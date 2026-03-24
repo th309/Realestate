@@ -2,20 +2,44 @@
  * Map Layers Hook
  */
 
-import { useCallback, useRef, useEffect } from 'react';
-import mapboxgl from 'mapbox-gl';
-import type { GeoLevel, ForecastHorizon, MapData, SelectedGeography, SearchResult } from '../types';
-import { GEOJSON_SOURCES, FIPS_TO_STATE, STATE_NAME_TO_FIPS, getValueFromEntry, getDateFromEntry } from '../types';
+import { useCallback, useRef, useEffect } from "react";
+import mapboxgl from "mapbox-gl";
+import type {
+  GeoLevel,
+  ForecastHorizon,
+  MapData,
+  SelectedGeography,
+  SearchResult,
+} from "../types";
 import {
-  getColorScale,
+  GEOJSON_SOURCES,
+  FIPS_TO_STATE,
+  STATE_NAME_TO_FIPS,
+  getValueFromEntry,
+  getDateFromEntry,
+} from "../types";
+import {
   getMetricFormat,
   calculateValueRange,
   formatTooltipValue,
-  type MetricFormat,
-} from '../utils';
-import { useMetricFreshness } from '@/lib/data/hooks';
-import { normalizeZipKey } from '@/lib/format/zip';
-import { getGeoJsonApiUrl } from '@/lib/data';
+  calculatePolylabel,
+  getGeometryBbox,
+  computeScreenSpaceRatios,
+  computeCalloutPositions,
+  buildLeaderLineGeojson,
+  syncCalloutMarkers,
+  updateCalloutOpacity,
+  removeAllCalloutMarkers,
+  removeAllManagedLayers,
+  addMapLayers,
+  addLeaderLineLayers,
+  computeFillColor,
+  type LabelFeature,
+  type MarkerStore,
+} from "../utils";
+import { useMetricFreshness } from "@/lib/data/hooks";
+import { normalizeZipKey } from "@/lib/format/zip";
+import { getGeoJsonApiUrl } from "@/lib/data";
 
 /**
  * Fetch with retry logic for large GeoJSON endpoints (county, zip)
@@ -24,7 +48,7 @@ import { getGeoJsonApiUrl } from '@/lib/data';
 async function fetchWithRetry(
   url: string,
   maxRetries: number = 3,
-  baseDelayMs: number = 1000
+  baseDelayMs: number = 1000,
 ): Promise<Response> {
   let lastError: Error | null = null;
 
@@ -37,8 +61,10 @@ async function fetchWithRetry(
         lastError = new Error(`Server error: ${response.status}`);
         if (attempt < maxRetries) {
           const delay = baseDelayMs * attempt; // Linear backoff: 1s, 2s, 3s
-          console.warn(`GeoJSON fetch failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          console.warn(
+            `GeoJSON fetch failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
         throw lastError;
@@ -50,14 +76,17 @@ async function fetchWithRetry(
 
       if (attempt < maxRetries) {
         const delay = baseDelayMs * attempt;
-        console.warn(`GeoJSON fetch error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, err);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.warn(
+          `GeoJSON fetch error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`,
+          err,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
     }
   }
 
-  throw lastError || new Error('Fetch failed after retries');
+  throw lastError || new Error("Fetch failed after retries");
 }
 
 interface UseMapLayersProps {
@@ -72,7 +101,11 @@ interface UseMapLayersProps {
   dataLoading?: boolean;
   highlightedFeature?: SearchResult | null;
   onFeatureClick?: (geography: SelectedGeography | null) => void;
-  onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void;
+  onFeatureContextMenu?: (info: {
+    geography: SelectedGeography;
+    x: number;
+    y: number;
+  }) => void;
 }
 
 export function useMapLayers({
@@ -87,16 +120,31 @@ export function useMapLayers({
   dataLoading,
   highlightedFeature,
   onFeatureClick,
-  onFeatureContextMenu
+  onFeatureContextMenu,
 }: UseMapLayersProps) {
-  const { formattedDate: selectedMetricFreshnessDate } = useMetricFreshness(selectedMetric, geoLevel);
+  const { formattedDate: selectedMetricFreshnessDate } = useMetricFreshness(
+    selectedMetric,
+    geoLevel,
+  );
   // Store current geoLevel in ref for click handler
   const geoLevelRef = useRef(geoLevel);
   const updateIdRef = useRef(0);
+  const zoomHandlerRef = useRef<(() => void) | null>(null);
+  const markersRef = useRef<MarkerStore>(new Map());
 
   useEffect(() => {
     geoLevelRef.current = geoLevel;
   }, [geoLevel]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomHandlerRef.current && map.current) {
+        map.current.off("zoomend", zoomHandlerRef.current);
+      }
+      removeAllCalloutMarkers(markersRef.current);
+    };
+  }, []);
 
   const updateMapLayers = useCallback(async () => {
     const updateId = ++updateIdRef.current;
@@ -104,14 +152,21 @@ export function useMapLayers({
     if (!map.current || !mapLoaded) return;
 
     if (!map.current.isStyleLoaded()) {
-      map.current.once('idle', () => {
+      map.current.once("idle", () => {
         if (updateId === updateIdRef.current) updateMapLayers();
       });
       return;
     }
 
+    // Clean up zoom handler and callout markers from previous render
+    if (zoomHandlerRef.current && map.current) {
+      map.current.off("zoomend", zoomHandlerRef.current);
+      zoomHandlerRef.current = null;
+    }
+    removeAllCalloutMarkers(markersRef.current);
+
     // Remove existing layers and sources
-    removeExistingLayers(map.current);
+    removeAllManagedLayers(map.current);
 
     // Get GeoJSON URL
     const geojsonUrl = getGeojsonUrl(geoLevel, selectedState);
@@ -119,7 +174,7 @@ export function useMapLayers({
 
     try {
       // Use retry logic for county and zip (large datasets that can timeout on cold cache)
-      const useRetry = geoLevel === 'county' || geoLevel === 'zip';
+      const useRetry = geoLevel === "county" || geoLevel === "zip";
       const response = useRetry
         ? await fetchWithRetry(geojsonUrl, 3, 1000)
         : await fetch(geojsonUrl);
@@ -134,35 +189,106 @@ export function useMapLayers({
       addValuesToFeatures(geojson, geoLevel, mapData);
 
       // Remove source again right before adding (handles race condition)
-      // This is needed because another updateMapLayers call may have started
-      // while we were fetching the GeoJSON
-      if (map.current!.getSource('geo-data')) {
-        const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels', 'geo-highlight'];
-        layersToRemove.forEach(layerId => {
-          if (map.current!.getLayer(layerId)) {
-            map.current!.removeLayer(layerId);
-          }
-        });
-        map.current!.removeSource('geo-data');
-      }
-      if (map.current!.getSource('geo-labels-data')) {
-        map.current!.removeSource('geo-labels-data');
-      }
+      removeAllManagedLayers(map.current!);
 
       // Add source
-      map.current!.addSource('geo-data', { type: 'geojson', data: geojson });
+      map.current!.addSource("geo-data", { type: "geojson", data: geojson });
 
       // Create label points for state/national (single centered label per geography)
-      const labelPointsGeojson = (geoLevel === 'state' || geoLevel === 'national')
-        ? createLabelPoints(geojson, geoLevel)
-        : undefined;
+      const labelPointsGeojson =
+        geoLevel === "state" || geoLevel === "national"
+          ? createLabelPoints(geojson, geoLevel)
+          : undefined;
 
       // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
-      const { min: minVal, max: maxVal } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
+      const { min: minVal, max: maxVal } = calculateValueRange(
+        mapData,
+        metricFormat,
+        selectedMetric,
+        geoLevel,
+      );
 
       // Add layers - uses same min/max as legend for consistent colors
-      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson, highlightedFeature);
+      addMapLayers({
+        map: map.current!,
+        geoLevel,
+        metricFormat,
+        minVal,
+        maxVal,
+        labelPointsGeojson,
+        highlightedFeature,
+      });
+
+      // Leader lines + callout labels for small states at state level
+      if (geoLevel === "state" && labelPointsGeojson) {
+        // Build LabelFeature array from the label points
+        const labelFeatures: LabelFeature[] = labelPointsGeojson.features.map(
+          (f: any) => ({
+            name: f.properties.name,
+            value: f.properties.value,
+            polylabel: [
+              f.properties.polylabelLng,
+              f.properties.polylabelLat,
+            ] as [number, number],
+            bbox: [
+              f.properties.bboxMinLng,
+              f.properties.bboxMinLat,
+              f.properties.bboxMaxLng,
+              f.properties.bboxMaxLat,
+            ] as [number, number, number, number],
+            screenSpaceRatio: 0,
+            fillColor: "",
+          }),
+        );
+
+        // Compute fill colors for each state (matching geo-fills)
+        for (const lf of labelFeatures) {
+          lf.fillColor = computeFillColor(lf.value, minVal, maxVal);
+        }
+
+        // Function to update labels on zoom
+        const updateLabelsForZoom = () => {
+          if (!map.current) return;
+
+          computeScreenSpaceRatios(labelFeatures, map.current);
+
+          const source = map.current.getSource("geo-labels-data") as
+            | mapboxgl.GeoJSONSource
+            | undefined;
+          if (source) {
+            const updatedData = {
+              ...labelPointsGeojson,
+              features: labelPointsGeojson.features.map(
+                (f: any, i: number) => ({
+                  ...f,
+                  properties: {
+                    ...f.properties,
+                    screenSpaceRatio: labelFeatures[i]?.screenSpaceRatio ?? 0,
+                  },
+                }),
+              ),
+            };
+            source.setData(updatedData);
+          }
+
+          const callouts = computeCalloutPositions(labelFeatures);
+          const lineGeojson = buildLeaderLineGeojson(callouts);
+
+          addLeaderLineLayers(map.current, lineGeojson);
+          syncCalloutMarkers(
+            markersRef.current,
+            map.current,
+            callouts,
+            metricFormat,
+          );
+          updateCalloutOpacity(markersRef.current, labelFeatures);
+        };
+
+        updateLabelsForZoom();
+        map.current!.on("zoomend", updateLabelsForZoom);
+        zoomHandlerRef.current = updateLabelsForZoom;
+      }
 
       // Setup hover and click interactions
       setupInteractions(
@@ -176,9 +302,22 @@ export function useMapLayers({
         onFeatureContextMenu,
       );
     } catch (err) {
-      console.error('Error loading GeoJSON:', err);
+      console.error("Error loading GeoJSON:", err);
     }
-  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, selectedMetricFreshnessDate, forecastHorizon, map, popup, highlightedFeature, onFeatureClick, onFeatureContextMenu]);
+  }, [
+    geoLevel,
+    mapData,
+    mapLoaded,
+    selectedState,
+    selectedMetric,
+    selectedMetricFreshnessDate,
+    forecastHorizon,
+    map,
+    popup,
+    highlightedFeature,
+    onFeatureClick,
+    onFeatureContextMenu,
+  ]);
 
   // Effect to trigger logic when core dependencies change
   useEffect(() => {
@@ -189,11 +328,11 @@ export function useMapLayers({
     // The effect will re-fire when dataLoading becomes false.
     if (dataLoading) return;
 
-    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    const requiresState = ["city", "zip", "tract"].includes(geoLevel);
     if (requiresState && !selectedState) {
       // Clear layers if state is required but not selected
       if (map.current) {
-        removeExistingLayers(map.current);
+        removeAllManagedLayers(map.current);
       }
       return;
     }
@@ -203,95 +342,102 @@ export function useMapLayers({
 
   // Effect for instant highlight update without full re-fetch if level/state didn't change
   useEffect(() => {
-    if (!map.current || !mapLoaded || !map.current.getLayer('geo-highlight')) return;
+    if (!map.current || !mapLoaded || !map.current.getLayer("geo-highlight"))
+      return;
 
-    const filter = calculateHighlightFilter(highlightedFeature, geoLevel);
-    map.current.setFilter('geo-highlight', filter);
+    // Build highlight filter inline — same logic as map-layer-config
+    const filter = buildHighlightFilter(highlightedFeature, geoLevel);
+    map.current.setFilter("geo-highlight", filter);
   }, [highlightedFeature, geoLevel, mapLoaded]);
 
   return { updateMapLayers };
 }
 
 /**
- * Filter logic for geographic highlighting
+ * Build highlight filter for instant highlight updates (without full layer rebuild).
+ * Mirrors the logic in map-layer-config.ts calculateHighlightFilter.
  */
-function calculateHighlightFilter(highlightedFeature: SearchResult | null | undefined, geoLevel: GeoLevel): any[] {
-  if (!highlightedFeature) return ['==', ['get', 'id'], '___none___'];
+function buildHighlightFilter(
+  highlightedFeature: SearchResult | null | undefined,
+  geoLevel: GeoLevel,
+): any[] {
+  if (!highlightedFeature) return ["==", ["get", "id"], "___none___"];
 
   const searchName = highlightedFeature.name;
-  const searchId = highlightedFeature.id.replace(/.*?\./, ''); // Strip Mapbox prefix
+  const searchId = highlightedFeature.id.replace(/.*?\./, ""); // Strip Mapbox prefix
 
-  if (geoLevel === 'metro') {
-    return ['any',
-      ['==', ['get', 'name'], searchName],
-      ['in', searchName, ['get', 'name']],
-      ['==', ['get', 'id'], searchName]
+  if (geoLevel === "metro") {
+    return [
+      "any",
+      ["==", ["get", "name"], searchName],
+      ["in", searchName, ["get", "name"]],
+      ["==", ["get", "id"], searchName],
     ];
-  } else if (geoLevel === 'zip') {
-    return ['==', ['get', 'id'], searchName];
+  } else if (geoLevel === "zip") {
+    return ["==", ["get", "id"], searchName];
   } else {
-    return ['any',
-      ['==', ['get', 'name'], searchName],
-      ['==', ['get', 'id'], searchName],
-      ['==', ['get', 'id'], searchId],
-      ['in', searchName, ['get', 'displayName']]
+    return [
+      "any",
+      ["==", ["get", "name"], searchName],
+      ["==", ["get", "id"], searchName],
+      ["==", ["get", "id"], searchId],
+      ["in", searchName, ["get", "displayName"]],
     ];
   }
 }
 
-function removeExistingLayers(map: mapboxgl.Map): void {
-  const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels', 'geo-highlight'];
-  layersToRemove.forEach(layerId => {
-    if (map.getLayer(layerId)) {
-      map.removeLayer(layerId);
-    }
-  });
-  if (map.getSource('geo-data')) {
-    map.removeSource('geo-data');
-  }
-  if (map.getSource('geo-labels-data')) {
-    map.removeSource('geo-labels-data');
-  }
-}
-
-function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null {
+function getGeojsonUrl(
+  geoLevel: GeoLevel,
+  selectedState: string,
+): string | null {
   // Prefer static files (served from /public, no backend or DB hit)
   // This bypasses the DB entirely and leverages Next.js edge caching.
-  if (geoLevel === 'national') return '/geojson/national.json';
-  if (geoLevel === 'state') return '/geojson/states.json';
-  if (geoLevel === 'metro') return '/geojson/metros.json';
-  if (geoLevel === 'county' && !selectedState) return '/geojson/counties.json';
+  if (geoLevel === "national") return "/geojson/national.json";
+  if (geoLevel === "state") return "/geojson/states.json";
+  if (geoLevel === "metro") return "/geojson/metros.json";
+  if (geoLevel === "county" && !selectedState) return "/geojson/counties.json";
 
   // These layers remain on the backend API (cached 24h in-memory)
   // because generating a nationwide static file for every single zip code/city is too large.
-  if (geoLevel === 'county' && selectedState) {
-    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`);
-  } else if (geoLevel === 'city' && selectedState) {
-    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`);
-  } else if (geoLevel === 'zip' && selectedState) {
-    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`);
-  } else if (geoLevel === 'tract' && selectedState) {
-    console.warn('Tract data not available');
+  if (geoLevel === "county" && selectedState) {
+    return getGeoJsonApiUrl(
+      `${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`,
+    );
+  } else if (geoLevel === "city" && selectedState) {
+    return getGeoJsonApiUrl(
+      `${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`,
+    );
+  } else if (geoLevel === "zip" && selectedState) {
+    return getGeoJsonApiUrl(
+      `${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`,
+    );
+  } else if (geoLevel === "tract" && selectedState) {
+    console.warn("Tract data not available");
     return null;
   }
   return null;
 }
 
-function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData): void {
-  if (geoLevel === 'national') {
+function addValuesToFeatures(
+  geojson: any,
+  geoLevel: GeoLevel,
+  mapData: MapData,
+): void {
+  if (geoLevel === "national") {
     // National geojson has NAME: "United States", GEOID: "US"
     geojson.features.forEach((feature: any) => {
-      const name = feature.properties.NAME || feature.properties.name || 'United States';
+      const name =
+        feature.properties.NAME || feature.properties.name || "United States";
       // Try multiple keys: "United States", "US", name
-      const entry = mapData['United States'] ?? mapData['US'] ?? mapData[name];
+      const entry = mapData["United States"] ?? mapData["US"] ?? mapData[name];
       feature.properties.value = getValueFromEntry(entry) || 0;
       feature.properties.dataDate = getDateFromEntry(entry);
-      feature.properties.id = feature.properties.GEOID || 'US';
+      feature.properties.id = feature.properties.GEOID || "US";
       feature.properties.displayName = name;
       // Normalize property names for consistent tooltip display
       feature.properties.name = name;
     });
-  } else if (geoLevel === 'state') {
+  } else if (geoLevel === "state") {
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.name;
       const entry = mapData[name];
@@ -299,12 +445,13 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
       feature.properties.dataDate = getDateFromEntry(entry);
       // Set state ID (FIPS code) for benchmark lookups
       // Try multiple sources: STATEFP property, name-to-FIPS lookup, feature.id
-      const stateFips = feature.properties.STATEFP || STATE_NAME_TO_FIPS[name] || feature.id;
+      const stateFips =
+        feature.properties.STATEFP || STATE_NAME_TO_FIPS[name] || feature.id;
       feature.properties.id = stateFips;
       // Also set stateAbbr from FIPS for states
-      feature.properties.stateAbbr = FIPS_TO_STATE[stateFips] || '';
+      feature.properties.stateAbbr = FIPS_TO_STATE[stateFips] || "";
     });
-  } else if (geoLevel === 'county') {
+  } else if (geoLevel === "county") {
     let countyWithData = 0;
     geojson.features.forEach((feature: any) => {
       const fips = feature.id || feature.properties.id;
@@ -314,332 +461,181 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
       feature.properties.id = fips;
       if (getValueFromEntry(entry) != null) countyWithData++;
       const stateFips = fips?.substring(0, 2);
-      const stateAbbr = FIPS_TO_STATE[stateFips] || '';
-      feature.properties.displayName = `${feature.properties.NAME || 'County'}, ${stateAbbr}`;
+      const stateAbbr = FIPS_TO_STATE[stateFips] || "";
+      feature.properties.displayName = `${feature.properties.NAME || "County"}, ${stateAbbr}`;
     });
     // One-off coverage check: compare to PropertyIQ "County coverage" log (score keys vs features)
     console.log(
-      `[Map] County layer: ${geojson.features.length} features, ${Object.keys(mapData).length} data keys, ${countyWithData} features with value`
+      `[Map] County layer: ${geojson.features.length} features, ${Object.keys(mapData).length} data keys, ${countyWithData} features with value`,
     );
-  } else if (geoLevel === 'metro') {
+  } else if (geoLevel === "metro") {
     geojson.features.forEach((feature: any) => {
       const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
       const entry = mapData[cbsaCode];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = cbsaCode;
-      feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
-      feature.properties.name = feature.properties.NAME || feature.properties.NAMELSAD;
+      feature.properties.displayName =
+        feature.properties.NAME || feature.properties.NAMELSAD || "Metro Area";
+      feature.properties.name =
+        feature.properties.NAME || feature.properties.NAMELSAD;
     });
-  } else if (geoLevel === 'city') {
+  } else if (geoLevel === "city") {
     geojson.features.forEach((feature: any) => {
       // TIGER Place files use GEOID (state FIPS + place FIPS) and NAME
       // Zillow city data uses region_name (city name) as the key
       const placeId = feature.properties.GEOID || feature.properties.PLACEFP;
-      const placeName = feature.properties.NAME || feature.properties.NAMELSAD || 'Unknown City';
+      const placeName =
+        feature.properties.NAME ||
+        feature.properties.NAMELSAD ||
+        "Unknown City";
       const stateFips = feature.properties.STATEFP;
-      const stateAbbr = FIPS_TO_STATE[stateFips] || '';
+      const stateAbbr = FIPS_TO_STATE[stateFips] || "";
       // Try matching by name first (Zillow data), then by GEOID
       const entry = mapData[placeName] ?? mapData[placeId];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = placeId;
-      feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
+      feature.properties.displayName = stateAbbr
+        ? `${placeName}, ${stateAbbr}`
+        : placeName;
       feature.properties.name = placeName;
     });
-  } else if (geoLevel === 'zip') {
+  } else if (geoLevel === "zip") {
     geojson.features.forEach((feature: any) => {
-      const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
-      const key = zipCode ? normalizeZipKey(zipCode) : '';
+      const zipCode =
+        feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
+      const key = zipCode ? normalizeZipKey(zipCode) : "";
       const entry = key ? mapData[key] : undefined;
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = zipCode;
       feature.properties.displayName = zipCode;
     });
-  } else if (geoLevel === 'tract') {
+  } else if (geoLevel === "tract") {
     geojson.features.forEach((feature: any) => {
       // TIGER Tract files use GEOID (state FIPS + county FIPS + tract code)
       const tractId = feature.properties.GEOID || feature.properties.TRACTCE;
-      const tractName = feature.properties.NAMELSAD || feature.properties.NAME || `Tract ${tractId}`;
+      const tractName =
+        feature.properties.NAMELSAD ||
+        feature.properties.NAME ||
+        `Tract ${tractId}`;
       const stateFips = feature.properties.STATEFP;
       const countyFips = feature.properties.COUNTYFP;
-      const stateAbbr = FIPS_TO_STATE[stateFips] || '';
+      const stateAbbr = FIPS_TO_STATE[stateFips] || "";
       const entry = mapData[tractId];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = tractId;
-      feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ''}`;
+      feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ""}`;
       feature.properties.countyFips = stateFips + countyFips;
     });
   }
 }
 
 /**
- * Calculate the centroid of a polygon or multipolygon geometry
- * Uses bounding box center for label positioning
- * Returns [lng, lat] coordinates
- */
-function calculateCentroid(geometry: any): [number, number] | null {
-  if (!geometry || !geometry.coordinates) return null;
-
-  let allCoords: [number, number][] = [];
-
-  if (geometry.type === 'Polygon') {
-    // Use the exterior ring (first array)
-    allCoords = geometry.coordinates[0] || [];
-  } else if (geometry.type === 'MultiPolygon') {
-    // Collect all exterior rings from all polygons
-    geometry.coordinates.forEach((polygon: any) => {
-      if (polygon[0]) {
-        allCoords = allCoords.concat(polygon[0]);
-      }
-    });
-  }
-
-  if (allCoords.length === 0) return null;
-
-  // Calculate bounding box center
-  let minLng = Infinity, maxLng = -Infinity;
-  let minLat = Infinity, maxLat = -Infinity;
-
-  allCoords.forEach(([lng, lat]) => {
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-  });
-
-  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
-}
-
-/**
- * Create point features at the centroid of each polygon feature for labeling
- * This ensures only one label per geography, centered on the shape
+ * Create point features at the polylabel of each polygon feature for labeling.
+ * Stores bbox and polylabel coordinates as properties for screen-space calculations.
  */
 function createLabelPoints(geojson: any, geoLevel: GeoLevel): any {
-  // For national level, create exactly ONE label point at the center of contiguous US
-  // The national GeoJSON may have multiple features (continental US, Alaska, Hawaii, territories)
-  // but we only want one centered label
-  if (geoLevel === 'national') {
-    // Use properties from first feature (they should all be "United States")
+  if (geoLevel === "national") {
     const firstFeature = geojson.features[0];
     return {
-      type: 'FeatureCollection',
-      features: [{
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [-98.5795, 39.8283] // Geographic center of contiguous US (Kansas)
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [-98.5795, 39.8283] },
+          properties: firstFeature
+            ? { ...firstFeature.properties }
+            : { name: "United States", value: 0 },
         },
-        properties: firstFeature ? { ...firstFeature.properties } : { name: 'United States', value: 0 }
-      }]
+      ],
     };
   }
 
-  // For state level, create one point per feature at its centroid
-  const labelFeatures = geojson.features.map((feature: any) => {
-    const centroid = calculateCentroid(feature.geometry);
-    if (!centroid) return null;
+  const labelFeatures = geojson.features
+    .map((feature: any) => {
+      const centroid = calculatePolylabel(feature.geometry);
+      if (!centroid) return null;
 
-    return {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: centroid
-      },
-      properties: { ...feature.properties }
-    };
-  }).filter(Boolean);
+      const bbox = getGeometryBbox(feature.geometry);
 
-  return {
-    type: 'FeatureCollection',
-    features: labelFeatures
-  };
-}
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: centroid },
+        properties: {
+          ...feature.properties,
+          polylabelLng: centroid[0],
+          polylabelLat: centroid[1],
+          bboxMinLng: bbox ? bbox[0] : centroid[0],
+          bboxMinLat: bbox ? bbox[1] : centroid[1],
+          bboxMaxLng: bbox ? bbox[2] : centroid[0],
+          bboxMaxLat: bbox ? bbox[3] : centroid[1],
+        },
+      };
+    })
+    .filter(Boolean);
 
-function addMapLayers(
-  map: mapboxgl.Map,
-  geoLevel: GeoLevel,
-  metricFormat: MetricFormat,
-  minVal: number,
-  maxVal: number,
-  labelPointsGeojson?: any,
-  highlightedFeature?: SearchResult | null
-): void {
-  // Fill layer - uses dynamic min/max from calculateValueRange (same as legend)
-  map.addLayer({
-    id: 'geo-fills',
-    type: 'fill',
-    source: 'geo-data',
-    paint: {
-      'fill-color': getColorScale(minVal, maxVal) as any,
-      'fill-opacity': 0.6,
-    },
-  });
-
-  // Border layer
-  const lineWidth = geoLevel === 'tract' ? 0.2 :
-    geoLevel === 'zip' ? 0.3 :
-      geoLevel === 'city' ? 0.4 :
-        geoLevel === 'county' ? 0.5 :
-          geoLevel === 'metro' ? 0.8 : 1.5;
-  map.addLayer({
-    id: 'geo-borders',
-    type: 'line',
-    source: 'geo-data',
-    paint: {
-      'line-color': '#ffffff',
-      'line-width': lineWidth,
-      'line-opacity': 0.8, // Slightly softer white
-    },
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round',
-    }
-  });
-
-  // Highlight layer - for searched geography
-  if (highlightedFeature) {
-    const filter = calculateHighlightFilter(highlightedFeature, geoLevel);
-
-    map.addLayer({
-      id: 'geo-highlight',
-      type: 'line',
-      source: 'geo-data',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#8b5cf6', // Vibrant Violet
-        'line-width': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          5, lineWidth * 3,
-          10, lineWidth * 6,
-          15, lineWidth * 12
-        ],
-        'line-opacity': 1,
-        'line-blur': 0.4, // Soft premium glow
-      },
-      filter
-    });
-  }
-
-  // Labels for state and national level - use separate point source for centered labels
-  if ((geoLevel === 'state' || geoLevel === 'national') && labelPointsGeojson) {
-    // Add the label points source
-    map.addSource('geo-labels-data', { type: 'geojson', data: labelPointsGeojson });
-
-    // Build value format expression based on metric type
-    let valueFormat: any;
-    switch (metricFormat) {
-      case 'percent':
-        // Show as percentage with sign
-        valueFormat = [
-          'concat',
-          ['case', ['>', ['get', 'value'], 0], '+', ''],
-          ['number-format', ['get', 'value'], { 'min-fraction-digits': 1, 'max-fraction-digits': 1 }],
-          '%'
-        ];
-        break;
-      case 'percent_abs':
-        // Absolute percentage (0-100%) - no sign
-        valueFormat = [
-          'concat',
-          ['number-format', ['get', 'value'], { 'min-fraction-digits': 1, 'max-fraction-digits': 1 }],
-          '%'
-        ];
-        break;
-      case 'number':
-      case 'index':
-        // Plain number with thousands separator
-        valueFormat = ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
-        break;
-      case 'days':
-        // Number with "days" suffix
-        valueFormat = [
-          'concat',
-          ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
-          ' days'
-        ];
-        break;
-      case 'currency':
-      default:
-        // Currency with $ prefix
-        valueFormat = ['concat', '$', ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
-        break;
-    }
-
-    // M3 Typography: Use Roboto (with fallbacks), on-surface color #1d1b20
-    map.addLayer({
-      id: 'geo-labels',
-      type: 'symbol',
-      source: 'geo-labels-data',  // Use centroid points source for single centered labels
-      layout: {
-        'text-field': [
-          'format',
-          ['get', 'name'], { 'font-scale': 0.9, 'text-font': ['literal', ['Roboto Medium', 'DIN Pro Medium', 'Arial Unicode MS Bold']] },
-          '\n', {},
-          valueFormat,
-          { 'font-scale': 0.8, 'text-font': ['literal', ['Roboto Regular', 'DIN Pro Regular', 'Arial Unicode MS Regular']] },
-        ],
-        'text-size': 15,  // M3 Label size (reduced 20% for better fit)
-        'text-variable-anchor': ['center', 'top', 'bottom', 'left', 'right'],  // Auto-shift to avoid collisions
-        'text-radial-offset': 0.5,  // Offset when using non-center anchors
-        'text-max-width': 8,
-        'text-letter-spacing': 0.02,  // M3 tracking-wide for labels
-      },
-      paint: {
-        'text-color': '#1d1b20',  // M3 on-surface color
-        'text-halo-color': 'rgba(255, 255, 255, 0.95)',
-        'text-halo-width': 2,
-      },
-    });
-  }
+  return { type: "FeatureCollection", features: labelFeatures };
 }
 
 function setupInteractions(
   map: mapboxgl.Map,
   popup: React.MutableRefObject<mapboxgl.Popup | null>,
-  metricFormat: MetricFormat,
+  metricFormat: string,
   forecastHorizon: ForecastHorizon,
   geoLevelRef: React.MutableRefObject<GeoLevel>,
   selectedMetricFreshnessDate: string,
   onFeatureClick?: (geography: SelectedGeography | null) => void,
-  onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void
+  onFeatureContextMenu?: (info: {
+    geography: SelectedGeography;
+    x: number;
+    y: number;
+  }) => void,
 ): void {
-  map.on('mouseenter', 'geo-fills', () => {
-    map.getCanvas().style.cursor = 'pointer';
+  map.on("mouseenter", "geo-fills", () => {
+    map.getCanvas().style.cursor = "pointer";
   });
 
-  map.on('mouseleave', 'geo-fills', () => {
-    map.getCanvas().style.cursor = '';
+  map.on("mouseleave", "geo-fills", () => {
+    map.getCanvas().style.cursor = "";
     popup.current?.remove();
   });
 
-  map.on('mousemove', 'geo-fills', (e) => {
+  map.on("mousemove", "geo-fills", (e) => {
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
-      const name = feature.properties?.name || feature.properties?.displayName || feature.properties?.NAME || 'Unknown';
+      const name =
+        feature.properties?.name ||
+        feature.properties?.displayName ||
+        feature.properties?.NAME ||
+        "Unknown";
       // Use null to indicate "no data" - don't convert 0 to null since 0 is a valid forecast value
       const value = feature.properties?.value ?? null;
 
       if (!popup.current) {
-        popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+        popup.current = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
       }
 
       // Use centralized formatting functions
-      const { displayValue, valueColor } = formatTooltipValue(value, metricFormat);
+      const { displayValue, valueColor } = formatTooltipValue(
+        value,
+        metricFormat,
+      );
 
-      const asOfText = selectedMetricFreshnessDate ? `as of ${selectedMetricFreshnessDate}` : '';
+      const asOfText = selectedMetricFreshnessDate
+        ? `as of ${selectedMetricFreshnessDate}`
+        : "";
 
       // M3-compliant tooltip styling using CSS custom properties
       popup.current
         .setLngLat(e.lngLat)
-        .setHTML(`
+        .setHTML(
+          `
           <div style="
             font-family: 'Google Sans', Roboto, sans-serif;
             padding: 12px 16px;
@@ -649,15 +645,16 @@ function setupInteractions(
           ">
             <div style="font-weight: 500; font-size: 14px; color: var(--md-on-surface, #1d1b20); line-height: 20px;">${name}</div>
             <div style="font-size: 22px; font-weight: 600; color: ${valueColor}; margin: 4px 0;">${displayValue}</div>
-            ${asOfText ? `<div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>` : ''}
+            ${asOfText ? `<div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>` : ""}
           </div>
-        `)
+        `,
+        )
         .addTo(map);
     }
   });
 
   // Click handler for benchmark comparison
-  map.on('click', 'geo-fills', (e) => {
+  map.on("click", "geo-fills", (e) => {
     if (!onFeatureClick || !e.features || e.features.length === 0) return;
 
     const feature = e.features[0];
@@ -668,28 +665,34 @@ function setupInteractions(
     // The enrichment step sets props.id, but we also handle raw GeoJSON
     // properties (CBSAFP for metros, GEOID for counties/zips, etc.)
     // to be resilient against race conditions or stale features.
-    const id = props.id
-      || props.CBSAFP   // Metro CBSA code
-      || props.GEOID     // Census GEOID (works for counties, zips, tracts)
-      || props.GEOID20   // ZIP ZCTA GEOID
-      || props.ZCTA5CE20 // ZIP ZCTA code
-      || feature.id
-      || '';
+    const id =
+      props.id ||
+      props.CBSAFP || // Metro CBSA code
+      props.GEOID || // Census GEOID (works for counties, zips, tracts)
+      props.GEOID20 || // ZIP ZCTA GEOID
+      props.ZCTA5CE20 || // ZIP ZCTA code
+      feature.id ||
+      "";
 
     // Extract display name — prefer enriched name, fall back to raw GeoJSON
-    const name = props.name || props.displayName || props.NAME || 'Unknown';
+    const name = props.name || props.displayName || props.NAME || "Unknown";
     const value = props.value ?? null;
 
     // Get state abbreviation if available.
     // For metros, CBSA codes do NOT start with state FIPS, so id.substring(0, 2)
     // gives a wrong result. Instead, extract the state from the metro name
     // (e.g., "Phoenix-Mesa-Chandler, AZ" → "AZ").
-    let stateAbbr = props.stateAbbr || '';
+    let stateAbbr = props.stateAbbr || "";
     if (!stateAbbr && props.STATEFP) {
-      stateAbbr = FIPS_TO_STATE[props.STATEFP] || '';
+      stateAbbr = FIPS_TO_STATE[props.STATEFP] || "";
     }
-    if (!stateAbbr && geoLevel !== 'metro' && typeof id === 'string' && id.length >= 2) {
-      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || '';
+    if (
+      !stateAbbr &&
+      geoLevel !== "metro" &&
+      typeof id === "string" &&
+      id.length >= 2
+    ) {
+      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || "";
     }
     if (!stateAbbr && name) {
       // Extract state abbreviation from name like "Phoenix-Mesa, AZ" or "Name, NY-NJ-PA"
@@ -702,22 +705,24 @@ function setupInteractions(
       name,
       geoLevel,
       value,
-      stateAbbr
+      stateAbbr,
     });
   });
 
   // Click outside of features to deselect
-  map.on('click', (e) => {
+  map.on("click", (e) => {
     if (!onFeatureClick) return;
 
-    const features = map.queryRenderedFeatures(e.point, { layers: ['geo-fills'] });
+    const features = map.queryRenderedFeatures(e.point, {
+      layers: ["geo-fills"],
+    });
     if (features.length === 0) {
       onFeatureClick(null);
     }
   });
 
   // Right-click context menu on features
-  map.on('contextmenu', 'geo-fills', (e) => {
+  map.on("contextmenu", "geo-fills", (e) => {
     if (!onFeatureContextMenu || !e.features || e.features.length === 0) return;
     e.preventDefault();
 
@@ -725,24 +730,30 @@ function setupInteractions(
     const props = feature.properties || {};
     const geoLevel = geoLevelRef.current;
 
-    const id = props.id
-      || props.CBSAFP
-      || props.GEOID
-      || props.GEOID20
-      || props.ZCTA5CE20
-      || feature.id
-      || '';
+    const id =
+      props.id ||
+      props.CBSAFP ||
+      props.GEOID ||
+      props.GEOID20 ||
+      props.ZCTA5CE20 ||
+      feature.id ||
+      "";
 
-    const name = props.name || props.displayName || props.NAME || 'Unknown';
+    const name = props.name || props.displayName || props.NAME || "Unknown";
     const value = props.value ?? null;
 
     // Same state abbreviation logic as left-click handler above
-    let stateAbbr = props.stateAbbr || '';
+    let stateAbbr = props.stateAbbr || "";
     if (!stateAbbr && props.STATEFP) {
-      stateAbbr = FIPS_TO_STATE[props.STATEFP] || '';
+      stateAbbr = FIPS_TO_STATE[props.STATEFP] || "";
     }
-    if (!stateAbbr && geoLevel !== 'metro' && typeof id === 'string' && id.length >= 2) {
-      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || '';
+    if (
+      !stateAbbr &&
+      geoLevel !== "metro" &&
+      typeof id === "string" &&
+      id.length >= 2
+    ) {
+      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || "";
     }
     if (!stateAbbr && name) {
       const commaMatch = name.match(/,\s*([A-Z]{2})(?:[- ]|$)/);
@@ -756,4 +767,3 @@ function setupInteractions(
     });
   });
 }
-
