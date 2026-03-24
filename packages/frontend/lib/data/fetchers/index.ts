@@ -236,6 +236,38 @@ export {
   type AddToWatchlistDto,
 } from "./watchlist";
 
+// Organization management
+export {
+  fetchOrg,
+  fetchOrgMembers,
+  fetchOrgAuditLog,
+  fetchInviteDetails,
+  createOrganization,
+  updateOrganization,
+  inviteOrgMember,
+  changeOrgMemberRole,
+  removeOrgMember,
+  acceptOrgInvite,
+  transferOrgOwnership,
+  type OrgData,
+  type OrgMember,
+  type OrgMembersResponse,
+  type AuditLogEntry,
+  type AuditLogResponse,
+  type InviteDetails,
+} from "./organizations";
+
+// Organization billing
+export {
+  fetchOrgBilling,
+  createOrgCheckout,
+  createOrgBillingPortal,
+  updateOrgSeats,
+  type OrgBillingUsage,
+  type OrgCheckoutResult,
+  type OrgBillingPortalResult,
+} from "./org-billing";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

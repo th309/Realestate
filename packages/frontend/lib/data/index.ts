@@ -310,6 +310,38 @@ export {
   type AiModelConfig,
 } from "./fetchers";
 
+// Organization management
+export {
+  fetchOrg,
+  fetchOrgMembers,
+  fetchOrgAuditLog,
+  fetchInviteDetails,
+  createOrganization,
+  updateOrganization,
+  inviteOrgMember,
+  changeOrgMemberRole,
+  removeOrgMember,
+  acceptOrgInvite,
+  transferOrgOwnership,
+  type OrgData,
+  type OrgMember,
+  type OrgMembersResponse,
+  type AuditLogEntry,
+  type AuditLogResponse,
+  type InviteDetails,
+} from "./fetchers";
+
+// Organization billing
+export {
+  fetchOrgBilling,
+  createOrgCheckout,
+  createOrgBillingPortal,
+  updateOrgSeats,
+  type OrgBillingUsage,
+  type OrgCheckoutResult,
+  type OrgBillingPortalResult,
+} from "./fetchers";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";

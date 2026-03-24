@@ -17,8 +17,16 @@ export const TEST_ORG_SLUG = 'test-brokerage-e2e';
 /** Email domain suffix used to identify test users during cleanup. */
 const TEST_EMAIL_SUFFIX = '.propertyiq-test.com';
 
-/** Shared password for all test auth users (test environment only). */
-const TEST_USER_PASSWORD = 'TestPassword123!';
+/** Read the shared test user password from env (no hardcoded fallback). */
+function getTestUserPassword(): string {
+  const password = process.env.TEST_USER_PASSWORD;
+  if (!password) {
+    throw new Error(
+      'TEST_USER_PASSWORD is not set. Required for enterprise e2e tests.',
+    );
+  }
+  return password;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,17 +61,24 @@ function shortUuid(): string {
     .join('');
 }
 
-/** Build the service-role Supabase client used for all seed operations. */
-function getServiceClient(): SupabaseClient {
-  const supabaseUrl =
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
+/** Read SUPABASE_URL from env with no fallback. */
+function getSupabaseUrl(): string {
+  const url = process.env.SUPABASE_URL;
+  if (!url) {
     throw new Error(
-      'Missing Supabase env vars. Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) ' +
-        'and SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY).',
+      'SUPABASE_URL is not set. Required for enterprise e2e tests.',
+    );
+  }
+  return url;
+}
+
+/** Build the service-role Supabase client used for admin seed operations. */
+function getServiceClient(): SupabaseClient {
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supabaseKey) {
+    throw new Error(
+      'SUPABASE_SERVICE_KEY is not set. Required for enterprise e2e tests.',
     );
   }
 
@@ -72,18 +87,39 @@ function getServiceClient(): SupabaseClient {
   });
 }
 
+/** Build an anon Supabase client used for user sign-in (avoids mutating service client session). */
+function getAnonClient(): SupabaseClient {
+  const supabaseUrl = getSupabaseUrl();
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!anonKey) {
+    throw new Error(
+      'SUPABASE_ANON_KEY is not set. Required for enterprise e2e tests.',
+    );
+  }
+
+  return createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 /**
  * Create a test auth user and sign them in to obtain an access token.
+ *
+ * Uses the service client for admin.createUser and a separate anon client
+ * for signInWithPassword so the service client's auth state is never mutated.
  */
 async function createAndSignInUser(
-  supabase: SupabaseClient,
+  serviceClient: SupabaseClient,
+  anonClient: SupabaseClient,
   email: string,
 ): Promise<TestUser> {
-  // Create auth user with confirmed email
+  const password = getTestUserPassword();
+
+  // Create auth user with confirmed email (admin operation)
   const { data: createData, error: createError } =
-    await supabase.auth.admin.createUser({
+    await serviceClient.auth.admin.createUser({
       email,
-      password: TEST_USER_PASSWORD,
+      password,
       email_confirm: true,
     });
 
@@ -93,12 +129,9 @@ async function createAndSignInUser(
     );
   }
 
-  // Sign in to get an access token
+  // Sign in on the anon client to get an access token
   const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password: TEST_USER_PASSWORD,
-    });
+    await anonClient.auth.signInWithPassword({ email, password });
 
   if (signInError) {
     throw new Error(
@@ -132,19 +165,26 @@ async function createAndSignInUser(
  */
 export async function seedTestOrg(): Promise<TestOrgFixture> {
   const supabase = getServiceClient();
+  const anonClient = getAnonClient();
   const runId = shortUuid();
 
-  // 1. Create auth users
+  // 0. Clean up stale org from previous crashed runs
+  await supabase.from('organizations').delete().eq('slug', TEST_ORG_SLUG);
+
+  // 1. Create auth users (service client for admin ops, anon client for sign-in)
   const admin = await createAndSignInUser(
     supabase,
+    anonClient,
     `admin-${runId}@test-brokerage${TEST_EMAIL_SUFFIX}`,
   );
   const member = await createAndSignInUser(
     supabase,
+    anonClient,
     `member-${runId}@test-brokerage${TEST_EMAIL_SUFFIX}`,
   );
   const outsider = await createAndSignInUser(
     supabase,
+    anonClient,
     `outsider-${runId}@other-company${TEST_EMAIL_SUFFIX}`,
   );
 
