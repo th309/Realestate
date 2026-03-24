@@ -27,8 +27,6 @@ import { OrgUsageResponse } from './org-billing.types';
 export class OrgBillingService {
   private readonly logger = new Logger(OrgBillingService.name);
   private readonly frontendUrl: string | null;
-  private readonly enterprisePriceId: string | null;
-  private readonly seatPriceId: string | null;
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
@@ -37,21 +35,40 @@ export class OrgBillingService {
     private readonly config: ConfigService,
   ) {
     this.frontendUrl = this.config.get<string>('FRONTEND_URL') || null;
-    this.enterprisePriceId =
-      this.config.get<string>('STRIPE_ENTERPRISE_PRICE_ID') || null;
-    this.seatPriceId =
-      this.config.get<string>('STRIPE_ENTERPRISE_SEAT_PRICE_ID') || null;
 
     if (!this.frontendUrl) {
       this.logger.warn(
         'FRONTEND_URL not set — org billing checkout/portal disabled',
       );
     }
-    if (!this.enterprisePriceId) {
-      this.logger.warn(
-        'STRIPE_ENTERPRISE_PRICE_ID not set — org checkout disabled',
-      );
-    }
+  }
+
+  /** Read the enterprise tier's Stripe price ID from the DB (source of truth). */
+  private async getEnterprisePriceId(): Promise<string | null> {
+    const { data } = await this.supabase
+      .from('subscription_tiers')
+      .select('stripe_price_monthly_id')
+      .eq('slug', 'enterprise')
+      .single();
+    return (
+      data?.stripe_price_monthly_id ??
+      this.config.get<string>('STRIPE_ENTERPRISE_PRICE_ID') ??
+      null
+    );
+  }
+
+  /** Read the seat add-on Stripe price ID from the DB (source of truth). */
+  private async getSeatPriceId(): Promise<string | null> {
+    const { data } = await this.supabase
+      .from('subscription_tiers')
+      .select('stripe_price_monthly_id')
+      .eq('slug', 'enterprise-seat')
+      .single();
+    return (
+      data?.stripe_price_monthly_id ??
+      this.config.get<string>('STRIPE_ENTERPRISE_SEAT_PRICE_ID') ??
+      null
+    );
   }
 
   private getFrontendUrl(): string {
@@ -72,7 +89,8 @@ export class OrgBillingService {
     ownerEmail: string,
     ownerId: string,
   ): Promise<string> {
-    if (!this.enterprisePriceId) {
+    const enterprisePriceId = await this.getEnterprisePriceId();
+    if (!enterprisePriceId) {
       throw new ServiceUnavailableException(
         'Org billing unavailable: enterprise price not configured.',
       );
@@ -89,7 +107,7 @@ export class OrgBillingService {
 
     return this.stripe.createCheckoutSession({
       customerId,
-      priceId: this.enterprisePriceId,
+      priceId: enterprisePriceId,
       successUrl,
       cancelUrl,
       metadata: {
@@ -250,15 +268,16 @@ export class OrgBillingService {
     subscriptionId: string,
     additionalSeats: number,
   ): Promise<void> {
-    if (!this.seatPriceId) {
+    const seatPriceId = await this.getSeatPriceId();
+    if (!seatPriceId) {
       throw new ServiceUnavailableException(
-        'STRIPE_ENTERPRISE_SEAT_PRICE_ID is not configured.',
+        'Seat add-on price not configured in subscription_tiers or env.',
       );
     }
 
     const subscription = await this.stripe.getSubscription(subscriptionId);
     const seatItem = subscription.items.data.find(
-      (item) => item.price.id === this.seatPriceId,
+      (item) => item.price.id === seatPriceId,
     );
 
     if (additionalSeats === 0 && seatItem) {
@@ -271,7 +290,7 @@ export class OrgBillingService {
       });
     } else if (additionalSeats > 0 && !seatItem) {
       await this.stripe.updateSubscriptionItems(subscriptionId, {
-        addItems: [{ priceId: this.seatPriceId, quantity: additionalSeats }],
+        addItems: [{ priceId: seatPriceId, quantity: additionalSeats }],
       });
     }
   }

@@ -312,6 +312,7 @@ export {
 
 // Organization management
 export {
+  fetchMyOrg,
   fetchOrg,
   fetchOrgMembers,
   fetchOrgAuditLog,

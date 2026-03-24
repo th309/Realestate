@@ -118,6 +118,29 @@ export class OrganizationsService {
   }
 
   /**
+   * Find the organization a user belongs to (returns the first active membership).
+   * Returns null if the user has no organization membership.
+   */
+  async findByUserId(userId: string) {
+    const { data: membership, error } = await this.supabase
+      .from('organization_members')
+      .select('organization_id, role, organizations(id, name, slug)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .limit(1)
+      .single();
+
+    if (error || !membership) {
+      return null;
+    }
+
+    const org = (membership as any).organizations;
+    return org
+      ? { slug: org.slug, name: org.name, role: membership.role }
+      : null;
+  }
+
+  /**
    * Retrieve an organization by its slug.
    * Throws NotFoundException if no organization matches.
    */

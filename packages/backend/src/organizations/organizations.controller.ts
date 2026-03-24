@@ -43,6 +43,13 @@ export class OrganizationsController {
     return this.organizationsService.create(dto, userId);
   }
 
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  async getMyOrg(@AuthUserId() userId: string) {
+    const org = await this.organizationsService.findByUserId(userId);
+    return org ?? { slug: null, name: null, role: null };
+  }
+
   @Get(':slug')
   @UseGuards(JwtAuthGuard, OrgContextGuard, OrgMemberGuard)
   async getOrg(@Param('slug') slug: string) {

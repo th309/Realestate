@@ -2,10 +2,12 @@
  * Tiers Service
  *
  * CRUD operations for subscription tiers.
+ * When prices change, auto-syncs to Stripe (creates new prices, archives old ones).
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { StripeService } from '../../billing/stripe.service';
 
 export interface SubscriptionTier {
   id: string;
@@ -46,7 +48,10 @@ export interface UpdateTierDto {
 export class TiersService {
   private readonly logger = new Logger(TiersService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly stripe: StripeService,
+  ) {}
 
   /**
    * Get all tiers
@@ -132,11 +137,13 @@ export class TiersService {
   async update(slug: string, dto: UpdateTierDto): Promise<SubscriptionTier> {
     const client = this.supabase.getClient();
 
-    // If updating price, record pricing history
+    const existing = await this.getBySlug(slug);
+
+    // If updating price, record history and sync to Stripe
     if (dto.price_monthly !== undefined || dto.price_yearly !== undefined) {
-      const existing = await this.getBySlug(slug);
       if (existing) {
         await this.recordPricingHistory(slug, existing, dto);
+        await this.syncStripePrices(existing, dto);
       }
     }
 
@@ -183,15 +190,74 @@ export class TiersService {
   }
 
   /**
+   * Sync price changes to Stripe: create new prices, archive old ones, store IDs.
+   * Skips tiers without a Stripe product (e.g., free tier).
+   */
+  private async syncStripePrices(
+    existing: SubscriptionTier,
+    update: UpdateTierDto,
+  ): Promise<void> {
+    const productId = (existing as any).stripe_product_id;
+    if (!productId) return; // Free tier or not linked to Stripe
+
+    const client = this.supabase.getClient();
+    const stripeUpdates: Record<string, string> = {};
+
+    try {
+      if (
+        update.price_monthly !== undefined &&
+        update.price_monthly !== existing.price_monthly
+      ) {
+        const newPrice = await this.stripe.createPrice(
+          productId,
+          update.price_monthly * 100,
+          'month',
+        );
+        stripeUpdates.stripe_price_monthly_id = newPrice.id;
+        const oldId = (existing as any).stripe_price_monthly_id;
+        if (oldId) await this.stripe.archivePrice(oldId);
+      }
+      if (
+        update.price_yearly !== undefined &&
+        update.price_yearly !== existing.price_yearly
+      ) {
+        const newPrice = await this.stripe.createPrice(
+          productId,
+          update.price_yearly * 100,
+          'year',
+        );
+        stripeUpdates.stripe_price_yearly_id = newPrice.id;
+        const oldId = (existing as any).stripe_price_yearly_id;
+        if (oldId) await this.stripe.archivePrice(oldId);
+      }
+
+      if (Object.keys(stripeUpdates).length > 0) {
+        await client
+          .from('subscription_tiers')
+          .update(stripeUpdates)
+          .eq('slug', existing.slug);
+        this.logger.log(`Stripe prices synced for tier: ${existing.slug}`);
+      }
+    } catch (err) {
+      this.logger.error(
+        `Stripe price sync failed for ${existing.slug}: ${err}`,
+      );
+      // Don't throw — DB price update should still proceed
+    }
+  }
+
+  /**
    * Get pricing history for a tier
    */
-  async getPricingHistory(slug: string): Promise<Array<{
-    price_monthly: number;
-    price_yearly: number;
-    effective_from: string;
-    effective_until: string | null;
-    change_reason: string;
-  }>> {
+  async getPricingHistory(slug: string): Promise<
+    Array<{
+      price_monthly: number;
+      price_yearly: number;
+      effective_from: string;
+      effective_until: string | null;
+      change_reason: string;
+    }>
+  > {
     const client = this.supabase.getClient();
 
     const { data, error } = await client

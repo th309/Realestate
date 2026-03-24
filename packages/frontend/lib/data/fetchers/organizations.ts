@@ -63,6 +63,18 @@ export interface InviteDetails {
 // ---------------------------------------------------------------------------
 
 /**
+ * Fetch the current user's organization membership.
+ * Returns { slug, name, role } or { slug: null } if not in any org.
+ */
+export async function fetchMyOrg(): Promise<{
+  slug: string | null;
+  name: string | null;
+  role: string | null;
+}> {
+  return fetchAPI(`/api/org/mine`);
+}
+
+/**
  * Fetch organization details by slug.
  */
 export async function fetchOrg(slug: string): Promise<OrgData> {
