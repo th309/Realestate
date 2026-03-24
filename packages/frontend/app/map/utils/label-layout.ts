@@ -4,14 +4,25 @@
  */
 import mapboxgl from "mapbox-gl";
 
-/** Approximate character width in pixels at font size 15 (Roboto Medium). */
-const CHAR_WIDTH_PX = 8.5;
+/** Approximate character width in pixels at font size 15 (Roboto Medium).
+ * Mapbox renders text at ~6.5px per character at size 15 with Roboto.
+ * The label also uses variable-anchor which shifts labels to fit. */
+const CHAR_WIDTH_PX = 6.5;
 
 /** Font size for state labels. */
 const LABEL_FONT_SIZE = 15;
 
 /** How far east (in degrees) to offset callout labels from the easternmost NE state. */
-const CALLOUT_LNG_OFFSET = 4;
+const CALLOUT_LNG_OFFSET = 2;
+
+/**
+ * Contiguous US bounding box — excludes Alaska, Hawaii, and territories
+ * (Guam at +145°E, American Samoa at -170°W, etc.)
+ */
+const CONUS_LNG_MIN = -130;
+const CONUS_LNG_MAX = -60;
+const CONUS_LAT_MIN = 24;
+const CONUS_LAT_MAX = 50;
 
 /** Minimum latitude gap between stacked callout labels (degrees). */
 const CALLOUT_LAT_GAP = 0.7;
@@ -46,6 +57,18 @@ export function computeScreenSpaceRatios(
   map: mapboxgl.Map,
 ): void {
   for (const feature of features) {
+    // Skip non-contiguous states/territories (their projections are unreliable)
+    const [lng, lat] = feature.polylabel;
+    if (
+      lng < CONUS_LNG_MIN ||
+      lng > CONUS_LNG_MAX ||
+      lat < CONUS_LAT_MIN ||
+      lat > CONUS_LAT_MAX
+    ) {
+      feature.screenSpaceRatio = 0; // Never gets callout
+      continue;
+    }
+
     const [minLng, , maxLng] = feature.bbox;
 
     // Project bbox corners to screen pixels
@@ -70,7 +93,15 @@ export function computeScreenSpaceRatios(
 export function computeCalloutPositions(
   features: LabelFeature[],
 ): CalloutPosition[] {
-  const needsCallout = features.filter((f) => f.screenSpaceRatio > 1.0);
+  // Filter to contiguous US states that need callouts (exclude AK, HI, territories)
+  const needsCallout = features.filter(
+    (f) =>
+      f.screenSpaceRatio > 1.0 &&
+      f.polylabel[0] >= CONUS_LNG_MIN &&
+      f.polylabel[0] <= CONUS_LNG_MAX &&
+      f.polylabel[1] >= CONUS_LAT_MIN &&
+      f.polylabel[1] <= CONUS_LAT_MAX,
+  );
 
   if (needsCallout.length === 0) return [];
 
