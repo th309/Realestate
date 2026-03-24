@@ -49,6 +49,7 @@ import { AiProviderModule } from './ai-provider/ai-provider.module';
 import { OrgAuditModule } from './org-audit/org-audit.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { OrgBillingModule } from './org-billing/org-billing.module';
+import { OrgBrandingModule } from './org-branding/org-branding.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -118,6 +119,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     OrgAuditModule,
     OrganizationsModule,
     OrgBillingModule,
+    OrgBrandingModule,
   ],
   controllers: [AppController],
   providers: [
