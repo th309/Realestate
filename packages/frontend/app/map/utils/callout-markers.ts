@@ -81,7 +81,7 @@ export function syncCalloutMarkers(
       callout.fillColor,
       metricFormat,
     );
-    const marker = new mapboxgl.Marker({ element: el, anchor: "left" })
+    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
       .setLngLat(callout.calloutLngLat)
       .addTo(map);
     markers.set(callout.name, marker);

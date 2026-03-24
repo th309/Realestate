@@ -185,7 +185,10 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
     }
   }
 
-  // Fix east group: stack vertically, matching anchor latitude order
+  // Fix east group: stack vertically, matching anchor latitude order.
+  // Each callout stays near its own state's latitude but is nudged to
+  // maintain north-to-south order with minimum spacing, preventing
+  // leader line crossings.
   if (eastGroup.length > 0) {
     // Sort by anchor latitude descending (northernmost anchor first)
     eastGroup.sort((a, b) => b.anchorLngLat[1] - a.anchorLngLat[1]);
@@ -193,18 +196,21 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
     // Use a shared longitude: the rightmost callout lng in the group
     const sharedLng = Math.max(...eastGroup.map((c) => c.calloutLngLat[0]));
 
-    // Anchor top of stack at the northernmost state's latitude, then stack downward.
-    // This keeps all pills within the US/Atlantic, not up in Canada.
-    const northernmostLat = Math.max(
-      ...eastGroup.map((c) => c.anchorLngLat[1]),
-    );
-    const topLat = northernmostLat;
-
+    // Start each callout at its own anchor latitude, then enforce
+    // minimum gap from top to bottom. This keeps callouts near their
+    // states while preventing overlap and crossings.
+    const latitudes: number[] = [];
     for (let i = 0; i < eastGroup.length; i++) {
-      eastGroup[i].calloutLngLat = [
-        sharedLng,
-        topLat - i * MIN_CALLOUT_GAP_LAT,
-      ];
+      let targetLat = eastGroup[i].anchorLngLat[1];
+
+      // Enforce minimum gap below previous callout
+      if (i > 0) {
+        const maxAllowed = latitudes[i - 1] - MIN_CALLOUT_GAP_LAT;
+        targetLat = Math.min(targetLat, maxAllowed);
+      }
+
+      latitudes.push(targetLat);
+      eastGroup[i].calloutLngLat = [sharedLng, targetLat];
     }
   }
 
