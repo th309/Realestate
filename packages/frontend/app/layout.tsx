@@ -9,6 +9,7 @@ import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
 import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "./components/AppFooter";
 import { BetaBanner } from "./components/BetaBanner";
+import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
@@ -175,16 +176,18 @@ export default async function RootLayout({
         <Providers initialUserId={initialUserId}>
           <Header />
           <BetaBanner />
-          <AnalyticsProvider>
-            <main
-              id="main-content"
-              className="flex-1 min-h-0 flex flex-col relative"
-            >
-              {children}
-            </main>
-          </AnalyticsProvider>
-          <AppFooter />
-          <DevToolbarLoader />
+          <EnterpriseOnboardingGate>
+            <AnalyticsProvider>
+              <main
+                id="main-content"
+                className="flex-1 min-h-0 flex flex-col relative"
+              >
+                {children}
+              </main>
+            </AnalyticsProvider>
+            <AppFooter />
+            <DevToolbarLoader />
+          </EnterpriseOnboardingGate>
           {/* <QuinnFloatingButton /> */}{" "}
           {/* PAUSED: Quinn development on hold */}
         </Providers>

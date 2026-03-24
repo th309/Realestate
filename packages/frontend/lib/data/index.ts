@@ -462,6 +462,9 @@ export {
   // Watchlist
   useWatchlist,
 
+  // Organization
+  useMyOrg,
+
   // Validation data hooks
   useValidationSummary,
   useValidationQuintiles,

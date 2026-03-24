@@ -100,6 +100,9 @@ export {
 // Watchlist
 export { useWatchlist } from "./useWatchlist";
 
+// Organization
+export { useMyOrg } from "./useMyOrg";
+
 // Validation data hooks
 export {
   useValidationSummary,
