@@ -191,11 +191,11 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
         // Fixed center anchor — polylabel + bbox center computes the visual center,
         // so we don't need variable-anchor collision avoidance (which shifts labels
         // away from the intended position, e.g. California drifting to LA).
-        // allow-overlap: true ensures every state shows its label — hiding labels
-        // via collision detection causes states like MS, WV, MD, GA to disappear.
+        // allow-overlap: false — Mapbox hides colliding labels, but our JS-side
+        // collision detection (in label-layout.ts) catches these states and pushes
+        // them to callouts with leader lines before Mapbox ever needs to hide them.
         "text-anchor": "center",
-        "text-allow-overlap": true,
-        "text-ignore-placement": true,
+        "text-allow-overlap": false,
         "text-max-width": 8,
         "text-letter-spacing": 0.02,
       },

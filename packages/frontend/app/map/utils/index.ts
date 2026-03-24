@@ -3,6 +3,7 @@ export * from "./colorScale";
 export * from "./metricUtils";
 export * from "./polylabel";
 export * from "./label-layout";
+export * from "./screen-space-detection";
 export * from "./callout-markers";
 export * from "./value-format-expressions";
 export * from "./map-layer-config";

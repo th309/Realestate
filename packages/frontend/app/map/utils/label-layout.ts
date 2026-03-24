@@ -1,16 +1,8 @@
 /**
  * Label layout engine for state map labels.
- * Computes screen-space ratios, callout positions, and leader line geometries.
+ * Callout positioning, leader line geometry, and crossing prevention.
+ * Screen-space detection is in screen-space-detection.ts.
  */
-import mapboxgl from "mapbox-gl";
-
-/** Approximate character width in pixels at font size 15 (Roboto Medium).
- * Mapbox renders text at ~6.5px per character at size 15 with Roboto.
- * The label also uses variable-anchor which shifts labels to fit. */
-const CHAR_WIDTH_PX = 6.5;
-
-/** Font size for state labels. */
-const LABEL_FONT_SIZE = 15;
 
 /** Offset distance (degrees) from state bbox edge to callout label. */
 const CALLOUT_OFFSET = 2;
@@ -19,10 +11,7 @@ const CALLOUT_OFFSET = 2;
 const MIN_CALLOUT_GAP_LAT = 1.2;
 const MIN_CALLOUT_GAP_LNG = 2.5;
 
-/**
- * Contiguous US bounding box — excludes Alaska, Hawaii, and territories
- * (Guam at +145°E, American Samoa at -170°W, etc.)
- */
+/** Contiguous US bounding box — used to filter out territories. */
 const CONUS_LNG_MIN = -130;
 const CONUS_LNG_MAX = -60;
 const CONUS_LAT_MIN = 24;
@@ -46,45 +35,6 @@ export interface CalloutPosition {
   fillColor: string;
   anchorLngLat: [number, number]; // polylabel point on the state
   calloutLngLat: [number, number]; // offset position for the callout label
-}
-
-/**
- * Compute the screen-space ratio for each label feature.
- * ratio = estimated label pixel width / state pixel width on screen.
- * ratio > 1.0 means the label doesn't fit inside the state.
- */
-export function computeScreenSpaceRatios(
-  features: LabelFeature[],
-  map: mapboxgl.Map,
-): void {
-  for (const feature of features) {
-    // Skip non-contiguous states/territories (their projections are unreliable)
-    const [lng, lat] = feature.polylabel;
-    if (
-      lng < CONUS_LNG_MIN ||
-      lng > CONUS_LNG_MAX ||
-      lat < CONUS_LAT_MIN ||
-      lat > CONUS_LAT_MAX
-    ) {
-      feature.screenSpaceRatio = 0; // Never gets callout
-      continue;
-    }
-
-    const [minLng, , maxLng] = feature.bbox;
-
-    // Project bbox corners to screen pixels
-    const leftPx = map.project([minLng, feature.polylabel[1]]);
-    const rightPx = map.project([maxLng, feature.polylabel[1]]);
-    const stateWidthPx = Math.abs(rightPx.x - leftPx.x);
-
-    // Estimate label width: name is the longest line
-    const labelText = feature.name;
-    const labelWidthPx =
-      labelText.length * CHAR_WIDTH_PX * (LABEL_FONT_SIZE / 15);
-
-    feature.screenSpaceRatio =
-      stateWidthPx > 0 ? labelWidthPx / stateWidthPx : 999;
-  }
 }
 
 /**
