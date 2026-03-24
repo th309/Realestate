@@ -31,10 +31,10 @@ export function calculatePolylabel(geometry: any): [number, number] | null {
     const center = bboxCenter(ring[0]);
     if (!center) return [pole[0], pole[1]];
 
-    // Blend: use polylabel for longitude (stays inside polygon horizontally)
-    // and average polylabel + bbox center for latitude (better vertical centering
-    // for tall/narrow states like California where polylabel drifts to the widest part)
-    return [pole[0], (pole[1] + center[1]) / 2];
+    // Blend: polylabel for longitude (stays inside the polygon horizontally),
+    // bbox center for latitude (true vertical midpoint — polylabel drifts to
+    // the widest part which is NorCal for California instead of Central Valley)
+    return [pole[0], center[1]];
   } catch {
     return bboxCenter(ring[0]);
   }
