@@ -20,18 +20,12 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 
-const ALLOWED_MIME_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/svg+xml',
-];
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
 };
 
 const LOGO_BUCKET = 'org-logos';
@@ -173,6 +167,32 @@ export class OrgBrandingService {
       throw new BadRequestException(
         `Invalid file type: ${file.mimetype}. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`,
       );
+    }
+
+    // Delete orphaned logo file if MIME type changed (e.g., PNG → JPEG)
+    const { data: existing } = await this.supabase
+      .from('organizations')
+      .select('logo_url')
+      .eq('id', orgId)
+      .single();
+
+    if (existing?.logo_url) {
+      const urlParts = existing.logo_url.split(`/${LOGO_BUCKET}/`);
+      const oldPath = urlParts.length > 1 ? urlParts[1] : null;
+      const ext = MIME_TO_EXT[file.mimetype];
+      const newPath = `${orgId}/logo.${ext}`;
+
+      if (oldPath && oldPath !== newPath) {
+        const { error: removeError } = await this.supabase.storage
+          .from(LOGO_BUCKET)
+          .remove([oldPath]);
+
+        if (removeError) {
+          this.logger.warn(
+            `Failed to remove old logo ${oldPath}: ${removeError.message}`,
+          );
+        }
+      }
     }
 
     const ext = MIME_TO_EXT[file.mimetype];

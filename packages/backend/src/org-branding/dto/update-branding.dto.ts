@@ -1,4 +1,10 @@
-import { IsOptional, IsString, MaxLength, Matches } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  Matches,
+  IsUrl,
+} from 'class-validator';
 
 export class UpdateBrandingDto {
   @IsOptional()
@@ -11,5 +17,9 @@ export class UpdateBrandingDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'website_url must be a valid HTTP or HTTPS URL' },
+  )
   website_url?: string;
 }
