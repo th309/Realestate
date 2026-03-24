@@ -193,12 +193,12 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
     // Use a shared longitude: the rightmost callout lng in the group
     const sharedLng = Math.max(...eastGroup.map((c) => c.calloutLngLat[0]));
 
-    // Center the stack around the group's mean anchor latitude
-    const meanAnchorLat =
-      eastGroup.reduce((sum, c) => sum + c.anchorLngLat[1], 0) /
-      eastGroup.length;
-    const totalHeight = (eastGroup.length - 1) * MIN_CALLOUT_GAP_LAT;
-    const topLat = meanAnchorLat + totalHeight / 2;
+    // Anchor top of stack at the northernmost state's latitude, then stack downward.
+    // This keeps all pills within the US/Atlantic, not up in Canada.
+    const northernmostLat = Math.max(
+      ...eastGroup.map((c) => c.anchorLngLat[1]),
+    );
+    const topLat = northernmostLat;
 
     for (let i = 0; i < eastGroup.length; i++) {
       eastGroup[i].calloutLngLat = [
