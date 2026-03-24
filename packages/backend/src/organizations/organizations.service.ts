@@ -11,6 +11,7 @@ import {
   Injectable,
   Inject,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
   BadRequestException,
   Logger,
@@ -35,6 +36,20 @@ export class OrganizationsService {
    * Throws ConflictException if the slug is already taken.
    */
   async create(dto: CreateOrganizationDto, ownerId: string) {
+    // Reject reserved slugs that conflict with platform routes
+    const RESERVED_SLUGS = [
+      'billing',
+      'invite',
+      'api',
+      'admin',
+      'settings',
+      'embed',
+      'v1',
+    ];
+    if (RESERVED_SLUGS.includes(dto.slug)) {
+      throw new BadRequestException('This slug is reserved and cannot be used');
+    }
+
     // Check slug uniqueness
     const { data: existing } = await this.supabase
       .from('organizations')
@@ -60,11 +75,17 @@ export class OrganizationsService {
       .select('*')
       .single();
 
-    if (orgError || !org) {
-      this.logger.error(
-        `Failed to create organization: ${orgError?.message ?? 'no data returned'}`,
-      );
-      throw new Error('Failed to create organization');
+    if (orgError) {
+      if (orgError.code === '23505') {
+        throw new ConflictException('SLUG_TAKEN');
+      }
+      this.logger.error(`Failed to create organization: ${orgError.message}`);
+      throw new BadRequestException('Failed to create organization');
+    }
+
+    if (!org) {
+      this.logger.error('Failed to create organization: no data returned');
+      throw new BadRequestException('Failed to create organization');
     }
 
     // Insert the owner as an active admin member
@@ -167,6 +188,19 @@ export class OrganizationsService {
     newOwnerId: string,
     currentOwnerId: string,
   ) {
+    // Verify the caller is the actual owner
+    const { data: org } = await this.supabase
+      .from('organizations')
+      .select('owner_id')
+      .eq('id', orgId)
+      .single();
+
+    if (!org || org.owner_id !== currentOwnerId) {
+      throw new ForbiddenException(
+        'Only the organization owner can transfer ownership',
+      );
+    }
+
     // Verify the new owner is an active admin member
     const { data: membership } = await this.supabase
       .from('organization_members')

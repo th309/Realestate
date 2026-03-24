@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class UpdateOrganizationDto {
   @IsOptional()
@@ -7,7 +7,7 @@ export class UpdateOrganizationDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl({}, { message: 'website_url must be a valid URL' })
   @MaxLength(200)
   website_url?: string;
 }
