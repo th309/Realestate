@@ -148,46 +148,83 @@ export function computeCalloutPositions(
     };
   });
 
-  // Step 2: Resolve overlaps — push apart callouts that are too close
-  resolveCalloutOverlaps(callouts);
+  // Step 2: Prevent leader line crossings and pill overlaps.
+  // Group callouts by offset direction, then within each group
+  // ensure callout latitude order matches anchor latitude order.
+  preventCrossingsAndOverlaps(callouts);
 
   return callouts;
 }
 
 /**
- * Nudge callouts apart so no two pills overlap.
- * Uses a simple iterative approach: for each pair that's too close,
- * push the lower-priority one (further south) away.
+ * Prevent leader line crossings by enforcing a rule:
+ * within each directional group (east-offset vs south-offset),
+ * the callout latitude order must match the anchor latitude order.
+ * This guarantees no lines cross within a group.
+ *
+ * Algorithm:
+ * 1. Separate callouts into groups by offset direction
+ * 2. Within each group, sort by anchor latitude (north → south)
+ * 3. Compute a shared callout longitude (rightmost east-offset value)
+ * 4. Stack callout latitudes top-to-bottom with minimum gap
+ * 5. Center the stack around the group's mean anchor latitude
  */
-function resolveCalloutOverlaps(callouts: CalloutPosition[]): void {
-  // Sort by latitude descending (north first gets priority)
-  callouts.sort((a, b) => b.calloutLngLat[1] - a.calloutLngLat[1]);
+function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
+  // Classify: east-offset = callout is east of anchor, south-offset = callout is south
+  const eastGroup: CalloutPosition[] = [];
+  const southGroup: CalloutPosition[] = [];
 
-  // Group by rough longitude zone (east column vs south column)
-  // Within each zone, resolve vertical overlaps
-  for (let pass = 0; pass < 5; pass++) {
-    let anyMoved = false;
-    for (let i = 0; i < callouts.length; i++) {
-      for (let j = i + 1; j < callouts.length; j++) {
-        const a = callouts[i].calloutLngLat;
-        const b = callouts[j].calloutLngLat;
+  for (const c of callouts) {
+    const dLng = c.calloutLngLat[0] - c.anchorLngLat[0];
+    const dLat = c.calloutLngLat[1] - c.anchorLngLat[1];
 
-        const dLat = Math.abs(a[1] - b[1]);
-        const dLng = Math.abs(a[0] - b[0]);
-
-        // Only resolve if pills are in the same general area
-        if (dLng < MIN_CALLOUT_GAP_LNG && dLat < MIN_CALLOUT_GAP_LAT) {
-          // Push the lower one further south (or east if same latitude)
-          const pushDirection = a[1] > b[1] ? -1 : 1;
-          callouts[j].calloutLngLat = [
-            b[0],
-            b[1] + pushDirection * (MIN_CALLOUT_GAP_LAT - dLat),
-          ];
-          anyMoved = true;
-        }
-      }
+    if (Math.abs(dLng) > Math.abs(dLat)) {
+      eastGroup.push(c);
+    } else {
+      southGroup.push(c);
     }
-    if (!anyMoved) break;
+  }
+
+  // Fix east group: stack vertically, matching anchor latitude order
+  if (eastGroup.length > 0) {
+    // Sort by anchor latitude descending (northernmost anchor first)
+    eastGroup.sort((a, b) => b.anchorLngLat[1] - a.anchorLngLat[1]);
+
+    // Use a shared longitude: the rightmost callout lng in the group
+    const sharedLng = Math.max(...eastGroup.map((c) => c.calloutLngLat[0]));
+
+    // Center the stack around the group's mean anchor latitude
+    const meanAnchorLat =
+      eastGroup.reduce((sum, c) => sum + c.anchorLngLat[1], 0) /
+      eastGroup.length;
+    const totalHeight = (eastGroup.length - 1) * MIN_CALLOUT_GAP_LAT;
+    const topLat = meanAnchorLat + totalHeight / 2;
+
+    for (let i = 0; i < eastGroup.length; i++) {
+      eastGroup[i].calloutLngLat = [
+        sharedLng,
+        topLat - i * MIN_CALLOUT_GAP_LAT,
+      ];
+    }
+  }
+
+  // Fix south group: stack horizontally, matching anchor longitude order
+  if (southGroup.length > 0) {
+    southGroup.sort((a, b) => a.anchorLngLat[0] - b.anchorLngLat[0]);
+
+    const sharedLat = Math.min(...southGroup.map((c) => c.calloutLngLat[1]));
+    const meanAnchorLng =
+      southGroup.reduce((sum, c) => sum + c.anchorLngLat[0], 0) /
+      southGroup.length;
+    const totalWidth = (southGroup.length - 1) * MIN_CALLOUT_GAP_LNG;
+    const leftLng = meanAnchorLng - totalWidth / 2;
+
+    for (let i = 0; i < southGroup.length; i++) {
+      southGroup[i].calloutLngLat = [
+        leftLng + i * MIN_CALLOUT_GAP_LNG,
+        sharedLat,
+      ];
+    }
   }
 }
 
