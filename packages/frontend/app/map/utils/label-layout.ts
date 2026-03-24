@@ -12,8 +12,12 @@ const CHAR_WIDTH_PX = 6.5;
 /** Font size for state labels. */
 const LABEL_FONT_SIZE = 15;
 
-/** How far east (in degrees) to offset callout labels from the easternmost NE state. */
-const CALLOUT_LNG_OFFSET = 2;
+/** Offset distance (degrees) from state bbox edge to callout label. */
+const CALLOUT_OFFSET = 2;
+
+/** Minimum gap between callout pills (degrees) to prevent overlap. */
+const MIN_CALLOUT_GAP_LAT = 1.2;
+const MIN_CALLOUT_GAP_LNG = 2.5;
 
 /**
  * Contiguous US bounding box — excludes Alaska, Hawaii, and territories
@@ -23,9 +27,6 @@ const CONUS_LNG_MIN = -130;
 const CONUS_LNG_MAX = -60;
 const CONUS_LAT_MIN = 24;
 const CONUS_LAT_MAX = 50;
-
-/** Minimum latitude gap between stacked callout labels (degrees). */
-const CALLOUT_LAT_GAP = 0.7;
 
 /** Fade range: leader lines start fading at this ratio and are gone by 0.8. */
 export const FADE_THRESHOLD_START = 0.8;
@@ -87,8 +88,35 @@ export function computeScreenSpaceRatios(
 }
 
 /**
+ * Determine the best offset direction for a state's callout label.
+ * Places callouts in the nearest open water/space:
+ * - NE states (east of -77°, north of 38°) → offset EAST (Atlantic)
+ * - Gulf states (south of 35°, between -92° and -80°) → offset SOUTH (Gulf of Mexico)
+ * - Southeast coastal (east of -82°, south of 37°) → offset EAST (Atlantic)
+ * - Other states → offset EAST by default
+ */
+function getCalloutOffset(feature: LabelFeature): [number, number] {
+  const [lng, lat] = feature.polylabel;
+  const [, minLat, maxLng, maxLat] = feature.bbox;
+
+  // Gulf states: Mississippi, Louisiana area — offset south toward Gulf
+  if (lat < 35 && lng < -88 && lng > -95) {
+    return [0, -(maxLat - minLat) / 2 - CALLOUT_OFFSET];
+  }
+
+  // Southeast states not on coast (Alabama) — offset south
+  if (lat < 35 && lng >= -88 && lng < -82) {
+    return [0, -(maxLat - minLat) / 2 - CALLOUT_OFFSET];
+  }
+
+  // Default: offset east from the state's eastern edge
+  return [maxLng - lng + CALLOUT_OFFSET, 0];
+}
+
+/**
  * Compute callout positions for states that need leader lines.
- * Positions are stacked vertically off the east coast, sorted north to south.
+ * Each callout is placed near its own state in the nearest open direction,
+ * then adjusted to prevent overlaps.
  */
 export function computeCalloutPositions(
   features: LabelFeature[],
@@ -105,26 +133,62 @@ export function computeCalloutPositions(
 
   if (needsCallout.length === 0) return [];
 
-  // Sort north to south (highest latitude first)
-  needsCallout.sort((a, b) => b.polylabel[1] - a.polylabel[1]);
+  // Step 1: Compute initial callout position per state
+  const callouts: CalloutPosition[] = needsCallout.map((feature) => {
+    const offset = getCalloutOffset(feature);
+    return {
+      name: feature.name,
+      value: feature.value,
+      fillColor: feature.fillColor,
+      anchorLngLat: feature.polylabel,
+      calloutLngLat: [
+        feature.polylabel[0] + offset[0],
+        feature.polylabel[1] + offset[1],
+      ] as [number, number],
+    };
+  });
 
-  // Find the easternmost bbox edge among all callout states for the column position
-  const maxEastLng = Math.max(...needsCallout.map((f) => f.bbox[2]));
-  const calloutLng = maxEastLng + CALLOUT_LNG_OFFSET;
+  // Step 2: Resolve overlaps — push apart callouts that are too close
+  resolveCalloutOverlaps(callouts);
 
-  // Stack callouts vertically starting from the northernmost state's latitude
-  const startLat = needsCallout[0].polylabel[1] + 0.5;
+  return callouts;
+}
 
-  return needsCallout.map((feature, index) => ({
-    name: feature.name,
-    value: feature.value,
-    fillColor: feature.fillColor,
-    anchorLngLat: feature.polylabel,
-    calloutLngLat: [calloutLng, startLat - index * CALLOUT_LAT_GAP] as [
-      number,
-      number,
-    ],
-  }));
+/**
+ * Nudge callouts apart so no two pills overlap.
+ * Uses a simple iterative approach: for each pair that's too close,
+ * push the lower-priority one (further south) away.
+ */
+function resolveCalloutOverlaps(callouts: CalloutPosition[]): void {
+  // Sort by latitude descending (north first gets priority)
+  callouts.sort((a, b) => b.calloutLngLat[1] - a.calloutLngLat[1]);
+
+  // Group by rough longitude zone (east column vs south column)
+  // Within each zone, resolve vertical overlaps
+  for (let pass = 0; pass < 5; pass++) {
+    let anyMoved = false;
+    for (let i = 0; i < callouts.length; i++) {
+      for (let j = i + 1; j < callouts.length; j++) {
+        const a = callouts[i].calloutLngLat;
+        const b = callouts[j].calloutLngLat;
+
+        const dLat = Math.abs(a[1] - b[1]);
+        const dLng = Math.abs(a[0] - b[0]);
+
+        // Only resolve if pills are in the same general area
+        if (dLng < MIN_CALLOUT_GAP_LNG && dLat < MIN_CALLOUT_GAP_LAT) {
+          // Push the lower one further south (or east if same latitude)
+          const pushDirection = a[1] > b[1] ? -1 : 1;
+          callouts[j].calloutLngLat = [
+            b[0],
+            b[1] + pushDirection * (MIN_CALLOUT_GAP_LAT - dLat),
+          ];
+          anyMoved = true;
+        }
+      }
+    }
+    if (!anyMoved) break;
+  }
 }
 
 /**
