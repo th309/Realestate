@@ -50,6 +50,7 @@ import { OrgAuditModule } from './org-audit/org-audit.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { OrgBillingModule } from './org-billing/org-billing.module';
 import { OrgBrandingModule } from './org-branding/org-branding.module';
+import { OrgEmbedsModule } from './org-embeds/org-embeds.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -120,6 +121,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     OrganizationsModule,
     OrgBillingModule,
     OrgBrandingModule,
+    OrgEmbedsModule,
   ],
   controllers: [AppController],
   providers: [
