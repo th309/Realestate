@@ -81,11 +81,12 @@
 
 ### Test Files
 
-| File                                                          | What It Tests                                    |
-| ------------------------------------------------------------- | ------------------------------------------------ |
-| `packages/backend/test/enterprise/branding.e2e-spec.ts`       | Logo upload, accent color, report branding       |
-| `packages/backend/test/enterprise/embeds.e2e-spec.ts`         | Token CRUD, widget data, CORS, origin validation |
-| `packages/frontend/test/enterprise/embed-widgets.e2e-spec.ts` | Playwright: widget rendering + branding          |
+| File                                                            | What It Tests                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------ |
+| `packages/backend/test/enterprise/branding.e2e-spec.ts`         | Logo upload, accent color, report branding             |
+| `packages/backend/test/enterprise/embeds.e2e-spec.ts`           | Token CRUD, widget data, CORS, origin validation       |
+| `packages/frontend/test/enterprise/embed-widgets.e2e-spec.ts`   | Playwright: widget rendering + branding                |
+| `packages/frontend/test/enterprise/report-branding.e2e-spec.ts` | Playwright: branded report header in app + shared link |
 
 ---
 
@@ -123,6 +124,12 @@ git commit -m "feat: add Supabase Storage bucket for org logos"
 ## Task 2: Org Branding Backend — Service, Controller, DTO
 
 Build the branding management backend: update accent color, upload/delete logo, public branding endpoint for shared reports.
+
+**PREREQUISITE:** Install `@types/multer` for NestJS file upload types:
+
+```bash
+cd packages/backend && npm install --save-dev @types/multer
+```
 
 **Files:**
 
@@ -202,7 +209,7 @@ This is a separate controller to keep the auth boundary clear.
 
 - [ ] **Step 5: Create OrgBrandingModule**
 
-Import OrgAuditModule. Provide guards (OrgContextGuard, OrgAdminGuard). Export OrgBrandingService.
+Import OrgAuditModule. Import guards directly from `'../organizations/guards'` (barrel export) — do NOT re-provide them, just import OrganizationsModule which already exports them. Export OrgBrandingService.
 
 - [ ] **Step 6: Register in app.module.ts**
 
@@ -285,6 +292,8 @@ Reads `?token=` from query params. If present:
 3. If validation fails → 403
 
 If no token present → allow through (backwards compatibility for existing public embeds).
+
+**IMPORTANT:** Also verify `embed_enabled = true` on the token's org. If the org has embeds disabled, reject with 403 even if the token is valid.
 
 The `widgetType` is derived from the URL path: `/api/embed/score/*` → 'score', `/api/embed/metric-card/*` → 'metric_card', `/api/embed/map/*` → 'map'.
 
@@ -606,18 +615,20 @@ In the existing ReportHeader, check if the report has `organization_id`. If yes,
 
 - [ ] **Step 4: Update shared report page**
 
-In `shared/report/[token]/page.tsx`, fetch org branding from the report's organization_id and pass to BrandingProvider:
+In `shared/report/[token]/page.tsx`, fetch org branding from the report's organization_id and pass to BrandingProvider.
+
+**IMPORTANT:** The existing `BrandingProvider` takes a `branding` prop (not `config`), and `BrandingConfig` does NOT have `websiteUrl`. You MUST first update `BrandingConfig` in `app/reports/[id]/components/BrandingProvider.tsx` to add `websiteUrl?: string`, then wire:
 
 ```typescript
-const branding = report.organization_id
+const brandingData = report.organization_id
   ? await fetchPublicBranding(report.organization_id)
   : null;
 
-<BrandingProvider config={branding ? {
-  logoUrl: branding.logo_url,
-  primaryColor: branding.accent_color,
-  companyName: branding.org_name,
-  websiteUrl: branding.website_url,
+<BrandingProvider branding={brandingData ? {
+  logoUrl: brandingData.logo_url,
+  primaryColor: brandingData.accent_color,
+  companyName: brandingData.org_name,
+  websiteUrl: brandingData.website_url,
 } : undefined}>
 ```
 
@@ -689,11 +700,19 @@ git commit -m "test: add branding and embed integration tests"
 - "Powered by PropertyIQ" link present on all widgets
 - Widget renders without token (backwards compat) → no branding bar, widget still works
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Write Playwright report branding tests**
+
+Create `packages/frontend/test/enterprise/report-branding.e2e-spec.ts` with 3 tests:
+
+- Branded report header shows org logo + accent color + "Prepared by [Org Name]"
+- Shared report link shows branded header with org branding
+- "Powered by PropertyIQ" is always visible on branded reports
+
+- [ ] **Step 3: Commit**
 
 ```bash
 git add packages/frontend/test/enterprise/
-git commit -m "test: add Playwright E2E tests for embeddable widgets"
+git commit -m "test: add Playwright E2E tests for embeddable widgets and report branding"
 ```
 
 ---
