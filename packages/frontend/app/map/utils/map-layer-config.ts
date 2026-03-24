@@ -190,9 +190,12 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
         "text-size": 15,
         // Fixed center anchor — polylabel + bbox center computes the visual center,
         // so we don't need variable-anchor collision avoidance (which shifts labels
-        // away from the intended position, e.g. California drifting to LA)
+        // away from the intended position, e.g. California drifting to LA).
+        // allow-overlap: true ensures every state shows its label — hiding labels
+        // via collision detection causes states like MS, WV, MD, GA to disappear.
         "text-anchor": "center",
-        "text-allow-overlap": false,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
         "text-max-width": 8,
         "text-letter-spacing": 0.02,
       },
