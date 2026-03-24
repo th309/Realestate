@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
-import { Breadcrumbs } from "@/components/navigation";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { SearchWidget } from "@/app/map/components/SearchWidget";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
 import type { SearchResult } from "@/app/map/types";
@@ -76,23 +76,13 @@ export function MarketLanding() {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
-        <Breadcrumbs items={[{ label: "Markets" }]} className="mb-4" />
-
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-primary mb-1">
-            <TrendingUp className="w-5 h-5" />
-            <span className="text-xs font-medium uppercase tracking-wider">
-              Market Intelligence
-            </span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-medium text-on-surface tracking-tight">
-            Explore Markets
-          </h1>
-          <p className="text-on-surface-variant text-sm mt-1">
-            AI-powered market analysis for metros, counties, and zip codes
-          </p>
-        </div>
+        <PageHeaderWithBreadcrumbs
+          breadcrumbs={[{ label: "Markets" }]}
+          title="Explore Markets"
+          description="AI-powered market analysis for metros, counties, and zip codes"
+          icon={<TrendingUp className="w-5 h-5" />}
+          className="mb-8"
+        />
 
         {/* Search Section */}
         <div className="bg-surface-container rounded-3xl p-8 md:p-12 mb-8 border border-outline-variant">

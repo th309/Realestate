@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ChevronRight, Home } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import { ChevronRight, Home } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -21,13 +21,18 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
   items,
   showHome = true,
   separator,
-  className = '',
+  className = "",
 }) => {
   const allItems = showHome
-    ? [{ label: 'Home', href: '/', icon: <Home className="w-4 h-4" /> }, ...items]
+    ? [
+        { label: "Home", href: "/", icon: <Home className="w-4 h-4" /> },
+        ...items,
+      ]
     : items;
 
-  const Separator = separator || <ChevronRight className="w-4 h-4 text-on-surface-variant" />;
+  const Separator = separator || (
+    <ChevronRight className="w-4 h-4 text-on-surface-variant" />
+  );
 
   return (
     <nav aria-label="Breadcrumb" className={className}>
@@ -51,9 +56,9 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
                 <span
                   className={`
                     flex items-center gap-1.5 text-sm
-                    ${isLast ? 'text-on-surface font-medium' : 'text-on-surface-variant'}
+                    ${isLast ? "text-on-surface font-medium" : "text-on-surface-variant"}
                   `}
-                  aria-current={isLast ? 'page' : undefined}
+                  aria-current={isLast ? "page" : undefined}
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -76,12 +81,15 @@ export const CollapsibleBreadcrumbs: React.FC<CollapsibleBreadcrumbsProps> = ({
   items,
   showHome = true,
   maxVisible = 3,
-  className = '',
+  className = "",
 }) => {
   const [expanded, setExpanded] = React.useState(false);
 
   const allItems = showHome
-    ? [{ label: 'Home', href: '/', icon: <Home className="w-4 h-4" /> }, ...items]
+    ? [
+        { label: "Home", href: "/", icon: <Home className="w-4 h-4" /> },
+        ...items,
+      ]
     : items;
 
   if (allItems.length <= maxVisible || expanded) {
@@ -101,7 +109,7 @@ export const CollapsibleBreadcrumbs: React.FC<CollapsibleBreadcrumbsProps> = ({
         {/* First item */}
         <li className="flex items-center gap-1">
           <Link
-            href={firstItem.href || '/'}
+            href={firstItem.href || "/"}
             className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition-colors"
           >
             {firstItem.icon}
@@ -142,9 +150,9 @@ export const CollapsibleBreadcrumbs: React.FC<CollapsibleBreadcrumbsProps> = ({
                 <span
                   className={`
                     flex items-center gap-1.5 text-sm
-                    ${isLast ? 'text-on-surface font-medium' : 'text-on-surface-variant'}
+                    ${isLast ? "text-on-surface font-medium" : "text-on-surface-variant"}
                   `}
-                  aria-current={isLast ? 'page' : undefined}
+                  aria-current={isLast ? "page" : undefined}
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -168,14 +176,9 @@ interface PageHeaderWithBreadcrumbsProps {
   className?: string;
 }
 
-export const PageHeaderWithBreadcrumbs: React.FC<PageHeaderWithBreadcrumbsProps> = ({
-  breadcrumbs,
-  title,
-  description,
-  icon,
-  actions,
-  className = '',
-}) => {
+export const PageHeaderWithBreadcrumbs: React.FC<
+  PageHeaderWithBreadcrumbsProps
+> = ({ breadcrumbs, title, description, icon, actions, className = "" }) => {
   return (
     <div className={`space-y-3 ${className}`}>
       <Breadcrumbs items={breadcrumbs} />
@@ -188,12 +191,14 @@ export const PageHeaderWithBreadcrumbs: React.FC<PageHeaderWithBreadcrumbsProps>
                 {icon}
               </div>
             )}
-            <h1 className="text-2xl md:text-3xl font-medium text-on-surface tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight">
               {title}
             </h1>
           </div>
           {description && (
-            <p className="text-sm text-on-surface-variant mt-1">{description}</p>
+            <p className="mt-2 text-base text-on-surface-variant">
+              {description}
+            </p>
           )}
         </div>
 

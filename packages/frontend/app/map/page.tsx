@@ -69,7 +69,7 @@ mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 export default function MapPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-gray-900" />}>
+    <Suspense fallback={<div className="h-screen w-full bg-surface" />}>
       <MapPageInner />
     </Suspense>
   );
@@ -148,6 +148,8 @@ function MapPageInner() {
     "popular",
   ]);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const sidebarCollapsedManualRef = useRef(false);
   const [viewMode, setViewMode] = useState<ViewMode>("homebuyer");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedGeography, setSelectedGeography] =
@@ -193,6 +195,25 @@ function MapPageInner() {
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  }, []);
+
+  // Auto-collapse sidebar on narrow screens (<1440px), auto-expand on wide screens.
+  // Manual toggle overrides auto-behavior until the next resize crosses the threshold.
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1440px)");
+    // Set initial state based on current viewport
+    setSidebarCollapsed(!mql.matches);
+    const handleChange = (e: MediaQueryListEvent) => {
+      sidebarCollapsedManualRef.current = false;
+      setSidebarCollapsed(!e.matches);
+    };
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  const handleToggleSidebarCollapsed = useCallback(() => {
+    sidebarCollapsedManualRef.current = true;
+    setSidebarCollapsed((prev) => !prev);
   }, []);
 
   // Sync core state to URL so the browser back button restores previous view.
@@ -478,7 +499,7 @@ function MapPageInner() {
     fetchMapData,
   ]);
 
-  // Handle Mapbox resize when right panel opens/closes
+  // Handle Mapbox resize when right panel or sidebar collapse state changes
   useEffect(() => {
     if (!map.current) return;
 
@@ -488,7 +509,7 @@ function MapPageInner() {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [rightPanelOpen]);
+  }, [rightPanelOpen, sidebarCollapsed]);
 
   // Initialize map
   useEffect(() => {
@@ -676,7 +697,7 @@ function MapPageInner() {
       }}
     >
       {/* Map Controls Toolbar */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 z-20 shadow-sm">
+      <div className="bg-surface-container-lowest/80 backdrop-blur-md border-b border-outline-variant px-4 py-3 z-20 shadow-sm">
         <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center gap-4">
           {/* Top Row (Desktop) or Only Row (Mobile) */}
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
@@ -689,7 +710,7 @@ function MapPageInner() {
 
             {/* Sidebar Toggle */}
             <button
-              className="p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-full transition-all duration-200 active:scale-95 flex-shrink-0"
+              className="p-2.5 text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-full transition-all duration-200 active:scale-95 flex-shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle sidebar"
             >
@@ -780,6 +801,8 @@ function MapPageInner() {
             sidebarWidth={sidebarWidth}
             viewMode={viewMode}
             mobileMenuOpen={mobileMenuOpen}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebarCollapsed={handleToggleSidebarCollapsed}
             onToggleCategory={toggleCategory}
             onSelectMetric={(id: string) => {
               trackEvent("feature.map_filter", {
@@ -811,14 +834,11 @@ function MapPageInner() {
             </div>
           )}
           {effectiveDataLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-surface/80 z-10">
-              <div className="flex flex-col items-center gap-3">
-                {/* M3 Circular Progress Indicator */}
-                <div className="w-8 h-8 border-4 border-primary-container border-t-primary rounded-full animate-spin"></div>
-                <p className="text-on-surface-variant">
-                  Loading {geoLevel} data...
-                </p>
-              </div>
+            <div className="absolute inset-0 z-10 animate-pulse bg-surface/80 p-4 flex flex-col">
+              {/* Skeleton: map area */}
+              <div className="flex-1 bg-surface-container-high rounded-xl" />
+              {/* Skeleton: legend bar */}
+              <div className="mt-3 h-10 w-64 bg-surface-container-high rounded-xl" />
             </div>
           )}
           <div

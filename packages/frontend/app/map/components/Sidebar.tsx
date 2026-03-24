@@ -60,6 +60,8 @@ interface SidebarProps {
   onViewModeChange: (mode: ViewMode) => void;
   onCloseMobileMenu: () => void;
   onScoreCardClick?: () => void;
+  sidebarCollapsed?: boolean;
+  onToggleSidebarCollapsed?: () => void;
 }
 
 export function Sidebar({
@@ -88,6 +90,8 @@ export function Sidebar({
   onViewModeChange,
   onCloseMobileMenu,
   onScoreCardClick,
+  sidebarCollapsed = false,
+  onToggleSidebarCollapsed,
 }: SidebarProps) {
   return (
     <aside
@@ -132,13 +136,50 @@ export function Sidebar({
             </Link>
           );
         })}
+
+        {/* Spacer to push toggle to bottom */}
+        <div className="flex-1" />
+
+        {/* Collapse/expand toggle - desktop only */}
+        {onToggleSidebarCollapsed && (
+          <button
+            onClick={onToggleSidebarCollapsed}
+            className="hidden md:flex w-10 h-10 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors duration-200"
+            aria-label={
+              sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform duration-200 ${sidebarCollapsed ? "" : "rotate-180"}`}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* Metric Panel - fixed 256px on mobile, dynamic sidebarWidth on desktop via CSS variable */}
+      {/* Metric Panel - fixed 256px on mobile, dynamic sidebarWidth on desktop via CSS variable.
+          On desktop (md+), hidden when sidebarCollapsed is true. On mobile, always visible (controlled by mobileMenuOpen on the aside). */}
       <div
-        className="sidebar-panel overflow-y-auto p-3 md:p-4 h-full"
+        className={`sidebar-panel overflow-y-auto p-3 md:p-4 h-full transition-[width,opacity] duration-300 ${
+          sidebarCollapsed
+            ? "md:w-0 md:opacity-0 md:overflow-hidden md:p-0"
+            : ""
+        }`}
         style={
-          { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
+          {
+            "--sidebar-width": sidebarCollapsed ? "0px" : `${sidebarWidth}px`,
+          } as React.CSSProperties
         }
       >
         {/* Mobile header with close button */}
@@ -238,10 +279,12 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Resize handle - hidden on mobile */}
+      {/* Resize handle - hidden on mobile and when sidebar is collapsed */}
       <div
         onMouseDown={onMouseDown}
-        className="hidden md:block w-1 hover:w-1.5 bg-transparent hover:bg-primary/30 cursor-col-resize transition-all duration-200 flex-shrink-0 group"
+        className={`hidden w-1 hover:w-1.5 bg-transparent hover:bg-primary/30 cursor-col-resize transition-all duration-200 flex-shrink-0 group ${
+          sidebarCollapsed ? "" : "md:block"
+        }`}
         title="Drag to resize sidebar"
       >
         <div className="w-full h-full flex items-center justify-center">

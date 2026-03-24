@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Check, X, Lock } from 'lucide-react';
-import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
-import { PaywallCard } from '@/components/entitlements/PaywallCard';
-import type { GeoLevel } from '@/lib/data';
-import { MetricTitle } from '@/app/components/MetricTitle';
+import React, { useState, useEffect, useMemo } from "react";
+import { Check, X, Lock } from "lucide-react";
+import { useAllMetricOptions } from "@/app/map/hooks/useMetricOptions";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import type { GeoLevel } from "@/lib/data";
+import { MetricTitle } from "@/app/components/MetricTitle";
 
 // Available metrics for selection
 interface AvailableMetric {
@@ -19,38 +19,95 @@ interface AvailableMetric {
 // Map metric IDs to UI categories (must match metric-categories.tsx)
 function getMetricCategory(metricId: string): string {
   // Affordability metrics
-  if (['affordable_home_price', 'home_value_yoy', 'home_value_5yr', 'income_to_buy', 'listing_price', 'price_per_sqft', 'years_to_save'].includes(metricId)) {
-    return 'AFFORDABILITY';
+  if (
+    [
+      "affordable_home_price",
+      "home_value_yoy",
+      "home_value_5yr",
+      "income_to_buy",
+      "listing_price",
+      "price_per_sqft",
+      "years_to_save",
+    ].includes(metricId)
+  ) {
+    return "AFFORDABILITY";
   }
   // Cash Flow metrics (Investor)
-  if (['cap_rate', 'rent_index', 'rent_for_houses'].includes(metricId)) {
-    return 'CASH FLOW';
+  if (["cap_rate", "rent_index", "rent_for_houses"].includes(metricId)) {
+    return "CASH FLOW";
   }
   // Local Economy metrics
-  if (['cost_of_living', 'gdp_growth', 'job_growth', 'unemployment_rate'].includes(metricId)) {
-    return 'LOCAL ECONOMY';
+  if (
+    [
+      "cost_of_living",
+      "gdp_growth",
+      "job_growth",
+      "unemployment_rate",
+    ].includes(metricId)
+  ) {
+    return "LOCAL ECONOMY";
   }
   // Market Competition metrics
-  if (['days_on_market', 'hotness_score', 'for_sale_inventory', 'inventory_yoy', 'new_listings_yoy', 'pending_ratio', 'sale_to_list', 'home_value_mom', 'price_cut_pct', 'price_increase_pct', 'new_listings', 'inventory_surplus'].includes(metricId)) {
-    return 'MARKET COMPETITION';
+  if (
+    [
+      "days_on_market",
+      "hotness_score",
+      "for_sale_inventory",
+      "inventory_yoy",
+      "new_listings_yoy",
+      "pending_ratio",
+      "sale_to_list",
+      "home_value_mom",
+      "price_cut_pct",
+      "price_increase_pct",
+      "new_listings",
+      "inventory_surplus",
+    ].includes(metricId)
+  ) {
+    return "MARKET COMPETITION";
   }
   // Appreciation metrics (Investor)
-  if (['home_value', 'overvalued_pct'].includes(metricId)) {
-    return 'APPRECIATION';
+  if (["home_value", "overvalued_pct"].includes(metricId)) {
+    return "APPRECIATION";
   }
   // Area Profile metrics
-  if (['population', 'population_growth', 'median_income', 'income_growth', 'median_age', 'homeownership_rate'].includes(metricId)) {
-    return 'AREA PROFILE';
+  if (
+    [
+      "population",
+      "population_growth",
+      "median_income",
+      "income_growth",
+      "median_age",
+      "homeownership_rate",
+    ].includes(metricId)
+  ) {
+    return "AREA PROFILE";
   }
   // New Construction metrics
-  if (['sf_permits', 'mf_permits', 'total_permits', 'permits_yoy', 'sf_mf_ratio', 'permit_value_per_unit', 'new_construction_sales', 'new_construction_price', 'new_construction_ppsf'].includes(metricId)) {
-    return 'NEW CONSTRUCTION';
+  if (
+    [
+      "sf_permits",
+      "mf_permits",
+      "total_permits",
+      "permits_yoy",
+      "sf_mf_ratio",
+      "permit_value_per_unit",
+      "new_construction_sales",
+      "new_construction_price",
+      "new_construction_ppsf",
+    ].includes(metricId)
+  ) {
+    return "NEW CONSTRUCTION";
   }
   // PropertyIQ Scores
-  if (['homeready_score', 'investoredge_score', 'market_health_score'].includes(metricId)) {
-    return 'PROPERTYIQ SCORES';
+  if (
+    ["homeready_score", "investoredge_score", "market_health_score"].includes(
+      metricId,
+    )
+  ) {
+    return "PROPERTYIQ SCORES";
   }
-  return 'OTHER';
+  return "OTHER";
 }
 
 export interface MetricSelectorProps {
@@ -67,19 +124,21 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
   onSave,
   onCancel,
   maxSelections = 3,
-  className = '',
+  className = "",
   geoLevel,
 }) => {
   const [selected, setSelected] = useState<string[]>(selectedMetrics);
-  
+
   // Use data binding layer to get available metrics
   const { options: metricOptions, loading } = useAllMetricOptions(geoLevel);
-  
-  const [paywallMetric, setPaywallMetric] = useState<AvailableMetric | null>(null);
+
+  const [paywallMetric, setPaywallMetric] = useState<AvailableMetric | null>(
+    null,
+  );
 
   // Transform metric options to AvailableMetric format with UI categories
   const availableMetrics = useMemo((): AvailableMetric[] => {
-    return metricOptions.map(opt => ({
+    return metricOptions.map((opt) => ({
       id: opt.value,
       name: opt.label,
       category: getMetricCategory(opt.value),
@@ -95,28 +154,38 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
 
   // Group metrics by the 4 categories
   const groupedMetrics = useMemo(() => {
-    return availableMetrics.reduce((acc, m) => {
-      if (!acc[m.category]) acc[m.category] = [];
-      acc[m.category].push(m);
-      return acc;
-    }, {} as Record<string, AvailableMetric[]>);
+    return availableMetrics.reduce(
+      (acc, m) => {
+        if (!acc[m.category]) acc[m.category] = [];
+        acc[m.category].push(m);
+        return acc;
+      },
+      {} as Record<string, AvailableMetric[]>,
+    );
   }, [availableMetrics]);
 
   // Define category order (matches sidebar structure)
   const categoryOrder = [
-    'AFFORDABILITY', 'MARKET COMPETITION', 'CASH FLOW', 'APPRECIATION',
-    'AREA PROFILE', 'LOCAL ECONOMY', 'NEW CONSTRUCTION', 'PROPERTYIQ SCORES', 'OTHER'
+    "AFFORDABILITY",
+    "MARKET COMPETITION",
+    "CASH FLOW",
+    "APPRECIATION",
+    "AREA PROFILE",
+    "LOCAL ECONOMY",
+    "NEW CONSTRUCTION",
+    "PROPERTYIQ SCORES",
+    "OTHER",
   ];
 
   const toggleMetric = (metricId: string) => {
-    const metric = availableMetrics.find(m => m.id === metricId);
+    const metric = availableMetrics.find((m) => m.id === metricId);
     if (metric?.locked) {
       setPaywallMetric(metric);
       return;
     }
-    setSelected(prev => {
+    setSelected((prev) => {
       if (prev.includes(metricId)) {
-        return prev.filter(id => id !== metricId);
+        return prev.filter((id) => id !== metricId);
       }
       if (metric?.disabled) return prev;
       if (prev.length < maxSelections) {
@@ -127,10 +196,13 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
   };
 
   return (
-    <div className={`bg-surface-container-high border border-outline-variant rounded-xl shadow-lg p-4 overflow-y-auto ${className}`}>
+    <div
+      className={`bg-surface-container-high border border-outline-variant rounded-xl shadow-lg p-4 overflow-y-auto ${className}`}
+    >
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm font-medium text-on-surface">
-          Select up to {maxSelections} metrics ({selected.length}/{maxSelections})
+          Select up to {maxSelections} metrics ({selected.length}/
+          {maxSelections})
         </span>
         <div className="flex gap-2">
           <button
@@ -155,14 +227,14 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
         {categoryOrder.map((category) => {
           const metrics = groupedMetrics[category] || [];
           if (metrics.length === 0) return null;
-          
+
           return (
             <div key={category}>
               <div className="text-xs font-semibold text-on-surface-variant uppercase mb-2">
                 {category}
               </div>
               <div className="flex flex-wrap gap-2">
-                {metrics.map(m => {
+                {metrics.map((m) => {
                   const isSelected = selected.includes(m.id);
                   const isDisabled = m.disabled && !isSelected;
                   return (
@@ -172,15 +244,17 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
                       disabled={isDisabled && !m.locked}
                       className={`
                         px-4 py-2 rounded-full text-sm font-medium transition-all inline-flex items-center gap-1.5
-                        ${isSelected
-                          ? 'bg-primary text-white shadow-md'
-                          : m.locked
-                            ? 'bg-surface-container text-on-surface-variant/60 border border-outline-variant cursor-pointer hover:bg-surface-container-high'
-                            : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border border-outline-variant'
+                        ${
+                          isSelected
+                            ? "bg-primary text-on-primary shadow-md"
+                            : m.locked
+                              ? "bg-surface-container text-on-surface-variant/60 border border-outline-variant cursor-pointer hover:bg-surface-container-high"
+                              : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high border border-outline-variant"
                         }
-                        ${isDisabled && !m.locked
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'cursor-pointer'
+                        ${
+                          isDisabled && !m.locked
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer"
                         }
                       `}
                     >
@@ -201,7 +275,7 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
           onClick={() => setPaywallMetric(null)}
         >
-          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+          <div className="max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <PaywallCard
               type="metric"
               id={paywallMetric.id}

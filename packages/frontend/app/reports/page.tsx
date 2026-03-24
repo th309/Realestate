@@ -31,7 +31,7 @@ import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 import { useAuth } from "@/lib/auth";
-import { Breadcrumbs } from "@/components/navigation";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
 import { SearchWidget } from "@/app/map/components/SearchWidget";
 import type { SearchResult } from "@/app/map/types";
@@ -945,16 +945,27 @@ function ReportHistory() {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+      <div className="py-8 animate-pulse space-y-3">
+        <div className="h-14 bg-surface-container-high rounded-xl" />
+        <div className="h-14 bg-surface-container-high rounded-xl" />
+        <div className="h-14 bg-surface-container-high rounded-xl" />
       </div>
     );
   }
 
   if (reports.length === 0) {
     return (
-      <div className="text-center py-12 text-on-surface-variant border border-dashed border-outline-variant/50 rounded-2xl">
-        No reports yet. Create your first one above!
+      <div className="text-center py-14 px-6 border border-dashed border-outline-variant/50 rounded-2xl">
+        <div className="w-12 h-12 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-6 h-6 text-primary/60" />
+        </div>
+        <p className="text-base font-medium text-on-surface mb-1">
+          No reports yet
+        </p>
+        <p className="text-sm text-on-surface-variant max-w-xs mx-auto">
+          Pick a report type above to generate your first AI-powered market
+          analysis.
+        </p>
       </div>
     );
   }
@@ -1029,16 +1040,13 @@ function ReportsContent() {
   return (
     <div className="min-h-screen bg-surface" data-tour="reports-section">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <Breadcrumbs items={[{ label: "Reports" }]} className="mb-6" />
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight mb-3">
-            Create a Report
-          </h1>
-          <p className="text-lg text-on-surface-variant max-w-xl mx-auto">
-            Get AI-powered market analysis tailored to your goals
-          </p>
-        </div>
+        <PageHeaderWithBreadcrumbs
+          breadcrumbs={[{ label: "Reports" }]}
+          title="Create a Report"
+          description="Get AI-powered market analysis tailored to your goals"
+          icon={<FileText className="w-5 h-5" />}
+          className="mb-12"
+        />
 
         {/* Report Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -1109,12 +1117,19 @@ function ReportsContent() {
 
 function LoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-screen bg-surface">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-on-surface-variant font-medium">
-          Loading reports...
-        </p>
+    <div className="h-screen bg-surface px-6 py-10">
+      <div className="max-w-5xl mx-auto animate-pulse">
+        {/* Skeleton: page title */}
+        <div className="h-8 w-48 bg-surface-container-high rounded-xl mb-8" />
+        {/* Skeleton: report type cards (grid of 3) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="h-64 bg-surface-container-high rounded-3xl" />
+          <div className="h-64 bg-surface-container-high rounded-3xl" />
+          <div className="h-64 bg-surface-container-high rounded-3xl" />
+        </div>
+        {/* Skeleton: recent reports section */}
+        <div className="h-6 w-36 bg-surface-container-high rounded-xl mb-4" />
+        <div className="h-32 bg-surface-container-high rounded-xl" />
       </div>
     </div>
   );
@@ -1147,18 +1162,13 @@ function ReportsLanding() {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <Breadcrumbs items={[{ label: "Reports" }]} className="mb-8" />
-
-        {/* Hero */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight mb-3">
-            AI-Powered Market Reports
-          </h1>
-          <p className="text-lg text-on-surface-variant max-w-2xl mx-auto">
-            Get comprehensive market analysis tailored to homebuyers and
-            investors. See a real report below.
-          </p>
-        </div>
+        <PageHeaderWithBreadcrumbs
+          breadcrumbs={[{ label: "Reports" }]}
+          title="AI-Powered Market Reports"
+          description="Get comprehensive market analysis tailored to homebuyers and investors. See a real report below."
+          icon={<FileText className="w-5 h-5" />}
+          className="mb-10"
+        />
 
         {/* Sample Report CTA - prominent */}
         <a

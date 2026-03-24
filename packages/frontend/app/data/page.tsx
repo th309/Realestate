@@ -274,15 +274,10 @@ export default function DataPage() {
       <PageHeaderWithBreadcrumbs
         breadcrumbs={[{ label: "Data Sources" }]}
         title="Data Sources"
+        description="PropertyIQ aggregates data from trusted federal agencies and leading real estate data providers. Below are the sources powering our analytics, the metrics we derive from each, and links to their original data portals."
         icon={<Database className="w-5 h-5" />}
+        className="mb-8"
       />
-
-      <p className="text-on-surface-variant mt-6 mb-8 max-w-3xl">
-        PropertyIQ aggregates data from trusted federal agencies and leading
-        real estate data providers. Below are the sources powering our
-        analytics, the metrics we derive from each, and links to their original
-        data portals.
-      </p>
 
       <div className="space-y-10">
         {DATA_PROVIDERS.map((provider) => {

@@ -1,3 +1,5 @@
+import { Home, TrendingUp, ShieldCheck } from "lucide-react";
+
 /** "How to Use PropertyIQ Scores" section — guidance for buyers, investors, and risk. */
 export function HowToUseScoresSection() {
   return (
@@ -7,12 +9,15 @@ export function HowToUseScoresSection() {
           How to Use PropertyIQ Scores
         </h2>
 
-        <div className="space-y-8">
-          <div>
-            <h3 className="text-lg font-medium text-on-surface mb-3">
-              For Homebuyers
-            </h3>
-            <p className="text-on-surface-variant leading-relaxed">
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Home className="w-5 h-5 text-on-surface" />
+              <h3 className="text-base font-medium text-on-surface">
+                For Homebuyers
+              </h3>
+            </div>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
               The HomeReady Score identifies markets where home values are most
               likely to appreciate over the next 1-3 years. Start by filtering
               for markets with a HomeReady score above 70, then narrow by your
@@ -23,11 +28,14 @@ export function HowToUseScoresSection() {
             </p>
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-on-surface mb-3">
-              For Real Estate Investors
-            </h3>
-            <p className="text-on-surface-variant leading-relaxed">
+          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <TrendingUp className="w-5 h-5 text-on-surface" />
+              <h3 className="text-base font-medium text-on-surface">
+                For Real Estate Investors
+              </h3>
+            </div>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
               The InvestorEdge Score measures total return potential including
               rental yield, price appreciation, and market stability.
               High-scoring markets (75+) tend to offer the best risk-adjusted
@@ -38,11 +46,14 @@ export function HowToUseScoresSection() {
             </p>
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-on-surface mb-3">
-              For Risk Assessment
-            </h3>
-            <p className="text-on-surface-variant leading-relaxed">
+          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldCheck className="w-5 h-5 text-on-surface" />
+              <h3 className="text-base font-medium text-on-surface">
+                For Risk Assessment
+              </h3>
+            </div>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
               The Market Health Score evaluates market fundamentals:
               supply/demand balance, economic diversity, population trends, and
               affordability ratios. Markets with low Market Health scores (below

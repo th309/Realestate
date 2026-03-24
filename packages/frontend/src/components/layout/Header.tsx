@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
+import { ChevronDown } from "lucide-react";
 import {
   MenuIcon,
   CloseIcon,
@@ -25,17 +26,129 @@ import {
   ScoreIcon,
 } from "@/src/components/common/Icons";
 
-const NAV_LINKS = [
+/* ─── Nav structure ─── */
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavDropdown {
+  name: string;
+  items: NavItem[];
+}
+
+type NavEntry = NavItem | NavDropdown;
+
+function isDropdown(entry: NavEntry): entry is NavDropdown {
+  return "items" in entry;
+}
+
+const NAV: NavEntry[] = [
   { name: "Home", href: "/", icon: HomeIcon },
-  { name: "Maps", href: "/map", icon: MapIcon },
-  { name: "Markets", href: "/market", icon: MarketsIcon },
-  { name: "Graphs", href: "/graphs", icon: TrendingIcon },
+  {
+    name: "Explore",
+    items: [
+      { name: "Maps", href: "/map", icon: MapIcon },
+      { name: "Markets", href: "/market", icon: MarketsIcon },
+      { name: "Graphs", href: "/graphs", icon: TrendingIcon },
+    ],
+  },
   { name: "Reports", href: "/reports", icon: ArticleIcon },
   { name: "Scores", href: "/scores", icon: ScoreIcon },
-  { name: "Blog", href: "/blog", icon: BookIcon },
-  { name: "About us", href: "/about", icon: InfoIcon },
   { name: "Pricing", href: "/pricing", icon: MoneyIcon },
+  {
+    name: "More",
+    items: [
+      { name: "Blog", href: "/blog", icon: BookIcon },
+      { name: "About us", href: "/about", icon: InfoIcon },
+    ],
+  },
 ];
+
+/** Flat list of all nav items for mobile menu and active-state detection */
+const ALL_NAV_ITEMS: NavItem[] = NAV.flatMap((entry) =>
+  isDropdown(entry) ? entry.items : [entry],
+);
+
+/* ─── Dropdown component ─── */
+
+function NavDropdownMenu({
+  label,
+  items,
+  pathname,
+}: {
+  label: string;
+  items: NavItem[];
+  pathname: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const isChildActive = items.some(
+    (item) =>
+      pathname === item.href ||
+      (item.href !== "/" && pathname?.startsWith(item.href)),
+  );
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open, close]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+          isChildActive
+            ? "text-primary bg-primary-container/30"
+            : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+        }`}
+      >
+        {label}
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/50 overflow-hidden z-50">
+          <div className="py-1">
+            {items.map((item) => {
+              const active =
+                pathname === item.href ||
+                (item.href !== "/" && pathname?.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={close}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "text-primary bg-primary-container/20"
+                      : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Header ─── */
 
 export function Header() {
   const pathname = usePathname();
@@ -75,21 +188,31 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1 ml-8">
-            {NAV_LINKS.map((link) => {
+            {NAV.map((entry) => {
+              if (isDropdown(entry)) {
+                return (
+                  <NavDropdownMenu
+                    key={entry.name}
+                    label={entry.name}
+                    items={entry.items}
+                    pathname={pathname}
+                  />
+                );
+              }
               const isActive =
-                pathname === link.href ||
-                (link.href !== "/" && pathname?.startsWith(link.href));
+                pathname === entry.href ||
+                (entry.href !== "/" && pathname?.startsWith(entry.href));
               return (
                 <Link
-                  key={link.name}
-                  href={link.href}
+                  key={entry.name}
+                  href={entry.href}
                   className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? "text-primary bg-primary-container/30"
                       : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                   }`}
                 >
-                  {link.name}
+                  {entry.name}
                 </Link>
               );
             })}
@@ -204,21 +327,43 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — flat list grouped by section */}
       {isMenuOpen && (
         <div className="md:hidden border-t border-outline-variant bg-surface-container-lowest absolute w-full shadow-lg">
-          <div className="px-4 py-4 space-y-2">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <link.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
-                {link.name}
-              </Link>
-            ))}
+          <div className="px-4 py-4 space-y-1">
+            {NAV.map((entry) => {
+              if (isDropdown(entry)) {
+                return (
+                  <div key={entry.name}>
+                    <p className="px-4 pt-3 pb-1 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                      {entry.name}
+                    </p>
+                    {entry.items.map((item) => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <item.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={entry.name}
+                  href={entry.href}
+                  className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <entry.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
+                  {entry.name}
+                </Link>
+              );
+            })}
             <div className="h-px bg-outline-variant my-3" />
             {loading ? null : !!user ? (
               <button
@@ -266,7 +411,7 @@ function DropdownItem({
   label,
   href,
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   href: string;
 }) {

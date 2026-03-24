@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CreditCard,
@@ -25,6 +32,93 @@ import { useAuth } from "@/lib/auth";
 import { fetchPricingSummary, type PricingTier } from "@/lib/data";
 import { startCheckout } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
+
+/* ------------------------------------------------------------------ */
+/* CollapsibleFeature — accordion wrapper for pricing feature sections */
+/* ------------------------------------------------------------------ */
+interface CollapsibleFeatureProps {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}
+
+function CollapsibleFeature({
+  id,
+  icon,
+  title,
+  subtitle,
+  summary,
+  defaultOpen = false,
+  children,
+}: CollapsibleFeatureProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number | undefined>(
+    undefined,
+  );
+
+  // Measure the content height whenever it's rendered
+  const measureHeight = useCallback(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    measureHeight();
+    // Re-measure when window resizes (content may reflow)
+    window.addEventListener("resize", measureHeight);
+    return () => window.removeEventListener("resize", measureHeight);
+  }, [measureHeight]);
+
+  // If navigated to via anchor, auto-expand
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === `#${id}`) {
+      setIsOpen(true);
+    }
+  }, [id]);
+
+  return (
+    <section id={id} className="scroll-mt-24 mb-20">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full flex items-center gap-2.5 mb-3 group cursor-pointer text-left"
+        aria-expanded={isOpen}
+        aria-controls={`${id}-content`}
+      >
+        <div className="p-1.5 rounded-lg bg-primary/10">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold text-on-surface">{title}</h3>
+          <p className="text-xs text-on-surface-variant">{subtitle}</p>
+        </div>
+        {!isOpen && (
+          <span className="hidden md:block text-sm text-on-surface-variant/60 truncate max-w-[50%]">
+            {summary}
+          </span>
+        )}
+        <ChevronDown
+          className={`w-5 h-5 text-on-surface-variant/50 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <div
+        id={`${id}-content`}
+        style={{
+          maxHeight: isOpen ? (contentHeight ?? 2000) : 0,
+          opacity: isOpen ? 1 : 0,
+        }}
+        className="overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.2,0,0,1)]"
+      >
+        <div ref={contentRef}>{children}</div>
+      </div>
+    </section>
+  );
+}
 
 export default function PricingPage() {
   return (
@@ -484,21 +578,14 @@ function PricingContent() {
           </div>
 
           {/* ---- 1. AI MARKET ANALYSIS ---- */}
-          <section id="ai-insights" className="scroll-mt-24 mb-20">
+          <CollapsibleFeature
+            id="ai-insights"
+            icon={<Sparkles className="w-5 h-5 text-primary" />}
+            title="AI Market Analysis"
+            subtitle="Included with Pro"
+            summary="Our AI reads 60+ metrics and tells you what they actually mean."
+          >
             <div className="mb-8">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface">
-                    AI Market Analysis
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    Included with Pro
-                  </p>
-                </div>
-              </div>
               <ul className="space-y-1.5 text-[15px] text-on-surface-variant leading-relaxed">
                 <li>
                   Prices up, but inventory surging. Job growth strong, but
@@ -607,24 +694,17 @@ function PricingContent() {
                 </div>
               </div>
             </div>
-          </section>
+          </CollapsibleFeature>
 
           {/* ---- 2. PROPERTYIQ SCORES ---- */}
-          <section id="scores" className="scroll-mt-24 mb-20">
+          <CollapsibleFeature
+            id="scores"
+            icon={<Target className="w-5 h-5 text-primary" />}
+            title="PropertyIQ Scores"
+            subtitle="34,000+ markets scored"
+            summary="Composite scores that predict what's likely to happen next."
+          >
             <div className="mb-8">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <Target className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface">
-                    PropertyIQ Scores
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    34,000+ markets scored
-                  </p>
-                </div>
-              </div>
               <ul className="space-y-1.5 text-[15px] text-on-surface-variant leading-relaxed">
                 <li>
                   Raw metrics tell you <em>what happened</em>. Our scores tell
@@ -799,24 +879,17 @@ function PricingContent() {
                 </div>
               </div>
             </div>
-          </section>
+          </CollapsibleFeature>
 
           {/* ---- 3. MARKET REPORTS ---- */}
-          <section id="reports" className="scroll-mt-24 mb-20">
+          <CollapsibleFeature
+            id="reports"
+            icon={<FileText className="w-5 h-5 text-primary" />}
+            title="Market Reports"
+            subtitle="Single-market or head-to-head comparison"
+            summary="Polished reports with AI narratives, investment thesis, and risk assessment."
+          >
             <div className="mb-8">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface">
-                    Market Reports
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    Single-market or head-to-head comparison
-                  </p>
-                </div>
-              </div>
               <ul className="space-y-1.5 text-[15px] text-on-surface-variant leading-relaxed">
                 <li>
                   Metrics, scores, trends, and AI narratives pulled into one
@@ -965,24 +1038,17 @@ function PricingContent() {
                 </div>
               </div>
             </div>
-          </section>
+          </CollapsibleFeature>
 
           {/* ---- 4. GEOGRAPHIC DATA DEPTH ---- */}
-          <section id="data-depth" className="scroll-mt-24 mb-12">
+          <CollapsibleFeature
+            id="data-depth"
+            icon={<MapPin className="w-5 h-5 text-primary" />}
+            title="County & ZIP Code Data"
+            subtitle="33,000+ additional markets unlocked"
+            summary="Drill from metro to county to ZIP -- where the real deals are."
+          >
             <div className="mb-8">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <MapPin className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface">
-                    County &amp; ZIP Code Data
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    33,000+ additional markets unlocked
-                  </p>
-                </div>
-              </div>
               <ul className="space-y-1.5 text-[15px] text-on-surface-variant leading-relaxed">
                 <li>
                   A metro average tells you almost nothing about the ZIP code
@@ -1137,7 +1203,7 @@ function PricingContent() {
                 </div>
               </div>
             </div>
-          </section>
+          </CollapsibleFeature>
 
           {/* ---- BOTTOM CTA ---- */}
           <div className="text-center pt-8 pb-4 border-t border-outline-variant/15">

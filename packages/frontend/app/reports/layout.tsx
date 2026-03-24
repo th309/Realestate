@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Market Reports | PropertyIQ",
+  title: "AI Market Reports",
   description:
     "Generate AI-powered market reports for any US metro, county, or ZIP code. Get personalized analysis for homebuyers and investors with PropertyIQ.",
   alternates: { canonical: "https://www.propertyiq.app/reports" },
