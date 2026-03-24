@@ -455,7 +455,16 @@ Wire everything together and register in app.module.ts.
 
 - [ ] **Step 1: Create PlatformApiModule**
 
-Import: OrgApiKeysModule (for ApiKeyAuthGuard + key validation), ScoringModule, MetricsModule, MarketsModule, ReportsModule, RedisModule (global). Register all 6 v1 controllers. Provide ApiResponseInterceptor, ApiThrottleGuard.
+Import: OrgApiKeysModule (for ApiKeyAuthGuard + key validation), ScoringModule, MarketsModule, ReportsModule, RedisModule (global). **NOTE:** There is no standalone MetricsModule — metrics/timeseries controllers query Supabase directly using SUPABASE_CLIENT. Register all 6 v1 controllers. Provide ApiResponseInterceptor, ApiThrottleGuard.
+
+**REVIEW FIXES (from plan review):**
+
+- key_prefix should be first 8 chars (not 12) per spec
+- RedisService.set() takes `Record<string, any>` not arrays — use `setByKey(key, value, ttlSeconds)` and `getByKey(key)` instead
+- Rate limiter must use atomic Redis INCR (add `incr` method to RedisService or use raw ioredis client)
+- Rate limit keys need 120s TTL
+- `validateKey()` must check `api_enabled` on the org
+- ApiResponseInterceptor must support `meta.pagination` — controllers return `{ items, pagination }`, interceptor reshapes to `{ data: items, meta: { ..., pagination } }`
 
 - [ ] **Step 2: Register in app.module.ts**
 
