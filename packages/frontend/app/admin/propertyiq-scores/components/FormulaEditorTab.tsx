@@ -8,16 +8,17 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, useCallback } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 
 // New features-based format from SCORING_SYSTEM_SPEC
 interface FormulaFeature {
   name: string;
   weight: number;
-  direction: '+' | '-';
+  direction: "+" | "-";
 }
 
 // Legacy components format (for backward compatibility)
@@ -53,42 +54,49 @@ interface ConfidenceData {
 }
 
 const SCORE_TYPES = [
-  { value: 'market_health', label: 'Market Health' },
-  { value: 'homeready', label: 'HomeReady' },
-  { value: 'investoredge', label: 'InvestorEdge' },
+  { value: "market_health", label: "Market Health" },
+  { value: "homeready", label: "HomeReady" },
+  { value: "investoredge", label: "InvestorEdge" },
 ];
 
 const GEOGRAPHIES = [
-  { value: 'metro', label: 'Metro' },
-  { value: 'county', label: 'County' },
-  { value: 'zip', label: 'ZIP' },
+  { value: "metro", label: "Metro" },
+  { value: "county", label: "County" },
+  { value: "zip", label: "ZIP" },
 ];
 
 // Component labels for display
 const COMPONENT_LABELS: Record<string, string> = {
-  demand_strength: 'Demand Strength',
-  supply_balance: 'Supply Balance',
-  price_stability: 'Price Stability',
-  economic_foundation: 'Economic Foundation',
-  affordability: 'Affordability',
-  market_timing: 'Market Timing',
-  stability: 'Stability',
-  growth_potential: 'Growth Potential',
-  livability: 'Livability',
-  cash_flow: 'Cash Flow',
-  rent_demand: 'Rent Demand',
-  appreciation: 'Appreciation',
-  entry_point: 'Entry Point',
-  risk: 'Risk',
+  demand_strength: "Demand Strength",
+  supply_balance: "Supply Balance",
+  price_stability: "Price Stability",
+  economic_foundation: "Economic Foundation",
+  affordability: "Affordability",
+  market_timing: "Market Timing",
+  stability: "Stability",
+  growth_potential: "Growth Potential",
+  livability: "Livability",
+  cash_flow: "Cash Flow",
+  rent_demand: "Rent Demand",
+  appreciation: "Appreciation",
+  entry_point: "Entry Point",
+  risk: "Risk",
 };
 
 export function FormulaEditorTab() {
   const [versions, setVersions] = useState<FormulaVersion[]>([]);
-  const [selectedScoreType, setSelectedScoreType] = useState<string>('market_health');
-  const [selectedGeography, setSelectedGeography] = useState<string>('metro');
-  const [selectedVersion, setSelectedVersion] = useState<FormulaVersion | null>(null);
-  const [draftFeatures, setDraftFeatures] = useState<FormulaFeature[] | null>(null);
-  const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
+  const [selectedScoreType, setSelectedScoreType] =
+    useState<string>("market_health");
+  const [selectedGeography, setSelectedGeography] = useState<string>("metro");
+  const [selectedVersion, setSelectedVersion] = useState<FormulaVersion | null>(
+    null,
+  );
+  const [draftFeatures, setDraftFeatures] = useState<FormulaFeature[] | null>(
+    null,
+  );
+  const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -107,7 +115,7 @@ export function FormulaEditorTab() {
     try {
       const response = await fetchAPIRaw(
         `/api/admin/formula-versions?scoreType=${selectedScoreType}&geography=${selectedGeography}`,
-        { credentials: 'include' },
+        { credentials: "include" },
       );
 
       if (response.ok) {
@@ -124,7 +132,7 @@ export function FormulaEditorTab() {
         }
       }
     } catch (error) {
-      console.error('Error fetching formula versions:', error);
+      console.error("Error fetching formula versions:", error);
     } finally {
       setLoading(false);
     }
@@ -134,7 +142,7 @@ export function FormulaEditorTab() {
     try {
       const response = await fetchAPIRaw(
         `/api/admin/backtest-runs/confidence/summary`,
-        { credentials: 'include' },
+        { credentials: "include" },
       );
 
       if (response.ok) {
@@ -142,7 +150,8 @@ export function FormulaEditorTab() {
         // Find confidence for selected score type and geography
         const found = data.data?.find(
           (c: { scoreType: string; geographyType: string }) =>
-            c.scoreType === selectedScoreType && c.geographyType === selectedGeography,
+            c.scoreType === selectedScoreType &&
+            c.geographyType === selectedGeography,
         );
         if (found) {
           setConfidenceData({
@@ -156,7 +165,7 @@ export function FormulaEditorTab() {
         }
       }
     } catch (error) {
-      console.error('Error fetching confidence data:', error);
+      console.error("Error fetching confidence data:", error);
       setConfidenceData(null);
     }
   };
@@ -166,16 +175,23 @@ export function FormulaEditorTab() {
 
     setDraftFeatures(
       draftFeatures.map((f) =>
-        f.name === featureName ? { ...f, weight: Math.max(0, Math.min(100, weight)) } : f,
+        f.name === featureName
+          ? { ...f, weight: Math.max(0, Math.min(100, weight)) }
+          : f,
       ),
     );
   };
 
-  const handleFeatureDirectionChange = (featureName: string, direction: '+' | '-') => {
+  const handleFeatureDirectionChange = (
+    featureName: string,
+    direction: "+" | "-",
+  ) => {
     if (!draftFeatures) return;
 
     setDraftFeatures(
-      draftFeatures.map((f) => (f.name === featureName ? { ...f, direction } : f)),
+      draftFeatures.map((f) =>
+        f.name === featureName ? { ...f, direction } : f,
+      ),
     );
   };
 
@@ -187,7 +203,8 @@ export function FormulaEditorTab() {
   const hasChanges = useCallback(() => {
     if (!selectedVersion || !draftFeatures) return false;
     return (
-      JSON.stringify(selectedVersion.formulaConfig.features) !== JSON.stringify(draftFeatures)
+      JSON.stringify(selectedVersion.formulaConfig.features) !==
+      JSON.stringify(draftFeatures)
     );
   }, [selectedVersion, draftFeatures]);
 
@@ -197,15 +214,15 @@ export function FormulaEditorTab() {
     setSaving(true);
     try {
       const response = await fetchAPIRaw(`/api/admin/formula-versions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           scoreType: selectedScoreType,
           geography: selectedGeography,
           formulaConfig: { features: draftFeatures },
           parentVersion: selectedVersion.version,
-          description: 'Draft update',
+          description: "Draft update",
         }),
       });
 
@@ -213,7 +230,7 @@ export function FormulaEditorTab() {
         await fetchVersions();
       }
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error("Error saving draft:", error);
     } finally {
       setSaving(false);
     }
@@ -222,16 +239,16 @@ export function FormulaEditorTab() {
   const deployWithABTest = async () => {
     if (!draftFeatures || !selectedVersion) return;
 
-    const testName = prompt('Enter A/B test name:');
+    const testName = prompt("Enter A/B test name:");
     if (!testName) return;
 
     setSaving(true);
     try {
       // First create the new version
       const versionRes = await fetchAPIRaw(`/api/admin/formula-versions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           scoreType: selectedScoreType,
           geography: selectedGeography,
@@ -241,15 +258,15 @@ export function FormulaEditorTab() {
         }),
       });
 
-      if (!versionRes.ok) throw new Error('Failed to create version');
+      if (!versionRes.ok) throw new Error("Failed to create version");
 
       const newVersion = await versionRes.json();
 
       // Then create the A/B test
       const testRes = await fetchAPIRaw(`/api/admin/ab-tests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: testName,
           scoreType: selectedScoreType,
@@ -260,12 +277,12 @@ export function FormulaEditorTab() {
       });
 
       if (testRes.ok) {
-        alert('A/B test created successfully');
+        alert("A/B test created successfully");
         await fetchVersions();
       }
     } catch (error) {
-      console.error('Error deploying A/B test:', error);
-      alert('Failed to deploy A/B test');
+      console.error("Error deploying A/B test:", error);
+      alert("Failed to deploy A/B test");
     } finally {
       setSaving(false);
     }
@@ -277,7 +294,9 @@ export function FormulaEditorTab() {
       <div className="flex flex-wrap items-center gap-6 p-4 bg-surface-container rounded-xl">
         {/* Score Type */}
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-on-surface-variant">Score Type:</label>
+          <label className="text-sm font-medium text-on-surface-variant">
+            Score Type:
+          </label>
           <div className="flex gap-2">
             {SCORE_TYPES.map((type) => (
               <button
@@ -287,8 +306,8 @@ export function FormulaEditorTab() {
                   px-4 py-2 text-sm rounded-lg transition-colors
                   ${
                     selectedScoreType === type.value
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                      ? "bg-primary text-on-primary"
+                      : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
                   }
                 `}
               >
@@ -300,7 +319,9 @@ export function FormulaEditorTab() {
 
         {/* Geography */}
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-on-surface-variant">Geography:</label>
+          <label className="text-sm font-medium text-on-surface-variant">
+            Geography:
+          </label>
           <div className="flex gap-2">
             {GEOGRAPHIES.map((geo) => (
               <button
@@ -310,8 +331,8 @@ export function FormulaEditorTab() {
                   px-4 py-2 text-sm rounded-lg transition-colors
                   ${
                     selectedGeography === geo.value
-                      ? 'bg-secondary text-on-secondary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                      ? "bg-secondary text-on-secondary"
+                      : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
                   }
                 `}
               >
@@ -329,15 +350,16 @@ export function FormulaEditorTab() {
               className={`
                 px-2 py-0.5 rounded text-sm font-medium
                 ${
-                  confidenceData.confidenceLevel === 'A'
-                    ? 'bg-green-100 text-green-800'
-                    : confidenceData.confidenceLevel === 'B'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
+                  confidenceData.confidenceLevel === "A"
+                    ? "bg-green-100 text-green-800"
+                    : confidenceData.confidenceLevel === "B"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                 }
               `}
             >
-              {confidenceData.confidenceScore.toFixed(0)}% ({confidenceData.confidenceLevel})
+              {confidenceData.confidenceScore.toFixed(0)}% (
+              {confidenceData.confidenceLevel})
             </span>
             {confidenceData.rSquared !== null && (
               <span className="text-xs text-on-surface-variant">
@@ -349,7 +371,9 @@ export function FormulaEditorTab() {
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+        <div className="p-4">
+          <SkeletonLoader variant="card" count={3} />
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Version History */}
@@ -367,13 +391,15 @@ export function FormulaEditorTab() {
                     w-full p-3 text-left rounded-lg transition-colors
                     ${
                       selectedVersion?.id === version.id
-                        ? 'bg-primary-container'
-                        : 'bg-surface-container-low hover:bg-surface-container'
+                        ? "bg-primary-container"
+                        : "bg-surface-container-low hover:bg-surface-container"
                     }
                   `}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-on-surface">v{version.version}</span>
+                    <span className="font-medium text-on-surface">
+                      v{version.version}
+                    </span>
                     <div className="flex gap-1">
                       {version.isActive && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">
@@ -401,14 +427,14 @@ export function FormulaEditorTab() {
               <h3 className="font-medium text-on-surface">
                 {selectedVersion
                   ? `Editing v${selectedVersion.version} (${selectedGeography})`
-                  : 'Select a version'}
+                  : "Select a version"}
               </h3>
               {draftFeatures && (
                 <div
                   className={`text-sm ${
                     Math.abs(getTotalWeight() - 100) < 1
-                      ? 'text-green-600'
-                      : 'text-yellow-600'
+                      ? "text-green-600"
+                      : "text-yellow-600"
                   }`}
                 >
                   Total: {getTotalWeight().toFixed(1)}%
@@ -430,21 +456,21 @@ export function FormulaEditorTab() {
                           onClick={() =>
                             handleFeatureDirectionChange(
                               feature.name,
-                              feature.direction === '+' ? '-' : '+',
+                              feature.direction === "+" ? "-" : "+",
                             )
                           }
                           className={`
                             w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold
                             ${
-                              feature.direction === '+'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
+                              feature.direction === "+"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
                             }
                           `}
                           title={
-                            feature.direction === '+'
-                              ? 'Higher is better'
-                              : 'Lower is better'
+                            feature.direction === "+"
+                              ? "Higher is better"
+                              : "Lower is better"
                           }
                         >
                           {feature.direction}
@@ -473,7 +499,9 @@ export function FormulaEditorTab() {
                           }
                           className="w-20 px-2 py-1 text-right rounded border border-outline bg-surface text-on-surface"
                         />
-                        <span className="text-sm text-on-surface-variant">%</span>
+                        <span className="text-sm text-on-surface-variant">
+                          %
+                        </span>
                       </div>
                     </div>
 
@@ -497,11 +525,11 @@ export function FormulaEditorTab() {
                         className="h-2 rounded"
                         style={{
                           width: `${feature.weight}%`,
-                          maxWidth: '100px',
+                          maxWidth: "100px",
                           backgroundColor:
-                            feature.direction === '+'
-                              ? 'var(--md-sys-color-primary)'
-                              : 'var(--md-sys-color-error)',
+                            feature.direction === "+"
+                              ? "var(--md-sys-color-primary)"
+                              : "var(--md-sys-color-error)",
                         }}
                       />
                     </div>
@@ -529,8 +557,8 @@ export function FormulaEditorTab() {
             ) : (
               <div className="p-8 text-center text-on-surface-variant">
                 {selectedVersion
-                  ? 'No features defined for this version'
-                  : 'Select a version from the list to edit'}
+                  ? "No features defined for this version"
+                  : "Select a version from the list to edit"}
               </div>
             )}
           </div>
@@ -543,22 +571,22 @@ export function FormulaEditorTab() {
 function formatMetricName(metric: string): string {
   // Convert snake_case to Title Case and handle common abbreviations
   return metric
-    .split('_')
+    .split("_")
     .map((word) => {
       // Handle common abbreviations
-      if (word === 'yoy') return 'YoY';
-      if (word === 'yy') return 'YoY';
-      if (word === 'zhvi') return 'ZHVI';
-      if (word === 'zori') return 'ZORI';
-      if (word === 'grm') return 'GRM';
-      if (word === 'cagr') return 'CAGR';
-      if (word === 'dom') return 'DOM';
-      if (word === 'pct') return '%';
-      if (word === '3y') return '3Y';
-      if (word === '5y') return '5Y';
-      if (word === '36m') return '36M';
+      if (word === "yoy") return "YoY";
+      if (word === "yy") return "YoY";
+      if (word === "zhvi") return "ZHVI";
+      if (word === "zori") return "ZORI";
+      if (word === "grm") return "GRM";
+      if (word === "cagr") return "CAGR";
+      if (word === "dom") return "DOM";
+      if (word === "pct") return "%";
+      if (word === "3y") return "3Y";
+      if (word === "5y") return "5Y";
+      if (word === "36m") return "36M";
       // Capitalize first letter
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
-    .join(' ');
+    .join(" ");
 }

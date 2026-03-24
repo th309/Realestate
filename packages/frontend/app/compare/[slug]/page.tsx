@@ -251,22 +251,32 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
     notFound();
   }
 
-  // Fetch live prices from the database
+  // Fetch live prices from the database — no hardcoded fallbacks
   let comparison = rawComparison;
   try {
     const pricing = await fetchPricingSummary();
     const pro = pricing.tiers.find((t) => t.slug === "pro");
     const enterprise = pricing.tiers.find((t) => t.slug === "enterprise");
+
+    if (!pro?.price_monthly || !enterprise?.price_monthly) {
+      console.error("[compare] Pricing tiers missing from DB response");
+    }
+
     comparison = withLivePricing(rawComparison, {
       proMonthly: pro?.price_monthly
         ? `$${Math.round(Number(pro.price_monthly))}`
-        : "$39",
+        : "See pricing",
       enterpriseMonthly: enterprise?.price_monthly
         ? `$${Math.round(Number(enterprise.price_monthly))}`
-        : "$149",
+        : "See pricing",
     });
   } catch (error) {
-    console.error("Failed to fetch pricing:", error);
+    console.error("[compare] Failed to fetch live pricing:", error);
+    // Replace tokens with a generic label so raw {{PRO_PRICE}} never shows
+    comparison = withLivePricing(rawComparison, {
+      proMonthly: "See pricing",
+      enterpriseMonthly: "See pricing",
+    });
   }
 
   return (

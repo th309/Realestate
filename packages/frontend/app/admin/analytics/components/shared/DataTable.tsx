@@ -32,7 +32,7 @@ function SortIcon({ direction }: { direction: SortDirection | null }) {
 }
 
 function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined) return "--";
+  if (value === null || value === undefined) return "—";
   if (typeof value === "number") {
     if (Number.isInteger(value)) return value.toLocaleString();
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });

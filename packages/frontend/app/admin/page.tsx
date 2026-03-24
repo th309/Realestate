@@ -14,7 +14,8 @@ import { FeedbackQueueWidget } from "./components/widgets/FeedbackQueueWidget";
 export default function AdminDashboardPage() {
   const { refreshTrigger, lastRefreshTime, triggerRefresh } =
     useAdminDashboardRefresh();
-  const { status: systemStatus } = useSystemHealth(refreshTrigger);
+  const { status: systemStatus, summary: healthSummary } =
+    useSystemHealth(refreshTrigger);
 
   return (
     <div className="min-h-screen bg-surface">
@@ -39,6 +40,7 @@ export default function AdminDashboardPage() {
       <div className="mt-4">
         <SystemHealthBanner
           status={systemStatus}
+          summary={healthSummary}
           lastRefresh={lastRefreshTime}
           onRefresh={triggerRefresh}
         />

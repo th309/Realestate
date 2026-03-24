@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   useTimeSeriesData,
+  useSnapshotData,
   formatMetricValue,
   getMetricFormat,
 } from "@/lib/data";
@@ -77,6 +78,17 @@ function QuickCard({
     { historyMonths: 6 },
   );
 
+  const { source, sourceGeoLevel, sourceGeoId, isInherited, isFallback } =
+    useSnapshotData(metricId, market.type as GeoLevel, market.id);
+
+  const resolvedMetric = {
+    source,
+    sourceGeoLevel,
+    sourceGeoId,
+    isInherited,
+    isFallback,
+  };
+
   const format = getMetricFormat(metricId);
   const formattedValue =
     current != null ? formatMetricValue(current, format) : null;
@@ -119,7 +131,7 @@ function QuickCard({
 
         <div className="flex-1 min-w-0">
           <div className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wider truncate">
-            <MetricTitle metricId={metricId} />
+            <MetricTitle metricId={metricId} resolvedMetric={resolvedMetric} />
           </div>
           <div className="flex items-center gap-1.5">
             {isLoading ? (
@@ -165,7 +177,7 @@ function QuickCard({
       `}
     >
       <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider truncate">
-        <MetricTitle metricId={metricId} />
+        <MetricTitle metricId={metricId} resolvedMetric={resolvedMetric} />
       </div>
 
       <div className="flex items-end justify-between gap-2">

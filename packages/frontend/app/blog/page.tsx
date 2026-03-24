@@ -1,7 +1,38 @@
+import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { getAllPosts } from "@/lib/blog";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { BlogFilterableList } from "./BlogFilterableList";
+
+export const metadata: Metadata = {
+  title: "Blog | PropertyIQ",
+  description:
+    "Data-driven housing market analysis, forecasts, and investment insights from PropertyIQ Research.",
+  alternates: { canonical: "https://www.propertyiq.app/blog" },
+  openGraph: {
+    title: "PropertyIQ Blog",
+    description:
+      "Data-driven housing market analysis, forecasts, and investment insights.",
+    url: "https://www.propertyiq.app/blog",
+    siteName: "PropertyIQ",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PropertyIQ Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PropertyIQ Blog",
+    description:
+      "Data-driven housing market analysis, forecasts, and investment insights.",
+    images: ["/twitter-image.png"],
+  },
+};
 
 export default function BlogIndexPage() {
   const posts = getAllPosts();

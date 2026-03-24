@@ -30,6 +30,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 import TierPricingEditor from "./TierPricingEditor";
 
 // Human-readable labels for feature categories
@@ -517,8 +518,7 @@ export default function TiersConfigurationPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-on-surface-variant" />
-        <span className="ml-3 text-on-surface-variant">Loading...</span>
+        <SkeletonLoader variant="card" count={3} />
       </div>
     );
   }

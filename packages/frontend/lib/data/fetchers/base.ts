@@ -14,33 +14,52 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 /**
- * Generic fetch wrapper with error handling
+ * Generic fetch wrapper with error handling and retry for transient failures.
+ * Retries once on 5xx or network errors with a 500ms delay.
  */
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  const authHeaders = await getAuthHeaders();
-  try {
-    const response = await fetch(url, {
-      credentials: "include",
-      headers: { ...authHeaders },
-    });
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+  const maxRetries = 1;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const authHeaders = await getAuthHeaders();
+    try {
+      const response = await fetch(url, {
+        credentials: "include",
+        headers: { ...authHeaders },
+      });
+
+      if (response.status >= 500 && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        if (attempt < maxRetries) {
+          console.warn(`[fetchAPI] Network error for ${endpoint}, retrying...`);
+          await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+          continue;
+        }
+        console.warn(
+          `[fetchAPI] Network error for ${endpoint} - backend may be unreachable`,
+        );
+      }
+      throw error;
     }
-    return response.json();
-  } catch (error) {
-    // Provide more context for debugging
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      console.warn(
-        `[fetchAPI] Network error for ${endpoint} - backend may be unreachable`,
-      );
-    }
-    throw error;
   }
+
+  throw new Error(
+    `[fetchAPI] Failed after ${maxRetries + 1} attempts: ${endpoint}`,
+  );
 }
 
 /**
- * Fetch with optional query parameters
+ * Fetch with optional query parameters and retry for transient failures.
  */
 export async function fetchAPIWithParams<T>(
   endpoint: string,
@@ -56,16 +75,39 @@ export async function fetchAPIWithParams<T>(
     });
   }
 
-  const authHeaders = await getAuthHeaders();
-  const response = await fetch(url.toString(), {
-    credentials: "include",
-    cache: "no-store",
-    headers: { ...authHeaders },
-  });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  const maxRetries = 1;
+  const urlStr = url.toString();
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const authHeaders = await getAuthHeaders();
+    try {
+      const response = await fetch(urlStr, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { ...authHeaders },
+      });
+
+      if (response.status >= 500 && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      if (attempt < maxRetries && error instanceof TypeError) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+        continue;
+      }
+      throw error;
+    }
   }
-  return response.json();
+
+  throw new Error(
+    `[fetchAPIWithParams] Failed after ${maxRetries + 1} attempts: ${endpoint}`,
+  );
 }
 
 /**

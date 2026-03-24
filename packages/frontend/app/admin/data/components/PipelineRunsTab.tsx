@@ -6,10 +6,11 @@
  * Allows manual triggering of pipelines.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, Fragment } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, Fragment } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 import {
   PipelineRun,
   AvailablePipeline,
@@ -17,10 +18,10 @@ import {
   PipelineFilterParams,
   formatDuration,
   formatRunDate,
-} from './pipelineRuns.types';
-import { PipelineStatusBadge } from './PipelineStatusBadge';
-import { PipelineRunDetails } from './PipelineRunDetails';
-import { PipelineTriggerDialog } from './PipelineTriggerDialog';
+} from "./pipelineRuns.types";
+import { PipelineStatusBadge } from "./PipelineStatusBadge";
+import { PipelineRunDetails } from "./PipelineRunDetails";
+import { PipelineTriggerDialog } from "./PipelineTriggerDialog";
 
 interface DataSourceHealth {
   displayName: string;
@@ -36,12 +37,15 @@ interface DataSourcesResponse {
 
 export function PipelineRunsTab() {
   const [runs, setRuns] = useState<PipelineRun[]>([]);
-  const [dataSources, setDataSources] = useState<DataSourcesResponse | null>(null);
+  const [dataSources, setDataSources] = useState<DataSourcesResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
-  const [triggerDialogPipeline, setTriggerDialogPipeline] = useState<AvailablePipeline | null>(null);
+  const [triggerDialogPipeline, setTriggerDialogPipeline] =
+    useState<AvailablePipeline | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -53,8 +57,8 @@ export function PipelineRunsTab() {
     try {
       // Fetch both pipeline runs and data sources in parallel
       const [runsResponse, sourcesResponse] = await Promise.all([
-        fetchAPIRaw(`/api/health/pipeline-runs`, { credentials: 'include' }),
-        fetchAPIRaw(`/api/health/data-sources`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/health/pipeline-runs`, { credentials: "include" }),
+        fetchAPIRaw(`/api/health/data-sources`, { credentials: "include" }),
       ]);
 
       if (runsResponse.ok) {
@@ -69,8 +73,8 @@ export function PipelineRunsTab() {
         setDataSources(data);
       }
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      console.error("Error fetching data:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect to API");
       setRuns([]);
     } finally {
       setLoading(false);
@@ -87,33 +91,40 @@ export function PipelineRunsTab() {
     }
   };
 
-  const handleTriggerPipeline = async (pipelineName: string, filters: PipelineFilterParams) => {
+  const handleTriggerPipeline = async (
+    pipelineName: string,
+    filters: PipelineFilterParams,
+  ) => {
     setTriggering(pipelineName);
     setTriggerDialogPipeline(null);
     try {
-      const response = await fetchAPIRaw(`/api/pipelines/${pipelineName}/trigger`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters }),
-      });
+      const response = await fetchAPIRaw(
+        `/api/pipelines/${pipelineName}/trigger`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters }),
+        },
+      );
 
       if (response.ok) {
         await fetchPipelineRuns();
       }
     } catch (error) {
-      console.error('Error triggering pipeline:', error);
+      console.error("Error triggering pipeline:", error);
     } finally {
       setTriggering(null);
     }
   };
 
-
   return (
     <div className="space-y-6">
       {/* Manual Trigger */}
       <div className="p-4 rounded-xl bg-surface-container">
-        <h3 className="text-sm font-medium text-on-surface mb-3">Trigger Manual Run</h3>
+        <h3 className="text-sm font-medium text-on-surface mb-3">
+          Trigger Manual Run
+        </h3>
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_PIPELINES.map((pipeline) => (
             <button
@@ -122,7 +133,7 @@ export function PipelineRunsTab() {
               disabled={triggering !== null}
               className="px-3 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50"
             >
-              {triggering === pipeline.name ? 'Triggering...' : pipeline.label}
+              {triggering === pipeline.name ? "Triggering..." : pipeline.label}
             </button>
           ))}
         </div>
@@ -144,25 +155,31 @@ export function PipelineRunsTab() {
         </div>
         <div className="p-4 rounded-xl bg-amber-50">
           <div className="text-2xl font-bold text-amber-800">
-            {(dataSources?.summary.total || 0) - (dataSources?.summary.fresh || 0)}
+            {(dataSources?.summary.total || 0) -
+              (dataSources?.summary.fresh || 0)}
           </div>
           <div className="text-sm text-amber-600">Stale</div>
         </div>
         <div className="p-4 rounded-xl bg-blue-50">
-          <div className="text-2xl font-bold text-blue-800">
-            {runs.length}
-          </div>
+          <div className="text-2xl font-bold text-blue-800">{runs.length}</div>
           <div className="text-sm text-blue-600">Logged Runs</div>
         </div>
       </div>
 
       {/* Pipeline Runs Table */}
-      <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="pipeline-runs-table">
+      <div
+        className="overflow-x-auto bg-surface-container rounded-xl"
+        data-testid="pipeline-runs-table"
+      >
         {loading ? (
-          <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+          <div className="p-8">
+            <SkeletonLoader variant="table" />
+          </div>
         ) : error ? (
           <div className="p-8 text-center">
-            <div className="text-red-600 font-medium mb-2">Failed to load pipeline runs</div>
+            <div className="text-red-600 font-medium mb-2">
+              Failed to load pipeline runs
+            </div>
             <div className="text-sm text-on-surface-variant mb-4">{error}</div>
             <button
               onClick={fetchPipelineRuns}
@@ -174,7 +191,8 @@ export function PipelineRunsTab() {
         ) : runs.length === 0 ? (
           <div className="p-6">
             <p className="text-center text-on-surface-variant mb-4">
-              No pipeline runs logged. Showing data freshness from actual tables:
+              No pipeline runs logged. Showing data freshness from actual
+              tables:
             </p>
             {dataSources && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -182,7 +200,7 @@ export function PipelineRunsTab() {
                   <div
                     key={source.displayName}
                     className={`p-3 rounded-lg ${
-                      source.fresh ? 'bg-green-50' : 'bg-amber-50'
+                      source.fresh ? "bg-green-50" : "bg-amber-50"
                     }`}
                   >
                     <div className="font-medium text-on-surface text-sm">
@@ -190,12 +208,12 @@ export function PipelineRunsTab() {
                     </div>
                     <div
                       className={`text-xs ${
-                        source.fresh ? 'text-green-600' : 'text-amber-600'
+                        source.fresh ? "text-green-600" : "text-amber-600"
                       }`}
                     >
                       {source.daysSinceUpdate !== null
                         ? `${source.daysSinceUpdate}d old`
-                        : 'Unknown'}
+                        : "Unknown"}
                     </div>
                   </div>
                 ))}
@@ -227,17 +245,25 @@ export function PipelineRunsTab() {
               {runs.map((run) => (
                 <Fragment key={run.id}>
                   <tr
-                    onClick={() => setExpandedRunId(expandedRunId === run.id ? null : run.id)}
+                    onClick={() =>
+                      setExpandedRunId(expandedRunId === run.id ? null : run.id)
+                    }
                     className="cursor-pointer hover:bg-surface-container-low transition-colors"
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs transition-transform ${expandedRunId === run.id ? 'rotate-90' : ''}`}>
+                        <span
+                          className={`text-xs transition-transform ${expandedRunId === run.id ? "rotate-90" : ""}`}
+                        >
                           ▶
                         </span>
                         <div>
-                          <div className="font-medium text-on-surface">{run.displayName}</div>
-                          <div className="text-xs text-on-surface-variant">{run.pipelineName}</div>
+                          <div className="font-medium text-on-surface">
+                            {run.displayName}
+                          </div>
+                          <div className="text-xs text-on-surface-variant">
+                            {run.pipelineName}
+                          </div>
                         </div>
                       </div>
                     </td>

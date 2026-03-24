@@ -344,6 +344,9 @@ All routes in `surface-inventory.json → routes.public` must load without auth.
 - `/about/terms` — Full Terms of Service
 - `/scores`, `/scores/methodology`, `/scores/accuracy`
 - `/data` — Data sources page
+- `/about` — Company info
+- `/contact` — Contact form
+- `/help` — FAQ and support
 
 ### 3.2 Anonymous Paywall
 
@@ -598,6 +601,8 @@ All issues submitted during this test session should appear here. Verify:
 **D:** Avatar → Settings → Profile → Subscription → Tabs
 **E:** `/` → Blog → Post → Newsletter signup → Markets → Metro detail → "View on Map" → Map
 **F:** `/markets/[slug]` → "Full Market Dashboard" → `/market/[id]` → data loads
+**G:** Map → Search → Click favorites dropdown → Select saved market → Map navigates to it
+**H:** Graphs → Search → Favorites dropdown appears → Select saved market → Slot populates
 
 ### Navigation
 
@@ -650,15 +655,25 @@ State → Metro → County → ZIP: data, legend, colors update correctly.
 
 ### 11.4 SEO Artifacts
 
-- `/robots.txt` loads, blocks `/admin`, `/auth`, `/api`
+- `/robots.txt` loads (generated dynamically by `app/robots.ts`), blocks `/admin`, `/auth`, `/api`, `/account`, `/dev`, `/betatest`
+- `/robots.txt` includes AI bot rules for GPTBot, ClaudeBot, PerplexityBot
 - `/sitemap.xml` generates valid XML with all routes (static + metros + blog + compare)
 - `/blog/rss.xml` returns valid RSS XML
 - OG image loads at `/og-image.png`
 - Each public page has unique title + description metadata
-- JSON-LD schema valid on blog posts (Article), metro pages (Place), comparison pages (FAQ)
+- **`/blog` page must have metadata export** (currently missing — P1)
+- Protected routes (`/dashboard`, `/alerts`, `/reports`, `/account`) must have `robots: { index: false }` metadata
+- JSON-LD schema valid on blog posts (Article), metro pages (Place), comparison pages (FAQ), homepage (Organization + SoftwareApplication + WebSite), about (WebPage), contact (ContactPage)
 - No `propertyiq.com` references in page source (should all be `propertyiq.app`)
 
-### 11.5 Google Analytics
+### 11.5 AI Readiness & Security
+
+- `/llms.txt` loads with summary guidance for AI crawlers
+- `/llms-full.txt` loads with detailed guidance
+- `/.well-known/security.txt` loads with contact info
+- CSP headers configured correctly (check `next.config.mjs`)
+
+### 11.6 Google Analytics
 
 - `gtag('config', 'G-...')` fires on page load
 - Page view events tracked on navigation
@@ -673,48 +688,49 @@ Check `.claude/beta-test/change-log.md` for additional issues discovered by the 
 
 ### Security (P0)
 
-| Issue                                           | Where                         |
-| ----------------------------------------------- | ----------------------------- |
-| `ml-workflow.controller.ts` has NO AdminGuard   | `api/admin/ml-workflow`       |
-| `validation.controller.ts` has NO AdminGuard    | `api/admin/scores/validation` |
-| `backtest-runs.controller.ts` has NO AdminGuard | `api/admin/backtest-runs`     |
-| `ml-validation.controller.ts` has NO AdminGuard | `api/admin/ml-validation`     |
+All admin controllers now have `@UseGuards(AdminGuard)`. No outstanding P0 security issues.
 
-### Data Provenance (P1)
+### Data Provenance (P1) — All Resolved
 
-| Issue                                                                     | Where                                      |
-| ------------------------------------------------------------------------- | ------------------------------------------ |
-| `MetricTitle` info icon shows primary source only, not actual source used | Any metric tooltip                         |
-| `InheritedBadge` exists but never rendered anywhere                       | ZIP/county metrics                         |
-| Backend `ResolvedMetric` metadata not passed in API responses             | All metric displays                        |
-| No fallback indicator shown when secondary source provides data           | Metric cards with fallback values          |
-| AI insights `execute` endpoint allows arbitrary DB changes                | `api/admin/analytics/insights/.../execute` |
+- MetricTitle info icon now shows actual source, fallback, and inheritance data on all data-display surfaces (graph QuickCards wired, MarketSnapshot, RightDetailPanel, reports already wired)
+- `InheritedBadge` is actively rendered in 7 files
+- Backend `ResolvedMetric` metadata IS passed via market-snapshot API
+- AI insights `execute` endpoint does NOT exist — system is advisory-only (copy prompt, dismiss, mark implemented)
+
+### SEO & Metadata (P1) — All Resolved
+
+- `/blog` page.tsx now has full metadata export (title, description, OG, Twitter)
+- Protected routes now have `robots: { index: false }` via layout files
 
 ### Data Consistency (P2)
 
-| Issue                                                           | Where                             |
-| --------------------------------------------------------------- | --------------------------------- |
-| `formatMetricValue()` returns `—` but components hardcode `--`  | Null metrics across site          |
-| `useDataCardBatch` silently filters null values                 | Card grids showing fewer items    |
-| No retry on failed API calls                                    | Network blips → permanent error   |
-| Inconsistent loading (skeleton vs `...` vs `--`)                | Slow network testing              |
-| Report `metricHelpers.ts` duplicates backend fallback logic     | Report values may differ from map |
-| Blog category filter uses anchor links that don't filter        | `/blog` page                      |
-| `metro-slug-data.ts` is 6,564 lines (file size limit violation) | `/markets/[slug]` bundle          |
-| Newsletter API route has no rate limiting                       | `POST /api/newsletter`            |
-| Newsletter has no double opt-in / email verification            | Newsletter signup flow            |
-| Compare page `withLivePricing()` regex replacement is fragile   | `/compare/[slug]`                 |
-| Compare page catches pricing fetch failures silently            | `/compare/[slug]`                 |
-| Sitemap lastModified changes on every build                     | `/sitemap.xml`                    |
+| Issue                                                          | Where                             | Status                |
+| -------------------------------------------------------------- | --------------------------------- | --------------------- |
+| `useDataCardBatch` silently filters null values                | Card grids showing fewer items    | Needs design decision |
+| No retry on failed API calls                                   | Network blips → permanent error   | Needs design decision |
+| Inconsistent loading (skeleton vs `...` vs `--`)               | Slow network testing              | Needs design decision |
+| Report `metricHelpers.ts` duplicates backend fallback logic    | Report values may differ from map | Needs consolidation   |
+| Blog category filter uses anchor links that don't filter       | `/blog` page                      | Needs UX redesign     |
+| `metro-slug-data.json` is oversized (6,500+ entries in bundle) | `/markets/[slug]` bundle          | Needs data split      |
+| Newsletter has no double opt-in / email verification           | Newsletter signup flow            | Needs email infra     |
+| Compare page `withLivePricing()` regex replacement is fragile  | `/compare/[slug]`                 | Low risk, monitor     |
+| Some POST endpoints lack DTO validation                        | `data-ingestion`, `entitlements`  | Add DTOs              |
+
+**Resolved consistency items:**
+
+- Hardcoded `"--"` null placeholders replaced with `"—"` (em-dash) across DataTable, CompositeResults, HistoryTab
+- Compare page catch block now logs with context prefix
+- Sitemap `lastModified` now uses fixed date instead of `new Date()`
+- Newsletter API route already has rate limiting implemented
+- Backend API rate limiting enabled via ThrottlerModule (20/sec, 100/min, 500/10min)
 
 ### Polish (P3)
 
-| Issue                                                        | Where                 |
-| ------------------------------------------------------------ | --------------------- |
-| No WebSocket push for admin tier changes                     | Stale user sessions   |
-| System health status is mocked (always healthy)              | `/admin` banner       |
-| GA measurement ID hardcoded as fallback                      | `GoogleAnalytics.tsx` |
-| Pricing page shows `...` briefly while loading dynamic price | `/pricing`            |
+| Issue                                           | Where                 |
+| ----------------------------------------------- | --------------------- |
+| No WebSocket push for admin tier changes        | Stale user sessions   |
+| System health status is mocked (always healthy) | `/admin` banner       |
+| GA measurement ID hardcoded as fallback         | `GoogleAnalytics.tsx` |
 
 ---
 

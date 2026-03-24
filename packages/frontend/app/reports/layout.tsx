@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   description:
     "Generate AI-powered market reports for any US metro, county, or ZIP code. Get personalized analysis for homebuyers and investors with PropertyIQ.",
   alternates: { canonical: "https://www.propertyiq.app/reports" },
+  robots: { index: false, follow: false },
   openGraph: {
     title: "AI Market Reports | PropertyIQ",
     description:

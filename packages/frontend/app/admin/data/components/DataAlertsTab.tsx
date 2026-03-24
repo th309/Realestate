@@ -5,22 +5,23 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
-import { DataAlert, AlertFilter } from './dataAlerts.types';
-import { AlertListItem } from './AlertListItem';
-import { AlertDetail } from './AlertDetail';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
+import { DataAlert, AlertFilter } from "./dataAlerts.types";
+import { AlertListItem } from "./AlertListItem";
+import { AlertDetail } from "./AlertDetail";
 
 export function DataAlertsTab() {
   const [alerts, setAlerts] = useState<DataAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<AlertFilter>({
-    status: 'open',
-    severity: 'all',
-    type: 'all',
+    status: "open",
+    severity: "all",
+    type: "all",
   });
   const [selectedAlert, setSelectedAlert] = useState<DataAlert | null>(null);
 
@@ -33,12 +34,12 @@ export function DataAlertsTab() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (filter.status !== 'all') params.append('status', filter.status);
-      if (filter.severity !== 'all') params.append('severity', filter.severity);
-      if (filter.type !== 'all') params.append('type', filter.type);
+      if (filter.status !== "all") params.append("status", filter.status);
+      if (filter.severity !== "all") params.append("severity", filter.severity);
+      if (filter.type !== "all") params.append("type", filter.type);
 
       const response = await fetchAPIRaw(`/api/health/data-alerts?${params}`, {
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -49,20 +50,26 @@ export function DataAlertsTab() {
         setAlerts([]);
       }
     } catch (err) {
-      console.error('Error fetching alerts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      console.error("Error fetching alerts:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect to API");
       setAlerts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAction = async (alertId: string, action: 'acknowledge' | 'resolve') => {
+  const handleAction = async (
+    alertId: string,
+    action: "acknowledge" | "resolve",
+  ) => {
     try {
-      const response = await fetchAPIRaw(`/api/health/data-alerts/${alertId}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const response = await fetchAPIRaw(
+        `/api/health/data-alerts/${alertId}/${action}`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         await fetchAlerts();
@@ -128,11 +135,17 @@ export function DataAlertsTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-3">
           {loading ? (
-            <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+            <div className="p-8">
+              <SkeletonLoader variant="table" />
+            </div>
           ) : error ? (
             <div className="p-8 text-center bg-surface-container rounded-xl">
-              <div className="text-red-600 font-medium mb-2">Failed to load alerts</div>
-              <div className="text-sm text-on-surface-variant mb-4">{error}</div>
+              <div className="text-red-600 font-medium mb-2">
+                Failed to load alerts
+              </div>
+              <div className="text-sm text-on-surface-variant mb-4">
+                {error}
+              </div>
               <button
                 onClick={fetchAlerts}
                 className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90"
@@ -159,8 +172,8 @@ export function DataAlertsTab() {
         {selectedAlert && (
           <AlertDetail
             alert={selectedAlert}
-            onAcknowledge={(id) => handleAction(id, 'acknowledge')}
-            onResolve={(id) => handleAction(id, 'resolve')}
+            onAcknowledge={(id) => handleAction(id, "acknowledge")}
+            onResolve={(id) => handleAction(id, "resolve")}
           />
         )}
       </div>

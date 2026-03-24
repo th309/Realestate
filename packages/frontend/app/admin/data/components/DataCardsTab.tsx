@@ -5,23 +5,26 @@
  * for all data cards in the platform. Matches the maps page sidebar exactly.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 import {
   MetricHealth,
   getStatusBadgeClasses,
   getCoverageColor,
-} from './dataCards.types';
-import { MetricTitle } from '@/app/components/MetricTitle';
+} from "./dataCards.types";
+import { MetricTitle } from "@/app/components/MetricTitle";
 
 export function DataCardsTab() {
   const [metrics, setMetrics] = useState<MetricHealth[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'ok' | 'stale' | 'empty' | 'error'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [filter, setFilter] = useState<
+    "all" | "ok" | "stale" | "empty" | "error"
+  >("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchMetricHealth();
@@ -32,7 +35,7 @@ export function DataCardsTab() {
     setError(null);
     try {
       const response = await fetchAPIRaw(`/api/health/data-cards`, {
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -43,8 +46,8 @@ export function DataCardsTab() {
         setMetrics([]);
       }
     } catch (err) {
-      console.error('Error fetching metric health:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      console.error("Error fetching metric health:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect to API");
       setMetrics([]);
     } finally {
       setLoading(false);
@@ -52,8 +55,9 @@ export function DataCardsTab() {
   };
 
   const filteredMetrics = metrics.filter((m) => {
-    const statusMatch = filter === 'all' || m.status === filter;
-    const categoryMatch = categoryFilter === 'all' || m.category === categoryFilter;
+    const statusMatch = filter === "all" || m.status === filter;
+    const categoryMatch =
+      categoryFilter === "all" || m.category === categoryFilter;
     return statusMatch && categoryMatch;
   });
 
@@ -62,7 +66,9 @@ export function DataCardsTab() {
   const renderStatusBadge = (status: string) => {
     const classes = getStatusBadgeClasses(status);
     return (
-      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${classes.bg} ${classes.text}`}>
+      <span
+        className={`px-2 py-0.5 text-xs font-medium rounded-full ${classes.bg} ${classes.text}`}
+      >
         {classes.label}
       </span>
     );
@@ -73,24 +79,30 @@ export function DataCardsTab() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-surface-container">
-          <div className="text-2xl font-bold text-on-surface">{metrics.length}</div>
+          <div className="text-2xl font-bold text-on-surface">
+            {metrics.length}
+          </div>
           <div className="text-sm text-on-surface-variant">Total Metrics</div>
         </div>
         <div className="p-4 rounded-xl bg-green-50">
           <div className="text-2xl font-bold text-green-800">
-            {metrics.filter((m) => m.status === 'ok').length}
+            {metrics.filter((m) => m.status === "ok").length}
           </div>
           <div className="text-sm text-green-600">Healthy</div>
         </div>
         <div className="p-4 rounded-xl bg-amber-50">
           <div className="text-2xl font-bold text-amber-800">
-            {metrics.filter((m) => m.status === 'stale').length}
+            {metrics.filter((m) => m.status === "stale").length}
           </div>
           <div className="text-sm text-amber-600">Stale</div>
         </div>
         <div className="p-4 rounded-xl bg-red-50">
           <div className="text-2xl font-bold text-red-800">
-            {metrics.filter((m) => m.status === 'error' || m.status === 'empty').length}
+            {
+              metrics.filter(
+                (m) => m.status === "error" || m.status === "empty",
+              ).length
+            }
           </div>
           <div className="text-sm text-red-600">Issues</div>
         </div>
@@ -135,12 +147,19 @@ export function DataCardsTab() {
       </div>
 
       {/* Metric Health Table */}
-      <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="metric-health-table">
+      <div
+        className="overflow-x-auto bg-surface-container rounded-xl"
+        data-testid="metric-health-table"
+      >
         {loading ? (
-          <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+          <div className="p-4">
+            <SkeletonLoader variant="card" count={4} />
+          </div>
         ) : error ? (
           <div className="p-8 text-center">
-            <div className="text-red-600 font-medium mb-2">Failed to load data</div>
+            <div className="text-red-600 font-medium mb-2">
+              Failed to load data
+            </div>
             <div className="text-sm text-on-surface-variant mb-4">{error}</div>
             <button
               onClick={fetchMetricHealth}
@@ -182,7 +201,10 @@ export function DataCardsTab() {
                 <tr key={metric.metricId} data-testid="metric-health-row">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <MetricTitle metricId={metric.metricId} className="font-medium text-on-surface" />
+                      <MetricTitle
+                        metricId={metric.metricId}
+                        className="font-medium text-on-surface"
+                      />
                       {metric.isNew && (
                         <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-green-100 text-green-700">
                           New
@@ -194,17 +216,23 @@ export function DataCardsTab() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-on-surface-variant">{metric.tableName}</div>
+                    <div className="text-xs text-on-surface-variant">
+                      {metric.tableName}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
                     {metric.category}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{renderStatusBadge(metric.status)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {renderStatusBadge(metric.status)}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
-                    {metric.latestDate || 'N/A'}
+                    {metric.latestDate || "N/A"}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`text-sm font-medium ${getCoverageColor(metric.coverage)}`}>
+                    <span
+                      className={`text-sm font-medium ${getCoverageColor(metric.coverage)}`}
+                    >
                       {metric.coverage.toFixed(1)}%
                     </span>
                   </td>

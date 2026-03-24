@@ -6,7 +6,9 @@ import { COMPARISONS } from "@/lib/data/comparisons";
 const BASE_URL = "https://www.propertyiq.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date().toISOString().split("T")[0];
+  // Use a fixed date so sitemap doesn't change on every build/request.
+  // Update this date when content is meaningfully updated.
+  const now = "2026-03-23";
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

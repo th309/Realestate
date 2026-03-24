@@ -8,8 +8,12 @@ export function NewsletterSignup() {
     "idle" | "loading" | "success" | "error"
   >("idle");
 
+  const [website, setWebsite] = useState("");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Honeypot: real users won't fill the hidden field
+    if (website) return;
     setStatus("loading");
     try {
       const res = await fetch("/api/newsletter", {
@@ -48,6 +52,17 @@ export function NewsletterSignup() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex gap-2">
+          {/* Honeypot field — hidden from real users, filled by bots */}
+          <input
+            type="text"
+            name="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute opacity-0 h-0 w-0 overflow-hidden pointer-events-none"
+          />
           <input
             type="email"
             value={email}

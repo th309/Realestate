@@ -1,95 +1,79 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
-type SystemStatus = "healthy" | "degraded" | "error" | "loading";
+export type SystemStatus = "healthy" | "degraded" | "error" | "loading";
 
-interface HealthCheckResponse {
-  status: string;
-  timestamp: string;
-  database?: string;
+export interface HealthSummary {
+  total: number;
+  available: number;
+  fresh: number;
 }
 
 interface DataSourcesResponse {
   status: "healthy" | "degraded" | "unhealthy";
   sources: Array<{ sourceName: string; available: boolean }>;
-  summary: { total: number; available: number; fresh: number };
+  summary: HealthSummary;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export interface SystemHealthState {
+  status: SystemStatus;
+  summary: HealthSummary | null;
+}
 
 /**
- * Fetches real system health from the backend health endpoints.
+ * Fetches real system health from the backend data-sources endpoint.
  *
- * Calls GET /api/health and GET /api/health/data-sources, then maps
- * the combined result to the SystemStatus union used by the admin banner.
+ * Uses fetchAPIRaw from the data layer. Maps the response to the
+ * SystemStatus union used by the admin banner and returns the summary
+ * so the banner can display source counts.
  *
  * Status mapping:
- *  - Fetch failure or database error  → 'error'
- *  - Any data source unhealthy        → 'degraded'
- *  - Everything nominal               → 'healthy'
+ *  - Fetch failure           → 'error'
+ *  - status 'unhealthy'      → 'error'
+ *  - status 'degraded'       → 'degraded'
+ *  - status 'healthy'        → 'healthy'
  */
-export function useSystemHealth(refreshTrigger: number): {
-  status: SystemStatus;
-} {
-  const [status, setStatus] = useState<SystemStatus>("loading");
+export function useSystemHealth(refreshTrigger: number): SystemHealthState {
+  const [state, setState] = useState<SystemHealthState>({
+    status: "loading",
+    summary: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     async function checkHealth() {
-      setStatus("loading");
+      setState((prev) => ({ ...prev, status: "loading" }));
 
       try {
-        // Fetch both endpoints in parallel
-        const [healthRes, sourcesRes] = await Promise.all([
-          fetch(`${API_URL}/api/health`),
-          fetch(`${API_URL}/api/health/data-sources`),
-        ]);
+        const res = await fetchAPIRaw("/api/health/data-sources");
 
         if (cancelled) return;
 
-        // If the primary health endpoint failed, treat as error
-        if (!healthRes.ok) {
-          setStatus("error");
+        if (!res.ok) {
+          setState({ status: "error", summary: null });
           return;
         }
 
-        const healthData: HealthCheckResponse = await healthRes.json();
+        const data: DataSourcesResponse = await res.json();
 
-        // Database connectivity failure → error
-        if (healthData.database === "error") {
-          setStatus("error");
-          return;
-        }
+        if (cancelled) return;
 
-        // If data-sources endpoint returned OK, inspect sources
-        if (sourcesRes.ok) {
-          const sourcesData: DataSourcesResponse = await sourcesRes.json();
+        const statusMap: Record<DataSourcesResponse["status"], SystemStatus> = {
+          healthy: "healthy",
+          degraded: "degraded",
+          unhealthy: "error",
+        };
 
-          if (cancelled) return;
-
-          const hasUnhealthySource = sourcesData.sources.some(
-            (source) => !source.available,
-          );
-
-          if (hasUnhealthySource || sourcesData.status === "unhealthy") {
-            setStatus("degraded");
-            return;
-          }
-
-          if (sourcesData.status === "degraded") {
-            setStatus("degraded");
-            return;
-          }
-        }
-
-        // Everything looks good
-        setStatus("healthy");
+        setState({
+          status: statusMap[data.status] ?? "error",
+          summary: data.summary,
+        });
       } catch {
-        // Network failure or other unrecoverable error
         if (!cancelled) {
-          setStatus("error");
+          setState({ status: "error", summary: null });
         }
       }
     }
@@ -101,5 +85,5 @@ export function useSystemHealth(refreshTrigger: number): {
     };
   }, [refreshTrigger]);
 
-  return { status };
+  return state;
 }

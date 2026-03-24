@@ -2,6 +2,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -53,6 +55,23 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
       envFilePath: ['.env.local', '.env'],
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,
+        limit: 20,
+      },
+      {
+        name: 'medium',
+        ttl: 60000,
+        limit: 100,
+      },
+      {
+        name: 'long',
+        ttl: 600000,
+        limit: 500,
+      },
+    ]),
     RedisModule,
     SupabaseModule,
     AiProviderModule,
@@ -95,6 +114,13 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     PreferencesModule,
   ],
   controllers: [AppController],
-  providers: [AppService, CacheRefreshJob],
+  providers: [
+    AppService,
+    CacheRefreshJob,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

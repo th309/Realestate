@@ -4,15 +4,16 @@
  * Displays data source availability, freshness, and schema status.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 
 interface SourceHealth {
   sourceName: string;
   displayName: string;
-  sourceType: 's3' | 'api';
+  sourceType: "s3" | "api";
   available: boolean;
   responseTimeMs: number | null;
   fresh: boolean;
@@ -37,7 +38,7 @@ export function DataSourcesTab() {
     setError(null);
     try {
       const response = await fetchAPIRaw(`/api/health/data-sources`, {
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -48,8 +49,8 @@ export function DataSourcesTab() {
         setSources([]);
       }
     } catch (err) {
-      console.error('Error fetching source health:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      console.error("Error fetching source health:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect to API");
       setSources([]);
     } finally {
       setLoading(false);
@@ -77,7 +78,10 @@ export function DataSourcesTab() {
    * - Orange: 150-175% of threshold (Overdue)
    * - Red: >=175% of threshold (Stale)
    */
-  const getFreshnessBadge = (daysSince: number | null, expectedDays: number) => {
+  const getFreshnessBadge = (
+    daysSince: number | null,
+    expectedDays: number,
+  ) => {
     if (daysSince === null) {
       return <span className="text-on-surface-variant">Unknown</span>;
     }
@@ -87,32 +91,34 @@ export function DataSourcesTab() {
     let label: string;
 
     if (ratio <= 1.25) {
-      colorClass = 'text-green-600';
-      label = 'Fresh';
+      colorClass = "text-green-600";
+      label = "Fresh";
     } else if (ratio <= 1.5) {
-      colorClass = 'text-amber-500';
-      label = 'OK';
+      colorClass = "text-amber-500";
+      label = "OK";
     } else if (ratio <= 1.75) {
-      colorClass = 'text-orange-500';
-      label = 'Overdue';
+      colorClass = "text-orange-500";
+      label = "Overdue";
     } else {
-      colorClass = 'text-red-600';
-      label = 'Stale';
+      colorClass = "text-red-600";
+      label = "Stale";
     }
 
     return (
       <span className={`inline-flex items-center gap-1.5 ${colorClass}`}>
-        <span className={`w-2 h-2 rounded-full ${colorClass.replace('text-', 'bg-')}`} />
+        <span
+          className={`w-2 h-2 rounded-full ${colorClass.replace("text-", "bg-")}`}
+        />
         {label}
       </span>
     );
   };
 
   const getResponseTimeColor = (ms: number | null) => {
-    if (ms === null) return 'text-on-surface-variant';
-    if (ms < 500) return 'text-green-600';
-    if (ms < 2000) return 'text-amber-600';
-    return 'text-red-600';
+    if (ms === null) return "text-on-surface-variant";
+    if (ms < 500) return "text-green-600";
+    if (ms < 2000) return "text-amber-600";
+    return "text-red-600";
   };
 
   return (
@@ -120,7 +126,9 @@ export function DataSourcesTab() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 rounded-xl bg-surface-container">
-          <div className="text-2xl font-bold text-on-surface">{sources.length}</div>
+          <div className="text-2xl font-bold text-on-surface">
+            {sources.length}
+          </div>
           <div className="text-sm text-on-surface-variant">Data Sources</div>
         </div>
         <div className="p-4 rounded-xl bg-green-50">
@@ -131,19 +139,32 @@ export function DataSourcesTab() {
         </div>
         <div className="p-4 rounded-xl bg-blue-50">
           <div className="text-2xl font-bold text-blue-800">
-            {sources.filter((s) => s.daysSinceUpdate !== null && s.daysSinceUpdate <= s.expectedFreshnessDays).length}
+            {
+              sources.filter(
+                (s) =>
+                  s.daysSinceUpdate !== null &&
+                  s.daysSinceUpdate <= s.expectedFreshnessDays,
+              ).length
+            }
           </div>
           <div className="text-sm text-blue-600">Fresh</div>
         </div>
       </div>
 
       {/* Source Health Table */}
-      <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="source-health-table">
+      <div
+        className="overflow-x-auto bg-surface-container rounded-xl"
+        data-testid="source-health-table"
+      >
         {loading ? (
-          <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+          <div className="p-4">
+            <SkeletonLoader variant="card" count={4} />
+          </div>
         ) : error ? (
           <div className="p-8 text-center">
-            <div className="text-red-600 font-medium mb-2">Failed to load data</div>
+            <div className="text-red-600 font-medium mb-2">
+              Failed to load data
+            </div>
             <div className="text-sm text-on-surface-variant mb-4">{error}</div>
             <button
               onClick={fetchSourceHealth}
@@ -187,8 +208,12 @@ export function DataSourcesTab() {
               {sources.map((source) => (
                 <tr key={source.sourceName}>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="font-medium text-on-surface">{source.displayName}</div>
-                    <div className="text-xs text-on-surface-variant">{source.sourceName}</div>
+                    <div className="font-medium text-on-surface">
+                      {source.displayName}
+                    </div>
+                    <div className="text-xs text-on-surface-variant">
+                      {source.sourceName}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-800 uppercase">
@@ -199,17 +224,26 @@ export function DataSourcesTab() {
                     {getAvailabilityBadge(source.available)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`text-sm ${getResponseTimeColor(source.responseTimeMs)}`}>
-                      {source.responseTimeMs !== null ? `${source.responseTimeMs}ms` : 'N/A'}
+                    <span
+                      className={`text-sm ${getResponseTimeColor(source.responseTimeMs)}`}
+                    >
+                      {source.responseTimeMs !== null
+                        ? `${source.responseTimeMs}ms`
+                        : "N/A"}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {getFreshnessBadge(source.daysSinceUpdate, source.expectedFreshnessDays)}
+                    {getFreshnessBadge(
+                      source.daysSinceUpdate,
+                      source.expectedFreshnessDays,
+                    )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {source.daysSinceUpdate !== null ? (
                       <div>
-                        <span className="text-on-surface">{source.daysSinceUpdate}d</span>
+                        <span className="text-on-surface">
+                          {source.daysSinceUpdate}d
+                        </span>
                         <span className="text-on-surface-variant/60 ml-1">
                           / {source.expectedFreshnessDays}d
                         </span>

@@ -15,6 +15,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 import { ConfidenceMatrix } from "./ConfidenceMatrix";
 import { ConfidenceTrendChart } from "./ConfidenceTrendChart";
 import { ComponentAnalysis } from "./ComponentAnalysis";
@@ -299,8 +300,8 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
               </div>
 
               {loading ? (
-                <div className="p-8 text-center text-on-surface-variant">
-                  Loading...
+                <div className="p-8">
+                  <SkeletonLoader variant="table" />
                 </div>
               ) : filteredResults.length === 0 ? (
                 <div className="p-8 text-center text-on-surface-variant">

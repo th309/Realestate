@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useCallback } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 
@@ -49,7 +50,25 @@ function TagChip({ tag }: { tag: string }) {
 }
 
 export function BlogFilterableList({ posts }: { posts: BlogPostSummary[] }) {
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const activeCategory = searchParams.get("category") ?? "all";
+
+  const setActiveCategory = useCallback(
+    (category: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (category === "all") {
+        params.delete("category");
+      } else {
+        params.set("category", category);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
 
   const filteredPosts =
     activeCategory === "all"

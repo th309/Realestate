@@ -7,17 +7,18 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { SkeletonLoader } from "@/app/admin/analytics/components/shared/SkeletonLoader";
 
 interface Alert {
   id: string;
   scoreType: string;
   geographyType: string;
-  alertType: 'threshold' | 'degradation' | 'anomaly';
-  severity: 'warning' | 'critical';
+  alertType: "threshold" | "degradation" | "anomaly";
+  severity: "warning" | "critical";
   previousConfidence: number | null;
   currentConfidence: number;
   thresholdCrossed: number;
@@ -25,10 +26,10 @@ interface Alert {
     name: string;
     description: string;
     value: string | number;
-    severity: 'info' | 'warning' | 'critical';
+    severity: "info" | "warning" | "critical";
   }>;
   recommendedActions: string[];
-  status: 'open' | 'acknowledged' | 'resolved' | 'dismissed';
+  status: "open" | "acknowledged" | "resolved" | "dismissed";
   createdAt: string;
 }
 
@@ -39,7 +40,7 @@ export function AlertsTab() {
     status: string;
     severity: string;
     scoreType: string;
-  }>({ status: 'open', severity: 'all', scoreType: 'all' });
+  }>({ status: "open", severity: "all", scoreType: "all" });
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
@@ -50,12 +51,13 @@ export function AlertsTab() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (filter.status !== 'all') params.append('status', filter.status);
-      if (filter.severity !== 'all') params.append('severity', filter.severity);
-      if (filter.scoreType !== 'all') params.append('scoreType', filter.scoreType);
+      if (filter.status !== "all") params.append("status", filter.status);
+      if (filter.severity !== "all") params.append("severity", filter.severity);
+      if (filter.scoreType !== "all")
+        params.append("scoreType", filter.scoreType);
 
       const response = await fetchAPIRaw(`/api/admin/alerts?${params}`, {
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -63,18 +65,24 @@ export function AlertsTab() {
         setAlerts(data.alerts || []);
       }
     } catch (error) {
-      console.error('Error fetching alerts:', error);
+      console.error("Error fetching alerts:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAction = async (alertId: string, action: 'acknowledge' | 'resolve' | 'dismiss') => {
+  const handleAction = async (
+    alertId: string,
+    action: "acknowledge" | "resolve" | "dismiss",
+  ) => {
     try {
-      const response = await fetchAPIRaw(`/api/admin/alerts/${alertId}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const response = await fetchAPIRaw(
+        `/api/admin/alerts/${alertId}/${action}`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         await fetchAlerts();
@@ -88,23 +96,23 @@ export function AlertsTab() {
   };
 
   const getSeverityColor = (severity: string) => {
-    return severity === 'critical'
-      ? 'bg-red-100 text-red-800 border-red-200'
-      : 'bg-amber-100 text-amber-800 border-amber-200';
+    return severity === "critical"
+      ? "bg-red-100 text-red-800 border-red-200"
+      : "bg-amber-100 text-amber-800 border-amber-200";
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open':
-        return 'bg-red-100 text-red-800';
-      case 'acknowledged':
-        return 'bg-amber-100 text-amber-800';
-      case 'resolved':
-        return 'bg-green-100 text-green-800';
-      case 'dismissed':
-        return 'bg-gray-100 text-gray-800';
+      case "open":
+        return "bg-red-100 text-red-800";
+      case "acknowledged":
+        return "bg-amber-100 text-amber-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "dismissed":
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -144,7 +152,9 @@ export function AlertsTab() {
           <label className="text-sm text-on-surface-variant">Score:</label>
           <select
             value={filter.scoreType}
-            onChange={(e) => setFilter({ ...filter, scoreType: e.target.value })}
+            onChange={(e) =>
+              setFilter({ ...filter, scoreType: e.target.value })
+            }
             className="px-3 py-1.5 rounded-lg border border-outline bg-surface text-on-surface"
           >
             <option value="all">All Scores</option>
@@ -159,7 +169,9 @@ export function AlertsTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-3">
           {loading ? (
-            <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+            <div className="p-8">
+              <SkeletonLoader variant="table" />
+            </div>
           ) : alerts.length === 0 ? (
             <div className="p-8 text-center bg-surface-container rounded-xl text-on-surface-variant">
               No alerts found
@@ -173,8 +185,8 @@ export function AlertsTab() {
                   w-full p-4 text-left rounded-xl transition-all
                   ${
                     selectedAlert?.id === alert.id
-                      ? 'ring-2 ring-primary bg-primary-container'
-                      : 'bg-surface-container hover:bg-surface-container-high'
+                      ? "ring-2 ring-primary bg-primary-container"
+                      : "bg-surface-container hover:bg-surface-container-high"
                   }
                 `}
               >
@@ -185,7 +197,9 @@ export function AlertsTab() {
                     >
                       {alert.severity}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(alert.status)}`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(alert.status)}`}
+                    >
                       {alert.status}
                     </span>
                   </div>
@@ -202,8 +216,12 @@ export function AlertsTab() {
                   Confidence: {alert.currentConfidence}%
                   {alert.previousConfidence !== null && (
                     <span className="text-red-600">
-                      {' '}
-                      (↓{(alert.previousConfidence - alert.currentConfidence).toFixed(1)}%)
+                      {" "}
+                      (↓
+                      {(
+                        alert.previousConfidence - alert.currentConfidence
+                      ).toFixed(1)}
+                      %)
                     </span>
                   )}
                 </div>
@@ -221,7 +239,8 @@ export function AlertsTab() {
                   {formatScoreType(selectedAlert.scoreType)}
                 </h3>
                 <p className="text-sm text-on-surface-variant capitalize">
-                  {selectedAlert.geographyType} • {selectedAlert.alertType} alert
+                  {selectedAlert.geographyType} • {selectedAlert.alertType}{" "}
+                  alert
                 </p>
               </div>
               <span
@@ -248,9 +267,14 @@ export function AlertsTab() {
                 </h4>
                 <div className="space-y-2">
                   {selectedAlert.diagnosticSignals.map((signal, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-surface-container-low">
+                    <div
+                      key={i}
+                      className="p-3 rounded-lg bg-surface-container-low"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-on-surface">{signal.name}</span>
+                        <span className="font-medium text-on-surface">
+                          {signal.name}
+                        </span>
                         <span className="text-sm text-on-surface-variant">
                           {signal.value}
                         </span>
@@ -272,7 +296,10 @@ export function AlertsTab() {
                 </h4>
                 <ul className="space-y-1">
                   {selectedAlert.recommendedActions.map((action, i) => (
-                    <li key={i} className="text-sm text-on-surface flex items-start gap-2">
+                    <li
+                      key={i}
+                      className="text-sm text-on-surface flex items-start gap-2"
+                    >
                       <span className="text-primary">•</span>
                       {action}
                     </li>
@@ -282,22 +309,22 @@ export function AlertsTab() {
             )}
 
             {/* Actions */}
-            {selectedAlert.status === 'open' && (
+            {selectedAlert.status === "open" && (
               <div className="flex gap-3 pt-4 border-t border-outline-variant">
                 <button
-                  onClick={() => handleAction(selectedAlert.id, 'acknowledge')}
+                  onClick={() => handleAction(selectedAlert.id, "acknowledge")}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-on-secondary"
                 >
                   Acknowledge
                 </button>
                 <button
-                  onClick={() => handleAction(selectedAlert.id, 'resolve')}
+                  onClick={() => handleAction(selectedAlert.id, "resolve")}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-on-primary"
                 >
                   Resolve
                 </button>
                 <button
-                  onClick={() => handleAction(selectedAlert.id, 'dismiss')}
+                  onClick={() => handleAction(selectedAlert.id, "dismiss")}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
                 >
                   Dismiss
@@ -305,10 +332,10 @@ export function AlertsTab() {
               </div>
             )}
 
-            {selectedAlert.status === 'acknowledged' && (
+            {selectedAlert.status === "acknowledged" && (
               <div className="flex gap-3 pt-4 border-t border-outline-variant">
                 <button
-                  onClick={() => handleAction(selectedAlert.id, 'resolve')}
+                  onClick={() => handleAction(selectedAlert.id, "resolve")}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-on-primary"
                 >
                   Resolve
@@ -324,9 +351,9 @@ export function AlertsTab() {
 
 function formatScoreType(type: string): string {
   const labels: Record<string, string> = {
-    market_health: 'Market Health',
-    homeready: 'HomeReady',
-    investoredge: 'InvestorEdge',
+    market_health: "Market Health",
+    homeready: "HomeReady",
+    investoredge: "InvestorEdge",
   };
   return labels[type] || type;
 }
