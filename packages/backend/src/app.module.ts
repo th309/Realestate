@@ -51,6 +51,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { OrgBillingModule } from './org-billing/org-billing.module';
 import { OrgBrandingModule } from './org-branding/org-branding.module';
 import { OrgEmbedsModule } from './org-embeds/org-embeds.module';
+import { OrgApiKeysModule } from './org-api-keys/org-api-keys.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -122,6 +123,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     OrgBillingModule,
     OrgBrandingModule,
     OrgEmbedsModule,
+    OrgApiKeysModule,
   ],
   controllers: [AppController],
   providers: [
