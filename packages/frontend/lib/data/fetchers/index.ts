@@ -285,9 +285,16 @@ export {
   updateOrgEmbedToken,
   revokeOrgEmbedToken,
   fetchEmbedBranding,
+  fetchEmbedScore,
+  fetchEmbedMetricCard,
+  fetchEmbedMapData,
   type EmbedToken,
   type EmbedTokenListItem,
   type EmbedBranding,
+  type EmbedScoreData,
+  type EmbedMetricCardData,
+  type EmbedMapRegion,
+  type EmbedMapData,
 } from "./org-embeds";
 
 // Admin analytics

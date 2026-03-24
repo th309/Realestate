@@ -66,6 +66,87 @@ export async function fetchEmbedBranding(
 }
 
 // ---------------------------------------------------------------------------
+// Embed widget data fetchers (public, token-authenticated)
+// ---------------------------------------------------------------------------
+
+/** Response from the embed score endpoint. */
+export interface EmbedScoreData {
+  geography_name: string;
+  scores: Record<
+    string,
+    {
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }
+  >;
+}
+
+/** Response from the embed metric-card endpoint. */
+export interface EmbedMetricCardData {
+  metric_id: string;
+  geography_name: string;
+  value: number | null;
+  period_date: string;
+  trend: number | null;
+}
+
+/** A single region entry from the embed map endpoint. */
+export interface EmbedMapRegion {
+  region_id: string;
+  region_name: string;
+  value: number;
+}
+
+/** Response from the embed map endpoint. */
+export interface EmbedMapData {
+  metric_id: string;
+  geo_level: string;
+  data: EmbedMapRegion[];
+}
+
+/**
+ * Fetch score data for an embed widget (public, token-authenticated).
+ */
+export async function fetchEmbedScore(
+  geoLevel: string,
+  geoId: string,
+  token: string,
+): Promise<EmbedScoreData> {
+  return fetchAPI<EmbedScoreData>(
+    `/api/embed/score/${encodeURIComponent(geoLevel)}/${encodeURIComponent(geoId)}?token=${encodeURIComponent(token)}`,
+  );
+}
+
+/**
+ * Fetch metric card data for an embed widget (public, token-authenticated).
+ */
+export async function fetchEmbedMetricCard(
+  metricId: string,
+  geoLevel: string,
+  geoId: string,
+  token: string,
+): Promise<EmbedMetricCardData> {
+  return fetchAPI<EmbedMetricCardData>(
+    `/api/embed/metric-card/${encodeURIComponent(metricId)}/${encodeURIComponent(geoLevel)}/${encodeURIComponent(geoId)}?token=${encodeURIComponent(token)}`,
+  );
+}
+
+/**
+ * Fetch map snapshot data for an embed widget (public, token-authenticated).
+ */
+export async function fetchEmbedMapData(
+  geoLevel: string,
+  metric: string,
+  token: string,
+): Promise<EmbedMapData> {
+  return fetchAPI<EmbedMapData>(
+    `/api/embed/map/${encodeURIComponent(geoLevel)}?metric=${encodeURIComponent(metric)}&token=${encodeURIComponent(token)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Mutation operations — use fetchAPIRaw (manual error handling)
 // ---------------------------------------------------------------------------
 

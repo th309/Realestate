@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Roboto } from "next/font/google";
+import { Suspense } from "react";
 import "../globals.css";
 import { EmbedProviders } from "./providers";
+import { EmbedShell } from "./components";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -11,7 +13,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "PropertyIQ Score Widget",
+  title: "PropertyIQ Embed Widget",
   robots: { index: false, follow: false },
 };
 
@@ -25,6 +27,14 @@ export const viewport: Viewport = {
  *
  * Minimal layout for embeddable widgets — no header, footer, sidebar, or nav.
  * Designed to be rendered inside an iframe on third-party sites.
+ *
+ * Wraps all embed pages with:
+ * 1. EmbedProviders — QueryClient, Auth, Entitlements
+ * 2. EmbedShell — Reads ?token= from URL, fetches org branding, renders
+ *    branded header bar + powered-by footer around the widget content.
+ *
+ * EmbedShell uses useSearchParams (client component) so it needs a
+ * Suspense boundary to avoid CSR bailout.
  */
 export default function EmbedLayout({
   children,
@@ -34,7 +44,11 @@ export default function EmbedLayout({
   return (
     <html lang="en">
       <body className={`${roboto.variable} antialiased bg-transparent`}>
-        <EmbedProviders>{children}</EmbedProviders>
+        <EmbedProviders>
+          <Suspense>
+            <EmbedShell>{children}</EmbedShell>
+          </Suspense>
+        </EmbedProviders>
       </body>
     </html>
   );
