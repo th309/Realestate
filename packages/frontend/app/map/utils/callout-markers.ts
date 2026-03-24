@@ -24,26 +24,24 @@ function createPillElement(
   metricFormat: MetricFormat,
 ): HTMLDivElement {
   const el = document.createElement("div");
+  // Match the centered label style: Roboto Medium ~13.5px name, Roboto Regular ~12px value
+  // Uses M3 on-surface color (#1d1b20) with white halo (text-shadow), same as geo-labels layer
   el.style.cssText = `
-    background: ${fillColor};
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 6px;
-    padding: 3px 8px;
     pointer-events: none;
     white-space: nowrap;
     line-height: 1.3;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    text-align: center;
     transition: opacity 0.3s ease;
   `;
 
   const nameSpan = document.createElement("div");
   nameSpan.style.cssText =
-    "color: white; font-size: 10px; font-weight: 600; font-family: Roboto, sans-serif;";
+    "color: #1d1b20; font-size: 13.5px; font-weight: 500; font-family: Roboto, sans-serif; text-shadow: -1px -1px 0 rgba(255,255,255,0.95), 1px -1px 0 rgba(255,255,255,0.95), -1px 1px 0 rgba(255,255,255,0.95), 1px 1px 0 rgba(255,255,255,0.95), 0 0 3px rgba(255,255,255,0.95); letter-spacing: 0.02em;";
   nameSpan.textContent = name;
 
   const valueSpan = document.createElement("div");
   valueSpan.style.cssText =
-    "color: rgba(255, 255, 255, 0.85); font-size: 9px; font-family: Roboto, sans-serif;";
+    "color: #1d1b20; font-size: 12px; font-weight: 400; font-family: Roboto, sans-serif; text-shadow: -1px -1px 0 rgba(255,255,255,0.95), 1px -1px 0 rgba(255,255,255,0.95), -1px 1px 0 rgba(255,255,255,0.95), 1px 1px 0 rgba(255,255,255,0.95), 0 0 3px rgba(255,255,255,0.95); letter-spacing: 0.02em;";
   valueSpan.textContent = formatCompactValue(value, metricFormat);
 
   el.appendChild(nameSpan);
