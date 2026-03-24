@@ -188,8 +188,11 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
           },
         ],
         "text-size": 15,
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.5,
+        // Fixed center anchor — polylabel + bbox center computes the visual center,
+        // so we don't need variable-anchor collision avoidance (which shifts labels
+        // away from the intended position, e.g. California drifting to LA)
+        "text-anchor": "center",
+        "text-allow-overlap": false,
         "text-max-width": 8,
         "text-letter-spacing": 0.02,
       },
