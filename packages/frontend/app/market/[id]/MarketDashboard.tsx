@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -290,12 +290,26 @@ export function MarketDashboard({
   const queryClient = useQueryClient();
 
   // Check entitlements for geography level
-  const { getAccess } = useEntitlements();
+  const { getAccess, canAccess } = useEntitlements();
   const geoAccess = getAccess("geo", geographyType);
   const hasGeoAccess =
     geoAccess.level === "full" ||
     geoAccess.level === "preview" ||
     !PREMIUM_GEO_LEVELS.includes(geographyType);
+  const canExport = canAccess("feature", "export_csv");
+
+  const handleShareMarket = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // Fallback: silent
+    }
+  }, []);
+
+  const handleDownloadMarket = useCallback(() => {
+    if (!canExport) return;
+    window.print();
+  }, [canExport]);
 
   // Derive state filter: use URL param if available
   // Note: metros don't use state filter - they can span state boundaries
@@ -484,16 +498,26 @@ export function MarketDashboard({
                 <RefreshCw className="w-5 h-5 text-on-surface-variant" />
               </button>
               <button
+                onClick={handleShareMarket}
                 className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
                 title="Share"
               >
                 <Share2 className="w-5 h-5 text-on-surface-variant" />
               </button>
               <button
+                onClick={handleDownloadMarket}
                 className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
-                title="Download"
+                title={
+                  canExport
+                    ? "Print / Save as PDF"
+                    : "Upgrade to Pro to download"
+                }
               >
-                <Download className="w-5 h-5 text-on-surface-variant" />
+                {canExport ? (
+                  <Download className="w-5 h-5 text-on-surface-variant" />
+                ) : (
+                  <Lock className="w-5 h-5 text-on-surface-variant" />
+                )}
               </button>
             </div>
           </div>
