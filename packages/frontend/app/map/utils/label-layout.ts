@@ -196,12 +196,17 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
     // Use a shared longitude: the rightmost callout lng in the group
     const sharedLng = Math.max(...eastGroup.map((c) => c.calloutLngLat[0]));
 
-    // Start each callout at its own anchor latitude, then enforce
+    // Cap the top of the stack: no callout should be above ~42.5°N
+    // (Massachusetts latitude). States like Vermont and NH are further
+    // north but their callouts should stay in the Atlantic, not Canada.
+    const MAX_CALLOUT_LAT = 42.5;
+
+    // Start each callout at its own anchor latitude (capped), then enforce
     // minimum gap from top to bottom. This keeps callouts near their
     // states while preventing overlap and crossings.
     const latitudes: number[] = [];
     for (let i = 0; i < eastGroup.length; i++) {
-      let targetLat = eastGroup[i].anchorLngLat[1];
+      let targetLat = Math.min(eastGroup[i].anchorLngLat[1], MAX_CALLOUT_LAT);
 
       // Enforce minimum gap below previous callout
       if (i > 0) {
