@@ -24,7 +24,10 @@ export function calculatePolylabel(geometry: any): [number, number] | null {
   if (!ring || ring.length === 0 || ring[0].length === 0) return null;
 
   try {
-    const result = polylabel(ring, 1.0);
+    // Precision in coordinate units (degrees). 0.01° ≈ 1.1km — accurate enough
+    // for state-level label placement. The previous 1.0° (111km) was too coarse,
+    // causing labels like California to land far from the visual center.
+    const result = polylabel(ring, 0.01);
     return [result[0], result[1]];
   } catch {
     return bboxCenter(ring[0]);
