@@ -191,11 +191,12 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
         // Fixed center anchor — polylabel + bbox center computes the visual center,
         // so we don't need variable-anchor collision avoidance (which shifts labels
         // away from the intended position, e.g. California drifting to LA).
-        // allow-overlap: false — Mapbox hides colliding labels, but our JS-side
-        // collision detection (in label-layout.ts) catches these states and pushes
-        // them to callouts with leader lines before Mapbox ever needs to hide them.
+        // allow-overlap: true — all centered labels always show. The white halo
+        // makes minor overlaps readable. Only states where the label physically
+        // can't fit (ratio > 1.0) get callout leader lines instead.
         "text-anchor": "center",
-        "text-allow-overlap": false,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
         "text-max-width": 8,
         "text-letter-spacing": 0.02,
       },
