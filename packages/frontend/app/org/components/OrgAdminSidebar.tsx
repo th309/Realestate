@@ -9,6 +9,7 @@ import {
   CreditCard,
   Palette,
   Code,
+  Key,
   ScrollText,
   ArrowLeft,
   Menu,
@@ -63,6 +64,11 @@ export function OrgAdminSidebar({ slug }: OrgAdminSidebarProps) {
       label: "Embeds",
       href: `/org/${slug}/admin/embeds`,
       icon: Code,
+    },
+    {
+      label: "API Keys",
+      href: `/org/${slug}/admin/api-keys`,
+      icon: Key,
     },
     {
       label: "Audit Log",

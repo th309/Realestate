@@ -371,6 +371,18 @@ export {
   type EmbedMapData,
 } from "./fetchers";
 
+// Organization API keys
+export {
+  fetchOrgApiKeys,
+  createOrgApiKey,
+  updateOrgApiKey,
+  revokeOrgApiKey,
+  type ApiKey,
+  type ApiKeyListItem,
+  type CreateApiKeyPayload,
+  type UpdateApiKeyPayload,
+} from "./fetchers";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
