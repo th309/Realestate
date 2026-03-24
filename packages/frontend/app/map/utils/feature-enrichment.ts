@@ -53,7 +53,8 @@ function enrichNationalFeatures(geojson: any, mapData: MapData): void {
 function enrichStateFeatures(geojson: any, mapData: MapData): void {
   geojson.features.forEach((feature: any) => {
     const name = feature.properties.name;
-    const entry = mapData[name];
+    // Try exact match first, then case-insensitive fallback (handles "District Of Columbia" vs "District of Columbia")
+    const entry = mapData[name] ?? findCaseInsensitive(mapData, name);
     feature.properties.value = getValueFromEntry(entry) || 0;
     feature.properties.dataDate = getDateFromEntry(entry);
     const stateFips =
@@ -142,4 +143,14 @@ function enrichTractFeatures(geojson: any, mapData: MapData): void {
     feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ""}`;
     feature.properties.countyFips = stateFips + countyFips;
   });
+}
+
+/** Case-insensitive lookup in mapData for state names that differ in capitalization. */
+function findCaseInsensitive(mapData: MapData, name: string): any {
+  if (!name) return undefined;
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(mapData)) {
+    if (key.toLowerCase() === lower) return mapData[key];
+  }
+  return undefined;
 }
