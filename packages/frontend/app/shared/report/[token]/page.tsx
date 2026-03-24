@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import React, { Suspense, useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import React, { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Loader2, FileText, AlertTriangle, ArrowLeft } from "lucide-react";
+import { BrandingProvider } from "@/app/reports/[id]/components/BrandingProvider";
+import { BrandedReportHeader } from "@/app/reports/[id]/components/BrandedReportHeader";
+import { ReportWithTemplate } from "@/app/reports/[id]/components/types";
+import { UserType, ReportInstance } from "@/app/reports/types";
+import { SectionErrorBoundary } from "@/app/reports/[id]/components/SectionErrorBoundary";
 import {
-  Loader2,
-  FileText,
-  AlertTriangle,
-  ArrowLeft,
-} from 'lucide-react';
-import { BrandingProvider } from '@/app/reports/[id]/components/BrandingProvider';
-import { ReportWithTemplate } from '@/app/reports/[id]/components/types';
-import { UserType, ReportInstance } from '@/app/reports/types';
-import { SectionErrorBoundary } from '@/app/reports/[id]/components/SectionErrorBoundary';
-import { getTemplate, ReportTemplateType } from '@/app/reports/[id]/components/templates';
-import { formatSectionName } from '@/app/reports/[id]/components/utils/sectionDisplay';
-import { ReportFooter } from '@/app/reports/[id]/components/ReportFooter';
-import { normalizeReport } from '@/app/reports/[id]/components/utils/normalizeReport';
-import { fetchSharedReport } from '@/lib/data';
-import '@/app/reports/styles/report-theme.css';
+  getTemplate,
+  ReportTemplateType,
+} from "@/app/reports/[id]/components/templates";
+import { formatSectionName } from "@/app/reports/[id]/components/utils/sectionDisplay";
+import { ReportFooter } from "@/app/reports/[id]/components/ReportFooter";
+import { normalizeReport } from "@/app/reports/[id]/components/utils/normalizeReport";
+import { fetchSharedReport } from "@/lib/data";
+import { useReportBranding } from "@/app/reports/hooks/useReportBranding";
+import "@/app/reports/styles/report-theme.css";
 
 function LoadingFallback() {
   return (
@@ -46,6 +46,9 @@ function SharedReportViewer() {
   const [report, setReport] = useState<ReportWithTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { branding: orgBranding } = useReportBranding(
+    report?.organization_id ?? null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -59,14 +62,16 @@ function SharedReportViewer() {
         }
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : 'Failed to load report');
+        setError(e instanceof Error ? e.message : "Failed to load report");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   if (loading) {
@@ -91,7 +96,8 @@ function SharedReportViewer() {
           </div>
           <h2 className="report-heading-md mb-2">Report not available</h2>
           <p className="report-body mb-6">
-            {error || 'This shared report link may have expired or is no longer available.'}
+            {error ||
+              "This shared report link may have expired or is no longer available."}
           </p>
           <Link href="/" className="report-btn-primary">
             <ArrowLeft className="w-4 h-4" />
@@ -102,7 +108,7 @@ function SharedReportViewer() {
     );
   }
 
-  if (report.status !== 'ready') {
+  if (report.status !== "ready") {
     return (
       <div className="report-page min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md px-6">
@@ -110,7 +116,9 @@ function SharedReportViewer() {
             <FileText className="w-8 h-8 text-amber-600" />
           </div>
           <h2 className="report-heading-md mb-2">Report not ready</h2>
-          <p className="report-body mb-6">This report is still being generated. Please try again later.</p>
+          <p className="report-body mb-6">
+            This report is still being generated. Please try again later.
+          </p>
           <Link href="/" className="report-btn-primary">
             <ArrowLeft className="w-4 h-4" />
             Go to PropertyIQ
@@ -122,55 +130,81 @@ function SharedReportViewer() {
 
   const userType = report.user_type as UserType;
   const reportType = report.template?.config?.report_type;
-  const isAgentReport = report.user_type === 'agent' || reportType === 'snapshot';
+  const isAgentReport =
+    report.user_type === "agent" || reportType === "snapshot";
   let templateType: ReportTemplateType;
 
-  if (reportType === 'comparison' && report.comparison_geographies && report.comparison_geographies.length > 0) {
-    templateType = 'comparison';
+  if (
+    reportType === "comparison" &&
+    report.comparison_geographies &&
+    report.comparison_geographies.length > 0
+  ) {
+    templateType = "comparison";
   } else if (isAgentReport) {
-    templateType = 'market_snapshot_client';
-  } else if (userType === 'investor') {
-    templateType = 'investoredge';
+    templateType = "market_snapshot_client";
+  } else if (userType === "investor") {
+    templateType = "investoredge";
   } else {
-    templateType = 'homeready';
+    templateType = "homeready";
   }
 
   const template = getTemplate(templateType);
   const templateSections = template?.sections || [];
   const reportInstance = report as unknown as ReportInstance;
 
+  // Build branding config for BrandingProvider when org branding is available
+  const brandingConfig = orgBranding
+    ? {
+        logoUrl: orgBranding.logo_url || undefined,
+        primaryColor: orgBranding.accent_color,
+        companyName: orgBranding.org_name,
+        websiteUrl: orgBranding.website_url || undefined,
+      }
+    : undefined;
+
   return (
     <div className="report-page min-h-screen">
-      {/* Minimal header for shared reports */}
-      <header className="sticky top-0 z-40 bg-[var(--report-cream)] border-b border-[rgba(27,46,74,0.08)] backdrop-blur-sm report-no-print">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[var(--report-navy)] flex items-center justify-center">
-                <FileText className="w-4 h-4 text-white" />
+      {/* Header: branded when org exists, default PropertyIQ otherwise */}
+      {orgBranding ? (
+        <BrandedReportHeader
+          branding={orgBranding}
+          reportTitle={report.title}
+          geographyName={report.primary_geography_name}
+          reportDate={new Date(report.created_at).toLocaleDateString()}
+          onPrint={() => window.print()}
+        />
+      ) : (
+        <header className="sticky top-0 z-40 bg-[var(--report-cream)] border-b border-[rgba(27,46,74,0.08)] backdrop-blur-sm report-no-print">
+          <div className="max-w-6xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[var(--report-navy)] flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-semibold text-[var(--report-navy)]">
+                  PropertyIQ
+                </span>
+                <span className="text-xs text-[var(--report-stone-light)] ml-2">
+                  Shared Report
+                </span>
               </div>
-              <span className="font-semibold text-[var(--report-navy)]">PropertyIQ</span>
-              <span className="text-xs text-[var(--report-stone-light)] ml-2">Shared Report</span>
+              <Link href="/auth/sign-up" className="report-btn-primary text-sm">
+                Sign up free
+              </Link>
             </div>
-            <Link
-              href="/auth/sign-up"
-              className="report-btn-primary text-sm"
-            >
-              Sign up free
-            </Link>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Report Body */}
       <main>
         <div className="max-w-4xl mx-auto px-6 py-10">
-          <BrandingProvider>
+          <BrandingProvider branding={brandingConfig}>
             {templateSections.map(({ component: Section, id }, index) => (
               <section
                 key={id}
                 id={id}
-                className={`${id === 'hero' || id === 'investor-hero' || id === 'comparison-hero' || id === 'client-overview' ? 'mb-0' : 'mb-10'} report-animate-in`}
+                className={`${id === "hero" || id === "investor-hero" || id === "comparison-hero" || id === "client-overview" ? "mb-0" : "mb-10"} report-animate-in`}
                 style={{ animationDelay: `${(index + 1) * 100}ms` }}
               >
                 <SectionErrorBoundary sectionId={id}>

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from "react";
 
 /**
  * Configuration for white-label branding
@@ -12,16 +12,17 @@ export interface BrandingConfig {
   secondaryColor: string;
   companyName: string;
   fontFamily?: string;
-  headerStyle?: 'minimal' | 'full';
+  headerStyle?: "minimal" | "full";
   footerText?: string;
   watermark?: boolean;
+  websiteUrl?: string;
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
-  primaryColor: '#2563eb', // blue-600
-  secondaryColor: '#1e40af', // blue-800
-  companyName: 'PropertyIQ',
-  headerStyle: 'full',
+  primaryColor: "#2563eb", // blue-600
+  secondaryColor: "#1e40af", // blue-800
+  companyName: "PropertyIQ",
+  headerStyle: "full",
   watermark: false,
 };
 
@@ -35,7 +36,10 @@ interface BrandingProviderProps {
 /**
  * Provides branding configuration to all report sections
  */
-export function BrandingProvider({ children, branding }: BrandingProviderProps) {
+export function BrandingProvider({
+  children,
+  branding,
+}: BrandingProviderProps) {
   const mergedBranding: BrandingConfig = {
     ...DEFAULT_BRANDING,
     ...branding,

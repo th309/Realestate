@@ -2,11 +2,14 @@
 
 import React, { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Share2, MessageSquare } from "lucide-react";
 import { ReportWithTemplate } from "./types";
 import { PDFExportButton } from "../export/PDFExport";
 import { ReportTemplateType } from "./templates";
 import { ShareReportModal } from "./ShareReportModal";
+import { BrandedReportHeader } from "./BrandedReportHeader";
+import { useReportBranding } from "../../hooks/useReportBranding";
 
 interface TemplateSectionRef {
   id: string;
@@ -29,11 +32,43 @@ export function ReportHeader({
   setShowConversation,
   formatSectionName,
 }: ReportHeaderProps) {
+  const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
+  const { branding: orgBranding } = useReportBranding(
+    report.organization_id ?? null,
+  );
 
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
+
+  // Render branded header when org branding is available
+  if (orgBranding) {
+    return (
+      <>
+        <BrandedReportHeader
+          branding={orgBranding}
+          reportTitle={report.title}
+          geographyName={report.primary_geography_name}
+          reportDate={new Date(report.created_at).toLocaleDateString()}
+          onBack={() => router.push("/reports")}
+          onShare={() => setShowShareModal(true)}
+          onPrint={handlePrint}
+        />
+        <ShareReportModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          reportId={report.id}
+          reportTitle={report.title}
+          userId={report.user_id}
+          existingShareToken={report.share_token}
+          reportData={null}
+          onPrint={handlePrint}
+          onExportPdf={handlePrint}
+        />
+      </>
+    );
+  }
 
   return (
     <>
