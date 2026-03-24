@@ -26,7 +26,11 @@ import { SupabaseService } from '../../supabase/supabase.service';
 export class OrgContextGuard implements CanActivate {
   private readonly logger = new Logger(OrgContextGuard.name);
 
-  /** Path segments under /api/org/ that are NOT org slugs. */
+  /**
+   * Path segments under /api/org/ that are NOT org slugs.
+   * IMPORTANT: These must also be reserved in org creation validation
+   * to prevent users from creating orgs with these slugs.
+   */
   private static readonly SKIP_PATHS = ['billing', 'invite'];
 
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -37,10 +41,20 @@ export class OrgContextGuard implements CanActivate {
 
     // Extract slug from /api/org/:slug/...
     const slugMatch = request.path.match(/^\/api\/org\/([^/]+)/);
-    if (!slugMatch) return true;
+    if (!slugMatch) {
+      this.logger.warn(
+        `OrgContextGuard applied to route with no org slug: ${request.path}`,
+      );
+      return true;
+    }
 
     const slug = slugMatch[1];
     if (OrgContextGuard.SKIP_PATHS.includes(slug)) return true;
+
+    // Validate slug format to avoid wasted DB round trips
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(slug)) {
+      throw new NotFoundException('Organization not found');
+    }
 
     const client = this.supabaseService.getClient();
 
@@ -72,7 +86,16 @@ export class OrgContextGuard implements CanActivate {
         .maybeSingle();
 
       request.orgRole = membership?.role || null;
+
+      // Org owner always has admin access
+      if (userId === org.owner_id) {
+        request.orgRole = 'admin';
+      }
     }
+
+    this.logger.debug(
+      `Resolved org "${slug}" (id=${org.id}) for user, role=${request.orgRole}`,
+    );
 
     return true;
   }
