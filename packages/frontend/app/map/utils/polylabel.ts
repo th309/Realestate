@@ -6,7 +6,10 @@
 import polylabel from "@mapbox/polylabel";
 
 /**
- * Calculate the visual center (pole of inaccessibility) of a GeoJSON geometry.
+ * Calculate the visual center of a GeoJSON geometry.
+ * Blends the polylabel (pole of inaccessibility) with the bounding box center:
+ * - Polylabel ensures the point is inside the polygon (good horizontal placement)
+ * - Bbox center provides better vertical centering for long/narrow shapes
  * For MultiPolygon, uses the largest polygon by bounding-box area.
  * Returns [lng, lat] or null if geometry is invalid.
  */
@@ -24,11 +27,14 @@ export function calculatePolylabel(geometry: any): [number, number] | null {
   if (!ring || ring.length === 0 || ring[0].length === 0) return null;
 
   try {
-    // Precision in coordinate units (degrees). 0.01° ≈ 1.1km — accurate enough
-    // for state-level label placement. The previous 1.0° (111km) was too coarse,
-    // causing labels like California to land far from the visual center.
-    const result = polylabel(ring, 0.01);
-    return [result[0], result[1]];
+    const pole = polylabel(ring, 0.01);
+    const center = bboxCenter(ring[0]);
+    if (!center) return [pole[0], pole[1]];
+
+    // Blend: use polylabel for longitude (stays inside polygon horizontally)
+    // and average polylabel + bbox center for latitude (better vertical centering
+    // for tall/narrow states like California where polylabel drifts to the widest part)
+    return [pole[0], (pole[1] + center[1]) / 2];
   } catch {
     return bboxCenter(ring[0]);
   }
