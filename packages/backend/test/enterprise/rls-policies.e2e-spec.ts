@@ -4,7 +4,7 @@
  * Verifies that Supabase row-level security policies on enterprise tables
  * correctly enforce access control using real JWTs against a live database.
  *
- * Requires: SUPABASE_URL, SUPABASE_SERVICE_KEY, and SUPABASE_ANON_KEY env vars.
+ * Requires: SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_KEY env vars.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -18,16 +18,24 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Read SUPABASE_URL from env with no fallback. */
+function getSupabaseUrl(): string {
+  const url = process.env.SUPABASE_URL;
+  if (!url) {
+    throw new Error(
+      'SUPABASE_URL is not set. Required for enterprise e2e tests.',
+    );
+  }
+  return url;
+}
+
 /** Build a Supabase client authenticated as a specific user via the anon key. */
 function createAuthenticatedClient(accessToken: string): SupabaseClient {
-  const supabaseUrl =
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey =
-    process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !anonKey) {
+  const supabaseUrl = getSupabaseUrl();
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!anonKey) {
     throw new Error(
-      'Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_ANON_KEY.',
+      'SUPABASE_ANON_KEY is not set. Required for enterprise e2e tests.',
     );
   }
 
@@ -39,14 +47,11 @@ function createAuthenticatedClient(accessToken: string): SupabaseClient {
 
 /** Build a Supabase client using the service-role key (bypasses RLS). */
 function createServiceRoleClient(): SupabaseClient {
-  const supabaseUrl =
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceKey) {
+  const supabaseUrl = getSupabaseUrl();
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!serviceKey) {
     throw new Error(
-      'Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.',
+      'SUPABASE_SERVICE_KEY is not set. Required for enterprise e2e tests.',
     );
   }
 
@@ -130,8 +135,8 @@ describe('Enterprise RLS Policies', () => {
         organization_id: fixture.organization.id,
         actor_id: fixture.admin.id,
         action: 'test.rls_check',
-        resource_type: 'organization',
-        resource_id: fixture.organization.id,
+        target_type: 'organization',
+        target_id: fixture.organization.id,
       });
 
     expect(insertError).toBeNull();
@@ -157,6 +162,135 @@ describe('Enterprise RLS Policies', () => {
     const { data, error } = await client
       .from('organization_audit_log')
       .select('action')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // organization_invites
+  // -----------------------------------------------------------------------
+
+  it('admin can read org invites', async () => {
+    // Seed a test invite via service role
+    const { error: insertError } = await fixture.supabase
+      .from('organization_invites')
+      .insert({
+        organization_id: fixture.organization.id,
+        email: 'rls-test-invite@example.com',
+        role: 'member',
+        token: `rls-test-token-${Date.now()}`,
+        invited_by: fixture.admin.id,
+        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+        status: 'pending',
+      });
+
+    expect(insertError).toBeNull();
+
+    const client = createAuthenticatedClient(fixture.admin.accessToken);
+
+    const { data, error } = await client
+      .from('organization_invites')
+      .select('email, role')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data!.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('outsider cannot read org invites', async () => {
+    const client = createAuthenticatedClient(fixture.outsider.accessToken);
+
+    const { data, error } = await client
+      .from('organization_invites')
+      .select('email, role')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // organization_api_keys
+  // -----------------------------------------------------------------------
+
+  it('admin can read org API keys', async () => {
+    // Seed a test API key via service role
+    const { error: insertError } = await fixture.supabase
+      .from('organization_api_keys')
+      .insert({
+        organization_id: fixture.organization.id,
+        name: 'RLS Test Key',
+        key_prefix: 'piq_test_',
+        key_hash: `rls-test-hash-${Date.now()}`,
+        scopes: ['read:metrics'],
+        created_by: fixture.admin.id,
+        is_active: true,
+      });
+
+    expect(insertError).toBeNull();
+
+    const client = createAuthenticatedClient(fixture.admin.accessToken);
+
+    const { data, error } = await client
+      .from('organization_api_keys')
+      .select('name, key_prefix')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data!.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('member cannot read org API keys', async () => {
+    const client = createAuthenticatedClient(fixture.member.accessToken);
+
+    const { data, error } = await client
+      .from('organization_api_keys')
+      .select('name, key_prefix')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // organization_embed_tokens
+  // -----------------------------------------------------------------------
+
+  it('admin can read org embed tokens', async () => {
+    // Seed a test embed token via service role
+    const { error: insertError } = await fixture.supabase
+      .from('organization_embed_tokens')
+      .insert({
+        organization_id: fixture.organization.id,
+        name: 'RLS Test Embed',
+        token: `rls-test-embed-${Date.now()}`,
+        allowed_origins: ['https://example.com'],
+        widget_types: ['score_badge'],
+        created_by: fixture.admin.id,
+        is_active: true,
+      });
+
+    expect(insertError).toBeNull();
+
+    const client = createAuthenticatedClient(fixture.admin.accessToken);
+
+    const { data, error } = await client
+      .from('organization_embed_tokens')
+      .select('name, token')
+      .eq('organization_id', fixture.organization.id);
+
+    expect(error).toBeNull();
+    expect(data!.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('member cannot read org embed tokens', async () => {
+    const client = createAuthenticatedClient(fixture.member.accessToken);
+
+    const { data, error } = await client
+      .from('organization_embed_tokens')
+      .select('name, token')
       .eq('organization_id', fixture.organization.id);
 
     expect(error).toBeNull();
