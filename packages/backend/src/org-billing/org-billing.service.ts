@@ -239,14 +239,17 @@ export class OrgBillingService {
       .eq('id', userId)
       .single();
 
-    if (!profile?.enterprise_grace_expires_at) {
-      throw new BadRequestException(
-        'No enterprise grace period found for this user.',
+    // If grace period exists, use it as trial end. Otherwise start billing immediately.
+    let trialEndUnix: number | undefined;
+    if (profile?.enterprise_grace_expires_at) {
+      const graceExpiresAt = new Date(profile.enterprise_grace_expires_at);
+      // Stripe requires trial_end to be at least 48 hours in the future
+      const minTrialEnd = Math.floor((Date.now() + 48 * 60 * 60 * 1000) / 1000);
+      trialEndUnix = Math.max(
+        Math.floor(graceExpiresAt.getTime() / 1000),
+        minTrialEnd,
       );
     }
-
-    const graceExpiresAt = new Date(profile.enterprise_grace_expires_at);
-    const trialEndUnix = Math.floor(graceExpiresAt.getTime() / 1000);
 
     const customerId = await this.stripe.getOrCreateCustomer(userId, email);
 
