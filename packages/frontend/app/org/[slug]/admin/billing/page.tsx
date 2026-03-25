@@ -69,7 +69,10 @@ export default function OrgAdminBilling() {
     if (!org || !billing || seatDelta === 0) return;
     setUpdatingSeats(true);
     try {
-      await updateOrgSeats(org.slug, billing.additional_seats + seatDelta);
+      await updateOrgSeats(
+        org.slug,
+        (billing.additional_seats ?? 0) + seatDelta,
+      );
       await loadBilling();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update seats");
@@ -93,8 +96,8 @@ export default function OrgAdminBilling() {
   }, [org]);
 
   const totalSeats = billing
-    ? billing.seats_included + billing.additional_seats
-    : (org?.seat_count ?? 0);
+    ? (billing.seats_included ?? 0) + (billing.additional_seats ?? 0)
+    : (org?.seat_limit ?? 0);
   const projectedTotal = totalSeats + seatDelta;
 
   const cardClass = "bg-surface-container-low rounded-xl shadow-sm p-6";
@@ -167,13 +170,15 @@ export default function OrgAdminBilling() {
             <div className="hidden sm:block h-8 w-px bg-outline-variant" />
 
             {/* Billing period */}
-            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-              <Calendar className="w-4 h-4 shrink-0" />
-              <span>
-                {formatDate(billing.current_period_start)} &mdash;{" "}
-                {formatDate(billing.current_period_end)}
-              </span>
-            </div>
+            {billing.current_period_start && billing.current_period_end && (
+              <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+                <Calendar className="w-4 h-4 shrink-0" />
+                <span>
+                  {formatDate(billing.current_period_start)} &mdash;{" "}
+                  {formatDate(billing.current_period_end)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

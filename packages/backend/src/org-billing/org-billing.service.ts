@@ -2,9 +2,9 @@
  * Organization Billing Service
  *
  * Manages Stripe per-seat subscriptions for enterprise organizations.
- * Handles checkout session creation, billing portal access, seat management,
- * and usage reporting.
+ * Handles checkout session creation, billing portal access, and seat management.
  *
+ * Usage reporting (read-only) is in OrgBillingUsageService.
  * Uses StripeService from the billing module for all Stripe API calls.
  */
 
@@ -21,7 +21,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { StripeService } from '../billing/stripe.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
-import { OrgUsageResponse } from './org-billing.types';
 
 @Injectable()
 export class OrgBillingService {
@@ -205,62 +204,6 @@ export class OrgBillingService {
         newExtraSeats: additionalSeats,
       },
     });
-  }
-
-  /**
-   * Get current billing usage for an organization.
-   */
-  async getUsage(orgId: string): Promise<OrgUsageResponse> {
-    const { data: org, error: orgError } = await this.supabase
-      .from('organizations')
-      .select('seat_limit, extra_seats, billing_status, stripe_customer_id')
-      .eq('id', orgId)
-      .single();
-
-    if (orgError || !org) {
-      throw new NotFoundException('Organization not found.');
-    }
-
-    const [{ count: activeMembers }, { count: pendingInvites }] =
-      await Promise.all([
-        this.supabase
-          .from('organization_members')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', orgId)
-          .eq('status', 'active'),
-        this.supabase
-          .from('organization_members')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', orgId)
-          .eq('status', 'pending'),
-      ]);
-
-    let upcomingInvoice: OrgUsageResponse['upcomingInvoice'] = null;
-    if (org.stripe_customer_id) {
-      try {
-        const invoice = await this.stripe.getUpcomingInvoice(
-          org.stripe_customer_id,
-        );
-        if (invoice) {
-          upcomingInvoice = {
-            amountDue: invoice.amount_due,
-            currency: invoice.currency,
-            periodEnd: new Date((invoice.period_end ?? 0) * 1000).toISOString(),
-          };
-        }
-      } catch {
-        this.logger.debug(`No upcoming invoice for org ${orgId}`);
-      }
-    }
-
-    return {
-      seatLimit: org.seat_limit ?? 5,
-      extraSeats: org.extra_seats ?? 0,
-      activeMembers: activeMembers ?? 0,
-      pendingInvites: pendingInvites ?? 0,
-      billingStatus: org.billing_status ?? 'none',
-      upcomingInvoice,
-    };
   }
 
   /** Sync the seat add-on line item on the Stripe subscription. */

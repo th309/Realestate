@@ -22,12 +22,16 @@ import { AuthUserId } from '../common/decorators';
 import { OrgContextGuard } from '../organizations/guards/org-context.guard';
 import { OrgAdminGuard } from '../organizations/guards/org-admin.guard';
 import { OrgBillingService } from './org-billing.service';
+import { OrgBillingUsageService } from './org-billing-usage.service';
 import { OrgCheckoutDto } from './dto/org-checkout.dto';
 import { UpdateSeatsDto } from './dto/update-seats.dto';
 
 @Controller('api/org')
 export class OrgBillingController {
-  constructor(private readonly orgBilling: OrgBillingService) {}
+  constructor(
+    private readonly orgBilling: OrgBillingService,
+    private readonly orgBillingUsage: OrgBillingUsageService,
+  ) {}
 
   /**
    * Create a checkout session for a new enterprise org.
@@ -45,7 +49,7 @@ export class OrgBillingController {
       dto.ownerEmail,
       userId,
     );
-    return { checkoutUrl };
+    return { checkout_url: checkoutUrl };
   }
 
   /** Open Stripe billing portal for org payment management. */
@@ -55,7 +59,7 @@ export class OrgBillingController {
     const portalUrl = await this.orgBilling.createBillingPortalSession(
       req.org.id,
     );
-    return { portalUrl };
+    return { portal_url: portalUrl };
   }
 
   /** Update the number of additional seats for the org. */
@@ -74,6 +78,6 @@ export class OrgBillingController {
   @Get(':slug/billing/usage')
   @UseGuards(JwtAuthGuard, OrgContextGuard, OrgAdminGuard)
   async getUsage(@Req() req: any) {
-    return this.orgBilling.getUsage(req.org.id);
+    return this.orgBillingUsage.getUsage(req.org.id);
   }
 }

@@ -3,6 +3,7 @@ import { BillingModule } from '../billing/billing.module';
 import { OrgAuditModule } from '../org-audit/org-audit.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { OrgBillingService } from './org-billing.service';
+import { OrgBillingUsageService } from './org-billing-usage.service';
 import { OrgBillingWebhookService } from './org-billing-webhook.service';
 import { OrgDowngradeHandlerService } from './org-downgrade-handler.service';
 import { OrgBillingController } from './org-billing.controller';
@@ -16,11 +17,13 @@ import { OrgBillingController } from './org-billing.controller';
   controllers: [OrgBillingController],
   providers: [
     OrgBillingService,
+    OrgBillingUsageService,
     OrgBillingWebhookService,
     OrgDowngradeHandlerService,
   ],
   exports: [
     OrgBillingService,
+    OrgBillingUsageService,
     OrgBillingWebhookService,
     OrgDowngradeHandlerService,
   ],

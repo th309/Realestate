@@ -11,13 +11,19 @@ import { fetchAPI, fetchAPIRaw } from "./base";
 // ---------------------------------------------------------------------------
 
 export interface OrgBillingUsage {
-  seats_used: number;
   seats_included: number;
   additional_seats: number;
-  current_period_start: string;
-  current_period_end: string;
+  seats_used: number;
+  pending_invites: number;
   plan_name: string;
   status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  upcoming_invoice: {
+    amount_due: number;
+    currency: string;
+    period_end: string;
+  } | null;
 }
 
 export interface OrgCheckoutResult {

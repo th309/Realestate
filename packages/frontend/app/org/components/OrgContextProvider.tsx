@@ -57,7 +57,7 @@ export function OrgContextProvider({
           name: org.name,
           slug: org.slug,
           owner_id: org.owner_id,
-          seat_count: org.seat_count,
+          seat_limit: org.seat_limit,
           website_url: org.website_url,
           billing_status:
             ((org as unknown as Record<string, unknown>)

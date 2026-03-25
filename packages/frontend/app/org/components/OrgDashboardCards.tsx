@@ -107,7 +107,7 @@ export function OrgDashboardCards() {
             </p>
             <SeatUsageBar
               used={memberCount ?? 0}
-              total={org?.seat_count ?? 0}
+              total={org?.seat_limit ?? 0}
             />
           </>
         )}

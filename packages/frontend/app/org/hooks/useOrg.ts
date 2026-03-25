@@ -8,7 +8,7 @@ export interface OrgContextValue {
     name: string;
     slug: string;
     owner_id: string;
-    seat_count: number;
+    seat_limit: number;
     website_url: string | null;
     billing_status: string;
     created_at: string;

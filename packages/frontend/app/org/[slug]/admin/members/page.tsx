@@ -108,7 +108,7 @@ export default function OrgAdminMembers() {
       {/* Seat usage summary */}
       {org && (
         <div className="mb-6 max-w-xs">
-          <SeatUsageBar used={totalMembers} total={org.seat_count} />
+          <SeatUsageBar used={totalMembers} total={org.seat_limit} />
         </div>
       )}
 
@@ -144,7 +144,7 @@ export default function OrgAdminMembers() {
         onInvite={handleInvite}
         seatInfo={{
           used: totalMembers,
-          total: org?.seat_count ?? 0,
+          total: org?.seat_limit ?? 0,
         }}
       />
     </div>

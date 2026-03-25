@@ -17,7 +17,7 @@ export interface OrgData {
   slug: string;
   owner_id: string;
   website_url: string | null;
-  seat_count: number;
+  seat_limit: number;
   created_at: string;
   updated_at: string;
 }
