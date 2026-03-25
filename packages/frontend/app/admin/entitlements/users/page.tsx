@@ -721,6 +721,10 @@ export default function UserOverridesPage() {
   const [features, setFeatures] = useState<FeatureDefinition[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("");
+  const [orgFilter, setOrgFilter] = useState<string>("");
+  const [orgList, setOrgList] = useState<
+    { id: string; name: string; slug: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -742,6 +746,7 @@ export default function UserOverridesPage() {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       if (tierFilter) params.append("tier", tierFilter);
+      if (orgFilter) params.append("organization_id", orgFilter);
 
       const [usersRes, statsRes, featuresRes] = await Promise.all([
         fetchAPIRaw(`/api/admin/users?${params}`),
@@ -853,7 +858,7 @@ export default function UserOverridesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, tierFilter]);
+  }, [searchQuery, tierFilter, orgFilter]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -862,6 +867,19 @@ export default function UserOverridesPage() {
 
     return () => clearTimeout(debounce);
   }, [fetchData]);
+
+  useEffect(() => {
+    fetchAPIRaw("/api/admin/users/organizations")
+      .then(async (res) => {
+        if (res.ok) {
+          const body = await res.json();
+          setOrgList(body.organizations || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch organizations:", err);
+      });
+  }, []);
 
   const handleAddOverride = async (userId: string, featureSlug: string) => {
     try {
@@ -1175,6 +1193,18 @@ export default function UserOverridesPage() {
           <option value="pro">Pro</option>
           <option value="enterprise">Enterprise</option>
           <option value="admin">Admin</option>
+        </select>
+        <select
+          value={orgFilter}
+          onChange={(e) => setOrgFilter(e.target.value)}
+          className="px-4 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
+        >
+          <option value="">All Organizations</option>
+          {orgList.map((org) => (
+            <option key={org.id} value={org.id}>
+              {org.name}
+            </option>
+          ))}
         </select>
       </div>
 

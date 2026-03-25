@@ -73,6 +73,8 @@ export class UsersService {
   async getUsers(options?: {
     search?: string;
     tier?: string;
+    organizationId?: string;
+    sort?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ users: UserListItem[]; total: number }> {
@@ -104,6 +106,10 @@ export class UsersService {
 
     if (options?.tier) {
       query = query.eq('subscription_tier', options.tier);
+    }
+
+    if (options?.organizationId) {
+      query = query.eq('organization_id', options.organizationId);
     }
 
     const { data: profiles, count, error } = await query;
@@ -188,7 +194,30 @@ export class UsersService {
       };
     });
 
+    // Sort by organization name in JS (org name comes from a join, not the query)
+    if (options?.sort === 'organization') {
+      users.sort((a, b) => {
+        const nameA = (a.organizationName || '').toLowerCase();
+        const nameB = (b.organizationName || '').toLowerCase();
+        if (!nameA && !nameB) return 0;
+        if (!nameA) return 1;
+        if (!nameB) return -1;
+        return nameA.localeCompare(nameB);
+      });
+    }
+
     return { users, total: count || 0 };
+  }
+
+  async listOrganizations(): Promise<{
+    organizations: { id: string; name: string; slug: string }[];
+  }> {
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from('organizations')
+      .select('id, name, slug')
+      .order('name');
+    return { organizations: data || [] };
   }
 
   // Batch helper methods

@@ -23,12 +23,16 @@ export class UsersController {
   async listUsers(
     @Query('search') search?: string,
     @Query('tier') tier?: string,
+    @Query('organization_id') organizationId?: string,
+    @Query('sort') sort?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
     return this.usersService.getUsers({
       search,
       tier,
+      organizationId,
+      sort,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
@@ -37,6 +41,11 @@ export class UsersController {
   @Get('stats')
   async getStats() {
     return this.usersService.getStats();
+  }
+
+  @Get('organizations')
+  async listOrganizations() {
+    return this.usersService.listOrganizations();
   }
 
   @Get(':userId')
