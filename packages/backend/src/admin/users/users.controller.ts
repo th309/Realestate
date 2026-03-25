@@ -50,7 +50,8 @@ export class UsersController {
 
   @Post()
   async createUser(
-    @Body() body: {
+    @Body()
+    body: {
       email: string;
       password: string;
       fullName?: string;
@@ -80,6 +81,19 @@ export class UsersController {
     }
   }
 
+  @Delete('org/:orgId')
+  async deleteOrg(@Param('orgId') orgId: string) {
+    try {
+      await this.usersService.deleteOrganization(orgId);
+      return { success: true };
+    } catch (err) {
+      throw new HttpException(
+        err.message || 'Failed to delete organization',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   @Delete(':userId')
   async deleteUser(@Param('userId') userId: string) {
     try {
@@ -96,7 +110,8 @@ export class UsersController {
   @Post(':userId/overrides')
   async addOverride(
     @Param('userId') userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       featureSlug: string;
       reason?: string;
       expiresAt?: string;

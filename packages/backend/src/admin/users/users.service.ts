@@ -659,6 +659,49 @@ export class UsersService {
     );
   }
 
+  async deleteOrganization(orgId: string): Promise<void> {
+    const client = this.supabase.getClient();
+
+    // 1. Get all member user IDs before cascade deletes them
+    const { data: members } = await client
+      .from('organization_members')
+      .select('user_id')
+      .eq('organization_id', orgId);
+
+    const memberUserIds = (members || []).map((m) => m.user_id);
+
+    // 2. Clear organization_id and organization_role on member profiles
+    // (these columns are NOT FK-cascaded — they'd become dangling refs)
+    if (memberUserIds.length > 0) {
+      await client
+        .from('user_profiles')
+        .update({
+          organization_id: null,
+          organization_role: null,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', memberUserIds);
+    }
+
+    // 3. Delete org row (FK CASCADE handles members, invites, api_keys, embed_tokens, audit_log)
+    // reports.organization_id is ON DELETE SET NULL — reports survive
+    const { error } = await client
+      .from('organizations')
+      .delete()
+      .eq('id', orgId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to delete organization ${orgId}: ${error.message}`,
+      );
+      throw new Error('Failed to delete organization');
+    }
+
+    this.logger.log(
+      `Deleted organization ${orgId}, cleared ${memberUserIds.length} member profiles`,
+    );
+  }
+
   async deleteUser(userId: string): Promise<void> {
     const client = this.supabase.getClient();
 
