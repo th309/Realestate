@@ -35,7 +35,7 @@ export class MembersService {
     const { data, error } = await this.supabase
       .from('organization_members')
       .select(
-        'id, user_id, role, status, joined_at, user_profiles(email, full_name)',
+        'id, user_id, role, status, created_at, user_profiles(email, full_name)',
       )
       .eq('organization_id', orgId)
       .eq('status', 'active');
@@ -54,7 +54,7 @@ export class MembersService {
       name: row.user_profiles?.full_name ?? null,
       role: row.role,
       status: row.status,
-      joinedAt: row.joined_at,
+      joinedAt: row.created_at,
     }));
   }
 
