@@ -74,7 +74,8 @@ export async function createOrgBillingPortal(
     method: "POST",
   });
   if (!res.ok) {
-    throw new Error(`Billing portal failed: ${res.status}`);
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Billing portal failed: ${res.status}`);
   }
   return res.json();
 }
