@@ -6,6 +6,7 @@ import {
   Body,
   Headers,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
@@ -96,7 +97,7 @@ export class EntitlementsController {
 
     const email = profile?.email;
     if (!email) {
-      throw new Error('User profile not found');
+      throw new NotFoundException('User profile not found');
     }
 
     const checkoutUrl = await this.orgBilling.createEnterpriseTrialCheckout(

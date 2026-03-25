@@ -118,7 +118,6 @@ export class InvitesService {
         user_id: userId,
         role: invite.role,
         status: 'active',
-        joined_at: new Date().toISOString(),
       });
 
     if (memberError) {

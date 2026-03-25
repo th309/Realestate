@@ -164,8 +164,8 @@ export default function InviteAcceptPage() {
     setState({ kind: "accepting" });
 
     try {
-      const { org_slug } = await acceptOrgInvite(token);
-      setState({ kind: "accepted", orgSlug: org_slug, role });
+      const { orgSlug } = await acceptOrgInvite(token);
+      setState({ kind: "accepted", orgSlug, role });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to accept invite.";
@@ -273,7 +273,7 @@ function ReadyView({
         You&apos;ve been invited to join
       </p>
       <h1 className="text-2xl font-semibold text-on-surface mb-3">
-        {invite.org_name}
+        {invite.orgName}
       </h1>
 
       {/* Role badge */}
@@ -282,12 +282,9 @@ function ReadyView({
         {formatRole(invite.role)}
       </span>
 
-      {/* Invited by */}
+      {/* Organization info */}
       <p className="text-sm text-on-surface-variant mb-6">
-        Invited by{" "}
-        <span className="font-medium text-on-surface">
-          {invite.inviter_email}
-        </span>
+        You&apos;ll join as a member of this organization.
       </p>
 
       {/* Action button */}
@@ -314,7 +311,7 @@ function ReadyView({
       {/* Expiry notice */}
       <p className="mt-4 text-xs text-on-surface-variant flex items-center gap-1.5">
         <Clock className="w-3.5 h-3.5" />
-        {expiresInLabel(invite.expires_at)}
+        {expiresInLabel(invite.expiresAt)}
       </p>
     </div>
   );

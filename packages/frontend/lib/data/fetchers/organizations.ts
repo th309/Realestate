@@ -20,6 +20,7 @@ export interface OrgData {
   seat_limit: number;
   created_at: string;
   updated_at: string;
+  role?: string;
 }
 
 export interface OrgMember {
@@ -37,25 +38,29 @@ export interface OrgMembersResponse {
 
 export interface AuditLogEntry {
   id: string;
+  organization_id: string;
   action: string;
   actor_id: string;
-  actor_email: string;
+  target_type: string;
   target_id: string | null;
-  metadata: Record<string, unknown>;
+  details: Record<string, unknown> | null;
   created_at: string;
 }
 
 export interface AuditLogResponse {
   entries: AuditLogEntry[];
-  next_cursor: string | null;
+  nextCursor: string | null;
 }
 
 export interface InviteDetails {
-  org_name: string;
-  org_slug: string;
-  inviter_email: string;
+  id: string;
+  email: string;
   role: string;
-  expires_at: string;
+  status: string;
+  expiresAt: string;
+  organizationId: string;
+  orgName: string | null;
+  orgSlug: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +238,7 @@ export async function removeOrgMember(
  */
 export async function acceptOrgInvite(
   token: string,
-): Promise<{ org_slug: string }> {
+): Promise<{ orgSlug: string }> {
   const res = await fetchAPIRaw(`/api/org/invite/${token}/accept`, {
     method: "POST",
   });

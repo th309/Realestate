@@ -54,10 +54,10 @@ function formatTimestamp(dateString: string): string {
   }
 }
 
-/** Derive a human-readable target description from the entry metadata */
+/** Derive a human-readable target description from the entry details */
 function targetDescription(entry: AuditLogEntry): string {
-  if (entry.metadata?.target_email) {
-    return String(entry.metadata.target_email);
+  if (entry.details?.target_email) {
+    return String(entry.details.target_email);
   }
   if (entry.target_id) {
     return entry.target_id;
@@ -97,7 +97,7 @@ export default function OrgAdminAudit() {
         ...(toDate && { to: toDate }),
       });
       setEntries(res.entries);
-      setNextCursor(res.next_cursor);
+      setNextCursor(res.nextCursor);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load audit log");
     } finally {
@@ -124,7 +124,7 @@ export default function OrgAdminAudit() {
         ...(toDate && { to: toDate }),
       });
       setEntries((prev) => [...prev, ...res.entries]);
-      setNextCursor(res.next_cursor);
+      setNextCursor(res.nextCursor);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load more entries",
@@ -245,7 +245,7 @@ export default function OrgAdminAudit() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-on-surface-variant">
-                        {entry.actor_email}
+                        {entry.actor_id || "System"}
                       </td>
                       <td className="px-4 py-3 text-on-surface-variant hidden sm:table-cell">
                         {targetDescription(entry)}

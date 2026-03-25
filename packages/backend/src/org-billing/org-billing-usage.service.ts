@@ -47,7 +47,7 @@ export class OrgBillingUsageService {
           .eq('organization_id', orgId)
           .eq('status', 'active'),
         this.supabase
-          .from('organization_members')
+          .from('organization_invites')
           .select('id', { count: 'exact', head: true })
           .eq('organization_id', orgId)
           .eq('status', 'pending'),
