@@ -332,6 +332,13 @@ export {
   type InviteDetails,
 } from "./fetchers";
 
+// Organization report stats
+export {
+  fetchOrgReportStats,
+  type OrgReportStats,
+  type OrgReportMemberStats,
+} from "./fetchers";
+
 // Organization billing
 export {
   fetchOrgBilling,

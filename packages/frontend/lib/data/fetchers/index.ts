@@ -298,6 +298,13 @@ export {
   type EmbedMapData,
 } from "./org-embeds";
 
+// Organization report stats
+export {
+  fetchOrgReportStats,
+  type OrgReportStats,
+  type OrgReportMemberStats,
+} from "./org-reports";
+
 // Organization API keys
 export {
   fetchOrgApiKeys,
