@@ -135,56 +135,47 @@ In `admin/users/users.service.ts` `listUsers()`:
 
 ---
 
-## 5. Delete Organization
+## 5. Delete Organization (Platform Admin Only)
 
-**Problem:** No way to delete an org from the admin UI. If an enterprise user mistyped the org name, they're stuck.
+**Problem:** No way for platform admins to clean up orphaned or test organizations.
 
-**Design:** Two deletion paths with pre-deletion cleanup:
+**Key constraint:** Enterprise users MUST always have an org. They cannot self-delete — they use rename (feature 6) for name/slug changes. Only platform admins can delete orgs for cleanup purposes.
 
-### Pre-Deletion Cleanup (both paths)
+**Design:** Platform admin deletion only. Org deletion NEVER affects the Stripe subscription (the subscription is tied to the user's account, not the org).
+
+### Pre-Deletion Cleanup
 
 Before deleting the org row, the service MUST:
 
-1. **Cancel Stripe subscription** — if `org.stripe_subscription_id` exists, cancel via Stripe API (cancel at period end to avoid mid-period refund complexity)
-2. **Clear member profiles** — query all `organization_members`, then null out `user_profiles.organization_id` and `user_profiles.organization_role` for each member (these columns are NOT FK-cascaded)
-3. **Preserve reports** — `reports.organization_id` uses `ON DELETE SET NULL`, so reports survive. Document this in confirmation dialogs.
+1. **Clear member profiles** — query all `organization_members`, then null out `user_profiles.organization_id` and `user_profiles.organization_role` for each member (these columns are NOT FK-cascaded)
+2. **Preserve reports** — `reports.organization_id` uses `ON DELETE SET NULL`, so reports survive
+3. **Do NOT touch Stripe** — the enterprise subscription lives on the user, not the org
 4. Delete the org row → FK CASCADE removes members, invites, api_keys, embed_tokens, audit_log
 
 After deletion: if the owner's `subscription_tier` is still `enterprise`, the `EnterpriseOnboardingGate` automatically detects `hasOrg: false` and re-triggers the wizard on next page load.
 
-### 5a. Platform Admin Deletion
+### Endpoint
 
-- New endpoint: `DELETE /api/admin/org/:orgId`
+- `DELETE /api/admin/org/:orgId`
 - Guards: JwtAuthGuard + AdminGuard (platform admin only)
-- Runs pre-deletion cleanup, then deletes
-
-### 5b. Enterprise Owner Self-Delete
-
-- New endpoint: `DELETE /api/org/:slug` (owner only)
-- Guards: JwtAuthGuard + OrgContextGuard + ownership check (`org.owner_id === userId`)
-- Confirmation: requires `confirm: true` in body (prevents accidental deletion)
-- Runs same pre-deletion cleanup, then deletes
+- No self-delete endpoint for enterprise owners (they use rename instead)
 
 ### Frontend
 
 - **Admin panel:** Add "Delete Org" button in user detail card (when user has an org)
-- **Org admin dashboard:** Add "Delete Organization" in a danger zone section at bottom of dashboard
-- Both show confirmation dialog: "This will cancel the Stripe subscription, remove all members, and delete API keys/embed tokens. Reports will be preserved. Enterprise users will be prompted to create a new org."
+- Confirmation dialog: "This will remove all members, API keys, and embed tokens. Reports are preserved. If the owner is still enterprise, they'll be prompted to create a new org."
 
 **Files:**
 
 - `packages/backend/src/admin/users/users.controller.ts` (new admin delete endpoint)
 - `packages/backend/src/admin/users/users.service.ts` (new deleteOrg method)
-- `packages/backend/src/organizations/organizations.controller.ts` (new owner delete endpoint)
-- `packages/backend/src/organizations/organizations.service.ts` (new delete method)
 - `packages/frontend/app/admin/entitlements/users/page.tsx` (add delete org button)
-- `packages/frontend/app/org/[slug]/admin/page.tsx` (add danger zone)
 
 ---
 
 ## 6. Rename Organization (Name + Slug with 30-Day Redirect)
 
-**Problem:** Org name and slug are set at creation. Typos or rebranding require deletion and re-creation.
+**Problem:** Org name and slug are set at creation. Enterprise users need to fix typos or rebrand without deleting and re-creating.
 
 **Design:**
 
@@ -259,13 +250,13 @@ The Stripe billing portal already allows plan changes. The existing `OrgBillingW
 When a subscription changes from enterprise to pro/free:
 
 1. Update `organizations.billing_status` to reflect new state
-2. Update owner's `user_profiles.subscription_tier` to the new tier
+2. Update owner's `user_profiles.subscription_tier` to the new (downgraded) tier
 3. **Revoke enterprise features:** Set `api_enabled: false`, `embed_enabled: false` on the org
-4. **Members keep their membership** but lose enterprise-tier access (entitlements are tier-based, not membership-based). The org row continues to exist.
-5. Members' `user_profiles.subscription_tier` stays unchanged (they inherit access from the org's tier via entitlements, not via their own profile)
+4. **Downgrade ALL sub-users to free tier:** For every non-owner member in `organization_members`, set their `user_profiles.subscription_tier = 'free'`. They lose all paid features immediately.
+5. **Remove members from org:** Clear `organization_members` rows and null out `user_profiles.organization_id` / `user_profiles.organization_role` for all non-owner members. The owner keeps the org.
 6. Queue member notification (see 7b)
 
-**The org is NOT deleted on downgrade.** It persists with reduced features. Members can still access the org admin pages but will see paywalls on enterprise-gated features.
+**The org is NOT deleted on downgrade.** It persists under the owner with reduced features. Sub-users are removed and moved to free tier with an offer to create their own paid account.
 
 ### 7b. Member Notification Email
 
@@ -274,11 +265,11 @@ Queue notifications using a fire-and-forget pattern (webhook must return 200 wit
 - Set a `downgrade_notified_at IS NULL` flag on affected members
 - A follow-up async job (or `waitUntil`/`after`) sends emails
 - For each member, send an email via the existing email service:
-  - Subject: "Your enterprise account has been downgraded"
-  - Body: Explains the change, offers two CTAs:
-    1. **"Create your own Enterprise account"** → link to `/pricing?plan=enterprise`
+  - Subject: "Your enterprise team account has changed"
+  - Body: Explains that the enterprise account owner has downgraded, the user has been moved to the free tier, and their org membership has ended. Offers two CTAs:
+    1. **"Start your own Enterprise account"** → link to `/pricing?plan=enterprise`
     2. **"Upgrade to Pro"** → link to `/pricing?plan=pro`
-  - Include org name, effective date, what features they lose
+  - Include: org name, owner name, effective date, what features they had vs what they have now (free)
 - Add `org_downgraded` to the `AuditAction` type union
 
 ### 7c. In-App Notification
