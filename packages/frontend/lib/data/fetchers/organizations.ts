@@ -95,14 +95,25 @@ export async function fetchOrgMembers(
  */
 export async function fetchOrgAuditLog(
   slug: string,
-  params?: { cursor?: string; limit?: number },
+  params?: {
+    cursor?: string;
+    limit?: number;
+    action_prefix?: string;
+    from?: string;
+    to?: string;
+    actor_id?: string;
+  },
 ): Promise<AuditLogResponse> {
   const query = new URLSearchParams();
   if (params?.cursor) query.set("cursor", params.cursor);
   if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.action_prefix) query.set("action_prefix", params.action_prefix);
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  if (params?.actor_id) query.set("actor_id", params.actor_id);
   const qs = query.toString();
   return fetchAPI<AuditLogResponse>(
-    `/api/org/${slug}/audit${qs ? "?" + qs : ""}`,
+    `/api/org/${slug}/audit${qs ? `?${qs}` : ""}`,
   );
 }
 

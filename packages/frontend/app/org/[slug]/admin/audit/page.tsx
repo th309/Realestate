@@ -80,12 +80,22 @@ export default function OrgAdminAudit() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter state
+  const [actionFilter, setActionFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
   const loadInitial = useCallback(async () => {
     if (!org) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchOrgAuditLog(org.slug, { limit: PAGE_SIZE });
+      const res = await fetchOrgAuditLog(org.slug, {
+        limit: PAGE_SIZE,
+        ...(actionFilter && { action_prefix: actionFilter }),
+        ...(fromDate && { from: fromDate }),
+        ...(toDate && { to: toDate }),
+      });
       setEntries(res.entries);
       setNextCursor(res.next_cursor);
     } catch (err) {
@@ -93,9 +103,12 @@ export default function OrgAdminAudit() {
     } finally {
       setLoading(false);
     }
-  }, [org]);
+  }, [org, actionFilter, fromDate, toDate]);
 
+  // Reset entries and cursor when filters change, then reload
   useEffect(() => {
+    setEntries([]);
+    setNextCursor(null);
     void loadInitial();
   }, [loadInitial]);
 
@@ -106,6 +119,9 @@ export default function OrgAdminAudit() {
       const res = await fetchOrgAuditLog(org.slug, {
         cursor: nextCursor,
         limit: PAGE_SIZE,
+        ...(actionFilter && { action_prefix: actionFilter }),
+        ...(fromDate && { from: fromDate }),
+        ...(toDate && { to: toDate }),
       });
       setEntries((prev) => [...prev, ...res.entries]);
       setNextCursor(res.next_cursor);
@@ -116,7 +132,7 @@ export default function OrgAdminAudit() {
     } finally {
       setLoadingMore(false);
     }
-  }, [org, nextCursor]);
+  }, [org, nextCursor, actionFilter, fromDate, toDate]);
 
   return (
     <div className="p-6 max-w-5xl">
@@ -126,6 +142,47 @@ export default function OrgAdminAudit() {
         <p className="text-sm text-on-surface-variant mt-1">
           Activity history for your organization
         </p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <select
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+          className="px-3 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
+        >
+          <option value="">All Actions</option>
+          <option value="member">Member Events</option>
+          <option value="billing,seats">Billing</option>
+          <option value="org">Settings</option>
+          <option value="api_key">API Keys</option>
+          <option value="embed_token">Embeds</option>
+          <option value="branding,logo">Branding</option>
+        </select>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="px-3 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
+        />
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="px-3 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
+        />
+        {(actionFilter || fromDate || toDate) && (
+          <button
+            onClick={() => {
+              setActionFilter("");
+              setFromDate("");
+              setToDate("");
+            }}
+            className="text-xs text-primary hover:underline"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Loading state */}
