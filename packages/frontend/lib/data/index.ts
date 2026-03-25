@@ -357,6 +357,9 @@ export {
   uploadOrgLogo,
   deleteOrgLogo,
   fetchPublicBranding,
+  setCustomDomain,
+  verifyCustomDomain,
+  removeCustomDomain,
   type OrgBranding,
 } from "./fetchers";
 

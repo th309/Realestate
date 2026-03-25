@@ -276,6 +276,9 @@ export {
   uploadOrgLogo,
   deleteOrgLogo,
   fetchPublicBranding,
+  setCustomDomain,
+  verifyCustomDomain,
+  removeCustomDomain,
   type OrgBranding,
   type OrgBrandingAddress,
 } from "./org-branding";

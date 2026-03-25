@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import {
-  fetchOrgBranding,
-  updateOrgBranding,
-  uploadOrgLogo,
-  deleteOrgLogo,
-} from "@/lib/data";
+import { fetchOrgBranding, updateOrgBranding } from "@/lib/data";
+import { useLogoHandlers } from "./useLogoHandlers";
 
 /**
  * All form field values managed by the branding page.
@@ -77,10 +73,15 @@ const DEFAULT_FIELDS: BrandingFields = {
 export function useBrandingForm(orgSlug: string | undefined) {
   const [fields, setFields] = useState<BrandingFields>(DEFAULT_FIELDS);
   const [initial, setInitial] = useState<BrandingFields>(DEFAULT_FIELDS);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const logo = useLogoHandlers(orgSlug);
+  const [customDomainStatus, setCustomDomainStatus] = useState<string | null>(
+    null,
+  );
+  const [customDomainVerifiedAt, setCustomDomainVerifiedAt] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -156,7 +157,9 @@ export function useBrandingForm(orgSlug: string | undefined) {
       };
       setFields(loaded);
       setInitial(loaded);
-      setLogoUrl(data.logo_url);
+      logo.setLogoUrl(data.logo_url);
+      setCustomDomainStatus(data.custom_domain_status ?? null);
+      setCustomDomainVerifiedAt(data.custom_domain_verified_at ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load branding");
     } finally {
@@ -252,47 +255,22 @@ export function useBrandingForm(orgSlug: string | undefined) {
     }
   }, [orgSlug, fields]);
 
-  const handleLogoUpload = useCallback(
-    async (file: File) => {
-      if (!orgSlug) return;
-      setUploading(true);
-      setError(null);
-      try {
-        const result = await uploadOrgLogo(orgSlug, file);
-        setLogoUrl(result.logo_url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to upload logo");
-      } finally {
-        setUploading(false);
-      }
-    },
-    [orgSlug],
-  );
-
-  const handleLogoDelete = useCallback(async () => {
-    if (!orgSlug) return;
-    setError(null);
-    try {
-      await deleteOrgLogo(orgSlug);
-      setLogoUrl(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove logo");
-    }
-  }, [orgSlug]);
-
   return {
     fields,
     setField,
-    logoUrl,
+    logoUrl: logo.logoUrl,
+    customDomainStatus,
+    customDomainVerifiedAt,
     loading,
     saving,
-    uploading,
-    error,
+    uploading: logo.uploading,
+    error: error || logo.logoError,
     validationErrors,
     saveSuccess,
     dirty,
     handleSave,
-    handleLogoUpload,
-    handleLogoDelete,
+    handleLogoUpload: logo.handleLogoUpload,
+    handleLogoDelete: logo.handleLogoDelete,
+    reloadBranding: loadBranding,
   };
 }

@@ -43,6 +43,8 @@ export interface OrgBranding {
 
   // Domain
   custom_subdomain: string | null;
+  custom_domain_status: string | null;
+  custom_domain_verified_at: string | null;
   favicon_url: string | null;
   tab_title_format: string | null;
 
@@ -159,5 +161,58 @@ export async function deleteOrgLogo(slug: string): Promise<void> {
   });
   if (!res.ok) {
     throw new Error(`Delete logo failed: ${res.status}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Custom domain operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Add a custom domain (subdomain) for the organization.
+ * Returns the CNAME target the org must point their DNS to.
+ */
+export async function setCustomDomain(
+  slug: string,
+  subdomain: string,
+): Promise<{ cname_target: string }> {
+  const res = await fetchAPIRaw(`/api/org/${slug}/branding/domain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subdomain }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to set custom domain");
+  }
+  return res.json();
+}
+
+/**
+ * Verify DNS configuration for the organization's custom domain.
+ * Returns whether the CNAME record has been detected.
+ */
+export async function verifyCustomDomain(
+  slug: string,
+): Promise<{ verified: boolean; error?: string }> {
+  const res = await fetchAPIRaw(`/api/org/${slug}/branding/domain/verify`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to verify domain");
+  }
+  return res.json();
+}
+
+/**
+ * Remove the organization's custom domain.
+ */
+export async function removeCustomDomain(slug: string): Promise<void> {
+  const res = await fetchAPIRaw(`/api/org/${slug}/branding/domain`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to remove domain");
   }
 }
