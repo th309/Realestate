@@ -652,6 +652,18 @@ export class UsersService {
       updatePayload.subscription_status = 'active';
     }
 
+    // Enterprise grace period: give 30 days to set up billing
+    if (tier === 'enterprise') {
+      const graceExpiry = new Date();
+      graceExpiry.setDate(graceExpiry.getDate() + 30);
+      updatePayload.enterprise_grace_expires_at = graceExpiry.toISOString();
+    }
+
+    // Downgrading FROM enterprise: clear grace period
+    if (tier !== 'enterprise') {
+      updatePayload.enterprise_grace_expires_at = null;
+    }
+
     // Fetch the old tier before updating (for broadcast payload)
     const { data: oldProfile } = await client
       .from('user_profiles')

@@ -216,6 +216,57 @@ export class OrgBillingService {
     });
   }
 
+  /**
+   * Create a Stripe checkout session for an enterprise user's billing setup.
+   * The subscription trial_end aligns with the user's grace period expiry,
+   * so the first charge happens when the 30-day grace window closes.
+   */
+  async createEnterpriseTrialCheckout(
+    userId: string,
+    email: string,
+  ): Promise<string> {
+    const enterprisePriceId = await this.getEnterprisePriceId();
+    if (!enterprisePriceId) {
+      throw new ServiceUnavailableException(
+        'Enterprise billing unavailable: enterprise price not configured.',
+      );
+    }
+
+    // Look up the user's grace expiry to align the Stripe trial end
+    const { data: profile } = await this.supabase
+      .from('user_profiles')
+      .select('enterprise_grace_expires_at')
+      .eq('id', userId)
+      .single();
+
+    if (!profile?.enterprise_grace_expires_at) {
+      throw new BadRequestException(
+        'No enterprise grace period found for this user.',
+      );
+    }
+
+    const graceExpiresAt = new Date(profile.enterprise_grace_expires_at);
+    const trialEndUnix = Math.floor(graceExpiresAt.getTime() / 1000);
+
+    const customerId = await this.stripe.getOrCreateCustomer(userId, email);
+
+    const baseUrl = this.getFrontendUrl();
+    const successUrl = `${baseUrl}/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/settings/billing?checkout=cancelled`;
+
+    return this.stripe.createCheckoutSession({
+      customerId,
+      priceId: enterprisePriceId,
+      successUrl,
+      cancelUrl,
+      trialEnd: trialEndUnix,
+      metadata: {
+        user_id: userId,
+        checkout_type: 'enterprise_grace_billing',
+      },
+    });
+  }
+
   /** Sync the seat add-on line item on the Stripe subscription. */
   private async syncSeatLineItem(
     subscriptionId: string,

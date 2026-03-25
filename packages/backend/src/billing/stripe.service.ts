@@ -108,8 +108,19 @@ export class StripeService {
     cancelUrl: string;
     metadata?: Record<string, string>;
     trialPeriodDays?: number;
+    /** Unix timestamp for exact trial end (mutually exclusive with trialPeriodDays). */
+    trialEnd?: number;
   }): Promise<string> {
     const stripe = this.getStripeClient();
+
+    // Build subscription_data with trial — trial_end takes precedence
+    let subscriptionData: Record<string, unknown> | undefined;
+    if (params.trialEnd) {
+      subscriptionData = { trial_end: params.trialEnd };
+    } else if (params.trialPeriodDays) {
+      subscriptionData = { trial_period_days: params.trialPeriodDays };
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: params.customerId,
       mode: 'subscription',
@@ -118,9 +129,7 @@ export class StripeService {
       cancel_url: params.cancelUrl,
       metadata: params.metadata,
       allow_promotion_codes: true,
-      ...(params.trialPeriodDays
-        ? { subscription_data: { trial_period_days: params.trialPeriodDays } }
-        : {}),
+      ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
     });
 
     return session.url!;
