@@ -20,8 +20,36 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 
-const BRANDING_SELECT =
-  'logo_url, accent_color, name, website_url, phone, address, managing_broker';
+const BRANDING_SELECT = [
+  'logo_url',
+  'accent_color',
+  'name',
+  'website_url',
+  'phone',
+  'address',
+  'managing_broker',
+  'report_header_text',
+  'report_footer_text',
+  'report_disclaimer',
+  'powered_by_visible',
+  'support_email',
+  'email_from_name',
+  'email_reply_to',
+  'custom_subdomain',
+  'favicon_url',
+  'tab_title_format',
+  'primary_font',
+  'secondary_font',
+  'welcome_message',
+  'custom_tos_url',
+  'custom_privacy_url',
+  'display_name',
+  'department_label',
+  'default_member_role',
+  'quinn_bot_name',
+  'quinn_greeting',
+  'quinn_topic_restrictions',
+].join(', ');
 
 export interface BrandingResponse {
   logo_url: string | null;
@@ -31,6 +59,27 @@ export interface BrandingResponse {
   phone: string | null;
   address: Record<string, string> | null;
   managing_broker: string | null;
+  report_header_text: string | null;
+  report_footer_text: string | null;
+  report_disclaimer: string | null;
+  powered_by_visible: boolean;
+  support_email: string | null;
+  email_from_name: string | null;
+  email_reply_to: string | null;
+  custom_subdomain: string | null;
+  favicon_url: string | null;
+  tab_title_format: string | null;
+  primary_font: string;
+  secondary_font: string;
+  welcome_message: string | null;
+  custom_tos_url: string | null;
+  custom_privacy_url: string | null;
+  display_name: string | null;
+  department_label: string | null;
+  default_member_role: string;
+  quinn_bot_name: string | null;
+  quinn_greeting: string | null;
+  quinn_topic_restrictions: string[] | null;
 }
 
 /** Map a raw DB row to the public BrandingResponse shape. */
@@ -43,6 +92,27 @@ function toBrandingResponse(row: Record<string, any>): BrandingResponse {
     phone: row.phone,
     address: row.address,
     managing_broker: row.managing_broker,
+    report_header_text: row.report_header_text,
+    report_footer_text: row.report_footer_text,
+    report_disclaimer: row.report_disclaimer,
+    powered_by_visible: row.powered_by_visible ?? true,
+    support_email: row.support_email,
+    email_from_name: row.email_from_name,
+    email_reply_to: row.email_reply_to,
+    custom_subdomain: row.custom_subdomain,
+    favicon_url: row.favicon_url,
+    tab_title_format: row.tab_title_format,
+    primary_font: row.primary_font ?? 'Roboto',
+    secondary_font: row.secondary_font ?? 'Roboto',
+    welcome_message: row.welcome_message,
+    custom_tos_url: row.custom_tos_url,
+    custom_privacy_url: row.custom_privacy_url,
+    display_name: row.display_name,
+    department_label: row.department_label,
+    default_member_role: row.default_member_role ?? 'member',
+    quinn_bot_name: row.quinn_bot_name,
+    quinn_greeting: row.quinn_greeting,
+    quinn_topic_restrictions: row.quinn_topic_restrictions,
   };
 }
 
@@ -98,7 +168,7 @@ export class OrgBrandingService {
 
   /**
    * Update branding fields (accent color, website URL, phone, address,
-   * managing broker).
+   * managing broker, reports, email, subdomain, fonts, quinn, and more).
    */
   async updateBranding(
     orgId: string,
@@ -107,20 +177,39 @@ export class OrgBrandingService {
   ): Promise<BrandingResponse> {
     const updateFields: Record<string, unknown> = {};
 
-    if (dto.accent_color !== undefined) {
-      updateFields.accent_color = dto.accent_color;
-    }
-    if (dto.website_url !== undefined) {
-      updateFields.website_url = dto.website_url;
-    }
-    if (dto.phone !== undefined) {
-      updateFields.phone = dto.phone;
-    }
-    if (dto.address !== undefined) {
-      updateFields.address = dto.address;
-    }
-    if (dto.managing_broker !== undefined) {
-      updateFields.managing_broker = dto.managing_broker;
+    const directFields: (keyof UpdateBrandingDto)[] = [
+      'accent_color',
+      'website_url',
+      'phone',
+      'address',
+      'managing_broker',
+      'report_header_text',
+      'report_footer_text',
+      'report_disclaimer',
+      'powered_by_visible',
+      'support_email',
+      'email_from_name',
+      'email_reply_to',
+      'custom_subdomain',
+      'favicon_url',
+      'tab_title_format',
+      'primary_font',
+      'secondary_font',
+      'welcome_message',
+      'custom_tos_url',
+      'custom_privacy_url',
+      'display_name',
+      'department_label',
+      'default_member_role',
+      'quinn_bot_name',
+      'quinn_greeting',
+      'quinn_topic_restrictions',
+    ];
+
+    for (const field of directFields) {
+      if (dto[field] !== undefined) {
+        updateFields[field] = dto[field];
+      }
     }
 
     if (Object.keys(updateFields).length === 0) {
