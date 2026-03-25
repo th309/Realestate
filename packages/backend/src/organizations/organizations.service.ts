@@ -64,6 +64,14 @@ export class OrganizationsService {
       });
     }
 
+    // Check if the owner is on the enterprise tier
+    const { data: ownerProfile } = await this.supabase
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('id', ownerId)
+      .single();
+    const isEnterprise = ownerProfile?.subscription_tier === 'enterprise';
+
     // Insert the organization
     const { data: org, error: orgError } = await this.supabase
       .from('organizations')
@@ -71,6 +79,7 @@ export class OrganizationsService {
         name: dto.name,
         slug: dto.slug,
         owner_id: ownerId,
+        ...(isEnterprise && { api_enabled: true, embed_enabled: true }),
       })
       .select('*')
       .single();
