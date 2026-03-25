@@ -37,7 +37,8 @@ export class MembersController {
   @Get(':slug/members')
   @UseGuards(JwtAuthGuard, OrgContextGuard, OrgMemberGuard)
   async listMembers(@Req() req: any) {
-    return this.membersService.listMembers(req.org.id);
+    const members = await this.membersService.listMembers(req.org.id);
+    return { members, total: members.length };
   }
 
   @Post(':slug/members/invite')

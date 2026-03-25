@@ -32,11 +32,10 @@ export class MembersService {
    * List all active members of an organization, joined with profile data.
    */
   async listMembers(orgId: string) {
-    const { data, error } = await this.supabase
+    // Query members (no embedded join — PostgREST can't resolve the FK path)
+    const { data: members, error } = await this.supabase
       .from('organization_members')
-      .select(
-        'id, user_id, role, status, created_at, user_profiles(email, full_name)',
-      )
+      .select('id, user_id, role, status, created_at')
       .eq('organization_id', orgId)
       .eq('status', 'active');
 
@@ -47,15 +46,30 @@ export class MembersService {
       throw new Error('Failed to list organization members');
     }
 
-    return (data ?? []).map((row: any) => ({
-      id: row.id,
-      userId: row.user_id,
-      email: row.user_profiles?.email ?? null,
-      name: row.user_profiles?.full_name ?? null,
-      role: row.role,
-      status: row.status,
-      joinedAt: row.created_at,
-    }));
+    // Separate query for profile data
+    const userIds = (members ?? []).map((m: any) => m.user_id);
+    const { data: profiles } =
+      userIds.length > 0
+        ? await this.supabase
+            .from('user_profiles')
+            .select('id, email, full_name')
+            .in('id', userIds)
+        : { data: [] };
+
+    const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+    return (members ?? []).map((row: any) => {
+      const profile = profileMap.get(row.user_id);
+      return {
+        id: row.id,
+        userId: row.user_id,
+        email: profile?.email ?? null,
+        name: profile?.full_name ?? null,
+        role: row.role,
+        status: row.status,
+        joinedAt: row.created_at,
+      };
+    });
   }
 
   /**
