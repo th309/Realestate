@@ -39,27 +39,34 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function optionalEnv(name: string): string {
+  return process.env[name] || "";
+}
+
 const TEST_USERS = {
   free: {
-    email: requireEnv("TEST_FREE_USER_EMAIL"),
-    password: requireEnv("TEST_FREE_USER_PASSWORD"),
+    email: optionalEnv("TEST_FREE_USER_EMAIL"),
+    password: optionalEnv("TEST_FREE_USER_PASSWORD"),
   },
   pro: {
-    email: requireEnv("TEST_PRO_USER_EMAIL"),
-    password: requireEnv("TEST_PRO_USER_PASSWORD"),
+    email: optionalEnv("TEST_PRO_USER_EMAIL"),
+    password: optionalEnv("TEST_PRO_USER_PASSWORD"),
   },
   enterprise: {
     email: process.env.TEST_ENTERPRISE_USER_EMAIL || "troyhouston76@gmail.com",
     password: process.env.TEST_ENTERPRISE_USER_PASSWORD || "",
   },
   admin: {
-    email: requireEnv("TEST_ADMIN_USER_EMAIL"),
-    password: requireEnv("TEST_ADMIN_USER_PASSWORD"),
+    email: optionalEnv("TEST_ADMIN_USER_EMAIL"),
+    password: optionalEnv("TEST_ADMIN_USER_PASSWORD"),
   },
 };
 
 setup("authenticate as free user", async ({ page }) => {
-  // Navigate to login page
+  if (!TEST_USERS.free.email) {
+    setup.skip();
+    return;
+  }
   await page.goto("/login");
 
   // Fill in credentials
@@ -80,6 +87,10 @@ setup("authenticate as free user", async ({ page }) => {
 });
 
 setup("authenticate as pro user", async ({ page }) => {
+  if (!TEST_USERS.pro.email) {
+    setup.skip();
+    return;
+  }
   await page.goto("/login");
 
   await page.getByLabel("Email").fill(TEST_USERS.pro.email);
@@ -100,7 +111,7 @@ setup("authenticate as enterprise user", async ({ page }) => {
   await page.getByLabel("Email").fill(TEST_USERS.enterprise.email);
   await page.getByLabel("Password").fill(TEST_USERS.enterprise.password);
 
-  await page.getByRole("button", { name: /sign in|log in/i }).click();
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
 
   await page.waitForURL(/\/(dashboard|map|home|team)?$/, { timeout: 15000 });
 
@@ -108,6 +119,10 @@ setup("authenticate as enterprise user", async ({ page }) => {
 });
 
 setup("authenticate as admin user", async ({ page }) => {
+  if (!TEST_USERS.admin.email) {
+    setup.skip();
+    return;
+  }
   await page.goto("/login");
 
   await page.getByLabel("Email").fill(TEST_USERS.admin.email);
