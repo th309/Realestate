@@ -19,6 +19,9 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/emails/package.json ./packages/emails/
 COPY packages/frontend/package.json ./packages/frontend/
+# Postinstall script must exist before npm ci
+COPY scripts/postinstall-fix-types.js ./scripts/
+COPY packages/frontend/types/ ./packages/frontend/types/
 
 RUN npm ci
 

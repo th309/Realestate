@@ -19,6 +19,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
+# Postinstall script must exist before npm ci (it runs during install)
+COPY scripts/postinstall-fix-types.js ./scripts/
+# Type stub referenced by the postinstall script
+COPY packages/frontend/types/ ./packages/frontend/types/
 
 RUN npm ci
 
