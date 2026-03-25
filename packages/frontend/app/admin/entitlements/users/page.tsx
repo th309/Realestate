@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
   User,
@@ -23,8 +23,8 @@ import {
   Eye,
   FileText,
   Bookmark,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
 
 // Types
 interface UserOverride {
@@ -93,10 +93,10 @@ interface FeatureDefinition {
 // Components
 function TierBadge({ tier, status }: { tier: string; status?: string }) {
   const styles: Record<string, string> = {
-    free: 'bg-gray-100 text-gray-700',
-    pro: 'bg-blue-100 text-blue-700',
-    enterprise: 'bg-purple-100 text-purple-700',
-    admin: 'bg-amber-100 text-amber-700',
+    free: "bg-gray-100 text-gray-700",
+    pro: "bg-blue-100 text-blue-700",
+    enterprise: "bg-purple-100 text-purple-700",
+    admin: "bg-amber-100 text-amber-700",
   };
 
   const icons: Record<string, React.ReactNode> = {
@@ -111,7 +111,7 @@ function TierBadge({ tier, status }: { tier: string; status?: string }) {
       className={`
         inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
         ${styles[tier] || styles.free}
-        ${status === 'cancelled' ? 'opacity-50 line-through' : ''}
+        ${status === "cancelled" ? "opacity-50 line-through" : ""}
       `}
     >
       {icons[tier]}
@@ -120,7 +120,15 @@ function TierBadge({ tier, status }: { tier: string; status?: string }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: number | string; icon?: React.ComponentType<{ className?: string }> }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number | string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
   return (
     <div className="bg-surface-container rounded-lg p-4">
       <div className="flex items-center gap-2">
@@ -153,7 +161,7 @@ function UserCard({
   const [showAddOverride, setShowAddOverride] = useState(false);
   const [showChangeTier, setShowChangeTier] = useState(false);
   const [showStartTrial, setShowStartTrial] = useState(false);
-  const [trialTierSelection, setTrialTierSelection] = useState('pro');
+  const [trialTierSelection, setTrialTierSelection] = useState("pro");
   const [showActivity, setShowActivity] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -243,7 +251,7 @@ function UserCard({
           </div>
           <ChevronDown
             className={`w-5 h-5 transition-transform ${
-              isExpanded ? 'rotate-180' : ''
+              isExpanded ? "rotate-180" : ""
             }`}
           />
         </div>
@@ -303,27 +311,39 @@ function UserCard({
           {/* Usage Stats */}
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.paywallHits}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.paywallHits}
+              </div>
               <div className="text-xs text-on-surface-variant">Paywall</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.reportsGenerated}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.reportsGenerated}
+              </div>
               <div className="text-xs text-on-surface-variant">Reports</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.savedQueriesCount}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.savedQueriesCount}
+              </div>
               <div className="text-xs text-on-surface-variant">Queries</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.watchlistCount}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.watchlistCount}
+              </div>
               <div className="text-xs text-on-surface-variant">Watchlist</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.alertsCount}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.alertsCount}
+              </div>
               <div className="text-xs text-on-surface-variant">Alerts</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">{user.overrideCount}</div>
+              <div className="text-lg font-semibold text-on-surface">
+                {user.overrideCount}
+              </div>
               <div className="text-xs text-on-surface-variant">Overrides</div>
             </div>
           </div>
@@ -363,7 +383,9 @@ function UserCard({
                     Select feature to override...
                   </option>
                   {features
-                    .filter((f) => !overrides.some((o) => o.feature_slug === f.slug))
+                    .filter(
+                      (f) => !overrides.some((o) => o.feature_slug === f.slug),
+                    )
                     .map((feature) => (
                       <option key={feature.slug} value={feature.slug}>
                         {feature.name}
@@ -385,9 +407,10 @@ function UserCard({
                       <div
                         className={`
                           w-6 h-6 rounded flex items-center justify-center
-                          ${override.value
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                          ${
+                            override.value
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
                           }
                         `}
                       >
@@ -412,11 +435,14 @@ function UserCard({
                       {override.expires_at && (
                         <div className="flex items-center gap-1 text-xs text-on-surface-variant">
                           <Clock className="w-3 h-3" />
-                          Expires {new Date(override.expires_at).toLocaleDateString()}
+                          Expires{" "}
+                          {new Date(override.expires_at).toLocaleDateString()}
                         </div>
                       )}
                       <button
-                        onClick={() => onRemoveOverride(user.id, override.feature_slug)}
+                        onClick={() =>
+                          onRemoveOverride(user.id, override.feature_slug)
+                        }
                         className="p-1.5 hover:bg-red-100 rounded text-on-surface-variant hover:text-red-600 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -454,8 +480,8 @@ function UserCard({
                   }}
                   className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
                     showStartTrial
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                      ? "bg-primary text-on-primary"
+                      : "bg-surface-container-high text-on-surface hover:bg-surface-container"
                   }`}
                 >
                   Start Trial
@@ -471,8 +497,8 @@ function UserCard({
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
                   showChangeTier
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                    ? "bg-primary text-on-primary"
+                    : "bg-surface-container-high text-on-surface hover:bg-surface-container"
                 }`}
               >
                 Change Tier
@@ -487,8 +513,8 @@ function UserCard({
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
                   showActivity
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                    ? "bg-primary text-on-primary"
+                    : "bg-surface-container-high text-on-surface hover:bg-surface-container"
                 }`}
               >
                 View Activity
@@ -503,8 +529,8 @@ function UserCard({
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
                   showDeleteConfirm
-                    ? 'bg-red-600 text-white'
-                    : 'bg-surface-container-high text-red-600 hover:bg-red-50'
+                    ? "bg-red-600 text-white"
+                    : "bg-surface-container-high text-red-600 hover:bg-red-50"
                 }`}
               >
                 Delete User
@@ -514,7 +540,9 @@ function UserCard({
             {/* Start Trial Inline Form */}
             {showStartTrial && (
               <div className="bg-surface-container-high rounded-lg p-3 flex items-center gap-3">
-                <label className="text-sm text-on-surface-variant whitespace-nowrap">Trial tier:</label>
+                <label className="text-sm text-on-surface-variant whitespace-nowrap">
+                  Trial tier:
+                </label>
                 <select
                   value={trialTierSelection}
                   onChange={(e) => setTrialTierSelection(e.target.value)}
@@ -563,11 +591,13 @@ function UserCard({
                   <option value="" disabled>
                     Select new tier...
                   </option>
-                  {['free', 'pro', 'enterprise', 'admin'].filter((t) => t !== user.tier).map((t) => (
-                    <option key={t} value={t}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </option>
-                  ))}
+                  {["free", "pro", "enterprise", "admin"]
+                    .filter((t) => t !== user.tier)
+                    .map((t) => (
+                      <option key={t} value={t}>
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
@@ -577,7 +607,8 @@ function UserCard({
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                 <span className="text-sm text-red-700 flex-1">
-                  Permanently delete <strong>{user.name}</strong> ({user.email})? This cannot be undone.
+                  Permanently delete <strong>{user.name}</strong> ({user.email}
+                  )? This cannot be undone.
                 </span>
                 <button
                   onClick={(e) => {
@@ -604,41 +635,63 @@ function UserCard({
             {/* View Activity Inline Panel */}
             {showActivity && (
               <div className="bg-surface-container-high rounded-lg p-4">
-                <h5 className="text-sm font-medium text-on-surface mb-3">User Activity Summary</h5>
+                <h5 className="text-sm font-medium text-on-surface mb-3">
+                  User Activity Summary
+                </h5>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4 text-on-surface-variant" />
                     <div>
-                      <div className="font-medium text-on-surface">{user.paywallHits}</div>
-                      <div className="text-xs text-on-surface-variant">Paywall Hits</div>
+                      <div className="font-medium text-on-surface">
+                        {user.paywallHits}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Paywall Hits
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-on-surface-variant" />
                     <div>
-                      <div className="font-medium text-on-surface">{user.reportsGenerated}</div>
-                      <div className="text-xs text-on-surface-variant">Reports Generated</div>
+                      <div className="font-medium text-on-surface">
+                        {user.reportsGenerated}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Reports Generated
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-on-surface-variant" />
                     <div>
-                      <div className="font-medium text-on-surface">{user.savedQueriesCount}</div>
-                      <div className="text-xs text-on-surface-variant">Saved Queries</div>
+                      <div className="font-medium text-on-surface">
+                        {user.savedQueriesCount}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Saved Queries
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Bookmark className="w-4 h-4 text-on-surface-variant" />
                     <div>
-                      <div className="font-medium text-on-surface">{user.watchlistCount}</div>
-                      <div className="text-xs text-on-surface-variant">Watchlist Items</div>
+                      <div className="font-medium text-on-surface">
+                        {user.watchlistCount}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Watchlist Items
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-on-surface-variant" />
                     <div>
-                      <div className="font-medium text-on-surface">{user.alertsCount}</div>
-                      <div className="text-xs text-on-surface-variant">Alerts</div>
+                      <div className="font-medium text-on-surface">
+                        {user.alertsCount}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Alerts
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -647,7 +700,9 @@ function UserCard({
                       <div className="font-medium text-on-surface">
                         {new Date(user.lastActive).toLocaleDateString()}
                       </div>
-                      <div className="text-xs text-on-surface-variant">Last Active</div>
+                      <div className="text-xs text-on-surface-variant">
+                        Last Active
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -664,13 +719,18 @@ export default function UserOverridesPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [features, setFeatures] = useState<FeatureDefinition[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tierFilter, setTierFilter] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [createForm, setCreateForm] = useState({ email: '', password: '', fullName: '', tier: 'free' });
+  const [createForm, setCreateForm] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    tier: "free",
+  });
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -680,13 +740,13 @@ export default function UserOverridesPage() {
       setError(null);
 
       const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
-      if (tierFilter) params.append('tier', tierFilter);
+      if (searchQuery) params.append("search", searchQuery);
+      if (tierFilter) params.append("tier", tierFilter);
 
       const [usersRes, statsRes, featuresRes] = await Promise.all([
         fetchAPIRaw(`/api/admin/users?${params}`),
-        fetchAPIRaw('/api/admin/users/stats'),
-        fetchAPIRaw('/api/admin/features'),
+        fetchAPIRaw("/api/admin/users/stats"),
+        fetchAPIRaw("/api/admin/features"),
       ]);
 
       if (usersRes.ok) {
@@ -694,35 +754,67 @@ export default function UserOverridesPage() {
         const usersData = usersResponse.users || usersResponse.data || [];
         setTotal(usersResponse.total || usersData.length);
         if (Array.isArray(usersData)) {
-          setUsers(usersData.map((u: Record<string, unknown>) => ({
-            id: u.id as string,
-            email: u.email as string || '',
-            name: (u.name || u.full_name || 'Unknown') as string,
-            tier: (u.tier || u.subscription_tier || 'free') as string,
-            tierStatus: (u.tierStatus || u.tier_status || 'active') as string,
-            createdAt: (u.createdAt || u.created_at) as string,
-            lastActive: (u.lastActive || u.last_active || u.createdAt || u.created_at) as string,
-            trialActive: (u.trialActive ?? u.trial_active ?? false) as boolean,
-            trialExpiresAt: (u.trialExpiresAt || u.trial_expires_at) as string | undefined,
-            trialTier: (u.trialTier || u.trial_tier) as string | undefined,
-            grandfathered: (u.grandfathered ?? false) as boolean,
-            grandfatheredType: (u.grandfatheredType || u.grandfathered_type) as string | undefined,
-            grandfatheredReason: (u.grandfatheredReason || u.grandfathered_reason) as string | undefined,
-            organizationId: (u.organizationId || u.organization_id) as string | undefined,
-            organizationName: (u.organizationName || u.organization_name) as string | undefined,
-            organizationRole: (u.organizationRole || u.organization_role) as string | undefined,
-            stripeCustomerId: (u.stripeCustomerId || u.stripe_customer_id) as string | undefined,
-            stripeSubscriptionId: (u.stripeSubscriptionId || u.stripe_subscription_id) as string | undefined,
-            isBetaTester: (u.isBetaTester ?? u.is_beta_tester ?? false) as boolean,
-            betaTesterId: (u.betaTesterId || u.beta_tester_id) as string | undefined,
-            overrideCount: (u.overrideCount ?? u.override_count ?? 0) as number,
-            paywallHits: (u.paywallHits ?? u.paywall_hits ?? 0) as number,
-            reportsGenerated: (u.reportsGenerated ?? u.reports_generated ?? 0) as number,
-            savedQueriesCount: (u.savedQueriesCount ?? u.saved_queries_count ?? 0) as number,
-            watchlistCount: (u.watchlistCount ?? u.watchlist_count ?? 0) as number,
-            alertsCount: (u.alertsCount ?? u.alerts_count ?? 0) as number,
-            overrides: u.overrides as UserOverride[] | undefined,
-          })));
+          setUsers(
+            usersData.map((u: Record<string, unknown>) => ({
+              id: u.id as string,
+              email: (u.email as string) || "",
+              name: (u.name || u.full_name || "Unknown") as string,
+              tier: (u.tier || u.subscription_tier || "free") as string,
+              tierStatus: (u.tierStatus || u.tier_status || "active") as string,
+              createdAt: (u.createdAt || u.created_at) as string,
+              lastActive: (u.lastActive ||
+                u.last_active ||
+                u.createdAt ||
+                u.created_at) as string,
+              trialActive: (u.trialActive ??
+                u.trial_active ??
+                false) as boolean,
+              trialExpiresAt: (u.trialExpiresAt || u.trial_expires_at) as
+                | string
+                | undefined,
+              trialTier: (u.trialTier || u.trial_tier) as string | undefined,
+              grandfathered: (u.grandfathered ?? false) as boolean,
+              grandfatheredType: (u.grandfatheredType ||
+                u.grandfathered_type) as string | undefined,
+              grandfatheredReason: (u.grandfatheredReason ||
+                u.grandfathered_reason) as string | undefined,
+              organizationId: (u.organizationId || u.organization_id) as
+                | string
+                | undefined,
+              organizationName: (u.organizationName || u.organization_name) as
+                | string
+                | undefined,
+              organizationRole: (u.organizationRole || u.organization_role) as
+                | string
+                | undefined,
+              stripeCustomerId: (u.stripeCustomerId || u.stripe_customer_id) as
+                | string
+                | undefined,
+              stripeSubscriptionId: (u.stripeSubscriptionId ||
+                u.stripe_subscription_id) as string | undefined,
+              isBetaTester: (u.isBetaTester ??
+                u.is_beta_tester ??
+                false) as boolean,
+              betaTesterId: (u.betaTesterId || u.beta_tester_id) as
+                | string
+                | undefined,
+              overrideCount: (u.overrideCount ??
+                u.override_count ??
+                0) as number,
+              paywallHits: (u.paywallHits ?? u.paywall_hits ?? 0) as number,
+              reportsGenerated: (u.reportsGenerated ??
+                u.reports_generated ??
+                0) as number,
+              savedQueriesCount: (u.savedQueriesCount ??
+                u.saved_queries_count ??
+                0) as number,
+              watchlistCount: (u.watchlistCount ??
+                u.watchlist_count ??
+                0) as number,
+              alertsCount: (u.alertsCount ?? u.alerts_count ?? 0) as number,
+              overrides: u.overrides as UserOverride[] | undefined,
+            })),
+          );
         }
       }
 
@@ -731,11 +823,13 @@ export default function UserOverridesPage() {
         const statsData = statsResponse.data || statsResponse;
         setStats({
           totalUsers: statsData.totalUsers ?? statsData.total_users ?? 0,
-          withOverrides: statsData.withOverrides ?? statsData.with_overrides ?? 0,
+          withOverrides:
+            statsData.withOverrides ?? statsData.with_overrides ?? 0,
           activeTrials: statsData.activeTrials ?? statsData.active_trials ?? 0,
           grandfathered: statsData.grandfathered ?? 0,
           betaTesters: statsData.betaTesters ?? statsData.beta_testers ?? 0,
-          inOrganizations: statsData.inOrganizations ?? statsData.in_organizations ?? 0,
+          inOrganizations:
+            statsData.inOrganizations ?? statsData.in_organizations ?? 0,
           withStripe: statsData.withStripe ?? statsData.with_stripe ?? 0,
           byTier: statsData.byTier ?? statsData.by_tier ?? {},
         });
@@ -745,15 +839,17 @@ export default function UserOverridesPage() {
         const featuresResponse = await featuresRes.json();
         const featuresData = featuresResponse.data || featuresResponse;
         if (Array.isArray(featuresData)) {
-          setFeatures(featuresData.map((f: Record<string, unknown>) => ({
-            slug: f.slug as string,
-            name: f.name as string,
-          })));
+          setFeatures(
+            featuresData.map((f: Record<string, unknown>) => ({
+              slug: f.slug as string,
+              name: f.name as string,
+            })),
+          );
         }
       }
     } catch (err) {
-      console.error('Failed to fetch users:', err);
-      setError('Failed to load users');
+      console.error("Failed to fetch users:", err);
+      setError("Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -770,8 +866,8 @@ export default function UserOverridesPage() {
   const handleAddOverride = async (userId: string, featureSlug: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/users/${userId}/overrides`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureSlug }),
       });
 
@@ -779,29 +875,32 @@ export default function UserOverridesPage() {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to add override:', err);
+      console.error("Failed to add override:", err);
     }
   };
 
   const handleRemoveOverride = async (userId: string, featureSlug: string) => {
     try {
-      const res = await fetchAPIRaw(`/api/admin/users/${userId}/overrides/${featureSlug}`, {
-        method: 'DELETE',
-      });
+      const res = await fetchAPIRaw(
+        `/api/admin/users/${userId}/overrides/${featureSlug}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (res.ok) {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to remove override:', err);
+      console.error("Failed to remove override:", err);
     }
   };
 
   const handleChangeTier = async (userId: string, newTier: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/users/${userId}/tier`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier: newTier }),
       });
 
@@ -809,15 +908,15 @@ export default function UserOverridesPage() {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to change tier:', err);
+      console.error("Failed to change tier:", err);
     }
   };
 
   const handleStartTrial = async (userId: string, tier: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier }),
       });
 
@@ -825,35 +924,35 @@ export default function UserOverridesPage() {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to start trial:', err);
+      console.error("Failed to start trial:", err);
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (res.ok) {
         fetchData();
       } else {
         const body = await res.json().catch(() => null);
-        setError(body?.message || 'Failed to delete user');
+        setError(body?.message || "Failed to delete user");
       }
     } catch (err) {
-      console.error('Failed to delete user:', err);
-      setError('Failed to delete user');
+      console.error("Failed to delete user:", err);
+      setError("Failed to delete user");
     }
   };
 
   const handleCreateAccount = async () => {
     if (!createForm.email || !createForm.password) {
-      setCreateError('Email and password are required');
+      setCreateError("Email and password are required");
       return;
     }
     if (createForm.password.length < 6) {
-      setCreateError('Password must be at least 6 characters');
+      setCreateError("Password must be at least 6 characters");
       return;
     }
 
@@ -861,9 +960,9 @@ export default function UserOverridesPage() {
       setCreateLoading(true);
       setCreateError(null);
 
-      const res = await fetchAPIRaw('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetchAPIRaw("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: createForm.email,
           password: createForm.password,
@@ -874,15 +973,15 @@ export default function UserOverridesPage() {
 
       if (res.ok) {
         setShowCreateAccount(false);
-        setCreateForm({ email: '', password: '', fullName: '', tier: 'free' });
+        setCreateForm({ email: "", password: "", fullName: "", tier: "free" });
         fetchData();
       } else {
         const body = await res.json().catch(() => null);
-        setCreateError(body?.message || 'Failed to create account');
+        setCreateError(body?.message || "Failed to create account");
       }
     } catch (err) {
-      console.error('Failed to create account:', err);
-      setCreateError('Failed to create account');
+      console.error("Failed to create account:", err);
+      setCreateError("Failed to create account");
     } finally {
       setCreateLoading(false);
     }
@@ -897,7 +996,7 @@ export default function UserOverridesPage() {
   }
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-7xl mx-auto">
       {/* Error Banner */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
@@ -909,7 +1008,9 @@ export default function UserOverridesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-on-surface">User Management</h1>
+          <h1 className="text-2xl font-semibold text-on-surface">
+            User Management
+          </h1>
           <p className="text-on-surface-variant">
             Manage users, feature overrides, and subscriptions
           </p>
@@ -922,8 +1023,8 @@ export default function UserOverridesPage() {
             }}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-colors ${
               showCreateAccount
-                ? 'bg-primary text-on-primary'
-                : 'bg-primary/10 text-primary hover:bg-primary/20'
+                ? "bg-primary text-on-primary"
+                : "bg-primary/10 text-primary hover:bg-primary/20"
             }`}
           >
             <Plus className="w-4 h-4" />
@@ -934,7 +1035,9 @@ export default function UserOverridesPage() {
             className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
             title="Refresh data"
           >
-            <RefreshCw className={`w-4 h-4 text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 text-on-surface-variant ${loading ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </div>
@@ -942,7 +1045,9 @@ export default function UserOverridesPage() {
       {/* Create Account Form */}
       {showCreateAccount && (
         <div className="mb-6 bg-surface-container rounded-xl border border-outline-variant p-5">
-          <h3 className="text-sm font-medium text-on-surface mb-4">Create New Account</h3>
+          <h3 className="text-sm font-medium text-on-surface mb-4">
+            Create New Account
+          </h3>
           {createError && (
             <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -951,40 +1056,62 @@ export default function UserOverridesPage() {
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-xs text-on-surface-variant mb-1">Email *</label>
+              <label className="block text-xs text-on-surface-variant mb-1">
+                Email *
+              </label>
               <input
                 type="email"
                 value={createForm.email}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, email: e.target.value }))
+                }
                 placeholder="user@example.com"
                 className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-on-surface-variant mb-1">Password *</label>
+              <label className="block text-xs text-on-surface-variant mb-1">
+                Password *
+              </label>
               <input
                 type="password"
                 value={createForm.password}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, password: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    password: e.target.value,
+                  }))
+                }
                 placeholder="Min 6 characters"
                 className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-on-surface-variant mb-1">Full Name</label>
+              <label className="block text-xs text-on-surface-variant mb-1">
+                Full Name
+              </label>
               <input
                 type="text"
                 value={createForm.fullName}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, fullName: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    fullName: e.target.value,
+                  }))
+                }
                 placeholder="John Doe"
                 className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-on-surface-variant mb-1">Tier</label>
+              <label className="block text-xs text-on-surface-variant mb-1">
+                Tier
+              </label>
               <select
                 value={createForm.tier}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, tier: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, tier: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
               >
                 <option value="free">Free</option>
@@ -1005,13 +1132,18 @@ export default function UserOverridesPage() {
               ) : (
                 <Check className="w-4 h-4" />
               )}
-              {createLoading ? 'Creating...' : 'Create Account'}
+              {createLoading ? "Creating..." : "Create Account"}
             </button>
             <button
               onClick={() => {
                 setShowCreateAccount(false);
                 setCreateError(null);
-                setCreateForm({ email: '', password: '', fullName: '', tier: 'free' });
+                setCreateForm({
+                  email: "",
+                  password: "",
+                  fullName: "",
+                  tier: "free",
+                });
               }}
               className="px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg text-sm transition-colors"
             >
@@ -1048,13 +1180,41 @@ export default function UserOverridesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-        <StatCard label="Total Users" value={stats?.totalUsers ?? 0} icon={User} />
-        <StatCard label="With Overrides" value={stats?.withOverrides ?? 0} icon={Shield} />
-        <StatCard label="Active Trials" value={stats?.activeTrials ?? 0} icon={Clock} />
-        <StatCard label="Grandfathered" value={stats?.grandfathered ?? 0} icon={Star} />
-        <StatCard label="Beta Testers" value={stats?.betaTesters ?? 0} icon={Beaker} />
-        <StatCard label="In Orgs" value={stats?.inOrganizations ?? 0} icon={Building2} />
-        <StatCard label="With Stripe" value={stats?.withStripe ?? 0} icon={CreditCard} />
+        <StatCard
+          label="Total Users"
+          value={stats?.totalUsers ?? 0}
+          icon={User}
+        />
+        <StatCard
+          label="With Overrides"
+          value={stats?.withOverrides ?? 0}
+          icon={Shield}
+        />
+        <StatCard
+          label="Active Trials"
+          value={stats?.activeTrials ?? 0}
+          icon={Clock}
+        />
+        <StatCard
+          label="Grandfathered"
+          value={stats?.grandfathered ?? 0}
+          icon={Star}
+        />
+        <StatCard
+          label="Beta Testers"
+          value={stats?.betaTesters ?? 0}
+          icon={Beaker}
+        />
+        <StatCard
+          label="In Orgs"
+          value={stats?.inOrganizations ?? 0}
+          icon={Building2}
+        />
+        <StatCard
+          label="With Stripe"
+          value={stats?.withStripe ?? 0}
+          icon={CreditCard}
+        />
         <StatCard
           label="Free/Pro/Ent"
           value={`${stats?.byTier?.free ?? 0}/${stats?.byTier?.pro ?? 0}/${stats?.byTier?.enterprise ?? 0}`}

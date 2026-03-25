@@ -12,7 +12,12 @@ import {
   CheckCircle2,
   BrainCircuit,
   Shield,
+  Layers,
+  Clock,
+  Users,
   MessageSquare,
+  Zap,
+  BookOpen,
   ArrowLeft,
   Menu,
   X,
@@ -40,7 +45,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: LayoutDashboard,
         exactMatch: true,
       },
-      { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
       { label: "Data Feeds", href: "/admin/data", icon: Database },
       { label: "Scores", href: "/admin/propertyiq-scores", icon: Target },
       { label: "ML Ops", href: "/admin/ml-workflow", icon: Cpu },
@@ -55,8 +59,40 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Manage",
     items: [
-      { label: "Entitlements", href: "/admin/entitlements", icon: Shield },
+      {
+        label: "Entitlements",
+        href: "/admin/entitlements",
+        icon: Shield,
+        exactMatch: true,
+      },
+      { label: "Tiers", href: "/admin/entitlements/tiers", icon: Layers },
+      { label: "Trial", href: "/admin/entitlements/trial", icon: Clock },
+      { label: "Users", href: "/admin/entitlements/users", icon: Users },
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "Insights",
+    items: [{ label: "Analytics", href: "/admin/analytics", icon: BarChart3 }],
+  },
+  {
+    title: "Automate",
+    items: [
+      {
+        label: "Rules",
+        href: "/admin/entitlements/automations",
+        icon: Zap,
+      },
+    ],
+  },
+  {
+    title: "Learn",
+    items: [
+      {
+        label: "Playbook",
+        href: "/admin/entitlements/playbook",
+        icon: BookOpen,
+      },
     ],
   },
 ];

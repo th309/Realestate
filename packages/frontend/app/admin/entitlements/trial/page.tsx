@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Clock,
   Users,
@@ -16,8 +16,8 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
 
 // Types
 interface TrialConfig {
@@ -51,7 +51,7 @@ interface ActiveTrial {
 const DEFAULT_CONFIG: TrialConfig = {
   isEnabled: false,
   durationDays: 14,
-  trialTier: 'pro',
+  trialTier: "pro",
   showBanner: true,
   autoConvertEnabled: false,
   reminderDays: [7, 3, 1],
@@ -163,9 +163,9 @@ export default function TrialSettingsPage() {
       setError(null);
 
       const [configRes, statsRes, trialsRes] = await Promise.all([
-        fetchAPIRaw('/api/admin/trial/config'),
-        fetchAPIRaw('/api/admin/trial/stats'),
-        fetchAPIRaw('/api/admin/trial/users'),
+        fetchAPIRaw("/api/admin/trial/config"),
+        fetchAPIRaw("/api/admin/trial/stats"),
+        fetchAPIRaw("/api/admin/trial/users"),
       ]);
 
       if (configRes.ok) {
@@ -174,7 +174,7 @@ export default function TrialSettingsPage() {
         setConfig({
           isEnabled: configData.is_enabled ?? false,
           durationDays: configData.duration_days ?? 14,
-          trialTier: configData.trial_tier ?? 'pro',
+          trialTier: configData.trial_tier ?? "pro",
           showBanner: configData.show_banner ?? true,
           autoConvertEnabled: configData.auto_convert_enabled ?? false,
           reminderDays: configData.reminder_days ?? [7, 3, 1],
@@ -196,21 +196,23 @@ export default function TrialSettingsPage() {
         const trialsResponse = await trialsRes.json();
         const trialsData = trialsResponse.data || [];
         // Map snake_case API response to camelCase interface
-        setActiveTrials(trialsData.map((t: Record<string, unknown>) => ({
-          id: t.id,
-          userId: t.user_id,
-          userName: t.user_name || 'Unknown',
-          userEmail: t.user_email || '',
-          tier: t.tier || 'pro',
-          startedAt: t.started_at,
-          expiresAt: t.expires_at,
-          daysRemaining: t.days_remaining ?? 0,
-          paywallHits: t.paywall_hits ?? 0,
-        })));
+        setActiveTrials(
+          trialsData.map((t: Record<string, unknown>) => ({
+            id: t.id,
+            userId: t.user_id,
+            userName: t.user_name || "Unknown",
+            userEmail: t.user_email || "",
+            tier: t.tier || "pro",
+            startedAt: t.started_at,
+            expiresAt: t.expires_at,
+            daysRemaining: t.days_remaining ?? 0,
+            paywallHits: t.paywall_hits ?? 0,
+          })),
+        );
       }
     } catch (err) {
-      console.error('Failed to fetch trial data:', err);
-      setError('Failed to load trial data');
+      console.error("Failed to fetch trial data:", err);
+      setError("Failed to load trial data");
     } finally {
       setLoading(false);
     }
@@ -228,9 +230,9 @@ export default function TrialSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const res = await fetchAPIRaw('/api/admin/trial/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetchAPIRaw("/api/admin/trial/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           is_enabled: config.isEnabled,
           duration_days: config.durationDays,
@@ -241,11 +243,11 @@ export default function TrialSettingsPage() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) throw new Error("Failed to save");
       setHasChanges(false);
     } catch (err) {
-      console.error('Failed to save trial config:', err);
-      setError('Failed to save configuration');
+      console.error("Failed to save trial config:", err);
+      setError("Failed to save configuration");
     } finally {
       setSaving(false);
     }
@@ -254,28 +256,28 @@ export default function TrialSettingsPage() {
   const handleExtendTrial = async (userId: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}/extend`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ days: 7 }),
       });
       if (res.ok) {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to extend trial:', err);
+      console.error("Failed to extend trial:", err);
     }
   };
 
   const handleCancelTrial = async (userId: string) => {
     try {
       const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (res.ok) {
         fetchData();
       }
     } catch (err) {
-      console.error('Failed to cancel trial:', err);
+      console.error("Failed to cancel trial:", err);
     }
   };
 
@@ -290,7 +292,7 @@ export default function TrialSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-7xl mx-auto">
       {/* Error Banner */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
@@ -298,7 +300,10 @@ export default function TrialSettingsPage() {
             <AlertCircle className="w-4 h-4" />
             <span className="text-sm">{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-red-700 hover:text-red-900">
+          <button
+            onClick={() => setError(null)}
+            className="text-red-700 hover:text-red-900"
+          >
             <XCircle className="w-4 h-4" />
           </button>
         </div>
@@ -307,7 +312,9 @@ export default function TrialSettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-on-surface">Trial Settings</h1>
+          <h1 className="text-2xl font-semibold text-on-surface">
+            Trial Settings
+          </h1>
           <p className="text-on-surface-variant">
             Configure trial periods and manage active trials
           </p>
@@ -325,9 +332,10 @@ export default function TrialSettingsPage() {
             disabled={!hasChanges || saving}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg transition-colors
-              ${hasChanges && !saving
-                ? 'bg-primary text-on-primary hover:bg-primary/90'
-                : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
+              ${
+                hasChanges && !saving
+                  ? "bg-primary text-on-primary hover:bg-primary/90"
+                  : "bg-surface-container-high text-on-surface-variant cursor-not-allowed"
               }
             `}
           >
@@ -336,7 +344,7 @@ export default function TrialSettingsPage() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
@@ -355,13 +363,19 @@ export default function TrialSettingsPage() {
         />
         <StatCard
           label="Conversion Rate"
-          value={stats?.conversionRate != null ? `${stats.conversionRate}%` : '-'}
+          value={
+            stats?.conversionRate != null ? `${stats.conversionRate}%` : "-"
+          }
           icon={TrendingUp}
-          trend={stats?.conversionRate != null && stats.conversionRate > 20 ? '+5%' : undefined}
+          trend={
+            stats?.conversionRate != null && stats.conversionRate > 20
+              ? "+5%"
+              : undefined
+          }
         />
         <StatCard
           label="Avg Trial Usage"
-          value={stats?.avgUsage != null ? `${stats.avgUsage}%` : '-'}
+          value={stats?.avgUsage != null ? `${stats.avgUsage}%` : "-"}
           icon={Clock}
         />
       </div>
@@ -460,9 +474,10 @@ export default function TrialSettingsPage() {
                   }}
                   className={`
                     px-3 py-1.5 rounded-lg text-sm transition-colors
-                    ${config.reminderDays.includes(day)
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface-variant'
+                    ${
+                      config.reminderDays.includes(day)
+                        ? "bg-primary text-on-primary"
+                        : "bg-surface-container-high text-on-surface-variant"
                     }
                   `}
                 >

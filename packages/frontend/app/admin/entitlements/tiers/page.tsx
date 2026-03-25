@@ -542,7 +542,7 @@ export default function TiersConfigurationPage() {
   }
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-7xl mx-auto">
       <TierPricingEditor />
 
       {/* Header */}

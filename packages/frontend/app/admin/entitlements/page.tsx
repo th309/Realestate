@@ -127,7 +127,7 @@ export default function EntitlementsOverviewPage() {
   }, [fetchData]);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-7xl mx-auto">
       {/* Error Banner */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">

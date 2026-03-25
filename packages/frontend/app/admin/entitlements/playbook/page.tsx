@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   BookOpen,
   ChevronRight,
@@ -14,7 +14,7 @@ import {
   BarChart3,
   Lightbulb,
   ExternalLink,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Types
 interface PlaybookSection {
@@ -26,7 +26,7 @@ interface PlaybookSection {
 }
 
 interface PlaybookContent {
-  type: 'heading' | 'paragraph' | 'list' | 'tip' | 'metric' | 'action';
+  type: "heading" | "paragraph" | "list" | "tip" | "metric" | "action";
   content: string | string[];
   title?: string;
 }
@@ -34,251 +34,259 @@ interface PlaybookContent {
 // Playbook content
 const PLAYBOOK_SECTIONS: PlaybookSection[] = [
   {
-    id: 'tier-strategy',
-    title: 'Tier Strategy',
+    id: "tier-strategy",
+    title: "Tier Strategy",
     icon: Target,
-    description: 'Design tiers that maximize conversions while providing value at every level',
+    description:
+      "Design tiers that maximize conversions while providing value at every level",
     content: [
       {
-        type: 'heading',
-        content: 'The Golden Rule of Tiering',
+        type: "heading",
+        content: "The Golden Rule of Tiering",
       },
       {
-        type: 'paragraph',
-        content: 'Your free tier should be valuable enough to attract users, but limited enough to create natural upgrade moments. Think of it as a "taste" of your product, not a "meal".',
+        type: "paragraph",
+        content:
+          'Your free tier should be valuable enough to attract users, but limited enough to create natural upgrade moments. Think of it as a "taste" of your product, not a "meal".',
       },
       {
-        type: 'list',
-        title: 'Free Tier Best Practices',
+        type: "list",
+        title: "Free Tier Best Practices",
         content: [
-          'Include 3-5 core features that solve a real problem',
-          'Limit geography to state/metro level (where users discover value)',
-          'Allow full access to 1-2 premium features as a preview',
-          'Set reasonable rate limits rather than hard blocks',
+          "Include 3-5 core features that solve a real problem",
+          "Limit geography to state/metro level (where users discover value)",
+          "Allow full access to 1-2 premium features as a preview",
+          "Set reasonable rate limits rather than hard blocks",
         ],
       },
       {
-        type: 'tip',
-        content: 'Users who use 3+ features in their first week are 4x more likely to convert. Focus on activation, not restriction.',
+        type: "tip",
+        content:
+          "Users who use 3+ features in their first week are 4x more likely to convert. Focus on activation, not restriction.",
       },
       {
-        type: 'list',
-        title: 'Pro Tier Positioning',
+        type: "list",
+        title: "Pro Tier Positioning",
         content: [
-          'Unlock all core metrics and most geographies',
+          "Unlock all core metrics and most geographies",
           'Position as the "professional" choice for serious users',
-          'Include convenience features (CSV export, saved searches)',
+          "Include convenience features (CSV export, saved searches)",
           'Price at a point that feels like "obvious value"',
         ],
       },
     ],
   },
   {
-    id: 'paywall-design',
-    title: 'Paywall Design',
+    id: "paywall-design",
+    title: "Paywall Design",
     icon: DollarSign,
-    description: 'Create paywalls that convert without frustrating users',
+    description: "Create paywalls that convert without frustrating users",
     content: [
       {
-        type: 'heading',
-        content: 'Paywall Psychology',
+        type: "heading",
+        content: "Paywall Psychology",
       },
       {
-        type: 'paragraph',
-        content: 'The best paywalls feel like helpful suggestions, not barriers. They appear at moments of high intent and clearly articulate the value being offered.',
+        type: "paragraph",
+        content:
+          "The best paywalls feel like helpful suggestions, not barriers. They appear at moments of high intent and clearly articulate the value being offered.",
       },
       {
-        type: 'list',
-        title: 'High-Converting Paywall Patterns',
+        type: "list",
+        title: "High-Converting Paywall Patterns",
         content: [
-          'Show a preview/teaser of the locked content (blur effect)',
-          'Explain WHY this feature is valuable, not just that it\'s locked',
+          "Show a preview/teaser of the locked content (blur effect)",
+          "Explain WHY this feature is valuable, not just that it's locked",
           'Include social proof ("12,000 Pro users love this feature")',
-          'Offer a trial CTA alongside the purchase CTA',
+          "Offer a trial CTA alongside the purchase CTA",
         ],
       },
       {
-        type: 'metric',
-        title: 'Benchmark CTRs',
+        type: "metric",
+        title: "Benchmark CTRs",
         content: [
-          'Inline paywall cards: 5-8% CTR',
-          'Full-page overlays: 2-4% CTR',
-          'Teaser/preview with blur: 8-12% CTR',
-          'Contextual nudges: 3-5% CTR',
+          "Inline paywall cards: 5-8% CTR",
+          "Full-page overlays: 2-4% CTR",
+          "Teaser/preview with blur: 8-12% CTR",
+          "Contextual nudges: 3-5% CTR",
         ],
       },
       {
-        type: 'tip',
-        content: 'A/B test your paywall copy. "Unlock detailed analytics" converts 23% better than "Upgrade to Pro" in our data.',
+        type: "tip",
+        content:
+          'A/B test your paywall copy. "Unlock detailed analytics" converts 23% better than "Upgrade to Pro" in our data.',
       },
     ],
   },
   {
-    id: 'trial-optimization',
-    title: 'Trial Optimization',
+    id: "trial-optimization",
+    title: "Trial Optimization",
     icon: Gift,
-    description: 'Run trials that convert free users into paying customers',
+    description: "Run trials that convert free users into paying customers",
     content: [
       {
-        type: 'heading',
-        content: 'Trial Length Matters',
+        type: "heading",
+        content: "Trial Length Matters",
       },
       {
-        type: 'metric',
-        title: 'Trial Length vs Conversion',
+        type: "metric",
+        title: "Trial Length vs Conversion",
         content: [
-          '7-day trial: 18% conversion rate',
-          '14-day trial: 24% conversion rate',
-          '30-day trial: 21% conversion rate',
+          "7-day trial: 18% conversion rate",
+          "14-day trial: 24% conversion rate",
+          "30-day trial: 21% conversion rate",
         ],
       },
       {
-        type: 'paragraph',
-        content: '14 days is the sweet spot. Long enough for users to form habits, short enough to create urgency.',
+        type: "paragraph",
+        content:
+          "14 days is the sweet spot. Long enough for users to form habits, short enough to create urgency.",
       },
       {
-        type: 'list',
-        title: 'Trial Onboarding Checklist',
+        type: "list",
+        title: "Trial Onboarding Checklist",
         content: [
-          'Send welcome email within 1 hour of trial start',
+          "Send welcome email within 1 hour of trial start",
           'Highlight 3 "must-try" premium features',
-          'Schedule check-in at day 7 with usage summary',
-          'Send reminder emails at days 7, 3, and 1',
-          'Offer extension to high-engagement users who don\'t convert',
+          "Schedule check-in at day 7 with usage summary",
+          "Send reminder emails at days 7, 3, and 1",
+          "Offer extension to high-engagement users who don't convert",
         ],
       },
       {
-        type: 'action',
-        content: 'Set up trial reminder automations →',
+        type: "action",
+        content: "Set up trial reminder automations →",
       },
     ],
   },
   {
-    id: 'conversion-tactics',
-    title: 'Conversion Tactics',
+    id: "conversion-tactics",
+    title: "Conversion Tactics",
     icon: TrendingUp,
-    description: 'Proven strategies to turn free users into paying customers',
+    description: "Proven strategies to turn free users into paying customers",
     content: [
       {
-        type: 'heading',
-        content: 'The Conversion Funnel',
+        type: "heading",
+        content: "The Conversion Funnel",
       },
       {
-        type: 'list',
-        title: 'Stage 1: Awareness',
+        type: "list",
+        title: "Stage 1: Awareness",
         content: [
-          'Show upgrade benefits in natural workflow moments',
+          "Show upgrade benefits in natural workflow moments",
           'Use "Pro" badges on premium features',
-          'Display tier comparison on profile page',
+          "Display tier comparison on profile page",
         ],
       },
       {
-        type: 'list',
-        title: 'Stage 2: Consideration',
+        type: "list",
+        title: "Stage 2: Consideration",
         content: [
-          'Offer free trial when users hit multiple paywalls',
-          'Send personalized upgrade emails based on usage',
-          'Show testimonials from similar users',
+          "Offer free trial when users hit multiple paywalls",
+          "Send personalized upgrade emails based on usage",
+          "Show testimonials from similar users",
         ],
       },
       {
-        type: 'list',
-        title: 'Stage 3: Decision',
+        type: "list",
+        title: "Stage 3: Decision",
         content: [
-          'Offer time-limited discounts to high-intent users',
-          'Provide annual billing discount (typically 20%)',
-          'Remove friction from checkout (fewer steps = higher conversion)',
+          "Offer time-limited discounts to high-intent users",
+          "Provide annual billing discount (typically 20%)",
+          "Remove friction from checkout (fewer steps = higher conversion)",
         ],
       },
       {
-        type: 'tip',
-        content: 'Users who hit 5+ paywalls in a single session have 3x higher conversion rate. Target them with special offers.',
+        type: "tip",
+        content:
+          "Users who hit 5+ paywalls in a single session have 3x higher conversion rate. Target them with special offers.",
       },
     ],
   },
   {
-    id: 'retention-playbook',
-    title: 'Retention Playbook',
+    id: "retention-playbook",
+    title: "Retention Playbook",
     icon: Users,
-    description: 'Keep paying customers engaged and prevent churn',
+    description: "Keep paying customers engaged and prevent churn",
     content: [
       {
-        type: 'heading',
-        content: 'Churn Prevention',
+        type: "heading",
+        content: "Churn Prevention",
       },
       {
-        type: 'paragraph',
-        content: 'It costs 5x more to acquire a new customer than to retain an existing one. Focus on keeping your paying users happy.',
+        type: "paragraph",
+        content:
+          "It costs 5x more to acquire a new customer than to retain an existing one. Focus on keeping your paying users happy.",
       },
       {
-        type: 'list',
-        title: 'Early Warning Signs',
+        type: "list",
+        title: "Early Warning Signs",
         content: [
-          'No login for 14+ days',
-          'Decreased feature usage (vs previous month)',
-          'Support tickets or complaints',
-          'Failed payment attempts',
+          "No login for 14+ days",
+          "Decreased feature usage (vs previous month)",
+          "Support tickets or complaints",
+          "Failed payment attempts",
         ],
       },
       {
-        type: 'list',
-        title: 'Retention Tactics',
+        type: "list",
+        title: "Retention Tactics",
         content: [
           'Send "We miss you" email after 14 days inactive',
-          'Offer temporary tier upgrade to re-engage churning users',
-          'Create exclusive content/features for Pro users',
-          'Build habit loops (daily/weekly reports, notifications)',
+          "Offer temporary tier upgrade to re-engage churning users",
+          "Create exclusive content/features for Pro users",
+          "Build habit loops (daily/weekly reports, notifications)",
         ],
       },
       {
-        type: 'action',
-        content: 'Create churn risk automation →',
+        type: "action",
+        content: "Create churn risk automation →",
       },
     ],
   },
   {
-    id: 'analytics-guide',
-    title: 'Analytics Guide',
+    id: "analytics-guide",
+    title: "Analytics Guide",
     icon: BarChart3,
-    description: 'Understand your metrics and make data-driven decisions',
+    description: "Understand your metrics and make data-driven decisions",
     content: [
       {
-        type: 'heading',
-        content: 'Key Metrics to Track',
+        type: "heading",
+        content: "Key Metrics to Track",
       },
       {
-        type: 'list',
-        title: 'Conversion Metrics',
+        type: "list",
+        title: "Conversion Metrics",
         content: [
-          'Free-to-trial conversion rate (target: 8-12%)',
-          'Trial-to-paid conversion rate (target: 20-30%)',
-          'Paywall click-through rate (target: 5-10%)',
-          'Average time to conversion (track weekly)',
+          "Free-to-trial conversion rate (target: 8-12%)",
+          "Trial-to-paid conversion rate (target: 20-30%)",
+          "Paywall click-through rate (target: 5-10%)",
+          "Average time to conversion (track weekly)",
         ],
       },
       {
-        type: 'list',
-        title: 'Engagement Metrics',
+        type: "list",
+        title: "Engagement Metrics",
         content: [
-          'Feature adoption rate by tier',
-          'Session frequency and duration',
-          'Paywall hit frequency per user',
-          'Most-blocked features (upgrade drivers)',
+          "Feature adoption rate by tier",
+          "Session frequency and duration",
+          "Paywall hit frequency per user",
+          "Most-blocked features (upgrade drivers)",
         ],
       },
       {
-        type: 'list',
-        title: 'Revenue Metrics',
+        type: "list",
+        title: "Revenue Metrics",
         content: [
-          'Monthly Recurring Revenue (MRR)',
-          'Average Revenue Per User (ARPU)',
-          'Customer Lifetime Value (LTV)',
-          'Churn rate (target: <5% monthly)',
+          "Monthly Recurring Revenue (MRR)",
+          "Average Revenue Per User (ARPU)",
+          "Customer Lifetime Value (LTV)",
+          "Churn rate (target: <5% monthly)",
         ],
       },
       {
-        type: 'action',
-        content: 'View your analytics dashboard →',
+        type: "action",
+        content: "View your analytics dashboard →",
       },
     ],
   },
@@ -287,19 +295,19 @@ const PLAYBOOK_SECTIONS: PlaybookSection[] = [
 // Components
 function ContentRenderer({ content }: { content: PlaybookContent }) {
   switch (content.type) {
-    case 'heading':
+    case "heading":
       return (
         <h3 className="text-lg font-semibold text-on-surface mt-6 mb-3">
           {content.content}
         </h3>
       );
-    case 'paragraph':
+    case "paragraph":
       return (
         <p className="text-on-surface-variant leading-relaxed mb-4">
           {content.content}
         </p>
       );
-    case 'list':
+    case "list":
       return (
         <div className="mb-4">
           {content.title && (
@@ -309,7 +317,10 @@ function ContentRenderer({ content }: { content: PlaybookContent }) {
           )}
           <ul className="space-y-2">
             {(content.content as string[]).map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-on-surface-variant">
+              <li
+                key={i}
+                className="flex items-start gap-2 text-sm text-on-surface-variant"
+              >
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span>{item}</span>
               </li>
@@ -317,7 +328,7 @@ function ContentRenderer({ content }: { content: PlaybookContent }) {
           </ul>
         </div>
       );
-    case 'tip':
+    case "tip":
       return (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
           <div className="flex items-start gap-3">
@@ -326,7 +337,7 @@ function ContentRenderer({ content }: { content: PlaybookContent }) {
           </div>
         </div>
       );
-    case 'metric':
+    case "metric":
       return (
         <div className="bg-surface-container-high rounded-lg p-4 mb-4">
           {content.title && (
@@ -343,7 +354,7 @@ function ContentRenderer({ content }: { content: PlaybookContent }) {
           </div>
         </div>
       );
-    case 'action':
+    case "action":
       return (
         <button className="flex items-center gap-2 text-sm text-primary hover:underline mt-2">
           {content.content}
@@ -383,7 +394,7 @@ function PlaybookCard({
         </div>
         <ChevronRight
           className={`w-5 h-5 text-on-surface-variant transition-transform ${
-            isExpanded ? 'rotate-90' : ''
+            isExpanded ? "rotate-90" : ""
           }`}
         />
       </button>
@@ -400,10 +411,12 @@ function PlaybookCard({
 }
 
 export default function PlaybookPage() {
-  const [expandedSection, setExpandedSection] = useState<string | null>('tier-strategy');
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "tier-strategy",
+  );
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -460,9 +473,10 @@ export default function PlaybookPage() {
                 onClick={() => setExpandedSection(section.id)}
                 className={`
                   flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors
-                  ${expandedSection === section.id
-                    ? 'bg-primary/10 text-primary'
-                    : 'hover:bg-surface-container-high text-on-surface-variant'
+                  ${
+                    expandedSection === section.id
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-surface-container-high text-on-surface-variant"
                   }
                 `}
               >
@@ -483,7 +497,7 @@ export default function PlaybookPage() {
             isExpanded={expandedSection === section.id}
             onToggle={() =>
               setExpandedSection(
-                expandedSection === section.id ? null : section.id
+                expandedSection === section.id ? null : section.id,
               )
             }
           />
