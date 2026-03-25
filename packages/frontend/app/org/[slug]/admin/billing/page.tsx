@@ -8,7 +8,9 @@ import {
   Minus,
   Loader2,
   AlertCircle,
+  Calendar,
 } from "lucide-react";
+import { PlanComparisonCards } from "./PlanComparisonCards";
 import { useOrg } from "../../../hooks/useOrg";
 import {
   fetchOrgBilling,
@@ -139,37 +141,44 @@ export default function OrgAdminBilling() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Plan summary */}
-        <div className={cardClass}>
-          <div className="flex items-center gap-2 mb-4">
-            <CreditCard className="w-5 h-5 text-primary" />
-            <h2 className="text-sm font-medium text-on-surface-variant tracking-wide">
-              PLAN
-            </h2>
-          </div>
-          <p className="text-xl font-semibold text-on-surface mb-1">
-            {billing?.plan_name ?? "Enterprise"}
-          </p>
-          <span
-            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              billing?.status === "active"
-                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-            }`}
-          >
-            {billing?.status
-              ? billing.status.charAt(0).toUpperCase() + billing.status.slice(1)
-              : "Active"}
-          </span>
-          {billing && (
-            <p className="text-xs text-on-surface-variant mt-3">
-              Current period: {formatDate(billing.current_period_start)} —{" "}
-              {formatDate(billing.current_period_end)}
-            </p>
-          )}
-        </div>
+      {/* Plan context banner */}
+      {billing && (
+        <div className="mb-6 rounded-xl bg-primary/5 border border-primary/20 p-5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {/* Plan name badge */}
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <span className="text-lg font-semibold text-on-surface">
+                {billing.plan_name}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  billing.status === "active"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                }`}
+              >
+                {billing.status.charAt(0).toUpperCase() +
+                  billing.status.slice(1)}
+              </span>
+            </div>
 
+            {/* Divider (hidden on mobile) */}
+            <div className="hidden sm:block h-8 w-px bg-outline-variant" />
+
+            {/* Billing period */}
+            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+              <Calendar className="w-4 h-4 shrink-0" />
+              <span>
+                {formatDate(billing.current_period_start)} &mdash;{" "}
+                {formatDate(billing.current_period_end)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Seat usage */}
         <div className={cardClass}>
           <h2 className="text-sm font-medium text-on-surface-variant tracking-wide mb-4">
@@ -263,6 +272,13 @@ export default function OrgAdminBilling() {
           </button>
         </div>
       </div>
+
+      {/* Plan comparison cards */}
+      <PlanComparisonCards
+        currentPlanName={billing?.plan_name ?? null}
+        onSwitchPlan={() => void handleOpenPortal()}
+        switchLoading={portalLoading}
+      />
     </div>
   );
 }
