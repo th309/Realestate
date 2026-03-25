@@ -36,6 +36,8 @@ const BRANDING_SELECT = [
   'email_from_name',
   'email_reply_to',
   'custom_subdomain',
+  'custom_domain_status',
+  'custom_domain_verified_at',
   'favicon_url',
   'tab_title_format',
   'primary_font',
@@ -67,6 +69,8 @@ export interface BrandingResponse {
   email_from_name: string | null;
   email_reply_to: string | null;
   custom_subdomain: string | null;
+  custom_domain_status: string | null;
+  custom_domain_verified_at: string | null;
   favicon_url: string | null;
   tab_title_format: string | null;
   primary_font: string;
@@ -100,6 +104,8 @@ function toBrandingResponse(row: Record<string, any>): BrandingResponse {
     email_from_name: row.email_from_name,
     email_reply_to: row.email_reply_to,
     custom_subdomain: row.custom_subdomain,
+    custom_domain_status: row.custom_domain_status ?? 'pending',
+    custom_domain_verified_at: row.custom_domain_verified_at,
     favicon_url: row.favicon_url,
     tab_title_format: row.tab_title_format,
     primary_font: row.primary_font ?? 'Roboto',

@@ -5,10 +5,13 @@
  * logo upload/delete and accent color/website URL updates.
  *
  * Routes:
- *   GET    /api/org/:slug/branding       — Get current branding
- *   PUT    /api/org/:slug/branding       — Update accent color / website URL
- *   POST   /api/org/:slug/branding/logo  — Upload logo (max 2 MB)
- *   DELETE /api/org/:slug/branding/logo  — Delete logo
+ *   GET    /api/org/:slug/branding              — Get current branding
+ *   PUT    /api/org/:slug/branding              — Update accent color / website URL
+ *   POST   /api/org/:slug/branding/logo         — Upload logo (max 2 MB)
+ *   DELETE /api/org/:slug/branding/logo         — Delete logo
+ *   POST   /api/org/:slug/branding/domain       — Set custom domain
+ *   POST   /api/org/:slug/branding/domain/verify — Verify DNS CNAME
+ *   DELETE /api/org/:slug/branding/domain       — Remove custom domain
  */
 
 import {
@@ -29,6 +32,7 @@ import { AuthUserId } from '../common/decorators';
 import { OrgContextGuard, OrgAdminGuard } from '../organizations/guards';
 import { OrgBrandingService } from './org-branding.service';
 import { OrgLogoService } from './org-logo.service';
+import { CustomDomainService } from './custom-domain.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 
 @Controller('api/org/:slug/branding')
@@ -37,6 +41,7 @@ export class OrgBrandingController {
   constructor(
     private readonly brandingService: OrgBrandingService,
     private readonly logoService: OrgLogoService,
+    private readonly customDomainService: CustomDomainService,
   ) {}
 
   @Get()
@@ -71,5 +76,23 @@ export class OrgBrandingController {
   async deleteLogo(@Req() req: any, @AuthUserId() userId: string) {
     await this.logoService.deleteLogo(req.org.id, userId);
     return { message: 'Logo removed' };
+  }
+
+  // --- Custom domain management ---
+
+  @Post('domain')
+  async setCustomDomain(@Req() req: any, @Body('subdomain') subdomain: string) {
+    return this.customDomainService.setDomain(req.org.id, subdomain);
+  }
+
+  @Post('domain/verify')
+  async verifyCustomDomain(@Req() req: any) {
+    return this.customDomainService.verifyDomain(req.org.id);
+  }
+
+  @Delete('domain')
+  async removeCustomDomain(@Req() req: any) {
+    await this.customDomainService.removeDomain(req.org.id);
+    return { success: true };
   }
 }
