@@ -4,9 +4,11 @@
  * REST endpoints for organization CRUD operations.
  *
  * Routes:
- *   POST   /api/org              — Create a new organization
- *   GET    /api/org/:slug        — Get organization by slug (member+)
- *   PUT    /api/org/:slug        — Update organization (admin+)
+ *   POST   /api/org                       — Create a new organization
+ *   GET    /api/org/mine                  — Get caller's organization
+ *   GET    /api/org/:slug/reports/stats   — Report usage stats (member+)
+ *   GET    /api/org/:slug                 — Get organization by slug (member+)
+ *   PUT    /api/org/:slug                 — Update organization (admin+)
  *   PUT    /api/org/:slug/transfer-ownership — Transfer ownership (admin+)
  */
 
@@ -26,13 +28,17 @@ import { OrgContextGuard } from './guards/org-context.guard';
 import { OrgAdminGuard } from './guards/org-admin.guard';
 import { OrgMemberGuard } from './guards/org-member.guard';
 import { OrganizationsService } from './organizations.service';
+import { OrgReportStatsService } from './org-report-stats.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { TransferOwnershipDto } from './dto/transfer-ownership.dto';
 
 @Controller('api/org')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly reportStatsService: OrgReportStatsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -48,6 +54,12 @@ export class OrganizationsController {
   async getMyOrg(@AuthUserId() userId: string) {
     const org = await this.organizationsService.findByUserId(userId);
     return org ?? { slug: null, name: null, role: null };
+  }
+
+  @Get(':slug/reports/stats')
+  @UseGuards(JwtAuthGuard, OrgContextGuard, OrgMemberGuard)
+  async getReportStats(@Req() req: any) {
+    return this.reportStatsService.getStats(req.org.id);
   }
 
   @Get(':slug')

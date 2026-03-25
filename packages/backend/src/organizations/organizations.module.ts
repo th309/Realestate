@@ -6,6 +6,7 @@ import { OrganizationsController } from './organizations.controller';
 import { MembersController } from './members.controller';
 import { InvitesController } from './invites.controller';
 import { OrganizationsService } from './organizations.service';
+import { OrgReportStatsService } from './org-report-stats.service';
 import { MembersService } from './members.service';
 import { InvitesService } from './invites.service';
 import { InviteEmailService } from './invite-email.service';
@@ -18,6 +19,7 @@ import { OrgMemberGuard } from './guards/org-member.guard';
   controllers: [OrganizationsController, MembersController, InvitesController],
   providers: [
     OrganizationsService,
+    OrgReportStatsService,
     MembersService,
     InvitesService,
     InviteEmailService,
