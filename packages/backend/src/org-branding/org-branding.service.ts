@@ -1,11 +1,11 @@
 /**
  * Organization Branding Service
  *
- * Manages logo upload/delete, accent color, and public branding
- * for organization-branded shared reports and embeds.
+ * Manages accent color, website URL, phone, address, managing broker,
+ * and public branding for organization-branded shared reports and embeds.
  *
- * Storage: Supabase Storage bucket `org-logos` (public read).
- * Database: `organizations` table columns: logo_url, accent_color, website_url, name.
+ * Database: `organizations` table columns.
+ * Logo operations are handled by OrgLogoService.
  */
 
 import {
@@ -20,21 +20,30 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 
-const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-};
-
-const LOGO_BUCKET = 'org-logos';
+const BRANDING_SELECT =
+  'logo_url, accent_color, name, website_url, phone, address, managing_broker';
 
 export interface BrandingResponse {
   logo_url: string | null;
   accent_color: string | null;
   org_name: string;
   website_url: string | null;
+  phone: string | null;
+  address: Record<string, string> | null;
+  managing_broker: string | null;
+}
+
+/** Map a raw DB row to the public BrandingResponse shape. */
+function toBrandingResponse(row: Record<string, any>): BrandingResponse {
+  return {
+    logo_url: row.logo_url,
+    accent_color: row.accent_color,
+    org_name: row.name,
+    website_url: row.website_url,
+    phone: row.phone,
+    address: row.address,
+    managing_broker: row.managing_broker,
+  };
 }
 
 @Injectable()
@@ -52,7 +61,7 @@ export class OrgBrandingService {
   async getBranding(orgId: string): Promise<BrandingResponse> {
     const { data, error } = await this.supabase
       .from('organizations')
-      .select('logo_url, accent_color, name, website_url')
+      .select(BRANDING_SELECT)
       .eq('id', orgId)
       .single();
 
@@ -63,12 +72,7 @@ export class OrgBrandingService {
       throw new NotFoundException('Organization not found');
     }
 
-    return {
-      logo_url: data.logo_url,
-      accent_color: data.accent_color,
-      org_name: data.name,
-      website_url: data.website_url,
-    };
+    return toBrandingResponse(data);
   }
 
   /**
@@ -78,7 +82,7 @@ export class OrgBrandingService {
   async getBrandingPublic(orgId: string): Promise<BrandingResponse> {
     const { data, error } = await this.supabase
       .from('organizations')
-      .select('logo_url, accent_color, name, website_url')
+      .select(BRANDING_SELECT)
       .eq('id', orgId)
       .single();
 
@@ -89,16 +93,12 @@ export class OrgBrandingService {
       throw new NotFoundException('Organization not found');
     }
 
-    return {
-      logo_url: data.logo_url,
-      accent_color: data.accent_color,
-      org_name: data.name,
-      website_url: data.website_url,
-    };
+    return toBrandingResponse(data);
   }
 
   /**
-   * Update accent color and/or website URL.
+   * Update branding fields (accent color, website URL, phone, address,
+   * managing broker).
    */
   async updateBranding(
     orgId: string,
@@ -113,6 +113,15 @@ export class OrgBrandingService {
     if (dto.website_url !== undefined) {
       updateFields.website_url = dto.website_url;
     }
+    if (dto.phone !== undefined) {
+      updateFields.phone = dto.phone;
+    }
+    if (dto.address !== undefined) {
+      updateFields.address = dto.address;
+    }
+    if (dto.managing_broker !== undefined) {
+      updateFields.managing_broker = dto.managing_broker;
+    }
 
     if (Object.keys(updateFields).length === 0) {
       return this.getBranding(orgId);
@@ -122,7 +131,7 @@ export class OrgBrandingService {
       .from('organizations')
       .update(updateFields)
       .eq('id', orgId)
-      .select('logo_url, accent_color, name, website_url')
+      .select(BRANDING_SELECT)
       .single();
 
     if (error) {
@@ -140,159 +149,6 @@ export class OrgBrandingService {
       details: updateFields,
     });
 
-    return {
-      logo_url: data.logo_url,
-      accent_color: data.accent_color,
-      org_name: data.name,
-      website_url: data.website_url,
-    };
-  }
-
-  /**
-   * Upload organization logo to Supabase Storage.
-   *
-   * Validates MIME type, uploads to `org-logos/{orgId}/logo.{ext}`,
-   * and updates the organizations table with the public URL.
-   */
-  async uploadLogo(
-    orgId: string,
-    file: Express.Multer.File,
-    actorId: string,
-  ): Promise<{ logo_url: string }> {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
-
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Invalid file type: ${file.mimetype}. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`,
-      );
-    }
-
-    // Delete orphaned logo file if MIME type changed (e.g., PNG → JPEG)
-    const { data: existing } = await this.supabase
-      .from('organizations')
-      .select('logo_url')
-      .eq('id', orgId)
-      .single();
-
-    if (existing?.logo_url) {
-      const urlParts = existing.logo_url.split(`/${LOGO_BUCKET}/`);
-      const oldPath = urlParts.length > 1 ? urlParts[1] : null;
-      const ext = MIME_TO_EXT[file.mimetype];
-      const newPath = `${orgId}/logo.${ext}`;
-
-      if (oldPath && oldPath !== newPath) {
-        const { error: removeError } = await this.supabase.storage
-          .from(LOGO_BUCKET)
-          .remove([oldPath]);
-
-        if (removeError) {
-          this.logger.warn(
-            `Failed to remove old logo ${oldPath}: ${removeError.message}`,
-          );
-        }
-      }
-    }
-
-    const ext = MIME_TO_EXT[file.mimetype];
-    const storagePath = `${orgId}/logo.${ext}`;
-
-    const { error: uploadError } = await this.supabase.storage
-      .from(LOGO_BUCKET)
-      .upload(storagePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      this.logger.error(
-        `Failed to upload logo for org ${orgId}: ${uploadError.message}`,
-      );
-      throw new BadRequestException('Failed to upload logo');
-    }
-
-    const {
-      data: { publicUrl },
-    } = this.supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
-
-    const { error: updateError } = await this.supabase
-      .from('organizations')
-      .update({ logo_url: publicUrl })
-      .eq('id', orgId);
-
-    if (updateError) {
-      this.logger.error(
-        `Failed to update logo_url for org ${orgId}: ${updateError.message}`,
-      );
-      throw new BadRequestException('Failed to save logo URL');
-    }
-
-    await this.auditService.log({
-      organizationId: orgId,
-      actorId,
-      action: 'logo_uploaded',
-      targetType: 'branding',
-      details: { storagePath, mimeType: file.mimetype },
-    });
-
-    return { logo_url: publicUrl };
-  }
-
-  /**
-   * Delete the organization logo from storage and clear the DB column.
-   */
-  async deleteLogo(orgId: string, actorId: string): Promise<void> {
-    // Get current logo_url to determine the storage path
-    const { data, error: fetchError } = await this.supabase
-      .from('organizations')
-      .select('logo_url')
-      .eq('id', orgId)
-      .single();
-
-    if (fetchError || !data) {
-      throw new NotFoundException('Organization not found');
-    }
-
-    if (!data.logo_url) {
-      return; // No logo to delete
-    }
-
-    // Extract the storage path from the public URL
-    // URL format: .../storage/v1/object/public/org-logos/{orgId}/logo.{ext}
-    const urlParts = data.logo_url.split(`/${LOGO_BUCKET}/`);
-    const storagePath = urlParts.length > 1 ? urlParts[1] : null;
-
-    if (storagePath) {
-      const { error: deleteError } = await this.supabase.storage
-        .from(LOGO_BUCKET)
-        .remove([storagePath]);
-
-      if (deleteError) {
-        this.logger.warn(
-          `Failed to delete logo file for org ${orgId}: ${deleteError.message}`,
-        );
-        // Continue — still clear the DB reference even if storage delete fails
-      }
-    }
-
-    const { error: updateError } = await this.supabase
-      .from('organizations')
-      .update({ logo_url: null })
-      .eq('id', orgId);
-
-    if (updateError) {
-      this.logger.error(
-        `Failed to clear logo_url for org ${orgId}: ${updateError.message}`,
-      );
-      throw new BadRequestException('Failed to remove logo');
-    }
-
-    await this.auditService.log({
-      organizationId: orgId,
-      actorId,
-      action: 'logo_removed',
-      targetType: 'branding',
-    });
+    return toBrandingResponse(data);
   }
 }

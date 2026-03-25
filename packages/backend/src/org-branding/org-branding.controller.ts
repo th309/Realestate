@@ -28,12 +28,16 @@ import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { OrgContextGuard, OrgAdminGuard } from '../organizations/guards';
 import { OrgBrandingService } from './org-branding.service';
+import { OrgLogoService } from './org-logo.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 
 @Controller('api/org/:slug/branding')
 @UseGuards(JwtAuthGuard, OrgContextGuard, OrgAdminGuard)
 export class OrgBrandingController {
-  constructor(private readonly brandingService: OrgBrandingService) {}
+  constructor(
+    private readonly brandingService: OrgBrandingService,
+    private readonly logoService: OrgLogoService,
+  ) {}
 
   @Get()
   async getBranding(@Req() req: any) {
@@ -60,12 +64,12 @@ export class OrgBrandingController {
     @UploadedFile() file: Express.Multer.File,
     @AuthUserId() userId: string,
   ) {
-    return this.brandingService.uploadLogo(req.org.id, file, userId);
+    return this.logoService.uploadLogo(req.org.id, file, userId);
   }
 
   @Delete('logo')
   async deleteLogo(@Req() req: any, @AuthUserId() userId: string) {
-    await this.brandingService.deleteLogo(req.org.id, userId);
+    await this.logoService.deleteLogo(req.org.id, userId);
     return { message: 'Logo removed' };
   }
 }

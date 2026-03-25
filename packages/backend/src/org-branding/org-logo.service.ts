@@ -1,0 +1,184 @@
+/**
+ * Organization Logo Service
+ *
+ * Handles logo upload and deletion via Supabase Storage.
+ * Storage bucket: `org-logos` (public read).
+ */
+
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { OrgAuditService } from '../org-audit/org-audit.service';
+
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+const MIME_TO_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
+
+const LOGO_BUCKET = 'org-logos';
+
+@Injectable()
+export class OrgLogoService {
+  private readonly logger = new Logger(OrgLogoService.name);
+
+  constructor(
+    @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly auditService: OrgAuditService,
+  ) {}
+
+  /**
+   * Upload organization logo to Supabase Storage.
+   *
+   * Validates MIME type, uploads to `org-logos/{orgId}/logo.{ext}`,
+   * and updates the organizations table with the public URL.
+   */
+  async uploadLogo(
+    orgId: string,
+    file: Express.Multer.File,
+    actorId: string,
+  ): Promise<{ logo_url: string }> {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Invalid file type: ${file.mimetype}. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`,
+      );
+    }
+
+    // Delete orphaned logo file if MIME type changed (e.g., PNG → JPEG)
+    const { data: existing } = await this.supabase
+      .from('organizations')
+      .select('logo_url')
+      .eq('id', orgId)
+      .single();
+
+    if (existing?.logo_url) {
+      const urlParts = existing.logo_url.split(`/${LOGO_BUCKET}/`);
+      const oldPath = urlParts.length > 1 ? urlParts[1] : null;
+      const ext = MIME_TO_EXT[file.mimetype];
+      const newPath = `${orgId}/logo.${ext}`;
+
+      if (oldPath && oldPath !== newPath) {
+        const { error: removeError } = await this.supabase.storage
+          .from(LOGO_BUCKET)
+          .remove([oldPath]);
+
+        if (removeError) {
+          this.logger.warn(
+            `Failed to remove old logo ${oldPath}: ${removeError.message}`,
+          );
+        }
+      }
+    }
+
+    const ext = MIME_TO_EXT[file.mimetype];
+    const storagePath = `${orgId}/logo.${ext}`;
+
+    const { error: uploadError } = await this.supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(storagePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      this.logger.error(
+        `Failed to upload logo for org ${orgId}: ${uploadError.message}`,
+      );
+      throw new BadRequestException('Failed to upload logo');
+    }
+
+    const {
+      data: { publicUrl },
+    } = this.supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
+
+    const { error: updateError } = await this.supabase
+      .from('organizations')
+      .update({ logo_url: publicUrl })
+      .eq('id', orgId);
+
+    if (updateError) {
+      this.logger.error(
+        `Failed to update logo_url for org ${orgId}: ${updateError.message}`,
+      );
+      throw new BadRequestException('Failed to save logo URL');
+    }
+
+    await this.auditService.log({
+      organizationId: orgId,
+      actorId,
+      action: 'logo_uploaded',
+      targetType: 'branding',
+      details: { storagePath, mimeType: file.mimetype },
+    });
+
+    return { logo_url: publicUrl };
+  }
+
+  /**
+   * Delete the organization logo from storage and clear the DB column.
+   */
+  async deleteLogo(orgId: string, actorId: string): Promise<void> {
+    const { data, error: fetchError } = await this.supabase
+      .from('organizations')
+      .select('logo_url')
+      .eq('id', orgId)
+      .single();
+
+    if (fetchError || !data) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    if (!data.logo_url) {
+      return; // No logo to delete
+    }
+
+    // Extract the storage path from the public URL
+    // URL format: .../storage/v1/object/public/org-logos/{orgId}/logo.{ext}
+    const urlParts = data.logo_url.split(`/${LOGO_BUCKET}/`);
+    const storagePath = urlParts.length > 1 ? urlParts[1] : null;
+
+    if (storagePath) {
+      const { error: deleteError } = await this.supabase.storage
+        .from(LOGO_BUCKET)
+        .remove([storagePath]);
+
+      if (deleteError) {
+        this.logger.warn(
+          `Failed to delete logo file for org ${orgId}: ${deleteError.message}`,
+        );
+        // Continue — still clear the DB reference even if storage delete fails
+      }
+    }
+
+    const { error: updateError } = await this.supabase
+      .from('organizations')
+      .update({ logo_url: null })
+      .eq('id', orgId);
+
+    if (updateError) {
+      this.logger.error(
+        `Failed to clear logo_url for org ${orgId}: ${updateError.message}`,
+      );
+      throw new BadRequestException('Failed to remove logo');
+    }
+
+    await this.auditService.log({
+      organizationId: orgId,
+      actorId,
+      action: 'logo_removed',
+      targetType: 'branding',
+    });
+  }
+}
