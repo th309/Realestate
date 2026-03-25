@@ -150,11 +150,13 @@ export async function createOrganization(
 }
 
 /**
- * Update organization settings (name, website URL, etc.).
+ * Update organization settings (name, slug, website URL, etc.).
+ * When `slug` is included in data, the backend creates a 30-day redirect
+ * from the old slug and returns the updated org with the new slug.
  */
 export async function updateOrganization(
   slug: string,
-  data: { name?: string; website_url?: string },
+  data: { name?: string; slug?: string; website_url?: string },
 ): Promise<OrgData> {
   const res = await fetchAPIRaw(`/api/org/${slug}`, {
     method: "PUT",

@@ -2,6 +2,7 @@
 
 import { useOrg } from "../../hooks/useOrg";
 import { OrgDashboardCards } from "../../components/OrgDashboardCards";
+import { OrgSettingsSection } from "./components/OrgSettingsSection";
 
 /**
  * Enterprise admin dashboard — overview of org health.
@@ -22,6 +23,7 @@ export default function OrgAdminDashboard() {
       </div>
 
       <OrgDashboardCards />
+      <OrgSettingsSection />
     </div>
   );
 }
