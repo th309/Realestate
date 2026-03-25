@@ -12,6 +12,7 @@ import {
 import { LogoUploader } from "../../../components/LogoUploader";
 import { AccentColorPicker } from "../../../components/AccentColorPicker";
 import { BrandingPreview } from "../../../components/BrandingPreview";
+import { BusinessInfoSection } from "./BusinessInfoSection";
 
 /**
  * Branding admin page — logo upload, accent color, website URL,
@@ -23,16 +24,29 @@ export default function OrgAdminBranding() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [accentColor, setAccentColor] = useState("#2563eb");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [addrState, setAddrState] = useState("");
+  const [zip, setZip] = useState("");
+  const [managingBroker, setManagingBroker] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   // Track initial values so we know when form is dirty
   const [initialAccent, setInitialAccent] = useState("#2563eb");
   const [initialWebsite, setInitialWebsite] = useState("");
+  const [initialPhone, setInitialPhone] = useState("");
+  const [initialStreet, setInitialStreet] = useState("");
+  const [initialCity, setInitialCity] = useState("");
+  const [initialAddrState, setInitialAddrState] = useState("");
+  const [initialZip, setInitialZip] = useState("");
+  const [initialManagingBroker, setInitialManagingBroker] = useState("");
 
   const loadBranding = useCallback(async () => {
     if (!org) return;
@@ -43,8 +57,20 @@ export default function OrgAdminBranding() {
       setLogoUrl(data.logo_url);
       setAccentColor(data.accent_color || "#2563eb");
       setWebsiteUrl(data.website_url || "");
+      setPhone(data.phone || "");
+      setStreet(data.address?.street || "");
+      setCity(data.address?.city || "");
+      setAddrState(data.address?.state || "");
+      setZip(data.address?.zip || "");
+      setManagingBroker(data.managing_broker || "");
       setInitialAccent(data.accent_color || "#2563eb");
       setInitialWebsite(data.website_url || "");
+      setInitialPhone(data.phone || "");
+      setInitialStreet(data.address?.street || "");
+      setInitialCity(data.address?.city || "");
+      setInitialAddrState(data.address?.state || "");
+      setInitialZip(data.address?.zip || "");
+      setInitialManagingBroker(data.managing_broker || "");
       setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load branding");
@@ -59,9 +85,35 @@ export default function OrgAdminBranding() {
 
   // Track dirty state
   useEffect(() => {
-    setDirty(accentColor !== initialAccent || websiteUrl !== initialWebsite);
+    const changed =
+      accentColor !== initialAccent ||
+      websiteUrl !== initialWebsite ||
+      phone !== initialPhone ||
+      street !== initialStreet ||
+      city !== initialCity ||
+      addrState !== initialAddrState ||
+      zip !== initialZip ||
+      managingBroker !== initialManagingBroker;
+    setDirty(changed);
     setSaveSuccess(false);
-  }, [accentColor, websiteUrl, initialAccent, initialWebsite]);
+  }, [
+    accentColor,
+    websiteUrl,
+    phone,
+    street,
+    city,
+    addrState,
+    zip,
+    managingBroker,
+    initialAccent,
+    initialWebsite,
+    initialPhone,
+    initialStreet,
+    initialCity,
+    initialAddrState,
+    initialZip,
+    initialManagingBroker,
+  ]);
 
   const handleAccentChange = useCallback((color: string) => {
     setAccentColor(color);
@@ -76,6 +128,20 @@ export default function OrgAdminBranding() {
 
   const handleSave = useCallback(async () => {
     if (!org) return;
+
+    // Validate required business info fields
+    const errors: string[] = [];
+    if (!phone.trim()) errors.push("Phone number is required");
+    if (!street.trim()) errors.push("Street address is required");
+    if (!city.trim()) errors.push("City is required");
+    if (!addrState) errors.push("State is required");
+    if (!zip.trim()) errors.push("ZIP code is required");
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
+
     setSaving(true);
     setError(null);
     setSaveSuccess(false);
@@ -83,9 +149,23 @@ export default function OrgAdminBranding() {
       const result = await updateOrgBranding(org.slug, {
         accent_color: accentColor,
         website_url: websiteUrl || undefined,
+        phone: phone.trim(),
+        address: {
+          street: street.trim(),
+          city: city.trim(),
+          state: addrState,
+          zip: zip.trim(),
+        },
+        managing_broker: managingBroker.trim() || undefined,
       });
       setInitialAccent(result.accent_color || accentColor);
       setInitialWebsite(result.website_url || "");
+      setInitialPhone(result.phone || "");
+      setInitialStreet(result.address?.street || "");
+      setInitialCity(result.address?.city || "");
+      setInitialAddrState(result.address?.state || "");
+      setInitialZip(result.address?.zip || "");
+      setInitialManagingBroker(result.managing_broker || "");
       setDirty(false);
       setSaveSuccess(true);
     } catch (err) {
@@ -93,7 +173,17 @@ export default function OrgAdminBranding() {
     } finally {
       setSaving(false);
     }
-  }, [org, accentColor, websiteUrl]);
+  }, [
+    org,
+    accentColor,
+    websiteUrl,
+    phone,
+    street,
+    city,
+    addrState,
+    zip,
+    managingBroker,
+  ]);
 
   const handleLogoUpload = useCallback(
     async (file: File) => {
@@ -155,6 +245,23 @@ export default function OrgAdminBranding() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left panel — Form (60%) */}
         <div className="flex-[3] space-y-6">
+          {/* Business Information — required fields first */}
+          <BusinessInfoSection
+            phone={phone}
+            street={street}
+            city={city}
+            addrState={addrState}
+            zip={zip}
+            managingBroker={managingBroker}
+            validationErrors={validationErrors}
+            onPhoneChange={setPhone}
+            onStreetChange={setStreet}
+            onCityChange={setCity}
+            onAddrStateChange={setAddrState}
+            onZipChange={setZip}
+            onManagingBrokerChange={setManagingBroker}
+          />
+
           {/* Logo section */}
           <div className="bg-surface-container-low rounded-xl shadow-sm p-6">
             <LogoUploader

@@ -277,6 +277,7 @@ export {
   deleteOrgLogo,
   fetchPublicBranding,
   type OrgBranding,
+  type OrgBrandingAddress,
 } from "./org-branding";
 
 // Organization embed tokens

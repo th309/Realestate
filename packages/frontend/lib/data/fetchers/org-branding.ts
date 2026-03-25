@@ -10,11 +10,21 @@ import { fetchAPI, fetchAPIRaw } from "./base";
 // Types
 // ---------------------------------------------------------------------------
 
+export interface OrgBrandingAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
 export interface OrgBranding {
   logo_url: string | null;
   accent_color: string;
   org_name: string;
   website_url: string | null;
+  phone: string | null;
+  address: OrgBrandingAddress | null;
+  managing_broker: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +55,13 @@ export async function fetchPublicBranding(orgId: string): Promise<OrgBranding> {
  */
 export async function updateOrgBranding(
   slug: string,
-  data: { accent_color?: string; website_url?: string },
+  data: {
+    accent_color?: string;
+    website_url?: string;
+    phone?: string;
+    address?: OrgBrandingAddress;
+    managing_broker?: string;
+  },
 ): Promise<OrgBranding> {
   const res = await fetchAPIRaw(`/api/org/${slug}/branding`, {
     method: "PUT",
