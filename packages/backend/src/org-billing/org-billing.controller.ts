@@ -55,9 +55,10 @@ export class OrgBillingController {
   /** Open Stripe billing portal for org payment management. */
   @Post(':slug/billing/portal')
   @UseGuards(JwtAuthGuard, OrgContextGuard, OrgAdminGuard)
-  async billingPortal(@Req() req: any) {
+  async billingPortal(@Req() req: any, @AuthUserId() userId: string) {
     const portalUrl = await this.orgBilling.createBillingPortalSession(
       req.org.id,
+      userId,
     );
     return { portal_url: portalUrl };
   }

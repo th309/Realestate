@@ -120,22 +120,32 @@ export class OrgBillingService {
   /**
    * Create a Stripe billing portal session for an existing org.
    */
-  async createBillingPortalSession(orgId: string): Promise<string> {
-    const { data: org, error } = await this.supabase
+  async createBillingPortalSession(
+    orgId: string,
+    userId: string,
+  ): Promise<string> {
+    // Billing lives on the USER, not the org — use the user's Stripe customer ID
+    const { data: org } = await this.supabase
       .from('organizations')
-      .select('stripe_customer_id, slug')
+      .select('slug')
       .eq('id', orgId)
       .single();
 
-    if (error || !org?.stripe_customer_id) {
+    const { data: profile } = await this.supabase
+      .from('user_profiles')
+      .select('stripe_customer_id')
+      .eq('id', userId)
+      .single();
+
+    if (!profile?.stripe_customer_id) {
       throw new BadRequestException(
-        'No billing account found for this organization.',
+        'No billing account found. Please set up a subscription first.',
       );
     }
 
-    const returnUrl = `${this.getFrontendUrl()}/org/${org.slug}/billing`;
+    const returnUrl = `${this.getFrontendUrl()}/org/${org?.slug || ''}/admin/billing`;
     return this.stripe.createBillingPortalSession(
-      org.stripe_customer_id,
+      profile.stripe_customer_id,
       returnUrl,
     );
   }
