@@ -6,6 +6,24 @@ import { useRouter } from "next/navigation";
 import { updateOrganization } from "@/lib/data";
 import { Settings, AlertCircle, Loader2 } from "lucide-react";
 
+/** Must match the backend DTO regex in update-organization.dto.ts */
+const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+
+/**
+ * Sanitize raw input into a valid URL slug:
+ * lowercase, strip non-alphanumeric/hyphen chars, collapse hyphens,
+ * strip leading/trailing hyphens.
+ */
+function sanitizeSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
+}
+
 /**
  * Organization settings form — rename org name and URL slug.
  * Slug changes trigger a 30-day redirect from the old URL.
@@ -23,14 +41,20 @@ export function OrgSettingsSection() {
   const slugChanged = slug !== org?.slug;
   const isDirty = nameChanged || slugChanged;
 
-  const slugPreview = slug
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w-]/g, "")
-    .replace(/--+/g, "-");
+  const slugPreview = sanitizeSlug(slug);
+  const slugValid = slugPreview.length > 0 && SLUG_REGEX.test(slugPreview);
+  const slugError =
+    slugChanged && slugPreview.length > 0 && !slugValid
+      ? "Slug must start and end with a letter or number, and contain only lowercase letters, numbers, and hyphens"
+      : null;
 
   async function handleSave() {
     if (!isDirty || !org) return;
+
+    if (slugChanged && !slugValid) {
+      setError(slugError ?? "Invalid slug format");
+      return;
+    }
 
     if (
       slugChanged &&
@@ -50,11 +74,19 @@ export function OrgSettingsSection() {
       if (nameChanged) payload.name = name.trim();
       if (slugChanged) payload.slug = slugPreview;
 
-      await updateOrganization(org.slug, payload);
+      const updated = await updateOrganization(org.slug, payload);
+
+      // Verify the backend actually applied the slug change
+      if (slugChanged && updated.slug !== slugPreview) {
+        throw new Error(
+          "Slug update was not applied. The slug may be taken or reserved.",
+        );
+      }
+
       setSuccess(true);
 
       if (slugChanged) {
-        router.replace(`/org/${slugPreview}/admin`);
+        router.replace(`/org/${updated.slug}/admin`);
       } else {
         await refresh();
       }
@@ -99,14 +131,17 @@ export function OrgSettingsSection() {
             disabled={saving}
             className="w-full px-4 py-2 bg-surface border border-outline-variant rounded-lg text-sm font-mono"
           />
-          {slugChanged && (
+          {slugChanged && slugPreview && (
             <p className="text-xs text-on-surface-variant mt-1">
               New URL: propertyiq.app/org/
               <span className="text-primary font-mono">{slugPreview}</span>
               /admin
             </p>
           )}
-          {slugChanged && (
+          {slugError && (
+            <p className="text-xs text-red-600 mt-1">{slugError}</p>
+          )}
+          {slugChanged && slugValid && (
             <p className="text-xs text-amber-600 mt-1">
               Old URL will redirect for 30 days
             </p>
@@ -125,7 +160,7 @@ export function OrgSettingsSection() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={!isDirty || saving}
+          disabled={!isDirty || saving || (slugChanged && !slugValid)}
           className="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
