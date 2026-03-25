@@ -1,11 +1,4 @@
-/**
- * Organizations Service
- *
- * Handles CRUD operations for organizations, including creation,
- * retrieval by slug, updates, and ownership transfer.
- *
- * All mutations are audit-logged via OrgAuditService.
- */
+/** Organizations CRUD. Slug ops delegated to OrgSlugService; mutations audit-logged. */
 
 import {
   Injectable,
@@ -19,6 +12,7 @@ import {
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
+import { OrgSlugService, RESERVED_SLUGS } from './org-slug.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
@@ -29,23 +23,12 @@ export class OrganizationsService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
+    private readonly slugService: OrgSlugService,
   ) {}
 
-  /**
-   * Create a new organization. The caller becomes the owner and first admin member.
-   * Throws ConflictException if the slug is already taken.
-   */
+  /** Create a new organization. Caller becomes owner and first admin member. */
   async create(dto: CreateOrganizationDto, ownerId: string) {
     // Reject reserved slugs that conflict with platform routes
-    const RESERVED_SLUGS = [
-      'billing',
-      'invite',
-      'api',
-      'admin',
-      'settings',
-      'embed',
-      'v1',
-    ];
     if (RESERVED_SLUGS.includes(dto.slug)) {
       throw new BadRequestException('This slug is reserved and cannot be used');
     }
@@ -126,10 +109,7 @@ export class OrganizationsService {
     return org;
   }
 
-  /**
-   * Find the organization a user belongs to (returns the first active membership).
-   * Returns null if the user has no organization membership.
-   */
+  /** Find the organization a user belongs to (first active membership, or null). */
   async findByUserId(userId: string) {
     const { data: membership, error } = await this.supabase
       .from('organization_members')
@@ -149,10 +129,7 @@ export class OrganizationsService {
       : null;
   }
 
-  /**
-   * Retrieve an organization by its slug.
-   * Throws NotFoundException if no organization matches.
-   */
+  /** Retrieve an organization by its slug. Throws if not found. */
   async getBySlug(slug: string) {
     const { data: org, error } = await this.supabase
       .from('organizations')
@@ -186,6 +163,9 @@ export class OrganizationsService {
   /**
    * Update an organization's mutable fields.
    * Only provided fields are updated; omitted fields remain unchanged.
+   *
+   * When the slug changes, validation and redirect creation are
+   * delegated to OrgSlugService.
    */
   async update(orgId: string, dto: UpdateOrganizationDto, actorId: string) {
     const updatePayload: Record<string, unknown> = {
@@ -197,6 +177,29 @@ export class OrganizationsService {
     }
     if (dto.website_url !== undefined) {
       updatePayload.website_url = dto.website_url;
+    }
+
+    // --- Slug change handling (delegated to OrgSlugService) ---
+    if (dto.slug !== undefined) {
+      const { data: currentOrg } = await this.supabase
+        .from('organizations')
+        .select('slug')
+        .eq('id', orgId)
+        .single();
+
+      if (!currentOrg) {
+        throw new NotFoundException('Organization not found');
+      }
+
+      if (dto.slug !== currentOrg.slug) {
+        await this.slugService.validateSlugAvailability(dto.slug);
+        await this.slugService.recordSlugChange(
+          orgId,
+          currentOrg.slug,
+          dto.slug,
+        );
+        updatePayload.slug = dto.slug;
+      }
     }
 
     const { data: updated, error } = await this.supabase
