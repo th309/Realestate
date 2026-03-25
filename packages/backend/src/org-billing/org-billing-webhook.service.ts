@@ -12,6 +12,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
+import { OrgDowngradeHandlerService } from './org-downgrade-handler.service';
 import Stripe from 'stripe';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class OrgBillingWebhookService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
+    private readonly downgradeHandler: OrgDowngradeHandlerService,
   ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -153,6 +155,19 @@ export class OrgBillingWebhookService {
     const org = await this.findOrgBySubscriptionCustomer(subscription);
     if (!org) return;
 
+    // Detect downgrade: subscription canceled or moved to a non-enterprise plan
+    if (
+      subscription.status === 'canceled' ||
+      subscription.status === 'unpaid'
+    ) {
+      const newTier = 'free';
+      this.logger.log(
+        `Subscription ${subscription.id} status is ${subscription.status} — triggering downgrade for org ${org.id}`,
+      );
+      await this.downgradeHandler.handleDowngrade(org.id, newTier);
+      return;
+    }
+
     // Sync seat count if changed externally (e.g., via Stripe dashboard)
     const seatItem = subscription.items.data.find(
       (item) => item.price.recurring?.usage_type !== 'metered',
@@ -171,16 +186,21 @@ export class OrgBillingWebhookService {
     const org = await this.findOrgBySubscriptionCustomer(subscription);
     if (!org) return;
 
+    // Clear Stripe subscription reference
     await this.supabase
       .from('organizations')
       .update({
-        billing_status: 'canceled',
         stripe_subscription_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', org.id);
 
-    this.logger.log(`Subscription canceled for org ${org.id}`);
+    // Full downgrade: revoke features, free members, update tiers
+    await this.downgradeHandler.handleDowngrade(org.id, 'free');
+
+    this.logger.log(
+      `Subscription deleted for org ${org.id} — downgrade triggered`,
+    );
 
     await this.auditService.log({
       organizationId: org.id,

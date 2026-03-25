@@ -4,6 +4,7 @@ import { OrgAuditModule } from '../org-audit/org-audit.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { OrgBillingService } from './org-billing.service';
 import { OrgBillingWebhookService } from './org-billing-webhook.service';
+import { OrgDowngradeHandlerService } from './org-downgrade-handler.service';
 import { OrgBillingController } from './org-billing.controller';
 
 @Module({
@@ -13,7 +14,15 @@ import { OrgBillingController } from './org-billing.controller';
     OrganizationsModule,
   ],
   controllers: [OrgBillingController],
-  providers: [OrgBillingService, OrgBillingWebhookService],
-  exports: [OrgBillingService, OrgBillingWebhookService],
+  providers: [
+    OrgBillingService,
+    OrgBillingWebhookService,
+    OrgDowngradeHandlerService,
+  ],
+  exports: [
+    OrgBillingService,
+    OrgBillingWebhookService,
+    OrgDowngradeHandlerService,
+  ],
 })
 export class OrgBillingModule {}
