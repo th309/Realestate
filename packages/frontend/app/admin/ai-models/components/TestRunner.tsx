@@ -31,7 +31,7 @@ export function TestRunner({
 }: {
   onBatchComplete?: () => void;
 }) {
-  const { user } = useAuthState();
+  const { user } = useAuthState(null);
   const [phase, setPhase] = useState<1 | 2>(1);
   const [jobs, setJobs] = useState<TestJob[]>([]);
   const [running, setRunning] = useState(false);

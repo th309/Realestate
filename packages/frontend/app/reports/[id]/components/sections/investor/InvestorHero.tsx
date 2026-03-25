@@ -15,6 +15,7 @@ import {
   getScoreGrade,
   getScoreLabel,
   deriveConfidence,
+  formatComponentLabel,
 } from "../../utils/scoreHelpers";
 import { ComponentQuickGlance } from "./ComponentQuickGlance";
 

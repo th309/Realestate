@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FileText } from "lucide-react";
+import { FileText, type LucideIcon } from "lucide-react";
 
 import { SectionCard, AIAnalysisBlock } from "../core";
 import type { ReportInstance } from "../../../../types";
@@ -18,7 +18,7 @@ export interface V2NarrativeSectionProps {
   /** Display title for the section */
   title: string;
   /** Lucide icon component to show in the section header */
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: LucideIcon;
   className?: string;
 }
 

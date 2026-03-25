@@ -5,7 +5,7 @@
 import mapboxgl from "mapbox-gl";
 import type { GeoLevel, ForecastHorizon, SelectedGeography } from "../types";
 import { FIPS_TO_STATE } from "../types";
-import { formatTooltipValue } from "./metricUtils";
+import { formatTooltipValue, type MetricFormat } from "./metricUtils";
 
 /**
  * Extract state abbreviation from feature properties and geography context.
@@ -103,7 +103,7 @@ export function setupInteractions(
       // Use centralized formatting functions
       const { displayValue, valueColor } = formatTooltipValue(
         value,
-        metricFormat,
+        metricFormat as MetricFormat,
       );
 
       const asOfText = selectedMetricFreshnessDate

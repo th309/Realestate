@@ -33,7 +33,7 @@ export function OrgContextProvider({
       setOrg(data);
       // The backend enriches the response with the caller's role.
       // If the field isn't present yet (API not deployed), default to null.
-      const rawRole = (data as Record<string, unknown>).role as
+      const rawRole = (data as unknown as Record<string, unknown>).role as
         | string
         | undefined;
       setRole(rawRole === "admin" || rawRole === "member" ? rawRole : null);
@@ -60,8 +60,8 @@ export function OrgContextProvider({
           seat_count: org.seat_count,
           website_url: org.website_url,
           billing_status:
-            ((org as Record<string, unknown>).billing_status as string) ??
-            "active",
+            ((org as unknown as Record<string, unknown>)
+              .billing_status as string) ?? "active",
           created_at: org.created_at,
           updated_at: org.updated_at,
         }

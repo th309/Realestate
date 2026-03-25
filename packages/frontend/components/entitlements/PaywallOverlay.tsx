@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
-import { useEntitlements, ResourceType } from '@/lib/entitlements';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import Link from 'next/link';
+import React, { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
+import { useEntitlements, ResourceType } from "@/lib/entitlements";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 interface PaywallOverlayProps {
   type: ResourceType;
@@ -19,11 +19,12 @@ export function PaywallOverlay({
   id,
   children,
   title,
-  className = '',
+  className = "",
 }: PaywallOverlayProps) {
-  const { getAccess, trackPaywallView, trackUpgradeClick, simulatedAuth } = useEntitlements();
+  const { getAccess, trackPaywallView, trackUpgradeClick, simulatedAuth } =
+    useEntitlements();
   const access = getAccess(type, id);
-  const isBlocked = access.level === 'none';
+  const isBlocked = access.level === "none";
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function PaywallOverlay({
       return;
     }
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: any }) => {
       setIsAuthenticated(!!data.session);
     });
   }, [simulatedAuth]);
@@ -65,10 +66,10 @@ export function PaywallOverlay({
             <Lock className="w-6 h-6 text-primary" />
           </div>
           <h3 className="text-lg font-medium text-on-surface mb-2">
-            {title || 'Upgrade to Unlock'}
+            {title || "Upgrade to Unlock"}
           </h3>
           <p className="text-sm text-on-surface-variant mb-4">
-            This feature requires a {access.tierRequired || 'Pro'} subscription
+            This feature requires a {access.tierRequired || "Pro"} subscription
           </p>
           <Link
             href="/pricing"
@@ -80,7 +81,7 @@ export function PaywallOverlay({
               hover:bg-primary/90 transition-colors
             "
           >
-            {isAuthenticated ? 'View Plans' : 'Sign Up Free'}
+            {isAuthenticated ? "View Plans" : "Sign Up Free"}
           </Link>
         </div>
       </div>

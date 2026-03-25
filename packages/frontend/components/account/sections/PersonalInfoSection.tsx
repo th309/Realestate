@@ -32,8 +32,6 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
     setError(null);
     const { error: err } = await updateProfile({
       display_name: displayName,
-      phone,
-      location,
     });
     setSaving(false);
     if (err) {

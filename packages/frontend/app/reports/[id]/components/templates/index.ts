@@ -143,6 +143,10 @@ export const REPORT_TEMPLATES: Record<
   ReportTemplateType,
   ReportTemplateDefinition
 > = {
+  homeready_v2: V2_REPORT_TEMPLATES.homeready_v2,
+  investoredge_v2: V2_REPORT_TEMPLATES.investoredge_v2,
+  comparison_v2: V2_REPORT_TEMPLATES.comparison_v2,
+  custom_research_v2: V2_REPORT_TEMPLATES.custom_research_v2,
   homeready: {
     name: "HomeReady Report",
     description: "Comprehensive homebuyer analysis with score-driven narrative",

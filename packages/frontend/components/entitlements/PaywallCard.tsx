@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useEntitlements, ResourceType, UserTier } from '@/lib/entitlements';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React, { useEffect, useState } from "react";
+import { useEntitlements, ResourceType, UserTier } from "@/lib/entitlements";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface PaywallCardProps {
   type: ResourceType;
@@ -15,10 +15,10 @@ interface PaywallCardProps {
 }
 
 const TIER_LABELS: Record<UserTier, string> = {
-  free: 'Free',
-  pro: 'Pro',
-  enterprise: 'Enterprise',
-  admin: 'Admin',
+  free: "Free",
+  pro: "Pro",
+  enterprise: "Enterprise",
+  admin: "Admin",
 };
 
 export function PaywallCard({
@@ -26,16 +26,16 @@ export function PaywallCard({
   id,
   title,
   description,
-  className = '',
+  className = "",
 }: PaywallCardProps) {
   const { getTierRequired, trackUpgradeClick } = useEntitlements();
-  const tierRequired = getTierRequired(type, id) || 'pro';
+  const tierRequired = getTierRequired(type, id) || "pro";
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(true); // default true to avoid flash
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: any }) => {
       setIsAuthenticated(!!data.session);
     });
   }, []);
@@ -54,15 +54,19 @@ export function PaywallCard({
       `}
     >
       <span className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-primary/10 text-primary text-xs font-bold tracking-wide uppercase">
-        {TIER_LABELS[tierRequired as UserTier] || 'Pro'}
+        {TIER_LABELS[tierRequired as UserTier] || "Pro"}
       </span>
 
       <div>
-        <h3 data-testid="paywall-title" className="text-lg font-medium text-on-surface">
-          {title || 'Upgrade to Unlock'}
+        <h3
+          data-testid="paywall-title"
+          className="text-lg font-medium text-on-surface"
+        >
+          {title || "Upgrade to Unlock"}
         </h3>
         <p className="text-sm text-on-surface-variant mt-1">
-          {description || 'Get the data edge. Access 60+ metrics, ZIP-level detail, and full market history \u2014 analytics typically reserved for institutional investors.'}
+          {description ||
+            "Get the data edge. Access 60+ metrics, ZIP-level detail, and full market history \u2014 analytics typically reserved for institutional investors."}
         </p>
       </div>
 
@@ -77,7 +81,7 @@ export function PaywallCard({
           hover:bg-primary/90 transition-colors
         "
       >
-        {isAuthenticated ? 'View Plans' : 'Sign Up Free'}
+        {isAuthenticated ? "View Plans" : "Sign Up Free"}
       </Link>
     </div>
   );

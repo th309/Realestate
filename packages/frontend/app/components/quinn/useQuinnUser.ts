@@ -1,14 +1,14 @@
 /**
  * useQuinnUser Hook
- * 
+ *
  * Provides user identification for Quinn chat sessions.
  * Uses Supabase auth when available, falls back to localStorage for anonymous users.
  */
 
-import { useState, useEffect } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useState, useEffect } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const ANON_USER_KEY = 'quinn_anon_user_id';
+const ANON_USER_KEY = "quinn_anon_user_id";
 
 /**
  * Generate a unique anonymous user ID
@@ -23,10 +23,10 @@ function generateAnonId(): string {
  * Get or create anonymous user ID from localStorage
  */
 function getOrCreateAnonId(): string {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return generateAnonId();
   }
-  
+
   let anonId = localStorage.getItem(ANON_USER_KEY);
   if (!anonId) {
     anonId = generateAnonId();
@@ -46,12 +46,12 @@ interface QuinnUser {
 
 /**
  * Hook to get the current user ID for Quinn chat sessions.
- * 
+ *
  * - If user is logged in via Supabase: returns their user ID
  * - If user is anonymous: returns a persistent localStorage-based ID
  */
 export function useQuinnUser(): QuinnUser {
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -61,8 +61,10 @@ export function useQuinnUser(): QuinnUser {
     // Check current session
     async function checkUser() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (user) {
           setUserId(user.id);
           setIsAuthenticated(true);
@@ -82,17 +84,17 @@ export function useQuinnUser(): QuinnUser {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          setUserId(session.user.id);
-          setIsAuthenticated(true);
-        } else {
-          setUserId(getOrCreateAnonId());
-          setIsAuthenticated(false);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setIsAuthenticated(true);
+      } else {
+        setUserId(getOrCreateAnonId());
+        setIsAuthenticated(false);
       }
-    );
+    });
 
     return () => {
       subscription.unsubscribe();

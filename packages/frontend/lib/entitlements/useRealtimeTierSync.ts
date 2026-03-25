@@ -67,7 +67,7 @@ export function useRealtimeTierSync({
 
     const channel = supabase
       .channel(channelName, { config: { private: true } })
-      .on("broadcast", { event: "UPDATE" }, (payload) => {
+      .on("broadcast", { event: "UPDATE" }, (payload: any) => {
         const record = payload.payload?.record;
         const oldRecord = payload.payload?.old_record;
 
@@ -96,7 +96,7 @@ export function useRealtimeTierSync({
           onTierChange();
         }
       })
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         if (status === "SUBSCRIBED") {
           console.info(
             "[Entitlements] Realtime tier sync subscription active (broadcast)",

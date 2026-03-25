@@ -232,8 +232,8 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   let templateType: ReportTemplateType;
 
   const isCustomReport =
-    reportType === "custom" ||
-    report.template_slug === "custom_research" ||
+    (reportType as string) === "custom" ||
+    (report as any).template_slug === "custom_research" ||
     report.template?.slug === "custom_research";
 
   if (

@@ -49,15 +49,17 @@ export function useAuthState(initialUserId: string | null) {
     const supabase = createSupabaseBrowserClient();
 
     // Hydrate with full session (gets access token for API calls)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      cachedSession = session;
-      setState({ user: session?.user ?? null, session, loading: false });
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }: { data: { session: any } }) => {
+        cachedSession = session;
+        setState({ user: session?.user ?? null, session, loading: false });
+      });
 
     // Listen for auth changes (sign in, sign out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       cachedSession = session;
       setState({ user: session?.user ?? null, session, loading: false });
     });

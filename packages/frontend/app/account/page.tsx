@@ -233,7 +233,11 @@ function SavedMarketsWrapper({ userId, tier }: { userId: string; tier: any }) {
   });
 
   return (
-    <SavedMarketsSection items={items} isLoading={isLoading} tier={tier} />
+    <SavedMarketsSection
+      items={items as any}
+      isLoading={isLoading}
+      tier={tier}
+    />
   );
 }
 
@@ -241,6 +245,10 @@ function AlertHistoryWrapper({ tier }: { tier: any }) {
   const { entries, isLoading } = useAlertHistory();
 
   return (
-    <AlertHistorySection entries={entries} isLoading={isLoading} tier={tier} />
+    <AlertHistorySection
+      entries={entries as any}
+      isLoading={isLoading}
+      tier={tier}
+    />
   );
 }

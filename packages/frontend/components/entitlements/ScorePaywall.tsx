@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * ScorePaywall - Custom paywall for PropertyIQ Scores
@@ -7,11 +7,11 @@
  * about excess returns and market prediction accuracy.
  */
 
-import React, { useEffect, useState } from 'react';
-import { TrendingUp, Target, BarChart3, ArrowRight } from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import Link from 'next/link';
+import React, { useEffect, useState } from "react";
+import { TrendingUp, Target, BarChart3, ArrowRight } from "lucide-react";
+import { useEntitlements } from "@/lib/entitlements";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 interface ScorePaywallProps {
   className?: string;
@@ -22,22 +22,25 @@ interface ScorePaywallProps {
 const STATS = [
   {
     icon: TrendingUp,
-    stat: '12%',
-    label: 'Higher returns in markets scoring 80+',
+    stat: "12%",
+    label: "Higher returns in markets scoring 80+",
   },
   {
     icon: Target,
-    stat: '7 of 10',
-    label: 'Top-performing markets predicted correctly',
+    stat: "7 of 10",
+    label: "Top-performing markets predicted correctly",
   },
   {
     icon: BarChart3,
-    stat: '3 Scores',
-    label: 'HomeReady, InvestorEdge, Market Health',
+    stat: "3 Scores",
+    label: "HomeReady, InvestorEdge, Market Health",
   },
 ];
 
-export function ScorePaywall({ className = '', compact = false }: ScorePaywallProps) {
+export function ScorePaywall({
+  className = "",
+  compact = false,
+}: ScorePaywallProps) {
   const { trackUpgradeClick, simulatedAuth } = useEntitlements();
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
@@ -47,24 +50,29 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
       return;
     }
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: any }) => {
       setIsAuthenticated(!!data.session);
     });
   }, [simulatedAuth]);
 
   const handleClick = () => {
-    trackUpgradeClick('metric', 'homeready_score');
+    trackUpgradeClick("metric", "homeready_score");
   };
 
   if (compact) {
     return (
-      <div className={`bg-surface-container rounded-xl p-4 border border-outline-variant ${className}`}>
+      <div
+        className={`bg-surface-container rounded-xl p-4 border border-outline-variant ${className}`}
+      >
         <div className="flex items-center gap-2 mb-2">
           <Target className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-on-surface">Predictive Scores</span>
+          <span className="text-sm font-medium text-on-surface">
+            Predictive Scores
+          </span>
         </div>
         <p className="text-xs text-on-surface-variant mb-3">
-          Top-scoring markets outperform their regional benchmarks. Unlock scores that predict excess returns.
+          Top-scoring markets outperform their regional benchmarks. Unlock
+          scores that predict excess returns.
         </p>
         <Link
           href="/pricing#scores"
@@ -84,12 +92,16 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
   }
 
   return (
-    <div className={`bg-surface-container rounded-2xl border border-outline-variant overflow-hidden ${className}`}>
+    <div
+      className={`bg-surface-container rounded-2xl border border-outline-variant overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-primary/10 to-tertiary/10 px-6 pt-6 pb-4">
         <div className="flex items-center gap-2 text-primary mb-2">
           <Target className="w-5 h-5" />
-          <span className="text-xs font-semibold uppercase tracking-wider">PropertyIQ Scores</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">
+            PropertyIQ Scores
+          </span>
         </div>
         <h3 className="text-xl font-medium text-on-surface mb-1">
           The Predictive Edge
@@ -108,8 +120,12 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
               <Icon className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <span className="text-sm font-semibold text-on-surface">{stat}</span>
-              <span className="text-sm text-on-surface-variant ml-1">{label}</span>
+              <span className="text-sm font-semibold text-on-surface">
+                {stat}
+              </span>
+              <span className="text-sm text-on-surface-variant ml-1">
+                {label}
+              </span>
             </div>
           </div>
         ))}
@@ -128,7 +144,10 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
                 <span className="font-semibold text-green-600">+34%</span>
               </div>
               <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '85%' }} />
+                <div
+                  className="h-full bg-green-500 rounded-full"
+                  style={{ width: "85%" }}
+                />
               </div>
             </div>
             <div>
@@ -137,7 +156,10 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
                 <span className="font-semibold text-red-500">+8%</span>
               </div>
               <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-red-400 rounded-full" style={{ width: '20%' }} />
+                <div
+                  className="h-full bg-red-400 rounded-full"
+                  style={{ width: "20%" }}
+                />
               </div>
             </div>
           </div>
@@ -151,7 +173,7 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
           onClick={handleClick}
           className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors shadow-md"
         >
-          {isAuthenticated ? 'Unlock Predictive Scores' : 'Sign Up Free'}
+          {isAuthenticated ? "Unlock Predictive Scores" : "Sign Up Free"}
           <ArrowRight className="w-4 h-4" />
         </Link>
         <Link

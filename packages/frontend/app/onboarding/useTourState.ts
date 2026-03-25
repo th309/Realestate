@@ -51,7 +51,7 @@ export function useTourState() {
   const shouldShowTour =
     !isLoading &&
     onboardingState !== null &&
-    onboardingState.onboarding_completed_at === null;
+    onboardingState?.onboarding_completed_at === null;
 
   return {
     onboardingState,

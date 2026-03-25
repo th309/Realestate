@@ -50,7 +50,7 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
       .select("investment_goal, experience_level")
       .eq("id", user.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: any }) => {
         if (data) {
           setInvestmentGoal(data.investment_goal);
           setExperienceLevel(data.experience_level);
