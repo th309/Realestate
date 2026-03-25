@@ -177,11 +177,16 @@ export async function inviteOrgMember(
   slug: string,
   email: string,
   role: string,
+  firstName?: string,
+  lastName?: string,
 ): Promise<{ invite_id: string }> {
+  const payload: Record<string, string> = { email, role };
+  if (firstName) payload.first_name = firstName;
+  if (lastName) payload.last_name = lastName;
   const res = await fetchAPIRaw(`/api/org/${slug}/members/invite`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, role }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

@@ -47,9 +47,14 @@ export default function OrgAdminMembers() {
   }, [loadMembers]);
 
   const handleInvite = useCallback(
-    async (email: string, role: string) => {
+    async (
+      email: string,
+      role: string,
+      firstName?: string,
+      lastName?: string,
+    ) => {
       if (!org) return;
-      await inviteOrgMember(org.slug, email, role);
+      await inviteOrgMember(org.slug, email, role, firstName, lastName);
       await loadMembers();
     },
     [org, loadMembers],

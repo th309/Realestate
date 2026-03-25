@@ -11,7 +11,12 @@ interface SeatInfo {
 interface InviteMemberDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onInvite: (email: string, role: string) => Promise<void>;
+  onInvite: (
+    email: string,
+    role: string,
+    firstName?: string,
+    lastName?: string,
+  ) => Promise<void>;
   seatInfo: SeatInfo;
 }
 
@@ -26,6 +31,8 @@ export function InviteMemberDialog({
   seatInfo,
 }: InviteMemberDialogProps) {
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,8 +50,15 @@ export function InviteMemberDialog({
       setSubmitting(true);
       setError(null);
       try {
-        await onInvite(email, role);
+        await onInvite(
+          email,
+          role,
+          firstName.trim() || undefined,
+          lastName.trim() || undefined,
+        );
         setEmail("");
+        setFirstName("");
+        setLastName("");
         setRole("member");
         onClose();
       } catch (err) {
@@ -103,6 +117,44 @@ export function InviteMemberDialog({
                 className="w-full rounded-xl border border-outline-variant bg-surface pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 disabled={submitting}
                 autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Name fields */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label
+                htmlFor="invite-first-name"
+                className="block text-sm font-medium text-on-surface mb-1.5"
+              >
+                First name
+              </label>
+              <input
+                id="invite-first-name"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Jane"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={submitting}
+              />
+            </div>
+            <div className="flex-1">
+              <label
+                htmlFor="invite-last-name"
+                className="block text-sm font-medium text-on-surface mb-1.5"
+              >
+                Last name
+              </label>
+              <input
+                id="invite-last-name"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Doe"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={submitting}
               />
             </div>
           </div>
