@@ -156,6 +156,7 @@ function UserCard({
   onChangeTier: (userId: string, newTier: string) => void;
   onStartTrial: (userId: string, tier: string) => void;
   onDeleteUser: (userId: string) => void;
+  onDeleteOrg: (orgId: string, orgName: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddOverride, setShowAddOverride] = useState(false);
@@ -207,6 +208,20 @@ function UserCard({
                 <Building2 className="w-3 h-3" />
                 {user.organizationName}
               </span>
+            )}
+            {user.organizationId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteOrg(
+                    user.organizationId!,
+                    user.organizationName || "Unknown",
+                  );
+                }}
+                className="ml-2 text-xs text-red-600 hover:text-red-700 hover:underline"
+              >
+                Delete Org
+              </button>
             )}
             {user.stripeCustomerId && (
               <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -964,6 +979,25 @@ export default function UserOverridesPage() {
     }
   };
 
+  const handleDeleteOrg = async (orgId: string, orgName: string) => {
+    if (
+      !confirm(
+        `Delete organization "${orgName}"? This will remove all members, API keys, and embed tokens. Reports are preserved. Enterprise users will be prompted to create a new org.`,
+      )
+    )
+      return;
+    try {
+      const res = await fetchAPIRaw(`/api/admin/users/org/${orgId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to delete org:", err);
+    }
+  };
+
   const handleCreateAccount = async () => {
     if (!createForm.email || !createForm.password) {
       setCreateError("Email and password are required");
@@ -1264,6 +1298,7 @@ export default function UserOverridesPage() {
             onChangeTier={handleChangeTier}
             onStartTrial={handleStartTrial}
             onDeleteUser={handleDeleteUser}
+            onDeleteOrg={handleDeleteOrg}
           />
         ))}
 
