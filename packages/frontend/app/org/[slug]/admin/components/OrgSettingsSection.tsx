@@ -33,9 +33,23 @@ export function OrgSettingsSection() {
   const router = useRouter();
   const [name, setName] = useState(org?.name || "");
   const [slug, setSlug] = useState(org?.slug || "");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Auto-derive slug from name unless user has manually edited the slug field
+  function handleNameChange(newName: string) {
+    setName(newName);
+    if (!slugManuallyEdited) {
+      setSlug(sanitizeSlug(newName));
+    }
+  }
+
+  function handleSlugChange(newSlug: string) {
+    setSlug(newSlug);
+    setSlugManuallyEdited(true);
+  }
 
   const nameChanged = name !== org?.name;
   const slugChanged = slug !== org?.slug;
@@ -114,7 +128,7 @@ export function OrgSettingsSection() {
           </label>
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             disabled={saving}
             className="w-full px-4 py-2 bg-surface border border-outline-variant rounded-lg text-sm"
           />
@@ -127,7 +141,7 @@ export function OrgSettingsSection() {
           </label>
           <input
             value={slug}
-            onChange={(e) => setSlug(e.target.value)}
+            onChange={(e) => handleSlugChange(e.target.value)}
             disabled={saving}
             className="w-full px-4 py-2 bg-surface border border-outline-variant rounded-lg text-sm font-mono"
           />
