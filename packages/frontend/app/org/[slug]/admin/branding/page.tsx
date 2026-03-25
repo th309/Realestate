@@ -165,7 +165,12 @@ export default function OrgAdminBranding() {
             }
           />
 
-          <CustomDomainSection customSubdomain={form.fields.customSubdomain} />
+          <CustomDomainSection
+            customSubdomain={form.fields.customSubdomain}
+            customDomainStatus={form.customDomainStatus}
+            customDomainVerifiedAt={form.customDomainVerifiedAt}
+            onDomainChanged={form.reloadBranding}
+          />
 
           {/* Quinn — hooks in place, UI paused */}
           <QuinnCustomizationSection
