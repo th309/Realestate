@@ -58,17 +58,26 @@ export class MembersService {
 
     const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
-    return (members ?? []).map((row: any) => {
+    // Map to snake_case matching frontend OrgMember type.
+    // Sort: admins first, then by created_at ascending (owner is first admin).
+    const mapped = (members ?? []).map((row: any) => {
       const profile = profileMap.get(row.user_id);
       return {
-        id: row.id,
-        userId: row.user_id,
+        user_id: row.user_id,
         email: profile?.email ?? null,
-        name: profile?.full_name ?? null,
+        display_name:
+          profile?.full_name || profile?.email?.split('@')[0] || null,
         role: row.role,
-        status: row.status,
-        joinedAt: row.created_at,
+        joined_at: row.created_at,
       };
+    });
+
+    return mapped.sort((a: any, b: any) => {
+      // Admins first
+      if (a.role === 'admin' && b.role !== 'admin') return -1;
+      if (a.role !== 'admin' && b.role === 'admin') return 1;
+      // Then by join date (oldest first = owner first)
+      return new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
     });
   }
 
