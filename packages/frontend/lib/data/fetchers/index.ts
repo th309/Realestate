@@ -317,6 +317,13 @@ export {
   type UpdateApiKeyPayload,
 } from "./org-api-keys";
 
+// Enterprise grace period
+export {
+  fetchGraceStatus,
+  setupEnterpriseBilling,
+  type GraceStatus,
+} from "./grace-status";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

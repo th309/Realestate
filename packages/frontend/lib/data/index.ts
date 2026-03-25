@@ -391,6 +391,13 @@ export {
   type UpdateApiKeyPayload,
 } from "./fetchers";
 
+// Enterprise grace period
+export {
+  fetchGraceStatus,
+  setupEnterpriseBilling,
+  type GraceStatus,
+} from "./fetchers";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
