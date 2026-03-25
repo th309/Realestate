@@ -91,8 +91,15 @@ export default function OrgAdminBilling() {
       const msg = err instanceof Error ? err.message : "";
       if (msg.includes("No billing account") || msg.includes("subscription")) {
         // User was manually upgraded — no Stripe customer yet.
-        // Redirect to pricing page to set up billing properly.
-        window.location.href = "/pricing?plan=enterprise";
+        // Use the same trial checkout as the grace banner.
+        try {
+          const { setupEnterpriseBilling } = await import("@/lib/data");
+          const { checkout_url } = await setupEnterpriseBilling();
+          window.location.href = checkout_url;
+          return;
+        } catch {
+          setError("Unable to set up billing. Please try again.");
+        }
       } else {
         setError(msg || "Failed to open billing portal");
       }
