@@ -25,6 +25,40 @@ export interface OrgBranding {
   phone: string | null;
   address: OrgBrandingAddress | null;
   managing_broker: string | null;
+
+  // Report & Document Branding
+  report_header_text: string | null;
+  report_footer_text: string | null;
+  report_disclaimer: string | null;
+
+  // Powered By
+  powered_by_visible: boolean;
+
+  // Support
+  support_email: string | null;
+
+  // Email Branding
+  email_from_name: string | null;
+  email_reply_to: string | null;
+
+  // Domain
+  custom_subdomain: string | null;
+  favicon_url: string | null;
+  tab_title_format: string | null;
+
+  // Typography
+  primary_font: string | null;
+  secondary_font: string | null;
+
+  // Client-Facing
+  welcome_message: string | null;
+  custom_tos_url: string | null;
+  custom_privacy_url: string | null;
+
+  // Organization
+  display_name: string | null;
+  department_label: string | null;
+  default_member_role: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +95,24 @@ export async function updateOrgBranding(
     phone?: string;
     address?: OrgBrandingAddress;
     managing_broker?: string;
+    report_header_text?: string;
+    report_footer_text?: string;
+    report_disclaimer?: string;
+    powered_by_visible?: boolean;
+    support_email?: string;
+    email_from_name?: string;
+    email_reply_to?: string;
+    custom_subdomain?: string;
+    favicon_url?: string;
+    tab_title_format?: string;
+    primary_font?: string;
+    secondary_font?: string;
+    welcome_message?: string;
+    custom_tos_url?: string;
+    custom_privacy_url?: string;
+    display_name?: string;
+    department_label?: string;
+    default_member_role?: string;
   },
 ): Promise<OrgBranding> {
   const res = await fetchAPIRaw(`/api/org/${slug}/branding`, {

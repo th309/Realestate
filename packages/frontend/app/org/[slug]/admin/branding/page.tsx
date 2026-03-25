@@ -1,219 +1,29 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React from "react";
 import { Palette, Loader2, AlertCircle, Globe } from "lucide-react";
 import { useOrg } from "../../../hooks/useOrg";
-import {
-  fetchOrgBranding,
-  updateOrgBranding,
-  uploadOrgLogo,
-  deleteOrgLogo,
-} from "@/lib/data";
 import { LogoUploader } from "../../../components/LogoUploader";
 import { AccentColorPicker } from "../../../components/AccentColorPicker";
 import { BrandingPreview } from "../../../components/BrandingPreview";
 import { BusinessInfoSection } from "./BusinessInfoSection";
+import { ReportBrandingSection } from "./ReportBrandingSection";
+import { WhiteLabelSection } from "./WhiteLabelSection";
+import { EmailBrandingSection } from "./EmailBrandingSection";
+import { TypographySection } from "./TypographySection";
+import { ClientExperienceSection } from "./ClientExperienceSection";
+import { CustomDomainSection } from "./CustomDomainSection";
+import { useBrandingForm } from "./useBrandingForm";
 
 /**
  * Branding admin page — logo upload, accent color, website URL,
- * with a live preview panel on the right.
+ * white-label settings, and a live preview panel on the right.
  */
 export default function OrgAdminBranding() {
   const { org } = useOrg();
+  const form = useBrandingForm(org?.slug);
 
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [accentColor, setAccentColor] = useState("#2563eb");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [addrState, setAddrState] = useState("");
-  const [zip, setZip] = useState("");
-  const [managingBroker, setManagingBroker] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [dirty, setDirty] = useState(false);
-
-  // Track initial values so we know when form is dirty
-  const [initialAccent, setInitialAccent] = useState("#2563eb");
-  const [initialWebsite, setInitialWebsite] = useState("");
-  const [initialPhone, setInitialPhone] = useState("");
-  const [initialStreet, setInitialStreet] = useState("");
-  const [initialCity, setInitialCity] = useState("");
-  const [initialAddrState, setInitialAddrState] = useState("");
-  const [initialZip, setInitialZip] = useState("");
-  const [initialManagingBroker, setInitialManagingBroker] = useState("");
-
-  const loadBranding = useCallback(async () => {
-    if (!org) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchOrgBranding(org.slug);
-      setLogoUrl(data.logo_url);
-      setAccentColor(data.accent_color || "#2563eb");
-      setWebsiteUrl(data.website_url || "");
-      setPhone(data.phone || "");
-      setStreet(data.address?.street || "");
-      setCity(data.address?.city || "");
-      setAddrState(data.address?.state || "");
-      setZip(data.address?.zip || "");
-      setManagingBroker(data.managing_broker || "");
-      setInitialAccent(data.accent_color || "#2563eb");
-      setInitialWebsite(data.website_url || "");
-      setInitialPhone(data.phone || "");
-      setInitialStreet(data.address?.street || "");
-      setInitialCity(data.address?.city || "");
-      setInitialAddrState(data.address?.state || "");
-      setInitialZip(data.address?.zip || "");
-      setInitialManagingBroker(data.managing_broker || "");
-      setDirty(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load branding");
-    } finally {
-      setLoading(false);
-    }
-  }, [org]);
-
-  useEffect(() => {
-    void loadBranding();
-  }, [loadBranding]);
-
-  // Track dirty state
-  useEffect(() => {
-    const changed =
-      accentColor !== initialAccent ||
-      websiteUrl !== initialWebsite ||
-      phone !== initialPhone ||
-      street !== initialStreet ||
-      city !== initialCity ||
-      addrState !== initialAddrState ||
-      zip !== initialZip ||
-      managingBroker !== initialManagingBroker;
-    setDirty(changed);
-    setSaveSuccess(false);
-  }, [
-    accentColor,
-    websiteUrl,
-    phone,
-    street,
-    city,
-    addrState,
-    zip,
-    managingBroker,
-    initialAccent,
-    initialWebsite,
-    initialPhone,
-    initialStreet,
-    initialCity,
-    initialAddrState,
-    initialZip,
-    initialManagingBroker,
-  ]);
-
-  const handleAccentChange = useCallback((color: string) => {
-    setAccentColor(color);
-  }, []);
-
-  const handleWebsiteChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setWebsiteUrl(e.target.value);
-    },
-    [],
-  );
-
-  const handleSave = useCallback(async () => {
-    if (!org) return;
-
-    // Validate required business info fields
-    const errors: string[] = [];
-    if (!phone.trim()) errors.push("Phone number is required");
-    if (!street.trim()) errors.push("Street address is required");
-    if (!city.trim()) errors.push("City is required");
-    if (!addrState) errors.push("State is required");
-    if (!zip.trim()) errors.push("ZIP code is required");
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors([]);
-
-    setSaving(true);
-    setError(null);
-    setSaveSuccess(false);
-    try {
-      const result = await updateOrgBranding(org.slug, {
-        accent_color: accentColor,
-        website_url: websiteUrl || undefined,
-        phone: phone.trim(),
-        address: {
-          street: street.trim(),
-          city: city.trim(),
-          state: addrState,
-          zip: zip.trim(),
-        },
-        managing_broker: managingBroker.trim() || undefined,
-      });
-      setInitialAccent(result.accent_color || accentColor);
-      setInitialWebsite(result.website_url || "");
-      setInitialPhone(result.phone || "");
-      setInitialStreet(result.address?.street || "");
-      setInitialCity(result.address?.city || "");
-      setInitialAddrState(result.address?.state || "");
-      setInitialZip(result.address?.zip || "");
-      setInitialManagingBroker(result.managing_broker || "");
-      setDirty(false);
-      setSaveSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save branding");
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    org,
-    accentColor,
-    websiteUrl,
-    phone,
-    street,
-    city,
-    addrState,
-    zip,
-    managingBroker,
-  ]);
-
-  const handleLogoUpload = useCallback(
-    async (file: File) => {
-      if (!org) return;
-      setUploading(true);
-      setError(null);
-      try {
-        const result = await uploadOrgLogo(org.slug, file);
-        setLogoUrl(result.logo_url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to upload logo");
-      } finally {
-        setUploading(false);
-      }
-    },
-    [org],
-  );
-
-  const handleLogoDelete = useCallback(async () => {
-    if (!org) return;
-    setError(null);
-    try {
-      await deleteOrgLogo(org.slug);
-      setLogoUrl(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove logo");
-    }
-  }, [org]);
-
-  if (loading) {
+  if (form.loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-6 h-6 animate-spin text-on-surface-variant" />
@@ -235,10 +45,10 @@ export default function OrgAdminBranding() {
       </div>
 
       {/* Error banner */}
-      {error && (
+      {form.error && (
         <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-950/20 p-3 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <p className="text-sm text-red-700 dark:text-red-400">{form.error}</p>
         </div>
       )}
 
@@ -247,36 +57,36 @@ export default function OrgAdminBranding() {
         <div className="flex-[3] space-y-6">
           {/* Business Information — required fields first */}
           <BusinessInfoSection
-            phone={phone}
-            street={street}
-            city={city}
-            addrState={addrState}
-            zip={zip}
-            managingBroker={managingBroker}
-            validationErrors={validationErrors}
-            onPhoneChange={setPhone}
-            onStreetChange={setStreet}
-            onCityChange={setCity}
-            onAddrStateChange={setAddrState}
-            onZipChange={setZip}
-            onManagingBrokerChange={setManagingBroker}
+            phone={form.fields.phone}
+            street={form.fields.street}
+            city={form.fields.city}
+            addrState={form.fields.addrState}
+            zip={form.fields.zip}
+            managingBroker={form.fields.managingBroker}
+            validationErrors={form.validationErrors}
+            onPhoneChange={(v) => form.setField("phone", v)}
+            onStreetChange={(v) => form.setField("street", v)}
+            onCityChange={(v) => form.setField("city", v)}
+            onAddrStateChange={(v) => form.setField("addrState", v)}
+            onZipChange={(v) => form.setField("zip", v)}
+            onManagingBrokerChange={(v) => form.setField("managingBroker", v)}
           />
 
           {/* Logo section */}
           <div className="bg-surface-container-low rounded-xl shadow-sm p-6">
             <LogoUploader
-              currentLogoUrl={logoUrl}
-              onUpload={handleLogoUpload}
-              onDelete={handleLogoDelete}
-              uploading={uploading}
+              currentLogoUrl={form.logoUrl}
+              onUpload={form.handleLogoUpload}
+              onDelete={form.handleLogoDelete}
+              uploading={form.uploading}
             />
           </div>
 
           {/* Accent color section */}
           <div className="bg-surface-container-low rounded-xl shadow-sm p-6">
             <AccentColorPicker
-              value={accentColor}
-              onChange={handleAccentChange}
+              value={form.fields.accentColor}
+              onChange={(c) => form.setField("accentColor", c)}
             />
           </div>
 
@@ -289,8 +99,8 @@ export default function OrgAdminBranding() {
               <Globe className="w-4 h-4 text-on-surface-variant shrink-0" />
               <input
                 type="url"
-                value={websiteUrl}
-                onChange={handleWebsiteChange}
+                value={form.fields.websiteUrl}
+                onChange={(e) => form.setField("websiteUrl", e.target.value)}
                 placeholder="https://yourcompany.com"
                 className="flex-1 px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
@@ -300,16 +110,72 @@ export default function OrgAdminBranding() {
             </p>
           </div>
 
+          {/* --- White-label sections --- */}
+          <ReportBrandingSection
+            reportHeaderText={form.fields.reportHeaderText}
+            reportFooterText={form.fields.reportFooterText}
+            reportDisclaimer={form.fields.reportDisclaimer}
+            onReportHeaderTextChange={(v) =>
+              form.setField("reportHeaderText", v)
+            }
+            onReportFooterTextChange={(v) =>
+              form.setField("reportFooterText", v)
+            }
+            onReportDisclaimerChange={(v) =>
+              form.setField("reportDisclaimer", v)
+            }
+          />
+
+          <WhiteLabelSection
+            poweredByVisible={form.fields.poweredByVisible}
+            displayName={form.fields.displayName}
+            supportEmail={form.fields.supportEmail}
+            tabTitleFormat={form.fields.tabTitleFormat}
+            onPoweredByVisibleChange={(v) =>
+              form.setField("poweredByVisible", v)
+            }
+            onDisplayNameChange={(v) => form.setField("displayName", v)}
+            onSupportEmailChange={(v) => form.setField("supportEmail", v)}
+            onTabTitleFormatChange={(v) => form.setField("tabTitleFormat", v)}
+          />
+
+          <EmailBrandingSection
+            emailFromName={form.fields.emailFromName}
+            emailReplyTo={form.fields.emailReplyTo}
+            onEmailFromNameChange={(v) => form.setField("emailFromName", v)}
+            onEmailReplyToChange={(v) => form.setField("emailReplyTo", v)}
+          />
+
+          <TypographySection
+            primaryFont={form.fields.primaryFont}
+            secondaryFont={form.fields.secondaryFont}
+            onPrimaryFontChange={(v) => form.setField("primaryFont", v)}
+            onSecondaryFontChange={(v) => form.setField("secondaryFont", v)}
+          />
+
+          <ClientExperienceSection
+            welcomeMessage={form.fields.welcomeMessage}
+            customTosUrl={form.fields.customTosUrl}
+            customPrivacyUrl={form.fields.customPrivacyUrl}
+            onWelcomeMessageChange={(v) => form.setField("welcomeMessage", v)}
+            onCustomTosUrlChange={(v) => form.setField("customTosUrl", v)}
+            onCustomPrivacyUrlChange={(v) =>
+              form.setField("customPrivacyUrl", v)
+            }
+          />
+
+          <CustomDomainSection customSubdomain={form.fields.customSubdomain} />
+
           {/* Save button */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => void handleSave()}
-              disabled={saving || !dirty}
+              onClick={() => void form.handleSave()}
+              disabled={form.saving || !form.dirty}
               className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {form.saving ? "Saving..." : "Save Changes"}
             </button>
-            {saveSuccess && (
+            {form.saveSuccess && (
               <span className="text-sm text-green-600 dark:text-green-400 font-medium">
                 Changes saved
               </span>
@@ -320,10 +186,10 @@ export default function OrgAdminBranding() {
         {/* Right panel — Preview (40%) */}
         <div className="flex-[2] lg:sticky lg:top-6 lg:self-start">
           <BrandingPreview
-            logoUrl={logoUrl}
-            accentColor={accentColor}
+            logoUrl={form.logoUrl}
+            accentColor={form.fields.accentColor}
             orgName={org?.name ?? "Your Organization"}
-            websiteUrl={websiteUrl || null}
+            websiteUrl={form.fields.websiteUrl || null}
           />
         </div>
       </div>
