@@ -33,6 +33,31 @@ export function EnterpriseOnboardingGate({
   const needsOnboarding = isEnterprise && !hasOrg && !isLoading && !error;
   const isOnSkipPath = SKIP_PATHS.some((p) => pathname.startsWith(p));
 
+  // DEBUG: Remove after enterprise onboarding is verified working
+  useEffect(() => {
+    console.info("[EnterpriseGate]", {
+      tier,
+      isEnterprise,
+      hasOrg,
+      isLoading,
+      error: error ? String(error) : null,
+      needsOnboarding,
+      pathname,
+      isOnSkipPath,
+      seenKey:
+        typeof window !== "undefined" ? sessionStorage.getItem(SEEN_KEY) : null,
+    });
+  }, [
+    tier,
+    isEnterprise,
+    hasOrg,
+    isLoading,
+    error,
+    needsOnboarding,
+    pathname,
+    isOnSkipPath,
+  ]);
+
   // First-visit redirect (once per session)
   useEffect(() => {
     if (!needsOnboarding || isOnSkipPath || redirected.current) return;

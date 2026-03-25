@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
-import { UserFeaturesService, UserOverride } from '../features/user-features.service';
+import {
+  UserFeaturesService,
+  UserOverride,
+} from '../features/user-features.service';
 
 export interface UserListItem {
   id: string;
@@ -80,18 +83,23 @@ export class UsersService {
     // Query user_profiles with all relevant fields
     let query = client
       .from('user_profiles')
-      .select(`
+      .select(
+        `
         id, email, full_name, subscription_tier, subscription_status,
         stripe_customer_id, stripe_subscription_id,
         organization_id, organization_role,
         reports_generated_this_month,
         created_at, updated_at, last_login_at
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' },
+      )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (options?.search) {
-      query = query.or(`email.ilike.%${options.search}%,full_name.ilike.%${options.search}%`);
+      query = query.or(
+        `email.ilike.%${options.search}%,full_name.ilike.%${options.search}%`,
+      );
     }
 
     if (options?.tier) {
@@ -106,7 +114,7 @@ export class UsersService {
     }
 
     // Batch fetch related data for efficiency
-    const userIds = (profiles || []).map(p => p.id);
+    const userIds = (profiles || []).map((p) => p.id);
 
     // Fetch all related data in parallel
     const [
@@ -124,18 +132,24 @@ export class UsersService {
       this.getOverrideCountsForUsers(userIds),
       this.getPaywallCountsForUsers(userIds),
       this.getGrandfathersForUsers(userIds),
-      this.getBetaTestersForUsers(profiles?.map(p => p.email) || []),
-      this.getOrganizationsForUsers([...new Set(profiles?.map(p => p.organization_id).filter(Boolean) || [])]),
+      this.getBetaTestersForUsers(profiles?.map((p) => p.email) || []),
+      this.getOrganizationsForUsers([
+        ...new Set(
+          profiles?.map((p) => p.organization_id).filter(Boolean) || [],
+        ),
+      ]),
       this.getSavedQueryCountsForUsers(userIds),
       this.getWatchlistCountsForUsers(userIds),
       this.getAlertCountsForUsers(userIds),
     ]);
 
-    const users: UserListItem[] = (profiles || []).map(profile => {
+    const users: UserListItem[] = (profiles || []).map((profile) => {
       const trial = trials.get(profile.id);
       const grandfather = grandfathers.get(profile.id);
       const betaTester = betaTesters.get(profile.email?.toLowerCase());
-      const org = profile.organization_id ? organizations.get(profile.organization_id) : null;
+      const org = profile.organization_id
+        ? organizations.get(profile.organization_id)
+        : null;
 
       return {
         id: profile.id,
@@ -144,7 +158,8 @@ export class UsersService {
         tier: profile.subscription_tier || 'free',
         tierStatus: profile.subscription_status || 'active',
         createdAt: profile.created_at,
-        lastActive: profile.last_login_at || profile.updated_at || profile.created_at,
+        lastActive:
+          profile.last_login_at || profile.updated_at || profile.created_at,
         // Trial
         trialActive: !!trial,
         trialExpiresAt: trial?.expires_at,
@@ -177,7 +192,9 @@ export class UsersService {
   }
 
   // Batch helper methods
-  private async getTrialsForUsers(userIds: string[]): Promise<Map<string, any>> {
+  private async getTrialsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, any>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -187,10 +204,12 @@ export class UsersService {
       .is('converted_at', null)
       .is('cancelled_at', null)
       .gt('expires_at', new Date().toISOString());
-    return new Map((data || []).map(t => [t.user_id, t]));
+    return new Map((data || []).map((t) => [t.user_id, t]));
   }
 
-  private async getOverrideCountsForUsers(userIds: string[]): Promise<Map<string, number>> {
+  private async getOverrideCountsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -198,11 +217,15 @@ export class UsersService {
       .select('user_id')
       .in('user_id', userIds);
     const counts = new Map<string, number>();
-    (data || []).forEach(o => counts.set(o.user_id, (counts.get(o.user_id) || 0) + 1));
+    (data || []).forEach((o) =>
+      counts.set(o.user_id, (counts.get(o.user_id) || 0) + 1),
+    );
     return counts;
   }
 
-  private async getPaywallCountsForUsers(userIds: string[]): Promise<Map<string, number>> {
+  private async getPaywallCountsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -211,32 +234,40 @@ export class UsersService {
       .in('user_id', userIds)
       .eq('event_type', 'view');
     const counts = new Map<string, number>();
-    (data || []).forEach(e => counts.set(e.user_id, (counts.get(e.user_id) || 0) + 1));
+    (data || []).forEach((e) =>
+      counts.set(e.user_id, (counts.get(e.user_id) || 0) + 1),
+    );
     return counts;
   }
 
-  private async getGrandfathersForUsers(userIds: string[]): Promise<Map<string, any>> {
+  private async getGrandfathersForUsers(
+    userIds: string[],
+  ): Promise<Map<string, any>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
       .from('user_grandfathering')
-      .select('user_id, grandfathered_type, reason, original_price_monthly, original_tier_slug, effective_from, expires_at')
+      .select(
+        'user_id, grandfathered_type, reason, original_price_monthly, original_tier_slug, effective_from, expires_at',
+      )
       .in('user_id', userIds)
       .eq('is_active', true);
-    return new Map((data || []).map(g => [g.user_id, g]));
+    return new Map((data || []).map((g) => [g.user_id, g]));
   }
 
-  private async getBetaTestersForUsers(emails: string[]): Promise<Map<string, any>> {
+  private async getBetaTestersForUsers(
+    emails: string[],
+  ): Promise<Map<string, any>> {
     if (emails.length === 0) return new Map();
     const client = this.supabase.getClient();
-    const lowerEmails = emails.map(e => e?.toLowerCase()).filter(Boolean);
+    const lowerEmails = emails.map((e) => e?.toLowerCase()).filter(Boolean);
     const { data } = await client
       .from('beta_testers')
       .select('id, email, name, is_active')
       .eq('is_active', true);
     // Match by email (case-insensitive)
     const map = new Map<string, any>();
-    (data || []).forEach(bt => {
+    (data || []).forEach((bt) => {
       if (bt.email && lowerEmails.includes(bt.email.toLowerCase())) {
         map.set(bt.email.toLowerCase(), bt);
       }
@@ -244,17 +275,21 @@ export class UsersService {
     return map;
   }
 
-  private async getOrganizationsForUsers(orgIds: string[]): Promise<Map<string, any>> {
+  private async getOrganizationsForUsers(
+    orgIds: string[],
+  ): Promise<Map<string, any>> {
     if (orgIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
       .from('organizations')
       .select('id, name, slug')
       .in('id', orgIds);
-    return new Map((data || []).map(o => [o.id, o]));
+    return new Map((data || []).map((o) => [o.id, o]));
   }
 
-  private async getSavedQueryCountsForUsers(userIds: string[]): Promise<Map<string, number>> {
+  private async getSavedQueryCountsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -262,11 +297,15 @@ export class UsersService {
       .select('user_id')
       .in('user_id', userIds);
     const counts = new Map<string, number>();
-    (data || []).forEach(q => counts.set(q.user_id, (counts.get(q.user_id) || 0) + 1));
+    (data || []).forEach((q) =>
+      counts.set(q.user_id, (counts.get(q.user_id) || 0) + 1),
+    );
     return counts;
   }
 
-  private async getWatchlistCountsForUsers(userIds: string[]): Promise<Map<string, number>> {
+  private async getWatchlistCountsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -274,11 +313,15 @@ export class UsersService {
       .select('user_id')
       .in('user_id', userIds);
     const counts = new Map<string, number>();
-    (data || []).forEach(w => counts.set(w.user_id, (counts.get(w.user_id) || 0) + 1));
+    (data || []).forEach((w) =>
+      counts.set(w.user_id, (counts.get(w.user_id) || 0) + 1),
+    );
     return counts;
   }
 
-  private async getAlertCountsForUsers(userIds: string[]): Promise<Map<string, number>> {
+  private async getAlertCountsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
     const client = this.supabase.getClient();
     const { data } = await client
@@ -287,7 +330,9 @@ export class UsersService {
       .in('user_id', userIds)
       .eq('is_active', true);
     const counts = new Map<string, number>();
-    (data || []).forEach(a => counts.set(a.user_id, (counts.get(a.user_id) || 0) + 1));
+    (data || []).forEach((a) =>
+      counts.set(a.user_id, (counts.get(a.user_id) || 0) + 1),
+    );
     return counts;
   }
 
@@ -308,22 +353,29 @@ export class UsersService {
     // Get all related data
     const [overrides, trial, grandfather, org] = await Promise.all([
       this.userFeatures.getUserOverrides(userId),
-      client.from('user_trials')
+      client
+        .from('user_trials')
         .select('*')
         .eq('user_id', userId)
         .is('converted_at', null)
         .is('cancelled_at', null)
         .gt('expires_at', new Date().toISOString())
         .single()
-        .then(r => r.data),
-      client.from('user_grandfathering')
+        .then((r) => r.data),
+      client
+        .from('user_grandfathering')
         .select('*')
         .eq('user_id', userId)
         .eq('is_active', true)
         .single()
-        .then(r => r.data),
+        .then((r) => r.data),
       profile.organization_id
-        ? client.from('organizations').select('*').eq('id', profile.organization_id).single().then(r => r.data)
+        ? client
+            .from('organizations')
+            .select('*')
+            .eq('id', profile.organization_id)
+            .single()
+            .then((r) => r.data)
         : Promise.resolve(null),
     ]);
 
@@ -336,13 +388,36 @@ export class UsersService {
       .single();
 
     // Get usage counts
-    const [overrideCount, paywallCount, savedQueries, watchlist, alerts] = await Promise.all([
-      client.from('user_feature_overrides').select('*', { count: 'exact', head: true }).eq('user_id', userId).then(r => r.count || 0),
-      client.from('paywall_events').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('event_type', 'view').then(r => r.count || 0),
-      client.from('analytics_saved_queries').select('*', { count: 'exact', head: true }).eq('user_id', userId).then(r => r.count || 0),
-      client.from('analytics_watchlist').select('*', { count: 'exact', head: true }).eq('user_id', userId).then(r => r.count || 0),
-      client.from('analytics_alerts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_active', true).then(r => r.count || 0),
-    ]);
+    const [overrideCount, paywallCount, savedQueries, watchlist, alerts] =
+      await Promise.all([
+        client
+          .from('user_feature_overrides')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .then((r) => r.count || 0),
+        client
+          .from('paywall_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('event_type', 'view')
+          .then((r) => r.count || 0),
+        client
+          .from('analytics_saved_queries')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .then((r) => r.count || 0),
+        client
+          .from('analytics_watchlist')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .then((r) => r.count || 0),
+        client
+          .from('analytics_alerts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .then((r) => r.count || 0),
+      ]);
 
     return {
       id: profile.id,
@@ -351,7 +426,8 @@ export class UsersService {
       tier: profile.subscription_tier || 'free',
       tierStatus: profile.subscription_status || 'active',
       createdAt: profile.created_at,
-      lastActive: profile.last_login_at || profile.updated_at || profile.created_at,
+      lastActive:
+        profile.last_login_at || profile.updated_at || profile.created_at,
       trialActive: !!trial,
       trialExpiresAt: trial?.expires_at,
       trialTier: trial?.tier,
@@ -372,12 +448,14 @@ export class UsersService {
       watchlistCount: watchlist,
       alertsCount: alerts,
       overrides,
-      grandfatheringDetails: grandfather ? {
-        originalPrice: grandfather.original_price_monthly,
-        originalTier: grandfather.original_tier_slug,
-        effectiveFrom: grandfather.effective_from,
-        expiresAt: grandfather.expires_at,
-      } : undefined,
+      grandfatheringDetails: grandfather
+        ? {
+            originalPrice: grandfather.original_price_monthly,
+            originalTier: grandfather.original_tier_slug,
+            effectiveFrom: grandfather.effective_from,
+            expiresAt: grandfather.expires_at,
+          }
+        : undefined,
     };
   }
 
@@ -400,30 +478,48 @@ export class UsersService {
       // Users with overrides
       client.from('user_feature_overrides').select('user_id').limit(10000),
       // Active trials
-      client.from('user_trials')
+      client
+        .from('user_trials')
         .select('*', { count: 'exact', head: true })
         .is('converted_at', null)
         .is('cancelled_at', null)
         .gt('expires_at', new Date().toISOString()),
       // Grandfathered users
-      client.from('user_grandfathering').select('user_id').eq('is_active', true).limit(10000),
+      client
+        .from('user_grandfathering')
+        .select('user_id')
+        .eq('is_active', true)
+        .limit(10000),
       // Beta testers
-      client.from('beta_testers').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      client
+        .from('beta_testers')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true),
       // Users in organizations
-      client.from('user_profiles').select('*', { count: 'exact', head: true }).not('organization_id', 'is', null),
+      client
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true })
+        .not('organization_id', 'is', null),
       // Users with Stripe
-      client.from('user_profiles').select('*', { count: 'exact', head: true }).not('stripe_customer_id', 'is', null),
+      client
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true })
+        .not('stripe_customer_id', 'is', null),
       // Tier breakdown
       client.from('user_profiles').select('subscription_tier'),
     ]);
 
     // Calculate unique counts
-    const uniqueOverrideUsers = new Set((overridesResult.data || []).map(u => u.user_id)).size;
-    const uniqueGrandfathered = new Set((grandfatheredResult.data || []).map(u => u.user_id)).size;
+    const uniqueOverrideUsers = new Set(
+      (overridesResult.data || []).map((u) => u.user_id),
+    ).size;
+    const uniqueGrandfathered = new Set(
+      (grandfatheredResult.data || []).map((u) => u.user_id),
+    ).size;
 
     // Calculate tier breakdown
     const byTier: Record<string, number> = {};
-    (tierBreakdown.data || []).forEach(u => {
+    (tierBreakdown.data || []).forEach((u) => {
       const tier = u.subscription_tier || 'free';
       byTier[tier] = (byTier[tier] || 0) + 1;
     });
@@ -447,7 +543,7 @@ export class UsersService {
       reason?: string;
       expiresAt?: string;
       grantedBy?: string;
-    }
+    },
   ): Promise<void> {
     await this.userFeatures.createOverride(userId, featureSlug, true, {
       reason: options?.reason,
@@ -469,14 +565,15 @@ export class UsersService {
     const client = this.supabase.getClient();
 
     // Create auth user via Supabase Admin API
-    const { data: authData, error: authError } = await client.auth.admin.createUser({
-      email: params.email,
-      password: params.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: params.fullName,
-      },
-    });
+    const { data: authData, error: authError } =
+      await client.auth.admin.createUser({
+        email: params.email,
+        password: params.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: params.fullName,
+        },
+      });
 
     if (authError) {
       this.logger.error('Failed to create auth user', authError);
@@ -486,17 +583,15 @@ export class UsersService {
     const userId = authData.user.id;
 
     // Create user_profiles row
-    const { error: profileError } = await client
-      .from('user_profiles')
-      .insert({
-        id: userId,
-        email: params.email,
-        full_name: params.fullName || null,
-        subscription_tier: params.tier || 'free',
-        subscription_status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    const { error: profileError } = await client.from('user_profiles').insert({
+      id: userId,
+      email: params.email,
+      full_name: params.fullName || null,
+      subscription_tier: params.tier || 'free',
+      subscription_status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
     if (profileError) {
       this.logger.error('Failed to create user_profiles row', profileError);
@@ -505,7 +600,9 @@ export class UsersService {
       throw new Error(profileError.message);
     }
 
-    this.logger.log(`Admin created user ${userId} (${params.email}) with tier ${params.tier || 'free'}`);
+    this.logger.log(
+      `Admin created user ${userId} (${params.email}) with tier ${params.tier || 'free'}`,
+    );
 
     return { id: userId, email: params.email };
   }
@@ -513,12 +610,53 @@ export class UsersService {
   async updateUserTier(userId: string, tier: string): Promise<void> {
     const client = this.supabase.getClient();
 
-    await client
-      .from('user_profiles')
-      .update({ subscription_tier: tier, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    // Must set subscription_status alongside subscription_tier —
+    // the entitlements service requires status === 'active' (or null)
+    // to recognize a non-free tier. Without this, admin tier changes
+    // are silently ignored by the entitlements check.
+    const updatePayload: Record<string, unknown> = {
+      subscription_tier: tier,
+      updated_at: new Date().toISOString(),
+    };
 
-    this.logger.log(`Updated user ${userId} tier to ${tier}`);
+    if (tier !== 'free') {
+      updatePayload.subscription_status = 'active';
+    }
+
+    // Fetch the old tier before updating (for broadcast payload)
+    const { data: oldProfile } = await client
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('id', userId)
+      .single();
+
+    const oldTier = oldProfile?.subscription_tier ?? 'free';
+
+    await client.from('user_profiles').update(updatePayload).eq('id', userId);
+
+    // Broadcast tier change via Supabase Realtime so the frontend
+    // picks it up instantly (useRealtimeTierSync listens on this channel).
+    try {
+      const channel = client.channel(`user:${userId}:profile`, {
+        config: { private: true },
+      });
+      await channel.send({
+        type: 'broadcast',
+        event: 'UPDATE',
+        payload: {
+          record: { subscription_tier: tier },
+          old_record: { subscription_tier: oldTier },
+        },
+      });
+      client.removeChannel(channel);
+    } catch (err) {
+      this.logger.warn(`Failed to broadcast tier change for ${userId}: ${err}`);
+      // Non-fatal — user will see the change on next page load
+    }
+
+    this.logger.log(
+      `Updated user ${userId} tier to ${tier} (status: ${tier !== 'free' ? 'active' : 'unchanged'})`,
+    );
   }
 
   async deleteUser(userId: string): Promise<void> {
@@ -545,7 +683,9 @@ export class UsersService {
     for (const { table, column } of dependentTables) {
       const { error } = await client.from(table).delete().eq(column, userId);
       if (error) {
-        this.logger.warn(`Failed to clean ${table} for user ${userId}: ${error.message}`);
+        this.logger.warn(
+          `Failed to clean ${table} for user ${userId}: ${error.message}`,
+        );
         // Continue — table may not exist or have no rows for this user
       }
     }
@@ -557,7 +697,10 @@ export class UsersService {
       .eq('id', userId);
 
     if (profileError) {
-      this.logger.error(`Failed to delete user_profiles for ${userId}`, profileError);
+      this.logger.error(
+        `Failed to delete user_profiles for ${userId}`,
+        profileError,
+      );
       throw new Error(profileError.message);
     }
 
