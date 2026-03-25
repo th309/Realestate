@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
+import { useMyOrg } from "@/lib/data";
 import { ChevronDown } from "lucide-react";
 import {
   MenuIcon,
@@ -14,6 +15,7 @@ import {
   CreditCardIcon,
   BookIcon,
   HierarchyIcon,
+  BuildingIcon,
   HelpIcon,
   LogoutIcon,
   HomeIcon,
@@ -155,6 +157,7 @@ export function Header() {
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const { tier } = useEntitlements();
+  const { org } = useMyOrg();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -264,11 +267,11 @@ export function Header() {
                       label="Data Glossary"
                       href="/data"
                     />
-                    {tier === "enterprise" && (
+                    {tier === "enterprise" && org?.slug && (
                       <DropdownItem
-                        icon={HierarchyIcon}
-                        label="Manage Seats"
-                        href="/team"
+                        icon={BuildingIcon}
+                        label="Organization"
+                        href={`/org/${org.slug}/admin`}
                       />
                     )}
                     <DropdownItem icon={HelpIcon} label="Help" href="/help" />

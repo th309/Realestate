@@ -159,6 +159,22 @@ export class OrganizationsService {
   }
 
   /**
+   * Get the authenticated user's role in a specific organization.
+   * Returns 'admin' | 'member' | null.
+   */
+  async getMemberRole(orgId: string, userId: string): Promise<string | null> {
+    const { data } = await this.supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', orgId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    return data?.role ?? null;
+  }
+
+  /**
    * Update an organization's mutable fields.
    * Only provided fields are updated; omitted fields remain unchanged.
    */

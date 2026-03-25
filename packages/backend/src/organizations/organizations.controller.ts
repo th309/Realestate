@@ -52,8 +52,12 @@ export class OrganizationsController {
 
   @Get(':slug')
   @UseGuards(JwtAuthGuard, OrgContextGuard, OrgMemberGuard)
-  async getOrg(@Param('slug') slug: string) {
-    return this.organizationsService.getBySlug(slug);
+  async getOrg(@Param('slug') slug: string, @AuthUserId() userId: string) {
+    const org = await this.organizationsService.getBySlug(slug);
+    // Include the caller's membership role so the frontend OrgContextProvider
+    // can gate admin-only pages without a second API call.
+    const role = await this.organizationsService.getMemberRole(org.id, userId);
+    return { ...org, role };
   }
 
   @Put(':slug')
