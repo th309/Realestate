@@ -680,6 +680,216 @@ State → Metro → County → ZIP: data, legend, colors update correctly.
 
 ---
 
+## Phase 12: Enterprise Features & Data Export
+
+Enterprise features are gated to Enterprise tier (or org-level access). Test with `?tier=enterprise` simulation or a real Enterprise account. Organization features require an org to be created first.
+
+### 12.1 Data Export (Pro/Enterprise Gated)
+
+Test the `export_csv` entitlement across all export surfaces. Switch tiers to verify gating.
+
+**Map Table View Export:**
+- Navigate to `/map` → select any metric → click "Table View" FAB (bottom-right)
+- Modal shows sortable data table with search
+- **Enterprise/Pro:** Footer shows "Export CSV" button with Download icon → click triggers `.csv` download
+- **Free:** Footer shows "Export CSV" with Lock icon, button is visually muted and non-functional
+- CSV contents: geography name, formatted value, raw numeric value, date
+- Filename format: `{metric-name}-{geoLevel}-data.csv`
+- Verify: CSV values match the table display values
+
+**Top Markets Export:**
+- Navigate to `/market` → "Top Markets" section
+- **Enterprise/Pro:** Export button appears in section header → click triggers CSV download of current rankings
+- **Free:** Export button shows Lock icon → click opens PaywallCard modal with "Unlock Data Export" title
+- PaywallCard dismisses when clicking backdrop
+- CSV includes: Rank, Location, Score, Grade, Geography columns
+- Filename format: `top-markets-{scoreType}-{geography}[-{state}].csv`
+- Change geo/score/state/limit filters → export reflects current filters
+
+**Market Dashboard Share & Download:**
+- Navigate to `/market/{id}` (e.g., `/market/31080?type=metro`)
+- **Share button** (Share2 icon): Click copies current URL to clipboard (all tiers)
+- **Download button:**
+  - **Enterprise/Pro:** Download icon → opens browser print dialog (Save as PDF)
+  - **Free:** Lock icon shown, no action on click
+- Verify clipboard actually contains the correct URL after Share click
+
+**Reports Share & Export Modal:**
+- Navigate to `/reports` → open any report
+- Click Share button (Share2 icon) → ShareReportModal opens
+- **Copy share link:** Creates share token → copies URL → shows "Link copied!" → footer shows shared URL
+- **Download PDF:** Triggers browser print / PDF download → modal closes
+- **Export CSV:** Currently disabled (`reportData` not wired) — button should show but be non-functional
+  - **Free:** Shows Lock icon + "Upgrade to Pro to export CSV"
+  - **Enterprise/Pro:** Shows FileSpreadsheet icon but disabled (no data wired yet)
+- **Print:** Opens browser print dialog → modal closes
+- Re-opening modal shows previously generated share URL in footer
+- Share link works when opened in incognito (public view-only)
+
+### 12.2 Platform API v1
+
+**API Documentation Page:**
+- Navigate to `/docs/api` — page loads without errors
+- Endpoint reference section lists all 7 platform API endpoints
+- Code examples section shows valid request/response examples
+- Verify endpoint descriptions match actual API behavior
+
+**Platform API Endpoints (test via curl or Bash):**
+
+All endpoints live at `/platform-api/v1/` and require an API key header.
+
+```bash
+# Test without auth → expect 401
+curl -s http://localhost:3001/platform-api/v1/metrics/home_value/metro/31080 | head -c 200
+
+# Test with valid API key → expect 200 with envelope response
+curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home_value/metro/31080 | head -c 500
+```
+
+**Endpoints to verify:**
+| Endpoint | Expected |
+|---|---|
+| `GET /platform-api/v1/metrics/:metricId/:geoLevel/:geoId` | Metric value + metadata |
+| `GET /platform-api/v1/metrics/bulk/:metricId/:geoLevel` | Array of all geos |
+| `GET /platform-api/v1/timeseries/:metricId/:geoLevel/:geoId` | Historical data array |
+| `GET /platform-api/v1/scores/:geoLevel/:geoId` | Score + confidence |
+| `GET /platform-api/v1/rankings/:metricId/:geoLevel` | Ranked list |
+| `GET /platform-api/v1/reports/:reportId` | Report data |
+| `GET /platform-api/v1/watchlist/:userId` | Watchlist items |
+
+**Rate Limiting:**
+- Send 25+ rapid requests → should get 429 after rate limit exceeded
+- Response should include rate limit headers
+
+**Response Envelope:**
+- All responses wrapped in `{ success: true, data: {...}, meta: {...} }` format
+- Error responses: `{ success: false, error: { code, message } }`
+
+### 12.3 API Key Management
+
+**Prerequisites:** Create an organization first or use an existing one.
+
+**Navigate to:** `/org/{slug}/admin/api-keys`
+
+**Key Lifecycle:**
+1. Click "Create API Key" → dialog opens
+2. Enter name, select scopes (metrics, scores, reports, watchlist)
+3. Submit → key displayed ONCE in a copy-able field
+4. Verify: Key starts with `piq_` prefix
+5. Copy the key → close dialog → key is no longer visible (one-time reveal)
+6. Key appears in list with name, scopes, created date, last used
+
+**Scope Enforcement:**
+- Create key with only "metrics" scope
+- Use key to call `/platform-api/v1/metrics/...` → 200
+- Use key to call `/platform-api/v1/scores/...` → 403 (out of scope)
+
+**Key Revocation:**
+- Click revoke on a key → confirm → key removed from list
+- Use revoked key → 401
+
+**Auth Guard:**
+- Invalid key format → 401
+- Missing header → 401
+- Expired/revoked key → 401
+
+### 12.4 Embeddable Widgets
+
+**Prerequisites:** Organization with branding configured.
+
+**Embed Token Management (`/org/{slug}/admin/embeds`):**
+1. Create embed token → dialog with type selection (score, metric-card, map)
+2. Token created → code snippet shown (copy-able `<iframe>` or `<script>` tag)
+3. Token appears in list with type, creation date, status
+
+**Widget Rendering (test in browser):**
+
+| Widget | URL | Verify |
+|---|---|---|
+| Score | `/embed/score/{geoLevel}/{geoId}?token={token}` | Score ring renders with correct value |
+| Metric Card | `/embed/metric-card/{metricId}/{geoLevel}/{geoId}?token={token}` | Metric value + formatting correct |
+| Mini Map | `/embed/map/{geoLevel}?token={token}` | Mapbox map renders with controls |
+
+**For each widget:**
+- Valid token → widget renders with data
+- Invalid/missing token → error state shown (not a crash)
+- Custom branding applied (logo, accent color from org branding)
+- Widget is self-contained (no navigation links to PropertyIQ app)
+
+**CORS Verification:**
+- Widget must be loadable in an `<iframe>` on a different domain
+- Check response headers for `Access-Control-Allow-Origin`
+
+### 12.5 Organization Branding
+
+**Navigate to:** `/org/{slug}/admin/branding`
+
+**Logo Upload:**
+- Upload PNG/JPG → preview updates → logo appears in branding preview
+- Upload SVG → should be REJECTED (XSS prevention)
+- Upload oversized file → should show error
+- Delete logo → preview reverts to default
+
+**Accent Color:**
+- Select color via picker → preview updates in real-time
+- Color applies to: embed widgets, branded report headers
+
+**Branding on Reports:**
+- Generate a report while org branding is configured
+- Report header should show custom logo and accent color
+- Shared report (via token) should also show branding
+
+### 12.6 Organization Admin Portal
+
+**Navigate through each sub-page and verify access control:**
+
+| Page | URL | Auth Required | Verify |
+|---|---|---|---|
+| Dashboard | `/org/{slug}/admin` | Org admin | Loads, shows org overview |
+| Billing | `/org/{slug}/admin/billing` | Org admin | Shows plan, checkout, portal links |
+| Members | `/org/{slug}/admin/members` | Org admin | Lists members, invite button, role change |
+| Branding | `/org/{slug}/admin/branding` | Org admin | Logo + color + preview (see 12.5) |
+| API Keys | `/org/{slug}/admin/api-keys` | Org admin | Key list + create (see 12.3) |
+| Audit | `/org/{slug}/admin/audit` | Org admin | Activity log with timestamps |
+| Embeds | `/org/{slug}/admin/embeds` | Org admin | Token list + create (see 12.4) |
+
+**Access Control Checks:**
+- Non-member accessing `/org/{slug}/admin` → should be blocked (403 or redirect)
+- Org member (non-admin) → can view branding but NOT create keys, invite members, or modify billing
+- Org admin → full access to all sub-pages
+
+**Member Management:**
+- Invite by email → invitation record created
+- Accept invite at `/org/invite/{token}` → user added to org
+- Change member role (admin ↔ member) → permissions update immediately
+- Remove member → member loses access
+
+**Organization Billing:**
+- View current plan
+- Checkout flow → Stripe (same pattern as individual billing)
+- Portal link → Stripe customer portal
+
+### 12.7 Enterprise Tier Gating Summary
+
+Verify these features are ONLY available at the correct tiers:
+
+| Feature | Free | Pro | Enterprise |
+|---|---|---|---|
+| CSV Export (map, markets) | Lock icon | Works | Works |
+| Market Dashboard Download | Lock icon | Print dialog | Print dialog |
+| Report Share Link | Works | Works | Works |
+| Report PDF Download | Works | Works | Works |
+| Report CSV Export | Disabled | Shows but disabled* | Shows but disabled* |
+| Platform API v1 | N/A | N/A | Via API keys |
+| API Key Management | N/A | N/A | Via org admin |
+| Embeddable Widgets | N/A | N/A | Via org admin |
+| Organization Branding | N/A | N/A | Via org admin |
+| Organization Admin Portal | N/A | N/A | Via org admin |
+
+*Report CSV disabled in V1 — `reportData` not yet wired. Verify button renders but does nothing.
+
+---
+
 ## Known Code-Level Issues
 
 **Submit ALL of these as `category: 'bug'` at the start of each testing session if not already tracked.**
@@ -701,6 +911,17 @@ All admin controllers now have `@UseGuards(AdminGuard)`. No outstanding P0 secur
 
 - `/blog` page.tsx now has full metadata export (title, description, OG, Twitter)
 - Protected routes now have `robots: { index: false }` via layout files
+
+### Enterprise Features (P2)
+
+| Issue | Where | Status |
+|---|---|---|
+| `CreateApiKeyDialog.tsx` is 382 lines (approaching 400-line hard limit) | `/org/[slug]/admin/api-keys` | Monitor |
+| `CreateEmbedDialog.tsx` is 374 lines (approaching 400-line hard limit) | `/org/[slug]/admin/embeds` | Monitor |
+| `MarketDashboard.tsx` is ~715 lines (over 400-line component limit) | `/market/[id]` | Header extraction deferred |
+| Report CSV export disabled — `reportData={null}` needs data flattening | ShareReportModal | Follow-up task |
+| Report share link expiry UI deferred (backend supports `expiresInDays`) | ShareReportModal | Follow-up task |
+| Platform API v1 rate limit response headers not documented | `/docs/api` | Add docs |
 
 ### Data Consistency (P2)
 
