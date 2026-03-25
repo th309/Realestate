@@ -88,9 +88,14 @@ export default function OrgAdminBilling() {
       const result = await createOrgBillingPortal(org.slug);
       window.location.href = result.portal_url;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to open billing portal",
-      );
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("No billing account") || msg.includes("subscription")) {
+        // User was manually upgraded — no Stripe customer yet.
+        // Redirect to pricing page to set up billing properly.
+        window.location.href = "/pricing?plan=enterprise";
+      } else {
+        setError(msg || "Failed to open billing portal");
+      }
       setPortalLoading(false);
     }
   }, [org]);
