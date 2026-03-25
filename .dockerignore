@@ -33,6 +33,7 @@ packages/*/coverage
 # Data and scripts (not needed for backend runtime)
 data
 scripts
+!scripts/postinstall-fix-types.js
 redfin_downloads
 PropertyIQ
 
