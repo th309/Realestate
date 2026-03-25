@@ -22,6 +22,8 @@ interface InviteTeamStepProps {
 }
 
 interface EmailEntry {
+  firstName: string;
+  lastName: string;
   email: string;
   status: "pending" | "sending" | "sent" | "error";
   error?: string;
@@ -33,7 +35,7 @@ export function InviteTeamStep({
   onBack,
 }: InviteTeamStepProps) {
   const [emails, setEmails] = useState<EmailEntry[]>([
-    { email: "", status: "pending" },
+    { firstName: "", lastName: "", email: "", status: "pending" },
   ]);
   const [sending, setSending] = useState(false);
 
@@ -44,17 +46,24 @@ export function InviteTeamStep({
 
   function addEmail() {
     if (atCapacity) return;
-    setEmails((prev) => [...prev, { email: "", status: "pending" }]);
+    setEmails((prev) => [
+      ...prev,
+      { firstName: "", lastName: "", email: "", status: "pending" },
+    ]);
   }
 
   function removeEmail(index: number) {
     setEmails((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function updateEmail(index: number, value: string) {
+  function updateField(
+    index: number,
+    field: "firstName" | "lastName" | "email",
+    value: string,
+  ) {
     setEmails((prev) =>
       prev.map((e, i) =>
-        i === index ? { ...e, email: value, status: "pending" as const } : e,
+        i === index ? { ...e, [field]: value, status: "pending" as const } : e,
       ),
     );
   }
@@ -77,7 +86,13 @@ export function InviteTeamStep({
       setEmails([...updated]);
 
       try {
-        await inviteOrgMember(orgSlug, entry.email.trim(), "member");
+        await inviteOrgMember(
+          orgSlug,
+          entry.email.trim(),
+          "member",
+          entry.firstName.trim() || undefined,
+          entry.lastName.trim() || undefined,
+        );
         updated[i] = { ...entry, status: "sent" };
       } catch (err: unknown) {
         updated[i] = {
@@ -133,34 +148,57 @@ export function InviteTeamStep({
       {/* Email inputs */}
       <div className="space-y-3 mb-4">
         {emails.map((entry, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="email"
-              value={entry.email}
-              onChange={(e) => updateEmail(i, e.target.value)}
-              placeholder="teammate@company.com"
-              disabled={sending || entry.status === "sent"}
-              className="flex-1 px-3 py-2 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-            {entry.status === "sent" && (
-              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-            )}
-            {entry.status === "sending" && (
-              <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
-            )}
-            {entry.status === "error" && (
-              <span title={entry.error}>
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-              </span>
-            )}
-            {entry.status === "pending" && emails.length > 1 && (
-              <button
-                onClick={() => removeEmail(i)}
-                className="p-1 text-on-surface-variant hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+          <div
+            key={i}
+            className="space-y-2 p-3 bg-surface rounded-lg border border-outline-variant/50"
+          >
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={entry.firstName}
+                onChange={(e) => updateField(i, "firstName", e.target.value)}
+                placeholder="First name"
+                disabled={sending || entry.status === "sent"}
+                className="flex-1 px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+              <input
+                type="text"
+                value={entry.lastName}
+                onChange={(e) => updateField(i, "lastName", e.target.value)}
+                placeholder="Last name"
+                disabled={sending || entry.status === "sent"}
+                className="flex-1 px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                value={entry.email}
+                onChange={(e) => updateField(i, "email", e.target.value)}
+                placeholder="teammate@company.com"
+                disabled={sending || entry.status === "sent"}
+                className="flex-1 px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+              {entry.status === "sent" && (
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+              )}
+              {entry.status === "sending" && (
+                <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+              )}
+              {entry.status === "error" && (
+                <span title={entry.error}>
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                </span>
+              )}
+              {entry.status === "pending" && emails.length > 1 && (
+                <button
+                  onClick={() => removeEmail(i)}
+                  className="p-1 text-on-surface-variant hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
