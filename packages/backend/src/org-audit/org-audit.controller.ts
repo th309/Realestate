@@ -37,6 +37,10 @@ export class OrgAuditController {
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit?: number,
     @Query('action') action?: AuditAction,
     @Query('target_type') targetType?: AuditTargetType,
+    @Query('action_prefix') actionPrefix?: string,
+    @Query('from') fromDate?: string,
+    @Query('to') toDate?: string,
+    @Query('actor_id') actorId?: string,
     @Req() req?: any,
   ) {
     const organizationId: string = req.org.id;
@@ -47,6 +51,10 @@ export class OrgAuditController {
       limit,
       action,
       targetType,
+      actionPrefix,
+      fromDate,
+      toDate,
+      actorId,
     });
   }
 }

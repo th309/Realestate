@@ -28,7 +28,8 @@ export type AuditAction =
   | 'branding_updated'
   | 'logo_uploaded'
   | 'logo_removed'
-  | 'ownership_transferred';
+  | 'ownership_transferred'
+  | 'org_downgraded';
 
 export type AuditTargetType =
   | 'organization'
@@ -54,6 +55,10 @@ export interface AuditQueryParams {
   limit?: number;
   action?: AuditAction;
   targetType?: AuditTargetType;
+  actionPrefix?: string;
+  fromDate?: string;
+  toDate?: string;
+  actorId?: string;
 }
 
 export interface AuditEntry {
@@ -141,6 +146,22 @@ export class OrgAuditService {
 
     if (params.targetType) {
       query = query.eq('target_type', params.targetType);
+    }
+
+    if (params.actionPrefix) {
+      query = query.like('action', `${params.actionPrefix}%`);
+    }
+
+    if (params.fromDate) {
+      query = query.gte('created_at', params.fromDate);
+    }
+
+    if (params.toDate) {
+      query = query.lte('created_at', `${params.toDate}T23:59:59.999Z`);
+    }
+
+    if (params.actorId) {
+      query = query.eq('actor_id', params.actorId);
     }
 
     const { data, error } = await query;
