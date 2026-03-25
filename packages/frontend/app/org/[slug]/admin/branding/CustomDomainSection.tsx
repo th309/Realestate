@@ -40,8 +40,9 @@ export function CustomDomainSection({
   const [cnameTarget, setCnameTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
-  const hasDomain = !!customSubdomain;
+  const hasDomain = !!customSubdomain && !editing;
   const isVerified =
     customDomainStatus === "active" && !!customDomainVerifiedAt;
   const isPending = hasDomain && !isVerified;
@@ -54,6 +55,7 @@ export function CustomDomainSection({
       const result = await setCustomDomain(slug, domainInput.trim());
       setCnameTarget(result.cname_target);
       setDomainInput("");
+      setEditing(false);
       onDomainChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add domain");
@@ -164,6 +166,10 @@ export function CustomDomainSection({
           busy={busy}
           onVerify={() => void handleVerifyDns()}
           onRemove={() => void handleRemoveDomain()}
+          onEdit={() => {
+            setDomainInput(customSubdomain);
+            setEditing(true);
+          }}
         />
       )}
 
@@ -174,6 +180,10 @@ export function CustomDomainSection({
           verifiedDate={verifiedDate}
           busy={busy}
           onRemove={() => void handleRemoveDomain()}
+          onEdit={() => {
+            setDomainInput(customSubdomain);
+            setEditing(true);
+          }}
         />
       )}
     </div>
@@ -190,12 +200,14 @@ function DomainPendingView({
   busy,
   onVerify,
   onRemove,
+  onEdit,
 }: {
   subdomain: string;
   cnameTarget: string;
   busy: boolean;
   onVerify: () => void;
   onRemove: () => void;
+  onEdit: () => void;
 }) {
   const subdomainPrefix = subdomain.split(".")[0] || subdomain;
 
@@ -254,12 +266,19 @@ function DomainPendingView({
           Verify DNS
         </button>
         <button
+          onClick={onEdit}
+          disabled={busy}
+          className="text-sm text-primary hover:text-primary/80 transition-colors"
+        >
+          Change Domain
+        </button>
+        <button
           onClick={onRemove}
           disabled={busy}
           className="text-sm text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          Remove Domain
+          Remove
         </button>
       </div>
     </div>
@@ -271,11 +290,13 @@ function DomainActiveView({
   verifiedDate,
   busy,
   onRemove,
+  onEdit,
 }: {
   subdomain: string;
   verifiedDate: string | null;
   busy: boolean;
   onRemove: () => void;
+  onEdit: () => void;
 }) {
   return (
     <div className="space-y-3">
@@ -297,14 +318,23 @@ function DomainActiveView({
         </p>
       )}
 
-      <button
-        onClick={onRemove}
-        disabled={busy}
-        className="text-sm text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-        Remove Domain
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onEdit}
+          disabled={busy}
+          className="text-sm text-primary hover:text-primary/80 transition-colors"
+        >
+          Change Domain
+        </button>
+        <button
+          onClick={onRemove}
+          disabled={busy}
+          className="text-sm text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Remove
+        </button>
+      </div>
     </div>
   );
 }
