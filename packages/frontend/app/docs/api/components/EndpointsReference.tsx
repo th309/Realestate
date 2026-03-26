@@ -7,8 +7,33 @@ import { EndpointSection } from "./EndpointSection";
 export function EndpointsReference() {
   return (
     <div className="space-y-6">
+      {/* Health */}
+      <EndpointSection
+        id="endpoint-health"
+        method="GET"
+        path="/api/v1/health"
+        description="Verify your API key is working. Returns your organization name, active scopes, rate limit, and key expiration. This endpoint does not count against your rate limit — use it freely for debugging."
+        scope="(any valid key)"
+        curlExample={`curl -H "Authorization: Bearer YOUR_API_KEY" \\
+  https://backend-production-ee4d.up.railway.app/api/v1/health`}
+        responseExample={`{
+  "data": {
+    "status": "ok",
+    "organization": "Acme Realty Group",
+    "scopes": ["scores:read", "metrics:read"],
+    "rate_limit_rpm": 120,
+    "expires_at": null
+  },
+  "meta": {
+    "request_id": "req_7f3a2b1c",
+    "timestamp": "2026-03-26T12:00:00Z"
+  }
+}`}
+      />
+
       {/* Scores */}
       <EndpointSection
+        id="endpoint-scores"
         method="GET"
         path="/api/v1/scores/:geoLevel/:geoId"
         description="Retrieve all PropertyIQ scores (HomeReady, InvestorEdge, Market Health) for a single geography."
@@ -69,6 +94,7 @@ export function EndpointsReference() {
 
       {/* Metrics */}
       <EndpointSection
+        id="endpoint-metrics"
         method="GET"
         path="/api/v1/metrics/:metricId/:geoLevel"
         description="Get current values for a metric across all regions at the specified geography level. Results are paginated."
@@ -121,6 +147,7 @@ export function EndpointsReference() {
 
       {/* Time Series */}
       <EndpointSection
+        id="endpoint-timeseries"
         method="GET"
         path="/api/v1/timeseries/:metricId/:geoLevel/:geoId"
         description="Get historical time series data for a metric in a specific region."
@@ -156,6 +183,7 @@ export function EndpointsReference() {
 
       {/* Rankings */}
       <EndpointSection
+        id="endpoint-rankings"
         method="GET"
         path="/api/v1/rankings/:scoreType/:geoLevel"
         description="Get ranked market leaderboards by score type. Returns the top markets ordered by score."
@@ -185,6 +213,7 @@ export function EndpointsReference() {
 
       {/* Reports */}
       <EndpointSection
+        id="endpoint-reports"
         method="POST"
         path="/api/v1/reports"
         description="Trigger generation of a new market report. Report generation is asynchronous — poll the returned ID for status."
@@ -272,6 +301,7 @@ export function EndpointsReference() {
 
       {/* Watchlist */}
       <EndpointSection
+        id="endpoint-watchlist"
         method="GET"
         path="/api/v1/watchlist"
         description="List all markets on your organization's watchlist."

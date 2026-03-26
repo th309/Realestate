@@ -8,6 +8,7 @@ interface QueryParam {
 }
 
 interface EndpointSectionProps {
+  id?: string;
   method: "GET" | "POST" | "DELETE" | "PUT" | "PATCH";
   path: string;
   description: string;
@@ -31,6 +32,7 @@ const METHOD_COLORS: Record<string, string> = {
  * Renders method badge, path, params table, and code examples.
  */
 export function EndpointSection({
+  id,
   method,
   path,
   description,
@@ -41,7 +43,10 @@ export function EndpointSection({
   bodyParams,
 }: EndpointSectionProps) {
   return (
-    <div className="border border-outline-variant rounded-xl overflow-hidden">
+    <div
+      id={id}
+      className="border border-outline-variant rounded-xl overflow-hidden"
+    >
       {/* Endpoint header */}
       <div className="bg-surface-container-low px-5 py-4 flex items-center gap-3 flex-wrap">
         <span
