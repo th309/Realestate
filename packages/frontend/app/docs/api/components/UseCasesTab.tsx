@@ -1,8 +1,19 @@
-'use client';
+"use client";
 
-import { FileText, Code, Table, Bell, BarChart3 } from 'lucide-react';
-import { UseCaseCard } from './UseCaseCard';
-import { CodeTabs } from './CodeTabs';
+import {
+  FileText,
+  Code,
+  Table,
+  Bell,
+  BarChart3,
+  Mail,
+  Globe,
+  TrendingUp,
+  MessageSquare,
+  Plug,
+} from "lucide-react";
+import { UseCaseCard } from "./UseCaseCard";
+import { CodeTabs } from "./CodeTabs";
 
 /* -------------------------------------------------------------------------- */
 /* Use Case 1 — Auto-Generate Reports                                          */
@@ -213,6 +224,311 @@ const comparison = {
 console.log(comparison);
 // { markets: [...], winner: "90210", scoreDiff: 14 }`;
 
+/* -------------------------------------------------------------------------- */
+/* Use Case 6 — Monthly Market Newsletter                                      */
+/* -------------------------------------------------------------------------- */
+
+const NEWSLETTER_JS = `const API_KEY = process.env.PROPERTYIQ_API_KEY;
+const BASE = 'https://backend-production-ee4d.up.railway.app';
+
+// Step 1: Fetch top movers from rankings
+const rankingsRes = await fetch(
+  \`\${BASE}/api/v1/rankings/homeready/zip?limit=5&sort=score_change_desc\`,
+  { headers: { Authorization: \`Bearer \${API_KEY}\` } }
+);
+const { data: topMovers } = await rankingsRes.json();
+
+// Step 2: Pull key metrics for each market
+const marketData = await Promise.all(
+  topMovers.map(async (market) => {
+    const metricsRes = await fetch(
+      \`\${BASE}/api/v1/metrics/home_value/zip/\${market.geo_id}\`,
+      { headers: { Authorization: \`Bearer \${API_KEY}\` } }
+    );
+    const metrics = await metricsRes.json();
+    return { ...market, homeValue: metrics.data.value };
+  })
+);
+
+// Step 3: Format into an HTML email snippet
+const rows = marketData
+  .map(
+    (m) => \`<tr>
+  <td>\${m.geo_id}</td>
+  <td>\${m.score}</td>
+  <td>\${m.score_change > 0 ? '+' : ''}\${m.score_change}</td>
+  <td>$\${(m.homeValue / 1000).toFixed(0)}K</td>
+</tr>\`
+  )
+  .join('\\n');
+
+const emailHtml = \`<h2>Top Markets This Month</h2>
+<table>
+  <thead><tr><th>ZIP</th><th>Score</th><th>Change</th><th>Home Value</th></tr></thead>
+  <tbody>\${rows}</tbody>
+</table>\`;
+
+// Step 4: Send via your email provider (Resend example)
+await fetch('https://api.resend.com/emails', {
+  method: 'POST',
+  headers: {
+    Authorization: \`Bearer \${process.env.RESEND_API_KEY}\`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    from: 'you@yourdomain.com',
+    to: 'subscriber@example.com',
+    subject: 'Your Monthly Market Update',
+    html: emailHtml,
+  }),
+});`;
+
+/* -------------------------------------------------------------------------- */
+/* Use Case 7 — Website Market Pages                                           */
+/* -------------------------------------------------------------------------- */
+
+const MARKET_PAGES_JS = `const API_KEY = process.env.PROPERTYIQ_API_KEY;
+const BASE = 'https://backend-production-ee4d.up.railway.app';
+
+async function buildMarketPageData(zip: string) {
+  const [scoreRes, homeValueRes, daysOnMarketRes] = await Promise.all([
+    fetch(\`\${BASE}/api/v1/scores/zip/\${zip}\`,
+      { headers: { Authorization: \`Bearer \${API_KEY}\` } }),
+    fetch(\`\${BASE}/api/v1/metrics/home_value/zip/\${zip}\`,
+      { headers: { Authorization: \`Bearer \${API_KEY}\` } }),
+    fetch(\`\${BASE}/api/v1/metrics/days_on_market/zip/\${zip}\`,
+      { headers: { Authorization: \`Bearer \${API_KEY}\` } }),
+  ]);
+
+  const score = await scoreRes.json();
+  const homeValue = await homeValueRes.json();
+  const dom = await daysOnMarketRes.json();
+
+  return {
+    zip,
+    score: score.score,
+    label: score.label,
+    homeValue: homeValue.data.value,
+    daysOnMarket: dom.data.value,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// Render as an HTML section for your site
+function renderMarketSection(data) {
+  return \`
+<section class="market-snapshot" data-zip="\${data.zip}">
+  <h2>Market Overview — \${data.zip}</h2>
+  <div class="score-ring">\${data.score} <span>\${data.label}</span></div>
+  <ul>
+    <li>Median Home Value: $\${(data.homeValue / 1000).toFixed(0)}K</li>
+    <li>Avg Days on Market: \${data.daysOnMarket}</li>
+    <li>Last updated: \${data.updatedAt}</li>
+  </ul>
+</section>\`;
+}
+
+// Usage: call once per market you serve, cache the output for 24 hours
+const data = await buildMarketPageData('90210');
+const html = renderMarketSection(data);`;
+
+/* -------------------------------------------------------------------------- */
+/* Use Case 8 — Investor Pipeline Scoring                                      */
+/* -------------------------------------------------------------------------- */
+
+const PIPELINE_JS = `const API_KEY = process.env.PROPERTYIQ_API_KEY;
+const BASE = 'https://backend-production-ee4d.up.railway.app';
+
+// Your investor watchlist
+const watchlist = ['90210', '10001', '60601', '77001', '85001'];
+
+// Fetch InvestorEdge rankings and filter to watchlist
+const res = await fetch(
+  \`\${BASE}/api/v1/rankings/investoredge/zip\`,
+  { headers: { Authorization: \`Bearer \${API_KEY}\` } }
+);
+const { data: allRankings } = await res.json();
+
+const pipeline = allRankings
+  .filter((r) => watchlist.includes(r.geo_id))
+  .sort((a, b) => b.score - a.score)
+  .map((r, i) => ({
+    rank: i + 1,
+    zip: r.geo_id,
+    score: r.score,
+    label: r.label,
+    scoreChange: r.score_change,
+  }));
+
+console.table(pipeline);
+// ┌─────┬───────┬───────┬───────────┬─────────────┐
+// │rank │ zip   │ score │ label     │ scoreChange │
+// ├─────┼───────┼───────┼───────────┼─────────────┤
+// │  1  │ 60601 │  84   │ GREAT     │    +3       │
+// │  2  │ 90210 │  76   │ GOOD      │    -1       │
+// └─────┴───────┴───────┴───────────┴─────────────┘`;
+
+const PIPELINE_PYTHON = `import requests
+
+API_KEY = "YOUR_API_KEY"
+BASE = "https://backend-production-ee4d.up.railway.app"
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
+
+watchlist = {"90210", "10001", "60601", "77001", "85001"}
+
+resp = requests.get(f"{BASE}/api/v1/rankings/investoredge/zip", headers=HEADERS)
+all_rankings = resp.json()["data"]
+
+pipeline = sorted(
+    [r for r in all_rankings if r["geo_id"] in watchlist],
+    key=lambda r: r["score"],
+    reverse=True,
+)
+
+for i, r in enumerate(pipeline, 1):
+    print(f"{i}. ZIP {r['geo_id']} — score {r['score']} ({r['label']}) "
+          f"{'↑' if r['score_change'] > 0 else '↓'}{abs(r['score_change'])}")`;
+
+/* -------------------------------------------------------------------------- */
+/* Use Case 9 — Slack/Teams Market Alerts                                     */
+/* -------------------------------------------------------------------------- */
+
+const SLACK_JS = `const API_KEY = process.env.PROPERTYIQ_API_KEY;
+const BASE = 'https://backend-production-ee4d.up.railway.app';
+const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK_URL; // from Slack App settings
+
+const markets = ['90210', '10001', '60601'];
+
+const snapshots = await Promise.all(
+  markets.map(async (zip) => {
+    const res = await fetch(\`\${BASE}/api/v1/scores/zip/\${zip}\`,
+      { headers: { Authorization: \`Bearer \${API_KEY}\` } });
+    return { zip, ...(await res.json()) };
+  })
+);
+
+// Build Slack Block Kit message
+const blocks = [
+  {
+    type: 'header',
+    text: { type: 'plain_text', text: '📊 Daily Market Summary' },
+  },
+  ...snapshots.map((m) => ({
+    type: 'section',
+    fields: [
+      { type: 'mrkdwn', text: \`*ZIP \${m.zip}*\` },
+      { type: 'mrkdwn', text: \`Score: *\${m.score}* (\${m.label})\` },
+    ],
+  })),
+];
+
+await fetch(SLACK_WEBHOOK, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ blocks }),
+});`;
+
+/* -------------------------------------------------------------------------- */
+/* Use Case 10 — Connect to Your CRM or Dashboard                             */
+/* -------------------------------------------------------------------------- */
+
+const CRM_JS = `import axios from 'axios';
+
+const client = axios.create({
+  baseURL: 'https://backend-production-ee4d.up.railway.app/api/v1',
+  headers: { Authorization: \`Bearer \${process.env.PROPERTYIQ_API_KEY}\` },
+});
+
+// Retry wrapper with exponential backoff
+async function fetchWithRetry(url, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await client.get(url);
+
+      // Respect rate limit headers
+      const remaining = Number(res.headers['x-ratelimit-remaining'] ?? 100);
+      if (remaining < 10) {
+        const resetAt = Number(res.headers['x-ratelimit-reset'] ?? 0) * 1000;
+        const waitMs = Math.max(0, resetAt - Date.now());
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+
+      return res.data;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const isRetryable = err.response?.status === 429 || err.response?.status >= 500;
+      if (!isRetryable) throw err;
+      // Exponential backoff: 1s, 2s, 4s
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+}
+
+// Cursor-based pagination — fetch all pages
+async function fetchAllPages(endpoint) {
+  const results = [];
+  let cursor = undefined;
+  do {
+    const url = cursor ? \`\${endpoint}?cursor=\${cursor}\` : endpoint;
+    const page = await fetchWithRetry(url);
+    results.push(...page.data);
+    cursor = page.next_cursor; // null when no more pages
+  } while (cursor);
+  return results;
+}
+
+// Usage
+const allZipScores = await fetchAllPages('/rankings/homeready/zip');
+console.log(\`Fetched \${allZipScores.length} markets\`);`;
+
+const CRM_PYTHON = `import time
+import requests
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+
+API_KEY = "YOUR_API_KEY"
+BASE = "https://backend-production-ee4d.up.railway.app/api/v1"
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
+
+def is_retryable(exc):
+    return (
+        isinstance(exc, requests.HTTPError)
+        and exc.response.status_code in {429, 500, 502, 503, 504}
+    )
+
+@retry(
+    stop=stop_after_attempt(4),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    retry=retry_if_exception(is_retryable),
+)
+def fetch_with_retry(url: str) -> dict:
+    resp = requests.get(url, headers=HEADERS)
+    resp.raise_for_status()
+
+    # Respect rate limit headers
+    remaining = int(resp.headers.get("x-ratelimit-remaining", 100))
+    if remaining < 10:
+        reset_at = int(resp.headers.get("x-ratelimit-reset", 0))
+        wait_for = max(0, reset_at - time.time())
+        time.sleep(wait_for)
+
+    return resp.json()
+
+def fetch_all_pages(endpoint: str) -> list:
+    """Cursor-based pagination — fetches all pages automatically."""
+    results = []
+    cursor = None
+    while True:
+        url = f"{BASE}{endpoint}" + (f"?cursor={cursor}" if cursor else "")
+        page = fetch_with_retry(url)
+        results.extend(page["data"])
+        cursor = page.get("next_cursor")
+        if not cursor:
+            break
+    return results
+
+all_zip_scores = fetch_all_pages("/rankings/homeready/zip")
+print(f"Fetched {len(all_zip_scores)} markets")`;
+
 const COMPARE_PYTHON = `import asyncio
 import aiohttp
 
@@ -280,9 +596,13 @@ export function UseCasesTab() {
         </h4>
         <CodeTabs
           examples={[
-            { language: 'bash', label: 'curl', code: REPORT_POST_CURL },
-            { language: 'javascript', label: 'JavaScript', code: REPORT_POST_JS },
-            { language: 'python', label: 'Python', code: REPORT_POST_PYTHON },
+            { language: "bash", label: "curl", code: REPORT_POST_CURL },
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: REPORT_POST_JS,
+            },
+            { language: "python", label: "Python", code: REPORT_POST_PYTHON },
           ]}
         />
 
@@ -291,9 +611,13 @@ export function UseCasesTab() {
         </h4>
         <CodeTabs
           examples={[
-            { language: 'bash', label: 'curl', code: REPORT_POLL_CURL },
-            { language: 'javascript', label: 'JavaScript', code: REPORT_POLL_JS },
-            { language: 'python', label: 'Python', code: REPORT_POLL_PYTHON },
+            { language: "bash", label: "curl", code: REPORT_POLL_CURL },
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: REPORT_POLL_JS,
+            },
+            { language: "python", label: "Python", code: REPORT_POLL_PYTHON },
           ]}
         />
 
@@ -323,8 +647,8 @@ export function UseCasesTab() {
         <p>
           The simplest option. PropertyIQ provides pre-built embed widgets you
           can drop into any page. No API key, no code — just copy the embed
-          snippet from your{' '}
-          <span className="font-medium text-primary">Admin → API Keys</span>{' '}
+          snippet from your{" "}
+          <span className="font-medium text-primary">Admin → API Keys</span>{" "}
           panel and paste it into your site&apos;s HTML block.
         </p>
         <p className="text-xs text-on-surface-variant">
@@ -352,7 +676,11 @@ export function UseCasesTab() {
         </h4>
         <CodeTabs
           examples={[
-            { language: 'javascript', label: 'JavaScript', code: EMBED_FETCH_JS },
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: EMBED_FETCH_JS,
+            },
           ]}
         />
 
@@ -361,7 +689,11 @@ export function UseCasesTab() {
         </h4>
         <CodeTabs
           examples={[
-            { language: 'javascript', label: 'JavaScript', code: EMBED_RENDER_JS },
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: EMBED_RENDER_JS,
+            },
           ]}
         />
       </UseCaseCard>
@@ -382,15 +714,30 @@ export function UseCasesTab() {
         <h4 className="text-sm font-medium text-on-surface">Steps</h4>
         <ol className="list-decimal list-inside space-y-1 text-sm">
           <li>Open your Google Sheet</li>
-          <li>Click <strong>Extensions → Apps Script</strong></li>
-          <li>Paste the script below, replace <code className="text-xs bg-surface-container px-1 py-0.5 rounded">YOUR_API_KEY</code>, and save</li>
+          <li>
+            Click <strong>Extensions → Apps Script</strong>
+          </li>
+          <li>
+            Paste the script below, replace{" "}
+            <code className="text-xs bg-surface-container px-1 py-0.5 rounded">
+              YOUR_API_KEY
+            </code>
+            , and save
+          </li>
           <li>Run it once manually to grant permissions</li>
-          <li>Set a trigger: <strong>Triggers → Add trigger → Time-driven → Daily</strong></li>
+          <li>
+            Set a trigger:{" "}
+            <strong>Triggers → Add trigger → Time-driven → Daily</strong>
+          </li>
         </ol>
 
         <CodeTabs
           examples={[
-            { language: 'javascript', label: 'Apps Script', code: SHEETS_SCRIPT },
+            {
+              language: "javascript",
+              label: "Apps Script",
+              code: SHEETS_SCRIPT,
+            },
           ]}
         />
 
@@ -423,7 +770,7 @@ export function UseCasesTab() {
         </p>
         <CodeTabs
           examples={[
-            { language: 'javascript', label: 'JavaScript', code: ALERTS_JS },
+            { language: "javascript", label: "JavaScript", code: ALERTS_JS },
           ]}
         />
 
@@ -432,14 +779,14 @@ export function UseCasesTab() {
         </h4>
         <CodeTabs
           examples={[
-            { language: 'bash', label: 'Zapier steps', code: ALERTS_ZAPIER },
+            { language: "bash", label: "Zapier steps", code: ALERTS_ZAPIER },
           ]}
         />
 
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
-          💡 Your clients get &quot;Your market just improved to 82&quot; without
-          having to ask. A simple retention tool that takes 15 minutes to set
-          up.
+          💡 Your clients get &quot;Your market just improved to 82&quot;
+          without having to ask. A simple retention tool that takes 15 minutes
+          to set up.
         </div>
       </UseCaseCard>
 
@@ -463,14 +810,238 @@ export function UseCasesTab() {
 
         <CodeTabs
           examples={[
-            { language: 'javascript', label: 'JavaScript', code: COMPARE_JS },
-            { language: 'python', label: 'Python', code: COMPARE_PYTHON },
+            { language: "javascript", label: "JavaScript", code: COMPARE_JS },
+            { language: "python", label: "Python", code: COMPARE_PYTHON },
           ]}
         />
 
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
-          💡 Extend this by fetching multiple metrics (days on market, list-to-sale
-          ratio, rent yield) for a richer side-by-side comparison table.
+          💡 Extend this by fetching multiple metrics (days on market,
+          list-to-sale ratio, rent yield) for a richer side-by-side comparison
+          table.
+        </div>
+      </UseCaseCard>
+
+      {/* Use Case 6 */}
+      <UseCaseCard
+        title="Monthly Market Newsletter"
+        description="Auto-generate a monthly market update email for your sphere — no manual data gathering."
+        difficulty="Intermediate"
+        setupTime="20 min"
+        icon={<Mail className="w-5 h-5" />}
+      >
+        <p>
+          Fetch the top-moving markets from the rankings endpoint, pull key
+          metrics for each, format them into an HTML table, and send via your
+          email provider. Schedule this to run on the first of each month.
+        </p>
+
+        <h4 className="text-sm font-medium text-on-surface">Steps</h4>
+        <ol className="list-decimal list-inside space-y-1 text-sm">
+          <li>Fetch top movers from the rankings endpoint</li>
+          <li>Pull home value metrics for each market in parallel</li>
+          <li>Format into an HTML email table</li>
+          <li>Send via Mailchimp, Resend, or SendGrid API</li>
+        </ol>
+
+        <CodeTabs
+          examples={[
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: NEWSLETTER_JS,
+            },
+          ]}
+        />
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          💡 Creating newsletter content is the bottleneck — this automates the
+          data portion. Pair with a template in your email provider and you have
+          a fully automated monthly touch point.
+        </div>
+      </UseCaseCard>
+
+      {/* Use Case 7 */}
+      <UseCaseCard
+        title="Website Market Pages"
+        description="Create dynamic market pages on your site that update automatically — no stale screenshots."
+        difficulty="Advanced"
+        setupTime="30 min"
+        icon={<Globe className="w-5 h-5" />}
+      >
+        <p>
+          For each market you serve, fetch scores and key metrics, then render a
+          page section. Cache the output for 24 hours so each visitor gets fast
+          load times while data stays fresh.
+        </p>
+
+        <CodeTabs
+          examples={[
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: MARKET_PAGES_JS,
+            },
+          ]}
+        />
+
+        <p className="text-xs text-on-surface-variant">
+          Works with: any site builder that supports custom code or a headless
+          CMS — Next.js, Webflow, WordPress with custom templates, etc.
+        </p>
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          💡 SEO-friendly, always-fresh content — your market page always shows
+          current data. Google indexes these pages and ranks them for
+          &quot;[city] housing market&quot; searches.
+        </div>
+      </UseCaseCard>
+
+      {/* Use Case 8 */}
+      <UseCaseCard
+        title="Investor Pipeline Scoring"
+        description="Score every market in your pipeline and rank them — one API call replaces hours of research."
+        difficulty="Intermediate"
+        setupTime="15 min"
+        icon={<TrendingUp className="w-5 h-5" />}
+      >
+        <p>
+          Fetch the InvestorEdge rankings endpoint, filter to your watchlist
+          ZIPs, and sort by score. The result is a ranked table you can paste
+          into a report or feed into your CRM.
+        </p>
+
+        <CodeTabs
+          examples={[
+            {
+              language: "javascript",
+              label: "JavaScript",
+              code: PIPELINE_JS,
+            },
+            { language: "python", label: "Python", code: PIPELINE_PYTHON },
+          ]}
+        />
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          💡 Investor-focused brokerages managing portfolios across many markets
+          use this to automate the analysis — what used to take hours of manual
+          research runs in seconds.
+        </div>
+      </UseCaseCard>
+
+      {/* Use Case 9 */}
+      <UseCaseCard
+        title="Slack / Teams Market Alerts"
+        description="Get a daily market summary posted to your team's Slack channel automatically."
+        difficulty="Intermediate"
+        setupTime="15 min"
+        icon={<MessageSquare className="w-5 h-5" />}
+      >
+        <p>
+          Fetch scores for your tracked markets, format a Slack Block Kit
+          message, and POST to an incoming webhook URL. Schedule it daily so the
+          whole team starts the morning with fresh market data.
+        </p>
+
+        <h4 className="text-sm font-medium text-on-surface">Steps</h4>
+        <ol className="list-decimal list-inside space-y-1 text-sm">
+          <li>
+            Create a Slack app at{" "}
+            <span className="font-medium">api.slack.com/apps</span> and add an
+            Incoming Webhook
+          </li>
+          <li>Copy the webhook URL into your environment variables</li>
+          <li>Deploy the script on Railway or any cron host</li>
+          <li>Schedule it daily (e.g., 8 AM)</li>
+        </ol>
+
+        <CodeTabs
+          examples={[
+            { language: "javascript", label: "JavaScript", code: SLACK_JS },
+          ]}
+        />
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          💡 Keeps the whole team informed without anyone having to open the
+          dashboard. Works the same way with Microsoft Teams — replace the Slack
+          webhook with a Teams incoming webhook URL.
+        </div>
+      </UseCaseCard>
+
+      {/* Use Case 10 */}
+      <UseCaseCard
+        title="Connect to Your CRM or Dashboard"
+        description="Feed PropertyIQ data into your internal tools with production-grade reliability."
+        difficulty="Advanced"
+        setupTime="30 min"
+        icon={<Plug className="w-5 h-5" />}
+      >
+        <p>
+          This is the developer-focused integration pattern. Covers auth,
+          pagination, retry logic, and rate limit handling — everything you need
+          for a reliable production integration.
+        </p>
+
+        <h4 className="text-sm font-medium text-on-surface">
+          Key patterns covered
+        </h4>
+        <ul className="list-disc list-inside space-y-1 text-sm">
+          <li>
+            <strong>Auth:</strong> Pass{" "}
+            <code className="text-xs bg-surface-container px-1 py-0.5 rounded">
+              Authorization: Bearer YOUR_API_KEY
+            </code>{" "}
+            on every request
+          </li>
+          <li>
+            <strong>Pagination:</strong> Cursor-based —{" "}
+            <code className="text-xs bg-surface-container px-1 py-0.5 rounded">
+              next_cursor
+            </code>{" "}
+            is null on the last page
+          </li>
+          <li>
+            <strong>Retry logic:</strong> Exponential backoff on 429 and 5xx
+            responses
+          </li>
+          <li>
+            <strong>Rate limits:</strong> Read{" "}
+            <code className="text-xs bg-surface-container px-1 py-0.5 rounded">
+              x-ratelimit-remaining
+            </code>{" "}
+            — back off when below 10
+          </li>
+          <li>
+            <strong>Caching:</strong> Cache scores for 1 hour, metric snapshots
+            for 24 hours
+          </li>
+        </ul>
+
+        <CodeTabs
+          examples={[
+            {
+              language: "javascript",
+              label: "JavaScript (axios)",
+              code: CRM_JS,
+            },
+            {
+              language: "python",
+              label: "Python (tenacity)",
+              code: CRM_PYTHON,
+            },
+          ]}
+        />
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          💡 The Python example uses{" "}
+          <code className="text-xs bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded">
+            tenacity
+          </code>{" "}
+          for declarative retry logic —{" "}
+          <code className="text-xs bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded">
+            pip install tenacity
+          </code>
+          .
         </div>
       </UseCaseCard>
     </div>
