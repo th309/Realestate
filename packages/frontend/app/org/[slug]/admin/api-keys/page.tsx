@@ -113,7 +113,8 @@ export default function OrgAdminApiKeys() {
             API access is not enabled for your organization
           </p>
           <p className="text-sm text-on-surface-variant mt-2">
-            Contact support to enable programmatic access to PropertyIQ data.
+            API access is available on Enterprise plans. Contact your account
+            manager to enable it.
           </p>
         </div>
       </div>
@@ -171,7 +172,9 @@ export default function OrgAdminApiKeys() {
             No API keys yet
           </p>
           <p className="text-sm text-on-surface-variant mt-2">
-            Create one to access PropertyIQ data programmatically.
+            API keys let you pull PropertyIQ data into your website,
+            spreadsheets, CRM, and automations. Create your first key to get
+            started.
           </p>
           <button
             onClick={() => setCreateOpen(true)}
@@ -180,6 +183,12 @@ export default function OrgAdminApiKeys() {
             <Plus className="w-4 h-4" />
             Create Key
           </button>
+          <a
+            href="/docs/api#getting-started"
+            className="text-xs text-primary hover:underline mt-2 inline-block"
+          >
+            Learn what you can build with the API →
+          </a>
         </div>
       ) : (
         <div className="space-y-4">
