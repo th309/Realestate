@@ -5,143 +5,181 @@ import React from "react";
 type Shape = "square" | "horizontal" | "vertical";
 
 /* ------------------------------------------------------------------ */
-/*  Score Widget Mockup                                               */
+/*  Score Widget Mockup                                                */
 /* ------------------------------------------------------------------ */
 
 export function ScoreMockup({ shape }: { shape: Shape }) {
+  const ringSize = shape === "horizontal" ? "w-20 h-20" : "w-24 h-24";
+
   const ring = (
-    <div className="relative flex items-center justify-center">
-      {/* Outer ring */}
-      <svg viewBox="0 0 80 80" className="w-16 h-16">
+    <div className="relative flex-shrink-0">
+      <svg viewBox="0 0 100 100" className={ringSize}>
         <circle
-          cx="40"
-          cy="40"
-          r="34"
+          cx="50"
+          cy="50"
+          r="42"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          className="text-outline-variant/30"
+          stroke="#e5e7eb"
+          strokeWidth="4"
         />
         <circle
-          cx="40"
-          cy="40"
-          r="34"
+          cx="50"
+          cy="50"
+          r="42"
           fill="none"
-          stroke="url(#scoreGrad)"
-          strokeWidth="4"
-          strokeDasharray="171"
-          strokeDashoffset="30"
+          stroke="url(#scoreG)"
+          strokeWidth="5"
+          strokeDasharray={`${0.82 * 264} ${264}`}
           strokeLinecap="round"
-          transform="rotate(-90 40 40)"
+          transform="rotate(-90 50 50)"
+        />
+        {/* Tick marks at 33% and 66% */}
+        <line
+          x1="50"
+          y1="6"
+          x2="50"
+          y2="12"
+          stroke="#94a3b8"
+          strokeWidth="1.5"
+          transform="rotate(119 50 50)"
+        />
+        <line
+          x1="50"
+          y1="6"
+          x2="50"
+          y2="12"
+          stroke="#94a3b8"
+          strokeWidth="1.5"
+          transform="rotate(238 50 50)"
         />
         <defs>
-          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#16a34a" />
+          <linearGradient id="scoreG" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="50%" stopColor="#eab308" />
+            <stop offset="100%" stopColor="#22c55e" />
           </linearGradient>
         </defs>
         <text
-          x="40"
-          y="43"
+          x="50"
+          y="48"
           textAnchor="middle"
-          className="fill-on-surface text-[18px] font-bold"
+          fontSize="22"
+          fontWeight="700"
+          fill="#1e293b"
         >
           82
         </text>
+        <text
+          x="50"
+          y="62"
+          textAnchor="middle"
+          fontSize="8"
+          fontWeight="600"
+          fill="#16a34a"
+          letterSpacing="1"
+        >
+          GREAT
+        </text>
       </svg>
-      {/* Confidence badge */}
-      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white">
+      <span className="absolute -top-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-sm">
         A
       </span>
     </div>
   );
 
-  const details = (
-    <div className="flex flex-col gap-0.5 text-center">
-      <span className="text-[10px] font-medium tracking-wide text-on-surface-variant uppercase">
-        HomeReady Score
-      </span>
-      <span className="text-[10px] font-medium text-emerald-600 uppercase">
-        Great
-      </span>
+  const breakdown = (
+    <div className="flex flex-col gap-1.5 w-full">
+      {[
+        { label: "Affordability", pct: 78, color: "bg-emerald-500" },
+        { label: "Growth", pct: 85, color: "bg-blue-500" },
+        { label: "Stability", pct: 68, color: "bg-amber-500" },
+        { label: "Supply/Demand", pct: 72, color: "bg-violet-500" },
+      ].map(({ label, pct, color }) => (
+        <div key={label} className="flex items-center gap-2">
+          <span className="text-[10px] text-on-surface-variant w-20 text-right truncate">
+            {label}
+          </span>
+          <div className="flex-1 h-2 rounded-full bg-outline-variant/20 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${color}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-[10px] font-medium text-on-surface w-6">
+            {pct}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const location = (
+    <div className="text-[11px] text-on-surface-variant">
+      Dallas-Fort Worth, TX
     </div>
   );
 
   if (shape === "horizontal") {
     return (
-      <div className="flex items-center gap-4 h-full w-full justify-center">
+      <div className="flex items-center gap-5 h-full w-full px-4 py-3">
         {ring}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-medium text-on-surface">
-            HomeReady Score
-          </span>
-          <span className="text-[10px] font-medium text-emerald-600 uppercase">
-            Great
-          </span>
-          <span className="text-[10px] text-on-surface-variant mt-1">
-            Dallas-Fort Worth, TX
-          </span>
+        <div className="flex flex-col gap-2 flex-1 min-w-0">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm font-semibold text-on-surface">
+              HomeReady Score
+            </span>
+            {location}
+          </div>
+          {breakdown}
         </div>
       </div>
     );
   }
 
+  if (shape === "vertical") {
+    return (
+      <div className="flex flex-col items-center gap-3 h-full w-full px-4 py-4">
+        <span className="text-xs font-semibold text-on-surface tracking-wide">
+          HomeReady Score
+        </span>
+        {ring}
+        {location}
+        <div className="w-full mt-auto">{breakdown}</div>
+      </div>
+    );
+  }
+
+  // Square
   return (
-    <div className="flex flex-col items-center justify-center gap-2 h-full w-full">
+    <div className="flex flex-col items-center justify-center gap-2 h-full w-full p-3">
+      <span className="text-xs font-semibold text-on-surface tracking-wide">
+        HomeReady Score
+      </span>
       {ring}
-      {details}
-      {shape === "vertical" && (
-        <div className="mt-1 flex flex-col gap-1 w-full px-3">
-          {[
-            { label: "Affordability", pct: 78 },
-            { label: "Growth", pct: 85 },
-            { label: "Stability", pct: 68 },
-          ].map(({ label, pct }) => (
-            <div key={label} className="flex items-center gap-2">
-              <span className="text-[9px] text-on-surface-variant w-16 text-right">
-                {label}
-              </span>
-              <div className="flex-1 h-1.5 rounded-full bg-outline-variant/20 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {location}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Metric Card Mockup                                                */
+/*  Metric Card Mockup                                                 */
 /* ------------------------------------------------------------------ */
 
 export function MetricCardMockup({ shape }: { shape: Shape }) {
-  const sparklinePath =
-    "M0,20 L8,18 L16,15 L24,16 L32,12 L40,8 L48,10 L56,5 L64,3";
-
-  const valueBlock = (
-    <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[10px] font-medium tracking-wide text-on-surface-variant uppercase">
-        Home Value
-      </span>
-      <span className="text-xl font-bold text-on-surface">$450K</span>
-      <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600">
-        <svg viewBox="0 0 12 12" className="w-3 h-3">
-          <path d="M6 2 L10 7 L2 7 Z" fill="currentColor" />
-        </svg>
-        +3.2%
-      </span>
-    </div>
-  );
+  const sparkPoints =
+    "M0,18 C4,16 8,14 12,15 C16,16 20,12 24,9 C28,6 32,8 36,5 C40,2 44,4 48,3 C52,2 56,1 60,2";
 
   const sparkline = (
-    <svg viewBox="0 0 64 24" className="w-20 h-8" preserveAspectRatio="none">
+    <svg viewBox="0 0 60 20" className="w-full h-10" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkFill" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={sparkPoints + " L60,20 L0,20 Z"} fill="url(#sparkFill)" />
       <path
-        d={sparklinePath}
+        d={sparkPoints}
         fill="none"
         stroke="#22c55e"
         strokeWidth="1.5"
@@ -150,123 +188,211 @@ export function MetricCardMockup({ shape }: { shape: Shape }) {
     </svg>
   );
 
+  const trendBadge = (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+      <svg viewBox="0 0 12 12" className="w-3 h-3">
+        <path d="M6 2 L10 7 L2 7 Z" fill="currentColor" />
+      </svg>
+      +3.2%
+    </span>
+  );
+
   if (shape === "horizontal") {
     return (
-      <div className="flex items-center justify-between h-full w-full px-4">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-medium tracking-wide text-on-surface-variant uppercase">
-            Home Value
+      <div className="flex items-center h-full w-full px-5 py-3 gap-4">
+        <div className="flex flex-col gap-1 flex-shrink-0">
+          <span className="text-[11px] font-medium text-on-surface-variant uppercase tracking-wider">
+            Median Home Value
           </span>
-          <span className="text-lg font-bold text-on-surface">$450K</span>
-          <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600">
-            <svg viewBox="0 0 12 12" className="w-3 h-3">
-              <path d="M6 2 L10 7 L2 7 Z" fill="currentColor" />
-            </svg>
-            +3.2% YoY
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-on-surface">$450K</span>
+            {trendBadge}
+          </div>
+          <span className="text-[10px] text-on-surface-variant">
+            Dallas-Fort Worth, TX • Mar 2026
           </span>
         </div>
-        {sparkline}
+        <div className="flex-1 min-w-[80px]">{sparkline}</div>
       </div>
     );
   }
 
   if (shape === "vertical") {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 h-full w-full">
-        <span className="text-[10px] font-medium tracking-wide text-on-surface-variant uppercase">
-          Home Value
+      <div className="flex flex-col items-center justify-between h-full w-full px-4 py-4">
+        <span className="text-[11px] font-medium text-on-surface-variant uppercase tracking-wider">
+          Median Home Value
         </span>
-        <span className="text-2xl font-bold text-on-surface">$450K</span>
-        <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600">
-          <svg viewBox="0 0 12 12" className="w-3 h-3">
-            <path d="M6 2 L10 7 L2 7 Z" fill="currentColor" />
-          </svg>
-          +3.2% YoY
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-3xl font-bold text-on-surface">$450K</span>
+          {trendBadge}
+        </div>
+        <div className="w-full">{sparkline}</div>
+        <span className="text-[10px] text-on-surface-variant">
+          Dallas-Fort Worth, TX • Mar 2026
         </span>
-        <div className="mt-1">{sparkline}</div>
       </div>
     );
   }
 
+  // Square
   return (
-    <div className="flex flex-col items-center justify-center gap-1 h-full w-full">
-      {valueBlock}
-      <div className="mt-1">{sparkline}</div>
+    <div className="flex flex-col items-center justify-center gap-2 h-full w-full p-4">
+      <span className="text-[11px] font-medium text-on-surface-variant uppercase tracking-wider">
+        Median Home Value
+      </span>
+      <span className="text-3xl font-bold text-on-surface">$450K</span>
+      {trendBadge}
+      <div className="w-full mt-1">{sparkline}</div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Map Widget Mockup                                                 */
+/*  Map Widget Mockup — SVG map of US with colored states              */
 /* ------------------------------------------------------------------ */
 
 export function MapMockup({ shape }: { shape: Shape }) {
-  // Simplified choropleth representation
-  const mapContent = (
-    <div className="relative w-full h-full overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-slate-100">
-      {/* Grid of colored region blocks */}
-      <div className="absolute inset-1 grid grid-cols-5 grid-rows-4 gap-0.5">
-        {[
-          "bg-violet-300",
-          "bg-violet-400",
-          "bg-orange-300",
-          "bg-red-300",
-          "bg-orange-400",
-          "bg-violet-200",
-          "bg-orange-200",
-          "bg-orange-300",
-          "bg-red-400",
-          "bg-red-300",
-          "bg-orange-100",
-          "bg-violet-300",
-          "bg-orange-200",
-          "bg-orange-300",
-          "bg-violet-200",
-          "bg-violet-100",
-          "bg-orange-100",
-          "bg-violet-200",
-          "bg-violet-300",
-          "bg-orange-200",
-        ].map((color, i) => (
-          <div key={i} className={`${color} rounded-[2px] opacity-70`} />
-        ))}
-      </div>
-      {/* Dot markers */}
-      <div className="absolute top-[30%] left-[40%] w-1.5 h-1.5 rounded-full bg-on-surface/60" />
-      <div className="absolute top-[55%] left-[60%] w-1.5 h-1.5 rounded-full bg-on-surface/60" />
-      <div className="absolute top-[40%] left-[25%] w-1.5 h-1.5 rounded-full bg-on-surface/60" />
-    </div>
+  // Simplified US outline with state-like regions using paths
+  const mapSvg = (
+    <svg
+      viewBox="0 0 200 130"
+      className="w-full h-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* Background */}
+      <rect width="200" height="130" fill="#f8fafc" rx="4" />
+      {/* Simplified US state-like polygons with choropleth coloring */}
+      {/* West */}
+      <path d="M10,15 L30,12 L35,45 L15,50 Z" fill="#7c3aed" opacity="0.7" />
+      <path d="M30,12 L55,10 L55,35 L35,38 Z" fill="#8b5cf6" opacity="0.6" />
+      <path d="M15,50 L35,45 L40,70 L18,72 Z" fill="#6d28d9" opacity="0.7" />
+      <path d="M35,38 L55,35 L55,60 L40,62 Z" fill="#a78bfa" opacity="0.5" />
+      {/* Mountain/Central */}
+      <path d="M55,10 L85,8 L85,35 L55,35 Z" fill="#f59e0b" opacity="0.6" />
+      <path d="M55,35 L85,35 L88,65 L55,60 Z" fill="#fb923c" opacity="0.7" />
+      <path d="M40,62 L55,60 L58,85 L38,88 Z" fill="#ef4444" opacity="0.6" />
+      <path d="M55,60 L88,65 L90,90 L58,85 Z" fill="#dc2626" opacity="0.7" />
+      {/* Midwest */}
+      <path d="M85,8 L120,10 L118,40 L85,35 Z" fill="#eab308" opacity="0.5" />
+      <path d="M85,35 L118,40 L120,68 L88,65 Z" fill="#f97316" opacity="0.6" />
+      <path
+        d="M120,10 L150,12 L148,42 L118,40 Z"
+        fill="#84cc16"
+        opacity="0.5"
+      />
+      <path
+        d="M118,40 L148,42 L150,70 L120,68 Z"
+        fill="#22c55e"
+        opacity="0.6"
+      />
+      {/* East */}
+      <path
+        d="M150,12 L178,15 L175,45 L148,42 Z"
+        fill="#06b6d4"
+        opacity="0.6"
+      />
+      <path
+        d="M148,42 L175,45 L178,72 L150,70 Z"
+        fill="#22c55e"
+        opacity="0.7"
+      />
+      <path
+        d="M178,15 L195,20 L192,50 L175,45 Z"
+        fill="#14b8a6"
+        opacity="0.6"
+      />
+      <path
+        d="M175,45 L192,50 L190,75 L178,72 Z"
+        fill="#10b981"
+        opacity="0.7"
+      />
+      {/* South */}
+      <path d="M88,65 L120,68 L122,95 L90,90 Z" fill="#ef4444" opacity="0.7" />
+      <path
+        d="M120,68 L150,70 L152,98 L122,95 Z"
+        fill="#f97316"
+        opacity="0.6"
+      />
+      <path
+        d="M150,70 L178,72 L180,100 L152,98 Z"
+        fill="#eab308"
+        opacity="0.5"
+      />
+      <path
+        d="M90,90 L122,95 L125,115 L92,112 Z"
+        fill="#dc2626"
+        opacity="0.6"
+      />
+      <path
+        d="M122,95 L152,98 L155,118 L125,115 Z"
+        fill="#f59e0b"
+        opacity="0.6"
+      />
+      {/* City dots */}
+      <circle cx="170" cy="38" r="2" fill="#1e293b" opacity="0.7" />
+      <circle cx="105" cy="52" r="2" fill="#1e293b" opacity="0.7" />
+      <circle cx="140" cy="88" r="2" fill="#1e293b" opacity="0.7" />
+      <circle cx="60" cy="75" r="2" fill="#1e293b" opacity="0.7" />
+      <circle cx="80" cy="28" r="2" fill="#1e293b" opacity="0.7" />
+    </svg>
   );
 
   const legend = (
-    <div className="flex items-center gap-1 justify-center mt-1">
-      <span className="text-[8px] text-on-surface-variant">Low</span>
-      {[
-        "bg-violet-300",
-        "bg-violet-400",
-        "bg-orange-300",
-        "bg-orange-400",
-        "bg-red-300",
-        "bg-red-400",
-      ].map((c, i) => (
-        <div key={i} className={`w-3 h-2 rounded-[1px] ${c}`} />
-      ))}
-      <span className="text-[8px] text-on-surface-variant">High</span>
+    <div className="flex items-center gap-1.5 justify-center">
+      <span className="text-[9px] text-on-surface-variant font-medium">
+        Low
+      </span>
+      <div className="flex rounded-sm overflow-hidden">
+        {["#7c3aed", "#8b5cf6", "#eab308", "#f97316", "#ef4444", "#dc2626"].map(
+          (c, i) => (
+            <div key={i} className="w-4 h-2.5" style={{ backgroundColor: c }} />
+          ),
+        )}
+      </div>
+      <span className="text-[9px] text-on-surface-variant font-medium">
+        High
+      </span>
     </div>
   );
 
-  if (shape === "vertical") {
+  const title = (
+    <div className="flex items-center justify-between w-full">
+      <span className="text-[11px] font-semibold text-on-surface">
+        Home Value by State
+      </span>
+      <span className="text-[9px] text-on-surface-variant">Mar 2026</span>
+    </div>
+  );
+
+  if (shape === "horizontal") {
     return (
-      <div className="flex flex-col h-full w-full p-2 gap-1">
-        <div className="flex-1">{mapContent}</div>
+      <div className="flex flex-col h-full w-full p-3 gap-1.5">
+        {title}
+        <div className="flex-1 min-h-0">{mapSvg}</div>
         {legend}
       </div>
     );
   }
 
+  if (shape === "vertical") {
+    return (
+      <div className="flex flex-col h-full w-full p-3 gap-2">
+        {title}
+        <div className="flex-1 min-h-0">{mapSvg}</div>
+        {legend}
+        <div className="text-[9px] text-on-surface-variant text-center">
+          Hover over a state to see details
+        </div>
+      </div>
+    );
+  }
+
+  // Square
   return (
-    <div className="flex flex-col h-full w-full p-2 gap-1">
-      <div className="flex-1">{mapContent}</div>
+    <div className="flex flex-col h-full w-full p-3 gap-1.5">
+      {title}
+      <div className="flex-1 min-h-0">{mapSvg}</div>
       {legend}
     </div>
   );
