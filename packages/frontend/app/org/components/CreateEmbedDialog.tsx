@@ -16,8 +16,11 @@ interface CreateEmbedDialogProps {
 
 const WIDGET_OPTIONS = [
   { value: "score", label: "Score Ring" },
-  { value: "metric-card", label: "Metric Card" },
-  { value: "map", label: "Interactive Map" },
+  { value: "metric_card", label: "Metric Card" },
+  { value: "map", label: "Mini Map" },
+  { value: "map_full", label: "Interactive Map (Full)" },
+  { value: "chart", label: "Chart (Time Series)" },
+  { value: "report", label: "Report Viewer" },
 ] as const;
 
 function isValidOrigin(value: string): boolean {
