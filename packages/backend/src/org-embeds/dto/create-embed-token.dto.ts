@@ -2,7 +2,7 @@
  * Create Embed Token DTO
  *
  * Validates input for creating a new organization embed token.
- * Allowed widget types: 'score', 'metric_card', 'map'.
+ * Allowed widget types: 'score', 'metric_card', 'map', 'chart', 'map_full', 'report'.
  */
 
 import {
@@ -27,6 +27,8 @@ export class CreateEmbedTokenDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @IsIn(['score', 'metric_card', 'map'], { each: true })
+  @IsIn(['score', 'metric_card', 'map', 'chart', 'map_full', 'report'], {
+    each: true,
+  })
   widget_types: string[];
 }

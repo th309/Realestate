@@ -31,6 +31,8 @@ export class UpdateEmbedTokenDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
-  @IsIn(['score', 'metric_card', 'map'], { each: true })
+  @IsIn(['score', 'metric_card', 'map', 'chart', 'map_full', 'report'], {
+    each: true,
+  })
   widget_types?: string[];
 }
