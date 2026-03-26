@@ -307,12 +307,33 @@ GET /api/v1/health
 
 - New controller: `health.controller.ts` in `packages/backend/src/platform-api/v1/`
 - ~30 lines — reads org name, scopes, rate limit, and expiration from `request.apiKeyOrg` (set by the guard)
-- **Throttle exemption:** Apply only `ApiKeyAuthGuard` to the health controller — do NOT apply `ApiThrottleGuard`. Since the existing v1 controllers apply guards per-controller (not at module level), this is achieved by simply omitting the throttle guard decorator on the health controller.
+- **Throttle exemption:** Apply only `@UseGuards(ApiKeyAuthGuard)` on the health controller — omit `ApiThrottleGuard` from the decorator. While `ApiThrottleGuard` is registered as a shared provider in `platform-api.module.ts`, it is opt-in per controller via `@UseGuards`, not globally enforced. Existing v1 controllers all explicitly include it: `@UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)`. The health controller simply leaves it out.
+- Use `@UseInterceptors(ApiResponseInterceptor)` to keep the standard `{ data, meta }` envelope consistent with other v1 endpoints.
 - No request body → no input DTO needed. Response shape is documented above; a response DTO/interface is optional (follow existing v1 pattern).
 
 ---
 
-## 8. Files to Create / Modify
+## 8. Architecture Notes
+
+### Page.tsx is currently a Server Component
+
+The existing `/docs/api/page.tsx` is a Server Component (no `'use client'`). Adding hash-based tab routing requires client-side state. **Solution:** Extract a `DocsPageClient.tsx` client component that handles tab state, hash routing, and renders the tab panels. The `page.tsx` server component imports and renders `DocsPageClient`.
+
+### Existing sidebar navigation is replaced
+
+The current page has a sticky left sidebar with 7 anchor links. The tab bar replaces this navigation pattern entirely. Within long tabs (like API Reference), internal scroll-based navigation can be added if needed.
+
+### Existing CodeBlock has no syntax highlighting
+
+The current `CodeBlock.tsx` is a plain `<pre><code>` with a copy button. No highlighting library is used. For this iteration, keep it simple — add the copy button UX and language label but defer syntax highlighting to a future enhancement. The `CodeTabs` component adds language selection but renders each language's code using the existing `CodeBlock`.
+
+### Components live in `/components/` subdirectory
+
+All existing docs components (`CodeBlock`, `EndpointsReference`, `CodeExamplesSection`, `api-docs-data.ts`) are in `app/docs/api/components/`. New files must follow this pattern.
+
+---
+
+## 9. Files to Create / Modify
 
 ### Backend (new)
 
@@ -320,7 +341,7 @@ GET /api/v1/health
 
 ### Backend (modify)
 
-- `packages/backend/src/platform-api/v1/platform-api-v1.module.ts` (or equivalent module file) — register health controller
+- `packages/backend/src/platform-api/platform-api.module.ts` — Register `HealthV1Controller` in controllers array
 
 ### Backend (test)
 
@@ -328,20 +349,21 @@ GET /api/v1/health
 
 ### Frontend (new)
 
-- `packages/frontend/app/docs/api/GettingStartedTab.tsx` — Getting Started content
-- `packages/frontend/app/docs/api/UseCasesTab.tsx` — Use Cases with collapsible cards
-- `packages/frontend/app/docs/api/TroubleshootingTab.tsx` — Error guide + FAQ
-- `packages/frontend/app/docs/api/UseCaseCard.tsx` — Reusable collapsible card component
-- `packages/frontend/app/docs/api/CodeTabs.tsx` — Multi-language code example component (curl/JS/Python tabs with localStorage persistence) — only if the existing `CodeBlock` component doesn't support language switching
+- `packages/frontend/app/docs/api/components/DocsPageClient.tsx` — Client component wrapper handling tab state + hash routing
+- `packages/frontend/app/docs/api/components/GettingStartedTab.tsx` — Getting Started content
+- `packages/frontend/app/docs/api/components/UseCasesTab.tsx` — Use Cases with collapsible cards
+- `packages/frontend/app/docs/api/components/TroubleshootingTab.tsx` — Error guide + FAQ
+- `packages/frontend/app/docs/api/components/UseCaseCard.tsx` — Reusable collapsible card component
+- `packages/frontend/app/docs/api/components/CodeTabs.tsx` — Multi-language code example component (curl/JS/Python tabs with localStorage persistence). Renders each language via the existing `CodeBlock`. Replaces the sequential rendering in `CodeExamplesSection`.
 
 ### Frontend (modify)
 
-- `packages/frontend/app/docs/api/page.tsx` — Add tab layout with hash routing, restructure into tabs
-- `packages/frontend/app/docs/api/EndpointsReference.tsx` — Add health endpoint to reference, add anchor IDs to each endpoint section for scope badge deep linking
-- `packages/frontend/app/docs/api/api-docs-data.ts` — Add health endpoint data, use case metadata, scope-to-anchor mapping
-- `packages/frontend/app/docs/api/CodeExamplesSection.tsx` — May need updates if switching to CodeTabs
+- `packages/frontend/app/docs/api/page.tsx` — Simplify to server component shell that renders `DocsPageClient`
+- `packages/frontend/app/docs/api/components/EndpointsReference.tsx` — Add health endpoint to reference, add anchor IDs to each endpoint section for scope badge deep linking
+- `packages/frontend/app/docs/api/components/api-docs-data.ts` — Add health endpoint data, use case metadata, scope-to-anchor mapping
+- `packages/frontend/app/docs/api/components/CodeExamplesSection.tsx` — Refactor to use `CodeTabs` instead of sequential rendering
 - `packages/frontend/app/org/[slug]/admin/api-keys/page.tsx` — Empty state + disabled state copy
-- `packages/frontend/app/org/components/CreateApiKeyDialog.tsx` — Scope helpers, rate limit helper, What's Next card in KeyRevealDialog sub-component
+- `packages/frontend/app/org/components/CreateApiKeyDialog.tsx` — Scope helpers, rate limit helper, What's Next card in KeyRevealDialog sub-component (KeyRevealDialog is defined at the bottom of this same file)
 - `packages/frontend/app/org/components/ApiKeyCard.tsx` — "Never used" quickstart link, clickable scope badges
 
 ---
