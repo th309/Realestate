@@ -4,7 +4,7 @@
  * API functions for loading geography search lists and geography typeahead search.
  */
 
-import { API_URL } from './base';
+import { API_URL } from "./base";
 
 // ---------------------------------------------------------------------------
 // Geography search (typeahead)
@@ -30,14 +30,36 @@ export async function fetchGeographySearch(
   query: string,
   options?: { type?: string; limit?: number; signal?: AbortSignal },
 ): Promise<GeographySearchResult[]> {
-  const params = new URLSearchParams({ query, limit: String(options?.limit ?? 15) });
-  if (options?.type) params.set('type', options.type);
+  const params = new URLSearchParams({
+    query,
+    limit: String(options?.limit ?? 15),
+  });
+  if (options?.type) params.set("type", options.type);
 
   const res = await fetch(`${API_URL}/api/geography/search?${params}`, {
     signal: options?.signal,
   });
 
   if (!res.ok) return [];
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// ZIP display name lookup
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch zip code → display name lookup for a state.
+ * Returns e.g. { "90210": "Beverly Hills, CA 90210" }.
+ * Cached via HTTP Cache-Control (24h) on the backend.
+ */
+export async function fetchZipDisplayNames(
+  state: string,
+): Promise<Record<string, string>> {
+  const res = await fetch(
+    `${API_URL}/api/geography/zip-names/${encodeURIComponent(state)}`,
+  );
+  if (!res.ok) return {};
   return res.json();
 }
 

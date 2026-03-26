@@ -34,6 +34,7 @@ import {
   type MarkerStore,
 } from "../utils";
 import { useMetricFreshness } from "@/lib/data/hooks";
+import { fetchZipDisplayNames } from "@/lib/data";
 
 interface UseMapLayersProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
@@ -121,9 +122,20 @@ export function useMapLayers({
     try {
       // Use retry logic for county and zip (large datasets that can timeout on cold cache)
       const useRetry = geoLevel === "county" || geoLevel === "zip";
-      const response = useRetry
-        ? await fetchWithRetry(geojsonUrl, 3, 1000)
-        : await fetch(geojsonUrl);
+      const geojsonPromise = useRetry
+        ? fetchWithRetry(geojsonUrl, 3, 1000)
+        : fetch(geojsonUrl);
+
+      // Fetch zip display names in parallel (city, state labels from geographies table)
+      const zipNamesPromise =
+        geoLevel === "zip" && selectedState
+          ? fetchZipDisplayNames(selectedState).catch(() => undefined)
+          : Promise.resolve(undefined);
+
+      const [response, zipNameLookup] = await Promise.all([
+        geojsonPromise,
+        zipNamesPromise,
+      ]);
 
       if (updateId !== updateIdRef.current) return;
 
@@ -132,7 +144,7 @@ export function useMapLayers({
       if (updateId !== updateIdRef.current) return;
 
       // Add values to features
-      addValuesToFeatures(geojson, geoLevel, mapData);
+      addValuesToFeatures(geojson, geoLevel, mapData, zipNameLookup);
 
       // Remove source again right before adding (handles race condition)
       removeAllManagedLayers(map.current!);

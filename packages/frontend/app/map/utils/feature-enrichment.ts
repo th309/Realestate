@@ -14,11 +14,15 @@ import { normalizeZipKey } from "@/lib/format/zip";
 /**
  * Enrich GeoJSON features with metric values from the map data store.
  * Mutates feature.properties in-place with value, dataDate, id, and displayName.
+ *
+ * @param zipNameLookup Optional zip code → display name map (e.g. "90210" → "Beverly Hills, CA 90210").
+ *                      Only used when geoLevel is "zip".
  */
 export function addValuesToFeatures(
   geojson: any,
   geoLevel: GeoLevel,
   mapData: MapData,
+  zipNameLookup?: Record<string, string>,
 ): void {
   if (geoLevel === "national") {
     enrichNationalFeatures(geojson, mapData);
@@ -31,7 +35,7 @@ export function addValuesToFeatures(
   } else if (geoLevel === "city") {
     enrichCityFeatures(geojson, mapData);
   } else if (geoLevel === "zip") {
-    enrichZipFeatures(geojson, mapData);
+    enrichZipFeatures(geojson, mapData, zipNameLookup);
   } else if (geoLevel === "tract") {
     enrichTractFeatures(geojson, mapData);
   }
@@ -114,7 +118,11 @@ function enrichCityFeatures(geojson: any, mapData: MapData): void {
   });
 }
 
-function enrichZipFeatures(geojson: any, mapData: MapData): void {
+function enrichZipFeatures(
+  geojson: any,
+  mapData: MapData,
+  zipNameLookup?: Record<string, string>,
+): void {
   geojson.features.forEach((feature: any) => {
     const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
     const key = zipCode ? normalizeZipKey(zipCode) : "";
@@ -122,7 +130,10 @@ function enrichZipFeatures(geojson: any, mapData: MapData): void {
     feature.properties.value = getValueFromEntry(entry);
     feature.properties.dataDate = getDateFromEntry(entry);
     feature.properties.id = zipCode;
-    feature.properties.displayName = zipCode;
+    // Use city/state display name from geographies table when available
+    const displayName = zipNameLookup?.[key] ?? zipCode;
+    feature.properties.displayName = displayName;
+    feature.properties.name = displayName;
   });
 }
 

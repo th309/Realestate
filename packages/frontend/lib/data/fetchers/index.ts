@@ -127,6 +127,7 @@ export { fetchDataFreshness, type DataFreshnessResponse } from "./freshness";
 // Market search lists & geography search
 export {
   fetchGeographySearch,
+  fetchZipDisplayNames,
   type GeographySearchResult,
   fetchMetrosList,
   fetchCountiesList,

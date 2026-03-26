@@ -20,7 +20,7 @@ import {
 export class GeographyController {
   private readonly logger = new Logger(GeographyController.name);
 
-  constructor(private readonly geographyService: GeographyService) { }
+  constructor(private readonly geographyService: GeographyService) {}
 
   @Get('national')
   @ApiOperation({ summary: 'Get US national boundary as GeoJSON' })
@@ -71,7 +71,8 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get counties for a specific state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
+    description:
+      'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getCountiesByState(
@@ -114,7 +115,8 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get ZIP codes for a state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
+    description:
+      'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getZipsByState(
@@ -142,7 +144,8 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get cities/places for a state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
+    description:
+      'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getCitiesByState(
@@ -161,6 +164,35 @@ export class GeographyController {
       this.logger.error(`Error fetching cities GeoJSON for ${state}`, error);
       throw new HttpException(
         'Failed to fetch cities GeoJSON',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('zip-names/:state')
+  @ApiOperation({ summary: 'Get zip code → display name lookup for a state' })
+  @ApiParam({
+    name: 'state',
+    description:
+      'State: two-letter code (CA), FIPS (06), or full name (California)',
+  })
+  @Header('Cache-Control', 'public, max-age=86400')
+  async getZipDisplayNames(
+    @Param('state') state: string,
+  ): Promise<Record<string, string>> {
+    const stateCode = normalizeStateToCode(state);
+    if (!stateCode || stateCode.length !== 2) {
+      throw new HttpException(
+        'Invalid state. Use two-letter code (CA), FIPS (06), or full name (California).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    try {
+      return await this.geographyService.getZipDisplayNames(stateCode);
+    } catch (error: any) {
+      this.logger.error(`Error fetching zip display names for ${state}`, error);
+      throw new HttpException(
+        'Failed to fetch zip display names',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -188,7 +220,9 @@ export class GeographyController {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const limit = limitStr ? Math.min(parseInt(limitStr, 10) || 15, 50) : undefined;
+    const limit = limitStr
+      ? Math.min(parseInt(limitStr, 10) || 15, 50)
+      : undefined;
     try {
       return await this.geographyService.searchGeographies(query, type, limit);
     } catch (error: any) {

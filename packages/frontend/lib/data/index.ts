@@ -195,6 +195,7 @@ export {
 
   // Market search lists & geography search
   fetchGeographySearch,
+  fetchZipDisplayNames,
   type GeographySearchResult,
   fetchMetrosList,
   fetchCountiesList,

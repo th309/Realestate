@@ -24,7 +24,7 @@ export class GeographyService implements OnModuleInit {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Pre-warm the cache on module initialization for frequently accessed data
@@ -232,14 +232,18 @@ export class GeographyService implements OnModuleInit {
     type?: string,
     limit: number = 15,
   ): Promise<any[]> {
-    this.logger.log(`Searching geographies: "${query}" (type: ${type || 'all'})`);
+    this.logger.log(
+      `Searching geographies: "${query}" (type: ${type || 'all'})`,
+    );
 
     // Fetch more than needed so we can re-rank by relevance
     const fetchLimit = Math.max(limit * 3, 50);
 
     let dbQuery = this.supabase
       .from('geographies')
-      .select('geography_id, geography_type, name, name_short, state_code, cbsa_code, cbsa_name, fips_code, latitude, longitude, population');
+      .select(
+        'geography_id, geography_type, name, name_short, state_code, cbsa_code, cbsa_name, fips_code, latitude, longitude, population',
+      );
 
     // Split query into words so "washington dc" matches names containing
     // both "washington" AND "dc" even if they're not adjacent.
@@ -249,7 +253,9 @@ export class GeographyService implements OnModuleInit {
     if (words.length === 1) {
       // Single word: match name OR name_short OR geography_id
       const pattern = `%${words[0]}%`;
-      dbQuery = dbQuery.or(`name.ilike.${pattern},name_short.ilike.${pattern},geography_id.ilike.${pattern}`);
+      dbQuery = dbQuery.or(
+        `name.ilike.${pattern},name_short.ilike.${pattern},geography_id.ilike.${pattern}`,
+      );
     } else {
       // Multi-word: each word must appear in the name (AND semantics)
       for (const word of words) {
@@ -284,10 +290,18 @@ export class GeographyService implements OnModuleInit {
 
       let relevance: number;
 
-      if (geoId === queryLower || name === queryLower || nameShort === queryLower) {
+      if (
+        geoId === queryLower ||
+        name === queryLower ||
+        nameShort === queryLower
+      ) {
         // Exact match — highest priority
         relevance = 0;
-      } else if (geoId.startsWith(queryLower) || name.startsWith(queryLower) || nameShort.startsWith(queryLower)) {
+      } else if (
+        geoId.startsWith(queryLower) ||
+        name.startsWith(queryLower) ||
+        nameShort.startsWith(queryLower)
+      ) {
         // Prefix match
         relevance = 1;
       } else {
@@ -306,5 +320,44 @@ export class GeographyService implements OnModuleInit {
 
     // Strip internal field and return limited results
     return scored.slice(0, limit).map(({ _relevance, ...row }) => row);
+  }
+
+  /**
+   * Return a lookup map of zip code → display name for a given state.
+   * E.g., { "90210": "Beverly Hills, CA 90210", "90211": "Beverly Hills, CA 90211" }
+   * Cached for 24h since geography names are static.
+   */
+  async getZipDisplayNames(stateCode: string): Promise<Record<string, string>> {
+    const cacheKey = `zip-names-${stateCode}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data as any;
+    }
+
+    const { data, error } = await this.supabase
+      .from('geographies')
+      .select('geography_id, name')
+      .eq('geography_type', 'zip')
+      .eq('state_code', stateCode);
+
+    if (error) {
+      this.logger.error(
+        `Error fetching zip display names for ${stateCode}: ${error.message}`,
+      );
+      throw error;
+    }
+
+    const lookup: Record<string, string> = {};
+    for (const row of data || []) {
+      lookup[row.geography_id] = row.name;
+    }
+
+    // Store in cache (reusing the GeoJSON cache with a type cast)
+    this.cache.set(cacheKey, {
+      data: lookup as any,
+      expiry: Date.now() + this.CACHE_TTL,
+    });
+
+    return lookup;
   }
 }
