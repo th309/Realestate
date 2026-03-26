@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Trash2, Clock, Zap } from "lucide-react";
 import type { ApiKeyListItem } from "@/lib/data/fetchers/org-api-keys";
+import { SCOPE_ANCHORS } from "@/app/docs/api/components/api-docs-data";
 
 interface ApiKeyCardProps {
   apiKey: ApiKeyListItem;
@@ -95,12 +96,18 @@ export function ApiKeyCard({ apiKey, onRevoke }: ApiKeyCardProps) {
         {/* Scopes */}
         <div className="mt-3 flex flex-wrap gap-1.5">
           {apiKey.scopes.map((scope) => (
-            <span
+            <a
               key={scope}
-              className={`rounded-lg px-2 py-0.5 text-xs font-medium ${getScopeColor(scope)}`}
+              href="/docs/api#reference"
+              className="hover:opacity-80 transition-opacity"
+              title={`View ${scope} endpoints`}
             >
-              {SCOPE_LABELS[scope] ?? scope}
-            </span>
+              <span
+                className={`rounded-lg px-2 py-0.5 text-xs font-medium ${getScopeColor(scope)}`}
+              >
+                {SCOPE_LABELS[scope] ?? scope}
+              </span>
+            </a>
           ))}
         </div>
 
@@ -112,9 +119,16 @@ export function ApiKeyCard({ apiKey, onRevoke }: ApiKeyCardProps) {
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {apiKey.last_used_at
-              ? `Used ${formatRelativeDate(apiKey.last_used_at)}`
-              : "Never used"}
+            {apiKey.last_used_at ? (
+              `Used ${formatRelativeDate(apiKey.last_used_at)}`
+            ) : (
+              <a
+                href="/docs/api#getting-started"
+                className="text-primary hover:underline"
+              >
+                Never used — See quickstart
+              </a>
+            )}
           </span>
           <span>Created {formatRelativeDate(apiKey.created_at)}</span>
         </div>
