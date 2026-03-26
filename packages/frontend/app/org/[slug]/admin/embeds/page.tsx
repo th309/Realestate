@@ -14,7 +14,7 @@ import {
   CreateEmbedDialog,
   TokenRevealDialog,
 } from "../../../components/CreateEmbedDialog";
-import { WidgetGallery } from "./WidgetGallery";
+import { WidgetConfigurator } from "./WidgetConfigurator";
 
 /**
  * Embed token management page for the enterprise admin portal.
@@ -194,9 +194,9 @@ export default function OrgAdminEmbeds() {
         </div>
       )}
 
-      {/* Widget examples gallery */}
+      {/* Widget configurator */}
       <div className="mt-8">
-        <WidgetGallery />
+        <WidgetConfigurator token={tokens.find((t) => t.is_active)?.id ?? ""} />
       </div>
 
       {/* Create dialog */}
