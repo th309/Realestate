@@ -24,7 +24,7 @@ import {
   type TimeSeriesResult,
   type MetricFormat,
 } from "@/lib/data";
-import { EmbedLoadingSkeleton, EmbedErrorState } from "../../components";
+import { EmbedLoadingSkeleton, EmbedErrorState } from "../components";
 
 /** Colors for up to 3 comparison geographies */
 const GEO_COLORS = ["#3b82f6", "#22c55e", "#f97316"] as const;
