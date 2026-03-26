@@ -45,7 +45,10 @@ export async function getBillingPortalUrl(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error("Failed to get billing portal URL");
+    const err = await res
+      .json()
+      .catch(() => ({ message: "Failed to get billing portal URL" }));
+    throw new Error(err.message || "Failed to get billing portal URL");
   }
 
   const data = await res.json();

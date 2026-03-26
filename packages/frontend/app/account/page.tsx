@@ -1,13 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, HelpCircle } from "lucide-react";
+import { User, HelpCircle, Building2 } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
 import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
 import { useAlerts, useAlertHistory } from "@/lib/alerts/hooks";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SupportTab } from "@/components/account";
 import {
   HeroBanner,
@@ -81,6 +82,21 @@ function AccountPageContent() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { tier, trial, loading: entitlementsLoading } = useEntitlements();
+  const [isOrgMember, setIsOrgMember] = useState(false);
+
+  // Check if user belongs to an org (billing managed at org level, not personal)
+  useEffect(() => {
+    if (!user?.id) return;
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("user_profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }: { data: { organization_id: string | null } | null }) => {
+        if (data?.organization_id) setIsOrgMember(true);
+      });
+  }, [user?.id]);
 
   const tabParam = searchParams.get("tab");
 
@@ -169,8 +185,31 @@ function AccountPageContent() {
             memberSince={memberSince}
           />
 
-          {/* 2. Plan + Usage */}
-          <PlanUsageWrapper user={effectiveUser} tier={tier} trial={trial} />
+          {/* 2. Plan + Usage (hidden for org members — billing is at org level) */}
+          {isOrgMember ? (
+            <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-tertiary" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-on-surface">
+                    Enterprise Plan
+                  </p>
+                  <p className="text-sm text-on-surface-variant">
+                    Your subscription is managed by your organization. Visit
+                    your{" "}
+                    <a href="/org" className="text-primary hover:underline">
+                      organization settings
+                    </a>{" "}
+                    to manage billing.
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <PlanUsageWrapper user={effectiveUser} tier={tier} trial={trial} />
+          )}
 
           {/* 3. Personal Information */}
           <PersonalInfoSection user={effectiveUser} />
