@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { X, AlertCircle, Copy, Check, Shield } from "lucide-react";
+import { X, AlertCircle, Shield } from "lucide-react";
+
+export { KeyRevealDialog } from "./KeyRevealDialog";
 
 // ---------------------------------------------------------------------------
 // Scope definitions grouped by resource
@@ -45,6 +47,16 @@ const SCOPE_GROUPS: ScopeGroup[] = [
     ],
   },
 ];
+
+const SCOPE_GROUP_HELPERS: Record<string, string> = {
+  Scores:
+    "Read PropertyIQ scores for any market — HomeReady, InvestorEdge, Market Health",
+  Metrics:
+    "Read individual metric values like home values, rent prices, and economic indicators",
+  Rankings: "Access market leaderboards and top/bottom rankings by score type",
+  Reports: "Generate and retrieve client-ready market analysis reports",
+  Watchlist: "Read and manage your saved market watchlist",
+};
 
 const ALL_SCOPE_VALUES = SCOPE_GROUPS.flatMap((g) =>
   g.scopes.map((s) => s.value),
@@ -213,6 +225,9 @@ export function CreateApiKeyDialog({
                   <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wide mb-1.5">
                     {group.resource}
                   </p>
+                  <p className="text-xs text-on-surface-variant mt-0.5 mb-2">
+                    {SCOPE_GROUP_HELPERS[group.resource]}
+                  </p>
                   <div className="space-y-1.5 pl-1">
                     {group.scopes.map((scope) => (
                       <label
@@ -265,7 +280,8 @@ export function CreateApiKeyDialog({
               ))}
             </select>
             <p className="text-xs text-on-surface-variant mt-1">
-              Maximum requests per minute for this key.
+              How many requests per minute this key can make. 60 is fine for
+              most use cases.
             </p>
           </div>
 
@@ -301,82 +317,4 @@ export function CreateApiKeyDialog({
   );
 }
 
-// ---------------------------------------------------------------------------
-// One-time key reveal dialog — shown immediately after creation
-// ---------------------------------------------------------------------------
-
-interface KeyRevealDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  keyValue: string;
-}
-
-/**
- * Displays the full API key value exactly once after creation.
- * Includes a copy button and a warning that it cannot be retrieved later.
- */
-export function KeyRevealDialog({
-  isOpen,
-  onClose,
-  keyValue,
-}: KeyRevealDialogProps) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(keyValue);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API fallback — silent
-    }
-  }
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" aria-hidden />
-
-      <div className="relative bg-surface rounded-[28px] shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-medium text-on-surface mb-2">
-          API Key Created
-        </h2>
-
-        <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/20 mb-4">
-          <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-400">
-            This key won&apos;t be shown again. Copy it now and store it
-            securely.
-          </p>
-        </div>
-
-        <div className="relative">
-          <pre className="rounded-xl bg-surface-container p-4 text-xs leading-relaxed text-on-surface break-all whitespace-pre-wrap font-mono">
-            {keyValue}
-          </pre>
-          <button
-            onClick={handleCopy}
-            className="absolute top-2 right-2 rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-high transition-colors"
-            aria-label="Copy API key"
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-green-600" />
-            ) : (
-              <Copy className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-
-        <div className="flex justify-end mt-5">
-          <button
-            onClick={onClose}
-            className="rounded-full bg-primary px-6 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// KeyRevealDialog is defined in ./KeyRevealDialog.tsx and re-exported above.
