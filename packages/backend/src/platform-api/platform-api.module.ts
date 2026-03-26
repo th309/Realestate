@@ -14,6 +14,7 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { ReportsModule } from '../reports/reports.module';
 
 // v1 controllers
+import { HealthV1Controller } from './v1/health.controller';
 import { ScoresV1Controller } from './v1/scores.controller';
 import { MetricsV1Controller } from './v1/metrics.controller';
 import { TimeseriesV1Controller } from './v1/timeseries.controller';
@@ -28,6 +29,7 @@ import { ApiThrottleGuard } from './api-throttle.guard';
 @Module({
   imports: [OrgApiKeysModule, ScoringModule, ReportsModule],
   controllers: [
+    HealthV1Controller,
     ScoresV1Controller,
     MetricsV1Controller,
     TimeseriesV1Controller,
