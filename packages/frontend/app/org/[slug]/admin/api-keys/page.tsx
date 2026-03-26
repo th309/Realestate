@@ -183,9 +183,10 @@ export default function OrgAdminApiKeys() {
             <Plus className="w-4 h-4" />
             Create Key
           </button>
+          <br />
           <a
             href="/docs/api#getting-started"
-            className="text-xs text-primary hover:underline mt-2 inline-block"
+            className="text-xs text-on-surface-variant hover:text-primary hover:underline mt-4 inline-block"
           >
             Learn what you can build with the API →
           </a>
