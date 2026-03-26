@@ -22,6 +22,7 @@ import {
   usePricingTiers,
   buildPriceLookup,
   getBillingPortalUrl,
+  startCheckout,
 } from "@/lib/data";
 import { PlanComparison } from "../PlanComparison";
 import { CancelSubscriptionDialog } from "../CancelSubscriptionDialog";
@@ -204,12 +205,21 @@ export function PlanUsageSection({
       const url = await getBillingPortalUrl();
       window.location.href = url;
     } catch (err) {
-      setPortalError(
-        err instanceof Error ? err.message : "Failed to open billing portal",
-      );
+      const msg = err instanceof Error ? err.message : "";
+      // No Stripe customer yet — redirect to checkout to set up billing
+      if (msg.includes("No billing account")) {
+        try {
+          const checkoutUrl = await startCheckout(tier, "month", "account");
+          window.location.href = checkoutUrl;
+          return;
+        } catch {
+          // checkout also failed — show error
+        }
+      }
+      setPortalError(msg || "Failed to open billing portal");
       setPortalLoading(false);
     }
-  }, []);
+  }, [tier]);
 
   return (
     <section className="bg-white rounded-xl border border-purple-200/50 p-6">

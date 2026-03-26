@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { ExternalLink, Loader2, ArrowUpRight } from "lucide-react";
 import type { UserTier } from "@/lib/entitlements";
-import { getBillingPortalUrl } from "@/lib/data";
+import { getBillingPortalUrl, startCheckout } from "@/lib/data";
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
 
 // ---------------------------------------------------------------------------
@@ -32,12 +32,20 @@ export function SubscriptionActions({ tier }: { tier: UserTier }) {
       const url = await getBillingPortalUrl();
       window.location.href = url;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to open billing portal",
-      );
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("No billing account")) {
+        try {
+          const checkoutUrl = await startCheckout(tier, "month", "account");
+          window.location.href = checkoutUrl;
+          return;
+        } catch {
+          /* checkout also failed */
+        }
+      }
+      setError(msg || "Failed to open billing portal");
       setPortalLoading(false);
     }
-  }, []);
+  }, [tier]);
 
   const isStripeSubscriber = tier === "pro" || tier === "enterprise";
   const isAdmin = tier === "admin";
