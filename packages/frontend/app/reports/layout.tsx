@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Market Reports",
+  title: "Real Estate Market Reports — PropertyIQ",
   description:
     "Generate AI-powered market reports for any US metro, county, or ZIP code. Get personalized analysis for homebuyers and investors with PropertyIQ.",
   alternates: { canonical: "https://www.propertyiq.app/reports" },
   robots: { index: false, follow: false },
   openGraph: {
-    title: "AI Market Reports | PropertyIQ",
+    title: "Real Estate Market Reports — PropertyIQ",
     description:
       "Generate AI-powered market reports for any US metro, county, or ZIP code. Personalized analysis for homebuyers and investors.",
     url: "https://www.propertyiq.app/reports",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Market Reports | PropertyIQ",
+    title: "Real Estate Market Reports — PropertyIQ",
     description:
       "Generate AI-powered market reports for any US metro, county, or ZIP code.",
     images: ["/twitter-image.png"],

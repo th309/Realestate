@@ -39,7 +39,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
 
       {/* H1 */}
       <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3">
-        {metro.shortName} Housing Market Analysis
+        {metro.shortName} Housing Market
       </h1>
       <p className="text-on-surface-variant mb-8 max-w-2xl">
         AI-powered market intelligence for the {metro.name} metro area.

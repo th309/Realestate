@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { useInView } from './hooks/useInView';
-import { HeroSearchBar } from './HeroSearchBar';
+import Image from "next/image";
+import { useInView } from "./hooks/useInView";
+import { HeroSearchBar } from "./HeroSearchBar";
 
 export function HeroSection() {
   const [setRef, inView] = useInView();
@@ -18,7 +18,7 @@ export function HeroSection() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, var(--md-primary-container), transparent 70%)',
+            "radial-gradient(ellipse 80% 60% at 50% 0%, var(--md-primary-container), transparent 70%)",
           opacity: 0.12,
         }}
       />
@@ -29,7 +29,7 @@ export function HeroSection() {
           className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full bg-primary-container/60 text-on-primary-container text-sm font-medium transition-all duration-700"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(12px)',
+            transform: inView ? "translateY(0)" : "translateY(12px)",
           }}
         >
           <span aria-hidden="true">✦</span>
@@ -42,13 +42,12 @@ export function HeroSection() {
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-on-surface mb-6 leading-[1.1] font-[family-name:var(--font-source-serif)]"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.7s ease, transform 0.7s ease',
-            transitionDelay: '0.1s',
+            transform: inView ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+            transitionDelay: "0.1s",
           }}
         >
-          Find housing markets that{' '}
-          <span className="text-primary">outperform</span>
+          AI-Powered Real Estate Market Analysis
         </h1>
 
         {/* Subheadline */}
@@ -56,14 +55,14 @@ export function HeroSection() {
           className="text-lg md:text-xl text-on-surface-variant mb-10 max-w-2xl mx-auto leading-relaxed"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.7s ease, transform 0.7s ease',
-            transitionDelay: '0.2s',
+            transform: inView ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+            transitionDelay: "0.2s",
           }}
         >
-          PropertyIQ analyzes 925 US metros, 3,100+ counties, and 33,000+ ZIP codes
-          with machine learning to surface the markets where your money works hardest.
-          Then we write you a personalized AI report.
+          PropertyIQ analyzes 925 US metros, 3,100+ counties, and 33,000+ ZIP
+          codes with machine learning to surface the markets where your money
+          works hardest. Then we write you a personalized AI report.
         </p>
 
         {/* Search bar */}
@@ -71,9 +70,9 @@ export function HeroSection() {
           className="mb-8"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.7s ease, transform 0.7s ease',
-            transitionDelay: '0.3s',
+            transform: inView ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+            transitionDelay: "0.3s",
           }}
         >
           <HeroSearchBar />
@@ -87,16 +86,22 @@ export function HeroSection() {
           className="flex items-center justify-center gap-6 mb-16"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.7s ease, transform 0.7s ease',
-            transitionDelay: '0.35s',
+            transform: inView ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+            transitionDelay: "0.35s",
           }}
         >
-          <a href="/map" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+          <a
+            href="/map"
+            className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
             Explore the Map
           </a>
           <span className="text-on-surface-variant/30">|</span>
-          <a href="/scores" className="text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">
+          <a
+            href="/scores"
+            className="text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors"
+          >
             See Our Track Record
           </a>
         </div>
@@ -106,9 +111,11 @@ export function HeroSection() {
           className="relative mx-auto max-w-5xl"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.98)',
-            transition: 'opacity 0.9s ease, transform 0.9s ease',
-            transitionDelay: '0.4s',
+            transform: inView
+              ? "translateY(0) scale(1)"
+              : "translateY(24px) scale(0.98)",
+            transition: "opacity 0.9s ease, transform 0.9s ease",
+            transitionDelay: "0.4s",
           }}
         >
           <div className="rounded-xl overflow-hidden shadow-2xl border border-outline-variant/30 bg-surface">

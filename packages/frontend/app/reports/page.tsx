@@ -822,9 +822,9 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
               )}
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight">
                 {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
-              </h1>
+              </h2>
               <p className="text-on-surface-variant">
                 {isHomebuyer
                   ? "Powered by HomeReady Score"
@@ -1042,7 +1042,7 @@ function ReportsContent() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Reports" }]}
-          title="Create a Report"
+          title="Real Estate Market Reports"
           description="Get AI-powered market analysis tailored to your goals"
           icon={<FileText className="w-5 h-5" />}
           className="mb-12"
@@ -1164,7 +1164,7 @@ function ReportsLanding() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Reports" }]}
-          title="AI-Powered Market Reports"
+          title="Real Estate Market Reports"
           description="Get comprehensive market analysis tailored to homebuyers and investors. See a real report below."
           icon={<FileText className="w-5 h-5" />}
           className="mb-10"

@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
-  title: "Pricing & Plans",
+  title: "Pricing — PropertyIQ",
   description:
     "Compare PropertyIQ plans: Free, Pro, and Enterprise. AI-powered market analysis, scores, reports, and maps for real estate professionals.",
   alternates: { canonical: "https://www.propertyiq.app/pricing" },
   openGraph: {
-    title: "Pricing & Plans | PropertyIQ",
+    title: "Pricing — PropertyIQ",
     description:
       "Compare PropertyIQ plans: Free, Pro, and Enterprise. AI-powered market analysis, scores, reports, and maps.",
     url: "https://www.propertyiq.app/pricing",
@@ -29,7 +29,7 @@ const pricingJsonLd = {
     {
       "@type": "WebPage",
       url: "https://www.propertyiq.app/pricing",
-      name: "PropertyIQ Pricing & Plans",
+      name: "Pricing — PropertyIQ",
       description:
         "Compare PropertyIQ plans: Free, Pro, and Enterprise tiers for AI-powered real estate market analysis.",
     },
@@ -114,7 +114,7 @@ export default function PricingLayout({
       {/* Server-rendered pricing summary for crawlers */}
       <noscript>
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem" }}>
-          <h1>PropertyIQ Pricing & Plans</h1>
+          <h1>Pricing</h1>
           <p>
             Compare PropertyIQ plans for AI-powered real estate market analysis,
             scores, reports, and maps.

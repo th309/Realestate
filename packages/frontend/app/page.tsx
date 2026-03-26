@@ -12,14 +12,14 @@ import {
 } from "./components/home";
 
 export const metadata: Metadata = {
-  title: "PropertyIQ: AI Housing Market Data & Forecasts by ZIP Code",
+  title: "PropertyIQ — AI-Powered Real Estate Market Analysis",
   description:
-    "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find markets that outperform. Free interactive maps, market scores, and AI-generated reports.",
+    "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find housing markets that outperform. Free interactive maps, market scores, and AI-generated reports.",
   alternates: { canonical: "https://www.propertyiq.app" },
   openGraph: {
-    title: "PropertyIQ: AI Housing Market Data & Forecasts",
+    title: "PropertyIQ — AI-Powered Real Estate Market Analysis",
     description:
-      "Rank 925 US metros and 33,000+ ZIP codes with AI. Free maps, scores, and reports.",
+      "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find housing markets that outperform. Free maps, scores, and reports.",
     url: "https://www.propertyiq.app",
     siteName: "PropertyIQ",
     images: [

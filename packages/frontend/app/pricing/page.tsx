@@ -249,7 +249,7 @@ function PricingContent() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Pricing" }]}
-          title="Simple, Transparent Pricing"
+          title="Pricing"
           description="Start free, upgrade when you need more"
           icon={<CreditCard className="w-5 h-5" />}
         />

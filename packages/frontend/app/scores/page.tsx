@@ -18,12 +18,12 @@ import {
 } from "./ScoresContentSections";
 
 export const metadata: Metadata = {
-  title: "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth",
+  title: "Market Scores & Rankings — PropertyIQ",
   description:
     "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations with 5.55 pp/year excess returns. See HomeReady, InvestorEdge, and MarketHealth scores.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
-    title: "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth",
+    title: "Market Scores & Rankings — PropertyIQ",
     description:
       "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations.",
     url: "https://www.propertyiq.app/scores",
@@ -121,7 +121,7 @@ export default function ScoresPage() {
         <section>
           <PageHeaderWithBreadcrumbs
             breadcrumbs={[{ label: "Scores" }]}
-            title="PropertyIQ Scores"
+            title="Market Scores & Rankings"
             description="Data-driven scores that predict real estate market performance"
             icon={<Target className="w-5 h-5" />}
           />

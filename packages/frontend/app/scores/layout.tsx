@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "PropertyIQ Scores",
+  title: "Market Scores & Rankings — PropertyIQ",
   description:
     "AI-powered scores that predict real estate market performance, validated across 23,000+ locations and 924 metros.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
-    title: "PropertyIQ Scores | AI Market Predictions",
+    title: "Market Scores & Rankings — PropertyIQ",
     description:
       "AI-powered scores predicting real estate market performance, validated across 23,000+ locations.",
     url: "https://www.propertyiq.app/scores",
