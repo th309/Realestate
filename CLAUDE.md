@@ -591,18 +591,143 @@ const data = await queryMarketIndicatorLatest(supabase, table, geography);
 
 ---
 
-## 8. DESIGN SYSTEM: MATERIAL DESIGN 3 (M3)
+## 8. BRAND IDENTITY & DESIGN SYSTEM
 
-### 8.1 Core Authority
+### 8.0 PropertyIQ Brand Identity
+
+**Authoritative spec:** `docs/superpowers/specs/2026-03-27-propertyiq-brand-identity.md`
+
+| Element                | Value                                                               |
+| ---------------------- | ------------------------------------------------------------------- |
+| **Brand Name**         | PropertyIQ                                                          |
+| **Short Name**         | PIQ                                                                 |
+| **Tagline**            | The IQ Behind Every Market                                          |
+| **Mission**            | Democratizing real estate data                                      |
+| **Personality**        | The Smart Friend — approachable, knowledgeable, M3/Google aesthetic |
+| **Primary Audience**   | Real estate investors & agents                                      |
+| **Secondary Audience** | First-time homebuyers                                               |
+
+#### Logo System
+
+Three logo variants — all use Indigo `#3949AB` as the primary fill:
+
+| Variant                   | Description                                                          | Use Case                                      |
+| ------------------------- | -------------------------------------------------------------------- | --------------------------------------------- |
+| **P Monogram + Wordmark** | Stylized "P" in rounded square (`rx:14`) + "Property**IQ**" wordmark | Website header, pitch decks, business cards   |
+| **PIQ Shortmark**         | Bold "PIQ" text on indigo rounded square with ascending data dots    | Favicon, app icon, social avatars, watermarks |
+| **Stacked lockup**        | Logomark above wordmark                                              | Square formats, slide title cards             |
+
+**Logomark details:**
+
+- Background: Indigo `#3949AB`, P letterform: White, Data nodes: Green `#00C853`
+- Wordmark: "Property" in Deep Indigo `#1A237E`, "IQ" in Primary Indigo `#3949AB`
+
+**PIQ Shortmark details:**
+
+- Ascending dots: `#7986CB` → `#C5CAE9` → `#00C853` → `#00C853` (0.7 opacity) — conveys growth
+
+**Logo usage rules:**
+
+- Clear space: min 50% of logomark width on all sides
+- Minimum size: Logomark 24px, Full lockup 120px wide
+- Backgrounds: White, light gray, or deep indigo only. Never on busy photos without overlay.
+- **Don't:** Stretch, rotate, recolor, add shadows, or place on low-contrast backgrounds
+
+**SVG references:** See brand spec Section 7 for P Monogram and PIQ Shortmark SVGs.
+**Brand assets:** `.superpowers/brand-assets/` — all logo variants as HTML + PNG exports.
+
+#### Color Palette
+
+**Primary Colors (Indigo Tonal Range)**
+
+| Role                  | Name          | Hex       | M3 Tone | Usage                                  |
+| --------------------- | ------------- | --------- | ------- | -------------------------------------- |
+| **Primary**           | Indigo        | `#3949AB` | 40      | Buttons, active states, logomark fill  |
+| **Primary Dark**      | Deep Indigo   | `#1A237E` | 10      | Wordmark text, headings, dark surfaces |
+| **Primary Medium**    | Medium Indigo | `#5C6BC0` | 60      | Secondary elements, icons, borders     |
+| **Primary Light**     | Light Indigo  | `#C5CAE9` | 90      | Hover states, backgrounds, data viz    |
+| **Primary Container** | Pale Indigo   | `#E8EAF6` | 95      | Surface containers, card backgrounds   |
+
+**Accent Colors**
+
+| Role        | Name  | Hex       | Usage                                |
+| ----------- | ----- | --------- | ------------------------------------ |
+| **Accent**  | Green | `#00C853` | Positive metrics, growth, data nodes |
+| **Error**   | Red   | `#B3261E` | Negative metrics, errors, declines   |
+| **Warning** | Amber | `#FF8F00` | Caution states, neutral trends       |
+
+**Neutral Colors**
+
+| Role                  | Name        | Hex       | Usage                         |
+| --------------------- | ----------- | --------- | ----------------------------- |
+| **Surface**           | Off-white   | `#FAFBFF` | Page backgrounds (light mode) |
+| **On-Surface**        | Deep Indigo | `#1A237E` | Primary text                  |
+| **Surface Container** | Light Gray  | `#F3EDF7` | Cards, sidebars               |
+| **Outline**           | Gray        | `#79747E` | Dividers, borders             |
+| **Outline Variant**   | Light Gray  | `#CAC4D0` | Subtle dividers               |
+
+**Dark Mode**
+
+| Role       | Hex       | Notes                              |
+| ---------- | --------- | ---------------------------------- |
+| Surface    | `#1A1A2E` | Deep navy, not pure black          |
+| Containers | `#16213E` | Cards, sidebars                    |
+| Text       | `#E8EAF6` | Pale Indigo                        |
+| Primary    | `#7986CB` | Lightened indigo for contrast      |
+| Accents    | Same hue  | Adjust lightness for accessibility |
+
+**CRITICAL:** Use semantic CSS variables (`bg-primary`, `text-on-primary`, `bg-surface`, etc.) mapped in `globals.css`. Do NOT hardcode hex values in components.
+
+#### Typography
+
+| Role          | Font           | Weights  | Usage                                    |
+| ------------- | -------------- | -------- | ---------------------------------------- |
+| **Primary**   | Roboto         | 300-700  | All UI text, wordmark, headings, body    |
+| **Monospace** | Roboto Mono    | 400, 500 | Numbers, scores, metrics, code           |
+| **Editorial** | Source Serif 4 | 400-700  | AI narratives, reports, long-form        |
+| **Display**   | DM Sans        | 400-700  | Marketing headlines (optional alternate) |
+
+#### Brand Voice & Tone
+
+| Attribute          | Description                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| **Confident**      | We know our data. State findings directly, not tentatively.        |
+| **Conversational** | Like a knowledgeable friend, not a textbook or sales pitch.        |
+| **Data-First**     | Lead with specifics — numbers, percentages, trends — not opinions. |
+| **Accessible**     | Explain complex concepts simply. No unnecessary jargon.            |
+| **Actionable**     | Always point toward a next step or decision.                       |
+
+**Writing Guidelines:**
+
+| Do                                                  | Don't                                        |
+| --------------------------------------------------- | -------------------------------------------- |
+| "The data shows 12% rent growth in this metro"      | "Our proprietary algorithm detected..."      |
+| "Dallas-Fort Worth scored 78 — strong fundamentals" | "This is an amazing investment opportunity!" |
+| "Explore this market"                               | "Buy now!" / "Don't miss out!"               |
+| "B-level confidence — good data, rental comps thin" | "We're not totally sure about this one"      |
+| "Your Market IQ report is ready"                    | "CONGRATULATIONS on your new report!"        |
+
+**Terminology (use consistently everywhere):**
+
+| Use This            | Not This                 |
+| ------------------- | ------------------------ |
+| Market IQ Score     | Rating / Grade / Rank    |
+| Confidence level    | Accuracy / Trust score   |
+| Market intelligence | Market report / Analysis |
+| Geography / Market  | Area / Zone / Region     |
+| Data coverage       | Data availability        |
+
+### 8.1 Core Authority (M3)
 
 - **Source of Truth:** All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
 - **Strict Adherence:** Do NOT mix generic/Geist aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
+- **Brand + M3 alignment:** The PropertyIQ indigo palette maps directly to M3's tonal palette system. The brand spec IS the M3 theme.
 
 ### 8.2 Visual Foundation (Tailwind Implementation)
 
 **Typography (M3 Type Scale)**
 
-- **Font Family:** Use `Roboto` (via `next/font/google`) for all text.
+- **Font Family:** Use `Roboto` (via `next/font/google`) for all UI text. `Roboto Mono` for metrics/scores. `Source Serif 4` for AI narratives/reports.
 - **Scale Implementation:**
   - **Display:** `text-4xl` to `text-6xl` (tracking-tight)
   - **Headline:** `text-2xl` to `text-3xl`
