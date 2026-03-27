@@ -1,62 +1,132 @@
 "use client";
 
-import React from "react";
+import { useState } from "react";
 import { useAdminDashboardRefresh } from "./components/hooks/useAdminDashboardRefresh";
-import { useSystemHealth } from "./components/hooks/useSystemHealth";
-import { SystemHealthBanner } from "./components/SystemHealthBanner";
-import { DataFeedsWidget } from "./components/widgets/DataFeedsWidget";
-import { PipelineRunsWidget } from "./components/widgets/PipelineRunsWidget";
-import { ScoreSummaryWidget } from "./components/widgets/ScoreSummaryWidget";
-import { MLWorkflowWidget } from "./components/widgets/MLWorkflowWidget";
-import { UsersBillingWidget } from "./components/widgets/UsersBillingWidget";
-import { FeedbackQueueWidget } from "./components/widgets/FeedbackQueueWidget";
+import { useDetailPanel } from "./components/hooks/useDetailPanel";
+import { useTimeRange } from "./components/hooks/useTimeRange";
+import { HeroStatsRow } from "./components/hero/HeroStatsRow";
+import { TabBar } from "./components/tabs/TabBar";
+import type { AdminTab } from "./components/tabs/TabBar";
+import { OperationsTab } from "./components/tabs/OperationsTab";
+import { DataScoresTab } from "./components/tabs/DataScoresTab";
+import { BusinessTab } from "./components/tabs/BusinessTab";
+import { DetailPanel } from "./components/shared/DetailPanel";
 
 export default function AdminDashboardPage() {
+  // Existing refresh hook (auto-refreshes every 5 minutes)
   const { refreshTrigger, lastRefreshTime, triggerRefresh } =
     useAdminDashboardRefresh();
-  const { status: systemStatus, summary: healthSummary } =
-    useSystemHealth(refreshTrigger);
+
+  // New hooks for tabs, detail panel, and time range
+  const [activeTab, setActiveTab] = useState<AdminTab>("operations");
+  const { isOpen, activeCard, openPanel, closePanel } = useDetailPanel();
+  const { range, setRange } = useTimeRange();
 
   return (
     <div className="min-h-screen bg-surface">
-      {/* Page header */}
-      <div className="p-6 pb-0">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <h1 className="text-2xl font-semibold text-on-surface">
-              Command Center
-            </h1>
-            <p className="text-sm text-on-surface-variant">
-              Live overview of all PropertyIQ systems
-            </p>
-          </div>
-          <span className="px-3 py-1 text-xs font-medium rounded-full bg-tertiary-container text-on-tertiary-container">
-            Admin Access
+      {/* Header */}
+      <div className="p-6 pb-0 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-on-surface">
+            Command Center
+          </h1>
+          <p className="text-sm text-on-surface-variant">
+            Live overview of all PropertyIQ systems
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-on-surface-variant">
+            Last updated: {formatTimeAgo(lastRefreshTime)}
           </span>
+          <button
+            data-testid="refresh-button"
+            onClick={triggerRefresh}
+            className="px-4 py-2 bg-primary text-on-primary text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* System health banner */}
-      <div className="mt-4">
-        <SystemHealthBanner
-          status={systemStatus}
-          summary={healthSummary}
-          lastRefresh={lastRefreshTime}
-          onRefresh={triggerRefresh}
-        />
+      {/* Hero Stats Row */}
+      <div className="px-6 pt-4">
+        <HeroStatsRow refreshTrigger={refreshTrigger} />
       </div>
 
-      {/* Widget grid */}
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <DataFeedsWidget refreshTrigger={refreshTrigger} />
-          <PipelineRunsWidget refreshTrigger={refreshTrigger} />
-          <ScoreSummaryWidget refreshTrigger={refreshTrigger} />
-          <MLWorkflowWidget refreshTrigger={refreshTrigger} />
-          <UsersBillingWidget refreshTrigger={refreshTrigger} />
-          <FeedbackQueueWidget refreshTrigger={refreshTrigger} />
+      {/* Tab Bar + Content */}
+      <div className="px-6 pt-6">
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="pt-4 pb-6">
+          {activeTab === "operations" && (
+            <OperationsTab
+              refreshTrigger={refreshTrigger}
+              onCardClick={openPanel}
+            />
+          )}
+          {activeTab === "data-scores" && (
+            <DataScoresTab
+              refreshTrigger={refreshTrigger}
+              onCardClick={openPanel}
+            />
+          )}
+          {activeTab === "business" && (
+            <BusinessTab
+              refreshTrigger={refreshTrigger}
+              onCardClick={openPanel}
+            />
+          )}
         </div>
       </div>
+
+      {/* Detail Panel (slide-out from right) */}
+      <DetailPanel
+        isOpen={isOpen}
+        onClose={closePanel}
+        title={getPanelTitle(activeCard)}
+        timeRangeKey={range.key}
+        onTimeRangeChange={setRange}
+      >
+        <div className="text-sm text-on-surface-variant">
+          Panel content for{" "}
+          <span className="font-medium text-on-surface">{activeCard}</span> —
+          will be populated in Plan 3
+        </div>
+      </DetailPanel>
     </div>
   );
+}
+
+/** Map card IDs to human-readable panel titles. */
+function getPanelTitle(cardId: string | null): string {
+  const titles: Record<string, string> = {
+    "data-feeds": "Data Feeds",
+    "pipeline-runs": "Pipeline Runs",
+    "api-performance": "API Performance",
+    "cache-performance": "Cache Performance",
+    "active-alerts": "Active Alerts",
+    "score-health": "Score Health",
+    "ml-ops": "ML Ops",
+    "geographic-coverage": "Geographic Coverage",
+    "data-quality": "Data Quality",
+    "score-computation": "Score Computation",
+    "users-growth": "Users & Growth",
+    "revenue-mrr": "Revenue / MRR",
+    "feature-usage": "Feature Usage",
+    "tier-distribution": "Tier Distribution",
+    "feedback-queue": "Feedback Queue",
+  };
+  return titles[cardId || ""] || "Details";
+}
+
+/** Format a Date as a human-readable relative time string. */
+function formatTimeAgo(date: Date | null): string {
+  if (!date) return "Never";
+  const diff = Date.now() - date.getTime();
+  const secs = Math.floor(diff / 1000);
+  if (secs < 5) return "Just now";
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
 }
