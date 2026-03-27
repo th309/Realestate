@@ -8,52 +8,57 @@ export interface DataSourceTableConfig {
   expectedFreshnessDays: number;
 }
 
-/** Maps data_source_registry.source_name to the primary DB table used for freshness checks. */
+/**
+ * Maps source names to the actual Supabase table used for freshness checks.
+ *
+ * Table names and date columns are aligned with the working DataSourcesHealthService
+ * and DataFreshnessService in packages/backend/src/health/ to ensure consistency.
+ */
 export const DATA_SOURCE_TABLE_MAP: Record<string, DataSourceTableConfig> = {
   zillow: {
     table: 'zillow_metro',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 60,
   },
   realtor: {
     table: 'realtor_metro',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 60,
   },
   census_acs: {
-    table: 'census_acs_metro',
-    dateColumn: 'period_date',
-    expectedFreshnessDays: 438,
+    table: 'census_county',
+    dateColumn: 'year',
+    expectedFreshnessDays: 900,
   },
   bls: {
-    table: 'bls_metro',
+    table: 'economic_county',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 95,
   },
   fred: {
-    table: 'fred_national',
+    table: 'economic_national',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 60,
   },
   hud_fmr: {
-    table: 'hud_fmr_county',
-    dateColumn: 'period_date',
+    table: 'hud_fmr',
+    dateColumn: 'year',
     expectedFreshnessDays: 438,
   },
   building_permits: {
-    table: 'building_permits_metro',
+    table: 'permits_county',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 60,
   },
   redfin_sales: {
-    table: 'redfin_metro_sales',
-    dateColumn: 'period_date',
-    expectedFreshnessDays: 14,
+    table: 'redfin_metro',
+    dateColumn: 'period_end',
+    expectedFreshnessDays: 60,
   },
   redfin_rental: {
-    table: 'redfin_metro_rental',
+    table: 'redfin_rental_city',
     dateColumn: 'period_date',
-    expectedFreshnessDays: 36,
+    expectedFreshnessDays: 60,
   },
 };
 

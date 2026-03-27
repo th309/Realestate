@@ -4,8 +4,9 @@
  * Gathers user counts, trial status, tier distribution, and paywall activity
  * from Supabase. Callers persist the result to admin_user_snapshots.
  *
- * Gracefully degrades when optional tables (user_trials, user_entitlements,
- * paywall_events) are absent — returns 0 for those metrics and logs a warning.
+ * Uses user_profiles for user counts and subscription_tier for tier distribution.
+ * Gracefully degrades when optional tables (user_trials, paywall_events) are
+ * absent — returns 0 for those metrics and logs a warning.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -60,12 +61,12 @@ export class UserSnapshotService {
 
   private async countProfiles(client: SupabaseClient): Promise<number> {
     const { count, error } = await client
-      .from('profiles')
+      .from('user_profiles')
       .select('*', { count: 'exact', head: true });
 
     if (error) {
       this.logger.error(
-        `[UserSnapshot] Failed to count profiles: ${error.message}`,
+        `[UserSnapshot] Failed to count user_profiles: ${error.message}`,
       );
       return 0;
     }
@@ -77,7 +78,7 @@ export class UserSnapshotService {
     todayStart: Date,
   ): Promise<number> {
     const { count, error } = await client
-      .from('profiles')
+      .from('user_profiles')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', todayStart.toISOString());
 
@@ -122,12 +123,12 @@ export class UserSnapshotService {
     enterprise: number;
   }> {
     const { data, error } = await client
-      .from('user_entitlements')
-      .select('tier_slug');
+      .from('user_profiles')
+      .select('subscription_tier');
 
     if (error) {
       this.logger.warn(
-        `[UserSnapshot] user_entitlements query failed (table may not exist): ${error.message}`,
+        `[UserSnapshot] user_profiles tier query failed: ${error.message}`,
       );
       return { free: 0, starter: 0, pro: 0, enterprise: 0 };
     }
@@ -138,11 +139,11 @@ export class UserSnapshotService {
       enterprise = 0;
 
     for (const row of data ?? []) {
-      const slug = (row.tier_slug ?? '').toLowerCase();
-      if (slug === 'free') free++;
-      else if (slug === 'starter') starter++;
-      else if (slug === 'pro') pro++;
-      else if (slug === 'enterprise') enterprise++;
+      const tier = (row.subscription_tier ?? '').toLowerCase();
+      if (tier === 'free') free++;
+      else if (tier === 'starter') starter++;
+      else if (tier === 'pro') pro++;
+      else if (tier === 'enterprise' || tier === 'admin') enterprise++;
     }
 
     return { free, starter, pro, enterprise };

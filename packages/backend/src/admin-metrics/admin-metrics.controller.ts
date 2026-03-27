@@ -1,13 +1,17 @@
 import { Controller, Get, Post, Param, Query, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { MetricsQueryService } from './services/metrics-query.service';
+import { SnapshotRecorderService } from './services/snapshot-recorder.service';
 import { QueryMetricsDto } from './dto/query-metrics.dto';
 import { AlertActionParamsDto } from './dto/alert-action.dto';
 
 @Controller('api/admin/metrics')
 @UseGuards(AdminGuard)
 export class AdminMetricsController {
-  constructor(private readonly queryService: MetricsQueryService) {}
+  constructor(
+    private readonly queryService: MetricsQueryService,
+    private readonly snapshotRecorder: SnapshotRecorderService,
+  ) {}
 
   @Get('hero-stats')
   async getHeroStats() {
@@ -115,5 +119,29 @@ export class AdminMetricsController {
   async getCoverage() {
     const data = await this.queryService.getCoverage();
     return { success: true, data };
+  }
+
+  @Post('trigger/health-snapshots')
+  async triggerHealthSnapshots() {
+    await this.snapshotRecorder.recordHealthSnapshots();
+    return { success: true, message: 'Health snapshots recorded' };
+  }
+
+  @Post('trigger/user-snapshots')
+  async triggerUserSnapshots() {
+    await this.snapshotRecorder.recordUserSnapshots();
+    return { success: true, message: 'User snapshots recorded' };
+  }
+
+  @Post('trigger/cache-snapshots')
+  async triggerCacheSnapshots() {
+    await this.snapshotRecorder.recordCacheSnapshots();
+    return { success: true, message: 'Cache snapshots recorded' };
+  }
+
+  @Post('trigger/score-snapshots')
+  async triggerScoreSnapshots() {
+    await this.snapshotRecorder.recordScoreSnapshots();
+    return { success: true, message: 'Score snapshots recorded' };
   }
 }
