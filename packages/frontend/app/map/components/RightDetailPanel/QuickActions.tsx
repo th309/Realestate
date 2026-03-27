@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
-import { Heart, ExternalLink, FileText, Loader2, Lock } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useEntitlements } from '@/lib/entitlements';
-import { PaywallCard } from '@/components/entitlements/PaywallCard';
-import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
-import type { SelectedGeography, GeoLevel } from '../../types';
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { Heart, ExternalLink, FileText, Loader2, Lock } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { useEntitlements } from "@/lib/entitlements";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import type { SelectedGeography, GeoLevel } from "../../types";
 
 interface QuickActionsProps {
   geography: SelectedGeography;
@@ -18,10 +18,11 @@ interface QuickActionsProps {
 export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist, items, error } = useWatchlist({
-    userId: user?.id ?? '',
-    autoLoad: !!user?.id,
-  });
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist, items, error } =
+    useWatchlist({
+      userId: user?.id ?? "",
+      autoLoad: !!user?.id,
+    });
   const [toggling, setToggling] = useState(false);
 
   const isSaved = isInWatchlist(geoLevel, geography.id);
@@ -32,7 +33,8 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
     try {
       if (isSaved) {
         const item = items.find(
-          (i) => i.geography_type === geoLevel && i.geography_id === geography.id,
+          (i) =>
+            i.geography_type === geoLevel && i.geography_id === geography.id,
         );
         if (item) await removeFromWatchlist(item.id);
       } else {
@@ -45,39 +47,43 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
 
   const handleViewMarket = () => {
     const params = new URLSearchParams({ type: geoLevel });
-    if (geography.stateAbbr) params.set('state', geography.stateAbbr);
+    if (geography.stateAbbr) params.set("state", geography.stateAbbr);
     router.push(`/market/${geography.id}?${params.toString()}`);
   };
 
   const { getAccess } = useEntitlements();
-  const watchlistAccess = getAccess('feature', 'watchlist_limit');
-  const isWatchlistLocked = watchlistAccess.level === 'none';
-  const reportAccess = getAccess('feature', 'reports');
-  const isReportLocked = reportAccess.level === 'none';
-  const [showPaywall, setShowPaywall] = useState<'watchlist' | 'reports' | null>(null);
+  const watchlistAccess = getAccess("feature", "watchlist_limit");
+  const isWatchlistLocked = watchlistAccess.level === "none";
+  const reportAccess = getAccess("feature", "reports");
+  const isReportLocked = reportAccess.level === "none";
+  const [showPaywall, setShowPaywall] = useState<
+    "watchlist" | "reports" | null
+  >(null);
 
   const handleGenerateReport = () => {
     try {
       localStorage.setItem(
-        'propertyiq-report-prefill',
+        "propertyiq-report-prefill",
         JSON.stringify({
           id: geography.id,
           name: geography.name,
-          type: geoLevel,
+          type: geography.geoLevel || geoLevel,
           state: geography.stateAbbr,
         }),
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
-    if (reportAccess.level === 'full') {
-      router.push('/reports');
+    if (reportAccess.level === "full") {
+      router.push("/reports?rtype=homebuyer");
     } else {
-      router.push('/reports/sample');
+      router.push("/reports/sample");
     }
   };
 
   const btnBase =
-    'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors';
+    "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors";
 
   const disabled = !user?.id || toggling;
 
@@ -86,7 +92,7 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       <div className="flex gap-2">
         {isWatchlistLocked ? (
           <button
-            onClick={() => setShowPaywall('watchlist')}
+            onClick={() => setShowPaywall("watchlist")}
             className={`${btnBase} text-on-surface-variant/60 bg-surface-container border border-outline-variant hover:bg-surface-container-high`}
             title="Upgrade to Pro to favorite markets"
           >
@@ -97,17 +103,27 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
           <button
             onClick={handleToggleWatchlist}
             disabled={disabled}
-            className={`${btnBase} ${isSaved
-                ? 'bg-primary/10 text-primary border border-primary/30'
-                : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            {toggling
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
+            className={`${btnBase} ${
+              isSaved
+                ? "bg-primary/10 text-primary border border-primary/30"
+                : "bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high"
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+            title={
+              !user?.id
+                ? "Sign in to favorite markets"
+                : isSaved
+                  ? "Remove from favorites"
+                  : "Add to favorites"
             }
-            {toggling ? 'Saving...' : isSaved ? 'Favorited' : 'Favorite'}
+          >
+            {toggling ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Heart
+                className={`w-3.5 h-3.5 ${isSaved ? "fill-primary" : ""}`}
+              />
+            )}
+            {toggling ? "Saving..." : isSaved ? "Favorited" : "Favorite"}
           </button>
         )}
 
@@ -121,7 +137,7 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
 
         {isReportLocked ? (
           <button
-            onClick={() => setShowPaywall('reports')}
+            onClick={() => setShowPaywall("reports")}
             className={`${btnBase} text-on-surface-variant/60 bg-surface-container border border-outline-variant hover:bg-surface-container-high`}
             title="Upgrade to Pro to generate reports"
           >
@@ -143,21 +159,27 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
         <p className="text-[10px] text-red-500 mt-1 px-1">{error}</p>
       )}
 
-      {showPaywall && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
-          onClick={() => setShowPaywall(null)}
-        >
-          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-            <PaywallCard
-              type="feature"
-              id={showPaywall === 'watchlist' ? 'watchlist_limit' : 'reports'}
-              title={showPaywall === 'watchlist' ? 'Unlock Favorites' : 'Unlock Reports'}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
+      {showPaywall &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+            onClick={() => setShowPaywall(null)}
+          >
+            <div className="max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+              <PaywallCard
+                type="feature"
+                id={showPaywall === "watchlist" ? "watchlist_limit" : "reports"}
+                title={
+                  showPaywall === "watchlist"
+                    ? "Unlock Favorites"
+                    : "Unlock Reports"
+                }
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

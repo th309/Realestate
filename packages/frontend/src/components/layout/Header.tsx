@@ -162,6 +162,12 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  // Close menus on navigation
+  useEffect(() => {
+    setIsProfileOpen(false);
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);

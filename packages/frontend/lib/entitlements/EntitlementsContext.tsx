@@ -42,7 +42,7 @@ export function EntitlementsProvider({
   children,
   initialResources,
 }: EntitlementsProviderProps) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [state, setState] = useState<EntitlementsState>(
     DEFAULT_ENTITLEMENTS_STATE,
   );
@@ -112,6 +112,7 @@ export function EntitlementsProvider({
         setSimulatedTier(null);
         setSimulatedAuth(null);
       }
+      setUsageCache({});
     }
     prevUserIdRef.current = currentUserId ?? undefined;
   }, [user?.id, setSimulatedTier, setSimulatedAuth]);
@@ -151,12 +152,13 @@ export function EntitlementsProvider({
     }
   }, [resources]);
 
-  // Refresh when simulatedTier or user changes, but only after auth resolves
+  // Refresh when simulatedTier or user changes, but only after auth resolves.
+  // Also wait for session to hydrate to avoid fetching with missing auth tokens.
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && !(user?.id && !session)) {
       refresh();
     }
-  }, [simulatedTier, user?.id, authLoading, refresh]);
+  }, [simulatedTier, user?.id, session, authLoading, refresh]);
 
   // Real-time tier sync: listen for admin tier changes via Supabase Realtime
   const { toastMessage, dismissToast } = useRealtimeTierSync({

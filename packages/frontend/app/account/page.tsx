@@ -101,16 +101,22 @@ function AccountPageContent() {
   const tabParam = searchParams.get("tab");
 
   // Redirect old tab URLs to unified page (except support)
-  if (
+  const shouldRedirect =
     tabParam &&
     tabParam !== "support" &&
-    ["profile", "subscription", "activity"].includes(tabParam)
-  ) {
-    router.replace("/account", { scroll: false });
-    return <LoadingSkeleton />;
-  }
+    ["profile", "subscription", "activity"].includes(tabParam);
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.replace("/account", { scroll: false });
+    }
+  }, [shouldRedirect, router]);
 
   const showSupport = tabParam === "support";
+
+  if (shouldRedirect) {
+    return <LoadingSkeleton />;
+  }
 
   if (authLoading || entitlementsLoading) {
     return <LoadingSkeleton />;

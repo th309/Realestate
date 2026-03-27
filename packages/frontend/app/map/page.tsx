@@ -291,6 +291,11 @@ function MapPageInner() {
   // Handle feature click - open right panel with geography details
   const handleFeatureClick = useCallback(
     (geography: SelectedGeography | null) => {
+      if (!geography) {
+        setSelectedGeography(null);
+        setRightPanelOpen(false);
+        return;
+      }
       setSelectedGeography(geography);
       if (geography) {
         trackEvent("feature.region_select", {
@@ -426,6 +431,8 @@ function MapPageInner() {
   // Handler to change geo level and clear state filter for levels that don't need it
   const handleGeoLevelChange = useCallback((level: GeoLevel) => {
     setGeoLevel(level);
+    setSelectedGeography(null);
+    setRightPanelOpen(false);
     // Clear state filter when switching to levels that don't require it
     // (only city, zip, tract need state filtering)
     if (!["city", "zip", "tract"].includes(level)) {

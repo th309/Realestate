@@ -63,6 +63,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, isLoading, user, shouldShowTour, phase]);
 
+  // Reset tour when user signs out
+  useEffect(() => {
+    if (!user && phase !== "idle") {
+      setPhase("idle");
+      setStepIndex(0);
+    }
+  }, [user, phase]);
+
   const resolveStepRoute = useCallback(
     (step: TourStep): string | null => {
       if (step.id === "ai-assessment") {

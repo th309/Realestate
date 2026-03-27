@@ -98,8 +98,10 @@ export function OrgSettingsSection() {
       }
 
       setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
 
       if (slugChanged) {
+        await refresh();
         router.replace(`/org/${updated.slug}/admin`);
       } else {
         await refresh();

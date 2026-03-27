@@ -148,6 +148,7 @@ function UserCard({
   onChangeTier,
   onStartTrial,
   onDeleteUser,
+  onDeleteOrg,
 }: {
   user: UserData;
   features: FeatureDefinition[];

@@ -89,6 +89,7 @@ export function useWatchlist({
       geographyName?: string,
       scoreAtAdd?: number,
     ): Promise<WatchlistItem | null> => {
+      setError(null);
       try {
         const authHeaders = await getAuthHeaders();
         const response = await fetch("/api/analytics/persistence/watchlist", {
@@ -122,6 +123,7 @@ export function useWatchlist({
   );
 
   const removeFromWatchlist = useCallback(async (id: string) => {
+    setError(null);
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch(

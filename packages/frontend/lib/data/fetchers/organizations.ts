@@ -45,6 +45,7 @@ export interface AuditLogEntry {
   target_id: string | null;
   details: Record<string, unknown> | null;
   created_at: string;
+  actor_email?: string;
 }
 
 export interface AuditLogResponse {

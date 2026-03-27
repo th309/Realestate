@@ -1,7 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useMemo } from 'react';
-import type { SectionType, ReportSection, Geography, UserType } from '../../types';
+import { useState, useCallback, useMemo } from "react";
+import type {
+  SectionType,
+  ReportSection,
+  Geography,
+  UserType,
+} from "../../types";
 
 export interface BuilderSection extends ReportSection {
   name?: string;
@@ -24,8 +29,8 @@ export interface BuilderState {
 }
 
 const initialState: BuilderState = {
-  title: 'Custom Report',
-  userType: 'homebuyer',
+  title: "Custom Report",
+  userType: "homebuyer",
   geography: null,
   sections: [],
   selectedSectionId: null,
@@ -34,271 +39,277 @@ const initialState: BuilderState = {
 };
 
 // Section templates for the library
-export const SECTION_TEMPLATES: Record<SectionType, { name: string; description: string; defaultConfig: Record<string, unknown> }> = {
+export const SECTION_TEMPLATES: Record<
+  SectionType,
+  { name: string; description: string; defaultConfig: Record<string, unknown> }
+> = {
   report_title: {
-    name: 'Report Title',
-    description: 'Large title header for your report',
-    defaultConfig: { variant: 'hero' },
+    name: "Report Title",
+    description: "Large title header for your report",
+    defaultConfig: { variant: "hero" },
   },
   report_metadata: {
-    name: 'Report Info',
-    description: 'Date, author, and report details',
+    name: "Report Info",
+    description: "Date, author, and report details",
     defaultConfig: {},
   },
   score_gauge_single: {
-    name: 'Score Gauge',
-    description: 'Single market score visualization',
-    defaultConfig: { scoreType: 'homeready', showComponents: false },
+    name: "Score Gauge",
+    description: "Single market score visualization",
+    defaultConfig: { scoreType: "homeready", showComponents: false },
   },
   score_gauge_dual: {
-    name: 'Dual Score Gauge',
-    description: 'Compare two scores side by side',
+    name: "Dual Score Gauge",
+    description: "Compare two scores side by side",
     defaultConfig: {},
   },
   metric_grid: {
-    name: 'Key Metrics Grid',
-    description: 'Grid of important market metrics',
-    defaultConfig: { columns: 3, metrics: ['median_price', 'price_change_yoy', 'days_on_market'] },
+    name: "Key Metrics Grid",
+    description: "Grid of important market metrics",
+    defaultConfig: {
+      columns: 3,
+      metrics: ["median_price", "price_change_yoy", "days_on_market"],
+    },
   },
   metric_detail: {
-    name: 'Metric Detail',
-    description: 'Deep dive into a single metric',
-    defaultConfig: { metric: 'median_price', showChart: true },
+    name: "Metric Detail",
+    description: "Deep dive into a single metric",
+    defaultConfig: { metric: "median_price", showChart: true },
   },
   metric_highlight: {
-    name: 'Metric Highlight',
-    description: 'Highlight a key metric prominently',
-    defaultConfig: { metric: 'median_price', variant: 'large' },
+    name: "Metric Highlight",
+    description: "Highlight a key metric prominently",
+    defaultConfig: { metric: "median_price", variant: "large" },
   },
   metric_comparison: {
-    name: 'Metric Comparison',
-    description: 'Compare metrics across geographies',
-    defaultConfig: { metrics: ['median_price', 'price_change_yoy'] },
+    name: "Metric Comparison",
+    description: "Compare metrics across geographies",
+    defaultConfig: { metrics: ["median_price", "price_change_yoy"] },
   },
   chart_single: {
-    name: 'Single Chart',
-    description: 'Time series chart for one metric',
-    defaultConfig: { metric: 'median_price', chartType: 'area' },
+    name: "Single Chart",
+    description: "Time series chart for one metric",
+    defaultConfig: { metric: "median_price", chartType: "area" },
   },
   chart_grid: {
-    name: 'Chart Grid',
-    description: 'Multiple charts in a grid layout',
+    name: "Chart Grid",
+    description: "Multiple charts in a grid layout",
     defaultConfig: { columns: 2 },
   },
   comparison_chart_grid: {
-    name: 'Comparison Charts',
-    description: 'Compare multiple markets on charts',
+    name: "Comparison Charts",
+    description: "Compare multiple markets on charts",
     defaultConfig: {},
   },
   comparison_table: {
-    name: 'Comparison Table',
-    description: 'Side-by-side market comparison',
+    name: "Comparison Table",
+    description: "Side-by-side market comparison",
     defaultConfig: { showRankings: true },
   },
   comparison_radar: {
-    name: 'Radar Chart',
-    description: 'Multi-dimensional comparison',
+    name: "Radar Chart",
+    description: "Multi-dimensional comparison",
     defaultConfig: {},
   },
   comparison_header: {
-    name: 'Comparison Header',
-    description: 'Header showing compared markets',
+    name: "Comparison Header",
+    description: "Header showing compared markets",
     defaultConfig: {},
   },
   ai_narrative: {
-    name: 'AI Analysis',
-    description: 'AI-generated market insights',
+    name: "AI Analysis",
+    description: "AI-generated market insights",
     defaultConfig: { maxTokens: 500 },
   },
   market_verdict_bar: {
-    name: 'Market Verdict',
-    description: 'Overall market assessment bar',
+    name: "Market Verdict",
+    description: "Overall market assessment bar",
     defaultConfig: {},
   },
   winner_badges: {
-    name: 'Winner Badges',
-    description: 'Show winning market categories',
+    name: "Winner Badges",
+    description: "Show winning market categories",
     defaultConfig: {},
   },
   pros_cons_table: {
-    name: 'Pros & Cons',
-    description: 'Market advantages and disadvantages',
+    name: "Pros & Cons",
+    description: "Market advantages and disadvantages",
     defaultConfig: {},
   },
   strengths_risks: {
-    name: 'Strengths & Risks',
-    description: 'Market strength and risk analysis',
+    name: "Strengths & Risks",
+    description: "Market strength and risk analysis",
     defaultConfig: {},
   },
   score_breakdown: {
-    name: 'Score Breakdown',
-    description: 'Detailed score component analysis',
+    name: "Score Breakdown",
+    description: "Detailed score component analysis",
     defaultConfig: {},
   },
   investment_verdict: {
-    name: 'Investment Verdict',
-    description: 'Investment recommendation summary',
+    name: "Investment Verdict",
+    description: "Investment recommendation summary",
     defaultConfig: {},
   },
   fact_box: {
-    name: 'Fact Box',
-    description: 'Key facts callout box',
+    name: "Fact Box",
+    description: "Key facts callout box",
     defaultConfig: {},
   },
   ranked_list: {
-    name: 'Ranked List',
-    description: 'Ranked list of items',
+    name: "Ranked List",
+    description: "Ranked list of items",
     defaultConfig: { items: 5 },
   },
   indicator_dashboard: {
-    name: 'Indicators Dashboard',
-    description: 'Overview of market indicators',
+    name: "Indicators Dashboard",
+    description: "Overview of market indicators",
     defaultConfig: {},
   },
   indicator_deep_dive: {
-    name: 'Indicator Deep Dive',
-    description: 'Detailed indicator analysis',
+    name: "Indicator Deep Dive",
+    description: "Detailed indicator analysis",
     defaultConfig: {},
   },
   indicator_summary_table: {
-    name: 'Indicator Summary',
-    description: 'Summary table of indicators',
+    name: "Indicator Summary",
+    description: "Summary table of indicators",
     defaultConfig: {},
   },
   stress_indicator: {
-    name: 'Stress Indicator',
-    description: 'Market stress level gauge',
+    name: "Stress Indicator",
+    description: "Market stress level gauge",
     defaultConfig: {},
   },
   stress_summary: {
-    name: 'Stress Summary',
-    description: 'Summary of stress factors',
+    name: "Stress Summary",
+    description: "Summary of stress factors",
     defaultConfig: {},
   },
   cycle_indicator: {
-    name: 'Cycle Indicator',
-    description: 'Market cycle position indicator',
+    name: "Cycle Indicator",
+    description: "Market cycle position indicator",
     defaultConfig: {},
   },
   cycle_diagram: {
-    name: 'Cycle Diagram',
-    description: 'Visual cycle position diagram',
+    name: "Cycle Diagram",
+    description: "Visual cycle position diagram",
     defaultConfig: {},
   },
   percentile_bands: {
-    name: 'Percentile Bands',
-    description: 'Metric percentile visualization',
+    name: "Percentile Bands",
+    description: "Metric percentile visualization",
     defaultConfig: {},
   },
   percentile_rank: {
-    name: 'Percentile Rank',
-    description: 'Market ranking by percentile',
+    name: "Percentile Rank",
+    description: "Market ranking by percentile",
     defaultConfig: {},
   },
   scenario_card: {
-    name: 'Scenario Card',
-    description: 'Scenario analysis card',
+    name: "Scenario Card",
+    description: "Scenario analysis card",
     defaultConfig: {},
   },
   scenario_chart: {
-    name: 'Scenario Chart',
-    description: 'Chart showing scenarios',
+    name: "Scenario Chart",
+    description: "Chart showing scenarios",
     defaultConfig: {},
   },
   forecast_display: {
-    name: 'Forecast Display',
-    description: 'Market forecast visualization',
+    name: "Forecast Display",
+    description: "Market forecast visualization",
     defaultConfig: {},
   },
   affordability_gap_visual: {
-    name: 'Affordability Gap',
-    description: 'Income vs price gap visual',
+    name: "Affordability Gap",
+    description: "Income vs price gap visual",
     defaultConfig: {},
   },
   savings_calculator: {
-    name: 'Savings Calculator',
-    description: 'Down payment savings calculator',
+    name: "Savings Calculator",
+    description: "Down payment savings calculator",
     defaultConfig: {},
   },
   personal_affordability: {
-    name: 'Personal Affordability',
-    description: 'Personalized affordability analysis',
+    name: "Personal Affordability",
+    description: "Personalized affordability analysis",
     defaultConfig: {},
   },
   budget_breakdown: {
-    name: 'Budget Breakdown',
-    description: 'Monthly payment breakdown',
+    name: "Budget Breakdown",
+    description: "Monthly payment breakdown",
     defaultConfig: {},
   },
   savings_timeline: {
-    name: 'Savings Timeline',
-    description: 'Timeline to save for purchase',
+    name: "Savings Timeline",
+    description: "Timeline to save for purchase",
     defaultConfig: {},
   },
   alternative_areas: {
-    name: 'Alternative Areas',
-    description: 'Suggested alternative markets',
+    name: "Alternative Areas",
+    description: "Suggested alternative markets",
     defaultConfig: { count: 3 },
   },
   migration_sankey: {
-    name: 'Migration Flow',
-    description: 'Population migration flow chart',
+    name: "Migration Flow",
+    description: "Population migration flow chart",
     defaultConfig: {},
   },
   pro_forma_assumptions: {
-    name: 'Pro Forma Assumptions',
-    description: 'Investment assumptions table',
+    name: "Pro Forma Assumptions",
+    description: "Investment assumptions table",
     defaultConfig: {},
   },
   pro_forma_cash_flow: {
-    name: 'Cash Flow Analysis',
-    description: 'Monthly cash flow breakdown',
+    name: "Cash Flow Analysis",
+    description: "Monthly cash flow breakdown",
     defaultConfig: {},
   },
   pro_forma_returns: {
-    name: 'Returns Summary',
-    description: 'Investment returns overview',
+    name: "Returns Summary",
+    description: "Investment returns overview",
     defaultConfig: {},
   },
   pro_forma_sensitivity: {
-    name: 'Sensitivity Analysis',
-    description: 'Returns sensitivity to variables',
+    name: "Sensitivity Analysis",
+    description: "Returns sensitivity to variables",
     defaultConfig: {},
   },
   text_block: {
-    name: 'Text Block',
-    description: 'Custom text content',
-    defaultConfig: { content: '' },
+    name: "Text Block",
+    description: "Custom text content",
+    defaultConfig: { content: "" },
   },
   status_badge: {
-    name: 'Status Badge',
-    description: 'Status indicator badge',
+    name: "Status Badge",
+    description: "Status indicator badge",
     defaultConfig: {},
   },
   // Premium comparison report sections (2026 redesign)
   comparison_hero_showdown: {
-    name: 'Hero Showdown',
-    description: 'Side-by-side score comparison with winner',
+    name: "Hero Showdown",
+    description: "Side-by-side score comparison with winner",
     defaultConfig: {},
   },
   why_winner_won: {
-    name: 'Why Winner Won',
-    description: '3 reasons based on user priorities',
+    name: "Why Winner Won",
+    description: "3 reasons based on user priorities",
     defaultConfig: {},
   },
   score_credibility: {
-    name: 'Score Credibility',
-    description: 'Backtesting proof block',
+    name: "Score Credibility",
+    description: "Backtesting proof block",
     defaultConfig: {},
   },
   market_deep_dive: {
-    name: 'Market Deep Dive',
-    description: 'Full market analysis per market',
+    name: "Market Deep Dive",
+    description: "Full market analysis per market",
     defaultConfig: {},
   },
   ai_recommendation: {
-    name: 'AI Recommendation',
-    description: 'Personalized AI recommendation',
+    name: "AI Recommendation",
+    description: "Personalized AI recommendation",
     defaultConfig: {},
   },
 };
@@ -306,69 +317,122 @@ export const SECTION_TEMPLATES: Record<SectionType, { name: string; description:
 // Group sections by category
 export const SECTION_CATEGORIES = [
   {
-    id: 'header',
-    name: 'Header & Title',
-    sections: ['report_title', 'report_metadata'] as SectionType[],
+    id: "header",
+    name: "Header & Title",
+    sections: ["report_title", "report_metadata"] as SectionType[],
   },
   {
-    id: 'scores',
-    name: 'Scores & Gauges',
-    sections: ['score_gauge_single', 'score_gauge_dual', 'score_breakdown'] as SectionType[],
+    id: "scores",
+    name: "Scores & Gauges",
+    sections: [
+      "score_gauge_single",
+      "score_gauge_dual",
+      "score_breakdown",
+    ] as SectionType[],
   },
   {
-    id: 'metrics',
-    name: 'Metrics & Data',
-    sections: ['metric_grid', 'metric_detail', 'metric_highlight', 'metric_comparison'] as SectionType[],
+    id: "metrics",
+    name: "Metrics & Data",
+    sections: [
+      "metric_grid",
+      "metric_detail",
+      "metric_highlight",
+      "metric_comparison",
+    ] as SectionType[],
   },
   {
-    id: 'charts',
-    name: 'Charts & Visualizations',
-    sections: ['chart_single', 'chart_grid', 'comparison_chart_grid', 'comparison_radar'] as SectionType[],
+    id: "charts",
+    name: "Charts & Visualizations",
+    sections: [
+      "chart_single",
+      "chart_grid",
+      "comparison_chart_grid",
+      "comparison_radar",
+    ] as SectionType[],
   },
   {
-    id: 'comparison',
-    name: 'Comparison',
-    sections: ['comparison_header', 'comparison_table', 'winner_badges', 'market_verdict_bar'] as SectionType[],
+    id: "comparison",
+    name: "Comparison",
+    sections: [
+      "comparison_header",
+      "comparison_table",
+      "winner_badges",
+      "market_verdict_bar",
+    ] as SectionType[],
   },
   {
-    id: 'analysis',
-    name: 'Analysis & Insights',
-    sections: ['ai_narrative', 'pros_cons_table', 'strengths_risks', 'investment_verdict', 'fact_box', 'ranked_list'] as SectionType[],
+    id: "analysis",
+    name: "Analysis & Insights",
+    sections: [
+      "ai_narrative",
+      "pros_cons_table",
+      "strengths_risks",
+      "investment_verdict",
+      "fact_box",
+      "ranked_list",
+    ] as SectionType[],
   },
   {
-    id: 'indicators',
-    name: 'Market Indicators',
-    sections: ['indicator_dashboard', 'indicator_deep_dive', 'indicator_summary_table', 'stress_indicator', 'stress_summary'] as SectionType[],
+    id: "indicators",
+    name: "Market Indicators",
+    sections: [
+      "indicator_dashboard",
+      "indicator_deep_dive",
+      "indicator_summary_table",
+      "stress_indicator",
+      "stress_summary",
+    ] as SectionType[],
   },
   {
-    id: 'cycle',
-    name: 'Market Cycle',
-    sections: ['cycle_indicator', 'cycle_diagram', 'percentile_bands', 'percentile_rank'] as SectionType[],
+    id: "cycle",
+    name: "Market Cycle",
+    sections: [
+      "cycle_indicator",
+      "cycle_diagram",
+      "percentile_bands",
+      "percentile_rank",
+    ] as SectionType[],
   },
   {
-    id: 'scenarios',
-    name: 'Scenarios & Forecasts',
-    sections: ['scenario_card', 'scenario_chart', 'forecast_display'] as SectionType[],
+    id: "scenarios",
+    name: "Scenarios & Forecasts",
+    sections: [
+      "scenario_card",
+      "scenario_chart",
+      "forecast_display",
+    ] as SectionType[],
   },
   {
-    id: 'affordability',
-    name: 'Affordability',
-    sections: ['affordability_gap_visual', 'savings_calculator', 'personal_affordability', 'budget_breakdown', 'savings_timeline', 'alternative_areas'] as SectionType[],
+    id: "affordability",
+    name: "Affordability",
+    sections: [
+      "affordability_gap_visual",
+      "savings_calculator",
+      "personal_affordability",
+      "budget_breakdown",
+      "savings_timeline",
+      "alternative_areas",
+    ] as SectionType[],
   },
   {
-    id: 'migration',
-    name: 'Migration & Demographics',
-    sections: ['migration_sankey'] as SectionType[],
+    id: "migration",
+    name: "Migration & Demographics",
+    sections: ["migration_sankey"] as SectionType[],
   },
   {
-    id: 'investment',
-    name: 'Investment Analysis',
-    sections: ['pro_forma_assumptions', 'pro_forma_cash_flow', 'pro_forma_returns', 'pro_forma_sensitivity'] as SectionType[],
+    id: "investment",
+    name: "Investment Analysis",
+    sections: [
+      "pro_forma_assumptions",
+      "pro_forma_cash_flow",
+      "pro_forma_returns",
+      "pro_forma_sensitivity",
+    ] as SectionType[],
   },
   {
-    id: 'content',
-    name: 'Custom Content',
-    sections: ['text_block', 'status_badge'] as SectionType[],
+    id: "content",
+    name: "Custom Content",
+    sections: ["text_block", "status_badge"] as SectionType[],
   },
 ];
 
@@ -438,13 +502,22 @@ export function useBuilderState(): UseBuilderStateReturn {
     setState((prev) => ({
       ...prev,
       sections: prev.sections.filter((s) => s.id !== id),
-      selectedSectionId: prev.selectedSectionId === id ? null : prev.selectedSectionId,
+      selectedSectionId:
+        prev.selectedSectionId === id ? null : prev.selectedSectionId,
       isDirty: true,
     }));
   }, []);
 
   const moveSection = useCallback((fromIndex: number, toIndex: number) => {
     setState((prev) => {
+      if (
+        fromIndex < 0 ||
+        fromIndex >= prev.sections.length ||
+        toIndex < 0 ||
+        toIndex >= prev.sections.length
+      ) {
+        return prev;
+      }
       const newSections = [...prev.sections];
       const [removed] = newSections.splice(fromIndex, 1);
       newSections.splice(toIndex, 0, removed);
@@ -476,15 +549,18 @@ export function useBuilderState(): UseBuilderStateReturn {
     });
   }, []);
 
-  const updateSectionConfig = useCallback((id: string, config: Record<string, unknown>) => {
-    setState((prev) => ({
-      ...prev,
-      sections: prev.sections.map((s) =>
-        s.id === id ? { ...s, config: { ...s.config, ...config } } : s
-      ),
-      isDirty: true,
-    }));
-  }, []);
+  const updateSectionConfig = useCallback(
+    (id: string, config: Record<string, unknown>) => {
+      setState((prev) => ({
+        ...prev,
+        sections: prev.sections.map((s) =>
+          s.id === id ? { ...s, config: { ...s.config, ...config } } : s,
+        ),
+        isDirty: true,
+      }));
+    },
+    [],
+  );
 
   const selectSection = useCallback((id: string | null) => {
     setState((prev) => ({ ...prev, selectedSectionId: id }));
@@ -525,7 +601,7 @@ export function useBuilderState(): UseBuilderStateReturn {
   // Computed
   const selectedSection = useMemo(
     () => state.sections.find((s) => s.id === state.selectedSectionId) ?? null,
-    [state.sections, state.selectedSectionId]
+    [state.sections, state.selectedSectionId],
   );
 
   return {

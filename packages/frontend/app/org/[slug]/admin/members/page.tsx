@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Plus, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { useOrg } from "../../../hooks/useOrg";
+import { useAuth } from "@/lib/auth";
 import {
   fetchOrgMembers,
   inviteOrgMember,
@@ -46,6 +47,8 @@ export default function OrgAdminMembers() {
     void loadMembers();
   }, [loadMembers]);
 
+  const [memberError, setMemberError] = useState<string | null>(null);
+
   const handleInvite = useCallback(
     async (
       email: string,
@@ -54,8 +57,15 @@ export default function OrgAdminMembers() {
       lastName?: string,
     ) => {
       if (!org) return;
-      await inviteOrgMember(org.slug, email, role, firstName, lastName);
-      await loadMembers();
+      try {
+        setMemberError(null);
+        await inviteOrgMember(org.slug, email, role, firstName, lastName);
+        await loadMembers();
+      } catch (err) {
+        setMemberError(
+          err instanceof Error ? err.message : "Failed to invite member",
+        );
+      }
     },
     [org, loadMembers],
   );
@@ -63,8 +73,15 @@ export default function OrgAdminMembers() {
   const handleChangeRole = useCallback(
     async (userId: string, newRole: string) => {
       if (!org) return;
-      await changeOrgMemberRole(org.slug, userId, newRole);
-      await loadMembers();
+      try {
+        setMemberError(null);
+        await changeOrgMemberRole(org.slug, userId, newRole);
+        await loadMembers();
+      } catch (err) {
+        setMemberError(
+          err instanceof Error ? err.message : "Failed to change role",
+        );
+      }
     },
     [org, loadMembers],
   );
@@ -72,18 +89,36 @@ export default function OrgAdminMembers() {
   const handleRemove = useCallback(
     async (userId: string) => {
       if (!org) return;
-      await removeOrgMember(org.slug, userId);
-      await loadMembers();
+      try {
+        setMemberError(null);
+        await removeOrgMember(org.slug, userId);
+        await loadMembers();
+      } catch (err) {
+        setMemberError(
+          err instanceof Error ? err.message : "Failed to remove member",
+        );
+      }
     },
     [org, loadMembers],
   );
 
-  // Derive current user ID from the org owner as a fallback.
-  // In a real app this would come from the auth session.
-  const currentUserId = org?.owner_id ?? null;
+  const { user: authUser } = useAuth();
+  const currentUserId = authUser?.id ?? null;
 
   return (
     <div className="p-6 max-w-5xl">
+      {memberError && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-error-container/30 px-4 py-3 text-sm text-error">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {memberError}
+          <button
+            onClick={() => setMemberError(null)}
+            className="ml-auto text-xs hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

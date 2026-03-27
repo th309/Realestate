@@ -1,8 +1,12 @@
 "use client";
 
-import React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/lib/auth";
+import React, { useEffect, useRef } from "react";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 
@@ -102,6 +106,23 @@ function getQueryClient() {
   }
 }
 
+/** Clears React Query cache when user signs out to prevent data leaking between users. */
+function QueryCacheCleaner() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const prev = prevUserIdRef.current;
+    prevUserIdRef.current = user?.id ?? null;
+    if (prev && !user?.id) {
+      queryClient.clear();
+    }
+  }, [user?.id, queryClient]);
+
+  return null;
+}
+
 export function Providers({
   children,
   initialUserId,
@@ -114,6 +135,7 @@ export function Providers({
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider initialUserId={initialUserId}>
+        <QueryCacheCleaner />
         <TourProvider>
           <EntitlementsProvider>
             <PaywallProvider>{children}</PaywallProvider>

@@ -650,7 +650,6 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
     try {
       const raw = localStorage.getItem("propertyiq-report-prefill");
       if (raw) {
-        localStorage.removeItem("propertyiq-report-prefill");
         const prefill = JSON.parse(raw);
         if (prefill?.id && prefill?.name && prefill?.type) {
           setMarkets([
@@ -672,6 +671,7 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
   const canGenerate = markets.length > 0;
 
   const handleGenerate = async () => {
+    if (isGenerating) return;
     if (markets.length === 0) {
       setError("Please select at least one market");
       return;
@@ -764,6 +764,13 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
         userId,
         userTier: effectiveTier || undefined,
       });
+      setIsGenerating(false);
+      // Clear localStorage prefill now that the report was successfully generated
+      try {
+        localStorage.removeItem("propertyiq-report-prefill");
+      } catch {
+        /* ignore */
+      }
       router.push(`/reports/${data.report_id}`);
     } catch (err) {
       console.error("Report generation error:", err);
