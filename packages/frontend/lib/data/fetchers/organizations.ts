@@ -62,6 +62,8 @@ export interface InviteDetails {
   organizationId: string;
   orgName: string | null;
   orgSlug: string | null;
+  /** Whether the invited email already has a registered account. */
+  userExists: boolean;
 }
 
 // ---------------------------------------------------------------------------

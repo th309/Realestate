@@ -43,6 +43,13 @@ export class InvitesService {
 
     const org = invite.organizations as any;
 
+    // Check if the invited email already has an account
+    const { data: existingUser } = await this.supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', invite.email)
+      .maybeSingle();
+
     return {
       id: invite.id,
       email: invite.email,
@@ -52,6 +59,7 @@ export class InvitesService {
       organizationId: invite.organization_id,
       orgName: org?.name ?? null,
       orgSlug: org?.slug ?? null,
+      userExists: !!existingUser,
     };
   }
 
