@@ -21,7 +21,7 @@ export class AdminMetricsController {
       'admin_health_snapshots',
       query.from,
       query.to,
-      { source_name: query.source_name },
+      query.source_name ? { source_name: query.source_name } : undefined,
     );
     return { success: true, data };
   }
@@ -42,7 +42,7 @@ export class AdminMetricsController {
       'admin_api_metrics',
       query.from,
       query.to,
-      { endpoint: query.endpoint },
+      query.endpoint ? { endpoint: query.endpoint } : undefined,
     );
     return { success: true, data };
   }
@@ -61,7 +61,7 @@ export class AdminMetricsController {
   async getAlerts(@Query() query: QueryMetricsDto) {
     const data = await this.queryService.getAlerts({
       severity: query.severity,
-      status: query.status,
+      status: query.status as 'active' | 'resolved' | undefined,
       from: query.from,
       to: query.to,
     });
@@ -86,7 +86,7 @@ export class AdminMetricsController {
       'admin_score_snapshots',
       query.from,
       query.to,
-      { score_type: query.score_type },
+      query.score_type ? { score_type: query.score_type } : undefined,
     );
     return { success: true, data };
   }

@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -54,6 +54,8 @@ import { OrgEmbedsModule } from './org-embeds/org-embeds.module';
 import { OrgApiKeysModule } from './org-api-keys/org-api-keys.module';
 import { PlatformApiModule } from './platform-api/platform-api.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
+import { AdminMetricsModule } from './admin-metrics/admin-metrics.module';
+import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 
 @Module({
   imports: [
@@ -126,6 +128,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     OrgEmbedsModule,
     OrgApiKeysModule,
     PlatformApiModule,
+    AdminMetricsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -134,6 +137,10 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ApiMetricsInterceptor,
     },
   ],
 })
