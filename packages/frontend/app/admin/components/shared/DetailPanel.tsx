@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { TimeRangeSelector } from "./TimeRangeSelector";
 import type { TimeRangeKey } from "./TimeRangeSelector";
@@ -21,12 +23,30 @@ export function DetailPanel({
   onTimeRangeChange,
   children,
 }: DetailPanelProps) {
-  return (
+  // Track whether we're mounted in the browser so createPortal is safe to use
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Prevent body scroll when the panel is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  const panelContent = (
     <>
-      {/* M3 Scrim overlay — closes panel on click */}
+      {/* M3 Scrim overlay — covers admin area below the 64px global header */}
       <div
         data-testid="detail-panel-scrim"
-        className={`fixed inset-0 bg-on-surface/40 z-40 transition-opacity duration-400 ${
+        className={`fixed top-16 inset-x-0 bottom-0 bg-on-surface/40 z-40 transition-opacity duration-400 ${
           isOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -35,11 +55,11 @@ export function DetailPanel({
         aria-hidden="true"
       />
 
-      {/* Slide-out panel */}
+      {/* Slide-out panel — starts below the 64px global header (h-16) */}
       <aside
         data-testid="detail-panel"
         className={`
-          fixed inset-y-0 right-0 z-50 w-full sm:w-[480px]
+          fixed top-16 bottom-0 right-0 z-50 w-full sm:w-[480px]
           flex flex-col
           bg-surface-container-low border-l border-outline-variant
           transform transition-transform duration-400 ease-[cubic-bezier(0.2,0,0,1)]
@@ -76,4 +96,9 @@ export function DetailPanel({
       </aside>
     </>
   );
+
+  // Use a portal so the panel renders directly under document.body,
+  // escaping the layout's overflow-auto stacking context.
+  if (!isMounted) return null;
+  return createPortal(panelContent, document.body);
 }
