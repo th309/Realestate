@@ -1,178 +1,223 @@
 /**
- * Redfin TSV streaming processor.
+ * Redfin TSV processor for the shared import framework.
  *
- * Handles downloading gzipped TSV files from S3, decompressing them,
- * parsing the TSV content, and processing rows in chunks with geoid
- * resolution and batch upserting.
+ * Handles parsing TSV content (in-memory or streamed from disk) and
+ * upserting into per-geography tables (redfin_state, redfin_metro, etc.).
  *
- * This is separated from the entry point to keep file sizes under
- * the 300-line limit and to isolate the streaming I/O logic.
+ * Download logic is in redfin-download.ts. Column mapping is in
+ * redfin-column-maps.ts. This file orchestrates the import flow.
  */
 
-import { promisify } from 'util';
-import { gunzip } from 'zlib';
-import { parse } from 'csv-parse';
-import axios from 'axios';
+import { createReadStream } from "fs";
+import { unlink } from "fs/promises";
+import { parse } from "csv-parse";
 
-import { getSupabaseClient, batchUpsert } from '../../lib';
-import type { BatchUpsertResult, ImportGeographyResult } from '../../lib';
-import { createIngestionLogger } from '../../utils/ingestion-logger';
+import { getSupabaseClient, batchUpsert } from "../../lib";
+import type { ImportGeographyResult } from "../../lib";
+import { createIngestionLogger } from "../../utils/ingestion-logger";
 
 import {
   REDFIN_S3_URLS,
+  REDFIN_TABLE_NAMES,
   REDFIN_CONFLICT_KEYS,
-  REDFIN_PROPERTY_TYPE_FILTER,
-  getTableNameForYear,
-  STREAMING_CHUNK_SIZE,
   UPSERT_BATCH_SIZE,
-} from './redfin-config';
-import {
-  discoverMetricColumns,
-  countBaseMetrics,
-  mapTsvRowToRecord,
-  type RedfinMetricColumn,
-  type RedfinMappedRecord,
-} from './redfin-column-maps';
-import { resolveRedfinGeoid, getGeoidCacheSize } from './redfin-geoid-lookup';
+} from "./redfin-config";
+import { mapTsvRowToRecord } from "./redfin-column-maps";
+import { downloadToMemory, downloadToDisk } from "./redfin-download";
 
-const gunzipAsync = promisify(gunzip);
+/** Geo levels small enough to load into memory as a string. */
+const IN_MEMORY_GEOS = new Set(["national", "state"]);
 
 // ---------------------------------------------------------------------------
-// Download and decompress
+// County FIPS lookup
 // ---------------------------------------------------------------------------
 
-/**
- * Download a gzipped TSV file from S3 and return decompressed content as a string.
- */
-export async function downloadAndDecompressTsv(url: string): Promise<string> {
-  console.log(`  Downloading from: ${url.substring(0, 80)}...`);
+let countyFipsMap: Map<string, string> | null = null;
 
-  const response = await axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 300_000,
-    maxContentLength: 500 * 1024 * 1024,
-    headers: { 'User-Agent': 'PropertyIQ-DataPipeline/1.0' },
-  });
+async function initCountyFipsLookup(): Promise<void> {
+  if (countyFipsMap) return;
+  const supabase = getSupabaseClient();
+  countyFipsMap = new Map();
 
-  const buffer = Buffer.from(response.data);
-  console.log(`  Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB (compressed)`);
+  const { data, error } = await supabase
+    .from("geography_crosswalk")
+    .select("county_name, state_code, county_fips")
+    .not("county_fips", "is", null);
 
-  const isGzip = buffer[0] === 0x1f && buffer[1] === 0x8b;
-  if (isGzip) {
-    const decompressed = await gunzipAsync(buffer);
-    console.log(`  Decompressed to ${(decompressed.length / 1024 / 1024).toFixed(2)} MB`);
-    return decompressed.toString('utf-8');
+  if (error || !data) {
+    console.warn(
+      "  Warning: Could not load county FIPS lookup:",
+      error?.message,
+    );
+    return;
   }
 
-  return buffer.toString('utf-8');
+  for (const row of data) {
+    if (row.county_name && row.state_code && row.county_fips) {
+      const key = `${row.county_name.toLowerCase()}|${row.state_code.toUpperCase()}`;
+      countyFipsMap.set(key, row.county_fips);
+    }
+  }
+  console.log(`  County FIPS lookup loaded: ${countyFipsMap.size} entries`);
+}
+
+function lookupCountyFips(
+  county: string | null,
+  state: string | null,
+): string | null {
+  if (!county || !state || !countyFipsMap) return null;
+  return (
+    countyFipsMap.get(`${county.toLowerCase()}|${state.toUpperCase()}`) || null
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Group records by year-partitioned table and upsert
+// In-memory import (small files: national, state)
 // ---------------------------------------------------------------------------
 
-async function upsertRecordsByYear(
-  records: Record<string, unknown>[],
-): Promise<{ inserted: number; failed: number; errors: string[] }> {
+async function importSmallFile(
+  geoLevel: string,
+  tsvContent: string,
+  tableName: string,
+): Promise<{ inserted: number; failed: number; latestDate: string | null }> {
   const supabase = getSupabaseClient();
-  const recordsByTable = new Map<string, Record<string, unknown>[]>();
+  const conflictKeys = REDFIN_CONFLICT_KEYS[tableName].split(",");
 
-  for (const record of records) {
-    const dateStr = record.metric_date as string;
-    const year = new Date(dateStr).getFullYear();
-    if (isNaN(year)) continue;
+  return new Promise((resolve, reject) => {
+    const records: Record<string, unknown>[] = [];
+    let latestDate: string | null = null;
 
-    const tableName = getTableNameForYear(year);
-    if (!recordsByTable.has(tableName)) {
-      recordsByTable.set(tableName, []);
-    }
-    recordsByTable.get(tableName)!.push(record);
-  }
+    const parser = parse({
+      columns: true,
+      skip_empty_lines: true,
+      delimiter: "\t",
+      trim: true,
+      relax_column_count: true,
+      relax_quotes: true,
+    });
+
+    parser.on("data", (row: Record<string, string>) => {
+      const mapped = mapTsvRowToRecord(row, geoLevel, lookupCountyFips);
+      if (mapped) {
+        records.push(mapped.dbRecord);
+        if (!latestDate || mapped.periodEnd > latestDate)
+          latestDate = mapped.periodEnd;
+      }
+    });
+
+    parser.on("error", reject);
+    parser.on("end", async () => {
+      console.log(`  Parsed ${records.length} records (after filtering)`);
+      const result = await batchUpsert(supabase, records, {
+        tableName,
+        conflictKeys,
+        batchSize: UPSERT_BATCH_SIZE,
+      });
+      resolve({ inserted: result.inserted, failed: result.failed, latestDate });
+    });
+
+    parser.write(tsvContent);
+    parser.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Streaming import (large files: metro, county, city, zip, neighborhood)
+// ---------------------------------------------------------------------------
+
+async function importLargeFile(
+  geoLevel: string,
+  tsvPath: string,
+  tableName: string,
+): Promise<{ inserted: number; failed: number; latestDate: string | null }> {
+  const supabase = getSupabaseClient();
+  const conflictKeys = REDFIN_CONFLICT_KEYS[tableName].split(",");
 
   let inserted = 0;
   let failed = 0;
-  const allErrors: string[] = [];
+  let latestDate: string | null = null;
+  let batch: Record<string, unknown>[] = [];
+  let rawCount = 0;
 
-  for (const [tableName, tableRecords] of recordsByTable) {
-    const result: BatchUpsertResult = await batchUpsert(supabase, tableRecords, {
+  const readStream = createReadStream(tsvPath, { encoding: "utf-8" });
+  const parser = readStream.pipe(
+    parse({
+      columns: true,
+      skip_empty_lines: true,
+      delimiter: "\t",
+      trim: true,
+      relax_column_count: true,
+      relax_quotes: true,
+    }),
+  );
+
+  for await (const row of parser) {
+    rawCount++;
+    const mapped = mapTsvRowToRecord(
+      row as Record<string, string>,
+      geoLevel,
+      lookupCountyFips,
+    );
+    if (!mapped) continue;
+
+    batch.push(mapped.dbRecord);
+    if (!latestDate || mapped.periodEnd > latestDate)
+      latestDate = mapped.periodEnd;
+
+    if (batch.length >= UPSERT_BATCH_SIZE) {
+      const result = await batchUpsert(supabase, batch, {
+        tableName,
+        conflictKeys,
+        batchSize: UPSERT_BATCH_SIZE,
+      });
+      inserted += result.inserted;
+      failed += result.failed;
+      batch = [];
+    }
+
+    if (rawCount % 500_000 === 0) {
+      console.log(
+        `  Progress: ${rawCount.toLocaleString()} raw rows, ${inserted.toLocaleString()} inserted`,
+      );
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await batchUpsert(supabase, batch, {
       tableName,
-      conflictKeys: [...REDFIN_CONFLICT_KEYS],
+      conflictKeys,
       batchSize: UPSERT_BATCH_SIZE,
     });
     inserted += result.inserted;
     failed += result.failed;
-    allErrors.push(...result.errors);
   }
 
-  return { inserted, failed, errors: allErrors };
+  await unlink(tsvPath).catch(() => {});
+  console.log(
+    `  Complete: ${rawCount.toLocaleString()} rows parsed, ${inserted.toLocaleString()} inserted`,
+  );
+  return { inserted, failed, latestDate };
 }
 
 // ---------------------------------------------------------------------------
-// Process a chunk: resolve geoids then upsert
+// Public API
 // ---------------------------------------------------------------------------
 
-async function processRowChunk(
-  mappedRows: RedfinMappedRecord[],
-): Promise<{ inserted: number; failed: number; errors: string[] }> {
-  const supabase = getSupabaseClient();
-  const records: Record<string, unknown>[] = [];
-
-  for (const row of mappedRows) {
-    const geoid = await resolveRedfinGeoid(
-      supabase,
-      row.metadata.regionType,
-      row.metadata.regionName,
-      row.metadata.stateCode,
-    );
-    records.push({ geoid, ...row.dbRecord });
-  }
-
-  return upsertRecordsByYear(records);
-}
-
-// ---------------------------------------------------------------------------
-// Parse TSV content into row arrays
-// ---------------------------------------------------------------------------
-
-function parseTsvContent(tsvContent: string): Promise<string[][]> {
-  return new Promise((resolve, reject) => {
-    const rows: string[][] = [];
-    const tsvParser = parse({
-      delimiter: '\t',
-      quote: '"',
-      relax_quotes: true,
-      skip_empty_lines: true,
-      trim: true,
-      columns: false,
-      skip_records_with_error: true,
-      relax_column_count: true,
-    });
-    tsvParser.on('data', (record: string[]) => rows.push(record));
-    tsvParser.on('error', reject);
-    tsvParser.on('end', () => resolve(rows));
-    tsvParser.write(tsvContent);
-    tsvParser.end();
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Import a single geography level (main processing loop)
-// ---------------------------------------------------------------------------
-
-/**
- * Download, parse, and import all Redfin data for a single geography level.
- */
+/** Download, parse, and import all Redfin data for a single geography level. */
 export async function importRedfinGeography(
   geoLevel: string,
-  rowLimit?: number,
+  _rowLimit?: number,
 ): Promise<ImportGeographyResult> {
   const startTime = Date.now();
   const supabase = getSupabaseClient();
+  const tableName = REDFIN_TABLE_NAMES[geoLevel];
+  if (!tableName)
+    throw new Error(`No table configured for geography: ${geoLevel}`);
 
   const result: ImportGeographyResult = {
     geographyId: geoLevel,
-    tableName: `redfin_metrics (year-partitioned)`,
-    status: 'failed',
+    tableName,
+    status: "failed",
     recordsInserted: 0,
     recordsFailed: 0,
     totalRowsLoaded: 0,
@@ -183,8 +228,8 @@ export async function importRedfinGeography(
   };
 
   const logger = createIngestionLogger(supabase, {
-    source: 'redfin',
-    tableName: `redfin_metrics_${geoLevel}`,
+    source: "redfin",
+    tableName,
     datasetId: `redfin-${geoLevel}`,
   });
 
@@ -195,94 +240,43 @@ export async function importRedfinGeography(
     const downloadUrl = REDFIN_S3_URLS[geoLevel];
     if (!downloadUrl) throw new Error(`No S3 URL configured for: ${geoLevel}`);
 
-    const tsvContent = await downloadAndDecompressTsv(downloadUrl);
-    const allRows = await parseTsvContent(tsvContent);
-    console.log(`  Parsed ${allRows.length} total rows from TSV`);
+    if (geoLevel === "county") await initCountyFipsLookup();
 
-    if (allRows.length === 0) {
-      result.status = 'skipped';
-      result.durationMs = Date.now() - startTime;
-      return result;
-    }
+    let importResult: {
+      inserted: number;
+      failed: number;
+      latestDate: string | null;
+    };
 
-    // First row is the header
-    const headers = allRows[0];
-    const metricColumns = discoverMetricColumns(headers);
-    console.log(`  Header: ${headers.length} columns, ${countBaseMetrics(metricColumns)} base metrics`);
-
-    let currentChunk: RedfinMappedRecord[] = [];
-
-    let propertyTypeSkipped = 0;
-
-    for (let rowIndex = 1; rowIndex < allRows.length; rowIndex++) {
-      if (rowLimit && rowIndex > rowLimit) break;
-
-      const mapped = mapTsvRowToRecord(allRows[rowIndex], headers, metricColumns);
-      if (mapped) {
-        // Filter by property type: only import "All Residential" rows
-        if (mapped.metadata.propertyType && mapped.metadata.propertyType !== REDFIN_PROPERTY_TYPE_FILTER) {
-          propertyTypeSkipped++;
-          result.rowsSkippedByMapping++;
-          continue;
-        }
-        currentChunk.push(mapped);
-        if (!result.latestPeriodDate || mapped.metadata.periodEnd > result.latestPeriodDate) {
-          result.latestPeriodDate = mapped.metadata.periodEnd;
-        }
-      } else {
-        result.rowsSkippedByMapping++;
-      }
-
-      if (currentChunk.length >= STREAMING_CHUNK_SIZE) {
-        const chunkResult = await processRowChunk(currentChunk);
-        result.recordsInserted += chunkResult.inserted;
-        result.recordsFailed += chunkResult.failed;
-        result.errors.push(...chunkResult.errors);
-        currentChunk = [];
-        await logger.updateProgress(result.recordsInserted, result.recordsFailed);
-
-        if (rowIndex % 20_000 === 0) {
-          console.log(`  Progress: ${rowIndex.toLocaleString()} rows, ${result.recordsInserted.toLocaleString()} inserted, cache: ${getGeoidCacheSize()} geoids`);
-        }
-      }
-    }
-
-    result.totalRowsLoaded = Math.min(allRows.length - 1, rowLimit ?? Infinity);
-    if (propertyTypeSkipped > 0) {
-      console.log(`  Filtered out ${propertyTypeSkipped.toLocaleString()} rows with non-"${REDFIN_PROPERTY_TYPE_FILTER}" property type`);
-    }
-
-    // Flush remaining chunk
-    if (currentChunk.length > 0) {
-      const chunkResult = await processRowChunk(currentChunk);
-      result.recordsInserted += chunkResult.inserted;
-      result.recordsFailed += chunkResult.failed;
-      result.errors.push(...chunkResult.errors);
-    }
-
-    // Determine final status
-    if (result.recordsFailed === 0 && result.recordsInserted > 0) {
-      result.status = 'success';
-    } else if (result.recordsInserted > 0 && result.recordsFailed > 0) {
-      result.status = 'partial';
-    } else if (result.recordsInserted === 0 && result.totalRowsLoaded > 0) {
-      result.status = 'failed';
+    if (IN_MEMORY_GEOS.has(geoLevel)) {
+      const tsvContent = await downloadToMemory(downloadUrl);
+      importResult = await importSmallFile(geoLevel, tsvContent, tableName);
     } else {
-      result.status = 'skipped';
+      const tsvPath = await downloadToDisk(downloadUrl);
+      importResult = await importLargeFile(geoLevel, tsvPath, tableName);
     }
+
+    result.recordsInserted = importResult.inserted;
+    result.recordsFailed = importResult.failed;
+    result.latestPeriodDate = importResult.latestDate;
+
+    if (importResult.failed === 0 && importResult.inserted > 0)
+      result.status = "success";
+    else if (importResult.inserted > 0) result.status = "partial";
 
     await logger.complete({
-      recordsProcessed: result.totalRowsLoaded - result.rowsSkippedByMapping,
-      recordsSuccess: result.recordsInserted,
-      recordsError: result.recordsFailed,
+      recordsProcessed: importResult.inserted + importResult.failed,
+      recordsSuccess: importResult.inserted,
+      recordsError: importResult.failed,
       errors: result.errors,
     });
-
-    console.log(`  Done: ${result.recordsInserted.toLocaleString()} inserted, ${result.recordsFailed} failed, ${result.rowsSkippedByMapping} skipped`);
+    console.log(
+      `  Done: ${importResult.inserted.toLocaleString()} inserted, ${importResult.failed} failed`,
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     result.errors.push(message);
-    result.status = 'failed';
+    result.status = "failed";
     console.error(`  FATAL error importing ${geoLevel}: ${message}`);
     await logger.fail(message);
   }

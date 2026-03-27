@@ -7,25 +7,30 @@
  * API docs: https://apps.bea.gov/api/
  */
 
-import axios from 'axios';
-import { parseNumeric } from '../../lib';
+import axios from "axios";
+import { parseNumeric } from "../../lib";
 import {
   STATE_FIPS_TO_NAME,
   STATE_FIPS_TO_ABBREV,
   rateLimitWait,
-} from './census-economic-config';
+} from "./census-economic-config";
 
-const BEA_BASE_URL = 'https://apps.bea.gov/api/data';
+const BEA_BASE_URL = "https://apps.bea.gov/api/data";
+
+/** Round a numeric value to avoid float precision artifacts in integer DB columns. */
+function roundIfNotNull(val: number | null): number | null {
+  return val !== null ? Math.round(val) : null;
+}
 
 function getBeaApiKey(): string {
   const key = process.env.BEA_API_KEY;
   if (!key) {
-    throw new Error('FATAL: BEA_API_KEY environment variable is not set.');
+    throw new Error("FATAL: BEA_API_KEY environment variable is not set.");
   }
   return key;
 }
 
-type BeaGeoFips = 'STATE' | 'MSA' | 'COUNTY';
+type BeaGeoFips = "STATE" | "MSA" | "COUNTY";
 
 // ---------------------------------------------------------------------------
 // Generic BEA fetch
@@ -41,19 +46,19 @@ async function fetchBeaRegional(
   tableName: string,
   lineCode: string,
   geoFips: BeaGeoFips,
-  years: string = 'ALL',
+  years: string = "ALL",
 ): Promise<BeaApiResult> {
   await rateLimitWait();
 
   const params = {
     UserID: getBeaApiKey(),
-    method: 'GetData',
-    datasetname: 'Regional',
+    method: "GetData",
+    datasetname: "Regional",
     TableName: tableName,
     LineCode: lineCode,
     GeoFips: geoFips,
     Year: years,
-    ResultFormat: 'JSON',
+    ResultFormat: "JSON",
   };
 
   try {
@@ -62,7 +67,10 @@ async function fetchBeaRegional(
 
     const result = response.data?.BEAAPI?.Results;
     if (!result || result.Error) {
-      return { success: false, error: result?.Error?.APIErrorDescription || 'Unknown BEA error' };
+      return {
+        success: false,
+        error: result?.Error?.APIErrorDescription || "Unknown BEA error",
+      };
     }
 
     const data = result.Data || [];
@@ -80,30 +88,36 @@ async function fetchBeaRegional(
 // ---------------------------------------------------------------------------
 
 export async function fetchBeaStateGdp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('CAGDP1', '1', 'STATE');
+  const result = await fetchBeaRegional("CAGDP1", "1", "STATE");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips !== '00000')
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips !== "00000")
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      state_fips: row.GeoFips?.substring(0, 2) || '',
-      state_name: STATE_FIPS_TO_NAME[row.GeoFips?.substring(0, 2) || ''] || row.GeoName || '',
-      state_abbrev: STATE_FIPS_TO_ABBREV[row.GeoFips?.substring(0, 2) || ''] || '',
-      gdp_millions: parseNumeric(row.DataValue),
+      state_fips: row.GeoFips?.substring(0, 2) || "",
+      state_name:
+        STATE_FIPS_TO_NAME[row.GeoFips?.substring(0, 2) || ""] ||
+        row.GeoName ||
+        "",
+      state_abbrev:
+        STATE_FIPS_TO_ABBREV[row.GeoFips?.substring(0, 2) || ""] || "",
+      gdp_millions: roundIfNotNull(parseNumeric(row.DataValue)),
     }));
 }
 
-export async function fetchBeaStateRealGdp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('CAGDP9', '1', 'STATE');
+export async function fetchBeaStateRealGdp(): Promise<
+  Record<string, unknown>[]
+> {
+  const result = await fetchBeaRegional("CAGDP9", "1", "STATE");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips !== '00000')
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips !== "00000")
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      state_fips: row.GeoFips?.substring(0, 2) || '',
-      real_gdp_millions: parseNumeric(row.DataValue),
+      state_fips: row.GeoFips?.substring(0, 2) || "",
+      real_gdp_millions: roundIfNotNull(parseNumeric(row.DataValue)),
     }));
 }
 
@@ -112,14 +126,14 @@ export async function fetchBeaStateRealGdp(): Promise<Record<string, unknown>[]>
  * State uses SARPP table with LineCode 5 ("RPPs: All items").
  */
 export async function fetchBeaStateRpp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('SARPP', '5', 'STATE');
+  const result = await fetchBeaRegional("SARPP", "5", "STATE");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips !== '00000')
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips !== "00000")
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      state_fips: row.GeoFips?.substring(0, 2) || '',
+      state_fips: row.GeoFips?.substring(0, 2) || "",
       rpp_all_items: parseNumeric(row.DataValue),
     }));
 }
@@ -129,15 +143,15 @@ export async function fetchBeaStateRpp(): Promise<Record<string, unknown>[]> {
 // ---------------------------------------------------------------------------
 
 export async function fetchBeaMetroGdp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('CAGDP1', '1', 'MSA');
+  const result = await fetchBeaRegional("CAGDP1", "1", "MSA");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips.length >= 5)
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips.length >= 5)
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      cbsa_code: row.GeoFips?.substring(0, 5) || '',
-      cbsa_title: row.GeoName || '',
+      cbsa_code: row.GeoFips?.substring(0, 5) || "",
+      cbsa_title: row.GeoName || "",
       gdp_millions: parseNumeric(row.DataValue),
     }));
 }
@@ -147,15 +161,15 @@ export async function fetchBeaMetroGdp(): Promise<Record<string, unknown>[]> {
  * Metro uses MARPP table with LineCode 3 ("RPPs: All items").
  */
 export async function fetchBeaMetroRpp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('MARPP', '3', 'MSA');
+  const result = await fetchBeaRegional("MARPP", "3", "MSA");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips.length >= 5)
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips.length >= 5)
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      cbsa_code: row.GeoFips?.substring(0, 5) || '',
-      cbsa_title: row.GeoName || '',
+      cbsa_code: row.GeoFips?.substring(0, 5) || "",
+      cbsa_title: row.GeoName || "",
       rpp_all_items: parseNumeric(row.DataValue),
     }));
 }
@@ -165,17 +179,17 @@ export async function fetchBeaMetroRpp(): Promise<Record<string, unknown>[]> {
 // ---------------------------------------------------------------------------
 
 export async function fetchBeaCountyGdp(): Promise<Record<string, unknown>[]> {
-  const result = await fetchBeaRegional('CAGDP1', '1', 'COUNTY');
+  const result = await fetchBeaRegional("CAGDP1", "1", "COUNTY");
   if (!result.success || !result.data) return [];
 
   return result.data
-    .filter(row => row.GeoFips && row.GeoFips.length === 5)
-    .map(row => ({
+    .filter((row) => row.GeoFips && row.GeoFips.length === 5)
+    .map((row) => ({
       period_date: `${row.TimePeriod}-01-01`,
-      fips_code: row.GeoFips || '',
-      county_name: row.GeoName || '',
-      state_fips: row.GeoFips?.substring(0, 2) || '',
-      state_name: STATE_FIPS_TO_NAME[row.GeoFips?.substring(0, 2) || ''] || '',
+      fips_code: row.GeoFips || "",
+      county_name: row.GeoName || "",
+      state_fips: row.GeoFips?.substring(0, 2) || "",
+      state_name: STATE_FIPS_TO_NAME[row.GeoFips?.substring(0, 2) || ""] || "",
       gdp_millions: parseNumeric(row.DataValue),
     }));
 }
@@ -187,7 +201,7 @@ export async function fetchBeaCountyGdp(): Promise<Record<string, unknown>[]> {
  *   const fipsList = [...new Set(countyGdp.map(r => String(r.fips_code)).filter(Boolean))];
  */
 export async function fetchBeaCountyFipsList(): Promise<string[]> {
-  const result = await fetchBeaRegional('CAGDP1', '1', 'COUNTY');
+  const result = await fetchBeaRegional("CAGDP1", "1", "COUNTY");
   if (!result.success || !result.data) return [];
 
   const fipsSet = new Set<string>();

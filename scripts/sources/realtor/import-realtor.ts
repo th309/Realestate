@@ -17,10 +17,14 @@ import {
   loadDataFile,
   batchUpsert,
   runSourceImport,
-} from '../../lib';
-import type { ImportSourceResult, ImportGeographyResult, BatchUpsertResult } from '../../lib';
-import { refreshCalculatedMetrics } from '../../utils/refresh-calculated-metrics';
-import { createIngestionLogger } from '../../utils/ingestion-logger';
+} from "../../lib";
+import type {
+  ImportSourceResult,
+  ImportGeographyResult,
+  BatchUpsertResult,
+} from "../../lib";
+import { refreshCalculatedMetrics } from "../../utils/refresh-calculated-metrics";
+import { createIngestionLogger } from "../../utils/ingestion-logger";
 import {
   buildNationalStateConfig,
   buildHotnessMap,
@@ -31,28 +35,30 @@ import {
   REALTOR_URLS,
   REALTOR_HISTORY_FILES,
   REALTOR_TABLES,
-} from './realtor-config';
-import type { ColumnMapFn } from '../../lib';
+} from "./realtor-config";
+import type { ColumnMapFn } from "../../lib";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
 const args = process.argv.slice(2);
-const useHistory = args.includes('--history');
+const useHistory = args.includes("--history");
 
 // Support both --geo metro and --geo=metro formats
 function parseArgValue(flag: string): string | null {
   const eqArg = args.find((a) => a.startsWith(`${flag}=`));
-  if (eqArg) return eqArg.split('=')[1];
+  if (eqArg) return eqArg.split("=")[1];
   const idx = args.indexOf(flag);
   return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
 }
-const geoFilter = parseArgValue('--geo');
+const geoFilter = parseArgValue("--geo");
 
-const VALID_GEOS = ['national', 'state', 'metro', 'county', 'zip'];
+const VALID_GEOS = ["national", "state", "metro", "county", "zip"];
 if (geoFilter && !VALID_GEOS.includes(geoFilter)) {
-  console.error(`Invalid geography: "${geoFilter}". Valid: ${VALID_GEOS.join(', ')}`);
+  console.error(
+    `Invalid geography: "${geoFilter}". Valid: ${VALID_GEOS.join(", ")}`,
+  );
   process.exit(1);
 }
 
@@ -76,40 +82,40 @@ interface MergeGeographySpec {
 
 const MERGE_GEOGRAPHIES: MergeGeographySpec[] = [
   {
-    id: 'metro',
+    id: "metro",
     ...REALTOR_TABLES.metro,
     coreUrl: REALTOR_URLS.metro.core,
     hotnessUrl: REALTOR_URLS.metro.hotness,
     coreLocalPath: REALTOR_HISTORY_FILES.metro.core,
     hotnessLocalPath: REALTOR_HISTORY_FILES.metro.hotness,
     coreColumnMap: mapMetroCoreRow,
-    regionKeyField: 'cbsa_code',
+    regionKeyField: "cbsa_code",
     hotnessIncludesExtras: false,
-    datasetId: 'realtor-metro',
+    datasetId: "realtor-metro",
   },
   {
-    id: 'county',
+    id: "county",
     ...REALTOR_TABLES.county,
     coreUrl: REALTOR_URLS.county.core,
     hotnessUrl: REALTOR_URLS.county.hotness,
     coreLocalPath: REALTOR_HISTORY_FILES.county.core,
     hotnessLocalPath: REALTOR_HISTORY_FILES.county.hotness,
     coreColumnMap: mapCountyCoreRow,
-    regionKeyField: 'county_fips',
+    regionKeyField: "county_fips",
     hotnessIncludesExtras: true,
-    datasetId: 'realtor-county',
+    datasetId: "realtor-county",
   },
   {
-    id: 'zip',
+    id: "zip",
     ...REALTOR_TABLES.zip,
     coreUrl: REALTOR_URLS.zip.core,
     hotnessUrl: REALTOR_URLS.zip.hotness,
     coreLocalPath: REALTOR_HISTORY_FILES.zip.core,
     hotnessLocalPath: REALTOR_HISTORY_FILES.zip.hotness,
     coreColumnMap: mapZipCoreRow,
-    regionKeyField: 'postal_code',
+    regionKeyField: "postal_code",
     hotnessIncludesExtras: true,
-    datasetId: 'realtor-zip',
+    datasetId: "realtor-zip",
   },
 ];
 
@@ -117,16 +123,20 @@ const MERGE_GEOGRAPHIES: MergeGeographySpec[] = [
 // Import a single merge geography (core + hotness -> merge -> upsert)
 // ---------------------------------------------------------------------------
 
-async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeographyResult> {
+async function importMergeGeography(
+  spec: MergeGeographySpec,
+): Promise<ImportGeographyResult> {
   const importStartMs = Date.now();
   const supabase = getSupabaseClient();
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
+    source: "realtor",
     tableName: spec.tableName,
     datasetId: spec.datasetId,
   });
 
-  console.log(`\n--- Importing realtor / ${spec.id} -> ${spec.tableName} (core+hotness merge) ---`);
+  console.log(
+    `\n--- Importing realtor / ${spec.id} -> ${spec.tableName} (core+hotness merge) ---`,
+  );
 
   try {
     await logger.start(0);
@@ -135,7 +145,7 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
     const coreData = await loadDataFile({
       url: spec.coreUrl,
       localPath: useHistory ? spec.coreLocalPath : undefined,
-      format: 'csv',
+      format: "csv",
     });
     console.log(`  Core rows loaded: ${coreData.rowCount}`);
 
@@ -143,7 +153,7 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
     const hotnessData = await loadDataFile({
       url: spec.hotnessUrl,
       localPath: useHistory ? spec.hotnessLocalPath : undefined,
-      format: 'csv',
+      format: "csv",
     });
     console.log(`  Hotness rows loaded: ${hotnessData.rowCount}`);
 
@@ -158,7 +168,9 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
         rowsSkippedByMapping++;
       }
     }
-    console.log(`  Core records mapped: ${coreRecords.length} (${rowsSkippedByMapping} skipped)`);
+    console.log(
+      `  Core records mapped: ${coreRecords.length} (${rowsSkippedByMapping} skipped)`,
+    );
 
     // Build hotness lookup map from raw rows
     const hotnessMap = buildHotnessMap(
@@ -169,24 +181,30 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
     console.log(`  Hotness map entries: ${hotnessMap.size}`);
 
     // Merge hotness into core records
-    const mergedRecords = mergeCoreAndHotness(coreRecords, hotnessMap, spec.regionKeyField);
+    const mergedRecords = mergeCoreAndHotness(
+      coreRecords,
+      hotnessMap,
+      spec.regionKeyField,
+    );
 
     // Log hotness match rate to help diagnose data alignment issues
-    const recordsWithHotness = mergedRecords.filter((r) => r.hotness_score != null).length;
+    const recordsWithHotness = mergedRecords.filter(
+      (r) => r.hotness_score != null,
+    ).length;
     const hotnessMatchPct =
       mergedRecords.length > 0
         ? ((recordsWithHotness / mergedRecords.length) * 100).toFixed(1)
-        : '0.0';
+        : "0.0";
     console.log(
       `  Merged records: ${mergedRecords.length} (hotness matched: ${recordsWithHotness}/${mergedRecords.length} = ${hotnessMatchPct}%)`,
     );
 
     if (mergedRecords.length === 0) {
-      console.log('  No records to import, skipping.');
+      console.log("  No records to import, skipping.");
       return {
         geographyId: spec.id,
         tableName: spec.tableName,
-        status: 'skipped',
+        status: "skipped",
         recordsInserted: 0,
         recordsFailed: 0,
         totalRowsLoaded: coreData.rowCount,
@@ -198,19 +216,42 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
     }
 
     // Determine the latest period_date across all merged records
-    const latestPeriodDate = mergedRecords.reduce<string | null>((latest, record) => {
-      const dateStr = record.period_date as string | undefined;
-      if (!dateStr) return latest;
-      return latest === null || dateStr > latest ? dateStr : latest;
-    }, null);
+    const latestPeriodDate = mergedRecords.reduce<string | null>(
+      (latest, record) => {
+        const dateStr = record.period_date as string | undefined;
+        if (!dateStr) return latest;
+        return latest === null || dateStr > latest ? dateStr : latest;
+      },
+      null,
+    );
 
-    // Batch upsert merged records (use smaller batches for zip to avoid statement timeouts)
-    const batchSize = spec.id === 'zip' ? 2000 : 5000;
-    const upsertResult: BatchUpsertResult = await batchUpsert(supabase, mergedRecords, {
-      tableName: spec.tableName,
-      conflictKeys: [...spec.conflictKeys],
-      batchSize,
-    });
+    // Deduplicate by conflict keys before upserting (prevents PostgreSQL
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time" error
+    // when the source CSV contains duplicate rows for the same geography+date)
+    const dedupKey = (r: Record<string, unknown>) =>
+      spec.conflictKeys.map((k) => String(r[k] ?? "")).join("|");
+    const dedupMap = new Map<string, Record<string, unknown>>();
+    for (const record of mergedRecords) {
+      dedupMap.set(dedupKey(record), record); // last occurrence wins
+    }
+    const dedupedRecords = Array.from(dedupMap.values());
+    if (dedupedRecords.length < mergedRecords.length) {
+      console.log(
+        `  Deduplicated: ${mergedRecords.length} → ${dedupedRecords.length} records`,
+      );
+    }
+
+    // Batch upsert (use smaller batches for zip to avoid statement timeouts)
+    const batchSize = spec.id === "zip" ? 2000 : 5000;
+    const upsertResult: BatchUpsertResult = await batchUpsert(
+      supabase,
+      dedupedRecords,
+      {
+        tableName: spec.tableName,
+        conflictKeys: [...spec.conflictKeys],
+        batchSize,
+      },
+    );
 
     await logger.complete({
       recordsProcessed: mergedRecords.length,
@@ -221,10 +262,10 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
 
     const status =
       upsertResult.failed === 0
-        ? 'success'
+        ? "success"
         : upsertResult.inserted === 0
-          ? 'failed'
-          : 'partial';
+          ? "failed"
+          : "partial";
 
     return {
       geographyId: spec.id,
@@ -245,7 +286,7 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
     return {
       geographyId: spec.id,
       tableName: spec.tableName,
-      status: 'failed',
+      status: "failed",
       recordsInserted: 0,
       recordsFailed: 0,
       totalRowsLoaded: 0,
@@ -264,19 +305,21 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
 async function main(): Promise<void> {
   const startTime = Date.now();
 
-  console.log('Realtor.com Unified Data Import');
-  console.log('='.repeat(60));
+  console.log("Realtor.com Unified Data Import");
+  console.log("=".repeat(60));
   console.log(`Date:    ${new Date().toISOString()}`);
-  console.log(`Mode:    ${useHistory ? 'Local history files' : 'Download current month'}`);
-  console.log(`Filter:  ${geoFilter || 'all geographies'}`);
-  console.log('');
+  console.log(
+    `Mode:    ${useHistory ? "Local history files" : "Download current month"}`,
+  );
+  console.log(`Filter:  ${geoFilter || "all geographies"}`);
+  console.log("");
 
   let totalInserted = 0;
   let totalFailed = 0;
   const allErrors: string[] = [];
 
   // Phase 1: National + State (no merge needed, use runSourceImport)
-  const simpleGeos = ['national', 'state'];
+  const simpleGeos = ["national", "state"];
   const shouldRunSimple = !geoFilter || simpleGeos.includes(geoFilter);
 
   if (shouldRunSimple) {
@@ -311,16 +354,16 @@ async function main(): Promise<void> {
 
   // Phase 3: Post-import hooks (refresh calculated metrics)
   if (!geoFilter) {
-    console.log('\nRefreshing calculated metrics...');
+    console.log("\nRefreshing calculated metrics...");
     const supabase = getSupabaseClient();
     await refreshCalculatedMetrics(supabase);
   }
 
   // Summary
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log('\n' + '='.repeat(60));
-  console.log('  REALTOR.COM IMPORT COMPLETE');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("  REALTOR.COM IMPORT COMPLETE");
+  console.log("=".repeat(60));
   console.log(`  Total inserted: ${totalInserted}`);
   console.log(`  Total failed:   ${totalFailed}`);
   console.log(`  Duration:       ${duration}s`);
@@ -328,7 +371,7 @@ async function main(): Promise<void> {
     console.log(`  Errors (${allErrors.length}):`);
     allErrors.slice(0, 5).forEach((e) => console.log(`    - ${e}`));
   }
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   if (totalFailed > 0) {
     process.exit(1);
@@ -336,6 +379,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

@@ -8,15 +8,15 @@
  * a wide set of columns (PERIOD_BEGIN, REGION, REGION_TYPE, ..., MEDIAN_SALE_PRICE,
  * HOMES_SOLD, etc.) with optional _MOM and _YOY suffixes for change metrics.
  *
- * Data is stored in a wide format: one row per (geoid, metric_date) with
- * all metrics as separate columns in the redfin_metrics tables.
+ * Data is stored in per-geography tables (redfin_state, redfin_metro, etc.)
+ * with all 14 core metrics plus MOM and YOY variants as wide-format columns.
  */
 
 // ---------------------------------------------------------------------------
 // S3 download URLs
 // ---------------------------------------------------------------------------
 
-const S3_BASE = 'https://redfin-public-data.s3.us-west-2.amazonaws.com';
+const S3_BASE = "https://redfin-public-data.s3.us-west-2.amazonaws.com";
 
 /** Gzipped TSV download URLs per geography level. */
 export const REDFIN_S3_URLS: Record<string, string> = {
@@ -30,36 +30,31 @@ export const REDFIN_S3_URLS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Database table configuration
+// Database table configuration (per-geography tables)
 // ---------------------------------------------------------------------------
 
-export interface RedfinTableConfig {
-  tableName: string;
-  conflictKeys: string[];
-}
+/** Table name for each geography level. */
+export const REDFIN_TABLE_NAMES: Record<string, string> = {
+  national: "redfin_national",
+  state: "redfin_state",
+  metro: "redfin_metro",
+  county: "redfin_county",
+  city: "redfin_city",
+  zip: "redfin_zip",
+  neighborhood: "redfin_neighborhood",
+};
 
-/**
- * Target tables per year. Redfin data is partitioned by year:
- * - redfin_metrics (historical, pre-2024)
- * - redfin_metrics_2024
- * - redfin_metrics_2025
- * - redfin_metrics_2026 (when needed)
- */
-export function getTableNameForYear(year: number): string {
-  if (year >= 2024) return `redfin_metrics_${year}`;
-  return 'redfin_metrics';
-}
-
-/** Conflict keys are the same for all redfin_metrics tables. */
-export const REDFIN_CONFLICT_KEYS = ['geoid', 'metric_date', 'property_type'];
-
-/**
- * Property type to import. Redfin TSV files contain rows for multiple
- * property types (All Residential, Single Family, Condo, Townhouse, etc.)
- * per (region, date). We only import "All Residential" which is the aggregate
- * and most useful for our analytics. Rows with other property types are skipped.
- */
-export const REDFIN_PROPERTY_TYPE_FILTER = 'All Residential';
+/** Conflict keys for upsert per table (match DB unique constraints). */
+export const REDFIN_CONFLICT_KEYS: Record<string, string> = {
+  redfin_national: "period_end,property_type",
+  redfin_state: "period_end,state_code,property_type",
+  redfin_metro: "period_end,region_name,property_type",
+  redfin_county: "period_end,county_name,state_code,property_type",
+  redfin_city: "period_end,city_name,state_code,property_type",
+  redfin_zip: "period_end,zip_code,property_type",
+  redfin_neighborhood:
+    "period_end,neighborhood_name,city,state_code,property_type",
+};
 
 // ---------------------------------------------------------------------------
 // TSV metadata columns (skipped during metric extraction)
@@ -67,54 +62,107 @@ export const REDFIN_PROPERTY_TYPE_FILTER = 'All Residential';
 
 /** Column headers in Redfin TSV files that contain metadata, not metric values. */
 export const REDFIN_METADATA_COLUMNS = new Set([
-  'PERIOD_BEGIN', 'PERIOD_END', 'PERIOD_DURATION',
-  'REGION_TYPE', 'REGION_TYPE_ID', 'TABLE_ID', 'IS_SEASONALLY_ADJUSTED',
-  'REGION', 'CITY', 'STATE', 'STATE_CODE',
-  'PROPERTY_TYPE', 'PROPERTY_TYPE_ID',
-  'PARENT_METRO_REGION', 'PARENT_METRO_REGION_METRO_CODE', 'LAST_UPDATED',
+  "PERIOD_BEGIN",
+  "PERIOD_END",
+  "PERIOD_DURATION",
+  "REGION_TYPE",
+  "REGION_TYPE_ID",
+  "TABLE_ID",
+  "IS_SEASONALLY_ADJUSTED",
+  "REGION",
+  "CITY",
+  "STATE",
+  "STATE_CODE",
+  "PROPERTY_TYPE",
+  "PROPERTY_TYPE_ID",
+  "PARENT_METRO_REGION",
+  "PARENT_METRO_REGION_METRO_CODE",
+  "LAST_UPDATED",
 ]);
 
 // ---------------------------------------------------------------------------
-// Metric column mapping: raw TSV column names -> database column names
+// Metric columns: the 14 core metrics (each has _mom and _yoy variants)
 // ---------------------------------------------------------------------------
 
-/**
- * Maps normalized TSV metric names to redfin_metrics database column names.
- * The keys are lowercase, underscore-separated versions of the raw TSV headers
- * (e.g., MEDIAN_SALE_PRICE -> median_sale_price).
- *
- * Only metrics listed here are extracted; unlisted metrics are ignored.
- */
-export const REDFIN_METRIC_TO_DB_COLUMN: Record<string, string> = {
-  median_sale_price: 'median_sale_price',
-  median_list_price: 'median_list_price',
-  median_ppsf: 'median_ppsf',
-  median_list_ppsf: 'median_ppsf',
-  price_per_square_foot: 'median_ppsf',
-  homes_sold: 'homes_sold',
-  new_listings: 'new_listings',
-  inventory: 'inventory',
-  months_of_supply: 'months_of_supply',
-  median_dom: 'median_days_on_market',
-  median_days_on_market: 'median_days_on_market',
-  avg_sale_to_list: 'average_sale_to_list',
-  sale_to_list: 'average_sale_to_list',
-  average_sale_to_list: 'average_sale_to_list',
-  sale_to_list_ratio: 'average_sale_to_list',
-  compete_score: 'compete_score',
-  sold_above_list: 'bidding_war_percentage',
-  bidding_war: 'bidding_war_percentage',
-  price_drops: 'price_drops_percentage',
-  price_drop: 'price_drops_percentage',
-};
+/** All 14 core metric column names (lowercase DB format). */
+export const METRIC_COLUMNS = [
+  "median_sale_price",
+  "median_list_price",
+  "median_ppsf",
+  "median_list_ppsf",
+  "homes_sold",
+  "pending_sales",
+  "new_listings",
+  "inventory",
+  "months_of_supply",
+  "median_dom",
+  "avg_sale_to_list",
+  "sold_above_list",
+  "price_drops",
+  "off_market_in_two_weeks",
+] as const;
 
-/**
- * YoY columns that get stored alongside base metrics.
- * Maps the base metric DB column to its YoY companion column.
- */
-export const REDFIN_YOY_COLUMNS: Record<string, string> = {
-  median_sale_price: 'median_sale_price_yoy',
-  homes_sold: 'homes_sold_yoy',
+// ---------------------------------------------------------------------------
+// State FIPS lookup
+// ---------------------------------------------------------------------------
+
+export const STATE_FIPS: Record<string, string> = {
+  AL: "01",
+  AK: "02",
+  AZ: "04",
+  AR: "05",
+  CA: "06",
+  CO: "08",
+  CT: "09",
+  DE: "10",
+  DC: "11",
+  FL: "12",
+  GA: "13",
+  HI: "15",
+  ID: "16",
+  IL: "17",
+  IN: "18",
+  IA: "19",
+  KS: "20",
+  KY: "21",
+  LA: "22",
+  ME: "23",
+  MD: "24",
+  MA: "25",
+  MI: "26",
+  MN: "27",
+  MS: "28",
+  MO: "29",
+  MT: "30",
+  NE: "31",
+  NV: "32",
+  NH: "33",
+  NJ: "34",
+  NM: "35",
+  NY: "36",
+  NC: "37",
+  ND: "38",
+  OH: "39",
+  OK: "40",
+  OR: "41",
+  PA: "42",
+  RI: "44",
+  SC: "45",
+  SD: "46",
+  TN: "47",
+  TX: "48",
+  UT: "49",
+  VT: "50",
+  VA: "51",
+  WA: "53",
+  WV: "54",
+  WI: "55",
+  WY: "56",
+  AS: "60",
+  GU: "66",
+  MP: "69",
+  PR: "72",
+  VI: "78",
 };
 
 // ---------------------------------------------------------------------------
@@ -122,10 +170,18 @@ export const REDFIN_YOY_COLUMNS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 /** Default geography levels to import (excludes national and neighborhood). */
-export const DEFAULT_IMPORT_GEOS = ['state', 'metro', 'county', 'zip'];
+export const DEFAULT_IMPORT_GEOS = ["state", "metro", "county", "zip"];
 
 /** All available geography levels. */
-export const ALL_REDFIN_GEOS = ['national', 'state', 'metro', 'county', 'city', 'zip', 'neighborhood'];
+export const ALL_REDFIN_GEOS = [
+  "national",
+  "state",
+  "metro",
+  "county",
+  "city",
+  "zip",
+  "neighborhood",
+];
 
 // ---------------------------------------------------------------------------
 // Processing limits
