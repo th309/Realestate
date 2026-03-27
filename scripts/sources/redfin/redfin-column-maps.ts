@@ -64,11 +64,18 @@ export function mapTsvRowToRecord(
     county: string | null,
     state: string | null,
   ) => string | null,
+  dateCutoff?: string | null,
 ): RedfinMappedRecord | null {
   // Filter out seasonally adjusted data
   const sa = unquote(row.IS_SEASONALLY_ADJUSTED);
   if (sa === "true" || sa === "TRUE") return null;
   if (!row.PERIOD_END) return null;
+
+  // Filter by date cutoff (--recent flag): skip rows older than the cutoff
+  if (dateCutoff) {
+    const periodEnd = unquote(row.PERIOD_END);
+    if (periodEnd && periodEnd < dateCutoff) return null;
+  }
 
   const stateCode = unquote(row.STATE_CODE);
   const tableId = parseNumeric(row.TABLE_ID);

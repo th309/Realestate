@@ -117,11 +117,18 @@ const STATE_FIPS: Record<string, string> = {
 function rowToRecord(
   row: RedfinTsvRow,
   geoLevel: RedfinGeoLevel,
+  dateCutoff?: string | null,
 ): RedfinSalesRecord | null {
   // Filter out seasonally adjusted data
   const sa = unquote(row.IS_SEASONALLY_ADJUSTED);
   if (sa === "true" || sa === "TRUE") return null;
   if (!row.PERIOD_END) return null;
+
+  // Filter by date cutoff (--recent flag): skip rows older than the cutoff
+  if (dateCutoff) {
+    const periodEnd = unquote(row.PERIOD_END);
+    if (periodEnd && periodEnd < dateCutoff) return null;
+  }
 
   const tableId = parseNumber(row.TABLE_ID);
   const stateCode = unquote(row.STATE_CODE);
@@ -195,6 +202,7 @@ function rowToRecord(
 export function parseTsv(
   tsv: string,
   geoLevel: RedfinGeoLevel,
+  dateCutoff?: string | null,
 ): RedfinSalesRecord[] {
   const records: RedfinTsvRow[] = parse(tsv, {
     columns: true,
@@ -209,7 +217,7 @@ export function parseTsv(
 
   const dbRecords: RedfinSalesRecord[] = [];
   for (const row of records) {
-    const record = rowToRecord(row, geoLevel);
+    const record = rowToRecord(row, geoLevel, dateCutoff);
     if (record) dbRecords.push(record);
   }
 
@@ -228,6 +236,7 @@ export async function* parseTsvStream(
   stream: Readable,
   geoLevel: RedfinGeoLevel,
   batchSize: number,
+  dateCutoff?: string | null,
 ): AsyncGenerator<{
   batch: RedfinSalesRecord[];
   rawCount: number;
@@ -251,7 +260,7 @@ export async function* parseTsvStream(
 
   for await (const row of parser) {
     rawCount++;
-    const record = rowToRecord(row as RedfinTsvRow, geoLevel);
+    const record = rowToRecord(row as RedfinTsvRow, geoLevel, dateCutoff);
     if (record) {
       filteredCount++;
       batch.push(record);

@@ -5,16 +5,18 @@
  * and the import-runner orchestrator.
  */
 
-import { IngestionSource } from '../utils/ingestion-logger';
+import { IngestionSource } from "../utils/ingestion-logger";
 
 /** Supported input file formats for data imports. */
-export type FileFormat = 'csv' | 'tsv' | 'xlsx';
+export type FileFormat = "csv" | "tsv" | "xlsx";
 
 /**
  * Column mapping function: transforms a raw CSV/TSV/XLSX row into a database record.
  * Return null to skip the row (e.g., invalid data, filtered out).
  */
-export type ColumnMapFn = (row: Record<string, string>) => Record<string, unknown> | null;
+export type ColumnMapFn = (
+  row: Record<string, string>,
+) => Record<string, unknown> | null;
 
 /**
  * Per-geography configuration within an import source.
@@ -54,6 +56,12 @@ export interface ImportSourceConfig {
   geographies: GeographyConfig[];
   /** Optional hooks to run after all geographies complete (e.g., refresh materialized views). */
   postImportHooks?: Array<() => Promise<void>>;
+  /**
+   * Optional date cutoff string (YYYY-MM-DD). When set, records with
+   * period_date (or year) older than this are skipped after column mapping.
+   * Computed from --recent N flag: today minus N months.
+   */
+  dateCutoff?: string;
 }
 
 /** Result of importing a single geography level. */
@@ -63,7 +71,7 @@ export interface ImportGeographyResult {
   /** Target table name. */
   tableName: string;
   /** Overall status for this geography. */
-  status: 'success' | 'partial' | 'failed' | 'skipped';
+  status: "success" | "partial" | "failed" | "skipped";
   /** Number of records successfully upserted. */
   recordsInserted: number;
   /** Number of records that failed to upsert. */
@@ -87,7 +95,7 @@ export interface ImportSourceResult {
   /** Per-geography results. */
   geographies: ImportGeographyResult[];
   /** Overall status (success only if all geographies succeeded). */
-  overallStatus: 'success' | 'partial' | 'failed';
+  overallStatus: "success" | "partial" | "failed";
   /** Total records inserted across all geographies. */
   totalInserted: number;
   /** Total records failed across all geographies. */
@@ -137,5 +145,5 @@ export interface DataFileLoadResult {
   /** Total number of rows parsed. */
   rowCount: number;
   /** Whether data came from a local file or a remote URL. */
-  source: 'url' | 'file';
+  source: "url" | "file";
 }

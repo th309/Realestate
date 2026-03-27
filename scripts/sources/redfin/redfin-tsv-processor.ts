@@ -79,6 +79,7 @@ async function importSmallFile(
   geoLevel: string,
   tsvContent: string,
   tableName: string,
+  dateCutoff?: string | null,
 ): Promise<{ inserted: number; failed: number; latestDate: string | null }> {
   const supabase = getSupabaseClient();
   const conflictKeys = REDFIN_CONFLICT_KEYS[tableName].split(",");
@@ -97,7 +98,12 @@ async function importSmallFile(
     });
 
     parser.on("data", (row: Record<string, string>) => {
-      const mapped = mapTsvRowToRecord(row, geoLevel, lookupCountyFips);
+      const mapped = mapTsvRowToRecord(
+        row,
+        geoLevel,
+        lookupCountyFips,
+        dateCutoff,
+      );
       if (mapped) {
         records.push(mapped.dbRecord);
         if (!latestDate || mapped.periodEnd > latestDate)
@@ -129,6 +135,7 @@ async function importLargeFile(
   geoLevel: string,
   tsvPath: string,
   tableName: string,
+  dateCutoff?: string | null,
 ): Promise<{ inserted: number; failed: number; latestDate: string | null }> {
   const supabase = getSupabaseClient();
   const conflictKeys = REDFIN_CONFLICT_KEYS[tableName].split(",");
@@ -157,6 +164,7 @@ async function importLargeFile(
       row as Record<string, string>,
       geoLevel,
       lookupCountyFips,
+      dateCutoff,
     );
     if (!mapped) continue;
 
@@ -207,6 +215,7 @@ async function importLargeFile(
 export async function importRedfinGeography(
   geoLevel: string,
   _rowLimit?: number,
+  recentMonths?: number,
 ): Promise<ImportGeographyResult> {
   const startTime = Date.now();
   const supabase = getSupabaseClient();
@@ -242,6 +251,17 @@ export async function importRedfinGeography(
 
     if (geoLevel === "county") await initCountyFipsLookup();
 
+    // Compute date cutoff for --recent flag
+    let dateCutoff: string | null = null;
+    if (recentMonths) {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - recentMonths);
+      dateCutoff = cutoff.toISOString().slice(0, 10);
+      console.log(
+        `  Date cutoff: ${dateCutoff} (recent ${recentMonths} months)`,
+      );
+    }
+
     let importResult: {
       inserted: number;
       failed: number;
@@ -250,10 +270,20 @@ export async function importRedfinGeography(
 
     if (IN_MEMORY_GEOS.has(geoLevel)) {
       const tsvContent = await downloadToMemory(downloadUrl);
-      importResult = await importSmallFile(geoLevel, tsvContent, tableName);
+      importResult = await importSmallFile(
+        geoLevel,
+        tsvContent,
+        tableName,
+        dateCutoff,
+      );
     } else {
       const tsvPath = await downloadToDisk(downloadUrl);
-      importResult = await importLargeFile(geoLevel, tsvPath, tableName);
+      importResult = await importLargeFile(
+        geoLevel,
+        tsvPath,
+        tableName,
+        dateCutoff,
+      );
     }
 
     result.recordsInserted = importResult.inserted;

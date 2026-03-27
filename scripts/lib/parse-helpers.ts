@@ -6,7 +6,17 @@
  */
 
 /** Values treated as null/missing in CSV data. */
-const NULL_VALUES = new Set(['', 'null', 'NULL', 'NA', 'N/A', 'n/a', '#N/A', '.', '-']);
+const NULL_VALUES = new Set([
+  "",
+  "null",
+  "NULL",
+  "NA",
+  "N/A",
+  "n/a",
+  "#N/A",
+  ".",
+  "-",
+]);
 
 /**
  * Parse a string value to a floating-point number.
@@ -18,7 +28,7 @@ export function parseNumeric(value: string | null | undefined): number | null {
   const trimmed = value.trim();
   if (NULL_VALUES.has(trimmed)) return null;
 
-  const cleaned = trimmed.replace(/,/g, '');
+  const cleaned = trimmed.replace(/,/g, "");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? null : parsed;
 }
@@ -33,7 +43,7 @@ export function parseInteger(value: string | null | undefined): number | null {
   const trimmed = value.trim();
   if (NULL_VALUES.has(trimmed)) return null;
 
-  const cleaned = trimmed.replace(/,/g, '');
+  const cleaned = trimmed.replace(/,/g, "");
   const parsed = parseInt(cleaned, 10);
   return isNaN(parsed) ? null : parsed;
 }
@@ -42,7 +52,9 @@ export function parseInteger(value: string | null | undefined): number | null {
  * Convert a YYYYMM string (e.g., "202401") to a date string "YYYY-MM-01".
  * Returns null if the input is not a valid 6-digit year-month.
  */
-export function parseYearMonth(yyyymm: string | null | undefined): string | null {
+export function parseYearMonth(
+  yyyymm: string | null | undefined,
+): string | null {
   if (yyyymm == null) return null;
   const trimmed = yyyymm.trim();
   if (!/^\d{6}$/.test(trimmed)) return null;
@@ -59,16 +71,18 @@ export function parseYearMonth(yyyymm: string | null | undefined): string | null
  * Pad a ZIP code to 5 digits with leading zeros.
  * Returns null if input is empty or null-like.
  */
-export function normalizeZipCode(zip: string | null | undefined): string | null {
+export function normalizeZipCode(
+  zip: string | null | undefined,
+): string | null {
   if (zip == null) return null;
   const trimmed = zip.trim();
   if (NULL_VALUES.has(trimmed)) return null;
 
   // Strip any non-digit characters and take first 5
-  const digits = trimmed.replace(/\D/g, '');
+  const digits = trimmed.replace(/\D/g, "");
   if (digits.length === 0) return null;
 
-  return digits.padStart(5, '0').substring(0, 5);
+  return digits.padStart(5, "0").substring(0, 5);
 }
 
 /**
@@ -76,15 +90,18 @@ export function normalizeZipCode(zip: string | null | undefined): string | null 
  * Default length is 5 (county FIPS = 2-digit state + 3-digit county).
  * Returns null if input is empty or null-like.
  */
-export function normalizeFipsCode(fips: string | null | undefined, length: number = 5): string | null {
+export function normalizeFipsCode(
+  fips: string | null | undefined,
+  length: number = 5,
+): string | null {
   if (fips == null) return null;
   const trimmed = fips.trim();
   if (NULL_VALUES.has(trimmed)) return null;
 
-  const digits = trimmed.replace(/\D/g, '');
+  const digits = trimmed.replace(/\D/g, "");
   if (digits.length === 0) return null;
 
-  return digits.padStart(length, '0');
+  return digits.padStart(length, "0");
 }
 
 /**
@@ -97,7 +114,17 @@ export function parsePercent(value: string | null | undefined): number | null {
   const trimmed = value.trim();
   if (NULL_VALUES.has(trimmed)) return null;
 
-  const cleaned = trimmed.replace(/%/g, '').replace(/,/g, '');
+  const cleaned = trimmed.replace(/%/g, "").replace(/,/g, "");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Compute a YYYY-MM-DD date cutoff string from a "recent N months" value.
+ * Returns today minus N months as a date string.
+ */
+export function computeDateCutoff(recentMonths: number): string {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - recentMonths);
+  return cutoff.toISOString().slice(0, 10);
 }

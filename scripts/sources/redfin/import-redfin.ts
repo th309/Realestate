@@ -17,11 +17,14 @@
  *   npx tsx scripts/sources/redfin/import-redfin.ts --limit 5000     # Limit rows per file (for testing)
  */
 
-import type { ImportGeographyResult, ImportSourceResult } from '../../lib';
-import { printSummaryBanner, reportStatusToBackend } from '../../lib/import-reporter';
-import { DEFAULT_IMPORT_GEOS, ALL_REDFIN_GEOS } from './redfin-config';
-import { importRedfinGeography } from './redfin-tsv-processor';
-import { clearGeoidCache } from './redfin-geoid-lookup';
+import type { ImportGeographyResult, ImportSourceResult } from "../../lib";
+import {
+  printSummaryBanner,
+  reportStatusToBackend,
+} from "../../lib/import-reporter";
+import { DEFAULT_IMPORT_GEOS, ALL_REDFIN_GEOS } from "./redfin-config";
+import { importRedfinGeography } from "./redfin-tsv-processor";
+import { clearGeoidCache } from "./redfin-geoid-lookup";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -32,19 +35,26 @@ const args = process.argv.slice(2);
 /** Parse a CLI flag value supporting both --flag value and --flag=value formats. */
 function parseArgValue(flag: string): string | null {
   const eqArg = args.find((a) => a.startsWith(`${flag}=`));
-  if (eqArg) return eqArg.split('=')[1];
+  if (eqArg) return eqArg.split("=")[1];
   const idx = args.indexOf(flag);
   return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
 }
 
-const geoFilter = parseArgValue('--geo');
-const rowLimit = parseArgValue('--limit') ? parseInt(parseArgValue('--limit')!, 10) : undefined;
+const geoFilter = parseArgValue("--geo");
+const rowLimit = parseArgValue("--limit")
+  ? parseInt(parseArgValue("--limit")!, 10)
+  : undefined;
+const recentMonths = parseArgValue("--recent")
+  ? parseInt(parseArgValue("--recent")!, 10)
+  : undefined;
 
 function getGeographiesToImport(): string[] {
-  if (!geoFilter || geoFilter === 'default') return DEFAULT_IMPORT_GEOS;
-  if (geoFilter === 'all') return ALL_REDFIN_GEOS;
+  if (!geoFilter || geoFilter === "default") return DEFAULT_IMPORT_GEOS;
+  if (geoFilter === "all") return ALL_REDFIN_GEOS;
   if (!ALL_REDFIN_GEOS.includes(geoFilter)) {
-    console.error(`Invalid geography: "${geoFilter}". Valid: ${ALL_REDFIN_GEOS.join(', ')}, all, default`);
+    console.error(
+      `Invalid geography: "${geoFilter}". Valid: ${ALL_REDFIN_GEOS.join(", ")}, all, default`,
+    );
     process.exit(1);
   }
   return [geoFilter];
@@ -58,31 +68,44 @@ async function main(): Promise<void> {
   const startTime = Date.now();
   const geos = getGeographiesToImport();
 
-  console.log('Redfin Market Tracker Data Import');
-  console.log('='.repeat(60));
+  console.log("Redfin Market Tracker Data Import");
+  console.log("=".repeat(60));
   console.log(`Date:         ${new Date().toISOString()}`);
-  console.log(`Geographies:  ${geos.join(', ')}`);
+  console.log(`Geographies:  ${geos.join(", ")}`);
   if (rowLimit) console.log(`Row limit:    ${rowLimit.toLocaleString()}`);
-  console.log('');
+  if (recentMonths)
+    console.log(`Recent:       last ${recentMonths} months only`);
+  console.log("");
 
   const geoResults: ImportGeographyResult[] = [];
 
   // Import each geography sequentially (they share the geoid cache)
   for (const geo of geos) {
-    const geoResult = await importRedfinGeography(geo, rowLimit);
+    const geoResult = await importRedfinGeography(geo, rowLimit, recentMonths);
     geoResults.push(geoResult);
   }
 
   // Aggregate results
-  const totalInserted = geoResults.reduce((sum, g) => sum + g.recordsInserted, 0);
+  const totalInserted = geoResults.reduce(
+    (sum, g) => sum + g.recordsInserted,
+    0,
+  );
   const totalFailed = geoResults.reduce((sum, g) => sum + g.recordsFailed, 0);
-  const allSucceeded = geoResults.every(g => g.status === 'success' || g.status === 'skipped');
-  const anySucceeded = geoResults.some(g => g.status === 'success' || g.status === 'partial');
+  const allSucceeded = geoResults.every(
+    (g) => g.status === "success" || g.status === "skipped",
+  );
+  const anySucceeded = geoResults.some(
+    (g) => g.status === "success" || g.status === "partial",
+  );
 
-  const overallStatus = allSucceeded ? 'success' : anySucceeded ? 'partial' : 'failed';
+  const overallStatus = allSucceeded
+    ? "success"
+    : anySucceeded
+      ? "partial"
+      : "failed";
 
   const sourceResult: ImportSourceResult = {
-    source: 'redfin',
+    source: "redfin",
     geographies: geoResults,
     overallStatus,
     totalInserted,
@@ -96,12 +119,12 @@ async function main(): Promise<void> {
   // Clear the geoid cache at the end of the run
   clearGeoidCache();
 
-  if (overallStatus === 'failed') {
+  if (overallStatus === "failed") {
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

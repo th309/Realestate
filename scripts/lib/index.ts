@@ -9,7 +9,7 @@
  *   import type { ImportSourceConfig, GeographyConfig } from '../lib';
  */
 
-export { getSupabaseClient, getBackendApiUrl } from './db-client';
+export { getSupabaseClient, getBackendApiUrl } from "./db-client";
 
 export {
   parseNumeric,
@@ -18,13 +18,14 @@ export {
   normalizeZipCode,
   normalizeFipsCode,
   parsePercent,
-} from './parse-helpers';
+  computeDateCutoff,
+} from "./parse-helpers";
 
-export { loadDataFile, downloadFromUrl } from './csv-loader';
+export { loadDataFile, downloadFromUrl } from "./csv-loader";
 
-export { batchUpsert } from './batch-upsert';
+export { batchUpsert } from "./batch-upsert";
 
-export { runSourceImport } from './import-runner';
+export { runSourceImport } from "./import-runner";
 
 export type {
   FileFormat,
@@ -37,4 +38,4 @@ export type {
   BatchUpsertResult,
   DataFileLoadOptions,
   DataFileLoadResult,
-} from './types';
+} from "./types";

@@ -51,13 +51,14 @@ async function importDatasetInMemory(
   dataset: RedfinS3Dataset,
   rowLimit?: number,
   batchSize: number = BATCH_SIZE,
+  dateCutoff?: string,
 ): Promise<ImportResult> {
   const startTime = Date.now();
   const result = makeEmptyResult(dataset);
 
   try {
     let tsv = await downloadAndDecompress(dataset);
-    let records = parseTsv(tsv, dataset.geoLevel);
+    let records = parseTsv(tsv, dataset.geoLevel, dateCutoff);
     tsv = "";
     if (global.gc) global.gc();
     result.totalRows = records.length;
@@ -108,6 +109,7 @@ async function importDatasetStreaming(
   dataset: RedfinS3Dataset,
   rowLimit?: number,
   batchSize: number = BATCH_SIZE,
+  dateCutoff?: string,
 ): Promise<ImportResult> {
   const startTime = Date.now();
   const result = makeEmptyResult(dataset);
@@ -129,6 +131,7 @@ async function importDatasetStreaming(
       stream,
       dataset.geoLevel,
       batchSize,
+      dateCutoff,
     )) {
       batchNum++;
       result.totalRows = filteredCount;
@@ -180,6 +183,7 @@ export async function importDataset(
   supabase: SupabaseClient,
   dataset: RedfinS3Dataset,
   rowLimit?: number,
+  dateCutoff?: string,
 ): Promise<ImportResult> {
   const batchSize = getAutoBatchSize(dataset.geoLevel);
   console.log(
@@ -187,7 +191,19 @@ export async function importDataset(
   );
 
   if (needsStreaming(dataset.geoLevel)) {
-    return importDatasetStreaming(supabase, dataset, rowLimit, batchSize);
+    return importDatasetStreaming(
+      supabase,
+      dataset,
+      rowLimit,
+      batchSize,
+      dateCutoff,
+    );
   }
-  return importDatasetInMemory(supabase, dataset, rowLimit, batchSize);
+  return importDatasetInMemory(
+    supabase,
+    dataset,
+    rowLimit,
+    batchSize,
+    dateCutoff,
+  );
 }

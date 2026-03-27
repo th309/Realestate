@@ -12,27 +12,65 @@
  * region extractor functions defined inline in this file.
  */
 
-import { parseNumeric, normalizeZipCode, normalizeFipsCode } from '../../lib';
-import type { ZillowGeography } from './zillow-dataset-configs';
+import { parseNumeric, normalizeZipCode, normalizeFipsCode } from "../../lib";
+import type { ZillowGeography } from "./zillow-dataset-configs";
 
 // ---------------------------------------------------------------------------
 // State name to abbreviation mapping
 // ---------------------------------------------------------------------------
 
 const STATE_NAME_TO_CODE: Record<string, string> = {
-  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
-  'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
-  'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
-  'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
-  'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
-  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
-  'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
-  'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
-  'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
-  'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
-  'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
-  'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
-  'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
+  Alabama: "AL",
+  Alaska: "AK",
+  Arizona: "AZ",
+  Arkansas: "AR",
+  California: "CA",
+  Colorado: "CO",
+  Connecticut: "CT",
+  Delaware: "DE",
+  Florida: "FL",
+  Georgia: "GA",
+  Hawaii: "HI",
+  Idaho: "ID",
+  Illinois: "IL",
+  Indiana: "IN",
+  Iowa: "IA",
+  Kansas: "KS",
+  Kentucky: "KY",
+  Louisiana: "LA",
+  Maine: "ME",
+  Maryland: "MD",
+  Massachusetts: "MA",
+  Michigan: "MI",
+  Minnesota: "MN",
+  Mississippi: "MS",
+  Missouri: "MO",
+  Montana: "MT",
+  Nebraska: "NE",
+  Nevada: "NV",
+  "New Hampshire": "NH",
+  "New Jersey": "NJ",
+  "New Mexico": "NM",
+  "New York": "NY",
+  "North Carolina": "NC",
+  "North Dakota": "ND",
+  Ohio: "OH",
+  Oklahoma: "OK",
+  Oregon: "OR",
+  Pennsylvania: "PA",
+  "Rhode Island": "RI",
+  "South Carolina": "SC",
+  "South Dakota": "SD",
+  Tennessee: "TN",
+  Texas: "TX",
+  Utah: "UT",
+  Vermont: "VT",
+  Virginia: "VA",
+  Washington: "WA",
+  "West Virginia": "WV",
+  Wisconsin: "WI",
+  Wyoming: "WY",
+  "District of Columbia": "DC",
 };
 
 // Date column regex: YYYY-MM-DD format
@@ -63,7 +101,7 @@ function extractStateCode(row: Record<string, string>): string | null {
   }
 
   // Special case for national aggregate row
-  if (row.RegionName === 'United States') return 'US';
+  if (row.RegionName === "United States") return "US";
 
   return null;
 }
@@ -93,10 +131,10 @@ function extractGeoFields(
 ): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
 
-  if (geography === 'metro' && row.CBSACode) {
+  if (geography === "metro" && row.CBSACode) {
     fields.cbsa_code = row.CBSACode;
   }
-  if (geography === 'county') {
+  if (geography === "county") {
     const fips = buildCountyFipsCode(row);
     if (fips) fields.fips_code = fips;
   }
@@ -108,8 +146,11 @@ function extractGeoFields(
  * Normalize the region name for a given geography level.
  * ZIP codes are zero-padded to 5 digits.
  */
-function normalizeRegionName(regionName: string, geography: ZillowGeography): string {
-  if (geography === 'zip') {
+function normalizeRegionName(
+  regionName: string,
+  geography: ZillowGeography,
+): string {
+  if (geography === "zip") {
     return normalizeZipCode(regionName) ?? regionName;
   }
   return regionName;
@@ -129,6 +170,12 @@ export interface TransposeOptions {
    * as a sentinel for missing data in many datasets (inventory, sales count, etc.).
    */
   allowZeroValues?: boolean;
+  /**
+   * Optional date cutoff (YYYY-MM-DD). When set, only date columns >= this
+   * value are transposed. This dramatically reduces output for monthly refreshes
+   * (e.g., --recent 6 on ZIP data: ~60K records instead of ~6M).
+   */
+  dateCutoff?: string;
 }
 
 /**
@@ -148,7 +195,7 @@ export function transposeWideRow(
   const regionId = parseInt(row.RegionID, 10);
   if (isNaN(regionId)) return [];
 
-  const rawRegionName = row.RegionName || '';
+  const rawRegionName = row.RegionName || "";
   if (!rawRegionName) return [];
 
   const regionName = normalizeRegionName(rawRegionName, geography);
@@ -195,19 +242,40 @@ export function transposeAllRows(
   metricName: string,
   geography: ZillowGeography,
   options: TransposeOptions = {},
-): { records: Record<string, unknown>[]; rowsProcessed: number; rowsSkipped: number } {
+): {
+  records: Record<string, unknown>[];
+  rowsProcessed: number;
+  rowsSkipped: number;
+} {
   if (rows.length === 0) {
     return { records: [], rowsProcessed: 0, rowsSkipped: 0 };
   }
 
-  const dateColumns = detectDateColumns(rows[0]);
-  console.log(`  Detected ${dateColumns.length} date columns (${dateColumns[0]} to ${dateColumns[dateColumns.length - 1]})`);
+  let dateColumns = detectDateColumns(rows[0]);
+  console.log(
+    `  Detected ${dateColumns.length} date columns (${dateColumns[0]} to ${dateColumns[dateColumns.length - 1]})`,
+  );
+
+  // Filter date columns by cutoff (--recent optimization)
+  if (options.dateCutoff) {
+    const before = dateColumns.length;
+    dateColumns = dateColumns.filter((d) => d >= options.dateCutoff!);
+    console.log(
+      `  Date cutoff (>= ${options.dateCutoff}): ${before} → ${dateColumns.length} date columns`,
+    );
+  }
 
   const allRecords: Record<string, unknown>[] = [];
   let rowsSkipped = 0;
 
   for (const row of rows) {
-    const transposed = transposeWideRow(row, metricName, geography, dateColumns, options);
+    const transposed = transposeWideRow(
+      row,
+      metricName,
+      geography,
+      dateColumns,
+      options,
+    );
     if (transposed.length === 0) {
       rowsSkipped++;
     } else {

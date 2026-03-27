@@ -32,6 +32,7 @@ import { REDFIN_S3_DATASETS } from "./types";
 interface CliOptions {
   geoFilters: RedfinGeoLevel[];
   rowLimit?: number;
+  recentMonths?: number;
 }
 
 function parseCliArgs(): CliOptions {
@@ -66,6 +67,15 @@ function parseCliArgs(): CliOptions {
         process.exit(1);
       }
       options.rowLimit = value;
+    } else if (arg.startsWith("--recent=")) {
+      const value = parseInt(arg.split("=")[1], 10);
+      if (isNaN(value) || value <= 0) {
+        console.error(
+          `Invalid --recent value. Must be a positive integer (months).`,
+        );
+        process.exit(1);
+      }
+      options.recentMonths = value;
     } else if (arg.startsWith("--batch=")) {
       console.error(
         "Manual --batch override is disabled. This importer auto-selects batch sizes (max 5000) per geography.",
@@ -111,6 +121,17 @@ async function main(): Promise<void> {
     console.log(`  Row limit: ${options.rowLimit}`);
   }
 
+  // Compute date cutoff for --recent flag
+  let dateCutoff: string | undefined;
+  if (options.recentMonths) {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - options.recentMonths);
+    dateCutoff = cutoff.toISOString().slice(0, 10);
+    console.log(
+      `  Recent: last ${options.recentMonths} months (cutoff: ${dateCutoff})`,
+    );
+  }
+
   // 2. Load county FIPS lookup (used by parser for county-level imports)
   initCountyFipsLookup();
 
@@ -139,7 +160,12 @@ async function main(): Promise<void> {
     );
     console.log("-".repeat(50));
 
-    const result = await importDataset(supabase, dataset, options.rowLimit);
+    const result = await importDataset(
+      supabase,
+      dataset,
+      options.rowLimit,
+      dateCutoff,
+    );
     results.push(result);
 
     console.log(
