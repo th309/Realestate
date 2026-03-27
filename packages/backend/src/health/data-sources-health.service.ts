@@ -23,6 +23,8 @@ export interface SourceHealth {
   fresh: boolean;
   daysSinceUpdate: number | null;
   expectedFreshnessDays: number;
+  /** The most recent data date found in the source table (period_date or year). */
+  latestDate: string | null;
   schemaChanged: boolean;
   lastCheck: string;
   errorMessage?: string;
@@ -67,28 +69,93 @@ interface SourceConfig {
  * - HUD FMR: year (integer, e.g., 2024)
  *
  * Freshness thresholds: frequency × 1.2
- * - Monthly (30 days): 36 days
- * - Annual (365 days): 438 days
+ * Monthly: 60 days (+ 1.25x = 75 day stale threshold)
+ * Quarterly (BLS): 95 days (+ 1.25x = 119 day stale threshold)
+ * Annual: 438 days | Census ACS: 900 days (2-year publication lag)
  */
 const DATA_SOURCES: SourceConfig[] = [
   // Zillow - Monthly data, check ZIP level (exclude zhvf forecast data which has future dates)
-  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36, excludeFilter: { column: 'metric_name', value: 'zhvf' } },
+  {
+    sourceName: 'zillow_s3',
+    displayName: 'Zillow',
+    sourceType: 's3',
+    tableName: 'zillow_zip',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 60,
+    excludeFilter: { column: 'metric_name', value: 'zhvf' },
+  },
   // Realtor - Monthly data, check ZIP level (most granular)
-  { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
-  // Census/ACS - Annual data (5-year ACS estimates), check county level
-  { sourceName: 'census_acs', displayName: 'Census ACS', sourceType: 'api', tableName: 'census_county', dateColumn: 'year', expectedFreshnessDays: 438 },
-  // BLS - Monthly unemployment/employment data, check county level
-  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
-  // FRED - Monthly national economic indicators (mortgage rates, GDP, etc.)
-  { sourceName: 'fred_api', displayName: 'FRED', sourceType: 'api', tableName: 'economic_national', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  {
+    sourceName: 'realtor_s3',
+    displayName: 'Realtor',
+    sourceType: 's3',
+    tableName: 'realtor_zip',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 60,
+  },
+  // Census/ACS - Annual data (5-year ACS estimates), ~2 year publication lag
+  {
+    sourceName: 'census_acs',
+    displayName: 'Census ACS',
+    sourceType: 'api',
+    tableName: 'census_county',
+    dateColumn: 'year',
+    expectedFreshnessDays: 900,
+  },
+  // BLS - County unemployment/employment lags 2-3 months behind national
+  {
+    sourceName: 'bls_api',
+    displayName: 'BLS',
+    sourceType: 'api',
+    tableName: 'economic_county',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 95,
+  },
+  // FRED - Monthly national economic indicators (mortgage rates, unemployment)
+  {
+    sourceName: 'fred_api',
+    displayName: 'FRED',
+    sourceType: 'api',
+    tableName: 'economic_national',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 60,
+  },
   // HUD FMR - Annual Fair Market Rents
-  { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'year', expectedFreshnessDays: 438 },
-  // Building Permits - Monthly data from Census
-  { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  {
+    sourceName: 'hud_api',
+    displayName: 'HUD FMR',
+    sourceType: 'api',
+    tableName: 'hud_fmr',
+    dateColumn: 'year',
+    expectedFreshnessDays: 438,
+  },
+  // Building Permits - Monthly data from Census (lags ~2 months)
+  {
+    sourceName: 'permits_census',
+    displayName: 'Building Permits',
+    sourceType: 'api',
+    tableName: 'permits_county',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 60,
+  },
   // Redfin Sales - Weekly market tracker data from S3 (metro has best coverage)
-  { sourceName: 'redfin_sales_s3', displayName: 'Redfin Sales', sourceType: 's3', tableName: 'redfin_metro', dateColumn: 'period_end', expectedFreshnessDays: 14 },
+  {
+    sourceName: 'redfin_sales_s3',
+    displayName: 'Redfin Sales',
+    sourceType: 's3',
+    tableName: 'redfin_metro',
+    dateColumn: 'period_end',
+    expectedFreshnessDays: 60,
+  },
   // Redfin Rental - Rental market data from S3
-  { sourceName: 'redfin_rental_s3', displayName: 'Redfin Rental', sourceType: 's3', tableName: 'redfin_rental_metro', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  {
+    sourceName: 'redfin_rental_s3',
+    displayName: 'Redfin Rental',
+    sourceType: 's3',
+    tableName: 'redfin_rental_metro',
+    dateColumn: 'period_date',
+    expectedFreshnessDays: 60,
+  },
 ];
 
 @Injectable()
@@ -127,13 +194,14 @@ export class DataSourcesHealthService {
 
     try {
       // Query the table to check availability and freshness
-      let query = client
-        .from(config.tableName)
-        .select(config.dateColumn);
+      let query = client.from(config.tableName).select(config.dateColumn);
 
       // Apply exclude filter if specified (e.g., exclude forecast data)
       if (config.excludeFilter) {
-        query = query.neq(config.excludeFilter.column, config.excludeFilter.value);
+        query = query.neq(
+          config.excludeFilter.column,
+          config.excludeFilter.value,
+        );
       }
 
       const { data, error } = await query
@@ -152,15 +220,19 @@ export class DataSourcesHealthService {
           fresh: false,
           daysSinceUpdate: null,
           expectedFreshnessDays: config.expectedFreshnessDays,
+          latestDate: null,
           schemaChanged: false,
           lastCheck: new Date().toISOString(),
           errorMessage: error.message,
         };
       }
 
-      const latestDate = data?.[0]?.[config.dateColumn];
-      const daysSinceUpdate = this.calculateDaysSince(latestDate);
-      const fresh = daysSinceUpdate !== null && daysSinceUpdate <= config.expectedFreshnessDays * 1.25;
+      const latestDateRaw = data?.[0]?.[config.dateColumn];
+      const latestDate = latestDateRaw != null ? String(latestDateRaw) : null;
+      const daysSinceUpdate = this.calculateDaysSince(latestDateRaw);
+      const fresh =
+        daysSinceUpdate !== null &&
+        daysSinceUpdate <= config.expectedFreshnessDays * 1.25;
 
       return {
         sourceName: config.sourceName,
@@ -171,7 +243,8 @@ export class DataSourcesHealthService {
         fresh,
         daysSinceUpdate,
         expectedFreshnessDays: config.expectedFreshnessDays,
-        schemaChanged: false, // TODO: Implement schema change detection
+        latestDate,
+        schemaChanged: false,
         lastCheck: new Date().toISOString(),
       };
     } catch (error) {
@@ -184,6 +257,7 @@ export class DataSourcesHealthService {
         fresh: false,
         daysSinceUpdate: null,
         expectedFreshnessDays: config.expectedFreshnessDays,
+        latestDate: null,
         schemaChanged: false,
         lastCheck: new Date().toISOString(),
         errorMessage: error instanceof Error ? error.message : 'Unknown error',

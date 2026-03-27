@@ -123,3 +123,15 @@
 2. **Set an explicit Custom Start Command for backend services in Railway.** Railway may not respect the Dockerfile's CMD if a previous Railpack build cached a start command. Backend needs `node packages/backend/dist/main.js`. Frontend works without a custom start command (Dockerfile CMD is respected).
 3. **For monorepo Dockerfile builds, set ALL config in the Railway dashboard** — Builder: Dockerfile, Dockerfile Path, and Custom Start Command matching the Dockerfile's CMD.
 4. **When debugging Docker COPY failures, check what the build context actually is.** The `root directory set as '...'` line in Railway build logs tells you exactly what Docker can see.
+
+## Verify Table Names Against Actual Database Before Writing Backend Services
+
+**Date:** 2026-03-27
+**Context:** HealthSnapshotService queried a `data_source_registry` table that was never created in Supabase, resulting in 0 rows being recorded to `admin_health_snapshots` for the entire lifetime of the cron job. Additionally, `DATA_SOURCE_TABLE_MAP` referenced 7 nonexistent tables (`census_acs_metro`, `bls_metro`, `fred_national`, `hud_fmr_county`, `building_permits_metro`, `redfin_metro_sales`, `redfin_metro_rental`). The `UserSnapshotService` referenced `profiles` (doesn't exist, actual table is `user_profiles`) and `user_entitlements` (doesn't exist, tiers are on `user_profiles.subscription_tier`). Column types were also wrong (`days_since_update` sent as `null` but DB column is NOT NULL).
+
+**Rule:** Before writing any backend service that reads from Supabase:
+
+1. **Query `information_schema.tables` to verify the table exists.** Use the Supabase MCP tool. Don't assume table names from memory or from other services that may also be wrong.
+2. **Query `information_schema.columns` to verify column names and nullability.** A NOT NULL column that receives null will cause silent insert failures.
+3. **Cross-reference with working services.** If a health check endpoint already works (e.g., `DataSourcesHealthService`), its table names are proven correct -- use those, not guessed names.
+4. **When a cron job produces 0 output, check the data source first.** The service was silently returning `[]` because the initial query failed -- the rest of the logic was irrelevant.

@@ -17,11 +17,13 @@ interface TabBarProps {
 
 export function TabBar({ activeTab, onTabChange }: TabBarProps) {
   return (
-    <div className="border-b-2 border-outline-variant/30">
+    <div data-testid="tab-bar" className="border-b-2 border-outline-variant/30">
       <div className="flex gap-0">
         {TAB_ORDER.map((tab) => (
           <button
             key={tab}
+            data-testid={`tab-${tab}`}
+            data-active={activeTab === tab}
             onClick={() => onTabChange(tab)}
             className={`px-6 py-3 text-sm font-medium transition-colors duration-200 ${
               activeTab === tab

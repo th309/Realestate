@@ -9,6 +9,7 @@ interface PlaceholderCardProps {
 function PlaceholderCard({ cardId, title, onCardClick }: PlaceholderCardProps) {
   return (
     <div
+      data-testid={`card-${cardId}`}
       onClick={() => onCardClick(cardId)}
       className="bg-surface-container-low border border-outline-variant rounded-xl p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
     >

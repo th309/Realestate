@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Database } from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
-import { WidgetShell } from './WidgetShell';
+import React, { useState, useEffect } from "react";
+import { Database } from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
+import { WidgetShell } from "./WidgetShell";
 
 interface SourceHealth {
   sourceName: string;
   displayName: string;
-  sourceType: 's3' | 'api';
+  sourceType: "s3" | "api";
   available: boolean;
   responseTimeMs: number | null;
   fresh: boolean;
   daysSinceUpdate: number | null;
   expectedFreshnessDays: number;
+  latestDate: string | null;
   schemaChanged: boolean;
   lastCheck: string;
   errorMessage?: string;
@@ -26,6 +27,7 @@ interface DataSourcesSummary {
 }
 
 interface DataSourcesResponse {
+  status: "healthy" | "degraded" | "unhealthy";
   sources: SourceHealth[];
   summary: DataSourcesSummary;
 }
@@ -34,15 +36,18 @@ interface DataFeedsWidgetProps {
   refreshTrigger: number;
 }
 
-function getFreshnessStatus(source: SourceHealth): { dotClass: string; label: string } {
+function getFreshnessStatus(source: SourceHealth): {
+  dotClass: string;
+  label: string;
+} {
   if (source.daysSinceUpdate === null || source.expectedFreshnessDays === 0) {
-    return { dotClass: 'bg-gray-400', label: 'Unknown' };
+    return { dotClass: "bg-gray-400", label: "Unknown" };
   }
   const ratio = source.daysSinceUpdate / source.expectedFreshnessDays;
-  if (ratio < 0.5) return { dotClass: 'bg-green-500', label: 'Fresh' };
-  if (ratio < 0.9) return { dotClass: 'bg-amber-500', label: 'OK' };
-  if (ratio < 1.0) return { dotClass: 'bg-orange-500', label: 'Due Soon' };
-  return { dotClass: 'bg-red-500', label: 'Stale' };
+  if (ratio < 0.5) return { dotClass: "bg-green-500", label: "Fresh" };
+  if (ratio < 0.9) return { dotClass: "bg-amber-500", label: "OK" };
+  if (ratio < 1.0) return { dotClass: "bg-orange-500", label: "Due Soon" };
+  return { dotClass: "bg-red-500", label: "Stale" };
 }
 
 export function DataFeedsWidget({ refreshTrigger }: DataFeedsWidgetProps) {
@@ -57,19 +62,22 @@ export function DataFeedsWidget({ refreshTrigger }: DataFeedsWidgetProps) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchAPIRaw('/api/health/data-sources');
+        const res = await fetchAPIRaw("/api/health/data-sources");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: DataSourcesResponse = await res.json();
         if (!cancelled) setData(json);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [refreshTrigger]);
 
   return (
@@ -84,10 +92,22 @@ export function DataFeedsWidget({ refreshTrigger }: DataFeedsWidgetProps) {
         <div className="space-y-3">
           {/* Summary row */}
           <div className="flex items-center gap-4 text-xs">
-            <span className={data.summary.available === data.summary.total ? 'text-green-600' : 'text-amber-600'}>
+            <span
+              className={
+                data.summary.available === data.summary.total
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }
+            >
               {data.summary.available}/{data.summary.total} Available
             </span>
-            <span className={data.summary.fresh === data.summary.total ? 'text-green-600' : 'text-amber-600'}>
+            <span
+              className={
+                data.summary.fresh === data.summary.total
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }
+            >
               {data.summary.fresh}/{data.summary.total} Fresh
             </span>
           </div>
@@ -97,16 +117,25 @@ export function DataFeedsWidget({ refreshTrigger }: DataFeedsWidgetProps) {
             {data.sources.map((source) => {
               const freshness = getFreshnessStatus(source);
               return (
-                <li key={source.sourceName} className="flex items-center justify-between">
+                <li
+                  key={source.sourceName}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${source.available ? 'bg-green-500' : 'bg-red-500'}`}
+                      className={`w-2 h-2 rounded-full shrink-0 ${source.available ? "bg-green-500" : "bg-red-500"}`}
                     />
-                    <span className="text-xs text-on-surface truncate">{source.displayName}</span>
+                    <span className="text-xs text-on-surface truncate">
+                      {source.displayName}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${freshness.dotClass}`} />
-                    <span className="text-xs text-on-surface-variant">{freshness.label}</span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${freshness.dotClass}`}
+                    />
+                    <span className="text-xs text-on-surface-variant font-mono">
+                      {source.latestDate ?? "—"}
+                    </span>
                   </div>
                 </li>
               );
@@ -114,7 +143,9 @@ export function DataFeedsWidget({ refreshTrigger }: DataFeedsWidgetProps) {
           </ul>
         </div>
       ) : (
-        <p className="text-xs text-on-surface-variant">Unable to load data feed status</p>
+        <p className="text-xs text-on-surface-variant">
+          Unable to load data feed status
+        </p>
       )}
     </WidgetShell>
   );

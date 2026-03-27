@@ -7,15 +7,6 @@ interface HeroStatsRowProps {
   refreshTrigger: number;
 }
 
-function buildSparklineFromRate(rate: number, length = 8): number[] {
-  // Generates a stable-looking sparkline centered around the given rate value
-  const base = rate * 100;
-  return Array.from({ length }, (_, i) => {
-    const jitter = (((i * 7 + 3) % 5) - 2) * 0.5;
-    return Math.max(0, Math.min(100, base + jitter));
-  });
-}
-
 export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
   const { stats, isLoading } = useHeroStats(refreshTrigger);
 
@@ -37,83 +28,87 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
     );
   }
 
-  // Derive system health uptime from error rate
-  const uptimePct = Math.max(0, (1 - stats.errorRate) * 100);
-  const uptimeFormatted = `${uptimePct.toFixed(1)}%`;
-  const uptimeSparkline = buildSparklineFromRate(1 - stats.errorRate);
+  // Destructure the five backend hero stat sections with safe defaults
+  const health = stats.system_health ?? { uptime_pct: 0, sparkline: [] };
+  const alerts = stats.active_alerts ?? {
+    count: 0,
+    critical: 0,
+    warning: 0,
+    sparkline: [],
+  };
+  const freshness = stats.data_freshness ?? {
+    fresh: 0,
+    total: 0,
+    sparkline: [],
+  };
+  const users = stats.total_users ?? {
+    count: 0,
+    new_this_week: 0,
+    sparkline: [],
+  };
+  const scores = stats.score_health ?? { hit_rate_1y: 0, sparkline: [] };
 
-  // Derive active alerts: treat high error rate as alerts
-  const errorAlertCount = stats.errorRate > 0.05 ? 1 : 0;
-  const slowResponseAlertCount = stats.avgResponseTimeMs > 2000 ? 1 : 0;
-  const alertCount = errorAlertCount + slowResponseAlertCount;
-  const alertColor = alertCount > 0 ? "#f59e0b" : "#22c55e";
+  // System Health
+  const uptimeFormatted = `${health.uptime_pct.toFixed(1)}%`;
+
+  // Active Alerts
+  const alertColor = alerts.count > 0 ? "#f59e0b" : "#22c55e";
   const alertSubtitle =
-    alertCount === 0
+    alerts.count === 0
       ? "All systems nominal"
-      : `${errorAlertCount > 0 ? "1 error rate" : ""}${errorAlertCount > 0 && slowResponseAlertCount > 0 ? ", " : ""}${slowResponseAlertCount > 0 ? "1 slow response" : ""}`;
-  const alertSparkline = buildSparklineFromRate(alertCount === 0 ? 1 : 0.5);
+      : `${alerts.critical} critical, ${alerts.warning} warning`;
 
-  // Data freshness: use reportsLast7d / totalReports as a proxy
-  const freshCount = stats.reportsLast7d;
-  const totalForFreshness = Math.max(stats.totalReports, freshCount);
-  const freshnessFormatted = `${freshCount}/${totalForFreshness}`;
-  const allFresh = freshCount >= totalForFreshness;
+  // Data Freshness
+  const freshnessFormatted = `${freshness.fresh}/${freshness.total}`;
+  const allFresh = freshness.total > 0 && freshness.fresh >= freshness.total;
   const freshnessColor = allFresh ? "#22c55e" : "#ef4444";
-  const freshnessSparkline = buildSparklineFromRate(
-    totalForFreshness > 0 ? freshCount / totalForFreshness : 0,
-  );
 
-  // Total users
-  const totalUsersFormatted = stats.totalUsers.toLocaleString();
-  const usersSparkline = buildSparklineFromRate(
-    Math.min(1, stats.activeUsers30d / Math.max(stats.totalUsers, 1)),
-  );
+  // Total Users
+  const totalUsersFormatted = users.count.toLocaleString();
 
-  // Score health: use inverse of error rate as hit rate proxy
-  const scoreHitRate = Math.max(0, (1 - stats.errorRate) * 100);
-  const scoreHealthFormatted = `${scoreHitRate.toFixed(1)}%`;
-  const scoreSparkline = buildSparklineFromRate(1 - stats.errorRate);
+  // Score Health
+  const scoreHealthFormatted = `${scores.hit_rate_1y.toFixed(1)}%`;
 
   return (
     <div data-testid="hero-stats-row" className="flex gap-4">
       <HeroStatCard
         label="System Health"
         value={uptimeFormatted}
-        subtitle="Uptime (derived from error rate)"
-        sparkline={uptimeSparkline}
+        subtitle="30-day uptime"
+        sparkline={health.sparkline}
         color="#22c55e"
       />
 
       <HeroStatCard
         label="Active Alerts"
-        value={String(alertCount)}
+        value={String(alerts.count)}
         subtitle={alertSubtitle}
-        sparkline={alertSparkline}
+        sparkline={alerts.sparkline}
         color={alertColor}
-        borderAlert={alertCount > 0}
+        borderAlert={alerts.count > 0}
       />
 
       <HeroStatCard
         label="Data Freshness"
         value={freshnessFormatted}
-        subtitle={allFresh ? "All reports fresh" : "Some reports stale"}
-        sparkline={freshnessSparkline}
+        subtitle={allFresh ? "All sources fresh" : "Some sources stale"}
+        sparkline={freshness.sparkline}
         color={freshnessColor}
       />
 
       <HeroStatCard
         label="Total Users"
         value={totalUsersFormatted}
-        subtitle={`+${stats.activeUsers30d.toLocaleString()} active (30d)`}
-        sparkline={usersSparkline}
+        subtitle={`+${users.new_this_week.toLocaleString()} this week`}
+        sparkline={users.sparkline}
         color="#a78bfa"
       />
 
       <HeroStatCard
         label="Score Health"
         value={scoreHealthFormatted}
-        subtitle="Est. hit rate (1y proxy)"
-        sparkline={scoreSparkline}
+        subtitle="1-year hit rate"
+        sparkline={scores.sparkline}
         color="#3b82f6"
       />
     </div>

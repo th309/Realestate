@@ -173,9 +173,9 @@ export async function teardownAdminE2e(): Promise<void> {
     perPage: 500,
   });
   if (listData?.users) {
-    const stale = listData.users.filter((u) =>
-      u.email?.endsWith(TEST_EMAIL_DOMAIN),
-    );
+    const stale = (
+      listData.users as Array<{ id: string; email?: string }>
+    ).filter((u) => u.email?.endsWith(TEST_EMAIL_DOMAIN));
     await Promise.allSettled(
       stale.map((u) => serviceClient.auth.admin.deleteUser(u.id)),
     );
