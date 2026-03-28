@@ -53,6 +53,7 @@ const FEATURES = [
   "personalized_dashboard",
   "markets_to_watch",
   "custom_research",
+  "watchlist_limit",
 ];
 
 /** Read simulated tier from sessionStorage */
