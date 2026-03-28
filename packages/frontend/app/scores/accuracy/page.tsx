@@ -1,15 +1,6 @@
 import { Target } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
-import { HeroStats } from "./components/HeroStats";
-import { DollarImpactSection } from "./components/DollarImpactSection";
-import { AlphaCallout } from "./components/AlphaCallout";
-import { InteractiveScatter } from "./components/InteractiveScatter";
-import { QuintilePerformance } from "./components/QuintilePerformance";
-import { PearsonVsSpearman } from "./components/PearsonVsSpearman";
-import { HeadToHead } from "./components/HeadToHead";
-import { GeographyCoverage } from "./components/GeographyCoverage";
-import { MethodologyFooter } from "./components/MethodologyFooter";
-import { CTABanner } from "./components/CTABanner";
+import { AccuracyPageShell } from "./components/AccuracyPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -93,35 +84,8 @@ export default function AccuracyPage() {
         />
       </section>
 
-      {/* 1. Hero Stats */}
-      <HeroStats />
-
-      {/* 2. Dollar Impact */}
-      <DollarImpactSection />
-
-      {/* 2b. Alpha vs Beta Callout */}
-      <AlphaCallout />
-
-      {/* 3. Interactive Scatter */}
-      <InteractiveScatter />
-
-      {/* 4. Quintile Performance */}
-      <QuintilePerformance />
-
-      {/* 5. Pearson vs Spearman Explainer */}
-      <PearsonVsSpearman />
-
-      {/* 6. Head-to-Head Comparison */}
-      <HeadToHead />
-
-      {/* 7. Geography Coverage */}
-      <GeographyCoverage />
-
-      {/* 9. Methodology */}
-      <MethodologyFooter />
-
-      {/* 10. CTA */}
-      <CTABanner />
+      {/* Interactive shell — owns horizon toggle state */}
+      <AccuracyPageShell />
     </div>
   );
 }
