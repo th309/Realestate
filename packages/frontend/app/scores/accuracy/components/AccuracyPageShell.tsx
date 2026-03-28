@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { HorizonToggle } from "./HorizonToggle";
 import { HeroStats } from "./HeroStats";
 import { DollarImpactSection } from "./DollarImpactSection";
@@ -9,12 +9,15 @@ import { InteractiveScatter } from "./InteractiveScatter";
 import { QuintilePerformance } from "./QuintilePerformance";
 import { CorrelationTimeline } from "./CorrelationTimeline";
 import { PearsonVsSpearman } from "./PearsonVsSpearman";
-import { HeadToHead } from "./HeadToHead";
 import { GeographyCoverage } from "./GeographyCoverage";
 import { MethodologyFooter } from "./MethodologyFooter";
-import { CTABanner } from "./CTABanner";
 
-export function AccuracyPageShell() {
+interface AccuracyPageShellProps {
+  /** Server components rendered after the client shell (HeadToHead, CTABanner) */
+  children?: ReactNode;
+}
+
+export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
   const [horizon, setHorizon] = useState<"1y" | "3y">("3y");
 
   return (
@@ -45,17 +48,14 @@ export function AccuracyPageShell() {
       {/* 6. Pearson vs Spearman Explainer */}
       <PearsonVsSpearman />
 
-      {/* 6. Head-to-Head Comparison */}
-      <HeadToHead />
-
       {/* 7. Geography Coverage — shows both 1Y and 3Y, no horizon prop needed */}
       <GeographyCoverage />
 
-      {/* 9. Methodology */}
+      {/* 8. Methodology */}
       <MethodologyFooter />
 
-      {/* 10. CTA */}
-      <CTABanner />
+      {/* Server components passed from page.tsx (HeadToHead, CTABanner) */}
+      {children}
     </div>
   );
 }

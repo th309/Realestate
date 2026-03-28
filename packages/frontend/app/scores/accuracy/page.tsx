@@ -1,6 +1,8 @@
 import { Target } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { AccuracyPageShell } from "./components/AccuracyPageShell";
+import { HeadToHead } from "./components/HeadToHead";
+import { CTABanner } from "./components/CTABanner";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -85,7 +87,11 @@ export default function AccuracyPage() {
       </section>
 
       {/* Interactive shell — owns horizon toggle state */}
-      <AccuracyPageShell />
+      <AccuracyPageShell>
+        {/* Async server components rendered outside client boundary */}
+        <HeadToHead />
+        <CTABanner />
+      </AccuracyPageShell>
     </div>
   );
 }
