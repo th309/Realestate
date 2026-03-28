@@ -7,6 +7,7 @@ import { DollarImpactSection } from "./DollarImpactSection";
 import { AlphaCallout } from "./AlphaCallout";
 import { InteractiveScatter } from "./InteractiveScatter";
 import { QuintilePerformance } from "./QuintilePerformance";
+import { CorrelationTimeline } from "./CorrelationTimeline";
 import { PearsonVsSpearman } from "./PearsonVsSpearman";
 import { HeadToHead } from "./HeadToHead";
 import { GeographyCoverage } from "./GeographyCoverage";
@@ -19,7 +20,6 @@ export function AccuracyPageShell() {
   return (
     <div className="space-y-16">
       {/* 1. Hero Stats */}
-      {/* @ts-expect-error horizon prop will be added in a later task */}
       <HeroStats horizon={horizon} />
 
       {/* 2. Dollar Impact */}
@@ -34,14 +34,15 @@ export function AccuracyPageShell() {
       </div>
 
       {/* 3. Interactive Scatter */}
-      {/* @ts-expect-error horizon prop will be added in a later task */}
       <InteractiveScatter horizon={horizon} />
 
       {/* 4. Quintile Performance */}
-      {/* @ts-expect-error horizon prop will be added in a later task */}
       <QuintilePerformance horizon={horizon} />
 
-      {/* 5. Pearson vs Spearman Explainer */}
+      {/* 5. Correlation Timeline */}
+      <CorrelationTimeline horizon={horizon} />
+
+      {/* 6. Pearson vs Spearman Explainer */}
       <PearsonVsSpearman />
 
       {/* 6. Head-to-Head Comparison */}

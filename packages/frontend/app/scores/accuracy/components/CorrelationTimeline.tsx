@@ -6,9 +6,9 @@
  * Client component.
  */
 
-'use client';
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -18,21 +18,32 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { useValidationTimeSeries } from '@/lib/data';
+} from "recharts";
+import { useValidationTimeSeries } from "@/lib/data";
 
-export function CorrelationTimeline() {
-  const { data: rawData, isLoading, error } = useValidationTimeSeries({
-    geography: 'metro',
-    scoreType: 'homeready',
+interface CorrelationTimelineProps {
+  horizon?: "1y" | "3y";
+}
+
+export function CorrelationTimeline({
+  horizon = "1y",
+}: CorrelationTimelineProps) {
+  const {
+    data: rawData,
+    isLoading,
+    error,
+  } = useValidationTimeSeries({
+    geography: "metro",
+    scoreType: "homeready",
+    horizon,
   });
 
   const chartData = useMemo(() => {
     if (!rawData) return [];
     return rawData.map((p) => ({
-      date: new Date(p.date).toLocaleDateString('en-US', {
-        month: 'short',
-        year: '2-digit',
+      date: new Date(p.date).toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
       }),
       fullDate: p.date,
       correlation: p.correlation,
@@ -45,14 +56,16 @@ export function CorrelationTimeline() {
   const peak = useMemo(() => {
     if (chartData.length === 0) return null;
     return chartData.reduce((best, curr) =>
-      curr.correlation > best.correlation ? curr : best
+      curr.correlation > best.correlation ? curr : best,
     );
   }, [chartData]);
 
   // Average
   const avgCorrelation = useMemo(() => {
     if (chartData.length === 0) return 0;
-    return chartData.reduce((sum, d) => sum + d.correlation, 0) / chartData.length;
+    return (
+      chartData.reduce((sum, d) => sum + d.correlation, 0) / chartData.length
+    );
   }, [chartData]);
 
   if (isLoading) {
@@ -71,7 +84,9 @@ export function CorrelationTimeline() {
       <section>
         <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-6">
           <p className="text-sm text-on-surface-variant">
-            {error ? 'Failed to load timeline data.' : 'No time series data available.'}
+            {error
+              ? "Failed to load timeline data."
+              : "No time series data available."}
           </p>
         </div>
       </section>
@@ -81,31 +96,44 @@ export function CorrelationTimeline() {
   return (
     <section>
       <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-        Consistency Over Time
+        Consistency Over Time ({horizon === "3y" ? "3-Year" : "1-Year"} Horizon)
       </p>
       <h2 className="text-2xl font-[var(--font-source-serif)] text-on-surface mt-2">
         Our Best Window Beats Theirs. And We Show All {chartData.length}.
       </h2>
       <p className="text-on-surface-variant mt-2 max-w-2xl">
-        The competition publishes one cherry-picked window. Here are all {chartData.length} of ours.
-        Consistency matters more than a single data point.
+        The competition publishes one cherry-picked window. Here are all{" "}
+        {chartData.length} of ours. Consistency matters more than a single data
+        point.
       </p>
 
       <div className="mt-8 bg-surface-container-low border border-outline-variant rounded-2xl p-6">
         {/* Summary stats */}
         <div className="flex gap-4 mb-6">
           <div>
-            <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Windows</p>
-            <p className="text-lg font-bold text-on-surface">{chartData.length}</p>
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
+              Windows
+            </p>
+            <p className="text-lg font-bold text-on-surface">
+              {chartData.length}
+            </p>
           </div>
           <div>
-            <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Avg Correlation</p>
-            <p className="text-lg font-bold text-on-surface">{avgCorrelation.toFixed(3)}</p>
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
+              Avg Correlation
+            </p>
+            <p className="text-lg font-bold text-on-surface">
+              {avgCorrelation.toFixed(3)}
+            </p>
           </div>
           {peak && (
             <div>
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Peak</p>
-              <p className="text-lg font-bold text-primary">{peak.correlation.toFixed(3)}</p>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
+                Peak
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {peak.correlation.toFixed(3)}
+              </p>
             </div>
           )}
         </div>
@@ -113,32 +141,41 @@ export function CorrelationTimeline() {
         {/* Chart */}
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.5} />
+            <LineChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--outline-variant)"
+                opacity={0.5}
+              />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: 'var(--on-surface-variant)' }}
+                tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--outline-variant)' }}
+                axisLine={{ stroke: "var(--outline-variant)" }}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--outline-variant)' }}
-                domain={[0, 'auto']}
+                axisLine={{ stroke: "var(--outline-variant)" }}
+                domain={[0, "auto"]}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'var(--surface-container)',
-                  border: '1px solid var(--outline-variant)',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  backgroundColor: "var(--surface-container)",
+                  border: "1px solid var(--outline-variant)",
+                  borderRadius: "12px",
+                  fontSize: "12px",
                 }}
-                formatter={(value: number) => [value.toFixed(3), 'Correlation']}
+                formatter={(value: number) => [value.toFixed(3), "Correlation"]}
                 labelFormatter={(label, payload) => {
                   const item = payload?.[0]?.payload;
-                  return item ? `${item.fullDate} (n=${item.sampleSize})` : label;
+                  return item
+                    ? `${item.fullDate} (n=${item.sampleSize})`
+                    : label;
                 }}
               />
               {/* Competitor reference line */}
@@ -148,9 +185,9 @@ export function CorrelationTimeline() {
                 strokeDasharray="8 4"
                 label={{
                   value: "Competitor's best (r=0.72)",
-                  position: 'right',
+                  position: "right",
                   fontSize: 10,
-                  fill: '#f97316',
+                  fill: "#f97316",
                 }}
               />
               <Line
@@ -158,8 +195,8 @@ export function CorrelationTimeline() {
                 dataKey="correlation"
                 stroke="var(--primary)"
                 strokeWidth={2.5}
-                dot={{ fill: 'var(--primary)', r: 3 }}
-                activeDot={{ r: 5, fill: 'var(--primary)' }}
+                dot={{ fill: "var(--primary)", r: 3 }}
+                activeDot={{ r: 5, fill: "var(--primary)" }}
               />
             </LineChart>
           </ResponsiveContainer>

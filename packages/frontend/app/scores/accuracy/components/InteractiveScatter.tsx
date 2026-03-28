@@ -46,7 +46,13 @@ const V3_OOS_METRICS: Record<
   zip_markethealth: { ic: 0.221, spread: "2.16 pp", hitRate: "63.3%" },
 };
 
-export function InteractiveScatter() {
+interface InteractiveScatterProps {
+  horizon?: "1y" | "3y";
+}
+
+export function InteractiveScatter({
+  horizon = "3y",
+}: InteractiveScatterProps) {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("homeready");
 
@@ -57,13 +63,18 @@ export function InteractiveScatter() {
   } = useValidationScatter({
     geography,
     scoreType,
+    horizon,
     limit: 1000,
   });
 
   const scatterData: ScatterDataPoint[] = useMemo(() => {
     if (!rawData) return [];
     return rawData
-      .filter((p) => p.excessVsState3y !== null)
+      .filter((p) =>
+        horizon === "3y"
+          ? p.excessVsState3y !== null
+          : p.excessVsState1y !== null,
+      )
       .map((p) => {
         // Assign quartile category for coloring
         const q =
@@ -78,11 +89,11 @@ export function InteractiveScatter() {
           id: p.geographyId,
           label: p.geographyName,
           x: p.score,
-          y: p.excessVsState3y!,
+          y: horizon === "3y" ? p.excessVsState3y! : p.excessVsState1y!,
           category: q,
         };
       });
-  }, [rawData]);
+  }, [rawData, horizon]);
 
   // Official v3 OOS metrics (from walk-forward cross-validation report)
   const oosMetrics = V3_OOS_METRICS[`${geography}_${scoreType}`];
@@ -203,7 +214,7 @@ export function InteractiveScatter() {
           <ScatterPlot
             data={scatterData}
             xLabel="PropertyIQ Score"
-            yLabel="3Y Excess Return vs State (%)"
+            yLabel={`${horizon === "3y" ? "3-Year" : "1-Year"} Excess Return vs State (pp)`}
             xFormat="integer"
             yFormat="percentAbs"
             height={550}
