@@ -1,9 +1,14 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { useInView } from './hooks/useInView';
-import { ArrowRight } from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
+import Image from "next/image";
+import { useInView } from "./hooks/useInView";
+import { ArrowRight } from "lucide-react";
+import { useEntitlements } from "@/lib/entitlements";
+import {
+  getHomepageClaims,
+  formatDollarClaim,
+  formatObservations,
+} from "@/lib/data";
 
 /* ─── Individual value-prop row ─── */
 interface ValuePropProps {
@@ -36,7 +41,7 @@ function ValueProp({
     <div
       ref={setRef}
       className={`flex flex-col gap-10 lg:gap-16 items-center lg:items-start ${
-        reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'
+        reverse ? "lg:flex-row-reverse" : "lg:flex-row"
       }`}
     >
       {/* Text */}
@@ -44,8 +49,8 @@ function ValueProp({
         className="flex-1 max-w-lg lg:pt-4"
         style={{
           opacity: inView ? 1 : 0,
-          transform: inView ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 0.6s ease, transform 0.6s ease',
+          transform: inView ? "translateY(0)" : "translateY(20px)",
+          transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
         <span className="text-xs font-semibold text-primary uppercase tracking-[0.15em] mb-3 block">
@@ -83,9 +88,9 @@ function ValueProp({
         className="flex-1 w-full max-w-2xl"
         style={{
           opacity: inView ? 1 : 0,
-          transform: inView ? 'translateY(0)' : 'translateY(24px)',
-          transition: 'opacity 0.7s ease, transform 0.7s ease',
-          transitionDelay: '0.15s',
+          transform: inView ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.7s ease, transform 0.7s ease",
+          transitionDelay: "0.15s",
         }}
       >
         <a
@@ -104,7 +109,8 @@ function ValueProp({
             <div
               className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
               style={{
-                background: 'linear-gradient(to bottom, transparent, var(--md-surface))',
+                background:
+                  "linear-gradient(to bottom, transparent, var(--md-surface))",
               }}
               aria-hidden="true"
             />
@@ -118,12 +124,18 @@ function ValueProp({
 /* ─── Main section ─── */
 export function ValuePropsSection() {
   const { tier } = useEntitlements();
-  const isPaid = tier === 'pro' || tier === 'enterprise' || tier === 'admin';
-  const reportsHref = isPaid ? '/reports' : '/reports/sample';
-  const reportsLinkLabel = isPaid ? 'View your reports' : 'See a sample report';
+  const isPaid = tier === "pro" || tier === "enterprise" || tier === "admin";
+  const reportsHref = isPaid ? "/reports" : "/reports/sample";
+  const reportsLinkLabel = isPaid ? "View your reports" : "See a sample report";
+
+  const claims = getHomepageClaims();
 
   return (
-    <section className="py-20 lg:py-28 px-6" id="features" aria-labelledby="value-props-heading">
+    <section
+      className="py-20 lg:py-28 px-6"
+      id="features"
+      aria-labelledby="value-props-heading"
+    >
       <h2 id="value-props-heading" className="sr-only">
         Why PropertyIQ
       </h2>
@@ -134,10 +146,14 @@ export function ValuePropsSection() {
           eyebrow="Market Rankings"
           heading="We do the hard part: finding markets that beat the average"
           body="Most platforms give you data. We give you answers. PropertyIQ ranks every metro, county, and ZIP code by investment potential and homebuyer readiness, so you see exactly which markets are outperforming and which to avoid."
-          stat={{ value: '142%', label: 'more equity returned by our top-scored markets vs. bottom' }}
+          stat={{
+            value: `${claims.spreadPp}pp`,
+            label:
+              "annual excess return in top-scored markets vs. bottom (out-of-sample)",
+          }}
           image={{
-            src: '/images/home/top-ranked-markets-v2.png',
-            alt: 'PropertyIQ market intelligence landing page showing Explore Markets search, top-ranked metros by InvestorEdge score with Batavia NY at 100.0 and Hobbs NM at 99.9, and popular market quick links',
+            src: "/images/home/top-ranked-markets-v2.png",
+            alt: "PropertyIQ market intelligence landing page showing Explore Markets search, top-ranked metros by InvestorEdge score with Batavia NY at 100.0 and Hobbs NM at 99.9, and popular market quick links",
             width: 1425,
             height: 2149,
           }}
@@ -153,8 +169,8 @@ export function ValuePropsSection() {
           heading="Personalized analysis written for your specific market"
           body="Every report is generated fresh by AI for the exact geography you're evaluating. Score breakdowns, affordability analysis, market timing signals, growth potential, and a clear bottom-line verdict, whether you're buying a home or evaluating an investment."
           image={{
-            src: '/images/home/ai-report-narrative-v2.png',
-            alt: 'PropertyIQ AI-generated market report for Las Vegas NV showing HomeReady score of 25, score breakdown with Affordability, Growth Potential, Stability, and Market Timing components, and detailed AI narrative analysis explaining market transition dynamics and buyer opportunities',
+            src: "/images/home/ai-report-narrative-v2.png",
+            alt: "PropertyIQ AI-generated market report for Las Vegas NV showing HomeReady score of 25, score breakdown with Affordability, Growth Potential, Stability, and Market Timing components, and detailed AI narrative analysis explaining market transition dynamics and buyer opportunities",
             width: 1425,
             height: 1490,
           }}
@@ -167,11 +183,15 @@ export function ValuePropsSection() {
         <ValueProp
           eyebrow="Proven Scores"
           heading="Scores that predict real market performance"
-          body="HomeReady, InvestorEdge, and MarketHealth scores are built from 40+ metrics using machine learning, not opinions. Validated across 1.1 million observations and 5 years of data. Top-scored markets don't just correlate with better returns. They deliver them."
-          stat={{ value: '$27,100', label: 'more equity on a typical home over 3 years in top-scored markets' }}
+          body={`HomeReady, InvestorEdge, and MarketHealth scores are built from 40+ metrics using machine learning, not opinions. Validated across ${formatObservations(claims.totalObservations)} out-of-sample observations and ${claims.backtestYears} years of data. Top-scored markets don\u2019t just correlate with better returns. They deliver them.`}
+          stat={{
+            value: formatDollarClaim(claims.threeYearAlphaInvestorEdge),
+            label:
+              "more equity on a typical home over 3 years in top-scored markets (OOS)",
+          }}
           image={{
-            src: '/images/home/market-scores-detail-v2.png',
-            alt: 'PropertyIQ market analysis for Austin TX showing InvestorEdge score of 29, Market Health score of 4, with detailed metrics including cap rate, gross yield, rent index, days on market, and appreciation data',
+            src: "/images/home/market-scores-detail-v2.png",
+            alt: "PropertyIQ market analysis for Austin TX showing InvestorEdge score of 29, Market Health score of 4, with detailed metrics including cap rate, gross yield, rent index, days on market, and appreciation data",
             width: 1440,
             height: 845,
           }}

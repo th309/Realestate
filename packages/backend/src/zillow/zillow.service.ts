@@ -226,18 +226,28 @@ export class ZillowService {
 
     if (!metroData || metroData.length === 0) return [];
 
-    // Map results (already filtered by date, no dedup needed)
-    // Use region_id as cbsa_code fallback — Zillow metro region_ids ARE CBSA codes
-    const results: HomeValueData[] = metroData.map((record) => ({
-      region_id: String(record.region_id),
-      region_name: record.region_name,
-      cbsa_code: record.cbsa_code || String(record.region_id),
-      state_abbrev: record.state_code,
-      value: Number(record.value),
-      date: record.period_date,
-      property_type: 'sfrcondo',
-      geography: 'Metro',
-    }));
+    // Use the crosswalk to convert Zillow region IDs → real CBSA codes
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+
+    const results: HomeValueData[] = metroData
+      .map((record) => {
+        const { metro, cbsaCode } = lookupMetro(
+          String(record.region_id),
+          byZillowId,
+          byCbsaCode,
+        );
+        return {
+          region_id: String(record.region_id),
+          region_name: metro?.cbsa_name || record.region_name,
+          cbsa_code: cbsaCode || record.cbsa_code,
+          state_abbrev: metro?.state || record.state_code,
+          value: Number(record.value),
+          date: record.period_date,
+          property_type: 'sfrcondo',
+          geography: 'Metro',
+        };
+      })
+      .filter((r) => r.cbsa_code); // Only include records we can map to a CBSA
 
     return results.sort((a, b) => b.value - a.value);
   }
@@ -1763,9 +1773,18 @@ export class ZillowService {
       }
     }
 
-    // Use region_id as cbsa_code fallback — Zillow metro region_ids ARE CBSA codes
+    // Resolve real CBSA codes via crosswalk
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
     return Array.from(combinedMap.values())
-      .map((d) => ({ ...d, cbsa_code: d.cbsa_code || String(d.region_id) }))
+      .map((d) => {
+        const { cbsaCode } = lookupMetro(
+          String(d.region_id),
+          byZillowId,
+          byCbsaCode,
+        );
+        return { ...d, cbsa_code: cbsaCode || d.cbsa_code };
+      })
+      .filter((d) => d.cbsa_code)
       .sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
   }
 
@@ -1783,25 +1802,33 @@ export class ZillowService {
 
     if (!data.length) return [];
 
-    // Use cbsa_code directly from zillow_metro data (same approach as getMetroHomeValues)
-    // Filter out records without cbsa_code - they can't be displayed on the map
+    // Resolve real CBSA codes via crosswalk
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
     return data
-      .map((d) => ({
-        region_id: d.region_id,
-        region_name: d.region_name || 'Unknown',
-        cbsa_code: d.cbsa_code || String(d.region_id),
-        state_abbrev: d.state_code || null,
-        date: d.date,
-        geography: 'Metro',
-        homeowner_income_needed: d.homeowner_income_needed,
-        renter_income_needed: d.renter_income_needed,
-        affordable_home_price: d.affordable_home_price,
-        years_to_save: d.years_to_save,
-        homeowner_affordability_percent: d.homeowner_affordability_percent,
-        renter_affordability_percent: d.renter_affordability_percent,
-        down_payment_percent: d.down_payment_percent,
-        property_type: d.property_type,
-      }))
+      .map((d) => {
+        const { metro, cbsaCode } = lookupMetro(
+          String(d.region_id),
+          byZillowId,
+          byCbsaCode,
+        );
+        return {
+          region_id: d.region_id,
+          region_name: metro?.cbsa_name || d.region_name || 'Unknown',
+          cbsa_code: cbsaCode || d.cbsa_code,
+          state_abbrev: metro?.state || d.state_code || null,
+          date: d.date,
+          geography: 'Metro',
+          homeowner_income_needed: d.homeowner_income_needed,
+          renter_income_needed: d.renter_income_needed,
+          affordable_home_price: d.affordable_home_price,
+          years_to_save: d.years_to_save,
+          homeowner_affordability_percent: d.homeowner_affordability_percent,
+          renter_affordability_percent: d.renter_affordability_percent,
+          down_payment_percent: d.down_payment_percent,
+          property_type: d.property_type,
+        };
+      })
+      .filter((d) => d.cbsa_code)
       .sort(
         (a, b) =>
           (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0),

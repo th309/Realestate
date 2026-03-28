@@ -407,6 +407,21 @@ export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
 
 // ============================================================================
+// VALIDATION CLAIMS (homepage marketing stats derived from OOS data)
+// ============================================================================
+export {
+  getHomepageClaims,
+  formatDollarClaim,
+  formatDollarClaimShort,
+  formatObservations,
+  VALIDATION_SCOPE,
+  OOS_QUINTILE_SPREAD,
+  OOS_IC,
+  OOS_HIT_RATE,
+  MEDIAN_HOME_VALUE,
+} from "./validation-claims";
+
+// ============================================================================
 // HOOKS
 // ============================================================================
 export {

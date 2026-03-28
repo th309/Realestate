@@ -1,10 +1,13 @@
-'use client';
+"use client";
 
-import { TrendingUp } from 'lucide-react';
-import { useInView } from './hooks/useInView';
+import { TrendingUp } from "lucide-react";
+import { useInView } from "./hooks/useInView";
+import { getHomepageClaims, formatDollarClaim } from "@/lib/data";
 
 export function AlphaCallout() {
   const [setRef, inView] = useInView();
+  const claims = getHomepageClaims();
+  const alphaFormatted = formatDollarClaim(claims.alphaInsightValue);
 
   return (
     <section
@@ -16,8 +19,8 @@ export function AlphaCallout() {
         className="max-w-3xl mx-auto rounded-2xl bg-primary-container/30 border border-primary/10 p-8 md:p-12"
         style={{
           opacity: inView ? 1 : 0,
-          transform: inView ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 0.6s ease, transform 0.6s ease',
+          transform: inView ? "translateY(0)" : "translateY(20px)",
+          transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
         {/* Icon + Eyebrow */}
@@ -37,21 +40,27 @@ export function AlphaCallout() {
         >
           We Don&apos;t Predict &ldquo;Florida Will Be Hot.&rdquo;
           <br />
-          We Predict <span className="text-primary">Which</span> Florida Metro Will Beat the Others.
+          We Predict <span className="text-primary">Which</span> Florida Metro
+          Will Beat the Others.
         </h2>
 
         {/* Body */}
         <div className="space-y-4 text-base text-on-surface-variant leading-relaxed mb-8">
           <p>
-            Most forecast models predict raw appreciation. Will home prices go up or down?
-            That&apos;s <strong className="text-on-surface">beta</strong>. It&apos;s easy and not very useful.
-            Every model gets &ldquo;Sun Belt is growing&rdquo; right.
+            Most forecast models predict raw appreciation. Will home prices go
+            up or down? That&apos;s{" "}
+            <strong className="text-on-surface">beta</strong>. It&apos;s easy
+            and not very useful. Every model gets &ldquo;Sun Belt is
+            growing&rdquo; right.
           </p>
           <p>
-            PropertyIQ scores predict{' '}
-            <strong className="text-on-surface">excess returns above regional benchmarks</strong>.
-            That&apos;s <em className="text-on-surface">alpha</em>. Given two metros in the same state,
-            which one will <em>outperform</em>? That&apos;s the question worth $11,978 per year.
+            PropertyIQ scores predict{" "}
+            <strong className="text-on-surface">
+              excess returns above regional benchmarks
+            </strong>
+            . That&apos;s <em className="text-on-surface">alpha</em>. Given two
+            metros in the same state, which one will <em>outperform</em>?
+            That&apos;s the question worth {alphaFormatted} per year.
           </p>
         </div>
 
@@ -79,7 +88,8 @@ export function AlphaCallout() {
               &ldquo;Tampa will beat other FL metros by 2.3pp&rdquo;
             </p>
             <p className="mt-1 text-xs text-primary flex items-center gap-1">
-              <span aria-hidden="true">&rarr;</span> This is the $11,978 insight.
+              <span aria-hidden="true">&rarr;</span> This is the{" "}
+              {alphaFormatted} insight.
             </p>
           </div>
         </div>
