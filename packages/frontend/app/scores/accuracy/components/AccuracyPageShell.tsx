@@ -31,13 +31,13 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
       {/* 2b. Alpha vs Beta Callout */}
       <AlphaCallout />
 
-      {/* Horizon toggle — controls time window for the charts below */}
-      <div className="flex justify-end px-4">
-        <HorizonToggle value={horizon} onChange={setHorizon} />
-      </div>
-
       {/* 3. Interactive Scatter */}
-      <InteractiveScatter horizon={horizon} />
+      <div>
+        <div className="flex justify-end mb-4 px-4">
+          <HorizonToggle value={horizon} onChange={setHorizon} />
+        </div>
+        <InteractiveScatter horizon={horizon} />
+      </div>
 
       {/* 4. Quintile Performance */}
       <QuintilePerformance horizon={horizon} />
