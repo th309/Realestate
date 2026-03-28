@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PropertyIQ Brand Board</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;800&family=Roboto+Mono:wght@400;500&family=Source+Serif+4:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap");
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Roboto", sans-serif;
+        background: #f5f6fa;
+        color: #1a237e;
+        padding: 40px;
+        line-height: 1.5;
+      }
+
+      .brand-board {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(26, 35, 126, 0.08);
+      }
+
+      /* Header */
+      .bb-header {
+        background: linear-gradient(
+          135deg,
+          #1a237e 0%,
+          #3949ab 60%,
+          #5c6bc0 100%
+        );
+        padding: 48px 56px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .bb-header-left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .bb-header h1 {
+        font-size: 36px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      .bb-header h1 span {
+        color: #c5cae9;
+      }
+      .bb-header .tagline {
+        font-size: 16px;
+        color: #c5cae9;
+        margin-top: 4px;
+        letter-spacing: 0.5px;
+      }
+      .bb-header .date {
+        font-size: 13px;
+        color: #7986cb;
+      }
+
+      /* Sections */
+      .bb-section {
+        padding: 40px 56px;
+        border-bottom: 1px solid #e8eaf6;
+      }
+      .bb-section:last-child {
+        border-bottom: none;
+      }
+      .bb-section-title {
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #5c6bc0;
+        margin-bottom: 24px;
+      }
+
+      /* Logo Section */
+      .logo-row {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .logo-card {
+        flex: 1;
+        min-width: 240px;
+        background: #fafbff;
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+      }
+      .logo-card.dark {
+        background: #1a237e;
+      }
+      .logo-card-label {
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5c6bc0;
+        margin-bottom: 16px;
+      }
+      .logo-card.dark .logo-card-label {
+        color: #7986cb;
+      }
+      .logo-lockup {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+      .logo-wordmark {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a237e;
+        letter-spacing: -0.5px;
+      }
+      .logo-wordmark span {
+        color: #3949ab;
+      }
+      .logo-wordmark.light {
+        color: #e8eaf6;
+      }
+      .logo-wordmark.light span {
+        color: #c5cae9;
+      }
+      .logo-tagline-text {
+        font-size: 12px;
+        color: #5c6bc0;
+        margin-top: 8px;
+        letter-spacing: 0.5px;
+      }
+      .logo-card.dark .logo-tagline-text {
+        color: #7986cb;
+      }
+
+      /* Color Palette */
+      .color-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .color-group-label {
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #79747e;
+        margin-bottom: 10px;
+        margin-top: 16px;
+      }
+      .color-group-label:first-child {
+        margin-top: 0;
+      }
+      .color-swatch {
+        width: 120px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      .color-swatch-fill {
+        height: 64px;
+        width: 100%;
+      }
+      .color-swatch-info {
+        padding: 10px 12px;
+        background: white;
+      }
+      .color-swatch-name {
+        font-size: 12px;
+        font-weight: 500;
+        color: #1a237e;
+      }
+      .color-swatch-hex {
+        font-family: "Roboto Mono", monospace;
+        font-size: 11px;
+        color: #79747e;
+        margin-top: 2px;
+      }
+
+      /* Typography */
+      .type-samples {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .type-sample {
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        padding: 16px 0;
+        border-bottom: 1px solid #e8eaf6;
+      }
+      .type-sample:last-child {
+        border-bottom: none;
+      }
+      .type-label {
+        width: 140px;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5c6bc0;
+      }
+      .type-preview {
+        flex: 1;
+      }
+      .type-meta-info {
+        width: 180px;
+        flex-shrink: 0;
+        font-family: "Roboto Mono", monospace;
+        font-size: 11px;
+        color: #79747e;
+        text-align: right;
+      }
+
+      /* Voice */
+      .voice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+      .voice-card {
+        background: #fafbff;
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .voice-card h4 {
+        font-size: 14px;
+        font-weight: 500;
+        color: #3949ab;
+        margin-bottom: 6px;
+      }
+      .voice-card p {
+        font-size: 13px;
+        color: #5c6bc0;
+        line-height: 1.5;
+      }
+
+      /* Do/Don't */
+      .dodont {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .dodont-col {
+        background: #fafbff;
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .dodont-col.dont {
+        background: #fff5f5;
+      }
+      .dodont-col h4 {
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+      }
+      .dodont-col.do h4 {
+        color: #00c853;
+      }
+      .dodont-col.dont h4 {
+        color: #b3261e;
+      }
+      .dodont-col ul {
+        list-style: none;
+        padding: 0;
+      }
+      .dodont-col li {
+        font-size: 13px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        color: #1a237e;
+      }
+      .dodont-col li:last-child {
+        border-bottom: none;
+      }
+
+      /* Assets checklist */
+      .asset-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .asset-table th {
+        text-align: left;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #5c6bc0;
+        padding: 8px 12px;
+        border-bottom: 2px solid #e8eaf6;
+      }
+      .asset-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e8eaf6;
+        color: #1a237e;
+      }
+      .priority-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 2px 8px;
+        border-radius: 100px;
+      }
+      .p1 {
+        background: #e8eaf6;
+        color: #3949ab;
+      }
+      .p2 {
+        background: #fff3e0;
+        color: #ff8f00;
+      }
+      .p3 {
+        background: #f5f5f5;
+        color: #79747e;
+      }
+
+      /* Footer */
+      .bb-footer {
+        padding: 24px 56px;
+        background: #fafbff;
+        text-align: center;
+        font-size: 12px;
+        color: #79747e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="brand-board">
+      <!-- HEADER -->
+      <div class="bb-header">
+        <div class="bb-header-left">
+          <svg width="56" height="56" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="14" fill="white" opacity="0.15" />
+            <rect
+              x="2"
+              y="2"
+              width="60"
+              height="60"
+              rx="13"
+              fill="white"
+              opacity="0.1"
+            />
+            <path
+              d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+              fill="white"
+            />
+            <circle cx="34" cy="26" r="6" fill="#3949AB" />
+            <circle cx="44" cy="44" r="4" fill="#00C853" />
+            <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+          </svg>
+          <div>
+            <h1>Property<span>IQ</span> Brand Board</h1>
+            <div class="tagline">The IQ Behind Every Market</div>
+          </div>
+        </div>
+        <div class="date">March 2026</div>
+      </div>
+
+      <!-- LOGO SYSTEM -->
+      <div class="bb-section">
+        <div class="bb-section-title">Logo System</div>
+        <div class="logo-row">
+          <!-- Primary on light -->
+          <div class="logo-card">
+            <div class="logo-card-label">Primary Logo</div>
+            <div class="logo-lockup">
+              <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+                <rect width="64" height="64" rx="14" fill="#3949AB" />
+                <path
+                  d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+                  fill="white"
+                />
+                <circle cx="34" cy="26" r="6" fill="#3949AB" />
+                <circle cx="44" cy="44" r="4" fill="#00C853" />
+                <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+              </svg>
+              <div class="logo-wordmark">Property<span>IQ</span></div>
+            </div>
+            <div class="logo-tagline-text">The IQ Behind Every Market</div>
+          </div>
+
+          <!-- Primary on dark -->
+          <div class="logo-card dark">
+            <div class="logo-card-label">On Dark Background</div>
+            <div class="logo-lockup">
+              <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+                <rect width="64" height="64" rx="14" fill="#3949AB" />
+                <path
+                  d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+                  fill="white"
+                />
+                <circle cx="34" cy="26" r="6" fill="#3949AB" />
+                <circle cx="44" cy="44" r="4" fill="#00C853" />
+                <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+              </svg>
+              <div class="logo-wordmark light">Property<span>IQ</span></div>
+            </div>
+            <div class="logo-tagline-text">The IQ Behind Every Market</div>
+          </div>
+
+          <!-- PIQ Shortmark -->
+          <div class="logo-card">
+            <div class="logo-card-label">PIQ Shortmark</div>
+            <div
+              style="
+                display: flex;
+                justify-content: center;
+                gap: 16px;
+                align-items: flex-end;
+              "
+            >
+              <div>
+                <svg width="64" height="64" viewBox="0 0 96 96" fill="none">
+                  <rect width="96" height="96" rx="20" fill="#3949AB" />
+                  <text
+                    x="48"
+                    y="58"
+                    text-anchor="middle"
+                    font-family="Roboto, sans-serif"
+                    font-weight="800"
+                    font-size="38"
+                    fill="white"
+                    letter-spacing="-1"
+                  >
+                    PIQ
+                  </text>
+                  <circle cx="30" cy="72" r="3" fill="#7986CB" />
+                  <circle cx="42" cy="69" r="3.5" fill="#C5CAE9" />
+                  <circle cx="54" cy="65" r="4" fill="#00C853" />
+                  <circle
+                    cx="66"
+                    cy="60"
+                    r="4.5"
+                    fill="#00C853"
+                    opacity="0.7"
+                  />
+                </svg>
+                <div style="font-size: 10px; color: #79747e; margin-top: 6px">
+                  64px
+                </div>
+              </div>
+              <div>
+                <svg width="40" height="40" viewBox="0 0 96 96" fill="none">
+                  <rect width="96" height="96" rx="20" fill="#3949AB" />
+                  <text
+                    x="48"
+                    y="58"
+                    text-anchor="middle"
+                    font-family="Roboto, sans-serif"
+                    font-weight="800"
+                    font-size="38"
+                    fill="white"
+                    letter-spacing="-1"
+                  >
+                    PIQ
+                  </text>
+                  <circle cx="30" cy="72" r="3" fill="#7986CB" />
+                  <circle cx="42" cy="69" r="3.5" fill="#C5CAE9" />
+                  <circle cx="54" cy="65" r="4" fill="#00C853" />
+                  <circle
+                    cx="66"
+                    cy="60"
+                    r="4.5"
+                    fill="#00C853"
+                    opacity="0.7"
+                  />
+                </svg>
+                <div style="font-size: 10px; color: #79747e; margin-top: 6px">
+                  40px
+                </div>
+              </div>
+              <div>
+                <svg width="24" height="24" viewBox="0 0 96 96" fill="none">
+                  <rect width="96" height="96" rx="20" fill="#3949AB" />
+                  <text
+                    x="48"
+                    y="58"
+                    text-anchor="middle"
+                    font-family="Roboto, sans-serif"
+                    font-weight="800"
+                    font-size="38"
+                    fill="white"
+                    letter-spacing="-1"
+                  >
+                    PIQ
+                  </text>
+                  <circle cx="30" cy="72" r="3" fill="#7986CB" />
+                  <circle cx="42" cy="69" r="3.5" fill="#C5CAE9" />
+                  <circle cx="54" cy="65" r="4" fill="#00C853" />
+                  <circle
+                    cx="66"
+                    cy="60"
+                    r="4.5"
+                    fill="#00C853"
+                    opacity="0.7"
+                  />
+                </svg>
+                <div style="font-size: 10px; color: #79747e; margin-top: 6px">
+                  24px
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLOR PALETTE -->
+      <div class="bb-section">
+        <div class="bb-section-title">Color Palette</div>
+
+        <div class="color-group-label">Primary</div>
+        <div class="color-row">
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #1a237e"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Deep Indigo</div>
+              <div class="color-swatch-hex">#1A237E</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #3949ab"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Indigo</div>
+              <div class="color-swatch-hex">#3949AB</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #5c6bc0"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Medium Indigo</div>
+              <div class="color-swatch-hex">#5C6BC0</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #7986cb"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Light Indigo</div>
+              <div class="color-swatch-hex">#7986CB</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #c5cae9"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Pale Indigo</div>
+              <div class="color-swatch-hex">#C5CAE9</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #e8eaf6"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Surface</div>
+              <div class="color-swatch-hex">#E8EAF6</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-group-label">Accent &amp; Status</div>
+        <div class="color-row">
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #00c853"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Green (Growth)</div>
+              <div class="color-swatch-hex">#00C853</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #b3261e"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Red (Decline)</div>
+              <div class="color-swatch-hex">#B3261E</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #ff8f00"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Amber (Caution)</div>
+              <div class="color-swatch-hex">#FF8F00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-group-label">Dark Mode</div>
+        <div class="color-row">
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #1a1a2e"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Surface</div>
+              <div class="color-swatch-hex">#1A1A2E</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #16213e"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Container</div>
+              <div class="color-swatch-hex">#16213E</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="color-swatch-fill" style="background: #7986cb"></div>
+            <div class="color-swatch-info">
+              <div class="color-swatch-name">Primary (DM)</div>
+              <div class="color-swatch-hex">#7986CB</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TYPOGRAPHY -->
+      <div class="bb-section">
+        <div class="bb-section-title">Typography</div>
+        <div class="type-samples">
+          <div class="type-sample">
+            <div class="type-label">Display</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Roboto&quot;, sans-serif;
+                font-size: 42px;
+                font-weight: 400;
+                letter-spacing: -0.25px;
+                color: #1a237e;
+              "
+            >
+              Market Intelligence
+            </div>
+            <div class="type-meta-info">Roboto 400<br />42px / -0.25</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Headline</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Roboto&quot;, sans-serif;
+                font-size: 28px;
+                font-weight: 400;
+                color: #1a237e;
+              "
+            >
+              Dallas-Fort Worth Metro
+            </div>
+            <div class="type-meta-info">Roboto 400<br />28px / 0</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Title</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Roboto&quot;, sans-serif;
+                font-size: 22px;
+                font-weight: 500;
+                color: #1a237e;
+              "
+            >
+              HomeReady Score Overview
+            </div>
+            <div class="type-meta-info">Roboto 500<br />22px / 0</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Body</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Roboto&quot;, sans-serif;
+                font-size: 16px;
+                font-weight: 400;
+                color: #1a237e;
+                line-height: 1.5;
+              "
+            >
+              The data shows 12% rent growth in this metro, with strong job
+              creation and below-average vacancy rates driving investor
+              interest.
+            </div>
+            <div class="type-meta-info">Roboto 400<br />16px / 0.5</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Data / Metrics</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Roboto Mono&quot;, monospace;
+                font-size: 18px;
+                font-weight: 500;
+                color: #3949ab;
+              "
+            >
+              Score: 78 &nbsp;&middot;&nbsp; Confidence: A &nbsp;&middot;&nbsp;
+              $485,200
+            </div>
+            <div class="type-meta-info">Roboto Mono 500<br />18px</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Editorial</div>
+            <div
+              class="type-preview"
+              style="
+                font-family: &quot;Source Serif 4&quot;, serif;
+                font-size: 18px;
+                font-weight: 400;
+                color: #1a237e;
+                line-height: 1.6;
+              "
+            >
+              Markets in the Sun Belt continue to attract institutional capital,
+              with rent-to-price ratios outpacing the national average.
+            </div>
+            <div class="type-meta-info">Source Serif 4<br />18px / 400</div>
+          </div>
+          <div class="type-sample">
+            <div class="type-label">Label</div>
+            <div class="type-preview">
+              <span
+                style="
+                  font-family: &quot;Roboto&quot;, sans-serif;
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: white;
+                  background: #3949ab;
+                  padding: 4px 14px;
+                  border-radius: 100px;
+                  letter-spacing: 0.1px;
+                "
+                >Explore Market</span
+              >
+              &nbsp;&nbsp;
+              <span
+                style="
+                  font-family: &quot;Roboto&quot;, sans-serif;
+                  font-size: 12px;
+                  font-weight: 500;
+                  color: #3949ab;
+                  background: #e8eaf6;
+                  padding: 4px 12px;
+                  border-radius: 100px;
+                  letter-spacing: 0.5px;
+                "
+                >METRO</span
+              >
+              &nbsp;&nbsp;
+              <span
+                style="
+                  font-family: &quot;Roboto&quot;, sans-serif;
+                  font-size: 12px;
+                  font-weight: 500;
+                  color: #00c853;
+                  background: #e8f5e9;
+                  padding: 4px 12px;
+                  border-radius: 100px;
+                  letter-spacing: 0.5px;
+                "
+                >+12.4%</span
+              >
+            </div>
+            <div class="type-meta-info">Roboto 500<br />12-14px</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BRAND VOICE -->
+      <div class="bb-section">
+        <div class="bb-section-title">Brand Voice</div>
+        <div class="voice-grid">
+          <div class="voice-card">
+            <h4>Confident</h4>
+            <p>We know our data. State findings directly, not tentatively.</p>
+          </div>
+          <div class="voice-card">
+            <h4>Conversational</h4>
+            <p>Like a knowledgeable friend, not a textbook or sales pitch.</p>
+          </div>
+          <div class="voice-card">
+            <h4>Data-First</h4>
+            <p>Lead with specifics — numbers, percentages, trends.</p>
+          </div>
+          <div class="voice-card">
+            <h4>Accessible</h4>
+            <p>Explain complex concepts simply. No unnecessary jargon.</p>
+          </div>
+          <div class="voice-card">
+            <h4>Actionable</h4>
+            <p>Always point toward a next step or decision.</p>
+          </div>
+        </div>
+        <div class="dodont">
+          <div class="dodont-col do">
+            <h4>Do</h4>
+            <ul>
+              <li>"The data shows 12% rent growth in this metro"</li>
+              <li>"Dallas-Fort Worth scored 78 — strong fundamentals"</li>
+              <li>"Explore this market"</li>
+              <li>"B-level confidence — good data, rental comps thin"</li>
+              <li>"Your Market IQ report is ready"</li>
+            </ul>
+          </div>
+          <div class="dodont-col dont">
+            <h4>Don't</h4>
+            <ul>
+              <li>"Our proprietary algorithm detected..."</li>
+              <li>"This is an amazing investment opportunity!"</li>
+              <li>"Buy now!" / "Don't miss out!"</li>
+              <li>"We're not totally sure about this one"</li>
+              <li>"CONGRATULATIONS on your new report!"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ASSET CHECKLIST -->
+      <div class="bb-section">
+        <div class="bb-section-title">Asset Deliverables</div>
+        <table class="asset-table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Dimensions</th>
+              <th>Format</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Logo — horizontal lockup</td>
+              <td>SVG + PNG @2x</td>
+              <td>Transparent</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>Logo — stacked lockup</td>
+              <td>SVG + PNG @2x</td>
+              <td>Transparent</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>PIQ shortmark</td>
+              <td>512 / 192 / 32px</td>
+              <td>PNG + ICO</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>OG image (social share)</td>
+              <td>1200 x 630</td>
+              <td>PNG</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>X profile pic</td>
+              <td>400 x 400</td>
+              <td>PNG</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>X banner</td>
+              <td>1500 x 500</td>
+              <td>PNG</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>LinkedIn profile pic</td>
+              <td>400 x 400</td>
+              <td>PNG</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>LinkedIn banner</td>
+              <td>1584 x 396</td>
+              <td>PNG</td>
+              <td><span class="priority-badge p1">P1</span></td>
+            </tr>
+            <tr>
+              <td>Social post template</td>
+              <td>1080 x 1080</td>
+              <td>Canva</td>
+              <td><span class="priority-badge p2">P2</span></td>
+            </tr>
+            <tr>
+              <td>Email signature</td>
+              <td>600px wide</td>
+              <td>HTML + PNG</td>
+              <td><span class="priority-badge p2">P2</span></td>
+            </tr>
+            <tr>
+              <td>Pitch deck template</td>
+              <td>1920 x 1080</td>
+              <td>Canva</td>
+              <td><span class="priority-badge p2">P2</span></td>
+            </tr>
+            <tr>
+              <td>One-pager</td>
+              <td>8.5 x 11 in</td>
+              <td>Canva</td>
+              <td><span class="priority-badge p3">P3</span></td>
+            </tr>
+            <tr>
+              <td>Business card</td>
+              <td>3.5 x 2 in</td>
+              <td>Canva</td>
+              <td><span class="priority-badge p3">P3</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- FOUNDATION -->
+      <div class="bb-section">
+        <div class="bb-section-title">Brand Foundation</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px">
+          <div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #5c6bc0;
+                margin-bottom: 8px;
+              "
+            >
+              Mission
+            </div>
+            <div style="font-size: 18px; font-weight: 400; color: #1a237e">
+              Democratizing real estate data
+            </div>
+          </div>
+          <div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #5c6bc0;
+                margin-bottom: 8px;
+              "
+            >
+              Personality
+            </div>
+            <div style="font-size: 18px; font-weight: 400; color: #1a237e">
+              The Smart Friend
+            </div>
+            <div style="font-size: 13px; color: #5c6bc0; margin-top: 4px">
+              Approachable, knowledgeable, M3/Google aesthetic
+            </div>
+          </div>
+          <div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #5c6bc0;
+                margin-bottom: 8px;
+              "
+            >
+              Primary Audience
+            </div>
+            <div style="font-size: 18px; font-weight: 400; color: #1a237e">
+              Real estate investors &amp; agents
+            </div>
+          </div>
+          <div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #5c6bc0;
+                margin-bottom: 8px;
+              "
+            >
+              Secondary Audience
+            </div>
+            <div style="font-size: 18px; font-weight: 400; color: #1a237e">
+              First-time homebuyers
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bb-footer">
+        PropertyIQ Brand Identity &middot; March 2026 &middot; Spec:
+        docs/superpowers/specs/2026-03-27-propertyiq-brand-identity.md
+      </div>
+    </div>
+  </body>
+</html>

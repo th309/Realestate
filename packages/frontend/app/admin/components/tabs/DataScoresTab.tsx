@@ -1,25 +1,10 @@
 "use client";
 
-interface PlaceholderCardProps {
-  cardId: string;
-  title: string;
-  onCardClick: (cardId: string) => void;
-}
-
-function PlaceholderCard({ cardId, title, onCardClick }: PlaceholderCardProps) {
-  return (
-    <div
-      data-testid={`card-${cardId}`}
-      onClick={() => onCardClick(cardId)}
-      className="bg-surface-container-low border border-outline-variant rounded-xl p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
-    >
-      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
-      <div className="h-16 bg-surface-container rounded-lg flex items-center justify-center text-xs text-on-surface-variant">
-        Card content — Plan 3
-      </div>
-    </div>
-  );
-}
+import { ScoreHealthCard } from "../cards/ScoreHealthCard";
+import { MlOpsCard } from "../cards/MlOpsCard";
+import { GeographicCoverageCard } from "../cards/GeographicCoverageCard";
+import { DataQualityCard } from "../cards/DataQualityCard";
+import { ScoreComputationCard } from "../cards/ScoreComputationCard";
 
 interface DataScoresTabProps {
   refreshTrigger: number;
@@ -27,39 +12,44 @@ interface DataScoresTabProps {
 }
 
 export function DataScoresTab({
-  refreshTrigger: _refreshTrigger,
+  refreshTrigger,
   onCardClick,
 }: DataScoresTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <PlaceholderCard
-          cardId="score-health"
-          title="Score Health"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="ml-ops"
-          title="ML Ops"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="geographic-coverage"
-          title="Geographic Coverage"
-          onCardClick={onCardClick}
-        />
+        <div data-testid="card-score-health">
+          <ScoreHealthCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("score-health")}
+          />
+        </div>
+        <div data-testid="card-ml-ops">
+          <MlOpsCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("ml-ops")}
+          />
+        </div>
+        <div data-testid="card-geographic-coverage">
+          <GeographicCoverageCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("geographic-coverage")}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PlaceholderCard
-          cardId="data-quality"
-          title="Data Quality"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="score-computation"
-          title="Score Computation"
-          onCardClick={onCardClick}
-        />
+        <div data-testid="card-data-quality">
+          <DataQualityCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("data-quality")}
+          />
+        </div>
+        <div data-testid="card-score-computation">
+          <ScoreComputationCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("score-computation")}
+          />
+        </div>
       </div>
     </div>
   );

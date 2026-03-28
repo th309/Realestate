@@ -33,8 +33,14 @@ export function useAdminTimeSeries<T>(
 
   const { data, isLoading, error, refetch } = useQuery<T>({
     queryKey: ["admin", "time-series", endpoint, cleanedParams, refreshTrigger],
-    queryFn: () =>
-      fetchAPIWithParams<T>(`/api/admin/metrics/${endpoint}`, cleanedParams),
+    queryFn: async () => {
+      const response = await fetchAPIWithParams<{ success: boolean; data: T }>(
+        `/api/admin/metrics/${endpoint}`,
+        cleanedParams,
+      );
+      // Unwrap the backend envelope { success, data } so consumers get T directly
+      return response.data;
+    },
     staleTime: STALE_TIME,
     gcTime: STALE_TIME * 5,
     enabled,

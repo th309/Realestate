@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;800&family=Roboto+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: "Roboto", sans-serif;
+        background: #1a237e;
+        position: relative;
+      }
+      /* Subtle grid */
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 54px 54px;
+      }
+      /* Gradient accent bar top */
+      .top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, #3949ab, #00c853);
+      }
+      .container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        padding: 64px 72px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: 28px;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+      }
+      .wordmark .iq {
+        color: #c5cae9;
+      }
+      .category-chip {
+        font-family: "Roboto", sans-serif;
+        font-weight: 500;
+        font-size: 13px;
+        color: #c5cae9;
+        background: rgba(57, 73, 171, 0.5);
+        border: 1px solid rgba(197, 202, 233, 0.2);
+        padding: 6px 16px;
+        border-radius: 100px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      /* Main metric area */
+      .metric-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+      }
+      .metric-label-top {
+        font-weight: 500;
+        font-size: 18px;
+        color: #7986cb;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+      .metric-value {
+        font-family: "Roboto Mono", monospace;
+        font-weight: 700;
+        font-size: 120px;
+        color: #ffffff;
+        letter-spacing: -3px;
+        line-height: 1;
+      }
+      .metric-value .positive {
+        color: #00c853;
+      }
+      .metric-value .negative {
+        color: #b3261e;
+      }
+      .metric-name {
+        font-weight: 400;
+        font-size: 28px;
+        color: #c5cae9;
+        letter-spacing: 0.25px;
+      }
+      .geography {
+        font-weight: 500;
+        font-size: 20px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .geography .dot {
+        width: 6px;
+        height: 6px;
+        background: #00c853;
+        border-radius: 50%;
+      }
+      /* Trend indicator */
+      .trend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: "Roboto Mono", monospace;
+        font-weight: 500;
+        font-size: 18px;
+        color: #00c853;
+      }
+      .trend svg {
+        margin-top: -2px;
+      }
+      /* Footer */
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid rgba(57, 73, 171, 0.6);
+        padding-top: 24px;
+      }
+      .footer-left {
+        font-family: "Roboto Mono", monospace;
+        font-weight: 400;
+        font-size: 14px;
+        color: #5c6bc0;
+      }
+      .footer-right {
+        font-family: "Roboto", sans-serif;
+        font-weight: 400;
+        font-size: 13px;
+        color: #5c6bc0;
+        letter-spacing: 0.25px;
+      }
+      /* Decorative elements */
+      .accent-dots {
+        position: absolute;
+        top: 140px;
+        right: 40px;
+        opacity: 0.12;
+      }
+      .accent-line {
+        position: absolute;
+        bottom: 200px;
+        left: 40px;
+        opacity: 0.08;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid"></div>
+    <div class="top-bar"></div>
+
+    <!-- Subtle decorative dots -->
+    <svg
+      class="accent-dots"
+      width="60"
+      height="300"
+      viewBox="0 0 60 300"
+      fill="none"
+    >
+      <circle cx="30" cy="20" r="3" fill="#C5CAE9" />
+      <circle cx="30" cy="60" r="3" fill="#C5CAE9" />
+      <circle cx="30" cy="100" r="3" fill="#C5CAE9" />
+      <circle cx="30" cy="140" r="4" fill="#7986CB" />
+      <circle cx="30" cy="180" r="4" fill="#7986CB" />
+      <circle cx="30" cy="220" r="5" fill="#00C853" />
+      <circle cx="30" cy="260" r="5" fill="#00C853" />
+    </svg>
+
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-row">
+          <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="14" fill="#3949AB" />
+            <path
+              d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+              fill="white"
+            />
+            <circle cx="34" cy="26" r="6" fill="#3949AB" />
+            <circle cx="44" cy="44" r="4" fill="#00C853" />
+            <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+          </svg>
+          <div class="wordmark">Property<span class="iq">IQ</span></div>
+        </div>
+        <div class="category-chip">Market Insight</div>
+      </div>
+
+      <!-- Main Metric -->
+      <div class="metric-area">
+        <div class="metric-label-top">Median Home Value</div>
+        <div class="metric-value">$485K</div>
+        <div class="trend">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 4L16 12H4L10 4Z" fill="#00C853" />
+          </svg>
+          +12.3% YoY
+        </div>
+        <div class="metric-name">Zillow Home Value Index (ZHVI)</div>
+        <div class="geography">
+          <span class="dot"></span>
+          Dallas–Fort Worth Metro
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-left">propertyiq.app</div>
+        <div class="footer-right">Data: Zillow Research · March 2026</div>
+      </div>
+    </div>
+  </body>
+</html>

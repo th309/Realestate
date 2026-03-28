@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, Query, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { MetricsQueryService } from './services/metrics-query.service';
+import { MetricsQueryFallbackService } from './services/metrics-query-fallback.service';
 import { SnapshotRecorderService } from './services/snapshot-recorder.service';
 import { QueryMetricsDto } from './dto/query-metrics.dto';
 import { AlertActionParamsDto } from './dto/alert-action.dto';
@@ -10,6 +11,7 @@ import { AlertActionParamsDto } from './dto/alert-action.dto';
 export class AdminMetricsController {
   constructor(
     private readonly queryService: MetricsQueryService,
+    private readonly fallback: MetricsQueryFallbackService,
     private readonly snapshotRecorder: SnapshotRecorderService,
   ) {}
 
@@ -86,22 +88,28 @@ export class AdminMetricsController {
 
   @Get('score-history')
   async getScoreHistory(@Query() query: QueryMetricsDto) {
-    const data = await this.queryService.queryTimeSeries(
+    let data = await this.queryService.queryTimeSeries(
       'admin_score_snapshots',
       query.from,
       query.to,
       query.score_type ? { score_type: query.score_type } : undefined,
     );
+    if (data.length === 0) {
+      data = await this.fallback.fallbackScoreHistory();
+    }
     return { success: true, data };
   }
 
   @Get('user-history')
   async getUserHistory(@Query() query: QueryMetricsDto) {
-    const data = await this.queryService.queryTimeSeries(
+    let data = await this.queryService.queryTimeSeries(
       'admin_user_snapshots',
       query.from,
       query.to,
     );
+    if (data.length === 0) {
+      data = await this.fallback.fallbackUserHistory();
+    }
     return { success: true, data };
   }
 

@@ -1,0 +1,135 @@
+<h2>State Label Positioning: 3 Approaches</h2>
+<p class="subtitle">
+  All are fully dynamic — computed from geometry, no hardcoded positions
+</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Better Centroid Algorithm (polylabel)</h3>
+      <p>
+        <strong>What changes:</strong> Replace bounding-box center with Mapbox's
+        <code>polylabel</code> algorithm — finds the "pole of inaccessibility"
+        (point farthest from any edge). This is how Google Maps and most
+        professional mapping tools place labels.
+      </p>
+      <p>
+        <strong>Fixes:</strong> Florida label moves inland. Michigan lands on
+        lower peninsula. Louisiana stays on land.
+      </p>
+      <p>
+        <strong>Doesn't fix:</strong> Small NE states still collide — Maryland,
+        Delaware, Connecticut, Rhode Island labels still get hidden by Mapbox
+        collision detection.
+      </p>
+      <div
+        style="
+          margin-top: 12px;
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          font-size: 13px;
+        "
+      >
+        <strong>Effort:</strong> Low — swap ~30 lines in calculateCentroid()<br />
+        <strong>Dependency:</strong> <code>@mapbox/polylabel</code> (tiny, by
+        the Mapbox team)
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Polylabel + Smart Abbreviations for Small States</h3>
+      <p>
+        <strong>What changes:</strong> Uses polylabel (Approach A) PLUS
+        automatically detects small states by polygon area and switches to
+        2-letter abbreviation (e.g., "MD $396K" instead of "Maryland $396,102").
+        Reduces label footprint so Mapbox collision detection keeps them
+        visible.
+      </p>
+      <p>
+        <strong>Fixes:</strong> Everything in A, plus small NE states become
+        visible because shorter labels fit without colliding.
+      </p>
+      <p>
+        <strong>Trade-off:</strong> Inconsistent label style — some states show
+        full names, others show abbreviations. But this matches how professional
+        maps handle the NE corridor.
+      </p>
+      <div
+        style="
+          margin-top: 12px;
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          font-size: 13px;
+        "
+      >
+        <strong>Effort:</strong> Low-Medium — polylabel + area calculation +
+        conditional text field<br />
+        <strong>Dependency:</strong> <code>@mapbox/polylabel</code> + Turf.js
+        <code>area()</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Polylabel + Zoom-Adaptive Labels</h3>
+      <p>
+        <strong>What changes:</strong> Uses polylabel (Approach A) PLUS makes
+        labels zoom-aware. At low zoom (full US view): small states show
+        abbreviations + compact values ("MD $396K"). At higher zoom (zoomed into
+        NE): all states show full names + full values ("Maryland $396,102").
+        Mapbox expressions handle transitions automatically.
+      </p>
+      <p>
+        <strong>Fixes:</strong> Everything in A and B, plus labels get richer as
+        you zoom in — best of both worlds.
+      </p>
+      <p>
+        <strong>Trade-off:</strong> More complex Mapbox expressions. Label
+        "pops" when crossing zoom thresholds (mitigated with text-size
+        transitions).
+      </p>
+      <div
+        style="
+          margin-top: 12px;
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          font-size: 13px;
+        "
+      >
+        <strong>Effort:</strong> Medium — polylabel + area calc + zoom-dependent
+        Mapbox expressions<br />
+        <strong>Dependency:</strong> <code>@mapbox/polylabel</code> + Turf.js
+        <code>area()</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  style="
+    margin-top: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+  "
+>
+  <h3 style="margin-top: 0">My Recommendation: C</h3>
+  <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.8">
+    Approach C gives you the most polished result. The zoom-adaptive behavior is
+    how professional map tools (Google Maps, Apple Maps) handle label density —
+    show less at overview, more on zoom. The extra complexity is in Mapbox
+    expressions, not app logic, so it's maintainable. A is too incomplete
+    (ignores small states), B is good but C is strictly better for similar
+    effort.
+  </p>
+</div>

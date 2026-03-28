@@ -8,7 +8,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode, STATE_CODE_TO_FIPS, STATE_FIPS_TO_CODE } from '../common/geo';
+import {
+  normalizeStateToCode,
+  STATE_CODE_TO_FIPS,
+  STATE_FIPS_TO_CODE,
+} from '../common/geo';
 
 // Import types
 import type { HomeValueData, ForecastData } from './types';
@@ -65,7 +69,9 @@ export class ZillowService {
     // Check ZHVF records in zillow_metro
     const { data: metroSample, error: metroError } = await this.supabase
       .from('zillow_metro')
-      .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
+      .select(
+        'region_id, region_name, cbsa_code, state_code, metric_name, value, period_date',
+      )
       .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
       .order('period_date', { ascending: false })
       .limit(10);
@@ -73,7 +79,8 @@ export class ZillowService {
     debug.metro.error = metroError?.message || null;
     debug.metro.sampleCount = metroSample?.length || 0;
     debug.metro.sample = metroSample?.slice(0, 3) || [];
-    debug.metro.withCbsaCode = metroSample?.filter(r => r.cbsa_code).length || 0;
+    debug.metro.withCbsaCode =
+      metroSample?.filter((r) => r.cbsa_code).length || 0;
 
     // Get distinct dates for ZHVF
     const { data: metroDates } = await this.supabase
@@ -82,7 +89,7 @@ export class ZillowService {
       .eq('metric_name', 'zhvf_12m')
       .order('period_date', { ascending: false })
       .limit(5);
-    debug.metro.availableDates = metroDates?.map(d => d.period_date) || [];
+    debug.metro.availableDates = metroDates?.map((d) => d.period_date) || [];
 
     // Count total ZHVF records
     const { count: metroCount } = await this.supabase
@@ -108,17 +115,26 @@ export class ZillowService {
     debug.crosswalk.totalEntries = cwCount || 0;
 
     // Check if ZHVF region_ids match crosswalk
-    if (metroSample && metroSample.length > 0 && crosswalkSample && crosswalkSample.length > 0) {
-      const zhvfRegionIds = new Set(metroSample.map(r => r.region_id));
-      const cwRegionIds = new Set(crosswalkSample.map(r => r.zillow_region_id));
-      const overlap = [...zhvfRegionIds].filter(id => cwRegionIds.has(id));
+    if (
+      metroSample &&
+      metroSample.length > 0 &&
+      crosswalkSample &&
+      crosswalkSample.length > 0
+    ) {
+      const zhvfRegionIds = new Set(metroSample.map((r) => r.region_id));
+      const cwRegionIds = new Set(
+        crosswalkSample.map((r) => r.zillow_region_id),
+      );
+      const overlap = [...zhvfRegionIds].filter((id) => cwRegionIds.has(id));
       debug.crosswalk.matchingSampleIds = overlap.length;
     }
 
     // Check ZIP forecast data
     const { data: zipSample, error: zipError } = await this.supabase
       .from('zillow_zip')
-      .select('region_id, region_name, state_code, metric_name, value, period_date')
+      .select(
+        'region_id, region_name, state_code, metric_name, value, period_date',
+      )
       .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
       .order('period_date', { ascending: false })
       .limit(5);
@@ -211,18 +227,17 @@ export class ZillowService {
     if (!metroData || metroData.length === 0) return [];
 
     // Map results (already filtered by date, no dedup needed)
-    const results: HomeValueData[] = metroData
-      .filter((record) => record.cbsa_code) // Skip records without cbsa_code
-      .map((record) => ({
-        region_id: String(record.region_id),
-        region_name: record.region_name,
-        cbsa_code: record.cbsa_code,
-        state_abbrev: record.state_code,
-        value: Number(record.value),
-        date: record.period_date,
-        property_type: 'sfrcondo',
-        geography: 'Metro',
-      }));
+    // Use region_id as cbsa_code fallback — Zillow metro region_ids ARE CBSA codes
+    const results: HomeValueData[] = metroData.map((record) => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      cbsa_code: record.cbsa_code || String(record.region_id),
+      state_abbrev: record.state_code,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: 'sfrcondo',
+      geography: 'Metro',
+    }));
 
     return results.sort((a, b) => b.value - a.value);
   }
@@ -300,7 +315,9 @@ export class ZillowService {
     countyFilter?: string,
     date?: string,
   ): Promise<HomeValueData[]> {
-    const stateCode = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
+    const stateCode = stateFilter
+      ? normalizeStateToCode(stateFilter)
+      : undefined;
     if (!stateCode) {
       return [];
     }
@@ -375,7 +392,9 @@ export class ZillowService {
       const targetDate =
         date || (await getLatestDate(this.supabase, 'zip', 'zhvi'));
 
-      console.log(`getAllZipHomeValues: targetDate=${targetDate}, limit=${limit}`);
+      console.log(
+        `getAllZipHomeValues: targetDate=${targetDate}, limit=${limit}`,
+      );
 
       // Query all ZIPs with a limit, ordered by value descending
       const { data: zipData, error } = await this.supabase
@@ -394,7 +413,9 @@ export class ZillowService {
       }
 
       if (!zipData || zipData.length === 0) {
-        console.log(`getAllZipHomeValues: no data found for date ${targetDate}`);
+        console.log(
+          `getAllZipHomeValues: no data found for date ${targetDate}`,
+        );
         return [];
       }
 
@@ -466,11 +487,18 @@ export class ZillowService {
 
   async getAvailableDates(geography: string): Promise<string[]> {
     // Use the appropriate long-format table based on geography
-    const table = geography.toLowerCase() === 'state' ? 'zillow_state' :
-                  geography.toLowerCase() === 'metro' ? 'zillow_metro' :
-                  geography.toLowerCase() === 'county' ? 'zillow_county' :
-                  geography.toLowerCase() === 'zip' ? 'zillow_zip' :
-                  geography.toLowerCase() === 'city' ? 'zillow_city' : 'zillow_metro';
+    const table =
+      geography.toLowerCase() === 'state'
+        ? 'zillow_state'
+        : geography.toLowerCase() === 'metro'
+          ? 'zillow_metro'
+          : geography.toLowerCase() === 'county'
+            ? 'zillow_county'
+            : geography.toLowerCase() === 'zip'
+              ? 'zillow_zip'
+              : geography.toLowerCase() === 'city'
+                ? 'zillow_city'
+                : 'zillow_metro';
 
     const { data } = await this.supabase
       .from(table)
@@ -485,11 +513,18 @@ export class ZillowService {
 
   async getTimeSeries(regionId: string, geography: string): Promise<any[]> {
     // Use the appropriate long-format table based on geography
-    const table = geography.toLowerCase() === 'state' ? 'zillow_state' :
-                  geography.toLowerCase() === 'metro' ? 'zillow_metro' :
-                  geography.toLowerCase() === 'county' ? 'zillow_county' :
-                  geography.toLowerCase() === 'zip' ? 'zillow_zip' :
-                  geography.toLowerCase() === 'city' ? 'zillow_city' : 'zillow_metro';
+    const table =
+      geography.toLowerCase() === 'state'
+        ? 'zillow_state'
+        : geography.toLowerCase() === 'metro'
+          ? 'zillow_metro'
+          : geography.toLowerCase() === 'county'
+            ? 'zillow_county'
+            : geography.toLowerCase() === 'zip'
+              ? 'zillow_zip'
+              : geography.toLowerCase() === 'city'
+                ? 'zillow_city'
+                : 'zillow_metro';
 
     const { data, error } = await this.supabase
       .from(table)
@@ -499,7 +534,7 @@ export class ZillowService {
       .order('period_date', { ascending: true });
 
     if (error) throw new Error(error.message);
-    return data?.map(d => ({ date: d.period_date, value: d.value })) || [];
+    return data?.map((d) => ({ date: d.period_date, value: d.value })) || [];
   }
 
   // ============================================================================
@@ -514,17 +549,24 @@ export class ZillowService {
       getLatestDate(this.supabase, 'metro', 'zhvf_3m'),
       getLatestDate(this.supabase, 'metro', 'zhvf_12m'),
     ]);
-    
+
     // Use the most recent date across all horizons (excluding fallback dates)
-    const validDates = latestDates.filter(date => date && date !== '2025-10-31');
-    const latestDate = validDates.length > 0
-      ? validDates.sort().reverse()[0] // Most recent valid date
-      : latestDates.find(date => date) || null; // Fallback to any date if all are fallback
-    
-    console.log(`[ZHVF Metro] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`);
-    
+    const validDates = latestDates.filter(
+      (date) => date && date !== '2025-10-31',
+    );
+    const latestDate =
+      validDates.length > 0
+        ? validDates.sort().reverse()[0] // Most recent valid date
+        : latestDates.find((date) => date) || null; // Fallback to any date if all are fallback
+
+    console.log(
+      `[ZHVF Metro] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`,
+    );
+
     if (!latestDate || latestDate === '2025-10-31') {
-      console.log('[ZHVF Metro] No valid latest date found (all dates are fallback or null), returning empty');
+      console.log(
+        '[ZHVF Metro] No valid latest date found (all dates are fallback or null), returning empty',
+      );
       return [];
     }
 
@@ -575,16 +617,22 @@ export class ZillowService {
         .from('zillow_metro_crosswalk')
         .select('zillow_region_id, cbsa_code')
         .not('cbsa_code', 'is', null)
-        .range(crosswalkPage * crosswalkPageSize, (crosswalkPage + 1) * crosswalkPageSize - 1);
+        .range(
+          crosswalkPage * crosswalkPageSize,
+          (crosswalkPage + 1) * crosswalkPageSize - 1,
+        );
 
       if (crosswalkError) {
-        console.error('[ZHVF Metro] Error loading crosswalk:', crosswalkError.message);
+        console.error(
+          '[ZHVF Metro] Error loading crosswalk:',
+          crosswalkError.message,
+        );
         break;
       }
 
       if (!crosswalk || crosswalk.length === 0) break;
 
-      crosswalk.forEach(row => {
+      crosswalk.forEach((row) => {
         if (row.zillow_region_id && row.cbsa_code) {
           cbsaMap.set(row.zillow_region_id, row.cbsa_code);
         }
@@ -594,7 +642,9 @@ export class ZillowService {
       crosswalkPage++;
     }
 
-    console.log(`[ZHVF Metro] Loaded ${cbsaMap.size} CBSA mappings from crosswalk`);
+    console.log(
+      `[ZHVF Metro] Loaded ${cbsaMap.size} CBSA mappings from crosswalk`,
+    );
 
     const forecasts = allForecasts;
 
@@ -623,8 +673,10 @@ export class ZillowService {
     }
 
     // Log how many have cbsa_code now
-    const withCbsa = [...byRegion.values()].filter(r => r.cbsa_code).length;
-    console.log(`[ZHVF Metro] Records with cbsa_code after crosswalk: ${withCbsa}/${byRegion.size}`);
+    const withCbsa = [...byRegion.values()].filter((r) => r.cbsa_code).length;
+    console.log(
+      `[ZHVF Metro] Records with cbsa_code after crosswalk: ${withCbsa}/${byRegion.size}`,
+    );
 
     // Filter out records without cbsa_code - they can't be displayed on the map
     // The map GeoJSON uses CBSA codes as keys, so records without cbsa_code won't match
@@ -634,7 +686,12 @@ export class ZillowService {
         // Must have cbsa_code
         if (!f.cbsa_code) return false;
         // Must have a non-null value for the selected horizon (0 is valid, null is not)
-        const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
+        const horizonField =
+          horizon === '1m'
+            ? 'forecast_1m'
+            : horizon === '3m'
+              ? 'forecast_3m'
+              : 'forecast_12m';
         const horizonValue = f[horizonField];
         return horizonValue != null;
       })
@@ -643,18 +700,33 @@ export class ZillowService {
         (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
       );
 
-    console.log(`[ZHVF Metro] Returning ${result.length} unique metros (filtered to only those with cbsa_code and valid ${horizon} forecast)`);
+    console.log(
+      `[ZHVF Metro] Returning ${result.length} unique metros (filtered to only those with cbsa_code and valid ${horizon} forecast)`,
+    );
     if (result.length === 0) {
-      console.log('[ZHVF Metro] WARNING: No records returned. Diagnostic info:');
+      console.log(
+        '[ZHVF Metro] WARNING: No records returned. Diagnostic info:',
+      );
       console.log(`  - Latest date used: ${latestDate}`);
       console.log(`  - Horizon requested: ${horizon}`);
-      console.log(`  - Total forecast records fetched from DB: ${allForecasts.length}`);
+      console.log(
+        `  - Total forecast records fetched from DB: ${allForecasts.length}`,
+      );
       console.log(`  - Unique regions after grouping: ${byRegion.size}`);
-      const regionsWithCbsa = [...byRegion.values()].filter(r => r.cbsa_code);
+      const regionsWithCbsa = [...byRegion.values()].filter((r) => r.cbsa_code);
       console.log(`  - Regions with cbsa_code: ${regionsWithCbsa.length}`);
-      const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
-      const regionsWithHorizonValue = [...byRegion.values()].filter(r => r[horizonField] != null);
-      console.log(`  - Regions with non-null ${horizonField}: ${regionsWithHorizonValue.length}`);
+      const horizonField =
+        horizon === '1m'
+          ? 'forecast_1m'
+          : horizon === '3m'
+            ? 'forecast_3m'
+            : 'forecast_12m';
+      const regionsWithHorizonValue = [...byRegion.values()].filter(
+        (r) => r[horizonField] != null,
+      );
+      console.log(
+        `  - Regions with non-null ${horizonField}: ${regionsWithHorizonValue.length}`,
+      );
       if (byRegion.size > 0) {
         const sampleRegion = [...byRegion.values()][0];
         console.log(`  - Sample region:`, {
@@ -668,11 +740,14 @@ export class ZillowService {
       }
       if (regionsWithCbsa.length > 0 && regionsWithHorizonValue.length === 0) {
         const sampleWithCbsa = regionsWithCbsa[0];
-        console.log(`  - Sample region WITH cbsa_code but missing ${horizonField}:`, {
-          region_id: sampleWithCbsa.region_id,
-          cbsa_code: sampleWithCbsa.cbsa_code,
-          [horizonField]: sampleWithCbsa[horizonField],
-        });
+        console.log(
+          `  - Sample region WITH cbsa_code but missing ${horizonField}:`,
+          {
+            region_id: sampleWithCbsa.region_id,
+            cbsa_code: sampleWithCbsa.cbsa_code,
+            [horizonField]: sampleWithCbsa[horizonField],
+          },
+        );
       }
     }
     return result;
@@ -689,17 +764,24 @@ export class ZillowService {
       getLatestDate(this.supabase, 'zip', 'zhvf_3m'),
       getLatestDate(this.supabase, 'zip', 'zhvf_12m'),
     ]);
-    
+
     // Use the most recent date across all horizons (excluding fallback dates)
-    const validDates = latestDates.filter(date => date && date !== '2025-10-31');
-    const latestDate = validDates.length > 0
-      ? validDates.sort().reverse()[0] // Most recent valid date
-      : latestDates.find(date => date) || null; // Fallback to any date if all are fallback
-    
-    console.log(`[ZHVF Zip] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`);
-    
+    const validDates = latestDates.filter(
+      (date) => date && date !== '2025-10-31',
+    );
+    const latestDate =
+      validDates.length > 0
+        ? validDates.sort().reverse()[0] // Most recent valid date
+        : latestDates.find((date) => date) || null; // Fallback to any date if all are fallback
+
+    console.log(
+      `[ZHVF Zip] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`,
+    );
+
     if (!latestDate || latestDate === '2025-10-31') {
-      console.log('[ZHVF Zip] No valid latest date found (all dates are fallback or null), returning empty');
+      console.log(
+        '[ZHVF Zip] No valid latest date found (all dates are fallback or null), returning empty',
+      );
       return [];
     }
 
@@ -769,7 +851,12 @@ export class ZillowService {
     const result = [...byRegion.values()]
       .filter((f) => {
         // Must have a non-null value for the selected horizon (0 is valid, null is not)
-        const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
+        const horizonField =
+          horizon === '1m'
+            ? 'forecast_1m'
+            : horizon === '3m'
+              ? 'forecast_3m'
+              : 'forecast_12m';
         return f[horizonField] != null;
       })
       .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
@@ -777,9 +864,13 @@ export class ZillowService {
         (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
       );
 
-    console.log(`[ZHVF Zip] Returning ${result.length} unique ZIPs (filtered to only those with valid ${horizon} forecast)`);
+    console.log(
+      `[ZHVF Zip] Returning ${result.length} unique ZIPs (filtered to only those with valid ${horizon} forecast)`,
+    );
     if (result.length === 0 && allForecasts.length > 0) {
-      console.log(`[ZHVF Zip] WARNING: Filtered out all ${allForecasts.length} records. Check horizon field values.`);
+      console.log(
+        `[ZHVF Zip] WARNING: Filtered out all ${allForecasts.length} records. Check horizon field values.`,
+      );
     }
     return result;
   }
@@ -794,8 +885,7 @@ export class ZillowService {
   ): Promise<HomeValueData[]> {
     const metricName = mapRentPropertyType(propertyType);
     const targetDate =
-      date ||
-      (await getLatestDate(this.supabase, 'metro', metricName));
+      date || (await getLatestDate(this.supabase, 'metro', metricName));
 
     // Pass propertyType directly - queryZori handles mapping to metric name
     const zillow = await queryZori(
@@ -807,36 +897,35 @@ export class ZillowService {
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 
-    const results: HomeValueData[] = zillow
-      .map((z) => {
-        if (z.geography === 'US') {
-          return {
-            region_id: z.region_id,
-            region_name: 'United States',
-            value: z.value,
-            date: z.date,
-            property_type: z.property_type,
-            geography: 'US',
-          };
-        }
-
-        const { metro, cbsaCode } = lookupMetro(
-          z.region_id,
-          byZillowId,
-          byCbsaCode,
-        );
-
+    const results: HomeValueData[] = zillow.map((z) => {
+      if (z.geography === 'US') {
         return {
           region_id: z.region_id,
-          region_name: metro?.cbsa_name || 'Unknown',
-          cbsa_code: cbsaCode,
-          state_abbrev: metro?.state || null,
+          region_name: 'United States',
           value: z.value,
           date: z.date,
           property_type: z.property_type,
-          geography: 'Metro',
+          geography: 'US',
         };
-      });
+      }
+
+      const { metro, cbsaCode } = lookupMetro(
+        z.region_id,
+        byZillowId,
+        byCbsaCode,
+      );
+
+      return {
+        region_id: z.region_id,
+        region_name: metro?.cbsa_name || 'Unknown',
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        value: z.value,
+        date: z.date,
+        property_type: z.property_type,
+        geography: 'Metro',
+      };
+    });
 
     // ── HUD FMR fallback: fill metros without ZORI data ──
     // Compute population-weighted average of county FMR values for each metro
@@ -958,8 +1047,7 @@ export class ZillowService {
     stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     const metricName = mapRentPropertyType(propertyType);
     const targetDate =
-      date ||
-      (await getLatestDate(this.supabase, 'county', metricName));
+      date || (await getLatestDate(this.supabase, 'county', metricName));
 
     // Query zillow_county table directly (same pattern as getCountyHomeValues)
     // The previous approach incorrectly used FIPS codes as region_ids
@@ -1017,8 +1105,12 @@ export class ZillowService {
 
     // ── HUD FMR fallback: fill counties without ZORI data ──
     try {
-      const existingFips = new Set(results.map((r) => r.county_fips).filter(Boolean));
-      const year = targetDate ? parseInt(targetDate.substring(0, 4)) : new Date().getFullYear();
+      const existingFips = new Set(
+        results.map((r) => r.county_fips).filter(Boolean),
+      );
+      const year = targetDate
+        ? parseInt(targetDate.substring(0, 4))
+        : new Date().getFullYear();
       const fmrDate = targetDate || `${year}-01-01`;
 
       // Paginate HUD FMR to get all counties (Supabase default limit is 1000)
@@ -1043,13 +1135,15 @@ export class ZillowService {
         if (!fmrRows || fmrRows.length === 0) break;
 
         for (const fmr of fmrRows) {
-          const fips = fmr.fips_code && /^\d+$/.test(fmr.fips_code)
-            ? String(parseInt(fmr.fips_code, 10)).padStart(5, '0')
-            : fmr.fips_code;
+          const fips =
+            fmr.fips_code && /^\d+$/.test(fmr.fips_code)
+              ? String(parseInt(fmr.fips_code, 10)).padStart(5, '0')
+              : fmr.fips_code;
           if (!fips || existingFips.has(fips)) continue;
           existingFips.add(fips);
 
-          const stateAbbrev = stateFilter || STATE_FIPS_TO_CODE[fmr.state_fips] || null;
+          const stateAbbrev =
+            stateFilter || STATE_FIPS_TO_CODE[fmr.state_fips] || null;
           results.push({
             region_id: fips,
             region_name: fmr.county_name || `County ${fips}`,
@@ -1058,7 +1152,8 @@ export class ZillowService {
             state_name: null,
             value: Number(fmr.fmr_2br),
             date: fmrDate,
-            property_type: propertyType === 'all' ? 'sfrcondomfr' : propertyType,
+            property_type:
+              propertyType === 'all' ? 'sfrcondomfr' : propertyType,
             geography: 'County',
           });
         }
@@ -1100,23 +1195,22 @@ export class ZillowService {
       zipCodes,
     );
 
-    const results = zillow
-      .map((z) => {
-        const zip = zipMap.get(z.region_id);
-        return {
-          region_id: z.region_id,
-          region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
-          zip_code: z.region_id,
-          city: zip?.city || null,
-          county_name: zip?.county || null,
-          state_abbrev: zip?.state_abbrev || null,
-          state_name: zip?.state_name || null,
-          value: z.value,
-          date: z.date,
-          property_type: z.property_type,
-          geography: 'ZIP',
-        };
-      });
+    const results = zillow.map((z) => {
+      const zip = zipMap.get(z.region_id);
+      return {
+        region_id: z.region_id,
+        region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
+        zip_code: z.region_id,
+        city: zip?.city || null,
+        county_name: zip?.county || null,
+        state_abbrev: zip?.state_abbrev || null,
+        state_name: zip?.state_name || null,
+        value: z.value,
+        date: z.date,
+        property_type: z.property_type,
+        geography: 'ZIP',
+      };
+    });
 
     // ── HUD FMR fallback: fill zips without ZORI data ──
     try {
@@ -1147,7 +1241,9 @@ export class ZillowService {
         }
 
         if (Object.keys(zipToFips).length > 0) {
-          const year = targetDate ? parseInt(targetDate.substring(0, 4)) : new Date().getFullYear();
+          const year = targetDate
+            ? parseInt(targetDate.substring(0, 4))
+            : new Date().getFullYear();
           const uniqueFips = [...new Set(Object.values(zipToFips))];
 
           // Fetch HUD FMR (batch in chunks)
@@ -1188,7 +1284,8 @@ export class ZillowService {
               state_name: zip?.state_name || null,
               value: Number(rent),
               date: targetDate || `${year}-01-01`,
-              property_type: propertyType === 'all' ? 'sfrcondomfr' : propertyType,
+              property_type:
+                propertyType === 'all' ? 'sfrcondomfr' : propertyType,
               geography: 'ZIP',
             });
           }
@@ -1214,14 +1311,14 @@ export class ZillowService {
       const targetDate =
         date || (await getLatestDate(this.supabase, 'zip', metricName));
 
-      console.log(`getAllZipRent: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`);
+      console.log(
+        `getAllZipRent: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`,
+      );
 
       // Query all ZIPs with a limit, ordered by value descending
       const { data: zipData, error } = await this.supabase
         .from('zillow_zip')
-        .select(
-          'region_id, region_name, state_code, value, period_date',
-        )
+        .select('region_id, region_name, state_code, value, period_date')
         .eq('metric_name', metricName)
         .eq('period_date', targetDate)
         .order('value', { ascending: false })
@@ -1262,8 +1359,7 @@ export class ZillowService {
   ): Promise<HomeValueData[]> {
     // ZORDI data is in zillow_metro with metric_name = 'zordi', 'zordi_sfr', 'zordi_mfr'
     const targetDate =
-      date ||
-      (await getLatestDateForMetric(this.supabase, 'zordi', 'metro'));
+      date || (await getLatestDateForMetric(this.supabase, 'zordi', 'metro'));
 
     // Pass propertyType directly - queryZordi handles mapping to metric name
     const zillow = await queryZordi(
@@ -1366,18 +1462,23 @@ export class ZillowService {
   ): Promise<HomeValueData[]> {
     try {
       // Map propertyType to metric name - ZORDI is metro-only from Zillow
-      const metricName = propertyType === 'sfr' ? 'zordi_sfr' : propertyType === 'mfr' ? 'zordi_mfr' : 'zordi';
+      const metricName =
+        propertyType === 'sfr'
+          ? 'zordi_sfr'
+          : propertyType === 'mfr'
+            ? 'zordi_mfr'
+            : 'zordi';
       const targetDate =
         date || (await getLatestDateForMetric(this.supabase, 'zordi', 'metro'));
 
-      console.log(`getAllZipRenterDemand: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`);
+      console.log(
+        `getAllZipRenterDemand: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`,
+      );
 
       // Query all ZIPs with a limit, ordered by value descending
       const { data: zipData, error } = await this.supabase
         .from('zillow_zip')
-        .select(
-          'region_id, region_name, state_code, value, period_date',
-        )
+        .select('region_id, region_name, state_code, value, period_date')
         .eq('metric_name', metricName)
         .eq('period_date', targetDate)
         .order('value', { ascending: false })
@@ -1431,7 +1532,10 @@ export class ZillowService {
           date,
           propertyType,
         )
-      : await queryMarketIndicatorLatest(this.supabase, metricName, ['Metro', 'US']);
+      : await queryMarketIndicatorLatest(this.supabase, metricName, [
+          'Metro',
+          'US',
+        ]);
 
     if (!data.length) return [];
 
@@ -1659,9 +1763,9 @@ export class ZillowService {
       }
     }
 
-    // Filter out entries with no cbsa_code (can't be displayed on map)
+    // Use region_id as cbsa_code fallback — Zillow metro region_ids ARE CBSA codes
     return Array.from(combinedMap.values())
-      .filter((d) => d.cbsa_code)
+      .map((d) => ({ ...d, cbsa_code: d.cbsa_code || String(d.region_id) }))
       .sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
   }
 
@@ -1682,11 +1786,10 @@ export class ZillowService {
     // Use cbsa_code directly from zillow_metro data (same approach as getMetroHomeValues)
     // Filter out records without cbsa_code - they can't be displayed on the map
     return data
-      .filter((d) => d.cbsa_code) // Skip records without cbsa_code
       .map((d) => ({
         region_id: d.region_id,
         region_name: d.region_name || 'Unknown',
-        cbsa_code: d.cbsa_code,
+        cbsa_code: d.cbsa_code || String(d.region_id),
         state_abbrev: d.state_code || null,
         date: d.date,
         geography: 'Metro',

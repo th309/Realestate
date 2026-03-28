@@ -1,0 +1,247 @@
+<h2>Wordmark Typography</h2>
+<p class="subtitle">
+  Same logo, different typefaces. Which feels most like PropertyIQ?
+</p>
+
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=DM+Sans:wght@700&family=Inter:wght@700&family=Plus+Jakarta+Sans:wght@700&family=Outfit:wght@700&display=swap");
+
+  .type-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 28px 24px;
+    background: #f8f9ff;
+    border-radius: 12px;
+    margin-bottom: 4px;
+  }
+  .type-wordmark {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a237e;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+  }
+  .type-wordmark span {
+    color: #3949ab;
+  }
+  .type-tagline {
+    font-size: 13px;
+    color: #5c6bc0;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+  .type-meta {
+    font-family: system-ui;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+  }
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="type-card">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#3949AB" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div>
+          <div
+            class="type-wordmark"
+            style="font-family: &quot;Roboto&quot;, sans-serif"
+          >
+            Property<span>IQ</span>
+          </div>
+          <div
+            class="type-tagline"
+            style="font-family: &quot;Roboto&quot;, sans-serif"
+          >
+            The IQ Behind Every Market
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Roboto (Current)</h3>
+      <p>
+        Google's signature font. Mechanical skeleton with friendly curves.
+        Perfectly aligned with M3 design system.
+      </p>
+      <p class="type-meta">
+        Familiarity: High &middot; Personality: Neutral-Professional
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="type-card">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#3949AB" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div>
+          <div
+            class="type-wordmark"
+            style="font-family: &quot;DM Sans&quot;, sans-serif"
+          >
+            Property<span>IQ</span>
+          </div>
+          <div
+            class="type-tagline"
+            style="font-family: &quot;DM Sans&quot;, sans-serif"
+          >
+            The IQ Behind Every Market
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. DM Sans (Already Loaded)</h3>
+      <p>
+        Geometric, low-contrast sans-serif. Slightly warmer and more modern than
+        Roboto. Popular with startups (Linear, Notion).
+      </p>
+      <p class="type-meta">
+        Familiarity: Medium &middot; Personality: Modern-Approachable
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="type-card">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#3949AB" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div>
+          <div
+            class="type-wordmark"
+            style="font-family: &quot;Inter&quot;, sans-serif"
+          >
+            Property<span>IQ</span>
+          </div>
+          <div
+            class="type-tagline"
+            style="font-family: &quot;Inter&quot;, sans-serif"
+          >
+            The IQ Behind Every Market
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Inter</h3>
+      <p>
+        Designed for screens. Highly legible at all sizes, with a slightly
+        taller x-height. Used by GitHub, Figma, Linear.
+      </p>
+      <p class="type-meta">
+        Familiarity: High &middot; Personality: Clean-Technical
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="type-card">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#3949AB" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div>
+          <div
+            class="type-wordmark"
+            style="font-family: &quot;Plus Jakarta Sans&quot;, sans-serif"
+          >
+            Property<span>IQ</span>
+          </div>
+          <div
+            class="type-tagline"
+            style="font-family: &quot;Plus Jakarta Sans&quot;, sans-serif"
+          >
+            The IQ Behind Every Market
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>D. Plus Jakarta Sans</h3>
+      <p>
+        Geometric with personality. Softer terminals give it warmth without
+        losing professionalism. Trending in fintech/SaaS.
+      </p>
+      <p class="type-meta">
+        Familiarity: Low &middot; Personality: Warm-Premium
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="e" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="type-card">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#3949AB" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div>
+          <div
+            class="type-wordmark"
+            style="font-family: &quot;Outfit&quot;, sans-serif"
+          >
+            Property<span>IQ</span>
+          </div>
+          <div
+            class="type-tagline"
+            style="font-family: &quot;Outfit&quot;, sans-serif"
+          >
+            The IQ Behind Every Market
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>E. Outfit</h3>
+      <p>
+        Geometric, wide, confident. Strong visual presence in headlines.
+        Friendly but authoritative — great for data brands.
+      </p>
+      <p class="type-meta">
+        Familiarity: Low &middot; Personality: Bold-Confident
+      </p>
+    </div>
+  </div>
+</div>

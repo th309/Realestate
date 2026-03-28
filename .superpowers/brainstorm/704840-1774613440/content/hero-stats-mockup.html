@@ -1,0 +1,649 @@
+<h2>Hero Stats Row — Pick 5 key metrics</h2>
+<p class="subtitle">
+  These are always visible at the top of the command center. Each shows a value
+  + sparkline trend. Click a set to select it.
+</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Operations-First</h3>
+      <div class="mockup">
+        <div class="mockup-header">Hero Stats Row</div>
+        <div
+          class="mockup-body"
+          style="display: flex; gap: 12px; padding: 16px"
+        >
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              System Health
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              99.8%
+            </div>
+            <div style="color: #555; font-size: 11px">Uptime (30d)</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,20 15,18 30,16 45,12 60,8 75,6 90,4 105,3 120,2"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Active Alerts
+            </div>
+            <div
+              style="
+                color: #f59e0b;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              3
+            </div>
+            <div style="color: #555; font-size: 11px">2 warn, 1 critical</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,20 15,18 30,20 45,16 60,12 75,14 90,10 105,8 120,6"
+                fill="none"
+                stroke="#f59e0b"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Data Freshness
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              6/9
+            </div>
+            <div style="color: #555; font-size: 11px">Sources fresh</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,12 15,10 30,14 45,12 60,8 75,10 90,6 105,8 120,6"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              API Latency
+            </div>
+            <div
+              style="
+                color: #3b82f6;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              142ms
+            </div>
+            <div style="color: #555; font-size: 11px">p95 (1h)</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,18 15,16 30,14 45,16 60,12 75,14 90,10 105,12 120,10"
+                fill="none"
+                stroke="#3b82f6"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Total Users
+            </div>
+            <div
+              style="
+                color: #a78bfa;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              247
+            </div>
+            <div style="color: #555; font-size: 11px">+12 this week</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,22 15,20 30,18 45,16 60,14 75,12 90,10 105,8 120,6"
+                fill="none"
+                stroke="#a78bfa"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 8px; color: #aaa; font-size: 13px">
+        <strong>Metrics:</strong> System Health, Active Alerts, Data Freshness,
+        API Latency, Total Users
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Business-First</h3>
+      <div class="mockup">
+        <div class="mockup-header">Hero Stats Row</div>
+        <div
+          class="mockup-body"
+          style="display: flex; gap: 12px; padding: 16px"
+        >
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Total Users
+            </div>
+            <div
+              style="
+                color: #a78bfa;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              247
+            </div>
+            <div style="color: #555; font-size: 11px">+12 this week</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,22 15,20 30,18 45,16 60,14 75,12 90,10 105,8 120,6"
+                fill="none"
+                stroke="#a78bfa"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              MRR
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              $4.2K
+            </div>
+            <div style="color: #555; font-size: 11px">+8% MoM</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,22 15,20 30,18 45,16 60,14 75,12 90,10 105,8 120,6"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Conversion Rate
+            </div>
+            <div
+              style="
+                color: #f59e0b;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              3.2%
+            </div>
+            <div style="color: #555; font-size: 11px">Trial to Paid</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,18 15,16 30,18 45,14 60,12 75,14 90,10 105,12 120,8"
+                fill="none"
+                stroke="#f59e0b"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Data Freshness
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              6/9
+            </div>
+            <div style="color: #555; font-size: 11px">Sources fresh</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,12 15,10 30,14 45,12 60,8 75,10 90,6 105,8 120,6"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Active Alerts
+            </div>
+            <div
+              style="
+                color: #ef4444;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              3
+            </div>
+            <div style="color: #555; font-size: 11px">2 warn, 1 critical</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,20 15,18 30,20 45,16 60,12 75,14 90,10 105,8 120,6"
+                fill="none"
+                stroke="#ef4444"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 8px; color: #aaa; font-size: 13px">
+        <strong>Metrics:</strong> Total Users, MRR, Conversion Rate, Data
+        Freshness, Active Alerts
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Balanced (Recommended)</h3>
+      <div class="mockup">
+        <div class="mockup-header">Hero Stats Row</div>
+        <div
+          class="mockup-body"
+          style="display: flex; gap: 12px; padding: 16px"
+        >
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              System Health
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              99.8%
+            </div>
+            <div style="color: #555; font-size: 11px">Uptime (30d)</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,20 15,18 30,16 45,12 60,8 75,6 90,4 105,3 120,2"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Active Alerts
+            </div>
+            <div
+              style="
+                color: #f59e0b;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              3
+            </div>
+            <div style="color: #555; font-size: 11px">2 warn, 1 critical</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,20 15,18 30,20 45,16 60,12 75,14 90,10 105,8 120,6"
+                fill="none"
+                stroke="#f59e0b"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Data Freshness
+            </div>
+            <div
+              style="
+                color: #22c55e;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              6/9
+            </div>
+            <div style="color: #555; font-size: 11px">Sources fresh</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,12 15,10 30,14 45,12 60,8 75,10 90,6 105,8 120,6"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Total Users
+            </div>
+            <div
+              style="
+                color: #a78bfa;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              247
+            </div>
+            <div style="color: #555; font-size: 11px">+12 this week</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,22 15,20 30,18 45,16 60,14 75,12 90,10 105,8 120,6"
+                fill="none"
+                stroke="#a78bfa"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+          <div
+            style="
+              flex: 1;
+              background: #1a1a2e;
+              border-radius: 12px;
+              padding: 16px;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+            >
+              Score Health
+            </div>
+            <div
+              style="
+                color: #3b82f6;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 4px 0;
+              "
+            >
+              61.8%
+            </div>
+            <div style="color: #555; font-size: 11px">1Y Hit Rate</div>
+            <svg width="100%" height="24" viewBox="0 0 120 24">
+              <polyline
+                points="0,18 15,16 30,14 45,16 60,12 75,14 90,10 105,12 120,10"
+                fill="none"
+                stroke="#3b82f6"
+                stroke-width="1.5"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 8px; color: #aaa; font-size: 13px">
+        <strong>Metrics:</strong> System Health, Active Alerts, Data Freshness,
+        Total Users, Score Health — covers ops + business + core product
+      </p>
+    </div>
+  </div>
+</div>

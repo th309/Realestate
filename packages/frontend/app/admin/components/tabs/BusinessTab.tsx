@@ -1,65 +1,52 @@
 "use client";
 
-interface PlaceholderCardProps {
-  cardId: string;
-  title: string;
-  onCardClick: (cardId: string) => void;
-}
-
-function PlaceholderCard({ cardId, title, onCardClick }: PlaceholderCardProps) {
-  return (
-    <div
-      data-testid={`card-${cardId}`}
-      onClick={() => onCardClick(cardId)}
-      className="bg-surface-container-low border border-outline-variant rounded-xl p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
-    >
-      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
-      <div className="h-16 bg-surface-container rounded-lg flex items-center justify-center text-xs text-on-surface-variant">
-        Card content — Plan 3
-      </div>
-    </div>
-  );
-}
+import { UsersGrowthCard } from "../cards/UsersGrowthCard";
+import { RevenueMrrCard } from "../cards/RevenueMrrCard";
+import { FeatureUsageCard } from "../cards/FeatureUsageCard";
+import { TierDistributionCard } from "../cards/TierDistributionCard";
+import { FeedbackQueueCard } from "../cards/FeedbackQueueCard";
 
 interface BusinessTabProps {
   refreshTrigger: number;
   onCardClick: (cardId: string) => void;
 }
 
-export function BusinessTab({
-  refreshTrigger: _refreshTrigger,
-  onCardClick,
-}: BusinessTabProps) {
+export function BusinessTab({ refreshTrigger, onCardClick }: BusinessTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <PlaceholderCard
-          cardId="users-growth"
-          title="Users & Growth"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="revenue-mrr"
-          title="Revenue / MRR"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="feature-usage"
-          title="Feature Usage"
-          onCardClick={onCardClick}
-        />
+        <div data-testid="card-users-growth">
+          <UsersGrowthCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("users-growth")}
+          />
+        </div>
+        <div data-testid="card-revenue-mrr">
+          <RevenueMrrCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("revenue-mrr")}
+          />
+        </div>
+        <div data-testid="card-feature-usage">
+          <FeatureUsageCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("feature-usage")}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PlaceholderCard
-          cardId="tier-distribution"
-          title="Tier Distribution"
-          onCardClick={onCardClick}
-        />
-        <PlaceholderCard
-          cardId="feedback-queue"
-          title="Feedback Queue"
-          onCardClick={onCardClick}
-        />
+        <div data-testid="card-tier-distribution">
+          <TierDistributionCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("tier-distribution")}
+          />
+        </div>
+        <div data-testid="card-feedback-queue">
+          <FeedbackQueueCard
+            refreshTrigger={refreshTrigger}
+            onClick={() => onCardClick("feedback-queue")}
+          />
+        </div>
       </div>
     </div>
   );

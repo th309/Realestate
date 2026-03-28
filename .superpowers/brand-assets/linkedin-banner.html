@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1584px;
+        height: 396px;
+        overflow: hidden;
+        font-family: "Roboto", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #1a237e 0%,
+          #283593 50%,
+          #3949ab 100%
+        );
+        display: flex;
+        align-items: center;
+        position: relative;
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.015) 1px,
+            transparent 1px
+          );
+        background-size: 44px 44px;
+      }
+      .top-accent {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          #00c853 50%,
+          transparent
+        );
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 0 100px;
+      }
+      .left {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: 44px;
+        color: #ffffff;
+        letter-spacing: -1px;
+      }
+      .wordmark .iq {
+        color: #c5cae9;
+      }
+      .tagline {
+        font-weight: 400;
+        font-size: 20px;
+        color: #c5cae9;
+        letter-spacing: 0.5px;
+      }
+      .stats-row {
+        display: flex;
+        gap: 48px;
+        margin-top: 8px;
+      }
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .stat-value {
+        font-family: "Roboto Mono", monospace;
+        font-weight: 500;
+        font-size: 28px;
+        color: #ffffff;
+      }
+      .stat-label {
+        font-weight: 400;
+        font-size: 13px;
+        color: #7986cb;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      /* Right side chart */
+      .chart-area {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        opacity: 0.2;
+      }
+      .bar {
+        width: 12px;
+        border-radius: 3px 3px 0 0;
+        background: #c5cae9;
+      }
+      .bar.g {
+        background: #00c853;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid"></div>
+    <div class="top-accent"></div>
+    <div class="content">
+      <div class="left">
+        <div class="logo-row">
+          <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+            <rect
+              width="64"
+              height="64"
+              rx="14"
+              fill="rgba(255,255,255,0.12)"
+            />
+            <path
+              d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+              fill="white"
+            />
+            <circle cx="34" cy="26" r="6" fill="#3949AB" />
+            <circle cx="44" cy="44" r="4" fill="#00C853" />
+            <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+          </svg>
+          <div class="wordmark">Property<span class="iq">IQ</span></div>
+        </div>
+        <div class="tagline">The IQ Behind Every Market</div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-value">900+</div>
+            <div class="stat-label">Metros Tracked</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">33K+</div>
+            <div class="stat-label">ZIP Codes</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">50+</div>
+            <div class="stat-label">Data Metrics</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-area">
+        <div class="bar" style="height: 40px"></div>
+        <div class="bar" style="height: 65px"></div>
+        <div class="bar" style="height: 50px"></div>
+        <div class="bar" style="height: 85px"></div>
+        <div class="bar" style="height: 70px"></div>
+        <div class="bar g" style="height: 110px"></div>
+        <div class="bar g" style="height: 130px"></div>
+        <div class="bar" style="height: 95px"></div>
+        <div class="bar" style="height: 80px"></div>
+        <div class="bar g" style="height: 155px"></div>
+        <div class="bar g" style="height: 170px"></div>
+        <div class="bar" style="height: 120px"></div>
+      </div>
+    </div>
+  </body>
+</html>

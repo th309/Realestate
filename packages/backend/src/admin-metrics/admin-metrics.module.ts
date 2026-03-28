@@ -18,6 +18,7 @@ import { ApiMetricsInterceptor } from './interceptors/api-metrics.interceptor';
 
 // Services — query layer
 import { MetricsQueryService } from './services/metrics-query.service';
+import { MetricsQueryFallbackService } from './services/metrics-query-fallback.service';
 import { HeroStatsService } from './services/hero-stats.service';
 
 // Services — snapshot recorders
@@ -43,6 +44,7 @@ import { MetricsCleanupService } from './services/metrics-cleanup.service';
   providers: [
     // Query layer
     MetricsQueryService,
+    MetricsQueryFallbackService,
     HeroStatsService,
 
     // Snapshot recorders

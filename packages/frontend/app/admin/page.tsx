@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 import { useAdminDashboardRefresh } from "./components/hooks/useAdminDashboardRefresh";
 import { useDetailPanel } from "./components/hooks/useDetailPanel";
 import { useTimeRange } from "./components/hooks/useTimeRange";
@@ -11,6 +12,7 @@ import { OperationsTab } from "./components/tabs/OperationsTab";
 import { DataScoresTab } from "./components/tabs/DataScoresTab";
 import { BusinessTab } from "./components/tabs/BusinessTab";
 import { DetailPanel } from "./components/shared/DetailPanel";
+import { PanelContentRouter } from "./components/panels/PanelContentRouter";
 
 export default function AdminDashboardPage() {
   // Existing refresh hook (auto-refreshes every 5 minutes)
@@ -21,6 +23,26 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("operations");
   const { isOpen, activeCard, openPanel, closePanel } = useDetailPanel();
   const { range, setRange } = useTimeRange();
+  const [snapshotStatus, setSnapshotStatus] = useState<string | null>(null);
+
+  const triggerSnapshots = useCallback(async () => {
+    setSnapshotStatus("Recording...");
+    const endpoints = [
+      "trigger/health-snapshots",
+      "trigger/user-snapshots",
+      "trigger/cache-snapshots",
+      "trigger/score-snapshots",
+    ];
+    const results = await Promise.allSettled(
+      endpoints.map((ep) =>
+        fetchAPIRaw(`/api/admin/metrics/${ep}`, { method: "POST" }),
+      ),
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    setSnapshotStatus(`${ok}/${endpoints.length} recorded`);
+    triggerRefresh();
+    setTimeout(() => setSnapshotStatus(null), 3000);
+  }, [triggerRefresh]);
 
   return (
     <div className="min-h-screen bg-surface">
@@ -38,6 +60,13 @@ export default function AdminDashboardPage() {
           <span className="text-xs text-on-surface-variant">
             Last updated: {formatTimeAgo(lastRefreshTime)}
           </span>
+          <button
+            onClick={triggerSnapshots}
+            disabled={snapshotStatus === "Recording..."}
+            className="px-3 py-2 bg-surface-container text-on-surface-variant text-xs font-medium rounded-lg hover:bg-surface-container-high transition-colors disabled:opacity-50"
+          >
+            {snapshotStatus ?? "Record Snapshots"}
+          </button>
           <button
             data-testid="refresh-button"
             onClick={triggerRefresh}
@@ -87,11 +116,11 @@ export default function AdminDashboardPage() {
         timeRangeKey={range.key}
         onTimeRangeChange={setRange}
       >
-        <div className="text-sm text-on-surface-variant">
-          Panel content for{" "}
-          <span className="font-medium text-on-surface">{activeCard}</span> —
-          will be populated in Plan 3
-        </div>
+        <PanelContentRouter
+          cardId={activeCard}
+          timeRange={range}
+          refreshTrigger={refreshTrigger}
+        />
       </DetailPanel>
     </div>
   );

@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;800&family=Roboto+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        font-family: "Roboto", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #1a237e 0%,
+          #3949ab 60%,
+          #5c6bc0 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      /* Subtle grid pattern */
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      /* Data dots decoration */
+      .dots {
+        position: absolute;
+        top: 80px;
+        right: 120px;
+      }
+      .dots circle {
+        opacity: 0.15;
+      }
+      .dots-bottom {
+        position: absolute;
+        bottom: 60px;
+        left: 100px;
+      }
+      .dots-bottom circle {
+        opacity: 0.12;
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: 64px;
+        color: #ffffff;
+        letter-spacing: -1px;
+      }
+      .wordmark .iq {
+        color: #c5cae9;
+      }
+      .tagline {
+        font-weight: 400;
+        font-size: 24px;
+        color: #c5cae9;
+        letter-spacing: 0.5px;
+      }
+      .divider {
+        width: 80px;
+        height: 3px;
+        background: #00c853;
+        border-radius: 2px;
+      }
+      .url {
+        font-family: "Roboto Mono", monospace;
+        font-weight: 400;
+        font-size: 16px;
+        color: #7986cb;
+        letter-spacing: 1px;
+      }
+      /* Ascending trend dots - bottom right */
+      .trend-dots {
+        position: absolute;
+        bottom: 40px;
+        right: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-overlay"></div>
+
+    <!-- Decorative dots top-right -->
+    <svg
+      class="dots"
+      width="200"
+      height="200"
+      viewBox="0 0 200 200"
+      fill="none"
+    >
+      <circle cx="40" cy="160" r="4" fill="#7986CB" opacity="0.2" />
+      <circle cx="80" cy="120" r="6" fill="#C5CAE9" opacity="0.15" />
+      <circle cx="120" cy="80" r="8" fill="#00C853" opacity="0.2" />
+      <circle cx="160" cy="40" r="10" fill="#00C853" opacity="0.12" />
+      <circle cx="60" cy="80" r="3" fill="#7986CB" opacity="0.1" />
+      <circle cx="140" cy="140" r="5" fill="#C5CAE9" opacity="0.1" />
+    </svg>
+
+    <!-- Decorative dots bottom-left -->
+    <svg
+      class="dots-bottom"
+      width="160"
+      height="120"
+      viewBox="0 0 160 120"
+      fill="none"
+    >
+      <circle cx="20" cy="100" r="5" fill="#7986CB" opacity="0.15" />
+      <circle cx="60" cy="70" r="7" fill="#C5CAE9" opacity="0.1" />
+      <circle cx="100" cy="40" r="4" fill="#00C853" opacity="0.15" />
+      <circle cx="140" cy="20" r="6" fill="#00C853" opacity="0.1" />
+    </svg>
+
+    <div class="content">
+      <div class="logo-row">
+        <svg width="72" height="72" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="rgba(255,255,255,0.15)" />
+          <path
+            d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+            fill="white"
+          />
+          <circle cx="34" cy="26" r="6" fill="#3949AB" />
+          <circle cx="44" cy="44" r="4" fill="#00C853" />
+          <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+        </svg>
+        <div class="wordmark">Property<span class="iq">IQ</span></div>
+      </div>
+      <div class="divider"></div>
+      <div class="tagline">The IQ Behind Every Market</div>
+      <div class="url">propertyiq.app</div>
+    </div>
+
+    <!-- Ascending trend line bottom-right -->
+    <svg
+      class="trend-dots"
+      width="180"
+      height="60"
+      viewBox="0 0 180 60"
+      fill="none"
+    >
+      <circle cx="20" cy="50" r="4" fill="#7986CB" opacity="0.3" />
+      <circle cx="60" cy="38" r="5" fill="#C5CAE9" opacity="0.25" />
+      <circle cx="100" cy="24" r="6" fill="#00C853" opacity="0.35" />
+      <circle cx="140" cy="12" r="7" fill="#00C853" opacity="0.25" />
+      <polyline
+        points="20,50 60,38 100,24 140,12"
+        stroke="#00C853"
+        stroke-width="1.5"
+        fill="none"
+        opacity="0.2"
+        stroke-linecap="round"
+      />
+    </svg>
+  </body>
+</html>
