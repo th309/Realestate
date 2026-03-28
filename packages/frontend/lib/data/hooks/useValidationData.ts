@@ -5,14 +5,14 @@
  * Used by the /scores/accuracy page for interactive charts.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import {
   fetchValidationSummary,
   fetchValidationQuintiles,
   fetchValidationScatter,
   fetchValidationTimeSeries,
   fetchValidationGeography,
-} from '../fetchers';
+} from "../fetchers";
 import type {
   ValidationGeography,
   ValidationScoreType,
@@ -21,7 +21,7 @@ import type {
   ValidationScatterPoint,
   ValidationTimeSeriesPoint,
   ValidationGeographyBreakdown,
-} from '../fetchers';
+} from "../fetchers";
 
 // ============================================================================
 // SUMMARY
@@ -33,11 +33,13 @@ export interface UseValidationSummaryOptions {
   enabled?: boolean;
 }
 
-export function useValidationSummary(options: UseValidationSummaryOptions = {}) {
+export function useValidationSummary(
+  options: UseValidationSummaryOptions = {},
+) {
   const { geography, scoreType, enabled = true } = options;
 
   return useQuery<ValidationSummary>({
-    queryKey: ['validation', 'summary', geography, scoreType],
+    queryKey: ["validation", "summary", geography, scoreType],
     queryFn: () =>
       fetchValidationSummary({
         geography,
@@ -55,15 +57,17 @@ export function useValidationSummary(options: UseValidationSummaryOptions = {}) 
 export interface UseValidationQuintilesOptions {
   geography?: ValidationGeography;
   scoreType?: ValidationScoreType;
-  horizon?: '1y' | '3y';
+  horizon?: "1y" | "3y";
   enabled?: boolean;
 }
 
-export function useValidationQuintiles(options: UseValidationQuintilesOptions = {}) {
-  const { geography, scoreType, horizon = '1y', enabled = true } = options;
+export function useValidationQuintiles(
+  options: UseValidationQuintilesOptions = {},
+) {
+  const { geography, scoreType, horizon = "1y", enabled = true } = options;
 
   return useQuery<ValidationQuintile[]>({
-    queryKey: ['validation', 'quintiles', geography, scoreType, horizon],
+    queryKey: ["validation", "quintiles", geography, scoreType, horizon],
     queryFn: () =>
       fetchValidationQuintiles({
         geography,
@@ -83,19 +87,29 @@ export interface UseValidationScatterOptions {
   geography?: ValidationGeography;
   scoreType?: ValidationScoreType;
   limit?: number;
+  horizon?: "1y" | "3y";
   enabled?: boolean;
 }
 
-export function useValidationScatter(options: UseValidationScatterOptions = {}) {
-  const { geography, scoreType, limit, enabled = true } = options;
+export function useValidationScatter(
+  options: UseValidationScatterOptions = {},
+) {
+  const {
+    geography,
+    scoreType,
+    limit,
+    horizon = "3y",
+    enabled = true,
+  } = options;
 
   return useQuery<ValidationScatterPoint[]>({
-    queryKey: ['validation', 'scatter', geography, scoreType, limit],
+    queryKey: ["validation", "scatter", geography, scoreType, limit, horizon],
     queryFn: () =>
       fetchValidationScatter({
         geography,
         score_type: scoreType,
         limit,
+        horizon,
       }),
     enabled,
     staleTime: 2 * 60 * 60 * 1000,
@@ -109,18 +123,22 @@ export function useValidationScatter(options: UseValidationScatterOptions = {}) 
 export interface UseValidationTimeSeriesOptions {
   geography?: ValidationGeography;
   scoreType?: ValidationScoreType;
+  horizon?: "1y" | "3y";
   enabled?: boolean;
 }
 
-export function useValidationTimeSeries(options: UseValidationTimeSeriesOptions = {}) {
-  const { geography, scoreType, enabled = true } = options;
+export function useValidationTimeSeries(
+  options: UseValidationTimeSeriesOptions = {},
+) {
+  const { geography, scoreType, horizon = "1y", enabled = true } = options;
 
   return useQuery<ValidationTimeSeriesPoint[]>({
-    queryKey: ['validation', 'time-series', geography, scoreType],
+    queryKey: ["validation", "time-series", geography, scoreType, horizon],
     queryFn: () =>
       fetchValidationTimeSeries({
         geography,
         score_type: scoreType,
+        horizon,
       }),
     enabled,
     staleTime: 2 * 60 * 60 * 1000,
@@ -136,11 +154,13 @@ export interface UseValidationGeographyOptions {
   enabled?: boolean;
 }
 
-export function useValidationGeography(options: UseValidationGeographyOptions = {}) {
+export function useValidationGeography(
+  options: UseValidationGeographyOptions = {},
+) {
   const { scoreType, enabled = true } = options;
 
   return useQuery<ValidationGeographyBreakdown[]>({
-    queryKey: ['validation', 'geography', scoreType],
+    queryKey: ["validation", "geography", scoreType],
     queryFn: () =>
       fetchValidationGeography({
         score_type: scoreType,

@@ -4,14 +4,14 @@
  * API functions for score validation and quintile performance data.
  */
 
-import { fetchAPI, fetchAPIWithParams } from './base';
+import { fetchAPI, fetchAPIWithParams } from "./base";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type ValidationGeography = 'metro' | 'county' | 'zip';
-export type ValidationScoreType = 'homeready' | 'investoredge' | 'markethealth';
+export type ValidationGeography = "metro" | "county" | "zip";
+export type ValidationScoreType = "homeready" | "investoredge" | "markethealth";
 
 export interface QuintilePerformanceData {
   [key: string]: unknown;
@@ -68,7 +68,7 @@ export interface ValidationTimeSeriesPoint {
 }
 
 export interface ValidationGeographyBreakdown {
-  geographyType: 'metro' | 'county' | 'zip';
+  geographyType: "metro" | "county" | "zip";
   totalScores: number;
   avgCorrelation1y: number;
   avgCorrelation3y: number;
@@ -92,16 +92,19 @@ export interface ValidationGeographyBreakdown {
 export async function fetchQuintilePerformance<T = QuintilePerformanceData>(
   scoreType: string,
 ): Promise<T> {
-  return fetchAPIWithParams<T>('/api/admin/scores/validation/quintile-performance', {
-    score_type: scoreType,
-  });
+  return fetchAPIWithParams<T>(
+    "/api/admin/scores/validation/quintile-performance",
+    {
+      score_type: scoreType,
+    },
+  );
 }
 
 /**
  * Fetch report templates list.
  */
 export async function fetchReportTemplates<T = unknown>(): Promise<T[]> {
-  const data = await fetchAPI<T[]>('/api/reports/templates');
+  const data = await fetchAPI<T[]>("/api/reports/templates");
   return Array.isArray(data) ? data : [];
 }
 
@@ -112,7 +115,10 @@ export async function fetchValidationSummary(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
 }): Promise<ValidationSummary> {
-  return fetchAPIWithParams<ValidationSummary>('/api/admin/scores/validation/summary', params);
+  return fetchAPIWithParams<ValidationSummary>(
+    "/api/admin/scores/validation/summary",
+    params,
+  );
 }
 
 /**
@@ -121,9 +127,12 @@ export async function fetchValidationSummary(params?: {
 export async function fetchValidationQuintiles(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
-  horizon?: '1y' | '3y';
+  horizon?: "1y" | "3y";
 }): Promise<ValidationQuintile[]> {
-  return fetchAPIWithParams<ValidationQuintile[]>('/api/admin/scores/validation/quintile-analysis', params);
+  return fetchAPIWithParams<ValidationQuintile[]>(
+    "/api/admin/scores/validation/quintile-analysis",
+    params,
+  );
 }
 
 /**
@@ -133,8 +142,12 @@ export async function fetchValidationScatter(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
   limit?: number;
+  horizon?: "1y" | "3y";
 }): Promise<ValidationScatterPoint[]> {
-  return fetchAPIWithParams<ValidationScatterPoint[]>('/api/admin/scores/validation/scatter', params);
+  return fetchAPIWithParams<ValidationScatterPoint[]>(
+    "/api/admin/scores/validation/scatter",
+    params,
+  );
 }
 
 /**
@@ -143,8 +156,12 @@ export async function fetchValidationScatter(params?: {
 export async function fetchValidationTimeSeries(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
+  horizon?: "1y" | "3y";
 }): Promise<ValidationTimeSeriesPoint[]> {
-  return fetchAPIWithParams<ValidationTimeSeriesPoint[]>('/api/admin/scores/validation/time-series', params);
+  return fetchAPIWithParams<ValidationTimeSeriesPoint[]>(
+    "/api/admin/scores/validation/time-series",
+    params,
+  );
 }
 
 /**
@@ -153,5 +170,8 @@ export async function fetchValidationTimeSeries(params?: {
 export async function fetchValidationGeography(params?: {
   score_type?: ValidationScoreType;
 }): Promise<ValidationGeographyBreakdown[]> {
-  return fetchAPIWithParams<ValidationGeographyBreakdown[]>('/api/admin/scores/validation/geography-breakdown', params);
+  return fetchAPIWithParams<ValidationGeographyBreakdown[]>(
+    "/api/admin/scores/validation/geography-breakdown",
+    params,
+  );
 }
