@@ -11,6 +11,16 @@ import { fetchAPI, fetchAPIRaw } from "./base";
 // Types
 // ---------------------------------------------------------------------------
 
+/** Widget configuration stored with an embed token for the Embed Builder wizard. */
+export interface EmbedConfig {
+  widgetType: string;
+  embedPath: string;
+  geographyName: string;
+  width: number;
+  height: number;
+  snippet: string;
+}
+
 /** Full embed token — includes the token value (only returned on creation). */
 export interface EmbedToken {
   id: string;
@@ -19,6 +29,8 @@ export interface EmbedToken {
   allowed_origins: string[];
   widget_types: string[];
   is_active: boolean;
+  is_draft?: boolean;
+  embed_config?: EmbedConfig | null;
   created_at: string;
 }
 
@@ -29,6 +41,7 @@ export interface EmbedTokenListItem {
   allowed_origins: string[];
   widget_types: string[];
   is_active: boolean;
+  embed_config?: EmbedConfig | null;
   created_at: string;
 }
 
@@ -157,7 +170,13 @@ export async function fetchEmbedMapData(
  */
 export async function createOrgEmbedToken(
   slug: string,
-  data: { name: string; allowed_origins: string[]; widget_types: string[] },
+  data: {
+    name: string;
+    allowed_origins: string[];
+    widget_types: string[];
+    is_draft?: boolean;
+    embed_config?: EmbedConfig | null;
+  },
 ): Promise<EmbedToken> {
   const res = await fetchAPIRaw(`/api/org/${slug}/embed-tokens`, {
     method: "POST",
@@ -177,7 +196,13 @@ export async function createOrgEmbedToken(
 export async function updateOrgEmbedToken(
   slug: string,
   tokenId: string,
-  data: { name?: string; allowed_origins?: string[]; widget_types?: string[] },
+  data: {
+    name?: string;
+    allowed_origins?: string[];
+    widget_types?: string[];
+    is_draft?: boolean;
+    embed_config?: EmbedConfig | null;
+  },
 ): Promise<EmbedTokenListItem> {
   const res = await fetchAPIRaw(`/api/org/${slug}/embed-tokens/${tokenId}`, {
     method: "PUT",

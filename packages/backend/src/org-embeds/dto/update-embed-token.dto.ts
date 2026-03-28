@@ -13,6 +13,8 @@ import {
   ArrayMinSize,
   IsIn,
   IsOptional,
+  IsBoolean,
+  IsObject,
 } from 'class-validator';
 
 export class UpdateEmbedTokenDto {
@@ -35,4 +37,12 @@ export class UpdateEmbedTokenDto {
     each: true,
   })
   widget_types?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  is_draft?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  embed_config?: Record<string, unknown>;
 }
