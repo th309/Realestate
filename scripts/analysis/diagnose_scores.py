@@ -55,51 +55,168 @@ logger = logging.getLogger(__name__)
 
 SUPABASE_PROJECT_REF = "pysflbhpnqwoczyuaaif"
 
+# v3.0 formula weights — matches packages/backend/src/scoring/formula-weights.ts
+# XGBoost (metro, ZIP), LightGBM (county). SHAP-distilled linear weights.
 CURRENT_WEIGHTS = {
-    "homeready": {
-        "metrics": [
-            {"name": "hotness_score", "weight": 0.706, "direction": 1},
-            {"name": "pending_ratio", "weight": 0.152, "direction": 1},
-            {"name": "unemployment_rate_yoy", "weight": 0.057, "direction": -1},
-            {"name": "population_yoy", "weight": 0.054, "direction": -1},
-            {"name": "demand_score", "weight": 0.031, "direction": 1},
-        ],
+    "metro": {
+        "homeready": {
+            "metrics": [
+                {"name": "cen_median_age", "weight": 0.1674, "direction": -1},
+                {"name": "cen_population_yoy", "weight": 0.1605, "direction": -1},
+                {"name": "rf_median_dom", "weight": 0.1364, "direction": -1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.1209, "direction": -1},
+                {"name": "z_inventory", "weight": 0.0958, "direction": 1},
+                {"name": "cen_income_yoy", "weight": 0.0869, "direction": -1},
+                {"name": "cen_homeownership_rate", "weight": 0.0796, "direction": -1},
+                {"name": "cen_rent_as_pct_of_income", "weight": 0.0631, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.0605, "direction": 1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.0289, "direction": -1},
+            ],
+        },
+        "investoredge": {
+            "metrics": [
+                {"name": "z_inventory", "weight": 0.1863, "direction": 1},
+                {"name": "rf_median_dom", "weight": 0.1847, "direction": 1},
+                {"name": "cen_population_yoy", "weight": 0.1332, "direction": 1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.1104, "direction": -1},
+                {"name": "cen_median_age", "weight": 0.0861, "direction": 1},
+                {"name": "cen_income_yoy", "weight": 0.0805, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.074, "direction": -1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.0586, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.0459, "direction": -1},
+                {"name": "cen_rent_as_pct_of_income", "weight": 0.0403, "direction": -1},
+            ],
+        },
+        "markethealth": {
+            "metrics": [
+                {"name": "z_inventory", "weight": 0.2572, "direction": 1},
+                {"name": "cen_population_yoy", "weight": 0.1883, "direction": 1},
+                {"name": "cen_income_yoy", "weight": 0.1747, "direction": -1},
+                {"name": "cen_median_age", "weight": 0.1192, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.0617, "direction": 1},
+                {"name": "rf_median_dom", "weight": 0.0595, "direction": 1},
+                {"name": "cen_rent_as_pct_of_income", "weight": 0.0448, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.0418, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.0379, "direction": -1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.0149, "direction": 1},
+            ],
+        },
     },
-    "investoredge": {
-        "metrics": [
-            {"name": "hotness_score", "weight": 0.317, "direction": 1},
-            {"name": "median_gross_rent", "weight": 0.315, "direction": -1},
-            {"name": "affordability_ratio", "weight": 0.188, "direction": -1},
-            {"name": "pending_ratio", "weight": 0.080, "direction": 1},
-            {"name": "homeownership_rate", "weight": 0.047, "direction": 1},
-            {"name": "population_yoy", "weight": 0.035, "direction": -1},
-            {"name": "unemployment_rate_yoy", "weight": 0.018, "direction": -1},
-        ],
+    "county": {
+        "homeready": {
+            "metrics": [
+                {"name": "cen_population_yoy", "weight": 0.2103, "direction": -1},
+                {"name": "calc_income_to_buy", "weight": 0.1312, "direction": -1},
+                {"name": "cen_median_age", "weight": 0.1302, "direction": -1},
+                {"name": "fred_vix", "weight": 0.1127, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.1108, "direction": 1},
+                {"name": "rf_sold_above_list", "weight": 0.0752, "direction": 1},
+                {"name": "price_reduced_share", "weight": 0.0743, "direction": 1},
+                {"name": "econ_gdp_yoy", "weight": 0.073, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.0484, "direction": -1},
+                {"name": "cen_income_yoy", "weight": 0.0337, "direction": -1},
+            ],
+        },
+        "investoredge": {
+            "metrics": [
+                {"name": "cen_population_yoy", "weight": 0.2103, "direction": -1},
+                {"name": "calc_income_to_buy", "weight": 0.1312, "direction": -1},
+                {"name": "cen_median_age", "weight": 0.1302, "direction": -1},
+                {"name": "fred_vix", "weight": 0.1127, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.1108, "direction": 1},
+                {"name": "rf_sold_above_list", "weight": 0.0752, "direction": 1},
+                {"name": "price_reduced_share", "weight": 0.0743, "direction": 1},
+                {"name": "econ_gdp_yoy", "weight": 0.073, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.0484, "direction": -1},
+                {"name": "cen_income_yoy", "weight": 0.0337, "direction": -1},
+            ],
+        },
+        "markethealth": {
+            "metrics": [
+                {"name": "cen_population_yoy", "weight": 0.247, "direction": -1},
+                {"name": "fred_vix", "weight": 0.216, "direction": 1},
+                {"name": "price_reduced_share", "weight": 0.1025, "direction": 1},
+                {"name": "cen_income_yoy", "weight": 0.1005, "direction": 1},
+                {"name": "calc_income_to_buy", "weight": 0.0889, "direction": -1},
+                {"name": "cen_median_age", "weight": 0.0831, "direction": -1},
+                {"name": "econ_gdp_yoy", "weight": 0.049, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.041, "direction": 1},
+                {"name": "rf_sold_above_list", "weight": 0.0391, "direction": -1},
+                {"name": "cen_homeownership_rate", "weight": 0.0329, "direction": 1},
+            ],
+        },
+    },
+    "zip": {
+        "homeready": {
+            "metrics": [
+                {"name": "calc_income_to_buy", "weight": 0.198, "direction": 1},
+                {"name": "rf_median_dom", "weight": 0.161, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.1594, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.1076, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.1056, "direction": 1},
+                {"name": "rf_sold_above_list_yoy", "weight": 0.0667, "direction": -1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.0589, "direction": 1},
+                {"name": "rf_homes_sold_yoy", "weight": 0.053, "direction": -1},
+                {"name": "rf_median_dom_yoy", "weight": 0.053, "direction": 1},
+                {"name": "pending_listing_count_yy", "weight": 0.0368, "direction": -1},
+            ],
+        },
+        "investoredge": {
+            "metrics": [
+                {"name": "calc_income_to_buy", "weight": 0.198, "direction": 1},
+                {"name": "rf_median_dom", "weight": 0.161, "direction": 1},
+                {"name": "cen_homeownership_rate", "weight": 0.1594, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.1076, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.1056, "direction": 1},
+                {"name": "rf_sold_above_list_yoy", "weight": 0.0667, "direction": -1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.0589, "direction": 1},
+                {"name": "rf_homes_sold_yoy", "weight": 0.053, "direction": -1},
+                {"name": "rf_median_dom_yoy", "weight": 0.053, "direction": 1},
+                {"name": "pending_listing_count_yy", "weight": 0.0368, "direction": -1},
+            ],
+        },
+        "markethealth": {
+            "metrics": [
+                {"name": "pending_listing_count_yy", "weight": 0.3396, "direction": 1},
+                {"name": "calc_income_to_buy", "weight": 0.2452, "direction": -1},
+                {"name": "rf_median_dom", "weight": 0.0842, "direction": -1},
+                {"name": "rf_sold_above_list", "weight": 0.0755, "direction": -1},
+                {"name": "cen_homeownership_rate", "weight": 0.0695, "direction": -1},
+                {"name": "rf_avg_sale_to_list", "weight": 0.0676, "direction": 1},
+                {"name": "rf_off_market_in_two_weeks", "weight": 0.0564, "direction": 1},
+                {"name": "rf_sold_above_list_yoy", "weight": 0.0306, "direction": 1},
+                {"name": "rf_homes_sold_yoy", "weight": 0.0165, "direction": -1},
+                {"name": "rf_median_dom_yoy", "weight": 0.0148, "direction": -1},
+            ],
+        },
     },
 }
 
-# All candidate metrics that might appear in z_scores JSONB
+# All candidate metrics across all geos (v3.0 feature set)
 ALL_CANDIDATE_METRICS = [
-    "hotness_score",
-    "demand_score",
-    "pending_ratio",
+    "cen_median_age",
+    "cen_population_yoy",
+    "cen_income_yoy",
+    "cen_homeownership_rate",
+    "cen_rent_as_pct_of_income",
+    "rf_median_dom",
+    "rf_off_market_in_two_weeks",
+    "rf_sold_above_list",
+    "rf_avg_sale_to_list",
+    "rf_sold_above_list_yoy",
+    "rf_homes_sold_yoy",
+    "rf_median_dom_yoy",
+    "z_inventory",
+    "calc_income_to_buy",
+    "fred_vix",
+    "econ_gdp_yoy",
     "price_reduced_share",
-    "supply_score",
-    "median_days_on_market",
-    "population_yoy",
-    "unemployment_rate_yoy",
-    "affordability_ratio",
-    "zhvi_yoy",
-    "inventory_yoy",
-    "rent_price_ratio",
-    "median_gross_rent",
-    "homeownership_rate",
-    "zori_yoy",
+    "pending_listing_count_yy",
 ]
 
-# IC performance targets
-IC_TARGET_MEAN = 0.10
-IC_IR_TARGET = 0.50
+# IC performance targets (v3.0 baseline)
+IC_TARGET_MEAN = 0.20
+IC_IR_TARGET = 2.00
 
 # Quintile spread targets (percentage points)
 QUINTILE_TOP_TARGET = 1.5
@@ -508,14 +625,15 @@ def run_per_metric_analysis(
     df_z: pd.DataFrame,
     score_type: str,
     target: str,
+    geo_level: str = "metro",
 ) -> Dict[str, Any]:
     """
     Step 2.3: For each metric in the formula z_scores, compute rank correlation
     between that metric's z-score and subsequent excess return.
     """
-    logger.info("[2.3] Running per-metric predictive power for %s", score_type)
+    logger.info("[2.3] Running per-metric predictive power for %s/%s", geo_level, score_type)
 
-    formula_metrics = CURRENT_WEIGHTS.get(score_type, {}).get("metrics", [])
+    formula_metrics = CURRENT_WEIGHTS.get(geo_level, {}).get(score_type, {}).get("metrics", [])
     formula_metric_names = {m["name"] for m in formula_metrics}
     formula_direction = {m["name"]: m["direction"] for m in formula_metrics}
     formula_weight = {m["name"]: m["weight"] for m in formula_metrics}
@@ -879,6 +997,7 @@ def test_direction_hypothesis(
     hypothesis: str,
     appreciation_target: str,
     total_return_target: Optional[str] = None,
+    geo_level: str = "metro",
 ) -> Dict[str, Any]:
     """
     Test a specific direction hypothesis for a metric.
@@ -954,7 +1073,7 @@ def test_direction_hypothesis(
             "The current direction assignment may be correct for one target but wrong for the other."
         )
     elif appr_dir is not None:
-        formula_dir = {m["name"]: m["direction"] for m in CURRENT_WEIGHTS.get(score_type, {}).get("metrics", [])}.get(metric_name)
+        formula_dir = {m["name"]: m["direction"] for m in CURRENT_WEIGHTS.get(geo_level, {}).get(score_type, {}).get("metrics", [])}.get(metric_name)
         if formula_dir is not None and formula_dir != appr_dir:
             result["conclusion"] = (
                 f"WRONG DIRECTION: {metric_name} has formula direction={formula_dir} "
@@ -971,7 +1090,7 @@ def test_direction_hypothesis(
 
 
 def run_direction_diagnosis(
-    df: pd.DataFrame, df_z: pd.DataFrame, horizon: str
+    df: pd.DataFrame, df_z: pd.DataFrame, horizon: str, geo_level: str = "metro"
 ) -> Dict[str, Any]:
     """
     Step 2.6: Test specific direction hypotheses.
@@ -1055,12 +1174,13 @@ def run_normalization_impact(
     df_z: pd.DataFrame,
     score_type: str,
     target: str,
+    geo_level: str = "metro",
 ) -> Dict[str, Any]:
     """
     Step 2.7: Compare correlation of raw weighted sum vs min-max normalized
     score against excess return. Quantify if min-max normalization destroys signal.
     """
-    logger.info("[2.7] Running normalization impact analysis for %s", score_type)
+    logger.info("[2.7] Running normalization impact analysis for %s/%s", geo_level, score_type)
 
     df_sub = df[df["score_type"] == score_type].copy()
 
@@ -1079,7 +1199,7 @@ def run_normalization_impact(
     if merged.empty:
         return {"error": "no_matched_data", "summary": "No data matched for normalization analysis."}
 
-    formula_metrics = CURRENT_WEIGHTS.get(score_type, {}).get("metrics", [])
+    formula_metrics = CURRENT_WEIGHTS.get(geo_level, {}).get(score_type, {}).get("metrics", [])
 
     # Reconstruct raw weighted sum from z-scores
     merged["raw_weighted_sum"] = 0.0
@@ -1537,9 +1657,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--score-type",
-        choices=["homeready", "investoredge", "both"],
-        default="both",
-        help="Which score type to analyze (default: both)",
+        choices=["homeready", "investoredge", "markethealth", "all"],
+        default="all",
+        help="Which score type to analyze (default: all)",
     )
     parser.add_argument(
         "--geo-level",
@@ -1577,8 +1697,8 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine score types
-    if args.score_type == "both":
-        score_types = ["homeready", "investoredge"]
+    if args.score_type == "all":
+        score_types = ["homeready", "investoredge", "markethealth"]
     else:
         score_types = [args.score_type]
 
@@ -1644,7 +1764,7 @@ def main() -> None:
             ic_result = run_ic_analysis(df_outcomes, score_type, target)
 
             # 2.3 Per-Metric Analysis
-            metric_result = run_per_metric_analysis(df_outcomes, df_z, score_type, target)
+            metric_result = run_per_metric_analysis(df_outcomes, df_z, score_type, target, geo_level)
 
             # 2.4 Quintile Spread
             quintile_result = run_quintile_analysis(df_outcomes, score_type, target)
@@ -1653,7 +1773,7 @@ def main() -> None:
             stability_result = run_time_stability(df_outcomes, score_type, target)
 
             # 2.7 Normalization Impact
-            norm_result = run_normalization_impact(df_outcomes, df_z, score_type, target)
+            norm_result = run_normalization_impact(df_outcomes, df_z, score_type, target, geo_level)
 
             score_results.append({
                 "score_type": score_type,
@@ -1669,7 +1789,7 @@ def main() -> None:
             })
 
         # 2.6 Direction Diagnosis (runs across score types)
-        direction_result = run_direction_diagnosis(df_outcomes, df_z, args.horizon)
+        direction_result = run_direction_diagnosis(df_outcomes, df_z, args.horizon, geo_level)
 
         # Assemble report for this geo level
         report = {
@@ -1680,7 +1800,7 @@ def main() -> None:
             "score_types_analyzed": score_types,
             "results": score_results,
             "direction_diagnosis": direction_result,
-            "current_formula_weights": CURRENT_WEIGHTS,
+            "current_formula_weights": CURRENT_WEIGHTS.get(geo_level, {}),
             "targets": {
                 "ic_mean": IC_TARGET_MEAN,
                 "ic_ir": IC_IR_TARGET,
