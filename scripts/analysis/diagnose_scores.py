@@ -265,7 +265,7 @@ def _get_sqlalchemy_url() -> str:
     db_password = os.environ.get("SUPABASE_DB_PASSWORD", "IHatedoingpt12")
     ref = SUPABASE_PROJECT_REF
     pooler_host = "aws-1-us-east-1.pooler.supabase.com"
-    return f"postgresql://postgres.{ref}:{quote_plus(db_password)}@{pooler_host}:6543/postgres?sslmode=require"
+    return f"postgresql://postgres.{ref}:{quote_plus(db_password)}@{pooler_host}:6543/postgres?sslmode=require&options=-c%20statement_timeout%3D300000"
 
 
 # ---------------------------------------------------------------------------
@@ -528,6 +528,11 @@ def get_target_col(score_type: str, horizon: str) -> str:
         if horizon == "1y":
             return "excess_total_vs_state_1y"
         return "excess_total_vs_state_3y"
+    elif score_type == "markethealth":
+        # MarketHealth predicts appreciation excess vs state
+        if horizon == "1y":
+            return "excess_vs_state_1y"
+        return "excess_vs_state_3y"
     else:
         raise ValueError(f"Unknown score type: {score_type}")
 
