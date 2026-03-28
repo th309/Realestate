@@ -118,15 +118,19 @@ export const metadata: Metadata = {
   category: "Real Estate Technology",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "16x16" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#6750a4" },
-    { media: "(prefers-color-scheme: dark)", color: "#d0bcff" },
+    { media: "(prefers-color-scheme: light)", color: "#3949AB" },
+    { media: "(prefers-color-scheme: dark)", color: "#7986CB" },
   ],
   width: "device-width",
   initialScale: 1,

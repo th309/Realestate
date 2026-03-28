@@ -29,14 +29,14 @@ interface RetentionByCurveProps {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  free: "#6366f1",
+  free: "#3949AB",
   pro: "#10b981",
   enterprise: "#f59e0b",
-  trial: "#8b5cf6",
+  trial: "#5C6BC0",
 };
 
 function getTierColor(tier: string, index: number): string {
-  const fallbacks = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  const fallbacks = ["#3949AB", "#10b981", "#f59e0b", "#ef4444", "#5C6BC0"];
   return TIER_COLORS[tier.toLowerCase()] ?? fallbacks[index % fallbacks.length];
 }
 

@@ -9,10 +9,10 @@
  * - Date range selection
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
 interface TrendDataPoint {
   date: string;
@@ -28,15 +28,15 @@ interface ConfidenceTrendChartProps {
 }
 
 const SCORE_TYPE_COLORS: Record<string, string> = {
-  market_health: '#10b981',
-  homeready: '#3b82f6',
-  investoredge: '#8b5cf6',
+  market_health: "#10b981",
+  homeready: "#3b82f6",
+  investoredge: "#5C6BC0",
 };
 
 const SCORE_TYPE_LABELS: Record<string, string> = {
-  market_health: 'Market Health',
-  homeready: 'HomeReady',
-  investoredge: 'InvestorEdge',
+  market_health: "Market Health",
+  homeready: "HomeReady",
+  investoredge: "InvestorEdge",
 };
 
 export function ConfidenceTrendChart({
@@ -62,21 +62,24 @@ export function ConfidenceTrendChart({
         months: months.toString(),
       });
 
-      const res = await fetchAPIRaw(`/api/admin/backtest-runs/confidence/trend?${params}`, {
-        credentials: 'include',
-      });
+      const res = await fetchAPIRaw(
+        `/api/admin/backtest-runs/confidence/trend?${params}`,
+        {
+          credentials: "include",
+        },
+      );
       if (!res.ok) {
-        throw new Error('Failed to fetch trend data');
+        throw new Error("Failed to fetch trend data");
       }
 
       const result = await res.json();
       if (result.success) {
         setData(result.data);
       } else {
-        throw new Error(result.error || 'Failed to fetch data');
+        throw new Error(result.error || "Failed to fetch data");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -99,7 +102,9 @@ export function ConfidenceTrendChart({
     const yMin = 0;
     const yMax = 100;
     const yScale = (value: number) =>
-      padding.top + chartHeight - ((value - yMin) / (yMax - yMin)) * chartHeight;
+      padding.top +
+      chartHeight -
+      ((value - yMin) / (yMax - yMin)) * chartHeight;
 
     // X scale (date range)
     const xScale = (index: number) =>
@@ -110,28 +115,28 @@ export function ConfidenceTrendChart({
 
   // Generate path for the line
   const linePath = useMemo(() => {
-    if (data.length === 0) return '';
+    if (data.length === 0) return "";
 
     return data
       .map((point, index) => {
         const x = chartConfig.xScale(index);
         const y = chartConfig.yScale(point.confidence);
-        return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+        return `${index === 0 ? "M" : "L"} ${x} ${y}`;
       })
-      .join(' ');
+      .join(" ");
   }, [data, chartConfig]);
 
   // Generate threshold lines
   const thresholdLines = [
-    { value: 70, label: 'Healthy', color: '#10b981' },
-    { value: 55, label: 'Monitor', color: '#f59e0b' },
-    { value: 40, label: 'Review', color: '#ef4444' },
+    { value: 70, label: "Healthy", color: "#10b981" },
+    { value: 55, label: "Monitor", color: "#f59e0b" },
+    { value: 40, label: "Review", color: "#ef4444" },
   ];
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      year: '2-digit',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      year: "2-digit",
     });
   };
 
@@ -159,7 +164,7 @@ export function ConfidenceTrendChart({
     );
   }
 
-  const color = SCORE_TYPE_COLORS[scoreType] || '#6b7280';
+  const color = SCORE_TYPE_COLORS[scoreType] || "#6b7280";
   const label = SCORE_TYPE_LABELS[scoreType] || scoreType;
 
   return (
@@ -185,7 +190,7 @@ export function ConfidenceTrendChart({
       <svg
         viewBox={`0 0 ${chartConfig.width} ${chartConfig.height}`}
         className="w-full h-auto"
-        style={{ maxHeight: '300px' }}
+        style={{ maxHeight: "300px" }}
       >
         {/* Grid lines */}
         {[0, 25, 50, 75, 100].map((value) => (
@@ -240,7 +245,9 @@ export function ConfidenceTrendChart({
         {/* X-axis labels */}
         {data.map((point, index) => {
           // Only show labels for every few points to avoid crowding
-          const showLabel = index === 0 || index === data.length - 1 ||
+          const showLabel =
+            index === 0 ||
+            index === data.length - 1 ||
             (data.length > 6 ? index % Math.ceil(data.length / 6) === 0 : true);
           if (!showLabel) return null;
 
@@ -351,19 +358,22 @@ export function ConfidenceTrendChart({
         <div>
           <div className="text-on-surface-variant">Average</div>
           <div className="font-medium text-on-surface">
-            {(data.reduce((sum, p) => sum + p.confidence, 0) / data.length).toFixed(1)}%
+            {(
+              data.reduce((sum, p) => sum + p.confidence, 0) / data.length
+            ).toFixed(1)}
+            %
           </div>
         </div>
         <div>
           <div className="text-on-surface-variant">Min</div>
           <div className="font-medium text-on-surface">
-            {Math.min(...data.map(p => p.confidence)).toFixed(1)}%
+            {Math.min(...data.map((p) => p.confidence)).toFixed(1)}%
           </div>
         </div>
         <div>
           <div className="text-on-surface-variant">Max</div>
           <div className="font-medium text-on-surface">
-            {Math.max(...data.map(p => p.confidence)).toFixed(1)}%
+            {Math.max(...data.map((p) => p.confidence)).toFixed(1)}%
           </div>
         </div>
       </div>
@@ -385,7 +395,9 @@ export function MultiSeriesTrendChart({
   geographyType: string;
   months?: number;
 }) {
-  const [seriesData, setSeriesData] = useState<Record<string, TrendDataPoint[]>>({});
+  const [seriesData, setSeriesData] = useState<
+    Record<string, TrendDataPoint[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -406,9 +418,12 @@ export function MultiSeriesTrendChart({
               months: months.toString(),
             });
 
-            const res = await fetchAPIRaw(`/api/admin/backtest-runs/confidence/trend?${params}`, {
-              credentials: 'include',
-            });
+            const res = await fetchAPIRaw(
+              `/api/admin/backtest-runs/confidence/trend?${params}`,
+              {
+                credentials: "include",
+              },
+            );
             if (res.ok) {
               const result = await res.json();
               if (result.success) {
@@ -420,7 +435,7 @@ export function MultiSeriesTrendChart({
 
         setSeriesData(results);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
       } finally {
         setLoading(false);
       }
@@ -459,14 +474,20 @@ export function MultiSeriesTrendChart({
           <div key={scoreType} className="flex items-center gap-2 text-sm">
             <span
               className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: SCORE_TYPE_COLORS[scoreType] || '#6b7280' }}
+              style={{
+                backgroundColor: SCORE_TYPE_COLORS[scoreType] || "#6b7280",
+              }}
             ></span>
             <span className="text-on-surface-variant">
               {SCORE_TYPE_LABELS[scoreType] || scoreType}
             </span>
             {seriesData[scoreType]?.length > 0 && (
               <span className="text-on-surface font-medium">
-                ({seriesData[scoreType][seriesData[scoreType].length - 1]?.confidence.toFixed(0)}%)
+                (
+                {seriesData[scoreType][
+                  seriesData[scoreType].length - 1
+                ]?.confidence.toFixed(0)}
+                %)
               </span>
             )}
           </div>

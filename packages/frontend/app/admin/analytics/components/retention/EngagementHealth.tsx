@@ -54,8 +54,8 @@ function StickinessCard({ value }: { value: number }) {
   return (
     <div className="bg-surface-container rounded-xl p-5">
       <div className="flex items-start justify-between mb-3">
-        <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-purple-700" />
+        <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-indigo-700" />
         </div>
         <span
           className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}
@@ -100,7 +100,7 @@ export function EngagementHealth({
       label: "Monthly Active Users",
       value: formatCount(mau),
       subLabel: "Unique users last 30d",
-      colorClass: "bg-violet-100 text-violet-700",
+      colorClass: "bg-indigo-100 text-indigo-700",
     },
   ];
 

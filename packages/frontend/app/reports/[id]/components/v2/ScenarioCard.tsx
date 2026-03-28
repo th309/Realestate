@@ -46,8 +46,8 @@ function getScenarioAccent(
   if (total <= 1) {
     return {
       borderClass: "border-[var(--report-gold)]",
-      badgeClass: "bg-purple-50 text-purple-700",
-      valueBgClass: "bg-purple-50",
+      badgeClass: "bg-indigo-50 text-indigo-700",
+      valueBgClass: "bg-indigo-50",
     };
   }
   if (index === 0) {

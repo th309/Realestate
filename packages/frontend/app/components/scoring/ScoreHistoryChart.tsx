@@ -12,9 +12,9 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -25,8 +25,8 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { fetchAPI } from '@/lib/data';
+} from "recharts";
+import { fetchAPI } from "@/lib/data";
 
 interface HistoryDataPoint {
   date: string;
@@ -41,20 +41,20 @@ interface HistoryDataPoint {
 interface ExtendedHistory {
   data: HistoryDataPoint[];
   years: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   scoreChange: number;
 }
 
 interface Validation {
   hasOutcomes: boolean;
   excessReturn3Y?: number;
-  predictedVsActual?: 'outperformed' | 'underperformed' | 'matched';
+  predictedVsActual?: "outperformed" | "underperformed" | "matched";
 }
 
 interface ScoreHistoryChartProps {
   geographyType: string;
   geographyId: string;
-  scoreType: 'homeready' | 'investoredge' | 'markethealth';
+  scoreType: "homeready" | "investoredge" | "markethealth";
   initialYears?: 3 | 5;
   className?: string;
 }
@@ -64,7 +64,7 @@ export function ScoreHistoryChart({
   geographyId,
   scoreType,
   initialYears = 3,
-  className = '',
+  className = "",
 }: ScoreHistoryChartProps) {
   const [years, setYears] = useState<3 | 5>(initialYears);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@ export function ScoreHistoryChart({
         const data = await fetchAPI<any>(endpoint);
 
         if (!data?.scores) {
-          throw new Error('No score data received');
+          throw new Error("No score data received");
         }
 
         // Extract the specific score type's history
@@ -96,7 +96,9 @@ export function ScoreHistoryChart({
           setValidation(scoreData.validation);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch history');
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch history",
+        );
       } finally {
         setLoading(false);
       }
@@ -115,7 +117,8 @@ export function ScoreHistoryChart({
       dateLabel: formatDateLabel(point.date),
       score: point.score,
       actualReturn: years === 3 ? point.actualReturn3Y : point.actualReturn1Y,
-      benchmarkReturn: years === 3 ? point.benchmarkReturn3Y : point.benchmarkReturn1Y,
+      benchmarkReturn:
+        years === 3 ? point.benchmarkReturn3Y : point.benchmarkReturn1Y,
       excessReturn: point.excessReturn3Y,
     }));
   }, [history, years]);
@@ -123,12 +126,14 @@ export function ScoreHistoryChart({
   // Check if we have any return data
   const hasReturnData = useMemo(
     () => chartData.some((d) => d.actualReturn != null),
-    [chartData]
+    [chartData],
   );
 
   if (loading) {
     return (
-      <div className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}>
+      <div
+        className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}
+      >
         <div className="h-4 w-32 bg-outline-variant/30 rounded mb-4 animate-pulse" />
         <div className="h-48 bg-outline-variant/20 rounded animate-pulse" />
       </div>
@@ -137,7 +142,9 @@ export function ScoreHistoryChart({
 
   if (error) {
     return (
-      <div className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}>
+      <div
+        className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}
+      >
         <p className="text-sm text-error">{error}</p>
       </div>
     );
@@ -145,20 +152,26 @@ export function ScoreHistoryChart({
 
   if (!history || chartData.length === 0) {
     return (
-      <div className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}>
-        <p className="text-sm text-on-surface-variant">No history data available.</p>
+      <div
+        className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}
+      >
+        <p className="text-sm text-on-surface-variant">
+          No history data available.
+        </p>
       </div>
     );
   }
 
   const scoreLabel = {
-    homeready: 'HomeReady',
-    investoredge: 'InvestorEdge',
-    markethealth: 'Market Health',
+    homeready: "HomeReady",
+    investoredge: "InvestorEdge",
+    markethealth: "Market Health",
   }[scoreType];
 
   return (
-    <div className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}>
+    <div
+      className={`bg-surface-container-low border border-outline-variant rounded-xl p-4 ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -176,8 +189,8 @@ export function ScoreHistoryChart({
             onClick={() => setYears(3)}
             className={`px-3 py-1 text-xs font-medium transition-colors ${
               years === 3
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface text-on-surface hover:bg-surface-container'
+                ? "bg-primary text-on-primary"
+                : "bg-surface text-on-surface hover:bg-surface-container"
             }`}
           >
             3Y
@@ -186,8 +199,8 @@ export function ScoreHistoryChart({
             onClick={() => setYears(5)}
             className={`px-3 py-1 text-xs font-medium transition-colors ${
               years === 5
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface text-on-surface hover:bg-surface-container'
+                ? "bg-primary text-on-primary"
+                : "bg-surface text-on-surface hover:bg-surface-container"
             }`}
           >
             5Y
@@ -199,35 +212,51 @@ export function ScoreHistoryChart({
       <div className="flex gap-4 mb-4">
         <div>
           <p className="text-xs text-on-surface-variant">Score Change</p>
-          <p className={`text-sm font-semibold ${
-            history.scoreChange > 0 ? 'text-green-600' : history.scoreChange < 0 ? 'text-red-600' : 'text-on-surface'
-          }`}>
-            {history.scoreChange > 0 ? '+' : ''}{history.scoreChange.toFixed(1)} pts
+          <p
+            className={`text-sm font-semibold ${
+              history.scoreChange > 0
+                ? "text-green-600"
+                : history.scoreChange < 0
+                  ? "text-red-600"
+                  : "text-on-surface"
+            }`}
+          >
+            {history.scoreChange > 0 ? "+" : ""}
+            {history.scoreChange.toFixed(1)} pts
           </p>
         </div>
         {validation?.hasOutcomes && validation.excessReturn3Y != null && (
           <div>
             <p className="text-xs text-on-surface-variant">3Y Excess Return</p>
-            <p className={`text-sm font-semibold ${
-              validation.excessReturn3Y > 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {validation.excessReturn3Y > 0 ? '+' : ''}{validation.excessReturn3Y.toFixed(2)}%
+            <p
+              className={`text-sm font-semibold ${
+                validation.excessReturn3Y > 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {validation.excessReturn3Y > 0 ? "+" : ""}
+              {validation.excessReturn3Y.toFixed(2)}%
             </p>
           </div>
         )}
         {validation?.hasOutcomes && validation.predictedVsActual && (
           <div>
             <p className="text-xs text-on-surface-variant">Prediction</p>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              validation.predictedVsActual === 'outperformed'
-                ? 'bg-green-100 text-green-800'
-                : validation.predictedVsActual === 'underperformed'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-            }`}>
-              {validation.predictedVsActual === 'outperformed' && 'Outperformed'}
-              {validation.predictedVsActual === 'underperformed' && 'Underperformed'}
-              {validation.predictedVsActual === 'matched' && 'Matched'}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                validation.predictedVsActual === "outperformed"
+                  ? "bg-green-100 text-green-800"
+                  : validation.predictedVsActual === "underperformed"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800"
+              }`}
+            >
+              {validation.predictedVsActual === "outperformed" &&
+                "Outperformed"}
+              {validation.predictedVsActual === "underperformed" &&
+                "Underperformed"}
+              {validation.predictedVsActual === "matched" && "Matched"}
             </span>
           </div>
         )}
@@ -236,22 +265,34 @@ export function ScoreHistoryChart({
       {/* Chart */}
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: hasReturnData ? 50 : 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.5} />
+          <LineChart
+            data={chartData}
+            margin={{
+              top: 5,
+              right: hasReturnData ? 50 : 10,
+              left: 0,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--outline-variant)"
+              opacity={0.5}
+            />
             <XAxis
               dataKey="dateLabel"
-              tick={{ fontSize: 10, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
               interval="preserveStartEnd"
             />
             {/* Score Y-Axis (left) */}
             <YAxis
               yAxisId="score"
               domain={[0, 100]}
-              tick={{ fontSize: 10, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
               width={35}
             />
             {/* Return Y-Axis (right) - only if we have return data */}
@@ -259,38 +300,41 @@ export function ScoreHistoryChart({
               <YAxis
                 yAxisId="return"
                 orientation="right"
-                tick={{ fontSize: 10, fill: 'var(--on-surface-variant)' }}
+                tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--outline-variant)' }}
+                axisLine={{ stroke: "var(--outline-variant)" }}
                 tickFormatter={(v) => `${v}%`}
                 width={45}
               />
             )}
             <Tooltip
               contentStyle={{
-                backgroundColor: 'var(--surface-container)',
-                border: '1px solid var(--outline-variant)',
-                borderRadius: '8px',
-                fontSize: '11px',
+                backgroundColor: "var(--surface-container)",
+                border: "1px solid var(--outline-variant)",
+                borderRadius: "8px",
+                fontSize: "11px",
               }}
               formatter={(value: number, name: string) => {
-                if (name === 'Score') return [value?.toFixed(1), name];
+                if (name === "Score") return [value?.toFixed(1), name];
                 return [`${value?.toFixed(2)}%`, name];
               }}
             />
-            <Legend
-              wrapperStyle={{ fontSize: '11px' }}
-              iconType="line"
-            />
+            <Legend wrapperStyle={{ fontSize: "11px" }} iconType="line" />
             {/* Reference line at 50 score */}
-            <ReferenceLine yAxisId="score" y={50} stroke="var(--outline)" strokeDasharray="3 3" opacity={0.5} />
+            <ReferenceLine
+              yAxisId="score"
+              y={50}
+              stroke="var(--outline)"
+              strokeDasharray="3 3"
+              opacity={0.5}
+            />
             {/* Score line */}
             <Line
               yAxisId="score"
               type="monotone"
               dataKey="score"
               name="Score"
-              stroke="var(--color-indigo-500, #6366f1)"
+              stroke="var(--color-indigo-500, #3949AB)"
               strokeWidth={2}
               dot={false}
               connectNulls
@@ -343,7 +387,7 @@ export function ScoreHistoryChart({
 
 function formatDateLabel(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
 export default ScoreHistoryChart;

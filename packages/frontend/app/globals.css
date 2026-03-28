@@ -7,103 +7,103 @@
    ============================================================================= */
 
 :root {
-  /* M3 Primary Colors */
-  --md-primary: #6750a4;
+  /* PropertyIQ Primary — Indigo tonal range (brand spec §3.1) */
+  --md-primary: #3949ab;
   --md-on-primary: #ffffff;
-  --md-primary-container: #eaddff;
-  --md-on-primary-container: #21005d;
+  --md-primary-container: #e8eaf6;
+  --md-on-primary-container: #1a237e;
 
-  /* M3 Secondary Colors */
-  --md-secondary: #625b71;
+  /* PropertyIQ Secondary — Medium Indigo */
+  --md-secondary: #5c6bc0;
   --md-on-secondary: #ffffff;
-  --md-secondary-container: #e8def8;
-  --md-on-secondary-container: #1d192b;
+  --md-secondary-container: #c5cae9;
+  --md-on-secondary-container: #1a237e;
 
-  /* M3 Tertiary Colors */
-  --md-tertiary: #7d5260;
+  /* PropertyIQ Tertiary — Accent Green (brand spec §3.2) */
+  --md-tertiary: #00c853;
   --md-on-tertiary: #ffffff;
-  --md-tertiary-container: #ffd8e4;
-  --md-on-tertiary-container: #31111d;
+  --md-tertiary-container: #e8f5e9;
+  --md-on-tertiary-container: #1b5e20;
 
-  /* M3 Error Colors */
+  /* PropertyIQ Error — matches brand spec §3.2 */
   --md-error: #b3261e;
   --md-on-error: #ffffff;
   --md-error-container: #f9dedc;
   --md-on-error-container: #410e0b;
 
-  /* M3 Surface Colors (Light Mode) */
-  --md-surface: #fef7ff;
-  --md-surface-dim: #ded8e1;
-  --md-surface-bright: #fef7ff;
+  /* PropertyIQ Surfaces — Light Mode (blue-neutral, no purple tint) */
+  --md-surface: #fafbff;
+  --md-surface-dim: #e8eaf6;
+  --md-surface-bright: #fafbff;
   --md-surface-container-lowest: #ffffff;
-  --md-surface-container-low: #f7f2fa;
-  --md-surface-container: #f3edf7;
-  --md-surface-container-high: #ece6f0;
-  --md-surface-container-highest: #e6e0e9;
-  --md-on-surface: #1d1b20;
+  --md-surface-container-low: #f4f5fb;
+  --md-surface-container: #eeeff7;
+  --md-surface-container-high: #e8eaf6;
+  --md-surface-container-highest: #e0e3ee;
+  --md-on-surface: #1a237e;
   --md-on-surface-variant: #49454f;
 
-  /* M3 Outline Colors */
+  /* PropertyIQ Outline (brand spec §3.3) */
   --md-outline: #79747e;
   --md-outline-variant: #cac4d0;
 
-  /* M3 Inverse Colors */
-  --md-inverse-surface: #322f35;
-  --md-inverse-on-surface: #f5eff7;
-  --md-inverse-primary: #d0bcff;
+  /* PropertyIQ Inverse */
+  --md-inverse-surface: #1a237e;
+  --md-inverse-on-surface: #e8eaf6;
+  --md-inverse-primary: #c5cae9;
 
   /* Legacy mappings for compatibility */
   --background: var(--md-surface);
   --foreground: var(--md-on-surface);
 }
 
-/* M3 Dark Mode Colors */
+/* PropertyIQ Dark Mode (brand spec §3.4) */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* M3 Primary Colors - Dark */
-    --md-primary: #d0bcff;
-    --md-on-primary: #381e72;
-    --md-primary-container: #4f378b;
-    --md-on-primary-container: #eaddff;
+    /* Primary — lightened indigo for dark backgrounds */
+    --md-primary: #7986cb;
+    --md-on-primary: #1a237e;
+    --md-primary-container: #283593;
+    --md-on-primary-container: #c5cae9;
 
-    /* M3 Secondary Colors - Dark */
-    --md-secondary: #ccc2dc;
-    --md-on-secondary: #332d41;
-    --md-secondary-container: #4a4458;
-    --md-on-secondary-container: #e8def8;
+    /* Secondary — lighter indigo tones */
+    --md-secondary: #9fa8da;
+    --md-on-secondary: #1a237e;
+    --md-secondary-container: #303f9f;
+    --md-on-secondary-container: #c5cae9;
 
-    /* M3 Tertiary Colors - Dark */
-    --md-tertiary: #efb8c8;
-    --md-on-tertiary: #492532;
-    --md-tertiary-container: #633b48;
-    --md-on-tertiary-container: #ffd8e4;
+    /* Tertiary — accent green (same hue, adjusted lightness) */
+    --md-tertiary: #69f0ae;
+    --md-on-tertiary: #1b5e20;
+    --md-tertiary-container: #2e7d32;
+    --md-on-tertiary-container: #e8f5e9;
 
-    /* M3 Error Colors - Dark */
+    /* Error — lightened for dark surfaces */
     --md-error: #f2b8b5;
     --md-on-error: #601410;
     --md-error-container: #8c1d18;
     --md-on-error-container: #f9dedc;
 
-    /* M3 Surface Colors - Dark */
-    --md-surface: #141218;
-    --md-surface-dim: #141218;
-    --md-surface-bright: #3b383e;
-    --md-surface-container-lowest: #0f0d13;
-    --md-surface-container-low: #1d1b20;
-    --md-surface-container: #211f26;
-    --md-surface-container-high: #2b2930;
-    --md-surface-container-highest: #36343b;
-    --md-on-surface: #e6e0e9;
-    --md-on-surface-variant: #cac4d0;
+    /* Surfaces — deep navy (brand spec §3.4) */
+    --md-surface: #1a1a2e;
+    --md-surface-dim: #1a1a2e;
+    --md-surface-bright: #2a2a40;
+    --md-surface-container-lowest: #141428;
+    --md-surface-container-low: #16213e;
+    --md-surface-container: #1a2744;
+    --md-surface-container-high: #1e2d4a;
+    --md-surface-container-highest: #243556;
+    --md-on-surface: #e8eaf6;
+    --md-on-surface-variant: #c5cae9;
 
-    /* M3 Outline Colors - Dark */
-    --md-outline: #938f99;
-    --md-outline-variant: #49454f;
+    /* Outline — lightened for dark mode */
+    --md-outline: #9fa8da;
+    --md-outline-variant: #3949ab;
 
-    /* M3 Inverse Colors - Dark */
-    --md-inverse-surface: #e6e0e9;
-    --md-inverse-on-surface: #322f35;
-    --md-inverse-primary: #6750a4;
+    /* Inverse */
+    --md-inverse-surface: #e8eaf6;
+    --md-inverse-on-surface: #1a237e;
+    --md-inverse-primary: #3949ab;
 
     /* Legacy mappings */
     --background: var(--md-surface);

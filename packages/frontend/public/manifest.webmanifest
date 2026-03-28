@@ -4,8 +4,8 @@
   "description": "AI-powered real estate market intelligence",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffbfe",
-  "theme_color": "#6750a4",
+  "background_color": "#FAFBFF",
+  "theme_color": "#3949AB",
   "icons": [
     {
       "src": "/icon-192.png",

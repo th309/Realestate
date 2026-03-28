@@ -5,9 +5,9 @@
  * Demonstrates that higher scores lead to higher returns.
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -17,8 +17,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { fetchAPI } from '@/lib/data';
+} from "recharts";
+import { fetchAPI } from "@/lib/data";
 
 interface QuintileData {
   quintile: number;
@@ -38,10 +38,14 @@ interface QuintileData {
 interface Props {
   scoreType?: string;
   geography?: string;
-  horizon: '1y' | '3y';
+  horizon: "1y" | "3y";
 }
 
-export function QuintilePerformanceChart({ scoreType, geography, horizon }: Props) {
+export function QuintilePerformanceChart({
+  scoreType,
+  geography,
+  horizon,
+}: Props) {
   const [data, setData] = useState<QuintileData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +57,9 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
 
       try {
         const params = new URLSearchParams();
-        if (scoreType) params.append('score_type', scoreType);
-        if (geography) params.append('geography', geography);
-        params.append('horizon', horizon);
+        if (scoreType) params.append("score_type", scoreType);
+        if (geography) params.append("geography", geography);
+        params.append("horizon", horizon);
 
         const queryString = params.toString();
         const endpoint = `/api/admin/scores/validation/quintile-analysis?${queryString}`;
@@ -63,7 +67,9 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
         const result = await fetchAPI<QuintileData[]>(endpoint);
         setData(result || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch quintile data');
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch quintile data",
+        );
       } finally {
         setLoading(false);
       }
@@ -84,7 +90,9 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
   if (error) {
     return (
       <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-on-surface mb-2">Quintile Performance</h3>
+        <h3 className="text-sm font-semibold text-on-surface mb-2">
+          Quintile Performance
+        </h3>
         <p className="text-sm text-error">{error}</p>
       </div>
     );
@@ -93,8 +101,12 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
   if (data.length === 0) {
     return (
       <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-on-surface mb-2">Quintile Performance</h3>
-        <p className="text-sm text-on-surface-variant">No quintile data available.</p>
+        <h3 className="text-sm font-semibold text-on-surface mb-2">
+          Quintile Performance
+        </h3>
+        <p className="text-sm text-on-surface-variant">
+          No quintile data available.
+        </p>
       </div>
     );
   }
@@ -104,8 +116,9 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
     name: q.label,
     scoreRange: `${q.scoreMin.toFixed(0)}-${q.scoreMax.toFixed(0)}`,
     avgScore: q.avgScore,
-    return: horizon === '1y' ? q.avgReturn1y : q.avgReturn3y,
-    excessVsState: horizon === '1y' ? q.avgExcessVsState1y : q.avgExcessVsState3y,
+    return: horizon === "1y" ? q.avgReturn1y : q.avgReturn3y,
+    excessVsState:
+      horizon === "1y" ? q.avgExcessVsState1y : q.avgExcessVsState3y,
     count: q.count,
   }));
 
@@ -119,7 +132,8 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-on-surface">
-            {horizon === '3y' ? '3-Year' : '1-Year'} Excess Return by Score Range
+            {horizon === "3y" ? "3-Year" : "1-Year"} Excess Return by Score
+            Range
           </h3>
           <p className="text-xs text-on-surface-variant">
             Average excess return vs regional benchmark by score quintile
@@ -127,46 +141,63 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
         </div>
         <div className="text-right">
           <p className="text-xs text-on-surface-variant">Top-Bottom Spread</p>
-          <p className={`text-lg font-semibold ${spread > 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {spread > 0 ? '+' : ''}{spread.toFixed(2)}%
+          <p
+            className={`text-lg font-semibold ${spread > 0 ? "text-green-600" : "text-red-600"}`}
+          >
+            {spread > 0 ? "+" : ""}
+            {spread.toFixed(2)}%
           </p>
         </div>
       </div>
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.5} />
+          <BarChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--outline-variant)"
+              opacity={0.5}
+            />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'var(--surface-container)',
-                border: '1px solid var(--outline-variant)',
-                borderRadius: '8px',
-                fontSize: '12px',
+                backgroundColor: "var(--surface-container)",
+                border: "1px solid var(--outline-variant)",
+                borderRadius: "8px",
+                fontSize: "12px",
               }}
-              formatter={(value: number) => [`${value?.toFixed(2)}%`, 'Excess Return']}
+              formatter={(value: number) => [
+                `${value?.toFixed(2)}%`,
+                "Excess Return",
+              ]}
               labelFormatter={(label, payload) => {
                 const item = payload?.[0]?.payload;
                 return `${label} (Score: ${item?.scoreRange}, n=${item?.count})`;
               }}
             />
-            <ReferenceLine y={0} stroke="var(--outline)" strokeDasharray="3 3" />
+            <ReferenceLine
+              y={0}
+              stroke="var(--outline)"
+              strokeDasharray="3 3"
+            />
             <Bar
               dataKey="excessVsState"
               name="Excess Return"
-              fill="#6366f1"
+              fill="#3949AB"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
@@ -175,7 +206,7 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
 
       <div className="mt-3 flex justify-center gap-6 text-xs text-on-surface-variant">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-[#6366f1]" />
+          <div className="w-3 h-3 rounded bg-[#3949AB]" />
           <span>Excess Return vs Regional Benchmark</span>
         </div>
       </div>

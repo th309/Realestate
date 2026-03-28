@@ -209,15 +209,15 @@ export default function AutomationsPage() {
       </div>
 
       {/* Feature Requests */}
-      <div className="mt-8 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-        <h3 className="text-lg font-medium text-purple-900 mb-3">
+      <div className="mt-8 bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
+        <h3 className="text-lg font-medium text-indigo-900 mb-3">
           Have automation ideas?
         </h3>
-        <p className="text-sm text-purple-700 mb-4">
+        <p className="text-sm text-indigo-700 mb-4">
           We'd love to hear what automations would be most valuable for your
           workflow.
         </p>
-        <button className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors">
+        <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
           Share Feedback
         </button>
       </div>

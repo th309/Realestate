@@ -44,10 +44,10 @@ const DEFAULT_ZOOM = 4;
 const MIN_ZOOM = 3;
 const MAX_ZOOM = 12;
 
-/** 7-step color palette (violet to dark red) matching main app */
+/** 7-step color palette (indigo to dark red) matching main app */
 const CHOROPLETH_COLORS = [
-  "#7c3aed", // violet-600
-  "#6366f1", // indigo-500
+  "#3949AB", // indigo-600
+  "#5C6BC0", // indigo (brand medium)
   "#3b82f6", // blue-500
   "#22c55e", // green-500
   "#eab308", // yellow-500

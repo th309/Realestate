@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
             width: "14px",
             height: "14px",
             borderRadius: "50%",
-            background: "#6366f1",
+            background: "#3949AB",
             flexShrink: 0,
           }}
         />
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
           right: "0",
           height: "4px",
           background:
-            "linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
+            "linear-gradient(90deg, #1A237E 0%, #3949AB 50%, #5C6BC0 100%)",
         }}
       />
     </div>,

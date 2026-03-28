@@ -23,14 +23,20 @@ const FOOTER_NAV = {
 function Logo() {
   return (
     <svg
-      width="24"
-      height="24"
-      viewBox="0 0 32 32"
+      width="32"
+      height="32"
+      viewBox="0 0 64 64"
       fill="none"
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" className="fill-primary" />
-      <path d="M8 22V10h4v12H8zm6-8v8h4v-8h-4zm6-4v12h4V10h-4z" fill="white" />
+      <rect width="64" height="64" rx="14" fill="#3949AB" />
+      <path
+        d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+        fill="white"
+      />
+      <circle cx="34" cy="26" r="6" fill="#3949AB" />
+      <circle cx="44" cy="44" r="4" fill="#00C853" />
+      <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
     </svg>
   );
 }
@@ -45,7 +51,10 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <Logo />
-              <span className="font-bold text-on-surface">PropertyIQ</span>
+              <span className="font-bold">
+                <span className="text-[#1A237E]">Property</span>
+                <span className="text-[#3949AB]">IQ</span>
+              </span>
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
               AI-powered real estate market intelligence for smarter property

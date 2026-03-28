@@ -54,8 +54,8 @@ export function EmbedScoreWidget({
     : "bg-white text-gray-900 border-gray-200";
 
   const linkClasses = isDark
-    ? "text-purple-400 hover:text-purple-300"
-    : "text-purple-600 hover:text-purple-500";
+    ? "text-indigo-400 hover:text-indigo-300"
+    : "text-indigo-600 hover:text-indigo-500";
 
   return (
     <div

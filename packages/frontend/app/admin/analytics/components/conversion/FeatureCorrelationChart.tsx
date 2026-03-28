@@ -31,7 +31,9 @@ function formatPct(v: number): string {
   return `${(v * 100).toFixed(0)}%`;
 }
 
-export function FeatureCorrelationChart({ data }: FeatureCorrelationChartProps) {
+export function FeatureCorrelationChart({
+  data,
+}: FeatureCorrelationChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-on-surface-variant">
@@ -45,10 +47,14 @@ export function FeatureCorrelationChart({ data }: FeatureCorrelationChartProps) 
   return (
     <div className="space-y-2">
       <p className="text-xs text-on-surface-variant">
-        Features sorted by signal strength &mdash; gap between converter and non-converter usage rate
+        Features sorted by signal strength &mdash; gap between converter and
+        non-converter usage rate
       </p>
 
-      <ResponsiveContainer width="100%" height={Math.max(200, sorted.length * 44)}>
+      <ResponsiveContainer
+        width="100%"
+        height={Math.max(200, sorted.length * 44)}
+      >
         <BarChart
           data={sorted}
           layout="vertical"
@@ -102,7 +108,7 @@ export function FeatureCorrelationChart({ data }: FeatureCorrelationChartProps) 
           <Bar
             dataKey="converterRate"
             name="Converter rate"
-            fill="#6750a4"
+            fill="#3949AB"
             radius={[0, 3, 3, 0]}
           >
             <LabelList

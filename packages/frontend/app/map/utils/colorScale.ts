@@ -15,7 +15,7 @@ type MapboxColorExpression = MapboxExpressionValue[];
  * Uses dynamic min/max values from calculateValueRange() to ensure
  * the map colors match the legend display exactly.
  *
- * Color scale: violet -> blue -> green -> yellow -> orange -> red -> dark red
+ * Color scale: indigo -> blue -> green -> yellow -> orange -> red -> dark red
  */
 export function getColorScale(min: number, max: number): MapboxColorExpression {
   // Handle single value case (e.g., national level with 1 data point)

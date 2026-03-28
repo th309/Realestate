@@ -231,7 +231,7 @@ export const MarketsIcon = () => (
 );
 
 export const PremiumIcon = () => (
-  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-on-primary">
+  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gradient-to-r from-[#3949AB] to-[#1A237E] text-on-primary">
     PRO
   </span>
 );

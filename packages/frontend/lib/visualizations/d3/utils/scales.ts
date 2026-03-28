@@ -1,52 +1,55 @@
-import * as d3 from 'd3';
+import * as d3 from "d3";
 
 // M3 Chart Color Palette
 export const CHART_COLORS = {
   // Primary series (teal)
-  primary: '#0891b2',
-  onPrimary: '#ffffff',
-  primaryContainer: '#cffafe',
+  primary: "#0891b2",
+  onPrimary: "#ffffff",
+  primaryContainer: "#cffafe",
 
   // Comparison series (blue)
-  comparison: '#3b82f6',
-  comparisonLight: '#93c5fd',
+  comparison: "#3b82f6",
+  comparisonLight: "#93c5fd",
 
   // Baseline series (orange — unchanged)
-  baseline: '#ea580c',
-  baselineLight: '#fdba74',
+  baseline: "#ea580c",
+  baselineLight: "#fdba74",
 
   // User's market highlight (amber)
-  highlight: '#f59e0b',
-  highlightLight: '#fde68a',
+  highlight: "#f59e0b",
+  highlightLight: "#fde68a",
 
   // Additional series for multi-series charts
   series: [
-    '#0891b2', // Teal (primary)
-    '#3b82f6', // Blue
-    '#ea580c', // Orange
-    '#16a34a', // Green
-    '#f59e0b', // Amber
-    '#7c3aed', // Violet
-    '#0d9488', // Teal-dark
-    '#dc2626', // Red
+    "#0891b2", // Teal (primary)
+    "#3b82f6", // Blue
+    "#ea580c", // Orange
+    "#16a34a", // Green
+    "#f59e0b", // Amber
+    "#3949AB", // Indigo
+    "#0d9488", // Teal-dark
+    "#dc2626", // Red
   ],
 
   // Semantic colors (unchanged)
-  positive: '#16a34a',
-  negative: '#dc2626',
-  neutral: '#6b7280',
+  positive: "#16a34a",
+  negative: "#dc2626",
+  neutral: "#6b7280",
 
   // Surface colors (unchanged)
-  surface: '#fef7ff',
-  surfaceContainer: '#f3edf7',
-  outline: '#79747e',
-  outlineVariant: '#cac4d0',
-  onSurface: '#1d1b20',
-  onSurfaceVariant: '#49454f',
+  surface: "#fef7ff",
+  surfaceContainer: "#f3edf7",
+  outline: "#79747e",
+  outlineVariant: "#cac4d0",
+  onSurface: "#1d1b20",
+  onSurfaceVariant: "#49454f",
 };
 
 // Sequential color scales (for heatmaps, choropleths)
 export const sequentialScales = {
+  // Indigo sequential (default)
+  indigo: d3.scaleSequential(d3.interpolateBlues),
+
   // Purple sequential
   purple: d3.scaleSequential(d3.interpolatePurples),
 
@@ -85,10 +88,12 @@ export const categoricalScale = (domain: string[]) =>
 // Create a value color scale for numeric data
 export function createValueScale(
   domain: [number, number],
-  type: 'sequential' | 'diverging' = 'sequential',
-  colorScheme: keyof typeof sequentialScales | keyof typeof divergingScales = 'purple'
+  type: "sequential" | "diverging" = "sequential",
+  colorScheme:
+    | keyof typeof sequentialScales
+    | keyof typeof divergingScales = "indigo",
 ): d3.ScaleSequential<string, never> | d3.ScaleDiverging<string, never> {
-  if (type === 'diverging') {
+  if (type === "diverging") {
     const scale = divergingScales[colorScheme as keyof typeof divergingScales];
     return scale.domain([domain[0], (domain[0] + domain[1]) / 2, domain[1]]);
   }
@@ -101,7 +106,7 @@ export function createValueScale(
 export function createLinearScale(
   domain: [number, number],
   range: [number, number],
-  padding: number = 0.05
+  padding: number = 0.05,
 ): d3.ScaleLinear<number, number> {
   const extent = domain[1] - domain[0];
   const paddedDomain: [number, number] = [
@@ -115,7 +120,7 @@ export function createLinearScale(
 // Time scale for date-based data
 export function createTimeScale(
   domain: [Date, Date],
-  range: [number, number]
+  range: [number, number],
 ): d3.ScaleTime<number, number> {
   return d3.scaleTime().domain(domain).range(range).nice();
 }
@@ -124,7 +129,7 @@ export function createTimeScale(
 export function createBandScale(
   domain: string[],
   range: [number, number],
-  padding: number = 0.2
+  padding: number = 0.2,
 ): d3.ScaleBand<string> {
   return d3.scaleBand().domain(domain).range(range).padding(padding);
 }
@@ -133,7 +138,7 @@ export function createBandScale(
 export function createPointScale(
   domain: string[],
   range: [number, number],
-  padding: number = 0.5
+  padding: number = 0.5,
 ): d3.ScalePoint<string> {
   return d3.scalePoint().domain(domain).range(range).padding(padding);
 }
@@ -141,14 +146,14 @@ export function createPointScale(
 // Size scale (for bubble charts)
 export function createSizeScale(
   domain: [number, number],
-  range: [number, number] = [4, 40]
+  range: [number, number] = [4, 40],
 ): d3.ScalePower<number, number> {
   return d3.scaleSqrt<number, number>().domain(domain).range(range);
 }
 
 // Percentile scale (maps values to percentiles)
 export function createPercentileScale(
-  data: number[]
+  data: number[],
 ): (value: number) => number {
   const sorted = [...data].sort((a, b) => a - b);
   return (value: number) => {
@@ -160,7 +165,7 @@ export function createPercentileScale(
 // Quantile scale (for quartile-based coloring)
 export function createQuantileScale<T>(
   data: number[],
-  range: T[]
+  range: T[],
 ): d3.ScaleQuantile<T> {
   return d3.scaleQuantile<T>().domain(data).range(range);
 }
@@ -168,7 +173,7 @@ export function createQuantileScale<T>(
 // Threshold scale (for custom breakpoints)
 export function createThresholdScale<T>(
   thresholds: number[],
-  range: T[]
+  range: T[],
 ): d3.ScaleThreshold<number, T> {
   return d3.scaleThreshold<number, T>().domain(thresholds).range(range);
 }
@@ -179,8 +184,8 @@ export const formatters = {
     value >= 1e6
       ? `$${(value / 1e6).toFixed(1)}M`
       : value >= 1e3
-      ? `$${(value / 1e3).toFixed(0)}K`
-      : `$${value.toFixed(0)}`,
+        ? `$${(value / 1e3).toFixed(0)}K`
+        : `$${value.toFixed(0)}`,
 
   percent: (value: number) => `${(value * 100).toFixed(1)}%`,
 

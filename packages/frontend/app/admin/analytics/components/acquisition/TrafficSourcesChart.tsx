@@ -24,7 +24,7 @@ interface TrafficSourcesChartProps {
 }
 
 const ENTRY_TYPE_COLORS: Record<string, string> = {
-  direct: "#6750a4",
+  direct: "#3949AB",
   organic: "#22c55e",
   utm: "#3b82f6",
   email: "#f59e0b",
@@ -35,7 +35,6 @@ const ENTRY_TYPE_COLORS: Record<string, string> = {
 function getEntryColor(entryType: string): string {
   return ENTRY_TYPE_COLORS[entryType.toLowerCase()] ?? "#94a3b8";
 }
-
 
 export function TrafficSourcesChart({ data }: TrafficSourcesChartProps) {
   if (!data || data.length === 0) {
@@ -55,7 +54,10 @@ export function TrafficSourcesChart({ data }: TrafficSourcesChartProps) {
           const hasType = data.some((d) => d.entryType.toLowerCase() === type);
           if (!hasType) return null;
           return (
-            <div key={type} className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+            <div
+              key={type}
+              className="flex items-center gap-1.5 text-xs text-on-surface-variant"
+            >
               <span
                 className="inline-block w-2.5 h-2.5 rounded-sm"
                 style={{ backgroundColor: color }}
@@ -95,10 +97,7 @@ export function TrafficSourcesChart({ data }: TrafficSourcesChartProps) {
           />
           <Bar dataKey="sessions" radius={[0, 4, 4, 0]}>
             {chartData.map((entry) => (
-              <Cell
-                key={entry.source}
-                fill={getEntryColor(entry.entryType)}
-              />
+              <Cell key={entry.source} fill={getEntryColor(entry.entryType)} />
             ))}
             <LabelList
               dataKey="percentage"
@@ -111,7 +110,8 @@ export function TrafficSourcesChart({ data }: TrafficSourcesChartProps) {
       </ResponsiveContainer>
 
       <div className="text-xs text-on-surface-variant text-right">
-        Total: {data.reduce((sum, d) => sum + d.sessions, 0).toLocaleString()} sessions
+        Total: {data.reduce((sum, d) => sum + d.sessions, 0).toLocaleString()}{" "}
+        sessions
       </div>
     </div>
   );

@@ -33,9 +33,9 @@ export function AlertHistorySection({
 }: AlertHistorySectionProps) {
   if (tier === "free") {
     return (
-      <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+      <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Bell className="w-5 h-5 text-[#7C3AED]" />
+          <Bell className="w-5 h-5 text-[#3949AB]" />
           <h2 className="text-lg font-semibold text-on-surface">Alerts</h2>
         </div>
         <div className="py-6 text-center">
@@ -48,7 +48,7 @@ export function AlertHistorySection({
           </p>
           <Link
             href="/pricing"
-            className="inline-flex px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors"
+            className="inline-flex px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors"
           >
             Upgrade to Pro
           </Link>
@@ -58,15 +58,15 @@ export function AlertHistorySection({
   }
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-[#7C3AED]" />
+          <Bell className="w-5 h-5 text-[#3949AB]" />
           <h2 className="text-lg font-semibold text-on-surface">Alerts</h2>
         </div>
         <Link
           href="/alerts"
-          className="text-sm font-medium text-[#7C3AED] hover:text-[#7C3AED]/80 transition-colors"
+          className="text-sm font-medium text-[#3949AB] hover:text-[#3949AB]/80 transition-colors"
         >
           Manage Alerts
         </Link>

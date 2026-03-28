@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
 interface RunDetail {
   metricName: string;
   geography: string;
-  status: 'success' | 'failed' | 'skipped';
+  status: "success" | "failed" | "skipped";
   recordsInserted: number;
   recordsFailed: number;
   recordsDelta: number;
@@ -32,79 +32,79 @@ interface RunDetailsResponse {
 }
 
 const METRIC_DISPLAY_NAMES: Record<string, string> = {
-  zhvi: 'ZHVI (Home Value)',
-  zori: 'ZORI (Rent Index)',
-  zordi: 'ZORDI (Rent Demand)',
-  zhvf: 'ZHVF (Forecast)',
-  inventory: 'For-Sale Inventory',
-  new_listings: 'New Listings',
-  pending_sales: 'Pending Sales',
-  list_price: 'Median List Price',
-  sale_price: 'Median Sale Price',
-  sale_to_list: 'Sale-to-List Ratio',
-  dom: 'Days on Market',
-  price_cuts: 'Price Cuts',
-  market_heat: 'Market Heat Index',
-  new_con_price: 'New Construction Price',
-  new_con_price_sqft: 'New Construction $/SqFt',
-  new_con_sales: 'New Construction Sales',
-  sales_count: 'Sales Count',
-  homeowner_income: 'Homeowner Income Needed',
-  renter_income: 'Renter Income Needed',
-  affordable_price: 'Affordable Home Price',
-  years_to_save: 'Years to Save',
-  homeowner_afford: 'Homeowner Affordability',
-  renter_afford: 'Renter Affordability',
+  zhvi: "ZHVI (Home Value)",
+  zori: "ZORI (Rent Index)",
+  zordi: "ZORDI (Rent Demand)",
+  zhvf: "ZHVF (Forecast)",
+  inventory: "For-Sale Inventory",
+  new_listings: "New Listings",
+  pending_sales: "Pending Sales",
+  list_price: "Median List Price",
+  sale_price: "Median Sale Price",
+  sale_to_list: "Sale-to-List Ratio",
+  dom: "Days on Market",
+  price_cuts: "Price Cuts",
+  market_heat: "Market Heat Index",
+  new_con_price: "New Construction Price",
+  new_con_price_sqft: "New Construction $/SqFt",
+  new_con_sales: "New Construction Sales",
+  sales_count: "Sales Count",
+  homeowner_income: "Homeowner Income Needed",
+  renter_income: "Renter Income Needed",
+  affordable_price: "Affordable Home Price",
+  years_to_save: "Years to Save",
+  homeowner_afford: "Homeowner Affordability",
+  renter_afford: "Renter Affordability",
   // BLS / FRED Economic
-  unemployment_rate: 'Unemployment Rate',
-  unemployment_rate_yoy: 'Unemployment Rate YoY',
-  total_nonfarm_employment: 'Nonfarm Employment',
-  employment_yoy: 'Employment YoY',
-  gdp_millions: 'GDP (Millions)',
-  real_gdp_millions: 'Real GDP (Millions)',
-  gdp_yoy: 'GDP YoY',
-  rpp_all_items: 'RPP All Items',
-  rpp_goods: 'RPP Goods',
-  rpp_housing: 'RPP Housing',
-  rpp_utilities: 'RPP Utilities',
-  rpp_other_services: 'RPP Other Services',
+  unemployment_rate: "Unemployment Rate",
+  unemployment_rate_yoy: "Unemployment Rate YoY",
+  total_nonfarm_employment: "Nonfarm Employment",
+  employment_yoy: "Employment YoY",
+  gdp_millions: "GDP (Millions)",
+  real_gdp_millions: "Real GDP (Millions)",
+  gdp_yoy: "GDP YoY",
+  rpp_all_items: "RPP All Items",
+  rpp_goods: "RPP Goods",
+  rpp_housing: "RPP Housing",
+  rpp_utilities: "RPP Utilities",
+  rpp_other_services: "RPP Other Services",
   // Census ACS
-  total_population: 'Total Population',
-  population_yoy: 'Population YoY',
-  median_age: 'Median Age',
-  median_household_income: 'Median Household Income',
-  income_yoy: 'Income YoY',
-  per_capita_income: 'Per Capita Income',
-  total_housing_units: 'Total Housing Units',
-  owner_occupied_units: 'Owner-Occupied Units',
-  renter_occupied_units: 'Renter-Occupied Units',
-  homeownership_rate: 'Homeownership Rate',
-  median_home_value: 'Median Home Value (Census)',
-  median_gross_rent: 'Median Gross Rent',
-  rent_as_pct_of_income: 'Rent as % of Income',
+  total_population: "Total Population",
+  population_yoy: "Population YoY",
+  median_age: "Median Age",
+  median_household_income: "Median Household Income",
+  income_yoy: "Income YoY",
+  per_capita_income: "Per Capita Income",
+  total_housing_units: "Total Housing Units",
+  owner_occupied_units: "Owner-Occupied Units",
+  renter_occupied_units: "Renter-Occupied Units",
+  homeownership_rate: "Homeownership Rate",
+  median_home_value: "Median Home Value (Census)",
+  median_gross_rent: "Median Gross Rent",
+  rent_as_pct_of_income: "Rent as % of Income",
   // Census CBP
-  total_employment: 'Total Employment (CBP)',
-  total_establishments: 'Total Establishments',
-  annual_payroll: 'Annual Payroll',
+  total_employment: "Total Employment (CBP)",
+  total_establishments: "Total Establishments",
+  annual_payroll: "Annual Payroll",
 };
 
 const GEO_BADGE_COLORS: Record<string, string> = {
-  national: 'bg-indigo-100 text-indigo-700',
-  state: 'bg-blue-100 text-blue-700',
-  metro: 'bg-purple-100 text-purple-700',
-  county: 'bg-amber-100 text-amber-700',
-  city: 'bg-teal-100 text-teal-700',
-  zip: 'bg-rose-100 text-rose-700',
+  national: "bg-indigo-100 text-indigo-700",
+  state: "bg-blue-100 text-blue-700",
+  metro: "bg-indigo-100 text-indigo-700",
+  county: "bg-amber-100 text-amber-700",
+  city: "bg-teal-100 text-teal-700",
+  zip: "bg-rose-100 text-rose-700",
 };
 
 function getFreshnessColor(days: number): string {
-  if (days <= 36) return 'text-emerald-600';
-  if (days <= 60) return 'text-amber-600';
-  return 'text-rose-600';
+  if (days <= 36) return "text-emerald-600";
+  if (days <= 60) return "text-amber-600";
+  return "text-rose-600";
 }
 
 function formatDelta(value: number): string {
-  if (value === 0) return '';
+  if (value === 0) return "";
   return value > 0 ? `+${value}` : `${value}`;
 }
 
@@ -113,7 +113,9 @@ export function PipelineRunDetails({ runId }: { runId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAPIRaw(`/api/health/pipeline-runs/${runId}/details`, { credentials: 'include' })
+    fetchAPIRaw(`/api/health/pipeline-runs/${runId}/details`, {
+      credentials: "include",
+    })
       .then((res) => res.json())
       .then((json) => setData(json))
       .catch(() => setData(null))
@@ -121,26 +123,40 @@ export function PipelineRunDetails({ runId }: { runId: string }) {
   }, [runId]);
 
   if (loading) {
-    return <div className="p-4 text-sm text-on-surface-variant animate-pulse">Loading details...</div>;
+    return (
+      <div className="p-4 text-sm text-on-surface-variant animate-pulse">
+        Loading details...
+      </div>
+    );
   }
 
   if (!data || !data.details || data.details.length === 0) {
-    return <div className="p-4 text-sm text-on-surface-variant">No per-metric details recorded for this run.</div>;
+    return (
+      <div className="p-4 text-sm text-on-surface-variant">
+        No per-metric details recorded for this run.
+      </div>
+    );
   }
 
   return (
     <div className="border-t border-outline-variant bg-surface-container-low/50">
       {/* Summary chips */}
       <div className="flex gap-3 px-4 py-2 text-xs">
-        <span className="text-on-surface-variant">{data.summary.totalMetrics} metrics</span>
+        <span className="text-on-surface-variant">
+          {data.summary.totalMetrics} metrics
+        </span>
         {data.summary.succeeded > 0 && (
-          <span className="text-emerald-600">{data.summary.succeeded} succeeded</span>
+          <span className="text-emerald-600">
+            {data.summary.succeeded} succeeded
+          </span>
         )}
         {data.summary.failed > 0 && (
           <span className="text-rose-600">{data.summary.failed} failed</span>
         )}
         {data.summary.skipped > 0 && (
-          <span className="text-on-surface-variant">{data.summary.skipped} skipped</span>
+          <span className="text-on-surface-variant">
+            {data.summary.skipped} skipped
+          </span>
         )}
       </div>
 
@@ -162,45 +178,75 @@ export function PipelineRunDetails({ runId }: { runId: string }) {
             <tr
               key={`${detail.metricName}-${detail.geography}`}
               className={`border-t border-outline-variant/50 ${
-                detail.status === 'failed' ? 'bg-rose-50' : ''
+                detail.status === "failed" ? "bg-rose-50" : ""
               }`}
             >
               <td className="px-4 py-1.5 font-medium text-on-surface">
                 {METRIC_DISPLAY_NAMES[detail.metricName] || detail.metricName}
               </td>
               <td className="px-2 py-1.5">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                  GEO_BADGE_COLORS[detail.geography] || 'bg-gray-100 text-gray-700'
-                }`}>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                    GEO_BADGE_COLORS[detail.geography] ||
+                    "bg-gray-100 text-gray-700"
+                  }`}
+                >
                   {detail.geography}
                 </span>
               </td>
               <td className="px-2 py-1.5 text-center">
-                {detail.status === 'success' && <span className="text-emerald-600">OK</span>}
-                {detail.status === 'failed' && <span className="text-rose-600">FAIL</span>}
-                {detail.status === 'skipped' && <span className="text-on-surface-variant">SKIP</span>}
+                {detail.status === "success" && (
+                  <span className="text-emerald-600">OK</span>
+                )}
+                {detail.status === "failed" && (
+                  <span className="text-rose-600">FAIL</span>
+                )}
+                {detail.status === "skipped" && (
+                  <span className="text-on-surface-variant">SKIP</span>
+                )}
               </td>
               <td className="px-2 py-1.5 text-right tabular-nums">
                 {detail.recordsInserted.toLocaleString()}
                 {detail.recordsDelta !== 0 && (
-                  <span className={detail.recordsDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                    {' '}{formatDelta(detail.recordsDelta)}
+                  <span
+                    className={
+                      detail.recordsDelta > 0
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {" "}
+                    {formatDelta(detail.recordsDelta)}
                   </span>
                 )}
               </td>
               <td className="px-2 py-1.5 text-right">
                 {detail.latestDataDate
-                  ? new Date(detail.latestDataDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                  : '\u2014'}
+                  ? new Date(detail.latestDataDate).toLocaleDateString(
+                      "en-US",
+                      { month: "short", year: "numeric" },
+                    )
+                  : "\u2014"}
               </td>
-              <td className={`px-2 py-1.5 text-right ${getFreshnessColor(detail.freshnessDays)}`}>
-                {detail.latestDataDate ? `${detail.freshnessDays}d` : '\u2014'}
+              <td
+                className={`px-2 py-1.5 text-right ${getFreshnessColor(detail.freshnessDays)}`}
+              >
+                {detail.latestDataDate ? `${detail.freshnessDays}d` : "\u2014"}
               </td>
               <td className="px-4 py-1.5 text-right tabular-nums">
-                {detail.coveragePct > 0 ? `${detail.coveragePct.toFixed(1)}%` : '\u2014'}
+                {detail.coveragePct > 0
+                  ? `${detail.coveragePct.toFixed(1)}%`
+                  : "\u2014"}
                 {detail.coverageDelta !== 0 && (
-                  <span className={detail.coverageDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                    {' '}{formatDelta(parseFloat(detail.coverageDelta.toFixed(1)))}
+                  <span
+                    className={
+                      detail.coverageDelta > 0
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {" "}
+                    {formatDelta(parseFloat(detail.coverageDelta.toFixed(1)))}
                   </span>
                 )}
               </td>

@@ -153,9 +153,9 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
 
   if (loading) {
     return (
-      <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+      <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Target className="w-5 h-5 text-[#7C3AED]" />
+          <Target className="w-5 h-5 text-[#3949AB]" />
           <h2 className="text-lg font-semibold text-on-surface">Preferences</h2>
         </div>
         <div className="space-y-3">
@@ -167,9 +167,9 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
   }
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center gap-2 mb-1">
-        <Target className="w-5 h-5 text-[#7C3AED]" />
+        <Target className="w-5 h-5 text-[#3949AB]" />
         <h2 className="text-lg font-semibold text-on-surface">Preferences</h2>
       </div>
       <p className="text-xs text-on-surface-variant mb-5">
@@ -198,8 +198,8 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
                 onClick={() => setInvestmentGoal(goal.value)}
                 className={`px-3.5 py-2 rounded-full border text-sm transition-colors ${
                   isSelected
-                    ? "bg-[#7C3AED] text-white border-[#7C3AED]"
-                    : "bg-surface-container-low text-on-surface border-outline-variant hover:border-[#7C3AED] hover:bg-[#7C3AED]/5"
+                    ? "bg-[#3949AB] text-white border-[#3949AB]"
+                    : "bg-surface-container-low text-on-surface border-outline-variant hover:border-[#3949AB] hover:bg-[#3949AB]/5"
                 }`}
               >
                 {goal.label}
@@ -225,12 +225,12 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
                 onClick={() => setExperienceLevel(level.value)}
                 className={`text-left px-4 py-3 rounded-lg border transition-colors ${
                   isSelected
-                    ? "bg-[#7C3AED]/10 border-[#7C3AED]"
-                    : "bg-surface-container-low border-outline-variant hover:border-[#7C3AED] hover:bg-[#7C3AED]/5"
+                    ? "bg-[#3949AB]/10 border-[#3949AB]"
+                    : "bg-surface-container-low border-outline-variant hover:border-[#3949AB] hover:bg-[#3949AB]/5"
                 }`}
               >
                 <span
-                  className={`text-sm font-medium ${isSelected ? "text-[#7C3AED]" : "text-on-surface"}`}
+                  className={`text-sm font-medium ${isSelected ? "text-[#3949AB]" : "text-on-surface"}`}
                 >
                   {level.label}
                 </span>
@@ -275,7 +275,7 @@ export function PreferencesSection({ user }: PreferencesSectionProps) {
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+        className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50 flex items-center gap-2"
       >
         {saving ? (
           "Saving..."

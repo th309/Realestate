@@ -133,7 +133,7 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
       source: "geo-data",
       layout: { "line-join": "round", "line-cap": "round" },
       paint: {
-        "line-color": "#8b5cf6",
+        "line-color": "#3949AB",
         "line-width": [
           "interpolate",
           ["linear"],

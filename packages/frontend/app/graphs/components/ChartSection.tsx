@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 import {
   BarChart3,
   AreaChart as AreaIcon,
@@ -9,7 +9,7 @@ import {
   LineChart as LineIcon,
   Eye,
   EyeOff,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -25,15 +25,15 @@ import {
   LineChart,
   Legend,
   ComposedChart,
-} from 'recharts';
-import { ComparisonConfig } from '../types';
-import { MILESTONES, getMetricSource } from '../constants';
-import { getMetricTitle } from '@/lib/data';
-import { CustomTooltip } from './CustomTooltip';
-import { M3Card } from './M3Card';
+} from "recharts";
+import { ComparisonConfig } from "../types";
+import { MILESTONES, getMetricSource } from "../constants";
+import { getMetricTitle } from "@/lib/data";
+import { CustomTooltip } from "./CustomTooltip";
+import { M3Card } from "./M3Card";
 
-type TimeFrame = '1Y' | '3Y' | '5Y' | '10Y' | 'Max';
-type ChartType = 'area' | 'line' | 'bar';
+type TimeFrame = "1Y" | "3Y" | "5Y" | "10Y" | "Max";
+type ChartType = "area" | "line" | "bar";
 
 interface BaselineConfig {
   enabled: boolean;
@@ -60,26 +60,26 @@ interface ChartSectionProps {
   toggleSeries: (key: string) => void;
 }
 
-const timeframeOptions: TimeFrame[] = ['1Y', '3Y', '5Y', '10Y', 'Max'];
+const timeframeOptions: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
 const chartTypeConfig = [
-  { type: 'area' as ChartType, icon: AreaIcon, label: 'Area' },
-  { type: 'line' as ChartType, icon: LineIcon, label: 'Line' },
-  { type: 'bar' as ChartType, icon: BarChart3, label: 'Bar' },
+  { type: "area" as ChartType, icon: AreaIcon, label: "Area" },
+  { type: "line" as ChartType, icon: LineIcon, label: "Line" },
+  { type: "bar" as ChartType, icon: BarChart3, label: "Bar" },
 ];
 
 // M3 Color tokens for chart
 const CHART_COLORS = {
-  primary: '#0891b2',       // Teal - primary area
-  comparison: '#3b82f6',    // Blue - comparison area
-  baseline: '#ea580c',      // Bright orange - baseline (highly visible)
-  tertiary: '#7d5260',
-  outline: '#79747e',
-  surface: '#fef7ff',
-  surfaceContainer: '#f3edf7',
-  onSurface: '#1d1b20',
-  onSurfaceVariant: '#49454f',
-  outlineVariant: '#cac4d0',
+  primary: "#0891b2", // Teal - primary area
+  comparison: "#3b82f6", // Blue - comparison area
+  baseline: "#ea580c", // Bright orange - baseline (highly visible)
+  tertiary: "#00C853",
+  outline: "#79747e",
+  surface: "#fef7ff",
+  surfaceContainer: "#f3edf7",
+  onSurface: "#1d1b20",
+  onSurfaceVariant: "#49454f",
+  outlineVariant: "#cac4d0",
 };
 
 export const ChartSection: React.FC<ChartSectionProps> = ({
@@ -100,36 +100,44 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   visibleSeries,
   toggleSeries,
 }) => {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   // Comparison data key: areaId when from search (metro/county/city/zip), else area (state name)
   // Defined early so it can be used in getYAxisDomain
   const comparisonDataKey = comparison.areaId ?? comparison.area;
 
   // Calculate Y-axis domain based on data to avoid wasted space
-  const getYAxisDomain = (): [number | 'auto', number | 'auto'] => {
-    if (!chartData || chartData.length === 0) return ['auto', 'auto'];
+  const getYAxisDomain = (): [number | "auto", number | "auto"] => {
+    if (!chartData || chartData.length === 0) return ["auto", "auto"];
 
     // Get all numeric values from the chart data
     const allValues: number[] = [];
-    const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
+    const baselineKey = `baseline_${baseline.area.replace(/\s+/g, "_")}`;
 
     chartData.forEach((point) => {
       // Primary area
-      if (visibleSeries.primary && typeof point[selectedAreaId] === 'number') {
+      if (visibleSeries.primary && typeof point[selectedAreaId] === "number") {
         allValues.push(point[selectedAreaId] as number);
       }
       // Comparison area
-      if (comparison.enabled && visibleSeries.comparison && typeof point[comparisonDataKey] === 'number') {
+      if (
+        comparison.enabled &&
+        visibleSeries.comparison &&
+        typeof point[comparisonDataKey] === "number"
+      ) {
         allValues.push(point[comparisonDataKey] as number);
       }
       // Baseline
-      if (baseline.enabled && visibleSeries.baseline && typeof point[baselineKey] === 'number') {
+      if (
+        baseline.enabled &&
+        visibleSeries.baseline &&
+        typeof point[baselineKey] === "number"
+      ) {
         allValues.push(point[baselineKey] as number);
       }
     });
 
-    if (allValues.length === 0) return ['auto', 'auto'];
+    if (allValues.length === 0) return ["auto", "auto"];
 
     const minVal = Math.min(...allValues);
     const maxVal = Math.max(...allValues);
@@ -153,15 +161,28 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
   // Format X-axis based on time frame
   const formatXAxisTick = (val: string) => {
-    if (!val) return '';
+    if (!val) return "";
     const date = new Date(val);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
     switch (timeFrame) {
-      case '1Y':
+      case "1Y":
         // Show month + short year for 1 year view
         return `${months[date.getMonth()]} '${date.getFullYear().toString().slice(-2)}`;
-      case '3Y':
+      case "3Y":
         // Show month + short year for 3 year view
         return `${months[date.getMonth()]} '${date.getFullYear().toString().slice(-2)}`;
       default:
@@ -174,13 +195,13 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   const getTickInterval = () => {
     const dataLength = chartData?.length || 0;
     switch (timeFrame) {
-      case '1Y':
+      case "1Y":
         return isMobile ? 2 : 1; // Show every 1-2 months
-      case '3Y':
+      case "3Y":
         return isMobile ? 6 : 3; // Show every 3-6 months
-      case '5Y':
+      case "5Y":
         return Math.max(1, Math.floor(dataLength / (isMobile ? 5 : 8))); // ~5-8 labels
-      case '10Y':
+      case "10Y":
         return Math.max(1, Math.floor(dataLength / (isMobile ? 5 : 10))); // ~5-10 labels
       default: // Max
         return Math.max(1, Math.floor(dataLength / (isMobile ? 6 : 12))); // ~6-12 labels
@@ -188,7 +209,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   };
 
   const xAxisProps = {
-    dataKey: 'date',
+    dataKey: "date",
     axisLine: { stroke: CHART_COLORS.outlineVariant },
     tickLine: false,
     tick: { fill: CHART_COLORS.onSurfaceVariant, fontSize: isMobile ? 9 : 10 },
@@ -196,8 +217,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     dy: 5,
     interval: getTickInterval(),
     label: {
-      value: 'Date',
-      position: 'insideBottom' as const,
+      value: "Date",
+      position: "insideBottom" as const,
       offset: -5,
       fill: CHART_COLORS.onSurfaceVariant,
       fontSize: 10,
@@ -215,16 +236,16 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     label: {
       value: getMetricTitle(metric),
       angle: -90,
-      position: 'insideLeft' as const,
+      position: "insideLeft" as const,
       offset: 10,
       fill: CHART_COLORS.onSurfaceVariant,
       fontSize: 10,
-      style: { textAnchor: 'middle' },
+      style: { textAnchor: "middle" },
     },
   };
 
   // Use simple key format without special characters (matches useChartData)
-  const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
+  const baselineKey = `baseline_${baseline.area.replace(/\s+/g, "_")}`;
   // Display name for legend
   const baselineDisplayName = `Baseline: ${baseline.area}`;
 
@@ -238,23 +259,27 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         stroke={CHART_COLORS.tertiary}
         strokeDasharray="3 3"
         strokeWidth={1.5}
-        label={!isMobile ? {
-          position: 'top',
-          value: '!',
-          fill: CHART_COLORS.tertiary,
-          fontSize: 12,
-          fontWeight: 600,
-          offset: 10,
-        } : undefined}
+        label={
+          !isMobile
+            ? {
+                position: "top",
+                value: "!",
+                fill: CHART_COLORS.tertiary,
+                fontSize: 12,
+                fontWeight: 600,
+                offset: 10,
+              }
+            : undefined
+        }
       />
     ));
   };
 
   // Legend props
   const legendProps = {
-    verticalAlign: 'top' as const,
-    align: 'right' as const,
-    iconType: 'line' as const,
+    verticalAlign: "top" as const,
+    align: "right" as const,
+    iconType: "line" as const,
     iconSize: 14,
     wrapperStyle: {
       paddingBottom: 10,
@@ -270,18 +295,45 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       <ChartComponent data={chartData} margin={chartMargin}>
         <defs>
           <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.05} />
+            <stop
+              offset="5%"
+              stopColor={CHART_COLORS.primary}
+              stopOpacity={0.3}
+            />
+            <stop
+              offset="95%"
+              stopColor={CHART_COLORS.primary}
+              stopOpacity={0.05}
+            />
           </linearGradient>
           <linearGradient id="comparisonGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={CHART_COLORS.comparison} stopOpacity={0.25} />
-            <stop offset="95%" stopColor={CHART_COLORS.comparison} stopOpacity={0.05} />
+            <stop
+              offset="5%"
+              stopColor={CHART_COLORS.comparison}
+              stopOpacity={0.25}
+            />
+            <stop
+              offset="95%"
+              stopColor={CHART_COLORS.comparison}
+              stopOpacity={0.05}
+            />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="4 4"
+          stroke={CHART_COLORS.outlineVariant}
+        />
         <XAxis {...xAxisProps} />
         <YAxis {...yAxisProps} />
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+        <Tooltip
+          content={<CustomTooltip />}
+          cursor={{
+            stroke: CHART_COLORS.primary,
+            strokeWidth: 1.5,
+            strokeDasharray: "6 6",
+          }}
+        />
         <Legend {...legendProps} />
         {renderMilestones()}
         {visibleSeries.primary && (
@@ -323,10 +375,21 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   // Render Line Chart
   const renderLineChart = () => (
     <LineChart data={chartData} margin={chartMargin}>
-      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+      <CartesianGrid
+        vertical={false}
+        strokeDasharray="4 4"
+        stroke={CHART_COLORS.outlineVariant}
+      />
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
-      <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+      <Tooltip
+        content={<CustomTooltip />}
+        cursor={{
+          stroke: CHART_COLORS.primary,
+          strokeWidth: 1.5,
+          strokeDasharray: "6 6",
+        }}
+      />
       <Legend {...legendProps} />
       {renderMilestones()}
       {visibleSeries.primary && (
@@ -336,8 +399,18 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           name={selectedArea}
           stroke={CHART_COLORS.primary}
           strokeWidth={isMobile ? 2 : 3}
-          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.primary, strokeWidth: 2, stroke: '#fff' }}
-          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.primary, strokeWidth: 2, stroke: '#fff' }}
+          dot={{
+            r: isMobile ? 3 : 4,
+            fill: CHART_COLORS.primary,
+            strokeWidth: 2,
+            stroke: "#fff",
+          }}
+          activeDot={{
+            r: isMobile ? 5 : 7,
+            fill: CHART_COLORS.primary,
+            strokeWidth: 2,
+            stroke: "#fff",
+          }}
         />
       )}
       {comparison.enabled && visibleSeries.comparison && (
@@ -347,8 +420,18 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           name={comparison.area}
           stroke={CHART_COLORS.comparison}
           strokeWidth={isMobile ? 2 : 3}
-          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.comparison, strokeWidth: 2, stroke: '#fff' }}
-          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.comparison, strokeWidth: 2, stroke: '#fff' }}
+          dot={{
+            r: isMobile ? 3 : 4,
+            fill: CHART_COLORS.comparison,
+            strokeWidth: 2,
+            stroke: "#fff",
+          }}
+          activeDot={{
+            r: isMobile ? 5 : 7,
+            fill: CHART_COLORS.comparison,
+            strokeWidth: 2,
+            stroke: "#fff",
+          }}
         />
       )}
       {baseline.enabled && visibleSeries.baseline && (
@@ -371,10 +454,17 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     const ChartComponent = baseline.enabled ? ComposedChart : BarChart;
     return (
       <ChartComponent data={chartData} margin={chartMargin}>
-        <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="4 4"
+          stroke={CHART_COLORS.outlineVariant}
+        />
         <XAxis {...xAxisProps} />
         <YAxis {...yAxisProps} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: CHART_COLORS.surfaceContainer }} />
+        <Tooltip
+          content={<CustomTooltip />}
+          cursor={{ fill: CHART_COLORS.surfaceContainer }}
+        />
         <Legend {...legendProps} />
         {renderMilestones()}
         {visibleSeries.primary && (
@@ -425,10 +515,11 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
                 key={type}
                 onClick={() => setChartType(type)}
                 title={label}
-                className={`p-2 rounded-lg transition-all duration-200 ${chartType === type
-                  ? 'bg-surface text-primary elevation-1'
-                  : 'text-on-surface-variant hover:text-primary'
-                  }`}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  chartType === type
+                    ? "bg-surface text-primary elevation-1"
+                    : "text-on-surface-variant hover:text-primary"
+                }`}
               >
                 <Icon className="w-4 h-4" />
               </button>
@@ -441,10 +532,11 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               <button
                 key={opt}
                 onClick={() => setTimeFrame(opt)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${timeFrame === opt
-                  ? 'bg-surface text-primary elevation-1'
-                  : 'text-on-surface-variant hover:text-primary'
-                  }`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                  timeFrame === opt
+                    ? "bg-surface text-primary elevation-1"
+                    : "text-on-surface-variant hover:text-primary"
+                }`}
               >
                 {opt}
               </button>
@@ -457,20 +549,22 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowMilestones(!showMilestones)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${showMilestones
-                ? 'bg-tertiary-container text-on-tertiary-container border-tertiary-container'
-                : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary'
-                }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                showMilestones
+                  ? "bg-tertiary-container text-on-tertiary-container border-tertiary-container"
+                  : "bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary"
+              }`}
             >
               <History className="w-3.5 h-3.5" />
               Events
             </button>
             <button
               onClick={() => setShowForecast(!showForecast)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${showForecast
-                ? 'bg-primary-container text-on-primary-container border-primary-container'
-                : 'bg-surface text-on-surface-variant border-outline-variant hover:border-primary'
-                }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                showForecast
+                  ? "bg-primary-container text-on-primary-container border-primary-container"
+                  : "bg-surface text-on-surface-variant border-outline-variant hover:border-primary"
+              }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
               Forecast
@@ -481,36 +575,53 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           {(comparison.enabled || baseline.enabled) && (
             <div className="flex items-center gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant">
               <button
-                onClick={() => toggleSeries('primary')}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.primary
-                  ? 'text-primary bg-surface elevation-1'
-                  : 'text-on-surface-variant opacity-50'
-                  }`}
+                onClick={() => toggleSeries("primary")}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  visibleSeries.primary
+                    ? "text-primary bg-surface elevation-1"
+                    : "text-on-surface-variant opacity-50"
+                }`}
               >
-                {visibleSeries.primary ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                {visibleSeries.primary ? (
+                  <Eye className="w-3 h-3" />
+                ) : (
+                  <EyeOff className="w-3 h-3" />
+                )}
                 <span className="max-w-[60px] truncate">{selectedArea}</span>
               </button>
               {comparison.enabled && (
                 <button
-                  onClick={() => toggleSeries('comparison')}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.comparison
-                    ? 'text-cyan-600 bg-surface elevation-1'
-                    : 'text-on-surface-variant opacity-50'
-                    }`}
+                  onClick={() => toggleSeries("comparison")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    visibleSeries.comparison
+                      ? "text-cyan-600 bg-surface elevation-1"
+                      : "text-on-surface-variant opacity-50"
+                  }`}
                 >
-                  {visibleSeries.comparison ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                  <span className="max-w-[60px] truncate">{comparison.area}</span>
+                  {visibleSeries.comparison ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <EyeOff className="w-3 h-3" />
+                  )}
+                  <span className="max-w-[60px] truncate">
+                    {comparison.area}
+                  </span>
                 </button>
               )}
               {baseline.enabled && (
                 <button
-                  onClick={() => toggleSeries('baseline')}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.baseline
-                    ? 'text-orange-600 bg-surface elevation-1'
-                    : 'text-on-surface-variant opacity-50'
-                    }`}
+                  onClick={() => toggleSeries("baseline")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    visibleSeries.baseline
+                      ? "text-orange-600 bg-surface elevation-1"
+                      : "text-on-surface-variant opacity-50"
+                  }`}
                 >
-                  {visibleSeries.baseline ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  {visibleSeries.baseline ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <EyeOff className="w-3 h-3" />
+                  )}
                   <span>Base</span>
                 </button>
               )}
@@ -521,15 +632,23 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
       {/* Chart Container */}
       <div className="h-[400px] md:h-[550px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-2 md:p-4 flex flex-col">
-        {(!chartData || chartData.length === 0) ? (
+        {!chartData || chartData.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center px-4">
-            <p className="text-on-surface-variant font-medium">No data available for this selection.</p>
-            <p className="text-sm text-on-surface-variant mt-1">Try a different location, metric, or time range.</p>
+            <p className="text-on-surface-variant font-medium">
+              No data available for this selection.
+            </p>
+            <p className="text-sm text-on-surface-variant mt-1">
+              Try a different location, metric, or time range.
+            </p>
           </div>
         ) : (
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
-              {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
+              {chartType === "area"
+                ? renderAreaChart()
+                : chartType === "line"
+                  ? renderLineChart()
+                  : renderBarChart()}
             </ResponsiveContainer>
           </div>
         )}

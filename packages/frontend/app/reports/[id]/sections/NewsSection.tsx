@@ -1,7 +1,14 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Newspaper, ExternalLink, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
+import React from "react";
+import {
+  Newspaper,
+  ExternalLink,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+} from "lucide-react";
 
 interface NewsItem {
   headline: string;
@@ -14,7 +21,7 @@ interface NewsItem {
 }
 
 interface MarketSentiment {
-  sentiment: 'bullish' | 'neutral' | 'bearish';
+  sentiment: "bullish" | "neutral" | "bearish";
   confidence: number;
   summary: string;
   factors: string[];
@@ -28,17 +35,17 @@ interface NewsSectionProps {
 
 function getCategoryColor(category: string) {
   switch (category.toLowerCase()) {
-    case 'real_estate':
-    case 'housing':
-      return 'bg-blue-500/10 text-blue-600';
-    case 'economy':
-      return 'bg-green-500/10 text-green-600';
-    case 'development':
-      return 'bg-purple-500/10 text-purple-600';
-    case 'policy':
-      return 'bg-amber-500/10 text-amber-600';
+    case "real_estate":
+    case "housing":
+      return "bg-blue-500/10 text-blue-600";
+    case "economy":
+      return "bg-green-500/10 text-green-600";
+    case "development":
+      return "bg-indigo-500/10 text-indigo-600";
+    case "policy":
+      return "bg-amber-500/10 text-amber-600";
     default:
-      return 'bg-gray-500/10 text-gray-600';
+      return "bg-gray-500/10 text-gray-600";
   }
 }
 
@@ -49,16 +56,20 @@ function NewsCard({ item }: { item: NewsItem }) {
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-full ${getCategoryColor(item.category)}`}
         >
-          {item.category.replace('_', ' ')}
+          {item.category.replace("_", " ")}
         </span>
         <span className="text-xs text-on-surface-variant">
           {Math.round(item.relevance_score * 100)}% relevant
         </span>
       </div>
 
-      <h4 className="font-medium text-on-surface mb-2 line-clamp-2">{item.headline}</h4>
+      <h4 className="font-medium text-on-surface mb-2 line-clamp-2">
+        {item.headline}
+      </h4>
 
-      <p className="text-sm text-on-surface-variant line-clamp-2 mb-3">{item.summary}</p>
+      <p className="text-sm text-on-surface-variant line-clamp-2 mb-3">
+        {item.summary}
+      </p>
 
       <div className="flex items-center justify-between text-xs text-on-surface-variant">
         <span>{item.source}</span>
@@ -80,26 +91,28 @@ function NewsCard({ item }: { item: NewsItem }) {
 
 function SentimentCard({ sentiment }: { sentiment: MarketSentiment }) {
   const TrendIcon =
-    sentiment.sentiment === 'bullish'
+    sentiment.sentiment === "bullish"
       ? TrendingUp
-      : sentiment.sentiment === 'bearish'
+      : sentiment.sentiment === "bearish"
         ? TrendingDown
         : Minus;
 
   const sentimentColors = {
-    bullish: 'border-green-500/30 bg-green-500/5',
-    neutral: 'border-amber-500/30 bg-amber-500/5',
-    bearish: 'border-red-500/30 bg-red-500/5',
+    bullish: "border-green-500/30 bg-green-500/5",
+    neutral: "border-amber-500/30 bg-amber-500/5",
+    bearish: "border-red-500/30 bg-red-500/5",
   };
 
   const iconColors = {
-    bullish: 'text-green-500',
-    neutral: 'text-amber-500',
-    bearish: 'text-red-500',
+    bullish: "text-green-500",
+    neutral: "text-amber-500",
+    bearish: "text-red-500",
   };
 
   return (
-    <div className={`rounded-2xl p-4 border-2 ${sentimentColors[sentiment.sentiment]}`}>
+    <div
+      className={`rounded-2xl p-4 border-2 ${sentimentColors[sentiment.sentiment]}`}
+    >
       <div className="flex items-center gap-3 mb-3">
         <TrendIcon className={`w-6 h-6 ${iconColors[sentiment.sentiment]}`} />
         <div>

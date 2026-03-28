@@ -95,7 +95,7 @@ function TierBadge({ tier, status }: { tier: string; status?: string }) {
   const styles: Record<string, string> = {
     free: "bg-gray-100 text-gray-700",
     pro: "bg-blue-100 text-blue-700",
-    enterprise: "bg-purple-100 text-purple-700",
+    enterprise: "bg-indigo-100 text-indigo-700",
     admin: "bg-amber-100 text-amber-700",
   };
 

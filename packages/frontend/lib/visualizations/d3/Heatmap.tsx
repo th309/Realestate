@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useMemo, useCallback } from 'react';
-import * as d3 from 'd3';
-import { useD3, useD3Tooltip, D3Tooltip, useResponsiveD3 } from './hooks/useD3';
+import React, { useMemo, useCallback } from "react";
+import * as d3 from "d3";
+import { useD3, useD3Tooltip, D3Tooltip, useResponsiveD3 } from "./hooks/useD3";
 import {
   CHART_COLORS,
   createValueScale,
   FormatType,
   getFormatter,
-} from './utils/scales';
+} from "./utils/scales";
 
 interface HeatmapCell {
   x: string;
@@ -24,8 +24,15 @@ interface HeatmapProps {
   xLabel?: string;
   yLabel?: string;
   valueFormat?: FormatType;
-  colorScale?: 'sequential' | 'diverging';
-  colorScheme?: 'purple' | 'bluePurple' | 'warm' | 'cool' | 'redBlue' | 'redGreen';
+  colorScale?: "sequential" | "diverging";
+  colorScheme?:
+    | "indigo"
+    | "purple"
+    | "bluePurple"
+    | "warm"
+    | "cool"
+    | "redBlue"
+    | "redGreen";
   showValues?: boolean;
   normalizePerColumn?: boolean; // Normalize each column independently for better comparison
   height?: number;
@@ -39,27 +46,30 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   yLabels: providedYLabels,
   xLabel,
   yLabel,
-  valueFormat = 'number',
-  colorScale = 'sequential',
-  colorScheme = 'purple',
+  valueFormat = "number",
+  colorScale = "sequential",
+  colorScheme = "indigo",
   showValues = true,
   normalizePerColumn = true,
   height = 400,
-  className = '',
+  className = "",
   onCellClick,
 }) => {
-  const { containerRef, width } = useResponsiveD3<HTMLDivElement>(16 / 10, height);
+  const { containerRef, width } = useResponsiveD3<HTMLDivElement>(
+    16 / 10,
+    height,
+  );
   const { tooltip, showTooltip, hideTooltip, moveTooltip } = useD3Tooltip();
 
   // Extract unique labels
   const xLabels = useMemo(
     () => providedXLabels || [...new Set(data.map((d) => d.x))],
-    [data, providedXLabels]
+    [data, providedXLabels],
   );
 
   const yLabels = useMemo(
     () => providedYLabels || [...new Set(data.map((d) => d.y))],
-    [data, providedYLabels]
+    [data, providedYLabels],
   );
 
   // Normalize data per column when metrics have different scales
@@ -101,7 +111,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       bottom: xLabel ? 60 : 40,
       left: yLabel ? 80 : 60,
     }),
-    [xLabel, yLabel]
+    [xLabel, yLabel],
   );
 
   const chartWidth = (width || 600) - margins.left - margins.right;
@@ -112,23 +122,13 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
   // Create scales
   const xScale = useMemo(
-    () =>
-      d3
-        .scaleBand()
-        .domain(xLabels)
-        .range([0, chartWidth])
-        .padding(0.05),
-    [xLabels, chartWidth]
+    () => d3.scaleBand().domain(xLabels).range([0, chartWidth]).padding(0.05),
+    [xLabels, chartWidth],
   );
 
   const yScale = useMemo(
-    () =>
-      d3
-        .scaleBand()
-        .domain(yLabels)
-        .range([0, chartHeight])
-        .padding(0.05),
-    [yLabels, chartHeight]
+    () => d3.scaleBand().domain(yLabels).range([0, chartHeight]).padding(0.05),
+    [yLabels, chartHeight],
   );
 
   // Color scale - uses normalized values (0-1) when normalizePerColumn is true
@@ -169,7 +169,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       );
       showTooltip(event.clientX, event.clientY, content);
     },
-    [showTooltip, valueFormat]
+    [showTooltip, valueFormat],
   );
 
   // Determine if value label should be shown
@@ -188,7 +188,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      <svg width={width || '100%'} height={height} className="overflow-visible">
+      <svg width={width || "100%"} height={height} className="overflow-visible">
         <g transform={`translate(${margins.left},${margins.top})`}>
           {/* Cells */}
           {yLabels.map((y) =>
@@ -205,7 +205,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
               const bgColor = colorFn(cell.value, cell.normalizedValue);
               const rgb = d3.rgb(bgColor);
               const luminance = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
-              const textColor = luminance > 128 ? '#1d1b20' : '#ffffff';
+              const textColor = luminance > 128 ? "#1d1b20" : "#ffffff";
 
               return (
                 <g key={`${x}|${y}`}>
@@ -237,7 +237,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                   )}
                 </g>
               );
-            })
+            }),
           )}
 
           {/* X axis */}
@@ -308,9 +308,17 @@ export const Heatmap: React.FC<HeatmapProps> = ({
         </g>
 
         {/* Color legend */}
-        <g transform={`translate(${(width || 600) - margins.right - 100},${margins.top})`}>
+        <g
+          transform={`translate(${(width || 600) - margins.right - 100},${margins.top})`}
+        >
           <defs>
-            <linearGradient id="heatmap-legend-gradient" x1="0" x2="0" y1="1" y2="0">
+            <linearGradient
+              id="heatmap-legend-gradient"
+              x1="0"
+              x2="0"
+              y1="1"
+              y2="0"
+            >
               {[0, 0.25, 0.5, 0.75, 1].map((stop) => {
                 const values = data.map((d) => d.value);
                 const min = Math.min(...values);
@@ -334,20 +342,10 @@ export const Heatmap: React.FC<HeatmapProps> = ({
             fill="url(#heatmap-legend-gradient)"
             rx={2}
           />
-          <text
-            x={16}
-            y={8}
-            fontSize={9}
-            fill={CHART_COLORS.onSurfaceVariant}
-          >
+          <text x={16} y={8} fontSize={9} fill={CHART_COLORS.onSurfaceVariant}>
             {getFormatter(valueFormat)(Math.max(...data.map((d) => d.value)))}
           </text>
-          <text
-            x={16}
-            y={80}
-            fontSize={9}
-            fill={CHART_COLORS.onSurfaceVariant}
-          >
+          <text x={16} y={80} fontSize={9} fill={CHART_COLORS.onSurfaceVariant}>
             {getFormatter(valueFormat)(Math.min(...data.map((d) => d.value)))}
           </text>
         </g>

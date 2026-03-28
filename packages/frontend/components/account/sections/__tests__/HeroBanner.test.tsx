@@ -8,7 +8,7 @@ const DEFAULT_PROPS = {
   email: "troy@propertyiq.app",
   avatarUrl: null as string | null,
   tierLabel: "PRO",
-  tierClassName: "bg-white text-[#7C3AED]",
+  tierClassName: "bg-white text-[#3949AB]",
   memberSince: "January 2025",
 };
 

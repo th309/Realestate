@@ -31,9 +31,9 @@ export function RecentReportsSection() {
   }, []);
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <FileText className="w-5 h-5 text-[#7C3AED]" />
+        <FileText className="w-5 h-5 text-[#3949AB]" />
         <h2 className="text-lg font-semibold text-on-surface">
           Recent Reports
         </h2>
@@ -52,7 +52,7 @@ export function RecentReportsSection() {
           </p>
           <Link
             href="/reports/builder"
-            className="inline-flex mt-4 px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors"
+            className="inline-flex mt-4 px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors"
           >
             Create Report
           </Link>
@@ -87,7 +87,7 @@ export function RecentReportsSection() {
             return (
               <div
                 key={report.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant hover:border-[#7C3AED]/30 transition-colors"
+                className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant hover:border-[#3949AB]/30 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <FileText className="w-4 h-4 text-on-surface-variant flex-shrink-0" />
@@ -111,7 +111,7 @@ export function RecentReportsSection() {
                 </div>
                 <Link
                   href={`/reports/${report.id}`}
-                  className="text-xs font-medium text-[#7C3AED] hover:text-[#7C3AED]/80 transition-colors flex-shrink-0"
+                  className="text-xs font-medium text-[#3949AB] hover:text-[#3949AB]/80 transition-colors flex-shrink-0"
                 >
                   Reopen
                 </Link>

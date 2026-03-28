@@ -247,7 +247,7 @@ export function QuintilePerformance() {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={entry.name}
-                    fill={QUINTILE_COLORS[index] || "#6366f1"}
+                    fill={QUINTILE_COLORS[index] || "#3949AB"}
                   />
                 ))}
               </Bar>

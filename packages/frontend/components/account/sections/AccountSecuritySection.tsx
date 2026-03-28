@@ -47,9 +47,9 @@ export function AccountSecuritySection({ user }: AccountSecuritySectionProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <ShieldCheck className="w-5 h-5 text-[#7C3AED]" />
+        <ShieldCheck className="w-5 h-5 text-[#3949AB]" />
         <h2 className="text-lg font-semibold text-on-surface">
           Account & Security
         </h2>
@@ -60,7 +60,7 @@ export function AccountSecuritySection({ user }: AccountSecuritySectionProps) {
         <button
           type="button"
           onClick={() => setShowPasswordForm(!showPasswordForm)}
-          className="flex items-center gap-2 text-sm font-medium text-on-surface hover:text-[#7C3AED] transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-on-surface hover:text-[#3949AB] transition-colors"
         >
           {showPasswordForm ? (
             <ChevronUp className="w-4 h-4" />
@@ -97,7 +97,7 @@ export function AccountSecuritySection({ user }: AccountSecuritySectionProps) {
                   </span>
                 </div>
                 {linked ? (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#7C3AED]/10 text-[#7C3AED]">
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#3949AB]/10 text-[#3949AB]">
                     <Check className="w-3 h-3" />
                     Connected
                   </span>
@@ -178,7 +178,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
         </div>
       )}
       {success && (
-        <div className="p-3 rounded-lg bg-[#7C3AED]/10 text-[#7C3AED] text-sm flex items-center gap-2">
+        <div className="p-3 rounded-lg bg-[#3949AB]/10 text-[#3949AB] text-sm flex items-center gap-2">
           <Check className="w-4 h-4" /> Password updated!
         </div>
       )}
@@ -190,7 +190,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]"
+          className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 focus:border-[#3949AB]"
           placeholder="New password"
           required
           minLength={6}
@@ -204,7 +204,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]"
+          className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 focus:border-[#3949AB]"
           placeholder="Confirm new password"
           required
           minLength={6}
@@ -213,7 +213,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
       <button
         type="submit"
         disabled={saving}
-        className="px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors disabled:opacity-50"
+        className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50"
       >
         {saving ? "Updating..." : "Update Password"}
       </button>

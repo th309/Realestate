@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 /** Preset palette — all pass WCAG AA against white. */
 const PRESET_COLORS = [
   { hex: "#2563eb", label: "Blue" },
-  { hex: "#7c3aed", label: "Violet" },
+  { hex: "#3949AB", label: "Indigo" },
   { hex: "#4f46e5", label: "Indigo" },
   { hex: "#059669", label: "Emerald" },
   { hex: "#0891b2", label: "Cyan" },

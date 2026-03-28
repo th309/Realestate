@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useMemo, useCallback, useState } from 'react';
-import * as d3 from 'd3';
-import { useD3, useD3Tooltip, D3Tooltip, useResponsiveD3 } from './hooks/useD3';
+import React, { useMemo, useCallback, useState } from "react";
+import * as d3 from "d3";
+import { useD3, useD3Tooltip, D3Tooltip, useResponsiveD3 } from "./hooks/useD3";
 import {
   CHART_COLORS,
   createValueScale,
   FormatType,
   getFormatter,
-} from './utils/scales';
+} from "./utils/scales";
 
 interface TreemapNode {
   name: string;
@@ -19,8 +19,8 @@ interface TreemapNode {
 
 interface TreemapProps {
   data: TreemapNode;
-  colorBy?: 'value' | 'colorValue';
-  colorScale?: 'sequential' | 'diverging';
+  colorBy?: "value" | "colorValue";
+  colorScale?: "sequential" | "diverging";
   valueFormat?: FormatType;
   colorFormat?: FormatType;
   showLabels?: boolean;
@@ -34,17 +34,20 @@ type HierarchyNode = d3.HierarchyRectangularNode<TreemapNode>;
 
 export const Treemap: React.FC<TreemapProps> = ({
   data,
-  colorBy = 'value',
-  colorScale = 'sequential',
-  valueFormat = 'currency',
-  colorFormat = 'percent',
+  colorBy = "value",
+  colorScale = "sequential",
+  valueFormat = "currency",
+  colorFormat = "percent",
   showLabels = true,
   padding = 2,
   height = 500,
-  className = '',
+  className = "",
   onNodeClick,
 }) => {
-  const { containerRef, width } = useResponsiveD3<HTMLDivElement>(16 / 10, height);
+  const { containerRef, width } = useResponsiveD3<HTMLDivElement>(
+    16 / 10,
+    height,
+  );
   const { tooltip, showTooltip, hideTooltip, moveTooltip } = useD3Tooltip();
   const [breadcrumb, setBreadcrumb] = useState<string[]>([data.name]);
   const [currentData, setCurrentData] = useState(data);
@@ -73,14 +76,17 @@ export const Treemap: React.FC<TreemapProps> = ({
 
     const leaves = treemapData.leaves();
     const values = leaves.map((d) =>
-      colorBy === 'colorValue' ? d.data.colorValue ?? 0 : d.value ?? 0
+      colorBy === "colorValue" ? (d.data.colorValue ?? 0) : (d.value ?? 0),
     );
     const extent = d3.extent(values) as [number, number];
 
-    const scale = createValueScale(extent, colorScale, 'purple');
+    const scale = createValueScale(extent, colorScale, "indigo");
 
     return (node: HierarchyNode) => {
-      const value = colorBy === 'colorValue' ? node.data.colorValue ?? 0 : node.value ?? 0;
+      const value =
+        colorBy === "colorValue"
+          ? (node.data.colorValue ?? 0)
+          : (node.value ?? 0);
       return scale(value) as string;
     };
   }, [treemapData, colorBy, colorScale]);
@@ -96,7 +102,7 @@ export const Treemap: React.FC<TreemapProps> = ({
         onNodeClick?.(node.data, breadcrumb);
       }
     },
-    [breadcrumb, onNodeClick]
+    [breadcrumb, onNodeClick],
   );
 
   // Handle breadcrumb navigation
@@ -122,7 +128,7 @@ export const Treemap: React.FC<TreemapProps> = ({
         setBreadcrumb(newBreadcrumb);
       }
     },
-    [data, breadcrumb]
+    [data, breadcrumb],
   );
 
   // Handle tooltip
@@ -149,7 +155,11 @@ export const Treemap: React.FC<TreemapProps> = ({
               <div className="flex justify-between gap-4">
                 <span className="opacity-75">% of parent:</span>
                 <span>
-                  {(((node.value ?? 0) / (node.parent.value ?? 1)) * 100).toFixed(1)}%
+                  {(
+                    ((node.value ?? 0) / (node.parent.value ?? 1)) *
+                    100
+                  ).toFixed(1)}
+                  %
                 </span>
               </div>
             )}
@@ -158,7 +168,7 @@ export const Treemap: React.FC<TreemapProps> = ({
       );
       showTooltip(event.clientX, event.clientY, content);
     },
-    [showTooltip, valueFormat, colorFormat]
+    [showTooltip, valueFormat, colorFormat],
   );
 
   // Determine if label should be shown
@@ -187,16 +197,15 @@ export const Treemap: React.FC<TreemapProps> = ({
         <div className="flex items-center gap-1 mb-2 text-sm">
           {breadcrumb.map((item, index) => (
             <React.Fragment key={index}>
-              {index > 0 && (
-                <span className="text-on-surface-variant">/</span>
-              )}
+              {index > 0 && <span className="text-on-surface-variant">/</span>}
               <button
                 onClick={() => handleBreadcrumbClick(index)}
                 className={`
                   px-2 py-0.5 rounded
-                  ${index === breadcrumb.length - 1
-                    ? 'bg-primary-container text-on-primary-container font-medium'
-                    : 'text-primary hover:bg-surface-container'
+                  ${
+                    index === breadcrumb.length - 1
+                      ? "bg-primary-container text-on-primary-container font-medium"
+                      : "text-primary hover:bg-surface-container"
                   }
                 `}
               >
@@ -243,12 +252,12 @@ export const Treemap: React.FC<TreemapProps> = ({
                       <div
                         className="text-white text-xs font-medium leading-tight"
                         style={{
-                          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
+                          textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
+                          WebkitBoxOrient: "vertical",
                         }}
                       >
                         {node.data.name}
@@ -256,7 +265,7 @@ export const Treemap: React.FC<TreemapProps> = ({
                       {nodeHeight > 50 && (
                         <div
                           className="text-white/80 text-[10px]"
-                          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
                         >
                           {getFormatter(valueFormat)(node.value ?? 0)}
                         </div>

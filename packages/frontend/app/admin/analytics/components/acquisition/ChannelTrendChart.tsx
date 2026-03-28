@@ -35,7 +35,7 @@ interface ChannelTrendChartProps {
 }
 
 const CHANNEL_COLORS: Record<string, string> = {
-  direct: "#6750a4",
+  direct: "#3949AB",
   organic: "#22c55e",
   utm: "#3b82f6",
   email: "#f59e0b",

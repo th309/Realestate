@@ -1,9 +1,13 @@
-'use client';
+"use client";
 
-import type { TestSectionProps } from './types';
-import { useTestApi } from './hooks/useTestApi';
+import type { TestSectionProps } from "./types";
+import { useTestApi } from "./hooks/useTestApi";
 
-export function DatabaseTestsSection({ loading, setLoading, setResult }: TestSectionProps) {
+export function DatabaseTestsSection({
+  loading,
+  setLoading,
+  setResult,
+}: TestSectionProps) {
   const api = useTestApi({ setLoading, setResult });
 
   return (
@@ -15,7 +19,7 @@ export function DatabaseTestsSection({ loading, setLoading, setResult }: TestSec
           disabled={loading}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Testing...' : 'Test Connection'}
+          {loading ? "Testing..." : "Test Connection"}
         </button>
 
         <button
@@ -23,15 +27,15 @@ export function DatabaseTestsSection({ loading, setLoading, setResult }: TestSec
           disabled={loading}
           className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Setting up...' : 'Insert Test Data'}
+          {loading ? "Setting up..." : "Insert Test Data"}
         </button>
 
         <button
           onClick={api.verifyTestData}
           disabled={loading}
-          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Verifying...' : 'Verify Data'}
+          {loading ? "Verifying..." : "Verify Data"}
         </button>
       </div>
     </div>

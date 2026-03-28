@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 interface ScoreTrendSparklineProps {
   /** Array of score values over time (oldest to newest) */
@@ -18,8 +18,8 @@ export function ScoreTrendSparkline({
   data,
   width = 60,
   height = 24,
-  color = 'var(--color-primary, #6750A4)',
-  className = '',
+  color = "var(--color-primary, #3949AB)",
+  className = "",
 }: ScoreTrendSparklineProps) {
   if (data.length < 2) return null;
 
@@ -34,11 +34,15 @@ export function ScoreTrendSparkline({
       const y = padding + (1 - (value - min) / range) * (height - padding * 2);
       return `${x},${y}`;
     })
-    .join(' ');
+    .join(" ");
 
   // Determine trend color: green if last > first, red if last < first
   const trendUp = data[data.length - 1] > data[0];
-  const trendColor = trendUp ? '#16a34a' : data[data.length - 1] < data[0] ? '#dc2626' : color;
+  const trendColor = trendUp
+    ? "#16a34a"
+    : data[data.length - 1] < data[0]
+      ? "#dc2626"
+      : color;
 
   return (
     <svg

@@ -49,25 +49,28 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
   const scores = stats.score_health ?? { hit_rate_1y: 0, sparkline: [] };
 
   // System Health
-  const uptimeFormatted = `${health.uptime_pct.toFixed(1)}%`;
+  const uptimeFormatted = `${(health.uptime_pct ?? 0).toFixed(1)}%`;
 
   // Active Alerts
-  const alertColor = alerts.count > 0 ? "#f59e0b" : "#22c55e";
+  const alertCount = alerts.count ?? 0;
+  const alertColor = alertCount > 0 ? "#f59e0b" : "#22c55e";
   const alertSubtitle =
-    alerts.count === 0
+    alertCount === 0
       ? "All systems nominal"
-      : `${alerts.critical} critical, ${alerts.warning} warning`;
+      : `${alerts.critical ?? 0} critical, ${alerts.warning ?? 0} warning`;
 
   // Data Freshness
-  const freshnessFormatted = `${freshness.fresh}/${freshness.total}`;
-  const allFresh = freshness.total > 0 && freshness.fresh >= freshness.total;
+  const freshnessFormatted = `${freshness.fresh ?? 0}/${freshness.total ?? 0}`;
+  const allFresh =
+    (freshness.total ?? 0) > 0 &&
+    (freshness.fresh ?? 0) >= (freshness.total ?? 0);
   const freshnessColor = allFresh ? "#22c55e" : "#ef4444";
 
   // Total Users
-  const totalUsersFormatted = users.count.toLocaleString();
+  const totalUsersFormatted = (users.count ?? 0).toLocaleString();
 
   // Score Health
-  const scoreHealthFormatted = `${scores.hit_rate_1y.toFixed(1)}%`;
+  const scoreHealthFormatted = `${(scores.hit_rate_1y ?? 0).toFixed(1)}%`;
 
   return (
     <div data-testid="hero-stats-row" className="flex gap-4">
@@ -81,11 +84,11 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
 
       <HeroStatCard
         label="Active Alerts"
-        value={String(alerts.count)}
+        value={String(alertCount)}
         subtitle={alertSubtitle}
         sparkline={alerts.sparkline}
         color={alertColor}
-        borderAlert={alerts.count > 0}
+        borderAlert={alertCount > 0}
       />
 
       <HeroStatCard
@@ -99,9 +102,9 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
       <HeroStatCard
         label="Total Users"
         value={totalUsersFormatted}
-        subtitle={`+${users.new_this_week.toLocaleString()} this week`}
+        subtitle={`+${(users.new_this_week ?? 0).toLocaleString()} this week`}
         sparkline={users.sparkline}
-        color="#a78bfa"
+        color="#7986CB"
       />
 
       <HeroStatCard

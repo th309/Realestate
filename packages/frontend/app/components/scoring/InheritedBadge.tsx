@@ -46,7 +46,7 @@ function getBadgeColor(type: GeographyLevel): string {
     case "metro":
       return "bg-indigo-100 text-indigo-700 border-indigo-200";
     case "state":
-      return "bg-purple-100 text-purple-700 border-purple-200";
+      return "bg-indigo-100 text-indigo-700 border-indigo-200";
     case "national":
       return "bg-gray-100 text-gray-700 border-gray-200";
     default:

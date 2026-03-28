@@ -22,7 +22,7 @@ export function HeroBanner({
   const initials = (displayName || email || "?").charAt(0).toUpperCase();
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] p-6 sm:p-8">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#3949AB] to-[#1A237E] p-6 sm:p-8">
       {/* Decorative circles */}
       <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-white/5" />
       <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />

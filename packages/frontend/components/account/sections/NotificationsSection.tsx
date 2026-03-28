@@ -79,9 +79,9 @@ export function NotificationsSection() {
   );
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <BellRing className="w-5 h-5 text-[#7C3AED]" />
+        <BellRing className="w-5 h-5 text-[#3949AB]" />
         <h2 className="text-lg font-semibold text-on-surface">Notifications</h2>
       </div>
 
@@ -123,8 +123,8 @@ export function NotificationsSection() {
                     aria-checked={checked}
                     disabled={!!savingKey}
                     onClick={() => handleToggle(toggle.key)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      checked ? "bg-[#7C3AED]" : "bg-on-surface/20"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      checked ? "bg-[#3949AB]" : "bg-on-surface/20"
                     }`}
                   >
                     <span

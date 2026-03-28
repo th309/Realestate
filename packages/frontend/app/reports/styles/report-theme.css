@@ -10,30 +10,30 @@
    ======================================== */
 
 :root {
-  /* Primary Palette - M3 Harmonized */
-  --report-cream: #fef7ff;
-  --report-cream-dark: #f3edf7;
-  --report-navy: #1d1b20;
-  --report-navy-light: #49454f;
+  /* Primary Palette — PropertyIQ Brand Indigo */
+  --report-cream: #fafbff;
+  --report-cream-dark: #f4f5fb;
+  --report-navy: #1a237e;
+  --report-navy-light: #3949ab;
   --report-stone: #49454f;
   --report-stone-light: #79747e;
-  --report-gold: #6750a4;
-  --report-gold-muted: #7f67be;
-  --report-sage: #e8def8;
-  --report-sage-dark: #d0bcff;
+  --report-gold: #3949ab;
+  --report-gold-muted: #5c6bc0;
+  --report-sage: #e8eaf6;
+  --report-sage-dark: #c5cae9;
 
   /* Semantic Colors */
-  --report-success: #3D7A5F;
-  --report-success-bg: #E8F0EC;
-  --report-warning: #C4883A;
-  --report-warning-bg: #FDF6ED;
-  --report-error: #B44D4D;
-  --report-error-bg: #FAEDED;
+  --report-success: #3d7a5f;
+  --report-success-bg: #e8f0ec;
+  --report-warning: #c4883a;
+  --report-warning-bg: #fdf6ed;
+  --report-error: #b44d4d;
+  --report-error-bg: #faeded;
 
   /* Typography Scale */
-  --report-font-display: var(--font-source-serif), 'Georgia', serif;
-  --report-font-body: var(--font-dm-sans), 'Helvetica Neue', sans-serif;
-  --report-font-mono: var(--font-roboto-mono), 'Consolas', monospace;
+  --report-font-display: var(--font-source-serif), "Georgia", serif;
+  --report-font-body: var(--font-dm-sans), "Helvetica Neue", sans-serif;
+  --report-font-mono: var(--font-roboto-mono), "Consolas", monospace;
 
   /* Spacing Scale */
   --report-space-xs: 0.25rem;
@@ -51,10 +51,14 @@
   --report-radius-xl: 1.5rem;
 
   /* Shadows */
-  --report-shadow-sm: 0 1px 3px rgba(29, 27, 32, 0.04), 0 1px 2px rgba(29, 27, 32, 0.02);
-  --report-shadow-md: 0 4px 12px rgba(29, 27, 32, 0.06), 0 2px 4px rgba(29, 27, 32, 0.03);
-  --report-shadow-lg: 0 12px 32px rgba(29, 27, 32, 0.08), 0 4px 8px rgba(29, 27, 32, 0.04);
-  --report-shadow-xl: 0 20px 48px rgba(29, 27, 32, 0.1), 0 8px 16px rgba(29, 27, 32, 0.05);
+  --report-shadow-sm:
+    0 1px 3px rgba(29, 27, 32, 0.04), 0 1px 2px rgba(29, 27, 32, 0.02);
+  --report-shadow-md:
+    0 4px 12px rgba(29, 27, 32, 0.06), 0 2px 4px rgba(29, 27, 32, 0.03);
+  --report-shadow-lg:
+    0 12px 32px rgba(29, 27, 32, 0.08), 0 4px 8px rgba(29, 27, 32, 0.04);
+  --report-shadow-xl:
+    0 20px 48px rgba(29, 27, 32, 0.1), 0 8px 16px rgba(29, 27, 32, 0.05);
 
   /* Transitions */
   --report-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -269,10 +273,18 @@
   transition: stroke-dashoffset var(--report-transition-slow);
 }
 
-.report-score-excellent { stroke: var(--report-success); }
-.report-score-good { stroke: var(--report-gold); }
-.report-score-moderate { stroke: var(--report-warning); }
-.report-score-poor { stroke: var(--report-error); }
+.report-score-excellent {
+  stroke: var(--report-success);
+}
+.report-score-good {
+  stroke: var(--report-gold);
+}
+.report-score-moderate {
+  stroke: var(--report-warning);
+}
+.report-score-poor {
+  stroke: var(--report-error);
+}
 
 /* ========================================
    Status Badges
@@ -297,7 +309,7 @@
 }
 
 .report-badge-generating {
-  background: rgba(103, 80, 164, 0.15);
+  background: rgba(57, 73, 171, 0.15);
   color: var(--report-gold);
 }
 
@@ -372,7 +384,8 @@
 }
 
 @keyframes report-pulse-soft {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -384,11 +397,26 @@
   animation: report-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.report-animate-in-delay-1 { animation-delay: 0.1s; opacity: 0; }
-.report-animate-in-delay-2 { animation-delay: 0.2s; opacity: 0; }
-.report-animate-in-delay-3 { animation-delay: 0.3s; opacity: 0; }
-.report-animate-in-delay-4 { animation-delay: 0.4s; opacity: 0; }
-.report-animate-in-delay-5 { animation-delay: 0.5s; opacity: 0; }
+.report-animate-in-delay-1 {
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+.report-animate-in-delay-2 {
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+.report-animate-in-delay-3 {
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+.report-animate-in-delay-4 {
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+.report-animate-in-delay-5 {
+  animation-delay: 0.5s;
+  opacity: 0;
+}
 
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
@@ -541,8 +569,12 @@
 }
 
 @keyframes report-skeleton-pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ========================================
@@ -691,9 +723,15 @@
   }
 
   /* Explicit break utilities */
-  .report-page-break       { break-before: page; }
-  .report-page-break-after { break-after: page; }
-  .report-no-break         { break-inside: avoid; }
+  .report-page-break {
+    break-before: page;
+  }
+  .report-page-break-after {
+    break-after: page;
+  }
+  .report-no-break {
+    break-inside: avoid;
+  }
 
   /* ── Atomic elements — avoid breaking inside ─────────────────────────── *
    *
@@ -733,7 +771,7 @@
     break-inside: auto;
   }
   /* Small tables (e.g., summary rows) stay together */
-  table:has(tr:nth-child(-n+6):last-child) {
+  table:has(tr:nth-child(-n + 6):last-child) {
     break-inside: avoid;
   }
 
@@ -741,7 +779,9 @@
   .report-section-header {
     break-after: avoid;
   }
-  h2, h3, h4 {
+  h2,
+  h3,
+  h4 {
     break-after: avoid;
     orphans: 3;
     widows: 3;

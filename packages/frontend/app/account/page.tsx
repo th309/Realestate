@@ -31,11 +31,11 @@ const TIER_BADGE: Record<string, { label: string; className: string }> = {
   },
   pro: {
     label: "PRO",
-    className: "bg-white text-[#7C3AED]",
+    className: "bg-white text-[#3949AB]",
   },
   enterprise: {
     label: "ENTERPRISE",
-    className: "bg-white text-[#6D28D9]",
+    className: "bg-white text-[#1A237E]",
   },
   admin: {
     label: "ADMIN",
@@ -193,7 +193,7 @@ function AccountPageContent() {
 
           {/* 2. Plan + Usage (hidden for org members — billing is at org level) */}
           {isOrgMember ? (
-            <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+            <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-tertiary" />

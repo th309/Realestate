@@ -211,7 +211,7 @@ export function DataCardsTab() {
                         </span>
                       )}
                       {metric.isPro && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-100 text-purple-700">
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-indigo-100 text-indigo-700">
                           PRO
                         </span>
                       )}

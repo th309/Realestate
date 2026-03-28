@@ -82,9 +82,9 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
     .toUpperCase();
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <User className="w-5 h-5 text-[#7C3AED]" />
+        <User className="w-5 h-5 text-[#3949AB]" />
         <h2 className="text-lg font-semibold text-on-surface">
           Personal Information
         </h2>
@@ -101,7 +101,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30"
+          className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30"
           disabled={uploading}
         >
           {avatarUrl ? (
@@ -112,7 +112,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-[#7C3AED] flex items-center justify-center">
+            <div className="w-full h-full bg-[#3949AB] flex items-center justify-center">
               <span className="text-xl font-semibold text-white">
                 {initials}
               </span>
@@ -151,7 +151,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]"
+            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 focus:border-[#3949AB]"
             placeholder="Your name"
           />
         </div>
@@ -181,7 +181,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]"
+            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 focus:border-[#3949AB]"
             placeholder="(555) 123-4567"
           />
         </div>
@@ -196,7 +196,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]"
+            className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-[#3949AB]/30 focus:border-[#3949AB]"
             placeholder="City, State"
           />
         </div>
@@ -207,7 +207,7 @@ export function PersonalInfoSection({ user }: PersonalInfoSectionProps) {
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors disabled:opacity-50"
+        className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50"
       >
         {saving ? "Saving..." : saved ? "Saved!" : "Save"}
       </button>

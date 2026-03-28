@@ -48,7 +48,7 @@ function TierBadge({ tier }: { tier: string }) {
     free: "bg-surface-container-high text-on-surface-variant",
     pro: "bg-blue-100 text-blue-700",
     enterprise: "bg-amber-100 text-amber-700",
-    trial: "bg-purple-100 text-purple-700",
+    trial: "bg-indigo-100 text-indigo-700",
   };
   const color =
     colorMap[tier.toLowerCase()] ??

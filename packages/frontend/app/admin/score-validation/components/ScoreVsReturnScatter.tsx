@@ -227,7 +227,7 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
             <Scatter
               name="Locations"
               data={chartData}
-              fill="#6366f1"
+              fill="#3949AB"
               fillOpacity={0.6}
               shape="circle"
             />
@@ -249,7 +249,7 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
 
       <div className="mt-3 flex justify-center gap-6 text-xs text-on-surface-variant">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#6366f1]" />
+          <div className="w-3 h-3 rounded-full bg-[#3949AB]" />
           <span>Locations ({chartData.length})</span>
         </div>
         <div className="flex items-center gap-1.5">

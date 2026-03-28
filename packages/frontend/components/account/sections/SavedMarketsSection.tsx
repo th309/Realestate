@@ -44,10 +44,10 @@ export function SavedMarketsSection({
   const isUnlimited = limit === -1;
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-[#7C3AED]" />
+          <MapPin className="w-5 h-5 text-[#3949AB]" />
           <h2 className="text-lg font-semibold text-on-surface">
             Saved Markets
           </h2>
@@ -78,7 +78,7 @@ export function SavedMarketsSection({
           </p>
           <Link
             href="/map"
-            className="inline-flex mt-4 px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors"
+            className="inline-flex mt-4 px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors"
           >
             Explore Markets
           </Link>
@@ -92,12 +92,12 @@ export function SavedMarketsSection({
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant hover:border-[#7C3AED]/30 transition-colors"
+                className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant hover:border-[#3949AB]/30 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#7C3AED]/10 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#3949AB]/10 flex items-center justify-center">
                     {item.score_at_add != null ? (
-                      <span className="text-sm font-bold text-[#7C3AED]">
+                      <span className="text-sm font-bold text-[#3949AB]">
                         {Math.round(item.score_at_add)}
                       </span>
                     ) : (
@@ -119,7 +119,7 @@ export function SavedMarketsSection({
                   <TrendIcon className={`w-4 h-4 ${trend.color}`} />
                   <Link
                     href={`/map?geo=${item.geography_type}&id=${item.geography_id}&name=${encodeURIComponent(item.geography_name)}`}
-                    className="text-xs font-medium text-[#7C3AED] hover:text-[#7C3AED]/80 transition-colors"
+                    className="text-xs font-medium text-[#3949AB] hover:text-[#3949AB]/80 transition-colors"
                   >
                     View
                   </Link>

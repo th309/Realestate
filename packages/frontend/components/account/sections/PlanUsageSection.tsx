@@ -87,14 +87,14 @@ const ALERT_LIMITS: Record<UserTier, number> = {
 
 const TIER_ICONS: Record<UserTier, React.ReactNode> = {
   free: <Home className="w-5 h-5 text-on-surface-variant" />,
-  pro: <Warehouse className="w-5 h-5 text-[#7C3AED]" />,
+  pro: <Warehouse className="w-5 h-5 text-[#3949AB]" />,
   enterprise: <Building2 className="w-5 h-5 text-tertiary" />,
   admin: <Shield className="w-5 h-5 text-error" />,
 };
 
 const TIER_ICON_BG: Record<UserTier, string> = {
   free: "bg-on-surface/10",
-  pro: "bg-[#7C3AED]/10",
+  pro: "bg-[#3949AB]/10",
   enterprise: "bg-tertiary/10",
   admin: "bg-error/10",
 };
@@ -222,7 +222,7 @@ export function PlanUsageSection({
   }, [tier]);
 
   return (
-    <section className="bg-white rounded-xl border border-purple-200/50 p-6">
+    <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
       {/* Current Plan */}
       <div className="flex items-center gap-3 mb-6">
         <div
@@ -281,7 +281,7 @@ export function PlanUsageSection({
               {!isUnlimited && meter.limit > 0 && (
                 <div className="mt-1.5 h-1.5 rounded-full bg-on-surface/10 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${isHigh ? "bg-red-500" : "bg-[#7C3AED]"}`}
+                    className={`h-full rounded-full transition-all ${isHigh ? "bg-red-500" : "bg-[#3949AB]"}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -295,7 +295,7 @@ export function PlanUsageSection({
       <button
         type="button"
         onClick={() => setShowComparison(!showComparison)}
-        className="flex items-center gap-2 text-sm font-medium text-[#7C3AED] hover:text-[#7C3AED]/80 transition-colors mb-4"
+        className="flex items-center gap-2 text-sm font-medium text-[#3949AB] hover:text-[#3949AB]/80 transition-colors mb-4"
       >
         {showComparison ? (
           <ChevronUp className="w-4 h-4" />
@@ -324,7 +324,7 @@ export function PlanUsageSection({
             type="button"
             onClick={handleManageBilling}
             disabled={portalLoading}
-            className="px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
           >
             {portalLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -336,7 +336,7 @@ export function PlanUsageSection({
         ) : tier !== "admin" ? (
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] text-white rounded-lg text-sm font-medium hover:bg-[#7C3AED]/90 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors"
           >
             Upgrade to Pro
           </Link>

@@ -188,9 +188,32 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-xl font-bold tracking-tight text-primary group-hover:opacity-90 transition-opacity">
-                PropertyIQ
+            <Link
+              href="/"
+              className="flex items-center gap-2 group"
+              aria-label="PropertyIQ home"
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 64 64"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="shrink-0"
+                aria-hidden="true"
+              >
+                <rect width="64" height="64" rx="14" fill="#3949AB" />
+                <path
+                  d="M20 16V48H26V38H34C40.627 38 46 32.627 46 26C46 19.373 40.627 16 34 16H20Z"
+                  fill="white"
+                />
+                <circle cx="34" cy="26" r="6" fill="#3949AB" />
+                <circle cx="44" cy="44" r="4" fill="#00C853" />
+                <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
+              </svg>
+              <span className="text-xl font-bold tracking-tight group-hover:opacity-90 transition-opacity">
+                <span className="text-[#1A237E]">Property</span>
+                <span className="text-[#3949AB]">IQ</span>
               </span>
             </Link>
           </div>

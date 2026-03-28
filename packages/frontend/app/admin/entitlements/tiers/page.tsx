@@ -66,11 +66,11 @@ const TIER_STYLES: Record<
     header: "bg-blue-100",
   },
   enterprise: {
-    bg: "bg-purple-50",
-    border: "border-purple-300",
-    text: "text-purple-700",
-    chip: "bg-purple-100 text-purple-700 border-purple-300",
-    header: "bg-purple-100",
+    bg: "bg-indigo-50",
+    border: "border-indigo-300",
+    text: "text-indigo-700",
+    chip: "bg-indigo-100 text-indigo-700 border-indigo-300",
+    header: "bg-indigo-100",
   },
 };
 
@@ -196,7 +196,7 @@ function TierColumn({
           <p className="text-xs text-blue-600 mt-1">Pro + Enterprise</p>
         )}
         {tierSlug === "enterprise" && (
-          <p className="text-xs text-purple-600 mt-1">Enterprise only</p>
+          <p className="text-xs text-indigo-600 mt-1">Enterprise only</p>
         )}
       </div>
 
