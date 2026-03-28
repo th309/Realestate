@@ -14,6 +14,7 @@ import {
 } from "@/lib/visualizations/d3/ScatterPlot";
 import { useValidationScatter } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
+import { HorizonToggle } from "./HorizonToggle";
 
 const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
   { value: "metro", label: "Metro Areas" },
@@ -48,10 +49,12 @@ const V3_OOS_METRICS: Record<
 
 interface InteractiveScatterProps {
   horizon?: "1y" | "3y";
+  onHorizonChange?: (h: "1y" | "3y") => void;
 }
 
 export function InteractiveScatter({
   horizon = "3y",
+  onHorizonChange,
 }: InteractiveScatterProps) {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("homeready");
@@ -152,9 +155,9 @@ export function InteractiveScatter({
         </div>
       </div>
 
-      {/* OOS validation metrics (from v3 walk-forward CV report) */}
+      {/* OOS validation metrics + horizon toggle */}
       {oosMetrics && (
-        <div className="flex gap-4 mt-4">
+        <div className="flex items-end gap-4 mt-4">
           <div className="bg-surface-container rounded-xl px-4 py-2 border border-outline-variant">
             <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
               OOS IC
@@ -187,6 +190,11 @@ export function InteractiveScatter({
               {scatterData.length.toLocaleString()}
             </p>
           </div>
+          {onHorizonChange && (
+            <div className="ml-auto">
+              <HorizonToggle value={horizon} onChange={onHorizonChange} />
+            </div>
+          )}
         </div>
       )}
 

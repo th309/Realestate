@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { HorizonToggle } from "./HorizonToggle";
 import { HeroStats } from "./HeroStats";
 import { DollarImpactSection } from "./DollarImpactSection";
 import { AlphaCallout } from "./AlphaCallout";
@@ -13,7 +12,6 @@ import { GeographyCoverage } from "./GeographyCoverage";
 import { MethodologyFooter } from "./MethodologyFooter";
 
 interface AccuracyPageShellProps {
-  /** Server components rendered after the client shell (HeadToHead, CTABanner) */
   children?: ReactNode;
 }
 
@@ -22,10 +20,8 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
 
   return (
     <div className="space-y-16">
-      {/* 1. Hero Stats + Horizon Toggle (toggle bottom-aligned with stat cards) */}
-      <HeroStats horizon={horizon}>
-        <HorizonToggle value={horizon} onChange={setHorizon} />
-      </HeroStats>
+      {/* 1. Hero Stats */}
+      <HeroStats horizon={horizon} />
 
       {/* 2. Dollar Impact */}
       <DollarImpactSection />
@@ -33,8 +29,8 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
       {/* 2b. Alpha vs Beta Callout */}
       <AlphaCallout />
 
-      {/* 3. Interactive Scatter */}
-      <InteractiveScatter horizon={horizon} />
+      {/* 3. Interactive Scatter (toggle inside, on OOS metrics row) */}
+      <InteractiveScatter horizon={horizon} onHorizonChange={setHorizon} />
 
       {/* 4. Quintile Performance */}
       <QuintilePerformance horizon={horizon} />
@@ -45,13 +41,12 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
       {/* 6. Pearson vs Spearman Explainer */}
       <PearsonVsSpearman />
 
-      {/* 7. Geography Coverage — shows both 1Y and 3Y, no horizon prop needed */}
+      {/* 7. Geography Coverage */}
       <GeographyCoverage />
 
       {/* 8. Methodology */}
       <MethodologyFooter />
 
-      {/* Server components passed from page.tsx (HeadToHead, CTABanner) */}
       {children}
     </div>
   );
