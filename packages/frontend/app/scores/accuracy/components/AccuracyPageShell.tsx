@@ -22,8 +22,10 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
 
   return (
     <div className="space-y-16">
-      {/* 1. Hero Stats */}
-      <HeroStats horizon={horizon} />
+      {/* 1. Hero Stats + Horizon Toggle (toggle bottom-aligned with stat cards) */}
+      <HeroStats horizon={horizon}>
+        <HorizonToggle value={horizon} onChange={setHorizon} />
+      </HeroStats>
 
       {/* 2. Dollar Impact */}
       <DollarImpactSection />
@@ -32,12 +34,7 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
       <AlphaCallout />
 
       {/* 3. Interactive Scatter */}
-      <div>
-        <div className="flex justify-end mb-4 px-4">
-          <HorizonToggle value={horizon} onChange={setHorizon} />
-        </div>
-        <InteractiveScatter horizon={horizon} />
-      </div>
+      <InteractiveScatter horizon={horizon} />
 
       {/* 4. Quintile Performance */}
       <QuintilePerformance horizon={horizon} />

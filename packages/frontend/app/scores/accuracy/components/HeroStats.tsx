@@ -26,9 +26,10 @@ import {
 
 interface HeroStatsProps {
   horizon: "1y" | "3y";
+  children?: React.ReactNode;
 }
 
-export function HeroStats({ horizon }: HeroStatsProps) {
+export function HeroStats({ horizon, children }: HeroStatsProps) {
   const horizonLabel = horizon === "3y" ? "3Y" : "1Y";
 
   // Use the official v3 walk-forward OOS constants as the authoritative values.
@@ -90,7 +91,7 @@ export function HeroStats({ horizon }: HeroStatsProps) {
         page comes from held-out test periods the model never trained on.
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-8">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mt-8 items-end">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -113,6 +114,10 @@ export function HeroStats({ horizon }: HeroStatsProps) {
             </div>
           );
         })}
+        {/* Horizon toggle — bottom-aligned with stat cards */}
+        {children && (
+          <div className="flex items-end justify-end">{children}</div>
+        )}
       </div>
     </section>
   );
