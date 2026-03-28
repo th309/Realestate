@@ -11,44 +11,44 @@ name: PropertyIQ Automated Backtest
 on:
   schedule:
     # Run at 2:00 AM UTC on the 1st of each month
-    - cron: '0 2 1 * *'
+    - cron: "0 2 1 * *"
 
   workflow_dispatch:
     inputs:
       score_types:
-        description: 'Score types to test (comma-separated)'
+        description: "Score types to test (comma-separated)"
         required: false
-        default: 'market_health,homeready,investoredge'
+        default: "market_health,homeready,investoredge"
         type: string
       horizons:
-        description: 'Horizons to test (comma-separated)'
+        description: "Horizons to test (comma-separated)"
         required: false
-        default: '6m,1y,3y,5y'
+        default: "6m,1y,3y,5y"
         type: string
       county_sample:
-        description: 'Sample size for counties'
+        description: "Sample size for counties"
         required: false
-        default: '500'
+        default: "500"
         type: string
       zip_sample:
-        description: 'Sample size for ZIPs'
+        description: "Sample size for ZIPs"
         required: false
-        default: '2000'
+        default: "2000"
         type: string
       random_seed:
-        description: 'Random seed for reproducibility'
+        description: "Random seed for reproducibility"
         required: false
-        default: '42'
+        default: "42"
         type: string
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   backtest:
     name: Run Automated Backtest
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3-hour timeout for large backtests
+    timeout-minutes: 180 # 3-hour timeout for large backtests
 
     steps:
       - name: Checkout repository
@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install Python dependencies
         run: |
@@ -95,6 +95,28 @@ jobs:
 
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Validate 1Y and 3Y predictions via NestJS
+        if: success()
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: |
+          echo ">>> Triggering 1Y + 3Y prediction validation..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BACKEND_URL}/api/scores/validate" \
+            -H "Authorization: Bearer ${ADMIN_API_KEY}" \
+            -H "Content-Type: application/json")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY" | python -m json.tool 2>/dev/null || echo "$BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Validation complete"
+          else
+            echo "::warning::Prediction validation returned HTTP $HTTP_CODE — check backend logs"
+          fi
 
       - name: Upload backtest results
         uses: actions/upload-artifact@v4

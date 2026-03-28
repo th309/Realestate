@@ -379,6 +379,85 @@ export class PerformanceTrackingService {
   }
 
   // ============================================================================
+  // Validate 3-Year Predictions
+  // ============================================================================
+
+  /**
+   * Validate predictions from 36 months ago against actual 3-year outcomes.
+   * Should be run monthly alongside validatePredictions().
+   *
+   * This is the primary validation horizon — scores are trained to predict
+   * 3-year excess returns vs state median.
+   */
+  async validatePredictions3Y(): Promise<ValidationResult> {
+    // Calculate the prediction date to validate (36 months ago)
+    const now = new Date();
+    const predictionDate = new Date(now.getFullYear() - 3, now.getMonth(), 1);
+    const predictionDateStr = predictionDate.toISOString().slice(0, 7) + '-01';
+
+    // Get predictions that have 1Y validation but not yet 3Y
+    const { data: predictions, error } = await this.supabase
+      .from('score_performance_tracking')
+      .select('*')
+      .eq('prediction_date', predictionDateStr)
+      .is('validated_3y_at', null);
+
+    if (error || !predictions || predictions.length === 0) {
+      return { validated: 0, errors: 0, predictionDate: predictionDateStr };
+    }
+
+    const medians = await this.calculateMarketMedians(
+      predictions,
+      now.toISOString().slice(0, 10),
+    );
+
+    let validated = 0;
+    let errors = 0;
+
+    for (const pred of predictions) {
+      try {
+        const actualReturn = await this.getActualReturn(
+          pred.location_id,
+          pred.geography,
+          pred.price_at_prediction,
+        );
+
+        if (actualReturn === null) continue;
+
+        // Annualize the 3-year return: (1 + r)^(1/3) - 1
+        const annualizedReturn =
+          (Math.pow(1 + actualReturn / 100, 1 / 3) - 1) * 100;
+        const annualizedRounded = Math.round(annualizedReturn * 100) / 100;
+
+        const medianReturn = medians[pred.geography] || 0;
+        const medianAnnualized =
+          (Math.pow(1 + medianReturn / 100, 1 / 3) - 1) * 100;
+        const beatMarket = annualizedReturn > medianAnnualized;
+
+        const { error: updateError } = await this.supabase
+          .from('score_performance_tracking')
+          .update({
+            actual_return_3y_ann: annualizedRounded,
+            beat_market_3y: beatMarket,
+            validated_3y_at: new Date().toISOString(),
+          })
+          .eq('id', pred.id);
+
+        if (updateError) {
+          errors++;
+        } else {
+          validated++;
+        }
+      } catch (err) {
+        errors++;
+        console.error(`Error validating 3Y prediction ${pred.id}:`, err);
+      }
+    }
+
+    return { validated, errors, predictionDate: predictionDateStr };
+  }
+
+  // ============================================================================
   // Performance Metrics
   // ============================================================================
 

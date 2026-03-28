@@ -891,16 +891,18 @@ export class ScoringController {
   @Post('validate')
   @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Validate predictions from 12 months ago' })
-  async validatePredictions(): Promise<{
-    success: boolean;
-    validated: number;
-    errors: number;
-    predictionDate: string;
-  }> {
-    const result = await this.performanceTrackingService.validatePredictions();
+  async validatePredictions() {
+    const [result1Y, result3Y] = await Promise.all([
+      this.performanceTrackingService.validatePredictions(),
+      this.performanceTrackingService.validatePredictions3Y(),
+    ]);
     return {
-      success: result.errors === 0,
-      ...result,
+      success: result1Y.errors === 0 && result3Y.errors === 0,
+      validated_1y: result1Y.validated,
+      validated_3y: result3Y.validated,
+      errors: result1Y.errors + result3Y.errors,
+      predictionDate_1y: result1Y.predictionDate,
+      predictionDate_3y: result3Y.predictionDate,
     };
   }
 
