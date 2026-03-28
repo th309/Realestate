@@ -12,7 +12,7 @@ import {
   ScatterPlot,
   type ScatterDataPoint,
 } from "@/lib/visualizations/d3/ScatterPlot";
-import { useValidationScatter } from "@/lib/data";
+import { useValidationScatter, useValidationSummary } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
 import { HorizonToggle } from "./HorizonToggle";
 
@@ -98,8 +98,34 @@ export function InteractiveScatter({
       });
   }, [rawData, horizon]);
 
-  // Official v3 OOS metrics (from walk-forward cross-validation report)
-  const oosMetrics = V3_OOS_METRICS[`${geography}_${scoreType}`];
+  // For 3Y: use official v3 walk-forward OOS metrics (authoritative)
+  // For 1Y: use live validation API (early signal, not the trained horizon)
+  const v3Metrics = V3_OOS_METRICS[`${geography}_${scoreType}`];
+  const { data: liveSummary } = useValidationSummary({
+    geography,
+    scoreType,
+  });
+
+  const oosMetrics = v3Metrics
+    ? {
+        ic:
+          horizon === "3y"
+            ? v3Metrics.ic
+            : (liveSummary?.correlation1y ?? v3Metrics.ic),
+        spread:
+          horizon === "3y"
+            ? v3Metrics.spread
+            : liveSummary?.avgExcessVsState1y != null
+              ? `${liveSummary.avgExcessVsState1y.toFixed(2)} pp`
+              : v3Metrics.spread,
+        hitRate:
+          horizon === "3y"
+            ? v3Metrics.hitRate
+            : liveSummary?.hitRate1y != null
+              ? `${liveSummary.hitRate1y.toFixed(1)}%`
+              : v3Metrics.hitRate,
+      }
+    : null;
 
   return (
     <section>
