@@ -226,14 +226,22 @@ export class ValidationController {
     required: false,
     enum: ['homeready', 'investoredge', 'markethealth'],
   })
+  @ApiQuery({
+    name: 'horizon',
+    required: false,
+    enum: ['1y', '3y'],
+    description: 'Return horizon to analyze',
+  })
   async getTimeSeriesAccuracy(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
+    @Query('horizon') horizon?: string,
   ): Promise<TimeSeriesAccuracy[]> {
     const geoType = geography ? this.validateGeography(geography) : undefined;
     const sType = scoreType ? this.validateScoreType(scoreType) : undefined;
+    const h = horizon === '3y' ? '3y' : '1y';
 
-    return this.validationService.getTimeSeriesAccuracy(geoType, sType);
+    return this.validationService.getTimeSeriesAccuracy(geoType, sType, h);
   }
 
   /**

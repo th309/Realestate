@@ -443,15 +443,21 @@ export class ValidationService {
   async getTimeSeriesAccuracy(
     geographyType?: GeographyType,
     scoreType?: ScoreType,
+    horizon: '1y' | '3y' = '1y',
   ): Promise<TimeSeriesAccuracy[]> {
     const client = this.supabase.getClient();
+
+    const outcomeCol =
+      horizon === '3y' ? 'outcome_3y_value' : 'outcome_1y_value';
+    const excessCol =
+      horizon === '3y' ? 'excess_vs_state_3y' : 'excess_vs_state_1y';
 
     // Build query
     let query = client
       .from('propertyiq_backtest_outcomes')
-      .select('score_date, score_value, outcome_1y_value, excess_vs_state_1y')
+      .select(`score_date, score_value, ${outcomeCol}, ${excessCol}`)
       .not('score_value', 'is', null)
-      .not('outcome_1y_value', 'is', null)
+      .not(outcomeCol, 'is', null)
       .order('score_date', { ascending: true });
 
     if (geographyType) {
@@ -482,18 +488,18 @@ export class ValidationService {
       if (records.length < 10) continue; // Need minimum sample
 
       const scores = records.map((r) => r.score_value);
-      const returns = records.map((r) => r.outcome_1y_value);
+      const returns = records.map((r) => r[outcomeCol]);
       const excesses = records
-        .map((r) => r.excess_vs_state_1y)
+        .map((r) => r[excessCol])
         .filter((e) => e != null);
 
       // High scores (>70) that beat benchmark
       const highScores = records.filter(
-        (r) => r.score_value >= 70 && r.excess_vs_state_1y != null,
+        (r) => r.score_value >= 70 && r[excessCol] != null,
       );
       const hitRate =
         highScores.length > 0
-          ? highScores.filter((r) => r.excess_vs_state_1y > 0).length /
+          ? highScores.filter((r) => r[excessCol] > 0).length /
             highScores.length
           : 0;
 
