@@ -837,7 +837,7 @@ export class ScoringController {
    *     "predictions_validated": 367
    *   },
    *   "status": "healthy",
-   *   "formula_version": "v1.0",
+   *   "formula_version": "v3.0",
    *   "last_validated": "2025-01-15"
    * }
    */

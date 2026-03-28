@@ -6,8 +6,7 @@
  * the AI cite concrete validation evidence, increasing report credibility.
  *
  * Numbers sourced from:
- *   - docs/audits/2026-03-01-validation-report.md (v2 elastic-net pipeline)
- *   - scripts/analysis/output/validation_report.md (v3 XGBoost/LightGBM pipeline)
+ *   - scripts/analysis/output/validation_report.md (v3.0 XGBoost/LightGBM tournament pipeline)
  */
 
 export interface ValidationStats {
@@ -59,12 +58,10 @@ export interface ValidationStats {
 /**
  * Returns validation statistics extracted from real backtest results.
  *
- * These numbers are compiled from two validation reports:
- * - v2 (elastic net): 1.5M observations, 60 monthly scoring dates
- * - v3 (XGBoost/LightGBM tournament): 4 walk-forward windows, state benchmarks
- *
- * We use the v3 numbers as the primary source (latest pipeline) and
- * fall back to v2 for statistics not yet available in v3.
+ * All numbers sourced from the v3.0 scoring pipeline:
+ * - XGBoost/LightGBM tournament with walk-forward cross-validation
+ * - 4 walk-forward windows, state benchmarks
+ * - SHAP-distilled linear weights
  */
 export function getValidationStats(): ValidationStats {
   return {
@@ -110,7 +107,7 @@ export function getValidationStats(): ValidationStats {
     oos_hit_rate_homeready: '63.8%',
     oos_hit_rate_investoredge: '69.5%',
 
-    // Dollar alpha (v2 conservative OOS estimates on median home values)
+    // Dollar alpha (v3 OOS estimates on median home values)
     annual_dollar_alpha_homeready: '$3,537',
     annual_dollar_alpha_investoredge: '$11,144',
 

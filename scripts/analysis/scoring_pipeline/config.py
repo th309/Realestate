@@ -206,40 +206,17 @@ SHAP_MAX_SAMPLES = 2000  # subsample for SHAP computation on large datasets
 SHAP_MIN_WEIGHT = 0.01   # features below this weight are dropped
 
 # ---------------------------------------------------------------------------
-# Current production weights (v2.0) for comparison
+# Current production OOS ICs (v3.0) for comparison during retraining
 # ---------------------------------------------------------------------------
 
-CURRENT_PRODUCTION_WEIGHTS = {
-    "homeready": {
-        "median_days_on_market": {"weight": 0.3096, "direction": -1},
-        "affordability_ratio": {"weight": 0.1671, "direction": 1},
-        "pending_ratio": {"weight": 0.1484, "direction": 1},
-        "supply_score": {"weight": 0.1477, "direction": -1},
-        "population_yoy": {"weight": 0.0889, "direction": 1},
-        "demand_score": {"weight": 0.0845, "direction": 1},
-        "price_reduced_share": {"weight": 0.0374, "direction": -1},
-        "unemployment_rate_yoy": {"weight": 0.0164, "direction": -1},
-    },
-    "investoredge": {
-        "median_days_on_market": {"weight": 0.2887, "direction": -1},
-        "affordability_ratio": {"weight": 0.177, "direction": 1},
-        "pending_ratio": {"weight": 0.1564, "direction": 1},
-        "supply_score": {"weight": 0.1287, "direction": -1},
-        "population_yoy": {"weight": 0.0837, "direction": 1},
-        "demand_score": {"weight": 0.0657, "direction": 1},
-        "median_gross_rent": {"weight": 0.0575, "direction": -1},
-        "homeownership_rate": {"weight": 0.0423, "direction": 1},
-    },
-}
-
-# Production OOS ICs for comparison
 CURRENT_PRODUCTION_IC = {
-    ("metro", "homeready"): 0.18,
-    ("metro", "investoredge"): 0.15,
-    ("county", "homeready"): 0.16,
-    ("county", "investoredge"): 0.13,
-    ("zip", "homeready"): 0.12,
-    ("zip", "investoredge"): 0.10,
+    ("metro", "homeready"): 0.30,
+    ("metro", "investoredge"): 0.37,
+    ("metro", "markethealth"): 0.37,
+    ("county", "homeready"): 0.25,
+    ("county", "markethealth"): 0.28,
+    ("zip", "homeready"): 0.18,
+    ("zip", "markethealth"): 0.22,
 }
 
 # ---------------------------------------------------------------------------

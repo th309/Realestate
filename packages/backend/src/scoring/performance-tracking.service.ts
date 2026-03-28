@@ -530,7 +530,7 @@ export class PerformanceTrackingService {
         predictions_validated: metrics?.total_predictions ?? 0,
       },
       status,
-      formula_version: formula?.version ?? 'v1.0',
+      formula_version: formula?.version ?? 'v3.0',
       last_validated: lastValidation?.[0]?.validated_1y_at ?? null,
     };
   }
