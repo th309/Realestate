@@ -17,7 +17,6 @@ import {
   MapPin,
 } from "lucide-react";
 import {
-  useValidationSummary,
   VALIDATION_SCOPE,
   OOS_IC,
   OOS_HIT_RATE,
@@ -30,22 +29,13 @@ interface HeroStatsProps {
 }
 
 export function HeroStats({ horizon }: HeroStatsProps) {
-  const { data: summary } = useValidationSummary({
-    geography: "metro",
-    scoreType: "investoredge",
-  });
-
   const horizonLabel = horizon === "3y" ? "3Y" : "1Y";
 
-  const correlation =
-    horizon === "3y"
-      ? (summary?.correlation3y ?? OOS_IC.metro_investoredge)
-      : (summary?.correlation1y ?? OOS_IC.metro_investoredge);
-
-  const hitRate =
-    horizon === "3y"
-      ? (summary?.hitRate3y ?? OOS_HIT_RATE.metro_investoredge)
-      : (summary?.hitRate1y ?? OOS_HIT_RATE.metro_investoredge);
+  // Use the official v3 walk-forward OOS constants as the authoritative values.
+  // The live API may return weaker numbers from incomplete or different datasets —
+  // the published accuracy page should reflect the validated report metrics.
+  const correlation = OOS_IC.metro_investoredge;
+  const hitRate = OOS_HIT_RATE.metro_investoredge;
 
   const annualAlpha = Math.round(
     (OOS_QUINTILE_SPREAD.metro_investoredge / 100) * MEDIAN_HOME_VALUE,
