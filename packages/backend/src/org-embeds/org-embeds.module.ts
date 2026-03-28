@@ -17,11 +17,17 @@ import { OrgEmbedsController } from './org-embeds.controller';
 import { EmbedDataController } from './embed-data.controller';
 import { EmbedTokenGuard } from './embed-token.guard';
 import { EmbedCorsInterceptor } from './embed-cors.interceptor';
+import { EmbedTokenValidatorService } from './embed-token-validator.service';
 
 @Module({
   imports: [OrgAuditModule, OrganizationsModule, ScoringModule],
   controllers: [OrgEmbedsController, EmbedDataController],
-  providers: [OrgEmbedsService, EmbedTokenGuard, EmbedCorsInterceptor],
+  providers: [
+    OrgEmbedsService,
+    EmbedTokenValidatorService,
+    EmbedTokenGuard,
+    EmbedCorsInterceptor,
+  ],
   exports: [OrgEmbedsService],
 })
 export class OrgEmbedsModule {}
