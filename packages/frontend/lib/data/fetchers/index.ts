@@ -294,6 +294,7 @@ export {
   fetchEmbedScore,
   fetchEmbedMetricCard,
   fetchEmbedMapData,
+  type EmbedConfig,
   type EmbedToken,
   type EmbedTokenListItem,
   type EmbedBranding,
