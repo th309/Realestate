@@ -1,27 +1,27 @@
 const FAQ_ITEMS = [
   {
-    q: "How often are PropertyIQ Scores updated?",
-    a: "Scores are recalculated monthly as new data arrives from our 7 data sources. Housing metrics from Zillow and Realtor.com update monthly, while economic indicators from FRED and BLS update on their respective schedules. Each score refresh incorporates the latest available data across all sources.",
+    q: "How often is the PropertyIQ Score updated?",
+    a: "The score is recalculated monthly as new Redfin data arrives. The three input metrics — % Sold Above List, Median Days on Market, and Months of Supply — update monthly. Each refresh incorporates the latest available data.",
   },
   {
-    q: "What data sources power the scores?",
-    a: "PropertyIQ integrates data from Zillow (home values, rents, inventory), Realtor.com (listings, days on market), Redfin (sale prices, competition), U.S. Census Bureau (demographics, income), FRED (mortgage rates, GDP), BLS (unemployment), and BEA (regional economics). Over 90 individual metrics feed into the scoring models.",
+    q: "What data sources power the score?",
+    a: "The PropertyIQ Score is built on three Redfin metrics: % Sold Above List, Median Days on Market, and Months of Supply. We tested 40+ features from Zillow, Census, FRED, BLS, and Redfin — these three are the most predictive of future home price appreciation in out-of-sample testing.",
   },
   {
-    q: "How accurate are PropertyIQ Scores?",
-    a: "Our scores achieve a 0.37 out-of-sample Information Coefficient at the metro level, validated across four non-overlapping time windows from 2018 to 2023. Top-quintile markets outperformed bottom-quintile markets by 5.55 percentage points annually. See our accuracy page for detailed validation results.",
+    q: "How accurate is the PropertyIQ Score?",
+    a: "The score has a 100% year hit rate across 13 years of backtesting: every single year, higher-scored metros outperformed lower-scored metros on average. Top-quintile markets (Score 80+) beat the state 56% of the time, while bottom-quintile markets (Score 20) beat the state only 39% of the time. The gap between top and bottom quintile translates to roughly $18,100 in equity difference on a typical home over 3 years.",
   },
   {
-    q: "What is the difference between HomeReady and InvestorEdge scores?",
-    a: "HomeReady focuses on home value appreciation potential — ideal for homebuyers and homeowner-investors concerned primarily with equity growth. InvestorEdge measures total return including rental yield, appreciation, and market stability — designed for buy-and-hold rental property investors who need both cash flow and appreciation.",
+    q: "Why only 3 metrics?",
+    a: "We tested 40+ features across multiple data sources. These 3 Redfin metrics are the most predictive of future returns in rigorous out-of-sample testing. More metrics didn't improve performance — they added noise. Simpler models generalize better, and these three capture the core demand-supply dynamics that drive home price appreciation.",
   },
   {
     q: "Can I trust scores for smaller markets?",
-    a: "Each score comes with a confidence rating (A through F) that indicates data quality and coverage. Markets with A or B confidence have robust data across all indicators. Markets with C or F confidence have data gaps, and their scores should be used directionally rather than as precise predictions. We always recommend supplementing score data with local market knowledge.",
+    a: "Each score comes with a confidence rating (A through F) that indicates data quality and coverage. Markets with A or B confidence have robust data across all three input metrics. Markets with C or F confidence have data gaps, and their scores should be used directionally rather than as precise predictions. We always recommend supplementing score data with local market knowledge.",
   },
   {
     q: "How many markets does PropertyIQ cover?",
-    a: "PropertyIQ scores 924 metropolitan statistical areas (MSAs), 3,100+ counties, and 33,000+ ZIP codes across the United States. Coverage varies by geography level — metro-level scores have the deepest data coverage, while ZIP-level scores may have lower confidence in areas with sparse data.",
+    a: "PropertyIQ scores 746 metropolitan statistical areas (MSAs), covering the vast majority of the U.S. housing market. Coverage is focused at the metro level where data density supports reliable scoring. The validation dataset spans 13 years of historical data.",
   },
 ];
 

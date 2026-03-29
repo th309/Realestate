@@ -1,115 +1,144 @@
 import type { Metadata } from "next";
-import {
-  Target,
-  TrendingUp,
-  Shield,
-  Database,
-  Brain,
-  Award,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowRight, BarChart3, TrendingUp, Percent } from "lucide-react";
 import Link from "next/link";
-import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 import { ScoresFaqJsonLd, ScoresFaqSection } from "./ScoresFaqSection";
 import {
   HowToUseScoresSection,
   MethodologyOverviewSection,
 } from "./ScoresContentSections";
+import { METRO_DECILE_1Y, METRO_DECILE_3Y } from "./decile-data";
+import type { DecileRow } from "./decile-data";
 
 export const metadata: Metadata = {
-  title: "Market Scores & Rankings — PropertyIQ",
+  title: "The PropertyIQ Score — PropertyIQ",
   description:
-    "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations with 5.55 pp/year excess returns. See HomeReady, InvestorEdge, and MarketHealth scores.",
+    "One number that predicts market performance. Validated across 746 metros and 13 years of data with 100% year hit rate. See the methodology and proof.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
-    title: "Market Scores & Rankings — PropertyIQ",
+    title: "The PropertyIQ Score — PropertyIQ",
     description:
-      "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations.",
+      "One number that predicts market performance. Validated across 746 metros with 100% year hit rate.",
     url: "https://www.propertyiq.app/scores",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
 };
 
-const scoreCards = [
-  {
-    name: "HomeReady Score",
-    icon: TrendingUp,
-    iconContainer: "bg-primary-container text-on-primary-container",
-    description:
-      "Predicts home price appreciation potential. Best for homebuyers and primary-residence investors.",
-    measures: [
-      "Demand score",
-      "Days on market",
-      "Affordability ratio",
-      "Price reduction trends",
-    ],
-    badgeColor: "bg-primary/10 text-primary",
-    sampleScore: "Score: 82 \u00b7 Grade: A",
-  },
-  {
-    name: "InvestorEdge Score",
-    icon: Target,
-    iconContainer: "bg-tertiary-container text-on-tertiary-container",
-    description:
-      "Predicts total investment return including appreciation and rental yield. Best for rental property investors.",
-    measures: [
-      "Gross rent levels",
-      "Days on market",
-      "Supply score",
-      "Demand score",
-    ],
-    badgeColor: "bg-tertiary/10 text-tertiary",
-    sampleScore: "Score: 78 \u00b7 Grade: B+",
-  },
-  {
-    name: "MarketHealth Score",
-    icon: Shield,
-    iconContainer: "bg-secondary-container text-on-secondary-container",
-    description:
-      "Measures current market stability and fundamentals. Best for risk assessment and timing decisions.",
-    measures: [
-      "Price trends",
-      "Inventory levels",
-      "Economic indicators",
-      "Population growth",
-    ],
-    badgeColor: "bg-secondary/10 text-secondary",
-    sampleScore: "Score: 91 \u00b7 Grade: A+",
-  },
+const STAT_PILLS = [
+  { label: "746 metros", icon: BarChart3 },
+  { label: "13 years", icon: TrendingUp },
+  { label: "100% year hit rate", icon: Percent },
 ];
 
-const steps = [
+const HOW_IT_WORKS_STEPS = [
   {
     number: 1,
-    icon: Database,
-    title: "10 Key Features",
+    title: "3 Redfin Metrics",
     description:
-      "We collect data from Redfin, Census, Zillow, and other authoritative sources across every major metro area.",
+      "% Sold Above List, Median Days on Market, Months of Supply — the three signals that actually predict future returns.",
   },
   {
     number: 2,
-    icon: Brain,
-    title: "ML Analysis",
+    title: "Z-Score Normalization",
     description:
-      "Model tournament (XGBoost, LightGBM, ElasticNet) identifies which features actually predict future market returns — not just correlations, but causation signals.",
+      "Each metric is standardized against the national distribution, removing scale differences so they combine cleanly.",
   },
   {
     number: 3,
-    icon: Award,
-    title: "Score 0\u2013100",
+    title: "Percentile Score",
     description:
-      "Each location receives a score with letter grade (A+ to F) and confidence level, updated as new data arrives.",
+      "The composite z-score is mapped to 1-99 where 50 equals the state average. Higher is better.",
   },
 ];
+
+function DecileTable({
+  title,
+  data,
+  horizon,
+}: {
+  title: string;
+  data: DecileRow[];
+  horizon: string;
+}) {
+  return (
+    <div className="bg-surface-container-low rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-outline-variant">
+        <h3 className="text-lg font-medium text-on-surface">{title}</h3>
+        <p className="text-sm text-on-surface-variant mt-1">
+          {horizon} excess return vs. state benchmark
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-outline-variant bg-surface-container-low">
+              <th className="px-4 py-3 text-left font-medium text-on-surface-variant">
+                Score
+              </th>
+              <th className="px-4 py-3 text-right font-medium text-on-surface-variant">
+                Mean Excess
+              </th>
+              <th className="px-4 py-3 text-right font-medium text-on-surface-variant">
+                P(Beat State)
+              </th>
+              <th className="px-4 py-3 text-right font-medium text-on-surface-variant">
+                N
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => {
+              const isHighlight = row.score >= 80;
+              const isMidpoint = row.score === 50;
+              const rowClasses = isHighlight
+                ? "bg-primary/5"
+                : isMidpoint
+                  ? "bg-surface-container"
+                  : "";
+              return (
+                <tr
+                  key={row.score}
+                  className={`border-b border-outline-variant/50 ${rowClasses}`}
+                >
+                  <td className="px-4 py-2.5 font-[family-name:var(--font-roboto-mono)] font-medium text-on-surface">
+                    {row.score}
+                    {isMidpoint && (
+                      <span className="ml-2 text-xs text-on-surface-variant">
+                        state avg
+                      </span>
+                    )}
+                  </td>
+                  <td
+                    className={`px-4 py-2.5 text-right font-[family-name:var(--font-roboto-mono)] ${
+                      row.meanExcess >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {row.meanExcess >= 0 ? "+" : ""}
+                    {row.meanExcess.toFixed(2)}%
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                    {row.pBeatState.toFixed(1)}%
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
+                    {row.n.toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function ScoresPage() {
   return (
     <>
       <WebPageJsonLd
         url="https://www.propertyiq.app/scores"
-        name="PropertyIQ Scores"
-        description="AI-powered scores that predict real estate market performance"
+        name="The PropertyIQ Score"
+        description="One number that predicts market performance. Validated, not vibes."
         breadcrumbs={[
           { name: "Home", url: "https://www.propertyiq.app" },
           { name: "Scores", url: "https://www.propertyiq.app/scores" },
@@ -117,116 +146,135 @@ export default function ScoresPage() {
       />
       <ScoresFaqJsonLd />
       <div className="mt-12 space-y-16">
-        {/* Hero */}
-        <section>
-          <PageHeaderWithBreadcrumbs
-            breadcrumbs={[{ label: "Scores" }]}
-            title="Market Scores & Rankings"
-            description="Data-driven scores that predict real estate market performance"
-            icon={<Target className="w-5 h-5" />}
-          />
-          <p className="mt-4 text-on-surface-variant">
-            Validated across 23,000+ locations &middot; 924 metros &middot; 6
-            years of data
+        {/* Section 1: Hero */}
+        <section className="text-center">
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+            Validated, Not Vibes
           </p>
-        </section>
-
-        {/* Score Cards */}
-        <section>
-          <div className="grid md:grid-cols-3 gap-6" data-tour="score-cards">
-            {scoreCards.map((card) => {
-              const Icon = card.icon;
+          <h1 className="text-4xl md:text-5xl font-bold text-on-surface mt-4 tracking-tight">
+            The PropertyIQ Score
+          </h1>
+          <p className="text-lg md:text-xl text-on-surface-variant mt-4 max-w-2xl mx-auto">
+            One number that predicts market performance. Validated, not vibes.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
+            {STAT_PILLS.map((pill) => {
+              const Icon = pill.icon;
               return (
-                <div
-                  key={card.name}
-                  className="bg-surface-container border border-outline-variant rounded-2xl p-6"
+                <span
+                  key={pill.label}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium"
                 >
-                  <div className={`${card.iconContainer} p-2 rounded-xl w-fit`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-on-surface mt-3">
-                    {card.name}
-                  </h3>
-                  <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                    {card.description}
-                  </p>
-                  <ul className="mt-3 space-y-1">
-                    {card.measures.map((measure) => (
-                      <li
-                        key={measure}
-                        className="flex items-center gap-2 text-sm text-on-surface-variant"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                        {measure}
-                      </li>
-                    ))}
-                  </ul>
-                  <div
-                    className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 ${card.badgeColor} rounded-lg text-sm font-medium`}
-                  >
-                    {card.sampleScore}
-                  </div>
-                </div>
+                  <Icon className="w-4 h-4" />
+                  {pill.label}
+                </span>
               );
             })}
           </div>
-        </section>
-
-        {/* Value Proposition */}
-        <section>
-          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-            Proven Results
-          </p>
-          <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
-            Why Scores Matter
-          </h2>
-          <p className="text-4xl md:text-5xl font-bold text-primary mt-6">
-            $39,900
-          </p>
-          <p className="text-lg text-on-surface-variant mt-2">
-            More equity on a typical home over 3 years
-          </p>
-          <p className="text-on-surface-variant mt-4 leading-relaxed">
-            Our top-scored markets (top 20%) outperformed bottom-scored markets
-            by 5.55 percentage points per year. On a typical $240K metro home,
-            that&apos;s $13,320 more per year — nearly $40K over three years.
-          </p>
           <Link
-            href="/scores/accuracy"
-            className="inline-flex items-center gap-2 text-primary font-medium hover:underline mt-4"
+            href="/map"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors mt-8"
           >
-            See the proof <ArrowRight className="w-4 h-4" />
+            Explore scored markets <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
 
-        {/* How It Works */}
+        {/* Section 2: Decile Performance Tables */}
         <section>
           <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-            Our Process
+            The Proof
+          </p>
+          <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
+            Decile Performance
+          </h2>
+          <p className="text-on-surface-variant mt-3 max-w-3xl">
+            Higher-scored metros consistently outperform their state benchmark.
+            The pattern holds across both 1-year and 3-year horizons, with
+            monotonic separation between deciles.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6 mt-8">
+            <DecileTable
+              title="1-Year Returns"
+              data={METRO_DECILE_1Y}
+              horizon="1-year"
+            />
+            <DecileTable
+              title="3-Year Returns"
+              data={METRO_DECILE_3Y}
+              horizon="3-year cumulative"
+            />
+          </div>
+        </section>
+
+        {/* Section 3: How It Works */}
+        <section>
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+            Methodology
           </p>
           <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
             How It Works
           </h2>
           <div className="grid md:grid-cols-3 gap-8 mt-8">
-            {steps.map((step) => {
-              const Icon = step.icon;
-              return (
-                <div key={step.number}>
-                  <span className="text-xs font-semibold text-primary">
-                    Step {step.number}
-                  </span>
-                  <div className="bg-primary-container p-3 rounded-2xl w-fit mt-2">
-                    <Icon className="w-5 h-5 text-on-primary-container" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-on-surface mt-3">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-              );
-            })}
+            {HOW_IT_WORKS_STEPS.map((step) => (
+              <div
+                key={step.number}
+                className="bg-surface-container-low rounded-xl shadow-sm p-6"
+              >
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary text-sm font-bold">
+                  {step.number}
+                </span>
+                <h3 className="text-lg font-semibold text-on-surface mt-3">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 4: Dollar Impact */}
+        <section className="bg-surface-container-low rounded-xl shadow-sm p-8 md:p-12">
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+            Why It Matters
+          </p>
+          <p className="text-4xl md:text-5xl font-bold text-on-surface mt-4 font-[family-name:var(--font-roboto-mono)]">
+            $18,100
+          </p>
+          <p className="text-lg text-on-surface-variant mt-2">
+            The cost of choosing wrong
+          </p>
+          <div className="grid md:grid-cols-2 gap-6 mt-8">
+            <div className="border border-outline-variant rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="font-medium text-on-surface">Score 80+</span>
+              </div>
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Top-quintile metros averaged{" "}
+                <span className="font-[family-name:var(--font-roboto-mono)] font-medium text-green-600">
+                  +0.53%
+                </span>{" "}
+                excess return per year over their state benchmark. On a typical
+                $300K home, that compounds to meaningful wealth over 3 years.
+              </p>
+            </div>
+            <div className="border border-outline-variant rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="font-medium text-on-surface">Score 20</span>
+              </div>
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Bottom-quintile metros averaged{" "}
+                <span className="font-[family-name:var(--font-roboto-mono)] font-medium text-red-600">
+                  -1.26%
+                </span>{" "}
+                excess return per year versus their state. Over 3 years on a
+                $300K home, that gap versus Score 80+ adds up to roughly $18,100
+                in lost equity.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -234,48 +282,18 @@ export default function ScoresPage() {
         <MethodologyOverviewSection />
         <ScoresFaqSection />
 
-        {/* Cross-links */}
-        <section className="py-8">
-          <div className="flex flex-wrap gap-4 justify-center">
-            <a
-              href="/scores/methodology"
-              className="text-primary hover:underline text-sm font-medium"
-            >
-              Read Our Methodology
-            </a>
-            <a
-              href="/scores/accuracy"
-              className="text-primary hover:underline text-sm font-medium"
-            >
-              View Accuracy Results
-            </a>
-            <a
-              href="/data"
-              className="text-primary hover:underline text-sm font-medium"
-            >
-              Explore Data Sources
-            </a>
-            <a
-              href="/map"
-              className="text-primary hover:underline text-sm font-medium"
-            >
-              Try the Interactive Map
-            </a>
-          </div>
-        </section>
-
-        {/* CTA Footer */}
-        <section className="border-t border-outline-variant pt-8 mt-8">
+        {/* Section 6: CTA Footer */}
+        <section className="border-t border-outline-variant pt-8 mt-8 text-center">
           <h3 className="text-xl font-semibold text-on-surface">
             Ready to find the best markets?
           </h3>
           <p className="text-on-surface-variant mt-2">
-            Use PropertyIQ Scores to discover high-performing markets backed by
-            data, not hunches.
+            Use the PropertyIQ Score to discover high-performing markets backed
+            by data, not hunches.
           </p>
           <Link
             href="/map"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-colors mt-4"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors mt-4"
           >
             Start Analyzing Markets <ArrowRight className="w-4 h-4" />
           </Link>

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Market Scores & Rankings — PropertyIQ",
+  title: "The PropertyIQ Score — PropertyIQ",
   description:
-    "AI-powered scores that predict real estate market performance, validated across 23,000+ locations and 924 metros.",
+    "PropertyIQ Score — predicts market performance across 23,000+ locations.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
-    title: "Market Scores & Rankings — PropertyIQ",
+    title: "The PropertyIQ Score — PropertyIQ",
     description:
-      "AI-powered scores predicting real estate market performance, validated across 23,000+ locations.",
+      "PropertyIQ Score — predicts market performance across 23,000+ locations.",
     url: "https://www.propertyiq.app/scores",
     siteName: "PropertyIQ",
     images: [
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PropertyIQ Scores",
+        alt: "PropertyIQ Score",
       },
     ],
   },

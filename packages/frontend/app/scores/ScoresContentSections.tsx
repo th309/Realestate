@@ -1,67 +1,60 @@
-import { Home, TrendingUp, ShieldCheck } from "lucide-react";
+import { TrendingUp, ShieldCheck, BarChart3 } from "lucide-react";
 
-/** "How to Use PropertyIQ Scores" section — guidance for buyers, investors, and risk. */
+/** "How to Use the PropertyIQ Score" section — interpreting scores and confidence. */
 export function HowToUseScoresSection() {
   return (
     <section className="py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl font-medium text-on-surface mb-8">
-          How to Use PropertyIQ Scores
+          How to Use the PropertyIQ Score
         </h2>
 
         <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Home className="w-5 h-5 text-on-surface" />
-              <h3 className="text-base font-medium text-on-surface">
-                For Homebuyers
-              </h3>
-            </div>
-            <p className="text-sm text-on-surface-variant leading-relaxed">
-              The HomeReady Score identifies markets where home values are most
-              likely to appreciate over the next 1-3 years. Start by filtering
-              for markets with a HomeReady score above 70, then narrow by your
-              preferred region, budget, and lifestyle factors. Markets scoring
-              80+ have historically delivered 5.55 percentage points more annual
-              appreciation than bottom-scored markets — translating to $27,100
-              more equity on a typical home over three years.
-            </p>
-          </div>
-
-          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
+          <div className="bg-surface-container-low rounded-xl shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
               <TrendingUp className="w-5 h-5 text-on-surface" />
               <h3 className="text-base font-medium text-on-surface">
-                For Real Estate Investors
+                High Score (80+)
               </h3>
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
-              The InvestorEdge Score measures total return potential including
-              rental yield, price appreciation, and market stability.
-              High-scoring markets (75+) tend to offer the best risk-adjusted
-              returns for buy-and-hold investors. Combine the InvestorEdge score
-              with the Market Health score to find markets that offer strong
-              returns without excessive risk. Look for markets where both scores
-              are above 65 for the optimal balance of opportunity and stability.
+              Markets scoring 80 or above have historically outperformed their
+              state benchmark by a meaningful margin. These metros show strong
+              demand signals: homes selling above list price, fast days on
+              market, and tight supply. Historically, top-quintile markets beat
+              the state 56% of the time over 1-year horizons.
             </p>
           </div>
 
-          <div className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 md:p-8">
+          <div className="bg-surface-container-low rounded-xl shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
-              <ShieldCheck className="w-5 h-5 text-on-surface" />
+              <BarChart3 className="w-5 h-5 text-on-surface" />
               <h3 className="text-base font-medium text-on-surface">
-                For Risk Assessment
+                Low Score (Below 40)
               </h3>
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
-              The Market Health Score evaluates market fundamentals:
-              supply/demand balance, economic diversity, population trends, and
-              affordability ratios. Markets with low Market Health scores (below
-              40) may be overheated, economically vulnerable, or experiencing
-              population decline. Use this score as a guardrail — even if a
-              market looks attractive on other metrics, a low Market Health
-              score suggests caution. Markets with declining health scores over
-              consecutive quarters warrant particular scrutiny.
+              Markets below 40 have historically underperformed their state
+              benchmark. Weak demand signals — homes selling below list, long
+              days on market, excess supply — suggest caution. Bottom-quintile
+              markets beat the state only 39% of the time. Use low scores as a
+              guardrail when evaluating markets.
+            </p>
+          </div>
+
+          <div className="bg-surface-container-low rounded-xl shadow-sm p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldCheck className="w-5 h-5 text-on-surface" />
+              <h3 className="text-base font-medium text-on-surface">
+                Confidence (A-F)
+              </h3>
+            </div>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              Every score includes a confidence grade reflecting data quality
+              and coverage. A/B confidence means robust data across all three
+              input metrics. C/F confidence means data gaps exist — treat the
+              score directionally rather than precisely. Always supplement
+              low-confidence scores with local market knowledge.
             </p>
           </div>
         </div>
@@ -70,43 +63,43 @@ export function HowToUseScoresSection() {
   );
 }
 
-/** "How We Build the Scores" methodology overview section. */
+/** "How We Build the Score" methodology overview section. */
 export function MethodologyOverviewSection() {
   return (
     <section className="py-16 px-4 bg-surface-container-low">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl font-medium text-on-surface mb-6">
-          How We Build the Scores
+          How We Build the Score
         </h2>
         <p className="text-on-surface-variant leading-relaxed mb-6">
-          PropertyIQ Scores are generated by an ensemble of machine learning
-          models — XGBoost, LightGBM, and ElasticNet — trained on 40+ features
-          spanning housing metrics, economic indicators, and demographic trends.
-          We use SHAP (SHapley Additive exPlanations) to distill complex model
-          outputs into interpretable feature weights, ensuring every score can
-          be explained by concrete market factors.
+          The PropertyIQ Score uses three Redfin metrics — % Sold Above List,
+          Median Days on Market, and Months of Supply — chosen because they are
+          the most predictive signals of future home price appreciation. We
+          tested 40+ features from Zillow, Census, FRED, BLS, and Redfin. These
+          three survived rigorous out-of-sample validation; more metrics added
+          noise, not signal.
         </p>
         <p className="text-on-surface-variant leading-relaxed mb-6">
-          Every score undergoes walk-forward validation across four
-          non-overlapping time windows (2018-2023), testing predictions against
-          actual market outcomes. This rigorous out-of-sample testing ensures
-          our scores aren&apos;t just fitting historical patterns — they
-          genuinely predict future performance. Our methodology page details the
-          complete validation process, including Information Coefficient
-          measurements, quintile spread analysis, and calibration metrics.
+          Each metric is z-score normalized against the national distribution
+          for its time period, removing scale differences. The composite z-score
+          is then mapped to a 1-99 percentile where 50 equals the state average.
+          This approach is transparent, reproducible, and validated across 746
+          metros over 13 years of data with 100% year hit rate — every single
+          year, higher-scored metros outperformed lower-scored metros on
+          average.
         </p>
         <div className="flex gap-4">
           <a
             href="/scores/methodology"
             className="text-primary hover:text-primary/80 font-medium text-sm underline underline-offset-4"
           >
-            Read Full Methodology →
+            Read Full Methodology
           </a>
           <a
             href="/scores/accuracy"
             className="text-primary hover:text-primary/80 font-medium text-sm underline underline-offset-4"
           >
-            See Accuracy Results →
+            See Accuracy Results
           </a>
         </div>
       </div>
