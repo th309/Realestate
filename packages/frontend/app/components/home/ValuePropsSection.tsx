@@ -4,11 +4,7 @@ import Image from "next/image";
 import { useInView } from "./hooks/useInView";
 import { ArrowRight } from "lucide-react";
 import { useEntitlements } from "@/lib/entitlements";
-import {
-  getHomepageClaims,
-  formatDollarClaim,
-  formatObservations,
-} from "@/lib/data";
+import { getV4HomepageClaims, V4_CLAIMS } from "@/lib/data/validation-claims";
 
 /* ─── Individual value-prop row ─── */
 interface ValuePropProps {
@@ -128,7 +124,7 @@ export function ValuePropsSection() {
   const reportsHref = isPaid ? "/reports" : "/reports/sample";
   const reportsLinkLabel = isPaid ? "View your reports" : "See a sample report";
 
-  const claims = getHomepageClaims();
+  const claims = getV4HomepageClaims();
 
   return (
     <section
@@ -145,15 +141,15 @@ export function ValuePropsSection() {
         <ValueProp
           eyebrow="Market Rankings"
           heading="We do the hard part: finding markets that beat the average"
-          body="Most platforms give you data. We give you answers. PropertyIQ ranks every metro, county, and ZIP code by investment potential and homebuyer readiness, so you see exactly which markets are outperforming and which to avoid."
+          body="Most platforms give you data. We give you answers. The PropertyIQ Score ranks every metro, county, and ZIP code by predicted market performance, so you see exactly which markets are outperforming and which to avoid."
           stat={{
-            value: `${claims.spreadPp}pp`,
+            value: claims.alphaPp,
             label:
-              "annual excess return in top-scored markets vs. bottom (out-of-sample)",
+              "3-year alpha in top-scored markets vs. bottom (out-of-sample)",
           }}
           image={{
             src: "/images/home/top-ranked-markets-v2.png",
-            alt: "PropertyIQ market intelligence landing page showing Explore Markets search, top-ranked metros by InvestorEdge score with Batavia NY at 100.0 and Hobbs NM at 99.9, and popular market quick links",
+            alt: "PropertyIQ market intelligence landing page showing Explore Markets search, top-ranked metros by PropertyIQ score, and popular market quick links",
             width: 1425,
             height: 2149,
           }}
@@ -170,7 +166,7 @@ export function ValuePropsSection() {
           body="Every report is generated fresh by AI for the exact geography you're evaluating. Score breakdowns, affordability analysis, market timing signals, growth potential, and a clear bottom-line verdict, whether you're buying a home or evaluating an investment."
           image={{
             src: "/images/home/ai-report-narrative-v2.png",
-            alt: "PropertyIQ AI-generated market report for Las Vegas NV showing HomeReady score of 25, score breakdown with Affordability, Growth Potential, Stability, and Market Timing components, and detailed AI narrative analysis explaining market transition dynamics and buyer opportunities",
+            alt: "PropertyIQ AI-generated market report showing PropertyIQ score, component breakdown with Affordability, Growth Potential, Stability, and Market Timing, and detailed AI narrative analysis",
             width: 1425,
             height: 1490,
           }}
@@ -181,17 +177,17 @@ export function ValuePropsSection() {
 
         {/* 3. Scores that predict */}
         <ValueProp
-          eyebrow="Proven Scores"
-          heading="Scores that predict real market performance"
-          body={`HomeReady, InvestorEdge, and MarketHealth scores are built from 40+ metrics using machine learning, not opinions. Validated across ${formatObservations(claims.totalObservations)} out-of-sample observations and ${claims.backtestYears} years of data. Top-scored markets don\u2019t just correlate with better returns. They deliver them.`}
+          eyebrow="Proven Score"
+          heading="A score that predicts real market performance"
+          body={`The PropertyIQ Score is built from 40+ metrics using machine learning, not opinions. Validated across ${claims.metrosValidated.toLocaleString()} metros and ${claims.backtestYears} years of data. Top-scored markets don\u2019t just correlate with better returns. They deliver them.`}
           stat={{
-            value: formatDollarClaim(claims.threeYearAlphaInvestorEdge),
+            value: claims.dollarGap,
             label:
-              "more equity on a typical home over 3 years in top-scored markets (OOS)",
+              "3-year equity gap between top-scored and bottom-scored markets (OOS)",
           }}
           image={{
             src: "/images/home/market-scores-detail-v2.png",
-            alt: "PropertyIQ market analysis for Austin TX showing InvestorEdge score of 29, Market Health score of 4, with detailed metrics including cap rate, gross yield, rent index, days on market, and appreciation data",
+            alt: "PropertyIQ market analysis showing PropertyIQ score with detailed metrics including cap rate, gross yield, rent index, days on market, and appreciation data",
             width: 1440,
             height: 845,
           }}

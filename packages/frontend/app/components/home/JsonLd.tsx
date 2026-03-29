@@ -70,8 +70,7 @@ const softwareSchema = {
   ],
   featureList: [
     "AI-powered market analysis",
-    "HomeReady Score for homebuyers",
-    "InvestorEdge Score for real estate investors",
+    "PropertyIQ Score — predicts market performance with 100% year hit rate across 746 metros",
     "Rental demand analysis for landlords",
     "Market quality metrics",
     "Interactive market heat maps",

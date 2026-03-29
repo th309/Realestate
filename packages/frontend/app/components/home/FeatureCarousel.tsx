@@ -275,7 +275,7 @@ export function FeatureCarousel() {
           </div>
           <div>
             <div className="text-[10px] font-medium text-on-surface">
-              HomeReady
+              PropertyIQ
             </div>
             <div className="text-[9px] text-on-surface-variant">Score</div>
           </div>
