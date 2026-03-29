@@ -62,18 +62,18 @@ Approach all changes through the Hermeneutic Circle. Before touching any file or
 
 **Examples of good vs. bad naming:**
 
-| Context    | Bad                       | Good                                                             |
-| ---------- | ------------------------- | ---------------------------------------------------------------- |
-| File       | `utils2.ts`, `helper.ts`  | `scoring-engine.ts`, `timeseries-region-filter.ts`               |
-| Branch     | `feature-1`, `dev-branch` | `feat/report-share-buttons`                                      |
-| Plan       | `plan.md`, `plan-001.md`  | `plan-add-stripe-webhook-handling.md`                            |
-| Agent task | "Update file"             | "Add auth guard to billing controller"                           |
-| Output     | `output.txt`              | `audit-rls-policies-missing.txt`                                 |
-| Screenshot | `screenshot-3.png`        | `report-ai-narrative-clean.png`                                  |
-| Test       | `describe('test 1')`      | `describe('ScoreWidget renders grade badge for each threshold')` |
-| Migration  | `migration_20260220`      | `add_user_watchlist_table`                                       |
-| Variable   | `d`, `tmp`, `val`         | `regionScores`, `filteredMetrics`                                |
-| Function   | `process()`, `handle()`   | `calculatePercentileRange()`, `formatCurrencyValue()`            |
+| Context    | Bad                       | Good                                                              |
+| ---------- | ------------------------- | ----------------------------------------------------------------- |
+| File       | `utils2.ts`, `helper.ts`  | `scoring-engine.ts`, `timeseries-region-filter.ts`                |
+| Branch     | `feature-1`, `dev-branch` | `feat/report-share-buttons`                                       |
+| Plan       | `plan.md`, `plan-001.md`  | `plan-add-stripe-webhook-handling.md`                             |
+| Agent task | "Update file"             | "Add auth guard to billing controller"                            |
+| Output     | `output.txt`              | `audit-rls-policies-missing.txt`                                  |
+| Screenshot | `screenshot-3.png`        | `report-ai-narrative-clean.png`                                   |
+| Test       | `describe('test 1')`      | `describe('ScoreWidget renders confidence badge for each level')` |
+| Migration  | `migration_20260220`      | `add_user_watchlist_table`                                        |
+| Variable   | `d`, `tmp`, `val`         | `regionScores`, `filteredMetrics`                                 |
+| Function   | `process()`, `handle()`   | `calculatePercentileRange()`, `formatCurrencyValue()`             |
 
 ### 1.5 Parallel Agents & Agent Teams
 
@@ -348,7 +348,7 @@ const response = await fetch(`${API_URL}/api/metrics/...`);
 
 - `fetchSnapshotData(metricId, geoLevel, options)` - Current metric values
 - `fetchTimeSeriesData(metricId, geoLevel, geoId, options)` - Historical data
-- `fetchScore(geoLevel, geoId, scoreType)` - PropertyIQ scores
+- `fetchScore(geoLevel, geoId)` - PropertyIQ Score (single score type: `'propertyiq'`)
 - React hooks: `useSnapshotData`, `useTimeSeriesData`, `useScoreData`, `useDataCard`
 
 **If an endpoint doesn't exist in lib/data:**
@@ -711,7 +711,7 @@ Three logo variants — all use Indigo `#3949AB` as the primary fill:
 
 | Use This            | Not This                 |
 | ------------------- | ------------------------ |
-| Market IQ Score     | Rating / Grade / Rank    |
+| PropertyIQ Score    | Rating / Grade / Rank    |
 | Confidence level    | Accuracy / Trust score   |
 | Market intelligence | Market report / Analysis |
 | Geography / Market  | Area / Zone / Region     |
@@ -784,63 +784,75 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 
 ## 9. SCORE & CONFIDENCE DISPLAY (Standardized Components)
 
-**CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized score components. Do NOT create custom score visualizations.
+**CRITICAL:** All score displays MUST use the standardized score components. Do NOT create custom score visualizations.
+
+There is **one score type:** PropertyIQ Score (`score_type = 'propertyiq'`). It measures market demand signal relative to the state average.
 
 **All components:** `app/components/scoring/`
 
-| Component           | Use Case                                          | Data Source                    |
-| ------------------- | ------------------------------------------------- | ------------------------------ |
-| `ScoreWidget`       | **Preferred** - Auto-fetches score + confidence   | Uses `useScoreData` internally |
-| `ScoreDisplay`      | Presentation-only score ring                      | Score value passed as prop     |
-| `ScoreBadge`        | Compact score with trend arrow                    | Score + trend passed as props  |
-| `ScoreCard`         | Expanded view with breakdown, history, validation | Full score data as props       |
-| `ConfidenceDisplay` | Confidence star rating + percentage               | Confidence data as props       |
-| `ScoreHistoryChart` | 3Y/5Y score trend with returns overlay            | Fetches from API               |
-| `ComponentBar`      | Score component breakdown bar                     | Component data as props        |
+| Component           | Use Case                                        | Data Source                    |
+| ------------------- | ----------------------------------------------- | ------------------------------ |
+| `ScoreWidget`       | **Preferred** - Auto-fetches score + confidence | Uses `useScoreData` internally |
+| `ScoreDisplay`      | Presentation-only score ring                    | Score value passed as prop     |
+| `ScoreBadge`        | Compact score with trend arrow                  | Score + trend passed as props  |
+| `ScoreCard`         | Expanded view with metric breakdown and history | Full score data as props       |
+| `ConfidenceDisplay` | Confidence star rating + percentage             | Confidence data as props       |
+| `ScoreHistoryChart` | 3Y/5Y score trend with returns overlay          | Fetches from API               |
 
-### Two Concepts: Score (Number) and Confidence (Letter)
+### PropertyIQ Score (v4 Demand Signal)
 
-The system has two distinct measurements displayed together in the score widget:
+**One score, one formula.** The PropertyIQ Score is a demand-signal composite that measures how "hot" a market is relative to its state average.
 
-1. **Score (0-100 number):** How good a market is for a given strategy. Displayed as a **number** inside a color-gradient ring, with a descriptor label (EXCELLENT to VERY POOR).
+**Formula:**
 
-2. **Confidence (A/B/C/F letter):** How much we trust that score, based on data quality. Displayed as the **letter badge** on the score widget.
+```
+signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
+→ percentile rank within state
+→ re-center at 55.6
+→ clamp to 1-99
+```
 
-**CRITICAL:** The letter badge (A/B/C/F) shown in the ScoreWidget represents **confidence**, NOT a grade derived from the score number. A score of 78 with a "B" badge means "score is 78, and we have B-level confidence in that number." Do NOT confuse this with academic-style grading of the score itself.
+**Input Metrics (all from Redfin):**
 
-These are independent — a market can have a high score with low confidence (good on paper but insufficient data) or a low score with high confidence (reliably bad).
+| Metric            | Direction | Meaning                          |
+| ----------------- | --------- | -------------------------------- |
+| % Sold Above List | Higher ↑  | Strong buyer competition         |
+| Median DOM        | Lower ↓   | Homes sell faster = more demand  |
+| Months of Supply  | Lower ↓   | Less inventory = seller's market |
+
+**Score Semantics:**
+
+- Score range: **1-99** (no 0 or 100)
+- **50 = state average** — higher means outperformance
+- Scores are relative within each state, not nationally
+
+**Coverage:** 746 metros, 2,983 counties, 19,880 ZIPs (23,609 total geographies)
+
+**Validation:** 100% year hit rate, IC 0.24, $18,100 Q5-Q1 gap, 7.83pp alpha
+
+**Database:** `propertyiq_scores` table, `score_type = 'propertyiq'`
+
+**Report:** `template_slug = 'propertyiq'`, `user_type = 'universal'`
+
+### Confidence (A/B/C/F Letter Badge)
+
+The confidence letter (A/B/C/F) is displayed alongside the score. It represents **data quality**, NOT a grade of the score number. A score of 72 with a "B" badge means "score is 72, and we have B-level confidence in that number."
+
+Score and confidence are independent — a market can have a high score with low confidence (good on paper but insufficient data) or a low score with high confidence (reliably bad).
 
 ### Score Display
 
 **Component:** `ScoreDisplay` (`app/components/scoring/ScoreDisplay.tsx`)
 
-The base presentation component. Note: `ScoreDisplay` has internal `getLetterGrade()` and `showGrade` props that derive a letter from the score value — these are **internal utilities** and should not be confused with the confidence letter. When used inside `ScoreWidget`, the confidence letter badge (from the data layer) takes precedence as the displayed letter.
+The base presentation component for the PropertyIQ Score ring.
 
 **Visual Spec:**
 
 - **Ring:** SVG circular progress with HSL gradient (red at 0 → green at 100)
 - **Tick marks:** At 33% and 66% positions (market threshold indicators)
 - **Score Number:** Bold, centered in ring
-- **Letter Badge:** Confidence level (A/B/C/F) — comes from data layer, NOT from the score number
+- **Confidence Badge:** Letter (A/B/C/F) — comes from data layer, NOT from the score number
 - **Label:** Uppercase descriptor (EXCELLENT, GOOD, etc.) — derived from the score number
-
-**Score → Grade Utility Thresholds** (internal `getLetterGrade()` — NOT the displayed confidence letter):
-
-| Score | Grade |
-| ----- | ----- |
-| 97+   | A+    |
-| 93-96 | A     |
-| 90-92 | A-    |
-| 87-89 | B+    |
-| 83-86 | B     |
-| 80-82 | B-    |
-| 77-79 | C+    |
-| 73-76 | C     |
-| 70-72 | C-    |
-| 67-69 | D+    |
-| 63-66 | D     |
-| 60-62 | D-    |
-| <60   | F     |
 
 **Score → Label Thresholds:**
 
@@ -854,14 +866,6 @@ The base presentation component. Note: `ScoreDisplay` has internal `getLetterGra
 | 40-49 | BELOW AVG |
 | 20-39 | POOR      |
 | <20   | VERY POOR |
-
-**Grade Badge Colors:**
-
-- A grades: `bg-green-500`
-- B grades: `bg-emerald-500`
-- C grades: `bg-yellow-500`
-- D grades: `bg-orange-500`
-- F grade: `bg-red-500`
 
 **Exported Utilities:**
 
@@ -921,7 +925,7 @@ Confidence = (R² × 0.5) + (Sample Size Score × 0.3) + (Recency Score × 0.2)
 
 **Component:** `app/components/scoring/ScoreWidget.tsx`
 
-Auto-fetches score + confidence from the data layer. The number shown is the score; the letter badge is the confidence level:
+Auto-fetches the PropertyIQ Score + confidence from the data layer. Single score type — no type selector needed:
 
 ```typescript
 import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
@@ -929,24 +933,22 @@ import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
 <ScoreWidget
   geographyType="metro"
   geographyId="31080"
-  scoreType="homeready"
   showConfidence  // Shows confidence letter badge (A/B/C/F) — this is data quality, not score grade
 />
-// Result: "82" (score) with "A" badge (confidence in that score)
+// Result: "72" (score) with "B" badge (confidence in that score)
 ```
 
 ### ScoreBadge (Compact Display)
 
 **Component:** `app/components/scoring/ScoreBadge.tsx`
 
-Compact score ring with trend arrow, used in dashboards and lists:
+Compact score ring with trend arrow, used in dashboards and lists. Single indigo color (no type-specific colors):
 
 ```typescript
 import { ScoreBadge } from '@/app/components/scoring';
 
 <ScoreBadge
-  type="market_health"
-  label="Market Health"
+  label="PropertyIQ Score"
   score={72}
   trend="up"
   trendChange={3.2}
@@ -960,12 +962,12 @@ import { ScoreBadge } from '@/app/components/scoring';
 
 **Component:** `app/components/scoring/ScoreCard.tsx`
 
-Full expanded view with component breakdown, sparkline history, confidence, and validation:
+Full expanded view with metric breakdown, sparkline history, confidence, and validation:
 
 - **Header:** ScoreBadge + label + validation badge + data completeness
 - **History:** Sparkline + "View History" button for extended chart
 - **Confidence:** Inline `ConfidenceDisplay` with star rating
-- **Components:** Breakdown bars (gated to Pro+ via entitlements)
+- **Metric Breakdown:** 3 input metrics (% Sold Above List, Median DOM, Months of Supply) + derived context (state comparison, percentile rank, historical alpha)
 - **Upgrade CTA:** Shown when `access === 'teaser'`
 
 ### ScoreHistoryChart (Extended Trends)
