@@ -154,6 +154,7 @@ export async function getScoreForDate(
       homeready: scoresByType.homeready || null,
       investoredge: scoresByType.investoredge || null,
       markethealth: scoresByType.markethealth || null,
+      propertyiq: scoresByType.propertyiq || null,
     },
     z_scores: zScores,
     return_1y: data[0]?.return_1y,

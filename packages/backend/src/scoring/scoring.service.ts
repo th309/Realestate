@@ -168,6 +168,7 @@ export class ScoringService {
                 confidence: 0,
                 confidence_level: 'F',
               },
+              propertyiq: null,
             },
             z_scores: zScores[location.location_id] || {},
           };
@@ -288,6 +289,7 @@ export class ScoringService {
           );
         }
       }
+      // Note: propertyiq uses v4 engine with its own metrics — no v3 component breakdown
     }
 
     const rawMonths = options?.historyMonths ?? 0;
@@ -315,8 +317,14 @@ export class ScoringService {
     const priorResult = historyByDate[1]?.result;
     if (!priorResult) return result;
 
-    for (const key of ['homeready', 'investoredge', 'markethealth'] as const) {
+    for (const key of [
+      'homeready',
+      'investoredge',
+      'markethealth',
+      'propertyiq',
+    ] as const) {
       const curr = result.scores[key];
+      if (!curr) continue;
       const prev = priorResult.scores[key];
       const change =
         curr &&
@@ -325,7 +333,7 @@ export class ScoringService {
         typeof prev.score === 'number'
           ? Number((curr.score - prev.score).toFixed(1))
           : 0;
-      (curr as SingleScoreResult).trend_change = change;
+      curr.trend_change = change;
 
       const data = historyByDate.map(({ date, result: r }) => ({
         date,
@@ -333,7 +341,7 @@ export class ScoringService {
       }));
       const trend: 'up' | 'down' | 'stable' =
         change > 0.01 ? 'up' : change < -0.01 ? 'down' : 'stable';
-      (curr as SingleScoreResult).history = {
+      curr.history = {
         data,
         months: historyMonths,
         trend,
@@ -390,8 +398,14 @@ export class ScoringService {
       );
     }
 
-    for (const key of ['homeready', 'investoredge', 'markethealth'] as const) {
+    for (const key of [
+      'homeready',
+      'investoredge',
+      'markethealth',
+      'propertyiq',
+    ] as const) {
       const curr = result.scores[key];
+      if (!curr) continue;
       const oldest =
         historyByDate[historyByDate.length - 1]?.result.scores[key];
       const scoreChange =

@@ -152,7 +152,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: true,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['homeready', 'investoredge', 'markethealth', 'propertyiq'],
   })
   @ApiQuery({
     name: 'limit',
@@ -663,7 +663,7 @@ export class ScoringController {
     }
     const raw = scoreType.toLowerCase();
     if (raw === 'all') {
-      return ['homeready', 'investoredge', 'markethealth'];
+      return ['homeready', 'investoredge', 'markethealth', 'propertyiq'];
     }
     const parts = raw
       .split(',')
@@ -995,18 +995,20 @@ export class ScoringController {
     if (canBreakdown) return result;
 
     // User can't see breakdowns — strip components from all score types
-    const hasComponents = ['homeready', 'investoredge', 'markethealth'].some(
+    const scoreTypeKeys = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+      'propertyiq',
+    ] as const;
+    const hasComponents = scoreTypeKeys.some(
       (st) => result.scores?.[st]?.components,
     );
     if (!hasComponents) return result;
 
     // Shallow-clone to avoid mutating cached service objects
     const stripped: ScoreResult = { ...result, scores: { ...result.scores } };
-    for (const scoreType of [
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ] as const) {
+    for (const scoreType of scoreTypeKeys) {
       const scoreData = stripped.scores[scoreType];
       if (scoreData?.components) {
         stripped.scores[scoreType] = { ...scoreData };

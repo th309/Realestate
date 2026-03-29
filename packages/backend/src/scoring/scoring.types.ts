@@ -155,7 +155,7 @@ export interface ScoreResult {
     homeready: SingleScoreResult | null;
     investoredge: SingleScoreResult | null;
     markethealth: SingleScoreResult | null;
-    propertyiq?: SingleScoreResult | null;
+    propertyiq: SingleScoreResult | null;
   };
   /** Per-metric z-scores for this location (shared across all score types) */
   z_scores?: Record<string, number>;
