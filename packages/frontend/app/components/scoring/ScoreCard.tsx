@@ -118,6 +118,53 @@ interface ScoreCardProps {
   showHistoryButton?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// PropertyIQ v4 sub-components (rendered when type === 'propertyiq')
+// ---------------------------------------------------------------------------
+
+interface InputMetricRowProps {
+  name: string;
+  value: string;
+  percentile?: number;
+}
+
+function InputMetricRow({ name, value, percentile }: InputMetricRowProps) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-outline-variant/20 last:border-b-0">
+      <span className="text-sm text-on-surface-variant">{name}</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium font-mono text-on-surface">
+          {value}
+        </span>
+        {percentile !== undefined && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-primary-container text-on-primary-container">
+            {percentile}th
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AlphaSummaryLine({ score }: { score: number }) {
+  const ranges = [
+    { min: 1, max: 20, excess: -3.34 },
+    { min: 21, max: 40, excess: -1.2 },
+    { min: 41, max: 60, excess: -0.15 },
+    { min: 61, max: 80, excess: 1.17 },
+    { min: 81, max: 99, excess: 3.05 },
+  ];
+  const entry = ranges.find((r) => score >= r.min && score <= r.max);
+  if (!entry) return null;
+  const sign = entry.excess >= 0 ? "+" : "";
+  return (
+    <div className="mt-3 px-3 py-2 rounded-lg bg-primary-container/40 text-sm font-medium text-on-primary-container">
+      Score {score} → historically {sign}
+      {entry.excess.toFixed(1)}% vs state avg over 3Y
+    </div>
+  );
+}
+
 export const ScoreCard = memo(function ScoreCard({
   type,
   label,
@@ -280,27 +327,38 @@ export const ScoreCard = memo(function ScoreCard({
         </div>
       )}
 
-      {/* Components breakdown — visible to users with breakdown access */}
-      {components.length > 0 && !isTeaser && (
-        <div className="p-4 space-y-3">
-          <h4 className="text-sm font-medium text-on-surface-variant uppercase tracking-wide">
-            Components
-          </h4>
-          {components.map((component) => (
-            <ComponentBar
-              key={component.name}
-              name={component.name}
-              label={component.label}
-              description={component.description}
-              score={component.score}
-              weight={component.weight}
-              metrics={component.metrics}
-              helpingFactors={component.helpingFactors}
-              hurtingFactors={component.hurtingFactors}
-            />
-          ))}
-        </div>
-      )}
+      {/* Components breakdown — PropertyIQ v4 shows input metrics; legacy shows ComponentBar */}
+      {type === "propertyiq"
+        ? score !== null && (
+            <div className="p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-on-surface-variant mb-2">
+                Input Metrics
+              </div>
+              {/* Rows will be populated when backend provides per-metric data */}
+              <AlphaSummaryLine score={score} />
+            </div>
+          )
+        : components.length > 0 &&
+          !isTeaser && (
+            <div className="p-4 space-y-3">
+              <h4 className="text-sm font-medium text-on-surface-variant uppercase tracking-wide">
+                Components
+              </h4>
+              {components.map((component) => (
+                <ComponentBar
+                  key={component.name}
+                  name={component.name}
+                  label={component.label}
+                  description={component.description}
+                  score={component.score}
+                  weight={component.weight}
+                  metrics={component.metrics}
+                  helpingFactors={component.helpingFactors}
+                  hurtingFactors={component.hurtingFactors}
+                />
+              ))}
+            </div>
+          )}
 
       {/* Upgrade CTA for breakdown access */}
       {isTeaser && upgradeCta && (

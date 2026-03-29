@@ -17,7 +17,11 @@ import { memo } from "react";
 import { MARKET_THRESHOLDS } from "./ScoreDisplay";
 import { useEntitlements } from "@/lib/entitlements";
 
-export type ScoreType = "market_health" | "homeready" | "investoredge";
+export type ScoreType =
+  | "market_health"
+  | "homeready"
+  | "investoredge"
+  | "propertyiq";
 export type ScoreAccess = "full" | "teaser";
 export type TrendDirection = "up" | "down" | "stable";
 export type ScoreStatus = "complete" | "partial" | "unavailable";
@@ -68,6 +72,8 @@ function getTypeColor(type: ScoreType): string {
       return "bg-indigo-50 border-indigo-200";
     case "investoredge":
       return "bg-emerald-50 border-emerald-200";
+    case "propertyiq":
+      return "bg-indigo-50 border-indigo-200";
     default:
       return "bg-surface-container border-outline-variant";
   }
@@ -84,6 +90,8 @@ function getTypeLabelColor(type: ScoreType): string {
       return "text-indigo-700";
     case "investoredge":
       return "text-emerald-700";
+    case "propertyiq":
+      return "text-indigo-700";
     default:
       return "text-on-surface-variant";
   }
