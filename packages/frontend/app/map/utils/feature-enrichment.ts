@@ -86,9 +86,31 @@ function enrichCountyFeatures(geojson: any, mapData: MapData): void {
   );
 }
 
+/**
+ * TIGER shapefiles use 2023 Census CBSA codes, but our data tables use
+ * the older codes for ~13 metros. This crosswalk maps shapefile CBSAFP
+ * to the system code so the data join succeeds.
+ */
+const TIGER_TO_SYSTEM_CBSA: Record<string, string> = {
+  "14454": "14460", // Boston
+  "16984": "16980", // Chicago
+  "17460": "17410", // Cleveland
+  "19124": "19100", // Dallas
+  "19804": "19820", // Detroit
+  "30100": "30150", // Lebanon NH
+  "31084": "31080", // Los Angeles
+  "33124": "33100", // Miami
+  "35614": "35620", // New York
+  "37964": "37980", // Philadelphia
+  "41884": "41860", // San Francisco
+  "42644": "42660", // Seattle
+  "47894": "47900", // Washington DC
+};
+
 function enrichMetroFeatures(geojson: any, mapData: MapData): void {
   geojson.features.forEach((feature: any) => {
-    const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
+    const rawCbsa = feature.properties.CBSAFP || feature.properties.GEOID;
+    const cbsaCode = TIGER_TO_SYSTEM_CBSA[rawCbsa] || rawCbsa;
     const entry = mapData[cbsaCode];
     feature.properties.value = getValueFromEntry(entry);
     feature.properties.dataDate = getDateFromEntry(entry);
