@@ -2,13 +2,19 @@
 // PROPERTYIQ REPORTS SYSTEM - TYPESCRIPT TYPES
 // ============================================================================
 
-import type { ScoreComponentBreakdown } from '@/lib/data';
+import type { ScoreComponentBreakdown } from "@/lib/data";
 
 // -----------------------------------------------------------------------------
 // GEOGRAPHY
 // -----------------------------------------------------------------------------
 
-export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
+export type GeographyType =
+  | "national"
+  | "state"
+  | "metro"
+  | "county"
+  | "city"
+  | "zip";
 
 export interface Geography {
   id: string;
@@ -25,7 +31,7 @@ export interface Geography {
 // SUBSCRIPTION TIERS
 // -----------------------------------------------------------------------------
 
-export type SubscriptionTier = 'free' | 'basic' | 'pro' | 'enterprise';
+export type SubscriptionTier = "free" | "basic" | "pro" | "enterprise";
 
 export interface TierLimits {
   reports_per_month: number;
@@ -42,7 +48,7 @@ export interface TierLimits {
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   free: {
     reports_per_month: 2,
-    report_types: ['snapshot'],
+    report_types: ["snapshot"],
     conversation_exchanges: 3,
     conversation_persistence_days: null,
     multi_report_memory: false,
@@ -53,7 +59,7 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   basic: {
     reports_per_month: 10,
-    report_types: ['snapshot', 'comparison', 'investment', 'affordability'],
+    report_types: ["snapshot", "comparison", "investment", "affordability"],
     conversation_exchanges: 15,
     conversation_persistence_days: 30,
     multi_report_memory: false,
@@ -64,7 +70,13 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   pro: {
     reports_per_month: Infinity,
-    report_types: ['snapshot', 'comparison', 'investment', 'affordability', 'cycle'],
+    report_types: [
+      "snapshot",
+      "comparison",
+      "investment",
+      "affordability",
+      "cycle",
+    ],
     conversation_exchanges: Infinity,
     conversation_persistence_days: null,
     multi_report_memory: true,
@@ -75,7 +87,14 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   enterprise: {
     reports_per_month: Infinity,
-    report_types: ['snapshot', 'comparison', 'investment', 'affordability', 'cycle', 'custom'],
+    report_types: [
+      "snapshot",
+      "comparison",
+      "investment",
+      "affordability",
+      "cycle",
+      "custom",
+    ],
     conversation_exchanges: Infinity,
     conversation_persistence_days: null,
     multi_report_memory: true,
@@ -90,13 +109,18 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
 // USER TYPE
 // -----------------------------------------------------------------------------
 
-export type UserType = 'homebuyer' | 'investor' | 'agent';
+export type UserType = "homebuyer" | "investor" | "agent" | "universal";
 
 // -----------------------------------------------------------------------------
 // REPORT TEMPLATES
 // -----------------------------------------------------------------------------
 
-export type ReportType = 'snapshot' | 'comparison' | 'investment' | 'affordability' | 'cycle';
+export type ReportType =
+  | "snapshot"
+  | "comparison"
+  | "investment"
+  | "affordability"
+  | "cycle";
 
 export interface ReportTemplate {
   id: string;
@@ -135,7 +159,7 @@ export interface ReportTemplateConfig {
 export interface UserInputField {
   field_name: string;
   label: string;
-  type: 'number' | 'select' | 'range' | 'boolean' | 'text';
+  type: "number" | "select" | "range" | "boolean" | "text";
   required?: boolean;
   placeholder?: string;
   default?: any;
@@ -152,66 +176,74 @@ export interface UserInputField {
 export interface ReportPage {
   id: string;
   name: string;
-  layout?: 'cover' | 'dashboard' | 'comparison' | 'analysis' | 'narrative' | 'charts' | 'scenarios' | 'pro_forma';
+  layout?:
+    | "cover"
+    | "dashboard"
+    | "comparison"
+    | "analysis"
+    | "narrative"
+    | "charts"
+    | "scenarios"
+    | "pro_forma";
   show_if_inputs?: string[];
   sections: ReportSection[];
 }
 
 export type SectionType =
-  | 'report_title'
-  | 'report_metadata'
-  | 'score_gauge_single'
-  | 'score_gauge_dual'
-  | 'metric_grid'
-  | 'metric_detail'
-  | 'metric_highlight'
-  | 'metric_comparison'
-  | 'chart_single'
-  | 'chart_grid'
-  | 'comparison_chart_grid'
-  | 'comparison_table'
-  | 'comparison_radar'
-  | 'comparison_header'
-  | 'ai_narrative'
-  | 'market_verdict_bar'
-  | 'winner_badges'
-  | 'pros_cons_table'
-  | 'strengths_risks'
-  | 'score_breakdown'
-  | 'investment_verdict'
-  | 'fact_box'
-  | 'ranked_list'
-  | 'indicator_dashboard'
-  | 'indicator_deep_dive'
-  | 'indicator_summary_table'
-  | 'stress_indicator'
-  | 'stress_summary'
-  | 'cycle_indicator'
-  | 'cycle_diagram'
-  | 'percentile_bands'
-  | 'percentile_rank'
-  | 'scenario_card'
-  | 'scenario_chart'
-  | 'forecast_display'
-  | 'affordability_gap_visual'
-  | 'savings_calculator'
-  | 'personal_affordability'
-  | 'budget_breakdown'
-  | 'savings_timeline'
-  | 'alternative_areas'
-  | 'migration_sankey'
-  | 'pro_forma_assumptions'
-  | 'pro_forma_cash_flow'
-  | 'pro_forma_returns'
-  | 'pro_forma_sensitivity'
-  | 'text_block'
-  | 'status_badge'
+  | "report_title"
+  | "report_metadata"
+  | "score_gauge_single"
+  | "score_gauge_dual"
+  | "metric_grid"
+  | "metric_detail"
+  | "metric_highlight"
+  | "metric_comparison"
+  | "chart_single"
+  | "chart_grid"
+  | "comparison_chart_grid"
+  | "comparison_table"
+  | "comparison_radar"
+  | "comparison_header"
+  | "ai_narrative"
+  | "market_verdict_bar"
+  | "winner_badges"
+  | "pros_cons_table"
+  | "strengths_risks"
+  | "score_breakdown"
+  | "investment_verdict"
+  | "fact_box"
+  | "ranked_list"
+  | "indicator_dashboard"
+  | "indicator_deep_dive"
+  | "indicator_summary_table"
+  | "stress_indicator"
+  | "stress_summary"
+  | "cycle_indicator"
+  | "cycle_diagram"
+  | "percentile_bands"
+  | "percentile_rank"
+  | "scenario_card"
+  | "scenario_chart"
+  | "forecast_display"
+  | "affordability_gap_visual"
+  | "savings_calculator"
+  | "personal_affordability"
+  | "budget_breakdown"
+  | "savings_timeline"
+  | "alternative_areas"
+  | "migration_sankey"
+  | "pro_forma_assumptions"
+  | "pro_forma_cash_flow"
+  | "pro_forma_returns"
+  | "pro_forma_sensitivity"
+  | "text_block"
+  | "status_badge"
   // Premium comparison report sections (2026 redesign)
-  | 'comparison_hero_showdown'
-  | 'why_winner_won'
-  | 'score_credibility'
-  | 'market_deep_dive'
-  | 'ai_recommendation';
+  | "comparison_hero_showdown"
+  | "why_winner_won"
+  | "score_credibility"
+  | "market_deep_dive"
+  | "ai_recommendation";
 
 export interface ReportSection {
   id: string;
@@ -234,7 +266,7 @@ export interface NarrativeSection {
   name?: string;
   prompt_template: string;
   max_tokens: number;
-  output_format?: 'text' | 'json_array' | 'json_object';
+  output_format?: "text" | "json_array" | "json_object";
 }
 
 // -----------------------------------------------------------------------------
@@ -244,8 +276,8 @@ export interface NarrativeSection {
 export interface DataRequirements {
   current_metrics: string[];
   historical_metrics: { metric: string; periods: number }[];
-  benchmarks: ('national' | 'state' | 'similar_metros')[];
-  scores: ('homeready' | 'investoredge' | 'markethealth')[];
+  benchmarks: ("national" | "state" | "similar_metros")[];
+  scores: ("homeready" | "investoredge" | "markethealth")[];
   score_components?: boolean;
   demographics?: string[];
   migration?: {
@@ -309,7 +341,12 @@ export interface PartnerRecommendation {
 // REPORT INSTANCES
 // -----------------------------------------------------------------------------
 
-export type ReportStatus = 'pending' | 'generating' | 'ready' | 'failed' | 'expired';
+export type ReportStatus =
+  | "pending"
+  | "generating"
+  | "ready"
+  | "failed"
+  | "expired";
 
 export interface ReportInstance {
   id: string;
@@ -372,12 +409,12 @@ export interface ReportInstance {
   status: ReportStatus;
   error_message: string | null;
   data_as_of_date: string | null;
-  confidence_level: 'a' | 'b' | 'c' | 'f' | null;
+  confidence_level: "a" | "b" | "c" | "f" | null;
   generation_time_ms: number | null;
 
   // Sharing
   share_token: string | null;
-  share_access_level: 'view' | 'download';
+  share_access_level: "view" | "download";
   share_view_count: number;
 
   // Timestamps
@@ -389,11 +426,14 @@ export interface ReportInstance {
 
 export interface PopulatedReportData {
   current: Record<string, number | string | null>;
-  historical: Record<string, {
-    data: Array<{ date: string; value: number }>;
-    trend: 'up' | 'down' | 'stable';
-    change_pct: number;
-  }>;
+  historical: Record<
+    string,
+    {
+      data: Array<{ date: string; value: number }>;
+      trend: "up" | "down" | "stable";
+      change_pct: number;
+    }
+  >;
   benchmarks: {
     national?: Record<string, number>;
     state?: Record<string, number>;
@@ -418,7 +458,7 @@ export interface PopulatedReportData {
     news?: NewsItem[];
     indicators?: Record<string, any>;
     sentiment?: {
-      sentiment: 'bullish' | 'neutral' | 'bearish';
+      sentiment: "bullish" | "neutral" | "bearish";
       confidence: number;
       summary: string;
       factors: string[];
@@ -426,16 +466,22 @@ export interface PopulatedReportData {
     fetched_at?: string;
   };
   /** Comparison geography data for comparison reports */
-  comparisons?: Record<string, {
-    geography: Geography;
-    current: Record<string, number | string | null>;
-    historical?: Record<string, {
-      data: Array<{ date: string; value: number }>;
-      trend: 'up' | 'down' | 'stable';
-      change_pct: number;
-    }>;
-    scores?: Record<string, number | ScoreData>;
-  }>;
+  comparisons?: Record<
+    string,
+    {
+      geography: Geography;
+      current: Record<string, number | string | null>;
+      historical?: Record<
+        string,
+        {
+          data: Array<{ date: string; value: number }>;
+          trend: "up" | "down" | "stable";
+          change_pct: number;
+        }
+      >;
+      scores?: Record<string, number | ScoreData>;
+    }
+  >;
   /** Priority-weighted winner for comparison reports (2026 redesign) */
   priority_weighted_winner?: {
     winnerId: string;
@@ -462,12 +508,15 @@ export interface TimeSeriesPoint {
 
 export interface ScoreData {
   score: number;
-  trend: 'up' | 'down' | 'stable';
-  components?: Record<string, {
-    score: number;
-    weight: number;
-    helping: boolean;
-  }>;
+  trend: "up" | "down" | "stable";
+  components?: Record<
+    string,
+    {
+      score: number;
+      weight: number;
+      helping: boolean;
+    }
+  >;
   percentile?: number;
 }
 
@@ -529,26 +578,26 @@ export interface ReportConversation {
   messages: ConversationMessage[];
   user_profile: ConversationUserProfile;
   exchange_count: number;
-  status: 'active' | 'archived' | 'exported';
+  status: "active" | "archived" | "exported";
   created_at: string;
   updated_at: string;
 }
 
 export interface ConversationMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: string;
 }
 
 export interface ConversationUserProfile {
-  buyer_type?: 'first_time' | 'experienced' | 'investor';
-  goal?: 'buy' | 'rent' | 'invest' | 'relocate';
-  timeline?: 'immediate' | '6_months' | '1_year' | 'exploring';
+  buyer_type?: "first_time" | "experienced" | "investor";
+  goal?: "buy" | "rent" | "invest" | "relocate";
+  timeline?: "immediate" | "6_months" | "1_year" | "exploring";
   budget_range?: { min: number; max: number };
   priorities?: string[];
   concerns?: string[];
-  investment_goal?: 'cash_flow' | 'appreciation' | 'balanced';
+  investment_goal?: "cash_flow" | "appreciation" | "balanced";
   hold_period?: string;
 }
 
@@ -566,7 +615,7 @@ export interface GenerateReportRequest {
 
 export interface GenerateReportResponse {
   report_id: string;
-  status: 'generating';
+  status: "generating";
 }
 
 export interface SendMessageRequest {

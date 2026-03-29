@@ -10,7 +10,6 @@ import React, {
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home,
   TrendingUp,
   MapPin,
   DollarSign,
@@ -59,109 +58,7 @@ interface Market {
   state?: string;
 }
 
-// ============================================================================
-// REPORT CARD - Entry Point
-// ============================================================================
-
-interface ReportCardProps {
-  type: "homebuyer" | "investor";
-  onSelect: () => void;
-}
-
-function ReportCard({ type, onSelect }: ReportCardProps) {
-  const isHomebuyer = type === "homebuyer";
-
-  return (
-    <motion.button
-      onClick={onSelect}
-      className={`
-        group relative overflow-hidden
-        w-full h-full text-left rounded-3xl p-8 md:p-10
-        flex flex-col
-        transition-all duration-500 ease-out
-        ${
-          isHomebuyer
-            ? "bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 hover:from-primary/10 hover:via-primary/15 hover:to-primary/10"
-            : "bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-tertiary/5 hover:from-tertiary/10 hover:via-tertiary/15 hover:to-tertiary/10"
-        }
-        border border-outline-variant/30 hover:border-outline-variant/60
-        hover:shadow-xl hover:shadow-black/5
-      `}
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      {/* Decorative gradient orb */}
-      <div
-        className={`
-        absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30
-        transition-opacity duration-500 group-hover:opacity-50
-        ${isHomebuyer ? "bg-primary" : "bg-tertiary"}
-      `}
-      />
-
-      {/* Icon */}
-      <div
-        className={`
-        relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6
-        ${
-          isHomebuyer
-            ? "bg-primary/15 text-primary"
-            : "bg-tertiary/15 text-tertiary"
-        }
-      `}
-      >
-        {isHomebuyer ? (
-          <Home className="w-7 h-7" />
-        ) : (
-          <TrendingUp className="w-7 h-7" />
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="relative flex-1">
-        <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
-          {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
-        </h2>
-
-        <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
-          {isHomebuyer
-            ? "Discover if a market fits your budget and lifestyle. See affordability, competition, and buying conditions."
-            : "Analyze cash flow, appreciation potential, and risk. Get pro forma projections for any market."}
-        </p>
-      </div>
-
-      {/* Bottom row: badge + arrow */}
-      <div className="relative flex items-center justify-between mt-6">
-        <div
-          className={`
-          inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-          ${
-            isHomebuyer
-              ? "bg-primary/10 text-primary"
-              : "bg-tertiary/10 text-tertiary"
-          }
-        `}
-        >
-          <Sparkles className="w-4 h-4" />
-          {isHomebuyer ? "HomeReady Score" : "InvestorEdge Score"}
-        </div>
-        <div
-          className={`
-          w-12 h-12 rounded-full flex items-center justify-center
-          transition-all duration-300 group-hover:scale-110
-          ${
-            isHomebuyer
-              ? "bg-primary text-on-primary"
-              : "bg-tertiary text-on-tertiary"
-          }
-        `}
-        >
-          <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
-        </div>
-      </div>
-    </motion.button>
-  );
-}
+// ReportCard component removed — single PropertyIQ report type, no type picker needed
 
 // ============================================================================
 // MARKET SELECTOR
@@ -375,18 +272,12 @@ function handleCurrencyChange(
 // ============================================================================
 
 interface PersonalizationPanelProps {
-  type: "homebuyer" | "investor";
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
 }
 
-function PersonalizationPanel({
-  type,
-  values,
-  onChange,
-}: PersonalizationPanelProps) {
+function PersonalizationPanel({ values, onChange }: PersonalizationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isHomebuyer = type === "homebuyer";
 
   return (
     <div className="border border-outline-variant/30 rounded-2xl overflow-hidden">
@@ -431,7 +322,7 @@ function PersonalizationPanel({
                   What matters most to you? (Pick your top 3)
                 </h4>
                 <PrioritySelector
-                  userType={type}
+                  userType="homebuyer"
                   selected={
                     values.priorities ? JSON.parse(values.priorities) : []
                   }
@@ -441,163 +332,128 @@ function PersonalizationPanel({
                 />
               </div>
 
-              {/* Financial Inputs */}
-              {isHomebuyer ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-on-surface mb-2">
-                      Household income
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                        $
-                      </span>
-                      <input
-                        type="text"
-                        value={values.income || ""}
-                        onChange={(e) =>
-                          handleCurrencyChange(
-                            e.target.value,
-                            onChange,
-                            "income",
-                          )
-                        }
-                        placeholder="85,000"
-                        className="w-full pl-8 pr-4 py-3 rounded-xl
-                          bg-surface-container border border-outline-variant/50
-                          text-on-surface placeholder:text-on-surface-variant/40
-                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
-                          transition-all duration-200"
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-on-surface-variant/70">
-                      We&apos;ll calculate what you can afford
-                    </p>
+              {/* Financial Inputs - all fields merged, all optional */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-2">
+                    Household income
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                      $
+                    </span>
+                    <input
+                      type="text"
+                      value={values.income || ""}
+                      onChange={(e) =>
+                        handleCurrencyChange(e.target.value, onChange, "income")
+                      }
+                      placeholder="85,000"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl
+                        bg-surface-container border border-outline-variant/50
+                        text-on-surface placeholder:text-on-surface-variant/40
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
+                        transition-all duration-200"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-on-surface mb-2">
-                      Down payment
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                        $
-                      </span>
-                      <input
-                        type="text"
-                        value={values.downPayment || ""}
-                        onChange={(e) =>
-                          handleCurrencyChange(
-                            e.target.value,
-                            onChange,
-                            "downPayment",
-                          )
-                        }
-                        placeholder="50,000"
-                        className="w-full pl-8 pr-4 py-3 rounded-xl
-                          bg-surface-container border border-outline-variant/50
-                          text-on-surface placeholder:text-on-surface-variant/40
-                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
-                          transition-all duration-200"
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-on-surface-variant/70">
-                      Savings available for purchase
-                    </p>
-                  </div>
+                  <p className="mt-1.5 text-xs text-on-surface-variant/70">
+                    We&apos;ll calculate what you can afford
+                  </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-on-surface mb-2">
-                      Purchase price
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                        $
-                      </span>
-                      <input
-                        type="text"
-                        value={values.purchasePrice || ""}
-                        onChange={(e) =>
-                          handleCurrencyChange(
-                            e.target.value,
-                            onChange,
-                            "purchasePrice",
-                          )
-                        }
-                        placeholder="450,000"
-                        className="w-full pl-8 pr-4 py-3 rounded-xl
-                          bg-surface-container border border-outline-variant/50
-                          text-on-surface placeholder:text-on-surface-variant/40
-                          focus:outline-none focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary/50
-                          transition-all duration-200"
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-on-surface-variant/70">
-                      Leave blank for median price
-                    </p>
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-2">
+                    Down payment
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                      $
+                    </span>
+                    <input
+                      type="text"
+                      value={values.downPayment || ""}
+                      onChange={(e) =>
+                        handleCurrencyChange(
+                          e.target.value,
+                          onChange,
+                          "downPayment",
+                        )
+                      }
+                      placeholder="50,000"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl
+                        bg-surface-container border border-outline-variant/50
+                        text-on-surface placeholder:text-on-surface-variant/40
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
+                        transition-all duration-200"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-on-surface mb-2">
-                      Down payment %
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={values.downPaymentPct || ""}
-                        onChange={(e) =>
-                          onChange("downPaymentPct", e.target.value)
-                        }
-                        placeholder="25"
-                        className="w-full pl-4 pr-8 py-3 rounded-xl
-                          bg-surface-container border border-outline-variant/50
-                          text-on-surface placeholder:text-on-surface-variant/40
-                          focus:outline-none focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary/50
-                          transition-all duration-200"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                        %
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-xs text-on-surface-variant/70">
-                      Default: 25%
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-on-surface mb-2">
-                      Expected rent
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                        $
-                      </span>
-                      <input
-                        type="text"
-                        value={values.expectedRent || ""}
-                        onChange={(e) =>
-                          handleCurrencyChange(
-                            e.target.value,
-                            onChange,
-                            "expectedRent",
-                          )
-                        }
-                        placeholder="2,500"
-                        className="w-full pl-8 pr-16 py-3 rounded-xl
-                          bg-surface-container border border-outline-variant/50
-                          text-on-surface placeholder:text-on-surface-variant/40
-                          focus:outline-none focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary/50
-                          transition-all duration-200"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">
-                        /mo
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-xs text-on-surface-variant/70">
-                      Leave blank for market rent
-                    </p>
-                  </div>
+                  <p className="mt-1.5 text-xs text-on-surface-variant/70">
+                    Savings available for purchase
+                  </p>
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-2">
+                    Purchase price
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                      $
+                    </span>
+                    <input
+                      type="text"
+                      value={values.purchasePrice || ""}
+                      onChange={(e) =>
+                        handleCurrencyChange(
+                          e.target.value,
+                          onChange,
+                          "purchasePrice",
+                        )
+                      }
+                      placeholder="450,000"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl
+                        bg-surface-container border border-outline-variant/50
+                        text-on-surface placeholder:text-on-surface-variant/40
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
+                        transition-all duration-200"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-on-surface-variant/70">
+                    Leave blank for median price
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-2">
+                    Expected rent
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                      $
+                    </span>
+                    <input
+                      type="text"
+                      value={values.expectedRent || ""}
+                      onChange={(e) =>
+                        handleCurrencyChange(
+                          e.target.value,
+                          onChange,
+                          "expectedRent",
+                        )
+                      }
+                      placeholder="2,500"
+                      className="w-full pl-8 pr-16 py-3 rounded-xl
+                        bg-surface-container border border-outline-variant/50
+                        text-on-surface placeholder:text-on-surface-variant/40
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
+                        transition-all duration-200"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">
+                      /mo
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-on-surface-variant/70">
+                    Leave blank for market rent
+                  </p>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -610,12 +466,7 @@ function PersonalizationPanel({
 // REPORT CREATION PAGE
 // ============================================================================
 
-interface ReportCreationPageProps {
-  type: "homebuyer" | "investor";
-  onBack: () => void;
-}
-
-function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
+function ReportCreationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -667,7 +518,6 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
     }
   }, [markets.length, searchParams]);
 
-  const isHomebuyer = type === "homebuyer";
   const canGenerate = markets.length > 0;
 
   const handleGenerate = async () => {
@@ -681,14 +531,9 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
     setError(null);
 
     try {
-      const templateSlug =
-        markets.length > 1
-          ? "comparison"
-          : isHomebuyer
-            ? "homeready"
-            : "investoredge";
+      const templateSlug = markets.length > 1 ? "comparison" : "propertyiq";
 
-      const userType: UserType = isHomebuyer ? "homebuyer" : "investor";
+      const userType: UserType = "universal";
 
       const primaryMarket = markets[0];
       const primaryGeography: Geography = {
@@ -708,27 +553,22 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
       }));
 
       const userInputs: Record<string, any> = {};
-      if (isHomebuyer) {
-        if (inputs.income)
-          userInputs.household_income = parseFloat(
-            inputs.income.replace(/,/g, ""),
-          );
-        if (inputs.downPayment)
-          userInputs.down_payment = parseFloat(
-            inputs.downPayment.replace(/,/g, ""),
-          );
-      } else {
-        if (inputs.purchasePrice)
-          userInputs.purchase_price = parseFloat(
-            inputs.purchasePrice.replace(/,/g, ""),
-          );
-        if (inputs.downPaymentPct)
-          userInputs.down_payment_pct = parseFloat(inputs.downPaymentPct);
-        if (inputs.expectedRent)
-          userInputs.expected_rent = parseFloat(
-            inputs.expectedRent.replace(/,/g, ""),
-          );
-      }
+      if (inputs.income)
+        userInputs.household_income = parseFloat(
+          inputs.income.replace(/,/g, ""),
+        );
+      if (inputs.downPayment)
+        userInputs.down_payment = parseFloat(
+          inputs.downPayment.replace(/,/g, ""),
+        );
+      if (inputs.purchasePrice)
+        userInputs.purchase_price = parseFloat(
+          inputs.purchasePrice.replace(/,/g, ""),
+        );
+      if (inputs.expectedRent)
+        userInputs.expected_rent = parseFloat(
+          inputs.expectedRent.replace(/,/g, ""),
+        );
 
       // Add priorities if selected
       if (inputs.priorities) {
@@ -787,55 +627,22 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
       <div
         className={`
         relative overflow-hidden
-        ${
-          isHomebuyer
-            ? "bg-gradient-to-br from-primary/5 via-primary/10 to-transparent"
-            : "bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-transparent"
-        }
+        bg-gradient-to-br from-primary/5 via-primary/10 to-transparent
       `}
       >
-        <div
-          className={`
-          absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20
-          ${isHomebuyer ? "bg-primary" : "bg-tertiary"}
-        `}
-        />
+        <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20 bg-primary" />
 
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface
-              transition-colors mb-6 group"
-          >
-            <ChevronRight className="w-4 h-4 rotate-180 transition-transform group-hover:-translate-x-0.5" />
-            <span className="text-sm font-medium">Back</span>
-          </button>
-
           <div className="flex items-center gap-4 mb-2">
-            <div
-              className={`
-              w-12 h-12 rounded-2xl flex items-center justify-center
-              ${
-                isHomebuyer
-                  ? "bg-primary/15 text-primary"
-                  : "bg-tertiary/15 text-tertiary"
-              }
-            `}
-            >
-              {isHomebuyer ? (
-                <Home className="w-6 h-6" />
-              ) : (
-                <TrendingUp className="w-6 h-6" />
-              )}
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-primary/15 text-primary">
+              <BarChart3 className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight">
-                {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
+                PropertyIQ Report
               </h2>
               <p className="text-on-surface-variant">
-                {isHomebuyer
-                  ? "Powered by HomeReady Score"
-                  : "Powered by InvestorEdge Score"}
+                Powered by PropertyIQ Score
               </p>
             </div>
           </div>
@@ -855,13 +662,12 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
             markets={markets}
             onAdd={(market) => setMarkets([...markets, market])}
             onRemove={(id) => setMarkets(markets.filter((m) => m.id !== id))}
-            accentColor={isHomebuyer ? "primary" : "tertiary"}
+            accentColor="primary"
           />
         </section>
 
         <section>
           <PersonalizationPanel
-            type={type}
             values={inputs}
             onChange={(key, value) => setInputs({ ...inputs, [key]: value })}
           />
@@ -870,17 +676,11 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
         <motion.button
           onClick={handleGenerate}
           disabled={!canGenerate || isGenerating}
-          className={`
-            w-full py-4 px-6 rounded-2xl font-semibold text-lg
+          className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
             flex items-center justify-center gap-3
             transition-all duration-300
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${
-              isHomebuyer
-                ? "bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
-                : "bg-tertiary text-on-tertiary hover:bg-tertiary/90 shadow-lg shadow-tertiary/25"
-            }
-          `}
+            bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
           whileHover={canGenerate ? { scale: 1.01 } : {}}
           whileTap={canGenerate ? { scale: 0.99 } : {}}
         >
@@ -970,7 +770,7 @@ function ReportHistory() {
           No reports yet
         </p>
         <p className="text-sm text-on-surface-variant max-w-xs mx-auto">
-          Pick a report type above to generate your first AI-powered market
+          Select a market above to generate your first AI-powered market
           analysis.
         </p>
       </div>
@@ -988,21 +788,8 @@ function ReportHistory() {
             border border-outline-variant/30 hover:border-outline-variant/50
             transition-all duration-200 text-left group"
         >
-          <div
-            className={`
-            w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-            ${
-              report.user_type === "homebuyer"
-                ? "bg-primary/10 text-primary"
-                : "bg-tertiary/10 text-tertiary"
-            }
-          `}
-          >
-            {report.user_type === "homebuyer" ? (
-              <Home className="w-5 h-5" />
-            ) : (
-              <TrendingUp className="w-5 h-5" />
-            )}
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-100 text-indigo-700">
+            <BarChart3 className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-medium text-on-surface truncate">
@@ -1029,81 +816,53 @@ function ReportHistory() {
 
 function ReportsContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const urlType = searchParams.get("rtype") as "homebuyer" | "investor" | null;
-  const [selectedType, setSelectedType] = useState<
-    "homebuyer" | "investor" | null
-  >(urlType && ["homebuyer", "investor"].includes(urlType) ? urlType : null);
-
-  if (selectedType) {
-    return (
-      <ReportCreationPage
-        type={selectedType}
-        onBack={() => setSelectedType(null)}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-surface" data-tour="reports-section">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <PageHeaderWithBreadcrumbs
-          breadcrumbs={[{ label: "Reports" }]}
-          title="Real Estate Market Reports"
-          description="Get AI-powered market analysis tailored to your goals"
-          icon={<FileText className="w-5 h-5" />}
-          className="mb-12"
-        />
+      {/* Report creation form — direct to market selection, no type picker */}
+      <ReportCreationPage />
 
-        {/* Report Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <ReportCard
-            type="homebuyer"
-            onSelect={() => setSelectedType("homebuyer")}
-          />
-          <ReportCard
-            type="investor"
-            onSelect={() => setSelectedType("investor")}
-          />
-          <motion.button
-            onClick={() => router.push("/reports/research")}
-            className="
-              group relative overflow-hidden
-              w-full h-full text-left rounded-3xl p-8 md:p-10
-              flex flex-col
-              transition-all duration-500 ease-out
-              bg-gradient-to-br from-secondary/5 via-secondary/10 to-secondary/5
-              hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
-              border border-outline-variant/30 hover:border-outline-variant/60
-              hover:shadow-xl hover:shadow-black/5
-            "
-            whileHover={{ y: -4 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50 bg-secondary" />
-            <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-secondary/15 text-secondary">
-              <FileText className="w-7 h-7" />
+      {/* Below the form: Custom Research CTA + Recent Reports */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 space-y-10">
+        {/* Custom Research Card */}
+        <motion.button
+          onClick={() => router.push("/reports/research")}
+          className="
+            group relative overflow-hidden
+            w-full text-left rounded-3xl p-8 md:p-10
+            flex flex-col
+            transition-all duration-500 ease-out
+            bg-gradient-to-br from-secondary/5 via-secondary/10 to-secondary/5
+            hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
+            border border-outline-variant/30 hover:border-outline-variant/60
+            hover:shadow-xl hover:shadow-black/5
+          "
+          whileHover={{ y: -4 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50 bg-secondary" />
+          <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-secondary/15 text-secondary">
+            <FileText className="w-7 h-7" />
+          </div>
+          <div className="relative flex-1">
+            <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
+              Custom Research
+            </h2>
+            <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
+              Ask any real estate question. Get an AI-powered research brief
+              backed by PropertyIQ data.
+            </p>
+          </div>
+          <div className="relative flex items-center justify-between mt-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
+              <Sparkles className="w-4 h-4" />
+              AI Research Agent
             </div>
-            <div className="relative flex-1">
-              <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
-                Custom Research
-              </h2>
-              <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
-                Ask any real estate question. Get an AI-powered research brief
-                backed by PropertyIQ data.
-              </p>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-secondary text-on-secondary">
+              <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
             </div>
-            <div className="relative flex items-center justify-between mt-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
-                <Sparkles className="w-4 h-4" />
-                AI Research Agent
-              </div>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-secondary text-on-secondary">
-                <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </div>
-          </motion.button>
-        </div>
+          </div>
+        </motion.button>
 
         {/* Recent Reports */}
         <div>
