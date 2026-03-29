@@ -54,7 +54,7 @@ interface Validation {
 interface ScoreHistoryChartProps {
   geographyType: string;
   geographyId: string;
-  scoreType: "homeready" | "investoredge" | "markethealth";
+  scoreType: "propertyiq" | "homeready" | "investoredge" | "markethealth";
   initialYears?: 3 | 5;
   className?: string;
 }
@@ -163,9 +163,10 @@ export function ScoreHistoryChart({
   }
 
   const scoreLabel = {
-    homeready: "HomeReady",
-    investoredge: "InvestorEdge",
-    markethealth: "Market Health",
+    propertyiq: "PropertyIQ",
+    homeready: "PropertyIQ",
+    investoredge: "PropertyIQ",
+    markethealth: "PropertyIQ",
   }[scoreType];
 
   return (

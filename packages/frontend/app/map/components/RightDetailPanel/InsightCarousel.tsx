@@ -1,116 +1,127 @@
-import { useState, useEffect } from 'react';
-import { Sparkles } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Sparkles } from "lucide-react";
 
 interface InsightCarouselProps {
-    geographyName: string;
-    investorScore: number | null;
-    homeReadyScore: number | null;
-    marketHealthScore: number | null;
-    viewMode: 'investor' | 'homebuyer';
-    className?: string;
+  geographyName: string;
+  /** Single PropertyIQ score used for insight generation */
+  propertyIQScore: number | null;
+  viewMode: "investor" | "homebuyer";
+  className?: string;
 }
 
 export function InsightCarousel({
-    geographyName,
-    investorScore,
-    homeReadyScore,
-    marketHealthScore,
-    viewMode,
-    className
+  geographyName,
+  propertyIQScore,
+  viewMode,
+  className,
 }: InsightCarouselProps) {
-    const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-    // Generate dynamic insights based on scores
-    const getInvestorInsight = () => {
-        const score = investorScore ?? 0;
-        const health = marketHealthScore ?? 0;
+  // Generate dynamic insights based on the unified PropertyIQ score
+  const getInvestorInsight = () => {
+    const score = propertyIQScore ?? 0;
 
-        let text = `${geographyName} presents `;
-        if (score >= 80) text += "exceptional short-term rental potential with high yield indicators. ";
-        else if (score >= 60) text += "moderate investment opportunities, primarily for long-term holds. ";
-        else text += "challenging constraints for immediate cash flow. ";
+    let text = `${geographyName} presents `;
+    if (score >= 80)
+      text +=
+        "exceptional short-term rental potential with high yield indicators. ";
+    else if (score >= 60)
+      text +=
+        "moderate investment opportunities, primarily for long-term holds. ";
+    else text += "challenging constraints for immediate cash flow. ";
 
-        if (health >= 70) text += "Market fundamentals remain robust with strong demand.";
-        else text += "Monitor local inventory trends carefully before entering.";
+    if (score >= 70)
+      text += "Market fundamentals remain robust with strong demand.";
+    else text += "Monitor local inventory trends carefully before entering.";
 
-        return text;
-    };
+    return text;
+  };
 
-    const getBuyerInsight = () => {
-        const score = homeReadyScore ?? 0;
+  const getBuyerInsight = () => {
+    const score = propertyIQScore ?? 0;
 
-        let text = `${geographyName} is `;
-        if (score >= 75) text += "currently a buyer-friendly market with softening prices. ";
-        else if (score >= 50) text += "highly competitive; prepared offers are essential. ";
-        else text += "dominated by sellers; expect low inventory and bidding wars. ";
+    let text = `${geographyName} is `;
+    if (score >= 75)
+      text += "currently a buyer-friendly market with softening prices. ";
+    else if (score >= 50)
+      text += "highly competitive; prepared offers are essential. ";
+    else
+      text += "dominated by sellers; expect low inventory and bidding wars. ";
 
-        text += "Mortgage readiness factors are performing " + (score > 60 ? "above" : "below") + " regional averages.";
-        return text;
-    };
+    text +=
+      "Mortgage readiness factors are performing " +
+      (score > 60 ? "above" : "below") +
+      " regional averages.";
+    return text;
+  };
 
-    const insights = [
-        {
-            type: 'investor',
-            title: 'Investor Insight',
-            text: getInvestorInsight(),
-            color: 'text-primary',
-            bg: 'from-primary/10 to-transparent'
-        },
-        {
-            type: 'buyer',
-            title: 'Home Buyer/Renter Insight',
-            text: getBuyerInsight(),
-            color: 'text-secondary',
-            bg: 'from-secondary/10 to-transparent'
-        }
-    ];
+  const insights = [
+    {
+      type: "investor",
+      title: "Investor Insight",
+      text: getInvestorInsight(),
+      color: "text-primary",
+      bg: "from-primary/10 to-transparent",
+    },
+    {
+      type: "buyer",
+      title: "Home Buyer/Renter Insight",
+      text: getBuyerInsight(),
+      color: "text-secondary",
+      bg: "from-secondary/10 to-transparent",
+    },
+  ];
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % insights.length);
-        }, 8000); // Rotate every 8 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % insights.length);
+    }, 8000); // Rotate every 8 seconds
 
-        return () => clearInterval(interval);
-    }, [insights.length]);
+    return () => clearInterval(interval);
+  }, [insights.length]);
 
-    const current = insights[currentIndex];
+  const current = insights[currentIndex];
 
-    return (
-        <div className={`
+  return (
+    <div
+      className={`
       relative overflow-hidden rounded-xl p-3 border border-outline-variant
       bg-gradient-to-br transition-colors duration-500
       ${current.bg}
       ${className}
       flex flex-col
-    `}>
-            <div className="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
-                <Sparkles className={`w-3.5 h-3.5 ${current.color}`} />
-                <span className={`text-[9px] font-bold uppercase tracking-wide ${current.color}`}>
-                    {current.title}
-                </span>
-            </div>
+    `}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
+        <Sparkles className={`w-3.5 h-3.5 ${current.color}`} />
+        <span
+          className={`text-[9px] font-bold uppercase tracking-wide ${current.color}`}
+        >
+          {current.title}
+        </span>
+      </div>
 
-            <div className="flex-1 overflow-hidden">
-                <p
-                    key={currentIndex}
-                    className="text-[11px] text-on-surface leading-tight animate-in fade-in slide-in-from-right-4 duration-500 line-clamp-4"
-                >
-                    "{current.text}"
-                </p>
-            </div>
+      <div className="flex-1 overflow-hidden">
+        <p
+          key={currentIndex}
+          className="text-[11px] text-on-surface leading-tight animate-in fade-in slide-in-from-right-4 duration-500 line-clamp-4"
+        >
+          "{current.text}"
+        </p>
+      </div>
 
-            {/* Indicators */}
-            <div className="flex gap-1 mt-1.5 justify-center flex-shrink-0">
-                {insights.map((_, idx) => (
-                    <div
-                        key={idx}
-                        className={`
+      {/* Indicators */}
+      <div className="flex gap-1 mt-1.5 justify-center flex-shrink-0">
+        {insights.map((_, idx) => (
+          <div
+            key={idx}
+            className={`
               h-0.5 rounded-full transition-all duration-300
-              ${idx === currentIndex ? `w-3 ${current.color.replace('text-', 'bg-')}` : 'w-1 bg-outline-variant'}
+              ${idx === currentIndex ? `w-3 ${current.color.replace("text-", "bg-")}` : "w-1 bg-outline-variant"}
             `}
-                    />
-                ))}
-            </div>
-        </div>
-    );
+          />
+        ))}
+      </div>
+    </div>
+  );
 }

@@ -163,8 +163,9 @@ function ScoreRow({
           className="px-2 py-1 text-xs rounded-lg bg-surface border border-outline-variant text-on-surface"
         >
           <option value="">Report Type...</option>
-          <option value="homeready">HomeReady</option>
-          <option value="investoredge">InvestorEdge</option>
+          <option value="propertyiq">PropertyIQ</option>
+          <option value="homeready">HomeReady (Legacy)</option>
+          <option value="investoredge">InvestorEdge (Legacy)</option>
           <option value="comparison">Comparison</option>
           <option value="custom">Custom</option>
         </select>

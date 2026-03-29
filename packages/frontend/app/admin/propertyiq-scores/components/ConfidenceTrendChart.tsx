@@ -28,12 +28,14 @@ interface ConfidenceTrendChartProps {
 }
 
 const SCORE_TYPE_COLORS: Record<string, string> = {
+  propertyiq: "#3949AB",
   market_health: "#10b981",
   homeready: "#3b82f6",
   investoredge: "#5C6BC0",
 };
 
 const SCORE_TYPE_LABELS: Record<string, string> = {
+  propertyiq: "PropertyIQ",
   market_health: "Market Health",
   homeready: "HomeReady",
   investoredge: "InvestorEdge",

@@ -12,50 +12,89 @@
  * - Calculated: Derived metrics using formulas from base data
  */
 
-import type { MetricCategory, ViewMode, Metric } from '../types';
-import { getMetricConfig } from './metrics';
+import type { MetricCategory, ViewMode, Metric } from "../types";
+import { getMetricConfig } from "./metrics";
 import {
-  AttachMoneyIcon, ShowChartIcon, PeopleIcon, AnalyticsIcon
-} from '../components';
+  AttachMoneyIcon,
+  ShowChartIcon,
+  PeopleIcon,
+  AnalyticsIcon,
+} from "../components";
 
 // Icon for Economic Context / Local Economy
 const EconomicIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h80v-280h-80v280Zm160 0h80v-400h-80v400Zm160 0h80v-160h-80v160Z" />
   </svg>
 );
 
 // Icon for Competition / Speed
 const SpeedIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="m422-232 207-248H469l29-227-185 267h139l-30 208ZM320-80l40-280H160l360-520h80l-40 320h240L400-80h-80Zm151-390Z" />
   </svg>
 );
 
 // Icon for Cash Flow
 const WalletIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-160-60q25 0 42.5-17.5T700-480q0-25-17.5-42.5T640-540q-25 0-42.5 17.5T580-480q0 25 17.5 42.5T640-420Z" />
   </svg>
 );
 
 // Icon for Appreciation / Growth
 const GrowthIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="M120-120v-80l80-80v160h-80Zm160 0v-240l80-80v320h-80Zm160 0v-320l80 81v239h-80Zm160 0v-239l80-80v319h-80Zm160 0v-400l80-80v480h-80ZM120-327v-113l280-280 160 160 280-280v113L560-447 400-607 120-327Z" />
   </svg>
 );
 
 // Icon for Risk / Shield
 const ShieldIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Z" />
   </svg>
 );
 
 // Icon for Building / Construction
 const ConstructionIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="20"
+    viewBox="0 -960 960 960"
+    width="20"
+    fill="currentColor"
+  >
     <path d="M120-120v-560h200v-160h320v320h200v400H560v-200H400v200H120Zm80-80h120v-120H200v120Zm0-200h120v-120H200v120Zm0-200h120v-120H200v120Zm200 200h120v-120H400v120Zm0-200h120v-120H400v120Zm0-200h120v-120H400v120Zm200 400h120v-120H600v120Zm0-200h120v-120H600v120Z" />
   </svg>
 );
@@ -68,7 +107,9 @@ function metric(id: string, flags?: { isNew?: boolean }): Metric {
   const config = getMetricConfig(id);
   return {
     id,
-    name: config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    name:
+      config?.title ||
+      id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     dataSource: config?.dataSource,
     isNew: flags?.isNew,
   };
@@ -79,59 +120,59 @@ function metric(id: string, flags?: { isNew?: boolean }): Metric {
 // ============================================================================
 
 const HOMEBUYER_AFFORDABILITY: MetricCategory = {
-  id: 'affordability',
-  name: 'Affordability',
-  subtext: 'Can I afford to live here?',
+  id: "affordability",
+  name: "Affordability",
+  subtext: "Can I afford to live here?",
   icon: <AttachMoneyIcon />,
   metrics: [
-    metric('listing_price'),
-    metric('home_value'),
-    metric('income_to_buy'),
-    metric('affordable_home_price'),
-    metric('price_per_sqft'),
-    metric('years_to_save'),
-    metric('rent_index'),
-    metric('income_to_rent'),
-    metric('home_value_yoy'),
-    metric('home_value_5yr'),
+    metric("listing_price"),
+    metric("home_value"),
+    metric("income_to_buy"),
+    metric("affordable_home_price"),
+    metric("price_per_sqft"),
+    metric("years_to_save"),
+    metric("rent_index"),
+    metric("income_to_rent"),
+    metric("home_value_yoy"),
+    metric("home_value_5yr"),
   ],
 };
 
 const HOMEBUYER_COMPETITION: MetricCategory = {
-  id: 'market_competition',
-  name: 'Market Competition',
-  subtext: 'Should I act fast?',
+  id: "market_competition",
+  name: "Market Competition",
+  subtext: "Should I act fast?",
   icon: <SpeedIcon />,
   metrics: [
-    metric('days_on_market'),
-    metric('for_sale_inventory'),
-    metric('inventory_yoy'),
-    metric('pending_ratio'),
-    metric('pending_listings'),
-    metric('new_listings_yoy'),
-    metric('home_sales'),
-    metric('home_sales_yoy'),
-    metric('hotness_score'),
-    metric('market_heat'),
-    metric('sale_to_list'),
-    metric('supply_score'),
-    metric('demand_score'),
+    metric("days_on_market"),
+    metric("for_sale_inventory"),
+    metric("inventory_yoy"),
+    metric("pending_ratio"),
+    metric("pending_listings"),
+    metric("new_listings_yoy"),
+    metric("home_sales"),
+    metric("home_sales_yoy"),
+    metric("hotness_score"),
+    metric("market_heat"),
+    metric("sale_to_list"),
+    metric("supply_score"),
+    metric("demand_score"),
   ],
 };
 
 const HOMEBUYER_PRICING: MetricCategory = {
-  id: 'pricing_deals',
-  name: 'Pricing & Deals',
-  subtext: 'Are prices going up or down?',
+  id: "pricing_deals",
+  name: "Pricing & Deals",
+  subtext: "Are prices going up or down?",
   icon: <ShowChartIcon />,
   metrics: [
-    metric('home_value_yoy'),
-    metric('home_value_mom'),
-    metric('home_price_forecast'),
-    metric('price_cut_pct'),
-    metric('price_increase_pct'),
-    metric('new_listings'),
-    metric('inventory_surplus'),
+    metric("home_value_yoy"),
+    metric("home_value_mom"),
+    metric("home_price_forecast"),
+    metric("price_cut_pct"),
+    metric("price_increase_pct"),
+    metric("new_listings"),
+    metric("inventory_surplus"),
   ],
 };
 
@@ -140,54 +181,54 @@ const HOMEBUYER_PRICING: MetricCategory = {
 // ============================================================================
 
 const INVESTOR_CASHFLOW: MetricCategory = {
-  id: 'cash_flow',
-  name: 'Cash Flow',
-  subtext: 'Will this make money monthly?',
+  id: "cash_flow",
+  name: "Cash Flow",
+  subtext: "Will this make money monthly?",
   icon: <WalletIcon />,
   metrics: [
-    metric('cap_rate'),
-    metric('gross_yield'),
-    metric('grm'),
-    metric('rent_to_price_ratio'),
-    metric('rent_index'),
-    metric('rent_for_houses'),
-    metric('listing_price'),
-    metric('price_per_sqft'),
+    metric("cap_rate"),
+    metric("gross_yield"),
+    metric("grm"),
+    metric("rent_to_price_ratio"),
+    metric("rent_index"),
+    metric("rent_for_houses"),
+    metric("listing_price"),
+    metric("price_per_sqft"),
   ],
 };
 
 const INVESTOR_APPRECIATION: MetricCategory = {
-  id: 'appreciation',
-  name: 'Appreciation',
-  subtext: 'Will the value grow?',
+  id: "appreciation",
+  name: "Appreciation",
+  subtext: "Will the value grow?",
   icon: <GrowthIcon />,
   metrics: [
-    metric('home_value_yoy'),
-    metric('home_value_5yr'),
-    metric('home_price_forecast'),
-    metric('home_value'),
-    metric('overvalued_pct'),
+    metric("home_value_yoy"),
+    metric("home_value_5yr"),
+    metric("home_price_forecast"),
+    metric("home_value"),
+    metric("overvalued_pct"),
   ],
 };
 
 const INVESTOR_DEMAND_RISK: MetricCategory = {
-  id: 'demand_risk',
-  name: 'Demand & Risk',
-  subtext: 'Can I rent/sell it?',
+  id: "demand_risk",
+  name: "Demand & Risk",
+  subtext: "Can I rent/sell it?",
   icon: <ShieldIcon />,
   metrics: [
-    metric('days_on_market'),
-    metric('for_sale_inventory'),
-    metric('inventory_yoy'),
-    metric('pending_ratio'),
-    metric('pending_listings'),
-    metric('new_listings_yoy'),
-    metric('home_sales'),
-    metric('hotness_score'),
-    metric('sale_to_list'),
-    metric('market_heat'),
-    metric('supply_score'),
-    metric('demand_score'),
+    metric("days_on_market"),
+    metric("for_sale_inventory"),
+    metric("inventory_yoy"),
+    metric("pending_ratio"),
+    metric("pending_listings"),
+    metric("new_listings_yoy"),
+    metric("home_sales"),
+    metric("hotness_score"),
+    metric("sale_to_list"),
+    metric("market_heat"),
+    metric("supply_score"),
+    metric("demand_score"),
   ],
 };
 
@@ -196,57 +237,57 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
 // ============================================================================
 
 const DIVIDER_CATEGORY: MetricCategory = {
-  id: 'divider',
-  name: '',
+  id: "divider",
+  name: "",
   icon: null,
   isDivider: true,
 };
 
 const AREA_PROFILE: MetricCategory = {
-  id: 'area_profile',
-  name: 'Area Profile',
-  subtext: 'Who lives here?',
+  id: "area_profile",
+  name: "Area Profile",
+  subtext: "Who lives here?",
   icon: <PeopleIcon />,
   metrics: [
-    metric('population'),
-    metric('population_growth'),
-    metric('median_income'),
-    metric('income_growth'),
-    metric('median_age'),
-    metric('homeownership_rate'),
+    metric("population"),
+    metric("population_growth"),
+    metric("median_income"),
+    metric("income_growth"),
+    metric("median_age"),
+    metric("homeownership_rate"),
   ],
 };
 
 const LOCAL_ECONOMY: MetricCategory = {
-  id: 'local_economy',
-  name: 'Local Economy',
-  subtext: 'How strong is the job market?',
+  id: "local_economy",
+  name: "Local Economy",
+  subtext: "How strong is the job market?",
   icon: <EconomicIcon />,
   metrics: [
-    metric('unemployment_rate'),
-    metric('job_growth'),
-    metric('gdp_growth'),
-    metric('cost_of_living'),
+    metric("unemployment_rate"),
+    metric("job_growth"),
+    metric("gdp_growth"),
+    metric("cost_of_living"),
   ],
 };
 
 const NEW_CONSTRUCTION: MetricCategory = {
-  id: 'new_construction',
-  name: 'New Construction',
-  subtext: 'What new homes are being built?',
+  id: "new_construction",
+  name: "New Construction",
+  subtext: "What new homes are being built?",
   icon: <ConstructionIcon />,
   metrics: [
     // Building Permits (Census BPS - state/county)
-    metric('sf_permits'),
-    metric('mf_permits'),
-    metric('total_permits'),
-    metric('permits_yoy'),
-    metric('sf_mf_ratio'),
-    metric('permit_value_per_unit'),
+    metric("sf_permits"),
+    metric("mf_permits"),
+    metric("total_permits"),
+    metric("permits_yoy"),
+    metric("sf_mf_ratio"),
+    metric("permit_value_per_unit"),
     // New Construction Sales (Zillow - metro only)
-    metric('new_construction_sales'),
-    metric('new_construction_price'),
-    metric('new_construction_ppsf'),
+    metric("new_construction_sales"),
+    metric("new_construction_price"),
+    metric("new_construction_ppsf"),
   ],
 };
 
@@ -255,15 +296,11 @@ const NEW_CONSTRUCTION: MetricCategory = {
 // ============================================================================
 
 export const SCORES_CATEGORY: MetricCategory = {
-  id: 'scores',
-  name: 'PropertyIQ Scores',
-  subtext: 'AI-powered market analysis',
+  id: "scores",
+  name: "PropertyIQ Scores",
+  subtext: "AI-powered market analysis",
   icon: <AnalyticsIcon />,
-  metrics: [
-    metric('homeready_score'),
-    metric('investoredge_score'),
-    metric('market_health_score'),
-  ],
+  metrics: [metric("propertyiq_score")],
 };
 
 // ============================================================================
@@ -277,7 +314,7 @@ export const SCORES_CATEGORY: MetricCategory = {
  * Investor: Cash Flow, Appreciation, Demand & Risk, [divider], Area Profile, Local Economy, New Construction, Scores
  */
 export function getMetricCategories(viewMode: ViewMode): MetricCategory[] {
-  if (viewMode === 'homebuyer') {
+  if (viewMode === "homebuyer") {
     return [
       HOMEBUYER_AFFORDABILITY,
       HOMEBUYER_COMPETITION,
@@ -302,7 +339,6 @@ export function getMetricCategories(viewMode: ViewMode): MetricCategory[] {
     SCORES_CATEGORY,
   ];
 }
-
 
 // ============================================================================
 // HELPER: Get flat list of all metric IDs in order
@@ -335,22 +371,30 @@ export function getAllOrderedMetricIds(): string[] {
     AREA_PROFILE,
     LOCAL_ECONOMY,
     NEW_CONSTRUCTION,
-    SCORES_CATEGORY
+    SCORES_CATEGORY,
   ];
 
   const ids = new Set<string>();
-  categories.forEach(cat => {
-    cat.metrics?.forEach(m => ids.add(m.id));
+  categories.forEach((cat) => {
+    cat.metrics?.forEach((m) => ids.add(m.id));
   });
 
   return Array.from(ids);
 }
 
 // Legacy exports for backwards compatibility
-export const METRIC_CATEGORIES: MetricCategory[] = getMetricCategories('homebuyer');
-export const SHARED_CATEGORIES: MetricCategory[] = [AREA_PROFILE, LOCAL_ECONOMY, NEW_CONSTRUCTION];
-export const INVESTOR_CATEGORIES: MetricCategory[] = [INVESTOR_CASHFLOW, INVESTOR_APPRECIATION, INVESTOR_DEMAND_RISK];
+export const METRIC_CATEGORIES: MetricCategory[] =
+  getMetricCategories("homebuyer");
+export const SHARED_CATEGORIES: MetricCategory[] = [
+  AREA_PROFILE,
+  LOCAL_ECONOMY,
+  NEW_CONSTRUCTION,
+];
+export const INVESTOR_CATEGORIES: MetricCategory[] = [
+  INVESTOR_CASHFLOW,
+  INVESTOR_APPRECIATION,
+  INVESTOR_DEMAND_RISK,
+];
 export function getPopularDataCategory(viewMode: ViewMode): MetricCategory {
-  return viewMode === 'homebuyer' ? HOMEBUYER_AFFORDABILITY : INVESTOR_CASHFLOW;
+  return viewMode === "homebuyer" ? HOMEBUYER_AFFORDABILITY : INVESTOR_CASHFLOW;
 }
-

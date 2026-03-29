@@ -1,25 +1,26 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Loader2, TrendingUp, LineChart, Sparkles } from 'lucide-react';
-import { Breadcrumbs } from '@/components/navigation';
-import { getMetricDescription } from './constants';
-import { getMetricTitle } from '@/lib/data';
-import { getInsights } from './services/geminiService';
-import { useDashboardState } from './hooks/useDashboardState';
-import { useChartData } from './hooks/useChartData';
-import { FilterHeader } from './components/FilterHeader';
-import { InsightsPanel } from './components/InsightsPanel';
-import { ChartSection } from './components/ChartSection';
-import { ScoreCards } from './components/ScoreCards';
-import { D3VisualizationSection } from './components/D3VisualizationSection';
-import { ScoreVisualization } from './components/ScoreVisualization';
-import { EntitlementGate, InsightsPaywall } from '@/components/entitlements';
+import React, { useState } from "react";
+import { Loader2, TrendingUp, LineChart, Sparkles } from "lucide-react";
+import { Breadcrumbs } from "@/components/navigation";
+import { getMetricDescription } from "./constants";
+import { getMetricTitle } from "@/lib/data";
+import { getInsights } from "./services/geminiService";
+import { useDashboardState } from "./hooks/useDashboardState";
+import { useChartData } from "./hooks/useChartData";
+import { FilterHeader } from "./components/FilterHeader";
+import { InsightsPanel } from "./components/InsightsPanel";
+import { ChartSection } from "./components/ChartSection";
+import { ScoreCards } from "./components/ScoreCards";
+import { D3VisualizationSection } from "./components/D3VisualizationSection";
+import { ScoreVisualization } from "./components/ScoreVisualization";
+import { EntitlementGate, InsightsPaywall } from "@/components/entitlements";
 
-type VisualizationMode = 'timeSeries' | 'advanced';
+type VisualizationMode = "timeSeries" | "advanced";
 
 export const Dashboard: React.FC = () => {
-  const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('timeSeries');
+  const [visualizationMode, setVisualizationMode] =
+    useState<VisualizationMode>("timeSeries");
 
   const {
     geoLevel,
@@ -54,7 +55,12 @@ export const Dashboard: React.FC = () => {
     metricOptions,
   } = useDashboardState();
 
-  const { data: chartData, loading: chartLoading, error: chartError, isScore } = useChartData({
+  const {
+    data: chartData,
+    loading: chartLoading,
+    error: chartError,
+    isScore,
+  } = useChartData({
     metric,
     geoLevel,
     timeFrame,
@@ -74,7 +80,7 @@ export const Dashboard: React.FC = () => {
       selectedArea,
       metric,
       primaryData,
-      comparison.enabled ? comparison.area : undefined
+      comparison.enabled ? comparison.area : undefined,
     );
     setAiInsight(result);
     setIsInsightLoading(false);
@@ -90,13 +96,15 @@ export const Dashboard: React.FC = () => {
           <div className="fixed inset-0 bg-surface/60 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="bg-surface-container-high rounded-[28px] elevation-3 p-6 flex items-center gap-4">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <span className="text-on-surface font-medium">Loading data...</span>
+              <span className="text-on-surface font-medium">
+                Loading data...
+              </span>
             </div>
           </div>
         )}
 
         {/* Breadcrumbs */}
-        <Breadcrumbs items={[{ label: 'Analytics' }]} className="mb-4" />
+        <Breadcrumbs items={[{ label: "Analytics" }]} className="mb-4" />
 
         {/* Page Header */}
         <div className="mb-6">
@@ -104,12 +112,16 @@ export const Dashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 text-primary mb-1">
                 <TrendingUp className="w-5 h-5" />
-                <span className="text-xs font-medium uppercase tracking-wider">Market Analytics</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Market Analytics
+                </span>
               </div>
               <h1 className="text-2xl md:text-3xl font-medium text-on-surface tracking-tight">
-                {selectedArea || 'Select a Location'}
+                {selectedArea || "Select a Location"}
                 {comparison.enabled && (
-                  <span className="text-on-surface-variant font-normal mx-2">vs</span>
+                  <span className="text-on-surface-variant font-normal mx-2">
+                    vs
+                  </span>
                 )}
                 {comparison.enabled && (
                   <span className="text-secondary">{comparison.area}</span>
@@ -120,22 +132,22 @@ export const Dashboard: React.FC = () => {
               {/* Visualization Mode Toggle */}
               <div className="flex items-center bg-surface-container p-1 rounded-xl">
                 <button
-                  onClick={() => setVisualizationMode('timeSeries')}
+                  onClick={() => setVisualizationMode("timeSeries")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    visualizationMode === 'timeSeries'
-                      ? 'bg-primary text-on-primary elevation-1'
-                      : 'text-on-surface-variant hover:text-primary'
+                    visualizationMode === "timeSeries"
+                      ? "bg-primary text-on-primary elevation-1"
+                      : "text-on-surface-variant hover:text-primary"
                   }`}
                 >
                   <LineChart className="w-4 h-4" />
                   <span className="hidden sm:inline">Time Series</span>
                 </button>
                 <button
-                  onClick={() => setVisualizationMode('advanced')}
+                  onClick={() => setVisualizationMode("advanced")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    visualizationMode === 'advanced'
-                      ? 'bg-primary text-on-primary elevation-1'
-                      : 'text-on-surface-variant hover:text-primary'
+                    visualizationMode === "advanced"
+                      ? "bg-primary text-on-primary elevation-1"
+                      : "text-on-surface-variant hover:text-primary"
                   }`}
                 >
                   <Sparkles className="w-4 h-4" />
@@ -143,7 +155,9 @@ export const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-on-surface-variant hidden sm:inline">Analyzing</span>
+                <span className="text-sm font-medium text-on-surface-variant hidden sm:inline">
+                  Analyzing
+                </span>
                 <span className="bg-primary text-on-primary px-4 py-1.5 rounded-full text-sm font-medium">
                   {metricDisplayName}
                 </span>
@@ -151,16 +165,16 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <p className="text-on-surface-variant text-sm md:text-base max-w-3xl">
-            {visualizationMode === 'timeSeries'
+            {visualizationMode === "timeSeries"
               ? getMetricDescription(metric)
-              : 'Explore advanced visualizations including scatter plots, distributions, treemaps, heatmaps, and correlation analysis.'}
+              : "Explore advanced visualizations including scatter plots, distributions, treemaps, heatmaps, and correlation analysis."}
           </p>
         </div>
 
         {/* Main Content Grid */}
         <div className="space-y-6">
           {/* Filter Cards Row - Only show for time series mode */}
-          {visualizationMode === 'timeSeries' && (
+          {visualizationMode === "timeSeries" && (
             <FilterHeader
               geoLevel={geoLevel}
               setGeoLevel={setGeoLevel}
@@ -187,21 +201,28 @@ export const Dashboard: React.FC = () => {
           )}
 
           {/* Chart error message - Only show for time series mode */}
-          {visualizationMode === 'timeSeries' && chartError && (
+          {visualizationMode === "timeSeries" && chartError && (
             <div className="rounded-xl border border-outline-variant bg-surface-container-high px-4 py-3 text-on-surface-variant text-sm">
-              Could not load data for this selection. Try a different location, metric, or time range.
+              Could not load data for this selection. Try a different location,
+              metric, or time range.
             </div>
           )}
 
           {/* Time Series Mode: Two Column Layout */}
-          {visualizationMode === 'timeSeries' && (
+          {visualizationMode === "timeSeries" && (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Chart Card - Takes 2 columns on xl */}
               <div className="xl:col-span-2">
                 {isScore ? (
                   /* Score metrics get specialized visualization */
                   <ScoreVisualization
-                    scoreType={metric as 'homeready_score' | 'investoredge_score' | 'market_health_score'}
+                    scoreType={
+                      metric as
+                        | "propertyiq_score"
+                        | "homeready_score"
+                        | "investoredge_score"
+                        | "market_health_score"
+                    }
                     geoLevel={geoLevel}
                     selectedArea={selectedArea}
                     selectedAreaId={selectedAreaId}
@@ -231,7 +252,11 @@ export const Dashboard: React.FC = () => {
 
               {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
               <div className="xl:col-span-1 flex flex-col gap-4">
-                <ScoreCards geoLevel={geoLevel} selectedArea={selectedAreaId} isAdmin={true} />
+                <ScoreCards
+                  geoLevel={geoLevel}
+                  selectedArea={selectedAreaId}
+                  isAdmin={true}
+                />
                 <EntitlementGate
                   type="feature"
                   id="ai_insights"
@@ -248,7 +273,7 @@ export const Dashboard: React.FC = () => {
           )}
 
           {/* Advanced Mode: D3 Visualizations */}
-          {visualizationMode === 'advanced' && (
+          {visualizationMode === "advanced" && (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* D3 Visualization Section - Takes 2 columns on xl */}
               <div className="xl:col-span-2">
@@ -259,14 +284,18 @@ export const Dashboard: React.FC = () => {
                     setSelectedAreaId(geoId);
                     setSelectedArea(geoName);
                     // Switch to time series mode to show the focused geography's data
-                    setVisualizationMode('timeSeries');
+                    setVisualizationMode("timeSeries");
                   }}
                 />
               </div>
 
               {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
               <div className="xl:col-span-1 flex flex-col gap-4">
-                <ScoreCards geoLevel={geoLevel} selectedArea={selectedAreaId} isAdmin={true} />
+                <ScoreCards
+                  geoLevel={geoLevel}
+                  selectedArea={selectedAreaId}
+                  isAdmin={true}
+                />
                 <EntitlementGate
                   type="feature"
                   id="ai_insights"

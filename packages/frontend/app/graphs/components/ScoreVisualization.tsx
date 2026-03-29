@@ -1,20 +1,25 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Loader2, TrendingUp, TrendingDown, Info, Clock } from 'lucide-react';
-import { fetchScore, type GeoLevel, type ScoreResponse } from '@/lib/data';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-import { ScoreHistoryChart } from '@/app/components/scoring/ScoreHistoryChart';
-import { M3Card, M3CardHeader } from './M3Card';
+import React, { useEffect, useState } from "react";
+import { Loader2, TrendingUp, TrendingDown, Info, Clock } from "lucide-react";
+import { fetchScore, type GeoLevel, type ScoreResponse } from "@/lib/data";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
+import { ScoreHistoryChart } from "@/app/components/scoring/ScoreHistoryChart";
+import { M3Card, M3CardHeader } from "./M3Card";
 
-type ScoreType = 'homeready' | 'investoredge' | 'market_health';
-type ScoreMetricId = 'homeready_score' | 'investoredge_score' | 'market_health_score';
+type ScoreType = "propertyiq" | "homeready" | "investoredge" | "market_health";
+type ScoreMetricId =
+  | "propertyiq_score"
+  | "homeready_score"
+  | "investoredge_score"
+  | "market_health_score";
 
 // Map metric IDs to score types
 const METRIC_TO_SCORE_TYPE: Record<ScoreMetricId, ScoreType> = {
-  homeready_score: 'homeready',
-  investoredge_score: 'investoredge',
-  market_health_score: 'market_health',
+  propertyiq_score: "propertyiq",
+  homeready_score: "homeready",
+  investoredge_score: "investoredge",
+  market_health_score: "market_health",
 };
 
 interface ScoreVisualizationProps {
@@ -32,64 +37,99 @@ interface ScoreFactorData {
   description: string;
 }
 
-const SCORE_CONFIG: Record<ScoreType, {
-  title: string;
-  apiKey: 'homeready' | 'investoredge' | 'markethealth';
-  description: string;
-  color: string;
-  factors: ScoreFactorData[];
-}> = {
-  homeready: {
-    title: 'HomeReady Score',
-    apiKey: 'homeready',
-    description: 'Measures buyer opportunity based on pricing trends, inventory levels, and market dynamics. Higher scores indicate better buying conditions.',
-    color: 'primary',
+const SCORE_CONFIG: Record<
+  ScoreType,
+  {
+    title: string;
+    apiKey: "propertyiq" | "homeready" | "investoredge" | "markethealth";
+    description: string;
+    color: string;
+    factors: ScoreFactorData[];
+  }
+> = {
+  propertyiq: {
+    title: "PropertyIQ Score",
+    apiKey: "propertyiq",
+    description:
+      "Unified market intelligence score combining affordability, market activity, investment potential, and economic indicators.",
+    color: "primary",
     factors: [
-      { name: 'Affordability', value: 0, weight: 30, description: 'Price-to-income ratios and affordability metrics' },
-      { name: 'Market Activity', value: 0, weight: 25, description: 'Inventory levels and days on market' },
-      { name: 'Price Trends', value: 0, weight: 25, description: 'Recent price changes and momentum' },
-      { name: 'Competition', value: 0, weight: 20, description: 'Buyer competition and market heat' },
+      {
+        name: "Affordability",
+        value: 0,
+        weight: 25,
+        description: "Price-to-income ratios and affordability metrics",
+      },
+      {
+        name: "Market Activity",
+        value: 0,
+        weight: 25,
+        description: "Inventory levels, days on market, and demand",
+      },
+      {
+        name: "Investment Potential",
+        value: 0,
+        weight: 25,
+        description: "Yields, appreciation, and cash flow potential",
+      },
+      {
+        name: "Economic Base",
+        value: 0,
+        weight: 25,
+        description: "Job growth, population trends, and stability",
+      },
     ],
+  },
+  // Legacy score types — all display as PropertyIQ, only apiKey differs for data fetch
+  homeready: {
+    title: "PropertyIQ Score",
+    apiKey: "homeready",
+    description: "",
+    color: "primary",
+    factors: [],
   },
   investoredge: {
-    title: 'InvestorEdge Score',
-    apiKey: 'investoredge',
-    description: 'Evaluates investment potential based on rental yields, appreciation forecasts, and risk factors. Higher scores indicate better investment opportunities.',
-    color: 'secondary',
-    factors: [
-      { name: 'Cash Flow', value: 0, weight: 30, description: 'Cap rates and gross yields' },
-      { name: 'Appreciation', value: 0, weight: 25, description: 'Historical and projected price growth' },
-      { name: 'Demand', value: 0, weight: 25, description: 'Rental demand and occupancy indicators' },
-      { name: 'Risk', value: 0, weight: 20, description: 'Market volatility and economic stability' },
-    ],
+    title: "PropertyIQ Score",
+    apiKey: "investoredge",
+    description: "",
+    color: "primary",
+    factors: [],
   },
   market_health: {
-    title: 'Market Health Score',
-    apiKey: 'markethealth',
-    description: 'Assesses overall market stability and robustness. Higher scores indicate healthier, more balanced markets.',
-    color: 'tertiary',
-    factors: [
-      { name: 'Supply/Demand', value: 0, weight: 30, description: 'Balance of inventory and buyer activity' },
-      { name: 'Price Stability', value: 0, weight: 25, description: 'Consistency of price movements' },
-      { name: 'Economic Base', value: 0, weight: 25, description: 'Job growth and income stability' },
-      { name: 'Market Depth', value: 0, weight: 20, description: 'Transaction volume and liquidity' },
-    ],
+    title: "PropertyIQ Score",
+    apiKey: "markethealth",
+    description: "",
+    color: "primary",
+    factors: [],
   },
 };
+// Backfill legacy entries from the propertyiq config
+for (const key of ["homeready", "investoredge", "market_health"] as const) {
+  SCORE_CONFIG[key].description = SCORE_CONFIG.propertyiq.description;
+  SCORE_CONFIG[key].factors = SCORE_CONFIG.propertyiq.factors;
+}
 
 const CONFIDENCE_LABELS: Record<string, { label: string; color: string }> = {
-  a: { label: 'High Confidence', color: 'bg-green-500' },
-  b: { label: 'Medium Confidence', color: 'bg-amber-500' },
-  c: { label: 'Low Confidence', color: 'bg-orange-500' },
-  f: { label: 'Insufficient Data', color: 'bg-red-500' },
+  a: { label: "High Confidence", color: "bg-green-500" },
+  b: { label: "Medium Confidence", color: "bg-amber-500" },
+  c: { label: "Low Confidence", color: "bg-orange-500" },
+  f: { label: "Insufficient Data", color: "bg-red-500" },
 };
 
-function getScoreGrade(score: number): { grade: string; label: string; color: string } {
-  if (score >= 80) return { grade: 'A', label: 'Excellent', color: 'text-green-600' };
-  if (score >= 70) return { grade: 'B', label: 'Good', color: 'text-green-500' };
-  if (score >= 60) return { grade: 'C', label: 'Average', color: 'text-amber-500' };
-  if (score >= 50) return { grade: 'D', label: 'Below Average', color: 'text-orange-500' };
-  return { grade: 'F', label: 'Poor', color: 'text-red-500' };
+function getScoreGrade(score: number): {
+  grade: string;
+  label: string;
+  color: string;
+} {
+  if (score >= 80)
+    return { grade: "A", label: "Excellent", color: "text-green-600" };
+  if (score >= 70)
+    return { grade: "B", label: "Good", color: "text-green-500" };
+  if (score >= 60)
+    return { grade: "C", label: "Average", color: "text-amber-500" };
+  if (score >= 50)
+    return { grade: "D", label: "Below Average", color: "text-orange-500" };
+  return { grade: "F", label: "Poor", color: "text-red-500" };
 }
 
 export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
@@ -103,9 +143,10 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Map metric ID to score type if needed
-  const scoreType: ScoreType = (scoreTypeInput in METRIC_TO_SCORE_TYPE)
-    ? METRIC_TO_SCORE_TYPE[scoreTypeInput as ScoreMetricId]
-    : scoreTypeInput as ScoreType;
+  const scoreType: ScoreType =
+    scoreTypeInput in METRIC_TO_SCORE_TYPE
+      ? METRIC_TO_SCORE_TYPE[scoreTypeInput as ScoreMetricId]
+      : (scoreTypeInput as ScoreType);
 
   const config = SCORE_CONFIG[scoreType];
 
@@ -113,7 +154,7 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   useEffect(() => {
     let isMounted = true;
 
-    if (!selectedAreaId || geoLevel === 'state' || geoLevel === 'national') {
+    if (!selectedAreaId || geoLevel === "state" || geoLevel === "national") {
       setScores(null);
       setLoading(false);
       return;
@@ -129,36 +170,45 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
           setLoading(false);
         }
       } catch (err) {
-        console.error('Failed to fetch scores:', err);
+        console.error("Failed to fetch scores:", err);
         if (isMounted) {
-          setError('Failed to load score data');
+          setError("Failed to load score data");
           setLoading(false);
         }
       }
     }
 
     fetchScoreData();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [geoLevel, selectedAreaId]);
 
   // Get score data for the selected type
   const scoreData = scores?.scores?.[config.apiKey];
   const score = scoreData?.score ?? 0;
-  const confidenceLevel = (scoreData?.confidence_level?.toLowerCase() ?? 'b') as keyof typeof CONFIDENCE_LABELS;
+  const confidenceLevel = (scoreData?.confidence_level?.toLowerCase() ??
+    "b") as keyof typeof CONFIDENCE_LABELS;
   const confidence = CONFIDENCE_LABELS[confidenceLevel] || CONFIDENCE_LABELS.b;
   // Note: trend_3m may come from expanded score API with historyMonths option
   const trend = (scoreData as any)?.trend_3m ?? null;
   const grade = getScoreGrade(score);
 
   // Show unavailable message for state/national
-  if (geoLevel === 'state' || geoLevel === 'national') {
+  if (geoLevel === "state" || geoLevel === "national") {
     return (
-      <M3Card variant="elevated" className="h-full flex flex-col items-center justify-center p-8">
+      <M3Card
+        variant="elevated"
+        className="h-full flex flex-col items-center justify-center p-8"
+      >
         <Info className="w-12 h-12 text-on-surface-variant mb-4" />
-        <h3 className="text-lg font-semibold text-on-surface mb-2">Scores Unavailable at This Level</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-2">
+          Scores Unavailable at This Level
+        </h3>
         <p className="text-sm text-on-surface-variant text-center max-w-md">
-          PropertyIQ scores are available at the metro, county, and ZIP code level where they are most predictive.
-          Select a more specific geography to view {config.title}.
+          PropertyIQ scores are available at the metro, county, and ZIP code
+          level where they are most predictive. Select a more specific geography
+          to view {config.title}.
         </p>
       </M3Card>
     );
@@ -167,9 +217,14 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   // Show select location message when no area selected
   if (!selectedAreaId) {
     return (
-      <M3Card variant="elevated" className="h-full flex flex-col items-center justify-center p-8">
+      <M3Card
+        variant="elevated"
+        className="h-full flex flex-col items-center justify-center p-8"
+      >
         <Info className="w-12 h-12 text-on-surface-variant mb-4" />
-        <h3 className="text-lg font-semibold text-on-surface mb-2">Select a Location</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-2">
+          Select a Location
+        </h3>
         <p className="text-sm text-on-surface-variant text-center max-w-md">
           Search for and select a {geoLevel} to view the {config.title}.
         </p>
@@ -180,9 +235,14 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   // Loading state
   if (loading) {
     return (
-      <M3Card variant="elevated" className="h-full flex flex-col items-center justify-center p-8">
+      <M3Card
+        variant="elevated"
+        className="h-full flex flex-col items-center justify-center p-8"
+      >
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-sm text-on-surface-variant">Loading {config.title}...</p>
+        <p className="text-sm text-on-surface-variant">
+          Loading {config.title}...
+        </p>
       </M3Card>
     );
   }
@@ -190,9 +250,14 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   // Error state
   if (error) {
     return (
-      <M3Card variant="elevated" className="h-full flex flex-col items-center justify-center p-8">
+      <M3Card
+        variant="elevated"
+        className="h-full flex flex-col items-center justify-center p-8"
+      >
         <Info className="w-12 h-12 text-error mb-4" />
-        <h3 className="text-lg font-semibold text-on-surface mb-2">Unable to Load Score</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-2">
+          Unable to Load Score
+        </h3>
         <p className="text-sm text-on-surface-variant text-center">{error}</p>
       </M3Card>
     );
@@ -205,17 +270,22 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Score Gauge */}
           <div className="flex flex-col items-center lg:items-start">
-            <ScoreDisplay
-              value={score}
-              size={200}
-              strokeWidth={14}
-            />
+            <ScoreDisplay value={score} size={200} strokeWidth={14} />
 
             {/* Trend indicator */}
             {trend !== null && (
-              <div className={`flex items-center gap-1.5 mt-4 text-sm font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {trend >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                <span>{trend >= 0 ? '+' : ''}{trend.toFixed(1)} pts (3M)</span>
+              <div
+                className={`flex items-center gap-1.5 mt-4 text-sm font-semibold ${trend >= 0 ? "text-green-600" : "text-red-500"}`}
+              >
+                {trend >= 0 ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
+                <span>
+                  {trend >= 0 ? "+" : ""}
+                  {trend.toFixed(1)} pts (3M)
+                </span>
               </div>
             )}
           </div>
@@ -224,17 +294,29 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
           <div className="flex-1">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-on-surface">{config.title}</h2>
-                <p className="text-sm text-on-surface-variant mt-1">{selectedArea}</p>
+                <h2 className="text-2xl font-bold text-on-surface">
+                  {config.title}
+                </h2>
+                <p className="text-sm text-on-surface-variant mt-1">
+                  {selectedArea}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 {/* Grade Badge */}
-                <div className={`text-center px-4 py-2 rounded-xl bg-surface-container-high`}>
-                  <div className={`text-2xl font-bold ${grade.color}`}>{grade.grade}</div>
-                  <div className="text-xs text-on-surface-variant">{grade.label}</div>
+                <div
+                  className={`text-center px-4 py-2 rounded-xl bg-surface-container-high`}
+                >
+                  <div className={`text-2xl font-bold ${grade.color}`}>
+                    {grade.grade}
+                  </div>
+                  <div className="text-xs text-on-surface-variant">
+                    {grade.label}
+                  </div>
                 </div>
                 {/* Confidence Badge */}
-                <div className={`px-3 py-1.5 rounded-full ${confidence.color} text-white text-xs font-medium`}>
+                <div
+                  className={`px-3 py-1.5 rounded-full ${confidence.color} text-white text-xs font-medium`}
+                >
                   {confidence.label}
                 </div>
               </div>
@@ -248,7 +330,9 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-on-surface flex items-center gap-2">
                 <span>Score Components</span>
-                <span className="text-xs font-normal text-on-surface-variant">(Weighted factors)</span>
+                <span className="text-xs font-normal text-on-surface-variant">
+                  (Weighted factors)
+                </span>
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {config.factors.map((factor) => (
@@ -257,10 +341,16 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
                     className="bg-surface-container rounded-xl p-3"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-on-surface">{factor.name}</span>
-                      <span className="text-xs text-on-surface-variant">{factor.weight}%</span>
+                      <span className="text-sm font-medium text-on-surface">
+                        {factor.name}
+                      </span>
+                      <span className="text-xs text-on-surface-variant">
+                        {factor.weight}%
+                      </span>
                     </div>
-                    <p className="text-xs text-on-surface-variant">{factor.description}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      {factor.description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -289,10 +379,13 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
       {/* Future: Time Series Chart (when backend supports it) */}
       <div className="bg-surface-container-low border border-dashed border-outline-variant rounded-xl p-6 text-center">
         <Clock className="w-8 h-8 text-on-surface-variant mx-auto mb-3" />
-        <h3 className="text-sm font-semibold text-on-surface mb-1">Time Series Coming Soon</h3>
+        <h3 className="text-sm font-semibold text-on-surface mb-1">
+          Time Series Coming Soon
+        </h3>
         <p className="text-xs text-on-surface-variant max-w-md mx-auto">
-          Full time series visualization for {config.title} will be available when historical score data is enabled.
-          This will allow you to track score trends alongside market metrics.
+          Full time series visualization for {config.title} will be available
+          when historical score data is enabled. This will allow you to track
+          score trends alongside market metrics.
         </p>
       </div>
     </div>

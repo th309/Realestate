@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Trophy } from 'lucide-react';
-import { MyMarket } from '../../hooks/useMyMarkets';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import React from "react";
+import { Trophy } from "lucide-react";
+import { MyMarket } from "../../hooks/useMyMarkets";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 
 interface ScoreShowdownProps {
   primaryMarket: MyMarket;
   comparisonMarket: MyMarket;
-  userType: 'homebuyer' | 'investor';
+  userType: "homebuyer" | "investor";
 }
 
 /**
@@ -19,12 +19,13 @@ export function ScoreShowdown({
   comparisonMarket,
   userType,
 }: ScoreShowdownProps) {
-  const scoreLabel = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
+  const scoreLabel = "PropertyIQ";
 
   // Determine winner
   const primaryScore = primaryMarket.score ?? 0;
   const comparisonScore = comparisonMarket.score ?? 0;
-  const winnerId = primaryScore >= comparisonScore ? primaryMarket.id : comparisonMarket.id;
+  const winnerId =
+    primaryScore >= comparisonScore ? primaryMarket.id : comparisonMarket.id;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-8 items-center mb-8">
@@ -58,14 +59,19 @@ interface MarketScoreCardProps {
   scoreLabel: string;
 }
 
-function MarketScoreCard({ market, isWinner, scoreLabel }: MarketScoreCardProps) {
+function MarketScoreCard({
+  market,
+  isWinner,
+  scoreLabel,
+}: MarketScoreCardProps) {
   return (
     <div
       className={`
         relative p-6 rounded-3xl text-center transition-all
-        ${isWinner
-          ? 'bg-primary-container border-2 border-primary'
-          : 'bg-surface-container-low border-2 border-transparent'
+        ${
+          isWinner
+            ? "bg-primary-container border-2 border-primary"
+            : "bg-surface-container-low border-2 border-transparent"
         }
       `}
     >
@@ -80,7 +86,9 @@ function MarketScoreCard({ market, isWinner, scoreLabel }: MarketScoreCardProps)
       )}
 
       {/* Market Name */}
-      <h3 className={`text-lg font-medium mb-4 ${isWinner ? 'text-primary' : 'text-on-surface'}`}>
+      <h3
+        className={`text-lg font-medium mb-4 ${isWinner ? "text-primary" : "text-on-surface"}`}
+      >
         {market.name}
       </h3>
 
@@ -102,9 +110,7 @@ function MarketScoreCard({ market, isWinner, scoreLabel }: MarketScoreCardProps)
       </div>
 
       {/* Score Label */}
-      <p className="text-sm text-on-surface-variant">
-        {scoreLabel} Score
-      </p>
+      <p className="text-sm text-on-surface-variant">{scoreLabel} Score</p>
     </div>
   );
 }

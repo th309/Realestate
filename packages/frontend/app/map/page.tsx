@@ -332,7 +332,7 @@ function MapPageInner() {
 
   // When in match mode, override metric to "index" style (0-100 score)
   const effectiveMetric =
-    scoreViewMode === "match" ? "market_health_score" : selectedMetric;
+    scoreViewMode === "match" ? "propertyiq_score" : selectedMetric;
 
   const { updateMapLayers } = useMapLayers({
     map,
@@ -362,7 +362,7 @@ function MapPageInner() {
     loading: entitlementsLoading,
   } = useEntitlements();
 
-  // Map score response to sidebar format with all three scores
+  // Map score response to sidebar format with single PropertyIQ score
   // Gating info flows from entitlements through props — no hardcoded tier checks
   const sidebarScoreData = useMemo(() => {
     if (scoresLoading) {
@@ -375,33 +375,23 @@ function MapPageInner() {
       !entitlementsLoading &&
       getAccess("feature", "score_breakdown").level === "none";
 
-    // Helper to extract score info from response, with entitlements-driven gating
-    const extractScoreInfo = (scoreObj: any, metricId: string) => {
-      if (!scoreObj || typeof scoreObj !== "object" || !("score" in scoreObj)) {
-        return undefined;
-      }
-      const scoreMetricAccess = getAccess("metric", metricId);
-      const gated = !entitlementsLoading && scoreMetricAccess.level === "none";
-      return {
+    // Use propertyiq score if available, fall back to marketHealth for backward compat
+    const scoreObj = scoreResponse.propertyiq ?? scoreResponse.marketHealth;
+    if (!scoreObj || typeof scoreObj !== "object" || !("score" in scoreObj)) {
+      return { isLoading: false };
+    }
+
+    const scoreMetricAccess = getAccess("metric", "propertyiq_score");
+    const gated = !entitlementsLoading && scoreMetricAccess.level === "none";
+
+    return {
+      propertyiq: {
         score: gated ? undefined : (scoreObj.score ?? undefined),
-        trend: gated ? undefined : (scoreObj.trendChange ?? undefined),
+        trend: gated ? undefined : ((scoreObj as any).trendChange ?? undefined),
         access: (isBreakdownGated ? "teaser" : "full") as "full" | "teaser",
         gated,
         tierRequired: gated ? scoreMetricAccess.tierRequired : undefined,
-      };
-    };
-
-    return {
-      marketHealth: extractScoreInfo(
-        scoreResponse.marketHealth,
-        "market_health_score",
-      ),
-      homeready: extractScoreInfo(scoreResponse.homeready, "homeready_score"),
-      investoredge: extractScoreInfo(
-        scoreResponse.investoredge,
-        "investoredge_score",
-      ),
-      marketCondition: "balanced" as const, // TODO: Calculate from market data
+      },
       isLoading: false,
     };
   }, [scoreResponse, scoresLoading, entitlementsLoading, getAccess]);

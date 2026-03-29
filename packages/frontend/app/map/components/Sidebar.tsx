@@ -28,9 +28,8 @@ interface ScoreInfo {
 }
 
 interface ScoreData {
-  marketHealth?: ScoreInfo;
-  homeready?: ScoreInfo;
-  investoredge?: ScoreInfo;
+  /** Single PropertyIQ score */
+  propertyiq?: ScoreInfo;
   isLoading?: boolean;
 }
 
@@ -227,11 +226,9 @@ export function Sidebar({
         {/* View Mode Toggle */}
         <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
 
-        {/* Score Card - carousel with all three scores */}
+        {/* PropertyIQ Score Card */}
         <SidebarScoreCard
-          marketHealthScore={scoreData?.marketHealth}
-          homereadyScore={scoreData?.homeready}
-          investoredgeScore={scoreData?.investoredge}
+          score={scoreData?.propertyiq}
           isLoading={scoreData?.isLoading}
           onClick={onScoreCardClick}
           onUpgradeClick={() => (window.location.href = "/pricing")}

@@ -1,26 +1,41 @@
-'use client';
+"use client";
 
-import React from 'react';
-import type { UseGraphsStateReturn } from '../../hooks/useGraphsState';
-import type { TimeFrame, WaterfallPreset, ScoreTypeOption, RadarPreset, BarSort, BarCount, ScaleType } from '../../hooks/useGraphsState';
-import { ChartTypePills } from '../ChartTypePills';
-import { MarketSlots } from '../MarketSlots';
-import { ScopeMiniMap } from '../ScopeMiniMap';
-import { MetricPicker } from '../MetricPicker';
-import { WATERFALL_PRESETS, WATERFALL_PRESET_ORDER } from '../../constants/waterfallConfigs';
-import { RADAR_PROFILES, RADAR_PRESET_ORDER } from '../../constants/radarProfiles';
-import type { GeoLevel } from '@/lib/data';
-import { getMetricTitle } from '@/lib/data';
-import type { ChartType, ScatterScope } from '../../hooks/useGraphsState';
+import React from "react";
+import type { UseGraphsStateReturn } from "../../hooks/useGraphsState";
+import type {
+  TimeFrame,
+  WaterfallPreset,
+  ScoreTypeOption,
+  RadarPreset,
+  BarSort,
+  BarCount,
+  ScaleType,
+} from "../../hooks/useGraphsState";
+import { ChartTypePills } from "../ChartTypePills";
+import { MarketSlots } from "../MarketSlots";
+import { ScopeMiniMap } from "../ScopeMiniMap";
+import { MetricPicker } from "../MetricPicker";
+import {
+  WATERFALL_PRESETS,
+  WATERFALL_PRESET_ORDER,
+} from "../../constants/waterfallConfigs";
+import {
+  RADAR_PROFILES,
+  RADAR_PRESET_ORDER,
+} from "../../constants/radarProfiles";
+import type { GeoLevel } from "@/lib/data";
+import { getMetricTitle } from "@/lib/data";
+import type { ChartType, ScatterScope } from "../../hooks/useGraphsState";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const TIME_FRAMES: TimeFrame[] = ['1Y', '3Y', '5Y', '10Y', 'Max'];
+const TIME_FRAMES: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
 const SCORE_TYPE_OPTIONS: { value: ScoreTypeOption; label: string }[] = [
-  { value: 'homeready', label: 'HomeReady' },
-  { value: 'investoredge', label: 'InvestorEdge' },
-  { value: 'markethealth', label: 'Market Health' },
+  { value: "propertyiq", label: "PropertyIQ" },
+  { value: "homeready", label: "HomeReady (Legacy)" },
+  { value: "investoredge", label: "InvestorEdge (Legacy)" },
+  { value: "markethealth", label: "Market Health (Legacy)" },
 ];
 
 const BAR_COUNT_OPTIONS: BarCount[] = [10, 25];
@@ -35,50 +50,71 @@ interface SidebarProps {
 
 export function Sidebar({ state }: SidebarProps) {
   const {
-    chartType, setChartType,
-    markets, addMarket, removeMarket,
-    activeMetric, setActiveMetric,
-    timeFrame, setTimeFrame,
-    scope, setScope,
-    baselineType, setBaselineType,
+    chartType,
+    setChartType,
+    markets,
+    addMarket,
+    removeMarket,
+    activeMetric,
+    setActiveMetric,
+    timeFrame,
+    setTimeFrame,
+    scope,
+    setScope,
+    baselineType,
+    setBaselineType,
     // Scatter
-    scatterXMetric, setScatterXMetric,
-    scatterYMetric, setScatterYMetric,
-    scatterXScaleType, setScatterXScaleType,
-    scatterYScaleType, setScatterYScaleType,
-    showRegression, setShowRegression,
-    showQuadrants, setShowQuadrants,
+    scatterXMetric,
+    setScatterXMetric,
+    scatterYMetric,
+    setScatterYMetric,
+    scatterXScaleType,
+    setScatterXScaleType,
+    scatterYScaleType,
+    setScatterYScaleType,
+    showRegression,
+    setShowRegression,
+    showQuadrants,
+    setShowQuadrants,
     // Waterfall
-    waterfallPreset, setWaterfallPreset,
-    scoreType, setScoreType,
+    waterfallPreset,
+    setWaterfallPreset,
+    scoreType,
+    setScoreType,
     // Radar
-    radarPreset, setRadarPreset,
+    radarPreset,
+    setRadarPreset,
     // Bar
-    barMetric, setBarMetric,
-    barSort, setBarSort,
-    barCount, setBarCount,
-    raceMode, setRaceMode,
+    barMetric,
+    setBarMetric,
+    barSort,
+    setBarSort,
+    barCount,
+    setBarCount,
+    raceMode,
+    setRaceMode,
   } = state;
 
   // ── Visibility flags ─────────────────────────────────────────────────────
 
-  const maxMarketSlots = ['timeseries', 'radar'].includes(chartType) ? 3 : 2;
-  const showMiniMap = ['timeseries', 'scatter', 'bar'].includes(chartType);
-  const showSingleMetric = ['timeseries', 'bar'].includes(chartType);
-  const showScatterMetrics = chartType === 'scatter';
-  const showTimeFrame = chartType === 'timeseries';
-  const showScatterToggles = chartType === 'scatter';
-  const showWaterfallPresets = chartType === 'waterfall';
-  const showScoreType = chartType === 'waterfall' && waterfallPreset === 'score';
-  const showRadarPresets = chartType === 'radar';
-  const showBarControls = chartType === 'bar';
-  const showRaceToggle = ['bar', 'scatter', 'radar'].includes(chartType);
+  const maxMarketSlots = ["timeseries", "radar"].includes(chartType) ? 3 : 2;
+  const showMiniMap = ["timeseries", "scatter", "bar"].includes(chartType);
+  const showSingleMetric = ["timeseries", "bar"].includes(chartType);
+  const showScatterMetrics = chartType === "scatter";
+  const showTimeFrame = chartType === "timeseries";
+  const showScatterToggles = chartType === "scatter";
+  const showWaterfallPresets = chartType === "waterfall";
+  const showScoreType =
+    chartType === "waterfall" && waterfallPreset === "score";
+  const showRadarPresets = chartType === "radar";
+  const showBarControls = chartType === "bar";
+  const showRaceToggle = ["bar", "scatter", "radar"].includes(chartType);
 
   // ── Derived values ───────────────────────────────────────────────────────
 
   const primaryState = markets[0]?.state;
   const primaryName = markets[0]?.name;
-  const geoLevel: GeoLevel = (markets[0]?.type as GeoLevel) || 'metro';
+  const geoLevel: GeoLevel = (markets[0]?.type as GeoLevel) || "metro";
 
   return (
     <aside className="w-[200px] flex-shrink-0 flex flex-col gap-5 overflow-y-auto">
@@ -92,11 +128,15 @@ export function Sidebar({ state }: SidebarProps) {
 
       {/* Chart Type */}
       <SidebarSection label="Chart Type">
-        <ChartTypePills activeType={chartType} onChange={setChartType} vertical />
+        <ChartTypePills
+          activeType={chartType}
+          onChange={setChartType}
+          vertical
+        />
       </SidebarSection>
 
       {/* Scope / Comparison Baseline */}
-      {showMiniMap && chartType === 'timeseries' && (
+      {showMiniMap && chartType === "timeseries" && (
         <ScopeMiniMap
           scope={baselineType}
           onScopeChange={setBaselineType as (v: string) => void}
@@ -105,7 +145,7 @@ export function Sidebar({ state }: SidebarProps) {
           mode="baseline"
         />
       )}
-      {showMiniMap && chartType !== 'timeseries' && (
+      {showMiniMap && chartType !== "timeseries" && (
         <ScopeMiniMap
           scope={scope}
           onScopeChange={setScope as (v: string) => void}
@@ -119,8 +159,8 @@ export function Sidebar({ state }: SidebarProps) {
       {showSingleMetric && (
         <SidebarSection label="Metric">
           <MetricPicker
-            value={chartType === 'bar' ? barMetric : activeMetric}
-            onChange={chartType === 'bar' ? setBarMetric : setActiveMetric}
+            value={chartType === "bar" ? barMetric : activeMetric}
+            onChange={chartType === "bar" ? setBarMetric : setActiveMetric}
             geoLevel={geoLevel}
             fullWidth
           />
@@ -159,8 +199,16 @@ export function Sidebar({ state }: SidebarProps) {
       {/* Scatter Toggles */}
       {showScatterToggles && (
         <>
-          <ToggleRow label="Regression" checked={showRegression} onChange={setShowRegression} />
-          <ToggleRow label="Quadrants" checked={showQuadrants} onChange={setShowQuadrants} />
+          <ToggleRow
+            label="Regression"
+            checked={showRegression}
+            onChange={setShowRegression}
+          />
+          <ToggleRow
+            label="Quadrants"
+            checked={showQuadrants}
+            onChange={setShowQuadrants}
+          />
           <SidebarSection label="Scale">
             <ScaleTypePicker
               xScale={scatterXScaleType}
@@ -175,7 +223,10 @@ export function Sidebar({ state }: SidebarProps) {
       {/* Waterfall Presets */}
       {showWaterfallPresets && (
         <SidebarSection label="Preset">
-          <WaterfallPresetPills value={waterfallPreset} onChange={setWaterfallPreset} />
+          <WaterfallPresetPills
+            value={waterfallPreset}
+            onChange={setWaterfallPreset}
+          />
         </SidebarSection>
       )}
 
@@ -225,7 +276,13 @@ export function Sidebar({ state }: SidebarProps) {
 
 // ── Sidebar Section Wrapper ──────────────────────────────────────────────────
 
-function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
+function SidebarSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <div className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2 px-1">
@@ -253,9 +310,10 @@ function TimeFrameButtons({
           onClick={() => onChange(tf)}
           className={`
             px-2 py-1 rounded-lg text-[10px] font-medium transition-all duration-150
-            ${value === tf
-              ? 'bg-primary text-on-primary'
-              : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+            ${
+              value === tf
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
             }
           `}
         >
@@ -293,7 +351,7 @@ function ToggleRow({
         <span
           className={`
             absolute top-1 w-2 h-2 rounded-full transition-all duration-200
-            ${checked ? 'left-4 bg-primary' : 'left-1 bg-outline-variant'}
+            ${checked ? "left-4 bg-primary" : "left-1 bg-outline-variant"}
           `}
         />
       </span>
@@ -322,15 +380,20 @@ function WaterfallPresetPills({
             title={preset.description}
             className={`
               w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-              ${isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+              ${
+                isActive
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
               }
             `}
           >
-            {preset.title.replace(' Breakdown', '').replace(' vs National Average', '')}
+            {preset.title
+              .replace(" Breakdown", "")
+              .replace(" vs National Average", "")}
             {preset.proOnly && !isActive && (
-              <span className="ml-1 text-[9px] text-on-surface-variant/50 uppercase">Pro</span>
+              <span className="ml-1 text-[9px] text-on-surface-variant/50 uppercase">
+                Pro
+              </span>
             )}
           </button>
         );
@@ -358,9 +421,10 @@ function ScoreTypeSelector({
             onClick={() => onChange(opt.value)}
             className={`
               w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-              ${isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+              ${
+                isActive
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
               }
             `}
           >
@@ -392,9 +456,10 @@ function RadarPresetPills({
             onClick={() => onChange(presetId)}
             className={`
               w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-              ${isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+              ${
+                isActive
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
               }
             `}
           >
@@ -404,12 +469,13 @@ function RadarPresetPills({
       })}
       {/* Custom option */}
       <button
-        onClick={() => onChange('custom')}
+        onClick={() => onChange("custom")}
         className={`
           w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-          ${value === 'custom'
-            ? 'bg-primary text-on-primary'
-            : 'text-on-surface-variant hover:bg-surface-container-high'
+          ${
+            value === "custom"
+              ? "bg-primary text-on-primary"
+              : "text-on-surface-variant hover:bg-surface-container-high"
           }
         `}
       >
@@ -431,24 +497,26 @@ function SortToggle({
   return (
     <div className="flex flex-col gap-1">
       <button
-        onClick={() => onChange('desc')}
+        onClick={() => onChange("desc")}
         className={`
           w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-          ${value === 'desc'
-            ? 'bg-primary text-on-primary'
-            : 'text-on-surface-variant hover:bg-surface-container-high'
+          ${
+            value === "desc"
+              ? "bg-primary text-on-primary"
+              : "text-on-surface-variant hover:bg-surface-container-high"
           }
         `}
       >
         Highest First
       </button>
       <button
-        onClick={() => onChange('asc')}
+        onClick={() => onChange("asc")}
         className={`
           w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-          ${value === 'asc'
-            ? 'bg-primary text-on-primary'
-            : 'text-on-surface-variant hover:bg-surface-container-high'
+          ${
+            value === "asc"
+              ? "bg-primary text-on-primary"
+              : "text-on-surface-variant hover:bg-surface-container-high"
           }
         `}
       >
@@ -475,9 +543,10 @@ function CountPicker({
           onClick={() => onChange(count)}
           className={`
             w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150
-            ${value === count
-              ? 'bg-primary text-on-primary'
-              : 'text-on-surface-variant hover:bg-surface-container-high'
+            ${
+              value === count
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high"
             }
           `}
         >
@@ -501,8 +570,9 @@ function ScaleTypePicker({
   onXChange: (type: ScaleType) => void;
   onYChange: (type: ScaleType) => void;
 }) {
-  const SCALE_OPTIONS = ['auto', 'linear', 'log'] as const;
-  const scaleLabel = (t: ScaleType) => t === 'auto' ? 'Auto' : t === 'linear' ? 'Lin' : 'Log';
+  const SCALE_OPTIONS = ["auto", "linear", "log"] as const;
+  const scaleLabel = (t: ScaleType) =>
+    t === "auto" ? "Auto" : t === "linear" ? "Lin" : "Log";
 
   return (
     <div className="flex flex-col gap-2">
@@ -515,9 +585,10 @@ function ScaleTypePicker({
               onClick={() => onXChange(t)}
               className={`
                 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-150
-                ${xScale === t
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                ${
+                  xScale === t
+                    ? "bg-primary text-on-primary"
+                    : "text-on-surface-variant hover:bg-surface-container-high"
                 }
               `}
             >
@@ -535,9 +606,10 @@ function ScaleTypePicker({
               onClick={() => onYChange(t)}
               className={`
                 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-150
-                ${yScale === t
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                ${
+                  yScale === t
+                    ? "bg-primary text-on-primary"
+                    : "text-on-surface-variant hover:bg-surface-container-high"
                 }
               `}
             >
@@ -567,7 +639,14 @@ function ChartExplainer({
   scatterXMetric: string;
   scatterYMetric: string;
 }) {
-  const text = getExplainerText(chartType, radarPreset, raceMode, scope, scatterXMetric, scatterYMetric);
+  const text = getExplainerText(
+    chartType,
+    radarPreset,
+    raceMode,
+    scope,
+    scatterXMetric,
+    scatterYMetric,
+  );
   if (!text) return null;
 
   return (
@@ -591,39 +670,45 @@ function getExplainerText(
   const yLabel = getMetricTitle(yMetric);
 
   switch (chartType) {
-    case 'timeseries':
-      return 'Tracks how a metric changes over time for your selected markets. Add markets to compare trends side-by-side.';
+    case "timeseries":
+      return "Tracks how a metric changes over time for your selected markets. Add markets to compare trends side-by-side.";
 
-    case 'scatter': {
-      const scopeLabel = scope === 'national' ? 'nationwide' : scope === 'region' ? 'in the census region' : 'in the state';
+    case "scatter": {
+      const scopeLabel =
+        scope === "national"
+          ? "nationwide"
+          : scope === "region"
+            ? "in the census region"
+            : "in the state";
       if (raceMode) {
         return `Each dot is a metro area ${scopeLabel}, plotted by ${xLabel} vs ${yLabel}. The animation shows how metros move over time. Larger dots are your selected markets.`;
       }
       return `Each dot is a metro area ${scopeLabel}, plotted by ${xLabel} (x-axis) vs ${yLabel} (y-axis). Dot color reflects the Y metric quartile.`;
     }
 
-    case 'waterfall':
-      return 'Breaks down how individual metrics contribute to the overall score, showing each factor\'s positive or negative impact.';
+    case "waterfall":
+      return "Breaks down how individual metrics contribute to the overall score, showing each factor's positive or negative impact.";
 
-    case 'radar': {
-      const profileName = radarPreset !== 'custom'
-        ? RADAR_PROFILES[radarPreset].title.toLowerCase()
-        : 'custom';
+    case "radar": {
+      const profileName =
+        radarPreset !== "custom"
+          ? RADAR_PROFILES[radarPreset].title.toLowerCase()
+          : "custom";
       if (raceMode) {
         return `Shows how the ${profileName} shape shifts over time. Each axis is a metric percentile rank (0-100) compared to all metros. Higher = stronger on that dimension.`;
       }
       return `Each axis shows a percentile rank (0-100) for the ${profileName} metrics compared to all metros. A larger shape means the market outperforms peers.`;
     }
 
-    case 'bar': {
+    case "bar": {
       if (raceMode) {
-        return 'Animates the top metros over time, showing how rankings shift as values change month to month.';
+        return "Animates the top metros over time, showing how rankings shift as values change month to month.";
       }
-      return 'Ranks metros by the selected metric. Use scope to filter by state, region, or nationwide.';
+      return "Ranks metros by the selected metric. Use scope to filter by state, region, or nationwide.";
     }
 
     default:
-      return '';
+      return "";
   }
 }
 

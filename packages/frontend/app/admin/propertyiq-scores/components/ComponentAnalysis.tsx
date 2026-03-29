@@ -46,9 +46,10 @@ interface ComponentAnalysisProps {
 }
 
 const SCORE_TYPES = [
-  { id: "market_health", label: "Market Health" },
-  { id: "homeready", label: "HomeReady" },
-  { id: "investoredge", label: "InvestorEdge" },
+  { id: "propertyiq", label: "PropertyIQ" },
+  { id: "market_health", label: "Market Health (Legacy)" },
+  { id: "homeready", label: "HomeReady (Legacy)" },
+  { id: "investoredge", label: "InvestorEdge (Legacy)" },
 ];
 
 const GEOGRAPHY_TYPES = ["state", "metro", "county", "zip"];
@@ -219,7 +220,7 @@ function ComponentBar({ component }: { component: ComponentMetrics }) {
 }
 
 export function ComponentAnalysis({ geography }: ComponentAnalysisProps) {
-  const [scoreType, setScoreType] = useState("homeready");
+  const [scoreType, setScoreType] = useState("propertyiq");
   const [geographyType, setGeographyType] = useState(
     geography?.type || "metro",
   );

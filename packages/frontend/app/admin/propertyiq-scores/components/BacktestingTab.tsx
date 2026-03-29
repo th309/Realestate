@@ -81,7 +81,7 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
   const [selectedHorizon, setSelectedHorizon] = useState<string>("all");
 
   // Trend configuration
-  const [trendScoreType, setTrendScoreType] = useState("homeready");
+  const [trendScoreType, setTrendScoreType] = useState("propertyiq");
   const [trendHorizon, setTrendHorizon] = useState("1y");
   const [trendGeoType, setTrendGeoType] = useState("metro");
 
@@ -178,9 +178,10 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                   onChange={(e) => setTrendScoreType(e.target.value)}
                   className="px-3 py-2 border border-outline rounded-lg bg-surface text-on-surface"
                 >
-                  <option value="market_health">Market Health</option>
-                  <option value="homeready">HomeReady</option>
-                  <option value="investoredge">InvestorEdge</option>
+                  <option value="propertyiq">PropertyIQ</option>
+                  <option value="market_health">Market Health (Legacy)</option>
+                  <option value="homeready">HomeReady (Legacy)</option>
+                  <option value="investoredge">InvestorEdge (Legacy)</option>
                 </select>
               </div>
               <div>
@@ -239,9 +240,10 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                   className="px-3 py-1.5 rounded-lg border border-outline bg-surface text-on-surface"
                 >
                   <option value="all">All Scores</option>
-                  <option value="market_health">Market Health</option>
-                  <option value="homeready">HomeReady</option>
-                  <option value="investoredge">InvestorEdge</option>
+                  <option value="propertyiq">PropertyIQ</option>
+                  <option value="market_health">Market Health (Legacy)</option>
+                  <option value="homeready">HomeReady (Legacy)</option>
+                  <option value="investoredge">InvestorEdge (Legacy)</option>
                 </select>
               </div>
 

@@ -9,10 +9,10 @@
  * - Responsive design
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, useCallback } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
 interface ConfidenceResult {
   confidence_score: number;
@@ -22,20 +22,28 @@ interface ConfidenceResult {
   recency_component: number;
 }
 
-type ConfidenceSummary = Record<string, Record<string, Record<string, ConfidenceResult>>>;
+type ConfidenceSummary = Record<
+  string,
+  Record<string, Record<string, ConfidenceResult>>
+>;
 
 interface ConfidenceMatrixProps {
-  onCellClick?: (scoreType: string, horizon: string, geographyType: string) => void;
+  onCellClick?: (
+    scoreType: string,
+    horizon: string,
+    geographyType: string,
+  ) => void;
 }
 
 const SCORE_TYPES = [
-  { id: 'market_health', label: 'Market Health' },
-  { id: 'homeready', label: 'HomeReady' },
-  { id: 'investoredge', label: 'InvestorEdge' },
+  { id: "propertyiq", label: "PropertyIQ" },
+  { id: "market_health", label: "Market Health (Legacy)" },
+  { id: "homeready", label: "HomeReady (Legacy)" },
+  { id: "investoredge", label: "InvestorEdge (Legacy)" },
 ];
 
-const HORIZONS = ['6m', '1y', '3y', '5y'];
-const GEOGRAPHY_TYPES = ['state', 'metro', 'county', 'zip'];
+const HORIZONS = ["6m", "1y", "3y", "5y"];
+const GEOGRAPHY_TYPES = ["state", "metro", "county", "zip"];
 
 function ConfidenceCell({
   confidence,
@@ -55,14 +63,14 @@ function ConfidenceCell({
   }
 
   const getColorClass = (score: number, status: string) => {
-    if (status === 'healthy' || score >= 70) {
-      return 'bg-green-100 text-green-800 hover:bg-green-200';
-    } else if (status === 'monitor' || score >= 55) {
-      return 'bg-amber-100 text-amber-800 hover:bg-amber-200';
-    } else if (status === 'review' || score >= 40) {
-      return 'bg-orange-100 text-orange-800 hover:bg-orange-200';
+    if (status === "healthy" || score >= 70) {
+      return "bg-green-100 text-green-800 hover:bg-green-200";
+    } else if (status === "monitor" || score >= 55) {
+      return "bg-amber-100 text-amber-800 hover:bg-amber-200";
+    } else if (status === "review" || score >= 40) {
+      return "bg-orange-100 text-orange-800 hover:bg-orange-200";
     } else {
-      return 'bg-red-100 text-red-800 hover:bg-red-200';
+      return "bg-red-100 text-red-800 hover:bg-red-200";
     }
   };
 
@@ -89,11 +97,15 @@ function ConfidenceCell({
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span>Score:</span>
-                <span className="font-medium">{confidence.confidence_score.toFixed(1)}%</span>
+                <span className="font-medium">
+                  {confidence.confidence_score.toFixed(1)}%
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Status:</span>
-                <span className="font-medium capitalize">{confidence.status}</span>
+                <span className="font-medium capitalize">
+                  {confidence.status}
+                </span>
               </div>
               <div className="border-t border-outline-variant my-1 pt-1">
                 <div className="text-on-surface-variant mb-1">Components:</div>
@@ -132,21 +144,24 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
       setLoading(true);
       setError(null);
 
-      const res = await fetchAPIRaw(`/api/admin/backtest-runs/confidence/summary`, {
-        credentials: 'include',
-      });
+      const res = await fetchAPIRaw(
+        `/api/admin/backtest-runs/confidence/summary`,
+        {
+          credentials: "include",
+        },
+      );
       if (!res.ok) {
-        throw new Error('Failed to fetch confidence summary');
+        throw new Error("Failed to fetch confidence summary");
       }
 
       const result = await res.json();
       if (result.success) {
         setData(result.data);
       } else {
-        throw new Error(result.error || 'Failed to fetch data');
+        throw new Error(result.error || "Failed to fetch data");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -179,7 +194,10 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
   };
 
   // Calculate column averages
-  const getColumnAverage = (scoreType: string, horizon: string): number | null => {
+  const getColumnAverage = (
+    scoreType: string,
+    horizon: string,
+  ): number | null => {
     const validScores: number[] = [];
     for (const geoType of GEOGRAPHY_TYPES) {
       const conf = getConfidence(scoreType, horizon, geoType);
@@ -210,7 +228,8 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
   if (!data || Object.keys(data).length === 0) {
     return (
       <div className="p-8 text-center text-on-surface-variant">
-        No confidence data available. Run a backtest to generate confidence scores.
+        No confidence data available. Run a backtest to generate confidence
+        scores.
       </div>
     );
   }
@@ -240,7 +259,10 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
 
       {/* Matrix for each score type */}
       {SCORE_TYPES.map((scoreType) => (
-        <div key={scoreType.id} className="bg-surface-container rounded-lg overflow-hidden">
+        <div
+          key={scoreType.id}
+          className="bg-surface-container rounded-lg overflow-hidden"
+        >
           <div className="px-4 py-3 border-b border-outline-variant bg-surface-container-high">
             <h3 className="font-medium text-on-surface">{scoreType.label}</h3>
           </div>
@@ -272,15 +294,21 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
                       {geoType}
                     </td>
                     {HORIZONS.map((horizon) => {
-                      const conf = getConfidence(scoreType.id, horizon, geoType);
+                      const conf = getConfidence(
+                        scoreType.id,
+                        horizon,
+                        geoType,
+                      );
                       // Skip invalid combinations (Market Health only has 6m, 1y)
                       if (
-                        scoreType.id === 'market_health' &&
-                        (horizon === '3y' || horizon === '5y')
+                        scoreType.id === "market_health" &&
+                        (horizon === "3y" || horizon === "5y")
                       ) {
                         return (
                           <td key={horizon} className="px-3 py-2 text-center">
-                            <span className="text-on-surface-variant text-sm">-</span>
+                            <span className="text-on-surface-variant text-sm">
+                              -
+                            </span>
                           </td>
                         );
                       }
@@ -288,7 +316,9 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
                         <ConfidenceCell
                           key={horizon}
                           confidence={conf}
-                          onClick={() => onCellClick?.(scoreType.id, horizon, geoType)}
+                          onClick={() =>
+                            onCellClick?.(scoreType.id, horizon, geoType)
+                          }
                         />
                       );
                     })}
@@ -306,21 +336,28 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
                 ))}
                 {/* Column averages */}
                 <tr className="bg-surface-container-low border-t-2 border-outline">
-                  <td className="px-4 py-2 text-sm font-medium text-on-surface">Average</td>
+                  <td className="px-4 py-2 text-sm font-medium text-on-surface">
+                    Average
+                  </td>
                   {HORIZONS.map((horizon) => {
                     if (
-                      scoreType.id === 'market_health' &&
-                      (horizon === '3y' || horizon === '5y')
+                      scoreType.id === "market_health" &&
+                      (horizon === "3y" || horizon === "5y")
                     ) {
                       return (
                         <td key={horizon} className="px-3 py-2 text-center">
-                          <span className="text-on-surface-variant text-sm">-</span>
+                          <span className="text-on-surface-variant text-sm">
+                            -
+                          </span>
                         </td>
                       );
                     }
                     const avg = getColumnAverage(scoreType.id, horizon);
                     return (
-                      <td key={horizon} className="px-3 py-2 text-center text-sm">
+                      <td
+                        key={horizon}
+                        className="px-3 py-2 text-center text-sm"
+                      >
                         {avg !== null ? (
                           <span className="font-medium">{avg.toFixed(0)}%</span>
                         ) : (

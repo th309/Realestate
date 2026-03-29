@@ -77,7 +77,7 @@ function DemoSiteHomeContent() {
           >
             <EmbedIframe
               embedPath="/embed/score/metro/31080"
-              embedParams={{ scoreType: "markethealth" }}
+              embedParams={{ scoreType: "propertyiq" }}
               title="Market Health Score — Dallas Metro"
               height="340px"
             />

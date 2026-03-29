@@ -129,9 +129,10 @@ export function HistoryTab() {
             className="px-3 py-1.5 rounded-lg border border-outline bg-surface text-on-surface"
           >
             <option value="all">All Scores</option>
-            <option value="market_health">Market Health</option>
-            <option value="homeready">HomeReady</option>
-            <option value="investoredge">InvestorEdge</option>
+            <option value="propertyiq">PropertyIQ</option>
+            <option value="market_health">Market Health (Legacy)</option>
+            <option value="homeready">HomeReady (Legacy)</option>
+            <option value="investoredge">InvestorEdge (Legacy)</option>
           </select>
         </div>
 

@@ -38,24 +38,17 @@ export const CATEGORY_ORDER: WidgetCategory[] = [
 export const WIDGETS: WidgetConfig[] = [
   // Score widgets
   {
-    id: "score-homeready-metro",
-    label: "HomeReady — Metro 31080 (Dallas)",
+    id: "score-propertyiq-metro",
+    label: "PropertyIQ — Metro 31080 (Dallas)",
     category: "score",
-    src: (t) => `/embed/score/metro/31080?scoreType=homeready&token=${t}`,
+    src: (t) => `/embed/score/metro/31080?scoreType=propertyiq&token=${t}`,
     height: 280,
   },
   {
-    id: "score-investoredge-county",
-    label: "InvestorEdge — County 48201 (Harris)",
+    id: "score-propertyiq-county",
+    label: "PropertyIQ — County 48201 (Harris)",
     category: "score",
-    src: (t) => `/embed/score/county/48201?scoreType=investoredge&token=${t}`,
-    height: 280,
-  },
-  {
-    id: "score-markethealth-metro",
-    label: "MarketHealth — Metro 31080 (Dallas)",
-    category: "score",
-    src: (t) => `/embed/score/metro/31080?scoreType=markethealth&token=${t}`,
+    src: (t) => `/embed/score/county/48201?scoreType=propertyiq&token=${t}`,
     height: 280,
   },
 

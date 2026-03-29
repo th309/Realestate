@@ -14,7 +14,12 @@ interface EmbedScorePageProps {
 }
 
 const VALID_GEO_LEVELS = ["metro", "county", "zip"];
-const VALID_SCORE_TYPES = ["homeready", "investoredge", "markethealth"];
+const VALID_SCORE_TYPES = [
+  "propertyiq",
+  "homeready",
+  "investoredge",
+  "markethealth",
+];
 
 export async function generateMetadata({
   params,
@@ -54,8 +59,12 @@ export default async function EmbedScorePage({
   // Validate and default score type
   const scoreType =
     rawScoreType && VALID_SCORE_TYPES.includes(rawScoreType)
-      ? (rawScoreType as "homeready" | "investoredge" | "markethealth")
-      : "homeready";
+      ? (rawScoreType as
+          | "propertyiq"
+          | "homeready"
+          | "investoredge"
+          | "markethealth")
+      : "propertyiq";
 
   // Fetch score data server-side
   const scoreData = await fetchScore(geoLevel, geoId);

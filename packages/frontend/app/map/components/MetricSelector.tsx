@@ -101,9 +101,12 @@ function getMetricCategory(metricId: string): string {
   }
   // PropertyIQ Scores
   if (
-    ["homeready_score", "investoredge_score", "market_health_score"].includes(
-      metricId,
-    )
+    [
+      "propertyiq_score",
+      "homeready_score",
+      "investoredge_score",
+      "market_health_score",
+    ].includes(metricId)
   ) {
     return "PROPERTYIQ SCORES";
   }

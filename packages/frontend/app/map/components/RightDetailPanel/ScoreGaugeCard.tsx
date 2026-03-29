@@ -14,19 +14,20 @@ interface ScoreGaugeCardProps {
 }
 
 const SCORE_LABELS: Record<ScoreType, { title: string; desc: string }> = {
+  propertyiq: {
+    title: "PropertyIQ Score",
+    desc: "Unified market intelligence score combining all key real estate indicators.",
+  },
+  // Legacy types kept for backward compatibility with existing data
   investoredge: {
-    title: "InvestorEdge Score",
-    desc: "Investment potential based on yields, appreciation, and risk factors.",
+    title: "PropertyIQ Score",
+    desc: "Unified market intelligence score combining all key real estate indicators.",
   },
   homeready: {
-    title: "HomeReady Score",
-    desc: "Buyer opportunity score based on pricing, inventory, and market dynamics.",
+    title: "PropertyIQ Score",
+    desc: "Unified market intelligence score combining all key real estate indicators.",
   },
   market_health: {
-    title: "Market Health Score",
-    desc: "Overall stability and robustness of the local real estate market.",
-  },
-  propertyiq: {
     title: "PropertyIQ Score",
     desc: "Unified market intelligence score combining all key real estate indicators.",
   },

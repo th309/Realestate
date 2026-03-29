@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchScore } from '@/lib/data';
+import { useState, useEffect } from "react";
+import { fetchScore } from "@/lib/data";
 
 export interface MyMarket {
   id: string;
@@ -9,13 +9,13 @@ export interface MyMarket {
   type: string;
   state?: string;
   score: number | null;
-  trend?: 'up' | 'down' | 'stable';
+  trend?: "up" | "down" | "stable";
   lastViewed?: string;
   isPinned?: boolean;
 }
 
 interface UseMyMarketsOptions {
-  userType?: 'homebuyer' | 'investor';
+  userType?: "homebuyer" | "investor";
   maxMarkets?: number;
 }
 
@@ -24,13 +24,13 @@ interface UseMyMarketsOptions {
  * Sources: pinned favorites, recent reports, recent searches
  */
 export function useMyMarkets(options: UseMyMarketsOptions = {}) {
-  const { userType = 'homebuyer', maxMarkets = 5 } = options;
+  const { userType = "homebuyer", maxMarkets = 5 } = options;
 
   const [markets, setMarkets] = useState<MyMarket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const scoreType = userType === 'investor' ? 'investoredge' : 'homeready';
+  const scoreType = "propertyiq";
 
   useEffect(() => {
     async function loadMarkets() {
@@ -45,7 +45,7 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
         // Combine and dedupe
         const allMarkets = [...storedMarkets];
         for (const market of recentMarkets) {
-          if (!allMarkets.find(m => m.id === market.id)) {
+          if (!allMarkets.find((m) => m.id === market.id)) {
             allMarkets.push(market);
           }
         }
@@ -76,12 +76,12 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
             } catch {
               return { ...market, score: null };
             }
-          })
+          }),
         );
 
         setMarkets(marketsWithScores);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load markets');
+        setError(err instanceof Error ? err.message : "Failed to load markets");
       } finally {
         setLoading(false);
       }
@@ -91,10 +91,14 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
   }, [scoreType, maxMarkets]);
 
   // Add a market to the list
-  const addMarket = (market: Omit<MyMarket, 'score'>) => {
-    setMarkets(prev => {
-      if (prev.find(m => m.id === market.id)) return prev;
-      const newMarket: MyMarket = { ...market, score: null, lastViewed: new Date().toISOString() };
+  const addMarket = (market: Omit<MyMarket, "score">) => {
+    setMarkets((prev) => {
+      if (prev.find((m) => m.id === market.id)) return prev;
+      const newMarket: MyMarket = {
+        ...market,
+        score: null,
+        lastViewed: new Date().toISOString(),
+      };
       const updated = [newMarket, ...prev].slice(0, maxMarkets);
       saveRecentMarket(newMarket);
       return updated;
@@ -103,14 +107,16 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
 
   // Remove a market from the list
   const removeMarket = (marketId: string) => {
-    setMarkets(prev => prev.filter(m => m.id !== marketId));
+    setMarkets((prev) => prev.filter((m) => m.id !== marketId));
   };
 
   // Toggle pinned status
   const togglePin = (marketId: string) => {
-    setMarkets(prev => prev.map(m =>
-      m.id === marketId ? { ...m, isPinned: !m.isPinned } : m
-    ));
+    setMarkets((prev) =>
+      prev.map((m) =>
+        m.id === marketId ? { ...m, isPinned: !m.isPinned } : m,
+      ),
+    );
     // TODO: Persist to user profile/localStorage
   };
 
@@ -126,7 +132,7 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
         } catch {
           return market;
         }
-      })
+      }),
     );
     setMarkets(updated);
     setLoading(false);
@@ -145,10 +151,10 @@ export function useMyMarkets(options: UseMyMarketsOptions = {}) {
 
 // Helper: Get pinned/favorite markets from localStorage
 function getStoredMarkets(): MyMarket[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === "undefined") return [];
 
   try {
-    const stored = localStorage.getItem('propertyiq_pinned_markets');
+    const stored = localStorage.getItem("propertyiq_pinned_markets");
     if (!stored) return [];
     return JSON.parse(stored) as MyMarket[];
   } catch {
@@ -158,10 +164,10 @@ function getStoredMarkets(): MyMarket[] {
 
 // Helper: Get recent markets from localStorage, falling back to geography history
 function getRecentMarkets(): MyMarket[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === "undefined") return [];
 
   try {
-    const stored = localStorage.getItem('propertyiq_recent_markets');
+    const stored = localStorage.getItem("propertyiq_recent_markets");
     if (stored) {
       const parsed = JSON.parse(stored) as MyMarket[];
       if (parsed.length > 0) return parsed;
@@ -172,18 +178,20 @@ function getRecentMarkets(): MyMarket[] {
 
   // Fallback: last geography the user viewed on the maps page
   try {
-    const lastGeo = localStorage.getItem('propertyiq-last-geography');
+    const lastGeo = localStorage.getItem("propertyiq-last-geography");
     if (lastGeo) {
       const geo = JSON.parse(lastGeo);
       if (geo?.id && geo?.name && geo.type) {
-        return [{
-          id: geo.id,
-          name: geo.name,
-          type: geo.type as string,
-          state: geo.state,
-          score: null,
-          lastViewed: new Date().toISOString(),
-        }];
+        return [
+          {
+            id: geo.id,
+            name: geo.name,
+            type: geo.type as string,
+            state: geo.state,
+            score: null,
+            lastViewed: new Date().toISOString(),
+          },
+        ];
       }
     }
   } catch {
@@ -195,16 +203,18 @@ function getRecentMarkets(): MyMarket[] {
 
 // Helper: Save recent market to localStorage
 function saveRecentMarket(market: MyMarket) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   try {
     const existing = getRecentMarkets();
-    const updated = [market, ...existing.filter(m => m.id !== market.id)].slice(0, 10);
-    localStorage.setItem('propertyiq_recent_markets', JSON.stringify(updated));
+    const updated = [
+      market,
+      ...existing.filter((m) => m.id !== market.id),
+    ].slice(0, 10);
+    localStorage.setItem("propertyiq_recent_markets", JSON.stringify(updated));
   } catch {
     // Ignore storage errors
   }
 }
-
 
 export default useMyMarkets;

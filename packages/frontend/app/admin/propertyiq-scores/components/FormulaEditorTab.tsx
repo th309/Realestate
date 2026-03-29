@@ -54,9 +54,10 @@ interface ConfidenceData {
 }
 
 const SCORE_TYPES = [
-  { value: "market_health", label: "Market Health" },
-  { value: "homeready", label: "HomeReady" },
-  { value: "investoredge", label: "InvestorEdge" },
+  { value: "propertyiq", label: "PropertyIQ" },
+  { value: "market_health", label: "Market Health (Legacy)" },
+  { value: "homeready", label: "HomeReady (Legacy)" },
+  { value: "investoredge", label: "InvestorEdge (Legacy)" },
 ];
 
 const GEOGRAPHIES = [
@@ -86,7 +87,7 @@ const COMPONENT_LABELS: Record<string, string> = {
 export function FormulaEditorTab() {
   const [versions, setVersions] = useState<FormulaVersion[]>([]);
   const [selectedScoreType, setSelectedScoreType] =
-    useState<string>("market_health");
+    useState<string>("propertyiq");
   const [selectedGeography, setSelectedGeography] = useState<string>("metro");
   const [selectedVersion, setSelectedVersion] = useState<FormulaVersion | null>(
     null,

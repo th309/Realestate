@@ -14,10 +14,11 @@ interface SideScoreCardProps {
 }
 
 const SCORE_CONFIG: Record<ScoreType, { label: string }> = {
-  investoredge: { label: "InvestorEdge" },
-  homeready: { label: "HomeReady" },
-  market_health: { label: "Market Health" },
   propertyiq: { label: "PropertyIQ" },
+  // Legacy types kept for backward compatibility
+  investoredge: { label: "PropertyIQ" },
+  homeready: { label: "PropertyIQ" },
+  market_health: { label: "PropertyIQ" },
 };
 
 export function SideScoreCard({

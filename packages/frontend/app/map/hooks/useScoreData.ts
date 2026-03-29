@@ -64,6 +64,8 @@ function setCachedData(key: string, data: AllScoresResponse): void {
 }
 
 function getScoreLabel(type: ScoreType): string {
+  if (type === "propertyiq") return "PropertyIQ";
+  // Legacy labels for backward compat
   return type === "market_health"
     ? "Market Health"
     : type === "homeready"
@@ -201,6 +203,11 @@ export function useScoreData(
         userTier: "pro",
         calculatedAt: new Date().toISOString(),
         calculationVersion: "1.0.0",
+        // Primary unified score
+        propertyiq: rawResult.scores?.propertyiq
+          ? transformScore("propertyiq", rawResult.scores.propertyiq, scoreDate)
+          : undefined,
+        // Legacy score types for backward compatibility
         marketHealth: transformScore(
           "market_health",
           rawResult.scores?.markethealth || rawResult.scores?.market_health,
@@ -260,10 +267,7 @@ export function useScoreData(
   };
 }
 
-/**
- * Hook to fetch a single score type for a geography.
- * Thin wrapper around useScoreData that extracts one score type.
- */
+/** Hook to fetch a single score type for a geography. Thin wrapper around useScoreData. */
 export function useSingleScore(
   geographyType: GeographyType | null,
   geographyId: string | null,
@@ -275,13 +279,13 @@ export function useSingleScore(
     geographyId,
     options,
   );
-  const score = data
-    ? scoreType === "market_health"
-      ? data.marketHealth
-      : scoreType === "homeready"
-        ? data.homeready
-        : data.investoredge
-    : null;
+  const SCORE_KEY_MAP: Record<ScoreType, keyof AllScoresResponse> = {
+    propertyiq: "propertyiq",
+    market_health: "marketHealth",
+    homeready: "homeready",
+    investoredge: "investoredge",
+  };
+  const score = data ? (data[SCORE_KEY_MAP[scoreType]] ?? null) : null;
   return {
     score: score as ScoreBadgeData | ScoreCardData | ScoreTeaserData | null,
     loading,

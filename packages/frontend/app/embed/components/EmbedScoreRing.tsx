@@ -24,9 +24,10 @@ export interface EmbedScoreRingProps {
 
 /** Human-readable labels for each score type */
 const SCORE_TYPE_LABELS: Record<string, string> = {
-  homeready: "HomeReady Score",
-  investoredge: "InvestorEdge Score",
-  markethealth: "Market Health Score",
+  propertyiq: "PropertyIQ Score",
+  homeready: "PropertyIQ Score",
+  investoredge: "PropertyIQ Score",
+  markethealth: "PropertyIQ Score",
 };
 
 /** Confidence level color mapping */

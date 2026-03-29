@@ -10,7 +10,7 @@
  * Updated with database verification for metrics marked unavailable by API.
  */
 
-import type { GeoLevel } from './metrics';
+import type { GeoLevel } from "./metrics";
 
 export type MetricAvailabilityMap = {
   [metricId: string]: {
@@ -151,6 +151,11 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
     county: true,
     zip: true,
   },
+  propertyiq_score: {
+    metro: true,
+    county: true,
+    zip: true,
+  },
   hotness_score: {
     metro: true,
     county: true,
@@ -197,8 +202,7 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
     zip: true,
     tract: true,
   },
-  investment_score: {
-  },
+  investment_score: {},
   investoredge_score: {
     metro: true,
     county: true,
@@ -219,8 +223,7 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
     zip: true,
     tract: true,
   },
-  long_term_growth_score: {
-  },
+  long_term_growth_score: {},
   market_health_score: {
     metro: true,
     county: true,
@@ -382,8 +385,7 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
     zip: true,
     tract: true,
   },
-  rent_to_price_ratio: {
-  },
+  rent_to_price_ratio: {},
   renter_affordability: {
     state: true,
     metro: true,
@@ -442,15 +444,15 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
  */
 export function isMetricAvailableForGeo(
   metricId: string,
-  geoLevel: GeoLevel
+  geoLevel: GeoLevel,
 ): boolean {
   const metricAvailability = METRIC_GEO_AVAILABILITY[metricId];
   if (!metricAvailability) return false;
-  
+
   // National level uses state data
-  if (geoLevel === 'national') {
+  if (geoLevel === "national") {
     return metricAvailability.state === true;
   }
-  
+
   return metricAvailability[geoLevel] === true;
 }

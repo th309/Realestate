@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { MyMarket } from '../../hooks/useMyMarkets';
-import { TemplateType, VizType } from '../../hooks/useGraphsState';
-import { ScoreShowdown } from './ScoreShowdown';
-import { PriorityBreakdown } from './PriorityBreakdown';
-import { TemplateTabs } from './TemplateTabs';
-import { TemplateVisualization } from './TemplateVisualization';
+import React from "react";
+import { MyMarket } from "../../hooks/useMyMarkets";
+import { TemplateType, VizType } from "../../hooks/useGraphsState";
+import { ScoreShowdown } from "./ScoreShowdown";
+import { PriorityBreakdown } from "./PriorityBreakdown";
+import { TemplateTabs } from "./TemplateTabs";
+import { TemplateVisualization } from "./TemplateVisualization";
 
 interface HeroComparisonProps {
   primaryMarket: MyMarket | null;
   comparisonMarket: MyMarket | null;
   activeTemplate: TemplateType;
   vizType: VizType;
-  userType: 'homebuyer' | 'investor';
+  userType: "homebuyer" | "investor";
   onTemplateChange: (template: TemplateType) => void;
   onVizTypeChange: (viz: VizType) => void;
 }
@@ -63,7 +63,7 @@ export function HeroComparison({
           {primaryMarket.score !== null && (
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-container rounded-full">
               <span className="text-on-primary-container font-medium">
-                {userType === 'investor' ? 'InvestorEdge' : 'HomeReady'} Score:
+                PropertyIQ Score:
               </span>
               <span className="text-on-primary-container font-bold text-lg">
                 {Math.round(primaryMarket.score)}
@@ -121,27 +121,28 @@ export function HeroComparison({
   );
 }
 
-const TEMPLATE_INFO: Record<TemplateType, { title: string; subtitle: string }> = {
-  affordability: {
-    title: 'Affordability Showdown',
-    subtitle: 'Which market fits your budget better?',
-  },
-  investment: {
-    title: 'Investment Face-off',
-    subtitle: 'Which market offers better returns?',
-  },
-  momentum: {
-    title: 'Market Momentum',
-    subtitle: 'Which market is heating up faster?',
-  },
-  cashflow: {
-    title: 'Cash Flow Face-off',
-    subtitle: 'Which market cash flows better?',
-  },
-  custom: {
-    title: 'Custom Comparison',
-    subtitle: 'Compare any metrics you choose',
-  },
-};
+const TEMPLATE_INFO: Record<TemplateType, { title: string; subtitle: string }> =
+  {
+    affordability: {
+      title: "Affordability Showdown",
+      subtitle: "Which market fits your budget better?",
+    },
+    investment: {
+      title: "Investment Face-off",
+      subtitle: "Which market offers better returns?",
+    },
+    momentum: {
+      title: "Market Momentum",
+      subtitle: "Which market is heating up faster?",
+    },
+    cashflow: {
+      title: "Cash Flow Face-off",
+      subtitle: "Which market cash flows better?",
+    },
+    custom: {
+      title: "Custom Comparison",
+      subtitle: "Compare any metrics you choose",
+    },
+  };
 
 export default HeroComparison;

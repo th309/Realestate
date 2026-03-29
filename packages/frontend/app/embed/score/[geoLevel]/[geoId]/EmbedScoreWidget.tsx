@@ -5,9 +5,10 @@ import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 
 /** Human-readable labels for each score type */
 const SCORE_TYPE_LABELS: Record<string, string> = {
-  homeready: "HomeReady",
-  investoredge: "InvestorEdge",
-  markethealth: "Market Health",
+  propertyiq: "PropertyIQ",
+  homeready: "PropertyIQ",
+  investoredge: "PropertyIQ",
+  markethealth: "PropertyIQ",
 };
 
 /** Confidence level color mapping */

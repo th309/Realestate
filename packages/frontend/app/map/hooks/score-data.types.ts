@@ -141,10 +141,14 @@ export interface AllScoresResponse {
   stateCode?: string;
   periodDate: string;
   userTier: string;
-  marketHealth: ScoreBadgeData | ScoreCardData;
-  homeready: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
-  investoredge: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
+  /** Primary unified PropertyIQ score */
   propertyiq?: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
+  /** @deprecated Legacy score types — kept for backward compatibility */
+  marketHealth: ScoreBadgeData | ScoreCardData;
+  /** @deprecated Legacy score types — kept for backward compatibility */
+  homeready: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
+  /** @deprecated Legacy score types — kept for backward compatibility */
+  investoredge: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
   calculatedAt: string;
   calculationVersion: string;
 }

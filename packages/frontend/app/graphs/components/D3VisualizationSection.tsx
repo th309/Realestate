@@ -218,6 +218,11 @@ const CATEGORY_THRESHOLDS: Record<
     { max: 20, label: "Moderate", color: "#a855f7" },
     { max: Infinity, label: "Many Cuts", color: "#ef4444" },
   ],
+  propertyiq_score: [
+    { max: 40, label: "Poor", color: "#ef4444" },
+    { max: 60, label: "Average", color: "#a855f7" },
+    { max: Infinity, label: "Good", color: "#22c55e" },
+  ],
   homeready_score: [
     { max: 40, label: "Poor", color: "#ef4444" },
     { max: 60, label: "Average", color: "#a855f7" },

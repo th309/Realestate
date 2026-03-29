@@ -105,11 +105,11 @@ export function RightDetailPanel({
     }
   };
 
-  // Extract score values for InsightCarousel
-  const getScoreValue = (type: ScoreType) => {
+  // Extract PropertyIQ score value for InsightCarousel
+  const getPropertyIQScore = (): number | null => {
     if (!scoreDataProp) return null;
-    const key = type === "market_health" ? "marketHealth" : type;
-    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
+    // Prefer propertyiq, fall back to marketHealth for backward compat
+    const scoreObj = scoreDataProp.propertyiq ?? scoreDataProp.marketHealth;
     if (
       typeof scoreObj === "object" &&
       scoreObj !== null &&
@@ -194,9 +194,7 @@ export function RightDetailPanel({
           {/* AI Insight */}
           <InsightCarousel
             geographyName={geography.name}
-            investorScore={getScoreValue("investoredge")}
-            homeReadyScore={getScoreValue("homeready")}
-            marketHealthScore={getScoreValue("market_health")}
+            propertyIQScore={getPropertyIQScore()}
             viewMode={viewMode === "investor" ? "investor" : "homebuyer"}
           />
 

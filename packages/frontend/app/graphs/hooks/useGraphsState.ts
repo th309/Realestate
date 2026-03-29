@@ -23,7 +23,11 @@ export type WaterfallPreset =
 export type RadarPreset = "homebuyer" | "investor" | "market_health" | "custom";
 export type BarSort = "asc" | "desc";
 export type BarCount = 10 | 25;
-export type ScoreTypeOption = "homeready" | "investoredge" | "markethealth";
+export type ScoreTypeOption =
+  | "propertyiq"
+  | "homeready"
+  | "investoredge"
+  | "markethealth";
 export type ScaleType = "auto" | "linear" | "log";
 
 // Backward-compat aliases (old components still reference these)
@@ -154,7 +158,7 @@ const DEFAULT_STATE: GraphsState = {
   showRegression: true,
   showQuadrants: true,
   waterfallPreset: "investment",
-  scoreType: "homeready",
+  scoreType: "propertyiq",
   radarPreset: "homebuyer",
   radarMetrics: [],
   barMetric: "home_value",

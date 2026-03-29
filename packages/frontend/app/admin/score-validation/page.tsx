@@ -19,12 +19,17 @@ import { ValidationSummaryCards } from "./components/ValidationSummaryCards";
 import { QuintilePerformanceChart } from "./components/QuintilePerformanceChart";
 import { ScoreVsReturnScatter } from "./components/ScoreVsReturnScatter";
 
-type ScoreType = "homeready" | "investoredge" | "markethealth" | "all";
+type ScoreType =
+  | "propertyiq"
+  | "homeready"
+  | "investoredge"
+  | "markethealth"
+  | "all";
 type GeographyType = "metro" | "county" | "zip" | "all";
 type Horizon = "1y" | "3y";
 
 export default function ScoreValidationPage() {
-  const [scoreType, setScoreType] = useState<ScoreType>("homeready");
+  const [scoreType, setScoreType] = useState<ScoreType>("propertyiq");
   const [geography, setGeography] = useState<GeographyType>("metro");
   const [horizon, setHorizon] = useState<Horizon>("1y");
 
@@ -67,9 +72,10 @@ export default function ScoreValidationPage() {
                 className="px-3 py-1.5 text-sm border border-outline-variant rounded-lg bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="all">All Types</option>
-                <option value="homeready">HomeReady</option>
-                <option value="investoredge">InvestorEdge</option>
-                <option value="markethealth">Market Health</option>
+                <option value="propertyiq">PropertyIQ</option>
+                <option value="homeready">HomeReady (Legacy)</option>
+                <option value="investoredge">InvestorEdge (Legacy)</option>
+                <option value="markethealth">Market Health (Legacy)</option>
               </select>
             </div>
 
