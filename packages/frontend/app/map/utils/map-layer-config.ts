@@ -205,14 +205,15 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
         "text-halo-color": "rgba(255, 255, 255, 0.95)",
         "text-halo-width": 2,
       },
-      filter:
-        geoLevel === "state"
-          ? [
+      ...(geoLevel === "state"
+        ? {
+            filter: [
               "any",
               ["!", ["has", "screenSpaceRatio"]],
               ["<=", ["get", "screenSpaceRatio"], 1.0],
-            ]
-          : undefined,
+            ],
+          }
+        : {}),
     });
   }
 }

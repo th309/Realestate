@@ -54,7 +54,7 @@ export async function upsertScoresWithRetry(
 ): Promise<boolean> {
   const maxAttempts = 4;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const { error } = await supabase.from('propertyiq_scores_v2').upsert(rows, {
+    const { error } = await supabase.from('propertyiq_scores').upsert(rows, {
       onConflict: 'geography,location_id,score_type,score_date',
     });
 
