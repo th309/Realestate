@@ -13,7 +13,14 @@
  * Geography levels supported by the platform.
  * Used consistently across all data fetching and display.
  */
-export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
+export type GeoLevel =
+  | "national"
+  | "state"
+  | "metro"
+  | "county"
+  | "city"
+  | "zip"
+  | "tract";
 
 // ============================================================================
 // METRIC CONFIGURATION TYPES
@@ -22,12 +29,26 @@ export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip
 /**
  * Display format types for metric values
  */
-export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'index_1dec' | 'days';
+export type MetricFormat =
+  | "currency"
+  | "percent"
+  | "percent_abs"
+  | "number"
+  | "index"
+  | "index_1dec"
+  | "days";
 
 /**
  * Data source types - identifies which backend system provides the data
  */
-export type DataSource = 'zillow' | 'realtor' | 'redfin' | 'calculated' | 'census' | 'fred' | 'propertyiq';
+export type DataSource =
+  | "zillow"
+  | "realtor"
+  | "redfin"
+  | "calculated"
+  | "census"
+  | "fred"
+  | "propertyiq";
 
 /**
  * Metric configuration interface - defines how to fetch and display a metric
@@ -42,7 +63,13 @@ export interface MetricConfig {
   apiEndpoint: string;
 
   /** Which field to use as the key when mapping response data */
-  keyField: 'auto' | 'region_id' | 'region_name' | 'cbsa_code' | 'county_fips' | 'postal_code';
+  keyField:
+    | "auto"
+    | "region_id"
+    | "region_name"
+    | "cbsa_code"
+    | "county_fips"
+    | "postal_code";
 
   /** Which geographies support this metric */
   supportedGeos: GeoLevel[];
@@ -54,7 +81,7 @@ export interface MetricConfig {
   valueField?: string;
 
   /** Range calculation: 'dynamic' uses actual data range, 'full' uses 0-100% of data */
-  rangeType?: 'dynamic' | 'full';
+  rangeType?: "dynamic" | "full";
 
   /** Fixed scale bounds for color/legend (e.g. permit counts: 0 to 200+) */
   scaleMin?: number;
@@ -70,7 +97,7 @@ export interface MetricConfig {
   hasTimeSeries?: boolean;
 
   /** Direction in which a higher value is favorable from a real estate investing perspective */
-  favorableDirection: 'higher' | 'lower' | 'neutral';
+  favorableDirection: "higher" | "lower" | "neutral";
 }
 
 // ============================================================================
@@ -90,7 +117,7 @@ export interface SnapshotEntry {
   /** Geography ID where value was resolved (can differ when inherited) */
   sourceGeoId?: string | null;
   /** Geography level where value was resolved */
-  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel?: "metro" | "county" | "zip" | "state" | "national" | null;
   /** True when value came from parent geography */
   isInherited?: boolean;
   /** True when value came from non-primary source in fallback chain */
@@ -147,7 +174,7 @@ export interface TimeSeriesResult {
 export interface TimeSeriesHistoryResult {
   data: TimeSeriesPoint[];
   months: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   change: number;
 }
 
@@ -180,7 +207,7 @@ export interface DateRangeResponse {
 /**
  * Direction of a trend
  */
-export type TrendDirection = 'up' | 'down' | 'stable';
+export type TrendDirection = "up" | "down" | "stable";
 
 /**
  * Result from calculating trend data
@@ -201,18 +228,27 @@ export interface TrendResult {
 /**
  * Score types available in the system
  */
-export type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
+export type ScoreType =
+  | "homeready"
+  | "investoredge"
+  | "markethealth"
+  | "propertyiq";
 
 /**
  * Confidence level for a score
  */
-export type ConfidenceLevel = 'A' | 'B' | 'C' | 'F';
+export type ConfidenceLevel = "A" | "B" | "C" | "F";
 
 /**
  * Status label for a score component based on its normalized score.
  * Mirrors backend ComponentStatus from scoring.types.ts.
  */
-export type ComponentStatus = 'excellent' | 'strong' | 'moderate' | 'watch' | 'concern';
+export type ComponentStatus =
+  | "excellent"
+  | "strong"
+  | "moderate"
+  | "watch"
+  | "concern";
 
 /**
  * Breakdown of a single component's contribution to an overall score.
@@ -236,7 +272,7 @@ export interface ScoreComponentBreakdown {
     /** Standardized z-score for this metric */
     z_score: number;
     /** Whether higher values help or hurt the score */
-    direction: 'positive' | 'negative';
+    direction: "positive" | "negative";
     /** Raw metric value before standardization, null if unavailable */
     raw_value: number | null;
   }[];
@@ -267,6 +303,7 @@ export interface ScoreResponse {
     homeready: SingleScoreResult;
     investoredge: SingleScoreResult;
     markethealth: SingleScoreResult;
+    propertyiq?: SingleScoreResult;
   };
   /** Per-metric z-scores (available when expanded=true) */
   z_scores?: Record<string, number>;
@@ -307,8 +344,8 @@ export interface ApiResponseItem {
   source?: string;
   sourceGeoId?: string;
   source_geo_id?: string;
-  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national';
-  source_geo_level?: 'metro' | 'county' | 'zip' | 'state' | 'national';
+  sourceGeoLevel?: "metro" | "county" | "zip" | "state" | "national";
+  source_geo_level?: "metro" | "county" | "zip" | "state" | "national";
   isInherited?: boolean;
   is_inherited?: boolean;
   isFallback?: boolean;

@@ -13,7 +13,11 @@ import { fetchAPI, fetchAPIWithParams } from "./base";
 // ============================================================================
 
 export type TopMarketsGeo = "metro" | "county" | "zip";
-export type TopMarketsScoreType = "homeready" | "investoredge" | "markethealth";
+export type TopMarketsScoreType =
+  | "homeready"
+  | "investoredge"
+  | "markethealth"
+  | "propertyiq";
 
 export interface TopMarketEntry {
   location_id: string;

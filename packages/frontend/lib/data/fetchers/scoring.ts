@@ -11,7 +11,11 @@ import { fetchAPI, fetchAPIWithParams } from "./base";
 // ============================================================================
 
 export type ValidationGeography = "metro" | "county" | "zip";
-export type ValidationScoreType = "homeready" | "investoredge" | "markethealth";
+export type ValidationScoreType =
+  | "homeready"
+  | "investoredge"
+  | "markethealth"
+  | "propertyiq";
 
 export interface QuintilePerformanceData {
   [key: string]: unknown;

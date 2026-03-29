@@ -5,7 +5,11 @@
  * Used by useScoreData hook and score display components.
  */
 
-export type ScoreType = "market_health" | "homeready" | "investoredge";
+export type ScoreType =
+  | "market_health"
+  | "homeready"
+  | "investoredge"
+  | "propertyiq";
 export type GeographyType =
   | "national"
   | "state"
@@ -140,6 +144,7 @@ export interface AllScoresResponse {
   marketHealth: ScoreBadgeData | ScoreCardData;
   homeready: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
   investoredge: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
+  propertyiq?: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
   calculatedAt: string;
   calculationVersion: string;
 }

@@ -77,6 +77,7 @@ export const SCORE_FORMULAS: Record<string, GeographyFormulas> = {
       demand_score: w(0.345, 1, "demand_score"),
       pending_ratio: w(0.239, 1, "pending_ratio"),
     },
+    propertyiq: {},
   },
   county: {
     homeready: {
@@ -104,6 +105,7 @@ export const SCORE_FORMULAS: Record<string, GeographyFormulas> = {
       demand_score: w(0.254, 1, "demand_score"),
       pending_ratio: w(0.213, 1, "pending_ratio"),
     },
+    propertyiq: {},
   },
   zip: {
     homeready: {
@@ -125,6 +127,7 @@ export const SCORE_FORMULAS: Record<string, GeographyFormulas> = {
       hotness_score: w(0.699, 1, "hotness_score"),
       demand_score: w(0.301, 1, "demand_score"),
     },
+    propertyiq: {},
   },
 };
 
