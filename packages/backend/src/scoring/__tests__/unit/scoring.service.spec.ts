@@ -17,7 +17,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ScoringService } from '../../scoring.service';
 import { NormalizationService } from '../../normalization.service';
 import { InheritanceService } from '../../inheritance.service';
-import { MarketHealthService } from '../../market-health.service';
+
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
 import { CalibrationService } from '../../calibration/calibration.service';
 import { GeographyChainService } from '../../../metric-resolution/geography-chain.service';
@@ -54,15 +54,12 @@ const mockSupabase = {
 describe('ScoringService', () => {
   let service: ScoringService;
   let normalizationService: NormalizationService;
-  let marketHealthService: MarketHealthService;
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScoringService,
         NormalizationService,
         InheritanceService,
-        MarketHealthService,
         {
           provide: SUPABASE_CLIENT,
           useValue: mockSupabase,
@@ -84,8 +81,6 @@ describe('ScoringService', () => {
     service = module.get<ScoringService>(ScoringService);
     normalizationService =
       module.get<NormalizationService>(NormalizationService);
-    marketHealthService = module.get<MarketHealthService>(MarketHealthService);
-
     // Reset mocks
     jest.clearAllMocks();
   });

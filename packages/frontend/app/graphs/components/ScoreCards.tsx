@@ -444,14 +444,9 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
     !!selectedArea && geoLevel !== "state" && geoLevel !== "national";
   const displayScores = shouldFetchScores ? scores : null;
   const effectiveLoading = shouldFetchScores ? loading : false;
-  const propertyiqScore =
-    displayScores?.scores?.propertyiq?.score ??
-    displayScores?.scores?.homeready?.score ??
-    0;
+  const propertyiqScore = displayScores?.scores?.propertyiq?.score ?? 0;
   const confidenceLabel =
-    displayScores?.scores?.propertyiq?.confidence_level ??
-    displayScores?.scores?.homeready?.confidence_level ??
-    "B";
+    displayScores?.scores?.propertyiq?.confidence_level ?? "B";
 
   const scoresUnavailable = geoLevel === "state" || geoLevel === "national";
 

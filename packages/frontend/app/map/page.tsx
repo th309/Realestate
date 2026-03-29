@@ -375,8 +375,7 @@ function MapPageInner() {
       !entitlementsLoading &&
       getAccess("feature", "score_breakdown").level === "none";
 
-    // Use propertyiq score if available, fall back to marketHealth for backward compat
-    const scoreObj = scoreResponse.propertyiq ?? scoreResponse.marketHealth;
+    const scoreObj = scoreResponse.propertyiq;
     if (!scoreObj || typeof scoreObj !== "object" || !("score" in scoreObj)) {
       return { isLoading: false };
     }

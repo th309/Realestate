@@ -52,81 +52,12 @@ function w(weight: number, direction: 1 | -1, metric: string): MetricWeight {
 
 export const SCORE_FORMULAS: Record<string, GeographyFormulas> = {
   metro: {
-    homeready: {
-      median_days_on_market: w(0.3096, -1, "median_days_on_market"),
-      affordability_ratio: w(0.1671, 1, "affordability_ratio"),
-      pending_ratio: w(0.1484, 1, "pending_ratio"),
-      supply_score: w(0.1477, -1, "supply_score"),
-      population_yoy: w(0.0889, 1, "population_yoy"),
-      demand_score: w(0.0845, 1, "demand_score"),
-      price_reduced_share: w(0.0374, -1, "price_reduced_share"),
-      unemployment_rate_yoy: w(0.0164, -1, "unemployment_rate_yoy"),
-    },
-    investoredge: {
-      median_days_on_market: w(0.2887, -1, "median_days_on_market"),
-      affordability_ratio: w(0.177, 1, "affordability_ratio"),
-      pending_ratio: w(0.1564, 1, "pending_ratio"),
-      supply_score: w(0.1287, -1, "supply_score"),
-      population_yoy: w(0.0837, 1, "population_yoy"),
-      demand_score: w(0.0657, 1, "demand_score"),
-      median_gross_rent: w(0.0575, -1, "median_gross_rent"),
-      homeownership_rate: w(0.0423, 1, "homeownership_rate"),
-    },
-    markethealth: {
-      hotness_score: w(0.416, 1, "hotness_score"),
-      demand_score: w(0.345, 1, "demand_score"),
-      pending_ratio: w(0.239, 1, "pending_ratio"),
-    },
     propertyiq: {},
   },
   county: {
-    homeready: {
-      median_days_on_market: w(0.2595, -1, "median_days_on_market"),
-      pending_ratio: w(0.2194, 1, "pending_ratio"),
-      population_yoy: w(0.1945, 1, "population_yoy"),
-      affordability_ratio: w(0.0903, -1, "affordability_ratio"),
-      demand_score: w(0.0874, 1, "demand_score"),
-      unemployment_rate_yoy: w(0.0759, 1, "unemployment_rate_yoy"),
-      supply_score: w(0.0393, -1, "supply_score"),
-      price_reduced_share: w(0.0337, 1, "price_reduced_share"),
-    },
-    investoredge: {
-      median_days_on_market: w(0.2497, -1, "median_days_on_market"),
-      pending_ratio: w(0.2115, 1, "pending_ratio"),
-      population_yoy: w(0.1904, 1, "population_yoy"),
-      affordability_ratio: w(0.0884, -1, "affordability_ratio"),
-      median_gross_rent: w(0.0719, 1, "median_gross_rent"),
-      demand_score: w(0.0641, 1, "demand_score"),
-      homeownership_rate: w(0.0623, 1, "homeownership_rate"),
-      unemployment_rate_yoy: w(0.0617, 1, "unemployment_rate_yoy"),
-    },
-    markethealth: {
-      hotness_score: w(0.533, 1, "hotness_score"),
-      demand_score: w(0.254, 1, "demand_score"),
-      pending_ratio: w(0.213, 1, "pending_ratio"),
-    },
     propertyiq: {},
   },
   zip: {
-    homeready: {
-      demand_score: w(0.3024, 1, "demand_score"),
-      pending_ratio: w(0.2918, 1, "pending_ratio"),
-      median_days_on_market: w(0.2049, -1, "median_days_on_market"),
-      hotness_score: w(0.1393, 1, "hotness_score"),
-      affordability_ratio: w(0.0312, 1, "affordability_ratio"),
-      price_reduced_share: w(0.0304, 1, "price_reduced_share"),
-    },
-    investoredge: {
-      pending_ratio: w(0.2384, 1, "pending_ratio"),
-      homeownership_rate: w(0.2267, 1, "homeownership_rate"),
-      median_days_on_market: w(0.1943, -1, "median_days_on_market"),
-      demand_score: w(0.1912, 1, "demand_score"),
-      hotness_score: w(0.1494, 1, "hotness_score"),
-    },
-    markethealth: {
-      hotness_score: w(0.699, 1, "hotness_score"),
-      demand_score: w(0.301, 1, "demand_score"),
-    },
     propertyiq: {},
   },
 };

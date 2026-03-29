@@ -882,48 +882,6 @@ export const METRICS: Record<string, MetricConfig> = {
   // ============================================================================
   // PROPERTYIQ SCORES
   // ============================================================================
-  homeready_score: {
-    id: "homeready_score",
-    title: "HomeReady Score",
-    format: "number",
-    dataSource: "propertyiq",
-    apiEndpoint: "/api/scores/{geo}/{location_id}",
-    keyField: "auto",
-    supportedGeos: ["metro", "county", "zip"],
-    valueField: "homeready_score",
-    rangeType: "full",
-    hasTimeSeries: true,
-    favorableDirection: "higher",
-  },
-
-  investoredge_score: {
-    id: "investoredge_score",
-    title: "InvestorEdge Score",
-    format: "number",
-    dataSource: "propertyiq",
-    apiEndpoint: "/api/scores/{geo}/{location_id}",
-    keyField: "auto",
-    supportedGeos: ["metro", "county", "zip"],
-    valueField: "investoredge_score",
-    rangeType: "full",
-    hasTimeSeries: true,
-    favorableDirection: "higher",
-  },
-
-  market_health_score: {
-    id: "market_health_score",
-    title: "Market Health Score",
-    format: "number",
-    dataSource: "propertyiq",
-    apiEndpoint: "/api/scores/{geo}/{location_id}",
-    keyField: "auto",
-    supportedGeos: ["metro", "county", "zip"],
-    valueField: "market_health_score",
-    rangeType: "full",
-    hasTimeSeries: true,
-    favorableDirection: "higher",
-  },
-
   propertyiq_score: {
     id: "propertyiq_score",
     title: "PropertyIQ Score",
@@ -973,10 +931,5 @@ export function metricHasTimeSeries(metricId: string): boolean {
  * These require special handling (score API instead of time series).
  */
 export function isScoreMetric(metricId: string): boolean {
-  return [
-    "homeready_score",
-    "investoredge_score",
-    "market_health_score",
-    "propertyiq_score",
-  ].includes(metricId);
+  return metricId === "propertyiq_score";
 }

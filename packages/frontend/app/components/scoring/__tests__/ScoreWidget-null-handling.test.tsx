@@ -44,7 +44,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="homeready"
+        scoreType="propertyiq"
       />,
     );
 
@@ -65,7 +65,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="99999"
-        scoreType="homeready"
+        scoreType="propertyiq"
       />,
     );
 
@@ -83,7 +83,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="investoredge"
+        scoreType="propertyiq"
       />,
     );
 
@@ -101,7 +101,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="homeready"
+        scoreType="propertyiq"
       />,
     );
 
@@ -127,7 +127,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="homeready"
+        scoreType="propertyiq"
       />,
     );
 
@@ -152,7 +152,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="market_health"
+        scoreType="propertyiq"
       />,
     );
 
@@ -176,7 +176,7 @@ describe("ScoreWidget — null score handling", () => {
       <ScoreWidget
         geographyType="metro"
         geographyId="31080"
-        scoreType="homeready"
+        scoreType="propertyiq"
         onScoreLoad={onScoreLoad}
       />,
     );

@@ -12,24 +12,20 @@ import React from "react";
 import { Sparkles, BarChart3, Layers, type LucideIcon } from "lucide-react";
 import type { ReportInstance } from "../../../../types";
 import { V2NarrativeSection } from "./V2NarrativeSection";
-import { Hero as V1Hero } from "../homebuyer/Hero";
 
 interface SectionWrapperProps {
   report: ReportInstance;
 }
 
-/** Fixed section: executive_summary with hero score widget */
+/** Fixed section: executive_summary */
 export function V2CustomExecutiveSummary({ report }: SectionWrapperProps) {
   return (
-    <>
-      <V1Hero report={report} />
-      <V2NarrativeSection
-        report={report}
-        sectionId="executive_summary"
-        title="Executive Summary"
-        icon={Sparkles}
-      />
-    </>
+    <V2NarrativeSection
+      report={report}
+      sectionId="executive_summary"
+      title="Executive Summary"
+      icon={Sparkles}
+    />
   );
 }
 

@@ -143,9 +143,9 @@ function SharedReportViewer() {
   } else if (isAgentReport) {
     templateType = "market_snapshot_client";
   } else if (userType === "investor") {
-    templateType = "investoredge";
+    templateType = "investoredge_v2";
   } else {
-    templateType = "homeready";
+    templateType = "homeready_v2";
   }
 
   const template = getTemplate(templateType);

@@ -408,18 +408,14 @@ export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
 
 // ============================================================================
-// VALIDATION CLAIMS (homepage marketing stats derived from OOS data)
+// VALIDATION CLAIMS (PropertyIQ v4 validation stats)
 // ============================================================================
 export {
-  getHomepageClaims,
+  V4_CLAIMS,
+  getV4HomepageClaims,
   formatDollarClaim,
   formatDollarClaimShort,
   formatObservations,
-  VALIDATION_SCOPE,
-  OOS_QUINTILE_SPREAD,
-  OOS_IC,
-  OOS_HIT_RATE,
-  MEDIAN_HOME_VALUE,
 } from "./validation-claims";
 
 // ============================================================================

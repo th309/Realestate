@@ -9,7 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ScoringService } from '../../scoring.service';
 import { NormalizationService } from '../../normalization.service';
 import { InheritanceService } from '../../inheritance.service';
-import { MarketHealthService } from '../../market-health.service';
+
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
 import { CalibrationService } from '../../calibration/calibration.service';
@@ -138,7 +138,6 @@ describe('Scoring Pipeline Integration', () => {
         ScoringService,
         NormalizationService,
         InheritanceService,
-        MarketHealthService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: SUPABASE_CLIENT, useValue: mockSupabaseClient },
         {

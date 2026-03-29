@@ -108,8 +108,7 @@ export function RightDetailPanel({
   // Extract PropertyIQ score value for InsightCarousel
   const getPropertyIQScore = (): number | null => {
     if (!scoreDataProp) return null;
-    // Prefer propertyiq, fall back to marketHealth for backward compat
-    const scoreObj = scoreDataProp.propertyiq ?? scoreDataProp.marketHealth;
+    const scoreObj = scoreDataProp.propertyiq;
     if (
       typeof scoreObj === "object" &&
       scoreObj !== null &&

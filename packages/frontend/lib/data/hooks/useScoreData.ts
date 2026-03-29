@@ -17,9 +17,6 @@ import { useEntitlements, type UserTier } from "@/lib/entitlements";
 
 /** Metric IDs for each score type — used for entitlements lookups */
 const SCORE_METRIC_IDS: Record<string, string> = {
-  homeready: "homeready_score",
-  investoredge: "investoredge_score",
-  markethealth: "market_health_score",
   propertyiq: "propertyiq_score",
 };
 
@@ -42,10 +39,7 @@ export interface ScoreGatingInfo {
 export interface UseScoreDataResult {
   /** Full score response */
   data: ScoreResponse | null;
-  /** Individual scores by type */
-  homeready: SingleScoreResult | null;
-  investoredge: SingleScoreResult | null;
-  markethealth: SingleScoreResult | null;
+  /** PropertyIQ score */
   propertyiq: SingleScoreResult | null;
   /** Loading state */
   isLoading: boolean;
@@ -126,18 +120,12 @@ export function useScoreData(
 
   return {
     data: data ?? null,
-    homeready: data?.scores?.homeready ?? null,
-    investoredge: data?.scores?.investoredge ?? null,
-    markethealth: data?.scores?.markethealth ?? null,
     propertyiq: data?.scores?.propertyiq ?? null,
     isLoading,
     error: error as Error | null,
     refetch,
     isBreakdownGated,
     gating: {
-      homeready: buildGating("homeready"),
-      investoredge: buildGating("investoredge"),
-      markethealth: buildGating("markethealth"),
       propertyiq: buildGating("propertyiq"),
     },
   };

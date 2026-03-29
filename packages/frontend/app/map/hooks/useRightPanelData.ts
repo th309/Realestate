@@ -180,8 +180,7 @@ export function useRightPanelData(
 
       // Get the PropertyIQ score (unified — no longer split by view mode)
       const score = scoreResponse
-        ? (scoreResponse.scores?.propertyiq?.score ??
-          scoreResponse.scores?.homeready?.score)
+        ? scoreResponse.scores?.propertyiq?.score
         : undefined;
 
       // Calculate confidence based on data completeness

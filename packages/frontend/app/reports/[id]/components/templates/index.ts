@@ -40,32 +40,6 @@
 import type { ComponentType } from "react";
 import type { ReportInstance } from "../../../types";
 
-// Homebuyer sections (redesigned)
-import {
-  Hero,
-  ScoreStory,
-  AffordabilityDeepDive,
-  MarketTimingDeepDive,
-  StabilityDeepDive,
-  GrowthPotentialDeepDive,
-  YourPriorities,
-  BottomLine,
-} from "../sections/homebuyer";
-
-// Investor sections (redesigned)
-import {
-  InvestorHero,
-  InvestorScoreStory,
-  CashFlowDeepDive,
-  RentDemandDeepDive,
-  AppreciationDeepDive,
-  EntryPointDeepDive,
-  RiskDeepDive,
-  InvestmentThesisSection,
-  ProFormaSnapshot,
-  InvestorBottomLine,
-} from "../sections/investor";
-
 // Agent sections (redesigned)
 import {
   ClientOverview,
@@ -125,8 +99,6 @@ export interface ReportTemplateDefinition {
 
 /** Available report template types (includes v2 variants for new narrative format) */
 export type ReportTemplateType =
-  | "homeready"
-  | "investoredge"
   | "market_snapshot_client"
   | "market_snapshot_prep"
   | "comparison"
@@ -147,38 +119,6 @@ export const REPORT_TEMPLATES: Record<
   investoredge_v2: V2_REPORT_TEMPLATES.investoredge_v2,
   comparison_v2: V2_REPORT_TEMPLATES.comparison_v2,
   custom_research_v2: V2_REPORT_TEMPLATES.custom_research_v2,
-  homeready: {
-    name: "HomeReady Report",
-    description: "Comprehensive homebuyer analysis with score-driven narrative",
-    sections: [
-      { component: Hero, id: "hero" },
-      { component: ScoreStory, id: "score-story" },
-      { component: AffordabilityDeepDive, id: "affordability-deep-dive" },
-      { component: MarketTimingDeepDive, id: "market-timing-deep-dive" },
-      { component: StabilityDeepDive, id: "stability-deep-dive" },
-      { component: GrowthPotentialDeepDive, id: "growth-potential-deep-dive" },
-      { component: YourPriorities, id: "your-priorities" },
-      { component: BottomLine, id: "bottom-line" },
-      { component: SharedMarketPulse, id: "market-pulse" },
-    ],
-  },
-  investoredge: {
-    name: "InvestorEdge Report",
-    description: "Score-driven investment opportunity analysis",
-    sections: [
-      { component: InvestorHero, id: "investor-hero" },
-      { component: InvestorScoreStory, id: "investor-score-story" },
-      { component: CashFlowDeepDive, id: "cash-flow" },
-      { component: RentDemandDeepDive, id: "rent-demand" },
-      { component: AppreciationDeepDive, id: "appreciation" },
-      { component: EntryPointDeepDive, id: "entry-point" },
-      { component: RiskDeepDive, id: "risk" },
-      { component: InvestmentThesisSection, id: "investment-thesis" },
-      { component: ProFormaSnapshot, id: "pro-forma" },
-      { component: InvestorBottomLine, id: "investor-bottom-line" },
-      { component: SharedMarketPulse, id: "market-pulse" },
-    ],
-  },
   market_snapshot_client: {
     name: "Client Market Report",
     description: "Clean, shareable market overview for clients",

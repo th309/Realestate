@@ -103,13 +103,7 @@ export function ScoreWidget({
   const scoreData = React.useMemo(() => {
     if (!data) return { score: null, confidence: null };
 
-    const key =
-      scoreType === "market_health"
-        ? "marketHealth"
-        : scoreType === "propertyiq"
-          ? "propertyiq"
-          : scoreType;
-    const scoreObj = data[key as keyof typeof data];
+    const scoreObj = data.propertyiq;
 
     if (
       typeof scoreObj === "object" &&

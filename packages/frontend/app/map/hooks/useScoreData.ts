@@ -203,24 +203,10 @@ export function useScoreData(
         userTier: "pro",
         calculatedAt: new Date().toISOString(),
         calculationVersion: "1.0.0",
-        // Primary unified score
-        propertyiq: rawResult.scores?.propertyiq
-          ? transformScore("propertyiq", rawResult.scores.propertyiq, scoreDate)
-          : undefined,
-        // Legacy score types for backward compatibility
-        marketHealth: transformScore(
-          "market_health",
-          rawResult.scores?.markethealth || rawResult.scores?.market_health,
-          scoreDate,
-        ),
-        homeready: transformScore(
-          "homeready",
-          rawResult.scores?.homeready,
-          scoreDate,
-        ),
-        investoredge: transformScore(
-          "investoredge",
-          rawResult.scores?.investoredge,
+        // Primary unified PropertyIQ score
+        propertyiq: transformScore(
+          "propertyiq",
+          rawResult.scores?.propertyiq,
           scoreDate,
         ),
       };
@@ -279,13 +265,7 @@ export function useSingleScore(
     geographyId,
     options,
   );
-  const SCORE_KEY_MAP: Record<ScoreType, keyof AllScoresResponse> = {
-    propertyiq: "propertyiq",
-    market_health: "marketHealth",
-    homeready: "homeready",
-    investoredge: "investoredge",
-  };
-  const score = data ? (data[SCORE_KEY_MAP[scoreType]] ?? null) : null;
+  const score = data ? (data.propertyiq ?? null) : null;
   return {
     score: score as ScoreBadgeData | ScoreCardData | ScoreTeaserData | null,
     loading,

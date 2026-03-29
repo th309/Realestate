@@ -2,12 +2,11 @@
 
 import { TrendingUp } from "lucide-react";
 import { useInView } from "./hooks/useInView";
-import { getHomepageClaims, formatDollarClaim } from "@/lib/data";
+import { V4_CLAIMS, formatDollarClaim } from "@/lib/data";
 
 export function AlphaCallout() {
   const [setRef, inView] = useInView();
-  const claims = getHomepageClaims();
-  const alphaFormatted = formatDollarClaim(claims.alphaInsightValue);
+  const alphaFormatted = formatDollarClaim(V4_CLAIMS.metroGap1Y);
 
   return (
     <section

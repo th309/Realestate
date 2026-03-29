@@ -216,13 +216,7 @@ export const Dashboard: React.FC = () => {
                 {isScore ? (
                   /* Score metrics get specialized visualization */
                   <ScoreVisualization
-                    scoreType={
-                      metric as
-                        | "propertyiq_score"
-                        | "homeready_score"
-                        | "investoredge_score"
-                        | "market_health_score"
-                    }
+                    scoreType={metric as "propertyiq_score" | "propertyiq"}
                     geoLevel={geoLevel}
                     selectedArea={selectedArea}
                     selectedAreaId={selectedAreaId}

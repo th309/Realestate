@@ -3,10 +3,9 @@
 /**
  * Hero Stats Section
  *
- * Five stat cards showing key v3 walk-forward validation metrics.
+ * Five stat cards showing key v4 PropertyIQ validation metrics.
  * Accepts a `horizon` prop to switch between 1Y and 3Y labels.
- * Values are sourced from the validation API (useValidationSummary),
- * with OOS static constants as immediate fallbacks while data loads.
+ * Values are sourced from V4_CLAIMS (the single PropertyIQ score validation).
  */
 
 import {
@@ -16,61 +15,50 @@ import {
   CheckCircle,
   MapPin,
 } from "lucide-react";
-import {
-  VALIDATION_SCOPE,
-  OOS_IC,
-  OOS_HIT_RATE,
-  OOS_QUINTILE_SPREAD,
-  MEDIAN_HOME_VALUE,
-} from "@/lib/data";
+import { V4_CLAIMS } from "@/lib/data";
 
 interface HeroStatsProps {
   horizon: "1y" | "3y";
 }
 
 export function HeroStats({ horizon }: HeroStatsProps) {
-  const horizonLabel = horizon === "3y" ? "3Y" : "1Y";
+  const is3Y = horizon === "3y";
+  const horizonLabel = is3Y ? "3Y" : "1Y";
 
-  // Use the official v3 walk-forward OOS constants as the authoritative values.
-  // The live API may return weaker numbers from incomplete or different datasets —
-  // the published accuracy page should reflect the validated report metrics.
-  const correlation = OOS_IC.metro_investoredge;
-  const hitRate = OOS_HIT_RATE.metro_investoredge;
-
-  const annualAlpha = Math.round(
-    (OOS_QUINTILE_SPREAD.metro_investoredge / 100) * MEDIAN_HOME_VALUE,
-  );
+  const correlation = is3Y ? V4_CLAIMS.ic3Y : V4_CLAIMS.ic1Y;
+  const hitRate = is3Y ? V4_CLAIMS.yearHitRate3Y : V4_CLAIMS.yearHitRate1Y;
+  const dollarGap = is3Y ? V4_CLAIMS.metroGap3Y : V4_CLAIMS.metroGap1Y;
 
   const stats = [
     {
       icon: TrendingUp,
       value: correlation.toFixed(2),
       label: `OOS Correlation (${horizonLabel})`,
-      sublabel: "Metro InvestorEdge, walk-forward validated",
+      sublabel: "PropertyIQ Score, walk-forward validated",
     },
     {
       icon: DollarSign,
-      value: `$${annualAlpha.toLocaleString("en-US")}`,
-      label: "Top vs bottom quintile spread",
-      sublabel: "Annual dollar difference on $240K home",
+      value: `$${dollarGap.toLocaleString("en-US")}`,
+      label: `Top vs bottom quintile (${horizonLabel})`,
+      sublabel: `Dollar difference on $${Math.round(V4_CLAIMS.medianHomeValue / 1000)}K home`,
     },
     {
       icon: Calendar,
-      value: String(VALIDATION_SCOPE.walkForwardWindows),
-      label: "Walk-forward windows",
-      sublabel: "Non-overlapping test periods (2018\u20132023)",
+      value: String(V4_CLAIMS.backtestYears),
+      label: "Years of backtest data",
+      sublabel: "Walk-forward validated (2012\u20132024)",
     },
     {
       icon: CheckCircle,
-      value: `${hitRate.toFixed(1)}%`,
+      value: `${hitRate}%`,
       label: `Hit rate (${horizonLabel})`,
       sublabel: "Top-scored markets beating benchmark",
     },
     {
       icon: MapPin,
-      value: VALIDATION_SCOPE.metrosValidated.toLocaleString("en-US"),
+      value: V4_CLAIMS.metrosValidated.toLocaleString("en-US"),
       label: "Metros validated",
-      sublabel: `${VALIDATION_SCOPE.countiesValidated.toLocaleString("en-US")} counties \u00B7 ${VALIDATION_SCOPE.zipsValidated.toLocaleString("en-US")} ZIPs`,
+      sublabel: `${V4_CLAIMS.countiesValidated.toLocaleString("en-US")} counties \u00B7 ${V4_CLAIMS.zipsValidated.toLocaleString("en-US")} ZIPs`,
     },
   ];
 
@@ -80,14 +68,13 @@ export function HeroStats({ horizon }: HeroStatsProps) {
         Forecast Accuracy
       </p>
       <h1 className="text-3xl md:text-4xl font-[var(--font-source-serif)] text-on-surface mt-2">
-        {correlation.toFixed(2)} OOS Correlation.{" "}
-        {VALIDATION_SCOPE.walkForwardWindows} Windows.{" "}
-        <span className="text-primary">Real Data.</span>
+        {correlation.toFixed(2)} OOS Correlation. {V4_CLAIMS.backtestYears}{" "}
+        Years. <span className="text-primary">Real Data.</span>
       </h1>
       <p className="text-on-surface-variant mt-3 max-w-3xl text-base leading-relaxed">
         PropertyIQ validates with walk-forward cross-validation across{" "}
-        {VALIDATION_SCOPE.backtestYears} years of data. Every number on this
-        page comes from held-out test periods the model never trained on.
+        {V4_CLAIMS.backtestYears} years of data. Every number on this page comes
+        from held-out test periods the model never trained on.
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-8">

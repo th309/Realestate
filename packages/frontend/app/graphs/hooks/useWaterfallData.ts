@@ -645,9 +645,7 @@ export function useWaterfallData(
     scoreData.error,
     scoreData.gating,
     scoreData.data,
-    scoreData.homeready,
-    scoreData.investoredge,
-    scoreData.markethealth,
+    scoreData.propertyiq,
     scoreType,
     geoLevel,
   ]);

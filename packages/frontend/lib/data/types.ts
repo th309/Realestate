@@ -228,11 +228,7 @@ export interface TrendResult {
 /**
  * Score types available in the system
  */
-export type ScoreType =
-  | "homeready"
-  | "investoredge"
-  | "markethealth"
-  | "propertyiq";
+export type ScoreType = "propertyiq";
 
 /**
  * Confidence level for a score
@@ -300,10 +296,7 @@ export interface ScoreResponse {
   median_price: number | null;
   score_date: string;
   scores: {
-    homeready: SingleScoreResult;
-    investoredge: SingleScoreResult;
-    markethealth: SingleScoreResult;
-    propertyiq?: SingleScoreResult;
+    propertyiq: SingleScoreResult;
   };
   /** Per-metric z-scores (available when expanded=true) */
   z_scores?: Record<string, number>;

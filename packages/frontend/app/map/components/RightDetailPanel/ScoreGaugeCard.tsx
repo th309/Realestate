@@ -18,19 +18,6 @@ const SCORE_LABELS: Record<ScoreType, { title: string; desc: string }> = {
     title: "PropertyIQ Score",
     desc: "Unified market intelligence score combining all key real estate indicators.",
   },
-  // Legacy types kept for backward compatibility with existing data
-  investoredge: {
-    title: "PropertyIQ Score",
-    desc: "Unified market intelligence score combining all key real estate indicators.",
-  },
-  homeready: {
-    title: "PropertyIQ Score",
-    desc: "Unified market intelligence score combining all key real estate indicators.",
-  },
-  market_health: {
-    title: "PropertyIQ Score",
-    desc: "Unified market intelligence score combining all key real estate indicators.",
-  },
 };
 
 const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> =

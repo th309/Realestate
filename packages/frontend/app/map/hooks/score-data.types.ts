@@ -5,11 +5,7 @@
  * Used by useScoreData hook and score display components.
  */
 
-export type ScoreType =
-  | "market_health"
-  | "homeready"
-  | "investoredge"
-  | "propertyiq";
+export type ScoreType = "propertyiq";
 export type GeographyType =
   | "national"
   | "state"
@@ -142,13 +138,7 @@ export interface AllScoresResponse {
   periodDate: string;
   userTier: string;
   /** Primary unified PropertyIQ score */
-  propertyiq?: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
-  /** @deprecated Legacy score types — kept for backward compatibility */
-  marketHealth: ScoreBadgeData | ScoreCardData;
-  /** @deprecated Legacy score types — kept for backward compatibility */
-  homeready: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
-  /** @deprecated Legacy score types — kept for backward compatibility */
-  investoredge: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
+  propertyiq: ScoreBadgeData | ScoreCardData | ScoreTeaserData;
   calculatedAt: string;
   calculationVersion: string;
 }

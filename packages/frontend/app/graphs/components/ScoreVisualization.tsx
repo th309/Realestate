@@ -7,19 +7,12 @@ import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import { ScoreHistoryChart } from "@/app/components/scoring/ScoreHistoryChart";
 import { M3Card, M3CardHeader } from "./M3Card";
 
-type ScoreType = "propertyiq" | "homeready" | "investoredge" | "market_health";
-type ScoreMetricId =
-  | "propertyiq_score"
-  | "homeready_score"
-  | "investoredge_score"
-  | "market_health_score";
+type ScoreType = "propertyiq";
+type ScoreMetricId = "propertyiq_score";
 
 // Map metric IDs to score types
 const METRIC_TO_SCORE_TYPE: Record<ScoreMetricId, ScoreType> = {
   propertyiq_score: "propertyiq",
-  homeready_score: "homeready",
-  investoredge_score: "investoredge",
-  market_health_score: "market_health",
 };
 
 interface ScoreVisualizationProps {
@@ -41,7 +34,7 @@ const SCORE_CONFIG: Record<
   ScoreType,
   {
     title: string;
-    apiKey: "propertyiq" | "homeready" | "investoredge" | "markethealth";
+    apiKey: "propertyiq";
     description: string;
     color: string;
     factors: ScoreFactorData[];
@@ -80,34 +73,7 @@ const SCORE_CONFIG: Record<
       },
     ],
   },
-  // Legacy score types — all display as PropertyIQ, only apiKey differs for data fetch
-  homeready: {
-    title: "PropertyIQ Score",
-    apiKey: "homeready",
-    description: "",
-    color: "primary",
-    factors: [],
-  },
-  investoredge: {
-    title: "PropertyIQ Score",
-    apiKey: "investoredge",
-    description: "",
-    color: "primary",
-    factors: [],
-  },
-  market_health: {
-    title: "PropertyIQ Score",
-    apiKey: "markethealth",
-    description: "",
-    color: "primary",
-    factors: [],
-  },
 };
-// Backfill legacy entries from the propertyiq config
-for (const key of ["homeready", "investoredge", "market_health"] as const) {
-  SCORE_CONFIG[key].description = SCORE_CONFIG.propertyiq.description;
-  SCORE_CONFIG[key].factors = SCORE_CONFIG.propertyiq.factors;
-}
 
 const CONFIDENCE_LABELS: Record<string, { label: string; color: string }> = {
   a: { label: "High Confidence", color: "bg-green-500" },

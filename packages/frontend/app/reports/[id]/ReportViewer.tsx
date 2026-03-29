@@ -250,9 +250,9 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   } else if (isCustomReport && useV2) {
     templateType = "custom_research_v2";
   } else if (userType === "investor") {
-    templateType = useV2 ? "investoredge_v2" : "investoredge";
+    templateType = "investoredge_v2";
   } else {
-    templateType = useV2 ? "homeready_v2" : "homeready";
+    templateType = "homeready_v2";
   }
 
   const template = getTemplate(templateType);
@@ -318,9 +318,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
       <div className="flex">
         <main className={`flex-1 ${showConversation ? "lg:pr-[400px]" : ""}`}>
           {/* Report Hero - skip for redesigned templates since their Hero/Overview sections handle it */}
-          {templateType !== "homeready" &&
-            templateType !== "investoredge" &&
-            templateType !== "comparison" &&
+          {templateType !== "comparison" &&
             templateType !== "market_snapshot_client" &&
             templateType !== "market_snapshot_prep" && (
               <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">

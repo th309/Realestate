@@ -25,11 +25,6 @@ import {
 
 import type { ReportInstance } from "../../../../types";
 
-// Re-use existing v1 Hero components for the hero section
-// (they read score data from the report, not from ai_narrative keys)
-import { Hero as V1Hero } from "../homebuyer/Hero";
-import { InvestorHero as V1InvestorHero } from "../investor/InvestorHero";
-
 // V2 renderers
 import { V2NarrativeSection } from "./V2NarrativeSection";
 import { V2VerdictActionsSection } from "./V2VerdictActionsSection";
@@ -50,15 +45,12 @@ interface SectionWrapperProps {
 
 export function V2HomeReadyExecutiveVerdict({ report }: SectionWrapperProps) {
   return (
-    <>
-      <V1Hero report={report} />
-      <V2NarrativeSection
-        report={report}
-        sectionId="executive_verdict"
-        title="Executive Verdict"
-        icon={Sparkles}
-      />
-    </>
+    <V2NarrativeSection
+      report={report}
+      sectionId="executive_verdict"
+      title="Executive Verdict"
+      icon={Sparkles}
+    />
   );
 }
 
@@ -111,15 +103,12 @@ export function V2HomeReadyWhatToWatch({ report }: SectionWrapperProps) {
 
 export function V2InvestorExecutiveVerdict({ report }: SectionWrapperProps) {
   return (
-    <>
-      <V1InvestorHero report={report} />
-      <V2NarrativeSection
-        report={report}
-        sectionId="executive_verdict"
-        title="Executive Verdict"
-        icon={Sparkles}
-      />
-    </>
+    <V2NarrativeSection
+      report={report}
+      sectionId="executive_verdict"
+      title="Executive Verdict"
+      icon={Sparkles}
+    />
   );
 }
 
