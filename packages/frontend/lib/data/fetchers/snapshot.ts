@@ -200,6 +200,9 @@ async function fetchPropertyIQScoreData(
   const params = new URLSearchParams();
   params.append("score_type", scoreType);
   if (options?.state) params.append("state", options.state);
+  // Cache-bust: append a daily timestamp so stale browser caches don't persist
+  // across score recalculations (backend sends max-age=21600)
+  params.append("_t", String(Math.floor(Date.now() / 86_400_000)));
 
   try {
     // Fetch all pages
