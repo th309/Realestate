@@ -574,7 +574,7 @@ export class ScoringController {
         grade: item.grade,
         confidence: item.confidence,
         confidence_level: item.confidence_level,
-        date: date || undefined,
+        date: (item as any).score_date || date || undefined,
       })),
       pagination: {
         page: result.page,

@@ -254,34 +254,11 @@ async function fetchPropertyIQScoreData(
       }
     }
 
-    // Inject a date field for each row so the legend can show "as of ..."
-    // The backend /api/scores/all endpoint doesn't include per-row dates,
-    // but all rows share the same score_date. Fetch it from the single-score endpoint.
-    let scoreDate: string | undefined;
-    if (allData.length > 0) {
-      try {
-        const sampleId = allData[0].region_id;
-        const dateResp = await fetchWithRetry(
-          `${API_URL}/api/scores/${geoPath}/${sampleId}`,
-        );
-        if (dateResp.ok) {
-          const dateData = await dateResp.json();
-          scoreDate = dateData.score_date;
-        }
-      } catch {
-        // Non-critical — legend just won't show date
-      }
-    }
-
-    const datedData = scoreDate
-      ? allData.map((item) => ({ ...item, date: scoreDate }))
-      : allData;
-
     // Transform to unified format
     const normalizedData: ApiResponse = {
       success: true,
-      count: datedData.length,
-      data: datedData,
+      count: allData.length,
+      data: allData,
     };
 
     // PropertyIQ scores use 'value' field

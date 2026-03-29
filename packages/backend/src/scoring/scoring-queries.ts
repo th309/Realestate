@@ -35,15 +35,25 @@ function normalizeConfidenceLevel(
 
 /**
  * Get the most recent score_date for a given geography level.
+ * Optionally filter by score_type to avoid date mismatches between
+ * v3 (homeready/investoredge/markethealth) and v4 (propertyiq) rows
+ * that may have been calculated on different dates.
  */
 export async function getLatestScoreDate(
   supabase: SupabaseClient,
   geography: GeographyLevel,
+  scoreType?: ScoreType,
 ): Promise<string | null> {
-  const { data } = await supabase
+  let query = supabase
     .from('propertyiq_scores')
     .select('score_date')
-    .eq('geography', geography)
+    .eq('geography', geography);
+
+  if (scoreType) {
+    query = query.eq('score_type', scoreType);
+  }
+
+  const { data } = await query
     .order('score_date', { ascending: false })
     .limit(1);
   return data?.[0]?.score_date || null;
@@ -119,6 +129,74 @@ export async function getScoreForDate(
   const { data } = await query;
   if (!data || data.length === 0) return null;
 
+  return assembleScoreResult(data, locationId, geography, scoreDate);
+}
+
+/**
+ * Fetch the latest score row per score_type for a single location,
+ * regardless of score_date. This handles the case where different
+ * score types (v3 homeready/investoredge/markethealth vs v4 propertyiq)
+ * were calculated on different dates.
+ *
+ * For each score_type, fetches the most recent row, then assembles
+ * them into a unified ScoreResult. The returned score_date is the
+ * newest date across all score types found.
+ */
+export async function getLatestScoresForLocation(
+  supabase: SupabaseClient,
+  locationId: string,
+  geography: GeographyLevel,
+): Promise<ScoreResult | null> {
+  const scoreTypes: ScoreType[] = [
+    'propertyiq',
+    'homeready',
+    'investoredge',
+    'markethealth',
+  ];
+
+  // Fetch the latest row per score_type in parallel
+  const queries = scoreTypes.map((scoreType) => {
+    let query = supabase
+      .from('propertyiq_scores')
+      .select('*')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .order('score_date', { ascending: false })
+      .limit(1);
+
+    if (/^\d+$/.test(locationId)) {
+      query = query.eq('location_id', locationId);
+    } else {
+      query = query.ilike('location_name', `${locationId}%`);
+    }
+
+    return query;
+  });
+
+  const results = await Promise.all(queries);
+  const allRows = results.flatMap((r) => r.data ?? []);
+
+  if (allRows.length === 0) return null;
+
+  // Use the newest score_date across all rows
+  const newestDate = allRows.reduce(
+    (latest, row) => (row.score_date > latest ? row.score_date : latest),
+    allRows[0].score_date,
+  );
+
+  return assembleScoreResult(allRows, locationId, geography, newestDate);
+}
+
+/**
+ * Assemble raw DB rows into a unified ScoreResult.
+ * Shared by getScoreForDate and getLatestScoresForLocation.
+ */
+function assembleScoreResult(
+  data: any[],
+  locationId: string,
+  geography: GeographyLevel,
+  scoreDate: string,
+): ScoreResult {
   const scoresByType: Record<ScoreType, SingleScoreResult> = {
     homeready: null!,
     investoredge: null!,
@@ -378,7 +456,7 @@ export async function fetchScoresPage(
   const { data, error } = await supabase
     .from('propertyiq_scores')
     .select(
-      'location_id, location_name, score, grade, confidence, confidence_level',
+      'location_id, location_name, score, grade, confidence, confidence_level, score_date',
     )
     .eq('geography', geography)
     .eq('score_type', scoreType)
