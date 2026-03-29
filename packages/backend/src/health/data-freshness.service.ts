@@ -108,7 +108,7 @@ export class DataFreshnessService {
       { tableName: 'permits_county', dateColumn: 'period_date' },
       // Calculated / scores
       { tableName: 'calculated_metrics', dateColumn: 'period_date' },
-      { tableName: 'propertyiq_scores', dateColumn: 'created_at' },
+      { tableName: 'propertyiq_scores', dateColumn: 'score_date' },
       // Economic
       { tableName: 'economic_national', dateColumn: 'period_date' },
       { tableName: 'economic_state', dateColumn: 'period_date' },
