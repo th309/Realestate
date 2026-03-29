@@ -24,7 +24,7 @@ import type { ScoreType } from './scoring.types';
 import { UserFeaturesService } from '../admin/features/user-features.service';
 
 export type ScoreAccess = 'full' | 'teaser';
-export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
+export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise' | 'admin';
 
 // Decorator key for score access metadata
 export const SCORE_ACCESS_KEY = 'scoreAccess';
@@ -129,7 +129,13 @@ export class ScoreAccessService {
    * Validate and normalize tier value
    */
   private validateTier(tier: string): UserTier {
-    const validTiers: UserTier[] = ['free', 'basic', 'pro', 'enterprise'];
+    const validTiers: UserTier[] = [
+      'free',
+      'basic',
+      'pro',
+      'enterprise',
+      'admin',
+    ];
     const normalizedTier = tier.toLowerCase() as UserTier;
     return validTiers.includes(normalizedTier) ? normalizedTier : 'free';
   }

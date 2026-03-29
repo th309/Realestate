@@ -74,6 +74,27 @@ export class EntitlementsService {
             tier = profile.subscription_tier;
           }
         }
+
+        // If tier is still 'free', check admin_users table —
+        // admin/super_admin users get full access regardless of subscription tier.
+        if (tier === 'free') {
+          const { data: adminRow } = await this.supabase
+            .getClient()
+            .from('admin_users')
+            .select('role')
+            .eq('id', userId)
+            .single();
+
+          if (
+            adminRow &&
+            (adminRow.role === 'admin' || adminRow.role === 'super_admin')
+          ) {
+            tier = 'admin';
+            this.logger.debug(
+              `[Entitlements] User ${userId.substring(0, 8)}... is ${adminRow.role} — granting admin tier`,
+            );
+          }
+        }
       }
     }
 

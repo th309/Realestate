@@ -1,11 +1,25 @@
-'use client';
+"use client";
 
-import { AnimatedCounter } from './AnimatedCounter';
+import { AnimatedCounter } from "./AnimatedCounter";
+import { V4_CLAIMS } from "@/lib/data/validation-claims";
 
+/* Coverage breadth — answers "do you cover my area?" for every audience */
 const STATS = [
-  { value: 2400000, suffix: '+', label: 'Properties Analyzed' },
-  { value: 925, suffix: '', label: 'Metro Areas' },
-  { value: 64, suffix: '+', label: 'Data Points per Market' },
+  {
+    value: V4_CLAIMS.metrosValidated,
+    suffix: "",
+    label: "Metros scored and ranked",
+  },
+  {
+    value: V4_CLAIMS.countiesValidated,
+    suffix: "",
+    label: "Counties analyzed daily",
+  },
+  {
+    value: V4_CLAIMS.zipsValidated,
+    suffix: "",
+    label: "ZIP codes — down to your neighborhood",
+  },
 ];
 
 export function StatsSection() {
@@ -16,7 +30,9 @@ export function StatsSection() {
           <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-on-surface">
             <AnimatedCounter end={stat.value} suffix={stat.suffix} />
           </div>
-          <div className="text-sm text-on-surface-variant mt-2">{stat.label}</div>
+          <div className="text-sm text-on-surface-variant mt-2">
+            {stat.label}
+          </div>
         </div>
       ))}
     </section>

@@ -53,6 +53,7 @@ import {
   getLatestScoreDate,
   getScoreDatesForLocation,
   getScoreForDate,
+  getLatestScoresForLocation,
   getOutcomesForLocation,
   getTopMarkets as queryTopMarkets,
   searchMarkets as querySearchMarkets,
@@ -255,16 +256,29 @@ export class ScoringService {
     periodDate?: string,
     options?: { historyMonths?: number; components?: boolean },
   ): Promise<ScoreResult | null> {
-    const targetDate =
-      periodDate || (await getLatestScoreDate(this.supabase, geography));
-    if (!targetDate) return null;
+    // When no date is specified, fetch the latest row per score_type
+    // to handle v3/v4 date mismatches (different score types may have
+    // been calculated on different dates).
+    let result: ScoreResult | null;
+    let targetDate: string;
 
-    const result = await getScoreForDate(
-      this.supabase,
-      locationId,
-      geography,
-      targetDate,
-    );
+    if (periodDate) {
+      targetDate = periodDate;
+      result = await getScoreForDate(
+        this.supabase,
+        locationId,
+        geography,
+        targetDate,
+      );
+    } else {
+      result = await getLatestScoresForLocation(
+        this.supabase,
+        locationId,
+        geography,
+      );
+      if (!result) return null;
+      targetDate = result.score_date;
+    }
     if (!result) return null;
 
     // Attach component breakdowns if requested
