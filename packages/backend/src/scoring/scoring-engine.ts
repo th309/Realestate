@@ -19,6 +19,7 @@ import {
   ScoreType,
   GeographyLevel,
   FormulaDefinition,
+  MetricWeight,
   ConfidenceLevel,
 } from './formula-weights';
 import {
@@ -42,7 +43,11 @@ export interface RawScoreResult {
 export function getAllMetricNames(geography: GeographyLevel): string[] {
   const metrics = new Set<string>();
 
-  for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
+  for (const scoreType of [
+    'homeready',
+    'investoredge',
+    'markethealth',
+  ] as ScoreType[]) {
     const formula = FORMULA_WEIGHTS[geography][scoreType];
     for (const metricName of Object.keys(formula)) {
       metrics.add(metricName);
@@ -77,7 +82,8 @@ export function calculateZScores(
     if (values.length < 2) continue;
 
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const variance =
+      values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
     const std = Math.sqrt(variance);
 
     if (std === 0) continue;
@@ -178,7 +184,8 @@ export function zScoreToPercentile(z: number): number {
   const sign = clamped < 0 ? -1 : 1;
   const x = Math.abs(clamped) / Math.sqrt(2);
   const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  const y =
+    1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
 
   const cdf = 0.5 * (1.0 + sign * y);
   const score = Math.round(cdf * 1000) / 10;
@@ -215,7 +222,8 @@ export function calculateComponentBreakdown(
   for (const [componentName, metricNames] of Object.entries(componentGroups)) {
     if (!metricNames || metricNames.length === 0) continue;
 
-    const contributingMetrics: ScoreComponentBreakdown['contributing_metrics'] = [];
+    const contributingMetrics: ScoreComponentBreakdown['contributing_metrics'] =
+      [];
     let weightedZScoreSum = 0;
     let totalWeight = 0;
 
@@ -239,9 +247,8 @@ export function calculateComponentBreakdown(
       }
     }
 
-    const normalizedZScore = totalWeight > 0
-      ? weightedZScoreSum / totalWeight
-      : 0;
+    const normalizedZScore =
+      totalWeight > 0 ? weightedZScoreSum / totalWeight : 0;
 
     const componentScore = zScoreToPercentile(normalizedZScore);
 
@@ -287,37 +294,51 @@ export function calculateConfidence(
 
   // Identify which metrics have real data
   const availableMetricNames = metricEntries
-    .filter(([m]) => (location as any)[m] !== null && (location as any)[m] !== undefined)
+    .filter(
+      ([m]) =>
+        (location as any)[m] !== null && (location as any)[m] !== undefined,
+    )
     .map(([m]) => m);
 
   const inheritedSet = new Set(location._inherited ?? []);
 
   // Factor 1: Weighted Completeness (55%)
   // Sum of formula weights for metrics that have data / total formula weight
-  const totalWeight = metricEntries.reduce((sum, [, def]) => sum + def.weight, 0);
+  const totalWeight = metricEntries.reduce(
+    (sum, [, def]) => sum + (def as MetricWeight).weight,
+    0,
+  );
   const availableWeight = metricEntries
     .filter(([m]) => availableMetricNames.includes(m))
-    .reduce((sum, [, def]) => sum + def.weight, 0);
-  const weightedCompleteness = totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
+    .reduce((sum, [, def]) => sum + (def as MetricWeight).weight, 0);
+  const weightedCompleteness =
+    totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
 
   // Factor 2: Direct Data Ratio (30%)
   // Of the available metrics, what fraction is direct (not inherited)?
-  const directCount = availableMetricNames.filter(m => !inheritedSet.has(m)).length;
-  const directDataRatio = availableMetricNames.length > 0
-    ? (directCount / availableMetricNames.length) * 100
-    : 0;
+  const directCount = availableMetricNames.filter(
+    (m) => !inheritedSet.has(m),
+  ).length;
+  const directDataRatio =
+    availableMetricNames.length > 0
+      ? (directCount / availableMetricNames.length) * 100
+      : 0;
 
   // Factor 3: Critical Metric Coverage (15%)
   // Are the top-3 highest-weighted metrics present? 33.3 pts each.
-  const sortedByWeight = [...metricEntries].sort((a, b) => b[1].weight - a[1].weight);
+  const sortedByWeight = [...metricEntries].sort(
+    (a, b) => (b[1] as MetricWeight).weight - (a[1] as MetricWeight).weight,
+  );
   const topThreeMetrics = sortedByWeight.slice(0, 3).map(([m]) => m);
-  const topThreePresent = topThreeMetrics.filter(m => availableMetricNames.includes(m)).length;
+  const topThreePresent = topThreeMetrics.filter((m) =>
+    availableMetricNames.includes(m),
+  ).length;
   const criticalMetricCoverage = (topThreePresent / 3) * 100;
 
   // Weighted average
   const confidence =
     weightedCompleteness * 0.55 +
-    directDataRatio * 0.30 +
+    directDataRatio * 0.3 +
     criticalMetricCoverage * 0.15;
 
   const level = getConfidenceLevel(confidence);

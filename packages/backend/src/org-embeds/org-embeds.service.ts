@@ -16,7 +16,7 @@ import { UpdateEmbedTokenDto } from './dto/update-embed-token.dto';
 import { EmbedTokenValidatorService } from './embed-token-validator.service';
 import { EmbedTokenRecord, EmbedValidationResult } from './embed-token.types';
 
-export { EmbedTokenRecord, EmbedValidationResult };
+export type { EmbedTokenRecord, EmbedValidationResult };
 
 @Injectable()
 export class OrgEmbedsService {

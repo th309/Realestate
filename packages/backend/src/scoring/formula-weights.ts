@@ -295,8 +295,12 @@ export function validateFormulaWeights(
   geography: GeographyLevel,
   scoreType: ScoreType,
 ): { valid: boolean; sum: number } {
-  const formula = FORMULA_WEIGHTS[geography][scoreType];
-  const sum = Object.values(formula).reduce((acc, m) => acc + m.weight, 0);
+  const formula: Record<string, MetricWeight> =
+    FORMULA_WEIGHTS[geography][scoreType];
+  const sum: number = Object.values(formula).reduce(
+    (acc, m) => acc + m.weight,
+    0,
+  );
   // Allow for small floating point errors (within 1%)
   const valid = Math.abs(sum - 1.0) < 0.01;
   return { valid, sum };

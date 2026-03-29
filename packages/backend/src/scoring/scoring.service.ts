@@ -24,7 +24,6 @@ import {
   scoreToGrade,
   ScoreType,
   GeographyLevel,
-  V4_FORMULA_VERSION,
 } from './formula-weights';
 import {
   calculateV4Scores as runV4Engine,
@@ -217,6 +216,8 @@ export class ScoringService {
     const results = runV4Engine(locations, geography);
 
     // 4. Build rows for persistence
+    // Note: formula_version is NOT a column in propertyiq_scores_v2 — omit it.
+    // The version is tracked via score_type='propertyiq' which is implicitly v4.
     const rows = results.map((r) => ({
       geography,
       location_id: r.locationId,
@@ -230,7 +231,6 @@ export class ScoringService {
       score_date: scoreDate,
       created_at: new Date().toISOString(),
       z_scores: JSON.stringify(r.inputMetrics),
-      formula_version: V4_FORMULA_VERSION,
     }));
 
     // 5. Persist

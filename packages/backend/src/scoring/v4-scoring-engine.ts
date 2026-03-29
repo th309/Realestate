@@ -207,26 +207,26 @@ export function calculateV4Scores(
     zScoreMaps.set(metric, computeZScores(locations, metric));
   }
 
-  // Step 2: Compute signal for locations that have ALL 3 z-scores
+  // Step 2: Compute signal. Require at least 2 of 3 metrics (months_of_supply
+  // is universally NULL at ZIP level, so we degrade gracefully to 2 metrics).
+  const MIN_METRICS_FOR_SIGNAL = 2;
   const signalEntries: { locationId: string; signal: number }[] = [];
   const signalMap = new Map<string, number>();
 
   for (const loc of locations) {
     let signal = 0;
-    let hasAll = true;
+    let metricCount = 0;
 
     for (const metric of V4_FORMULA_METRICS) {
       const zMap = zScoreMaps.get(metric)!;
       const z = zMap.get(loc.location_id);
-      if (z == null) {
-        hasAll = false;
-        break;
-      }
+      if (z == null) continue;
       const direction = V4_METRIC_DIRECTIONS[metric];
       signal += z * direction;
+      metricCount++;
     }
 
-    if (hasAll) {
+    if (metricCount >= MIN_METRICS_FOR_SIGNAL) {
       signalEntries.push({ locationId: loc.location_id, signal });
       signalMap.set(loc.location_id, signal);
     }
@@ -245,24 +245,8 @@ export function calculateV4Scores(
     const signal = signalMap.get(loc.location_id);
     const pctRank = pctRankMap.get(loc.location_id);
 
-    // Locations without all 3 metrics get no score
+    // Locations without enough metrics (min 2 of 3) get no score — skip.
     if (signal == null || pctRank == null) {
-      results.push({
-        locationId: loc.location_id,
-        locationName: loc.location_name,
-        score: 0,
-        grade: 'N/A',
-        confidence,
-        confidenceLevel,
-        signal: 0,
-        percentileRank: 0,
-        medianPrice: loc.median_price ?? null,
-        inputMetrics: {
-          sold_above_list: getMetricValue(loc, 'sold_above_list'),
-          median_dom: getMetricValue(loc, 'median_dom'),
-          months_of_supply: getMetricValue(loc, 'months_of_supply'),
-        },
-      });
       continue;
     }
 
