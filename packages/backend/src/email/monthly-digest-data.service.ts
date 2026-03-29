@@ -127,7 +127,7 @@ export class MonthlyDigestDataService {
   }
 
   /**
-   * Fetch PIQ homeready scores for the given regions.
+   * Fetch PIQ scores for the given regions.
    * offset=0 is the latest score date, offset=1 is the previous month.
    */
   private async lookupPiqScoresAtOffset(
@@ -142,7 +142,7 @@ export class MonthlyDigestDataService {
       .from('propertyiq_scores')
       .select('score_date')
       .eq('geography', geography)
-      .eq('score_type', 'homeready')
+      .eq('score_type', 'propertyiq')
       .order('score_date', { ascending: false })
       .limit(50);
 
@@ -157,7 +157,7 @@ export class MonthlyDigestDataService {
       .from('propertyiq_scores')
       .select('location_id, score')
       .eq('geography', geography)
-      .eq('score_type', 'homeready')
+      .eq('score_type', 'propertyiq')
       .eq('score_date', targetDate)
       .in('location_id', regionIds);
 
@@ -230,7 +230,7 @@ export class MonthlyDigestDataService {
       .from('propertyiq_scores')
       .select('score_date')
       .eq('geography', 'metro')
-      .eq('score_type', 'homeready')
+      .eq('score_type', 'propertyiq')
       .order('score_date', { ascending: false })
       .limit(50);
 
@@ -246,13 +246,13 @@ export class MonthlyDigestDataService {
         .from('propertyiq_scores')
         .select('location_id, score')
         .eq('geography', 'metro')
-        .eq('score_type', 'homeready')
+        .eq('score_type', 'propertyiq')
         .eq('score_date', latestDate),
       this.supabase
         .from('propertyiq_scores')
         .select('location_id, score')
         .eq('geography', 'metro')
-        .eq('score_type', 'homeready')
+        .eq('score_type', 'propertyiq')
         .eq('score_date', previousDate),
     ]);
 

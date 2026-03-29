@@ -33,8 +33,7 @@ Available: National, State, Metro, City, County, Zip Code
 **NO NEIGHBORHOODS** - If asked about city areas, use: filter_geographies(city) → get_rankings(zips)
 
 ## SCORING
-- Investors: InvestorEdge score (investoredge_score)
-- Homebuyers: HomeReady score (homeready_score)
+- All users: PropertyIQ Score (propertyiq_score) — unified market quality score
 
 ## QUERY → TOOL PATTERNS
 

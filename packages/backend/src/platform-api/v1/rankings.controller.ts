@@ -29,11 +29,14 @@ import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.ser
 import type { GeographyLevel, ScoreType } from '../../scoring/formula-weights';
 
 const VALID_GEO_LEVELS: GeographyLevel[] = ['metro', 'county', 'zip'];
-const VALID_SCORE_TYPES: ScoreType[] = [
-  'homeready',
-  'investoredge',
-  'markethealth',
-];
+const VALID_SCORE_TYPES: ScoreType[] = ['propertyiq'];
+
+/** Old score types accepted for backward compatibility, mapped to 'propertyiq'. */
+const LEGACY_SCORE_TYPE_MAP: Record<string, ScoreType> = {
+  homeready: 'propertyiq',
+  investoredge: 'propertyiq',
+  markethealth: 'propertyiq',
+};
 
 const DEFAULT_RANKING_LIMIT = 25;
 const MAX_RANKING_LIMIT = 100;
@@ -67,7 +70,7 @@ export class RankingsV1Controller {
     @Req() request: any,
   ) {
     this.apiKeyValidator.checkScope(request.apiKeyOrg.scopes, 'rankings:read');
-    this.validateScoreType(scoreType);
+    const normalizedScoreType = this.validateScoreType(scoreType);
     this.validateGeoLevel(geoLevel);
 
     const limit = this.parseLimit(limitParam);
@@ -78,14 +81,14 @@ export class RankingsV1Controller {
       .from('propertyiq_scores')
       .select('score_date')
       .eq('geography', geoLevel)
-      .eq('score_type', scoreType)
+      .eq('score_type', normalizedScoreType)
       .order('score_date', { ascending: false })
       .limit(1);
 
     const latestDate = dateRow?.[0]?.score_date;
     if (!latestDate) {
       return {
-        score_type: scoreType,
+        score_type: normalizedScoreType,
         geography_level: geoLevel,
         score_date: null,
         rankings: [],
@@ -99,7 +102,7 @@ export class RankingsV1Controller {
         'location_id, location_name, score, grade, confidence, confidence_level',
       )
       .eq('geography', geoLevel)
-      .eq('score_type', scoreType)
+      .eq('score_type', normalizedScoreType)
       .eq('score_date', latestDate)
       .order('score', { ascending })
       .limit(limit);
@@ -122,7 +125,7 @@ export class RankingsV1Controller {
     const rows = data ?? [];
 
     return {
-      score_type: scoreType,
+      score_type: normalizedScoreType,
       geography_level: geoLevel,
       score_date: latestDate,
       rankings: rows.map((row: any, index: number) => ({
@@ -155,13 +158,15 @@ export class RankingsV1Controller {
     }
   }
 
-  private validateScoreType(scoreType: string): void {
-    if (!VALID_SCORE_TYPES.includes(scoreType as ScoreType)) {
-      throw new BadRequestException({
-        code: 'INVALID_SCORE_TYPE',
-        message: `Invalid score type '${scoreType}'. Must be one of: ${VALID_SCORE_TYPES.join(', ')}`,
-      });
-    }
+  private validateScoreType(scoreType: string): ScoreType {
+    if (VALID_SCORE_TYPES.includes(scoreType as ScoreType))
+      return scoreType as ScoreType;
+    const mapped = LEGACY_SCORE_TYPE_MAP[scoreType];
+    if (mapped) return mapped;
+    throw new BadRequestException({
+      code: 'INVALID_SCORE_TYPE',
+      message: `Invalid score type '${scoreType}'. Must be one of: propertyiq`,
+    });
   }
 
   private parseLimit(raw: string | undefined): number {

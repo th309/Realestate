@@ -7,7 +7,7 @@
  * v1 Algorithm (simplified):
  *   1. Read user's saved markets from analytics_watchlist.
  *   2. Determine the preferred geography level (most frequent in watchlist).
- *   3. Fetch top-scoring markets at that geography level (homeready score).
+ *   3. Fetch top-scoring markets at that geography level (PropertyIQ score).
  *   4. Exclude markets already on the watchlist.
  *   5. Return the top 8 with a reason string.
  *
@@ -106,7 +106,7 @@ export class RecommendationsService {
       .from('propertyiq_scores')
       .select('location_id, location_name, score')
       .eq('geography', geoType)
-      .eq('score_type', 'homeready')
+      .eq('score_type', 'propertyiq')
       .eq('score_date', latestDate)
       .order('score', { ascending: false })
       .limit(fetchLimit);
@@ -138,9 +138,7 @@ export class RecommendationsService {
   /**
    * Get the most recent score_date for a geography level.
    */
-  private async getLatestScoreDate(
-    geography: string,
-  ): Promise<string | null> {
+  private async getLatestScoreDate(geography: string): Promise<string | null> {
     const client = this.supabase.getClient();
 
     const { data } = await client

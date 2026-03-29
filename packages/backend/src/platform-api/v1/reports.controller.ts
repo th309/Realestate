@@ -198,8 +198,7 @@ export class PlatformReportsController {
         name: report.primary_geography_name,
       },
       scores: {
-        homeready: report.homeready_score ?? null,
-        investoredge: report.investoredge_score ?? null,
+        propertyiq: report.propertyiq_score ?? report.homeready_score ?? null,
       },
       metrics: report.populated_data ?? null,
       ai_narrative: report.ai_narratives ?? null,
@@ -232,7 +231,7 @@ export class PlatformReportsController {
     let query = this.supabase
       .from('reports')
       .select(
-        'id, title, report_type, status, primary_geography_type, primary_geography_id, primary_geography_name, homeready_score, investoredge_score, created_at',
+        'id, title, report_type, status, primary_geography_type, primary_geography_id, primary_geography_name, propertyiq_score, homeready_score, created_at',
       )
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false })

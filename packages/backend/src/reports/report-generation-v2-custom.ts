@@ -41,9 +41,7 @@ ${question}
 - Market phase: ${context.market_phase || 'N/A'}
 - Median income: ${context.median_household_income || 'N/A'}
 - Unemployment: ${context.unemployment_rate || 'N/A'}%
-- HomeReady score: ${context.homeready_score || 'N/A'}/100
-- InvestorEdge score: ${context.investoredge_score || 'N/A'}/100
-- Market Health: ${context.markethealth_score || 'N/A'}/100
+- PropertyIQ Score: ${context.propertyiq_score || context.homeready_score || 'N/A'}/100
 - Forecast: ${context.zhvf_1yr_pct || 'N/A'}%
 
 ## Your Task

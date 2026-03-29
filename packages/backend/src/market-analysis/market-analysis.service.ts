@@ -14,9 +14,7 @@ interface AnalysisRequest {
   geoName: string;
   metrics: Record<string, MetricValue>;
   scores: {
-    homeready: { score: number; grade: string };
-    investoredge: { score: number; grade: string };
-    markethealth: { score: number; grade: string };
+    propertyiq: { score: number; grade: string };
   };
   lastUpdated?: string;
 }
@@ -122,9 +120,7 @@ Market Data for ${geoName}:
 ${metricsBlock}
 
 Scores:
-- HomeReady Score: ${scores.homeready.score}/100 (Grade: ${scores.homeready.grade})
-- InvestorEdge Score: ${scores.investoredge.score}/100 (Grade: ${scores.investoredge.grade})
-- Market Health Score: ${scores.markethealth.score}/100 (Grade: ${scores.markethealth.grade})
+- PropertyIQ Score: ${scores.propertyiq.score}/100 (Grade: ${scores.propertyiq.grade})
 
 Write exactly 6 sections — 3 for homebuyers and 3 for investors. Use natural, informative titles.
 
@@ -240,7 +236,7 @@ Respond in this exact JSON format:
     const chg = (key: string) => metrics[key]?.change ?? null;
 
     if (viewType === 'homebuyer') {
-      const hs = scores.homeready;
+      const hs = scores.propertyiq;
       const scoreDesc =
         hs.score >= 70
           ? 'favorable'
@@ -249,7 +245,7 @@ Respond in this exact JSON format:
             : 'challenging';
 
       const affordParts = [
-        `${geoName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`,
+        `${geoName} shows ${scoreDesc} conditions for homebuyers (PropertyIQ score: ${hs.score}).`,
       ];
       if (fmt('listing_price'))
         affordParts.push(
@@ -317,12 +313,12 @@ Respond in this exact JSON format:
     }
 
     // Investor fallback
-    const is = scores.investoredge;
+    const is = scores.propertyiq;
     const scoreDesc =
       is.score >= 70 ? 'strong' : is.score >= 50 ? 'moderate' : 'limited';
 
     const cfParts = [
-      `${geoName} shows ${scoreDesc} investment potential (InvestorEdge score: ${is.score}).`,
+      `${geoName} shows ${scoreDesc} investment potential (PropertyIQ score: ${is.score}).`,
     ];
     const cr = val('cap_rate');
     if (cr != null)
@@ -367,7 +363,7 @@ Respond in this exact JSON format:
       liqParts.push(
         `Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? 'healthy' : 'softer'} demand.`,
       );
-    liqParts.push(`Market Health score: ${scores.markethealth.score}/100.`);
+    liqParts.push(`PropertyIQ score: ${scores.propertyiq.score}/100.`);
 
     return [
       { title: 'Cash Flow Potential', analysis: cfParts.join(' ') },

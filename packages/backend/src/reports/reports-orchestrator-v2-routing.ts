@@ -28,22 +28,30 @@ export function getPromptVersion(
 export function resolveReportType(
   template: ReportTemplate,
   dto: GenerateReportDto,
-): 'homeready' | 'investoredge' | 'comparison' | 'custom' | null {
+):
+  | 'propertyiq'
+  | 'homeready'
+  | 'investoredge'
+  | 'comparison'
+  | 'custom'
+  | null {
   // Comparison reports are identified by having comparison geographies
   if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
     return 'comparison';
   }
   const slug = template.slug?.toLowerCase() || '';
-  if (slug.includes('investor') || slug.includes('investoredge')) {
-    return 'investoredge';
-  }
-  if (slug.includes('homeready') || slug.includes('homebuyer')) {
-    return 'homeready';
-  }
   if (slug.includes('custom') || dto.user_inputs?.custom_question) {
     return 'custom';
   }
-  // Fallback based on user_type
+  // All score-based reports now use the unified PropertyIQ flow
+  // Legacy slugs (investor, homeready) map to the same type
+  if (slug.includes('investor') || slug.includes('investoredge')) {
+    return 'investoredge'; // backward compat — same sections
+  }
+  if (slug.includes('homeready') || slug.includes('homebuyer')) {
+    return 'homeready'; // backward compat — same sections
+  }
+  // Default based on user_type
   if (dto.user_type === 'investor') return 'investoredge';
   if (dto.user_type === 'homebuyer') return 'homeready';
   return null;

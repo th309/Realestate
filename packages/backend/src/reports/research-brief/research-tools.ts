@@ -20,7 +20,7 @@ const GET_MARKET_SNAPSHOT: ResearchTool = {
   function: {
     name: 'get_market_snapshot',
     description:
-      'Get PropertyIQ scores (HomeReady, InvestorEdge, MarketHealth) and key metrics for a specific region. Use this to understand the current state of a market.',
+      'Get the PropertyIQ Score and key metrics for a specific region. Use this to understand the current state of a market.',
     parameters: {
       type: 'object' as const,
       properties: {
@@ -135,7 +135,7 @@ const GET_RANKINGS: ResearchTool = {
       properties: {
         score_type: {
           type: 'string',
-          enum: ['homeready', 'investoredge', 'markethealth'],
+          enum: ['propertyiq'],
           description: 'Which score to rank by',
         },
         geography_level: {

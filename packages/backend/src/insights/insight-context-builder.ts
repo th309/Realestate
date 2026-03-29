@@ -89,9 +89,7 @@ export async function buildInsightContext(
  */
 function extractScores(scoreResult: any): InsightContext['scores'] {
   return {
-    homeready: scoreResult?.scores?.homeready?.score ?? null,
-    investoredge: scoreResult?.scores?.investoredge?.score ?? null,
-    market_health: scoreResult?.scores?.markethealth?.score ?? null,
+    propertyiq: scoreResult?.scores?.propertyiq?.score ?? null,
   };
 }
 
@@ -103,11 +101,7 @@ function extractScoreComponents(
 ): InsightContext['score_components'] {
   const components: InsightContext['score_components'] = {};
 
-  for (const scoreType of [
-    'homeready',
-    'investoredge',
-    'markethealth',
-  ] as const) {
+  for (const scoreType of ['propertyiq'] as const) {
     const singleScore = scoreResult?.scores?.[scoreType];
     if (singleScore?.components) {
       for (const comp of singleScore.components) {

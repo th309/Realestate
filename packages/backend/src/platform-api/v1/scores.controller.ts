@@ -1,8 +1,10 @@
 /**
  * Platform API v1 - Scores Controller
  *
- * Exposes PropertyIQ scores (HomeReady, InvestorEdge, MarketHealth) to
- * external consumers via API-key-authenticated endpoints.
+ * Exposes the unified PropertyIQ Score to external consumers via
+ * API-key-authenticated endpoints. Old score types (homeready, investoredge,
+ * markethealth) are accepted for backward compatibility and mapped to
+ * 'propertyiq'.
  *
  * Endpoints:
  *   GET /api/v1/scores/:geoLevel/:geoId          - All scores for a geography
@@ -27,11 +29,20 @@ import { ScoringService } from '../../scoring/scoring.service';
 import type { GeographyLevel, ScoreType } from '../../scoring/formula-weights';
 
 const VALID_GEO_LEVELS: GeographyLevel[] = ['metro', 'county', 'zip'];
-const VALID_SCORE_TYPES: ScoreType[] = [
-  'homeready',
-  'investoredge',
-  'markethealth',
-];
+const VALID_SCORE_TYPES: ScoreType[] = ['propertyiq'];
+
+/** Old score types accepted for backward compatibility, mapped to 'propertyiq'. */
+const LEGACY_SCORE_TYPE_MAP: Record<string, ScoreType> = {
+  homeready: 'propertyiq',
+  investoredge: 'propertyiq',
+  markethealth: 'propertyiq',
+};
+
+/** Normalize a score type param, supporting legacy names. */
+function normalizeScoreType(raw: string): ScoreType | null {
+  if (VALID_SCORE_TYPES.includes(raw as ScoreType)) return raw as ScoreType;
+  return LEGACY_SCORE_TYPE_MAP[raw] ?? null;
+}
 
 /** Map score number to human-readable label. */
 function scoreToLabel(score: number): string {
@@ -99,7 +110,7 @@ export class ScoresV1Controller {
   ) {
     this.apiKeyValidator.checkScope(request.apiKeyOrg.scopes, 'scores:read');
     this.validateGeoLevel(geoLevel);
-    this.validateScoreType(scoreType);
+    const normalized = this.validateScoreType(scoreType);
 
     const result = await this.scoringService.getScore(
       geoId,
@@ -115,11 +126,11 @@ export class ScoresV1Controller {
       });
     }
 
-    const singleScore = result.scores[scoreType as ScoreType];
+    const singleScore = result.scores[normalized];
     if (!singleScore) {
       throw new NotFoundException({
         code: 'SCORE_TYPE_NOT_FOUND',
-        message: `No ${scoreType} score found for ${geoLevel} ${geoId}`,
+        message: `No ${normalized} score found for ${geoLevel} ${geoId}`,
       });
     }
 
@@ -130,7 +141,7 @@ export class ScoresV1Controller {
         name: result.location_name,
       },
       scores: {
-        [scoreType]: this.formatSingleScore(singleScore, result.score_date),
+        [normalized]: this.formatSingleScore(singleScore, result.score_date),
       },
     };
   }
@@ -148,13 +159,15 @@ export class ScoresV1Controller {
     }
   }
 
-  private validateScoreType(scoreType: string): void {
-    if (!VALID_SCORE_TYPES.includes(scoreType as ScoreType)) {
+  private validateScoreType(scoreType: string): ScoreType {
+    const normalized = normalizeScoreType(scoreType);
+    if (!normalized) {
       throw new BadRequestException({
         code: 'INVALID_SCORE_TYPE',
-        message: `Invalid score type '${scoreType}'. Must be one of: ${VALID_SCORE_TYPES.join(', ')}`,
+        message: `Invalid score type '${scoreType}'. Must be one of: propertyiq`,
       });
     }
+    return normalized;
   }
 
   private formatScoreResponse(result: any, geoLevel: string, geoId: string) {

@@ -95,7 +95,7 @@ export class ResearchBriefController {
         `Research execution done: ${research.toolCallCount} tool calls in ${research.durationMs}ms`,
       );
 
-      // Step 2: Enrich with direct news fetch (same pattern as HomeReady/InvestorEdge)
+      // Step 2: Enrich with direct news fetch (same pattern as PropertyIQ reports)
       this.logger.log('Enriching research data with news...');
       const enrichedData = await this.researchBriefService.enrichWithNews(
         research.researchData,

@@ -38,15 +38,26 @@ export interface JobRecord {
 // Map step IDs to analytics API endpoints
 const STEP_ENDPOINTS: Record<string, { method: string; path: string }> = {
   // Scoring endpoints
-  'score-homeready': { method: 'POST', path: '/api/v1/score/homeready' },
-  'score-investor-edge': { method: 'POST', path: '/api/v1/score/investor-edge' },
+  'score-propertyiq': { method: 'POST', path: '/api/v1/score/propertyiq' },
   'backtest-run': { method: 'POST', path: '/api/v1/backtest/run' },
   // ML Workflow endpoints
   'data-export': { method: 'POST', path: '/api/v1/workflow/data-export' },
-  'prepare-backtest-data': { method: 'POST', path: '/api/v1/workflow/prepare-backtest-data' },
-  'calculate-benchmarks': { method: 'POST', path: '/api/v1/workflow/calculate-benchmarks' },
-  'feature-analysis': { method: 'POST', path: '/api/v1/workflow/feature-analysis' },
-  'score-explanations': { method: 'POST', path: '/api/v1/workflow/score-explanations' },
+  'prepare-backtest-data': {
+    method: 'POST',
+    path: '/api/v1/workflow/prepare-backtest-data',
+  },
+  'calculate-benchmarks': {
+    method: 'POST',
+    path: '/api/v1/workflow/calculate-benchmarks',
+  },
+  'feature-analysis': {
+    method: 'POST',
+    path: '/api/v1/workflow/feature-analysis',
+  },
+  'score-explanations': {
+    method: 'POST',
+    path: '/api/v1/workflow/score-explanations',
+  },
   'monthly-report': { method: 'POST', path: '/api/v1/workflow/monthly-report' },
 };
 
@@ -72,7 +83,9 @@ export class MLWorkflowService {
     const supabase = this.supabaseService.getClient();
 
     const allStepIds = Object.keys(STEP_ENDPOINTS);
-    this.logger.log(`[getWorkflowStatus] Fetching status for steps: ${allStepIds.join(', ')}`);
+    this.logger.log(
+      `[getWorkflowStatus] Fetching status for steps: ${allStepIds.join(', ')}`,
+    );
 
     const { data: jobs, error } = await supabase
       .from('propertyiq_ml_jobs')
@@ -150,11 +163,15 @@ export class MLWorkflowService {
     const endpoint = STEP_ENDPOINTS[stepId];
     if (!endpoint) {
       this.logger.error(`[runStep] Unknown step ID: ${stepId}`);
-      this.logger.error(`  Available steps: ${Object.keys(STEP_ENDPOINTS).join(', ')}`);
+      this.logger.error(
+        `  Available steps: ${Object.keys(STEP_ENDPOINTS).join(', ')}`,
+      );
       throw new Error(`Unknown step: ${stepId}`);
     }
 
-    this.logger.log(`[runStep] Mapped to endpoint: ${endpoint.method} ${endpoint.path}`);
+    this.logger.log(
+      `[runStep] Mapped to endpoint: ${endpoint.method} ${endpoint.path}`,
+    );
 
     const supabase = this.supabaseService.getClient();
     const jobId = crypto.randomUUID();
@@ -179,7 +196,9 @@ export class MLWorkflowService {
       this.logger.error(`[runStep] Failed to create job record`);
       this.logger.error(`  Error code: ${insertError.code}`);
       this.logger.error(`  Error message: ${insertError.message}`);
-      this.logger.error(`  Error details: ${JSON.stringify(insertError.details)}`);
+      this.logger.error(
+        `  Error details: ${JSON.stringify(insertError.details)}`,
+      );
       throw insertError;
     }
 
@@ -214,7 +233,9 @@ export class MLWorkflowService {
     this.logger.log(`----------------------------------------`);
 
     try {
-      this.logger.log(`[executeAnalyticsCall] Sending request to analytics service...`);
+      this.logger.log(
+        `[executeAnalyticsCall] Sending request to analytics service...`,
+      );
 
       const response = await fetch(url, {
         method: endpoint.method,
@@ -225,15 +246,21 @@ export class MLWorkflowService {
       });
 
       const durationMs = Date.now() - startTime;
-      this.logger.log(`[executeAnalyticsCall] Response received in ${durationMs}ms`);
+      this.logger.log(
+        `[executeAnalyticsCall] Response received in ${durationMs}ms`,
+      );
       this.logger.log(`  Status: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[executeAnalyticsCall] Analytics service returned error`);
+        this.logger.error(
+          `[executeAnalyticsCall] Analytics service returned error`,
+        );
         this.logger.error(`  Status: ${response.status}`);
         this.logger.error(`  Response: ${errorText}`);
-        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+        throw new Error(
+          `Analytics service error (${response.status}): ${errorText}`,
+        );
       }
 
       const result = await response.json();
@@ -270,12 +297,12 @@ export class MLWorkflowService {
   }
 
   /**
-   * Calculate HomeReady score via analytics service.
+   * Calculate PropertyIQ score via analytics service.
    */
-  async calculateHomeReadyScore(
+  async calculatePropertyIQScore(
     propertyData: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const url = `${this.analyticsServiceUrl}/api/v1/score/homeready`;
+    const url = `${this.analyticsServiceUrl}/api/v1/score/propertyiq`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -285,29 +312,7 @@ export class MLWorkflowService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`HomeReady scoring failed: ${errorText}`);
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Calculate InvestorEdge score via analytics service.
-   */
-  async calculateInvestorEdgeScore(
-    propertyData: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const url = `${this.analyticsServiceUrl}/api/v1/score/investor-edge`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(propertyData),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`InvestorEdge scoring failed: ${errorText}`);
+      throw new Error(`PropertyIQ scoring failed: ${errorText}`);
     }
 
     return response.json();
@@ -374,10 +379,13 @@ export class MLWorkflowService {
         return { healthy: true };
       }
 
-      this.logger.warn(`[checkAnalyticsHealth] Service unhealthy - Status ${response.status}`);
+      this.logger.warn(
+        `[checkAnalyticsHealth] Service unhealthy - Status ${response.status}`,
+      );
       return { healthy: false, error: `Status ${response.status}` };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+      const errorMsg =
+        error instanceof Error ? error.message : 'Connection failed';
       this.logger.error(`[checkAnalyticsHealth] Failed to connect`);
       this.logger.error(`  URL: ${healthUrl}`);
       this.logger.error(`  Error: ${errorMsg}`);
@@ -404,7 +412,8 @@ export class MLWorkflowService {
 
       return { error: `Status ${response.status}` };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+      const errorMsg =
+        error instanceof Error ? error.message : 'Connection failed';
       return { error: errorMsg };
     }
   }
@@ -425,7 +434,8 @@ export class MLWorkflowService {
 
       return { error: `Status ${response.status}` };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+      const errorMsg =
+        error instanceof Error ? error.message : 'Connection failed';
       return { error: errorMsg };
     }
   }

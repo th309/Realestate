@@ -128,24 +128,36 @@ export class AnalyticsChatService {
     private readonly redisService: RedisService,
   ) {
     // Determine Provider
-    const rawProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
-    this.provider = (['openai', 'novita', 'groq', 'deepseek'].includes(rawProvider) ? 'openai' : 'anthropic') as any;
+    const rawProvider = this.configService
+      .get<string>('AI_PROVIDER', 'anthropic')
+      .toLowerCase();
+    this.provider = (
+      ['openai', 'novita', 'groq', 'deepseek'].includes(rawProvider)
+        ? 'openai'
+        : 'anthropic'
+    ) as any;
 
     // Load API Keys - Prioritize DeepSeek key if explicitly requested
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    const isDeepSeekRequest = rawProvider === 'deepseek' || rawProvider === 'novita';
+    const isDeepSeekRequest =
+      rawProvider === 'deepseek' || rawProvider === 'novita';
 
     const openaiKey = isDeepSeekRequest
-      ? (this.configService.get<string>('DEEPSEEK_API_KEY') || this.configService.get<string>('OPENAI_API_KEY'))
-      : (this.configService.get<string>('OPENAI_API_KEY') || this.configService.get<string>('DEEPSEEK_API_KEY'));
+      ? this.configService.get<string>('DEEPSEEK_API_KEY') ||
+        this.configService.get<string>('OPENAI_API_KEY')
+      : this.configService.get<string>('OPENAI_API_KEY') ||
+        this.configService.get<string>('DEEPSEEK_API_KEY');
 
     const baseURL = this.configService.get<string>('AI_BASE_URL');
 
     // Model Selection
-    this.modelName = this.configService.get<string>('AI_MODEL') ||
+    this.modelName =
+      this.configService.get<string>('AI_MODEL') ||
       (this.provider === 'openai' ? 'deepseek-chat' : this.MODEL_BALANCED);
 
-    this.logger.log(`[Quinn Init] Configured Provider: ${this.provider.toUpperCase()}`);
+    this.logger.log(
+      `[Quinn Init] Configured Provider: ${this.provider.toUpperCase()}`,
+    );
     this.logger.log(`[Quinn Init] Model: ${this.modelName}`);
 
     // Initialize OpenAI Client & Provider
@@ -153,10 +165,17 @@ export class AnalyticsChatService {
       try {
         const client = new OpenAI({ apiKey: openaiKey, baseURL: baseURL });
         this.openaiClient = client; // Keep for legacy if needed
-        this.providers.set('openai', new OpenAIProvider(client, this.toolsService));
-        this.logger.log(`[Quinn Init] OpenAI provider initialized (BaseURL: ${baseURL || 'default'})`);
+        this.providers.set(
+          'openai',
+          new OpenAIProvider(client, this.toolsService),
+        );
+        this.logger.log(
+          `[Quinn Init] OpenAI provider initialized (BaseURL: ${baseURL || 'default'})`,
+        );
       } catch (e) {
-        this.logger.error(`[Quinn Init] Failed to initialize OpenAI provider: ${e.message}`);
+        this.logger.error(
+          `[Quinn Init] Failed to initialize OpenAI provider: ${e.message}`,
+        );
       }
     }
 
@@ -165,16 +184,26 @@ export class AnalyticsChatService {
       try {
         const client = new Anthropic({ apiKey: anthropicKey });
         this.anthropicClient = client;
-        this.providers.set('anthropic', new AnthropicProvider(client, this.toolsService));
+        this.providers.set(
+          'anthropic',
+          new AnthropicProvider(client, this.toolsService),
+        );
         this.logger.log('[Quinn Init] Anthropic provider initialized');
       } catch (e) {
-        this.logger.error(`[Quinn Init] Failed to initialize Anthropic provider: ${e.message}`);
+        this.logger.error(
+          `[Quinn Init] Failed to initialize Anthropic provider: ${e.message}`,
+        );
       }
     }
 
     // Validate Anthropic API Key format (duplicate initialization removed)
-    if (anthropicKey && (anthropicKey.includes(' ') || anthropicKey.length < 10)) {
-      this.logger.error('[Quinn Init] Invalid Anthropic API Key format detected - check .env configuration');
+    if (
+      anthropicKey &&
+      (anthropicKey.includes(' ') || anthropicKey.length < 10)
+    ) {
+      this.logger.error(
+        '[Quinn Init] Invalid Anthropic API Key format detected - check .env configuration',
+      );
     }
 
     if (!this.openaiClient && !this.anthropicClient) {
@@ -183,9 +212,15 @@ export class AnalyticsChatService {
 
     if (this.isAvailable()) {
       // Warm cache on startup if enabled
-      const warmOnStartup = this.configService.get<string>('QUINN_CACHE_WARM_ON_STARTUP', 'true') === 'true';
+      const warmOnStartup =
+        this.configService.get<string>(
+          'QUINN_CACHE_WARM_ON_STARTUP',
+          'true',
+        ) === 'true';
       if (warmOnStartup) {
-        this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+        this.warmCache().catch((err) =>
+          this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`),
+        );
       }
     }
 
@@ -204,7 +239,9 @@ export class AnalyticsChatService {
     // Cleanup on process termination
     process.on('beforeExit', () => this.stopConversationCleanup());
 
-    this.logger.log(`[Quinn Cleanup] Started conversation cleanup (TTL: ${this.CONVERSATION_TTL_MS / 1000}s, Interval: ${this.CLEANUP_INTERVAL_MS / 1000}s)`);
+    this.logger.log(
+      `[Quinn Cleanup] Started conversation cleanup (TTL: ${this.CONVERSATION_TTL_MS / 1000}s, Interval: ${this.CLEANUP_INTERVAL_MS / 1000}s)`,
+    );
   }
 
   /**
@@ -234,10 +271,16 @@ export class AnalyticsChatService {
 
     // If still over max, remove oldest conversations
     if (this.conversations.size > this.MAX_CONVERSATIONS) {
-      const sorted = Array.from(this.conversations.entries())
-        .sort((a, b) => new Date(a[1].lastMessageAt).getTime() - new Date(b[1].lastMessageAt).getTime());
+      const sorted = Array.from(this.conversations.entries()).sort(
+        (a, b) =>
+          new Date(a[1].lastMessageAt).getTime() -
+          new Date(b[1].lastMessageAt).getTime(),
+      );
 
-      const toRemove = sorted.slice(0, this.conversations.size - this.MAX_CONVERSATIONS);
+      const toRemove = sorted.slice(
+        0,
+        this.conversations.size - this.MAX_CONVERSATIONS,
+      );
       for (const [id] of toRemove) {
         this.conversations.delete(id);
         cleaned++;
@@ -245,7 +288,9 @@ export class AnalyticsChatService {
     }
 
     if (cleaned > 0) {
-      this.logger.log(`[Quinn Cleanup] Removed ${cleaned} stale conversations. Active: ${this.conversations.size}`);
+      this.logger.log(
+        `[Quinn Cleanup] Removed ${cleaned} stale conversations. Active: ${this.conversations.size}`,
+      );
     }
   }
 
@@ -264,34 +309,68 @@ export class AnalyticsChatService {
   }
 
   /** Query intent for tool selection and iteration limits */
-  private getQueryIntent(message: string): 'conversational' | 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
+  private getQueryIntent(
+    message: string,
+  ):
+    | 'conversational'
+    | 'ranking'
+    | 'filtering'
+    | 'comparison'
+    | 'analysis'
+    | 'raw_data'
+    | 'ml_analysis'
+    | 'news'
+    | 'geography' {
     const lower = message.toLowerCase().trim();
 
     // GEOGRAPHY MENTION CHECK — if user names a specific place, NEVER classify as conversational.
     // This ensures Quinn always looks up PropertyIQ scores before opining on any market.
-    const mentionsGeography = /\b(st\.?\s*louis|phoenix|austin|nashville|denver|miami|tampa|dallas|houston|chicago|atlanta|charlotte|raleigh|portland|seattle|san\s*francisco|san\s*diego|los\s*angeles|new\s*york|boston|detroit|cleveland|pittsburgh|minneapolis|indianapolis|columbus|cincinnati|kansas\s*city|fort\s*wayne|madison|sioux\s*falls|tulsa|oklahoma\s*city|memphis|jacksonville|orlando|las\s*vegas|salt\s*lake|boise|omaha|des\s*moines|richmond|virginia\s*beach|baltimore|washington\s*dc|philadelphia|san\s*antonio|sacramento|riverside|tucson|el\s*paso|albuquerque|birmingham|louisville|milwaukee|hartford|providence|new\s*orleans|reno|spokane|charleston|savannah|knoxville|greenville|durham|winston|fayetteville|springfield|little\s*rock|wichita|dayton|akron|toledo|youngstown|scranton|harrisburg|rochester|buffalo|syracuse|albany)\b/i.test(lower)
-      || /\b\d{5}\b/.test(lower)     // ZIP codes
-      || /\bcounty\b/i.test(lower)    // County references
-      || /\b(invest|buy|market|real\s*estate|housing)\b/i.test(lower) && /,\s*[A-Z]{2}\b/.test(message); // "City, ST" pattern
+    const mentionsGeography =
+      /\b(st\.?\s*louis|phoenix|austin|nashville|denver|miami|tampa|dallas|houston|chicago|atlanta|charlotte|raleigh|portland|seattle|san\s*francisco|san\s*diego|los\s*angeles|new\s*york|boston|detroit|cleveland|pittsburgh|minneapolis|indianapolis|columbus|cincinnati|kansas\s*city|fort\s*wayne|madison|sioux\s*falls|tulsa|oklahoma\s*city|memphis|jacksonville|orlando|las\s*vegas|salt\s*lake|boise|omaha|des\s*moines|richmond|virginia\s*beach|baltimore|washington\s*dc|philadelphia|san\s*antonio|sacramento|riverside|tucson|el\s*paso|albuquerque|birmingham|louisville|milwaukee|hartford|providence|new\s*orleans|reno|spokane|charleston|savannah|knoxville|greenville|durham|winston|fayetteville|springfield|little\s*rock|wichita|dayton|akron|toledo|youngstown|scranton|harrisburg|rochester|buffalo|syracuse|albany)\b/i.test(
+        lower,
+      ) ||
+      /\b\d{5}\b/.test(lower) || // ZIP codes
+      /\bcounty\b/i.test(lower) || // County references
+      (/\b(invest|buy|market|real\s*estate|housing)\b/i.test(lower) &&
+        /,\s*[A-Z]{2}\b/.test(message)); // "City, ST" pattern
 
     // CONVERSATIONAL - no tools needed, answer from digest/context/knowledge
     // CRITICAL: Only classify as conversational if NO specific geography is mentioned
     if (!mentionsGeography) {
-      if (/^(hi|hello|hey|thanks|thank you|ok|okay|got it|cool|great)\b/i.test(lower)) return 'conversational';
-      if (/^(help|what can you do|what do you do)\b/i.test(lower)) return 'conversational';
-      if (/\b(how does|how do).*(scor|rating|algorithm|methodology|work)\b/.test(lower)) return 'conversational';
-      if (/\bwhat('s| is) a good (score|rating)\b/.test(lower)) return 'conversational';
+      if (
+        /^(hi|hello|hey|thanks|thank you|ok|okay|got it|cool|great)\b/i.test(
+          lower,
+        )
+      )
+        return 'conversational';
+      if (/^(help|what can you do|what do you do)\b/i.test(lower))
+        return 'conversational';
+      if (
+        /\b(how does|how do).*(scor|rating|algorithm|methodology|work)\b/.test(
+          lower,
+        )
+      )
+        return 'conversational';
+      if (/\bwhat('s| is) a good (score|rating)\b/.test(lower))
+        return 'conversational';
     }
 
     // FOLLOW-UP: "out of those / of those / from that list" + price/trend → comparison so get_time_series is available
-    const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lower);
-    const priceOrTrend = /\b(price|drop|appreciation|trend|year|growth|drastic)\b/i.test(lower);
+    const followUpRef =
+      /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(
+        lower,
+      );
+    const priceOrTrend =
+      /\b(price|drop|appreciation|trend|year|growth|drastic)\b/i.test(lower);
     if (followUpRef && priceOrTrend) return 'comparison';
 
     // COMPARISON - check before ranking so "compare top in A to top in B" gets multiple tools/iterations
-    if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower)) return 'comparison';
-    if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower)) return 'comparison';
-    if (/\b(difference|delta|gap)\b.*\bbetween\b/.test(lower)) return 'comparison';
+    if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower))
+      return 'comparison';
+    if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower))
+      return 'comparison';
+    if (/\b(difference|delta|gap)\b.*\bbetween\b/.test(lower))
+      return 'comparison';
 
     // RANKING - most common, fastest path
     const rankingPatterns = [
@@ -321,13 +400,21 @@ export class AnalyticsChatService {
       /\b(zillow|realtor|census)\b.*\b(data|table)\b/,
     ];
     if (rawPatterns.some((p) => p.test(lower))) return 'raw_data';
-    if (/\b(price|rent|value|zhvi|zri|unemployment|population|income)\b/.test(lower) &&
-      !/\b(compare|rank|best|top)\b/.test(lower)) {
+    if (
+      /\b(price|rent|value|zhvi|zri|unemployment|population|income)\b/.test(
+        lower,
+      ) &&
+      !/\b(compare|rank|best|top)\b/.test(lower)
+    ) {
       return 'raw_data';
     }
 
     // ML/analysis
-    if (/\b(predict|regression|cluster|correlat|feature.*importance|optim.*weight|backtest|validat)\b/.test(lower)) {
+    if (
+      /\b(predict|regression|cluster|correlat|feature.*importance|optim.*weight|backtest|validat)\b/.test(
+        lower,
+      )
+    ) {
       return 'ml_analysis';
     }
 
@@ -335,7 +422,8 @@ export class AnalyticsChatService {
     if (/\b(news|article|happening|recent.*event)\b/.test(lower)) return 'news';
 
     // Geography
-    if (/\b(similar|neighbors?|nearby|like|around)\b/.test(lower)) return 'geography';
+    if (/\b(similar|neighbors?|nearby|like|around)\b/.test(lower))
+      return 'geography';
 
     return 'analysis';
   }
@@ -343,15 +431,36 @@ export class AnalyticsChatService {
   /**
    * Max allowed tool iterations by intent (prevents over-thinking simple queries).
    */
-  private getMaxIterations(intent: 'conversational' | 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography'): number {
+  private getMaxIterations(
+    intent:
+      | 'conversational'
+      | 'ranking'
+      | 'filtering'
+      | 'comparison'
+      | 'analysis'
+      | 'raw_data'
+      | 'ml_analysis'
+      | 'news'
+      | 'geography',
+  ): number {
     switch (intent) {
-      case 'conversational': return 1; // No tools, direct answer
-      case 'ranking': return 2; // Allow 1 retry or refinement
-      case 'filtering': return 3;
-      case 'comparison': return 5; // Comparison often needs multiple lookups
-      case 'raw_data': return 3;
-      case 'analysis': case 'ml_analysis': case 'news': case 'geography': return 5;
-      default: return 5;
+      case 'conversational':
+        return 1; // No tools, direct answer
+      case 'ranking':
+        return 2; // Allow 1 retry or refinement
+      case 'filtering':
+        return 3;
+      case 'comparison':
+        return 5; // Comparison often needs multiple lookups
+      case 'raw_data':
+        return 3;
+      case 'analysis':
+      case 'ml_analysis':
+      case 'news':
+      case 'geography':
+        return 5;
+      default:
+        return 5;
     }
   }
 
@@ -363,28 +472,40 @@ export class AnalyticsChatService {
     userMode: 'homebuyer' | 'investor',
     userPreferences?: Record<string, unknown>,
   ): string {
-    const modeDescription = userMode === 'homebuyer'
-      ? 'HomeReady (Homebuyer/Renter)'
-      : 'InvestorEdge (Investor)';
+    const modeDescription =
+      userMode === 'homebuyer'
+        ? 'PropertyIQ (Homebuyer/Renter)'
+        : 'PropertyIQ (Investor)';
 
-    const primaryScore = userMode === 'homebuyer' ? 'homeready_score' : 'investoredge_score';
+    const primaryScore = 'propertyiq_score';
 
     // Build profile sections
     const profileSections: string[] = [];
 
     profileSections.push(`User Mode: ${modeDescription}`);
     profileSections.push(`Primary Score: ${primaryScore}`);
-    profileSections.push(`Default Score for Queries: Use ${primaryScore} unless user specifies otherwise`);
+    profileSections.push(
+      `Default Score for Queries: Use ${primaryScore} unless user specifies otherwise`,
+    );
 
     // Geographic preferences
     if (userPreferences?.location) {
       profileSections.push(`\nGEOGRAPHIC PREFERENCES:`);
       profileSections.push(`- Home Location: ${userPreferences.location}`);
-      profileSections.push(`- When user asks for "local markets" or "my area", prioritize this location`);
+      profileSections.push(
+        `- When user asks for "local markets" or "my area", prioritize this location`,
+      );
     }
-    if (userPreferences?.preferredStates && Array.isArray(userPreferences.preferredStates)) {
-      profileSections.push(`- Preferred States: ${(userPreferences.preferredStates as string[]).join(', ')}`);
-      profileSections.push(`- Consider these states when providing recommendations`);
+    if (
+      userPreferences?.preferredStates &&
+      Array.isArray(userPreferences.preferredStates)
+    ) {
+      profileSections.push(
+        `- Preferred States: ${(userPreferences.preferredStates as string[]).join(', ')}`,
+      );
+      profileSections.push(
+        `- Consider these states when providing recommendations`,
+      );
     }
 
     // Financial preferences
@@ -402,16 +523,25 @@ export class AnalyticsChatService {
     if (userMode === 'investor') {
       profileSections.push(`\nINVESTMENT PREFERENCES:`);
       if (userPreferences?.investmentStrategy) {
-        profileSections.push(`- Strategy: ${userPreferences.investmentStrategy}`);
+        profileSections.push(
+          `- Strategy: ${userPreferences.investmentStrategy}`,
+        );
       }
       if (userPreferences?.riskTolerance) {
-        profileSections.push(`- Risk Tolerance: ${userPreferences.riskTolerance}`);
+        profileSections.push(
+          `- Risk Tolerance: ${userPreferences.riskTolerance}`,
+        );
       }
       if (userPreferences?.timeHorizon) {
         profileSections.push(`- Time Horizon: ${userPreferences.timeHorizon}`);
       }
-      if (userPreferences?.propertyTypes && Array.isArray(userPreferences.propertyTypes)) {
-        profileSections.push(`- Property Types: ${(userPreferences.propertyTypes as string[]).join(', ')}`);
+      if (
+        userPreferences?.propertyTypes &&
+        Array.isArray(userPreferences.propertyTypes)
+      ) {
+        profileSections.push(
+          `- Property Types: ${(userPreferences.propertyTypes as string[]).join(', ')}`,
+        );
       }
     }
 
@@ -419,20 +549,34 @@ export class AnalyticsChatService {
     if (userMode === 'homebuyer') {
       profileSections.push(`\nHOMEBUYER PREFERENCES:`);
       if (userPreferences?.householdSize) {
-        profileSections.push(`- Household Size: ${userPreferences.householdSize}`);
+        profileSections.push(
+          `- Household Size: ${userPreferences.householdSize}`,
+        );
       }
-      if (userPreferences?.priorities && Array.isArray(userPreferences.priorities)) {
-        profileSections.push(`- Priorities: ${(userPreferences.priorities as string[]).join(', ')}`);
+      if (
+        userPreferences?.priorities &&
+        Array.isArray(userPreferences.priorities)
+      ) {
+        profileSections.push(
+          `- Priorities: ${(userPreferences.priorities as string[]).join(', ')}`,
+        );
       }
     }
 
     // Saved searches / watchlist
-    if (userPreferences?.watchlist && Array.isArray(userPreferences.watchlist)) {
+    if (
+      userPreferences?.watchlist &&
+      Array.isArray(userPreferences.watchlist)
+    ) {
       profileSections.push(`\nWATCHLIST:`);
-      (userPreferences.watchlist as any[]).forEach((item: any) => {
-        profileSections.push(`- ${item.name || item.geography_name} (${item.geography_type})`);
+      userPreferences.watchlist.forEach((item: any) => {
+        profileSections.push(
+          `- ${item.name || item.geography_name} (${item.geography_type})`,
+        );
       });
-      profileSections.push(`- Consider these markets when providing recommendations`);
+      profileSections.push(
+        `- Consider these markets when providing recommendations`,
+      );
     }
 
     return `
@@ -456,27 +600,35 @@ IMPORTANT:
    * When the latest user message refers to "those/them/from that list", include
    * more of the previous assistant reply so "those" is unambiguous.
    */
-  private buildDynamicContext(
-    conversationHistory: ChatMessage[],
-  ): string {
+  private buildDynamicContext(conversationHistory: ChatMessage[]): string {
     const recentHistory = conversationHistory.slice(-4);
     const lastMsg = recentHistory[recentHistory.length - 1];
     const lastIsUser = lastMsg?.role === 'user';
-    const lastContent = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
-    const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lastContent);
+    const lastContent =
+      typeof lastMsg?.content === 'string' ? lastMsg.content : '';
+    const followUpRef =
+      /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(
+        lastContent,
+      );
 
-    const historyContext = recentHistory.length > 0
-      ? recentHistory
-        .map((msg) => {
-          const content = typeof msg.content === 'string' ? msg.content.substring(0, 150) : '[Tool usage]';
-          return `${msg.role}: ${content}`;
-        })
-        .join('\n')
-      : 'First query in conversation';
+    const historyContext =
+      recentHistory.length > 0
+        ? recentHistory
+            .map((msg) => {
+              const content =
+                typeof msg.content === 'string'
+                  ? msg.content.substring(0, 150)
+                  : '[Tool usage]';
+              return `${msg.role}: ${content}`;
+            })
+            .join('\n')
+        : 'First query in conversation';
 
     let refBlock = '';
     if (followUpRef && lastIsUser && conversationHistory.length >= 2) {
-      const prevAssistant = [...conversationHistory].reverse().find((m) => m.role === 'assistant');
+      const prevAssistant = [...conversationHistory]
+        .reverse()
+        .find((m) => m.role === 'assistant');
       if (prevAssistant && typeof prevAssistant.content === 'string') {
         const excerpt = prevAssistant.content.substring(0, 800);
         refBlock = `\n\nREFERENCE (what "those" / "that list" refers to — from your previous reply):\n${excerpt}${prevAssistant.content.length > 800 ? '...' : ''}\n\n`;
@@ -500,7 +652,9 @@ USER QUERY:`;
 
     switch (intent) {
       case 'conversational':
-        this.logger.log(`[Quinn Tools] Conversational - NO tools (direct answer from digest/context)`);
+        this.logger.log(
+          `[Quinn Tools] Conversational - NO tools (direct answer from digest/context)`,
+        );
         return [];
 
       case 'ranking':
@@ -508,56 +662,101 @@ USER QUERY:`;
         return allTools.filter((t) => t.name === 'get_rankings');
 
       case 'filtering':
-        this.logger.log(`[Quinn Tools] Filtering - filter_geographies + get_rankings + analyze_data`);
+        this.logger.log(
+          `[Quinn Tools] Filtering - filter_geographies + get_rankings + analyze_data`,
+        );
         return allTools.filter((t) =>
-          ['filter_geographies', 'get_rankings', 'analyze_data'].includes(t.name)
+          ['filter_geographies', 'get_rankings', 'analyze_data'].includes(
+            t.name,
+          ),
         );
 
       case 'comparison':
-        this.logger.log(`[Quinn Tools] Comparison - benchmark + ranking/filter + time_series`);
+        this.logger.log(
+          `[Quinn Tools] Comparison - benchmark + ranking/filter + time_series`,
+        );
         return allTools.filter((t) =>
-          ['compare_to_benchmark', 'analyze_data', 'get_rankings', 'filter_geographies', 'get_time_series'].includes(t.name)
+          [
+            'compare_to_benchmark',
+            'analyze_data',
+            'get_rankings',
+            'filter_geographies',
+            'get_time_series',
+          ].includes(t.name),
         );
 
       case 'analysis':
-        this.logger.log(`[Quinn Tools] Analysis - cached tools only (no raw DB)`);
-        return allTools.filter((t) =>
-          !['query_database_table', 'search_database', 'aggregate_database', 'get_database_summary', 'get_database_tables', 'describe_database_table'].includes(t.name)
+        this.logger.log(
+          `[Quinn Tools] Analysis - cached tools only (no raw DB)`,
+        );
+        return allTools.filter(
+          (t) =>
+            ![
+              'query_database_table',
+              'search_database',
+              'aggregate_database',
+              'get_database_summary',
+              'get_database_tables',
+              'describe_database_table',
+            ].includes(t.name),
         );
 
       case 'raw_data':
         this.logger.log(`[Quinn Tools] Raw data - database tools`);
         return allTools.filter((t) =>
-          ['query_database_table', 'describe_database_table', 'aggregate_database', 'search_database'].includes(t.name)
+          [
+            'query_database_table',
+            'describe_database_table',
+            'aggregate_database',
+            'search_database',
+          ].includes(t.name),
         );
 
       case 'ml_analysis':
         this.logger.log(`[Quinn Tools] ML query - analysis tools`);
         return allTools.filter((t) =>
-          ['run_regression', 'get_feature_importance', 'cluster_markets',
-            'optimize_weights', 'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
+          [
+            'run_regression',
+            'get_feature_importance',
+            'cluster_markets',
+            'optimize_weights',
+            'analyze_raw_metrics',
+            'get_raw_metric_summary',
+          ].includes(t.name),
         );
 
       case 'news':
-        this.logger.log(`[Quinn Tools] News - using ranking/trend tools (news tools disabled)`);
+        this.logger.log(
+          `[Quinn Tools] News - using ranking/trend tools (news tools disabled)`,
+        );
         return allTools.filter((t) =>
-          ['get_rankings', 'get_time_series', 'compare_to_benchmark'].includes(t.name)
+          ['get_rankings', 'get_time_series', 'compare_to_benchmark'].includes(
+            t.name,
+          ),
         );
 
       case 'geography':
         this.logger.log(`[Quinn Tools] Geography - location tools`);
         return allTools.filter((t) =>
-          ['find_similar_geographies', 'compare_to_neighbors', 'find_neighboring_geographies'].includes(t.name)
+          [
+            'find_similar_geographies',
+            'compare_to_neighbors',
+            'find_neighboring_geographies',
+          ].includes(t.name),
         );
 
       default:
         this.logger.log(`[Quinn Tools] Default - core tools`);
         return allTools.filter((t) =>
-          ['get_rankings', 'filter_geographies', 'analyze_data', 'compare_to_benchmark'].includes(t.name)
+          [
+            'get_rankings',
+            'filter_geographies',
+            'analyze_data',
+            'compare_to_benchmark',
+          ].includes(t.name),
         );
     }
   }
-
 
   /**
    * Build a compact text digest from warm cache results.
@@ -566,12 +765,18 @@ USER QUERY:`;
    */
   private async buildDataDigest(): Promise<void> {
     const lines: string[] = [];
-    lines.push('CURRENT DATA SNAPSHOT (answer directly from this when possible, no tool call needed):');
+    lines.push(
+      'CURRENT DATA SNAPSHOT (answer directly from this when possible, no tool call needed):',
+    );
     lines.push(`Data as of: ${new Date().toISOString().slice(0, 10)}`);
     lines.push('');
 
     // Helper: extract ranking lines from a cached tool result
-    const formatRankings = async (toolName: string, params: Record<string, any>, label: string): Promise<string | null> => {
+    const formatRankings = async (
+      toolName: string,
+      params: Record<string, any>,
+      label: string,
+    ): Promise<string | null> => {
       if (!this.redisService.isAvailable()) return null;
 
       const cached = await this.redisService.get(toolName, params);
@@ -581,9 +786,17 @@ USER QUERY:`;
       if (!Array.isArray(rankings) || rankings.length === 0) return null;
 
       const items = rankings.map((r: any) => {
-        const name = (r.geography_name || r.name || r.geography_id || '').replace(/,/g, '');
+        const name = (
+          r.geography_name ||
+          r.name ||
+          r.geography_id ||
+          ''
+        ).replace(/,/g, '');
         const score = r.score != null ? r.score.toFixed(1) : '';
-        const appr = r.appreciation_12m != null ? ` (${(r.appreciation_12m * 100).toFixed(1)}%)` : '';
+        const appr =
+          r.appreciation_12m != null
+            ? ` (${(r.appreciation_12m * 100).toFixed(1)}%)`
+            : '';
         return `${name} ${score}${appr}`;
       });
 
@@ -591,89 +804,140 @@ USER QUERY:`;
     };
 
     // Helper: extract benchmark data
-    const formatBenchmark = async (params: Record<string, any>): Promise<string | null> => {
+    const formatBenchmark = async (
+      params: Record<string, any>,
+    ): Promise<string | null> => {
       if (!this.redisService.isAvailable()) return null;
 
-      const cached = await this.redisService.get('compare_to_benchmark', params);
+      const cached = await this.redisService.get(
+        'compare_to_benchmark',
+        params,
+      );
       if (!cached?.success) return null;
 
       const comp = cached.data?.comparison;
       if (!comp) return null;
 
       const parts: string[] = [];
-      if (comp.benchmark_avg_score != null) parts.push(`avg score ${comp.benchmark_avg_score.toFixed(1)}`);
-      if (comp.benchmark_avg_appreciation_12m != null) parts.push(`avg 12m appr ${(comp.benchmark_avg_appreciation_12m * 100).toFixed(1)}%`);
-      if (comp.avg_investoredge_score != null) parts.push(`avg investoredge ${comp.avg_investoredge_score.toFixed(1)}`);
-      if (comp.avg_homeready_score != null) parts.push(`avg homeready ${comp.avg_homeready_score.toFixed(1)}`);
-      if (comp.avg_market_health_score != null) parts.push(`avg market_health ${comp.avg_market_health_score.toFixed(1)}`);
+      if (comp.benchmark_avg_score != null)
+        parts.push(`avg score ${comp.benchmark_avg_score.toFixed(1)}`);
+      if (comp.benchmark_avg_appreciation_12m != null)
+        parts.push(
+          `avg 12m appr ${(comp.benchmark_avg_appreciation_12m * 100).toFixed(1)}%`,
+        );
+      if (comp.avg_propertyiq_score != null)
+        parts.push(`avg propertyiq ${comp.avg_propertyiq_score.toFixed(1)}`);
 
-      return parts.length > 0 ? `NATIONAL BENCHMARK: ${parts.join(', ')}` : null;
+      return parts.length > 0
+        ? `NATIONAL BENCHMARK: ${parts.join(', ')}`
+        : null;
     };
 
-    const scoreLabels: Record<string, string> = {
-      investoredge_score: 'INVESTOREDGE',
-      homeready_score: 'HOMEREADY',
-      market_health_score: 'MARKET_HEALTH',
-    };
-
-    // --- TOP METROS BY EACH SCORE TYPE (top 10 from cached top-20) ---
-    for (const scoreType of ['investoredge_score', 'homeready_score', 'market_health_score'] as const) {
-      const label = scoreLabels[scoreType];
-      const top = await formatRankings('get_rankings', {
-        filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: false,
-      }, `TOP 10 METROS BY ${label}`);
+    // --- TOP METROS BY PROPERTYIQ SCORE (top 10 from cached top-20) ---
+    {
+      const top = await formatRankings(
+        'get_rankings',
+        {
+          filter: { geography_type: 'metro', score_type: 'propertyiq_score' },
+          limit: 10,
+          ascending: false,
+        },
+        'TOP 10 METROS BY PROPERTYIQ',
+      );
       if (top) lines.push(top);
     }
 
     // --- BOTTOM METROS ---
-    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
-      const label = scoreLabels[scoreType];
-      const bottom = await formatRankings('get_rankings', {
-        filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: true,
-      }, `BOTTOM 10 METROS BY ${label}`);
+    {
+      const bottom = await formatRankings(
+        'get_rankings',
+        {
+          filter: { geography_type: 'metro', score_type: 'propertyiq_score' },
+          limit: 10,
+          ascending: true,
+        },
+        'BOTTOM 10 METROS BY PROPERTYIQ',
+      );
       if (bottom) lines.push(bottom);
     }
 
     // --- STATE-LEVEL RANKINGS ---
     lines.push('');
-    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
-      const label = scoreLabels[scoreType];
-      const top = await formatRankings('get_rankings', {
-        filter: { geography_type: 'state', score_type: scoreType }, limit: 10, ascending: false,
-      }, `TOP 10 STATES BY ${label}`);
+    {
+      const top = await formatRankings(
+        'get_rankings',
+        {
+          filter: { geography_type: 'state', score_type: 'propertyiq_score' },
+          limit: 10,
+          ascending: false,
+        },
+        'TOP 10 STATES BY PROPERTYIQ',
+      );
       if (top) lines.push(top);
     }
-    const bottomStates = await formatRankings('get_rankings', {
-      filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: true,
-    }, 'BOTTOM 10 STATES BY INVESTOREDGE');
+    const bottomStates = await formatRankings(
+      'get_rankings',
+      {
+        filter: { geography_type: 'state', score_type: 'propertyiq_score' },
+        limit: 10,
+        ascending: true,
+      },
+      'BOTTOM 10 STATES BY PROPERTYIQ',
+    );
     if (bottomStates) lines.push(bottomStates);
 
-    // --- TOP METROS BY STATE (InvestorEdge + HomeReady) ---
+    // --- TOP METROS BY STATE ---
     lines.push('');
-    const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
+    const popularStates = [
+      'TX',
+      'CA',
+      'FL',
+      'AZ',
+      'NC',
+      'GA',
+      'TN',
+      'CO',
+      'WA',
+      'OH',
+    ];
     for (const state of popularStates) {
-      const ie = await formatRankings('get_rankings', {
-        filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [state] }, limit: 10, ascending: false,
-      }, `TOP ${state} METROS (INVESTOREDGE)`);
-      if (ie) lines.push(ie);
-
-      const hr = await formatRankings('get_rankings', {
-        filter: { geography_type: 'metro', score_type: 'homeready_score', states: [state] }, limit: 10, ascending: false,
-      }, `TOP ${state} METROS (HOMEREADY)`);
-      if (hr) lines.push(hr);
+      const top = await formatRankings(
+        'get_rankings',
+        {
+          filter: {
+            geography_type: 'metro',
+            score_type: 'propertyiq_score',
+            states: [state],
+          },
+          limit: 10,
+          ascending: false,
+        },
+        `TOP ${state} METROS (PROPERTYIQ)`,
+      );
+      if (top) lines.push(top);
     }
 
     // --- TOP COUNTIES ---
-    const counties = await formatRankings('get_rankings', {
-      filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false,
-    }, 'TOP 10 COUNTIES BY INVESTOREDGE');
-    if (counties) { lines.push(''); lines.push(counties); }
+    const counties = await formatRankings(
+      'get_rankings',
+      {
+        filter: { geography_type: 'county', score_type: 'propertyiq_score' },
+        limit: 10,
+        ascending: false,
+      },
+      'TOP 10 COUNTIES BY PROPERTYIQ',
+    );
+    if (counties) {
+      lines.push('');
+      lines.push(counties);
+    }
 
     // --- NATIONAL BENCHMARKS ---
     lines.push('');
-    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
+    {
       const benchmark = await formatBenchmark({
-        filter: { geography_type: 'metro', score_type: scoreType }, benchmark_type: 'national',
+        filter: { geography_type: 'metro', score_type: 'propertyiq_score' },
+        benchmark_type: 'national',
       });
       if (benchmark) lines.push(benchmark);
     }
@@ -681,7 +945,9 @@ USER QUERY:`;
     // Only set digest if we got meaningful content (more than just the header)
     if (lines.length > 3) {
       this.dataDigest = lines.join('\n');
-      this.logger.log(`[Quinn Digest] Built data digest: ${this.dataDigest.length} bytes, ${lines.length} lines`);
+      this.logger.log(
+        `[Quinn Digest] Built data digest: ${this.dataDigest.length} bytes, ${lines.length} lines`,
+      );
     } else {
       this.dataDigest = '';
       this.logger.warn('[Quinn Digest] No cached data available for digest');
@@ -698,31 +964,106 @@ USER QUERY:`;
     let cached = 0;
 
     // All 50 states
-    const allStates = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
-    const topStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
+    const allStates = [
+      'AL',
+      'AK',
+      'AZ',
+      'AR',
+      'CA',
+      'CO',
+      'CT',
+      'DE',
+      'FL',
+      'GA',
+      'HI',
+      'ID',
+      'IL',
+      'IN',
+      'IA',
+      'KS',
+      'KY',
+      'LA',
+      'ME',
+      'MD',
+      'MA',
+      'MI',
+      'MN',
+      'MS',
+      'MO',
+      'MT',
+      'NE',
+      'NV',
+      'NH',
+      'NJ',
+      'NM',
+      'NY',
+      'NC',
+      'ND',
+      'OH',
+      'OK',
+      'OR',
+      'PA',
+      'RI',
+      'SC',
+      'SD',
+      'TN',
+      'TX',
+      'UT',
+      'VT',
+      'VA',
+      'WA',
+      'WV',
+      'WI',
+      'WY',
+    ];
+    const topStates = [
+      'TX',
+      'CA',
+      'FL',
+      'AZ',
+      'NC',
+      'GA',
+      'TN',
+      'CO',
+      'WA',
+      'OH',
+    ];
 
-    const commonQueries: Array<{ tool: string; params: Record<string, any> }> = [];
+    const commonQueries: Array<{ tool: string; params: Record<string, any> }> =
+      [];
 
     // === METRO RANKINGS - MULTIPLE LIMIT VALUES ===
     // Cover common limit variations (5, 10, 15, 20, 25, 30) to increase cache hit rate
     const limits = [5, 10, 15, 20, 25, 30];
-    const scoreTypes = ['investoredge_score', 'homeready_score', 'market_health_score'];
+    const scoreTypes = [
+      'propertyiq_score',
+      'propertyiq_score',
+      'propertyiq_score',
+    ];
 
     for (const limit of limits) {
       for (const scoreType of scoreTypes) {
         // Top metros
         commonQueries.push({
           tool: 'get_rankings',
-          params: { filter: { geography_type: 'metro', score_type: scoreType }, limit, ascending: false }
+          params: {
+            filter: { geography_type: 'metro', score_type: scoreType },
+            limit,
+            ascending: false,
+          },
         });
       }
     }
 
     // Bottom metros (limit 10 only)
-    for (const scoreType of ['investoredge_score', 'homeready_score']) {
+    for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
       commonQueries.push({
         tool: 'get_rankings',
-        params: { filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: true }
+        params: {
+          filter: { geography_type: 'metro', score_type: scoreType },
+          limit: 10,
+          ascending: true,
+        },
       });
     }
 
@@ -730,16 +1071,24 @@ USER QUERY:`;
     for (const scoreType of scoreTypes) {
       commonQueries.push({
         tool: 'get_rankings',
-        params: { filter: { geography_type: 'state', score_type: scoreType }, limit: 10, ascending: false }
+        params: {
+          filter: { geography_type: 'state', score_type: scoreType },
+          limit: 10,
+          ascending: false,
+        },
       });
     }
 
     // === COUNTY LEVEL ===
     for (const limit of [10, 20]) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'get_rankings',
-          params: { filter: { geography_type: 'county', score_type: scoreType }, limit, ascending: false }
+          params: {
+            filter: { geography_type: 'county', score_type: scoreType },
+            limit,
+            ascending: false,
+          },
         });
       }
     }
@@ -747,56 +1096,104 @@ USER QUERY:`;
     // === ALL 50 STATES - METRO RANKINGS ===
     // Cache top metros for all states (not just top 10) to handle "best metros in [state]" queries
     for (const state of allStates) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'get_rankings',
-          params: { filter: { geography_type: 'metro', score_type: scoreType, states: [state] }, limit: 10, ascending: false }
+          params: {
+            filter: {
+              geography_type: 'metro',
+              score_type: scoreType,
+              states: [state],
+            },
+            limit: 10,
+            ascending: false,
+          },
         });
       }
     }
 
     // === COUNTY RANKINGS BY STATE (TOP 15 STATES) ===
-    const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH', 'IL', 'NY', 'VA', 'PA', 'OR'];
+    const popularStates = [
+      'TX',
+      'CA',
+      'FL',
+      'AZ',
+      'NC',
+      'GA',
+      'TN',
+      'CO',
+      'WA',
+      'OH',
+      'IL',
+      'NY',
+      'VA',
+      'PA',
+      'OR',
+    ];
     for (const state of popularStates) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'get_rankings',
-          params: { filter: { geography_type: 'county', score_type: scoreType, states: [state] }, limit: 10, ascending: false }
+          params: {
+            filter: {
+              geography_type: 'county',
+              score_type: scoreType,
+              states: [state],
+            },
+            limit: 10,
+            ascending: false,
+          },
         });
       }
     }
 
     // === ZIP-LEVEL RANKINGS FOR TOP 5 STATES ===
     for (const state of ['TX', 'CA', 'FL', 'AZ', 'NC']) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'get_rankings',
-          params: { filter: { geography_type: 'zip', score_type: scoreType, states: [state] }, limit: 10, ascending: false }
+          params: {
+            filter: {
+              geography_type: 'zip',
+              score_type: scoreType,
+              states: [state],
+            },
+            limit: 10,
+            ascending: false,
+          },
         });
       }
     }
 
     // === BENCHMARK COMPARISONS ===
     for (const geoType of ['metro', 'state', 'county']) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'compare_to_benchmark',
-          params: { filter: { geography_type: geoType, score_type: scoreType }, benchmark_type: 'national' }
+          params: {
+            filter: { geography_type: geoType, score_type: scoreType },
+            benchmark_type: 'national',
+          },
         });
       }
     }
 
     // === ANALYSIS QUERIES ===
     for (const geoType of ['metro', 'state']) {
-      for (const scoreType of ['investoredge_score', 'homeready_score']) {
+      for (const scoreType of ['propertyiq_score', 'propertyiq_score']) {
         commonQueries.push({
           tool: 'analyze_data',
-          params: { filter: { geography_type: geoType, score_type: scoreType }, horizons: [12] }
+          params: {
+            filter: { geography_type: geoType, score_type: scoreType },
+            horizons: [12],
+          },
         });
       }
     }
 
-    this.logger.log(`[Quinn Cache] Preparing to warm ${commonQueries.length} queries`);
+    this.logger.log(
+      `[Quinn Cache] Preparing to warm ${commonQueries.length} queries`,
+    );
 
     // Execute queries in parallel batches to avoid overwhelming the Python service
     const batchSize = 5;
@@ -810,24 +1207,34 @@ USER QUERY:`;
             if (this.redisService.isAvailable()) {
               const existing = await this.redisService.get(tool, params);
               if (existing) {
-                this.logger.debug(`[Quinn Cache] Skipping ${tool} - already cached`);
+                this.logger.debug(
+                  `[Quinn Cache] Skipping ${tool} - already cached`,
+                );
                 cached++;
                 return;
               }
             }
 
-            this.logger.log(`[Quinn Cache] Warming ${tool} (${i + 1}/${commonQueries.length})`);
+            this.logger.log(
+              `[Quinn Cache] Warming ${tool} (${i + 1}/${commonQueries.length})`,
+            );
 
             const result = await this.toolsService.executeTool(tool, params);
 
             if (result.success) {
               cached++;
-              this.logger.log(`[Quinn Cache] ✓ Cached ${tool} (${cached}/${commonQueries.length})`);
+              this.logger.log(
+                `[Quinn Cache] ✓ Cached ${tool} (${cached}/${commonQueries.length})`,
+              );
             } else {
-              this.logger.warn(`[Quinn Cache] ✗ Failed to cache ${tool}: ${result.error}`);
+              this.logger.warn(
+                `[Quinn Cache] ✗ Failed to cache ${tool}: ${result.error}`,
+              );
             }
           } catch (error) {
-            this.logger.error(`[Quinn Cache] Error warming ${tool}: ${error.message}`);
+            this.logger.error(
+              `[Quinn Cache] Error warming ${tool}: ${error.message}`,
+            );
           }
         }),
       );
@@ -839,30 +1246,33 @@ USER QUERY:`;
     }
 
     const duration = Date.now() - startTime;
-    this.logger.log(`[Quinn Cache] ✓ Warm-up complete: ${cached}/${commonQueries.length} queries cached in ${(duration / 1000).toFixed(1)}s`);
+    this.logger.log(
+      `[Quinn Cache] ✓ Warm-up complete: ${cached}/${commonQueries.length} queries cached in ${(duration / 1000).toFixed(1)}s`,
+    );
 
     // Get cache stats from Redis
     if (this.redisService.isAvailable()) {
       const stats = this.redisService.getStats();
-      this.logger.log(`[Quinn Cache] Redis stats: ${stats.hits} hits, ${stats.misses} misses, ${stats.hitRate.toFixed(1)}% hit rate`);
+      this.logger.log(
+        `[Quinn Cache] Redis stats: ${stats.hits} hits, ${stats.misses} misses, ${stats.hitRate.toFixed(1)}% hit rate`,
+      );
     }
 
     // Build compact text digest from cached results for LLM prompt injection
     await this.buildDataDigest();
   }
 
-
-
   /**
    * Process a chat message with streaming response
    * Yields text chunks as they're generated
    */
-  async * chatStream(
+  async *chatStream(
     conversationId: string,
     userMessage: string,
     context?: Record<string, any>,
   ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
-    if (!this.providers.size) throw new Error('AI Provider not initialized - check API Keys');
+    if (!this.providers.size)
+      throw new Error('AI Provider not initialized - check API Keys');
 
     let conversation = this.conversations.get(conversationId);
     if (!conversation) {
@@ -886,20 +1296,35 @@ USER QUERY:`;
     const rawTools = this.getRelevantTools(userMessage);
     this.logger.log(`[Quinn Stream Tools] Providing ${rawTools.length} tools`);
 
-    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
-    const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
+    const userMode =
+      (conversation.context?.userMode as 'homebuyer' | 'investor') ||
+      'homebuyer';
+    const userProfilePrompt = this.buildUserProfilePrompt(
+      userMode,
+      conversation.context as any,
+    );
     // Inject digest for all query types except those that need specialized tools without digest context
     // This enables fast LLM responses while tools still provide visualization data
-    const digestIntents = new Set(['conversational', 'ranking', 'filtering', 'comparison', 'analysis']);
-    const systemPrompt = this.dataDigest && digestIntents.has(queryIntent)
-      ? `${userProfilePrompt}\n${this.dataDigest}`
-      : userProfilePrompt;
+    const digestIntents = new Set([
+      'conversational',
+      'ranking',
+      'filtering',
+      'comparison',
+      'analysis',
+    ]);
+    const systemPrompt =
+      this.dataDigest && digestIntents.has(queryIntent)
+        ? `${userProfilePrompt}\n${this.dataDigest}`
+        : userProfilePrompt;
 
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
 
     const initialModel = this.selectInitialModel(userMessage);
-    const providerOrder = this.provider === 'anthropic' ? ['anthropic', 'openai'] : ['openai', 'anthropic'];
+    const providerOrder =
+      this.provider === 'anthropic'
+        ? ['anthropic', 'openai']
+        : ['openai', 'anthropic'];
 
     let successful = false;
     let lastError: Error | null = null;
@@ -911,11 +1336,14 @@ USER QUERY:`;
 
       let loopModel = initialModel;
       if (providerId !== this.provider) {
-        loopModel = providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
+        loopModel =
+          providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
       }
 
       try {
-        this.logger.log(`[Quinn Stream] Starting via ${providerId.toUpperCase()} (${loopModel})...`);
+        this.logger.log(
+          `[Quinn Stream] Starting via ${providerId.toUpperCase()} (${loopModel})...`,
+        );
 
         const stream = provider.chatStream({
           conversationId,
@@ -923,7 +1351,7 @@ USER QUERY:`;
           tools: rawTools,
           systemPrompt,
           model: loopModel,
-          maxIterations
+          maxIterations,
         });
 
         for await (const chunk of stream) {
@@ -933,9 +1361,10 @@ USER QUERY:`;
 
         successful = true;
         break;
-
       } catch (e) {
-        this.logger.warn(`[Quinn Stream] Provider ${providerId} failed: ${e.message}`);
+        this.logger.warn(
+          `[Quinn Stream] Provider ${providerId} failed: ${e.message}`,
+        );
         lastError = e;
       }
     }
@@ -944,7 +1373,6 @@ USER QUERY:`;
 
     conversation.messages.push({ role: 'assistant', content: accumulatedText });
   }
-
 
   /**
    * Process a chat message and return response (non-streaming)
@@ -962,9 +1390,14 @@ USER QUERY:`;
     toolsUsed: string[];
     structuredData?: StructuredData;
     modelUsed?: string;
-    metadata?: { intent: string; toolCallCount: number; totalExecutionTime: number };
+    metadata?: {
+      intent: string;
+      toolCallCount: number;
+      totalExecutionTime: number;
+    };
   }> {
-    if (!this.providers.size) throw new Error('AI Provider not initialized - check API Keys');
+    if (!this.providers.size)
+      throw new Error('AI Provider not initialized - check API Keys');
 
     let conversation = this.conversations.get(conversationId);
     if (!conversation) {
@@ -985,7 +1418,9 @@ USER QUERY:`;
 
     const queryIntent = this.getQueryIntent(userMessage);
     const maxIterations = this.getMaxIterations(queryIntent);
-    this.logger.log(`[Quinn Intent] Detected: ${queryIntent}, max iterations: ${maxIterations}`);
+    this.logger.log(
+      `[Quinn Intent] Detected: ${queryIntent}, max iterations: ${maxIterations}`,
+    );
 
     const rawTools = this.getRelevantTools(userMessage);
     this.logger.log(`[Quinn Tools] Providing ${rawTools.length} tools`);
@@ -994,20 +1429,35 @@ USER QUERY:`;
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
 
-    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
-    const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
+    const userMode =
+      (conversation.context?.userMode as 'homebuyer' | 'investor') ||
+      'homebuyer';
+    const userProfilePrompt = this.buildUserProfilePrompt(
+      userMode,
+      conversation.context as any,
+    );
     // Inject digest for most query types to enable fast LLM context.
     // Tools are still called to generate visualization data (structuredData).
     // This gives fast text responses + clean UI visualizations.
-    const digestIntents = new Set(['conversational', 'ranking', 'filtering', 'comparison', 'analysis']);
-    const systemPrompt = this.dataDigest && digestIntents.has(queryIntent)
-      ? `${userProfilePrompt}\n${this.dataDigest}`
-      : userProfilePrompt;
+    const digestIntents = new Set([
+      'conversational',
+      'ranking',
+      'filtering',
+      'comparison',
+      'analysis',
+    ]);
+    const systemPrompt =
+      this.dataDigest && digestIntents.has(queryIntent)
+        ? `${userProfilePrompt}\n${this.dataDigest}`
+        : userProfilePrompt;
     const dynamicContext = this.buildDynamicContext(conversation.messages);
 
     // Initial Model Selection
     const initialModel = this.selectInitialModel(userMessage);
-    const providerOrder = this.provider === 'anthropic' ? ['anthropic', 'openai'] : ['openai', 'anthropic'];
+    const providerOrder =
+      this.provider === 'anthropic'
+        ? ['anthropic', 'openai']
+        : ['openai', 'anthropic'];
 
     let successful = false;
     let lastError: Error | null = null;
@@ -1022,11 +1472,14 @@ USER QUERY:`;
 
       let loopModel = initialModel;
       if (providerId !== this.provider) {
-        loopModel = providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
+        loopModel =
+          providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
       }
 
       try {
-        this.logger.log(`[Quinn Chat] Processing via ${providerId} (${loopModel})`);
+        this.logger.log(
+          `[Quinn Chat] Processing via ${providerId} (${loopModel})`,
+        );
 
         // Inject dynamic context into the last message for the provider call
         // We clone messages to avoid mutating conversation persistence permanently with verbose context
@@ -1043,18 +1496,22 @@ USER QUERY:`;
           tools: rawTools,
           systemPrompt,
           model: loopModel,
-          maxIterations
+          maxIterations,
         });
 
-        conversation.messages.push({ role: 'assistant', content: result.content });
+        conversation.messages.push({
+          role: 'assistant',
+          content: result.content,
+        });
         finalResult = result;
         usedModel = loopModel;
         accumulatedToolsUsed = result.toolsUsed;
         successful = true;
         break;
-
       } catch (e) {
-        this.logger.warn(`[Quinn Chat] Provider ${providerId} failed: ${e.message}`);
+        this.logger.warn(
+          `[Quinn Chat] Provider ${providerId} failed: ${e.message}`,
+        );
         lastError = e;
       }
     }
@@ -1062,45 +1519,64 @@ USER QUERY:`;
     if (!successful) throw lastError || new Error('No AI provider available');
 
     // Extract structured data fallback logic
-    this.logger.debug(`[Quinn Chat] Mapping ${finalResult.toolResults.length} tool results for extraction`);
-    const toolResultsData = finalResult.toolResults.map((r: any, idx: number) => {
-      this.logger.debug(`[Quinn Chat] Result ${idx}: toolName=${r.toolName || 'MISSING'}, dataKeys=${JSON.stringify(Object.keys(r.data || {}))}`);
-      return {
-        toolName: r.toolName || 'unknown',
-        data: r.data
-      };
-    });
+    this.logger.debug(
+      `[Quinn Chat] Mapping ${finalResult.toolResults.length} tool results for extraction`,
+    );
+    const toolResultsData = finalResult.toolResults.map(
+      (r: any, idx: number) => {
+        this.logger.debug(
+          `[Quinn Chat] Result ${idx}: toolName=${r.toolName || 'MISSING'}, dataKeys=${JSON.stringify(Object.keys(r.data || {}))}`,
+        );
+        return {
+          toolName: r.toolName || 'unknown',
+          data: r.data,
+        };
+      },
+    );
 
-    this.logger.debug(`[Quinn Chat] Starting structured data extraction for message: "${userMessage?.slice(0, 50)}..."`);
-    const structuredData = this.extractStructuredData(toolResultsData, userMessage);
+    this.logger.debug(
+      `[Quinn Chat] Starting structured data extraction for message: "${userMessage?.slice(0, 50)}..."`,
+    );
+    const structuredData = this.extractStructuredData(
+      toolResultsData,
+      userMessage,
+    );
     if (structuredData) {
-      this.logger.log(`[Quinn Chat] Extraction SUCCESS: ${JSON.stringify(Object.keys(structuredData))}`);
+      this.logger.log(
+        `[Quinn Chat] Extraction SUCCESS: ${JSON.stringify(Object.keys(structuredData))}`,
+      );
     } else {
       this.logger.warn(`[Quinn Chat] Extraction returned UNDEFINED`);
     }
 
     // Fallback response generation
     if (!finalResult.content && structuredData) {
-      finalResult.content = this.buildFallbackResponseFromStructuredData(structuredData);
+      finalResult.content =
+        this.buildFallbackResponseFromStructuredData(structuredData);
       // correction in history
-      conversation.messages[conversation.messages.length - 1].content = finalResult.content;
+      conversation.messages[conversation.messages.length - 1].content =
+        finalResult.content;
     }
 
     const processingTime = Date.now() - chatStartTime;
-    this.logger.log(`[Quinn Chat] Completed. Tools: ${accumulatedToolsUsed.length}, Time: ${processingTime}ms`);
+    this.logger.log(
+      `[Quinn Chat] Completed. Tools: ${accumulatedToolsUsed.length}, Time: ${processingTime}ms`,
+    );
 
     return {
-      response: finalResult.content || (finalResult.toolsUsed && finalResult.toolsUsed.length > 0 ?
-        'Here are the results from your request.' :
-        'I processed that but have no text response.'),
+      response:
+        finalResult.content ||
+        (finalResult.toolsUsed && finalResult.toolsUsed.length > 0
+          ? 'Here are the results from your request.'
+          : 'I processed that but have no text response.'),
       toolsUsed: accumulatedToolsUsed,
       structuredData,
       modelUsed: usedModel,
       metadata: {
         intent: queryIntent,
         toolCallCount: accumulatedToolsUsed.length,
-        totalExecutionTime: processingTime
-      }
+        totalExecutionTime: processingTime,
+      },
     };
   }
 
@@ -1110,11 +1586,17 @@ USER QUERY:`;
    */
   private parseSingleGeographyFocus(userMessage: string): string | null {
     const m = userMessage.trim();
-    let match = m.match(/\btell\s+me\s+(?:everything\s+)?about\s+(?:the\s+)?(?:market\s+in\s+)?([^,.?!]+?)(?:\s+market|\s+metro|\s+county|$|\.|\?|,)/i);
+    let match = m.match(
+      /\btell\s+me\s+(?:everything\s+)?about\s+(?:the\s+)?(?:market\s+in\s+)?([^,.?!]+?)(?:\s+market|\s+metro|\s+county|$|\.|\?|,)/i,
+    );
     if (match) return match[1].trim();
-    match = m.match(/(?:market|metro|area)\s+in\s+([^,.?!]+?)(?:\s+market|\s+metro|$|\.|\?|,)/i);
+    match = m.match(
+      /(?:market|metro|area)\s+in\s+([^,.?!]+?)(?:\s+market|\s+metro|$|\.|\?|,)/i,
+    );
     if (match) return match[1].trim();
-    match = m.match(/\b(?:analyze|profile|report\s+on)\s+(?:the\s+)?([^,.?!]+?)(?:\s+market|$|\.|\?|,)/i);
+    match = m.match(
+      /\b(?:analyze|profile|report\s+on)\s+(?:the\s+)?([^,.?!]+?)(?:\s+market|$|\.|\?|,)/i,
+    );
     if (match) return match[1].trim();
     return null;
   }
@@ -1123,17 +1605,29 @@ USER QUERY:`;
    * Parse "compare A and B" / "A vs B" from user message. Returns [nameA, nameB] or null.
    * Works for any geography level (metros, counties, zips, states).
    */
-  private parseCompareTwoGeographies(userMessage: string): [string, string] | null {
+  private parseCompareTwoGeographies(
+    userMessage: string,
+  ): [string, string] | null {
     const m = userMessage.trim();
     // "compare zip codes 21701 and 22309" / "compare zip code X and Y" / "compare zips X and Y"
-    const zipMatch = m.match(/\bcompare\s+(?:zip\s*codes?|zips?)\s+(\d{5})\s+and\s+(\d{5})/i)
-      || m.match(/\bcompare\s+.+?\s+(\d{5})\s+and\s+(\d{5})/i);
+    const zipMatch =
+      m.match(
+        /\bcompare\s+(?:zip\s*codes?|zips?)\s+(\d{5})\s+and\s+(\d{5})/i,
+      ) || m.match(/\bcompare\s+.+?\s+(\d{5})\s+and\s+(\d{5})/i);
     if (zipMatch) return [zipMatch[1], zipMatch[2]];
 
-    let match = m.match(/\bcompare\s+(.+?)\s+and\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i);
+    let match = m.match(
+      /\bcompare\s+(.+?)\s+and\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i,
+    );
     if (match) {
-      const a = match[1].trim().replace(/\s+as\s+.*$/i, '').trim();
-      const b = match[2].trim().replace(/\s+as\s+.*$/i, '').trim();
+      const a = match[1]
+        .trim()
+        .replace(/\s+as\s+.*$/i, '')
+        .trim();
+      const b = match[2]
+        .trim()
+        .replace(/\s+as\s+.*$/i, '')
+        .trim();
       if (a && b) return [a, b];
     }
     match = m.match(/(.+?)\s+vs\.?\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i);
@@ -1142,7 +1636,9 @@ USER QUERY:`;
       const b = match[2].trim();
       if (a && b && a.length > 1 && b.length > 1) return [a, b];
     }
-    match = m.match(/(.+?)\s+and\s+(.+?)\s+as\s+(investment|homebuyer|market)/i);
+    match = m.match(
+      /(.+?)\s+and\s+(.+?)\s+as\s+(investment|homebuyer|market)/i,
+    );
     if (match) {
       const a = match[1].trim();
       const b = match[2].trim();
@@ -1162,30 +1658,46 @@ USER QUERY:`;
     if (toolResults.length === 0) return undefined;
 
     const structured: StructuredData = {};
-    const compareNames = userMessage ? this.parseCompareTwoGeographies(userMessage) : null;
-    const singleGeoFocus = userMessage && !compareNames ? this.parseSingleGeographyFocus(userMessage) : null;
+    const compareNames = userMessage
+      ? this.parseCompareTwoGeographies(userMessage)
+      : null;
+    const singleGeoFocus =
+      userMessage && !compareNames
+        ? this.parseSingleGeographyFocus(userMessage)
+        : null;
 
     for (const { toolName, data } of toolResults) {
       if (!data) {
-        this.logger.warn(`[Quinn Extract] Skipping tool ${toolName} due to null data`);
+        this.logger.warn(
+          `[Quinn Extract] Skipping tool ${toolName} due to null data`,
+        );
         continue;
       }
-      this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
+      this.logger.debug(
+        `[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`,
+      );
 
       // Unwrap if data is nested under data.data (analytics service wraps responses)
       const actualData = data.data || data;
       if (!actualData) {
-        this.logger.warn(`[Quinn Extract] Skipping tool ${toolName} due to null actualData`);
+        this.logger.warn(
+          `[Quinn Extract] Skipping tool ${toolName} due to null actualData`,
+        );
         continue;
       }
-      this.logger.debug(`[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`);
+      this.logger.debug(
+        `[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`,
+      );
 
       // Handle rankings from get_rankings tool (including failed calls: data = { success, data, error })
       if (toolName === 'get_rankings') {
         const isFailed = data?.success === false && data?.error;
         if (isFailed) {
           structured.errorMessage = data.error;
-        } else if (actualData?.error && (!actualData.rankings || actualData.rankings.length === 0)) {
+        } else if (
+          actualData?.error &&
+          (!actualData.rankings || actualData.rankings.length === 0)
+        ) {
           structured.errorMessage = actualData.error;
         }
         if (actualData?.rankings?.length) {
@@ -1194,35 +1706,53 @@ USER QUERY:`;
             name: item.geography_name || item.geography_id,
             id: item.geography_id,
             score: item.score,
-            appreciation: (Math.abs(item.appreciation_12m) > 100)
-              ? item.appreciation_12m / 100
-              : item.appreciation_12m,
+            appreciation:
+              Math.abs(item.appreciation_12m) > 100
+                ? item.appreciation_12m / 100
+                : item.appreciation_12m,
             state: item.state,
           }));
           // "Compare A and B" (any geography): show only the requested geographies, not a generic top-N
           if (compareNames && compareNames.length === 2) {
             const [na, nb] = compareNames.map((s) => s.toLowerCase().trim());
-            items = items.filter(
-              (it: { name: string; id?: string }) => {
-                const name = (it.name || '').toLowerCase();
-                const id = (it.id ?? '').toString().toLowerCase();
-                return name.includes(na) || id.includes(na) || name.includes(nb) || id.includes(nb);
-              },
-            );
+            items = items.filter((it: { name: string; id?: string }) => {
+              const name = (it.name || '').toLowerCase();
+              const id = (it.id ?? '').toString().toLowerCase();
+              return (
+                name.includes(na) ||
+                id.includes(na) ||
+                name.includes(nb) ||
+                id.includes(nb)
+              );
+            });
             if (items.length > 0) {
-              this.logger.log(`[Quinn Extract] Filtered to ${items.length} items for "compare ${compareNames[0]} and ${compareNames[1]}"`);
+              this.logger.log(
+                `[Quinn Extract] Filtered to ${items.length} items for "compare ${compareNames[0]} and ${compareNames[1]}"`,
+              );
             }
           } else if (singleGeoFocus) {
             // "Tell me about [geo]" / "market in [geo]": show only that geography, not full state list
             const focus = singleGeoFocus.toLowerCase();
-            items = items.filter((it: { name: string }) => (it.name || '').toLowerCase().includes(focus));
+            items = items.filter((it: { name: string }) =>
+              (it.name || '').toLowerCase().includes(focus),
+            );
             if (items.length > 0) {
-              this.logger.log(`[Quinn Extract] Filtered to ${items.length} item(s) for single-geo focus "${singleGeoFocus}"`);
+              this.logger.log(
+                `[Quinn Extract] Filtered to ${items.length} item(s) for single-geo focus "${singleGeoFocus}"`,
+              );
             }
           }
-          this.logger.debug(`[Quinn Extract] Found rankings: ${items.length} items`);
+          this.logger.debug(
+            `[Quinn Extract] Found rankings: ${items.length} items`,
+          );
           structured.rankings = {
-            title: compareNames ? 'Comparison' : singleGeoFocus ? `${singleGeoFocus} — Performance` : (actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers'),
+            title: compareNames
+              ? 'Comparison'
+              : singleGeoFocus
+                ? `${singleGeoFocus} — Performance`
+                : actualData.direction === 'bottom'
+                  ? 'Bottom Performers'
+                  : 'Top Performers',
             direction: actualData.direction || 'top',
             items,
           };
@@ -1281,12 +1811,14 @@ USER QUERY:`;
             { key: 'score', label: 'Score', type: 'score' },
             { key: 'appreciation', label: '12M Return', type: 'percent' },
           ],
-          rows: actualData.top_performers.slice(0, 10).map((p: any, i: number) => ({
-            rank: i + 1,
-            name: p.geography_name || p.geography_id,
-            score: p.score,
-            appreciation: p.appreciation_12m,
-          })),
+          rows: actualData.top_performers
+            .slice(0, 10)
+            .map((p: any, i: number) => ({
+              rank: i + 1,
+              name: p.geography_name || p.geography_id,
+              score: p.score,
+              appreciation: p.appreciation_12m,
+            })),
           highlightTop: 3,
         };
 
@@ -1316,12 +1848,15 @@ USER QUERY:`;
   /**
    * Format rankings for inclusion in the response text (intro + list).
    */
-  private formatRankingsForResponse(rankings: StructuredData['rankings']): string {
+  private formatRankingsForResponse(
+    rankings: StructuredData['rankings'],
+  ): string {
     if (!rankings?.items?.length) return '';
     const label = rankings.direction === 'bottom' ? 'Bottom' : 'Top';
     const top = rankings.items.slice(0, 10);
     const lines = top.map(
-      (i) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`,
+      (i) =>
+        `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`,
     );
     return `${label} markets:\n${lines.join('\n')}`;
   }
@@ -1330,13 +1865,16 @@ USER QUERY:`;
    * Build a short fallback text from structured data when the model returned no text.
    * Ensures the user always receives an answer when tools succeeded.
    */
-  private buildFallbackResponseFromStructuredData(structured: StructuredData): string {
+  private buildFallbackResponseFromStructuredData(
+    structured: StructuredData,
+  ): string {
     const parts: string[] = [];
     if (structured.errorMessage) {
       parts.push(`Unable to retrieve rankings: ${structured.errorMessage}`);
     }
     if (structured.rankings?.items?.length) {
-      const label = structured.rankings.direction === 'bottom' ? 'bottom' : 'top';
+      const label =
+        structured.rankings.direction === 'bottom' ? 'bottom' : 'top';
       parts.push(`Here are the ${label} markets.`);
     }
     if (structured.comparison) {
@@ -1418,11 +1956,11 @@ USER QUERY:`;
 
 ## COMMON QUERIES
 
-**"Find hot markets"** → First ASK which geography level, then get_rankings(geography_type=USER_CHOICE, score_type="investoredge", limit=10)
+**"Find hot markets"** → First ASK which geography level, then get_rankings(geography_type=USER_CHOICE, score_type="propertyiq_score", limit=10)
 
-**"Top Texas metros"** → get_rankings(geography_type="metro", score_type="investoredge", states=["TX"], limit=10)
+**"Top Texas metros"** → get_rankings(geography_type="metro", score_type="propertyiq_score", states=["TX"], limit=10)
 
-**"Best counties for investment"** → get_rankings(geography_type="county", score_type="investoredge", limit=10)
+**"Best counties for investment"** → get_rankings(geography_type="county", score_type="propertyiq_score", limit=10)
 
 **"Realtor hotness"** → query_database_table(table_name="realtor_metro", columns=["geography_name","hotness_rank"], order_by={"hotness_rank":"asc"}, limit=10)
 
@@ -1431,7 +1969,7 @@ USER QUERY:`;
 ## METRIC MAPPINGS
 - "home price" → zhvi (Zillow) or median_listing_price (Realtor)
 - "rent" → zri (Zillow)
-- "hottest markets" → hotness_rank (Realtor, lower=better) OR investoredge_score (PropertyIQ, higher=better)
+- "hottest markets" → hotness_rank (Realtor, lower=better) OR propertyiq_score (PropertyIQ, higher=better)
 - "unemployment" → unemployment_rate (Economic)
 - "population" → population (Census)
 
@@ -1483,8 +2021,6 @@ USER QUERY:`;
 - **EVEN IF** you know the answer from the injected context (Data Digest), you **MUST STILL CALL THE TOOL**.
 - The text answer alone is **INSUFFICIENT**. The UI widget is required.
 - Example: User asks "Top markets in Texas". Context says "Top market is Kingsville". You MUST still call \`get_rankings\` to show the full list in a table.`;
-
-
 
     // Add context if provided (e.g., focused on specific geography)
     if (context?.geographyType && context?.geographyId) {

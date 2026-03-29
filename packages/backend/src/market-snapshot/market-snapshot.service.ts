@@ -28,17 +28,11 @@ export interface MarketSnapshotResponse {
     type: string;
   };
   scores: {
-    homeready: {
+    propertyiq: {
       score: number;
       grade: string;
       components?: Record<string, number>;
     } | null;
-    investoredge: {
-      score: number;
-      grade: string;
-      components?: Record<string, number>;
-    } | null;
-    markethealth: { score: number; grade: string } | null;
   };
   metrics: Record<string, MarketSnapshotMetric>;
   lastUpdated: string;
@@ -432,55 +426,26 @@ export class MarketSnapshotService {
 
     // Process Scores
     let scores: MarketSnapshotResponse['scores'] = {
-      homeready: null,
-      investoredge: null,
-      markethealth: null,
+      propertyiq: null,
     };
     if (scoresResult.status === 'fulfilled' && scoresResult.value) {
       const s = scoresResult.value;
       if (s.location_name) geographyName = s.location_name;
       if (s.score_date) lastUpdated = s.score_date;
       scores = {
-        homeready: s.scores?.homeready
+        propertyiq: s.scores?.propertyiq
           ? {
-              score: Math.round(s.scores.homeready.score),
-              grade: s.scores.homeready.grade,
-              components: s.scores.homeready.components,
-            }
-          : null,
-        investoredge: s.scores?.investoredge
-          ? {
-              score: Math.round(s.scores.investoredge.score),
-              grade: s.scores.investoredge.grade,
-              components: s.scores.investoredge.components,
-            }
-          : null,
-        markethealth: s.scores?.markethealth
-          ? {
-              score: Math.round(s.scores.markethealth.score),
-              grade: s.scores.markethealth.grade,
+              score: Math.round(s.scores.propertyiq.score),
+              grade: s.scores.propertyiq.grade,
+              components: s.scores.propertyiq.components,
             }
           : null,
       };
 
-      // Also add score values as metrics for data card display
-      if (s.scores?.homeready) {
-        metrics['homeready_score'] = toMetric(
-          Math.round(s.scores.homeready.score),
-          s.score_date ?? null,
-          'propertyiq',
-        );
-      }
-      if (s.scores?.investoredge) {
-        metrics['investoredge_score'] = toMetric(
-          Math.round(s.scores.investoredge.score),
-          s.score_date ?? null,
-          'propertyiq',
-        );
-      }
-      if (s.scores?.markethealth) {
-        metrics['market_health_score'] = toMetric(
-          Math.round(s.scores.markethealth.score),
+      // Also add score value as metric for data card display
+      if (s.scores?.propertyiq) {
+        metrics['propertyiq_score'] = toMetric(
+          Math.round(s.scores.propertyiq.score),
           s.score_date ?? null,
           'propertyiq',
         );

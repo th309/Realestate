@@ -11,9 +11,7 @@ interface MarketAnalysisBody {
     { value: number | null; formatted: string; change: number | null }
   >;
   scores: {
-    homeready: { score: number; grade: string };
-    investoredge: { score: number; grade: string };
-    markethealth: { score: number; grade: string };
+    propertyiq: { score: number; grade: string };
   };
   lastUpdated?: string;
 }
@@ -22,9 +20,7 @@ interface MarketAnalysisBody {
 export class MarketAnalysisController {
   private readonly logger = new Logger(MarketAnalysisController.name);
 
-  constructor(
-    private readonly marketAnalysisService: MarketAnalysisService,
-  ) {}
+  constructor(private readonly marketAnalysisService: MarketAnalysisService) {}
 
   @Post(':geoType/:geoId/ai-analysis')
   async getAnalysis(
@@ -32,9 +28,7 @@ export class MarketAnalysisController {
     @Param('geoId') geoId: string,
     @Body() body: MarketAnalysisBody,
   ): Promise<{ success: boolean; analysis: MarketAnalysisResult }> {
-    this.logger.log(
-      `[AI Analysis] ${body.geoName} (${geoType}/${geoId})`,
-    );
+    this.logger.log(`[AI Analysis] ${body.geoName} (${geoType}/${geoId})`);
 
     const analysis = await this.marketAnalysisService.generateAnalysis({
       geoType,

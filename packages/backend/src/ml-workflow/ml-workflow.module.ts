@@ -3,8 +3,7 @@
  *
  * Provides endpoints for managing PropertyIQ ML workflow via the
  * PropertyIQ Analytics microservice:
- * - HomeReady scoring
- * - InvestorEdge scoring
+ * - PropertyIQ scoring
  * - Backtesting
  */
 

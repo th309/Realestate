@@ -5,9 +5,8 @@
  * data. Fetches top-scoring markets and score movers from the database,
  * builds prompt context, and returns MDX content for admin review.
  *
- * Three post types:
- * - Top 10 Homebuyer Markets (HomeReady scores)
- * - Top 10 Investor Markets (InvestorEdge scores)
+ * Post types:
+ * - Top 10 PropertyIQ Markets (unified score)
  * - Biggest Score Movers (month-over-month changes)
  */
 
@@ -17,6 +16,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { getTopMarkets, getScoreDates } from '../scoring/scoring-queries';
+import type { ScoreType } from '../scoring/formula-weights';
 import {
   BlogPostType,
   RankedMarket,
@@ -132,14 +132,14 @@ export class BlogGeneratorService {
   }
 
   private async generateHomebuyerPost(): Promise<GeneratedBlogPost> {
-    const markets = await this.fetchTopRankedMarkets('homeready');
+    const markets = await this.fetchTopRankedMarkets('propertyiq');
     const prompt = buildTopHomebuyerMarketsPrompt(markets);
     const mdx = await this.callDeepSeek(prompt);
     return this.buildResult('top_homebuyer_markets', mdx);
   }
 
   private async generateInvestorPost(): Promise<GeneratedBlogPost> {
-    const markets = await this.fetchTopRankedMarkets('investoredge');
+    const markets = await this.fetchTopRankedMarkets('propertyiq');
     const prompt = buildTopInvestorMarketsPrompt(markets);
     const mdx = await this.callDeepSeek(prompt);
     return this.buildResult('top_investor_markets', mdx);
@@ -157,7 +157,7 @@ export class BlogGeneratorService {
    * Uses the existing getTopMarkets query from scoring-queries.
    */
   private async fetchTopRankedMarkets(
-    scoreType: 'homeready' | 'investoredge',
+    scoreType: ScoreType,
   ): Promise<RankedMarket[]> {
     const topRows = await getTopMarkets(this.supabase, 'metro', scoreType, 10);
 
@@ -192,13 +192,13 @@ export class BlogGeneratorService {
           .from('propertyiq_scores')
           .select('location_id, location_name, score')
           .eq('geography', 'metro')
-          .eq('score_type', 'homeready')
+          .eq('score_type', 'propertyiq')
           .eq('score_date', currentDate),
         this.supabase
           .from('propertyiq_scores')
           .select('location_id, score')
           .eq('geography', 'metro')
-          .eq('score_type', 'homeready')
+          .eq('score_type', 'propertyiq')
           .eq('score_date', previousDate),
       ]);
 

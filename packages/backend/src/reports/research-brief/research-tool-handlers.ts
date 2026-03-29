@@ -62,12 +62,8 @@ export async function handleGetMarketSnapshot(
 
   const scores = scoreResult
     ? {
-        homeready: scoreResult.scores.homeready?.score ?? null,
-        homeready_grade: scoreResult.scores.homeready?.grade ?? null,
-        investoredge: scoreResult.scores.investoredge?.score ?? null,
-        investoredge_grade: scoreResult.scores.investoredge?.grade ?? null,
-        markethealth: scoreResult.scores.markethealth?.score ?? null,
-        markethealth_grade: scoreResult.scores.markethealth?.grade ?? null,
+        propertyiq: scoreResult.scores.propertyiq?.score ?? null,
+        propertyiq_grade: scoreResult.scores.propertyiq?.grade ?? null,
         location_name: scoreResult.location_name,
       }
     : null;
@@ -129,9 +125,7 @@ export async function handleCompareMarkets(
         region_id: region.region_id,
         geography_level: geoLevel,
         location_name: scoreResult?.location_name ?? region.region_id,
-        homeready: scoreResult?.scores.homeready?.score ?? null,
-        investoredge: scoreResult?.scores.investoredge?.score ?? null,
-        markethealth: scoreResult?.scores.markethealth?.score ?? null,
+        propertyiq: scoreResult?.scores.propertyiq?.score ?? null,
         metrics: metricsSimple,
       };
     }),

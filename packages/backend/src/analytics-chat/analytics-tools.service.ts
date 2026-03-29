@@ -29,7 +29,8 @@ export class AnalyticsToolsService {
     private readonly redisService: RedisService,
   ) {
     this.enabled =
-      this.configService.get<string>('ANALYTICS_TOOLS_ENABLED', 'true') === 'true';
+      this.configService.get<string>('ANALYTICS_TOOLS_ENABLED', 'true') ===
+      'true';
     this.analyticsBaseUrl =
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
@@ -37,7 +38,9 @@ export class AnalyticsToolsService {
       'ANALYTICS_SERVICE_SECRET',
     );
     if (!this.enabled) {
-      this.logger.log('[Analytics Tools] Disabled via ANALYTICS_TOOLS_ENABLED=false');
+      this.logger.log(
+        '[Analytics Tools] Disabled via ANALYTICS_TOOLS_ENABLED=false',
+      );
       return;
     }
     this.logger.log(`[Analytics Tools] Service URL: ${this.analyticsBaseUrl}`);
@@ -69,7 +72,9 @@ export class AnalyticsToolsService {
    */
   private async testConnectivity(): Promise<void> {
     try {
-      this.logger.log(`[Analytics Tools] Testing connectivity to ${this.analyticsBaseUrl}...`);
+      this.logger.log(
+        `[Analytics Tools] Testing connectivity to ${this.analyticsBaseUrl}...`,
+      );
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -80,13 +85,21 @@ export class AnalyticsToolsService {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        this.logger.log(`[Analytics Tools] ✓ Connected successfully (status: ${response.status})`);
+        this.logger.log(
+          `[Analytics Tools] ✓ Connected successfully (status: ${response.status})`,
+        );
       } else {
-        this.logger.warn(`[Analytics Tools] ⚠ Service responded with status: ${response.status}`);
+        this.logger.warn(
+          `[Analytics Tools] ⚠ Service responded with status: ${response.status}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`[Analytics Tools] ✗ Failed to connect: ${error.message}`);
-      this.logger.error(`[Analytics Tools] Tools will fail until Analytics service is reachable at ${this.analyticsBaseUrl}`);
+      this.logger.error(
+        `[Analytics Tools] ✗ Failed to connect: ${error.message}`,
+      );
+      this.logger.error(
+        `[Analytics Tools] Tools will fail until Analytics service is reachable at ${this.analyticsBaseUrl}`,
+      );
     }
   }
 
@@ -103,7 +116,9 @@ export class AnalyticsToolsService {
     }
     const startTime = Date.now();
     this.logger.log(`[Tool ${toolName}] === EXECUTING ===`);
-    this.logger.log(`[Tool ${toolName}] Analytics base URL: ${this.analyticsBaseUrl}`);
+    this.logger.log(
+      `[Tool ${toolName}] Analytics base URL: ${this.analyticsBaseUrl}`,
+    );
     this.logger.log(`[Tool ${toolName}] Arguments: ${JSON.stringify(args)}`);
 
     // Check Redis cache first
@@ -121,7 +136,11 @@ export class AnalyticsToolsService {
       let method = 'POST';
 
       // Handle special cases
-      if (toolName === 'get_available_filters' || toolName === 'get_database_tables' || toolName === 'get_database_summary') {
+      if (
+        toolName === 'get_available_filters' ||
+        toolName === 'get_database_tables' ||
+        toolName === 'get_database_summary'
+      ) {
         method = 'GET';
       } else if (toolName === 'describe_database_table' && args.table_name) {
         // Append table name to URL for describe endpoint
@@ -151,30 +170,48 @@ export class AnalyticsToolsService {
       }
       const fetchDuration = Date.now() - fetchStart;
 
-      this.logger.log(`[Tool ${toolName}] Response status: ${response.status} (${fetchDuration}ms)`);
+      this.logger.log(
+        `[Tool ${toolName}] Response status: ${response.status} (${fetchDuration}ms)`,
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[Tool ${toolName}] API error: ${response.status} - ${errorText.slice(0, 500)}`);
-        throw new Error(`API error: ${response.status} - ${errorText.slice(0, 200)}`);
+        this.logger.error(
+          `[Tool ${toolName}] API error: ${response.status} - ${errorText.slice(0, 500)}`,
+        );
+        throw new Error(
+          `API error: ${response.status} - ${errorText.slice(0, 200)}`,
+        );
       }
 
       const responseText = await response.text();
-      this.logger.log(`[Tool ${toolName}] Raw response (first 1000 chars): ${responseText.slice(0, 1000)}`);
-      this.logger.log(`[Tool ${toolName}] Response size: ${responseText.length} bytes`);
+      this.logger.log(
+        `[Tool ${toolName}] Raw response (first 1000 chars): ${responseText.slice(0, 1000)}`,
+      );
+      this.logger.log(
+        `[Tool ${toolName}] Response size: ${responseText.length} bytes`,
+      );
 
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        this.logger.error(`[Tool ${toolName}] JSON parse error: ${parseError.message}`);
-        this.logger.error(`[Tool ${toolName}] Raw response: ${responseText.slice(0, 500)}`);
+        this.logger.error(
+          `[Tool ${toolName}] JSON parse error: ${parseError.message}`,
+        );
+        this.logger.error(
+          `[Tool ${toolName}] Raw response: ${responseText.slice(0, 500)}`,
+        );
         throw new Error(`Invalid JSON from analytics service`);
       }
 
       const totalDuration = Date.now() - startTime;
-      this.logger.log(`[Tool ${toolName}] === SUCCESS === (${totalDuration}ms total)`);
-      this.logger.debug(`[Tool ${toolName}] Final data keys: ${JSON.stringify(Object.keys(data || {}))}`);
+      this.logger.log(
+        `[Tool ${toolName}] === SUCCESS === (${totalDuration}ms total)`,
+      );
+      this.logger.debug(
+        `[Tool ${toolName}] Final data keys: ${JSON.stringify(Object.keys(data || {}))}`,
+      );
 
       const result = { success: true, data };
 
@@ -186,7 +223,9 @@ export class AnalyticsToolsService {
       return result;
     } catch (error) {
       const totalDuration = Date.now() - startTime;
-      this.logger.error(`[Tool ${toolName}] === FAILED === (${totalDuration}ms)`);
+      this.logger.error(
+        `[Tool ${toolName}] === FAILED === (${totalDuration}ms)`,
+      );
       this.logger.error(`[Tool ${toolName}] Error: ${error.message}`);
       this.logger.error(`[Tool ${toolName}] Stack: ${error.stack}`);
       return { success: false, data: null, error: error.message };
@@ -272,7 +311,7 @@ Use when query includes filtering criteria:
   ✓ "metros with score above 80" → filter by score threshold
   ✓ "affordable high-scoring areas" → filter by score range
   ✓ "counties in the Southeast" → filter by multiple states
-  ✓ "zips with InvestorEdge over 90" → filter by score
+  ✓ "zips with PropertyIQ over 90" → filter by score
 
 DO NOT use if:
   ✗ Simple ranking query without filters → just use get_rankings
@@ -299,9 +338,7 @@ states (OPTIONAL):
   - Use for queries like "markets in Texas" or "metros in the Southeast"
 
 score_type (REQUIRED):
-  - "investoredge_score" = Filter by InvestorEdge score
-  - "homeready_score" = Filter by HomeReady score
-  - "market_health_score" = Filter by Market Health score
+  - "propertyiq_score" = Filter by PropertyIQ score (unified market quality score)
   - This determines WHICH score to apply min/max filters to
 
 min_score (OPTIONAL):
@@ -324,10 +361,10 @@ RETURNS:
   "filter_applied": {
     "geography_type": "metro",
     "states": ["TX"],
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "min_score": 80
   },
-  "summary": "Filtered to 25 metros in Texas with InvestorEdge score >= 80"
+  "summary": "Filtered to 25 metros in Texas with PropertyIQ score >= 80"
 }
 
 NOTE: This tool ONLY returns counts, not the actual data.
@@ -342,7 +379,7 @@ Step 1 - Filter:
 {
   "geography_type": "metro",
   "states": ["TX"],
-  "score_type": "investoredge_score"
+  "score_type": "propertyiq_score"
 }
 
 Step 2 - Rank (use same filter):
@@ -350,17 +387,17 @@ get_rankings({
   "filter": {
     "geography_type": "metro",
     "states": ["TX"],
-    "score_type": "investoredge_score"
+    "score_type": "propertyiq_score"
   },
   "limit": 10,
   "ascending": false
 })
 
-Example 2: "Find counties with HomeReady score above 80"
+Example 2: "Find counties with PropertyIQ score above 80"
 Step 1 - Filter:
 {
   "geography_type": "county",
-  "score_type": "homeready_score",
+  "score_type": "propertyiq_score",
   "min_score": 80
 }
 
@@ -368,7 +405,7 @@ Step 2 - Rank (use same filter):
 get_rankings({
   "filter": {
     "geography_type": "county",
-    "score_type": "homeready_score",
+    "score_type": "propertyiq_score",
     "min_score": 80
   },
   "limit": 10,
@@ -380,33 +417,38 @@ get_rankings({
             geography_type: {
               type: 'string',
               enum: ['state', 'metro', 'county', 'zip'],
-              description: 'REQUIRED. Type of geography to filter: metro, county, zip, or state',
+              description:
+                'REQUIRED. Type of geography to filter: metro, county, zip, or state',
             },
             states: {
               type: 'array',
               items: { type: 'string' },
-              description: 'OPTIONAL. State codes to include. Must be 2-letter uppercase codes like ["TX", "CA"]',
+              description:
+                'OPTIONAL. State codes to include. Must be 2-letter uppercase codes like ["TX", "CA"]',
             },
             min_score: {
               type: 'number',
               minimum: 0,
               maximum: 100,
-              description: 'OPTIONAL. Minimum score threshold (0-100). Use for "scores above X" queries',
+              description:
+                'OPTIONAL. Minimum score threshold (0-100). Use for "scores above X" queries',
             },
             max_score: {
               type: 'number',
               minimum: 0,
               maximum: 100,
-              description: 'OPTIONAL. Maximum score threshold (0-100). Use for "scores below X" queries',
+              description:
+                'OPTIONAL. Maximum score threshold (0-100). Use for "scores below X" queries',
             },
             score_type: {
               type: 'string',
               enum: [
-                'investoredge_score',
-                'homeready_score',
-                'market_health_score',
+                'propertyiq_score',
+                'propertyiq_score',
+                'propertyiq_score',
               ],
-              description: 'REQUIRED. Which score to filter by: investoredge_score (investors), homeready_score (homebuyers), market_health_score (overall)',
+              description:
+                'REQUIRED. Which score to filter by: propertyiq_score (investors), propertyiq_score (homebuyers), propertyiq_score (overall)',
             },
           },
           required: ['geography_type', 'score_type'],
@@ -447,7 +489,7 @@ filter (REQUIRED):
   Example:
   {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "states": ["TX", "CA"],
     "min_score": 70
   }
@@ -490,7 +532,7 @@ RETURNS:
   ],
   "filter_applied": {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "count_before_filter": 384,
     "count_after_filter": 50
   }
@@ -507,11 +549,11 @@ Interpretation:
 USAGE EXAMPLES:
 ═══════════════════════════════════════════════════════════════════
 
-Example 1: "What drives high InvestorEdge scores in Texas?"
+Example 1: "What drives high PropertyIQ scores in Texas?"
 {
   "filter": {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "states": ["TX"]
   },
   "horizons": [12, 36]
@@ -521,7 +563,7 @@ Example 2: "Statistical summary of top scoring metros"
 {
   "filter": {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "min_score": 80
   },
   "horizons": [12]
@@ -531,7 +573,7 @@ Example 3: "Analyze all counties"
 {
   "filter": {
     "geography_type": "county",
-    "score_type": "homeready_score"
+    "score_type": "propertyiq_score"
   }
 }`,
         input_schema: {
@@ -539,7 +581,8 @@ Example 3: "Analyze all counties"
           properties: {
             filter: {
               type: 'object',
-              description: 'REQUIRED. Filter criteria to apply before analysis. Must include geography_type and score_type.',
+              description:
+                'REQUIRED. Filter criteria to apply before analysis. Must include geography_type and score_type.',
               properties: {
                 geography_type: {
                   type: 'string',
@@ -549,7 +592,8 @@ Example 3: "Analyze all counties"
                 states: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: 'OPTIONAL. Filter to specific states: ["TX", "CA"]',
+                  description:
+                    'OPTIONAL. Filter to specific states: ["TX", "CA"]',
                 },
                 min_score: {
                   type: 'number',
@@ -561,7 +605,11 @@ Example 3: "Analyze all counties"
                 },
                 score_type: {
                   type: 'string',
-                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
+                  enum: [
+                    'propertyiq_score',
+                    'propertyiq_score',
+                    'propertyiq_score',
+                  ],
                   description: 'REQUIRED. Which score to analyze',
                 },
               },
@@ -570,7 +618,8 @@ Example 3: "Analyze all counties"
             horizons: {
               type: 'array',
               items: { type: 'integer' },
-              description: 'OPTIONAL. Time horizons in months for correlation analysis: [12, 36, 60]. Default: [12, 36]',
+              description:
+                'OPTIONAL. Time horizons in months for correlation analysis: [12, 36, 60]. Default: [12, 36]',
             },
           },
           required: ['filter'],
@@ -612,7 +661,7 @@ filter (REQUIRED):
   Example:
   {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "states": ["TX"]
   }
 
@@ -650,7 +699,7 @@ RETURNS:
   ],
   "benchmark_type": "national",
   "benchmark_score": 68.5,                 // Overall benchmark value
-  "score_type": "investoredge_score",
+  "score_type": "propertyiq_score",
   "geography_type": "metro"
 }
 
@@ -668,7 +717,7 @@ Example 1: "Compare Austin to national average"
 {
   "filter": {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "states": ["TX"]
   },
   "benchmark_type": "national"
@@ -679,7 +728,7 @@ Example 2: "How do Texas metros compare nationally?"
 {
   "filter": {
     "geography_type": "metro",
-    "score_type": "investoredge_score",
+    "score_type": "propertyiq_score",
     "states": ["TX"]
   },
   "benchmark_type": "national"
@@ -689,7 +738,7 @@ Example 3: "Is Miami above or below average?"
 {
   "filter": {
     "geography_type": "metro",
-    "score_type": "homeready_score",
+    "score_type": "propertyiq_score",
     "states": ["FL"]
   },
   "benchmark_type": "national"
@@ -699,7 +748,8 @@ Example 3: "Is Miami above or below average?"
           properties: {
             filter: {
               type: 'object',
-              description: 'REQUIRED. Defines which geographies to compare. Must include geography_type and score_type.',
+              description:
+                'REQUIRED. Defines which geographies to compare. Must include geography_type and score_type.',
               properties: {
                 geography_type: {
                   type: 'string',
@@ -709,11 +759,16 @@ Example 3: "Is Miami above or below average?"
                 states: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: 'OPTIONAL. Filter to specific states: ["TX", "FL"]',
+                  description:
+                    'OPTIONAL. Filter to specific states: ["TX", "FL"]',
                 },
                 score_type: {
                   type: 'string',
-                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
+                  enum: [
+                    'propertyiq_score',
+                    'propertyiq_score',
+                    'propertyiq_score',
+                  ],
                   description: 'REQUIRED. Which score to compare',
                 },
               },
@@ -722,7 +777,8 @@ Example 3: "Is Miami above or below average?"
             benchmark_type: {
               type: 'string',
               enum: ['national', 'regional'],
-              description: 'REQUIRED. Benchmark to compare against. "national" = US average (most common), "regional" = regional average',
+              description:
+                'REQUIRED. Benchmark to compare against. "national" = US average (most common), "regional" = regional average',
             },
           },
           required: ['filter', 'benchmark_type'],
@@ -756,14 +812,14 @@ TWO MODES OF OPERATION:
 MODE 1: SCORE-BASED RANKINGS (Most Common)
   - Use when query asks about "best markets", "high scores", "investment opportunities"
   - MUST include score_type in filter
-  - Valid score_types: "investoredge_score", "homeready_score", "market_health_score"
+  - Valid score_types: "propertyiq_score", "propertyiq_score", "propertyiq_score"
   - Omit or set sort_by to "score"
 
   Example Call:
   {
     "filter": {
       "geography_type": "metro",
-      "score_type": "investoredge_score"
+      "score_type": "propertyiq_score"
     },
     "limit": 10,
     "ascending": false
@@ -796,9 +852,9 @@ filter.geography_type (REQUIRED):
   - "state" = States
 
 filter.score_type (REQUIRED for score rankings, OMIT for appreciation rankings):
-  - "investoredge_score" = For investors (cash flow, appreciation, momentum)
-  - "homeready_score" = For homebuyers (affordability, appreciation, quality of life)
-  - "market_health_score" = Overall market condition
+  - "propertyiq_score" = For investors (cash flow, appreciation, momentum)
+  - "propertyiq_score" = For homebuyers (affordability, appreciation, quality of life)
+  - "propertyiq_score" = Overall market condition
   - INVALID VALUES: "yoy_price_growth", "appreciation", etc. (use sort_by instead)
 
 filter.states (OPTIONAL):
@@ -829,7 +885,7 @@ RETURNS:
       "geography_id": "12345",
       "geography_name": "Austin, TX",
       "geography_type": "metro",
-      "investoredge_score": 95.2,         // If score ranking
+      "propertyiq_score": 95.2,         // If score ranking
       "appreciation_12m": 15.3,           // If appreciation ranking
       "rank": 1
     },
@@ -837,7 +893,7 @@ RETURNS:
   ],
   "count": 10,
   "geography_type": "metro",
-  "sorted_by": "investoredge_score" or "appreciation_12m"
+  "sorted_by": "propertyiq_score" or "appreciation_12m"
 }
 
 ═══════════════════════════════════════════════════════════════════
@@ -847,17 +903,18 @@ COMMON MISTAKES TO AVOID:
 ❌ Using score_type for appreciation: {"score_type": "yoy_price_growth"}
 ✅ Use sort_by instead: {"sort_by": "appreciation_12m"}
 
-❌ Including score_type when using appreciation: {"score_type": "investoredge_score", "sort_by": "appreciation_12m"}
+❌ Including score_type when using appreciation: {"score_type": "propertyiq_score", "sort_by": "appreciation_12m"}
 ✅ Omit score_type for appreciation: {"sort_by": "appreciation_12m"}
 
-❌ Forgetting geography_type: {"score_type": "investoredge_score"}
-✅ Always include geography_type: {"geography_type": "metro", "score_type": "investoredge_score"}`,
+❌ Forgetting geography_type: {"score_type": "propertyiq_score"}
+✅ Always include geography_type: {"geography_type": "metro", "score_type": "propertyiq_score"}`,
         input_schema: {
           type: 'object',
           properties: {
             filter: {
               type: 'object',
-              description: 'Filter criteria. MUST include geography_type. For score rankings add score_type. For appreciation rankings do NOT add score_type.',
+              description:
+                'Filter criteria. MUST include geography_type. For score rankings add score_type. For appreciation rankings do NOT add score_type.',
               properties: {
                 geography_type: {
                   type: 'string',
@@ -867,12 +924,18 @@ COMMON MISTAKES TO AVOID:
                 states: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: 'OPTIONAL. Filter to specific states using 2-letter uppercase codes: ["TX", "CA"]',
+                  description:
+                    'OPTIONAL. Filter to specific states using 2-letter uppercase codes: ["TX", "CA"]',
                 },
                 score_type: {
                   type: 'string',
-                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
-                  description: 'REQUIRED for score rankings. MUST BE OMITTED for appreciation rankings. Valid values: investoredge_score, homeready_score, market_health_score',
+                  enum: [
+                    'propertyiq_score',
+                    'propertyiq_score',
+                    'propertyiq_score',
+                  ],
+                  description:
+                    'REQUIRED for score rankings. MUST BE OMITTED for appreciation rankings. Valid values: propertyiq_score, propertyiq_score, propertyiq_score',
                 },
               },
               required: ['geography_type'],
@@ -885,12 +948,14 @@ COMMON MISTAKES TO AVOID:
             },
             ascending: {
               type: 'boolean',
-              description: 'Sort direction. false = highest first (default), true = lowest first',
+              description:
+                'Sort direction. false = highest first (default), true = lowest first',
             },
             sort_by: {
               type: 'string',
               enum: ['score', 'appreciation_12m'],
-              description: 'What to sort by. "score" (default) = sort by PropertyIQ score. "appreciation_12m" = sort by 12-month price appreciation. When using appreciation_12m, DO NOT include score_type in filter.',
+              description:
+                'What to sort by. "score" (default) = sort by PropertyIQ score. "appreciation_12m" = sort by 12-month price appreciation. When using appreciation_12m, DO NOT include score_type in filter.',
             },
           },
           required: ['filter'],
@@ -905,7 +970,8 @@ COMMON MISTAKES TO AVOID:
           properties: {
             geography_id: {
               type: 'string',
-              description: 'The ID of the geography (e.g., CBSA code for metros)',
+              description:
+                'The ID of the geography (e.g., CBSA code for metros)',
             },
             geography_type: {
               type: 'string',
@@ -915,7 +981,8 @@ COMMON MISTAKES TO AVOID:
             metrics: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Metrics to retrieve, e.g., ["investoredge_score", "homeready_score"]',
+              description:
+                'Metrics to retrieve, e.g., ["propertyiq_score", "propertyiq_score"]',
             },
             months: {
               type: 'integer',
@@ -940,17 +1007,20 @@ COMMON MISTAKES TO AVOID:
             },
             target: {
               type: 'string',
-              description: 'Target variable: actual_appreciation_12m, actual_appreciation_36m, or actual_appreciation_60m',
+              description:
+                'Target variable: actual_appreciation_12m, actual_appreciation_36m, or actual_appreciation_60m',
             },
             features: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Feature columns to use. If not specified, auto-detects available score components.',
+              description:
+                'Feature columns to use. If not specified, auto-detects available score components.',
             },
             model_type: {
               type: 'string',
               enum: ['ols', 'ridge'],
-              description: 'Model type: ols (with p-values) or ridge (regularized)',
+              description:
+                'Model type: ols (with p-values) or ridge (regularized)',
             },
             states: {
               type: 'array',
@@ -1035,7 +1105,7 @@ COMMON MISTAKES TO AVOID:
             },
             score_type: {
               type: 'string',
-              enum: ['investoredge', 'homeready'],
+              enum: ['propertyiq'],
               description: 'Which score to optimize',
             },
             target: {
@@ -1109,12 +1179,14 @@ COMMON MISTAKES TO AVOID:
             },
             target: {
               type: 'string',
-              description: 'Target: actual_appreciation_12m, actual_appreciation_36m, or actual_appreciation_60m',
+              description:
+                'Target: actual_appreciation_12m, actual_appreciation_36m, or actual_appreciation_60m',
             },
             data_sources: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Sources to include: zillow, realtor, census, economic, calculated. Default: all.',
+              description:
+                'Sources to include: zillow, realtor, census, economic, calculated. Default: all.',
             },
             states: {
               type: 'array',
@@ -1150,8 +1222,8 @@ COMMON MISTAKES TO AVOID:
           properties: {
             score_type: {
               type: 'string',
-              enum: ['investoredge', 'homeready', 'market_health'],
-              description: 'Score type to validate (default: investoredge)',
+              enum: ['propertyiq'],
+              description: 'Score type to validate (default: propertyiq)',
             },
             geography_type: {
               type: 'string',
@@ -1166,7 +1238,8 @@ COMMON MISTAKES TO AVOID:
             horizons: {
               type: 'array',
               items: { type: 'integer' },
-              description: 'Time horizons in months to test, e.g., [12, 36, 60]. Default: [12, 36, 60]',
+              description:
+                'Time horizons in months to test, e.g., [12, 36, 60]. Default: [12, 36, 60]',
             },
             use_cache: {
               type: 'boolean',
@@ -1185,7 +1258,7 @@ COMMON MISTAKES TO AVOID:
           properties: {
             score_type: {
               type: 'string',
-              enum: ['investoredge', 'homeready', 'market_health'],
+              enum: ['propertyiq'],
               description: 'Score type to validate',
             },
             geography_type: {
@@ -1195,7 +1268,8 @@ COMMON MISTAKES TO AVOID:
             },
             horizon_months: {
               type: 'integer',
-              description: 'Time horizon in months: 12, 36, or 60 (default: 36)',
+              description:
+                'Time horizon in months: 12, 36, or 60 (default: 36)',
             },
             use_cache: {
               type: 'boolean',
@@ -1215,16 +1289,18 @@ COMMON MISTAKES TO AVOID:
             geography_types: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Geography levels to analyze, e.g., ["metro", "county", "zip"]. Default: ["metro", "county", "zip"]',
+              description:
+                'Geography levels to analyze, e.g., ["metro", "county", "zip"]. Default: ["metro", "county", "zip"]',
             },
             score_types: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Score types to compare, e.g., ["investoredge", "homeready", "market_health"]. Default: all three',
+              description: 'Score type to compare. Default: propertyiq',
             },
             horizon_months: {
               type: 'integer',
-              description: 'Time horizon for comparison in months (default: 36)',
+              description:
+                'Time horizon for comparison in months (default: 36)',
             },
           },
           required: [],
@@ -1234,7 +1310,7 @@ COMMON MISTAKES TO AVOID:
       {
         name: 'get_database_tables',
         description:
-          'Get list of all accessible real estate data tables in the database. Returns table names, row counts, and column information. Use this to discover what data is available. Only returns real estate tables (Zillow, Realtor, Census, Economic, Scores) plus user\'s own saved queries, watchlist, alerts, and conversation history.',
+          "Get list of all accessible real estate data tables in the database. Returns table names, row counts, and column information. Use this to discover what data is available. Only returns real estate tables (Zillow, Realtor, Census, Economic, Scores) plus user's own saved queries, watchlist, alerts, and conversation history.",
         input_schema: {
           type: 'object',
           properties: {},
@@ -1250,7 +1326,8 @@ COMMON MISTAKES TO AVOID:
           properties: {
             table_name: {
               type: 'string',
-              description: 'Name of the table to describe (e.g., "zillow_metro", "realtor_county", "propertyiq_scores")',
+              description:
+                'Name of the table to describe (e.g., "zillow_metro", "realtor_county", "propertyiq_scores")',
             },
           },
           required: ['table_name'],
@@ -1274,11 +1351,13 @@ COMMON MISTAKES TO AVOID:
             },
             filters: {
               type: 'object',
-              description: 'Filters to apply. Simple: {"column": "value"}. Range: {"column": {"gte": 100, "lte": 200}}. List: {"column": ["val1", "val2"]}. Pattern: {"column": {"like": "%pattern%"}}',
+              description:
+                'Filters to apply. Simple: {"column": "value"}. Range: {"column": {"gte": 100, "lte": 200}}. List: {"column": ["val1", "val2"]}. Pattern: {"column": {"like": "%pattern%"}}',
             },
             order_by: {
               type: 'string',
-              description: 'Column to sort by. Prefix with - for descending (e.g., "-period_date")',
+              description:
+                'Column to sort by. Prefix with - for descending (e.g., "-period_date")',
             },
             limit: {
               type: 'integer',
@@ -1306,12 +1385,14 @@ COMMON MISTAKES TO AVOID:
             tables: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Tables to search (omit to search common tables: geographies, zillow_metro, realtor_metro, propertyiq_scores)',
+              description:
+                'Tables to search (omit to search common tables: geographies, zillow_metro, realtor_metro, propertyiq_scores)',
             },
             columns: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Specific columns to search in (omit to search name/title/description columns)',
+              description:
+                'Specific columns to search in (omit to search name/title/description columns)',
             },
             limit_per_table: {
               type: 'integer',
@@ -1324,7 +1405,7 @@ COMMON MISTAKES TO AVOID:
       {
         name: 'aggregate_database',
         description:
-          'Run aggregation queries (COUNT, SUM, AVG, MIN, MAX) on tables. Use for analytics like "average score by state", "total metros per state", "min/max prices". Supports grouping and filtering. Examples: Count metros by state, Average InvestorEdge score, Sum of population by region.',
+          'Run aggregation queries (COUNT, SUM, AVG, MIN, MAX) on tables. Use for analytics like "average score by state", "total metros per state", "min/max prices". Supports grouping and filtering. Examples: Count metros by state, Average PropertyIQ score, Sum of population by region.',
         input_schema: {
           type: 'object',
           properties: {
@@ -1349,12 +1430,14 @@ COMMON MISTAKES TO AVOID:
                   },
                 },
               },
-              description: 'List of aggregations like [{"function": "avg", "column": "investoredge_score", "alias": "avg_score"}]',
+              description:
+                'List of aggregations like [{"function": "avg", "column": "propertyiq_score", "alias": "avg_score"}]',
             },
             group_by: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Columns to group by (e.g., ["parent_geography_id"] to group by state)',
+              description:
+                'Columns to group by (e.g., ["parent_geography_id"] to group by state)',
             },
             filters: {
               type: 'object',
@@ -1389,7 +1472,8 @@ COMMON MISTAKES TO AVOID:
           properties: {
             geography_id: {
               type: 'string',
-              description: 'Geography ID (e.g., FIPS code for counties, CBSA code for metros)',
+              description:
+                'Geography ID (e.g., FIPS code for counties, CBSA code for metros)',
             },
             geography_type: {
               type: 'string',
@@ -1399,7 +1483,8 @@ COMMON MISTAKES TO AVOID:
             method: {
               type: 'string',
               enum: ['same_state', 'adjacent', 'nearby'],
-              description: 'Method to find neighbors: same_state (all in state), adjacent (bordering), nearby (within radius). Default: same_state',
+              description:
+                'Method to find neighbors: same_state (all in state), adjacent (bordering), nearby (within radius). Default: same_state',
             },
           },
           required: ['geography_id'],
@@ -1408,7 +1493,7 @@ COMMON MISTAKES TO AVOID:
       {
         name: 'compare_to_neighbors',
         description:
-          'Compare a geography to its neighboring geographies across all key metrics (InvestorEdge, HomeReady, MarketHealth scores). Returns detailed comparison showing how the target ranks vs neighbors, percentile rankings, and whether it performs better/worse than average. Includes overall assessment and human-readable summary. Use when user asks: "How does McLean County compare to surrounding counties?", "Is Austin better than neighboring metros?", "Compare this market to nearby markets".',
+          'Compare a geography to its neighboring geographies across all key metrics (PropertyIQ scores). Returns detailed comparison showing how the target ranks vs neighbors, percentile rankings, and whether it performs better/worse than average. Includes overall assessment and human-readable summary. Use when user asks: "How does McLean County compare to surrounding counties?", "Is Austin better than neighboring metros?", "Compare this market to nearby markets".',
         input_schema: {
           type: 'object',
           properties: {
@@ -1418,7 +1503,8 @@ COMMON MISTAKES TO AVOID:
             },
             geography_name: {
               type: 'string',
-              description: 'Geography name (e.g., "McLean County, IL", "Austin, TX")',
+              description:
+                'Geography name (e.g., "McLean County, IL", "Austin, TX")',
             },
             geography_type: {
               type: 'string',
@@ -1428,7 +1514,8 @@ COMMON MISTAKES TO AVOID:
             metrics: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Metrics to compare (omit for default: investoredge_score, homeready_score, market_health_score)',
+              description:
+                'Metrics to compare (omit for default: propertyiq_score, propertyiq_score, propertyiq_score)',
             },
           },
           required: ['geography_id', 'geography_name'],
@@ -1452,19 +1539,23 @@ COMMON MISTAKES TO AVOID:
             },
             limit: {
               type: 'integer',
-              description: 'Max similar geographies to return (default: 10, max: 50)',
+              description:
+                'Max similar geographies to return (default: 10, max: 50)',
             },
             similarity_metrics: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Metrics to use for similarity (omit for scores: investoredge_score, homeready_score, market_health_score)',
+              description:
+                'Metrics to use for similarity (omit for scores: propertyiq_score, propertyiq_score, propertyiq_score)',
             },
           },
           required: ['geography_id'],
         },
       },
     ];
-    this.logger.debug(`Cached ${this.toolDefinitionsCache.length} tool definitions`);
+    this.logger.debug(
+      `Cached ${this.toolDefinitionsCache.length} tool definitions`,
+    );
     return this.toolDefinitionsCache;
   }
 }

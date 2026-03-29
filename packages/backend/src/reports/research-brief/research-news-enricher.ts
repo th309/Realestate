@@ -2,7 +2,7 @@
  * Research News Enricher
  *
  * Enriches research data with direct news fetching, using the same
- * pattern as HomeReady/InvestorEdge reports (NewsScoutService.getOrScoutNews
+ * pattern as PropertyIQ reports (NewsScoutService.getOrScoutNews
  * + formatNewsForPrompt). This does NOT rely on the agent's search_news
  * tool call — it guarantees news context in the research data.
  *

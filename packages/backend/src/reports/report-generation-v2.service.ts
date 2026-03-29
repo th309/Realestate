@@ -34,7 +34,12 @@ import {
 } from './report-generation-v2-custom';
 import { retryWithBackoff } from './report-ai-text-helpers';
 
-type ReportType = 'homeready' | 'investoredge' | 'comparison' | 'custom';
+type ReportType =
+  | 'propertyiq'
+  | 'homeready'
+  | 'investoredge'
+  | 'comparison'
+  | 'custom';
 
 @Injectable()
 export class ReportGenerationV2Service {
@@ -124,9 +129,8 @@ export class ReportGenerationV2Service {
 
     const audienceLabel =
       reportType === 'investoredge' ? 'real estate investor' : 'homebuyer';
-    const scoreKey =
-      reportType === 'investoredge' ? 'investoredge_score' : 'homeready_score';
-    const score = context[scoreKey] ?? 'N/A';
+    const score =
+      context['propertyiq_score'] ?? context['homeready_score'] ?? 'N/A';
 
     return `You are planning a ${reportType} market report for ${context.geography_name || 'a market'}.
 
@@ -141,7 +145,7 @@ Key inputs:
 - Market signal summary: ${context.market_signal_summary || 'None available'}
 
 Also generate the following (place these BEFORE the outline body):
-TITLE: A compelling, insight-driven report title (max 20 words) that captures the key finding. Not "HomeReady Report: Tampa, FL" — something that tells the reader what they'll learn.
+TITLE: A compelling, insight-driven report title (max 20 words) that captures the key finding. Not "PropertyIQ Report: Tampa, FL" — something that tells the reader what they'll learn.
 SUBTITLE: One sentence expanding on the title.
 
 Then produce a 150-200 word analytical outline for this report. Include:

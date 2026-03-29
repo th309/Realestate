@@ -135,7 +135,7 @@ FREE (no credit card required):
 PRO (monthly/yearly billing, free trial available):
 - Everything in Free, plus:
 - Metro, county, and ZIP code level data
-- PropertyIQ composite scores (HomeReady, InvestorEdge)
+- PropertyIQ Score (unified market quality score)
 - Quinn AI assistant (conversational market analysis)
 - Unlimited AI report generation
 - CSV data export
@@ -158,9 +158,7 @@ ENTERPRISE (contact sales):
    - Interactive color-coded map with metric overlays
 
 2. PropertyIQ Scoring System (0-100 scale with A/B/C/F confidence grades)
-   a) HomeReady Score — predicts 3-year excess appreciation for homebuyers
-   b) InvestorEdge Score — predicts 3-year excess total return for investors
-   c) Market Health Score — real-time demand/supply/price stability (free tier)
+   PropertyIQ Score — unified 0-100 market quality score predicting 3-year excess appreciation
 
 3. 50+ Real Estate Metrics across categories:
    - Home Values: ZHVI, listing price, YoY change, forecast, price/sqft
@@ -217,7 +215,7 @@ Core Product Pages (require sign-in for full access):
 /compare/[slug] (market comparison tool — side-by-side market analysis)
 /graphs (time-series analysis — historical trends for any metric)
 /metrics/[metricId] (individual metric explorer — deep dive into a single metric across geographies)
-/scores (scoring overview — HomeReady, InvestorEdge, Market Health explanation)
+/scores (scoring overview — PropertyIQ Score explanation)
 /scores/methodology (detailed scoring methodology documentation)
 /scores/accuracy (score validation and backtest accuracy results)
 /reports (report dashboard — list of user's generated AI reports)

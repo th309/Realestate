@@ -36,7 +36,7 @@ export class MetricsQueryFallbackService {
       { validated: number; hits: number; total: number }
     >();
     for (const o of outcomes) {
-      const type = o.score_type ?? 'homeready';
+      const type = o.score_type ?? 'propertyiq';
       const entry = byType.get(type) ?? { validated: 0, hits: 0, total: 0 };
       entry.total++;
       if (o.score_value >= 70) {

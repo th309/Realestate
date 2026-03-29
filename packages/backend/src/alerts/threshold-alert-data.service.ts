@@ -68,7 +68,7 @@ export class ThresholdAlertDataService {
       const geoIds = [...geoIdSet];
       const { data, error } = await this.supabase
         .from('propertyiq_scores')
-        .select('geography_id, homeready_score, investoredge_score')
+        .select('geography_id, propertyiq_score')
         .eq('geography_type', geoType)
         .in('geography_id', geoIds)
         .order('period_date', { ascending: false })

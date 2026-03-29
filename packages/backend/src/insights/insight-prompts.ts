@@ -72,9 +72,7 @@ export function buildMarketTakePrompt(ctx: InsightContext): string {
   return `You are a real estate analyst writing a brief market insight.
 
 Data for ${ctx.region_name}:
-- HomeReady Score: ${ctx.scores.homeready ?? 'N/A'}/100
-- InvestorEdge Score: ${ctx.scores.investoredge ?? 'N/A'}/100
-- Market Health: ${ctx.scores.market_health ?? 'N/A'}/100
+- PropertyIQ Score: ${ctx.scores.propertyiq ?? 'N/A'}/100
 - Top score drivers: ${topComponents}
 - Key metrics: ${formatKeyMetrics(ctx.key_metrics)}
 - Benchmarks:
@@ -98,9 +96,7 @@ export function buildScoreExplanationPrompt(ctx: InsightContext): string {
   return `You are a real estate analyst explaining a market score in one sentence.
 
 Data for ${ctx.region_name}:
-- HomeReady Score: ${ctx.scores.homeready ?? 'N/A'}/100
-- InvestorEdge Score: ${ctx.scores.investoredge ?? 'N/A'}/100
-- Market Health: ${ctx.scores.market_health ?? 'N/A'}/100
+- PropertyIQ Score: ${ctx.scores.propertyiq ?? 'N/A'}/100
 - Top 2 score components: ${topComponents}
 
 Rules:
@@ -141,9 +137,7 @@ export function buildMarketOverviewPrompt(ctx: InsightContext): string {
   return `You are a real estate analyst writing an in-depth market analysis for a landing page.
 
 Data for ${ctx.region_name}:
-- HomeReady Score: ${ctx.scores.homeready ?? 'N/A'}/100
-- InvestorEdge Score: ${ctx.scores.investoredge ?? 'N/A'}/100
-- Market Health: ${ctx.scores.market_health ?? 'N/A'}/100
+- PropertyIQ Score: ${ctx.scores.propertyiq ?? 'N/A'}/100
 - Top score drivers: ${topComponents}
 - Key metrics: ${formatKeyMetrics(ctx.key_metrics)}
 - Benchmarks:

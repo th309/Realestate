@@ -18,16 +18,18 @@ export interface ActiveAlert {
 
 export interface ScoreRow {
   geography_id: string;
-  homeready_score: number | null;
-  investoredge_score: number | null;
+  propertyiq_score: number | null;
 }
 
 /** Metrics that map to score columns in propertyiq_scores */
 export const SCORE_METRIC_COLUMNS: Record<string, keyof ScoreRow> = {
-  homeready_score: 'homeready_score',
-  homeready: 'homeready_score',
-  investoredge_score: 'investoredge_score',
-  investoredge: 'investoredge_score',
+  propertyiq_score: 'propertyiq_score',
+  propertyiq: 'propertyiq_score',
+  // Backward compat: old names map to the unified score
+  homeready_score: 'propertyiq_score',
+  homeready: 'propertyiq_score',
+  investoredge_score: 'propertyiq_score',
+  investoredge: 'propertyiq_score',
 };
 
 export function checkThreshold(

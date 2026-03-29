@@ -36,9 +36,7 @@ export interface InsightContext {
   region_id: string;
   geo_level: GeoLevel;
   scores: {
-    homeready: number | null;
-    investoredge: number | null;
-    market_health: number | null;
+    propertyiq: number | null;
   };
   score_components: Record<string, { status: string; value: number }>;
   key_metrics: Record<

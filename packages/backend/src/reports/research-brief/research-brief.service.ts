@@ -208,7 +208,7 @@ export class ResearchBriefService {
   }
 
   /**
-   * Enrich research data with direct news fetch (same pattern as HomeReady/InvestorEdge).
+   * Enrich research data with direct news fetch (same pattern as PropertyIQ reports).
    * Does NOT rely on the agent's search_news tool call — fetches news directly.
    */
   async enrichWithNews(

@@ -37,7 +37,7 @@ export function buildConversationSystemPrompt(
   newsContext?: string,
 ): string {
   const userType = report.user_type || 'homebuyer';
-  const heroScore = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
+  const heroScore = 'PropertyIQ';
   const geoName = report.primary_geography_name || 'the selected market';
   const audience =
     userType === 'investor'
@@ -47,10 +47,7 @@ export function buildConversationSystemPrompt(
     userType === 'investor'
       ? 'investment decisions (cash flow, appreciation, risk)'
       : 'homebuying decisions (affordability, timing, neighborhoods)';
-  const score =
-    userType === 'investor'
-      ? report.investoredge_score
-      : report.homeready_score;
+  const score = report.propertyiq_score ?? report.homeready_score;
 
   let prompt = `You are an expert real estate market analyst for PropertyIQ, helping ${audience} make informed decisions.
 

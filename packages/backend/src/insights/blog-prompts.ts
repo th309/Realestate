@@ -1,16 +1,16 @@
 /**
  * Blog Post Prompt Templates
  *
- * Templates for three monthly auto-generated blog post types:
- * 1. Top 10 Markets for Homebuyers (HomeReady scores)
- * 2. Top 10 Markets for Investors (InvestorEdge scores)
- * 3. Markets to Watch: Biggest Score Movers (month-over-month changes)
+ * Templates for two monthly auto-generated blog post types:
+ * 1. Top 10 PropertyIQ Markets (unified score)
+ * 2. Markets to Watch: Biggest Score Movers (month-over-month changes)
  *
  * Each function receives structured market data and returns a fully-formed
  * prompt that produces MDX-compatible content with frontmatter.
  */
 
 export type BlogPostType =
+  | 'top_propertyiq_markets'
   | 'top_homebuyer_markets'
   | 'top_investor_markets'
   | 'biggest_score_movers';
@@ -59,8 +59,8 @@ function currentMonthYear(): string {
 }
 
 /**
- * Prompt: "Top 10 Markets for Homebuyers This Month"
- * Uses the top 10 HomeReady scores nationally.
+ * Prompt: "Top 10 PropertyIQ Markets This Month"
+ * Uses the top 10 PropertyIQ scores nationally.
  */
 export function buildTopHomebuyerMarketsPrompt(
   markets: RankedMarket[],
@@ -69,57 +69,31 @@ export function buildTopHomebuyerMarketsPrompt(
 
   return `You are a real estate analyst writing a blog post for PropertyIQ, a data-driven real estate analytics platform.
 
-Write a blog post titled "Top 10 Markets for Homebuyers — ${monthYear}" based on our HomeReady Score rankings.
+Write a blog post titled "Top 10 PropertyIQ Markets — ${monthYear}" based on our PropertyIQ Score rankings.
 
-The HomeReady Score (0-100) predicts 3-year price appreciation potential for homebuyers, factoring in affordability, market timing, stability, growth potential, and livability.
+The PropertyIQ Score (0-100) is a unified market quality score that predicts 3-year excess appreciation, factoring in affordability, momentum, stability, growth potential, and rental yield.
 
-Top 10 HomeReady Markets:
+Top 10 PropertyIQ Markets:
 ${formatRankedMarkets(markets)}
 
 Rules:
 - Output ONLY valid MDX content starting with frontmatter (---) block
 - Frontmatter must include: title, description, date (${new Date().toISOString().split('T')[0]}), author ("PropertyIQ Research"), category ("Market Rankings"), tags (array)
 - Write 800-1200 words total (excluding frontmatter)
-- Start with a 2-3 sentence introduction explaining the HomeReady Score methodology
+- Start with a 2-3 sentence introduction explaining the PropertyIQ Score methodology
 - Dedicate a short paragraph (3-5 sentences) to each of the top 10 markets explaining why it ranks well
 - End with a "Key Takeaways" section summarizing patterns across the top 10
 - Use ## headers for major sections (Introduction, The Rankings, Key Takeaways)
 - Use ### headers for each market (e.g., ### 1. Market Name — Score: XX/100)
 - Reference specific scores and grades — do not generalize
-- Write in an informative but accessible tone suitable for homebuyers
+- Write in an informative but accessible tone suitable for both homebuyers and investors
 - ${DATA_GROUNDING_RULE}
 - Do NOT use import statements or JSX components — pure markdown with frontmatter only`;
 }
 
-/**
- * Prompt: "Top 10 Markets for Investors This Month"
- * Uses the top 10 InvestorEdge scores nationally.
- */
+/** @deprecated Use buildTopHomebuyerMarketsPrompt (now generates unified PropertyIQ content) */
 export function buildTopInvestorMarketsPrompt(markets: RankedMarket[]): string {
-  const monthYear = currentMonthYear();
-
-  return `You are a real estate analyst writing a blog post for PropertyIQ, a data-driven real estate analytics platform.
-
-Write a blog post titled "Top 10 Markets for Real Estate Investors — ${monthYear}" based on our InvestorEdge Score rankings.
-
-The InvestorEdge Score (0-100) predicts total return potential for real estate investors, factoring in cash flow, rent demand, appreciation, entry point, and risk.
-
-Top 10 InvestorEdge Markets:
-${formatRankedMarkets(markets)}
-
-Rules:
-- Output ONLY valid MDX content starting with frontmatter (---) block
-- Frontmatter must include: title, description, date (${new Date().toISOString().split('T')[0]}), author ("PropertyIQ Research"), category ("Market Rankings"), tags (array)
-- Write 800-1200 words total (excluding frontmatter)
-- Start with a 2-3 sentence introduction explaining the InvestorEdge Score methodology
-- Dedicate a short paragraph (3-5 sentences) to each of the top 10 markets explaining its investment appeal
-- End with a "Key Takeaways" section summarizing investment themes across the top 10
-- Use ## headers for major sections (Introduction, The Rankings, Key Takeaways)
-- Use ### headers for each market (e.g., ### 1. Market Name — Score: XX/100)
-- Reference specific scores and grades — do not generalize
-- Write in an informative but analytical tone suitable for investors
-- ${DATA_GROUNDING_RULE}
-- Do NOT use import statements or JSX components — pure markdown with frontmatter only`;
+  return buildTopHomebuyerMarketsPrompt(markets);
 }
 
 /**
@@ -134,9 +108,9 @@ export function buildBiggestScoreMoversPrompt(
 
   return `You are a real estate analyst writing a blog post for PropertyIQ, a data-driven real estate analytics platform.
 
-Write a blog post titled "Markets to Watch: Biggest Score Movers — ${monthYear}" based on month-over-month changes in our HomeReady Score.
+Write a blog post titled "Markets to Watch: Biggest Score Movers — ${monthYear}" based on month-over-month changes in our PropertyIQ Score.
 
-The HomeReady Score (0-100) predicts 3-year price appreciation potential. Significant month-over-month changes signal shifting market conditions.
+The PropertyIQ Score (0-100) predicts 3-year excess appreciation potential. Significant month-over-month changes signal shifting market conditions.
 
 Biggest Risers (score increased most):
 ${formatScoreMovers(risers)}

@@ -62,9 +62,5 @@ export const DATA_SOURCE_TABLE_MAP: Record<string, DataSourceTableConfig> = {
   },
 };
 
-export const SCORE_TYPES = [
-  'homeready',
-  'investor_edge',
-  'market_health',
-] as const;
+export const SCORE_TYPES = ['propertyiq'] as const;
 export type ScoreType = (typeof SCORE_TYPES)[number];

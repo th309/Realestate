@@ -1,7 +1,7 @@
 /**
  * ScoreSnapshotService
  *
- * For each score type (homeready, investor_edge, market_health), fetches the
+ * For each score type (propertyiq — unified score), fetches the
  * latest validation stats and counts validated vs pending scores from Supabase.
  * Callers persist the results to admin_score_snapshots.
  */
