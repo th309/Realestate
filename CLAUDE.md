@@ -6,15 +6,9 @@ Real estate analytics platform with React/Next.js frontend and NestJS backend.
 
 ### 1.0 The Hermeneutic Circle (How to Approach All Changes)
 
-Approach all changes through the Hermeneutic Circle. Before touching any file or function, first develop an understanding of the whole system's architecture, intent, and interdependencies. Then examine how the specific part you're changing fits within that whole. After making a change, cycle back to re-evaluate the whole — does the system still cohere? Do assumptions elsewhere still hold? Repeat this part-to-whole interpretation loop until the change is fully integrated. Never make changes in isolation without this contextual pass.
+Before touching any file, understand the whole system first. Then examine the specific part. After changing, re-evaluate the whole — do imports resolve? Do consumers still work? Do types align? Repeat until the change is fully integrated. Never make changes in isolation.
 
-**The loop:**
-
-1. **Understand the whole** — Read related files, trace data flow, understand why things exist before changing them.
-2. **Examine the part** — Focus on the specific file/function, understanding its role in the system.
-3. **Make the change** — Implement with full awareness of upstream and downstream effects.
-4. **Re-evaluate the whole** — After changing, verify: Do imports still resolve? Do consumers of this code still work? Do types still align? Are assumptions in other files still valid?
-5. **Repeat** — If re-evaluation reveals breakage or drift, address it before considering the task done.
+**The loop:** Understand whole → Examine part → Make change → Re-evaluate whole → Repeat if breakage found.
 
 ### 1.1 The "Don'ts" (Strict Constraints)
 
@@ -27,155 +21,68 @@ Approach all changes through the Hermeneutic Circle. Before touching any file or
 
 ### 1.2 Security & Data Protection (Strict)
 
-- **Authentication & Authorization:**
-  - **RLS is Supreme:** NEVER implement row-level security logic in the application layer if it can be done in Supabase RLS policies. Do not manually filter by `user_id` in the frontend.
-  - **Client vs. Server:** NEVER fetch sensitive data (PII, billing) in Client Components (`'use client'`). Always fetch in Server Components or via the NestJS backend.
-- **Input Validation:**
-  - **Trust No One:** Every API endpoint (NestJS) and Server Action (Next.js) MUST validate input using Zod or `class-validator`.
-- **Secrets Management:**
-  - **No Defaults:** NEVER hardcode fallback values for secrets (e.g., `process.env.KEY || 'default'`). The app MUST crash if a secret is missing.
-  - **Exposure:** NEVER expose `service_role` keys to the client.
+- **RLS is Supreme:** NEVER implement row-level security in application layer if it can be done in Supabase RLS policies.
+- **Client vs. Server:** NEVER fetch sensitive data (PII, billing) in Client Components (`'use client'`).
+- **Trust No One:** Every API endpoint (NestJS) and Server Action (Next.js) MUST validate input using Zod or `class-validator`.
+- **No Defaults:** NEVER hardcode fallback values for secrets (e.g., `process.env.KEY || 'default'`). App MUST crash if a secret is missing.
+- **Exposure:** NEVER expose `service_role` keys to the client.
 
 ### 1.3 Architecture & Modularity (File Size Limits)
 
-- **Modular by Default:** Prefer small, single-purpose files.
-- **File Size Limits (by file type):**
+| File Type                  | Target     | Hard Limit    | Action            |
+| -------------------------- | ---------- | ------------- | ----------------- |
+| Logic files (hooks, utils) | <200 lines | **300 lines** | MUST split        |
+| React components           | <300 lines | **400 lines** | MUST split        |
+| Test files                 | <400 lines | **500 lines** | Split by describe |
 
-| File Type                                            | Target          | Hard Limit    | Action at Hard Limit         |
-| ---------------------------------------------------- | --------------- | ------------- | ---------------------------- |
-| Logic files (hooks, utils, helpers, services, types) | Under 200 lines | **300 lines** | MUST split                   |
-| React components (single responsibility, JSX-heavy)  | Under 300 lines | **400 lines** | MUST split                   |
-| Test files (e2e, unit)                               | Under 400 lines | **500 lines** | MUST split by describe block |
-
-- **At the hard limit, you MUST:**
-  1. **Analyze** logical components (sub-components, helpers, constants, types).
-  2. **Propose** a refactor plan.
-  3. **Execute** the split into `/utils/`, `/hooks/`, or sub-components.
-- **What counts as "single responsibility":** One exported component with its local helpers. A file with 2+ exported components must be split regardless of line count.
-- **Colocation:** Keep related utils/types in the same feature folder.
+At hard limit: analyze logical components → propose refactor plan → execute split. One exported component per file with its local helpers. 2+ exports = must split regardless of line count.
 
 ### 1.4 Naming Convention (Human-Readable Names)
 
-**Every name you create MUST be descriptive and self-explanatory.** This applies to EVERYTHING — files, folders, branches, variables, functions, classes, constants, plan files, agent tasks, audit outputs, screenshots, migrations, services, modules, test descriptions, worktrees, commit messages, PR titles, database columns, environment variables, config keys, and anything else that gets a name. No exceptions. Random, generic, or auto-generated names are never acceptable.
+**Every name MUST be descriptive and self-explanatory** — files, branches, variables, functions, tests, migrations, everything. If someone sees it 6 months later with no context, they should understand immediately.
 
-**The rule:** If someone sees the name 6 months from now with no other context, they should immediately understand what it is and what it does. If not, rename it.
-
-**Examples of good vs. bad naming:**
-
-| Context    | Bad                       | Good                                                              |
-| ---------- | ------------------------- | ----------------------------------------------------------------- |
-| File       | `utils2.ts`, `helper.ts`  | `scoring-engine.ts`, `timeseries-region-filter.ts`                |
-| Branch     | `feature-1`, `dev-branch` | `feat/report-share-buttons`                                       |
-| Plan       | `plan.md`, `plan-001.md`  | `plan-add-stripe-webhook-handling.md`                             |
-| Agent task | "Update file"             | "Add auth guard to billing controller"                            |
-| Output     | `output.txt`              | `audit-rls-policies-missing.txt`                                  |
-| Screenshot | `screenshot-3.png`        | `report-ai-narrative-clean.png`                                   |
-| Test       | `describe('test 1')`      | `describe('ScoreWidget renders confidence badge for each level')` |
-| Migration  | `migration_20260220`      | `add_user_watchlist_table`                                        |
-| Variable   | `d`, `tmp`, `val`         | `regionScores`, `filteredMetrics`                                 |
-| Function   | `process()`, `handle()`   | `calculatePercentileRange()`, `formatCurrencyValue()`             |
+| Bad                       | Good                                                              |
+| ------------------------- | ----------------------------------------------------------------- |
+| `utils2.ts`, `helper.ts`  | `scoring-engine.ts`, `timeseries-region-filter.ts`                |
+| `feature-1`, `dev-branch` | `feat/report-share-buttons`                                       |
+| `d`, `tmp`, `val`         | `regionScores`, `filteredMetrics`                                 |
+| `process()`, `handle()`   | `calculatePercentileRange()`, `formatCurrencyValue()`             |
+| `describe('test 1')`      | `describe('ScoreWidget renders confidence badge for each level')` |
 
 ### 1.5 Parallel Agents & Agent Teams
 
-**Use subagents liberally.** Keep the main context window clean by offloading research, exploration, and parallel analysis. For complex problems, throw more compute at it — one focused task per subagent.
+**Default to parallelism.** When 2+ independent subtasks exist, dispatch parallel agents. Keep main context clean.
 
-**Default to parallelism.** When a task involves 2+ independent subtasks, dispatch them as parallel agents rather than working sequentially. This applies to implementation, research, and testing.
-
-**When to use parallel agents:**
-
-- **Multi-file implementations** — e.g., frontend component + backend endpoint + tests can each be a separate agent.
-- **Research & exploration** — searching across packages, reading multiple files, or investigating independent questions.
-- **Cross-package changes** — frontend and backend changes that don't depend on each other.
-- **Bulk operations** — updating multiple similar files (e.g., adding auth guards to several controllers, updating imports across modules).
-- **Test + lint + build** — run verification steps concurrently after implementation.
-
-**How to structure agent teams:**
-
-1. **Identify independent work streams.** If task B doesn't need output from task A, they're independent.
-2. **Launch all independent agents in a single message** using multiple Task tool calls.
-3. **Use sequential agents only when there's a true data dependency** — e.g., "generate types" must finish before "use types in component."
-4. **Assign clear, scoped prompts** — each agent should know exactly what files to touch and what constraints to follow (reference this CLAUDE.md).
-5. **Aggregate results** — after agents complete, synthesize their outputs and handle any cross-cutting concerns.
+**When:** Multi-file implementations, research across packages, cross-package changes, bulk operations, test+lint+build verification.
 
 **Agent type selection:**
 | Task | Agent Type |
 |------|-----------|
-| File search / codebase exploration | `Explore` |
+| File search / exploration | `Explore` |
 | Implementation planning | `Plan` |
-| Running commands (build, test, git) | `Bash` |
-| Multi-step coding or research | `general-purpose` |
-| Code review after major step | `superpowers:code-reviewer` |
-
-**Example — Adding a new API endpoint with frontend integration:**
-
-```
-Agent 1 (general-purpose): Create NestJS controller + service + DTO in packages/backend
-Agent 2 (general-purpose): Create fetcher + hook + types in packages/frontend/lib/data
-Agent 3 (general-purpose): Write unit tests for the backend service
-→ All three launch in parallel
-→ After completion: Agent 4 wires up the frontend component using the new hook
-```
+| Running commands | `Bash` |
+| Multi-step coding/research | `general-purpose` |
+| Code review | `superpowers:code-reviewer` |
 
 ### 1.6 Background Validation Agents
 
-**After completing implementation work, dispatch relevant validation agents in the background.** Do NOT interrupt the user's flow — keep building. When agents finish, provide a brief summary only if there are actionable issues.
+**After implementation, dispatch validation agents in background.** Don't interrupt flow — only surface CRITICAL/WARNING issues.
 
-**When to dispatch (automatically, in background):**
+| Trigger                  | Agent(s)                 |
+| ------------------------ | ------------------------ |
+| Feature implemented      | `code-reviewer`          |
+| Frontend data fetching   | `data-layer-reviewer`    |
+| Backend controllers      | `dto-validation-auditor` |
+| Auth/payments/secrets    | `security-reviewer`      |
+| Large files (>200 lines) | `file-size-compliance`   |
 
-| Trigger                            | Agent(s) to Dispatch     | Priority           |
-| ---------------------------------- | ------------------------ | ------------------ |
-| Finished implementing a feature    | `code-reviewer`          | Always             |
-| Modified frontend data fetching    | `data-layer-reviewer`    | Always             |
-| Modified backend controllers       | `dto-validation-auditor` | Always             |
-| Touched auth, payments, or secrets | `security-reviewer`      | Always             |
-| Created/modified large files       | `file-size-compliance`   | If file >200 lines |
-
-**How to dispatch:**
-
-```
-Task tool with run_in_background: true
-→ Continue working on the user's request
-→ When agent completes, briefly summarize findings
-→ Only flag CRITICAL/WARNING issues — skip nitpicks unless asked
-```
-
-**Do NOT:**
-
-- Stop mid-implementation to run a full skill workflow
-- Ask the user "should I run validation?" — just do it silently
-- Report "all checks passed" unless the user asks — only surface problems
-- Let background agents block or delay the primary task
-
-**Skills vs Agents:**
-
-- **Skills** (`/gen-tests`, `/pr-check`, `/scaffold-module`, etc.) are full workflows — only run when the user explicitly invokes them
-- **Agents** are lightweight reviewers — dispatch them in the background automatically
+Don't stop mid-implementation, don't ask "should I run validation?", don't report "all passed" unless asked.
 
 ### 1.7 Skill Suggestions
 
-**After completing a task, suggest relevant skills the user might want to run.** Do NOT invoke them automatically — just mention them in a brief line at the end of your response.
-
-**Format:** One line, natural language, with the `/command` so they can copy it:
+After completing a task, suggest relevant skills in ONE line. Don't invoke automatically.
 
 > Might be useful: `/gen-tests` for the new service, `/gen-swagger` to add API docs.
-
-**When to suggest:**
-
-| Just finished...                     | Suggest                                        |
-| ------------------------------------ | ---------------------------------------------- |
-| Implementing a feature or bugfix     | `/gen-tests`                                   |
-| Creating/modifying backend endpoints | `/add-dto-validation`, `/gen-swagger`          |
-| Creating a new backend module        | `/scaffold-module` (if they built it manually) |
-| Completing a branch of work          | `/pr-check`                                    |
-| Ready to ship                        | `/railway-deploy`                              |
-
-**Rules:**
-
-- Keep it to ONE line — not a table, not a list, not a paragraph
-- Only suggest skills that are actually relevant to what just happened
-- Don't suggest on trivial changes (typo fixes, config tweaks, single-line edits)
-- Don't repeat a suggestion the user already declined in this session
-- If the user ignores a suggestion, that's fine — move on
 
 ### 1.8 Core Principles
 
@@ -190,37 +97,29 @@ Task tool with run_in_background: true
 ### 2.1 Plan Mode Default
 
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
-- If something goes sideways, STOP and re-plan immediately — don't keep pushing
-- Use plan mode for verification steps, not just building
+- If something goes sideways, STOP and re-plan immediately
 - Write detailed specs upfront to reduce ambiguity
 
 ### 2.2 Self-Improvement Loop
 
-- **Read `tasks/lessons.md` at the start of every session** before doing any work. These are hard-won rules from past mistakes — follow them.
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
-- Write rules for yourself that prevent the same mistake
-- Ruthlessly iterate on these lessons until mistake rate drops
+- **Read `tasks/lessons.md` at session start** — hard-won rules from past mistakes.
+- After ANY correction: update `tasks/lessons.md` with the pattern.
 
 ### 2.3 Verification Before Done
 
 - Never mark a task complete without proving it works
-- Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
 
 ### 2.4 Demand Elegance (Balanced)
 
 - For non-trivial changes: pause and ask "is there a more elegant way?"
-- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
 - Skip this for simple, obvious fixes — don't over-engineer
-- Challenge your own work before presenting it
 
 ### 2.5 Autonomous Bug Fixing
 
-- When given a bug report: just fix it. Don't ask for hand-holding
-- Point at logs, errors, failing tests — then resolve them
-- Zero context switching required from the user
-- Go fix failing CI tests without being told how
+- When given a bug report: just fix it. Don't ask for hand-holding.
+- Zero context switching required from the user.
 
 ---
 
@@ -239,25 +138,20 @@ Task tool with run_in_background: true
 
 ### 4.1 Technology Stack
 
-| Layer                | Technology               | Version      |
-| :------------------- | :----------------------- | :----------- |
-| **Frontend**         | Next.js (App Router)     | 16.1.1       |
-| **UI Library**       | React                    | 19.2.0       |
-| **Styling**          | Tailwind CSS             | 4.0          |
-| **Mapping**          | Mapbox GL + react-map-gl | 3.17.0       |
-| **Backend**          | NestJS                   | 11.0.1       |
-| **Database**         | Supabase (PostgreSQL)    | Cloud-hosted |
-| **Caching**          | Redis (ioredis)          | 5.9.1        |
-| **State Management** | TanStack React Query     | 5.90.7       |
+| Layer            | Technology               | Version      |
+| ---------------- | ------------------------ | ------------ |
+| Frontend         | Next.js (App Router)     | 16.1.1       |
+| UI Library       | React                    | 19.2.0       |
+| Styling          | Tailwind CSS             | 4.0          |
+| Mapping          | Mapbox GL + react-map-gl | 3.17.0       |
+| Backend          | NestJS                   | 11.0.1       |
+| Database         | Supabase (PostgreSQL)    | Cloud-hosted |
+| Caching          | Redis (ioredis)          | 5.9.1        |
+| State Management | TanStack React Query     | 5.90.7       |
 
 ### 4.2 Third-Party Services
 
-- **Mapbox:** Map tiles and geocoding.
-- **Supabase:** Database + Auth.
-- **Zillow/Realtor/Redfin:** Real estate data feeds.
-- **Census/FRED/BLS:** Economic indicators.
-- **Anthropic Claude:** AI integration (backend SDK).
-- **Stripe:** Payments (Phase 1).
+Mapbox (tiles/geocoding), Supabase (DB+Auth), Zillow/Realtor/Redfin (RE data), Census/FRED/BLS (economic), Anthropic Claude (AI), Stripe (payments).
 
 ### 4.3 Architecture Style: Full-Stack Monorepo
 
@@ -265,10 +159,10 @@ Task tool with run_in_background: true
 
 **Deployment Targets (STRICT):**
 
-- **Frontend:** Railway (Production/Staging) — `propertyiq.up.railway.app`
-- **Backend:** Railway (Production/Staging) — `backend-production-ee4d.up.railway.app`
-- **Analytics:** Railway (Production/Staging) — `analytics-production-af35.up.railway.app`
-- **Infrastructure Rule:** Code changes to `.env` files affect **LOCAL ONLY**. Production/Staging variables must be updated in the Railway cloud dashboard. **NEVER** assume a local `.env` change enables a feature in production.
+- **Frontend:** Railway — `propertyiq.up.railway.app`
+- **Backend:** Railway — `backend-production-ee4d.up.railway.app`
+- **Analytics:** Railway — `analytics-production-af35.up.railway.app`
+- **Infrastructure Rule:** `.env` changes affect **LOCAL ONLY**. Production/Staging vars via Railway dashboard. **NEVER** assume local `.env` enables production features.
 
 ### 4.4 Project Structure
 
@@ -293,24 +187,20 @@ scripts/              # Data import pipelines
 data/                 # Raw data files
 ```
 
-**Backend Pattern:** NestJS modules with dependency injection (Controllers → Services → Supabase).
-**Frontend Pattern:** React hooks + React Query for server state; component composition.
+**Backend:** NestJS modules with DI (Controllers → Services → Supabase).
+**Frontend:** React hooks + React Query for server state; component composition.
 
 ### 4.5 Data Flow
 
 ```
-User selects metric → triggers useMapData hook
-→ API Client sends GET request to backend
-→ NestJS Controller routes to appropriate service
-→ Service queries Supabase with filters (queryLatestPerRegion) → returns JSON
-→ React Query caches response; transforms to HomeValues format
-→ useMapLayers applies data to GeoJSON features
-→ Map + Legend render with consistent color scales
+User selects metric → useMapData hook → API Client → NestJS Controller → Service
+→ Supabase query (queryLatestPerRegion) → JSON response
+→ React Query cache → useMapLayers → GeoJSON features → Map + Legend render
 ```
 
 ### 4.6 Database Schema (Long Format)
 
-Each geography level has its own table. All follow the same schema pattern: `region_id`, `region_name`, `period_date`, `metric_name`, `value`.
+Each geography level has its own table. Schema: `region_id`, `region_name`, `period_date`, `metric_name`, `value`.
 
 | Table         | Region ID Format |
 | ------------- | ---------------- |
@@ -326,23 +216,12 @@ Each geography level has its own table. All follow the same schema pattern: `reg
 **ALL frontend data fetching MUST go through `@/lib/data`.**
 
 ```typescript
-// CORRECT - Use the data layer
-import {
-  fetchSnapshotData,
-  fetchTimeSeriesData,
-  useSnapshotData,
-} from "@/lib/data";
+// CORRECT
+import { fetchSnapshotData, useSnapshotData } from "@/lib/data";
 
 // WRONG - Never do this outside lib/data
 const response = await fetch(`${API_URL}/api/metrics/...`);
 ```
-
-**Why this matters:**
-
-- Unified error handling, caching, and retry logic
-- Consistent data transformation and normalization
-- Single source of truth for API contracts
-- Easier to debug and maintain
 
 **The data layer provides:**
 
@@ -351,64 +230,28 @@ const response = await fetch(`${API_URL}/api/metrics/...`);
 - `fetchScore(geoLevel, geoId)` - PropertyIQ Score (single score type: `'propertyiq'`)
 - React hooks: `useSnapshotData`, `useTimeSeriesData`, `useScoreData`, `useDataCard`
 
-**If an endpoint doesn't exist in lib/data:**
+**If an endpoint doesn't exist:** Add to `lib/data/fetchers/` → export from `lib/data/index.ts` → then use.
 
-1. Add it to `lib/data/fetchers/`
-2. Export from `lib/data/index.ts`
-3. THEN use it in your component
-
-### Files to NEVER import from
-
-- `lib/api/client.ts` - Deprecated, will be removed
-- Direct `fetch()` with `API_URL` or `NEXT_PUBLIC_API_URL`
+**Files to NEVER import from:** `lib/api/client.ts` (deprecated), direct `fetch()` with API_URL.
 
 ### Data Binding Hooks
 
-**NEVER** write custom fetch logic for cards, dropdowns, or selectors. Use the unified data binding hooks:
+**NEVER** write custom fetch logic. Use unified hooks:
 
-| Hook                  | Use Case                                    | Location                                  |
-| --------------------- | ------------------------------------------- | ----------------------------------------- |
-| `useMetricData`       | Core: fetch any metric for any geography    | `app/map/hooks/useMetricData.ts`          |
-| `useDataCard`         | Cards: formatted values + trend calculation | `app/map/hooks/useDataCard.ts`            |
-| `useMetricOptions`    | Dropdowns: metric/geography options         | `app/map/hooks/useMetricOptions.ts`       |
-| `useScoreCardMetrics` | Score cards: batch indicators               | `app/graphs/hooks/useScoreCardMetrics.ts` |
+| Hook                  | Use Case                                    |
+| --------------------- | ------------------------------------------- |
+| `useMetricData`       | Core: fetch any metric for any geography    |
+| `useDataCard`         | Cards: formatted values + trend calculation |
+| `useMetricOptions`    | Dropdowns: metric/geography options         |
+| `useScoreCardMetrics` | Score cards: batch indicators               |
 
-**Card Example:**
-
-```typescript
-import { useDataCard } from "@/app/map/hooks";
-
-const { formattedValue, trend, loading } = useDataCard({
-  metricId: "home_value",
-  geoLevel: "metro",
-  regionId: "31080",
-  showTrend: true,
-});
-```
-
-**Dropdown Example:**
-
-```typescript
-import { useAllMetricOptions } from "@/app/map/hooks";
-
-const { options } = useAllMetricOptions(geoLevel);
-// Returns: [{ label: 'Home Value', value: 'home_value', disabled: false }, ...]
-```
-
-**Features:**
-
-- 2-hour React Query caching (automatic deduplication)
-- Auto-filtering by geography support
-- Consistent formatting via `formatValue()`
-- Trend calculation (3-month comparison)
+Features: 2-hour React Query caching, auto-filtering by geography, consistent formatting via `formatValue()`, trend calculation (3-month comparison).
 
 ### 5.1 BACKEND METRIC RESOLUTION - CRITICAL
 
 **ALL backend metric fallback logic MUST go through `MetricResolutionService`.**
 
 **Module:** `packages/backend/src/metric-resolution/`
-
-When a backend service needs a metric value (e.g., `home_value`, `rent_index`, `unemployment_rate`) and the primary data source might be missing, it MUST NOT write its own if/else fallback chain. Instead, it calls `MetricResolutionService`, which consults the centralized `fallback-registry.ts` — the **single source of truth** for which data sources to try and in what order.
 
 ```typescript
 // CORRECT - Use MetricResolutionService
@@ -417,45 +260,14 @@ const resolved = await this.metricResolution.resolveMetricBatch(
   geoLevel,
   geoId,
 );
-const homeValue = resolved.home_value.value; // Resolved via ZHVI → Census ACS → Realtor
 
 // WRONG - Never write ad-hoc fallback chains
 if (zhviValue == null) {
-  // try Census...
-  if (censusValue == null) {
-    // try Realtor...
-  }
+  /* try Census... */
 }
 ```
 
-**Why this matters:**
-
-- Every consumer gets the same answer for the same geography — no more bugs where one page shows data and another doesn't
-- Adding or changing a fallback source is a one-line change in `fallback-registry.ts`, not a hunt across 4+ files
-- Geography inheritance (ZIP → County → Metro → State) is handled automatically via `GeographyChainService`
-- Source provenance is tracked: `ResolvedMetric` tells you which source provided the value and whether it was inherited
-
-**The module provides:**
-
-| Method                                           | Use Case                                                       |
-| ------------------------------------------------ | -------------------------------------------------------------- |
-| `resolveMetric(metricId, geoLevel, geoId)`       | Single metric for one geography                                |
-| `resolveMetricBatch(metricIds, geoLevel, geoId)` | Multiple metrics for one geography (market snapshots, reports) |
-| `resolveMetricForAllGeos(metricId, geoLevel)`    | One metric across all geographies at a level (scoring batch)   |
-
-**`ResolvedMetric` return type:**
-
-```typescript
-interface ResolvedMetric {
-  value: number | null;
-  date: string | null;
-  source: string; // Which data source provided the value
-  sourceGeoId: string | null;
-  sourceGeoLevel: string | null;
-  isInherited: boolean; // Was this inherited from a parent geography?
-  isFallback: boolean; // Was this from a non-primary source?
-}
-```
+**Methods:** `resolveMetric()`, `resolveMetricBatch()`, `resolveMetricForAllGeos()`
 
 **Key files:**
 
@@ -464,92 +276,51 @@ interface ResolvedMetric {
 | `fallback-registry.ts`         | **THE** source of truth for all metric fallback chains |
 | `source-fetcher.service.ts`    | DB table/column routing per (source, geoLevel)         |
 | `geography-chain.service.ts`   | Geography parent chain with LRU cache                  |
-| `metric-resolution.service.ts` | Public API (the 3 methods above)                       |
+| `metric-resolution.service.ts` | Public API                                             |
 
-**Adding a new metric fallback:**
+**Adding a new metric fallback:** Add entry to `FALLBACK_REGISTRY` → add source table route if needed → done.
 
-1. Add the entry to `FALLBACK_REGISTRY` in `fallback-registry.ts`
-2. If the source table doesn't exist in `source-fetcher.service.ts`, add its route
-3. Done — all consumers automatically get the new fallback
-
-**Adding a new data source:**
-
-1. Add the source type to `DataSource` in `metric-resolution.types.ts`
-2. Add the fetch logic in `source-fetcher.service.ts`
-3. Reference it in the relevant `FALLBACK_REGISTRY` entries
-
-**Geography inheritance** (for metrics like `unemployment_rate` where ZIP data may be missing):
-
-- Set `supportsGeoInheritance: true` in the registry entry
-- `GeographyChainService` walks up: ZIP → County → Metro → State → National
-- Uses `geography_crosswalk` table with LRU-cached lookups
+**Geography inheritance:** Set `supportsGeoInheritance: true` in registry. Chain: ZIP → County → Metro → State → National via `geography_crosswalk` table.
 
 ---
 
 ## 6. METRIC CONFIGURATION (SOURCE OF TRUTH)
 
-**IMPORTANT:** All metric properties are defined in ONE place.
-
-**File:** `packages/frontend/app/map/config/metrics.ts`
+**All metric properties defined in ONE place:** `packages/frontend/app/map/config/metrics.ts`
 
 ```typescript
 export const METRICS: Record<string, MetricConfig> = {
   market_heat: {
     id: "market_heat",
-    title: "Market Heat Index", // Display name everywhere
+    title: "Market Heat Index",
     format: "index", // currency | percent | percent_abs | number | index | days
-    dataSource: "zillow", // zillow | realtor | calculated | census | fred
+    dataSource: "zillow",
     apiEndpoint: "/api/zillow/market-heat/{geo}",
-    keyField: "auto", // How to match to GeoJSON
-    supportedGeos: ["metro"], // Which geo levels have data
-    rangeType: "full", // Color scale calculation
+    supportedGeos: ["metro"],
+    rangeType: "full",
   },
-  // ... all other metrics
 };
 ```
 
-**Key Configuration Files:**
-
-| File                           | Purpose                       | Gets from METRICS                       |
-| ------------------------------ | ----------------------------- | --------------------------------------- |
-| `config/metrics.ts`            | THE source of truth           | N/A - defines everything                |
-| `config/metric-categories.tsx` | Sidebar category organization | title, dataSource                       |
-| `config/fetchMetricData.ts`    | Unified API fetching          | apiEndpoint, keyField, asPercent        |
-| `lib/api/client.ts`            | API Client                    | N/A                                     |
-| `utils/metricUtils.ts`         | Formatting & color scale      | format, rangeType                       |
-| `components/Legend.tsx`        | Map legend display            | via getMetricFormat(), getMetricTitle() |
-| `hooks/useMapLayers.ts`        | Map rendering                 | via calculateValueRange()               |
-
 ### Adding New Metrics
 
-1. Add metric config to `lib/data/registry.ts`
-2. Set `supportedGeos` to specify which geography levels support it
-3. Use existing fetchers - they read from registry automatically
-4. Add to category in `config/metric-categories.tsx`:
-   ```typescript
-   metric('new_metric', { isPremium: true, isNew: true }),
-   ```
-5. Backend: Ensure the endpoint exists
+1. Add config to `lib/data/registry.ts` with `supportedGeos`
+2. Existing fetchers read from registry automatically
+3. Add to category in `config/metric-categories.tsx`
+4. Backend: Ensure endpoint exists
 
 ### Color Scale Logic
 
-- Palette: 7 colors (Violet #7c3aed to Dark Red #b91c1c).
-- Range Calculation:
-  - `percent`: 5th to 95th percentile
-  - `percent_abs`: 5th to 95th percentile (positive values)
-  - `currency / number / days`: Min to 95th percentile
-  - `index` (with rangeType: 'full'): Actual Min to Max
+- Palette: 7 colors (Violet #7c3aed to Dark Red #b91c1c)
+- `percent`/`percent_abs`: 5th-95th percentile. `currency`/`number`/`days`: Min-95th. `index` (full): Min-Max.
 
 ### Formatting Values - CRITICAL
 
 ```typescript
 import { formatMetricValue, getMetricFormat } from "@/lib/data";
-
-// CORRECT: formatMetricValue(value, format)
 formatMetricValue(499000, "currency"); // "$499K"
 formatMetricValue(value, getMetricFormat(metricId)); // Use metric's format
-
-// WRONG: formatMetricValue(metricId, value) - will show "$metricId" literally
+// WRONG: formatMetricValue(metricId, value) — will show "$metricId" literally
 ```
 
 ---
@@ -560,9 +331,8 @@ formatMetricValue(value, getMetricFormat(metricId)); // Use metric's format
 
 ```typescript
 import { isMetricSupportedForGeo } from "@/lib/data";
-
 if (isMetricSupportedForGeo("home_value", "zip")) {
-  // Safe to fetch
+  /* Safe to fetch */
 }
 ```
 
@@ -570,414 +340,138 @@ if (isMetricSupportedForGeo("home_value", "zip")) {
 
 ```typescript
 import { getMetricWithAliases } from '../utils/metricHelpers';
-
-// Use for report data access - handles aliases (zhvi → median_listing_price)
 const price = getMetricWithAliases(report, 'zhvi');
-
-// Always check data availability - never use hardcoded fallbacks
-if (!price) {
-  return <DataUnavailable />;  // Show UI, don't use || 400000
-}
+if (!price) return <DataUnavailable />;  // Show UI, don't use || 400000
 ```
 
-### Backend Query Pattern (NestJS)
+### Backend Query Pattern
 
-Use `queryLatestPerRegion()` to get the most recent data point for each region, rather than a single global date.
-
-```typescript
-const data = await queryMarketIndicatorLatest(supabase, table, geography);
-// Returns rows with: region_id, value, period_date
-```
+Use `queryLatestPerRegion()` for most recent data point per region (not a single global date).
 
 ---
 
 ## 8. BRAND IDENTITY & DESIGN SYSTEM
 
-### 8.0 PropertyIQ Brand Identity
-
 **Authoritative spec:** `docs/superpowers/specs/2026-03-27-propertyiq-brand-identity.md`
+**Brand assets:** `.superpowers/brand-assets/`
 
-| Element                | Value                                                               |
-| ---------------------- | ------------------------------------------------------------------- |
-| **Brand Name**         | PropertyIQ                                                          |
-| **Short Name**         | PIQ                                                                 |
-| **Tagline**            | The IQ Behind Every Market                                          |
-| **Mission**            | Democratizing real estate data                                      |
-| **Personality**        | The Smart Friend — approachable, knowledgeable, M3/Google aesthetic |
-| **Primary Audience**   | Real estate investors & agents                                      |
-| **Secondary Audience** | First-time homebuyers                                               |
+### 8.0 Brand Essentials
 
-#### Logo System
+| Element         | Value                                                               |
+| --------------- | ------------------------------------------------------------------- |
+| **Brand Name**  | PropertyIQ                                                          |
+| **Short Name**  | PIQ                                                                 |
+| **Tagline**     | The IQ Behind Every Market                                          |
+| **Personality** | The Smart Friend — approachable, knowledgeable, M3/Google aesthetic |
+| **Audience**    | RE investors & agents (primary), first-time homebuyers (secondary)  |
 
-Three logo variants — all use Indigo `#3949AB` as the primary fill:
+### 8.1 Core Authority (M3)
 
-| Variant                   | Description                                                          | Use Case                                      |
-| ------------------------- | -------------------------------------------------------------------- | --------------------------------------------- |
-| **P Monogram + Wordmark** | Stylized "P" in rounded square (`rx:14`) + "Property**IQ**" wordmark | Website header, pitch decks, business cards   |
-| **PIQ Shortmark**         | Bold "PIQ" text on indigo rounded square with ascending data dots    | Favicon, app icon, social avatars, watermarks |
-| **Stacked lockup**        | Logomark above wordmark                                              | Square formats, slide title cards             |
+- All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
+- Do NOT mix generic/Geist aesthetics with Material.
+- The PropertyIQ indigo palette maps directly to M3's tonal palette system.
 
-**Logomark details:**
+### 8.2 Color Palette (Key Values)
 
-- Background: Indigo `#3949AB`, P letterform: White, Data nodes: Green `#00C853`
-- Wordmark: "Property" in Deep Indigo `#1A237E`, "IQ" in Primary Indigo `#3949AB`
+**Use semantic CSS variables (`bg-primary`, `text-on-primary`, `bg-surface`, etc.) mapped in `globals.css`. Do NOT hardcode hex values.**
 
-**PIQ Shortmark details:**
+| Role              | Hex       | Usage                            |
+| ----------------- | --------- | -------------------------------- |
+| Primary (Indigo)  | `#3949AB` | Buttons, active states, logomark |
+| Primary Dark      | `#1A237E` | Headings, dark surfaces          |
+| Primary Medium    | `#5C6BC0` | Secondary elements, icons        |
+| Primary Light     | `#C5CAE9` | Hover states, backgrounds        |
+| Primary Container | `#E8EAF6` | Card backgrounds                 |
+| Accent (Green)    | `#00C853` | Positive metrics, growth         |
+| Error (Red)       | `#B3261E` | Negative metrics, errors         |
+| Warning (Amber)   | `#FF8F00` | Caution states                   |
+| Surface           | `#FAFBFF` | Page backgrounds                 |
+| On-Surface        | `#1A237E` | Primary text                     |
+| Dark Surface      | `#1A1A2E` | Dark mode background             |
 
-- Ascending dots: `#7986CB` → `#C5CAE9` → `#00C853` → `#00C853` (0.7 opacity) — conveys growth
+### 8.3 Typography
 
-**Logo usage rules:**
+| Role      | Font                     | Usage                    |
+| --------- | ------------------------ | ------------------------ |
+| Primary   | Roboto (300-700)         | All UI text              |
+| Monospace | Roboto Mono (400, 500)   | Numbers, scores, metrics |
+| Editorial | Source Serif 4 (400-700) | AI narratives, reports   |
 
-- Clear space: min 50% of logomark width on all sides
-- Minimum size: Logomark 24px, Full lockup 120px wide
-- Backgrounds: White, light gray, or deep indigo only. Never on busy photos without overlay.
-- **Don't:** Stretch, rotate, recolor, add shadows, or place on low-contrast backgrounds
+### 8.4 Visual Foundation (Tailwind)
 
-**SVG references:** See brand spec Section 7 for P Monogram and PIQ Shortmark SVGs.
-**Brand assets:** `.superpowers/brand-assets/` — all logo variants as HTML + PNG exports.
+**Shape:** Cards `rounded-xl`, Buttons/Chips `rounded-full`, Dialogs `rounded-[28px]`
+**Elevation:** Surface Tones + Shadow, NOT Glassmorphism. Cards: `shadow-sm`, Dialogs: `shadow-lg`
+**Motion:** M3 Standard Easing. Short `duration-200`, Medium `duration-400`, Long `duration-600`
 
-#### Color Palette
+### 8.5 M3 Component Mapping
 
-**Primary Colors (Indigo Tonal Range)**
+| Concept        | M3 Replacement    | Tailwind                                  |
+| -------------- | ----------------- | ----------------------------------------- |
+| Sidebar        | Navigation Drawer | `bg-surface-container-low`, rounded-r-2xl |
+| Pill Selectors | Filter Chips      | `rounded-lg`, `border-outline`            |
+| Stat Cards     | Elevated Card     | `rounded-xl`, `shadow-sm`                 |
+| Search Bar     | Search Bar (View) | `rounded-full`, `h-14`                    |
 
-| Role                  | Name          | Hex       | M3 Tone | Usage                                  |
-| --------------------- | ------------- | --------- | ------- | -------------------------------------- |
-| **Primary**           | Indigo        | `#3949AB` | 40      | Buttons, active states, logomark fill  |
-| **Primary Dark**      | Deep Indigo   | `#1A237E` | 10      | Wordmark text, headings, dark surfaces |
-| **Primary Medium**    | Medium Indigo | `#5C6BC0` | 60      | Secondary elements, icons, borders     |
-| **Primary Light**     | Light Indigo  | `#C5CAE9` | 90      | Hover states, backgrounds, data viz    |
-| **Primary Container** | Pale Indigo   | `#E8EAF6` | 95      | Surface containers, card backgrounds   |
+### 8.6 Brand Voice
 
-**Accent Colors**
-
-| Role        | Name  | Hex       | Usage                                |
-| ----------- | ----- | --------- | ------------------------------------ |
-| **Accent**  | Green | `#00C853` | Positive metrics, growth, data nodes |
-| **Error**   | Red   | `#B3261E` | Negative metrics, errors, declines   |
-| **Warning** | Amber | `#FF8F00` | Caution states, neutral trends       |
-
-**Neutral Colors**
-
-| Role                  | Name        | Hex       | Usage                         |
-| --------------------- | ----------- | --------- | ----------------------------- |
-| **Surface**           | Off-white   | `#FAFBFF` | Page backgrounds (light mode) |
-| **On-Surface**        | Deep Indigo | `#1A237E` | Primary text                  |
-| **Surface Container** | Light Gray  | `#F3EDF7` | Cards, sidebars               |
-| **Outline**           | Gray        | `#79747E` | Dividers, borders             |
-| **Outline Variant**   | Light Gray  | `#CAC4D0` | Subtle dividers               |
-
-**Dark Mode**
-
-| Role       | Hex       | Notes                              |
-| ---------- | --------- | ---------------------------------- |
-| Surface    | `#1A1A2E` | Deep navy, not pure black          |
-| Containers | `#16213E` | Cards, sidebars                    |
-| Text       | `#E8EAF6` | Pale Indigo                        |
-| Primary    | `#7986CB` | Lightened indigo for contrast      |
-| Accents    | Same hue  | Adjust lightness for accessibility |
-
-**CRITICAL:** Use semantic CSS variables (`bg-primary`, `text-on-primary`, `bg-surface`, etc.) mapped in `globals.css`. Do NOT hardcode hex values in components.
-
-#### Typography
-
-| Role          | Font           | Weights  | Usage                                    |
-| ------------- | -------------- | -------- | ---------------------------------------- |
-| **Primary**   | Roboto         | 300-700  | All UI text, wordmark, headings, body    |
-| **Monospace** | Roboto Mono    | 400, 500 | Numbers, scores, metrics, code           |
-| **Editorial** | Source Serif 4 | 400-700  | AI narratives, reports, long-form        |
-| **Display**   | DM Sans        | 400-700  | Marketing headlines (optional alternate) |
-
-#### Brand Voice & Tone
-
-| Attribute          | Description                                                        |
-| ------------------ | ------------------------------------------------------------------ |
-| **Confident**      | We know our data. State findings directly, not tentatively.        |
-| **Conversational** | Like a knowledgeable friend, not a textbook or sales pitch.        |
-| **Data-First**     | Lead with specifics — numbers, percentages, trends — not opinions. |
-| **Accessible**     | Explain complex concepts simply. No unnecessary jargon.            |
-| **Actionable**     | Always point toward a next step or decision.                       |
-
-**Writing Guidelines:**
-
-| Do                                                  | Don't                                        |
-| --------------------------------------------------- | -------------------------------------------- |
-| "The data shows 12% rent growth in this metro"      | "Our proprietary algorithm detected..."      |
-| "Dallas-Fort Worth scored 78 — strong fundamentals" | "This is an amazing investment opportunity!" |
-| "Explore this market"                               | "Buy now!" / "Don't miss out!"               |
-| "B-level confidence — good data, rental comps thin" | "We're not totally sure about this one"      |
-| "Your Market IQ report is ready"                    | "CONGRATULATIONS on your new report!"        |
-
-**Terminology (use consistently everywhere):**
+**Confident, Conversational, Data-First, Accessible, Actionable.** Lead with specifics, not opinions. Like a knowledgeable friend, not a textbook.
 
 | Use This            | Not This                 |
 | ------------------- | ------------------------ |
 | PropertyIQ Score    | Rating / Grade / Rank    |
 | Confidence level    | Accuracy / Trust score   |
 | Market intelligence | Market report / Analysis |
-| Geography / Market  | Area / Zone / Region     |
-| Data coverage       | Data availability        |
-
-### 8.1 Core Authority (M3)
-
-- **Source of Truth:** All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
-- **Strict Adherence:** Do NOT mix generic/Geist aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
-- **Brand + M3 alignment:** The PropertyIQ indigo palette maps directly to M3's tonal palette system. The brand spec IS the M3 theme.
-
-### 8.2 Visual Foundation (Tailwind Implementation)
-
-**Typography (M3 Type Scale)**
-
-- **Font Family:** Use `Roboto` (via `next/font/google`) for all UI text. `Roboto Mono` for metrics/scores. `Source Serif 4` for AI narratives/reports.
-- **Scale Implementation:**
-  - **Display:** `text-4xl` to `text-6xl` (tracking-tight)
-  - **Headline:** `text-2xl` to `text-3xl`
-  - **Title:** `text-lg` to `text-xl` (font-medium)
-  - **Body:** `text-base` (tracking-wide)
-  - **Label:** `text-sm` (font-medium, tracking-wide)
-
-**Color System (Semantic Roles)**
-Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind colors:
-
-- **Primary:** Key actions (FABs, Active States) → `bg-primary` / `text-on-primary`
-- **Surface:**
-  - `bg-surface` (Main background)
-  - `bg-surface-container-low` (Sidebar/Drawer)
-  - `bg-surface-container-high` (Modals/Dialogs)
-- **Outline:** `border-outline` (dividers) and `border-outline-variant`.
-
-**Shape & Elevation**
-
-- **Corner Radius:**
-  - **Cards:** `rounded-xl` (M3 Medium) or `rounded-3xl` (M3 Large)
-  - **Buttons/Chips:** `rounded-full` (M3 Full)
-  - **Dialogs:** `rounded-[28px]` (M3 Extra Large)
-- **Elevation (Shadows):**
-  - Use Surface Tones + Shadow, NOT Glassmorphism.
-  - Level 1 (Cards): `shadow-sm bg-surface-container-low`
-  - Level 3 (Dialogs/FABs): `shadow-lg bg-surface-container-high`
-
-### 8.3 UI Components (M3 Mapping)
-
-| Current Concept          | Material 3 Replacement           | Tailwind Spec                                         |
-| :----------------------- | :------------------------------- | :---------------------------------------------------- |
-| **Sidebar**              | **Navigation Drawer** (Standard) | Fixed left, `bg-surface-container-low`, rounded-r-2xl |
-| **Pill Selectors**       | **Filter Chips**                 | `rounded-lg`, `border-outline`, `bg-surface`          |
-| **Stat Cards**           | **Elevated Card**                | `bg-surface-container-low`, `rounded-xl`, `shadow-sm` |
-| **Search Bar**           | **Search Bar (View)**            | `rounded-full`, `h-14`, `bg-surface-container-high`   |
-| **Benchmark Panel**      | **Standard Side Sheet**          | Fixed right, `bg-surface-container-low`, `border-l`   |
-| **Floating Map Details** | **Bottom Sheet**                 | `rounded-t-xl`, `bg-surface-container`                |
-
-### 8.4 Iconography
-
-- **Set:** Material Symbols (Rounded or Sharp).
-- **Implementation:** Use a consistent SVG set that matches Material Symbols.
-
-### 8.5 Motion
-
-- **Easing:** Use M3 Standard Easing (`ease-[0.2, 0.0, 0, 1.0]`).
-- **Durations:**
-  - Short: `duration-200` (icons, selection)
-  - Medium: `duration-400` (sheets, dialogs)
-  - Long: `duration-600` (page transitions)
 
 ---
 
-## 9. SCORE & CONFIDENCE DISPLAY (Standardized Components)
+## 9. SCORE & CONFIDENCE DISPLAY
 
-**CRITICAL:** All score displays MUST use the standardized score components. Do NOT create custom score visualizations.
+**All score displays MUST use standardized components in `app/components/scoring/`.** Do NOT create custom score visualizations.
 
-There is **one score type:** PropertyIQ Score (`score_type = 'propertyiq'`). It measures market demand signal relative to the state average.
+**One score type:** PropertyIQ Score (`score_type = 'propertyiq'`). Measures market demand signal relative to state average.
 
-**All components:** `app/components/scoring/`
+### Components
 
-| Component           | Use Case                                        | Data Source                    |
-| ------------------- | ----------------------------------------------- | ------------------------------ |
-| `ScoreWidget`       | **Preferred** - Auto-fetches score + confidence | Uses `useScoreData` internally |
-| `ScoreDisplay`      | Presentation-only score ring                    | Score value passed as prop     |
-| `ScoreBadge`        | Compact score with trend arrow                  | Score + trend passed as props  |
-| `ScoreCard`         | Expanded view with metric breakdown and history | Full score data as props       |
-| `ConfidenceDisplay` | Confidence star rating + percentage             | Confidence data as props       |
-| `ScoreHistoryChart` | 3Y/5Y score trend with returns overlay          | Fetches from API               |
+| Component           | Use Case                                        |
+| ------------------- | ----------------------------------------------- |
+| `ScoreWidget`       | **Preferred** — auto-fetches score + confidence |
+| `ScoreDisplay`      | Presentation-only score ring                    |
+| `ScoreBadge`        | Compact score with trend arrow                  |
+| `ScoreCard`         | Expanded view with breakdown and history        |
+| `ConfidenceDisplay` | Confidence star rating + percentage             |
+| `ScoreHistoryChart` | 3Y/5Y trend with returns overlay                |
 
-### PropertyIQ Score (v4 Demand Signal)
-
-**One score, one formula.** The PropertyIQ Score is a demand-signal composite that measures how "hot" a market is relative to its state average.
-
-**Formula:**
+### PropertyIQ Score Formula
 
 ```
 signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
-→ percentile rank within state
-→ re-center at 55.6
-→ clamp to 1-99
+→ percentile rank within state → re-center at 55.6 → clamp 1-99
 ```
 
-**Input Metrics (all from Redfin):**
-
-| Metric            | Direction | Meaning                          |
-| ----------------- | --------- | -------------------------------- |
-| % Sold Above List | Higher ↑  | Strong buyer competition         |
-| Median DOM        | Lower ↓   | Homes sell faster = more demand  |
-| Months of Supply  | Lower ↓   | Less inventory = seller's market |
-
-**Score Semantics:**
-
-- Score range: **1-99** (no 0 or 100)
 - **50 = state average** — higher means outperformance
 - Scores are relative within each state, not nationally
+- Input metrics: % Sold Above List (↑), Median DOM (↓), Months of Supply (↓) — all from Redfin
+- **Coverage:** 746 metros, 2,983 counties, 19,880 ZIPs
+- **Database:** `propertyiq_scores` table, `score_type = 'propertyiq'`
 
-**Coverage:** 746 metros, 2,983 counties, 19,880 ZIPs (23,609 total geographies)
+### Score Labels
 
-**Validation:** 100% year hit rate, IC 0.24, $18,100 Q5-Q1 gap, 7.83pp alpha
-
-**Database:** `propertyiq_scores` table, `score_type = 'propertyiq'`
-
-**Report:** `template_slug = 'propertyiq'`, `user_type = 'universal'`
+| Score | Label     | Score | Label     |
+| ----- | --------- | ----- | --------- |
+| 90+   | EXCELLENT | 50-59 | AVERAGE   |
+| 80-89 | GREAT     | 40-49 | BELOW AVG |
+| 70-79 | GOOD      | 20-39 | POOR      |
+| 60-69 | FAIR      | <20   | VERY POOR |
 
 ### Confidence (A/B/C/F Letter Badge)
 
-The confidence letter (A/B/C/F) is displayed alongside the score. It represents **data quality**, NOT a grade of the score number. A score of 72 with a "B" badge means "score is 72, and we have B-level confidence in that number."
+Confidence represents **data quality**, NOT a grade of the score. Score and confidence are independent.
 
-Score and confidence are independent — a market can have a high score with low confidence (good on paper but insufficient data) or a low score with high confidence (reliably bad).
+| Level | Range   | Meaning                                 |
+| ----- | ------- | --------------------------------------- |
+| A     | 80-100% | Excellent data coverage and freshness   |
+| B     | 65-79%  | Good data, minor gaps                   |
+| C     | 45-64%  | Fair data, notable gaps (shows warning) |
+| F     | 0-44%   | Insufficient data (shows warning)       |
 
-### Score Display
-
-**Component:** `ScoreDisplay` (`app/components/scoring/ScoreDisplay.tsx`)
-
-The base presentation component for the PropertyIQ Score ring.
-
-**Visual Spec:**
-
-- **Ring:** SVG circular progress with HSL gradient (red at 0 → green at 100)
-- **Tick marks:** At 33% and 66% positions (market threshold indicators)
-- **Score Number:** Bold, centered in ring
-- **Confidence Badge:** Letter (A/B/C/F) — comes from data layer, NOT from the score number
-- **Label:** Uppercase descriptor (EXCELLENT, GOOD, etc.) — derived from the score number
-
-**Score → Label Thresholds:**
-
-| Score | Label     |
-| ----- | --------- |
-| 90+   | EXCELLENT |
-| 80-89 | GREAT     |
-| 70-79 | GOOD      |
-| 60-69 | FAIR      |
-| 50-59 | AVERAGE   |
-| 40-49 | BELOW AVG |
-| 20-39 | POOR      |
-| <20   | VERY POOR |
-
-**Exported Utilities:**
-
-- `getScoreColor(value)` - Returns HSL color string
-- `getLetterGrade(score)` - Returns letter grade string
-- `getGradeColor(grade)` - Returns `{ bg, text }` Tailwind classes
-- `getScoreLabel(score)` - Returns descriptor string
-- `MARKET_THRESHOLDS` - `{ sellersMax: 33, balancedMax: 66 }` for tick marks
-
-### Confidence Display
-
-**Component:** `ConfidenceDisplay` (`app/components/scoring/ConfidenceDisplay.tsx`)
-
-Confidence uses a **letter grade system (A/B/C/F)** — NOT "HIGH/MED/LOW".
-
-**Confidence Level Thresholds:**
-
-| Level | Range   | Color           | Meaning                                 |
-| ----- | ------- | --------------- | --------------------------------------- |
-| A     | 80-100% | Emerald (green) | Excellent data coverage and freshness   |
-| B     | 65-79%  | Amber           | Good data, minor gaps                   |
-| C     | 45-64%  | Rose            | Fair data, notable gaps — shows warning |
-| F     | 0-44%   | Red             | Insufficient data — shows warning       |
-
-**Star Rating (visual indicator):**
-
-| Percentage | Stars   |
-| ---------- | ------- |
-| 90%+       | 5 stars |
-| 80-89%     | 4 stars |
-| 70-79%     | 3 stars |
-| 55-69%     | 2 stars |
-| <55%       | 1 star  |
-
-**Props:**
-
-```typescript
-interface ConfidenceDisplayProps {
-  level: "a" | "b" | "c" | "f"; // Letter grade
-  percentage: number; // 0-100
-  metricsAvailable: number; // How many metrics had data
-  metricsTotal: number; // Total metrics needed
-  freshnessInDays: number; // Age of newest data
-  warning?: string; // Shown for C/F levels
-  size?: "sm" | "md";
-  showDetails?: boolean; // Show percentage + warning icon
-}
-```
-
-**Backend Confidence Formula** (calculated in `confidence-calculator.service.ts`):
-
-```
-Confidence = (R² × 0.5) + (Sample Size Score × 0.3) + (Recency Score × 0.2)
-```
-
-### ScoreWidget (Connected Component)
-
-**Component:** `app/components/scoring/ScoreWidget.tsx`
-
-Auto-fetches the PropertyIQ Score + confidence from the data layer. Single score type — no type selector needed:
-
-```typescript
-import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
-
-<ScoreWidget
-  geographyType="metro"
-  geographyId="31080"
-  showConfidence  // Shows confidence letter badge (A/B/C/F) — this is data quality, not score grade
-/>
-// Result: "72" (score) with "B" badge (confidence in that score)
-```
-
-### ScoreBadge (Compact Display)
-
-**Component:** `app/components/scoring/ScoreBadge.tsx`
-
-Compact score ring with trend arrow, used in dashboards and lists. Single indigo color (no type-specific colors):
-
-```typescript
-import { ScoreBadge } from '@/app/components/scoring';
-
-<ScoreBadge
-  label="PropertyIQ Score"
-  score={72}
-  trend="up"
-  trendChange={3.2}
-  access="full"        // 'full' | 'teaser' (gated breakdown)
-  status="complete"    // 'complete' | 'partial' | 'unavailable'
-  size="md"            // 'sm' | 'md' | 'lg'
-/>
-```
-
-### ScoreCard (Expanded View)
-
-**Component:** `app/components/scoring/ScoreCard.tsx`
-
-Full expanded view with metric breakdown, sparkline history, confidence, and validation:
-
-- **Header:** ScoreBadge + label + validation badge + data completeness
-- **History:** Sparkline + "View History" button for extended chart
-- **Confidence:** Inline `ConfidenceDisplay` with star rating
-- **Metric Breakdown:** 3 input metrics (% Sold Above List, Median DOM, Months of Supply) + derived context (state comparison, percentile rank, historical alpha)
-- **Upgrade CTA:** Shown when `access === 'teaser'`
-
-### ScoreHistoryChart (Extended Trends)
-
-**Component:** `app/components/scoring/ScoreHistoryChart.tsx`
-
-3Y/5Y score trend with actual returns overlay (dual Y-axis):
-
-- Left axis: Score (0-100)
-- Right axis: Returns (%)
-- Lines: Score, Actual Return, State Benchmark (dashed)
-- Toggle between 3Y and 5Y views
-- Validation badge when 3Y+ of return data exists
+**Exported utilities:** `getScoreColor()`, `getLetterGrade()`, `getGradeColor()`, `getScoreLabel()`, `MARKET_THRESHOLDS`
