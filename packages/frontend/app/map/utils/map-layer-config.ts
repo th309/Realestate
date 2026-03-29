@@ -152,6 +152,41 @@ export function addMapLayers(opts: AddMapLayersOptions): void {
     });
   }
 
+  // State boundary overlay for sub-state geo levels (county, zip, city, tract)
+  // Uses Mapbox's built-in admin boundaries for a clean outline without loading extra GeoJSON
+  if (["county", "zip", "city", "tract"].includes(geoLevel)) {
+    map.addLayer({
+      id: "state-borders-overlay",
+      type: "line",
+      source: "composite",
+      "source-layer": "admin",
+      filter: [
+        "all",
+        ["==", ["get", "admin_level"], 1],
+        ["==", ["get", "iso_3166_1"], "US"],
+      ],
+      paint: {
+        "line-color": "#1A237E",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3,
+          1.2,
+          6,
+          2,
+          10,
+          3,
+        ],
+        "line-opacity": 0.5,
+      },
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+    });
+  }
+
   // Label layers for state and national
   if ((geoLevel === "state" || geoLevel === "national") && labelPointsGeojson) {
     map.addSource("geo-labels-data", {

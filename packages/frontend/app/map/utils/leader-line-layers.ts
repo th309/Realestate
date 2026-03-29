@@ -9,6 +9,7 @@ export const MANAGED_LAYER_IDS = [
   "geo-fills",
   "geo-borders",
   "geo-highlight",
+  "state-borders-overlay",
   "leader-lines",
   "leader-dots",
   "geo-labels",
