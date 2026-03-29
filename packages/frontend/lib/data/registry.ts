@@ -885,7 +885,7 @@ export const METRICS: Record<string, MetricConfig> = {
   propertyiq_score: {
     id: "propertyiq_score",
     title: "PropertyIQ Score",
-    format: "number",
+    format: "index",
     dataSource: "propertyiq",
     apiEndpoint: "/api/scores/{geo}/{location_id}",
     keyField: "auto",
