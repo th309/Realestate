@@ -24,7 +24,13 @@ import {
   scoreToGrade,
   ScoreType,
   GeographyLevel,
+  V4_FORMULA_VERSION,
 } from './formula-weights';
+import {
+  calculateV4Scores as runV4Engine,
+  V4ScoreResult,
+} from './v4-scoring-engine';
+import { fetchV4Metrics } from './v4-scoring-data-fetcher';
 import {
   GeographyType,
   LocationMetrics,
@@ -54,7 +60,7 @@ import {
   fetchScoresPage,
   fetchAllScoresBatched,
 } from './scoring-queries';
-import { saveScoresBatch } from './scoring-persistence';
+import { saveScoresBatch, upsertScoresWithRetry } from './scoring-persistence';
 import {
   getScoreDistribution as queryScoreDistribution,
   getAllScoreDistributions as queryAllScoreDistributions,
@@ -184,6 +190,53 @@ export class ScoringService {
       targetDate,
     );
     return { calculated, errors, scoreDate: targetDate };
+  }
+
+  /**
+   * Calculate v4 demand-signal scores for all locations at a given geography level.
+   * Uses only 3 Redfin metrics (sold_above_list, median_dom, months_of_supply).
+   */
+  async calculateV4Scores(
+    geography: GeographyLevel,
+    periodDate?: string,
+  ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
+    // 1. Get latest Redfin date if not specified
+    const scoreDate =
+      periodDate || (await getLatestRedfinDate(this.supabase, geography));
+    if (!scoreDate) {
+      throw new Error(`No Redfin data found for ${geography}`);
+    }
+
+    // 2. Fetch only v4 metrics (3 Redfin columns)
+    const locations = await fetchV4Metrics(this.supabase, geography, scoreDate);
+    if (locations.length === 0) {
+      return { calculated: 0, errors: 0, scoreDate };
+    }
+
+    // 3. Calculate scores using v4 engine
+    const results = runV4Engine(locations, geography);
+
+    // 4. Build rows for persistence
+    const rows = results.map((r) => ({
+      geography,
+      location_id: r.locationId,
+      location_name: r.locationName,
+      score_type: 'propertyiq' as const,
+      score: r.score,
+      grade: r.grade,
+      confidence: r.confidence,
+      confidence_level: r.confidenceLevel,
+      median_price: r.medianPrice,
+      score_date: scoreDate,
+      created_at: new Date().toISOString(),
+      z_scores: JSON.stringify(r.inputMetrics),
+      formula_version: V4_FORMULA_VERSION,
+    }));
+
+    // 5. Persist
+    await upsertScoresWithRetry(this.supabase, rows);
+
+    return { calculated: results.length, errors: 0, scoreDate };
   }
 
   // ============================================================================
