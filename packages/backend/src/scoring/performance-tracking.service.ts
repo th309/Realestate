@@ -176,6 +176,7 @@ export class PerformanceTrackingService {
       homeready: [],
       investoredge: [],
       markethealth: [],
+      propertyiq: [],
     };
 
     if (!data || data.length === 0) {

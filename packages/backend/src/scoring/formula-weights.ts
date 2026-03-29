@@ -12,7 +12,11 @@
  *   Percentage contribution to the total score (0-1)
  */
 
-export type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
+export type ScoreType =
+  | 'homeready'
+  | 'investoredge'
+  | 'markethealth'
+  | 'propertyiq';
 export type GeographyLevel = 'metro' | 'county' | 'zip';
 
 export interface MetricWeight {
@@ -203,16 +207,19 @@ export const MODEL_CORRELATIONS: Record<
     homeready: 0.2996, // XGBoost walk-forward OOS IC
     investoredge: 0.3724, // XGBoost walk-forward OOS IC
     markethealth: 0.3659, // XGBoost walk-forward OOS IC
+    propertyiq: 0.0, // v4 demand-signal — correlation TBD after backtest
   },
   county: {
     homeready: 0.2459, // LightGBM walk-forward OOS IC
     investoredge: 0.2459, // Duplicates HR (no separate IE model at county)
     markethealth: 0.2818, // LightGBM walk-forward OOS IC
+    propertyiq: 0.0, // v4 demand-signal — correlation TBD after backtest
   },
   zip: {
     homeready: 0.1841, // XGBoost walk-forward OOS IC
     investoredge: 0.1841, // Duplicates HR (no separate IE model at ZIP)
     markethealth: 0.2213, // XGBoost walk-forward OOS IC
+    propertyiq: 0.0, // v4 demand-signal — correlation TBD after backtest
   },
 };
 
@@ -403,6 +410,22 @@ export const COMPONENT_GROUPS: Record<
   },
 
   // -----------------------------------------------------------------------
+  // PropertyIQ (v4): demand_signal — single composite from 3 Redfin metrics
+  // No component groups needed; the score IS the single demand signal.
+  // -----------------------------------------------------------------------
+  propertyiq: {
+    metro: {
+      demand_signal: ['sold_above_list', 'median_dom', 'months_of_supply'],
+    },
+    county: {
+      demand_signal: ['sold_above_list', 'median_dom', 'months_of_supply'],
+    },
+    zip: {
+      demand_signal: ['sold_above_list', 'median_dom', 'months_of_supply'],
+    },
+  },
+
+  // -----------------------------------------------------------------------
   // MarketHealth: demand_strength, supply_balance
   // -----------------------------------------------------------------------
   markethealth: {
@@ -568,9 +591,97 @@ export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
       avgExcessReturn: 0.66,
     },
   ],
+  propertyiq: [
+    {
+      quintile: 1,
+      scoreRange: [1, 20],
+      label: 'Bottom',
+      avgExcessReturn: -3.34,
+    },
+    {
+      quintile: 2,
+      scoreRange: [21, 40],
+      label: 'Below Avg',
+      avgExcessReturn: -1.2,
+    },
+    {
+      quintile: 3,
+      scoreRange: [41, 60],
+      label: 'Average',
+      avgExcessReturn: -0.15,
+    },
+    {
+      quintile: 4,
+      scoreRange: [61, 80],
+      label: 'Above Avg',
+      avgExcessReturn: +1.17,
+    },
+    { quintile: 5, scoreRange: [81, 99], label: 'Top', avgExcessReturn: +3.05 },
+  ],
 };
 
 /**
  * Current formula version identifier.
  */
 export const FORMULA_VERSION = 'v3.0';
+
+// ============================================================================
+// v4 Demand Signal Formula (PropertyIQ unified score)
+// ============================================================================
+
+/**
+ * v4 Demand Signal formula — 3 Redfin metrics.
+ * signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
+ * Then percentile-ranked and re-centered at the zero-crossing.
+ */
+export const V4_FORMULA_METRICS = [
+  'sold_above_list',
+  'median_dom',
+  'months_of_supply',
+] as const;
+
+export const V4_METRIC_DIRECTIONS: Record<string, 1 | -1> = {
+  sold_above_list: 1, // higher = hotter
+  median_dom: -1, // lower = hotter
+  months_of_supply: -1, // lower = hotter
+};
+
+/**
+ * Zero-crossing percentile by geography level.
+ * This is the percentile rank where excess return vs state = 0.
+ * Determined from isotonic regression in recentered_score.py.
+ */
+export const V4_ZERO_CROSSING: Record<GeographyLevel, number> = {
+  metro: 55.6,
+  county: 62.4,
+  zip: 55.6,
+};
+
+export const V4_FORMULA_VERSION = 'v4.0-demand-signal';
+
+/**
+ * v4 calibration data: maps score quintiles to average historical excess return.
+ * From county backtest (recentered_score.py) — stronger signal separation than v3.
+ */
+export const V4_CALIBRATION: CalibrationEntry[] = [
+  { quintile: 1, scoreRange: [1, 20], label: 'Bottom', avgExcessReturn: -3.34 },
+  {
+    quintile: 2,
+    scoreRange: [21, 40],
+    label: 'Below Avg',
+    avgExcessReturn: -1.2,
+  },
+  {
+    quintile: 3,
+    scoreRange: [41, 60],
+    label: 'Average',
+    avgExcessReturn: -0.15,
+  },
+  {
+    quintile: 4,
+    scoreRange: [61, 80],
+    label: 'Above Avg',
+    avgExcessReturn: +1.17,
+  },
+  { quintile: 5, scoreRange: [81, 99], label: 'Top', avgExcessReturn: +3.05 },
+];

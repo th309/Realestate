@@ -36,7 +36,9 @@ export class MetricDetailDto {
   @ApiPropertyOptional({ description: 'Target/optimal value description' })
   target?: string;
 
-  @ApiProperty({ description: 'Whether this metric was inherited from parent geography' })
+  @ApiProperty({
+    description: 'Whether this metric was inherited from parent geography',
+  })
   isInherited: boolean;
 
   @ApiPropertyOptional({ description: 'Source geography type if inherited' })
@@ -74,13 +76,22 @@ export class ComponentDetailDto {
   @ApiProperty({ description: 'Component description' })
   description: string;
 
-  @ApiProperty({ type: [MetricDetailDto], description: 'Metrics that make up this component' })
+  @ApiProperty({
+    type: [MetricDetailDto],
+    description: 'Metrics that make up this component',
+  })
   metrics: MetricDetailDto[];
 
-  @ApiProperty({ description: 'Factors helping this component score', type: [String] })
+  @ApiProperty({
+    description: 'Factors helping this component score',
+    type: [String],
+  })
   helpingFactors: string[];
 
-  @ApiProperty({ description: 'Factors hurting this component score', type: [String] })
+  @ApiProperty({
+    description: 'Factors hurting this component score',
+    type: [String],
+  })
   hurtingFactors: string[];
 }
 
@@ -97,13 +108,19 @@ export class ScoreHistoryPointDto {
 }
 
 export class ScoreHistoryDto {
-  @ApiProperty({ type: [ScoreHistoryPointDto], description: 'Historical score data' })
+  @ApiProperty({
+    type: [ScoreHistoryPointDto],
+    description: 'Historical score data',
+  })
   data: ScoreHistoryPointDto[];
 
   @ApiProperty({ description: 'Number of months of history' })
   months: number;
 
-  @ApiProperty({ description: 'Trend direction', enum: ['up', 'down', 'stable'] })
+  @ApiProperty({
+    description: 'Trend direction',
+    enum: ['up', 'down', 'stable'],
+  })
   trend: 'up' | 'down' | 'stable';
 
   @ApiProperty({ description: 'Change from first to last period' })
@@ -115,7 +132,10 @@ export class ScoreHistoryDto {
 // ============================================================================
 
 export class ConfidenceDto {
-  @ApiProperty({ description: 'Confidence letter grade', enum: ['A', 'B', 'C', 'F'] })
+  @ApiProperty({
+    description: 'Confidence letter grade',
+    enum: ['A', 'B', 'C', 'F'],
+  })
   level: 'A' | 'B' | 'C' | 'F';
 
   @ApiProperty({ description: 'Confidence percentage (0-100)' })
@@ -139,7 +159,10 @@ export class ConfidenceDto {
 // ============================================================================
 
 export class ScoreBadgeResponseDto {
-  @ApiProperty({ description: 'Score type', enum: ['markethealth', 'homeready', 'investoredge'] })
+  @ApiProperty({
+    description: 'Score type',
+    enum: ['markethealth', 'homeready', 'investoredge'],
+  })
   type: ScoreType;
 
   @ApiProperty({ description: 'Score label for display' })
@@ -154,10 +177,16 @@ export class ScoreBadgeResponseDto {
   @ApiProperty({ description: 'Trend change amount' })
   trendChange: number;
 
-  @ApiProperty({ description: 'Access level for this user', enum: ['full', 'teaser'] })
+  @ApiProperty({
+    description: 'Access level for this user',
+    enum: ['full', 'teaser'],
+  })
   access: ScoreAccess;
 
-  @ApiProperty({ description: 'Score status', enum: ['complete', 'partial', 'unavailable'] })
+  @ApiProperty({
+    description: 'Score status',
+    enum: ['complete', 'partial', 'unavailable'],
+  })
   status: 'complete' | 'partial' | 'unavailable';
 
   @ApiPropertyOptional({ description: 'Status message' })
@@ -172,13 +201,22 @@ export class ScoreBadgeResponseDto {
 // ============================================================================
 
 export class ScoreCardResponseDto extends ScoreBadgeResponseDto {
-  @ApiProperty({ type: [ComponentDetailDto], description: 'Component breakdown' })
+  @ApiProperty({
+    type: [ComponentDetailDto],
+    description: 'Component breakdown',
+  })
   components: ComponentDetailDto[];
 
-  @ApiProperty({ type: ConfidenceDto, description: 'Score confidence information' })
+  @ApiProperty({
+    type: ConfidenceDto,
+    description: 'Score confidence information',
+  })
   confidence: ConfidenceDto;
 
-  @ApiPropertyOptional({ type: ScoreHistoryDto, description: 'Historical score data' })
+  @ApiPropertyOptional({
+    type: ScoreHistoryDto,
+    description: 'Historical score data',
+  })
   history?: ScoreHistoryDto;
 
   @ApiProperty({ description: 'Data completeness percentage (0-100)' })
@@ -222,7 +260,10 @@ export class UpgradeCtaDto {
   @ApiProperty({ description: 'Upgrade URL' })
   upgradeUrl: string;
 
-  @ApiProperty({ description: 'Required tier for full access', enum: ['pro', 'enterprise'] })
+  @ApiProperty({
+    description: 'Required tier for full access',
+    enum: ['pro', 'enterprise'],
+  })
   requiredTier: UserTier;
 
   @ApiProperty({ description: 'Feature highlights', type: [String] })
@@ -230,7 +271,10 @@ export class UpgradeCtaDto {
 }
 
 export class ScoreTeaserResponseDto extends ScoreBadgeResponseDto {
-  @ApiProperty({ type: [LockedComponentDto], description: 'Locked component previews' })
+  @ApiProperty({
+    type: [LockedComponentDto],
+    description: 'Locked component previews',
+  })
   lockedComponents: LockedComponentDto[];
 
   @ApiProperty({ type: UpgradeCtaDto, description: 'Upgrade call to action' })
@@ -248,7 +292,10 @@ export class AllScoresResponseDto {
   @ApiProperty({ description: 'Geography ID' })
   geographyId: string;
 
-  @ApiProperty({ description: 'Geography type', enum: ['national', 'state', 'metro', 'county', 'city', 'zip'] })
+  @ApiProperty({
+    description: 'Geography type',
+    enum: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+  })
   geographyType: GeographyType;
 
   @ApiProperty({ description: 'Geography name' })
@@ -260,17 +307,33 @@ export class AllScoresResponseDto {
   @ApiProperty({ description: 'Period date' })
   periodDate: string;
 
-  @ApiProperty({ description: 'User tier', enum: ['free', 'basic', 'pro', 'enterprise'] })
+  @ApiProperty({
+    description: 'User tier',
+    enum: ['free', 'basic', 'pro', 'enterprise'],
+  })
   userTier: UserTier;
 
-  @ApiProperty({ type: ScoreBadgeResponseDto, description: 'Market Health score (always full access)' })
+  @ApiProperty({
+    type: ScoreBadgeResponseDto,
+    description: 'Market Health score (always full access)',
+  })
   marketHealth: ScoreBadgeResponseDto | ScoreCardResponseDto;
 
-  @ApiProperty({ description: 'HomeReady score (full or teaser based on tier)' })
-  homeready: ScoreBadgeResponseDto | ScoreCardResponseDto | ScoreTeaserResponseDto;
+  @ApiProperty({
+    description: 'HomeReady score (full or teaser based on tier)',
+  })
+  homeready:
+    | ScoreBadgeResponseDto
+    | ScoreCardResponseDto
+    | ScoreTeaserResponseDto;
 
-  @ApiProperty({ description: 'InvestorEdge score (full or teaser based on tier)' })
-  investoredge: ScoreBadgeResponseDto | ScoreCardResponseDto | ScoreTeaserResponseDto;
+  @ApiProperty({
+    description: 'InvestorEdge score (full or teaser based on tier)',
+  })
+  investoredge:
+    | ScoreBadgeResponseDto
+    | ScoreCardResponseDto
+    | ScoreTeaserResponseDto;
 
   @ApiProperty({ description: 'Timestamp when scores were calculated' })
   calculatedAt: string;
@@ -284,13 +347,22 @@ export class AllScoresResponseDto {
 // ============================================================================
 
 export class GetScoreQueryDto {
-  @ApiPropertyOptional({ description: 'Score type filter', enum: ['markethealth', 'homeready', 'investoredge'] })
+  @ApiPropertyOptional({
+    description: 'Score type filter',
+    enum: ['markethealth', 'homeready', 'investoredge'],
+  })
   type?: ScoreType;
 
-  @ApiPropertyOptional({ description: 'Include expanded component details', default: false })
+  @ApiPropertyOptional({
+    description: 'Include expanded component details',
+    default: false,
+  })
   expanded?: boolean;
 
-  @ApiPropertyOptional({ description: 'Number of months of history to include', default: 0 })
+  @ApiPropertyOptional({
+    description: 'Number of months of history to include',
+    default: 0,
+  })
   historyMonths?: number;
 
   @ApiPropertyOptional({ description: 'Period date (defaults to latest)' })
@@ -419,6 +491,7 @@ export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
     markethealth: 'Unlock Full Market Health Details',
     homeready: 'Unlock HomeReady Score',
     investoredge: 'Unlock InvestorEdge Score',
+    propertyiq: 'Unlock PropertyIQ Score',
   };
 
   const descriptions: Record<ScoreType, string> = {
@@ -427,6 +500,8 @@ export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
       'Discover if this market is right for homebuyers with our proprietary HomeReady scoring.',
     investoredge:
       'Analyze investment potential with cash flow, appreciation, and risk metrics.',
+    propertyiq:
+      'See the unified PropertyIQ demand signal with calibrated return predictions.',
   };
 
   const features: Record<ScoreType, string[]> = {
@@ -448,6 +523,11 @@ export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
       'Rent demand metrics',
       'Appreciation forecast',
       'Risk assessment',
+    ],
+    propertyiq: [
+      'Demand signal score',
+      'Calibrated return predictions',
+      'Historical trend',
     ],
   };
 

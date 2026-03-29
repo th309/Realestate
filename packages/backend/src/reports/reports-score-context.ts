@@ -29,10 +29,9 @@ export interface ScoreContext {
   comparison?: string;
 }
 
-/**
- * Score type definitions for contextualization
- */
-export type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
+// Score type — imported from the single source of truth in formula-weights.ts
+import type { ScoreType } from '../scoring/formula-weights';
+export type { ScoreType };
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
@@ -111,7 +110,11 @@ export function generateScoreContext(
   const percentile_text = getPercentileText(score, scoreType, geoData);
 
   // Generate dollar impact based on score type and value
-  const dollar_impact = getDollarImpact(score, scoreType, geoData?.median_price);
+  const dollar_impact = getDollarImpact(
+    score,
+    scoreType,
+    geoData?.median_price,
+  );
 
   // Generate comparison text
   const comparison = getComparisonText(score, geoData);
@@ -127,7 +130,10 @@ export function generateScoreContext(
 /**
  * Get human-readable interpretation based on score range
  */
-export function getScoreInterpretation(score: number, scoreType: ScoreType): string {
+export function getScoreInterpretation(
+  score: number,
+  scoreType: ScoreType,
+): string {
   // Score range labels based on GRADE_THRESHOLDS
   const getRangeLabel = (score: number): string => {
     if (score >= 93) return 'exceptional';
@@ -146,24 +152,29 @@ export function getScoreInterpretation(score: number, scoreType: ScoreType): str
   // Score-type specific interpretations
   const interpretations: Record<ScoreType, Record<string, string>> = {
     homeready: {
-      exceptional: 'Exceptional buying conditions with strong appreciation potential',
-      excellent: 'Excellent market for homebuyers with favorable long-term outlook',
+      exceptional:
+        'Exceptional buying conditions with strong appreciation potential',
+      excellent:
+        'Excellent market for homebuyers with favorable long-term outlook',
       'very good': 'Very good buying opportunity with solid fundamentals',
       good: 'Good conditions for buyers seeking stable markets',
       'above average': 'Above average market with reasonable buying conditions',
-      moderate: 'Moderate conditions - consider timing and specific neighborhoods',
+      moderate:
+        'Moderate conditions - consider timing and specific neighborhoods',
       'below average': 'Below average conditions - buyer caution advised',
       poor: 'Poor buying conditions - significant headwinds present',
       'very poor': 'Very challenging market for homebuyers',
     },
     investoredge: {
-      exceptional: 'Exceptional investment opportunity with strong returns expected',
+      exceptional:
+        'Exceptional investment opportunity with strong returns expected',
       excellent: 'Excellent rental market with high yield potential',
       'very good': 'Very good investment fundamentals and cash flow potential',
       good: 'Good investment conditions with reasonable returns',
       'above average': 'Above average returns likely compared to most markets',
       moderate: 'Moderate investment potential - selective opportunities exist',
-      'below average': 'Below average returns expected - careful analysis needed',
+      'below average':
+        'Below average returns expected - careful analysis needed',
       poor: 'Poor investment conditions - limited upside potential',
       'very poor': 'Very challenging for real estate investment',
     },
@@ -178,6 +189,19 @@ export function getScoreInterpretation(score: number, scoreType: ScoreType): str
       poor: 'Poor market health - low demand and slow activity',
       'very poor': 'Very weak market conditions with significant oversupply',
     },
+    propertyiq: {
+      exceptional:
+        'Exceptionally strong demand signal — top quintile markets historically return +3% above benchmark',
+      excellent: 'Excellent demand signal with strong buyer competition',
+      'very good': 'Very strong demand indicators across key metrics',
+      good: 'Good demand signal suggesting above-average market activity',
+      'above average': 'Above average demand — moderate buyer competition',
+      moderate: 'Moderate demand signal — market performing near benchmark',
+      'below average': 'Below average demand — softer buyer activity',
+      poor: 'Weak demand signal — limited buyer competition',
+      'very poor':
+        'Very weak demand — bottom quintile markets historically underperform by -3%',
+    },
   };
 
   return interpretations[scoreType][rangeLabel] || 'Score data available';
@@ -189,15 +213,23 @@ export function getScoreInterpretation(score: number, scoreType: ScoreType): str
 export function getPercentileText(
   score: number,
   scoreType: ScoreType,
-  geoData?: { geography_type?: 'metro' | 'county' | 'zip'; percentile?: number; total_markets?: number },
+  geoData?: {
+    geography_type?: 'metro' | 'county' | 'zip';
+    percentile?: number;
+    total_markets?: number;
+  },
 ): string {
   // If we have actual percentile data, use it
   if (geoData?.percentile !== undefined) {
     const position = geoData.percentile;
-    if (position <= 10) return `Top 10% of ${getGeoLabel(geoData.geography_type)}s`;
-    if (position <= 25) return `Top 25% of ${getGeoLabel(geoData.geography_type)}s`;
-    if (position <= 50) return `Top half of ${getGeoLabel(geoData.geography_type)}s`;
-    if (position <= 75) return `Bottom half of ${getGeoLabel(geoData.geography_type)}s`;
+    if (position <= 10)
+      return `Top 10% of ${getGeoLabel(geoData.geography_type)}s`;
+    if (position <= 25)
+      return `Top 25% of ${getGeoLabel(geoData.geography_type)}s`;
+    if (position <= 50)
+      return `Top half of ${getGeoLabel(geoData.geography_type)}s`;
+    if (position <= 75)
+      return `Bottom half of ${getGeoLabel(geoData.geography_type)}s`;
     return `Bottom 25% of ${getGeoLabel(geoData.geography_type)}s`;
   }
 
@@ -226,10 +258,14 @@ export function getPercentileText(
  */
 export function getGeoLabel(geoType?: 'metro' | 'county' | 'zip'): string {
   switch (geoType) {
-    case 'metro': return 'metro area';
-    case 'county': return 'county';
-    case 'zip': return 'ZIP code';
-    default: return 'market';
+    case 'metro':
+      return 'metro area';
+    case 'county':
+      return 'county';
+    case 'zip':
+      return 'ZIP code';
+    default:
+      return 'market';
   }
 }
 
@@ -262,7 +298,8 @@ export function getDollarImpact(
         annualAppreciation = Math.max(0, (score / 40) * 1); // 0-1%
       }
 
-      const threeYearGain = medianPrice * (Math.pow(1 + annualAppreciation / 100, 3) - 1);
+      const threeYearGain =
+        medianPrice * (Math.pow(1 + annualAppreciation / 100, 3) - 1);
 
       if (threeYearGain > 1000) {
         return `Homes in similar markets have historically appreciated ~${formatCurrency(Math.round(threeYearGain))} over 3 years (${annualAppreciation.toFixed(1)}% annually)`;
@@ -317,7 +354,10 @@ export function getDollarImpact(
  */
 export function getComparisonText(
   score: number,
-  geoData?: { geography_type?: 'metro' | 'county' | 'zip'; total_markets?: number },
+  geoData?: {
+    geography_type?: 'metro' | 'county' | 'zip';
+    total_markets?: number;
+  },
 ): string | undefined {
   // Calculate approximate percentile from score
   // Scores are normalized 0-100, so a score of 75 means roughly better than 75% of markets
@@ -353,6 +393,7 @@ export function generateAllScoreContexts(
     homeready: null,
     investoredge: null,
     markethealth: null,
+    propertyiq: null,
   };
 
   if (scores.homeready) {

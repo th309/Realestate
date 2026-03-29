@@ -123,6 +123,7 @@ export async function getScoreForDate(
     homeready: null!,
     investoredge: null!,
     markethealth: null!,
+    propertyiq: null!,
   };
   let locationName = '';
   let medianPrice: number | null = null;

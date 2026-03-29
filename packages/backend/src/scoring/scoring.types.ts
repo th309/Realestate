@@ -31,6 +31,12 @@ export {
   getConfidenceLevel,
   getRequiredMetrics,
   validateFormulaWeights,
+  // v4 demand-signal formula exports
+  V4_FORMULA_METRICS,
+  V4_METRIC_DIRECTIONS,
+  V4_ZERO_CROSSING,
+  V4_FORMULA_VERSION,
+  V4_CALIBRATION,
 } from './formula-weights';
 
 // ============================================================================
@@ -149,6 +155,7 @@ export interface ScoreResult {
     homeready: SingleScoreResult | null;
     investoredge: SingleScoreResult | null;
     markethealth: SingleScoreResult | null;
+    propertyiq?: SingleScoreResult | null;
   };
   /** Per-metric z-scores for this location (shared across all score types) */
   z_scores?: Record<string, number>;
