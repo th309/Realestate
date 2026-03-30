@@ -106,7 +106,7 @@ export function DashboardHeader({
   );
 }
 
-/** Capitalize each word in a geography name, with state abbreviation uppercased */
+/** Format geography display: "80652 — Roggen, CO" for ZIPs, "Title Case, ST" for others */
 function formatGeographyDisplayName(
   name: string,
   type: string,
@@ -121,6 +121,10 @@ function formatGeographyDisplayName(
   const cityState = state ? `${city}, ${state}` : city;
 
   if (type === "zip") {
+    // If name is just the ZIP code itself (no city/state from backend), show ZIP only once
+    if (cityState === id || !name.includes(",")) {
+      return id;
+    }
     return `${id} \u2014 ${cityState}`;
   }
   return cityState;

@@ -452,6 +452,19 @@ export class MarketSnapshotService {
       }
     }
 
+    // Enrich ZIP names: ensure we always show "City, ST" not just the ZIP code
+    if (geoType === 'zip' && (!geographyName || !geographyName.includes(','))) {
+      const { data: cw } = await this.supabase
+        .from('geography_crosswalk')
+        .select('zip_default_city, zip_default_state')
+        .eq('zip_code', geoId)
+        .limit(1)
+        .maybeSingle();
+      if (cw?.zip_default_city && cw?.zip_default_state) {
+        geographyName = `${cw.zip_default_city}, ${cw.zip_default_state}`;
+      }
+    }
+
     return {
       success: true,
       geography: {
