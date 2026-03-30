@@ -16,6 +16,16 @@ export function createSupabaseBrowserClient() {
     browserClient = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          flowType: "pkce",
+          // Prevent "Lock broken by another request with the 'steal' option"
+          // AbortError in Next.js 16. The default uses navigator.locks with
+          // steal mode which races when multiple components call getSession()
+          // concurrently. The singleton pattern above already serializes access.
+          lock: async (_name, _acquireTimeout, fn) => fn(),
+        },
+      },
     );
   }
   return browserClient;
