@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
 import { useMyOrg } from "@/lib/data";
-import { ChevronDown } from "lucide-react";
 import {
   MenuIcon,
   CloseIcon,
@@ -14,139 +13,34 @@ import {
   SettingsIcon,
   CreditCardIcon,
   BookIcon,
-  HierarchyIcon,
   BuildingIcon,
   HelpIcon,
   LogoutIcon,
   HomeIcon,
-  MapIcon,
-  TrendingIcon,
-  ArticleIcon,
-  InfoIcon,
-  MoneyIcon,
-  MarketsIcon,
-  ScoreIcon,
 } from "@/src/components/common/Icons";
+import { NAV, isDropdown } from "./header-nav-data";
+import { NavDropdownMenu } from "./NavDropdownMenu";
+import { MobileMenu } from "./MobileMenu";
 
-/* ─── Nav structure ─── */
+/* ─── Profile dropdown item ─── */
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface NavDropdown {
-  name: string;
-  items: NavItem[];
-}
-
-type NavEntry = NavItem | NavDropdown;
-
-function isDropdown(entry: NavEntry): entry is NavDropdown {
-  return "items" in entry;
-}
-
-const NAV: NavEntry[] = [
-  { name: "Home", href: "/", icon: HomeIcon },
-  {
-    name: "Explore",
-    items: [
-      { name: "Maps", href: "/map", icon: MapIcon },
-      { name: "Markets", href: "/market", icon: MarketsIcon },
-      { name: "Graphs", href: "/graphs", icon: TrendingIcon },
-    ],
-  },
-  { name: "Reports", href: "/reports", icon: ArticleIcon },
-  { name: "Scores", href: "/scores", icon: ScoreIcon },
-  { name: "Pricing", href: "/pricing", icon: MoneyIcon },
-  {
-    name: "More",
-    items: [
-      { name: "Blog", href: "/blog", icon: BookIcon },
-      { name: "About us", href: "/about", icon: InfoIcon },
-    ],
-  },
-];
-
-/** Flat list of all nav items for mobile menu and active-state detection */
-const ALL_NAV_ITEMS: NavItem[] = NAV.flatMap((entry) =>
-  isDropdown(entry) ? entry.items : [entry],
-);
-
-/* ─── Dropdown component ─── */
-
-function NavDropdownMenu({
+function DropdownItem({
+  icon: Icon,
   label,
-  items,
-  pathname,
+  href,
 }: {
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
-  items: NavItem[];
-  pathname: string | null;
+  href: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const isChildActive = items.some(
-    (item) =>
-      pathname === item.href ||
-      (item.href !== "/" && pathname?.startsWith(item.href)),
-  );
-
-  const close = useCallback(() => setOpen(false), []);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) close();
-    }
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open, close]);
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-          isChildActive
-            ? "text-primary bg-primary-container/30"
-            : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-        }`}
-      >
-        {label}
-        <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/50 overflow-hidden z-50">
-          <div className="py-1">
-            {items.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== "/" && pathname?.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={close}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "text-primary bg-primary-container/20"
-                      : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+    <Link
+      href={href}
+      className="group flex items-center px-3 py-2 text-sm font-medium text-on-surface-variant rounded-lg hover:bg-surface-container hover:text-primary transition-colors"
+    >
+      <Icon className="w-4 h-4 mr-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+      {label}
+    </Link>
   );
 }
 
@@ -359,101 +253,20 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu — flat list grouped by section */}
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-outline-variant bg-surface-container-lowest absolute w-full shadow-lg">
-          <div className="px-4 py-4 space-y-1">
-            {NAV.map((entry) => {
-              if (isDropdown(entry)) {
-                return (
-                  <div key={entry.name}>
-                    <p className="px-4 pt-3 pb-1 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                      {entry.name}
-                    </p>
-                    {entry.items.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <item.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
-                        {item.name}
-                      </Link>
-                    ))}
-                  </div>
-                );
-              }
-              return (
-                <Link
-                  key={entry.name}
-                  href={entry.href}
-                  className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <entry.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
-                  {entry.name}
-                </Link>
-              );
-            })}
-            <div className="h-px bg-outline-variant my-3" />
-            {loading ? null : !!user ? (
-              <button
-                onClick={async () => {
-                  await signOut();
-                  setIsMenuOpen(false);
-                  router.push("/");
-                }}
-                className="w-full flex items-center px-4 py-3 rounded-xl text-base font-medium text-error hover:bg-error-container/30"
-              >
-                <LogoutIcon className="w-5 h-5 mr-3" />
-                Sign out
-              </button>
-            ) : (
-              <div className="space-y-3 pt-2">
-                <button
-                  onClick={() => {
-                    router.push("/auth/sign-in");
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant border border-outline-variant hover:bg-surface-container"
-                >
-                  Log in
-                </button>
-                <button
-                  onClick={() => {
-                    router.push("/auth/sign-up");
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-primary bg-primary hover:bg-primary/90 shadow-md"
-                >
-                  Get Started
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <MobileMenu
+          user={user}
+          loading={loading}
+          onClose={() => setIsMenuOpen(false)}
+          onSignOut={async () => {
+            await signOut();
+            setIsMenuOpen(false);
+            router.push("/");
+          }}
+          onNavigate={(path) => router.push(path)}
+        />
       )}
     </header>
-  );
-}
-
-function DropdownItem({
-  icon: Icon,
-  label,
-  href,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center px-3 py-2 text-sm font-medium text-on-surface-variant rounded-lg hover:bg-surface-container hover:text-primary transition-colors"
-    >
-      <Icon className="w-4 h-4 mr-3 text-on-surface-variant group-hover:text-primary transition-colors" />
-      {label}
-    </Link>
   );
 }

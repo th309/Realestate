@@ -1,7 +1,7 @@
 {
   "name": "@propertyiq/mcp-server",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "MCP server exposing PropertyIQ real estate analytics to AI agents",
   "main": "dist/index.js",
   "bin": {
