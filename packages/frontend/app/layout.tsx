@@ -154,7 +154,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col`}
+        className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-surface text-on-surface`}
       >
         <a
           href="#main-content"
