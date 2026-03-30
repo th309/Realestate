@@ -1,11 +1,11 @@
 const FAQ_ITEMS = [
   {
     q: "How often is the PropertyIQ Score updated?",
-    a: "The score is recalculated monthly as new Redfin data arrives. The three input metrics — % Sold Above List, Median Days on Market, and Months of Supply — update monthly. Each refresh incorporates the latest available data.",
+    a: "The score is recalculated monthly as new housing data arrives. The three input metrics — % Sold Above List, Median Days on Market, and Months of Supply — update monthly. Each refresh incorporates the latest available data.",
   },
   {
     q: "What data sources power the score?",
-    a: "The PropertyIQ Score is built on three Redfin metrics: % Sold Above List, Median Days on Market, and Months of Supply. We tested 40+ features from Zillow, Census, FRED, BLS, and Redfin — these three are the most predictive of future home price appreciation in out-of-sample testing.",
+    a: "The PropertyIQ Score is built on three housing metrics: % Sold Above List, Median Days on Market, and Months of Supply. We tested 40+ features from Zillow, Census, FRED, BLS, and housing — these three are the most predictive of future home price appreciation in out-of-sample testing.",
   },
   {
     q: "How accurate is the PropertyIQ Score?",
@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Why only 3 metrics?",
-    a: "We tested 40+ features across multiple data sources. These 3 Redfin metrics are the most predictive of future returns in rigorous out-of-sample testing. More metrics didn't improve performance — they added noise. Simpler models generalize better, and these three capture the core demand-supply dynamics that drive home price appreciation.",
+    a: "We tested 40+ features across multiple data sources. These 3 housing metrics are the most predictive of future returns in rigorous out-of-sample testing. More metrics didn't improve performance — they added noise. Simpler models generalize better, and these three capture the core demand-supply dynamics that drive home price appreciation.",
   },
   {
     q: "Can I trust scores for smaller markets?",

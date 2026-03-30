@@ -72,10 +72,10 @@ export function MethodologyOverviewSection() {
           How We Build the Score
         </h2>
         <p className="text-on-surface-variant leading-relaxed mb-6">
-          The PropertyIQ Score uses three Redfin metrics — % Sold Above List,
+          The PropertyIQ Score uses three housing metrics — % Sold Above List,
           Median Days on Market, and Months of Supply — chosen because they are
           the most predictive signals of future home price appreciation. We
-          tested 40+ features from Zillow, Census, FRED, BLS, and Redfin. These
+          tested 40+ features from Zillow, Census, FRED, BLS, and housing. These
           three survived rigorous out-of-sample validation; more metrics added
           noise, not signal.
         </p>

@@ -33,7 +33,7 @@ const STAT_PILLS = [
 const HOW_IT_WORKS_STEPS = [
   {
     number: 1,
-    title: "3 Redfin Metrics",
+    title: "3 Housing Metrics",
     description:
       "% Sold Above List, Median Days on Market, Months of Supply — the three signals that actually predict future returns.",
   },
