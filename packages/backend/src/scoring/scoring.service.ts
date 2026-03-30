@@ -223,7 +223,27 @@ export class ScoringService {
     }
     if (historyByDate.length < 2) return result;
 
-    const priorResult = historyByDate[1]?.result;
+    // Find the entry closest to N months ago for the trend comparison.
+    // historyByDate is sorted newest-first; find the entry whose date is
+    // closest to (current date - historyMonths months).
+    const currentDate = new Date(historyByDate[0].date);
+    const targetPriorDate = new Date(currentDate);
+    targetPriorDate.setMonth(targetPriorDate.getMonth() - historyMonths);
+    const targetMs = targetPriorDate.getTime();
+
+    let priorIdx = 1;
+    let closestDiff = Infinity;
+    for (let i = 1; i < historyByDate.length; i++) {
+      const diff = Math.abs(
+        new Date(historyByDate[i].date).getTime() - targetMs,
+      );
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        priorIdx = i;
+      }
+    }
+
+    const priorResult = historyByDate[priorIdx]?.result;
     if (!priorResult) return result;
 
     for (const key of [

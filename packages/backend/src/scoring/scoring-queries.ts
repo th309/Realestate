@@ -72,12 +72,14 @@ export async function getScoreDatesForLocation(
   locationId: string,
   geography: GeographyLevel,
   limit: number,
+  scoreType: ScoreType = 'propertyiq',
 ): Promise<string[]> {
   const { data } = await supabase
     .from('propertyiq_scores')
     .select('score_date')
     .eq('geography', geography)
     .eq('location_id', locationId)
+    .eq('score_type', scoreType)
     .order('score_date', { ascending: false })
     .limit(limit);
   if (!data?.length) return [];

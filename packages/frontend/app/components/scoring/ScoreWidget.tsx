@@ -85,7 +85,9 @@ export function ScoreWidget({
   showLabel = true,
   className = "",
 }: ScoreWidgetProps) {
-  const { data, loading, error } = useScoreData(geographyType, geographyId);
+  const { data, loading, error } = useScoreData(geographyType, geographyId, {
+    historyMonths: 3,
+  });
 
   // Track score view once per mount
   const hasFiredRef = useRef(false);
@@ -101,7 +103,12 @@ export function ScoreWidget({
 
   // Extract score and confidence for the requested type
   const scoreData = React.useMemo(() => {
-    if (!data) return { score: null, confidence: null };
+    if (!data)
+      return {
+        score: null,
+        confidence: null,
+        trendChange: undefined as number | undefined,
+      };
 
     const scoreObj = data.propertyiq;
 
@@ -114,10 +121,15 @@ export function ScoreWidget({
       const confidence = (scoreObj as any).confidence?.level as
         | ConfidenceLevel
         | undefined;
-      return { score, confidence: confidence ?? "b" };
+      const trendChange = (scoreObj as any).trendChange as number | undefined;
+      return { score, confidence: confidence ?? "b", trendChange };
     }
 
-    return { score: null, confidence: null };
+    return {
+      score: null,
+      confidence: null,
+      trendChange: undefined as number | undefined,
+    };
   }, [data, scoreType]);
 
   // Notify parent when score loads
