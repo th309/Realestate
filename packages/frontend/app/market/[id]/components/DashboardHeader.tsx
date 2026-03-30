@@ -12,6 +12,7 @@ import {
 import { Breadcrumbs } from "@/components/navigation";
 
 interface DashboardHeaderProps {
+  geographyId: string;
   geographyName: string;
   geographyType: string;
   updatedDateLabel: string;
@@ -22,6 +23,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({
+  geographyId,
   geographyName,
   geographyType,
   updatedDateLabel,
@@ -30,13 +32,20 @@ export function DashboardHeader({
   onShare,
   onDownload,
 }: DashboardHeaderProps) {
+  // Format: "80652 — Roggen, CO" for ZIPs, "Roggen, CO" for others
+  const formattedName = formatGeographyDisplayName(
+    geographyName,
+    geographyType,
+    geographyId,
+  );
+
   return (
     <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
         <Breadcrumbs
           items={[
             { label: "Markets", href: "/market" },
-            { label: geographyName },
+            { label: formattedName },
           ]}
           className="mb-3"
         />
@@ -52,7 +61,7 @@ export function DashboardHeader({
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" />
                 <h1 className="text-xl font-semibold text-on-surface">
-                  {geographyName}
+                  {formattedName}
                 </h1>
               </div>
               <p className="text-sm text-on-surface-variant">
@@ -95,4 +104,24 @@ export function DashboardHeader({
       </div>
     </header>
   );
+}
+
+/** Capitalize each word in a geography name, with state abbreviation uppercased */
+function formatGeographyDisplayName(
+  name: string,
+  type: string,
+  id: string,
+): string {
+  const parts = name.split(",").map((p) => p.trim());
+  const city = parts[0]
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+  const state = parts[1]?.toUpperCase();
+  const cityState = state ? `${city}, ${state}` : city;
+
+  if (type === "zip") {
+    return `${id} \u2014 ${cityState}`;
+  }
+  return cityState;
 }

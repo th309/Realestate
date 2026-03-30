@@ -151,6 +151,7 @@ export function MarketDashboard({
   return (
     <div className="min-h-screen bg-surface">
       <DashboardHeader
+        geographyId={geographyId}
         geographyName={geography.name}
         geographyType={geographyType}
         updatedDateLabel={updatedDateLabel}

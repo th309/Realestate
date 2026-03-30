@@ -379,7 +379,7 @@ export async function getTopMarkets(
     }
 
     allResults.sort((a, b) => b.score - a.score);
-    return allResults.slice(0, limit);
+    return enrichZipNames(supabase, geography, allResults.slice(0, limit));
   }
 
   // Unfiltered path — simple national ranking
@@ -392,7 +392,42 @@ export async function getTopMarkets(
     .order('score', { ascending: false })
     .limit(limit);
 
-  return data || [];
+  return enrichZipNames(supabase, geography, data || []);
+}
+
+/** Enrich ZIP results with "XXXXX — City, ST" from geography_crosswalk. */
+async function enrichZipNames<
+  T extends { location_id: string; location_name: string },
+>(
+  supabase: SupabaseClient,
+  geography: GeographyLevel,
+  results: T[],
+): Promise<T[]> {
+  if (geography !== 'zip' || results.length === 0) return results;
+
+  const { data: cw } = await supabase
+    .from('geography_crosswalk')
+    .select('zip_code, zip_default_city, zip_default_state')
+    .in(
+      'zip_code',
+      results.map((r) => r.location_id),
+    );
+
+  if (!cw?.length) return results;
+
+  const map = new Map(
+    cw
+      .filter((r: any) => r.zip_default_city && r.zip_default_state)
+      .map((r: any) => [
+        r.zip_code,
+        `${r.zip_code} — ${r.zip_default_city}, ${r.zip_default_state}`,
+      ]),
+  );
+
+  return results.map((r) => ({
+    ...r,
+    location_name: map.get(r.location_id) ?? r.location_name,
+  }));
 }
 
 /**
