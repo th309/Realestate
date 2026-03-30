@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { RedisService } from '../../redis/redis.service';
 import {
   UserFeaturesService,
   UserOverride,
@@ -68,6 +69,7 @@ export class UsersService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly userFeatures: UserFeaturesService,
+    private readonly redis: RedisService,
   ) {}
 
   async getUsers(options?: {
@@ -674,6 +676,10 @@ export class UsersService {
     const oldTier = oldProfile?.subscription_tier ?? 'free';
 
     await client.from('user_profiles').update(updatePayload).eq('id', userId);
+
+    // Invalidate ALL entitlements cache so the user gets fresh access on next request.
+    // Cache is keyed by tier, so we must clear both old and new tier entries.
+    await this.redis.deleteByPrefix('entitlements:tier:');
 
     // Broadcast tier change via Supabase Realtime so the frontend
     // picks it up instantly (useRealtimeTierSync listens on this channel).

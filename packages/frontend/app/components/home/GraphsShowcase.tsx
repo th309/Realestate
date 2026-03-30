@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useInView } from './hooks/useInView';
-import { ArrowRight } from 'lucide-react';
+import { useInView } from "./hooks/useInView";
+import { ArrowRight } from "lucide-react";
 
 /**
  * Graphs-in-motion showcase — real product video.
@@ -26,22 +26,23 @@ export function GraphsShowcase() {
           className="text-center max-w-2xl mx-auto mb-12"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.6s ease, transform 0.6s ease',
+            transform: inView ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
           }}
         >
-          <span className="text-xs font-semibold text-primary uppercase tracking-[0.15em] mb-3 block">
+          <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
             Interactive Analytics
           </span>
           <h2
             id="graphs-heading"
-            className="text-2xl md:text-3xl lg:text-4xl font-bold text-on-surface tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
           >
             Compare any metric across any market
           </h2>
-          <p className="text-base text-on-surface-variant leading-relaxed">
+          <p className="text-base text-[#C5CAE9] leading-relaxed">
             Scatter plots, timelines, radar charts, rankings, and waterfalls.
-            Pick your markets, pick your metrics, and see the story the data tells.
+            Pick your markets, pick your metrics, and see the story the data
+            tells.
           </p>
         </div>
 
@@ -50,9 +51,11 @@ export function GraphsShowcase() {
           className="relative mx-auto max-w-5xl"
           style={{
             opacity: inView ? 1 : 0,
-            transform: inView ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
-            transition: 'opacity 0.8s ease, transform 0.8s ease',
-            transitionDelay: '0.15s',
+            transform: inView
+              ? "translateY(0) scale(1)"
+              : "translateY(20px) scale(0.98)",
+            transition: "opacity 0.8s ease, transform 0.8s ease",
+            transitionDelay: "0.15s",
           }}
         >
           {/* Outer frame */}
@@ -83,13 +86,13 @@ export function GraphsShowcase() {
           className="text-center mt-8"
           style={{
             opacity: inView ? 1 : 0,
-            transition: 'opacity 0.6s ease',
-            transitionDelay: '0.3s',
+            transition: "opacity 0.6s ease",
+            transitionDelay: "0.3s",
           }}
         >
           <a
             href="/graphs"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors group"
           >
             Try the analytics tools
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

@@ -43,7 +43,7 @@ function Logo() {
 
 export function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-outline-variant bg-surface-container-lowest">
+    <footer className="py-12 px-6 border-t border-outline-variant/30">
       <div className="max-w-6xl mx-auto">
         {/* Main footer grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
@@ -56,7 +56,7 @@ export function Footer() {
                 <span className="text-[#3949AB]">IQ</span>
               </span>
             </div>
-            <p className="text-sm text-on-surface-variant leading-relaxed">
+            <p className="text-sm text-[#3949AB] leading-relaxed">
               AI-powered real estate market intelligence for smarter property
               decisions.
             </p>
@@ -65,7 +65,7 @@ export function Footer() {
           {/* Navigation columns */}
           {Object.entries(FOOTER_NAV).map(([category, links]) => (
             <nav key={category} aria-label={`${category} navigation`}>
-              <h3 className="text-sm font-semibold text-on-surface mb-3">
+              <h3 className="text-sm font-semibold text-[#1A237E] mb-3">
                 {category}
               </h3>
               <ul className="space-y-2">
@@ -73,7 +73,7 @@ export function Footer() {
                   <li key={link.href}>
                     <a
                       href={link.href}
-                      className="text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-200"
+                      className="text-sm text-[#3949AB] hover:text-[#1A237E] transition-colors duration-200"
                     >
                       {link.label}
                     </a>
@@ -85,11 +85,11 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-on-surface-variant">
+        <div className="pt-8 border-t border-[#3949AB]/20 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-[#3949AB]">
             © {new Date().getFullYear()} PropertyIQ. All rights reserved.
           </p>
-          <p className="text-xs text-on-surface-variant">
+          <p className="text-xs text-[#3949AB]/70">
             Data from US Census, BLS, Zillow, and FRED. Updated regularly.
           </p>
         </div>

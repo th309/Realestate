@@ -12,11 +12,7 @@
  * Total: 20 geographies × 3 scores = 60 hand-calculated expected values
  */
 
-import {
-  HOMEREADY_WEIGHTS,
-  INVESTOREDGE_WEIGHTS,
-  MARKET_HEALTH_WEIGHTS,
-} from '../../scoring.types';
+// Legacy 3-score weights removed — single PropertyIQ Score system now
 
 // ============================================================================
 // TYPE DEFINITIONS FOR TESTS (simplified component scores as plain numbers)
@@ -168,7 +164,8 @@ export interface TestGeography {
 
 export const HAPPY_LOW_001: TestGeography = {
   geography_id: 'HAPPY_LOW_001',
-  test_purpose: 'All metrics present, poor market conditions producing ~30 scores',
+  test_purpose:
+    'All metrics present, poor market conditions producing ~30 scores',
   geography_type: 'zip',
 
   raw_metrics: {
@@ -198,7 +195,7 @@ export const HAPPY_LOW_001: TestGeography = {
 
     // Supply - oversupplied
     active_listing_count_yy: 0.35, // +35% inventory
-    new_listing_count_yy: 0.20,
+    new_listing_count_yy: 0.2,
     inventory_surplus_pct: 0.25,
 
     // Stability - volatile
@@ -221,7 +218,7 @@ export const HAPPY_LOW_001: TestGeography = {
     gross_yield: 0.045,
     rent_to_price_ratio: 0.0037,
     overvalued_pct: 0.25, // 25% overvalued
-    large_multi_permits_yoy: 0.40, // New supply coming
+    large_multi_permits_yoy: 0.4, // New supply coming
   },
 
   homeready: {
@@ -315,7 +312,7 @@ export const HAPPY_MED_002: TestGeography = {
     median_household_income: 75000,
     income_gap_ratio: 1.2,
     years_to_save: 8,
-    rent_as_pct_of_income: 0.30,
+    rent_as_pct_of_income: 0.3,
 
     // Market timing - balanced
     median_days_on_market: 45,
@@ -447,7 +444,7 @@ export const HAPPY_HIGH_003: TestGeography = {
     median_household_income: 95000,
     income_gap_ratio: 0.8,
     years_to_save: 4,
-    rent_as_pct_of_income: 0.20,
+    rent_as_pct_of_income: 0.2,
 
     // Market timing - hot market
     median_days_on_market: 18,
@@ -463,7 +460,7 @@ export const HAPPY_HIGH_003: TestGeography = {
     // Supply - tight
     active_listing_count_yy: -0.15,
     new_listing_count_yy: -0.08,
-    inventory_surplus_pct: -0.10,
+    inventory_surplus_pct: -0.1,
 
     // Stability - stable
     volatility_36m: 0.03,
@@ -595,7 +592,7 @@ export const HAPPY_VERY_HIGH_004: TestGeography = {
     // Supply - very tight
     active_listing_count_yy: -0.25,
     new_listing_count_yy: -0.15,
-    inventory_surplus_pct: -0.20,
+    inventory_surplus_pct: -0.2,
 
     // Stability - very stable
     volatility_36m: 0.015,
@@ -732,9 +729,9 @@ export const HAPPY_EXACT_50_005: TestGeography = {
     median_household_income_yoy: 0.02,
     employment_yoy: 0.01,
 
-    homeownership_rate: 0.60,
+    homeownership_rate: 0.6,
     median_age: 37,
-    renter_share: 0.40,
+    renter_share: 0.4,
 
     cap_rate: 0.057,
     grm: 17.5,
@@ -808,7 +805,8 @@ export const HAPPY_EXACT_50_005: TestGeography = {
 
 export const MISSING_OPTIONAL_001: TestGeography = {
   geography_id: 'MISSING_OPTIONAL_001',
-  test_purpose: 'Optional metrics missing (walkability, hotness) - skip strategy',
+  test_purpose:
+    'Optional metrics missing (walkability, hotness) - skip strategy',
   geography_type: 'zip',
 
   raw_metrics: {
@@ -939,7 +937,7 @@ export const MISSING_NEUTRAL_002: TestGeography = {
     rent_as_pct_of_income: 0.25,
 
     median_days_on_market: 40,
-    price_reduced_share: 0.20,
+    price_reduced_share: 0.2,
     months_of_supply: 4.0,
     pending_listing_count_yy: null, // MISSING - neutral (50)
 
@@ -1157,7 +1155,8 @@ export const MISSING_REQUIRED_003: TestGeography = {
 
 export const MISSING_COMPONENT_004: TestGeography = {
   geography_id: 'MISSING_COMPONENT_004',
-  test_purpose: 'All metrics for one component (growth) missing - weight redistributed',
+  test_purpose:
+    'All metrics for one component (growth) missing - weight redistributed',
   geography_type: 'zip',
 
   raw_metrics: {
@@ -1177,7 +1176,7 @@ export const MISSING_COMPONENT_004: TestGeography = {
     months_of_supply: 3.8,
     pending_listing_count_yy: 0.06,
 
-    pending_ratio: 0.30,
+    pending_ratio: 0.3,
     hotness_score: 58,
     sale_to_list_ratio: 0.99,
 
@@ -1358,7 +1357,7 @@ export const MISSING_MAJORITY_005: TestGeography = {
     expected_result: {
       score: null,
       status: 'unavailable',
-      dataCompleteness: 0.10,
+      dataCompleteness: 0.1,
       reason: 'Insufficient data: only 10% of weighted metrics available',
     },
     calculation: `
@@ -1410,35 +1409,35 @@ export const BOUNDARY_ALL_MIN_001: TestGeography = {
     rent_as_pct_of_income: 0.75,
 
     median_days_on_market: 365,
-    price_reduced_share: 0.70,
+    price_reduced_share: 0.7,
     months_of_supply: 18,
-    pending_listing_count_yy: -0.50,
+    pending_listing_count_yy: -0.5,
 
     pending_ratio: 0.02,
     hotness_score: 5,
-    sale_to_list_ratio: 0.70,
+    sale_to_list_ratio: 0.7,
 
-    active_listing_count_yy: 0.80,
-    new_listing_count_yy: 0.60,
-    inventory_surplus_pct: 0.50,
+    active_listing_count_yy: 0.8,
+    new_listing_count_yy: 0.6,
+    inventory_surplus_pct: 0.5,
 
     volatility_36m: 0.25,
     unemployment_rate: 15.0,
 
     population_yoy: -0.08,
     median_household_income_yoy: -0.05,
-    employment_yoy: -0.10,
+    employment_yoy: -0.1,
 
-    homeownership_rate: 0.30,
+    homeownership_rate: 0.3,
     median_age: 55,
-    renter_share: 0.70,
+    renter_share: 0.7,
 
     cap_rate: 0.02,
     grm: 40,
     gross_yield: 0.027,
     rent_to_price_ratio: 0.0023,
-    overvalued_pct: 0.50,
-    large_multi_permits_yoy: 0.80,
+    overvalued_pct: 0.5,
+    large_multi_permits_yoy: 0.8,
   },
 
   homeready: {
@@ -1508,7 +1507,7 @@ export const BOUNDARY_ALL_MAX_002: TestGeography = {
     zori: 800,
     zhvi_yoy: 0.12,
     zhvi_5y_cagr: 0.12,
-    zori_yoy: 0.10,
+    zori_yoy: 0.1,
 
     median_household_income: 200000,
     income_gap_ratio: 0.2,
@@ -1518,15 +1517,15 @@ export const BOUNDARY_ALL_MAX_002: TestGeography = {
     median_days_on_market: 3,
     price_reduced_share: 0.01,
     months_of_supply: 0.5,
-    pending_listing_count_yy: 0.50,
+    pending_listing_count_yy: 0.5,
 
-    pending_ratio: 0.70,
+    pending_ratio: 0.7,
     hotness_score: 100,
     sale_to_list_ratio: 1.15,
 
-    active_listing_count_yy: -0.40,
-    new_listing_count_yy: -0.30,
-    inventory_surplus_pct: -0.30,
+    active_listing_count_yy: -0.4,
+    new_listing_count_yy: -0.3,
+    inventory_surplus_pct: -0.3,
 
     volatility_36m: 0.005,
     unemployment_rate: 1.5,
@@ -1539,12 +1538,12 @@ export const BOUNDARY_ALL_MAX_002: TestGeography = {
     median_age: 32,
     renter_share: 0.15,
 
-    cap_rate: 0.10,
+    cap_rate: 0.1,
     grm: 8,
     gross_yield: 0.096,
     rent_to_price_ratio: 0.008,
     overvalued_pct: -0.25,
-    large_multi_permits_yoy: -0.20,
+    large_multi_permits_yoy: -0.2,
   },
 
   homeready: {
@@ -1614,7 +1613,7 @@ export const BOUNDARY_MIXED_003: TestGeography = {
     zori: 800, // best (relative)
     zhvi_yoy: 0.12, // best
     zhvi_5y_cagr: -0.05, // worst
-    zori_yoy: 0.10, // best
+    zori_yoy: 0.1, // best
 
     median_household_income: 200000, // best
     income_gap_ratio: 5.0, // worst
@@ -1622,17 +1621,17 @@ export const BOUNDARY_MIXED_003: TestGeography = {
     rent_as_pct_of_income: 0.75, // worst
 
     median_days_on_market: 3, // best
-    price_reduced_share: 0.70, // worst
+    price_reduced_share: 0.7, // worst
     months_of_supply: 0.5, // best
-    pending_listing_count_yy: -0.50, // worst
+    pending_listing_count_yy: -0.5, // worst
 
-    pending_ratio: 0.70, // best
+    pending_ratio: 0.7, // best
     hotness_score: 5, // worst
     sale_to_list_ratio: 1.15, // best
 
-    active_listing_count_yy: 0.80, // worst
-    new_listing_count_yy: -0.30, // best
-    inventory_surplus_pct: 0.50, // worst
+    active_listing_count_yy: 0.8, // worst
+    new_listing_count_yy: -0.3, // best
+    inventory_surplus_pct: 0.5, // worst
 
     volatility_36m: 0.005, // best
     unemployment_rate: 15.0, // worst
@@ -1641,16 +1640,16 @@ export const BOUNDARY_MIXED_003: TestGeography = {
     median_household_income_yoy: -0.05, // worst
     employment_yoy: 0.07, // best
 
-    homeownership_rate: 0.30, // worst
+    homeownership_rate: 0.3, // worst
     median_age: 32, // best
-    renter_share: 0.70, // worst
+    renter_share: 0.7, // worst
 
-    cap_rate: 0.10, // best
+    cap_rate: 0.1, // best
     grm: 40, // worst
     gross_yield: 0.096, // best
     rent_to_price_ratio: 0.0023, // worst
     overvalued_pct: -0.25, // best
-    large_multi_permits_yoy: 0.80, // worst
+    large_multi_permits_yoy: 0.8, // worst
   },
 
   homeready: {
@@ -1728,13 +1727,13 @@ export const BOUNDARY_THRESHOLD_004: TestGeography = {
     rent_as_pct_of_income: 0.28, // 28% threshold
 
     median_days_on_market: 30, // Threshold
-    price_reduced_share: 0.20, // 20% threshold
+    price_reduced_share: 0.2, // 20% threshold
     months_of_supply: 4.0, // Threshold
     pending_listing_count_yy: 0.0, // Threshold
 
-    pending_ratio: 0.30, // Threshold
+    pending_ratio: 0.3, // Threshold
     hotness_score: 50, // Threshold
-    sale_to_list_ratio: 1.00, // Exact parity
+    sale_to_list_ratio: 1.0, // Exact parity
 
     active_listing_count_yy: 0.0, // Threshold
     new_listing_count_yy: 0.0, // Threshold
@@ -1834,13 +1833,13 @@ export const BOUNDARY_INVALID_005: TestGeography = {
     rent_as_pct_of_income: 0.28,
 
     median_days_on_market: -5, // INVALID: negative days
-    price_reduced_share: 0.20,
+    price_reduced_share: 0.2,
     months_of_supply: 4.0,
     pending_listing_count_yy: 0.0,
 
-    pending_ratio: 0.30,
+    pending_ratio: 0.3,
     hotness_score: 50,
-    sale_to_list_ratio: 1.00,
+    sale_to_list_ratio: 1.0,
 
     active_listing_count_yy: 0.0,
     new_listing_count_yy: 0.0,
@@ -2410,9 +2409,9 @@ export const INHERIT_FULL_CHAIN_004: TestGeography = {
       population_yoy: 0.005,
       median_household_income_yoy: 0.018,
       employment_yoy: 0.012,
-      homeownership_rate: 0.60,
+      homeownership_rate: 0.6,
       median_age: 38,
-      renter_share: 0.40,
+      renter_share: 0.4,
       hotness_score: 48,
       cap_rate: 0.052,
       grm: 19,
@@ -2468,7 +2467,7 @@ export const INHERIT_FULL_CHAIN_004: TestGeography = {
     expected_result: {
       score: 47.25,
       status: 'partial',
-      dataCompleteness: 0.60,
+      dataCompleteness: 0.6,
     },
     calculation: `
       Final = 50×0.35 + 45×0.20 + 42×0.20 + 48×0.15 + 50×0.10
@@ -2486,7 +2485,7 @@ export const INHERIT_FULL_CHAIN_004: TestGeography = {
     expected_result: {
       score: 47.45,
       status: 'partial',
-      dataCompleteness: 0.70,
+      dataCompleteness: 0.7,
     },
     calculation: `
       Final = 45×0.35 + 48×0.25 + 50×0.25 + 48×0.15
@@ -2511,9 +2510,9 @@ export const INHERIT_NO_FALLBACK_005: TestGeography = {
     years_to_save: 4.5,
     rent_as_pct_of_income: 0.21,
     median_days_on_market: 22,
-    price_reduced_share: 0.10,
+    price_reduced_share: 0.1,
     months_of_supply: 2.5,
-    pending_listing_count_yy: 0.10,
+    pending_listing_count_yy: 0.1,
     pending_ratio: 0.42,
     hotness_score: 78,
     sale_to_list_ratio: 1.02,
@@ -2525,9 +2524,9 @@ export const INHERIT_NO_FALLBACK_005: TestGeography = {
     population_yoy: 0.022,
     median_household_income_yoy: 0.038,
     employment_yoy: 0.032,
-    homeownership_rate: 0.70,
+    homeownership_rate: 0.7,
     median_age: 34,
-    renter_share: 0.30,
+    renter_share: 0.3,
     cap_rate: 0.059,
     grm: 16.8,
     gross_yield: 0.059,
@@ -2658,53 +2657,4 @@ export const ALL_FIXTURES = [
 // VALIDATION HELPERS
 // ============================================================================
 
-/**
- * Validates that weights sum to 1.0
- */
-export function validateWeightSums(): void {
-  const homeReadySum = Object.values(HOMEREADY_WEIGHTS).reduce((a, b) => a + b, 0);
-  const investorEdgeSum = Object.values(INVESTOREDGE_WEIGHTS).reduce((a, b) => a + b, 0);
-  const marketHealthSum = Object.values(MARKET_HEALTH_WEIGHTS).reduce((a, b) => a + b, 0);
-
-  if (Math.abs(homeReadySum - 1.0) > 0.0001) {
-    throw new Error(`HomeReady weights sum to ${homeReadySum}, expected 1.0`);
-  }
-  if (Math.abs(investorEdgeSum - 1.0) > 0.0001) {
-    throw new Error(`InvestorEdge weights sum to ${investorEdgeSum}, expected 1.0`);
-  }
-  if (Math.abs(marketHealthSum - 1.0) > 0.0001) {
-    throw new Error(`MarketHealth weights sum to ${marketHealthSum}, expected 1.0`);
-  }
-}
-
-/**
- * Calculates expected score from components for verification
- */
-export function calculateExpectedHomeReady(components: HomeReadyComponents): number {
-  return (
-    components.affordability * HOMEREADY_WEIGHTS.affordability +
-    components.market_timing * HOMEREADY_WEIGHTS.market_timing +
-    components.stability * HOMEREADY_WEIGHTS.stability +
-    components.growth_potential * HOMEREADY_WEIGHTS.growth_potential +
-    components.livability * HOMEREADY_WEIGHTS.livability
-  );
-}
-
-export function calculateExpectedInvestorEdge(components: InvestorEdgeComponents): number {
-  return (
-    components.cash_flow * INVESTOREDGE_WEIGHTS.cash_flow +
-    components.rent_demand * INVESTOREDGE_WEIGHTS.rent_demand +
-    components.appreciation * INVESTOREDGE_WEIGHTS.appreciation +
-    components.entry_point * INVESTOREDGE_WEIGHTS.entry_point +
-    components.risk * INVESTOREDGE_WEIGHTS.risk
-  );
-}
-
-export function calculateExpectedMarketHealth(components: MarketHealthComponents): number {
-  return (
-    components.demand_strength * MARKET_HEALTH_WEIGHTS.demand_strength +
-    components.supply_balance * MARKET_HEALTH_WEIGHTS.supply_balance +
-    components.price_stability * MARKET_HEALTH_WEIGHTS.price_stability +
-    components.economic_foundation * MARKET_HEALTH_WEIGHTS.economic_foundation
-  );
-}
+// Legacy weight validation and calculation functions removed — single PropertyIQ Score system now

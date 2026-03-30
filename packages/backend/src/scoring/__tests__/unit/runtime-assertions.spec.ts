@@ -7,12 +7,7 @@
  * Critical for $100K-$1M+ real estate decisions - we must catch impossible values.
  */
 
-import {
-  SCORING_CONSTANTS,
-  HOMEREADY_WEIGHTS,
-  INVESTOREDGE_WEIGHTS,
-  MARKET_HEALTH_WEIGHTS,
-} from '../../scoring.types';
+import { SCORING_CONSTANTS } from '../../scoring.types';
 
 // ============================================================================
 // Custom Error Types (would be defined in scoring errors module)
@@ -287,23 +282,7 @@ describe('Runtime Score Assertions', () => {
       expect(() => validateWeights(goodWeights, 'test')).not.toThrow();
     });
 
-    it('HomeReady weights sum to 1.0', () => {
-      expect(() =>
-        validateWeights(HOMEREADY_WEIGHTS, 'homeready'),
-      ).not.toThrow();
-    });
-
-    it('InvestorEdge weights sum to 1.0', () => {
-      expect(() =>
-        validateWeights(INVESTOREDGE_WEIGHTS, 'investoredge'),
-      ).not.toThrow();
-    });
-
-    it('Market Health weights sum to 1.0', () => {
-      expect(() =>
-        validateWeights(MARKET_HEALTH_WEIGHTS, 'market_health'),
-      ).not.toThrow();
-    });
+    // Legacy 3-score weight tests removed — single PropertyIQ Score system now
   });
 });
 

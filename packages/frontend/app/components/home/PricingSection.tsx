@@ -46,8 +46,8 @@ function PricingTier({
         relative flex-1 max-w-sm rounded-3xl p-8 transition-all duration-300
         ${
           highlighted
-            ? "bg-primary-container border-2 border-primary"
-            : "bg-surface-container-low border border-outline-variant"
+            ? "bg-white border-2 border-[#3949AB] shadow-lg"
+            : "bg-white/80 border border-[#C5CAE9]"
         }
         ${hovered ? "elevation-3 -translate-y-1" : "elevation-1"}
       `}
@@ -67,29 +67,22 @@ function PricingTier({
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-on-surface-variant mb-2">
-        {name}
-      </h3>
+      <h3 className="text-lg font-semibold text-[#3949AB] mb-2">{name}</h3>
 
       <div className="mb-6">
         {priceLoading ? (
-          <span className="inline-block h-10 w-20 rounded-lg bg-on-surface/10 animate-pulse" />
+          <span className="inline-block h-10 w-20 rounded-lg bg-[#3949AB]/10 animate-pulse" />
         ) : (
           <>
-            <span className="text-4xl font-bold text-on-surface">{price}</span>
-            {period && (
-              <span className="text-on-surface-variant ml-1">/{period}</span>
-            )}
+            <span className="text-4xl font-bold text-[#1A237E]">{price}</span>
+            {period && <span className="text-[#3949AB] ml-1">/{period}</span>}
           </>
         )}
       </div>
 
       <ul className="space-y-3 mb-8">
         {features.map((feature, i) => (
-          <li
-            key={i}
-            className="flex items-start gap-3 text-sm text-on-surface-variant"
-          >
+          <li key={i} className="flex items-start gap-3 text-sm text-[#3949AB]">
             <svg
               width="18"
               height="18"
@@ -118,7 +111,7 @@ function PricingTier({
           ${
             highlighted
               ? "bg-primary text-on-primary hover:bg-primary/90"
-              : "border border-outline text-on-surface hover:bg-surface-container"
+              : "border border-[#3949AB] text-[#1A237E] hover:bg-[#3949AB]/10"
           }
         `}
       >
@@ -218,13 +211,13 @@ export function PricingSection() {
     >
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
-        <span className="text-sm font-semibold text-primary uppercase tracking-widest">
+        <span className="text-sm font-semibold text-[#1A237E] uppercase tracking-widest">
           Pricing
         </span>
-        <h2 className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1A237E] mt-3 mb-4 tracking-tight">
           Start free, upgrade when you&apos;re ready
         </h2>
-        <p className="text-on-surface-variant">
+        <p className="text-[#3949AB]">
           No credit card required. Cancel anytime.
         </p>
       </div>

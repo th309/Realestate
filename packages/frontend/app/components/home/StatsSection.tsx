@@ -24,15 +24,13 @@ const STATS = [
 
 export function StatsSection() {
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-12 bg-surface-container-low border-y border-outline-variant">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-12 border-y border-white/10">
       {STATS.map((stat, i) => (
         <div key={i} className="text-center">
-          <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-on-surface">
+          <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-white">
             <AnimatedCounter end={stat.value} suffix={stat.suffix} />
           </div>
-          <div className="text-sm text-on-surface-variant mt-2">
-            {stat.label}
-          </div>
+          <div className="text-sm text-[#C5CAE9] mt-2">{stat.label}</div>
         </div>
       ))}
     </section>

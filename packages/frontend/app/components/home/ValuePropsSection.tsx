@@ -49,30 +49,26 @@ function ValueProp({
           transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
-        <span className="text-xs font-semibold text-primary uppercase tracking-[0.15em] mb-3 block">
+        <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
           {eyebrow}
         </span>
-        <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-on-surface tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]">
+        <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]">
           {heading}
         </h3>
-        <p className="text-base text-on-surface-variant leading-relaxed mb-6">
-          {body}
-        </p>
+        <p className="text-base text-[#C5CAE9] leading-relaxed mb-6">{body}</p>
 
         {stat && (
-          <div className="mb-6 p-4 rounded-xl bg-primary-container/40 border border-primary/10 inline-block">
-            <span className="block text-3xl font-bold text-primary font-mono">
+          <div className="mb-6 p-4 rounded-xl bg-white/10 border border-white/10 inline-block">
+            <span className="block text-3xl font-bold text-[#00C853] font-mono">
               {stat.value}
             </span>
-            <span className="text-sm text-on-primary-container">
-              {stat.label}
-            </span>
+            <span className="text-sm text-[#C5CAE9]">{stat.label}</span>
           </div>
         )}
 
         <a
           href={href}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors group"
         >
           {linkLabel}
           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

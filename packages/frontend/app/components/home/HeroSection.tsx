@@ -46,23 +46,15 @@ export function HeroSection() {
   return (
     <section
       ref={setRef}
-      className="relative pt-16 pb-20 lg:pt-24 lg:pb-32 px-6 overflow-hidden bg-gradient-to-br from-[#1A237E] to-[#3949AB]"
+      className="relative pt-8 pb-20 lg:pt-10 lg:pb-32 px-6 overflow-hidden"
       aria-labelledby="hero-heading"
     >
       <div className="relative max-w-5xl mx-auto text-center z-10">
-        {/* Eyebrow */}
-        <div
-          className="inline-block px-4 py-1 mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#C5CAE9]"
-          style={fadeUp(inView, "0s")}
-        >
-          PropertyIQ
-        </div>
-
         {/* Headline — lead with transformation, not features */}
         <h1
           id="hero-heading"
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1] font-[family-name:var(--font-source-serif)]"
-          style={fadeUp(inView, "0.1s")}
+          style={fadeUp(inView, "0s")}
         >
           Know before you buy.{" "}
           <span className="text-[#C5CAE9]/70">Not after.</span>
@@ -71,7 +63,7 @@ export function HeroSection() {
         {/* Subheadline — address all three audiences */}
         <p
           className="text-lg md:text-xl text-[#C5CAE9] mb-10 max-w-2xl mx-auto leading-relaxed"
-          style={fadeUp(inView, "0.2s")}
+          style={fadeUp(inView, "0.1s")}
         >
           PropertyIQ scores {totalMarkets} markets across America — so agents
           advise with confidence, investors find outperformers early, and
@@ -81,7 +73,7 @@ export function HeroSection() {
         {/* Proof points — dollars and plain English, not jargon */}
         <div
           className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12"
-          style={fadeUp(inView, "0.3s")}
+          style={fadeUp(inView, "0.2s")}
         >
           {PROOF_POINTS.map((point) => (
             <div
@@ -103,7 +95,7 @@ export function HeroSection() {
         </div>
 
         {/* Search bar */}
-        <div className="mb-8" style={fadeUp(inView, "0.4s")}>
+        <div className="mb-8" style={fadeUp(inView, "0.3s")}>
           <HeroSearchBar />
           <p className="text-xs text-[#C5CAE9]/60 mt-2">
             Try: Miami, Austin TX, 90210, Cook County
@@ -113,7 +105,7 @@ export function HeroSection() {
         {/* CTAs */}
         <div
           className="flex items-center justify-center gap-4"
-          style={fadeUp(inView, "0.45s")}
+          style={fadeUp(inView, "0.35s")}
         >
           <a
             href="/map"

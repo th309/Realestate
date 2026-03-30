@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import {
+  BrandBanner,
   HeroSection,
   StatsSection,
   ValuePropsSection,
@@ -48,7 +49,8 @@ export default function HomePage() {
   return (
     <>
       <JsonLd />
-      <div className="bg-surface text-on-surface font-sans">
+      <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
+        <BrandBanner />
         <HeroSection />
         <StatsSection />
         <ValuePropsSection />
