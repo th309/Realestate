@@ -8,7 +8,7 @@ export function CTASection() {
   return (
     <section
       ref={setRef}
-      className="text-center py-20 lg:py-28 px-6 border-t border-outline-variant/30"
+      className="text-center py-10 lg:py-14 px-6 border-t border-outline-variant/30"
       aria-labelledby="cta-heading"
     >
       <div

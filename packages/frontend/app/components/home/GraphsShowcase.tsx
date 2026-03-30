@@ -17,7 +17,7 @@ export function GraphsShowcase() {
   return (
     <section
       ref={setRef}
-      className="py-20 lg:py-28 px-6"
+      className="pt-20 pb-10 lg:pt-28 lg:pb-14 px-6"
       aria-labelledby="graphs-heading"
     >
       <div className="max-w-6xl mx-auto">

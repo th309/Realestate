@@ -206,7 +206,7 @@ export function PricingSection() {
 
   return (
     <section
-      className="pt-10 pb-20 lg:pt-14 lg:pb-28 px-6 max-w-6xl mx-auto"
+      className="pt-5 pb-10 lg:pt-7 lg:pb-14 px-6 max-w-6xl mx-auto"
       id="pricing"
     >
       {/* Header */}
