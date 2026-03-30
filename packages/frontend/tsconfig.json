@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@propertyiq/emails": ["../emails/dist/index.d.ts"],
+      "@propertyiq/emails/*": ["../emails/dist/*"]
     }
   },
   "include": [
