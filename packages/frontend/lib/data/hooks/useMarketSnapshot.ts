@@ -61,7 +61,7 @@ export function useMarketSnapshot(
 ): UseMarketSnapshotResult {
   const {
     state,
-    trendMonths = 6,
+    trendMonths = 3,
     includeTrends = true,
     enabled = true,
   } = options;

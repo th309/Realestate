@@ -6,14 +6,17 @@
  * formatted display, trend direction, and sparkline.
  */
 
-import type { GeoLevel, TrendResult, TrendDirection } from '../types';
-import { useSnapshotData, type UseSnapshotDataOptions } from './useSnapshotData';
-import { useTrendData } from './useTrendData';
-import { useMetricAccess } from './useMetricAccess';
-import { isMetricSupportedForGeo } from '../registry-helpers';
-import type { UserTier } from '@/lib/entitlements';
+import type { GeoLevel, TrendResult, TrendDirection } from "../types";
+import {
+  useSnapshotData,
+  type UseSnapshotDataOptions,
+} from "./useSnapshotData";
+import { useTrendData } from "./useTrendData";
+import { useMetricAccess } from "./useMetricAccess";
+import { isMetricSupportedForGeo } from "../registry-helpers";
+import type { UserTier } from "@/lib/entitlements";
 
-const IS_DEV = process.env.NODE_ENV === 'development';
+const IS_DEV = process.env.NODE_ENV === "development";
 
 export interface UseDataCardOptions extends UseSnapshotDataOptions {
   /** Number of months for trend calculation */
@@ -34,7 +37,7 @@ export interface UseDataCardResult {
   /** Source geography ID used for resolution */
   sourceGeoId: string | null;
   /** Source geography level used for resolution */
-  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null;
   /** Was value inherited from parent geography */
   isInherited: boolean;
   /** Was value resolved via fallback source */
@@ -86,10 +89,10 @@ export function useDataCard(
   metricId: string,
   geoLevel: GeoLevel,
   regionId: string,
-  options: UseDataCardOptions = {}
+  options: UseDataCardOptions = {},
 ): UseDataCardResult {
   const {
-    trendMonths = 12,
+    trendMonths = 3,
     includeTrend = true,
     stateFilter,
     enabled = true,
@@ -149,7 +152,7 @@ export function useDataCardBatch(
   metricIds: string[],
   geoLevel: GeoLevel,
   regionId: string,
-  options: UseDataCardOptions = {}
+  options: UseDataCardOptions = {},
 ): {
   cards: Record<string, UseDataCardResult>;
   isLoading: boolean;
@@ -173,8 +176,14 @@ export function useDataCardBatch(
   // showing a clear "no data" state.
   if (IS_DEV) {
     for (const [metricId, result] of Object.entries(allCards)) {
-      if (!result.isLoading && result.value == null && isMetricSupportedForGeo(metricId, geoLevel)) {
-        console.warn(`[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`);
+      if (
+        !result.isLoading &&
+        result.value == null &&
+        isMetricSupportedForGeo(metricId, geoLevel)
+      ) {
+        console.warn(
+          `[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`,
+        );
       }
     }
   }

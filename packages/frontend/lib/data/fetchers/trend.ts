@@ -5,10 +5,10 @@
  * Uses the time series API with historyMonths parameter.
  */
 
-import type { GeoLevel, TrendResult, TrendDirection } from '../types';
-import { fetchTimeSeriesData } from './timeseries';
-import { fetchAPIWithParams } from './base';
-import { getMetricConfig } from '../registry-helpers';
+import type { GeoLevel, TrendResult, TrendDirection } from "../types";
+import { fetchTimeSeriesData } from "./timeseries";
+import { fetchAPIWithParams } from "./base";
+import { getMetricConfig } from "../registry-helpers";
 
 /**
  * Fetch trend data for a specific metric, geography, and region.
@@ -23,7 +23,7 @@ export async function fetchTrendData(
   metricId: string,
   geoLevel: GeoLevel,
   regionId: string,
-  months: number = 3
+  months: number = 3,
 ): Promise<TrendResult | null> {
   try {
     const response = await fetchTimeSeriesData(metricId, geoLevel, regionId, {
@@ -37,7 +37,7 @@ export async function fetchTrendData(
           currentValue: response.data[0].value,
           previousValue: null,
           percentChange: null,
-          direction: 'stable',
+          direction: "stable",
           sparklineData: [response.data[0].value],
           label: null,
         };
@@ -47,10 +47,10 @@ export async function fetchTrendData(
 
     // Sort by date ascending (oldest first)
     const sorted = [...response.data].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
-    const sparklineData = sorted.map(d => d.value);
+    const sparklineData = sorted.map((d) => d.value);
     const firstValue = sorted[0].value;
     const lastValue = sorted[sorted.length - 1].value;
 
@@ -62,24 +62,28 @@ export async function fetchTrendData(
 
     // Determine direction
     const direction: TrendDirection =
-      percentChange === null ? 'stable' :
-      percentChange > 0.5 ? 'up' :
-      percentChange < -0.5 ? 'down' : 'stable';
+      percentChange === null
+        ? "stable"
+        : percentChange > 0.5
+          ? "up"
+          : percentChange < -0.5
+            ? "down"
+            : "stable";
 
     // Generate label based on metric format
     const config = getMetricConfig(metricId);
-    const isPercentageMetric = config?.format === 'percent';
+    const isPercentageMetric = config?.format === "percent";
 
     let label: string | null = null;
     if (percentChange !== null) {
       if (isPercentageMetric) {
         // For percentage metrics, show percentage point difference
         const pointDiff = lastValue - firstValue;
-        const sign = pointDiff > 0 ? '+' : '';
+        const sign = pointDiff > 0 ? "+" : "";
         label = `${sign}${pointDiff.toFixed(1)} pts`;
       } else {
         // For absolute metrics, show relative percentage change
-        const sign = percentChange > 0 ? '+' : '';
+        const sign = percentChange > 0 ? "+" : "";
         label = `${sign}${percentChange.toFixed(1)}%`;
       }
     }
@@ -111,14 +115,19 @@ export async function fetchTrendDataBatch(
   metricIds: string[],
   geoLevel: GeoLevel,
   regionId: string,
-  months: number = 3
+  months: number = 3,
 ): Promise<Record<string, TrendResult | null>> {
   const results: Record<string, TrendResult | null> = {};
 
   await Promise.all(
     metricIds.map(async (metricId) => {
-      results[metricId] = await fetchTrendData(metricId, geoLevel, regionId, months);
-    })
+      results[metricId] = await fetchTrendData(
+        metricId,
+        geoLevel,
+        regionId,
+        months,
+      );
+    }),
   );
 
   return results;
@@ -132,14 +141,14 @@ export interface BatchTrendEntry {
   current: number | null;
   prior: number | null;
   percentChange: number | null;
-  direction: 'up' | 'down' | 'stable';
+  direction: "up" | "down" | "stable";
 }
 
 export async function fetchBatchTrendsServer(
   metricIds: string[],
   geoLevel: GeoLevel,
   regionId: string,
-  months: number = 6,
+  months: number = 3,
 ): Promise<Record<string, BatchTrendEntry>> {
   if (metricIds.length === 0) return {};
 
@@ -147,7 +156,7 @@ export async function fetchBatchTrendsServer(
     success: boolean;
     trends: Record<string, BatchTrendEntry>;
   }>(`/api/timeseries/batch/${geoLevel}/${regionId}`, {
-    metrics: metricIds.join(','),
+    metrics: metricIds.join(","),
     historyMonths: months,
   });
 
@@ -178,5 +187,5 @@ export function normalizeSparklineData(data: number[]): number[] {
 
   if (range === 0) return data.map(() => 0.5);
 
-  return data.map(v => (v - min) / range);
+  return data.map((v) => (v - min) / range);
 }

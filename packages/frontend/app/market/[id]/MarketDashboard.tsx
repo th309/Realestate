@@ -77,7 +77,7 @@ export function MarketDashboard({
   const { cards, scores, geography, lastUpdated, isLoading, error } =
     useMarketSnapshot(geographyType, geographyId, {
       state: effectiveStateFilter,
-      trendMonths: 6,
+      trendMonths: 3,
     });
 
   // Get metric categories for the current view (must be called before early returns)

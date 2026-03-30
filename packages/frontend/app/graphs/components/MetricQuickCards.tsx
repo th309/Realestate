@@ -75,7 +75,7 @@ function QuickCard({
     metricId,
     market.type as GeoLevel,
     market.id,
-    { historyMonths: 6 },
+    { historyMonths: 3 },
   );
 
   const { source, sourceGeoLevel, sourceGeoId, isInherited, isFallback } =
