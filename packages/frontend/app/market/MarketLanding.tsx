@@ -203,8 +203,7 @@ export function MarketLanding() {
                 Market Scores
               </h4>
               <p className="text-sm text-on-surface-variant">
-                InvestorEdge, HomeReady, and Market Health scores for every
-                geography
+                PropertyIQ scores for every geography level
               </p>
             </div>
             <div className="text-center p-6">

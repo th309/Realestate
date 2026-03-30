@@ -21,26 +21,26 @@ export default function OnboardingDay1Scores({
         Hey {name},
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        Every market on PropertyIQ gets three scores. Here&apos;s what each one
-        tells you:
+        Every market on PropertyIQ gets a{" "}
+        <strong>PropertyIQ Score (1-99)</strong> that predicts which markets
+        will outperform. Here&apos;s how to read it:
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-2">
-        <strong>HomeReady (0-100)</strong> — Predicts 3-year price appreciation.
-        Best for homebuyers looking for markets where values are likely to grow.
+        <strong>Score 50 = state average.</strong> Higher means the market is
+        predicted to outperform its state; lower means underperformance.
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-2">
-        <strong>InvestorEdge (0-100)</strong> — Predicts total return
-        (appreciation + rental yield). Best for investors who want the full
-        picture on cash flow and growth.
+        The score is built from 3 demand-signal metrics: % Sold Above List
+        Price, Median Days on Market, and Months of Supply — validated across 13
+        years with a 100% year hit rate.
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        <strong>Market Health (0-100)</strong> — Current market conditions.
-        Tells you how hot (or cold) a market is right now based on supply,
-        demand, and pricing trends.
+        Markets scoring 80+ have historically gained{" "}
+        <strong>$18,100 more</strong> on a typical home over 3 years compared to
+        bottom-scoring markets.
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-6">
-        Higher is better across the board. Pick a market on the map and see all
-        three scores side by side:
+        Pick a market on the map and see your PropertyIQ Score:
       </Text>
       <Section className="text-center mb-6">
         <BrandedButton href={mapUrl}>See Scores on the Map</BrandedButton>

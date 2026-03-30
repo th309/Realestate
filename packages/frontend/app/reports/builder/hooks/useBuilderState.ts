@@ -56,7 +56,7 @@ export const SECTION_TEMPLATES: Record<
   score_gauge_single: {
     name: "Score Gauge",
     description: "Single market score visualization",
-    defaultConfig: { scoreType: "homeready", showComponents: false },
+    defaultConfig: { scoreType: "propertyiq", showComponents: false },
   },
   score_gauge_dual: {
     name: "Dual Score Gauge",

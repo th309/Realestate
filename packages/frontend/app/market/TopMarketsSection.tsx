@@ -16,9 +16,7 @@ const GEO_TABS: { value: TopMarketsGeo; label: string }[] = [
 ];
 
 const SCORE_TABS: { value: TopMarketsScoreType; label: string }[] = [
-  { value: "investoredge", label: "InvestorEdge" },
-  { value: "homeready", label: "HomeReady" },
-  { value: "markethealth", label: "Market Health" },
+  { value: "propertyiq", label: "PropertyIQ" },
 ];
 
 const LIMIT_OPTIONS = [10, 25, 50, 100] as const;
@@ -51,8 +49,7 @@ function getScoreTextColor(score: number): string {
 
 export function TopMarketsSection() {
   const [geo, setGeo] = useState<TopMarketsGeo>("metro");
-  const [scoreType, setScoreType] =
-    useState<TopMarketsScoreType>("investoredge");
+  const [scoreType, setScoreType] = useState<TopMarketsScoreType>("propertyiq");
   const [limit, setLimit] = useState<number>(10);
   const [stateFilter, setStateFilter] = useState<string>("");
 
@@ -92,25 +89,6 @@ export function TopMarketsSection() {
                 className={`px-2 sm:px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md transition-all ${
                   geo === tab.value
                     ? "bg-primary text-on-primary shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="w-px h-5 bg-outline-variant hidden sm:block" />
-
-          {/* Score type tabs */}
-          <div className="flex bg-surface-container-high rounded-lg p-0.5">
-            {SCORE_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setScoreType(tab.value)}
-                className={`px-2 sm:px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md transition-all ${
-                  scoreType === tab.value
-                    ? "bg-tertiary text-on-tertiary shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >

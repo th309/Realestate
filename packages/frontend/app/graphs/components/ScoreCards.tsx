@@ -293,6 +293,7 @@ const DEFAULT_MARKETHEALTH_METRICS = [
 const STORAGE_KEY = "scorecard-metric-selections";
 
 interface MetricSelections {
+  propertyiq: string[];
   homeready: string[];
   investoredge: string[];
   markethealth: string[];
@@ -301,6 +302,7 @@ interface MetricSelections {
 function loadMetricSelections(): MetricSelections {
   if (typeof window === "undefined") {
     return {
+      propertyiq: DEFAULT_PROPERTYIQ_METRICS,
       homeready: DEFAULT_HOMEREADY_METRICS,
       investoredge: DEFAULT_INVESTOREDGE_METRICS,
       markethealth: DEFAULT_MARKETHEALTH_METRICS,
@@ -309,12 +311,18 @@ function loadMetricSelections(): MetricSelections {
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Ensure propertyiq key exists for backward compat with old stored data
+      if (!parsed.propertyiq) parsed.propertyiq = DEFAULT_PROPERTYIQ_METRICS;
+      return parsed;
+    }
   } catch (e) {
     console.error("Failed to load metric selections:", e);
   }
 
   return {
+    propertyiq: DEFAULT_PROPERTYIQ_METRICS,
     homeready: DEFAULT_HOMEREADY_METRICS,
     investoredge: DEFAULT_INVESTOREDGE_METRICS,
     markethealth: DEFAULT_MARKETHEALTH_METRICS,
@@ -337,20 +345,19 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
 }) => {
   const { canAccess } = useEntitlements();
   const canViewPropertyIQ = canAccess("metric", "propertyiq_score");
-  const canViewHomeready = canAccess("metric", "homeready_score");
-  const canViewInvestoredge = canAccess("metric", "investoredge_score");
-  const canViewMarketHealth = canAccess("metric", "market_health_score");
-  const canViewAnyScore =
-    canViewPropertyIQ ||
-    canViewHomeready ||
-    canViewInvestoredge ||
-    canViewMarketHealth;
+  const canViewAnyScore = canViewPropertyIQ;
   const [scores, setScores] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricSelections, setMetricSelections] =
     useState<MetricSelections>(loadMetricSelections);
 
   // Use the new data binding hooks for metric data (replaces manual fetch)
+  const propertyiqMetrics = useScoreCardMetrics({
+    metricIds: metricSelections.propertyiq,
+    geoLevel,
+    regionId: selectedArea,
+  });
+  // Legacy hooks kept for backward compat (stable hook count between renders)
   const homereadyMetrics = useScoreCardMetrics({
     metricIds: metricSelections.homeready,
     geoLevel,
@@ -368,9 +375,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   });
 
   // Per-score loading: each card only waits for its own metrics
-  const homereadyMetricsLoading = homereadyMetrics.loading;
-  const investoredgeMetricsLoading = investoredgeMetrics.loading;
-  const markethealthMetricsLoading = markethealthMetrics.loading;
+  const propertyiqMetricsLoading = propertyiqMetrics.loading;
 
   // Fetch scores
   useEffect(() => {
@@ -406,9 +411,10 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   // The hook handles all data fetching, formatting, and trend calculation
   const getIndicatorsForMetrics = useCallback(
     (
-      scoreType: "homeready" | "investoredge" | "markethealth",
+      scoreType: "propertyiq" | "homeready" | "investoredge" | "markethealth",
     ): MetricIndicator[] => {
       const metricsData = {
+        propertyiq: propertyiqMetrics,
         homeready: homereadyMetrics,
         investoredge: investoredgeMetrics,
         markethealth: markethealthMetrics,
@@ -426,7 +432,12 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         trend: ind.trend,
       }));
     },
-    [homereadyMetrics, investoredgeMetrics, markethealthMetrics],
+    [
+      propertyiqMetrics,
+      homereadyMetrics,
+      investoredgeMetrics,
+      markethealthMetrics,
+    ],
   );
 
   // Handlers for metric selection changes
@@ -480,12 +491,12 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         title="PropertyIQ Score"
         value={propertyiqScore}
         confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics("homeready")}
+        indicators={getIndicatorsForMetrics("propertyiq")}
         loading={effectiveLoading}
-        metricsLoading={homereadyMetricsLoading}
+        metricsLoading={propertyiqMetricsLoading}
         isAdmin={isAdmin}
-        selectedMetricIds={metricSelections.homeready}
-        onMetricsChange={handleMetricsChange("homeready")}
+        selectedMetricIds={metricSelections.propertyiq}
+        onMetricsChange={handleMetricsChange("propertyiq")}
         geoLevel={geoLevel}
       />
     </div>

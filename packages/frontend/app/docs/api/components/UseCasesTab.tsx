@@ -233,7 +233,7 @@ const BASE = 'https://backend-production-ee4d.up.railway.app';
 
 // Step 1: Fetch top movers from rankings
 const rankingsRes = await fetch(
-  \`\${BASE}/api/v1/rankings/homeready/zip?limit=5&sort=score_change_desc\`,
+  \`\${BASE}/api/v1/rankings/propertyiq/zip?limit=5&sort=score_change_desc\`,
   { headers: { Authorization: \`Bearer \${API_KEY}\` } }
 );
 const { data: topMovers } = await rankingsRes.json();
@@ -342,9 +342,9 @@ const BASE = 'https://backend-production-ee4d.up.railway.app';
 // Your investor watchlist
 const watchlist = ['90210', '10001', '60601', '77001', '85001'];
 
-// Fetch InvestorEdge rankings and filter to watchlist
+// Fetch PropertyIQ rankings and filter to watchlist
 const res = await fetch(
-  \`\${BASE}/api/v1/rankings/investoredge/zip\`,
+  \`\${BASE}/api/v1/rankings/propertyiq/zip\`,
   { headers: { Authorization: \`Bearer \${API_KEY}\` } }
 );
 const { data: allRankings } = await res.json();
@@ -376,7 +376,7 @@ HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 watchlist = {"90210", "10001", "60601", "77001", "85001"}
 
-resp = requests.get(f"{BASE}/api/v1/rankings/investoredge/zip", headers=HEADERS)
+resp = requests.get(f"{BASE}/api/v1/rankings/propertyiq/zip", headers=HEADERS)
 all_rankings = resp.json()["data"]
 
 pipeline = sorted(
@@ -478,7 +478,7 @@ async function fetchAllPages(endpoint) {
 }
 
 // Usage
-const allZipScores = await fetchAllPages('/rankings/homeready/zip');
+const allZipScores = await fetchAllPages('/rankings/propertyiq/zip');
 console.log(\`Fetched \${allZipScores.length} markets\`);`;
 
 const CRM_PYTHON = `import time
@@ -526,7 +526,7 @@ def fetch_all_pages(endpoint: str) -> list:
             break
     return results
 
-all_zip_scores = fetch_all_pages("/rankings/homeready/zip")
+all_zip_scores = fetch_all_pages("/rankings/propertyiq/zip")
 print(f"Fetched {len(all_zip_scores)} markets")`;
 
 const COMPARE_PYTHON = `import asyncio

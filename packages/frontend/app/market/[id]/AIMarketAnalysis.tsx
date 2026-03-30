@@ -36,9 +36,7 @@ interface AIMarketAnalysisProps {
     }
   >;
   scores: {
-    homeready: { score: number; grade: string } | null;
-    investoredge: { score: number; grade: string } | null;
-    markethealth: { score: number; grade: string } | null;
+    propertyiq: { score: number; grade: string } | null;
   };
   lastUpdated: string;
 }
@@ -67,18 +65,18 @@ function generateTemplateAnalysis(
     metrics[key]?.percentChange ?? null;
 
   if (view === "homebuyer") {
-    const hs = scores.homeready;
-    const scoreDesc = hs
-      ? hs.score >= 70
+    const piq = scores.propertyiq;
+    const scoreDesc = piq
+      ? piq.score >= 70
         ? "favorable"
-        : hs.score >= 50
+        : piq.score >= 50
           ? "moderate"
           : "challenging"
       : "unknown";
 
-    const affordParts = hs
+    const affordParts = piq
       ? [
-          `${marketName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`,
+          `${marketName} shows ${scoreDesc} conditions for homebuyers (PropertyIQ score: ${piq.score}).`,
         ]
       : [
           `${marketName} conditions for homebuyers — score data is currently unavailable.`,
@@ -147,18 +145,18 @@ function generateTemplateAnalysis(
   }
 
   // Investor
-  const ie = scores.investoredge;
-  const scoreDesc = ie
-    ? ie.score >= 70
+  const piq = scores.propertyiq;
+  const scoreDesc = piq
+    ? piq.score >= 70
       ? "strong"
-      : ie.score >= 50
+      : piq.score >= 50
         ? "moderate"
         : "limited"
     : "unknown";
 
-  const cfParts = ie
+  const cfParts = piq
     ? [
-        `${marketName} shows ${scoreDesc} investment potential (InvestorEdge score: ${ie.score}).`,
+        `${marketName} shows ${scoreDesc} investment potential (PropertyIQ score: ${piq.score}).`,
       ]
     : [
         `${marketName} investment potential — score data is currently unavailable.`,
@@ -204,8 +202,8 @@ function generateTemplateAnalysis(
     liqParts.push(
       `Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? "healthy" : "softer"} demand.`,
     );
-  if (scores.markethealth) {
-    liqParts.push(`Market Health score: ${scores.markethealth.score}/100.`);
+  if (scores.propertyiq) {
+    liqParts.push(`PropertyIQ score: ${scores.propertyiq.score}/100.`);
   }
 
   return [

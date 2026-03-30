@@ -20,6 +20,7 @@ export function buildScoreRows(
   const createdAt = new Date().toISOString();
   for (const result of results) {
     for (const scoreType of [
+      'propertyiq',
       'homeready',
       'investoredge',
       'markethealth',

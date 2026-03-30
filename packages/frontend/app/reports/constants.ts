@@ -138,34 +138,48 @@ export const SCORE_INFO: Record<
     bgClass: string;
   }
 > = {
-  homeready: {
-    name: "HomeReady Score",
+  propertyiq: {
+    name: "PropertyIQ Score",
     description:
-      "Measures how favorable a market is for homebuyers and renters",
+      "Predicts market performance using validated demand-signal metrics",
+    color: "text-primary",
+    bgClass: "bg-primary",
+  },
+  PropertyIQ: {
+    name: "PropertyIQ Score",
+    description:
+      "Predicts market performance using validated demand-signal metrics",
+    color: "text-primary",
+    bgClass: "bg-primary",
+  },
+  // Legacy aliases — kept for backward compat with old reports
+  homeready: {
+    name: "PropertyIQ Score",
+    description:
+      "Predicts market performance using validated demand-signal metrics",
     color: "text-primary",
     bgClass: "bg-primary",
   },
   investoredge: {
-    name: "InvestorEdge Score",
+    name: "PropertyIQ Score",
     description:
-      "Measures investment potential based on cash flow and appreciation",
-    color: "text-tertiary",
-    bgClass: "bg-tertiary",
+      "Predicts market performance using validated demand-signal metrics",
+    color: "text-primary",
+    bgClass: "bg-primary",
   },
-  // Uppercase aliases for component usage
   HomeReady: {
-    name: "HomeReady Score",
+    name: "PropertyIQ Score",
     description:
-      "Measures how favorable a market is for homebuyers and renters",
+      "Predicts market performance using validated demand-signal metrics",
     color: "text-primary",
     bgClass: "bg-primary",
   },
   InvestorEdge: {
-    name: "InvestorEdge Score",
+    name: "PropertyIQ Score",
     description:
-      "Measures investment potential based on cash flow and appreciation",
-    color: "text-tertiary",
-    bgClass: "bg-tertiary",
+      "Predicts market performance using validated demand-signal metrics",
+    color: "text-primary",
+    bgClass: "bg-primary",
   },
 };
 

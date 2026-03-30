@@ -398,6 +398,12 @@ const METRIC_MAPPINGS: Record<string, MetricMapping> = {
     usesMetricName: true,
     metricNameValue: 'markethealth',
   },
+  propertyiq_score: {
+    source: 'propertyiq',
+    columnName: 'score',
+    usesMetricName: true,
+    metricNameValue: 'propertyiq',
+  },
 };
 
 /**

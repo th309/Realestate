@@ -11,14 +11,10 @@ interface ScoreData {
 interface ScoreColumnProps {
   activeView: "investor" | "homebuyer";
   primaryScore: ScoreData | null | undefined;
-  marketHealthScore: ScoreData | null | undefined;
+  marketHealthScore?: ScoreData | null | undefined;
 }
 
-export function ScoreColumn({
-  activeView,
-  primaryScore,
-  marketHealthScore,
-}: ScoreColumnProps) {
+export function ScoreColumn({ activeView, primaryScore }: ScoreColumnProps) {
   return (
     <div className="lg:col-span-4 space-y-6">
       {/* Main Score Card */}
@@ -58,18 +54,8 @@ export function ScoreColumn({
           )}
         </motion.div>
 
-        <p className="text-on-surface-variant">
-          {activeView === "investor" ? "InvestorEdge" : "HomeReady"} Score
-        </p>
+        <p className="text-on-surface-variant">PropertyIQ Score</p>
       </motion.div>
-
-      {/* Market Health Badge */}
-      {marketHealthScore && (
-        <DashboardScoreBadge
-          label="Market Health"
-          score={marketHealthScore.score}
-        />
-      )}
     </div>
   );
 }

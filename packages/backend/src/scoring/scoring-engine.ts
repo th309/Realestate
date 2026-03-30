@@ -38,7 +38,8 @@ export interface RawScoreResult {
 }
 
 /**
- * Get all metric names used across all formulas for a geography.
+ * Get all metric names used across v3 formulas for a geography.
+ * @deprecated v3 scoring path — v4 PropertyIQ uses V4_FORMULA_METRICS from v4-scoring-engine.ts
  */
 export function getAllMetricNames(geography: GeographyLevel): string[] {
   const metrics = new Set<string>();
@@ -48,7 +49,8 @@ export function getAllMetricNames(geography: GeographyLevel): string[] {
     'investoredge',
     'markethealth',
   ] as ScoreType[]) {
-    const formula = FORMULA_WEIGHTS[geography][scoreType];
+    const formula = FORMULA_WEIGHTS[geography]?.[scoreType];
+    if (!formula) continue;
     for (const metricName of Object.keys(formula)) {
       metrics.add(metricName);
     }

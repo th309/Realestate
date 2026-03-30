@@ -20,7 +20,12 @@ export type WaterfallPreset =
   | "momentum"
   | "benchmark"
   | "score";
-export type RadarPreset = "homebuyer" | "investor" | "market_health" | "custom";
+export type RadarPreset =
+  | "propertyiq"
+  | "homebuyer"
+  | "investor"
+  | "market_health"
+  | "custom";
 export type BarSort = "asc" | "desc";
 export type BarCount = 10 | 25;
 export type ScoreTypeOption =

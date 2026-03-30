@@ -34,11 +34,8 @@ export function useTopMarkets(
 ): UseTopMarketsResult {
   const { geography, scoreType, limit = 10, state, enabled = true } = options;
   const { isMetricGated } = useEntitlements();
-  // Scores are fully gated only if all three score metrics are gated
-  const scoresGated =
-    isMetricGated("homeready_score") &&
-    isMetricGated("investoredge_score") &&
-    isMetricGated("market_health_score");
+  // Scores are gated if the PropertyIQ score metric is gated
+  const scoresGated = isMetricGated("propertyiq_score");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["top-markets", geography, scoreType, limit, state ?? null],

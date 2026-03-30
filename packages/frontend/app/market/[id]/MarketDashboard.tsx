@@ -146,8 +146,7 @@ export function MarketDashboard({
     return <DashboardGeoGateWall geographyType={geographyType} />;
   }
 
-  const primaryScore =
-    activeView === "investor" ? scores?.investoredge : scores?.homeready;
+  const primaryScore = scores?.propertyiq;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -165,11 +164,7 @@ export function MarketDashboard({
         <ViewToggle activeView={activeView} onViewChange={setActiveView} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <ScoreColumn
-            activeView={activeView}
-            primaryScore={primaryScore}
-            marketHealthScore={scores?.markethealth}
-          />
+          <ScoreColumn activeView={activeView} primaryScore={primaryScore} />
 
           {/* Right Column - Details */}
           <div className="lg:col-span-8 space-y-6">
@@ -235,9 +230,7 @@ export function MarketDashboard({
                   ]),
                 )}
                 scores={{
-                  homeready: scores?.homeready ?? null,
-                  investoredge: scores?.investoredge ?? null,
-                  markethealth: scores?.markethealth ?? null,
+                  propertyiq: scores?.propertyiq ?? null,
                 }}
                 lastUpdated={lastUpdated ?? new Date().toISOString()}
               />

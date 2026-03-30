@@ -5,14 +5,14 @@
  * Replaces 57+ individual snapshot API calls on the Markets page.
  */
 
-import { fetchAPIWithParams } from './base';
+import { fetchAPIWithParams } from "./base";
 
 export interface MarketSnapshotMetric {
   value: number | null;
   date: string | null;
   source: string;
   sourceGeoId: string | null;
-  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null;
   isInherited: boolean;
   isFallback: boolean;
 }
@@ -31,9 +31,7 @@ export interface MarketSnapshotResponse {
     type: string;
   };
   scores: {
-    homeready: MarketSnapshotScoreEntry | null;
-    investoredge: MarketSnapshotScoreEntry | null;
-    markethealth: MarketSnapshotScoreEntry | null;
+    propertyiq: MarketSnapshotScoreEntry | null;
   };
   metrics: Record<string, MarketSnapshotMetric>;
   lastUpdated: string;

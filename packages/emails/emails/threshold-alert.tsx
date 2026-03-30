@@ -15,9 +15,10 @@ export interface ThresholdAlertProps {
 }
 
 const SCORE_TYPE_LABELS: Record<string, string> = {
-  homeready: "HomeReady",
-  investoredge: "InvestorEdge",
-  market_health: "Market Health",
+  propertyiq: "PropertyIQ",
+  homeready: "PropertyIQ",
+  investoredge: "PropertyIQ",
+  market_health: "PropertyIQ",
 };
 
 function scoreColor(score: number): string {

@@ -380,6 +380,7 @@ export function getComparisonText(
  */
 export function generateAllScoreContexts(
   scores: {
+    propertyiq?: { score: number; grade: string };
     homeready?: { score: number; grade: string };
     investoredge?: { score: number; grade: string };
     markethealth?: { score: number; grade: string };
@@ -390,11 +391,19 @@ export function generateAllScoreContexts(
   },
 ): Record<ScoreType, ScoreContext | null> {
   const contexts: Record<ScoreType, ScoreContext | null> = {
+    propertyiq: null,
     homeready: null,
     investoredge: null,
     markethealth: null,
-    propertyiq: null,
   };
+
+  if (scores.propertyiq) {
+    contexts.propertyiq = generateScoreContext(
+      scores.propertyiq.score,
+      'propertyiq',
+      geoData,
+    );
+  }
 
   if (scores.homeready) {
     contexts.homeready = generateScoreContext(

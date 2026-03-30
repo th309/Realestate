@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Settings, X, Info } from 'lucide-react';
-import type { BuilderSection } from '../hooks/useBuilderState';
-import { SECTION_TEMPLATES } from '../hooks/useBuilderState';
+import React from "react";
+import { Settings, X, Info } from "lucide-react";
+import type { BuilderSection } from "../hooks/useBuilderState";
+import { SECTION_TEMPLATES } from "../hooks/useBuilderState";
 
 interface PropertyPanelProps {
   section: BuilderSection | null;
@@ -44,7 +44,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       {/* Header */}
       <div className="p-4 border-b border-outline-variant">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium text-on-surface">{sectionName}</h3>
+          <h3 className="text-base font-medium text-on-surface">
+            {sectionName}
+          </h3>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
@@ -53,7 +55,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
           </button>
         </div>
         {template?.description && (
-          <p className="text-xs text-on-surface-variant mt-1">{template.description}</p>
+          <p className="text-xs text-on-surface-variant mt-1">
+            {template.description}
+          </p>
         )}
       </div>
 
@@ -67,7 +71,8 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
         <div className="flex items-start gap-2">
           <Info className="w-4 h-4 text-on-surface-variant shrink-0 mt-0.5" />
           <p className="text-xs text-on-surface-variant">
-            Changes are applied automatically. The report preview will update in real-time.
+            Changes are applied automatically. The report preview will update in
+            real-time.
           </p>
         </div>
       </div>
@@ -76,24 +81,26 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
 };
 
 // Common input styles
-const selectClassName = "w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
-const textareaClassName = "w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface-container-low text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none";
+const selectClassName =
+  "w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
+const textareaClassName =
+  "w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface-container-low text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none";
 
 // Render properties based on section type
 function renderSectionProperties(
   section: BuilderSection,
-  onChange: (key: string, value: unknown) => void
+  onChange: (key: string, value: unknown) => void,
 ) {
   const config = section.config;
 
   switch (section.type) {
-    case 'report_title':
+    case "report_title":
       return (
         <>
           <PropertyField label="Title Variant">
             <select
-              value={(config.variant as string) || 'hero'}
-              onChange={(e) => onChange('variant', e.target.value)}
+              value={(config.variant as string) || "hero"}
+              onChange={(e) => onChange("variant", e.target.value)}
               className={selectClassName}
             >
               <option value="hero">Hero (Large)</option>
@@ -104,48 +111,47 @@ function renderSectionProperties(
           <PropertyField label="Show Subtitle">
             <PropertyToggle
               checked={(config.showSubtitle as boolean) ?? true}
-              onChange={(v) => onChange('showSubtitle', v)}
+              onChange={(v) => onChange("showSubtitle", v)}
             />
           </PropertyField>
         </>
       );
 
-    case 'score_gauge_single':
-    case 'score_gauge_dual':
+    case "score_gauge_single":
+    case "score_gauge_dual":
       return (
         <>
           <PropertyField label="Score Type">
             <select
-              value={(config.scoreType as string) || 'homeready'}
-              onChange={(e) => onChange('scoreType', e.target.value)}
+              value={(config.scoreType as string) || "propertyiq"}
+              onChange={(e) => onChange("scoreType", e.target.value)}
               className={selectClassName}
             >
-              <option value="homeready">HomeReady Score</option>
-              <option value="investoredge">InvestorEdge Score</option>
+              <option value="propertyiq">PropertyIQ Score</option>
             </select>
           </PropertyField>
           <PropertyField label="Show Components">
             <PropertyToggle
               checked={(config.showComponents as boolean) ?? false}
-              onChange={(v) => onChange('showComponents', v)}
+              onChange={(v) => onChange("showComponents", v)}
             />
           </PropertyField>
           <PropertyField label="Show Trend">
             <PropertyToggle
               checked={(config.showTrend as boolean) ?? true}
-              onChange={(v) => onChange('showTrend', v)}
+              onChange={(v) => onChange("showTrend", v)}
             />
           </PropertyField>
         </>
       );
 
-    case 'metric_grid':
+    case "metric_grid":
       return (
         <>
           <PropertyField label="Columns">
             <select
               value={(config.columns as number) || 3}
-              onChange={(e) => onChange('columns', parseInt(e.target.value))}
+              onChange={(e) => onChange("columns", parseInt(e.target.value))}
               className={selectClassName}
             >
               <option value={2}>2 Columns</option>
@@ -156,26 +162,26 @@ function renderSectionProperties(
           <PropertyField label="Show Trends">
             <PropertyToggle
               checked={(config.showTrends as boolean) ?? true}
-              onChange={(v) => onChange('showTrends', v)}
+              onChange={(v) => onChange("showTrends", v)}
             />
           </PropertyField>
           <PropertyField label="Compact Mode">
             <PropertyToggle
               checked={(config.compact as boolean) ?? false}
-              onChange={(v) => onChange('compact', v)}
+              onChange={(v) => onChange("compact", v)}
             />
           </PropertyField>
         </>
       );
 
-    case 'chart_single':
-    case 'chart_grid':
+    case "chart_single":
+    case "chart_grid":
       return (
         <>
           <PropertyField label="Chart Type">
             <select
-              value={(config.chartType as string) || 'area'}
-              onChange={(e) => onChange('chartType', e.target.value)}
+              value={(config.chartType as string) || "area"}
+              onChange={(e) => onChange("chartType", e.target.value)}
               className={selectClassName}
             >
               <option value="area">Area Chart</option>
@@ -186,13 +192,13 @@ function renderSectionProperties(
           <PropertyField label="Show Legend">
             <PropertyToggle
               checked={(config.showLegend as boolean) ?? true}
-              onChange={(v) => onChange('showLegend', v)}
+              onChange={(v) => onChange("showLegend", v)}
             />
           </PropertyField>
           <PropertyField label="Time Period">
             <select
-              value={(config.period as string) || '5Y'}
-              onChange={(e) => onChange('period', e.target.value)}
+              value={(config.period as string) || "5Y"}
+              onChange={(e) => onChange("period", e.target.value)}
               className={selectClassName}
             >
               <option value="1Y">1 Year</option>
@@ -205,13 +211,13 @@ function renderSectionProperties(
         </>
       );
 
-    case 'ai_narrative':
+    case "ai_narrative":
       return (
         <>
           <PropertyField label="Max Length">
             <select
               value={(config.maxTokens as number) || 500}
-              onChange={(e) => onChange('maxTokens', parseInt(e.target.value))}
+              onChange={(e) => onChange("maxTokens", parseInt(e.target.value))}
               className={selectClassName}
             >
               <option value={250}>Brief (~250 words)</option>
@@ -222,43 +228,43 @@ function renderSectionProperties(
           <PropertyField label="Include Data Citations">
             <PropertyToggle
               checked={(config.includeCitations as boolean) ?? true}
-              onChange={(v) => onChange('includeCitations', v)}
+              onChange={(v) => onChange("includeCitations", v)}
             />
           </PropertyField>
         </>
       );
 
-    case 'comparison_table':
+    case "comparison_table":
       return (
         <>
           <PropertyField label="Show Rankings">
             <PropertyToggle
               checked={(config.showRankings as boolean) ?? true}
-              onChange={(v) => onChange('showRankings', v)}
+              onChange={(v) => onChange("showRankings", v)}
             />
           </PropertyField>
           <PropertyField label="Highlight Best">
             <PropertyToggle
               checked={(config.highlightBest as boolean) ?? true}
-              onChange={(v) => onChange('highlightBest', v)}
+              onChange={(v) => onChange("highlightBest", v)}
             />
           </PropertyField>
           <PropertyField label="Compact Mode">
             <PropertyToggle
               checked={(config.compact as boolean) ?? false}
-              onChange={(v) => onChange('compact', v)}
+              onChange={(v) => onChange("compact", v)}
             />
           </PropertyField>
         </>
       );
 
-    case 'text_block':
+    case "text_block":
       return (
         <>
           <PropertyField label="Content">
             <textarea
-              value={(config.content as string) || ''}
-              onChange={(e) => onChange('content', e.target.value)}
+              value={(config.content as string) || ""}
+              onChange={(e) => onChange("content", e.target.value)}
               placeholder="Enter your text content..."
               className={textareaClassName}
               rows={4}
@@ -266,8 +272,8 @@ function renderSectionProperties(
           </PropertyField>
           <PropertyField label="Style">
             <select
-              value={(config.style as string) || 'normal'}
-              onChange={(e) => onChange('style', e.target.value)}
+              value={(config.style as string) || "normal"}
+              onChange={(e) => onChange("style", e.target.value)}
               className={selectClassName}
             >
               <option value="normal">Normal</option>
@@ -311,13 +317,13 @@ const PropertyToggle: React.FC<{
     onClick={() => onChange(!checked)}
     className={`
       relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-      ${checked ? 'bg-primary' : 'bg-on-surface/20'}
+      ${checked ? "bg-primary" : "bg-on-surface/20"}
     `}
   >
     <span
       className={`
         inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-        ${checked ? 'translate-x-6' : 'translate-x-1'}
+        ${checked ? "translate-x-6" : "translate-x-1"}
       `}
     />
   </button>

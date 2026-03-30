@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   MapPin,
@@ -15,27 +15,30 @@ import {
   ChevronRight,
   TrendingUp,
   TrendingDown,
-} from 'lucide-react';
-import { SCORE_INFO } from '../constants';
-import type { ReportListItem, ReportStatus } from '../types';
-import Link from 'next/link';
-import { fetchReportHistory } from '@/lib/data';
-import { useAuth } from '@/lib/auth';
+} from "lucide-react";
+import { SCORE_INFO } from "../constants";
+import type { ReportListItem, ReportStatus } from "../types";
+import Link from "next/link";
+import { fetchReportHistory } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 
-const STATUS_CONFIG: Record<ReportStatus, { label: string; className: string }> = {
-  pending: { label: 'Pending', className: 'report-badge-pending' },
-  generating: { label: 'Generating', className: 'report-badge-generating' },
-  ready: { label: 'Ready', className: 'report-badge-ready' },
-  failed: { label: 'Failed', className: 'report-badge-failed' },
-  expired: { label: 'Expired', className: 'report-badge-pending' },
+const STATUS_CONFIG: Record<
+  ReportStatus,
+  { label: string; className: string }
+> = {
+  pending: { label: "Pending", className: "report-badge-pending" },
+  generating: { label: "Generating", className: "report-badge-generating" },
+  ready: { label: "Ready", className: "report-badge-ready" },
+  failed: { label: "Failed", className: "report-badge-failed" },
+  expired: { label: "Expired", className: "report-badge-pending" },
 };
 
 const GEO_TYPE_LABELS: Record<string, string> = {
-  metro: 'Metro Area',
-  county: 'County',
-  zip: 'ZIP Code',
-  city: 'City',
-  state: 'State',
+  metro: "Metro Area",
+  county: "County",
+  zip: "ZIP Code",
+  city: "City",
+  state: "State",
 };
 
 export const ReportHistoryRefined: React.FC = () => {
@@ -47,7 +50,10 @@ export const ReportHistoryRefined: React.FC = () => {
 
   useEffect(() => {
     const userId = user?.id;
-    if (!userId) { setLoading(false); return; }
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     fetchReportHistory({ userId })
       .then((reportsList: any[]) => {
@@ -56,7 +62,7 @@ export const ReportHistoryRefined: React.FC = () => {
           title: r.title,
           template_slug: r.template?.slug || r.report_type,
           template_name: r.template?.name || r.report_type,
-          template_icon: r.template?.icon || 'FileText',
+          template_icon: r.template?.icon || "FileText",
           user_type: r.user_type,
           primary_geography_name: r.primary_geography_name,
           primary_geography_type: r.primary_geography_type,
@@ -69,7 +75,7 @@ export const ReportHistoryRefined: React.FC = () => {
         setReports(mappedReports);
       })
       .catch((err) => {
-        console.error('Failed to fetch report history:', err);
+        console.error("Failed to fetch report history:", err);
         setError(err.message);
       })
       .finally(() => setLoading(false));
@@ -78,8 +84,18 @@ export const ReportHistoryRefined: React.FC = () => {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
     return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
   };
@@ -90,8 +106,8 @@ export const ReportHistoryRefined: React.FC = () => {
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return formatDate(dateStr);
@@ -111,7 +127,9 @@ export const ReportHistoryRefined: React.FC = () => {
   if (error) {
     return (
       <div className="report-card p-12 text-center">
-        <p className="text-[var(--report-error)] mb-2">Failed to load reports</p>
+        <p className="text-[var(--report-error)] mb-2">
+          Failed to load reports
+        </p>
         <p className="report-body-sm">{error}</p>
       </div>
     );
@@ -125,7 +143,8 @@ export const ReportHistoryRefined: React.FC = () => {
         </div>
         <h3 className="report-heading-sm mb-2">No reports yet</h3>
         <p className="report-body-sm max-w-sm mx-auto">
-          Generate your first report using the wizard above. Your reports will appear here.
+          Generate your first report using the wizard above. Your reports will
+          appear here.
         </p>
       </div>
     );
@@ -135,10 +154,15 @@ export const ReportHistoryRefined: React.FC = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
       {reports.map((report, index) => {
         const status = STATUS_CONFIG[report.status];
-        const heroScore = report.user_type === 'investor' ? 'investoredge' : 'homeready';
-        const scoreValue = report.user_type === 'investor' ? report.investoredge_score : report.homeready_score;
+        const heroScore = "propertyiq";
+        const scoreValue =
+          report.propertyiq_score ??
+          report.homeready_score ??
+          report.investoredge_score;
         const scoreInfo = SCORE_INFO[heroScore];
-        const geoLabel = GEO_TYPE_LABELS[report.primary_geography_type] || report.primary_geography_type;
+        const geoLabel =
+          GEO_TYPE_LABELS[report.primary_geography_type] ||
+          report.primary_geography_type;
 
         return (
           <Link
@@ -217,9 +241,13 @@ export const ReportHistoryRefined: React.FC = () => {
               {/* Geography */}
               <div className="flex items-center gap-2 text-sm text-[var(--report-stone)]">
                 <MapPin className="w-4 h-4 shrink-0 text-[var(--report-stone-light)]" />
-                <span className="truncate">{report.primary_geography_name}</span>
+                <span className="truncate">
+                  {report.primary_geography_name}
+                </span>
                 <span className="text-[var(--report-stone-light)]">·</span>
-                <span className="text-xs text-[var(--report-stone-light)]">{geoLabel}</span>
+                <span className="text-xs text-[var(--report-stone-light)]">
+                  {geoLabel}
+                </span>
               </div>
             </div>
 
@@ -233,7 +261,9 @@ export const ReportHistoryRefined: React.FC = () => {
                       <span className="text-3xl font-semibold text-[var(--report-navy)] font-['Source_Serif_4',serif]">
                         {scoreValue}
                       </span>
-                      <span className="text-sm text-[var(--report-stone-light)]">/100</span>
+                      <span className="text-sm text-[var(--report-stone-light)]">
+                        /100
+                      </span>
                     </div>
                   </div>
                   <ScoreRing score={scoreValue} size={56} />
@@ -272,10 +302,10 @@ function ScoreRing({ score, size = 56 }: ScoreRingProps) {
   const offset = circumference - progress;
 
   const getScoreColor = (s: number) => {
-    if (s >= 70) return 'var(--report-success)';
-    if (s >= 50) return 'var(--report-gold)';
-    if (s >= 30) return 'var(--report-warning)';
-    return 'var(--report-error)';
+    if (s >= 70) return "var(--report-success)";
+    if (s >= 50) return "var(--report-gold)";
+    if (s >= 30) return "var(--report-warning)";
+    return "var(--report-error)";
   };
 
   return (
@@ -287,7 +317,7 @@ function ScoreRing({ score, size = 56 }: ScoreRingProps) {
           r={radius}
           strokeWidth={strokeWidth}
           className="report-score-ring-bg"
-          style={{ stroke: 'var(--report-cream-dark)' }}
+          style={{ stroke: "var(--report-cream-dark)" }}
         />
         <circle
           cx={size / 2}
@@ -299,7 +329,7 @@ function ScoreRing({ score, size = 56 }: ScoreRingProps) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
         />
       </svg>
       <div

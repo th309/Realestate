@@ -638,6 +638,7 @@ export interface ReportListItem {
   user_type: UserType;
   primary_geography_name: string;
   primary_geography_type: GeographyType;
+  propertyiq_score?: number | null;
   homeready_score: number | null;
   investoredge_score: number | null;
   status: ReportStatus;

@@ -162,12 +162,14 @@ export function ScoreHistoryChart({
     );
   }
 
-  const scoreLabel = {
-    propertyiq: "PropertyIQ",
-    homeready: "PropertyIQ",
-    investoredge: "PropertyIQ",
-    markethealth: "PropertyIQ",
-  }[scoreType];
+  // PropertyIQ is the primary score type; legacy keys map to the same label
+  const scoreLabel =
+    {
+      propertyiq: "PropertyIQ",
+      homeready: "PropertyIQ",
+      investoredge: "PropertyIQ",
+      markethealth: "PropertyIQ",
+    }[scoreType] ?? "PropertyIQ";
 
   return (
     <div

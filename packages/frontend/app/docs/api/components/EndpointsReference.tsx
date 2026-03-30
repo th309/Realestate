@@ -56,9 +56,7 @@ export function EndpointsReference() {
   -H "Authorization: Bearer piq_live_abc123..."`}
         responseExample={`{
   "data": {
-    "homeready": { "score": 82, "confidence": "A", "updated_at": "2026-03-20" },
-    "investor_edge": { "score": 68, "confidence": "B", "updated_at": "2026-03-20" },
-    "market_health": { "score": 74, "confidence": "A", "updated_at": "2026-03-20" }
+    "propertyiq": { "score": 78, "confidence": "A", "updated_at": "2026-03-20" }
   }
 }`}
       />
@@ -73,10 +71,11 @@ export function EndpointsReference() {
             name: "scoreType",
             type: "string",
             required: true,
-            description: "homeready, investor_edge, or market_health",
+            description:
+              "propertyiq (default), homeready, investoredge, or markethealth",
           },
         ]}
-        curlExample={`curl "https://api.propertyiq.app/api/v1/scores/metro/31080/homeready" \\
+        curlExample={`curl "https://api.propertyiq.app/api/v1/scores/metro/31080/propertyiq" \\
   -H "Authorization: Bearer piq_live_abc123..."`}
         responseExample={`{
   "data": {
@@ -200,7 +199,7 @@ export function EndpointsReference() {
             description: "Offset for pagination (default 0)",
           },
         ]}
-        curlExample={`curl "https://api.propertyiq.app/api/v1/rankings/homeready/metro?limit=3" \\
+        curlExample={`curl "https://api.propertyiq.app/api/v1/rankings/propertyiq/metro?limit=3" \\
   -H "Authorization: Bearer piq_live_abc123..."`}
         responseExample={`{
   "data": [

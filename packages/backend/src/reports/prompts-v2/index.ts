@@ -59,6 +59,7 @@ export function getSystemPromptForReportType(reportType: string): string {
       return REPORT_SYSTEM_PROMPT_INVESTOR;
     case 'custom':
       return REPORT_SYSTEM_PROMPT_CUSTOM;
+    case 'propertyiq':
     case 'homeready':
     default:
       return REPORT_SYSTEM_PROMPT_HOMEBUYER;
@@ -75,6 +76,7 @@ export const V2_SECTIONS_BY_REPORT_TYPE: Record<
   string,
   Record<string, NarrativePromptConfig> | 'dynamic'
 > = {
+  propertyiq: HOMEREADY_V2_SECTIONS,
   homeready: HOMEREADY_V2_SECTIONS,
   investor: INVESTOR_V2_SECTIONS,
   investoredge: INVESTOR_V2_SECTIONS,

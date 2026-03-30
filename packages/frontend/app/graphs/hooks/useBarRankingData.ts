@@ -1,14 +1,23 @@
-'use client';
+"use client";
 
-import { useMemo, useCallback } from 'react';
-import { useSnapshotData, formatMetricValue, getMetricFormat, getMetricTitle } from '@/lib/data';
-import type { GeoLevel, SnapshotData } from '@/lib/data';
-import type { BarEntry } from '@/lib/visualizations/d3/HorizontalBarChart';
-import { getAllowedStates, matchesAllowedStates, getScopeBenchmarkLabel } from '../constants';
+import { useMemo, useCallback } from "react";
+import {
+  useSnapshotData,
+  formatMetricValue,
+  getMetricFormat,
+  getMetricTitle,
+} from "@/lib/data";
+import type { GeoLevel, SnapshotData } from "@/lib/data";
+import type { BarEntry } from "@/lib/visualizations/d3/HorizontalBarChart";
+import {
+  getAllowedStates,
+  matchesAllowedStates,
+  getScopeBenchmarkLabel,
+} from "../constants";
 
 // Re-export shared types from useGraphsState for convenience
-export type { ScatterScope, BarSort, BarCount } from './useGraphsState';
-import type { ScatterScope, BarSort, BarCount } from './useGraphsState';
+export type { ScatterScope, BarSort, BarCount } from "./useGraphsState";
+import type { ScatterScope, BarSort, BarCount } from "./useGraphsState";
 
 export interface UseBarRankingDataResult {
   data: BarEntry[];
@@ -19,7 +28,6 @@ export interface UseBarRankingDataResult {
   isLoading: boolean;
   error: Error | null;
 }
-
 
 /** Compute the median of a sorted (ascending) array of numbers */
 function median(sorted: number[]): number | null {
@@ -59,7 +67,11 @@ export function useBarRankingData(
   // 2-9. Transform, filter, sort, slice, and map to BarEntry[]
   const { data, benchmarkValue, benchmarkLabel } = useMemo(() => {
     if (isLoading || !allData || Object.keys(allData).length === 0) {
-      return { data: [] as BarEntry[], benchmarkValue: null, benchmarkLabel: '' };
+      return {
+        data: [] as BarEntry[],
+        benchmarkValue: null,
+        benchmarkLabel: "",
+      };
     }
 
     // --- 2. Convert record to array of { id, name, value } ---
@@ -67,9 +79,8 @@ export function useBarRankingData(
 
     for (const [id, entry] of Object.entries(allData)) {
       if (!entry) continue;
-      const val = typeof entry === 'number' ? entry : entry.value;
-      const name =
-        (typeof entry === 'object' && entry.name) || id;
+      const val = typeof entry === "number" ? entry : entry.value;
+      const name = (typeof entry === "object" && entry.name) || id;
 
       // 4. Filter out null / undefined / NaN values
       if (val == null || Number.isNaN(val)) continue;
@@ -81,7 +92,11 @@ export function useBarRankingData(
     // For multi-state metros (e.g., DC-VA-MD-WV), state scope includes
     // all states the metro spans so it can be meaningfully compared.
     const primaryState = primaryMarket?.state ?? null;
-    const allowedStates = getAllowedStates(primaryMarket?.name, primaryState ?? undefined, scope);
+    const allowedStates = getAllowedStates(
+      primaryMarket?.name,
+      primaryState ?? undefined,
+      scope,
+    );
 
     const filtered = allowedStates
       ? entries.filter((e) => matchesAllowedStates(e.name, allowedStates!))
@@ -89,7 +104,7 @@ export function useBarRankingData(
 
     // --- 5. Sort by value ---
     const sorted = [...filtered].sort((a, b) =>
-      sort === 'desc' ? b.value - a.value : a.value - b.value,
+      sort === "desc" ? b.value - a.value : a.value - b.value,
     );
 
     // --- 6. Calculate benchmark: median of ALL filtered entries (before slicing) ---
@@ -101,7 +116,8 @@ export function useBarRankingData(
 
     // --- 8. If primary market is not in the sliced set, append it ---
     const primaryId = primaryMarket?.id ?? null;
-    const primaryInSlice = primaryId !== null && sliced.some((e) => e.id === primaryId);
+    const primaryInSlice =
+      primaryId !== null && sliced.some((e) => e.id === primaryId);
 
     if (primaryId && !primaryInSlice) {
       const primaryEntry = sorted.find((e) => e.id === primaryId);
@@ -119,7 +135,11 @@ export function useBarRankingData(
     }));
 
     // --- 11. Benchmark label based on scope ---
-    const label = getScopeBenchmarkLabel(primaryMarket?.name, primaryState ?? undefined, scope);
+    const label = getScopeBenchmarkLabel(
+      primaryMarket?.name,
+      primaryState ?? undefined,
+      scope,
+    );
 
     return { data: barData, benchmarkValue: medianVal, benchmarkLabel: label };
   }, [allData, isLoading, primaryMarket, scope, sort, count]);

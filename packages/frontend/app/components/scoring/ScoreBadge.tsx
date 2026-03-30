@@ -8,7 +8,8 @@
  * - Score number always visible; breakdown access gated by entitlements tier
  * - Click to expand to full ScoreCard
  *
- * Used for Market Health, HomeReady, and InvestorEdge scores.
+ * Used primarily for PropertyIQ scores. Legacy types (market_health, homeready, investoredge)
+ * are retained for backward compatibility with cached data.
  */
 
 "use client";

@@ -57,18 +57,36 @@ export function buildNarrativeTemplateVars(
     geography_type: dto.primary_geography.type,
     user_type: dto.user_type,
 
-    // Scores
-    homeready_score: scores?.scores.homeready
-      ? Math.round(scores.scores.homeready.score)
+    // PropertyIQ Score (v4 — primary)
+    propertyiq_score: scores?.scores.propertyiq
+      ? Math.round(scores.scores.propertyiq.score)
       : 'N/A',
-    investoredge_score: scores?.scores.investoredge
-      ? Math.round(scores.scores.investoredge.score)
-      : 'N/A',
-    markethealth_score: scores?.scores.markethealth
-      ? Math.round(scores.scores.markethealth.score)
-      : 'N/A',
-    homeready_grade: scores?.scores.homeready?.grade || 'N/A',
-    investoredge_grade: scores?.scores.investoredge?.grade || 'N/A',
+    propertyiq_grade: scores?.scores.propertyiq?.grade || 'N/A',
+
+    // Legacy scores (backward compat for old report templates)
+    homeready_score: scores?.scores.propertyiq
+      ? Math.round(scores.scores.propertyiq.score)
+      : scores?.scores.homeready
+        ? Math.round(scores.scores.homeready.score)
+        : 'N/A',
+    investoredge_score: scores?.scores.propertyiq
+      ? Math.round(scores.scores.propertyiq.score)
+      : scores?.scores.investoredge
+        ? Math.round(scores.scores.investoredge.score)
+        : 'N/A',
+    markethealth_score: scores?.scores.propertyiq
+      ? Math.round(scores.scores.propertyiq.score)
+      : scores?.scores.markethealth
+        ? Math.round(scores.scores.markethealth.score)
+        : 'N/A',
+    homeready_grade:
+      scores?.scores.propertyiq?.grade ||
+      scores?.scores.homeready?.grade ||
+      'N/A',
+    investoredge_grade:
+      scores?.scores.propertyiq?.grade ||
+      scores?.scores.investoredge?.grade ||
+      'N/A',
 
     // HomeReady component scores
     ...buildComponentVars(
@@ -180,16 +198,55 @@ export function buildNarrativeTemplateVars(
     raw_market_signals: [],
     raw_national_context: null,
 
-    // Score context for AI narratives
-    homeready_context: scoreContexts?.homeready?.interpretation || null,
-    homeready_comparison: scoreContexts?.homeready?.comparison || null,
-    homeready_impact: scoreContexts?.homeready?.dollar_impact || null,
-    investoredge_context: scoreContexts?.investoredge?.interpretation || null,
-    investoredge_comparison: scoreContexts?.investoredge?.comparison || null,
-    investoredge_impact: scoreContexts?.investoredge?.dollar_impact || null,
-    markethealth_context: scoreContexts?.markethealth?.interpretation || null,
-    markethealth_comparison: scoreContexts?.markethealth?.comparison || null,
-    markethealth_impact: scoreContexts?.markethealth?.dollar_impact || null,
+    // Score context for AI narratives (propertyiq primary, legacy fallback)
+    propertyiq_context:
+      scoreContexts?.propertyiq?.interpretation ||
+      scoreContexts?.homeready?.interpretation ||
+      null,
+    propertyiq_comparison:
+      scoreContexts?.propertyiq?.comparison ||
+      scoreContexts?.homeready?.comparison ||
+      null,
+    propertyiq_impact:
+      scoreContexts?.propertyiq?.dollar_impact ||
+      scoreContexts?.homeready?.dollar_impact ||
+      null,
+    homeready_context:
+      scoreContexts?.propertyiq?.interpretation ||
+      scoreContexts?.homeready?.interpretation ||
+      null,
+    homeready_comparison:
+      scoreContexts?.propertyiq?.comparison ||
+      scoreContexts?.homeready?.comparison ||
+      null,
+    homeready_impact:
+      scoreContexts?.propertyiq?.dollar_impact ||
+      scoreContexts?.homeready?.dollar_impact ||
+      null,
+    investoredge_context:
+      scoreContexts?.propertyiq?.interpretation ||
+      scoreContexts?.investoredge?.interpretation ||
+      null,
+    investoredge_comparison:
+      scoreContexts?.propertyiq?.comparison ||
+      scoreContexts?.investoredge?.comparison ||
+      null,
+    investoredge_impact:
+      scoreContexts?.propertyiq?.dollar_impact ||
+      scoreContexts?.investoredge?.dollar_impact ||
+      null,
+    markethealth_context:
+      scoreContexts?.propertyiq?.interpretation ||
+      scoreContexts?.markethealth?.interpretation ||
+      null,
+    markethealth_comparison:
+      scoreContexts?.propertyiq?.comparison ||
+      scoreContexts?.markethealth?.comparison ||
+      null,
+    markethealth_impact:
+      scoreContexts?.propertyiq?.dollar_impact ||
+      scoreContexts?.markethealth?.dollar_impact ||
+      null,
 
     // Priority and comparison context
     priorities,
@@ -216,18 +273,15 @@ export function buildNarrativeTemplateVars(
     user_experience_level: userProfile?.experience_level || null,
 
     // Cross-section context for narrative coherence
-    overall_score:
-      dto.user_type === 'investor'
-        ? scores?.scores.investoredge
-          ? Math.round(scores.scores.investoredge.score)
-          : 'N/A'
-        : scores?.scores.homeready
-          ? Math.round(scores.scores.homeready.score)
-          : 'N/A',
+    overall_score: scores?.scores.propertyiq
+      ? Math.round(scores.scores.propertyiq.score)
+      : scores?.scores.homeready
+        ? Math.round(scores.scores.homeready.score)
+        : 'N/A',
     overall_grade:
-      dto.user_type === 'investor'
-        ? scores?.scores.investoredge?.grade || 'N/A'
-        : scores?.scores.homeready?.grade || 'N/A',
+      scores?.scores.propertyiq?.grade ||
+      scores?.scores.homeready?.grade ||
+      'N/A',
     ...computeComponentExtremes(scores, dto.user_type),
     key_tension: computeKeyTension(scores, dto.user_type),
     user_goal_summary: computeUserGoalSummary(dto, priorities),

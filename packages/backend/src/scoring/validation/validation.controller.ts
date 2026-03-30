@@ -52,7 +52,7 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
   })
   async getSummary(
     @Query('geography') geography?: string,
@@ -79,7 +79,7 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
   })
   @ApiQuery({
     name: 'horizon',
@@ -110,8 +110,8 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge'],
-    description: 'Score type (defaults to homeready)',
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
+    description: 'Score type (defaults to propertyiq)',
   })
   async getQuintilePerformance(
     @Query('score_type') scoreType?: string,
@@ -130,7 +130,7 @@ export class ValidationController {
       totalSamples: number;
     };
   }> {
-    const sType = scoreType ? this.validateScoreType(scoreType) : 'homeready';
+    const sType = scoreType ? this.validateScoreType(scoreType) : 'propertyiq';
 
     // Get quintile data for metros (most reliable data)
     const quintileData = await this.validationService.getQuintileAnalysis(
@@ -190,7 +190,7 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
   })
   @ApiQuery({
     name: 'limit',
@@ -224,7 +224,7 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
   })
   @ApiQuery({
     name: 'horizon',
@@ -254,7 +254,7 @@ export class ValidationController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq', 'homeready', 'investoredge', 'markethealth'],
   })
   async getGeographyBreakdown(
     @Query('score_type') scoreType?: string,
@@ -284,6 +284,7 @@ export class ValidationController {
 
   private validateScoreType(scoreType: string): ScoreType {
     const validTypes: ScoreType[] = [
+      'propertyiq',
       'homeready',
       'investoredge',
       'markethealth',

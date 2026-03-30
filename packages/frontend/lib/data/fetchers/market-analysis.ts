@@ -29,9 +29,7 @@ export async function fetchMarketAnalysis(
       { value: number | null; formatted: string; change: number | null }
     >;
     scores: {
-      homeready: { score: number; grade: string } | null;
-      investoredge: { score: number; grade: string } | null;
-      markethealth: { score: number; grade: string } | null;
+      propertyiq: { score: number; grade: string } | null;
     };
     lastUpdated?: string;
   },

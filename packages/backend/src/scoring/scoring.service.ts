@@ -92,105 +92,14 @@ export class ScoringService {
 
   /**
    * Calculate scores for all locations at a given geography level.
+   * Uses the v4 demand-signal engine (single PropertyIQ score).
    */
   async calculateAllScores(
     geography: GeographyLevel,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
-    const targetDate =
-      periodDate || (await getLatestRedfinDate(this.supabase, geography));
-    if (!targetDate) {
-      return { calculated: 0, errors: 0, scoreDate: '' };
-    }
-
-    const locations = await fetchAllMetrics(
-      this.supabase,
-      geography,
-      targetDate,
-    );
-    if (locations.length === 0) {
-      return { calculated: 0, errors: 0, scoreDate: targetDate };
-    }
-
-    const allMetricNames = getAllMetricNames(geography);
-    const zScores = calculateZScores(locations, allMetricNames);
-
-    const scoreTypes: ScoreType[] = [
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ];
-    const allResults: ScoreResult[] = [];
-
-    for (const scoreType of scoreTypes) {
-      const formula = FORMULA_WEIGHTS[geography][scoreType];
-      const rawScores = applyFormula(locations, zScores, formula);
-      const rawNormalized = normalizeScores(rawScores);
-      const normalizedScores = rawNormalized.map((score) =>
-        this.calibrationService.calibrate(score, scoreType, geography),
-      );
-
-      for (let i = 0; i < locations.length; i++) {
-        const location = locations[i];
-        const score = normalizedScores[i];
-        const grade = scoreToGrade(score);
-        const { confidence, level } = calculateConfidence(
-          location,
-          geography,
-          scoreType,
-        );
-
-        let result = allResults.find(
-          (r) => r.location_id === location.location_id,
-        );
-        if (!result) {
-          result = {
-            location_id: location.location_id,
-            location_name: location.location_name,
-            geography,
-            median_price: location.median_price ?? null,
-            score_date: targetDate,
-            scores: {
-              homeready: {
-                score: 0,
-                grade: 'F',
-                confidence: 0,
-                confidence_level: 'F',
-              },
-              investoredge: {
-                score: 0,
-                grade: 'F',
-                confidence: 0,
-                confidence_level: 'F',
-              },
-              markethealth: {
-                score: 0,
-                grade: 'F',
-                confidence: 0,
-                confidence_level: 'F',
-              },
-              propertyiq: null,
-            },
-            z_scores: zScores[location.location_id] || {},
-          };
-          allResults.push(result);
-        }
-
-        result.scores[scoreType] = {
-          score,
-          grade,
-          confidence,
-          confidence_level: level,
-        };
-      }
-    }
-
-    const { calculated, errors } = await saveScoresBatch(
-      this.supabase,
-      allResults,
-      targetDate,
-    );
-    return { calculated, errors, scoreDate: targetDate };
+    // v4: delegate to the demand-signal engine
+    return this.calculateV4Scores(geography, periodDate);
   }
 
   /**
@@ -288,6 +197,7 @@ export class ScoringService {
       for (const key of Object.keys(zs)) {
         rawValues[key] = null;
       }
+      // v3 legacy component breakdowns (only for old cached data)
       for (const scoreType of [
         'homeready',
         'investoredge',
@@ -303,7 +213,7 @@ export class ScoringService {
           );
         }
       }
-      // Note: propertyiq uses v4 engine with its own metrics — no v3 component breakdown
+      // propertyiq uses v4 engine — input metrics stored in z_scores field
     }
 
     const rawMonths = options?.historyMonths ?? 0;

@@ -56,11 +56,11 @@ const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
  * ScoreWidget fetches score data from useScoreData and displays it.
  *
  * @example
- * // Auto-fetch and display HomeReady score for a metro
+ * // Auto-fetch and display PropertyIQ score for a metro
  * <ScoreWidget
  *   geographyType="metro"
  *   geographyId="31080"
- *   scoreType="homeready"
+ *   scoreType="propertyiq"
  *   size={100}
  * />
  *
@@ -69,7 +69,7 @@ const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
  * <ScoreWidget
  *   geographyType="county"
  *   geographyId="06037"
- *   scoreType="investoredge"
+ *   scoreType="propertyiq"
  *   showConfidence
  * />
  */
