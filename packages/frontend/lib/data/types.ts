@@ -350,6 +350,10 @@ export interface ApiResponseItem {
   zcta?: string;
   place_fips?: string;
   state_abbrev?: string;
+  location_id?: string;
+  location_name?: string;
+  zip_code?: string;
+  score?: number;
   [key: string]: unknown;
 }
 

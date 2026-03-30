@@ -65,9 +65,10 @@ export async function fetchV4Metrics(
 
     for (const row of data) {
       const r = row as Record<string, any>;
+      const rawName: string = r[nameCol] || r[idCol];
       const loc: LocationMetrics & { months_of_supply?: number } = {
         location_id: r[idCol],
-        location_name: r[nameCol] || r[idCol],
+        location_name: rawName.replace(/\s+metro area$/i, ''),
         median_price: r.median_sale_price ?? undefined,
         rf_sold_above_list: r.sold_above_list ?? undefined,
         rf_median_dom: r.median_dom ?? undefined,

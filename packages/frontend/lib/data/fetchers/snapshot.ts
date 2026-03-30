@@ -20,6 +20,7 @@ import {
   getMetricConfig,
 } from "../registry-helpers";
 import { API_URL, fetchWithRetry } from "./base";
+import { TIGER_TO_SYSTEM_CBSA } from "../cbsa-crosswalk";
 
 interface ApiResponse {
   success: boolean;
@@ -254,7 +255,6 @@ async function fetchPropertyIQScoreData(
       }
     }
 
-    // Transform to unified format
     const normalizedData: ApiResponse = {
       success: true,
       count: allData.length,
@@ -299,12 +299,20 @@ function transformResponse(
         key = item.region_name;
         break;
       case "cbsa_code": {
-        const raw = item.cbsa_code ?? item.region_id;
-        key = raw != null ? String(raw) : undefined;
+        const raw = item.cbsa_code ?? item.region_id ?? item.location_id;
+        if (raw != null) {
+          const code = String(raw);
+          // Normalize old CBSA codes to 2023 delineation (single crosswalk point)
+          key = TIGER_TO_SYSTEM_CBSA[code] ?? code;
+        }
         break;
       }
       case "county_fips":
-        key = item.county_fips || item.fips_code || item.region_id;
+        key =
+          item.county_fips ||
+          item.fips_code ||
+          item.region_id ||
+          item.location_id;
         // Normalize FIPS codes to 5-digit strings
         if (key && geoLevel === "county") {
           const fipsNum = parseInt(key, 10);
@@ -316,15 +324,19 @@ function transformResponse(
       case "postal_code": {
         // Zillow uses zip_code, Realtor uses postal_code
         const raw =
-          item.postal_code || item.zip_code || item.zcta || item.region_id;
+          item.postal_code ||
+          item.zip_code ||
+          item.zcta ||
+          item.region_id ||
+          item.location_id;
         key = raw ? normalizeZipKey(String(raw)) : undefined;
         break;
       }
       case "place_fips":
-        key = item.place_fips || item.region_id;
+        key = item.place_fips || item.region_id || item.location_id;
         break;
       default:
-        key = item.region_id;
+        key = item.region_id || item.location_id;
     }
 
     if (!key) return;
@@ -361,7 +373,7 @@ function transformResponse(
     result[key] = {
       value: finalValue,
       date: item.date,
-      name: item.region_name || key, // Include human-readable name
+      name: item.region_name || item.location_name || key,
       ...extractProvenance(item),
     };
   });
