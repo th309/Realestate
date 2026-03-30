@@ -31,15 +31,15 @@
   --md-error-container: #f9dedc;
   --md-on-error-container: #410e0b;
 
-  /* PropertyIQ Surfaces — Light Mode (blue-neutral, no purple tint) */
-  --md-surface: #fafbff;
-  --md-surface-dim: #e8eaf6;
-  --md-surface-bright: #fafbff;
-  --md-surface-container-lowest: #ffffff;
-  --md-surface-container-low: #f4f5fb;
-  --md-surface-container: #eeeff7;
-  --md-surface-container-high: #e8eaf6;
-  --md-surface-container-highest: #e0e3ee;
+  /* PropertyIQ Surfaces — Light Mode (indigo-tinted, visible on all screens) */
+  --md-surface: #f3f4fc;
+  --md-surface-dim: #e0e3f0;
+  --md-surface-bright: #f3f4fc;
+  --md-surface-container-lowest: #f8f9fe;
+  --md-surface-container-low: #edeef8;
+  --md-surface-container: #e7e8f4;
+  --md-surface-container-high: #e0e2f0;
+  --md-surface-container-highest: #d8daec;
   --md-on-surface: #1a237e;
   --md-on-surface-variant: #49454f;
 
