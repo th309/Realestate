@@ -87,9 +87,10 @@ function enrichCountyFeatures(geojson: any, mapData: MapData): void {
 }
 
 /**
- * TIGER shapefiles use 2023 Census CBSA codes, but our data tables use
- * the older codes for ~13 metros. This crosswalk maps shapefile CBSAFP
- * to the system code so the data join succeeds.
+ * TIGER shapefiles use 2023 Census CBSA codes, but our data tables may use
+ * either old or new codes for ~13 metros (depends on cache freshness after
+ * the 2023-delineation migration). This bidirectional crosswalk ensures the
+ * data join succeeds regardless of which side has old vs new codes.
  */
 const TIGER_TO_SYSTEM_CBSA: Record<string, string> = {
   "14454": "14460", // Boston
@@ -107,11 +108,22 @@ const TIGER_TO_SYSTEM_CBSA: Record<string, string> = {
   "47894": "47900", // Washington DC
 };
 
+/** Reverse crosswalk: new (system) code → old (TIGER) code */
+const SYSTEM_TO_TIGER_CBSA: Record<string, string> = Object.fromEntries(
+  Object.entries(TIGER_TO_SYSTEM_CBSA).map(([k, v]) => [v, k]),
+);
+
 function enrichMetroFeatures(geojson: any, mapData: MapData): void {
   geojson.features.forEach((feature: any) => {
     const rawCbsa = feature.properties.CBSAFP || feature.properties.GEOID;
     const cbsaCode = TIGER_TO_SYSTEM_CBSA[rawCbsa] || rawCbsa;
-    const entry = mapData[cbsaCode];
+    // Try mapped code first, then raw code, then reverse-mapped (old) code
+    // so the join works whether mapData has old or new CBSA codes
+    const altCode = SYSTEM_TO_TIGER_CBSA[cbsaCode];
+    const entry =
+      mapData[cbsaCode] ??
+      mapData[rawCbsa] ??
+      (altCode ? mapData[altCode] : undefined);
     feature.properties.value = getValueFromEntry(entry);
     feature.properties.dataDate = getDateFromEntry(entry);
     feature.properties.id = cbsaCode;
