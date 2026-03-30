@@ -79,13 +79,16 @@ export function EmbedShell({ children }: EmbedShellProps) {
     };
   }, [token]);
 
+  // Hide chrome (branding bar + footer) when ?chrome=0 is set (e.g. homepage embed)
+  const hideChrome = searchParams.get("chrome") === "0";
+
   // --- No token: render children directly (backwards compat) ---
   if (!token) {
     return (
       <EmbedBrandingContext.Provider value={null}>
         <div className="flex flex-col min-h-full">
           <div className="flex-1">{children}</div>
-          <PoweredByFooter />
+          {!hideChrome && <PoweredByFooter />}
         </div>
       </EmbedBrandingContext.Provider>
     );

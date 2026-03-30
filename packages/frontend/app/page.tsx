@@ -3,6 +3,7 @@ import {
   BrandBanner,
   HeroSection,
   StatsSection,
+  MapShowcase,
   ValuePropsSection,
   AlphaCallout,
   GraphsShowcase,
@@ -53,6 +54,7 @@ export default function HomePage() {
         <BrandBanner />
         <HeroSection />
         <StatsSection />
+        <MapShowcase />
         <ValuePropsSection />
         <AlphaCallout />
         <GraphsShowcase />

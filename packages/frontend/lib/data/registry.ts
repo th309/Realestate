@@ -120,7 +120,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: "zillow",
     apiEndpoint: "/api/zillow/{geo}",
     keyField: "auto",
-    supportedGeos: ["state", "metro", "county", "city", "zip"],
+    supportedGeos: ["national", "state", "metro", "county", "city", "zip"],
     favorableDirection: "higher",
   },
 

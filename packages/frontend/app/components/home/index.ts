@@ -1,6 +1,7 @@
 // Home page components
 export { BrandBanner } from "./BrandBanner";
 export { HeroSection } from "./HeroSection";
+export { MapShowcase } from "./MapShowcase";
 export { StatsSection } from "./StatsSection";
 export { ValuePropsSection } from "./ValuePropsSection";
 export { AlphaCallout } from "./AlphaCallout";

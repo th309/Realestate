@@ -30,16 +30,16 @@ export function GraphsShowcase() {
             transition: "opacity 0.6s ease, transform 0.6s ease",
           }}
         >
-          <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
+          <span className="text-xs font-semibold text-[#1A237E] uppercase tracking-[0.15em] mb-3 block">
             Interactive Analytics
           </span>
           <h2
             id="graphs-heading"
-            className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold text-[#1A237E] tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
           >
             Compare any metric across any market
           </h2>
-          <p className="text-base text-[#C5CAE9] leading-relaxed">
+          <p className="text-base text-[#3949AB] leading-relaxed">
             Scatter plots, timelines, radar charts, rankings, and waterfalls.
             Pick your markets, pick your metrics, and see the story the data
             tells.
@@ -92,7 +92,7 @@ export function GraphsShowcase() {
         >
           <a
             href="/graphs"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors group"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#3949AB] hover:text-[#1A237E] transition-colors group"
           >
             Try the analytics tools
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

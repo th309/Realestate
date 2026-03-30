@@ -156,6 +156,31 @@ export class ZillowService {
   // ZHVI (Home Value) Methods
   // ============================================================================
 
+  async getNationalHomeValue(): Promise<HomeValueData[]> {
+    const { data, error } = await this.supabase
+      .from('realtor_national')
+      .select('period_date, median_listing_price')
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      throw new Error(`Error fetching national home value: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) return [];
+
+    return [
+      {
+        region_id: 'US',
+        region_name: 'United States',
+        value: Number(data[0].median_listing_price),
+        date: data[0].period_date,
+        property_type: 'sfrcondo',
+        geography: 'National',
+      },
+    ];
+  }
+
   async getStateHomeValues(date?: string): Promise<HomeValueData[]> {
     // Query zillow_state table directly - it has region_name (state name) built in
     const { data: stateData, error } = await this.supabase

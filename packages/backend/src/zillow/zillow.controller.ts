@@ -5,6 +5,17 @@ import { ZillowService } from './zillow.service';
 export class ZillowController {
   constructor(private readonly zillowService: ZillowService) {}
 
+  @Get('national')
+  async getNationalHomeValue() {
+    const data = await this.zillowService.getNationalHomeValue();
+    return {
+      success: true,
+      count: data.length,
+      geography: 'National',
+      data,
+    };
+  }
+
   @Get('states')
   async getStateHomeValues(@Query('date') date?: string) {
     const data = await this.zillowService.getStateHomeValues(date);
