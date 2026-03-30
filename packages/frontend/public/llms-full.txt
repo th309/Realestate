@@ -4,7 +4,7 @@
 
 ## Overview
 
-PropertyIQ uses machine learning to predict real estate market performance. The platform analyzes 90+ metrics from 7 trusted data sources to generate three proprietary scores: HomeReady (for homebuyers), InvestorEdge (for investors), and MarketHealth (for risk assessment).
+PropertyIQ uses machine learning to predict real estate market performance. The platform generates a single PropertyIQ Score (1-99) that predicts market performance using 3 Redfin demand-signal metrics (% Sold Above List, Median DOM, Months of Supply). Validated across 13 years of data with a 100% year hit rate — top-scored markets outperformed bottom-scored markets in every single test window.
 
 ## Key Pages
 
@@ -20,20 +20,20 @@ PropertyIQ uses machine learning to predict real estate market performance. The 
 
 ## Scoring System
 
-PropertyIQ offers three distinct scores, each 0-100:
+PropertyIQ generates a single **PropertyIQ Score** (1-99) for every geography:
 
-- **HomeReady Score**: Predicts home appreciation potential for primary buyers. Factors include price trends, affordability ratios, inventory dynamics, and economic fundamentals.
-- **InvestorEdge Score**: Targets rental property investors by measuring total return potential including rental yield, price appreciation, and market stability.
-- **MarketHealth Score**: Evaluates overall market stability and fundamentals for risk assessment. Incorporates supply/demand balance, economic diversity, and demographic trends.
+- **50 = state average** — higher means outperformance relative to the state
+- Built from 3 Redfin demand-signal metrics: % Sold Above List (positive), Median Days on Market (negative), Months of Supply (negative)
+- Each metric is z-scored within the state, combined into a signal, then percentile-ranked and re-centered at 55.6, clamped 1-99
+- Coverage: 746 metros, 2,983 counties, 19,880 ZIPs
 
 ### Validation Results
 
-Scores are walk-forward validated across 4 non-overlapping windows (2018-2023):
-- Out-of-sample Information Coefficient: 0.37 (metro level)
-- Top-scored markets outperformed bottom by 5.55 percentage points per year
-- $27,100 more equity on a typical home over 3 years in top-scored markets
-- 23,000+ locations scored across 924 metros
-- Models: XGBoost, LightGBM, ElasticNet ensemble with SHAP feature distillation
+Validated across 13 years of walk-forward data (2012-2025):
+- 100% year hit rate: top-quintile markets outperformed bottom-quintile in every single test window
+- Top-scored markets delivered +3.05% excess return vs state average over 3 years
+- Bottom-scored markets delivered -3.34% excess return vs state average over 3 years
+- Monotonic quintile separation: performance increases consistently from Q1 to Q5
 
 ## Data Sources
 
@@ -71,31 +71,32 @@ PropertyIQ differentiates from competitors through validated predictive scores:
 
 ## Detailed Methodology
 
+### PropertyIQ Score Formula
+
+The PropertyIQ Score measures relative market demand signal within each state:
+
+1. Three Redfin demand-signal metrics are collected: % Sold Above List Price (positive signal), Median Days on Market (negative signal), and Months of Supply (negative signal).
+2. Each metric is z-scored within the state to normalize across different market scales.
+3. The signal is computed as: `z(sold_above_list) - z(median_dom) - z(months_of_supply)`.
+4. The raw signal is converted to a percentile rank within the state, re-centered at 55.6, and clamped to the 1-99 range.
+5. A score of 50 represents the state average. Higher scores indicate stronger demand relative to other markets in the same state.
+
+This formula is transparent, reproducible, and uses only three publicly available Redfin metrics. There is no black-box ML model — the score is a direct function of observable market conditions.
+
 ### Walk-Forward Validation Process
 
-PropertyIQ's scoring models are validated using a rigorous walk-forward methodology designed to simulate real-world predictive performance. Unlike backtesting, which can overfit to historical data by allowing the model to "see" the future, walk-forward validation trains models on past data and tests them on genuinely unseen future periods.
+The PropertyIQ Score has been validated across 13 years of walk-forward data (2012-2025). For each test window, scores are computed using only data available at scoring time, then compared against actual home price appreciation over the subsequent 1-year and 3-year periods.
 
-The validation uses four non-overlapping test windows spanning 2018 through 2023. For each window, models are trained exclusively on data available before the test period begins. No future information leaks into the training set. The model generates scores for all metros at the start of each window, and those scores are compared against actual home price appreciation over the subsequent 12-month period. This produces an out-of-sample Information Coefficient (IC) of 0.37 at the metro level, meaning the scores have meaningful predictive power for ranking markets by future performance. The top-quintile markets (highest scores) outperformed the bottom-quintile markets by an average of 5.55 percentage points per year in realized home price appreciation.
+Key validation results:
+- 100% year hit rate: the top-quintile (highest-scored) markets outperformed the bottom-quintile in every single year tested.
+- Monotonic quintile separation: average excess returns increase consistently from Q1 (-3.34%) through Q5 (+3.05%) relative to the state average over 3 years.
+- Performance is consistent across market regimes including the 2020-2021 pandemic surge and the 2022-2023 rate-shock correction.
 
-The walk-forward approach also reveals how model performance varies across market regimes. The 2020-2021 pandemic period, with its unprecedented price surges, tested whether the models could identify which markets would sustain gains versus which were driven by temporary migration patterns. The 2022-2023 rate-shock period tested whether the models could anticipate which markets were most vulnerable to correction. Performance remained consistent across these regimes, confirming that the scoring methodology captures durable structural factors rather than momentum signals.
+### Data Sources
 
-### Feature Engineering
+The score uses Redfin data exclusively for its three input metrics. Missing values are handled through the MetricResolutionService's geographic inheritance system, which walks up the geography hierarchy (ZIP to county to metro to state) when primary data is unavailable.
 
-The scoring pipeline begins with raw data ingestion from seven sources (Zillow, Realtor.com, Redfin, Census Bureau, FRED, BLS, and BEA), producing approximately 90 base metrics per geography per time period. These raw metrics are transformed into approximately 200 engineered features through several processes.
-
-Ratio features capture relative affordability and market balance: price-to-income ratios, rent-to-price ratios, months of supply, and similar cross-metric relationships that are more informative than raw levels. Momentum features measure the rate and direction of change across multiple time horizons (1-month, 3-month, 6-month, and 12-month percentage changes) for key indicators like home values, inventory levels, and employment. Z-score normalization features express each metric relative to the market's own historical distribution and relative to the national cross-section, capturing both absolute levels and relative positioning. Interaction features capture non-linear relationships, such as the combination of rising prices and declining inventory (which signals different conditions than either metric alone), or the interaction between employment growth and housing permit activity.
-
-All features are computed using only data available at the time of scoring. No look-ahead bias is introduced during feature construction. Missing values are handled through the MetricResolutionService's fallback and geographic inheritance system, which walks up the geography hierarchy (ZIP to county to metro to state) when primary data is unavailable.
-
-### Model Ensemble Approach
-
-PropertyIQ uses an ensemble of three model families to generate final scores, combining their strengths while mitigating individual weaknesses.
-
-XGBoost provides gradient-boosted decision trees that excel at capturing non-linear relationships and feature interactions. It handles the complex, non-monotonic patterns common in housing data (for example, moderate population growth is positive, but extremely rapid growth often precedes oversupply). LightGBM offers a second gradient-boosting implementation with different tree-growing strategies, providing diversity in the ensemble. Its leaf-wise growth algorithm often captures different patterns than XGBoost's level-wise approach, and the disagreement between the two models serves as an implicit uncertainty signal. ElasticNet contributes regularized linear regression that enforces parsimony and interpretability. While less powerful for non-linear patterns, it provides stable baseline predictions and prevents the ensemble from overfitting to noise that tree-based models might chase.
-
-The final score is a weighted combination of all three models, with weights determined by each model's out-of-sample performance during validation. SHAP (SHapley Additive exPlanations) feature importance analysis is applied to the ensemble to identify which features drive each market's score, enabling the component breakdown shown in the ScoreCard interface. This distillation step ensures that users can understand not just what a market scored, but why it scored that way: which specific factors (affordability, supply conditions, employment trends, etc.) contributed positively or negatively.
-
-The ensemble is retrained monthly as new data arrives, with the walk-forward validation framework continuously monitoring for performance degradation. If out-of-sample IC drops below threshold levels, the system flags the model for review and potential recalibration.
+Scores are recomputed monthly as new Redfin data arrives. Coverage spans 746 metros, 2,983 counties, and 19,880 ZIP codes.
 
 ## Citation
 

@@ -11,7 +11,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 import { randomUUID } from 'crypto';
 
 export interface MLValidationConfig {
-  scoreType: 'homeready' | 'investoredge' | 'market_health';
+  scoreType: 'propertyiq' | 'homeready' | 'investoredge' | 'market_health';
   geographyType: 'metro' | 'county' | 'zip';
   horizon: '6m' | '1y' | '3y' | '5y';
   trainPeriodStart: string;
@@ -129,10 +129,13 @@ export class MLValidationService {
    * Queue a new ML validation job.
    * The job will be processed by the analytics service.
    */
-  async queueMLValidationJob(config: MLValidationConfig): Promise<{ jobId: string }> {
+  async queueMLValidationJob(
+    config: MLValidationConfig,
+  ): Promise<{ jobId: string }> {
     const jobId = randomUUID();
 
-    const { error } = await this.supabase.getClient()
+    const { error } = await this.supabase
+      .getClient()
       .from('propertyiq_ml_jobs')
       .insert({
         id: jobId,
@@ -178,7 +181,8 @@ export class MLValidationService {
       this.logger.log(`Calling analytics service: POST ${url}`);
 
       // Update job status to running
-      await this.supabase.getClient()
+      await this.supabase
+        .getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'running',
@@ -205,13 +209,16 @@ export class MLValidationService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+        throw new Error(
+          `Analytics service error (${response.status}): ${errorText}`,
+        );
       }
 
       const result = await response.json();
 
       // Update job as completed
-      await this.supabase.getClient()
+      await this.supabase
+        .getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'completed',
@@ -223,9 +230,11 @@ export class MLValidationService {
 
       this.logger.log(`ML validation job ${jobId} completed`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
 
-      await this.supabase.getClient()
+      await this.supabase
+        .getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'failed',
@@ -242,7 +251,8 @@ export class MLValidationService {
    * Get the status of an ML validation job.
    */
   async getJobStatus(jobId: string): Promise<JobStatus | null> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_ml_jobs')
       .select('*')
       .eq('id', jobId)
@@ -288,7 +298,8 @@ export class MLValidationService {
     horizon?: string;
     limit?: number;
   }): Promise<MLValidationResult[]> {
-    let query = this.supabase.getClient()
+    let query = this.supabase
+      .getClient()
       .from('propertyiq_ml_validations')
       .select('*')
       .order('created_at', { ascending: false });
@@ -318,7 +329,8 @@ export class MLValidationService {
    * Get a specific ML validation result.
    */
   async getValidation(id: string): Promise<MLValidationResult | null> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_ml_validations')
       .select('*')
       .eq('id', id)
@@ -365,7 +377,9 @@ export class MLValidationService {
   /**
    * Map database row to MLValidationResult.
    */
-  private mapValidationResult(row: Record<string, unknown>): MLValidationResult {
+  private mapValidationResult(
+    row: Record<string, unknown>,
+  ): MLValidationResult {
     return {
       id: row.id as string,
       scoreType: row.score_type as string,
@@ -378,7 +392,9 @@ export class MLValidationService {
       mlPreset: row.ml_preset as string,
       timeLimitSeconds: row.time_limit_seconds as number,
       formulaR2: row.formula_r2 as number | null,
-      formulaDirectionalAccuracy: row.formula_directional_accuracy as number | null,
+      formulaDirectionalAccuracy: row.formula_directional_accuracy as
+        | number
+        | null,
       formulaMae: row.formula_mae as number | null,
       formulaRmse: row.formula_rmse as number | null,
       formulaQuintileSpread: row.formula_quintile_spread as number | null,

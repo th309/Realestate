@@ -197,13 +197,8 @@ export const ScoreCard = memo(function ScoreCard({
     "score_explanation",
   );
 
-  // Map score type for history chart — normalize legacy "market_health" to "markethealth"
-  const scoreTypeForChart =
-    type === "market_health"
-      ? "markethealth"
-      : type === "propertyiq"
-        ? "propertyiq"
-        : type;
+  // Score type for history chart — only PropertyIQ is supported
+  const scoreTypeForChart = "propertyiq" as const;
 
   return (
     <div
@@ -325,13 +320,7 @@ export const ScoreCard = memo(function ScoreCard({
           <ScoreHistoryChart
             geographyType={geographyType}
             geographyId={geographyId}
-            scoreType={
-              scoreTypeForChart as
-                | "propertyiq"
-                | "homeready"
-                | "investoredge"
-                | "markethealth"
-            }
+            scoreType={scoreTypeForChart}
           />
         </div>
       )}

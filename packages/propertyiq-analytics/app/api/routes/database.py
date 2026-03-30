@@ -101,7 +101,7 @@ async def query_table(request: QueryTableRequest):
 
     Examples:
     - Get all metros: {"table_name": "geographies", "filters": {"geography_type": "metro"}}
-    - Get high scores: {"table_name": "propertyiq_scores", "filters": {"investoredge_score": {"gte": 80}}}
+    - Get high scores: {"table_name": "propertyiq_scores", "filters": {"propertyiq_score": {"gte": 80}}}
     - Get sorted: {"table_name": "zillow_metro", "order_by": "-period_date", "limit": 50}
 
     Supported filter operators:
@@ -167,7 +167,7 @@ async def aggregate_query(request: AggregateQueryRequest):
       }
     - Average score: {
         "table_name": "propertyiq_scores",
-        "aggregations": [{"function": "avg", "column": "investoredge_score"}]
+        "aggregations": [{"function": "avg", "column": "propertyiq_score"}]
       }
 
     Supported functions: count, sum, avg, mean, min, max

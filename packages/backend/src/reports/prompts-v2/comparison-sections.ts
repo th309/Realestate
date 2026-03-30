@@ -16,9 +16,7 @@ Primary market: {{geography_name}} ({{geography_type}})
 User type: {{user_type}}
 
 ## Primary Market Scores
-{{#if homeready_score}}- HomeReady: {{homeready_score}}/100 ({{homeready_grade}}){{/if}}
-{{#if investoredge_score}}- InvestorEdge: {{investoredge_score}}/100 ({{investoredge_grade}}){{/if}}
-- Market Health: {{markethealth_score}}/100
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 
 ## Comparison Markets
@@ -72,8 +70,7 @@ User type: {{user_type}}
 {{#if cash_on_cash_estimate}}- Cash-on-cash: {{cash_on_cash_estimate}}{{/if}}
 
 ## Primary Market Scores
-{{#if homeready_score}}- HomeReady: {{homeready_score}}/100 — Affordability {{affordability_score}}, Timing {{market_timing_score}}, Stability {{stability_score}}, Growth {{growth_potential_score}}{{/if}}
-{{#if investoredge_score}}- InvestorEdge: {{investoredge_score}}/100 — Cash Flow {{cash_flow_score}}, Demand {{rent_demand_score}}, Appreciation {{appreciation_score}}, Entry {{entry_point_score}}, Risk {{risk_score}}{{/if}}
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 
 ## Comparison Markets
 {{#each comparison_markets}}
@@ -100,9 +97,7 @@ Write 6-8 paragraphs comparing the markets across these dimensions:
 
 4. **Risk Profile** — Volatility, concentration risk, historical drawdowns. Which market lets you sleep better at night?
 
-{{#if investoredge_score}}
 5. **Investment Returns** — Yield comparison, cash flow potential, total return trajectory. Which market is the better capital deployment?
-{{/if}}
 
 CRITICAL: Do NOT write 5 separate mini-reports. COMPARE the markets directly in every paragraph. Use phrases like "while {{geography_name}} offers X, [comparison market] counters with Y." The reader should understand the trade-offs, not just the individual profiles.
 

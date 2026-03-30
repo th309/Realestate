@@ -167,7 +167,7 @@ class GeographyService:
 
             # Default metrics to compare
             if metrics is None:
-                metrics = ['investoredge_score', 'homeready_score', 'market_health_score']
+                metrics = ['propertyiq_score']
 
             # Calculate rankings and comparisons
             target_data = df[df['geography_id'] == geography_id].iloc[0] if len(df[df['geography_id'] == geography_id]) > 0 else None
@@ -325,7 +325,7 @@ class GeographyService:
 
             # Calculate similarity (Euclidean distance)
             if similarity_metrics is None:
-                similarity_metrics = ['investoredge_score', 'homeready_score', 'market_health_score']
+                similarity_metrics = ['propertyiq_score']
 
             target_values = [float(target.get(m, 0)) for m in similarity_metrics]
 

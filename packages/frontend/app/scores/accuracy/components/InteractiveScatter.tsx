@@ -23,9 +23,7 @@ const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
 ];
 
 const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
-  { value: "homeready", label: "HomeReady" },
-  { value: "investoredge", label: "InvestorEdge" },
-  { value: "markethealth", label: "MarketHealth" },
+  { value: "propertyiq", label: "PropertyIQ" },
 ];
 
 /**
@@ -57,7 +55,7 @@ export function InteractiveScatter({
   onHorizonChange,
 }: InteractiveScatterProps) {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
-  const [scoreType, setScoreType] = useState<ValidationScoreType>("homeready");
+  const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
   const {
     data: rawData,

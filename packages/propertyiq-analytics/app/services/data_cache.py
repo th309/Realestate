@@ -245,7 +245,7 @@ class DataCache:
 
         Normalized (DB): one row per (location_id, score_type, score_date)
         Denormalized (returned): one row per (geography_id, period_date) with
-            homeready_score, investoredge_score, market_health_score columns.
+            propertyiq_score column.
         """
         try:
             if latest_only:
@@ -315,11 +315,9 @@ class DataCache:
             # Flatten MultiIndex columns
             pivoted.columns.name = None
 
-            # Rename score columns to match legacy format
+            # Rename score columns to match expected format
             score_rename = {
-                'homeready': 'homeready_score',
-                'investoredge': 'investoredge_score',
-                'markethealth': 'market_health_score',
+                'propertyiq': 'propertyiq_score',
             }
             pivoted = pivoted.rename(columns=score_rename)
 
@@ -453,7 +451,7 @@ class DataCache:
                 self.supabase.table('propertyiq_scores')
                 .select('location_id', count='exact')
                 .eq('geography', geo_type)
-                .eq('score_type', 'homeready')
+                .eq('score_type', 'propertyiq')
                 .limit(0)
                 .execute()
             )

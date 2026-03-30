@@ -19,14 +19,14 @@ export interface ValidationStats {
   /** Total scored observations across all geos and periods */
   total_observations: string;
 
-  /** Human-readable HomeReady quintile performance statement */
-  homeready_quintile_performance: string;
-  /** Human-readable InvestorEdge quintile performance statement */
-  investoredge_quintile_performance: string;
+  /** Human-readable PropertyIQ homebuyer quintile performance statement */
+  propertyiq_homebuyer_quintile_performance: string;
+  /** Human-readable PropertyIQ investor quintile performance statement */
+  propertyiq_investor_quintile_performance: string;
 
   /** Information coefficient summary */
-  information_coefficient_homeready: string;
-  information_coefficient_investoredge: string;
+  information_coefficient_homebuyer: string;
+  information_coefficient_investor: string;
 
   /** Years of backtest data */
   backtest_years: number;
@@ -72,15 +72,15 @@ export function getValidationStats(): ValidationStats {
     total_observations: '1,503,719',
 
     // Quintile performance (v3 OOS results)
-    homeready_quintile_performance:
+    propertyiq_homebuyer_quintile_performance:
       'Top-quintile HomeReady markets outperform bottom-quintile by 2.66 percentage points annually (out-of-sample)',
-    investoredge_quintile_performance:
+    propertyiq_investor_quintile_performance:
       'Top-quintile InvestorEdge markets outperform bottom-quintile by 5.55 percentage points annually (out-of-sample)',
 
     // Information coefficients (v3 OOS, averaged across windows)
-    information_coefficient_homeready:
+    information_coefficient_homebuyer:
       'Out-of-sample IC of 0.30 across 924 metros (4 walk-forward windows)',
-    information_coefficient_investoredge:
+    information_coefficient_investor:
       'Out-of-sample IC of 0.37 across 924 metros (4 walk-forward windows)',
 
     // Backtest period
@@ -134,12 +134,14 @@ export function getValidationTemplateVars(): Record<string, string | number> {
     validation_data_sources_count: stats.data_sources_count,
 
     // Quintile performance
-    validation_homeready_quintile: stats.homeready_quintile_performance,
-    validation_investoredge_quintile: stats.investoredge_quintile_performance,
+    validation_homeready_quintile:
+      stats.propertyiq_homebuyer_quintile_performance,
+    validation_investoredge_quintile:
+      stats.propertyiq_investor_quintile_performance,
 
     // IC stats
-    validation_ic_homeready: stats.information_coefficient_homeready,
-    validation_ic_investoredge: stats.information_coefficient_investoredge,
+    validation_ic_homeready: stats.information_coefficient_homebuyer,
+    validation_ic_investoredge: stats.information_coefficient_investor,
 
     // Hit rates
     validation_hit_rate_homeready: stats.oos_hit_rate_homeready,

@@ -126,12 +126,9 @@ class AdvancedAnalysisService:
     
     def _get_feature_columns(self, df: pd.DataFrame) -> List[str]:
         """Get columns that can be used as features."""
-        # Score component columns
+        # PropertyIQ demand signal components
         score_components = [
-            'homeready_affordability', 'homeready_stability', 'homeready_value',
-            'homeready_livability', 'homeready_momentum',
-            'investoredge_cashflow', 'investoredge_growth', 'investoredge_demand',
-            'investoredge_entrypoint', 'investoredge_risk'
+            'sold_above_list', 'median_dom', 'months_of_supply',
         ]
         
         # Raw metric columns that might exist
@@ -499,16 +496,16 @@ class AdvancedAnalysisService:
     def optimize_weights(
         self,
         geography_type: str = 'metro',
-        score_type: str = 'investoredge',
+        score_type: str = 'propertyiq',
         target: str = 'actual_appreciation_12m',
         states: Optional[List[str]] = None
     ) -> OptimizationResult:
         """
         Find optimal weights for score components to maximize correlation with outcomes.
-        
+
         Args:
             geography_type: Type of geography
-            score_type: 'investoredge' or 'homeready'
+            score_type: Score type ('propertyiq')
             target: Target variable to optimize for
             states: Optional state filter
         
@@ -527,13 +524,8 @@ class AdvancedAnalysisService:
                 df = df.sort_values('period_date', ascending=False)
                 df = df.groupby('geography_id').first().reset_index()
             
-            # Get component columns
-            if score_type == 'homeready':
-                components = ['homeready_affordability', 'homeready_stability', 
-                             'homeready_value', 'homeready_livability', 'homeready_momentum']
-            else:
-                components = ['investoredge_cashflow', 'investoredge_growth',
-                             'investoredge_demand', 'investoredge_entrypoint', 'investoredge_risk']
+            # Get PropertyIQ component columns (demand signal metrics)
+            components = ['sold_above_list', 'median_dom', 'months_of_supply']
             
             components = [c for c in components if c in df.columns]
             if len(components) == 0 or target not in df.columns:
@@ -659,7 +651,7 @@ class AdvancedAnalysisService:
             
             # Set default columns based on chart type
             if chart_type == 'scatter':
-                x_column = x_column or 'investoredge_score'
+                x_column = x_column or 'propertyiq_score'
                 y_column = y_column or 'actual_appreciation_12m'
                 
                 if x_column not in df.columns or y_column not in df.columns:
@@ -678,7 +670,7 @@ class AdvancedAnalysisService:
                 )
                 
             elif chart_type == 'histogram':
-                x_column = x_column or 'investoredge_score'
+                x_column = x_column or 'propertyiq_score'
                 if x_column not in df.columns:
                     return ChartResult(
                         success=False, chart_type=chart_type,
@@ -693,7 +685,7 @@ class AdvancedAnalysisService:
             elif chart_type == 'bar':
                 # Top/bottom performers
                 x_column = x_column or 'geography_name'
-                y_column = y_column or 'investoredge_score'
+                y_column = y_column or 'propertyiq_score'
                 
                 if y_column in df.columns:
                     df = df.nlargest(20, y_column)
@@ -707,7 +699,7 @@ class AdvancedAnalysisService:
                 
             elif chart_type == 'box':
                 x_column = x_column or 'parent_geography_id'
-                y_column = y_column or 'investoredge_score'
+                y_column = y_column or 'propertyiq_score'
                 
                 fig = px.box(
                     df, x=x_column, y=y_column,

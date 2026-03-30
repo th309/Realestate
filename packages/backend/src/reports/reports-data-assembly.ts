@@ -149,6 +149,25 @@ export function assemblePopulatedData(
     historical: historicalData,
     benchmarks: {},
     scores: {
+      // Primary: unified PropertyIQ score
+      propertyiq:
+        scores?.scores.propertyiq || scores?.scores.homeready
+          ? {
+              score: (scores.scores.propertyiq ?? scores.scores.homeready)
+                ?.score,
+              grade: (scores.scores.propertyiq ?? scores.scores.homeready)
+                ?.grade,
+              trend: 'stable',
+              context:
+                scoreContexts?.propertyiq ||
+                scoreContexts?.homeready ||
+                undefined,
+              components:
+                (scores.scores.propertyiq ?? scores.scores.homeready)
+                  ?.components || undefined,
+            }
+          : undefined,
+      // Legacy keys preserved for old reports that read these fields
       homeready: scores?.scores.homeready
         ? {
             score: scores.scores.homeready.score,
@@ -165,15 +184,6 @@ export function assemblePopulatedData(
             trend: 'stable',
             context: scoreContexts?.investoredge || undefined,
             components: scores.scores.investoredge.components || undefined,
-          }
-        : undefined,
-      markethealth: scores?.scores.markethealth
-        ? {
-            score: scores.scores.markethealth.score,
-            grade: scores.scores.markethealth.grade,
-            trend: 'stable',
-            context: scoreContexts?.markethealth || undefined,
-            components: scores.scores.markethealth.components || undefined,
           }
         : undefined,
     },

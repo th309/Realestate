@@ -277,7 +277,7 @@ export interface DataRequirements {
   current_metrics: string[];
   historical_metrics: { metric: string; periods: number }[];
   benchmarks: ("national" | "state" | "similar_metros")[];
-  scores: ("homeready" | "investoredge" | "markethealth")[];
+  scores: "propertyiq"[];
   score_components?: boolean;
   demographics?: string[];
   migration?: {
@@ -380,27 +380,43 @@ export interface ReportInstance {
   ai_model_used?: string;
 
   // Scores
+  /** @deprecated Retained for reading old report data */
   homeready_score: number | null;
+  /** @deprecated Retained for reading old report data */
   investoredge_score: number | null;
   /** Full score details from scoring service */
   scores_snapshot?: {
+    /** PropertyIQ score */
+    propertyiq?: {
+      score: number;
+      grade?: string;
+      confidence?: number;
+    };
+    /** @deprecated Retained for reading old report data */
     homeready_score?: number;
+    /** @deprecated Retained for reading old report data */
     homeready_details?: {
       affordability?: number;
       stability?: number;
       value?: number;
       competition?: number;
     };
+    /** @deprecated Retained for reading old report data */
     homeready_components?: ScoreComponentBreakdown[];
+    /** @deprecated Retained for reading old report data */
     investoredge_score?: number;
+    /** @deprecated Retained for reading old report data */
     investoredge_details?: {
       cash_flow?: number;
       appreciation?: number;
       risk?: number;
       liquidity?: number;
     };
+    /** @deprecated Retained for reading old report data */
     investoredge_components?: ScoreComponentBreakdown[];
+    /** @deprecated Retained for reading old report data */
     markethealth_score?: number;
+    /** @deprecated Retained for reading old report data */
     markethealth_components?: ScoreComponentBreakdown[];
     scores?: any;
   } | null;

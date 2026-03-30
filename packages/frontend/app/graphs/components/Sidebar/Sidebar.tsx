@@ -33,9 +33,6 @@ const TIME_FRAMES: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
 const SCORE_TYPE_OPTIONS: { value: ScoreTypeOption; label: string }[] = [
   { value: "propertyiq", label: "PropertyIQ" },
-  { value: "homeready", label: "HomeReady (Legacy)" },
-  { value: "investoredge", label: "InvestorEdge (Legacy)" },
-  { value: "markethealth", label: "Market Health (Legacy)" },
 ];
 
 const BAR_COUNT_OPTIONS: BarCount[] = [10, 25];

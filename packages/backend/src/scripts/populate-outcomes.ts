@@ -59,9 +59,7 @@ async function main() {
   const geographies: GeographyType[] =
     args.geography === 'all' ? ['metro', 'county', 'zip'] : [args.geography];
   const scoreTypes: ScoreType[] =
-    args.scoreType === 'all'
-      ? ['homeready', 'investoredge', 'markethealth']
-      : [args.scoreType];
+    args.scoreType === 'all' ? ['propertyiq'] : [args.scoreType];
 
   // Fetch score dates
   let scoreDates: string[];

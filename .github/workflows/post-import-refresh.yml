@@ -132,7 +132,7 @@ jobs:
           # but we can trigger a specific refresh here if needed
 
           # Run scoring pipeline for each geography type
-          # This updates propertyiq_scores with HomeReady and InvestorEdge scores
+          # This updates propertyiq_scores with PropertyIQ scores
 
           echo ""
           echo ">>> Running scoring pipeline for metros..."
@@ -328,7 +328,7 @@ jobs:
               '',
               '### Steps in This Workflow',
               '1. Calculated Metrics Refresh (cap_rate, gross_yield, GRM, overvalued%, 5yr growth, income_to_buy)',
-              '2. PropertyIQ Scoring Pipeline (HomeReady, InvestorEdge, Market Health Index)',
+              '2. PropertyIQ Scoring Pipeline (PropertyIQ Score)',
               '3. PropertyIQ Rankings Update',
               '',
               '### Tables Updated',
@@ -390,9 +390,7 @@ jobs:
           echo "  - Market Health Score"
           echo ""
           echo "PropertyIQ Scores Updated:"
-          echo "  - HomeReady Score (for homebuyers)"
-          echo "  - InvestorEdge Score (for investors)"
-          echo "  - Market Health Index"
+          echo "  - PropertyIQ Score (demand signal relative to state average)"
           echo ""
           echo "Rankings Updated:"
           echo "  - National rankings"

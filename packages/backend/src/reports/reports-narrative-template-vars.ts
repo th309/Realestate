@@ -198,55 +198,20 @@ export function buildNarrativeTemplateVars(
     raw_market_signals: [],
     raw_national_context: null,
 
-    // Score context for AI narratives (propertyiq primary, legacy fallback)
-    propertyiq_context:
-      scoreContexts?.propertyiq?.interpretation ||
-      scoreContexts?.homeready?.interpretation ||
-      null,
-    propertyiq_comparison:
-      scoreContexts?.propertyiq?.comparison ||
-      scoreContexts?.homeready?.comparison ||
-      null,
-    propertyiq_impact:
-      scoreContexts?.propertyiq?.dollar_impact ||
-      scoreContexts?.homeready?.dollar_impact ||
-      null,
-    homeready_context:
-      scoreContexts?.propertyiq?.interpretation ||
-      scoreContexts?.homeready?.interpretation ||
-      null,
-    homeready_comparison:
-      scoreContexts?.propertyiq?.comparison ||
-      scoreContexts?.homeready?.comparison ||
-      null,
-    homeready_impact:
-      scoreContexts?.propertyiq?.dollar_impact ||
-      scoreContexts?.homeready?.dollar_impact ||
-      null,
-    investoredge_context:
-      scoreContexts?.propertyiq?.interpretation ||
-      scoreContexts?.investoredge?.interpretation ||
-      null,
-    investoredge_comparison:
-      scoreContexts?.propertyiq?.comparison ||
-      scoreContexts?.investoredge?.comparison ||
-      null,
-    investoredge_impact:
-      scoreContexts?.propertyiq?.dollar_impact ||
-      scoreContexts?.investoredge?.dollar_impact ||
-      null,
-    markethealth_context:
-      scoreContexts?.propertyiq?.interpretation ||
-      scoreContexts?.markethealth?.interpretation ||
-      null,
-    markethealth_comparison:
-      scoreContexts?.propertyiq?.comparison ||
-      scoreContexts?.markethealth?.comparison ||
-      null,
-    markethealth_impact:
-      scoreContexts?.propertyiq?.dollar_impact ||
-      scoreContexts?.markethealth?.dollar_impact ||
-      null,
+    // Score context for AI narratives
+    propertyiq_context: scoreContexts?.propertyiq?.interpretation || null,
+    propertyiq_comparison: scoreContexts?.propertyiq?.comparison || null,
+    propertyiq_impact: scoreContexts?.propertyiq?.dollar_impact || null,
+    // Legacy template var aliases (old report templates reference these)
+    homeready_context: scoreContexts?.propertyiq?.interpretation || null,
+    homeready_comparison: scoreContexts?.propertyiq?.comparison || null,
+    homeready_impact: scoreContexts?.propertyiq?.dollar_impact || null,
+    investoredge_context: scoreContexts?.propertyiq?.interpretation || null,
+    investoredge_comparison: scoreContexts?.propertyiq?.comparison || null,
+    investoredge_impact: scoreContexts?.propertyiq?.dollar_impact || null,
+    markethealth_context: scoreContexts?.propertyiq?.interpretation || null,
+    markethealth_comparison: scoreContexts?.propertyiq?.comparison || null,
+    markethealth_impact: scoreContexts?.propertyiq?.dollar_impact || null,
 
     // Priority and comparison context
     priorities,

@@ -115,7 +115,8 @@ export class BacktestRunsService {
   }> {
     const { limit = 20, offset = 0, status, startDate, endDate } = params;
 
-    let query = this.supabase.getClient()
+    let query = this.supabase
+      .getClient()
       .from('propertyiq_backtest_runs')
       .select('*', { count: 'exact' })
       .order('started_at', { ascending: false })
@@ -150,7 +151,8 @@ export class BacktestRunsService {
    * Get a specific backtest run by ID.
    */
   async getRun(runId: string): Promise<BacktestRun | null> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_backtest_runs')
       .select('*')
       .eq('id', runId)
@@ -171,7 +173,8 @@ export class BacktestRunsService {
    * Get samples for a specific backtest run.
    */
   async getRunSamples(runId: string): Promise<BacktestSample[]> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_backtest_samples')
       .select('*')
       .eq('run_id', runId)
@@ -189,9 +192,12 @@ export class BacktestRunsService {
    * Get confidence summary across all recent runs.
    * Returns the latest confidence for each score/horizon/geography combination.
    */
-  async getConfidenceSummary(): Promise<Record<string, Record<string, Record<string, ConfidenceResult>>>> {
+  async getConfidenceSummary(): Promise<
+    Record<string, Record<string, Record<string, ConfidenceResult>>>
+  > {
     // Get the most recent run
-    const { data: latestRun, error } = await this.supabase.getClient()
+    const { data: latestRun, error } = await this.supabase
+      .getClient()
       .from('propertyiq_backtest_runs')
       .select('results')
       .eq('status', 'healthy')
@@ -205,7 +211,10 @@ export class BacktestRunsService {
     }
 
     // Build nested structure: score_type -> horizon -> geography_type -> confidence
-    const summary: Record<string, Record<string, Record<string, ConfidenceResult>>> = {};
+    const summary: Record<
+      string,
+      Record<string, Record<string, ConfidenceResult>>
+    > = {};
 
     for (const result of latestRun.results as BacktestCellResult[]) {
       if (!summary[result.score_type]) {
@@ -214,7 +223,8 @@ export class BacktestRunsService {
       if (!summary[result.score_type][result.horizon]) {
         summary[result.score_type][result.horizon] = {};
       }
-      summary[result.score_type][result.horizon][result.geography_type] = result.confidence;
+      summary[result.score_type][result.horizon][result.geography_type] =
+        result.confidence;
     }
 
     return summary;
@@ -232,7 +242,8 @@ export class BacktestRunsService {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_backtest_runs')
       .select('started_at, results')
       .gte('started_at', startDate.toISOString())
@@ -243,12 +254,13 @@ export class BacktestRunsService {
       throw new Error(`Failed to get confidence trend: ${error.message}`);
     }
 
-    const trend: Array<{ date: string; confidence: number; status: string }> = [];
+    const trend: Array<{ date: string; confidence: number; status: string }> =
+      [];
 
     for (const run of data || []) {
       const results = run.results as BacktestCellResult[];
       const cell = results.find(
-        r =>
+        (r) =>
           r.score_type === scoreType &&
           r.horizon === horizon &&
           r.geography_type === geographyType,
@@ -269,9 +281,11 @@ export class BacktestRunsService {
   /**
    * Trigger a new backtest run via the analytics service.
    */
-  async triggerBacktest(params: TriggerBacktestParams = {}): Promise<TriggerResult> {
+  async triggerBacktest(
+    params: TriggerBacktestParams = {},
+  ): Promise<TriggerResult> {
     const {
-      score_types = ['market_health', 'homeready', 'investoredge'],
+      score_types = ['propertyiq'],
       horizons = ['6m', '1y', '3y', '5y'],
       county_sample = 500,
       zip_sample = 2000,
@@ -281,7 +295,8 @@ export class BacktestRunsService {
     // Create a job entry
     const jobId = `backtest_${Date.now()}`;
 
-    const { error: insertError } = await this.supabase.getClient()
+    const { error: insertError } = await this.supabase
+      .getClient()
       .from('propertyiq_ml_jobs')
       .insert({
         id: jobId,
@@ -300,7 +315,9 @@ export class BacktestRunsService {
       });
 
     if (insertError) {
-      this.logger.error(`Failed to create backtest job: ${insertError.message}`);
+      this.logger.error(
+        `Failed to create backtest job: ${insertError.message}`,
+      );
       throw new Error(`Failed to create backtest job: ${insertError.message}`);
     }
 
@@ -348,13 +365,16 @@ export class BacktestRunsService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+        throw new Error(
+          `Analytics service error (${response.status}): ${errorText}`,
+        );
       }
 
       const result = await response.json();
 
       // Update job as completed
-      await this.supabase.getClient()
+      await this.supabase
+        .getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'completed',
@@ -366,9 +386,11 @@ export class BacktestRunsService {
 
       this.logger.log(`Backtest job ${jobId} completed successfully`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
 
-      await this.supabase.getClient()
+      await this.supabase
+        .getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'failed',
@@ -390,7 +412,8 @@ export class BacktestRunsService {
     error?: string;
     result?: unknown;
   } | null> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_ml_jobs')
       .select('status, progress, error, result')
       .eq('id', jobId)
@@ -415,7 +438,8 @@ export class BacktestRunsService {
     averageDuration: number;
     statusCounts: Record<string, number>;
   }> {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('propertyiq_backtest_runs')
       .select('status, duration_seconds, started_at')
       .order('started_at', { ascending: false });

@@ -1,8 +1,8 @@
 /**
  * SCORE DATA HOOK
  *
- * React Query hook for fetching PropertyIQ scores.
- * The API returns all score types (homeready, investoredge, markethealth) in a single response.
+ * React Query hook for fetching the PropertyIQ score for a geography.
+ * The API returns a single PropertyIQ score per geography.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -61,7 +61,7 @@ export interface UseScoreDataResult {
  * @param options - Query options
  *
  * @example
- * const { homeready, investoredge, markethealth, isLoading } = useScoreData(
+ * const { propertyiq, isLoading } = useScoreData(
  *   'county',
  *   '24001'
  * );
@@ -134,7 +134,7 @@ export function useScoreData(
 /**
  * Hook for fetching a single score type for a geography.
  *
- * @param scoreType - Which score to extract (homeready, investoredge, markethealth)
+ * @param scoreType - Which score to extract (only "propertyiq" supported)
  * @param geoLevel - Geography level
  * @param regionId - Specific region identifier
  * @param options - Query options

@@ -1,6 +1,6 @@
 /** Missing-metrics strategy configuration and types for scoring v3.0. */
 
-import { NullStrategy } from './scoring.types';
+export type NullStrategy = 'skip' | 'neutral' | 'penalize';
 
 export interface MissingMetricResult {
   strategy: NullStrategy;

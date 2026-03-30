@@ -6,12 +6,12 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { ScoreType, GeographyLevel } from './formula-weights';
+import { ScoreType, AnyScoreType, GeographyLevel } from './formula-weights';
 import { getLatestScoreDate } from './scoring-queries';
 
 export interface ScoreDistributionResult {
   geography: GeographyLevel;
-  score_type: ScoreType;
+  score_type: AnyScoreType;
   score_date: string;
   total_count: number;
   distribution: Array<{
@@ -42,10 +42,11 @@ export interface ScoreDistributionResult {
 export async function getScoreDistribution(
   supabase: SupabaseClient,
   geography: GeographyLevel,
-  scoreType: ScoreType,
+  scoreType: AnyScoreType,
   periodDate?: string,
 ): Promise<ScoreDistributionResult> {
-  const targetDate = periodDate || (await getLatestScoreDate(supabase, geography));
+  const targetDate =
+    periodDate || (await getLatestScoreDate(supabase, geography));
   if (!targetDate) {
     return {
       geography,
@@ -76,7 +77,9 @@ export async function getScoreDistribution(
       .range(from, to);
 
     if (error) {
-      throw new Error(`Failed to fetch scores for distribution: ${error.message}`);
+      throw new Error(
+        `Failed to fetch scores for distribution: ${error.message}`,
+      );
     }
     if (!data || data.length === 0) break;
 
@@ -123,7 +126,7 @@ export async function getScoreDistribution(
   }
 
   const totalCount = allScores.length;
-  const distribution = buckets.map(b => ({
+  const distribution = buckets.map((b) => ({
     ...b,
     percentage: Math.round((b.count / totalCount) * 1000) / 10,
   }));
@@ -131,10 +134,12 @@ export async function getScoreDistribution(
   // Calculate statistics
   const sortedScores = [...allScores].sort((a, b) => a - b);
   const mean = allScores.reduce((a, b) => a + b, 0) / totalCount;
-  const median = totalCount % 2 === 0
-    ? (sortedScores[totalCount / 2 - 1] + sortedScores[totalCount / 2]) / 2
-    : sortedScores[Math.floor(totalCount / 2)];
-  const variance = allScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / totalCount;
+  const median =
+    totalCount % 2 === 0
+      ? (sortedScores[totalCount / 2 - 1] + sortedScores[totalCount / 2]) / 2
+      : sortedScores[Math.floor(totalCount / 2)];
+  const variance =
+    allScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / totalCount;
   const stdDev = Math.sqrt(variance);
 
   const statistics = {
@@ -151,10 +156,24 @@ export async function getScoreDistribution(
     gradeCounts[grade] = (gradeCounts[grade] || 0) + 1;
   }
 
-  const gradeOrder = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+  const gradeOrder = [
+    'A+',
+    'A',
+    'A-',
+    'B+',
+    'B',
+    'B-',
+    'C+',
+    'C',
+    'C-',
+    'D+',
+    'D',
+    'D-',
+    'F',
+  ];
   const grade_distribution = gradeOrder
-    .filter(g => gradeCounts[g] !== undefined)
-    .map(grade => ({
+    .filter((g) => gradeCounts[g] !== undefined)
+    .map((grade) => ({
       grade,
       count: gradeCounts[grade],
       percentage: Math.round((gradeCounts[grade] / totalCount) * 1000) / 10,
@@ -172,7 +191,7 @@ export async function getScoreDistribution(
 }
 
 /**
- * Get score distribution for all score types at once.
+ * Get score distribution for the PropertyIQ score type.
  */
 export async function getAllScoreDistributions(
   supabase: SupabaseClient,
@@ -182,26 +201,24 @@ export async function getAllScoreDistributions(
   geography: GeographyLevel;
   score_date: string;
   distributions: {
-    homeready: ScoreDistributionResult;
-    investoredge: ScoreDistributionResult;
-    markethealth: ScoreDistributionResult;
+    propertyiq: ScoreDistributionResult;
   };
 }> {
-  const targetDate = periodDate || (await getLatestScoreDate(supabase, geography));
+  const targetDate =
+    periodDate || (await getLatestScoreDate(supabase, geography));
 
-  const [homeready, investoredge, markethealth] = await Promise.all([
-    getScoreDistribution(supabase, geography, 'homeready', targetDate || undefined),
-    getScoreDistribution(supabase, geography, 'investoredge', targetDate || undefined),
-    getScoreDistribution(supabase, geography, 'markethealth', targetDate || undefined),
-  ]);
+  const propertyiq = await getScoreDistribution(
+    supabase,
+    geography,
+    'propertyiq',
+    targetDate || undefined,
+  );
 
   return {
     geography,
     score_date: targetDate || '',
     distributions: {
-      homeready,
-      investoredge,
-      markethealth,
+      propertyiq,
     },
   };
 }

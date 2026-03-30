@@ -65,8 +65,8 @@ The frontend metric IDs map to these database sources:
 
 ### ❌ **Won't Work (Need Additional Mapping)**
 These metrics are in the frontend dropdown but not yet mapped in the service:
-- HomeReady Score
-- InvestorEdge Score  
+- PropertyIQ Score
+  
 - Demographic metrics (population, median_income, etc.)
 - Economic metrics (unemployment_rate, job_growth, etc.)
 

@@ -15,7 +15,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScoreResult } from './scoring.service';
-import { GeographyLevel, ScoreType, ALERT_THRESHOLDS } from './formula-weights';
+import {
+  GeographyLevel,
+  ScoreType,
+  AnyScoreType,
+  ALERT_THRESHOLDS,
+} from './formula-weights';
 
 export interface PredictionRecord {
   geography: GeographyLevel;
@@ -77,11 +82,7 @@ export class PerformanceTrackingService {
    */
   async recordPrediction(score: ScoreResult): Promise<void> {
     const predictionDate = score.score_date;
-    const scoreTypes: ScoreType[] = [
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ];
+    const scoreTypes: ScoreType[] = ['propertyiq'];
 
     // Calculate quintiles based on all scores for this geography
     const quintiles = await this.calculateQuintiles(
@@ -164,7 +165,7 @@ export class PerformanceTrackingService {
   private async calculateQuintiles(
     geography: GeographyLevel,
     periodDate: string,
-  ): Promise<Record<ScoreType, number[]>> {
+  ): Promise<Record<AnyScoreType, number[]>> {
     // Get all scores for this geography and date
     const { data } = await this.supabase
       .from('propertyiq_scores')
@@ -172,11 +173,11 @@ export class PerformanceTrackingService {
       .eq('geography', geography)
       .eq('score_date', periodDate);
 
-    const quintiles: Record<ScoreType, number[]> = {
+    const quintiles: Record<AnyScoreType, number[]> = {
+      propertyiq: [],
       homeready: [],
       investoredge: [],
       markethealth: [],
-      propertyiq: [],
     };
 
     if (!data || data.length === 0) {
@@ -364,7 +365,7 @@ export class PerformanceTrackingService {
       .select('median_price')
       .eq('location_id', locationId)
       .eq('geography', geography)
-      .eq('score_type', 'homeready') // Just need one to get median_price
+      .eq('score_type', 'propertyiq') // Just need one to get median_price
       .order('score_date', { ascending: false })
       .limit(1);
 
@@ -541,11 +542,7 @@ export class PerformanceTrackingService {
    */
   async getAllPerformanceMetrics(): Promise<PerformanceMetrics[]> {
     const geographies: GeographyLevel[] = ['metro', 'county', 'zip'];
-    const scoreTypes: ScoreType[] = [
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ];
+    const scoreTypes: ScoreType[] = ['propertyiq'];
     const results: PerformanceMetrics[] = [];
 
     for (const geography of geographies) {

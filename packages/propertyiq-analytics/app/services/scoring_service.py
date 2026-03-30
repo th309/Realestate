@@ -1,119 +1,114 @@
 import logging
 from datetime import datetime
 
-from app.models.requests import HomeReadyScoreRequest, InvestorEdgeScoreRequest
+from app.models.requests import PropertyIQScoreRequest
 from app.models.responses import (
-    HomeReadyScoreResponse,
-    InvestorEdgeScoreResponse,
+    PropertyIQScoreResponse,
     ScoreComponent,
-    ROIProjection,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def score_to_grade(score: float) -> str:
-    """Convert numeric score to letter grade."""
+def score_to_label(score: float) -> str:
+    """Convert numeric score to PropertyIQ label."""
     if score >= 90:
-        return "A"
+        return "EXCELLENT"
     elif score >= 80:
-        return "B"
+        return "GREAT"
     elif score >= 70:
-        return "C"
+        return "GOOD"
     elif score >= 60:
-        return "D"
+        return "FAIR"
+    elif score >= 50:
+        return "AVERAGE"
+    elif score >= 40:
+        return "BELOW AVG"
+    elif score >= 20:
+        return "POOR"
     else:
-        return "F"
+        return "VERY POOR"
 
 
 class ScoringService:
-    """Service for calculating property scores."""
+    """Service for calculating PropertyIQ scores."""
 
     def __init__(self):
-        self.model_version = "1.0.0"
+        self.model_version = "4.0.0"
 
-    async def calculate_homeready_score(
-        self, request: HomeReadyScoreRequest
-    ) -> HomeReadyScoreResponse:
+    async def calculate_propertyiq_score(
+        self, request: PropertyIQScoreRequest
+    ) -> PropertyIQScoreResponse:
         """
-        Calculate HomeReady score for a property/location.
+        Calculate PropertyIQ score for a property/location.
 
-        This is a placeholder implementation. The actual ML logic will be
-        migrated from the existing scoring system.
+        The PropertyIQ score measures market demand signal relative to the
+        state average using three Redfin metrics:
+        - % Sold Above List (positive signal)
+        - Median Days on Market (negative signal)
+        - Months of Supply (negative signal)
+
+        Formula: z(sold_above_list) - z(median_dom) - z(months_of_supply)
+        -> percentile rank within state -> re-center at 55.6 -> clamp 1-99
+
+        Score of 50 = state average; higher means outperformance.
         """
-        logger.info(f"Calculating HomeReady score for ZIP: {request.property_data.zip_code}")
+        logger.info(f"Calculating PropertyIQ score for ZIP: {request.property_data.zip_code}")
 
         prop = request.property_data
 
-        # Placeholder scoring components
-        # TODO: Replace with actual ML model scoring
         components = []
 
-        # Price momentum component
-        price_momentum_score = self._calculate_price_momentum_score(
-            prop.price_yoy_change, prop.price_mom_change
+        # Sold Above List component (positive signal)
+        sold_above_score = self._calculate_sold_above_list_score(
+            request.sold_above_list_pct
         )
         components.append(
             ScoreComponent(
-                name="Price Momentum",
-                score=price_momentum_score,
-                weight=0.25,
-                weighted_score=price_momentum_score * 0.25,
-                description="Based on year-over-year and month-over-month price changes",
+                name="Sold Above List",
+                score=sold_above_score,
+                weight=0.33,
+                weighted_score=sold_above_score * 0.33,
+                description="Percentage of homes sold above list price (higher = stronger demand)",
             )
         )
 
-        # Affordability component
-        affordability_score = self._calculate_affordability_score(
-            request.affordability_index, request.price_to_income_ratio
+        # Median Days on Market component (negative signal - lower is better)
+        dom_score = self._calculate_dom_score(
+            request.median_dom or prop.days_on_market
         )
         components.append(
             ScoreComponent(
-                name="Affordability",
-                score=affordability_score,
-                weight=0.30,
-                weighted_score=affordability_score * 0.30,
-                description="Based on affordability index and price-to-income ratio",
+                name="Median Days on Market",
+                score=dom_score,
+                weight=0.33,
+                weighted_score=dom_score * 0.33,
+                description="Median days on market (lower = stronger demand)",
             )
         )
 
-        # Market activity component
-        market_activity_score = self._calculate_market_activity_score(
-            prop.days_on_market, prop.inventory_level
-        )
+        # Months of Supply component (negative signal - lower is better)
+        supply_score = self._calculate_supply_score(request.months_of_supply)
         components.append(
             ScoreComponent(
-                name="Market Activity",
-                score=market_activity_score,
-                weight=0.25,
-                weighted_score=market_activity_score * 0.25,
-                description="Based on days on market and inventory levels",
+                name="Months of Supply",
+                score=supply_score,
+                weight=0.34,
+                weighted_score=supply_score * 0.34,
+                description="Months of housing supply (lower = stronger demand)",
             )
         )
 
-        # Economic health component
-        economic_score = self._calculate_economic_score(
-            prop.median_income, prop.unemployment_rate
-        )
-        components.append(
-            ScoreComponent(
-                name="Economic Health",
-                score=economic_score,
-                weight=0.20,
-                weighted_score=economic_score * 0.20,
-                description="Based on median income and unemployment rate",
-            )
-        )
-
-        # Calculate overall score
+        # Calculate overall score (clamped 1-99)
         overall_score = sum(c.weighted_score for c in components)
+        overall_score = max(1, min(99, round(overall_score, 1)))
 
         # Generate insights
-        strengths, concerns = self._generate_homeready_insights(components, prop)
+        strengths, concerns = self._generate_propertyiq_insights(components, prop)
 
-        return HomeReadyScoreResponse(
-            overall_score=round(overall_score, 1),
-            grade=score_to_grade(overall_score),
+        return PropertyIQScoreResponse(
+            overall_score=overall_score,
+            label=score_to_label(overall_score),
             components=components,
             zip_code=prop.zip_code,
             scored_at=datetime.utcnow(),
@@ -122,276 +117,60 @@ class ScoringService:
             concerns=concerns,
         )
 
-    async def calculate_investor_edge_score(
-        self, request: InvestorEdgeScoreRequest
-    ) -> InvestorEdgeScoreResponse:
-        """
-        Calculate InvestorEdge score for investment analysis.
+    def _calculate_sold_above_list_score(self, pct: float | None) -> float:
+        """Score based on % sold above list price (higher is better)."""
+        if pct is None:
+            return 50.0
+        # 0% -> ~30, 30% -> ~55, 60%+ -> ~85
+        return min(max(30 + pct * 0.9, 1), 99)
 
-        This is a placeholder implementation. The actual ML logic will be
-        migrated from the existing scoring system.
-        """
-        logger.info(f"Calculating InvestorEdge score for ZIP: {request.property_data.zip_code}")
+    def _calculate_dom_score(self, dom: float | None) -> float:
+        """Score based on median days on market (lower is better)."""
+        if dom is None:
+            return 50.0
+        # 7 days -> ~90, 30 days -> ~60, 90+ days -> ~25
+        if dom <= 7:
+            return 90.0
+        elif dom <= 14:
+            return 80.0
+        elif dom <= 30:
+            return 65.0
+        elif dom <= 60:
+            return 45.0
+        elif dom <= 90:
+            return 30.0
+        else:
+            return 20.0
 
-        prop = request.property_data
+    def _calculate_supply_score(self, months: float | None) -> float:
+        """Score based on months of supply (lower is better)."""
+        if months is None:
+            return 50.0
+        # 1 month -> ~85, 3 months -> ~55, 6+ months -> ~25
+        if months <= 1:
+            return 85.0
+        elif months <= 2:
+            return 70.0
+        elif months <= 3:
+            return 55.0
+        elif months <= 4:
+            return 45.0
+        elif months <= 6:
+            return 35.0
+        else:
+            return 20.0
 
-        # Placeholder scoring components
-        components = []
-
-        # Cash flow component
-        cash_flow_score = self._calculate_cash_flow_score(
-            request.cap_rate, request.gross_yield
-        )
-        components.append(
-            ScoreComponent(
-                name="Cash Flow Potential",
-                score=cash_flow_score,
-                weight=0.30,
-                weighted_score=cash_flow_score * 0.30,
-                description="Based on cap rate and gross yield",
-            )
-        )
-
-        # Appreciation potential component
-        appreciation_score = self._calculate_appreciation_score(
-            prop.price_yoy_change, prop.price_mom_change
-        )
-        components.append(
-            ScoreComponent(
-                name="Appreciation Potential",
-                score=appreciation_score,
-                weight=0.25,
-                weighted_score=appreciation_score * 0.25,
-                description="Based on historical price trends",
-            )
-        )
-
-        # Rental market component
-        rental_score = self._calculate_rental_market_score(
-            request.median_rent, request.rent_yoy_change, request.vacancy_rate
-        )
-        components.append(
-            ScoreComponent(
-                name="Rental Market Strength",
-                score=rental_score,
-                weight=0.25,
-                weighted_score=rental_score * 0.25,
-                description="Based on rent levels, growth, and vacancy",
-            )
-        )
-
-        # Risk component
-        risk_score = self._calculate_risk_score(
-            prop.unemployment_rate, request.vacancy_rate
-        )
-        components.append(
-            ScoreComponent(
-                name="Risk Assessment",
-                score=risk_score,
-                weight=0.20,
-                weighted_score=risk_score * 0.20,
-                description="Lower risk = higher score",
-            )
-        )
-
-        # Calculate overall score
-        overall_score = sum(c.weighted_score for c in components)
-
-        # Generate ROI projections
-        roi_projections = self._generate_roi_projections(request)
-
-        # Generate investment thesis
-        investment_thesis, risk_factors = self._generate_investment_insights(
-            components, request
-        )
-
-        return InvestorEdgeScoreResponse(
-            overall_score=round(overall_score, 1),
-            grade=score_to_grade(overall_score),
-            components=components,
-            roi_projections=roi_projections,
-            zip_code=prop.zip_code,
-            scored_at=datetime.utcnow(),
-            model_version=self.model_version,
-            investment_thesis=investment_thesis,
-            risk_factors=risk_factors,
-        )
-
-    # Placeholder scoring methods - to be replaced with actual ML logic
-
-    def _calculate_price_momentum_score(
-        self, yoy_change: float | None, mom_change: float | None
-    ) -> float:
-        """Placeholder: Calculate price momentum score."""
-        base_score = 50.0
-        if yoy_change is not None:
-            # Moderate growth (3-10%) is ideal
-            if 3 <= yoy_change <= 10:
-                base_score += 30
-            elif 0 <= yoy_change < 3:
-                base_score += 15
-            elif yoy_change > 10:
-                base_score += 20  # High growth but some risk
-            else:
-                base_score -= 10  # Negative growth
-
-        if mom_change is not None:
-            if mom_change > 0:
-                base_score += min(mom_change * 5, 20)
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_affordability_score(
-        self, affordability_index: float | None, price_to_income: float | None
-    ) -> float:
-        """Placeholder: Calculate affordability score."""
-        base_score = 50.0
-
-        if affordability_index is not None:
-            if affordability_index >= 100:
-                base_score += 30
-            elif affordability_index >= 80:
-                base_score += 15
-            else:
-                base_score -= 10
-
-        if price_to_income is not None:
-            if price_to_income <= 3:
-                base_score += 20
-            elif price_to_income <= 5:
-                base_score += 10
-            else:
-                base_score -= 10
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_market_activity_score(
-        self, days_on_market: float | None, inventory: float | None
-    ) -> float:
-        """Placeholder: Calculate market activity score."""
-        base_score = 50.0
-
-        if days_on_market is not None:
-            if days_on_market <= 30:
-                base_score += 25  # Hot market
-            elif days_on_market <= 60:
-                base_score += 15
-            elif days_on_market <= 90:
-                base_score += 5
-            else:
-                base_score -= 10
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_economic_score(
-        self, median_income: float | None, unemployment: float | None
-    ) -> float:
-        """Placeholder: Calculate economic health score."""
-        base_score = 50.0
-
-        if unemployment is not None:
-            if unemployment <= 3:
-                base_score += 25
-            elif unemployment <= 5:
-                base_score += 15
-            elif unemployment <= 7:
-                base_score += 5
-            else:
-                base_score -= 15
-
-        if median_income is not None:
-            if median_income >= 80000:
-                base_score += 20
-            elif median_income >= 60000:
-                base_score += 10
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_cash_flow_score(
-        self, cap_rate: float | None, gross_yield: float | None
-    ) -> float:
-        """Placeholder: Calculate cash flow potential score."""
-        base_score = 50.0
-
-        if cap_rate is not None:
-            if cap_rate >= 8:
-                base_score += 30
-            elif cap_rate >= 6:
-                base_score += 20
-            elif cap_rate >= 4:
-                base_score += 10
-            else:
-                base_score -= 10
-
-        if gross_yield is not None:
-            if gross_yield >= 10:
-                base_score += 20
-            elif gross_yield >= 7:
-                base_score += 10
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_appreciation_score(
-        self, yoy_change: float | None, mom_change: float | None
-    ) -> float:
-        """Placeholder: Calculate appreciation potential score."""
-        return self._calculate_price_momentum_score(yoy_change, mom_change)
-
-    def _calculate_rental_market_score(
-        self, median_rent: float | None, rent_yoy: float | None, vacancy: float | None
-    ) -> float:
-        """Placeholder: Calculate rental market strength score."""
-        base_score = 50.0
-
-        if rent_yoy is not None:
-            if rent_yoy >= 5:
-                base_score += 20
-            elif rent_yoy >= 2:
-                base_score += 10
-
-        if vacancy is not None:
-            if vacancy <= 3:
-                base_score += 25
-            elif vacancy <= 5:
-                base_score += 15
-            elif vacancy <= 7:
-                base_score += 5
-            else:
-                base_score -= 15
-
-        return min(max(base_score, 0), 100)
-
-    def _calculate_risk_score(
-        self, unemployment: float | None, vacancy: float | None
-    ) -> float:
-        """Placeholder: Calculate risk score (higher = lower risk)."""
-        base_score = 70.0
-
-        if unemployment is not None:
-            if unemployment > 7:
-                base_score -= 20
-            elif unemployment > 5:
-                base_score -= 10
-
-        if vacancy is not None:
-            if vacancy > 10:
-                base_score -= 20
-            elif vacancy > 7:
-                base_score -= 10
-
-        return min(max(base_score, 0), 100)
-
-    def _generate_homeready_insights(
+    def _generate_propertyiq_insights(
         self, components: list[ScoreComponent], prop
     ) -> tuple[list[str], list[str]]:
-        """Generate strengths and concerns for HomeReady score."""
+        """Generate strengths and concerns for PropertyIQ score."""
         strengths = []
         concerns = []
 
         for comp in components:
-            if comp.score >= 75:
+            if comp.score >= 70:
                 strengths.append(f"Strong {comp.name.lower()}")
-            elif comp.score < 50:
+            elif comp.score < 40:
                 concerns.append(f"Weak {comp.name.lower()}")
 
         if not strengths:
@@ -400,61 +179,6 @@ class ScoringService:
             concerns.append("No major concerns identified")
 
         return strengths[:3], concerns[:3]
-
-    def _generate_roi_projections(
-        self, request: InvestorEdgeScoreRequest
-    ) -> list[ROIProjection]:
-        """Generate placeholder ROI projections."""
-        # Placeholder projections based on inputs
-        base_appreciation = (request.property_data.price_yoy_change or 5) / 100
-        base_yield = (request.gross_yield or 6) / 100
-
-        projections = []
-        for months in [12, 24, 36]:
-            years = months / 12
-            projected_appreciation = base_appreciation * years * 100
-            projected_rental = (request.median_rent or 1500) * months
-            total_return = projected_appreciation + (base_yield * years * 100)
-
-            projections.append(
-                ROIProjection(
-                    period_months=months,
-                    projected_appreciation=round(projected_appreciation, 1),
-                    projected_rental_income=round(projected_rental, 0),
-                    projected_total_return=round(total_return, 1),
-                    confidence="medium",
-                )
-            )
-
-        return projections
-
-    def _generate_investment_insights(
-        self, components: list[ScoreComponent], request: InvestorEdgeScoreRequest
-    ) -> tuple[str, list[str]]:
-        """Generate investment thesis and risk factors."""
-        overall = sum(c.weighted_score for c in components)
-
-        if overall >= 80:
-            thesis = "Strong investment opportunity with favorable cash flow and appreciation potential."
-        elif overall >= 65:
-            thesis = "Solid investment opportunity with moderate returns expected."
-        elif overall >= 50:
-            thesis = "Average investment opportunity. Careful due diligence recommended."
-        else:
-            thesis = "Below-average investment metrics. Significant risks identified."
-
-        risk_factors = []
-        if request.vacancy_rate and request.vacancy_rate > 7:
-            risk_factors.append("High vacancy rate may impact rental income")
-        if request.property_data.unemployment_rate and request.property_data.unemployment_rate > 6:
-            risk_factors.append("Elevated unemployment in the area")
-        if request.cap_rate and request.cap_rate < 4:
-            risk_factors.append("Low cap rate suggests limited cash flow potential")
-
-        if not risk_factors:
-            risk_factors.append("No major risk factors identified")
-
-        return thesis, risk_factors
 
 
 # Singleton instance

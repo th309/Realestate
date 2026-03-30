@@ -374,7 +374,7 @@ class WorkflowService:
                         stats[f"pct_outcome_{horizon}m"] = pct
                 
                 # Check score availability
-                for score in ['investoredge_score', 'homeready_score']:
+                for score in ['propertyiq_score']:
                     if score in df.columns:
                         count = int(df[score].notna().sum())
                         pct = round(count / len(df) * 100, 1)
@@ -581,7 +581,7 @@ class WorkflowService:
                                            {"records": len(df)})
             
             # Correlation analysis by geography type
-            score_cols = ['investoredge_score', 'homeready_score', 'market_health_score']
+            score_cols = ['propertyiq_score']
             outcome_cols = ['actual_appreciation_12m', 'actual_appreciation_36m', 'actual_appreciation_60m']
             
             # Overall correlations
@@ -623,7 +623,7 @@ class WorkflowService:
                     geo_df = df[df['geography_type'] == geo_type]
                     geo_corrs = {}
                     
-                    for score_col in ['investoredge_score', 'homeready_score']:
+                    for score_col in ['propertyiq_score']:
                         if score_col not in geo_df.columns:
                             continue
                         
@@ -730,7 +730,7 @@ class WorkflowService:
             
             # Score distribution analysis - overall
             score_distributions = {}
-            for score_col in ['investoredge_score', 'homeready_score']:
+            for score_col in ['propertyiq_score']:
                 if score_col in df.columns:
                     valid = df[score_col].dropna()
                     if len(valid) > 0:
@@ -760,7 +760,7 @@ class WorkflowService:
                     geo_df = df[df['geography_type'] == geo_type]
                     geo_stats = {}
                     
-                    for score_col in ['investoredge_score', 'homeready_score']:
+                    for score_col in ['propertyiq_score']:
                         if score_col in geo_df.columns:
                             valid = geo_df[score_col].dropna()
                             if len(valid) > 0:
@@ -826,7 +826,7 @@ class WorkflowService:
             logger.info(f"Starting monthly report for {report_month}...")
             
             # Initialize progress tracking
-            score_types = ['homeready', 'investoredge', 'market_health']
+            score_types = ['propertyiq']
             substeps = [f"Backtest {st}" for st in score_types] + ["Key findings", "Dollar impact", "Final verdict"]
             WorkflowProgress.start_step(step_id, len(substeps), substeps)
             
@@ -838,9 +838,7 @@ class WorkflowService:
             
             # Run analysis for each score type
             score_display_names = {
-                'homeready': 'HomeReady',
-                'investoredge': 'InvestorEdge',
-                'market_health': 'MarketHealth',
+                'propertyiq': 'PropertyIQ',
             }
             
             validation_results = {}
@@ -912,7 +910,7 @@ class WorkflowService:
             best_avoid_score = None
             
             if valid_scores:
-                # Best spread (InvestorEdge typically)
+                # Best spread
                 best_spread_score = max(valid_scores.items(), key=lambda x: x[1].get("spread", 0))
                 # Best hit rate for picking winners
                 best_hit_rate_score = max(valid_scores.items(), key=lambda x: x[1].get("top_beat_rate", 0))

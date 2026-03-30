@@ -23,7 +23,7 @@ import {
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
 interface RunMLValidationDto {
-  scoreType: 'homeready' | 'investoredge' | 'market_health';
+  scoreType: 'propertyiq' | 'homeready' | 'investoredge' | 'market_health';
   geographyType: 'metro' | 'county' | 'zip';
   horizon: '6m' | '1y' | '3y' | '5y';
   trainPeriodStart: string;

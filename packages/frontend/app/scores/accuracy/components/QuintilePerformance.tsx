@@ -49,9 +49,7 @@ const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
 ];
 
 const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
-  { value: "investoredge", label: "InvestorEdge" },
-  { value: "homeready", label: "HomeReady" },
-  { value: "markethealth", label: "MarketHealth" },
+  { value: "propertyiq", label: "PropertyIQ" },
 ];
 
 interface QuintilePerformanceProps {
@@ -62,8 +60,7 @@ export function QuintilePerformance({
   horizon: propHorizon,
 }: QuintilePerformanceProps = {}) {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
-  const [scoreType, setScoreType] =
-    useState<ValidationScoreType>("investoredge");
+  const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
   const {
     data: rawData,

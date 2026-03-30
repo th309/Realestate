@@ -8,7 +8,12 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { ScoreType, GeographyLevel, ConfidenceLevel } from './formula-weights';
+import {
+  ScoreType,
+  AnyScoreType,
+  GeographyLevel,
+  ConfidenceLevel,
+} from './formula-weights';
 import { ScoreResult, SingleScoreResult } from './scoring.types';
 
 /**
@@ -147,12 +152,8 @@ export async function getLatestScoresForLocation(
   locationId: string,
   geography: GeographyLevel,
 ): Promise<ScoreResult | null> {
-  const scoreTypes: ScoreType[] = [
-    'propertyiq',
-    'homeready',
-    'investoredge',
-    'markethealth',
-  ];
+  // Only query propertyiq — legacy score types are historical
+  const scoreTypes: AnyScoreType[] = ['propertyiq'];
 
   // Fetch the latest row per score_type in parallel
   const queries = scoreTypes.map((scoreType) => {
@@ -197,11 +198,11 @@ function assembleScoreResult(
   geography: GeographyLevel,
   scoreDate: string,
 ): ScoreResult {
-  const scoresByType: Record<ScoreType, SingleScoreResult> = {
-    homeready: null!,
-    investoredge: null!,
-    markethealth: null!,
-    propertyiq: null!,
+  const scoresByType: Record<AnyScoreType, SingleScoreResult | null> = {
+    propertyiq: null,
+    homeready: null,
+    investoredge: null,
+    markethealth: null,
   };
   let locationName = '';
   let medianPrice: number | null = null;
@@ -213,7 +214,7 @@ function assembleScoreResult(
     if (!zScores && row.z_scores && typeof row.z_scores === 'object') {
       zScores = row.z_scores;
     }
-    const scoreType = row.score_type as ScoreType;
+    const scoreType = row.score_type as AnyScoreType;
     scoresByType[scoreType] = {
       score: row.score,
       grade: row.grade,
@@ -229,10 +230,11 @@ function assembleScoreResult(
     median_price: medianPrice,
     score_date: scoreDate,
     scores: {
+      propertyiq: scoresByType.propertyiq || null,
+      // Legacy keys — populated only when reading old DB rows
       homeready: scoresByType.homeready || null,
       investoredge: scoresByType.investoredge || null,
       markethealth: scoresByType.markethealth || null,
-      propertyiq: scoresByType.propertyiq || null,
     },
     z_scores: zScores,
     return_1y: data[0]?.return_1y,
@@ -450,7 +452,7 @@ export async function searchMarkets(
     .from('propertyiq_scores')
     .select('location_id, location_name, geography')
     .ilike('location_name', `%${query}%`)
-    .eq('score_type', 'homeready');
+    .eq('score_type', 'propertyiq');
 
   if (geography) {
     queryBuilder = queryBuilder.eq('geography', geography);

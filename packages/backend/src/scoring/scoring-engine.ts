@@ -17,6 +17,7 @@ import {
   COMPONENT_GROUPS,
   getConfidenceLevel,
   ScoreType,
+  AnyScoreType,
   GeographyLevel,
   FormulaDefinition,
   MetricWeight,
@@ -39,7 +40,8 @@ export interface RawScoreResult {
 
 /**
  * Get all metric names used across v3 formulas for a geography.
- * @deprecated v3 scoring path — v4 PropertyIQ uses V4_FORMULA_METRICS from v4-scoring-engine.ts
+ * @deprecated v3 legacy — will be removed. v4 PropertyIQ uses V4_FORMULA_METRICS from v4-scoring-engine.ts.
+ * Still called by v3 scoring paths for historical component breakdowns.
  */
 export function getAllMetricNames(geography: GeographyLevel): string[] {
   const metrics = new Set<string>();
@@ -48,7 +50,7 @@ export function getAllMetricNames(geography: GeographyLevel): string[] {
     'homeready',
     'investoredge',
     'markethealth',
-  ] as ScoreType[]) {
+  ] as const) {
     const formula = FORMULA_WEIGHTS[geography]?.[scoreType];
     if (!formula) continue;
     for (const metricName of Object.keys(formula)) {
@@ -210,7 +212,7 @@ export function scoreToComponentStatus(score: number): ComponentStatus {
  * Calculate per-component score breakdowns for a single location.
  */
 export function calculateComponentBreakdown(
-  scoreType: ScoreType,
+  scoreType: AnyScoreType,
   geography: GeographyLevel,
   locationZScores: Record<string, number>,
   rawValues: Record<string, number | null>,
@@ -218,7 +220,10 @@ export function calculateComponentBreakdown(
   const componentGroups = COMPONENT_GROUPS[scoreType]?.[geography];
   if (!componentGroups) return [];
 
-  const formula = FORMULA_WEIGHTS[geography][scoreType];
+  const formula =
+    FORMULA_WEIGHTS[geography][
+      scoreType as keyof (typeof FORMULA_WEIGHTS)[typeof geography]
+    ];
   const breakdowns: ScoreComponentBreakdown[] = [];
 
   for (const [componentName, metricNames] of Object.entries(componentGroups)) {
@@ -289,9 +294,12 @@ export function calculateComponentBreakdown(
 export function calculateConfidence(
   location: LocationMetrics,
   geography: GeographyLevel,
-  scoreType: ScoreType,
+  scoreType: AnyScoreType,
 ): { confidence: number; level: ConfidenceLevel } {
-  const formula = FORMULA_WEIGHTS[geography][scoreType];
+  const formula =
+    FORMULA_WEIGHTS[geography][
+      scoreType as keyof (typeof FORMULA_WEIGHTS)[typeof geography]
+    ];
   const metricEntries = Object.entries(formula);
 
   // Identify which metrics have real data
@@ -307,12 +315,12 @@ export function calculateConfidence(
   // Factor 1: Weighted Completeness (55%)
   // Sum of formula weights for metrics that have data / total formula weight
   const totalWeight = metricEntries.reduce(
-    (sum, [, def]) => sum + (def as MetricWeight).weight,
+    (sum, [, def]) => sum + def.weight,
     0,
   );
   const availableWeight = metricEntries
     .filter(([m]) => availableMetricNames.includes(m))
-    .reduce((sum, [, def]) => sum + (def as MetricWeight).weight, 0);
+    .reduce((sum, [, def]) => sum + def.weight, 0);
   const weightedCompleteness =
     totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
 
@@ -329,7 +337,7 @@ export function calculateConfidence(
   // Factor 3: Critical Metric Coverage (15%)
   // Are the top-3 highest-weighted metrics present? 33.3 pts each.
   const sortedByWeight = [...metricEntries].sort(
-    (a, b) => (b[1] as MetricWeight).weight - (a[1] as MetricWeight).weight,
+    (a, b) => b[1].weight - a[1].weight,
   );
   const topThreeMetrics = sortedByWeight.slice(0, 3).map(([m]) => m);
   const topThreePresent = topThreeMetrics.filter((m) =>

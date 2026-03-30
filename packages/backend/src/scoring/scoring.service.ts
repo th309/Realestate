@@ -1,14 +1,15 @@
 /**
  * PropertyIQ Scoring Service
  *
- * Orchestrates three scores for real estate markets using fixed ML-derived formulas:
- * - HomeReady: Predicts 3-year price appreciation for homebuyers
- * - InvestorEdge: Predicts total return (appreciation + rental yield) for investors
- * - MarketHealth: Current market conditions (how hot is the market)
+ * Orchestrates the PropertyIQ Score — a single demand-signal score
+ * measuring market heat relative to state average using 3 Redfin metrics.
+ *
+ * Legacy score types (homeready, investoredge, markethealth) are no longer
+ * computed but can still be read from historical DB rows.
  *
  * Delegates to:
- * - scoring-engine.ts: Pure math (z-scores, formulas, normalization, confidence)
- * - scoring-data-fetcher.ts: Data assembly from Realtor/Census/Economic tables
+ * - v4-scoring-engine.ts: Demand-signal calculation (z-scores, percentile, re-centering)
+ * - v4-scoring-data-fetcher.ts: Redfin metric assembly
  * - scoring-queries.ts: Score reads from propertyiq_scores table
  * - scoring-persistence.ts: Score writes (upsert with retry)
  * - scoring-distribution.ts: Score distribution analysis
@@ -196,22 +197,6 @@ export class ScoringService {
       const rawValues: Record<string, number | null> = {};
       for (const key of Object.keys(zs)) {
         rawValues[key] = null;
-      }
-      // v3 legacy component breakdowns (only for old cached data)
-      for (const scoreType of [
-        'homeready',
-        'investoredge',
-        'markethealth',
-      ] as const) {
-        const scoreData = result.scores[scoreType];
-        if (scoreData && scoreData.score > 0) {
-          scoreData.components = calculateComponentBreakdown(
-            scoreType,
-            geography,
-            zs,
-            rawValues,
-          );
-        }
       }
       // propertyiq uses v4 engine — input metrics stored in z_scores field
     }

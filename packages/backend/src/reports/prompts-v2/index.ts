@@ -51,16 +51,18 @@ import { COMPARISON_V2_SECTIONS } from './comparison-sections';
 
 /**
  * Returns the appropriate system prompt for a given report type.
+ * Legacy slugs (homeready, investoredge) are kept for backward compat
+ * with old reports stored in DB.
  */
 export function getSystemPromptForReportType(reportType: string): string {
   switch (reportType) {
     case 'investor':
-    case 'investoredge':
+    case 'investoredge': // legacy
       return REPORT_SYSTEM_PROMPT_INVESTOR;
     case 'custom':
       return REPORT_SYSTEM_PROMPT_CUSTOM;
     case 'propertyiq':
-    case 'homeready':
+    case 'homeready': // legacy
     default:
       return REPORT_SYSTEM_PROMPT_HOMEBUYER;
   }

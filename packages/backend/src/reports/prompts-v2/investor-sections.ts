@@ -1,9 +1,12 @@
 /**
- * InvestorEdge V2 Report Sections
+ * PropertyIQ Investor V2 Report Sections
  *
  * 5 interconnected sections for investor-focused reports. Emphasizes
  * cash flow math, demand drivers, risk quantification, and strategy
  * classification using pre-computed insights from narrative-insights.ts.
+ *
+ * NOTE: Exported names kept as INVESTOR_* for backward compatibility
+ * with old reports stored in DB with template_slug = 'investoredge'.
  */
 
 import type { NarrativePromptConfig } from '../narrative-prompt-shared';
@@ -14,7 +17,7 @@ export const INVESTOR_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
     prompt_template: `You are writing the opening investment signal for a market brief on {{geography_name}}.
 
 Data snapshot:
-- InvestorEdge Score: {{investoredge_score}}/100 ({{investoredge_grade}})
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 - Net yield: {{net_yield_estimate}}
 - Cash-on-cash: {{cash_on_cash_estimate}}
 - Total return: {{total_return_estimate}}
@@ -26,7 +29,7 @@ Data snapshot:
 Write ONE sentence that an investor would use to decide whether to keep reading. This is a signal — BUY, HOLD, WATCH, or AVOID — with the single most compelling number behind it.
 
 BAD: "This market offers a mix of cash flow and appreciation potential."
-GOOD: "{{geography_name}} scores {{investoredge_score}}/100 as a cash-flow-negative appreciation play — {{cash_on_cash_estimate}}, but {{appreciation_trajectory}} makes the total return story compelling if you can stomach negative monthly cash flow."
+GOOD: "{{geography_name}} scores {{propertyiq_score}}/100 as a cash-flow-negative appreciation play — {{cash_on_cash_estimate}}, but {{appreciation_trajectory}} makes the total return story compelling if you can stomach negative monthly cash flow."
 
 Rules:
 - Exactly one sentence
@@ -75,9 +78,9 @@ Rules:
 - Unemployment: {{unemployment_rate}}% | Net migration: {{net_migration}}
 - Median income: {{median_household_income}} | Homeownership: {{homeownership_rate}}%
 - 1Y price forecast: {{zhvf_1yr_pct}}%
-{{#if investoredge_context}}- Score context: {{investoredge_context}}{{/if}}
-{{#if investoredge_comparison}}- Comparison: {{investoredge_comparison}}{{/if}}
-{{#if investoredge_impact}}- Dollar impact: {{investoredge_impact}}{{/if}}
+{{#if propertyiq_context}}- Score context: {{propertyiq_context}}{{/if}}
+{{#if propertyiq_comparison}}- Comparison: {{propertyiq_comparison}}{{/if}}
+{{#if propertyiq_impact}}- Dollar impact: {{propertyiq_impact}}{{/if}}
 
 {{#if news_context}}
 ## Market Intelligence
@@ -165,7 +168,7 @@ Rules:
 {{/if}}
 
 ## Investment Summary
-- InvestorEdge Score: {{investoredge_score}}/100 ({{investoredge_grade}})
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 - Net yield: {{net_yield_estimate}}
 - Cash-on-cash: {{cash_on_cash_estimate}}
 - Total return: {{total_return_estimate}}
@@ -257,7 +260,7 @@ Rules:
   },
 };
 
-/** Ordered section IDs for InvestorEdge v2 reports. */
+/** Ordered section IDs for PropertyIQ investor v2 reports (kept as INVESTOR_* for backward compat). */
 export const INVESTOR_V2_SECTION_ORDER = [
   'executive_verdict',
   'investment_deep_dive',

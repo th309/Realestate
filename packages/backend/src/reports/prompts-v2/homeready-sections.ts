@@ -1,5 +1,5 @@
 /**
- * HomeReady V2 Report Sections
+ * PropertyIQ Homebuyer V2 Report Sections
  *
  * 5 interconnected sections that replace the 10+ isolated prompts.
  * Each section references pre-computed analytical insights from
@@ -7,6 +7,9 @@
  *
  * Template variables come from buildNarrativeTemplateVars() — see
  * reports-narrative-template-vars.ts for the full list.
+ *
+ * NOTE: Exported names kept as HOMEREADY_* for backward compatibility
+ * with old reports stored in DB with template_slug = 'homeready'.
  */
 
 import type { NarrativePromptConfig } from '../narrative-prompt-shared';
@@ -17,7 +20,7 @@ export const HOMEREADY_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
     prompt_template: `You are writing the opening hook for a homebuyer market brief on {{geography_name}}.
 
 Data snapshot:
-- HomeReady Score: {{homeready_score}}/100 ({{homeready_grade}})
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 - Key tension: {{key_tension}}
 - Monthly payment: {{monthly_payment_estimate}}
@@ -33,7 +36,7 @@ Write 2-3 sentences that a homebuyer would remember and quote to their partner. 
 This is a VERDICT, not a summary. Take a position. The market classification (buyer/seller/neutral) must appear in the first or second sentence — readers need this immediately.
 
 BAD: "The market shows mixed signals with moderate growth and reasonable prices."
-GOOD: "At {{homeready_score}}/100, {{geography_name}} is a market where the math works — barely. Your {{monthly_payment_estimate}} payment is {{dti_at_median_income}}, but {{key_tension}} means timing your entry matters more than usual."
+GOOD: "At {{propertyiq_score}}/100, {{geography_name}} is a market where the math works — barely. Your {{monthly_payment_estimate}} payment is {{dti_at_median_income}}, but {{key_tension}} means timing your entry matters more than usual."
 
 Rules:
 - Exactly 2-3 sentences
@@ -82,9 +85,9 @@ Rules:
 - Median income: {{median_household_income}} | Unemployment: {{unemployment_rate}}%
 - Population growth: {{population_growth_yoy}}% | Net migration: {{net_migration}}
 - 1Y price forecast: {{zhvf_1yr_pct}}%
-{{#if homeready_context}}- Score context: {{homeready_context}}{{/if}}
-{{#if homeready_comparison}}- Score comparison: {{homeready_comparison}}{{/if}}
-{{#if homeready_impact}}- Dollar impact: {{homeready_impact}}{{/if}}
+{{#if homeready_context}}- Score context: {{propertyiq_context}}{{/if}}
+{{#if homeready_comparison}}- Score comparison: {{propertyiq_comparison}}{{/if}}
+{{#if homeready_impact}}- Dollar impact: {{propertyiq_impact}}{{/if}}
 
 {{#if news_context}}
 ## Market Intelligence
@@ -141,7 +144,7 @@ Rules:
 - User type: {{user_type}}
 
 ## Market Context (from deep dive — reference, don't repeat)
-- HomeReady Score: {{homeready_score}}/100
+- PropertyIQ Score: {{propertyiq_score}}/100
 - Monthly payment: {{monthly_payment_estimate}}
 - DTI: {{dti_at_median_income}}
 - Market phase: {{market_phase}}
@@ -193,7 +196,7 @@ Rules:
 {{/if}}
 
 ## Market Summary
-- HomeReady Score: {{homeready_score}}/100 ({{homeready_grade}})
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 - Monthly payment: {{monthly_payment_estimate}}
 - DTI: {{dti_at_median_income}}
@@ -283,7 +286,7 @@ Rules:
   },
 };
 
-/** Ordered section IDs for HomeReady v2 reports. */
+/** Ordered section IDs for PropertyIQ homebuyer v2 reports (kept as HOMEREADY_* for backward compat). */
 export const HOMEREADY_V2_SECTION_ORDER = [
   'executive_verdict',
   'market_deep_dive',

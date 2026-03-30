@@ -48,7 +48,7 @@ Quinn now has **complete read access** to all real estate market data plus the u
 ```
 "Show me all metros in Texas"
 "Get the latest Zillow data for Austin"
-"Find all markets with InvestorEdge scores above 80"
+"Find all markets with PropertyIQ Scores above 80"
 "What are the top 10 markets by population?"
 ```
 
@@ -61,7 +61,7 @@ Quinn now has **complete read access** to all real estate market data plus the u
 
 ### Aggregate & Analyze
 ```
-"What's the average InvestorEdge score by state?"
+"What's the average PropertyIQ Score by state?"
 "Count how many metros are in each state"
 "What's the total population across all metros?"
 "Show me the min and max home prices by state"
@@ -132,7 +132,7 @@ Get detailed schema for a specific table.
       "sample_values": ["12420", "26420", "31080"]
     },
     {
-      "name": "investoredge_score",
+      "name": "propertyiq_score",
       "type": "float64",
       "min": 0.0,
       "max": 100.0,
@@ -166,15 +166,15 @@ Tool call:
 
 **Range filter:**
 ```
-"Find markets with InvestorEdge scores between 70 and 90"
+"Find markets with PropertyIQ Scores between 70 and 90"
 
 Tool call:
 {
   "table_name": "propertyiq_scores",
   "filters": {
-    "investoredge_score": {"gte": 70, "lte": 90}
+    "propertyiq_score": {"gte": 70, "lte": 90}
   },
-  "order_by": "-investoredge_score",
+  "order_by": "-propertyiq_score",
   "limit": 50
 }
 ```
@@ -250,13 +250,13 @@ Tool call:
 
 **Average score:**
 ```
-"What's the average InvestorEdge score by state?"
+"What's the average PropertyIQ Score by state?"
 
 Tool call:
 {
   "table_name": "propertyiq_scores",
   "aggregations": [
-    {"function": "avg", "column": "investoredge_score", "alias": "avg_score"}
+    {"function": "avg", "column": "propertyiq_score", "alias": "avg_score"}
   ],
   "group_by": ["parent_geography_id"]
 }
@@ -270,9 +270,9 @@ Tool call:
 {
   "table_name": "propertyiq_scores",
   "aggregations": [
-    {"function": "min", "column": "investoredge_score", "alias": "min_score"},
-    {"function": "max", "column": "investoredge_score", "alias": "max_score"},
-    {"function": "avg", "column": "investoredge_score", "alias": "avg_score"}
+    {"function": "min", "column": "propertyiq_score", "alias": "min_score"},
+    {"function": "max", "column": "propertyiq_score", "alias": "max_score"},
+    {"function": "avg", "column": "propertyiq_score", "alias": "avg_score"}
   ],
   "group_by": ["parent_geography_id"]
 }
@@ -339,7 +339,7 @@ High-level summary of all data.
 1. *Searches for Austin*
 2. "I found Austin-Round Rock-Georgetown, TX Metro (CBSA: 12420)"
 3. *Queries propertyiq_scores for 12420*
-4. "Austin has an InvestorEdge score of 78.5 (top quintile)"
+4. "Austin has an PropertyIQ Score of 78.5 (top quintile)"
 5. *Queries zillow_metro for 12420*
 6. "Latest ZHVI: $485,000, up 12.3% YoY"
 7. *Queries realtor_metro*
@@ -359,13 +359,13 @@ You have 5 saved queries:
 ```
 
 ### Example 3: Watchlist Analysis
-**User:** "Run InvestorEdge analysis on my watchlist"
+**User:** "Run PropertyIQ analysis on my watchlist"
 
 **Quinn:**
 1. *Queries analytics_watchlist for user*
 2. "You're watching 12 markets"
 3. *Queries propertyiq_scores for those markets*
-4. "Average InvestorEdge: 72.3"
+4. "Average PropertyIQ: 72.3"
 5. "Top 3: Boise (85.2), Austin (78.5), Raleigh (76.8)"
 6. *Queries zillow_metro for appreciation*
 7. "Average 3-year appreciation: 28.4%"

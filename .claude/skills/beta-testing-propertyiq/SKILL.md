@@ -636,7 +636,7 @@ State → Metro → County → ZIP: data, legend, colors update correctly.
 - `/markets` lists 925+ metros grouped alphabetically by state
 - Each `/markets/[slug]` shows:
   - Metro name + state
-  - 3 ScoreWidgets (HomeReady, InvestorEdge, Market Health) with labels
+  - PropertyIQ ScoreWidget with label
   - NO floating confidence badges
   - "View on Interactive Map" CTA → `/map?geo=metro&region=[cbsaCode]`
   - "Full Market Dashboard" → `/market/[cbsaCode]?type=metro`

@@ -1,9 +1,13 @@
 /**
- * V2 Report Template Definitions
+ * V2 Report Template Definitions (Legacy)
  *
  * These templates are used when a report's ai_narrative has _meta.version === 'v2'.
  * V2 narratives use fewer, larger narrative sections instead of the v1 pattern
  * of many small section-specific narratives.
+ *
+ * NOTE: The homeready_v2 and investoredge_v2 templates are retained for backward
+ * compatibility with existing reports generated before the migration to a single
+ * PropertyIQ Score. New reports should not use these legacy score types.
  */
 
 import { MarketPulse as SharedMarketPulse } from "../sections/shared";

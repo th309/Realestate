@@ -18,7 +18,7 @@ on:
       score_types:
         description: "Score types to test (comma-separated)"
         required: false
-        default: "market_health,homeready,investoredge"
+        default: "propertyiq"
         type: string
       horizons:
         description: "Horizons to test (comma-separated)"
@@ -74,7 +74,7 @@ jobs:
           cd packages/backend/jobs
 
           # Set parameters from inputs or defaults
-          SCORE_TYPES="${{ inputs.score_types || 'market_health,homeready,investoredge' }}"
+          SCORE_TYPES="${{ inputs.score_types || 'propertyiq' }}"
           HORIZONS="${{ inputs.horizons || '6m,1y,3y,5y' }}"
           COUNTY_SAMPLE="${{ inputs.county_sample || '500' }}"
           ZIP_SAMPLE="${{ inputs.zip_sample || '2000' }}"
@@ -214,7 +214,7 @@ jobs:
           echo "### Configuration" >> $GITHUB_STEP_SUMMARY
           echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Score Types | ${{ inputs.score_types || 'market_health,homeready,investoredge' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Score Types | ${{ inputs.score_types || 'propertyiq' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Horizons | ${{ inputs.horizons || '6m,1y,3y,5y' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| County Sample | ${{ inputs.county_sample || '500' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| ZIP Sample | ${{ inputs.zip_sample || '2000' }} |" >> $GITHUB_STEP_SUMMARY

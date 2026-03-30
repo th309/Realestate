@@ -1,18 +1,20 @@
 /**
  * PropertyIQ Scoring Types
  *
- * Simplified type definitions for the fixed-formula scoring system.
- * The scoring methodology uses z-score standardization with ML-derived weights.
+ * Type definitions for the PropertyIQ scoring system.
+ * Single score type: PropertyIQ Score — measures market demand signal
+ * relative to state average using 3 Redfin metrics.
  *
- * Score Types:
- * - HomeReady: Predicts 3-year price appreciation for homebuyers
- * - InvestorEdge: Predicts total return for investors
- * - MarketHealth: Current market conditions
+ * Legacy score types (homeready, investoredge, markethealth) are preserved
+ * as LegacyScoreType / AnyScoreType for backward compat when reading
+ * historical rows from the propertyiq_scores table.
  */
 
 // Re-export core types from formula-weights (using export type for isolatedModules)
 export type {
   ScoreType,
+  LegacyScoreType,
+  AnyScoreType,
   GeographyLevel,
   ConfidenceLevel,
   MetricWeight,
@@ -152,10 +154,14 @@ export interface ScoreResult {
   median_price: number | null;
   score_date: string;
   scores: {
-    homeready: SingleScoreResult | null;
-    investoredge: SingleScoreResult | null;
-    markethealth: SingleScoreResult | null;
+    /** Primary score — v4 demand-signal PropertyIQ Score */
     propertyiq: SingleScoreResult | null;
+    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    homeready?: SingleScoreResult | null;
+    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    investoredge?: SingleScoreResult | null;
+    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    markethealth?: SingleScoreResult | null;
   };
   /** Per-metric z-scores for this location (shared across all score types) */
   z_scores?: Record<string, number>;
@@ -202,136 +208,13 @@ export interface SingleScoreResult {
 }
 
 // ============================================================================
-// Legacy Types (for backwards compatibility)
+// Legacy Types — REMOVED
 // ============================================================================
-
-/**
- * @deprecated Use ScoreResult from scoring.service instead
- */
-export interface PropertyIQScore {
-  geographyId: string;
-  geographyType: string;
-  geographyName: string;
-  stateCode: string | null;
-  periodDate: string;
-
-  // Market Health (0-100)
-  marketHealthScore: number | null;
-  marketHealthComponents: MarketHealthComponentsLegacy | null;
-  marketHealthTrend: 'up' | 'down' | 'stable';
-  marketHealthTrendChange: number;
-
-  // HomeReady (0-100)
-  homereadyScore: number;
-  homereadyComponents: HomeReadyComponentsLegacy;
-  homereadyTrend: 'up' | 'down' | 'stable';
-  homereadyTrendChange: number;
-
-  // InvestorEdge (0-100)
-  investoredgeScore: number;
-  investoredgeComponents: InvestorEdgeComponentsLegacy;
-  investoredgeTrend: 'up' | 'down' | 'stable';
-  investoredgeTrendChange: number;
-
-  // Confidence
-  confidenceLevel: 'A' | 'B' | 'C' | 'F';
-  metricsAvailable: number;
-  metricsTotal: number;
-  dataFreshnessDays: number;
-
-  // Data completeness
-  dataCompleteness: number;
-  inheritedMetrics: Record<string, string>;
-
-  calculatedAt: string;
-  calculationVersion: string;
-}
-
-/**
- * @deprecated Legacy component structure
- */
-export interface HomeReadyComponentsLegacy {
-  affordability: ComponentScoreLegacy;
-  market_timing: ComponentScoreLegacy;
-  stability: ComponentScoreLegacy;
-  growth_potential: ComponentScoreLegacy;
-  livability: ComponentScoreLegacy;
-}
-
-/**
- * @deprecated Legacy component structure
- */
-export interface InvestorEdgeComponentsLegacy {
-  cash_flow: ComponentScoreLegacy;
-  rent_demand: ComponentScoreLegacy;
-  appreciation: ComponentScoreLegacy;
-  entry_point: ComponentScoreLegacy;
-  risk: ComponentScoreLegacy;
-}
-
-/**
- * @deprecated Legacy component structure
- */
-export interface MarketHealthComponentsLegacy {
-  demand_strength: ComponentScoreLegacy;
-  supply_balance: ComponentScoreLegacy;
-  price_stability: ComponentScoreLegacy;
-  economic_foundation: ComponentScoreLegacy;
-}
-
-/**
- * @deprecated Legacy component score
- */
-export interface ComponentScoreLegacy {
-  score: number;
-  weight: number;
-  weightedContribution: number;
-  metricsUsed: string[];
-  helpingFactors: string[];
-  hurtingFactors: string[];
-}
-
-// Type aliases for backwards compatibility (non-legacy names)
-export type HomeReadyComponents = HomeReadyComponentsLegacy;
-export type InvestorEdgeComponents = InvestorEdgeComponentsLegacy;
-export type MarketHealthComponents = MarketHealthComponentsLegacy;
-export type ComponentScore = ComponentScoreLegacy;
-
-// ============================================================================
-// Legacy Weights (kept for any code that might reference them)
-// ============================================================================
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts instead
- */
-export const HOMEREADY_WEIGHTS = {
-  affordability: 0.3,
-  market_timing: 0.25,
-  stability: 0.2,
-  growth_potential: 0.15,
-  livability: 0.1,
-};
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts instead
- */
-export const INVESTOREDGE_WEIGHTS = {
-  cash_flow: 0.35,
-  rent_demand: 0.2,
-  appreciation: 0.2,
-  entry_point: 0.15,
-  risk: 0.1,
-};
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts instead
- */
-export const MARKET_HEALTH_WEIGHTS = {
-  demand_strength: 0.35,
-  supply_balance: 0.25,
-  price_stability: 0.25,
-  economic_foundation: 0.15,
-};
+// The following legacy types were removed in the v3 → v4 migration:
+//   PropertyIQScore, HomeReadyComponentsLegacy, InvestorEdgeComponentsLegacy,
+//   MarketHealthComponentsLegacy, ComponentScoreLegacy,
+//   HOMEREADY_WEIGHTS, INVESTOREDGE_WEIGHTS, MARKET_HEALTH_WEIGHTS
+// If you need to read old data, use AnyScoreType from formula-weights.ts.
 
 // ============================================================================
 // Scoring Constants
@@ -410,58 +293,5 @@ export interface MetricPercentiles {
   stddev: number;
 }
 
-// ============================================================================
-// Legacy Metric Definitions (for reference only)
-// ============================================================================
-
-export type MetricDirection =
-  | 'higher_better'
-  | 'lower_better'
-  | 'moderate_better'
-  | 'neutral';
-export type NullStrategy = 'skip' | 'neutral' | 'penalize';
-
-export interface MetricDefinition {
-  name: string;
-  direction: MetricDirection;
-  weight: number;
-  nullStrategy: NullStrategy;
-  description?: string;
-}
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts
- * These empty arrays prevent compile errors in any legacy code
- */
-export const HOMEREADY_DETAILED_METRICS: Record<string, MetricDefinition[]> = {
-  affordability: [],
-  market_timing: [],
-  stability: [],
-  growth_potential: [],
-  livability: [],
-};
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts
- */
-export const INVESTOREDGE_DETAILED_METRICS: Record<string, MetricDefinition[]> =
-  {
-    cash_flow: [],
-    rent_demand: [],
-    appreciation: [],
-    entry_point: [],
-    risk: [],
-  };
-
-/**
- * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts
- */
-export const MARKET_HEALTH_DETAILED_METRICS: Record<
-  string,
-  MetricDefinition[]
-> = {
-  demand_strength: [],
-  supply_balance: [],
-  price_stability: [],
-  economic_foundation: [],
-};
+// Legacy metric definitions (HOMEREADY_DETAILED_METRICS, INVESTOREDGE_DETAILED_METRICS,
+// MARKET_HEALTH_DETAILED_METRICS) were removed in the v3 → v4 migration.

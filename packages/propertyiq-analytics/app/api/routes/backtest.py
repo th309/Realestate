@@ -24,7 +24,7 @@ router = APIRouter(prefix="/backtest", tags=["backtest"])
 
 class FullBacktestRequest(BaseModel):
     """Request for comprehensive backtest analysis."""
-    score_type: str = Field("investoredge", description="Score type: investoredge, homeready, market_health")
+    score_type: str = Field("propertyiq", description="Score type: 'propertyiq'")
     geography_type: str = Field("metro", description="Geography level: zip, county, metro, state")
     benchmark_type: str = Field("national", description="Benchmark: national, regional, peer")
     horizons: list[int] = Field(default=[6, 12, 36, 60], description="Time horizons in months")
@@ -202,7 +202,7 @@ async def get_data_status():
 
 @router.get("/quick-test")
 async def quick_test(
-    score_type: str = Query("investoredge", description="Score type to test"),
+    score_type: str = Query("propertyiq", description="Score type to test"),
     horizon: int = Query(12, description="Horizon in months"),
 ):
     """

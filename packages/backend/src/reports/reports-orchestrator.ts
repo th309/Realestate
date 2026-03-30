@@ -231,9 +231,7 @@ export async function generateReportAsync(
     const scoreContexts = scores
       ? generateAllScoreContexts(
           {
-            homeready: scores.scores.homeready ?? undefined,
-            investoredge: scores.scores.investoredge ?? undefined,
-            markethealth: scores.scores.markethealth ?? undefined,
+            propertyiq: scores.scores.propertyiq ?? undefined,
           },
           {
             geography_type: geoType,

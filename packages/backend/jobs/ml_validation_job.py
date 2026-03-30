@@ -39,7 +39,7 @@ except ImportError:
 @dataclass
 class MLValidationConfig:
     """Configuration for ML validation run."""
-    score_type: str  # 'homeready', 'investoredge', 'market_health'
+    score_type: str  # 'propertyiq'
     geography_type: str  # 'metro', 'county', 'zip'
     horizon: str  # '6m', '1y', '3y', '5y'
     train_period_start: str
@@ -65,27 +65,9 @@ class ValidationMetrics:
 
 # Score type to metrics mapping
 SCORE_METRICS = {
-    'homeready': [
-        'income_gap_ratio', 'years_to_save', 'rent_as_pct_of_income',
-        'price_reduced_share', 'median_days_on_market', 'months_of_supply',
-        'pending_listing_count_yy', 'volatility_36m', 'active_listing_count_yy',
-        'unemployment_rate', 'zhvi_5y_cagr', 'population_yoy',
-        'median_household_income_yoy', 'homeownership_rate', 'median_age'
+    'propertyiq': [
+        'sold_above_list', 'median_days_on_market', 'months_of_supply',
     ],
-    'investoredge': [
-        'cap_rate', 'grm', 'gross_yield', 'rent_to_price_ratio',
-        'zori_yoy', 'pending_ratio', 'median_days_on_market', 'renter_share',
-        'zhvi_5y_cagr', 'zhvi_yoy', 'population_yoy',
-        'overvalued_pct', 'price_reduced_share', 'months_of_supply',
-        'volatility_36m', 'unemployment_rate', 'inventory_surplus_pct',
-        'large_multi_permits_yoy'
-    ],
-    'market_health': [
-        'pending_ratio', 'median_days_on_market', 'hotness_score',
-        'months_of_supply', 'active_listing_count_yy', 'new_listing_count_yy',
-        'price_reduced_share', 'sale_to_list_ratio', 'zhvi_yoy',
-        'unemployment_rate', 'employment_yoy'
-    ]
 }
 
 # Outcome columns by horizon
@@ -98,56 +80,11 @@ OUTCOME_COLUMNS = {
 
 # Current formula weights (simplified - would come from database in production)
 FORMULA_WEIGHTS = {
-    'homeready': {
-        'income_gap_ratio': {'weight': 0.12, 'component': 'affordability'},
-        'years_to_save': {'weight': 0.09, 'component': 'affordability'},
-        'rent_as_pct_of_income': {'weight': 0.09, 'component': 'affordability'},
-        'price_reduced_share': {'weight': 0.075, 'component': 'market_timing'},
-        'median_days_on_market': {'weight': 0.0625, 'component': 'market_timing'},
-        'months_of_supply': {'weight': 0.0625, 'component': 'market_timing'},
-        'pending_listing_count_yy': {'weight': 0.05, 'component': 'market_timing'},
-        'volatility_36m': {'weight': 0.08, 'component': 'stability'},
-        'active_listing_count_yy': {'weight': 0.07, 'component': 'stability'},
-        'unemployment_rate': {'weight': 0.05, 'component': 'stability'},
-        'zhvi_5y_cagr': {'weight': 0.06, 'component': 'growth_potential'},
-        'population_yoy': {'weight': 0.045, 'component': 'growth_potential'},
-        'median_household_income_yoy': {'weight': 0.045, 'component': 'growth_potential'},
-        'homeownership_rate': {'weight': 0.06, 'component': 'livability'},
-        'median_age': {'weight': 0.04, 'component': 'livability'},
+    'propertyiq': {
+        'sold_above_list': {'weight': 0.33, 'component': 'demand_signal'},
+        'median_days_on_market': {'weight': 0.33, 'component': 'demand_signal'},
+        'months_of_supply': {'weight': 0.34, 'component': 'demand_signal'},
     },
-    'investoredge': {
-        'cap_rate': {'weight': 0.1225, 'component': 'cash_flow'},
-        'grm': {'weight': 0.0875, 'component': 'cash_flow'},
-        'gross_yield': {'weight': 0.0875, 'component': 'cash_flow'},
-        'rent_to_price_ratio': {'weight': 0.0525, 'component': 'cash_flow'},
-        'zori_yoy': {'weight': 0.07, 'component': 'rent_demand'},
-        'pending_ratio': {'weight': 0.05, 'component': 'rent_demand'},
-        'median_days_on_market': {'weight': 0.04, 'component': 'rent_demand'},
-        'renter_share': {'weight': 0.04, 'component': 'rent_demand'},
-        'zhvi_5y_cagr': {'weight': 0.08, 'component': 'appreciation'},
-        'zhvi_yoy': {'weight': 0.06, 'component': 'appreciation'},
-        'population_yoy': {'weight': 0.06, 'component': 'appreciation'},
-        'overvalued_pct': {'weight': 0.06, 'component': 'entry_point'},
-        'price_reduced_share': {'weight': 0.0525, 'component': 'entry_point'},
-        'months_of_supply': {'weight': 0.0375, 'component': 'entry_point'},
-        'volatility_36m': {'weight': 0.035, 'component': 'risk'},
-        'unemployment_rate': {'weight': 0.03, 'component': 'risk'},
-        'inventory_surplus_pct': {'weight': 0.02, 'component': 'risk'},
-        'large_multi_permits_yoy': {'weight': 0.015, 'component': 'risk'},
-    },
-    'market_health': {
-        'pending_ratio': {'weight': 0.1575, 'component': 'demand_strength'},
-        'median_days_on_market': {'weight': 0.1225, 'component': 'demand_strength'},
-        'hotness_score': {'weight': 0.07, 'component': 'demand_strength'},
-        'months_of_supply': {'weight': 0.10, 'component': 'supply_balance'},
-        'active_listing_count_yy': {'weight': 0.0875, 'component': 'supply_balance'},
-        'new_listing_count_yy': {'weight': 0.0625, 'component': 'supply_balance'},
-        'price_reduced_share': {'weight': 0.10, 'component': 'price_stability'},
-        'sale_to_list_ratio': {'weight': 0.0875, 'component': 'price_stability'},
-        'zhvi_yoy': {'weight': 0.0625, 'component': 'price_stability'},
-        'unemployment_rate': {'weight': 0.075, 'component': 'economic_foundation'},
-        'employment_yoy': {'weight': 0.075, 'component': 'economic_foundation'},
-    }
 }
 
 
@@ -176,7 +113,7 @@ def load_backtest_data(
     SELECT
         s.geography_id,
         s.period_date,
-        s.{score_type}_score as formula_score,
+        s.propertyiq_score as formula_score,
         {', '.join([f'd.{col}' for col in feature_cols])},
         o.{outcome_col} as outcome
     FROM propertyiq_scores s
@@ -318,18 +255,9 @@ def generate_suggestions(
 
     # Get current component weights
     component_weights = {
-        'homeready': {
-            'affordability': 0.30, 'market_timing': 0.25, 'stability': 0.20,
-            'growth_potential': 0.15, 'livability': 0.10
+        'propertyiq': {
+            'demand_signal': 1.0,
         },
-        'investoredge': {
-            'cash_flow': 0.35, 'rent_demand': 0.20, 'appreciation': 0.20,
-            'entry_point': 0.15, 'risk': 0.10
-        },
-        'market_health': {
-            'demand_strength': 0.35, 'supply_balance': 0.25,
-            'price_stability': 0.25, 'economic_foundation': 0.15
-        }
     }.get(score_type, {})
 
     # Generate weight suggestions
@@ -371,14 +299,8 @@ def generate_suggestions(
 
 def _suggest_component(metric: str, score_type: str) -> str:
     """Suggest which component a metric should belong to."""
-    # Simple heuristic mapping
-    if 'price' in metric or 'value' in metric or 'zhvi' in metric:
-        return 'growth_potential' if score_type == 'homeready' else 'appreciation'
-    if 'rent' in metric or 'zori' in metric:
-        return 'affordability' if score_type == 'homeready' else 'rent_demand'
-    if 'inventory' in metric or 'listing' in metric:
-        return 'market_timing' if score_type == 'homeready' else 'supply_balance'
-    return 'stability' if score_type == 'homeready' else 'risk'
+    # PropertyIQ uses a single demand_signal component
+    return 'demand_signal'
 
 
 def run_subgroup_analysis(
@@ -765,8 +687,8 @@ def main():
     parser = argparse.ArgumentParser(description='Run ML validation for PropertyIQ scores')
     parser.add_argument('--config', type=str, help='Path to config JSON file')
     parser.add_argument('--job-id', type=str, help='Job ID to resume from database')
-    parser.add_argument('--score-type', type=str, default='homeready',
-                       choices=['homeready', 'investoredge', 'market_health'])
+    parser.add_argument('--score-type', type=str, default='propertyiq',
+                       choices=['propertyiq'])
     parser.add_argument('--geography-type', type=str, default='metro',
                        choices=['metro', 'county', 'zip'])
     parser.add_argument('--horizon', type=str, default='1y',

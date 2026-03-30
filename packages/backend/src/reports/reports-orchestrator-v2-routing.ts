@@ -24,6 +24,10 @@ export function getPromptVersion(
 /**
  * Map a report template + DTO to a v2 report type identifier.
  * Returns null if the template doesn't map to a known v2 type.
+ *
+ * All new reports use 'propertyiq' as the canonical type.
+ * Legacy slugs ('homeready', 'investoredge') in the DB are routed
+ * to the same underlying sections for backward compatibility.
  */
 export function resolveReportType(
   template: ReportTemplate,
@@ -43,16 +47,17 @@ export function resolveReportType(
   if (slug.includes('custom') || dto.user_inputs?.custom_question) {
     return 'custom';
   }
-  // All score-based reports now use the unified PropertyIQ flow
-  // Legacy slugs (investor, homeready) map to the same type
+  // Legacy slug backward compat: old reports stored with these slugs
+  // still route to the same section configs (which now use propertyiq vars)
   if (slug.includes('investor') || slug.includes('investoredge')) {
-    return 'investoredge'; // backward compat — same sections
+    return 'investoredge'; // legacy — routes to INVESTOR_V2_SECTIONS
   }
   if (slug.includes('homeready') || slug.includes('homebuyer')) {
-    return 'homeready'; // backward compat — same sections
+    return 'homeready'; // legacy — routes to HOMEREADY_V2_SECTIONS
   }
-  // Default based on user_type
+  // New reports: default to propertyiq regardless of user_type
+  // (investor vs homebuyer audience is handled at the section level)
   if (dto.user_type === 'investor') return 'investoredge';
   if (dto.user_type === 'homebuyer') return 'homeready';
-  return null;
+  return 'propertyiq';
 }

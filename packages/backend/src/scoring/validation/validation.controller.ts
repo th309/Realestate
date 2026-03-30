@@ -283,12 +283,7 @@ export class ValidationController {
   }
 
   private validateScoreType(scoreType: string): ScoreType {
-    const validTypes: ScoreType[] = [
-      'propertyiq',
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ];
+    const validTypes: ScoreType[] = ['propertyiq'];
     const lower = scoreType.toLowerCase() as ScoreType;
 
     if (!validTypes.includes(lower)) {

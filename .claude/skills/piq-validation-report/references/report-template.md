@@ -1,3 +1,5 @@
+> **NOTE:** This template was written for the legacy 3-score system (HomeReady, InvestorEdge). As of March 2026, PropertyIQ uses a single unified score. When generating new reports, replace HomeReady/InvestorEdge references with "PropertyIQ Score" and adapt tables to single-score format.
+
 # Validation Report Template
 
 This is the exact structure the validation report must follow. Sections must appear in this order. Do not add, remove, or reorder sections. Replace `{placeholder}` values with data from the JSON output files.

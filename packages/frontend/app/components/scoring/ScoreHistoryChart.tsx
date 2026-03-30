@@ -54,7 +54,7 @@ interface Validation {
 interface ScoreHistoryChartProps {
   geographyType: string;
   geographyId: string;
-  scoreType: "propertyiq" | "homeready" | "investoredge" | "markethealth";
+  scoreType: "propertyiq";
   initialYears?: 3 | 5;
   className?: string;
 }
@@ -162,14 +162,7 @@ export function ScoreHistoryChart({
     );
   }
 
-  // PropertyIQ is the primary score type; legacy keys map to the same label
-  const scoreLabel =
-    {
-      propertyiq: "PropertyIQ",
-      homeready: "PropertyIQ",
-      investoredge: "PropertyIQ",
-      markethealth: "PropertyIQ",
-    }[scoreType] ?? "PropertyIQ";
+  const scoreLabel = "PropertyIQ";
 
   return (
     <div

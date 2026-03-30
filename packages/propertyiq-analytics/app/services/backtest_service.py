@@ -134,7 +134,7 @@ class BacktestService:
 
     async def run_full_backtest(
         self,
-        score_type: str = "investoredge",
+        score_type: str = "propertyiq",
         geography_type: str = "metro",
         benchmark_type: str = "national",
         horizons: list[int] = None,
@@ -142,9 +142,9 @@ class BacktestService:
     ) -> BacktestAnalysisResult:
         """
         Run comprehensive backtest analysis.
-        
+
         Args:
-            score_type: 'investoredge', 'homeready', or 'market_health'
+            score_type: 'propertyiq'
             geography_type: 'zip', 'county', 'metro', or 'state'
             benchmark_type: 'national', 'regional', or 'peer'
             horizons: List of months to test (default: [6, 12, 36, 60])

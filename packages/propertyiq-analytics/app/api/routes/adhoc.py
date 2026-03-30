@@ -30,7 +30,7 @@ class FilterRequest(BaseModel):
     metros: Optional[List[str]] = Field(None, description="Metro IDs to include")
     min_score: Optional[float] = Field(None, description="Minimum score threshold (0-100)")
     max_score: Optional[float] = Field(None, description="Maximum score threshold (0-100)")
-    score_type: str = Field("investoredge_score", description="Score column to use")
+    score_type: str = Field("propertyiq_score", description="Score column to use")
     start_date: Optional[date] = Field(None, description="Start date for time filter")
     end_date: Optional[date] = Field(None, description="End date for time filter")
 
@@ -63,7 +63,7 @@ class TimeSeriesRequest(BaseModel):
     """Request for time series data."""
     geography_id: str = Field(..., description="Geography ID to get history for")
     geography_type: str = Field("metro", description="Geography type")
-    metrics: List[str] = Field(default=["investoredge_score"], description="Metrics to retrieve")
+    metrics: List[str] = Field(default=["propertyiq_score"], description="Metrics to retrieve")
     months: int = Field(24, ge=1, le=120, description="Number of months of history")
 
 

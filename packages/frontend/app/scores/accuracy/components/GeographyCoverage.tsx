@@ -81,7 +81,7 @@ export function GeographyCoverage() {
     isLoading,
     error,
   } = useValidationGeography({
-    scoreType: "homeready",
+    scoreType: "propertyiq",
   });
 
   if (isLoading) {

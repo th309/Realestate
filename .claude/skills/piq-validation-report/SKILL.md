@@ -7,7 +7,9 @@ description: "Generate the PropertyIQ monthly validation report. Use this skill 
 
 ## What This Skill Does
 
-Runs the PropertyIQ backtest pipeline and generates a validation report from the results. The report summarizes how well PropertyIQ scores predicted real estate excess returns.
+Runs the PropertyIQ backtest pipeline and generates a validation report from the results. The report summarizes how well the single PropertyIQ Score predicted real estate excess returns.
+
+> **NOTE:** The legacy 3-score system (HomeReady, InvestorEdge, MarketHealth) was replaced by a single PropertyIQ Score in March 2026. References to HomeReady/InvestorEdge in the report template and data dictionary below are from the legacy system and should be adapted to the single PropertyIQ Score when generating new reports.
 
 ## Before You Start
 
@@ -57,7 +59,7 @@ Before you're done, verify every item. If any check fails, fix the report.
 - [ ] Dollar values derived from 3Y excess return spreads, not raw return spreads
 - [ ] Degradation ratio uses state benchmark for both IS and OOS columns
 - [ ] Section numbering sequential with no gaps or duplicates
-- [ ] InvestorEdge described as "excess total return vs state" (not absolute rent + excess appreciation)
+- [ ] Score described as "excess return vs state" (not absolute rent + excess appreciation)
 - [ ] Every quintile table column says "Excess Return (vs State)" or "Total Excess Return (vs State)"
 - [ ] Known Limitations section updated with any new WATCH/WARN flags from the robustness checklist
 - [ ] Median home value source and date cited in the dollar impact section
@@ -71,8 +73,8 @@ These override everything else. If you find yourself about to violate one, stop 
 
 | Score | Training Target | Benchmark | Horizon |
 |-------|----------------|-----------|---------|
-| HomeReady | `excess_vs_state_3y` | State median appreciation CAGR | 3 years |
-| InvestorEdge | `excess_vs_state_3y + (rent_return_3y_cagr - state_rent_return_3y_cagr)` | State median total return CAGR | 3 years |
+| PropertyIQ | `excess_vs_state_3y` | State median appreciation CAGR | 3 years |
+| (Legacy) InvestorEdge | `excess_vs_state_3y + rent excess` | State median total return CAGR | 3 years |
 
 **NEVER** describe the model as predicting 1Y returns, raw returns, returns vs Census Division, or returns vs national median. Division metrics appear only in Section 5 (within-state validation) as a comparison.
 

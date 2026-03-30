@@ -34,7 +34,7 @@ export function CorrelationTimeline({
     error,
   } = useValidationTimeSeries({
     geography: "metro",
-    scoreType: "homeready",
+    scoreType: "propertyiq",
     horizon,
   });
 

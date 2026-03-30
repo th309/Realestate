@@ -1,3 +1,5 @@
+> **ARCHIVED:** This document describes the legacy 3-score system (HomeReady, InvestorEdge, MarketHealth) which was replaced by a single PropertyIQ Score in March 2026. See `docs/superpowers/specs/2026-03-29-propertyiq-single-score-redesign.md` for the current system.
+
 # AI Model Evaluation Scorecard
 
 Reference: [Design Doc](./2026-03-07-ai-model-evaluation-design.md)

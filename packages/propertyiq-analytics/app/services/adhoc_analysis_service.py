@@ -39,7 +39,7 @@ class FilterCriteria:
     regions: Optional[List[str]] = None
     min_score: Optional[float] = None
     max_score: Optional[float] = None
-    score_type: str = "investoredge_score"
+    score_type: str = "propertyiq_score"
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
@@ -106,7 +106,7 @@ class AdhocAnalysisService:
                 "SO": "South (AL, AR, DE, DC, FL, GA, KY, LA, MD, MS, NC, OK, SC, TN, TX, VA, WV)",
                 "WE": "West (AZ, CA, CO, ID, MT, NV, NM, OR, UT, WA, WY, AK, HI)"
             },
-            "score_types": ["investoredge_score", "homeready_score", "market_health_score"],
+            "score_types": ["propertyiq_score"],
             "horizons": [12, 24, 36, 60],
             "date_range": date_range,
         }
@@ -160,7 +160,7 @@ class AdhocAnalysisService:
     def analyze_filtered_data(
         self,
         df: pd.DataFrame,
-        score_type: str = "investoredge_score",
+        score_type: str = "propertyiq_score",
         horizons: List[int] = None,
         include_chart_data: bool = False
     ) -> AnalysisResult:
@@ -274,7 +274,7 @@ class AdhocAnalysisService:
         self,
         filtered_df: pd.DataFrame,
         benchmark_type: str = "national",
-        score_type: str = "investoredge_score"
+        score_type: str = "propertyiq_score"
     ) -> Dict[str, Any]:
         """Compare filtered data to a benchmark."""
         if filtered_df is None or len(filtered_df) == 0:
@@ -347,7 +347,7 @@ class AdhocAnalysisService:
     def get_rankings(
         self,
         df: pd.DataFrame,
-        score_type: str = "investoredge_score",
+        score_type: str = "propertyiq_score",
         limit: int = 10,
         ascending: bool = False,
         sort_by: Optional[str] = None
@@ -418,7 +418,7 @@ class AdhocAnalysisService:
     ) -> Dict[str, Any]:
         """Get time series data for a specific geography."""
         if metrics is None:
-            metrics = ['investoredge_score']
+            metrics = ['propertyiq_score']
         
         df = self.cache.get_cached_data(geography_type, auto_sync=True, latest_only=False)
         if df is None or len(df) == 0:
@@ -458,9 +458,7 @@ class AdhocAnalysisService:
 
     # Map from Quinn's column-style score names to the propertyiq_scores score_type values
     SCORE_TYPE_MAP = {
-        'homeready_score': 'homeready',
-        'investoredge_score': 'investoredge',
-        'market_health_score': 'markethealth',
+        'propertyiq_score': 'propertyiq',
     }
 
     def get_rankings_direct(
@@ -475,8 +473,8 @@ class AdhocAnalysisService:
         (the single source of truth for all PIQ scores).
         """
         try:
-            # 1. Map score type: 'homeready_score' -> 'homeready'
-            db_score_type = self.SCORE_TYPE_MAP.get(criteria.score_type, 'investoredge')
+            # 1. Map score type: 'propertyiq_score' -> 'propertyiq'
+            db_score_type = self.SCORE_TYPE_MAP.get(criteria.score_type, 'propertyiq')
 
             # 2. Get latest score_date for this geography + score_type
             max_date = None

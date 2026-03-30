@@ -128,9 +128,10 @@ export class ReportGenerationV2Service {
     }
 
     const audienceLabel =
-      reportType === 'investoredge' ? 'real estate investor' : 'homebuyer';
-    const score =
-      context['propertyiq_score'] ?? context['homeready_score'] ?? 'N/A';
+      reportType === 'investoredge'
+        ? 'real estate investor'
+        : 'market participant (homebuyer or general audience)';
+    const score = context['propertyiq_score'] ?? 'N/A';
 
     return `You are planning a ${reportType} market report for ${context.geography_name || 'a market'}.
 
@@ -267,12 +268,13 @@ This outline will be shared with each section writer to ensure narrative coheren
     sectionsMap: Record<string, NarrativePromptConfig>;
   } {
     switch (reportType) {
-      case 'homeready':
+      case 'propertyiq':
+      case 'homeready': // legacy backward compat
         return {
           sectionIds: HOMEREADY_V2_SECTION_ORDER,
           sectionsMap: HOMEREADY_V2_SECTIONS,
         };
-      case 'investoredge':
+      case 'investoredge': // legacy backward compat
         return {
           sectionIds: INVESTOR_V2_SECTION_ORDER,
           sectionsMap: INVESTOREDGE_V2_SECTIONS,

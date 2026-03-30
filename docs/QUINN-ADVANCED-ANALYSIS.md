@@ -18,7 +18,7 @@ Generates the exact summary table format you requested:
 
 **Example Quinn Query:**
 ```
-"Run quintile analysis for InvestorEdge scores at the metro level with 3-year outcomes"
+"Run quintile analysis for PropertyIQ scores at the metro level with 3-year outcomes"
 ```
 
 **What it returns:**
@@ -49,7 +49,7 @@ Comprehensive validation across multiple time horizons (1y, 3y, 5y, 10y).
 
 **Example Quinn Query:**
 ```
-"Run a full backtest on HomeReady scores for counties, testing 1-year, 3-year, and 5-year outcomes"
+"Run a full backtest on PropertyIQ scores for counties, testing 1-year, 3-year, and 5-year outcomes"
 ```
 
 **What it returns:**
@@ -66,12 +66,12 @@ Comprehensive validation across multiple time horizons (1y, 3y, 5y, 10y).
 **Tool:** `compare_formulas`
 
 Helps decide whether to use:
-- **3 formulas:** One per score type (InvestorEdge, HomeReady, MarketHealth)
-- **9 formulas:** One per score type × geography level (metro, county, zip)
+- **single formula:** Single PropertyIQ Score formula
+- **per-geo formulas:** One per score type × geography level (metro, county, zip)
 
 **Example Quinn Query:**
 ```
-"Should I use 3 or 9 formulas? Compare predictive power across metro, county, and zip levels"
+"Should I use formula variants? Compare predictive power across metro, county, and zip levels"
 ```
 
 **What it returns:**
@@ -93,8 +93,8 @@ Helps decide whether to use:
 ```
 
 **Decision Logic:**
-- CV < 30% → Use 3 formulas (consistent across geographies)
-- CV > 30% → Use 9 formulas (geographies need different weights)
+- CV < 30% → Use single formula (consistent across geographies)
+- CV > 30% → Use per-geo formulas (geographies need different weights)
 
 ---
 
@@ -117,7 +117,7 @@ Uses: `analyze_raw_metrics`
 
 ### Step 3: Validate with Quintiles
 ```
-"Run quintile validation on InvestorEdge scores for metros"
+"Run quintile validation on PropertyIQ scores for metros"
 ```
 Uses: `run_quintile_analysis`
 - Returns exact validation table
@@ -139,7 +139,7 @@ Uses: `run_backtest`
 ```
 Uses: `compare_formulas`
 - Analyzes consistency
-- Recommends 3 or 9 formulas
+- Recommends formula variants
 - Provides reasoning
 
 ---
@@ -163,12 +163,12 @@ New endpoints:
 
 ## Example Conversation with Quinn
 
-**User:** "I want to validate our InvestorEdge scoring formula. Show me the quintile performance."
+**User:** "I want to validate our PropertyIQ scoring formula. Show me the quintile performance."
 
 **Quinn:** *[Calls run_quintile_analysis tool]*
 
 ```
-Quintile Validation Results for InvestorEdge (Metro, 3-year outcomes):
+Quintile Validation Results for PropertyIQ (Metro, 3-year outcomes):
 
 📊 Summary Table:
 ┌────────────┬────────────┬────────────┬─────────┐
@@ -273,7 +273,7 @@ suggesting the same underlying factors drive performance.
 1. Start your analytics service: `cd packages/propertyiq-analytics && uvicorn app.main:app`
 2. Start your backend: `cd packages/backend && npm run start:dev`
 3. Open Quinn in your frontend
-4. Ask: "Run quintile validation on InvestorEdge scores for metro markets"
+4. Ask: "Run quintile validation on PropertyIQ scores for metro markets"
 
 ### Extend it further
 - Add dollar impact calculations to Quinn responses

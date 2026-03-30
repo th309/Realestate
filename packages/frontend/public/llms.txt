@@ -4,7 +4,7 @@
 
 ## Overview
 
-PropertyIQ uses machine learning to predict real estate market performance. The platform analyzes 90+ metrics from 7 trusted data sources to generate three proprietary scores: HomeReady (for homebuyers), InvestorEdge (for investors), and MarketHealth (for risk assessment).
+PropertyIQ uses machine learning to predict real estate market performance. The platform generates a single PropertyIQ Score (1-99) that predicts market performance using 3 Redfin demand-signal metrics (% Sold Above List, Median DOM, Months of Supply). Validated across 13 years of data with a 100% year hit rate — top-scored markets outperformed bottom-scored markets in every single test window.
 
 ## Key Pages
 
@@ -20,20 +20,20 @@ PropertyIQ uses machine learning to predict real estate market performance. The 
 
 ## Scoring System
 
-PropertyIQ offers three distinct scores, each 0-100:
+PropertyIQ generates a single **PropertyIQ Score** (1-99) for every geography:
 
-- **HomeReady Score**: Predicts home appreciation potential for primary buyers. Factors include price trends, affordability ratios, inventory dynamics, and economic fundamentals.
-- **InvestorEdge Score**: Targets rental property investors by measuring total return potential including rental yield, price appreciation, and market stability.
-- **MarketHealth Score**: Evaluates overall market stability and fundamentals for risk assessment. Incorporates supply/demand balance, economic diversity, and demographic trends.
+- **50 = state average** — higher means outperformance relative to the state
+- Built from 3 Redfin demand-signal metrics: % Sold Above List (positive), Median Days on Market (negative), Months of Supply (negative)
+- Each metric is z-scored within the state, combined into a signal, then percentile-ranked and re-centered at 55.6, clamped 1-99
+- Coverage: 746 metros, 2,983 counties, 19,880 ZIPs
 
 ### Validation Results
 
-Scores are walk-forward validated across 4 non-overlapping windows (2018-2023):
-- Out-of-sample Information Coefficient: 0.37 (metro level)
-- Top-scored markets outperformed bottom by 5.55 percentage points per year
-- $27,100 more equity on a typical home over 3 years in top-scored markets
-- 23,000+ locations scored across 924 metros
-- Models: XGBoost, LightGBM, ElasticNet ensemble with SHAP feature distillation
+Validated across 13 years of walk-forward data (2012-2025):
+- 100% year hit rate: top-quintile markets outperformed bottom-quintile in every single test window
+- Top-scored markets delivered +3.05% excess return vs state average over 3 years
+- Bottom-scored markets delivered -3.34% excess return vs state average over 3 years
+- Monotonic quintile separation: performance increases consistently from Q1 to Q5
 
 ## Data Sources
 

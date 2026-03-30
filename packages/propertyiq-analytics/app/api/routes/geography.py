@@ -32,7 +32,7 @@ class CompareToNeighborsRequest(BaseModel):
     geography_type: str = Field("county", description="Type: county, metro, zip")
     metrics: Optional[List[str]] = Field(
         None,
-        description="Metrics to compare (None = all scores: investoredge_score, homeready_score, market_health_score)"
+        description="Metrics to compare (None = propertyiq_score)"
     )
 
 

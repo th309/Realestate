@@ -24,11 +24,11 @@ When the user asks to suggest blog posts:
 When the user approves a post idea:
 
 1. **REQUIRED: Fetch actual scores before writing.** Query the backend for real PropertyIQ scores for every metro you plan to mention:
-   - Run: `curl -s "http://localhost:3001/api/scores/top?scoreType=homeready&geoLevel=metro&limit=50"` to get top-scoring metros
-   - For specific metros: `curl -s "http://localhost:3001/api/scoring/metro/{cbsaCode}?scoreType=homeready"`
+   - Run: `curl -s "http://localhost:3001/api/scores/top?scoreType=propertyiq&geoLevel=metro&limit=50"` to get top-scoring metros
+   - For specific metros: `curl -s "http://localhost:3001/api/scoring/metro/{cbsaCode}?scoreType=propertyiq"`
    - CBSA codes are in `packages/frontend/lib/data/metro-slug-data.ts`
    - **NEVER recommend a metro without checking its actual score first**
-   - **NEVER recommend a metro with a HomeReady score below 60 as a "top market" or "good buy"**
+   - **NEVER recommend a metro with a PropertyIQ Score below 60 as a "top market" or "good buy"**
    - Low-scoring metros (below 50) can only be mentioned as cautionary examples or markets to watch/avoid
 2. **Verify all internal links resolve.** Every `/markets/[slug]` link must use a slug that exists in `packages/frontend/lib/data/metro-slug-data.ts`. Search the file to confirm before using any slug.
 3. Write a complete MDX file with frontmatter
@@ -56,9 +56,9 @@ When the user approves a draft:
 Blog content MUST align with PropertyIQ's own scoring data. Recommending metros that score poorly destroys credibility — users will read "Austin is great!" then visit the Austin page and see a 21/100.
 
 - **Always fetch live scores before drafting.** Never rely on general real estate knowledge or industry hype about which markets are "hot."
-- **Positive recommendations require HomeReady 60+.** Only recommend metros as "top markets," "best to buy," or "great investment" if their HomeReady score is 60 or above.
+- **Positive recommendations require PropertyIQ Score 60+.** Only recommend metros as "top markets," "best to buy," or "great investment" if their PropertyIQ Score is 60 or above.
 - **Low-scoring metros are cautionary examples.** Metros scoring below 50 (like Austin, Phoenix, Tampa, Nashville as of early 2026) should only appear as "markets to watch carefully," "markets facing headwinds," or "markets where the data says wait."
-- **Cite actual scores as evidence.** Don't just say "Rochester is strong" — say "Rochester's HomeReady score of 98.9 (A+) makes it the top-ranked major metro."
+- **Cite actual scores as evidence.** Don't just say "Rochester is strong" — say "Rochester's PropertyIQ Score of 98.9 (A+) makes it the top-ranked major metro."
 - **The narrative is data over hype.** PropertyIQ's differentiator is following the data. Our scores often contradict industry hype (e.g., "boring" Northeast/Midwest markets outperform hyped Sun Belt markets). Lean into this.
 
 ## Content Guidelines

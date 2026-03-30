@@ -13,11 +13,11 @@ class ScoreComponent(BaseModel):
     description: Optional[str] = Field(None, description="Explanation of score")
 
 
-class HomeReadyScoreResponse(BaseModel):
-    """Response model for HomeReady scoring."""
+class PropertyIQScoreResponse(BaseModel):
+    """Response model for PropertyIQ scoring."""
 
-    overall_score: float = Field(..., ge=0, le=100, description="Overall HomeReady score")
-    grade: str = Field(..., description="Letter grade A-F")
+    overall_score: float = Field(..., ge=1, le=99, description="PropertyIQ score (1-99, 50=state average)")
+    label: str = Field(..., description="Score label (e.g. EXCELLENT, GREAT, GOOD, etc.)")
 
     # Component breakdowns
     components: list[ScoreComponent] = Field(..., description="Score component breakdown")
@@ -25,43 +25,11 @@ class HomeReadyScoreResponse(BaseModel):
     # Metadata
     zip_code: str
     scored_at: datetime = Field(default_factory=datetime.utcnow)
-    model_version: str = Field(default="1.0.0")
+    model_version: str = Field(default="4.0.0")
 
     # Insights
     strengths: list[str] = Field(default_factory=list, description="Market strengths")
     concerns: list[str] = Field(default_factory=list, description="Market concerns")
-
-
-class ROIProjection(BaseModel):
-    """ROI projection for investment."""
-
-    period_months: int
-    projected_appreciation: float = Field(..., description="Expected price appreciation %")
-    projected_rental_income: float = Field(..., description="Expected rental income")
-    projected_total_return: float = Field(..., description="Expected total return %")
-    confidence: str = Field(..., description="Confidence level: low/medium/high")
-
-
-class InvestorEdgeScoreResponse(BaseModel):
-    """Response model for InvestorEdge scoring."""
-
-    overall_score: float = Field(..., ge=0, le=100, description="Overall InvestorEdge score")
-    grade: str = Field(..., description="Letter grade A-F")
-
-    # Component breakdowns
-    components: list[ScoreComponent] = Field(..., description="Score component breakdown")
-
-    # ROI projections
-    roi_projections: list[ROIProjection] = Field(..., description="ROI projections at different horizons")
-
-    # Metadata
-    zip_code: str
-    scored_at: datetime = Field(default_factory=datetime.utcnow)
-    model_version: str = Field(default="1.0.0")
-
-    # Investment insights
-    investment_thesis: str = Field(..., description="Summary investment thesis")
-    risk_factors: list[str] = Field(default_factory=list, description="Key risk factors")
 
 
 class BacktestMetrics(BaseModel):

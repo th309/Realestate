@@ -21,9 +21,13 @@ export function computeComponentExtremes(
   scores: any,
   userType: string,
 ): Record<string, string | number> {
-  const scoreType = userType === 'investor' ? 'investoredge' : 'homeready';
+  // Always use propertyiq; fall back to legacy types for old data
+  const scoreType = 'propertyiq';
   const components: Array<{ component: string; score: number }> =
-    scores?.scores?.[scoreType]?.components || [];
+    scores?.scores?.[scoreType]?.components ||
+    scores?.scores?.[userType === 'investor' ? 'investoredge' : 'homeready']
+      ?.components ||
+    [];
 
   if (components.length === 0) {
     return {
@@ -50,9 +54,13 @@ export function computeComponentExtremes(
  * Derive a key market tension from component score gaps.
  */
 export function computeKeyTension(scores: any, userType: string): string {
-  const scoreType = userType === 'investor' ? 'investoredge' : 'homeready';
+  // Always use propertyiq; fall back to legacy types for old data
+  const scoreType = 'propertyiq';
   const components: Array<{ component: string; score: number }> =
-    scores?.scores?.[scoreType]?.components || [];
+    scores?.scores?.[scoreType]?.components ||
+    scores?.scores?.[userType === 'investor' ? 'investoredge' : 'homeready']
+      ?.components ||
+    [];
 
   if (components.length < 2) return 'Insufficient data for tension analysis';
 

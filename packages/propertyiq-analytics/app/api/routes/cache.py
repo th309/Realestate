@@ -241,7 +241,7 @@ async def get_cache_info(geo_type: str):
             }
         
         # Score stats
-        for score_col in ['investoredge_score', 'homeready_score']:
+        for score_col in ['propertyiq_score']:
             if score_col in df.columns:
                 valid = df[score_col].dropna()
                 if len(valid) > 0:

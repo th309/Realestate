@@ -19,12 +19,8 @@ export function buildScoreRows(
   const rows: Array<Record<string, any>> = [];
   const createdAt = new Date().toISOString();
   for (const result of results) {
-    for (const scoreType of [
-      'propertyiq',
-      'homeready',
-      'investoredge',
-      'markethealth',
-    ] as ScoreType[]) {
+    // Only write propertyiq rows — legacy score types are historical and no longer computed
+    for (const scoreType of ['propertyiq'] as ScoreType[]) {
       const scoreData = result.scores[scoreType];
       if (!scoreData) continue;
       rows.push({

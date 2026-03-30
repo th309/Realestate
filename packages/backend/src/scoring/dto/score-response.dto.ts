@@ -11,6 +11,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
   ScoreType,
+  AnyScoreType,
   ScoreAccess,
   UserTier,
   GeographyType,
@@ -161,7 +162,7 @@ export class ConfidenceDto {
 export class ScoreBadgeResponseDto {
   @ApiProperty({
     description: 'Score type',
-    enum: ['markethealth', 'homeready', 'investoredge'],
+    enum: ['propertyiq'],
   })
   type: ScoreType;
 
@@ -315,22 +316,9 @@ export class AllScoresResponseDto {
 
   @ApiProperty({
     type: ScoreBadgeResponseDto,
-    description: 'Market Health score (always full access)',
+    description: 'PropertyIQ Score (demand signal)',
   })
-  marketHealth: ScoreBadgeResponseDto | ScoreCardResponseDto;
-
-  @ApiProperty({
-    description: 'HomeReady score (full or teaser based on tier)',
-  })
-  homeready:
-    | ScoreBadgeResponseDto
-    | ScoreCardResponseDto
-    | ScoreTeaserResponseDto;
-
-  @ApiProperty({
-    description: 'InvestorEdge score (full or teaser based on tier)',
-  })
-  investoredge:
+  propertyiq:
     | ScoreBadgeResponseDto
     | ScoreCardResponseDto
     | ScoreTeaserResponseDto;
@@ -349,7 +337,7 @@ export class AllScoresResponseDto {
 export class GetScoreQueryDto {
   @ApiPropertyOptional({
     description: 'Score type filter',
-    enum: ['markethealth', 'homeready', 'investoredge'],
+    enum: ['propertyiq'],
   })
   type?: ScoreType;
 
@@ -373,17 +361,8 @@ export class GetScoreQueryDto {
 // Helper Functions
 // ============================================================================
 
-export function getScoreLabel(type: ScoreType): string {
-  switch (type) {
-    case 'markethealth':
-      return 'Market Health Index';
-    case 'homeready':
-      return 'HomeReady Score';
-    case 'investoredge':
-      return 'InvestorEdge Score';
-    default:
-      return 'Score';
-  }
+export function getScoreLabel(type: AnyScoreType | string): string {
+  return 'PropertyIQ Score';
 }
 
 export function getComponentLabel(component: string): string {
@@ -486,57 +465,25 @@ export function formatMetricValue(
   return value.toFixed(1);
 }
 
-export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
-  const headlines: Record<ScoreType, string> = {
-    markethealth: 'Unlock Full Market Health Details',
-    homeready: 'Unlock HomeReady Score',
-    investoredge: 'Unlock InvestorEdge Score',
-    propertyiq: 'Unlock PropertyIQ Score',
-  };
-
-  const descriptions: Record<ScoreType, string> = {
-    markethealth: 'Get detailed market health breakdown and historical trends.',
-    homeready:
-      'Discover if this market is right for homebuyers with our proprietary HomeReady scoring.',
-    investoredge:
-      'Analyze investment potential with cash flow, appreciation, and risk metrics.',
-    propertyiq:
-      'See the unified PropertyIQ demand signal with calibrated return predictions.',
-  };
-
-  const features: Record<ScoreType, string[]> = {
-    markethealth: [
-      'Component breakdown',
-      '12-month history',
-      'Metric-level details',
-    ],
-    homeready: [
-      'Affordability analysis',
-      'Market timing insights',
-      'Growth potential forecast',
-      'Stability metrics',
-      'Livability scores',
-    ],
-    investoredge: [
-      'Cash flow analysis',
-      'Cap rate estimates',
-      'Rent demand metrics',
-      'Appreciation forecast',
-      'Risk assessment',
-    ],
-    propertyiq: [
-      'Demand signal score',
-      'Calibrated return predictions',
-      'Historical trend',
-    ],
-  };
+export function createUpgradeCta(
+  scoreType: AnyScoreType | string,
+): UpgradeCtaDto {
+  // All score types now map to PropertyIQ
+  const headline = 'Unlock PropertyIQ Score';
+  const description =
+    'See the unified PropertyIQ demand signal with calibrated return predictions.';
+  const features = [
+    'Demand signal score',
+    'Calibrated return predictions',
+    'Historical trend',
+  ];
 
   return {
-    headline: headlines[scoreType],
-    description: descriptions[scoreType],
+    headline,
+    description,
     buttonText: 'Upgrade to Pro',
     upgradeUrl: '/pricing?utm_source=score_teaser&utm_medium=cta',
     requiredTier: 'pro',
-    features: features[scoreType],
+    features,
   };
 }

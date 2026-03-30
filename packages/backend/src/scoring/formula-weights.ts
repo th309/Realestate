@@ -12,11 +12,14 @@
  *   Percentage contribution to the total score (0-1)
  */
 
-export type ScoreType =
-  | 'homeready'
-  | 'investoredge'
-  | 'markethealth'
-  | 'propertyiq';
+export type ScoreType = 'propertyiq';
+
+/** @deprecated Legacy score types — kept for backward compat when reading old DB rows */
+export type LegacyScoreType = 'homeready' | 'investoredge' | 'markethealth';
+
+/** Union of current + legacy score types for DB reads */
+export type AnyScoreType = ScoreType | LegacyScoreType;
+
 export type GeographyLevel = 'metro' | 'county' | 'zip';
 
 export interface MetricWeight {
@@ -28,6 +31,7 @@ export interface FormulaDefinition {
   [metricName: string]: MetricWeight;
 }
 
+/** @deprecated v3 formula structure — kept for backward compat with v3 scoring engine */
 export interface GeographyFormulas {
   homeready: FormulaDefinition;
   investoredge: FormulaDefinition;
@@ -35,7 +39,9 @@ export interface GeographyFormulas {
 }
 
 /**
- * Fixed formula weights for all geography levels and score types.
+ * @deprecated v3 formula weights — kept for backward compat with v3 scoring engine and component breakdowns.
+ * v4 PropertyIQ uses V4_FORMULA_METRICS / V4_METRIC_DIRECTIONS instead.
+ *
  * v3.0: Optimized via walk-forward CV with model tournament (XGBoost/LightGBM/ElasticNet).
  * Features: Redfin market activity, Census demographics, Realtor listings, calculated affordability,
  * FRED macro (VIX), Zillow inventory (metro only), economic GDP (county only).
@@ -199,9 +205,10 @@ export const GRADE_THRESHOLDS: Array<{ min: number; grade: string }> = [
  * Used in confidence calculation (Model Strength factor = correlation × 125, capped at 100).
  * v3.0: Updated from walk-forward model tournament OOS IC (mean Spearman rank correlation).
  */
+/** @deprecated v3 model correlations — kept for backward compat with confidence calculation */
 export const MODEL_CORRELATIONS: Record<
   GeographyLevel,
-  Record<ScoreType, number>
+  Record<AnyScoreType, number>
 > = {
   metro: {
     homeready: 0.2996, // XGBoost walk-forward OOS IC
@@ -280,23 +287,27 @@ export function getConfidenceLevel(confidenceScore: number): ConfidenceLevel {
 
 /**
  * Get all metric names required for a specific score calculation.
+ * @deprecated v3 helper — v4 uses V4_FORMULA_METRICS
  */
 export function getRequiredMetrics(
   geography: GeographyLevel,
-  scoreType: ScoreType,
+  scoreType: AnyScoreType,
 ): string[] {
-  return Object.keys(FORMULA_WEIGHTS[geography][scoreType]);
+  return Object.keys(
+    FORMULA_WEIGHTS[geography][scoreType as keyof GeographyFormulas],
+  );
 }
 
 /**
  * Validate that formula weights sum to approximately 1.0 (100%).
+ * @deprecated v3 helper — v4 uses V4_FORMULA_METRICS
  */
 export function validateFormulaWeights(
   geography: GeographyLevel,
-  scoreType: ScoreType,
+  scoreType: AnyScoreType,
 ): { valid: boolean; sum: number } {
   const formula: Record<string, MetricWeight> =
-    FORMULA_WEIGHTS[geography][scoreType];
+    FORMULA_WEIGHTS[geography][scoreType as keyof GeographyFormulas];
   const sum: number = Object.values(formula).reduce(
     (acc, m) => acc + m.weight,
     0,
@@ -325,8 +336,9 @@ export function validateFormulaWeights(
  */
 export type ComponentGroupDefinition = Record<string, string[]>;
 
+/** @deprecated v3 component groups for legacy score types — v4 PropertyIQ has no component breakdown */
 export const COMPONENT_GROUPS: Record<
-  ScoreType,
+  AnyScoreType,
   Record<GeographyLevel, ComponentGroupDefinition>
 > = {
   // -----------------------------------------------------------------------
@@ -503,7 +515,8 @@ export interface CalibrationEntry {
   avgExcessReturn: number;
 }
 
-export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
+/** @deprecated v3 calibration entries for homeready/investoredge/markethealth — kept for historical reference */
+export const SCORE_CALIBRATION: Record<AnyScoreType, CalibrationEntry[]> = {
   homeready: [
     {
       quintile: 1,

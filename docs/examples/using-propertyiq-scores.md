@@ -1,73 +1,70 @@
-/**
- * Example: Using PropertyIQ Scores in Other Components
- * 
- * The unified data binding layer (fetchMetricData) handles PropertyIQ scores
- * automatically. Just import and call it with the metric ID and geo level.
- */
+/\*\*
 
-import { fetchMetricData } from '@/app/map/config/fetchMetricData';
+- Example: Using PropertyIQ Scores in Other Components
+-
+- The unified data binding layer handles PropertyIQ scores automatically.
+- As of March 2026, PropertyIQ uses a single score type ('propertyiq')
+- that measures market demand signal relative to state average.
+-
+- Score formula: signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
+- → percentile rank within state → re-center at 55.6 → clamp 1-99
+- 50 = state average; higher = outperformance.
+  \*/
+
+import { fetchScore, useScoreData } from '@/lib/data';
 import type { GeoLevel } from '@/app/map/config/metrics';
 
-// Example 1: Fetch InvestorEdge scores for all counties
-async function getCountyInvestorEdgeScores() {
-  const data = await fetchMetricData('investoredge_score', 'county');
-  // Returns: { "01001": { value: 85.2, date: "2025-01-01" }, ... }
-  return data;
+// Example 1: Fetch PropertyIQ score for a specific metro
+async function getMetroScore(cbsaCode: string) {
+const score = await fetchScore('metro', cbsaCode);
+// Returns: { score: 72.5, confidence: 85, score_type: 'propertyiq', ... }
+return score;
 }
 
-// Example 2: Fetch HomeReady scores for metros in a specific state
-async function getMetroHomeReadyScores(state: string) {
-  const data = await fetchMetricData('homeready_score', 'metro', { state });
-  // Returns: { "12420": { value: 72.5, date: "2025-01-01" }, ... }
-  return data;
+// Example 2: Fetch PropertyIQ score for a county
+async function getCountyScore(countyFips: string) {
+const score = await fetchScore('county', countyFips);
+// Returns: { score: 68.3, confidence: 70, score_type: 'propertyiq', ... }
+return score;
 }
 
-// Example 3: Fetch Market Health scores for ZIP codes
-async function getZipMarketHealthScores(state: string) {
-  const data = await fetchMetricData('market_health_score', 'zip', { state });
-  // Returns: { "78701": { value: 68.3, date: "2025-01-01" }, ... }
-  return data;
+// Example 3: Use the ScoreWidget component (preferred)
+// ScoreWidget auto-fetches the score and displays it with confidence badge
+import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
+
+function MarketHeader({ geoLevel, geoId }: { geoLevel: GeoLevel; geoId: string }) {
+return (
+<div>
+<ScoreWidget geoLevel={geoLevel} geoId={geoId} />
+</div>
+);
 }
 
-// Example 4: Use in a React component
-function MyComponent() {
-  const [scores, setScores] = useState<Record<string, { value: number; date?: string }>>({});
-  
-  useEffect(() => {
-    async function loadScores() {
-      const data = await fetchMetricData('investoredge_score', 'county');
-      setScores(data);
-    }
-    loadScores();
-  }, []);
-  
-  return (
-    <div>
-      {Object.entries(scores).map(([fips, entry]) => (
-        <div key={fips}>
-          FIPS: {fips}, Score: {entry.value}
-        </div>
-      ))}
-    </div>
-  );
+// Example 4: Use the useScoreData hook in a custom component
+function CustomScoreDisplay({ geoLevel, geoId }: { geoLevel: GeoLevel; geoId: string }) {
+const { data: score, isLoading } = useScoreData(geoLevel, geoId);
+
+if (isLoading) return <div>Loading...</div>;
+if (!score) return <div>No score available</div>;
+
+return (
+<div>
+<span>PropertyIQ Score: {score.score}</span>
+<span>Confidence: {score.confidence}%</span>
+</div>
+);
 }
 
-/**
- * What fetchMetricData handles automatically:
- * 
- * 1. ✅ Pagination - Fetches all pages automatically (handles 1000+ records)
- * 2. ✅ FIPS normalization - Converts county FIPS to 5-digit format with leading zeros
- * 3. ✅ Data transformation - Converts API response to unified format
- * 4. ✅ Error handling - Returns empty object on errors
- * 5. ✅ Date handling - Includes "as of" date for display
- * 
- * The returned format is always:
- * {
- *   [key]: { value: number, date?: string }
- * }
- * 
- * Where 'key' is:
- * - County: 5-digit FIPS code (e.g., "01001")
- * - Metro: CBSA code (e.g., "12420")
- * - ZIP: ZIP code (e.g., "78701")
- */
+/\*\*
+
+- What the data layer handles automatically:
+-
+- 1.  Single score type - always fetches score_type='propertyiq'
+- 2.  Confidence rating - A/B/C/F letter grade based on data quality
+- 3.  Score labels - EXCELLENT/GREAT/GOOD/FAIR/AVERAGE/BELOW AVG/POOR/VERY POOR
+- 4.  Score colors - via getScoreColor() utility
+- 5.  Error handling - returns null on errors
+-
+- Coverage: 746 metros, 2,983 counties, 19,880 ZIPs
+- Database: propertyiq_scores table, score_type = 'propertyiq'
+  \*/

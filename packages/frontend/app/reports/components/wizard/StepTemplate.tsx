@@ -1,36 +1,52 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { BarChart3, GitCompare, PiggyBank, Users, Activity, Lock, Loader2 } from 'lucide-react';
-import { UserTypeToggle } from './UserTypeToggle';
-import { TEMPLATE_INFO, TIER_INFO } from '../../constants';
-import type { UseWizardStateReturn } from '../../hooks/useWizardState';
-import type { ReportTemplate, ReportType, SubscriptionTier } from '../../types';
-import { fetchReportTemplates } from '@/lib/data';
-import { useEntitlements } from '@/lib/entitlements';
+import React, { useEffect, useState } from "react";
+import {
+  BarChart3,
+  GitCompare,
+  PiggyBank,
+  Users,
+  Activity,
+  Lock,
+  Loader2,
+} from "lucide-react";
+import { UserTypeToggle } from "./UserTypeToggle";
+import { TEMPLATE_INFO, TIER_INFO } from "../../constants";
+import type { UseWizardStateReturn } from "../../hooks/useWizardState";
+import type { ReportTemplate, ReportType, SubscriptionTier } from "../../types";
+import { fetchReportTemplates } from "@/lib/data";
+import { useEntitlements } from "@/lib/entitlements";
 
 // Default templates with proper AI narrative sections (used if API returns empty)
 const DEFAULT_TEMPLATES: ReportTemplate[] = [
   {
-    id: 'default-snapshot',
-    slug: 'snapshot',
-    name: 'Market Snapshot',
-    description: 'Quick pulse on any single market. Current conditions, key metrics, and AI-generated summary.',
-    icon: 'BarChart3',
+    id: "default-snapshot",
+    slug: "snapshot",
+    name: "Market Snapshot",
+    description:
+      "Quick pulse on any single market. Current conditions, key metrics, and AI-generated summary.",
+    icon: "BarChart3",
     version: 1,
-    tier_required: 'free',
+    tier_required: "free",
     is_active: true,
     is_public: true,
     config: {
-      report_type: 'snapshot',
-      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+      report_type: "snapshot",
+      supported_geography_types: [
+        "national",
+        "state",
+        "metro",
+        "county",
+        "city",
+        "zip",
+      ],
       user_inputs: [],
       pages: [],
       ai_config: {
         narrative_sections: [
           {
-            id: 'market_summary',
-            name: 'Market Summary',
+            id: "market_summary",
+            name: "Market Summary",
             prompt_template: `You are a real estate market analyst. Provide a concise market summary for {{geography_name}} ({{geography_type}}).
 
 Market Scores:
@@ -50,11 +66,11 @@ Write a 150-200 word summary covering:
 
 Be specific, data-driven, and actionable.`,
             max_tokens: 400,
-            output_format: 'text',
+            output_format: "text",
           },
           {
-            id: 'trend_observations',
-            name: 'Key Trends',
+            id: "trend_observations",
+            name: "Key Trends",
             prompt_template: `Based on the market data for {{geography_name}}:
 
 Scores: HomeReady {{scores.scores.homeready.score}}, InvestorEdge {{scores.scores.investoredge.score}}, MarketHealth {{scores.scores.markethealth.score}}
@@ -67,11 +83,11 @@ List 3-4 key market trends as bullet points. Each trend should:
 - Explain the implication for {{user_type}}s
 - Be concise (1-2 sentences each)`,
             max_tokens: 350,
-            output_format: 'text',
+            output_format: "text",
           },
           {
-            id: 'affordability_analysis',
-            name: 'Affordability Analysis',
+            id: "affordability_analysis",
+            name: "Affordability Analysis",
             prompt_template: `Analyze affordability in {{geography_name}} for {{user_type}}s.
 
 Market Scores:
@@ -85,44 +101,57 @@ Provide a brief (100-150 word) affordability analysis covering:
 2. How this market compares to typical conditions
 3. Specific recommendations for {{user_type}}s`,
             max_tokens: 300,
-            output_format: 'text',
+            output_format: "text",
           },
         ],
-        conversation_starter: 'What would you like to know about this market?',
+        conversation_starter: "What would you like to know about this market?",
         initial_questions: [
-          'How does this market compare to national averages?',
-          'What are the risks I should consider?',
-          'Is now a good time to buy in this market?',
+          "How does this market compare to national averages?",
+          "What are the risks I should consider?",
+          "Is now a good time to buy in this market?",
         ],
       },
-      data_requirements: { current_metrics: [], historical_metrics: [], benchmarks: [], scores: ['homeready', 'investoredge', 'markethealth'] },
+      data_requirements: {
+        current_metrics: [],
+        historical_metrics: [],
+        benchmarks: [],
+        scores: ["propertyiq"],
+      },
     },
     organization_id: null,
     base_template_id: null,
-    created_at: '',
-    updated_at: '',
+    created_at: "",
+    updated_at: "",
   },
   {
-    id: 'default-comparison',
-    slug: 'comparison',
-    name: 'Market Comparison',
-    description: 'Side-by-side comparison of 2-5 markets with rankings and winner badges.',
-    icon: 'GitCompare',
+    id: "default-comparison",
+    slug: "comparison",
+    name: "Market Comparison",
+    description:
+      "Side-by-side comparison of 2-5 markets with rankings and winner badges.",
+    icon: "GitCompare",
     version: 1,
-    tier_required: 'basic',
+    tier_required: "basic",
     is_active: true,
     is_public: true,
     config: {
-      report_type: 'comparison',
-      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+      report_type: "comparison",
+      supported_geography_types: [
+        "national",
+        "state",
+        "metro",
+        "county",
+        "city",
+        "zip",
+      ],
       comparison: { min_geographies: 2, max_geographies: 5 },
       user_inputs: [],
       pages: [],
       ai_config: {
         narrative_sections: [
           {
-            id: 'market_summary',
-            name: 'Comparison Summary',
+            id: "market_summary",
+            name: "Comparison Summary",
             prompt_template: `Compare {{geography_name}} with other selected markets for a {{user_type}}.
 
 Primary Market Scores:
@@ -138,18 +167,24 @@ Provide a 150-200 word comparison summary highlighting:
 2. Key advantages and disadvantages
 3. Which market type of buyer/investor each market suits best`,
             max_tokens: 400,
-            output_format: 'text',
+            output_format: "text",
           },
         ],
-        conversation_starter: 'Which aspects of these markets would you like to compare?',
+        conversation_starter:
+          "Which aspects of these markets would you like to compare?",
         initial_questions: [],
       },
-      data_requirements: { current_metrics: [], historical_metrics: [], benchmarks: [], scores: ['homeready', 'investoredge', 'markethealth'] },
+      data_requirements: {
+        current_metrics: [],
+        historical_metrics: [],
+        benchmarks: [],
+        scores: ["propertyiq"],
+      },
     },
     organization_id: null,
     base_template_id: null,
-    created_at: '',
-    updated_at: '',
+    created_at: "",
+    updated_at: "",
   },
 ];
 
@@ -166,7 +201,8 @@ interface StepTemplateProps {
 }
 
 export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
-  const { userType, setUserType, selectedTemplate, setSelectedTemplate } = wizardState;
+  const { userType, setUserType, selectedTemplate, setSelectedTemplate } =
+    wizardState;
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +216,7 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
         setTemplates(templateList);
       })
       .catch((err) => {
-        console.warn('Using default templates:', err.message);
+        console.warn("Using default templates:", err.message);
         setTemplates(DEFAULT_TEMPLATES);
       })
       .finally(() => setLoading(false));
@@ -188,14 +224,22 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
 
   // Sort templates by user type relevance
   const sortedTemplates = [...templates].sort((a, b) => {
-    const aRelevance = TEMPLATE_INFO[a.config.report_type as ReportType]?.userTypeRelevance[userType] || 99;
-    const bRelevance = TEMPLATE_INFO[b.config.report_type as ReportType]?.userTypeRelevance[userType] || 99;
+    const aRelevance =
+      TEMPLATE_INFO[a.config.report_type as ReportType]?.userTypeRelevance[
+        userType
+      ] || 99;
+    const bRelevance =
+      TEMPLATE_INFO[b.config.report_type as ReportType]?.userTypeRelevance[
+        userType
+      ] || 99;
     return aRelevance - bRelevance;
   });
 
   const { tier, simulatedTier } = useEntitlements();
-  const currentTier: SubscriptionTier = (simulatedTier || tier || 'free') as SubscriptionTier;
-  const tierOrder: SubscriptionTier[] = ['free', 'basic', 'pro', 'enterprise'];
+  const currentTier: SubscriptionTier = (simulatedTier ||
+    tier ||
+    "free") as SubscriptionTier;
+  const tierOrder: SubscriptionTier[] = ["free", "basic", "pro", "enterprise"];
 
   const canAccessTemplate = (template: ReportTemplate): boolean => {
     const requiredTierIndex = tierOrder.indexOf(template.tier_required);
@@ -237,10 +281,10 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
                   relative p-4 rounded-2xl text-left transition-all duration-200
                   ${
                     isSelected
-                      ? 'bg-primary-container border-2 border-primary'
+                      ? "bg-primary-container border-2 border-primary"
                       : canAccess
-                      ? 'bg-surface-container border-2 border-transparent hover:border-outline-variant'
-                      : 'bg-surface-container/50 border-2 border-transparent cursor-not-allowed opacity-60'
+                        ? "bg-surface-container border-2 border-transparent hover:border-outline-variant"
+                        : "bg-surface-container/50 border-2 border-transparent cursor-not-allowed opacity-60"
                   }
                 `}
               >
@@ -248,11 +292,11 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
                   <div
                     className={`
                       p-2.5 rounded-xl shrink-0
-                      ${isSelected ? 'bg-primary/20' : 'bg-surface-container-high'}
+                      ${isSelected ? "bg-primary/20" : "bg-surface-container-high"}
                     `}
                   >
                     <Icon
-                      className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-on-surface-variant'}`}
+                      className={`w-5 h-5 ${isSelected ? "text-primary" : "text-on-surface-variant"}`}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -260,12 +304,12 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
                       <div
                         className={`
                           font-medium text-sm truncate
-                          ${isSelected ? 'text-on-primary-container' : 'text-on-surface'}
+                          ${isSelected ? "text-on-primary-container" : "text-on-surface"}
                         `}
                       >
                         {template.name}
                       </div>
-                      {template.tier_required !== 'free' && (
+                      {template.tier_required !== "free" && (
                         <span
                           className={`
                             text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0
@@ -279,7 +323,7 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
                     <div
                       className={`
                         text-xs line-clamp-2
-                        ${isSelected ? 'text-on-primary-container/70' : 'text-on-surface-variant'}
+                        ${isSelected ? "text-on-primary-container/70" : "text-on-surface-variant"}
                       `}
                     >
                       {template.description}

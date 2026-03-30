@@ -29,12 +29,10 @@ describe("ScoreWidget — null score handling", () => {
   });
 
   it("shows em-dash when score is null (missing score type)", () => {
-    // Simulate: API returned data but this specific score type is null
+    // Simulate: API returned data but the PropertyIQ score is null
     mockUseScoreData.mockReturnValue({
       data: {
-        homeready: null, // Score type missing from DB
-        investoredge: { score: 72, confidence: { level: "b" } },
-        marketHealth: { score: 65, confidence: { level: "a" } },
+        propertyiq: null, // Score type missing from DB
       },
       loading: false,
       error: null,

@@ -152,7 +152,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: true,
-    enum: ['homeready', 'investoredge', 'markethealth', 'propertyiq'],
+    enum: ['propertyiq'],
   })
   @ApiQuery({
     name: 'limit',
@@ -348,8 +348,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    description:
-      'homeready, investoredge, or markethealth. If omitted, returns all score types.',
+    description: 'propertyiq. If omitted, returns all score types.',
   })
   @ApiQuery({
     name: 'date',
@@ -435,7 +434,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: true,
-    description: 'homeready, investoredge, markethealth, or all',
+    description: 'propertyiq or all',
   })
   @ApiQuery({
     name: 'date',
@@ -591,7 +590,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: true,
-    description: 'homeready, investoredge, markethealth, or all',
+    description: 'propertyiq or all',
   })
   @ApiQuery({
     name: 'date',
@@ -663,20 +662,22 @@ export class ScoringController {
     }
     const raw = scoreType.toLowerCase();
     if (raw === 'all') {
-      return ['homeready', 'investoredge', 'markethealth', 'propertyiq'];
+      return ['propertyiq'];
     }
     const parts = raw
       .split(',')
       .map((p) => p.trim())
       .filter(Boolean);
     const valid = parts.map((p) => this.validateScoreType(p));
-    if (valid.length === 0) {
+    // Deduplicate (legacy types all map to propertyiq)
+    const unique = [...new Set(valid)];
+    if (unique.length === 0) {
       throw new HttpException(
-        'score_type must be homeready, investoredge, markethealth, or all',
+        'score_type must be propertyiq (or legacy: homeready, investoredge, markethealth)',
         HttpStatus.BAD_REQUEST,
       );
     }
-    return valid;
+    return unique;
   }
 
   // ============================================================================
@@ -886,7 +887,7 @@ export class ScoringController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    enum: ['homeready', 'investoredge', 'markethealth'],
+    enum: ['propertyiq'],
   })
   async getPerformanceMetrics(
     @Query('geography') geography?: string,
@@ -1038,21 +1039,25 @@ export class ScoringController {
   }
 
   private validateScoreType(scoreType: string): ScoreType {
-    const validTypes: ScoreType[] = [
-      'homeready',
-      'investoredge',
-      'markethealth',
-      'propertyiq',
-    ];
-    const lower = scoreType.toLowerCase() as ScoreType;
+    const lower = scoreType.toLowerCase();
 
-    if (!validTypes.includes(lower)) {
+    // Map legacy score type names to propertyiq for backward compat
+    const legacyMapping: Record<string, ScoreType> = {
+      homeready: 'propertyiq',
+      investoredge: 'propertyiq',
+      markethealth: 'propertyiq',
+      market_health: 'propertyiq',
+      propertyiq: 'propertyiq',
+    };
+
+    const mapped = legacyMapping[lower];
+    if (!mapped) {
       throw new HttpException(
-        `Invalid score_type: ${scoreType}. Valid values: ${validTypes.join(', ')}`,
+        `Invalid score_type: ${scoreType}. Valid value: propertyiq`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    return lower;
+    return mapped;
   }
 }

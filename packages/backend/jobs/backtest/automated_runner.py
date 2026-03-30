@@ -46,17 +46,9 @@ logger = logging.getLogger(__name__)
 
 # Score types and their configurations
 SCORE_TYPES = {
-    'market_health': {
-        'horizons': ['6m', '1y'],
-        'components': ['demand_strength', 'supply_balance', 'price_stability', 'economic_foundation'],
-    },
-    'homeready': {
+    'propertyiq': {
         'horizons': ['6m', '1y', '3y', '5y'],
-        'components': ['affordability', 'market_timing', 'growth_potential', 'stability', 'liquidity'],
-    },
-    'investoredge': {
-        'horizons': ['6m', '1y', '3y', '5y'],
-        'components': ['cash_flow', 'appreciation', 'rent_demand', 'entry_point', 'stability'],
+        'components': ['sold_above_list', 'median_dom', 'months_of_supply'],
     },
 }
 
@@ -71,7 +63,7 @@ CONFIDENCE_THRESHOLDS = {
 @dataclass
 class BacktestConfig:
     """Configuration for automated backtest run."""
-    score_types: List[str] = field(default_factory=lambda: ['market_health', 'homeready', 'investoredge'])
+    score_types: List[str] = field(default_factory=lambda: ['propertyiq'])
     horizons: List[str] = field(default_factory=lambda: ['6m', '1y', '3y', '5y'])
     geography_types: List[str] = field(default_factory=lambda: ['state', 'metro', 'county', 'zip'])
     county_sample: int = 500
@@ -188,11 +180,7 @@ def fetch_score_outcome_pairs(
             SELECT
                 geography_id,
                 calculated_at as score_date,
-                CASE
-                    WHEN %s = 'market_health' THEN market_health_score
-                    WHEN %s = 'homeready' THEN homeready_score
-                    WHEN %s = 'investoredge' THEN investoredge_score
-                END as score_value
+                propertyiq_score as score_value
             FROM propertyiq_scores
             WHERE geography_type = %s
               AND {geo_filter}
@@ -242,7 +230,6 @@ def fetch_score_outcome_pairs(
     """
 
     params = (
-        score_type, score_type, score_type,
         geography_type,
         *geo_param if isinstance(geo_param, list) else [geo_param],
         start_date, end_date,
@@ -760,7 +747,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Run automated PropertyIQ backtest')
-    parser.add_argument('--score-types', type=str, default='market_health,homeready,investoredge',
+    parser.add_argument('--score-types', type=str, default='propertyiq',
                         help='Comma-separated list of score types')
     parser.add_argument('--horizons', type=str, default='6m,1y,3y,5y',
                         help='Comma-separated list of horizons')

@@ -16,7 +16,7 @@ Quinn is now a **complete real estate analytics platform** with:
 ### 1. Real Estate Market Data
 ```
 "Show me all metros in Texas"
-"What's the InvestorEdge score for Austin?"
+"What's the PropertyIQ Score for Austin?"
 "Find markets with scores above 80"
 "Get the latest Zillow data for Phoenix"
 "Compare Zillow vs Realtor prices"
@@ -26,10 +26,10 @@ Quinn is now a **complete real estate analytics platform** with:
 
 ### 2. Statistical Analysis
 ```
-"Run quintile validation on InvestorEdge scores"
+"Run quintile validation on PropertyIQ Scores"
 "Show me the quintile performance table"
 "What's the top quintile excess return?"
-"Calculate beat rates for HomeReady scores"
+"Calculate beat rates for PropertyIQ scores"
 "Run a full backtest with 1-year, 3-year, and 5-year horizons"
 "Should I use 3 or 9 formulas?"
 "Which raw metrics best predict 5-year appreciation?"
@@ -160,9 +160,9 @@ potential price appreciation in 3-6 months.
 **Quinn:** *[Queries watchlist]*
 ```
 Your Watchlist (12 markets):
-1. Austin, TX - InvestorEdge: 78.5
-2. Phoenix, AZ - InvestorEdge: 75.2
-3. Raleigh, NC - InvestorEdge: 76.8
+1. Austin, TX - PropertyIQ: 78.5
+2. Phoenix, AZ - PropertyIQ: 75.2
+3. Raleigh, NC - PropertyIQ: 76.8
 ...
 ```
 
@@ -198,8 +198,8 @@ RALEIGH (1 article):
 🏠 Austin-Round Rock-Georgetown, TX Metro Analysis
 
 📊 PropertyIQ Scores:
-• InvestorEdge: 78.5 (Top Quintile)
-• HomeReady: 72.3 (Above Average)
+• PropertyIQ: 78.5 (Top Quintile)
+• PropertyIQ: 72.3 (Above Average)
 • MarketHealth: 68.9 (Good)
 
 💰 Current Market Data (Latest):
@@ -336,7 +336,7 @@ npm run dev
 
 **Market Research:**
 ```
-"Find the top 10 markets by InvestorEdge score"
+"Find the top 10 markets by PropertyIQ Score"
 "Show me Texas metros with scores above 75"
 "Compare Austin to Phoenix"
 ```
@@ -350,7 +350,7 @@ npm run dev
 
 **Advanced Analysis:**
 ```
-"Run quintile validation on InvestorEdge"
+"Run quintile validation on PropertyIQ"
 "Which metrics best predict appreciation?"
 "Should I use 3 or 9 formulas?"
 ```

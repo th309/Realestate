@@ -20,7 +20,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { ScoreType } from './scoring.types';
+import type { AnyScoreType } from './scoring.types';
 import { UserFeaturesService } from '../admin/features/user-features.service';
 
 export type ScoreAccess = 'full' | 'teaser';
@@ -30,13 +30,13 @@ export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise' | 'admin';
 export const SCORE_ACCESS_KEY = 'scoreAccess';
 
 // Decorator to specify required score access
-export const RequireScoreAccess = (...scoreTypes: ScoreType[]) =>
+export const RequireScoreAccess = (...scoreTypes: AnyScoreType[]) =>
   SetMetadata(SCORE_ACCESS_KEY, scoreTypes);
 
 /**
  * Get upgrade message for locked scores
  */
-export function getUpgradeMessage(scoreType: ScoreType): string {
+export function getUpgradeMessage(scoreType: AnyScoreType): string {
   switch (scoreType) {
     case 'homeready':
       return 'See what drives this HomeReady score — affordability, market timing, and livability factors.';

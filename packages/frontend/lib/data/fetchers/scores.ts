@@ -13,11 +13,7 @@ import { fetchAPI, fetchAPIWithParams } from "./base";
 // ============================================================================
 
 export type TopMarketsGeo = "metro" | "county" | "zip";
-export type TopMarketsScoreType =
-  | "homeready"
-  | "investoredge"
-  | "markethealth"
-  | "propertyiq";
+export type TopMarketsScoreType = "propertyiq";
 
 export interface TopMarketEntry {
   location_id: string;
@@ -34,7 +30,7 @@ export interface TopMarketEntry {
  * Fetch top-ranked markets by score
  *
  * @param geography - Geography level: metro, county, or zip
- * @param scoreType - Score to rank by: homeready, investoredge, or markethealth
+ * @param scoreType - Score to rank by (only "propertyiq" supported)
  * @param limit - Number of results (1-100, default 10)
  */
 export async function fetchTopMarkets(

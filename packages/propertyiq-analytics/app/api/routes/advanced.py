@@ -52,7 +52,7 @@ class ClusterRequest(BaseModel):
 class OptimizeWeightsRequest(BaseModel):
     """Request for weight optimization."""
     geography_type: str = Field("metro", description="Geography level")
-    score_type: str = Field("investoredge", description="'investoredge' or 'homeready'")
+    score_type: str = Field("propertyiq", description="Score type: 'propertyiq'")
     target: str = Field("actual_appreciation_12m", description="Target to optimize for")
     states: Optional[List[str]] = Field(None, description="State filter")
 
@@ -320,7 +320,7 @@ async def get_raw_metric_summary(
 
 class BacktestRequest(BaseModel):
     """Request for backtest analysis."""
-    score_type: str = Field("investoredge", description="Score type: investoredge, homeready, market_health")
+    score_type: str = Field("propertyiq", description="Score type: 'propertyiq'")
     geography_type: str = Field("metro", description="Geography level")
     benchmark_type: str = Field("national", description="Benchmark: national, regional, peer")
     horizons: Optional[List[int]] = Field(None, description="Time horizons in months (default: [12, 36, 60])")
@@ -329,7 +329,7 @@ class BacktestRequest(BaseModel):
 
 class QuintileAnalysisRequest(BaseModel):
     """Request for quintile validation analysis."""
-    score_type: str = Field("investoredge", description="Score type to validate")
+    score_type: str = Field("propertyiq", description="Score type to validate")
     geography_type: str = Field("metro", description="Geography level")
     horizon_months: int = Field(36, description="Time horizon in months (12, 36, or 60)")
     use_cache: bool = Field(True, description="Use cached data")
@@ -338,7 +338,7 @@ class QuintileAnalysisRequest(BaseModel):
 class FormulaComparisonRequest(BaseModel):
     """Request for comparing 3 vs 9 formula approach."""
     geography_types: List[str] = Field(["metro", "county", "zip"], description="Geography levels to analyze")
-    score_types: List[str] = Field(["investoredge", "homeready", "market_health"], description="Scores to compare")
+    score_types: List[str] = Field(["propertyiq"], description="Score types to compare")
     horizon_months: int = Field(36, description="Time horizon for comparison")
 
 
@@ -501,11 +501,10 @@ async def run_quintile_analysis(request: QuintileAnalysisRequest):
 @router.post("/formula-comparison")
 async def compare_formulas(request: FormulaComparisonRequest):
     """
-    Compare 3-formula vs 9-formula approach.
+    Compare formula performance across geography levels.
 
-    Analyzes whether you should use:
-    - 3 formulas: One per score type (InvestorEdge, HomeReady, MarketHealth)
-    - 9 formulas: One per score type × geography level (metro, county, zip)
+    Analyzes whether the PropertyIQ formula performs consistently
+    across different geography levels (metro, county, zip).
 
     Returns:
     - Validation metrics for each geography level
