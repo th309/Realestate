@@ -86,32 +86,10 @@ function enrichCountyFeatures(geojson: any, mapData: MapData): void {
   );
 }
 
-/**
- * TIGER shapefiles use 2023 Census CBSA codes, but our data tables may use
- * either old or new codes for ~13 metros (depends on cache freshness after
- * the 2023-delineation migration). This bidirectional crosswalk ensures the
- * data join succeeds regardless of which side has old vs new codes.
- */
-const TIGER_TO_SYSTEM_CBSA: Record<string, string> = {
-  "14454": "14460", // Boston
-  "16984": "16980", // Chicago
-  "17460": "17410", // Cleveland
-  "19124": "19100", // Dallas
-  "19804": "19820", // Detroit
-  "30100": "30150", // Lebanon NH
-  "31084": "31080", // Los Angeles
-  "33124": "33100", // Miami
-  "35614": "35620", // New York
-  "37964": "37980", // Philadelphia
-  "41884": "41860", // San Francisco
-  "42644": "42660", // Seattle
-  "47894": "47900", // Washington DC
-};
-
-/** Reverse crosswalk: new (system) code → old (TIGER) code */
-const SYSTEM_TO_TIGER_CBSA: Record<string, string> = Object.fromEntries(
-  Object.entries(TIGER_TO_SYSTEM_CBSA).map(([k, v]) => [v, k]),
-);
+import {
+  TIGER_TO_SYSTEM_CBSA,
+  SYSTEM_TO_TIGER_CBSA,
+} from "@/lib/data/cbsa-crosswalk";
 
 function enrichMetroFeatures(geojson: any, mapData: MapData): void {
   geojson.features.forEach((feature: any) => {

@@ -9,13 +9,14 @@
  * - Consistent loading/error states
  */
 
-import { useQuery } from '@tanstack/react-query';
-import type { GeoLevel, SnapshotData, SnapshotEntry } from '../types';
-import { fetchSnapshotData } from '../fetchers';
-import { getMetricConfig, getMetricFormat } from '../registry-helpers';
-import { formatMetricValue } from '../format';
-import { useMetricAccess } from './useMetricAccess';
-import type { UserTier } from '@/lib/entitlements';
+import { useQuery } from "@tanstack/react-query";
+import type { GeoLevel, SnapshotData, SnapshotEntry } from "../types";
+import { fetchSnapshotData } from "../fetchers";
+import { getMetricConfig, getMetricFormat } from "../registry-helpers";
+import { formatMetricValue } from "../format";
+import { useMetricAccess } from "./useMetricAccess";
+import type { UserTier } from "@/lib/entitlements";
+import { lookupWithCbsaFallback } from "../cbsa-crosswalk";
 
 export interface UseSnapshotDataOptions {
   /** State filter for county/zip/city data */
@@ -40,7 +41,7 @@ export interface UseSnapshotDataResult {
   /** Geography ID where value was resolved */
   sourceGeoId: string | null;
   /** Geography level where value was resolved */
-  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null;
   /** Whether value is inherited from parent geography */
   isInherited: boolean;
   /** Whether value came from fallback source */
@@ -81,23 +82,21 @@ export function useSnapshotData(
   metricId: string,
   geoLevel: GeoLevel,
   regionId?: string,
-  options: UseSnapshotDataOptions = {}
+  options: UseSnapshotDataOptions = {},
 ): UseSnapshotDataResult {
   const { stateFilter, enabled = true } = options;
   const access = useMetricAccess(metricId);
 
-  const queryKey = ['snapshot', metricId, geoLevel, stateFilter].filter(Boolean);
+  const queryKey = ["snapshot", metricId, geoLevel, stateFilter].filter(
+    Boolean,
+  );
 
   // IMPORTANT: Always call useQuery to maintain hook order consistency.
   // Use enabled: false to skip fetching when metric is gated.
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey,
-    queryFn: () => fetchSnapshotData(metricId, geoLevel, { state: stateFilter }),
+    queryFn: () =>
+      fetchSnapshotData(metricId, geoLevel, { state: stateFilter }),
     enabled: enabled && !!metricId && !!geoLevel && !access.gated,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
@@ -109,7 +108,7 @@ export function useSnapshotData(
       allData: {},
       entry: null,
       value: null,
-      formattedValue: '\u2014',
+      formattedValue: "\u2014",
       date: undefined,
       source: null,
       sourceGeoId: null,
@@ -126,35 +125,38 @@ export function useSnapshotData(
 
   // Extract specific entry if regionId provided
   const allData = data ?? {};
-  const entry = regionId ? (allData[regionId] ?? null) : null;
+  const rawEntry = regionId
+    ? lookupWithCbsaFallback(allData, regionId, geoLevel)
+    : null;
+  const entry: SnapshotEntry | null =
+    rawEntry !== null && typeof rawEntry === "object" ? rawEntry : null;
 
   // Extract numeric value
   let value: number | null = null;
   let date: string | undefined;
   let source: string | null = null;
   let sourceGeoId: string | null = null;
-  let sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null = null;
+  let sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null =
+    null;
   let isInherited = false;
   let isFallback = false;
 
-  if (entry !== null) {
-    if (typeof entry === 'number') {
-      value = entry;
-    } else if (entry && typeof entry === 'object') {
-      value = entry.value;
-      date = entry.date;
-      source = entry.source ?? null;
-      sourceGeoId = entry.sourceGeoId ?? null;
-      sourceGeoLevel = entry.sourceGeoLevel ?? null;
-      isInherited = entry.isInherited ?? false;
-      isFallback = entry.isFallback ?? false;
-    }
+  if (typeof rawEntry === "number") {
+    value = rawEntry;
+  } else if (entry !== null) {
+    value = entry.value;
+    date = entry.date;
+    source = entry.source ?? null;
+    sourceGeoId = entry.sourceGeoId ?? null;
+    sourceGeoLevel = entry.sourceGeoLevel ?? null;
+    isInherited = entry.isInherited ?? false;
+    isFallback = entry.isFallback ?? false;
   }
 
   // Format the value
   const format = getMetricFormat(metricId);
   const config = getMetricConfig(metricId);
-  const isPropertyIQ = config?.dataSource === 'propertyiq';
+  const isPropertyIQ = config?.dataSource === "propertyiq";
   const formattedValue = formatMetricValue(value, format, { isPropertyIQ });
 
   return {
@@ -185,7 +187,7 @@ export function useSnapshotDataBatch(
   metricIds: string[],
   geoLevel: GeoLevel,
   regionId?: string,
-  options: UseSnapshotDataOptions = {}
+  options: UseSnapshotDataOptions = {},
 ): {
   data: Record<string, UseSnapshotDataResult>;
   isLoading: boolean;
