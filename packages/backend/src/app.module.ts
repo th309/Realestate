@@ -54,6 +54,7 @@ import { OrgEmbedsModule } from './org-embeds/org-embeds.module';
 import { OrgApiKeysModule } from './org-api-keys/org-api-keys.module';
 import { UserApiKeysModule } from './user-api-keys/user-api-keys.module';
 import { PlatformApiModule } from './platform-api/platform-api.module';
+import { DeviceAuthModule } from './device-auth/device-auth.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 import { AdminMetricsModule } from './admin-metrics/admin-metrics.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
@@ -130,6 +131,7 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     OrgApiKeysModule,
     UserApiKeysModule,
     PlatformApiModule,
+    DeviceAuthModule,
     AdminMetricsModule,
   ],
   controllers: [AppController],
