@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { RedisService } from '../redis/redis.service';
 import { EmbedValidationResult } from './embed-token.types';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class EmbedTokenValidatorService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -76,6 +78,8 @@ export class EmbedTokenValidatorService {
       );
     }
 
+    await this.requireEnterpriseTier(tokenRow.organization_id);
+
     const allowedOrigins = tokenRow.allowed_origins as string[];
     if (origin && !this.matchOrigin(origin, allowedOrigins)) {
       throw new ForbiddenException('ORIGIN_NOT_ALLOWED');
@@ -99,6 +103,56 @@ export class EmbedTokenValidatorService {
         website_url: org.website_url ?? null,
       },
     };
+  }
+
+  /**
+   * Verify the org owner holds an enterprise or admin subscription tier.
+   * Uses Redis cache (key: `tier:org-owner:{orgId}`, TTL: 5 min) to avoid
+   * repeated DB lookups per request. Falls through to DB if Redis is down.
+   */
+  private async requireEnterpriseTier(orgId: string): Promise<void> {
+    const cacheKey = `tier:org-owner:${orgId}`;
+
+    try {
+      const cached = await this.redisService.getByKey(cacheKey);
+      if (cached && (cached === 'enterprise' || cached === 'admin')) return;
+      if (cached) {
+        throw new ForbiddenException(
+          'Embeds require an Enterprise subscription',
+        );
+      }
+    } catch (err) {
+      if (err instanceof ForbiddenException) throw err;
+      // Redis unavailable — fall through to DB check
+    }
+
+    const { data: org } = await this.supabase
+      .from('organizations')
+      .select('owner_id')
+      .eq('id', orgId)
+      .single();
+
+    if (!org?.owner_id) {
+      throw new ForbiddenException('Organization has no owner');
+    }
+
+    const { data: profile } = await this.supabase
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('id', org.owner_id)
+      .single();
+
+    const tier = profile?.subscription_tier ?? 'free';
+
+    try {
+      await this.redisService.setByKey(cacheKey, tier, 300);
+    } catch {
+      // Redis unavailable
+    }
+
+    if (tier !== 'enterprise' && tier !== 'admin') {
+      throw new ForbiddenException('Embeds require an Enterprise subscription');
+    }
   }
 
   /**
