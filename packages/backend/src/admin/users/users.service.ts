@@ -794,12 +794,19 @@ export class UsersService {
       throw new Error(profileError.message);
     }
 
-    // Delete auth user
+    // Delete auth user (may already be gone if profile was orphaned)
     const { error: authError } = await client.auth.admin.deleteUser(userId);
 
     if (authError) {
-      this.logger.error(`Failed to delete auth user ${userId}`, authError);
-      throw new Error(authError.message);
+      const msg = authError.message?.toLowerCase() ?? '';
+      if (msg.includes('not found') || msg.includes('user not found')) {
+        this.logger.warn(
+          `Auth user ${userId} already deleted — cleaning up orphaned profile`,
+        );
+      } else {
+        this.logger.error(`Failed to delete auth user ${userId}`, authError);
+        throw new Error(authError.message);
+      }
     }
 
     this.logger.log(`Admin deleted user ${userId}`);
