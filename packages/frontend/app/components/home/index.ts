@@ -6,6 +6,7 @@ export { StatsSection } from "./StatsSection";
 export { ValuePropsSection } from "./ValuePropsSection";
 export { AlphaCallout } from "./AlphaCallout";
 export { GraphsShowcase } from "./GraphsShowcase";
+export { AIIntegrationsSection } from "./AIIntegrationsSection";
 export { PricingSection } from "./PricingSection";
 export { CTASection } from "./CTASection";
 export { Footer } from "./Footer";

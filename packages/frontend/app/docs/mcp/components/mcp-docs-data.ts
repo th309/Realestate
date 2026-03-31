@@ -59,6 +59,15 @@ export const SETUP_CONFIGS = {
   }
 }`,
 
+  windsurf: `{
+  "mcpServers": {
+    "propertyiq": {
+      "command": "npx",
+      "args": ["-y", "@propertyiq/mcp-server"]
+    }
+  }
+}`,
+
   vscodeCopilot: `{
   "mcp": {
     "servers": {
@@ -67,6 +76,15 @@ export const SETUP_CONFIGS = {
         "command": "npx",
         "args": ["-y", "@propertyiq/mcp-server"]
       }
+    }
+  }
+}`,
+
+  cline: `{
+  "mcpServers": {
+    "propertyiq": {
+      "command": "npx",
+      "args": ["-y", "@propertyiq/mcp-server"]
     }
   }
 }`,
@@ -88,7 +106,7 @@ export const MCP_FAQ = [
   {
     question: "Which AI clients support MCP?",
     answer:
-      "Claude Code, Claude Desktop, Cursor, VS Code (GitHub Copilot), Windsurf, and any MCP-compatible client.",
+      "Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (GitHub Copilot), Cline, Zed, Continue.dev, and any client that supports MCP stdio transport.",
   },
   {
     question: "Can I use this with ChatGPT or Gemini?",

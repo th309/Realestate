@@ -7,6 +7,7 @@ import {
   ValuePropsSection,
   AlphaCallout,
   GraphsShowcase,
+  AIIntegrationsSection,
   PricingSection,
   CTASection,
   Footer,
@@ -58,6 +59,7 @@ export default function HomePage() {
         <ValuePropsSection />
         <AlphaCallout />
         <GraphsShowcase />
+        <AIIntegrationsSection />
         <PricingSection />
         <CTASection />
         <Footer />
