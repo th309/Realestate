@@ -15,13 +15,22 @@ import {
   IsOptional,
   IsInt,
 } from 'class-validator';
-import {
-  VALID_API_KEY_SCOPES,
-  VALID_RATE_LIMITS,
-  type ApiKeyScope,
-} from '../../org-api-keys/dto/create-api-key.dto';
+import { VALID_RATE_LIMITS } from '../../org-api-keys/dto/create-api-key.dto';
 
-export { VALID_API_KEY_SCOPES, VALID_RATE_LIMITS };
+export { VALID_RATE_LIMITS };
+
+/** Scopes available to Pro+ user API keys */
+export const VALID_USER_API_KEY_SCOPES = [
+  'scores:read',
+  'metrics:read',
+  'rankings:read',
+  'reports:read',
+  'reports:write',
+  'watchlist:read',
+  'watchlist:write',
+] as const;
+
+export type UserApiKeyScope = (typeof VALID_USER_API_KEY_SCOPES)[number];
 
 export class CreateUserApiKeyDto {
   @IsString()
@@ -31,8 +40,8 @@ export class CreateUserApiKeyDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @IsIn([...VALID_API_KEY_SCOPES], { each: true })
-  scopes: ApiKeyScope[];
+  @IsIn([...VALID_USER_API_KEY_SCOPES], { each: true })
+  scopes: UserApiKeyScope[];
 
   @IsOptional()
   @IsInt()

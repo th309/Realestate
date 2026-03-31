@@ -93,13 +93,7 @@ export class PlatformReportsController {
    */
   @Post()
   async create(@Req() req: any, @Body() body: CreateReportBody) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:write');
 
     if (!body.geography_level || !body.geography_id || !body.report_type) {
@@ -113,7 +107,8 @@ export class PlatformReportsController {
       );
     }
 
-    const ownerId = await getOrgOwnerId(this.supabase, orgId);
+    const ownerId =
+      source === 'user' ? userId : await getOrgOwnerId(this.supabase, orgId);
 
     // Build the internal GenerateReportDto from the API body
     const geography = new GeographyDto();
@@ -133,14 +128,16 @@ export class PlatformReportsController {
     const reportId = await this.reportsService.generateReport(
       ownerId,
       dto,
-      'enterprise',
+      source === 'user' ? 'pro' : 'enterprise',
     );
 
     // Tag the report with the org so GET queries can scope by org
-    await this.supabase
-      .from('reports')
-      .update({ organization_id: orgId })
-      .eq('id', reportId);
+    if (orgId) {
+      await this.supabase
+        .from('reports')
+        .update({ organization_id: orgId })
+        .eq('id', reportId);
+    }
 
     return {
       id: reportId,
@@ -157,13 +154,7 @@ export class PlatformReportsController {
    */
   @Get(':id')
   async findOne(@Req() req: any, @Param('id') reportId: string) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:read');
 
     const { data: report, error } = await this.supabase
@@ -179,14 +170,23 @@ export class PlatformReportsController {
       );
     }
 
-    // Verify org ownership — report must belong to this org or its owner
-    if (report.organization_id !== orgId) {
-      const ownerId = await getOrgOwnerId(this.supabase, orgId);
-      if (report.user_id !== ownerId) {
+    // Verify ownership — report must belong to this user or org
+    if (source === 'user') {
+      if (report.user_id !== userId) {
         throw new HttpException(
           { code: 'REPORT_NOT_FOUND', message: 'Report not found' },
           HttpStatus.NOT_FOUND,
         );
+      }
+    } else {
+      if (report.organization_id !== orgId) {
+        const ownerId = await getOrgOwnerId(this.supabase, orgId);
+        if (report.user_id !== ownerId) {
+          throw new HttpException(
+            { code: 'REPORT_NOT_FOUND', message: 'Report not found' },
+            HttpStatus.NOT_FOUND,
+          );
+        }
       }
     }
 
@@ -233,13 +233,7 @@ export class PlatformReportsController {
     @Query('limit') limitStr?: string,
     @Query('cursor') cursor?: string,
   ) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:read');
 
     const limit = Math.min(
@@ -251,10 +245,15 @@ export class PlatformReportsController {
       .from('reports')
       .select(
         'id, title, report_type, status, primary_geography_type, primary_geography_id, primary_geography_name, propertyiq_score, homeready_score, created_at',
-      )
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(limit + 1); // Fetch one extra to detect next page
+      );
+
+    if (source === 'user') {
+      query = query.eq('user_id', userId);
+    } else {
+      query = query.eq('organization_id', orgId);
+    }
+
+    query = query.order('created_at', { ascending: false }).limit(limit + 1); // Fetch one extra to detect next page
 
     if (cursor) {
       query = query.lt('created_at', cursor);

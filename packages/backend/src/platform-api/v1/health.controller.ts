@@ -38,17 +38,31 @@ export class HealthV1Controller {
    */
   @Get()
   async getHealth(@Req() request: any) {
-    const { orgId, scopes, rateLimitRpm, keyId } = request.apiKeyOrg;
+    const { orgId, userId, scopes, rateLimitRpm, source } = request.apiKeyOrg;
 
-    const { data: org } = await this.supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', orgId)
-      .single();
+    let ownerName: string | null = null;
+
+    if (source === 'org' && orgId) {
+      const { data: org } = await this.supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', orgId)
+        .single();
+      ownerName = org?.name ?? null;
+    } else if (source === 'user' && userId) {
+      const { data: profile } = await this.supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('id', userId)
+        .single();
+      ownerName = profile?.full_name || profile?.email || null;
+    }
 
     return {
       status: 'ok',
-      organization: org?.name ?? null,
+      key_type: source,
+      organization: source === 'org' ? ownerName : undefined,
+      user: source === 'user' ? ownerName : undefined,
       scopes,
       rate_limit_rpm: rateLimitRpm,
       expires_at: null,

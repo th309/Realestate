@@ -48,10 +48,13 @@ export class ApiThrottleGuard implements CanActivate {
     const limit = keyData.rateLimitRpm || DEFAULT_RATE_LIMIT_RPM;
     const resetAt = new Date((windowMinute + 1) * 60000).toISOString();
 
-    // Get current request count for this window
-    const currentCount = await this.getCurrentCount(redisKey);
+    // Atomically increment counter — prevents race conditions under concurrency
+    const currentCount = await this.redis.incrWithTTL(
+      redisKey,
+      RATE_LIMIT_KEY_TTL_SECONDS,
+    );
 
-    if (currentCount >= limit) {
+    if (currentCount > limit) {
       this.setRateLimitHeaders(response, limit, 0, resetAt);
       response.setHeader('Retry-After', '60');
 
@@ -68,38 +71,13 @@ export class ApiThrottleGuard implements CanActivate {
       );
     }
 
-    // Increment counter — uses setByKey with 120s TTL so keys auto-expire
-    await this.redis.setByKey(
-      redisKey,
-      currentCount + 1,
-      RATE_LIMIT_KEY_TTL_SECONDS,
-    );
-
-    const remaining = Math.max(0, limit - currentCount - 1);
+    const remaining = Math.max(0, limit - currentCount);
     this.setRateLimitHeaders(response, limit, remaining, resetAt);
 
     // Attach rate limit info for the response envelope interceptor
     request.rateLimitInfo = { limit, remaining, reset_at: resetAt };
 
     return true;
-  }
-
-  /**
-   * Read the current request count from Redis.
-   * Returns 0 if Redis is unavailable or key doesn't exist (fail-open).
-   */
-  private async getCurrentCount(redisKey: string): Promise<number> {
-    try {
-      const value = await this.redis.getByKey(redisKey);
-      if (value === null || value === undefined) return 0;
-      const parsed =
-        typeof value === 'number' ? value : parseInt(String(value), 10);
-      return isNaN(parsed) ? 0 : parsed;
-    } catch {
-      // Fail open — if Redis is down, don't block requests
-      this.logger.warn('Redis unavailable for rate limiting — failing open');
-      return 0;
-    }
   }
 
   /**

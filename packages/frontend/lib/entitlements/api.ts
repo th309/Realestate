@@ -1,10 +1,10 @@
 // packages/frontend/lib/entitlements/api.ts
 
-import type { EntitlementsState, ResourceType } from './types';
-import { getAnonymousSessionId } from './session';
-import { getAuthHeaders } from '@/lib/data/fetchers/auth-headers';
+import type { EntitlementsState, ResourceType } from "./types";
+import { getAnonymousSessionId } from "./session";
+import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export async function fetchEntitlements(
   resources: string[],
@@ -13,40 +13,40 @@ export async function fetchEntitlements(
 ): Promise<EntitlementsState> {
   const params = new URLSearchParams();
   if (resources.length > 0) {
-    params.set('resources', resources.join(','));
+    params.set("resources", resources.join(","));
   }
   if (tierOverride) {
-    params.set('tier', tierOverride);
+    params.set("tier", tierOverride);
   }
   // Cache bust to ensure fresh data
-  params.set('_t', Date.now().toString());
+  params.set("_t", Date.now().toString());
 
   const url = `${API_URL}/api/entitlements/check?${params}`;
 
   const authHeaders = await getAuthHeaders();
   const headers: Record<string, string> = {
     ...authHeaders,
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
   if (userId) {
-    headers['x-user-id'] = userId;
+    headers["x-user-id"] = userId;
   }
 
   let response: Response;
   try {
     response = await fetch(url, {
       headers,
-      credentials: 'include',
-      cache: 'no-store',
+      credentials: "include",
+      cache: "no-store",
     });
   } catch (err) {
     // Network error (backend unreachable) — throw so the caller preserves previous tier
-    console.warn('[Entitlements] Backend unreachable:', err);
-    throw new Error('Backend unreachable');
+    console.warn("[Entitlements] Backend unreachable:", err);
+    throw new Error("Backend unreachable");
   }
 
   if (!response.ok) {
-    console.warn('[Entitlements] API returned', response.status);
+    console.warn("[Entitlements] API returned", response.status);
     throw new Error(`Entitlements API returned ${response.status}`);
   }
 
@@ -64,17 +64,23 @@ export async function fetchEntitlements(
 export async function trackPaywallEvent(
   resourceType: ResourceType,
   resourceId: string,
-  eventType: 'view' | 'click_upgrade' | 'dismiss',
+  eventType: "view" | "click_upgrade" | "dismiss",
   pagePath?: string,
+  userId?: string,
+  userTier?: string,
 ): Promise<void> {
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-session-id": getAnonymousSessionId(),
+    };
+    if (userId) headers["x-user-id"] = userId;
+    if (userTier) headers["x-user-tier"] = userTier;
+
     await fetch(`${API_URL}/api/entitlements/events`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-session-id': getAnonymousSessionId(),
-      },
-      credentials: 'include',
+      method: "POST",
+      headers,
+      credentials: "include",
       body: JSON.stringify({
         resourceType,
         resourceId,
@@ -84,7 +90,7 @@ export async function trackPaywallEvent(
     });
   } catch (error) {
     // Silently fail - analytics should not break the app
-    console.warn('Failed to track paywall event:', error);
+    console.warn("Failed to track paywall event:", error);
   }
 }
 

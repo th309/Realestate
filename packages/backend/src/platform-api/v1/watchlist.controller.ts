@@ -107,16 +107,13 @@ export class PlatformWatchlistController {
    */
   @Get()
   async findAll(@Req() req: any) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:read');
 
-    const userIds = await getOrgMemberUserIds(this.supabase, orgId);
+    const userIds =
+      source === 'user'
+        ? [userId]
+        : await getOrgMemberUserIds(this.supabase, orgId);
 
     if (userIds.length === 0) {
       return { items: [], count: 0 };
@@ -150,13 +147,7 @@ export class PlatformWatchlistController {
    */
   @Post()
   async create(@Req() req: any, @Body() body: AddWatchlistBody) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:write');
 
     if (!body.geography_level || !body.geography_id) {
@@ -169,7 +160,8 @@ export class PlatformWatchlistController {
       );
     }
 
-    const ownerId = await getOrgOwnerId(this.supabase, orgId);
+    const ownerId =
+      source === 'user' ? userId : await getOrgOwnerId(this.supabase, orgId);
 
     const { data, error } = await this.supabase
       .from('analytics_watchlist')
@@ -216,17 +208,14 @@ export class PlatformWatchlistController {
    */
   @Delete(':id')
   async remove(@Req() req: any, @Param('id') itemId: string) {
-    if (!req.apiKeyOrg?.orgId) {
-      throw new ForbiddenException({
-        code: 'ORG_KEY_REQUIRED',
-        message: 'This endpoint requires an organization API key',
-      });
-    }
-    const { orgId, scopes } = req.apiKeyOrg;
+    const { orgId, userId, scopes, source } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:write');
 
-    // Verify the item belongs to an org member
-    const userIds = await getOrgMemberUserIds(this.supabase, orgId);
+    // Verify the item belongs to the user or an org member
+    const userIds =
+      source === 'user'
+        ? [userId]
+        : await getOrgMemberUserIds(this.supabase, orgId);
 
     if (userIds.length === 0) {
       throw new HttpException(

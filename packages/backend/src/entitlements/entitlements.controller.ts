@@ -30,10 +30,28 @@ export class EntitlementsController {
     @Query('tier') tierOverride: string,
     @Headers('x-user-id') userId: string,
   ) {
+    // Only allow tierOverride for admin users (dev tools simulation).
+    // Without this, anyone can call ?tier=admin and see full access maps.
+    let safeTierOverride: string | null = null;
+    if (tierOverride && userId) {
+      const { data: adminRow } = await this.supabase
+        .getClient()
+        .from('admin_users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      if (
+        adminRow &&
+        (adminRow.role === 'admin' || adminRow.role === 'super_admin')
+      ) {
+        safeTierOverride = tierOverride;
+      }
+    }
+
     const resourceList = resources ? resources.split(',') : [];
     return this.service.checkAccess(
       userId || null,
-      tierOverride || null,
+      safeTierOverride,
       resourceList,
     );
   }

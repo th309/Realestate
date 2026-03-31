@@ -221,9 +221,16 @@ export function EntitlementsProvider({
 
   const trackPaywallView = useCallback(
     (type: ResourceType, id: string, pagePath?: string) => {
-      trackPaywallEvent(type, id, "view", pagePath || window.location.pathname);
+      trackPaywallEvent(
+        type,
+        id,
+        "view",
+        pagePath || window.location.pathname,
+        user?.id,
+        state.tier,
+      );
     },
-    [],
+    [user?.id, state.tier],
   );
 
   const trackUpgradeClick = useCallback(
@@ -233,14 +240,26 @@ export function EntitlementsProvider({
         id,
         "click_upgrade",
         pagePath || window.location.pathname,
+        user?.id,
+        state.tier,
       );
     },
-    [],
+    [user?.id, state.tier],
   );
 
-  const trackDismiss = useCallback((type: ResourceType, id: string) => {
-    trackPaywallEvent(type, id, "dismiss", window.location.pathname);
-  }, []);
+  const trackDismiss = useCallback(
+    (type: ResourceType, id: string) => {
+      trackPaywallEvent(
+        type,
+        id,
+        "dismiss",
+        window.location.pathname,
+        user?.id,
+        state.tier,
+      );
+    },
+    [user?.id, state.tier],
+  );
 
   const resetSimulation = useCallback(() => {
     setSimulatedTier(null);

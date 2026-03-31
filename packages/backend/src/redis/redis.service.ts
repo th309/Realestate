@@ -214,6 +214,27 @@ export class RedisService implements OnModuleInit {
   }
 
   /**
+   * Atomically increment a key and set TTL on first creation.
+   * Returns the new count. Used for rate limiting.
+   */
+  async incrWithTTL(key: string, ttlSeconds: number): Promise<number> {
+    if (!this.isAvailable() || !this.client) {
+      return 0; // Fail open
+    }
+
+    try {
+      const count = await this.client.incr(key);
+      if (count === 1) {
+        await this.client.expire(key, ttlSeconds);
+      }
+      return count;
+    } catch (error) {
+      this.logger.error(`[Redis Cache] IncrWithTTL error: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
    * Get domain-level TTL (seconds). Falls back to default if domain not found.
    */
   getTTL(domain: string): number {
