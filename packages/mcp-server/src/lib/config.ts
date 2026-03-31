@@ -1,14 +1,18 @@
 /** PropertyIQ MCP Server Configuration */
 
+import { getApiKey } from "./auth";
+
 export const config = {
-  /** Backend API base URL */
   apiUrl:
     process.env.PROPERTYIQ_API_URL ||
     "https://backend-production-ee4d.up.railway.app",
-  /** Request timeout in ms */
   timeout: 15_000,
-  /** Default result limit for list endpoints */
   defaultLimit: 25,
-  /** Max result limit */
   maxLimit: 100,
+  apiKey: null as string | null,
 };
+
+export function resolveApiKey(): string | null {
+  config.apiKey = getApiKey();
+  return config.apiKey;
+}

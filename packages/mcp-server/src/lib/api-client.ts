@@ -1,6 +1,7 @@
 /** HTTP client wrapper for the PropertyIQ backend API */
 
 import { config } from "./config";
+import { clearCredentials } from "./auth";
 
 export class ApiError extends Error {
   constructor(
@@ -12,10 +13,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Fetch data from the PropertyIQ backend API.
- * Strips the `success` wrapper and returns the payload directly.
- */
 export async function fetchApi<T = unknown>(
   path: string,
   params?: Record<string, string | number | undefined>,
@@ -30,14 +27,38 @@ export async function fetchApi<T = unknown>(
     }
   }
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (config.apiKey) {
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.timeout);
 
   try {
     const response = await fetch(url.toString(), {
-      headers: { "Content-Type": "application/json" },
+      headers,
       signal: controller.signal,
     });
+
+    if (response.status === 401) {
+      clearCredentials();
+      throw new ApiError(
+        401,
+        "API key is invalid or revoked. Restart MCP server to re-authenticate.",
+      );
+    }
+
+    if (response.status === 403) {
+      const body = await response.text();
+      throw new ApiError(
+        403,
+        `Access denied: ${body}. Visit https://propertyiq.up.railway.app/pricing to upgrade.`,
+      );
+    }
 
     if (!response.ok) {
       throw new ApiError(

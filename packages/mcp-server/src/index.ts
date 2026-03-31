@@ -4,22 +4,27 @@
  * PropertyIQ MCP Server
  *
  * Exposes PropertyIQ real estate analytics as MCP tools.
- * Communicates over stdio transport for use with Claude Code,
- * Claude Desktop, and other MCP clients.
- *
- * Usage:
- *   npx tsx packages/mcp-server/src/index.ts
- *   claude mcp add propertyiq -- npx tsx packages/mcp-server/src/index.ts
+ * Authenticates via stored credentials, env var, or device flow.
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server";
+import { config, resolveApiKey } from "./lib/config";
+import { authenticate } from "./lib/auth";
 
 async function main() {
+  // Resolve API key: stored credentials → env var → device flow
+  let apiKey = resolveApiKey();
+
+  if (!apiKey) {
+    apiKey = await authenticate(config.apiUrl);
+    config.apiKey = apiKey;
+  }
+
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("[PropertyIQ MCP] Server running on stdio");
+  console.error("[PropertyIQ MCP] Server running on stdio (authenticated)");
 }
 
 main().catch((err) => {
