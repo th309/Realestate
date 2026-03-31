@@ -54,6 +54,10 @@ const FEATURES = [
   "markets_to_watch",
   "custom_research",
   "watchlist_limit",
+  "api_access",
+  "mcp_access",
+  "embed_builder",
+  "embeddable_widgets",
 ];
 
 /** Read simulated tier from sessionStorage */
