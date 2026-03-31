@@ -176,16 +176,17 @@ export class FeaturesService {
     }
 
     // Upsert the value
-    const { error } = await client
-      .from('tier_features')
-      .upsert({
+    const { error } = await client.from('tier_features').upsert(
+      {
         tier_id: tier.id,
         feature_id: feature.id,
         value,
         updated_at: new Date().toISOString(),
-      }, {
+      },
+      {
         onConflict: 'tier_id,feature_id',
-      });
+      },
+    );
 
     if (error) {
       this.logger.error(`Failed to update tier feature: ${error.message}`);
@@ -202,7 +203,9 @@ export class FeaturesService {
       value,
     });
 
-    this.logger.log(`Updated ${tierSlug}.${featureSlug} = ${JSON.stringify(value)}`);
+    this.logger.log(
+      `Updated ${tierSlug}.${featureSlug} = ${JSON.stringify(value)}`,
+    );
   }
 
   /**
@@ -240,7 +243,12 @@ export class FeaturesService {
       throw new Error(error.message);
     }
 
-    await this.logAudit('create_feature', 'feature_definition', feature.id, data);
+    await this.logAudit(
+      'create_feature',
+      'feature_definition',
+      feature.id,
+      data,
+    );
     return feature;
   }
 
@@ -264,7 +272,12 @@ export class FeaturesService {
       throw new Error(error.message);
     }
 
-    await this.logAudit('update_feature', 'feature_definition', data.id, updates);
+    await this.logAudit(
+      'update_feature',
+      'feature_definition',
+      data.id,
+      updates,
+    );
     return data;
   }
 
@@ -279,6 +292,7 @@ export class FeaturesService {
       price_monthly: string | null;
       price_yearly: string | null;
       description: string | null;
+      pricing_card_items: string[];
       features: Array<{
         slug: string;
         name: string;
@@ -293,7 +307,9 @@ export class FeaturesService {
     // Get active tiers (exclude admin)
     const { data: tiers, error: tiersError } = await client
       .from('subscription_tiers')
-      .select('id, slug, name, description, price_monthly, price_yearly, display_order')
+      .select(
+        'id, slug, name, description, price_monthly, price_yearly, display_order, pricing_card_items',
+      )
       .eq('is_active', true)
       .neq('slug', 'admin')
       .order('display_order');
@@ -326,23 +342,62 @@ export class FeaturesService {
     }
 
     return {
-      tiers: (tiers || []).map(tier => ({
+      tiers: (tiers || []).map((tier) => ({
         slug: tier.slug,
         name: tier.name,
         price_monthly: tier.price_monthly,
         price_yearly: tier.price_yearly,
         description: tier.description,
+        pricing_card_items: tier.pricing_card_items || [],
         features: (features || [])
-          .map(f => ({
+          .map((f) => ({
             slug: f.slug,
             name: f.name,
             category: f.category,
             value: tfLookup[tier.id]?.[f.id] ?? null,
             value_type: f.value_type,
           }))
-          .filter(f => f.value === true || (typeof f.value === 'number' && f.value !== 0) || f.value === 'true'),
+          .filter(
+            (f) =>
+              f.value === true ||
+              (typeof f.value === 'number' && f.value !== 0) ||
+              f.value === 'true',
+          ),
       })),
     };
+  }
+
+  /**
+   * Update pricing card items for a tier
+   */
+  async updatePricingCardItems(
+    tierSlug: string,
+    items: string[],
+  ): Promise<void> {
+    const client = this.supabase.getClient();
+    const { error } = await client
+      .from('subscription_tiers')
+      .update({
+        pricing_card_items: items,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('slug', tierSlug);
+
+    if (error) throw new Error(error.message);
+
+    await this.logAudit(
+      'update_pricing_card_items',
+      'subscription_tier',
+      null,
+      {
+        tier: tierSlug,
+        items,
+      },
+    );
+
+    this.logger.log(
+      `Updated pricing card items for ${tierSlug}: ${items.length} items`,
+    );
   }
 
   private async logAudit(

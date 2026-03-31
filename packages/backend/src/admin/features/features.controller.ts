@@ -132,7 +132,11 @@ export class FeaturesController {
     }
 
     try {
-      await this.featuresService.updateTierFeature(tierSlug, featureSlug, body.value);
+      await this.featuresService.updateTierFeature(
+        tierSlug,
+        featureSlug,
+        body.value,
+      );
       return {
         success: true,
         updated: {
@@ -161,15 +165,50 @@ export class FeaturesController {
     this.logger.log(`PUT /admin/features/tier/${tierSlug} (bulk)`);
 
     if (!body.features || typeof body.features !== 'object') {
-      throw new HttpException('features object is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'features object is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {
-      await this.featuresService.bulkUpdateTierFeatures(tierSlug, body.features);
+      await this.featuresService.bulkUpdateTierFeatures(
+        tierSlug,
+        body.features,
+      );
       return {
         success: true,
         updated: Object.keys(body.features).length,
       };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Update pricing card items for a tier
+   * PUT /api/admin/features/pricing-card-items/:tierSlug
+   */
+  @Put('pricing-card-items/:tierSlug')
+  async updatePricingCardItems(
+    @Param('tierSlug') tierSlug: string,
+    @Body() body: { items: string[] },
+  ) {
+    this.logger.log(`PUT /admin/features/pricing-card-items/${tierSlug}`);
+
+    if (!body.items || !Array.isArray(body.items)) {
+      throw new HttpException(
+        'items array is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      await this.featuresService.updatePricingCardItems(tierSlug, body.items);
+      return { success: true };
     } catch (error) {
       return {
         success: false,
@@ -184,7 +223,8 @@ export class FeaturesController {
    */
   @Post()
   async createFeature(
-    @Body() body: {
+    @Body()
+    body: {
       slug: string;
       name: string;
       description?: string;
@@ -223,7 +263,8 @@ export class FeaturesController {
   @Put(':slug')
   async updateFeature(
     @Param('slug') slug: string,
-    @Body() body: Partial<{
+    @Body()
+    body: Partial<{
       name: string;
       description: string;
       is_active: boolean;

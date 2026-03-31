@@ -4,7 +4,7 @@
  * Fetches tier and feature data for the pricing page from the public pricing API.
  */
 
-import { fetchAPIRaw } from './base';
+import { fetchAPIRaw } from "./base";
 
 export interface PricingFeature {
   slug: string;
@@ -20,6 +20,7 @@ export interface PricingTier {
   price_monthly: string | null;
   price_yearly: string | null;
   description: string | null;
+  pricing_card_items: string[];
   features: PricingFeature[];
 }
 
@@ -35,8 +36,9 @@ export interface PricingSummary {
 }
 
 export async function fetchPricingSummary(): Promise<PricingSummary> {
-  const response = await fetchAPIRaw('/api/pricing/tiers');
+  const response = await fetchAPIRaw("/api/pricing/tiers");
   const result = await response.json();
-  if (!result.success) throw new Error(result.error || 'Failed to fetch pricing summary');
+  if (!result.success)
+    throw new Error(result.error || "Failed to fetch pricing summary");
   return result.data;
 }

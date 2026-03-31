@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useInView } from "./hooks/useInView";
 import { usePricingTiers } from "@/lib/data";
+import { FALLBACK_BULLETS } from "@/app/pricing/components/build-feature-bullets";
 
 const CTA_HREF: Record<string, string> = {
   free: "/auth/sign-up",
@@ -121,50 +122,14 @@ function PricingTier({
   );
 }
 
-/** Static tier metadata (features, CTA, display order). Prices come from API. */
-const TIER_META: Record<
+/** CTA text and display order per tier. Features come from shared builder. */
+const TIER_DISPLAY: Record<
   string,
-  {
-    features: string[];
-    highlighted?: boolean;
-    cta: string;
-    order: number;
-  }
+  { highlighted?: boolean; cta: string; order: number }
 > = {
-  free: {
-    features: [
-      "Interactive market maps",
-      "National & state-level data",
-      "Historical trends & charts",
-      "Preview reports",
-    ],
-    cta: "Get Started",
-    order: 0,
-  },
-  pro: {
-    features: [
-      "Everything in Free, plus:",
-      "Metro, county, and ZIP code data",
-      "PropertyIQ composite scores",
-      "AI market analysis",
-      "Unlimited AI reports",
-      "CSV data export",
-    ],
-    highlighted: true,
-    cta: "Start Free Trial",
-    order: 1,
-  },
-  enterprise: {
-    features: [
-      "Everything in Pro, plus:",
-      "Scenario modeling",
-      "Statistical deep dives",
-      "Team & brokerage features",
-      "Priority support",
-    ],
-    cta: "Contact Sales",
-    order: 2,
-  },
+  free: { cta: "Get Started", order: 0 },
+  pro: { highlighted: true, cta: "Start Free Trial", order: 1 },
+  enterprise: { cta: "Contact Sales", order: 2 },
 };
 
 export function PricingSection() {
@@ -172,26 +137,28 @@ export function PricingSection() {
 
   const pricingTiers = useMemo(() => {
     if (tiers.length === 0) {
-      // Loading / fallback — show structure with placeholder prices
-      return Object.entries(TIER_META)
+      // Loading / fallback — use static bullets from shared source
+      return Object.entries(TIER_DISPLAY)
         .sort(([, a], [, b]) => a.order - b.order)
-        .map(([slug, meta]) => ({
+        .map(([slug, display]) => ({
           slug,
           name: slug.charAt(0).toUpperCase() + slug.slice(1),
           price: slug === "free" ? "$0" : "",
           priceLoading: slug !== "free" && isLoading,
           period: slug === "free" ? undefined : "mo",
-          ...meta,
+          features: FALLBACK_BULLETS[slug] ?? [],
+          ...display,
         }));
     }
     return tiers
-      .filter((t) => TIER_META[t.slug])
+      .filter((t) => TIER_DISPLAY[t.slug])
       .sort(
         (a, b) =>
-          (TIER_META[a.slug]?.order ?? 99) - (TIER_META[b.slug]?.order ?? 99),
+          (TIER_DISPLAY[a.slug]?.order ?? 99) -
+          (TIER_DISPLAY[b.slug]?.order ?? 99),
       )
       .map((t) => {
-        const meta = TIER_META[t.slug];
+        const display = TIER_DISPLAY[t.slug];
         const monthly = Number(t.price_monthly) || 0;
         return {
           slug: t.slug,
@@ -199,7 +166,11 @@ export function PricingSection() {
           price: monthly === 0 ? "$0" : `$${Math.round(monthly)}`,
           priceLoading: false,
           period: monthly === 0 ? undefined : "mo",
-          ...meta,
+          features:
+            t.pricing_card_items?.length > 0
+              ? t.pricing_card_items
+              : (FALLBACK_BULLETS[t.slug] ?? []),
+          ...display,
         };
       });
   }, [tiers, isLoading]);
