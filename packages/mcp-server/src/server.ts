@@ -23,8 +23,21 @@ export function createServer(): McpServer {
     version: "0.2.0",
   });
 
+  // Register each tool. The `as any` on `register` avoids TS2589 ("type
+  // instantiation is excessively deep") caused by the union of 35+ distinct
+  // schema shapes hitting the MCP SDK's overloaded `.tool()` signature.
+  const register = server.tool.bind(server) as (
+    name: string,
+    description: string,
+    schema: Record<string, unknown>,
+    cb: (args: Record<string, unknown>) => Promise<{
+      content: { type: "text"; text: string }[];
+      isError?: boolean;
+    }>,
+  ) => void;
+
   for (const tool of ALL_TOOLS) {
-    server.tool(tool.name, tool.description, tool.schema, async (args: any) => {
+    register(tool.name, tool.description, tool.schema, async (args) => {
       try {
         const text = await tool.handler(args);
         return {
