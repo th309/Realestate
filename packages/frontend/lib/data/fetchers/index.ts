@@ -323,6 +323,16 @@ export {
   type UpdateApiKeyPayload,
 } from "./org-api-keys";
 
+// Personal API keys
+export {
+  fetchUserApiKeys,
+  createUserApiKey,
+  revokeUserApiKey,
+  type UserApiKey,
+  type UserApiKeyListItem,
+  type CreateUserApiKeyPayload,
+} from "./user-api-keys";
+
 // Enterprise grace period
 export {
   fetchGraceStatus,
