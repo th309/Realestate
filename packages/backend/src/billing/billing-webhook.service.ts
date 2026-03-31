@@ -130,6 +130,20 @@ export class BillingWebhookService {
       .single();
 
     if (profile) {
+      // Never downgrade admin users — their tier is not Stripe-driven
+      const { data: adminRow } = await client
+        .from('admin_users')
+        .select('id')
+        .eq('id', profile.id)
+        .single();
+
+      if (adminRow) {
+        this.logger.log(
+          `Skipping cancellation downgrade for admin user ${profile.id}`,
+        );
+        return;
+      }
+
       await client
         .from('user_profiles')
         .update({
@@ -174,6 +188,21 @@ export class BillingWebhookService {
     stripeSubscriptionId: string,
   ): Promise<void> {
     const client = this.supabase.getClient();
+
+    // Never overwrite admin users' tiers — their tier is managed manually
+    const { data: adminRow } = await client
+      .from('admin_users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (adminRow) {
+      this.logger.log(
+        `Skipping tier sync for admin user ${userId} — admin tier is not Stripe-driven`,
+      );
+      return;
+    }
+
     await client
       .from('user_profiles')
       .update({
