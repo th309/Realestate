@@ -48,7 +48,10 @@ export class ApiKeyValidatorService {
     // 1. Check organization_api_keys first
     const orgResult = await this.lookupOrgKey(keyHash);
     if (orgResult) {
-      await this.requireOrgOwnerTier(orgResult.organization_id, 'enterprise');
+      await this.requireOrgOwnerTier(orgResult.organization_id, [
+        'enterprise',
+        'admin',
+      ]);
       await this.touchLastUsed('organization_api_keys', orgResult.id);
       return {
         orgId: orgResult.organization_id,
@@ -125,7 +128,7 @@ export class ApiKeyValidatorService {
 
   private async requireOrgOwnerTier(
     orgId: string,
-    requiredTier: string,
+    allowedTiers: string[],
   ): Promise<void> {
     const cacheKey = `tier:org-owner:${orgId}`;
     let tier = await this.getCachedTier(cacheKey);
@@ -145,7 +148,7 @@ export class ApiKeyValidatorService {
       await this.cacheTier(cacheKey, tier);
     }
 
-    if (tier !== requiredTier && tier !== 'admin') {
+    if (!allowedTiers.includes(tier)) {
       throw new ForbiddenException(
         "Organization owner's subscription does not include API access",
       );

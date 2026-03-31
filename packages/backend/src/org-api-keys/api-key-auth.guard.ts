@@ -2,14 +2,19 @@
  * API Key Authentication Guard
  *
  * Authenticates incoming Platform API requests using Bearer tokens
- * with the `piq_live_` prefix. On success, attaches the validated
- * key context (org ID, scopes, rate limit) to `request.apiKeyOrg`.
+ * with the `piq_live_` prefix. On success, attaches a `ValidatedApiKey`
+ * to `request.apiKeyOrg` with one of two shapes depending on key type:
+ *
+ *   - Org key:  { source: 'org',  orgId: string,  scopes, rateLimitRpm, keyId }
+ *   - User key: { source: 'user', userId: string, scopes, rateLimitRpm, keyId }
  *
  * Usage:
  *   @UseGuards(ApiKeyAuthGuard)
  *   @Get('scores')
  *   async getScores(@Req() req) {
- *     req.apiKeyOrg.orgId   // organization UUID
+ *     req.apiKeyOrg.source  // 'org' | 'user'
+ *     req.apiKeyOrg.orgId   // organization UUID (org keys only)
+ *     req.apiKeyOrg.userId  // user UUID (user keys only)
  *     req.apiKeyOrg.scopes  // ['scores:read', ...]
  *   }
  */

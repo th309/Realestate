@@ -24,6 +24,7 @@ import {
   UseInterceptors,
   HttpException,
   HttpStatus,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -106,6 +107,12 @@ export class PlatformWatchlistController {
    */
   @Get()
   async findAll(@Req() req: any) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:read');
 
@@ -143,6 +150,12 @@ export class PlatformWatchlistController {
    */
   @Post()
   async create(@Req() req: any, @Body() body: AddWatchlistBody) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:write');
 
@@ -203,6 +216,12 @@ export class PlatformWatchlistController {
    */
   @Delete(':id')
   async remove(@Req() req: any, @Param('id') itemId: string) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'watchlist:write');
 

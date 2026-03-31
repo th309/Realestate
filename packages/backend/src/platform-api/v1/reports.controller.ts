@@ -24,6 +24,7 @@ import {
   UseInterceptors,
   HttpException,
   HttpStatus,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -92,6 +93,12 @@ export class PlatformReportsController {
    */
   @Post()
   async create(@Req() req: any, @Body() body: CreateReportBody) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:write');
 
@@ -150,6 +157,12 @@ export class PlatformReportsController {
    */
   @Get(':id')
   async findOne(@Req() req: any, @Param('id') reportId: string) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:read');
 
@@ -220,6 +233,12 @@ export class PlatformReportsController {
     @Query('limit') limitStr?: string,
     @Query('cursor') cursor?: string,
   ) {
+    if (!req.apiKeyOrg?.orgId) {
+      throw new ForbiddenException({
+        code: 'ORG_KEY_REQUIRED',
+        message: 'This endpoint requires an organization API key',
+      });
+    }
     const { orgId, scopes } = req.apiKeyOrg;
     this.apiKeyValidator.checkScope(scopes, 'reports:read');
 
