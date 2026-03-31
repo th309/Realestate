@@ -215,7 +215,6 @@ export async function seedTestOrg(): Promise<TestOrgFixture> {
       user_id: admin.id,
       role: 'admin',
       status: 'active',
-      joined_at: new Date().toISOString(),
     });
 
   if (adminMemberError) {
@@ -230,10 +229,8 @@ export async function seedTestOrg(): Promise<TestOrgFixture> {
     .insert({
       organization_id: org.id,
       user_id: member.id,
-      role: 'member',
+      role: 'viewer',
       status: 'active',
-      invited_by: admin.id,
-      joined_at: new Date().toISOString(),
     });
 
   if (memberError) {
