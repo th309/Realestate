@@ -27,7 +27,9 @@ export function HeroStats({ horizon }: HeroStatsProps) {
 
   const correlation = is3Y ? V4_CLAIMS.ic3Y : V4_CLAIMS.ic1Y;
   const hitRate = is3Y ? V4_CLAIMS.yearHitRate3Y : V4_CLAIMS.yearHitRate1Y;
-  const dollarGap = is3Y ? V4_CLAIMS.metroGap3Y : V4_CLAIMS.metroGap1Y;
+  const dollarGap = is3Y
+    ? V4_CLAIMS.scoreExtreme3YGap
+    : V4_CLAIMS.scoreExtreme1YGap;
 
   const stats = [
     {
@@ -39,7 +41,7 @@ export function HeroStats({ horizon }: HeroStatsProps) {
     {
       icon: DollarSign,
       value: `$${dollarGap.toLocaleString("en-US")}`,
-      label: `Top vs bottom quintile (${horizonLabel})`,
+      label: `Score 100 vs Score 10 (${horizonLabel})`,
       sublabel: `Dollar difference on $${Math.round(V4_CLAIMS.medianHomeValue / 1000)}K home`,
     },
     {

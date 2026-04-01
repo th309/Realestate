@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { DollarImpactSection } from "./DollarImpactSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -31,12 +32,12 @@ export const metadata: Metadata = {
 const STATS = [
   {
     icon: DollarSign,
-    value: "$18,100",
-    label: "Extra equity choosing top vs bottom quintile (3yr)",
+    value: "$24,384",
+    label: "Extra equity — top vs bottom scored market (3yr)",
   },
   {
     icon: Briefcase,
-    value: "$54,300",
+    value: "$73,100",
     label: "Extra appreciation on a 3-property portfolio (3yr)",
   },
   {
@@ -246,11 +247,16 @@ export default function MethodologyPage() {
             <span className="text-primary font-bold">
               6.39 percentage points more
             </span>{" "}
-            over 3 years than bottom-20% scored markets — approximately $18,100
-            on a $245K home.
+            over 3 years than bottom-20% scored markets. At the extremes, a
+            score-100 market outperforms a score-10 market by{" "}
+            <span className="text-primary font-bold">$24,384</span> on a $245K
+            home.
           </p>
         </div>
       </section>
+
+      {/* Dollar Impact — The Cost of Choosing Wrong */}
+      <DollarImpactSection />
 
       {/* Key Findings */}
       <section>

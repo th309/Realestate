@@ -240,7 +240,7 @@ export default function ScoresPage() {
             Why It Matters
           </p>
           <p className="text-4xl md:text-5xl font-bold text-on-surface mt-4 font-[family-name:var(--font-roboto-mono)]">
-            $18,100
+            $24,384
           </p>
           <p className="text-lg text-on-surface-variant mt-2">
             The cost of choosing wrong
@@ -270,9 +270,9 @@ export default function ScoresPage() {
                 <span className="font-[family-name:var(--font-roboto-mono)] font-medium text-red-600">
                   -1.26%
                 </span>{" "}
-                excess return per year versus their state. Over 3 years on a
-                $300K home, that gap versus Score 80+ adds up to roughly $18,100
-                in lost equity.
+                excess return per year versus their state. At the extremes,
+                choosing a score-10 over a score-100 market costs roughly
+                $24,384 in lost equity over 3 years.
               </p>
             </div>
           </div>

@@ -109,15 +109,17 @@ export class BillingService {
       );
     }
 
-    // Check if trial is enabled
+    // Check if trial is enabled (enterprise skips trial)
     let trialDays: number | undefined;
-    const { data: trialConfig } = await client
-      .from('trial_config')
-      .select('is_enabled, duration_days')
-      .single();
+    if (tier !== 'enterprise') {
+      const { data: trialConfig } = await client
+        .from('trial_config')
+        .select('is_enabled, duration_days')
+        .single();
 
-    if (trialConfig?.is_enabled && trialConfig.duration_days > 0) {
-      trialDays = trialConfig.duration_days;
+      if (trialConfig?.is_enabled && trialConfig.duration_days > 0) {
+        trialDays = trialConfig.duration_days;
+      }
     }
 
     // Build success/cancel URLs

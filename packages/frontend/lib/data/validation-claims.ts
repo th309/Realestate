@@ -19,6 +19,10 @@ export const V4_CLAIMS = {
   metroGap3Y: 18_100,
   /** Q5 vs Q1 dollar gap, 1Y, metro */
   metroGap1Y: 9_199,
+  /** Score 100 vs Score 10 dollar gap, 3Y, metro */
+  scoreExtreme3YGap: 24_384,
+  /** Score 100 vs Score 10 dollar gap, 1Y, metro */
+  scoreExtreme1YGap: 9_199,
   /** 3Y quintile spread (percentage points) */
   alpha3Y_pp: 7.83,
   /** 1Y quintile spread (percentage points) */
@@ -50,8 +54,8 @@ export const V4_CLAIMS = {
 /** Returns formatted claims for homepage hero section */
 export function getV4HomepageClaims() {
   return {
-    dollarGap: `$${V4_CLAIMS.metroGap3Y.toLocaleString()}`,
-    dollarGapRaw: V4_CLAIMS.metroGap3Y,
+    dollarGap: `$${V4_CLAIMS.scoreExtreme3YGap.toLocaleString()}`,
+    dollarGapRaw: V4_CLAIMS.scoreExtreme3YGap,
     alphaPp: `${V4_CLAIMS.alpha3Y_pp}pp`,
     yearHitRate: `${V4_CLAIMS.yearHitRate1Y}%`,
     metrosValidated: V4_CLAIMS.metrosValidated,

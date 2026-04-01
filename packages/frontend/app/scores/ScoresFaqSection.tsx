@@ -9,7 +9,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How accurate is the PropertyIQ Score?",
-    a: "The score has a 100% year hit rate across 13 years of backtesting: every single year, higher-scored metros outperformed lower-scored metros on average. Top-quintile markets (Score 80+) beat the state 56% of the time, while bottom-quintile markets (Score 20) beat the state only 39% of the time. The gap between top and bottom quintile translates to roughly $18,100 in equity difference on a typical home over 3 years.",
+    a: "The score has a 100% year hit rate across 13 years of backtesting: every single year, higher-scored metros outperformed lower-scored metros on average. Top-quintile markets (Score 80+) beat the state 56% of the time, while bottom-quintile markets (Score 20) beat the state only 39% of the time. At the extremes, choosing a score-100 market over a score-10 market translates to roughly $24,384 in extra equity on a typical home over 3 years.",
   },
   {
     q: "Why only 3 metrics?",

@@ -9,7 +9,7 @@ import { FALLBACK_BULLETS } from "@/app/pricing/components/build-feature-bullets
 const CTA_HREF: Record<string, string> = {
   free: "/auth/sign-up",
   pro: "/auth/sign-up",
-  enterprise: "/contact",
+  enterprise: "/auth/sign-up",
 };
 
 interface PricingTierProps {
@@ -129,7 +129,7 @@ const TIER_DISPLAY: Record<
 > = {
   free: { cta: "Get Started", order: 0 },
   pro: { highlighted: true, cta: "Start Free Trial", order: 1 },
-  enterprise: { cta: "Contact Sales", order: 2 },
+  enterprise: { cta: "Get Started", order: 2 },
 };
 
 export function PricingSection() {

@@ -127,12 +127,7 @@ function PricingCard({
   const priceDisplay =
     effectiveMonthly === 0 ? "$0" : `$${Math.round(effectiveMonthly)}`;
   const periodDisplay = effectiveMonthly === 0 ? "forever" : "/month";
-  const ctaText =
-    plan.slug === "enterprise"
-      ? "Contact Sales"
-      : plan.slug === "pro"
-        ? "Start Free Trial"
-        : "Get Started";
+  const ctaText = plan.slug === "pro" ? "Start Free Trial" : "Get Started";
 
   const featureBullets =
     plan.pricing_card_items?.length > 0
@@ -259,16 +254,6 @@ function CardCTA({
         className="block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
       >
         Get Started
-      </a>
-    );
-  }
-  if (slug === "enterprise") {
-    return (
-      <a
-        href="/contact?subject=Enterprise%20Inquiry"
-        className="block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
-      >
-        Contact Sales
       </a>
     );
   }

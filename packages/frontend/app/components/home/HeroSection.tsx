@@ -15,9 +15,9 @@ function fadeUp(inView: boolean, delay: string) {
 
 const PROOF_POINTS = [
   {
-    value: `+$${V4_CLAIMS.metroGap3Y.toLocaleString()}`,
+    value: `+$${V4_CLAIMS.scoreExtreme3YGap.toLocaleString()}`,
     color: "text-[#00C853]",
-    lines: ["3-year equity edge in", "top-scored vs bottom markets"],
+    lines: ["3-year equity edge choosing", "top vs bottom scored markets"],
   },
   {
     value: `${V4_CLAIMS.yearHitRate1Y}%`,
