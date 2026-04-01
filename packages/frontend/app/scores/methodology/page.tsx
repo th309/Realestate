@@ -17,12 +17,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Methodology — How PropertyIQ Scores Predict Market Performance",
   description:
-    "Walk-forward validated across 6 years of market data. See the statistical proof behind PropertyIQ Scores.",
+    "Walk-forward validated across 14 years of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
   alternates: { canonical: "https://www.propertyiq.app/scores/methodology" },
   openGraph: {
     title: "Methodology — How PropertyIQ Scores Predict Market Performance",
     description:
-      "Walk-forward validated across 6 years of market data. See the statistical proof behind PropertyIQ Scores.",
+      "Walk-forward validated across 14 years of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
     url: "https://www.propertyiq.app/scores/methodology",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
@@ -31,32 +31,32 @@ export const metadata: Metadata = {
 const STATS = [
   {
     icon: DollarSign,
-    value: "$39,900",
-    label: "More equity on a typical home over 3 years",
+    value: "$18,100",
+    label: "Extra equity choosing top vs bottom quintile (3yr)",
   },
   {
     icon: Briefcase,
-    value: "$119,800",
+    value: "$54,300",
     label: "Extra appreciation on a 3-property portfolio (3yr)",
   },
   {
     icon: Target,
-    value: "69.5%",
-    label: "Hit rate — top-scored markets beat benchmark",
+    value: "57.8%",
+    label: "Hit rate — top-scored markets beat state average",
   },
   {
     icon: Database,
-    value: "23,000+",
-    label: "Locations scored and tracked",
+    value: "23,600+",
+    label: "Locations scored across metro, county, and ZIP",
   },
 ];
 
 const QUINTILES = [
-  { label: "Q5 (Top 20%)", range: "80–100", return: 2.78, width: 100 },
-  { label: "Q4", range: "61–80", return: 1.11, width: 60 },
-  { label: "Q3", range: "41–60", return: 0.0, width: 35 },
-  { label: "Q2", range: "21–40", return: -1.11, width: 20 },
-  { label: "Q1 (Bottom 20%)", range: "0–20", return: -2.77, width: 5 },
+  { label: "Q5 (Top 20%)", range: "81–99", return: 3.05, width: 100 },
+  { label: "Q4", range: "61–80", return: 1.17, width: 55 },
+  { label: "Q3", range: "41–60", return: -0.15, width: 30 },
+  { label: "Q2", range: "21–40", return: -1.2, width: 15 },
+  { label: "Q1 (Bottom 20%)", range: "1–20", return: -3.34, width: 5 },
 ];
 
 const KEY_FINDINGS = [
@@ -65,21 +65,21 @@ const KEY_FINDINGS = [
     iconClass: "bg-secondary/10 p-2 rounded-xl text-secondary w-fit",
     title: "Walk-Forward Validated",
     description:
-      "Four non-overlapping walk-forward windows (2018–2023) ensure the model never sees future data. Positive OOS IC in every window for all score types.",
+      "Expanding-window walk-forward validation across 14 years (2012–2025). Positive OOS IC in every single year — 100% hit rate across all test windows.",
   },
   {
     icon: TrendingUp,
     iconClass: "bg-primary/10 p-2 rounded-xl text-primary w-fit",
     title: "Consistent Across Geographies",
     description:
-      "Predictive at metro (IC 0.37), county (IC 0.25), and ZIP code (IC 0.18) levels. Works everywhere, not just cherry-picked markets.",
+      "Validated at metro (IC 0.24), county, and ZIP code levels. Strictly monotonic score-to-return tables at every decile — no reversals.",
   },
   {
     icon: CheckCircle,
     iconClass: "bg-tertiary/10 p-2 rounded-xl text-tertiary w-fit",
-    title: "v3.0: Model Tournament",
+    title: "v4.0: Demand Signal",
     description:
-      "XGBoost, LightGBM, and ElasticNet compete per geography. SHAP values distilled to interpretable 10-feature linear formulas.",
+      "Three Redfin supply-demand metrics combined into a single interpretable score. Statistically significant at p < 0.000001 via 10,000-shuffle permutation test.",
   },
 ];
 
@@ -125,7 +125,7 @@ export default function MethodologyPage() {
                 "@type": "Article",
                 headline: "How PropertyIQ Scores Predict Market Performance",
                 description:
-                  "Walk-forward validated across 6 years of market data. Technical methodology behind PropertyIQ's AI-powered real estate scores.",
+                  "Walk-forward validated across 14 years of market data. Technical methodology behind PropertyIQ's demand signal real estate scores.",
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {
@@ -174,7 +174,7 @@ export default function MethodologyPage() {
             { label: "Methodology" },
           ]}
           title="The Proof Behind PropertyIQ Scores"
-          description="Walk-forward validated across 6 years of market data"
+          description="Walk-forward validated across 14 years of market data"
           icon={<Target className="w-5 h-5" />}
         />
       </section>
@@ -213,9 +213,9 @@ export default function MethodologyPage() {
           How Scores Predict Returns
         </h2>
         <p className="text-on-surface-variant mt-2 max-w-2xl">
-          Metro InvestorEdge scores, validated across 4 walk-forward windows.
-          Higher scores consistently predict higher excess returns vs state
-          benchmarks.
+          PropertyIQ Demand Signal scores, validated across 14 years of
+          walk-forward windows. Higher scores consistently predict higher 3-year
+          excess returns vs state benchmarks.
         </p>
 
         <div className="mt-8 space-y-3">
@@ -244,10 +244,10 @@ export default function MethodologyPage() {
           <p className="text-sm font-medium text-on-surface">
             Top-20% scored markets earned{" "}
             <span className="text-primary font-bold">
-              5.55 percentage points more
+              6.39 percentage points more
             </span>{" "}
-            per year than bottom-20% scored markets — $13,320 annually on a
-            $240K home.
+            over 3 years than bottom-20% scored markets — approximately $18,100
+            on a $245K home.
           </p>
         </div>
       </section>
@@ -289,12 +289,13 @@ export default function MethodologyPage() {
             </p>
           </div>
           <h2 className="text-2xl font-[var(--font-source-serif)] text-on-surface mt-2">
-            Model tournament with walk-forward cross-validation and SHAP
-            distillation
+            Demand signal validation with walk-forward cross-validation and
+            permutation testing
           </h2>
           <p className="text-sm text-on-surface-variant mt-2 mb-8">
-            Full methodology and results from our v3.0 scoring model validation,
-            covering January 2018 through December 2023.
+            Full methodology and results from our v4.0 scoring validation,
+            covering January 2012 through February 2025 across 3.1M scored
+            location-periods.
           </p>
           <MarkdownRenderer content={reportContent} />
         </div>
