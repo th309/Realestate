@@ -39,6 +39,10 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
       }
       return response.json();
     } catch (error) {
+      // Aborted requests (HMR rebuild, navigation) — don't retry or warn
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
       if (error instanceof TypeError && error.message === "Failed to fetch") {
         if (attempt < maxRetries) {
           console.warn(`[fetchAPI] Network error for ${endpoint}, retrying...`);
@@ -97,6 +101,10 @@ export async function fetchAPIWithParams<T>(
       }
       return response.json();
     } catch (error) {
+      // Aborted requests (HMR rebuild, navigation) — don't retry
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
       if (attempt < maxRetries && error instanceof TypeError) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
         continue;
@@ -141,6 +149,10 @@ export async function fetchWithRetry(
 
       return response;
     } catch (error) {
+      // Aborted requests (HMR rebuild, navigation) — don't retry
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
       lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt < maxRetries) {

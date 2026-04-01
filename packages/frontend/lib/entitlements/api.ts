@@ -40,7 +40,11 @@ export async function fetchEntitlements(
       cache: "no-store",
     });
   } catch (err) {
-    // Network error (backend unreachable) — throw so the caller preserves previous tier
+    // Request aborted (HMR rebuild, navigation, unmount) — silently preserve previous state
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Request aborted");
+    }
+    // Network error (backend genuinely unreachable) — throw so the caller preserves previous tier
     console.warn("[Entitlements] Backend unreachable:", err);
     throw new Error("Backend unreachable");
   }
