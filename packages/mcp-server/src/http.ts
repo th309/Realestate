@@ -35,7 +35,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.options("*", (_req, res) => {
+app.options("/{*path}", (_req, res) => {
   res.status(204).end();
 });
 
