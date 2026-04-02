@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useInView } from "./hooks/useInView";
 
 /** Claude (Anthropic) brand mark — starburst in brand tan. Source: Simple Icons. */
@@ -101,7 +102,20 @@ export function AIIntegrationsSection() {
 
         {/* Description */}
         <p className="text-sm text-[#3949AB] leading-relaxed mb-2">
-          Monthly-updated scores, rent trends, and market forecasts
+          Monthly-updated{" "}
+          <Link
+            href="/scores"
+            className="underline underline-offset-4 hover:text-[#1A237E] transition-colors"
+          >
+            scores
+          </Link>
+          , rent trends, and{" "}
+          <Link
+            href="/reports"
+            className="underline underline-offset-4 hover:text-[#1A237E] transition-colors"
+          >
+            market forecasts
+          </Link>
           &mdash;&thinsp;inside your existing AI&nbsp;workflow.
         </p>
 

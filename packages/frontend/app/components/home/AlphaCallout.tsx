@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { useInView } from "./hooks/useInView";
 import { V4_CLAIMS, formatDollarClaim } from "@/lib/data";
@@ -52,7 +53,13 @@ export function AlphaCallout() {
             Belt is growing&rdquo; right.
           </p>
           <p>
-            PropertyIQ scores predict{" "}
+            <Link
+              href="/scores"
+              className="text-white underline underline-offset-4 hover:text-[#00C853] transition-colors"
+            >
+              PropertyIQ scores
+            </Link>{" "}
+            predict{" "}
             <strong className="text-white">
               excess returns above regional benchmarks
             </strong>

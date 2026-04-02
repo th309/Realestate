@@ -53,7 +53,7 @@ const softwareSchema = {
     {
       "@type": "Offer",
       name: "Pro",
-      price: "29",
+      price: "39",
       priceCurrency: "USD",
       billingIncrement: "P1M",
       description:

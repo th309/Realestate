@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
-  title: "Housing Market Graphs & Trends",
+  title:
+    "Housing Market Graphs & Trends — Compare Metros, Counties & ZIP Codes",
   description:
-    "Interactive charts and graphs showing housing market trends, price history, inventory levels, and economic indicators across US metros.",
+    "Interactive charts showing housing market trends, home price history, inventory levels, and economic indicators. Compare metros, counties, and ZIP codes free on PropertyIQ.",
   alternates: { canonical: "https://www.propertyiq.app/graphs" },
   openGraph: {
     title: "Housing Market Graphs & Trends | PropertyIQ",

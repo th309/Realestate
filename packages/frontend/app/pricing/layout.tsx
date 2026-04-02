@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
-  title: "Pricing — PropertyIQ",
+  title: "Plans & Pricing — Real Estate Analytics",
   description:
     "Compare PropertyIQ plans: Free, Pro, and Enterprise. AI-powered market analysis, scores, reports, and maps for real estate professionals.",
   alternates: { canonical: "https://www.propertyiq.app/pricing" },
   openGraph: {
-    title: "Pricing — PropertyIQ",
+    title: "Plans & Pricing — Real Estate Analytics | PropertyIQ",
     description:
       "Compare PropertyIQ plans: Free, Pro, and Enterprise. AI-powered market analysis, scores, reports, and maps.",
     url: "https://www.propertyiq.app/pricing",
@@ -52,11 +52,11 @@ const pricingJsonLd = {
         {
           "@type": "Offer",
           name: "Pro",
-          price: "29",
+          price: "39",
           priceCurrency: "USD",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "29",
+            price: "39",
             priceCurrency: "USD",
             billingDuration: "P1M",
           },
@@ -124,7 +124,7 @@ export default function PricingLayout({
             5 property lookups per month, basic market scores, metro-level data
             access, and limited market comparisons.
           </p>
-          <h2>Pro — $29/month</h2>
+          <h2>Pro — $39/month</h2>
           <p>
             Unlimited lookups, full score breakdowns with component analysis,
             AI-generated market reports, ZIP-level data, and priority support.

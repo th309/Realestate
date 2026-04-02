@@ -21,7 +21,7 @@ export async function generateMetadata({
   const ogImageUrl = `/api/og?title=${encodeURIComponent(metro.shortName)}`;
 
   return {
-    title: `${metro.shortName} Housing Market — 2026 Analysis | PropertyIQ`,
+    title: `${metro.shortName} Housing Market — 2026 Analysis`,
     description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
     alternates: {
       canonical: pageUrl,
@@ -29,7 +29,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       url: pageUrl,
-      title: `${metro.shortName} Housing Market — 2026 Analysis | PropertyIQ`,
+      title: `${metro.shortName} Housing Market — 2026 Analysis`,
       description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
       siteName: "PropertyIQ",
       images: [
@@ -43,7 +43,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${metro.shortName} Housing Market — 2026 Analysis | PropertyIQ`,
+      title: `${metro.shortName} Housing Market — 2026 Analysis`,
       description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
       images: [ogImageUrl],
     },

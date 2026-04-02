@@ -50,35 +50,35 @@ export function HeroSection() {
       aria-labelledby="hero-heading"
     >
       <div className="relative max-w-5xl mx-auto text-center z-10">
-        {/* Headline — lead with transformation, not features */}
-        <h1
-          id="hero-heading"
+        {/* Tagline — catchy brand line (visual emphasis, not the semantic H1) */}
+        <p
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1] font-[family-name:var(--font-source-serif)]"
           style={fadeUp(inView, "0s")}
         >
           Know before you buy.{" "}
           <span className="text-[#C5CAE9]/70">Not after.</span>
-        </h1>
+        </p>
 
-        {/* Subheadline — address all three audiences */}
-        <p
+        {/* H1 — keyword-rich for SEO, describes what the product does */}
+        <h1
+          id="hero-heading"
           className="text-lg md:text-xl text-[#C5CAE9] mb-10 max-w-2xl mx-auto leading-relaxed"
           style={fadeUp(inView, "0.1s")}
         >
-          PropertyIQ scores {totalMarkets} markets across America — so agents
-          advise with confidence, investors find outperformers early, and
-          homebuyers make the right call.
-        </p>
+          AI-powered real estate market analysis and investment scores for{" "}
+          {totalMarkets}+ metros, counties, and ZIP codes across America.
+        </h1>
 
         {/* Proof points — dollars and plain English, not jargon */}
+        {/* Proof points — fixed min-height prevents CLS during fade-in */}
         <div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12 min-h-[280px] sm:min-h-[120px]"
           style={fadeUp(inView, "0.2s")}
         >
           {PROOF_POINTS.map((point) => (
             <div
               key={point.value}
-              className="bg-white/10 backdrop-blur rounded-xl p-5 text-center"
+              className="bg-white/10 backdrop-blur rounded-xl p-5 text-center min-h-[84px]"
             >
               <div
                 className={`text-[28px] font-bold ${point.color} font-mono leading-tight`}

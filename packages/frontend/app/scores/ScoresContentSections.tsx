@@ -88,7 +88,7 @@ export function MethodologyOverviewSection() {
           year, higher-scored metros outperformed lower-scored metros on
           average.
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <a
             href="/scores/methodology"
             className="text-primary hover:text-primary/80 font-medium text-sm underline underline-offset-4"
@@ -100,6 +100,12 @@ export function MethodologyOverviewSection() {
             className="text-primary hover:text-primary/80 font-medium text-sm underline underline-offset-4"
           >
             See Accuracy Results
+          </a>
+          <a
+            href="/map"
+            className="text-primary hover:text-primary/80 font-medium text-sm underline underline-offset-4"
+          >
+            Explore Scored Markets on the Map
           </a>
         </div>
       </div>

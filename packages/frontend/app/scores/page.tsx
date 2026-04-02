@@ -11,14 +11,14 @@ import { METRO_DECILE_1Y, METRO_DECILE_3Y } from "./decile-data";
 import type { DecileRow } from "./decile-data";
 
 export const metadata: Metadata = {
-  title: "The PropertyIQ Score — PropertyIQ",
+  title: "PropertyIQ Score — Predict Real Estate Market Performance",
   description:
     "One number that predicts market performance. Validated across 746 metros and 13 years of data with 100% year hit rate. See the methodology and proof.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
-    title: "The PropertyIQ Score — PropertyIQ",
+    title: "PropertyIQ Score — Predict Real Estate Market Performance",
     description:
-      "One number that predicts market performance. Validated across 746 metros with 100% year hit rate.",
+      "One number that predicts real estate market performance. Validated across 746 metros with 100% year hit rate.",
     url: "https://www.propertyiq.app/scores",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
@@ -291,12 +291,20 @@ export default function ScoresPage() {
             Use the PropertyIQ Score to discover high-performing markets backed
             by data, not hunches.
           </p>
-          <Link
-            href="/map"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors mt-4"
-          >
-            Start Analyzing Markets <ArrowRight className="w-4 h-4" />
-          </Link>
+          <div className="flex flex-wrap justify-center gap-3 mt-4">
+            <Link
+              href="/map"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors"
+            >
+              Explore the Map <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/reports"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-primary text-primary rounded-full font-medium hover:bg-primary/10 transition-colors"
+            >
+              Generate a Report <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </section>
       </div>
     </>

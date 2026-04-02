@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
-  title: "Interactive Housing Market Map",
+  title: "Interactive Real Estate Market Heat Map — 40+ Metrics by ZIP Code",
   description:
-    "Explore the interactive housing market heat map. Visualize home values, rent prices, inventory, and 40+ metrics across 925 US metros and 33,000+ ZIP codes.",
+    "Explore the interactive housing market heat map. Visualize home values, rent prices, inventory, and 40+ metrics across 925 US metros, 3,000 counties, and 33,000+ ZIP codes.",
   alternates: { canonical: "https://www.propertyiq.app/map" },
   openGraph: {
     title: "Interactive Housing Market Map | PropertyIQ",

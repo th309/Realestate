@@ -15,14 +15,19 @@ import {
 } from "./components/home";
 
 export const metadata: Metadata = {
-  title: "PropertyIQ — AI-Powered Real Estate Market Analysis",
+  title: {
+    absolute:
+      "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
+  },
   description:
-    "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find housing markets that outperform. Free interactive maps, market scores, and AI-generated reports.",
+    "Analyze 23,600+ real estate markets with AI-powered scores, rent data, and investment insights. Free market maps, reports & forecasts by metro, county, and ZIP code.",
   alternates: { canonical: "https://www.propertyiq.app" },
   openGraph: {
-    title: "PropertyIQ — AI-Powered Real Estate Market Analysis",
+    title:
+      "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
+    type: "website",
     description:
-      "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find housing markets that outperform. Free maps, scores, and reports.",
+      "Analyze 23,600+ real estate markets with AI-powered scores, rent data, and investment insights. Free maps, reports & forecasts by metro, county, and ZIP code.",
     url: "https://www.propertyiq.app",
     siteName: "PropertyIQ",
     images: [
@@ -30,7 +35,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PropertyIQ - AI Real Estate Intelligence",
+        alt: "PropertyIQ real estate market analysis dashboard",
       },
     ],
   },

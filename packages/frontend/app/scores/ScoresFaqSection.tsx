@@ -1,5 +1,13 @@
 const FAQ_ITEMS = [
   {
+    q: "What is a real estate market score?",
+    a: "A real estate market score is a single number that measures how strong a housing market is relative to others. The PropertyIQ Score ranks markets from 1 to 99 based on demand signals — % Sold Above List, Median Days on Market, and Months of Supply. A score of 50 equals the state average; higher scores indicate markets outperforming their peers. It helps investors and homebuyers quickly compare thousands of markets without analyzing dozens of data points manually.",
+  },
+  {
+    q: "How can I predict housing market performance?",
+    a: "The most reliable way to predict housing market performance is to track leading demand indicators rather than lagging price data. The PropertyIQ Score combines three proven predictors — how often homes sell above asking, how fast they sell, and how much inventory is available. In 13 years of backtesting across 746 metros, these three signals predicted which markets would outperform every single year. You can check any market's score for free on PropertyIQ.",
+  },
+  {
     q: "How often is the PropertyIQ Score updated?",
     a: "The score is recalculated monthly as new housing data arrives. The three input metrics — % Sold Above List, Median Days on Market, and Months of Supply — update monthly. Each refresh incorporates the latest available data.",
   },
