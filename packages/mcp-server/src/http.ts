@@ -6,8 +6,7 @@
  * Serves the PropertyIQ MCP server over Streamable HTTP so Claude Desktop
  * (and other MCP clients) can connect to it as a remote custom connector.
  *
- * Auth: Users provide their piq_live_* API key as a Bearer token.
- * The backend validates the key and checks Pro/Enterprise subscription.
+ * Auth: Dual — piq_live_* API keys (existing) or OAuth 2.1 access tokens (new).
  */
 
 import { randomUUID } from "node:crypto";
@@ -15,8 +14,9 @@ import express, { type Request, type Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "./server";
-import { apiKeyStore } from "./lib/session-context";
-import { config } from "./lib/config";
+import { authStore } from "./lib/session-context";
+import { extractAuth } from "./lib/auth-http";
+import { mountOAuthRoutes } from "./routes/oauth-routes";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
@@ -40,11 +40,6 @@ app.options("/{*path}", (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
-import { extractApiKey } from "./lib/auth-http";
-
-// ---------------------------------------------------------------------------
 // Session store
 // ---------------------------------------------------------------------------
 const transports: Record<string, StreamableHTTPServerTransport> = {};
@@ -61,17 +56,22 @@ app.get("/health", (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// OAuth 2.1 routes (discovery, registration, authorize, callback, token)
+// ---------------------------------------------------------------------------
+mountOAuthRoutes(app);
+
+// ---------------------------------------------------------------------------
 // MCP POST — initialize or tool calls
 // ---------------------------------------------------------------------------
 app.post("/mcp", async (req: Request, res: Response) => {
-  const userApiKey = await extractApiKey(req, res);
-  if (!userApiKey) return;
+  const auth = await extractAuth(req, res);
+  if (!auth) return;
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
   try {
-    // Existing session — forward request with user's API key context
+    // Existing session — forward request with auth context
     if (sessionId && transports[sessionId]) {
-      await apiKeyStore.run(userApiKey, () =>
+      await authStore.run(auth, () =>
         transports[sessionId].handleRequest(req, res, req.body),
       );
       return;
@@ -93,7 +93,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
 
       const server = createServer();
       await server.connect(transport);
-      await apiKeyStore.run(userApiKey, () =>
+      await authStore.run(auth, () =>
         transport.handleRequest(req, res, req.body),
       );
       return;
@@ -139,13 +139,13 @@ app.get("/mcp", async (req: Request, res: Response) => {
   }
 
   // Authenticated SSE stream
-  const userApiKey = await extractApiKey(req, res);
-  if (!userApiKey) return;
+  const auth = await extractAuth(req, res);
+  if (!auth) return;
   if (!sessionId || !transports[sessionId]) {
     res.status(400).send("Invalid or missing session ID");
     return;
   }
-  await apiKeyStore.run(userApiKey, () =>
+  await authStore.run(auth, () =>
     transports[sessionId].handleRequest(req, res),
   );
 });

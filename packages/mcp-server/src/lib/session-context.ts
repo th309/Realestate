@@ -1,16 +1,23 @@
-/**
- * Per-request API key context using AsyncLocalStorage.
- *
- * Each HTTP request to the MCP server carries the user's Bearer token.
- * AsyncLocalStorage propagates it through the async call chain so
- * fetchApi() can pick it up without changing every tool handler signature.
- */
-
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export const apiKeyStore = new AsyncLocalStorage<string>();
+export type SessionAuth =
+  | { type: "api_key"; apiKey: string }
+  | { type: "oauth"; userId: string };
 
-/** Get the current request's API key (from AsyncLocalStorage or null). */
+export const authStore = new AsyncLocalStorage<SessionAuth>();
+
+/** Get the current request's auth context */
+export function getSessionAuth(): SessionAuth | null {
+  return authStore.getStore() ?? null;
+}
+
+// ── Backwards-compatible helpers ──
+
+/** @deprecated Use getSessionAuth() instead */
+export const apiKeyStore = authStore;
+
 export function getRequestApiKey(): string | null {
-  return apiKeyStore.getStore() ?? null;
+  const auth = authStore.getStore();
+  if (!auth) return null;
+  return auth.type === "api_key" ? auth.apiKey : null;
 }

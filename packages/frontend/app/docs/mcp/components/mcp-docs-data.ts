@@ -36,16 +36,32 @@ export interface ToolCategory {
   tools: McpTool[];
 }
 
+/* ─── Server URL ─── */
+
+export const MCP_SERVER_URL = "https://mcp.propertyiq.app/mcp";
+
 /* ─── Client configuration examples ─── */
 
 export const SETUP_CONFIGS = {
-  claudeCode: `claude mcp add propertyiq -- npx -y @propertyiq/mcp-server`,
+  claudeCode: `claude mcp add propertyiq \\
+  --transport http \\
+  "${MCP_SERVER_URL}" \\
+  --header "Authorization: Bearer YOUR_PIQ_API_KEY"`,
 
   claudeDesktop: `{
   "mcpServers": {
     "propertyiq": {
       "command": "npx",
-      "args": ["-y", "@propertyiq/mcp-server"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "${MCP_SERVER_URL}",
+        "--header",
+        "Authorization:\${PIQ_API_KEY}"
+      ],
+      "env": {
+        "PIQ_API_KEY": "Bearer YOUR_PIQ_API_KEY"
+      }
     }
   }
 }`,
@@ -53,8 +69,10 @@ export const SETUP_CONFIGS = {
   cursor: `{
   "mcpServers": {
     "propertyiq": {
-      "command": "npx",
-      "args": ["-y", "@propertyiq/mcp-server"]
+      "url": "${MCP_SERVER_URL}",
+      "headers": {
+        "Authorization": "Bearer YOUR_PIQ_API_KEY"
+      }
     }
   }
 }`,
@@ -62,8 +80,10 @@ export const SETUP_CONFIGS = {
   windsurf: `{
   "mcpServers": {
     "propertyiq": {
-      "command": "npx",
-      "args": ["-y", "@propertyiq/mcp-server"]
+      "serverUrl": "${MCP_SERVER_URL}",
+      "headers": {
+        "Authorization": "Bearer YOUR_PIQ_API_KEY"
+      }
     }
   }
 }`,
@@ -72,9 +92,11 @@ export const SETUP_CONFIGS = {
   "mcp": {
     "servers": {
       "propertyiq": {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@propertyiq/mcp-server"]
+        "type": "http",
+        "url": "${MCP_SERVER_URL}",
+        "headers": {
+          "Authorization": "Bearer YOUR_PIQ_API_KEY"
+        }
       }
     }
   }
@@ -83,8 +105,11 @@ export const SETUP_CONFIGS = {
   cline: `{
   "mcpServers": {
     "propertyiq": {
-      "command": "npx",
-      "args": ["-y", "@propertyiq/mcp-server"]
+      "url": "${MCP_SERVER_URL}",
+      "transportType": "streamableHttp",
+      "headers": {
+        "Authorization": "Bearer YOUR_PIQ_API_KEY"
+      }
     }
   }
 }`,
@@ -101,12 +126,12 @@ export const MCP_FAQ = [
   {
     question: "Do I need an API key?",
     answer:
-      "No. The MCP server connects directly to the PropertyIQ backend. It uses the same public API endpoints available to all users.",
+      "Yes. You need a PropertyIQ API key (starts with piq_live_) which you can generate from your account settings. A Pro or Enterprise subscription is required for MCP access.",
   },
   {
     question: "Which AI clients support MCP?",
     answer:
-      "Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (GitHub Copilot), Cline, Zed, Continue.dev, and any client that supports MCP stdio transport.",
+      "Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (GitHub Copilot), Cline, and any client that supports remote MCP servers over HTTP.",
   },
   {
     question: "Can I use this with ChatGPT or Gemini?",
@@ -124,8 +149,8 @@ export const MCP_FAQ = [
       "The MCP server calls the PropertyIQ API, which has standard rate limits. Normal conversational usage will never hit them.",
   },
   {
-    question: "Can I modify the tools or add custom ones?",
+    question: "How do I get an API key?",
     answer:
-      "Yes — the MCP server is open source TypeScript. Check the GitHub repo for contribution instructions.",
+      "Sign up for a Pro or Enterprise plan at propertyiq.app/pricing, then generate your API key from your account settings. Keys start with piq_live_.",
   },
 ];

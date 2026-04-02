@@ -2,7 +2,7 @@
 
 import { config } from "./config";
 import { clearCredentials } from "./auth";
-import { getRequestApiKey } from "./session-context";
+import { getSessionAuth } from "./session-context";
 
 export class ApiError extends Error {
   constructor(
@@ -32,10 +32,15 @@ export async function fetchApi<T = unknown>(
     "Content-Type": "application/json",
   };
 
-  // Per-request key (from HTTP transport) takes priority over global config
-  const apiKey = getRequestApiKey() || config.apiKey;
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
+  const auth = getSessionAuth();
+  if (auth) {
+    if (auth.type === "api_key") {
+      headers["Authorization"] = `Bearer ${auth.apiKey}`;
+    } else {
+      headers["x-user-id"] = auth.userId;
+    }
+  } else if (config.apiKey) {
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
 
   const controller = new AbortController();
