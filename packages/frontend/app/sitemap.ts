@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
+import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
+import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
 import { getAllPosts } from "@/lib/blog";
 import { COMPARISONS } from "@/lib/data/comparisons";
 
@@ -98,6 +100,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  const countyRoutes: MetadataRoute.Sitemap = COUNTY_SLUG_DATA.map(
+    (county) => ({
+      url: `${BASE_URL}/markets/county/${county.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }),
+  );
+
+  const zipRoutes: MetadataRoute.Sitemap = ZIP_SLUG_DATA.map((zip) => ({
+    url: `${BASE_URL}/markets/zip/${zip.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.5,
+  }));
+
   const blogPosts = getAllPosts();
   const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
     url: `${BASE_URL}/blog/${post.slug}`,
@@ -113,5 +131,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...metroRoutes, ...blogRoutes, ...comparisonRoutes];
+  return [
+    ...staticRoutes,
+    ...metroRoutes,
+    ...countyRoutes,
+    ...zipRoutes,
+    ...blogRoutes,
+    ...comparisonRoutes,
+  ];
 }
