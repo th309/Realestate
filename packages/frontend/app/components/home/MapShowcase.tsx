@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import type mapboxgl from "mapbox-gl";
 import { useInView } from "./hooks/useInView";
 import { useMapData, useMapLayers } from "@/app/map/hooks";
 import { Legend, GeoLevelPills } from "@/app/map/components";
 import { MAPBOX_ACCESS_TOKEN } from "@/app/map/config";
 import { GEO_ZOOM_LEVELS, STATE_CENTERS } from "@/app/map/types";
 import type { GeoLevel, SelectedGeography } from "@/app/map/types";
-
-mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 /**
  * Live interactive map rendered directly on the homepage.
@@ -61,34 +58,47 @@ export function MapShowcase() {
     }
   }, [geoLevel, selectedState, fetchMapData]);
 
-  // Initialize map — only when section scrolls into view
+  // Initialize map — only when section scrolls into view.
+  // mapbox-gl is dynamically imported to avoid bundling ~700KB on initial load.
   const mapInitRef = useRef(false);
   useEffect(() => {
     if (!inView || mapInitRef.current || !mapContainer.current) return;
     mapInitRef.current = true;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [-95.5, 38],
-      zoom: 3.5,
-      projection: "mercator",
-      interactive: true,
-      attributionControl: false,
+    let ro: ResizeObserver | undefined;
+    const containerEl = mapContainer.current;
+
+    import("mapbox-gl").then((mapboxModule) => {
+      // Also load the CSS dynamically alongside the JS
+      // @ts-expect-error -- CSS module has no type declarations
+      import("mapbox-gl/dist/mapbox-gl.css");
+
+      const mb = mapboxModule.default;
+      mb.accessToken = MAPBOX_ACCESS_TOKEN;
+
+      map.current = new mb.Map({
+        container: containerEl,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-95.5, 38],
+        zoom: 3.5,
+        projection: "mercator",
+        interactive: true,
+        attributionControl: false,
+      });
+
+      map.current.addControl(
+        new mb.NavigationControl({ showCompass: false }),
+        "top-right",
+      );
+
+      map.current.on("load", () => setMapLoaded(true));
+
+      ro = new ResizeObserver(() => map.current?.resize());
+      ro.observe(containerEl);
     });
 
-    map.current.addControl(
-      new mapboxgl.NavigationControl({ showCompass: false }),
-      "top-right",
-    );
-
-    map.current.on("load", () => setMapLoaded(true));
-
-    const ro = new ResizeObserver(() => map.current?.resize());
-    ro.observe(mapContainer.current);
-
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
     };
   }, [inView]);
 
@@ -176,11 +186,11 @@ export function MapShowcase() {
             />
           </div>
 
-          {/* Map */}
+          {/* Map — explicit dimensions prevent CLS before tiles load */}
           <div
             ref={mapContainer}
             className="w-full"
-            style={{ height: "min(60vw, 560px)" }}
+            style={{ height: "min(60vw, 560px)", minHeight: "320px" }}
           />
 
           {/* Legend */}

@@ -58,7 +58,7 @@ export function GraphsShowcase() {
             transitionDelay: "0.15s",
           }}
         >
-          {/* Outer frame */}
+          {/* Outer frame — aspect-ratio reserves space before video metadata loads to prevent CLS */}
           <div className="rounded-xl overflow-hidden shadow-xl border border-outline-variant/20 bg-surface">
             <video
               autoPlay
@@ -67,6 +67,7 @@ export function GraphsShowcase() {
               playsInline
               poster="/images/home/graphs-poster.png"
               className="w-full h-auto block"
+              style={{ aspectRatio: "16 / 9" }}
               aria-label="PropertyIQ interactive analytics demo showing animated scatter plot of home values vs days on market across US metros, then transitioning to an animated bar chart race ranking California metros by median home value with Napa highlighted"
             >
               <source src="/videos/graphs-showcase.webm" type="video/webm" />

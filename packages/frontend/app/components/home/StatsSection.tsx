@@ -32,8 +32,8 @@ export function StatsSection() {
   return (
     <section className="grid grid-cols-2 md:grid-cols-4 gap-8 px-6 py-12 border-y border-white/10">
       {STATS.map((stat, i) => (
-        <div key={i} className="text-center">
-          <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-white">
+        <div key={i} className="text-center min-h-[88px] md:min-h-[96px]">
+          <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-white min-h-[40px] md:min-h-[48px] lg:min-h-[56px]">
             {"prefix" in stat && stat.prefix}
             <AnimatedCounter end={stat.value} suffix={stat.suffix} />
           </div>
