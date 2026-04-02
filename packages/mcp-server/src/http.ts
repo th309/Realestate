@@ -23,6 +23,22 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const app = express();
 app.use(express.json());
 
+// CORS — allow browser-based MCP clients (claude.ai connectors, web UIs)
+app.use((_req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, Mcp-Session-Id",
+  );
+  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+  next();
+});
+
+app.options("*", (_req, res) => {
+  res.status(204).end();
+});
+
 // ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------
@@ -103,11 +119,28 @@ app.post("/mcp", async (req: Request, res: Response) => {
   }
 });
 
-// MCP GET — SSE event stream
+// MCP GET — SSE event stream (or unauthenticated server-info probe)
 app.get("/mcp", async (req: Request, res: Response) => {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+  // No session ID and no auth → discovery probe (claude.ai connectors, health checks)
+  if (!sessionId && !req.headers.authorization) {
+    res.json({
+      jsonrpc: "2.0",
+      result: {
+        name: "propertyiq",
+        version: "0.2.0",
+        transport: "streamable-http",
+        auth: "Bearer piq_live_*",
+      },
+      id: null,
+    });
+    return;
+  }
+
+  // Authenticated SSE stream
   const userApiKey = await extractApiKey(req, res);
   if (!userApiKey) return;
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
   if (!sessionId || !transports[sessionId]) {
     res.status(400).send("Invalid or missing session ID");
     return;
