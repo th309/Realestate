@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { getVisitorId } from "./visitor-identity";
 import { getAnonymousSessionId } from "@/lib/entitlements/session";
+import { isTrackingExcluded } from "./tracker";
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -20,6 +21,7 @@ export function useHeartbeat() {
 
     function sendHeartbeat() {
       if (document.visibilityState !== "visible") return;
+      if (isTrackingExcluded()) return;
 
       const payload = JSON.stringify({
         session_id: getAnonymousSessionId(),

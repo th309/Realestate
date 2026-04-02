@@ -30,6 +30,7 @@ interface AnalyticsEvent {
   event_category: string;
   event_action: string;
   visitor_id: string;
+  user_id?: string;
   properties: Record<string, unknown>;
   user_tier?: string;
   page_path?: string;
@@ -41,6 +42,8 @@ let eventQueue: AnalyticsEvent[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
 let sessionContextAttached = false;
+let currentUserId: string | null = null;
+let trackingExcluded = false;  
 
 function getSessionId(): string {
   return getAnonymousSessionId();
@@ -68,6 +71,7 @@ export function trackEvent(
   properties: Record<string, unknown> = {},
 ): void {
   if (typeof window === "undefined") return;
+  if (trackingExcluded) return;
 
   // Parse category.action from name (e.g., 'pageview.view' -> category='pageview', action='view')
   const [eventCategory, ...rest] = eventName.split(".");
@@ -88,6 +92,7 @@ export function trackEvent(
     event_category: eventCategory,
     event_action: eventAction,
     visitor_id: getVisitorId(),
+    user_id: currentUserId || undefined,
     properties: enrichedProperties,
     user_tier: getUserTier(),
     page_path: getPagePath(),
@@ -104,6 +109,28 @@ export function trackEvent(
   if (!initialized) {
     initialize();
   }
+}
+
+/**
+ * Set the authenticated user ID for inclusion in events.
+ */
+export function setUserId(userId: string | null): void {
+  currentUserId = userId;
+}
+
+/**
+ * Exclude this browser from all analytics tracking.
+ * Called when the authenticated user's email matches the exclusion list.
+ */
+export function setTrackingExcluded(excluded: boolean): void {
+  trackingExcluded = excluded;
+}
+
+/**
+ * Check if tracking is currently excluded.
+ */
+export function isTrackingExcluded(): boolean {
+  return trackingExcluded;
 }
 
 /**
