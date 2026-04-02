@@ -22,6 +22,7 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // CORS — allow browser-based MCP clients (claude.ai connectors, web UIs)
 app.use((_req, res, next) => {
