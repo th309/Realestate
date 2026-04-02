@@ -33,22 +33,29 @@ function McpAuthorizeContent() {
     }
 
     const checkAuth = async () => {
-      const supabase = createSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session) {
-        const returnUrl = `/auth/mcp-authorize?mcp_session=${encodeURIComponent(mcpSession)}`;
-        router.push(`/auth/sign-in?redirect=${encodeURIComponent(returnUrl)}`);
-        return;
+        if (!session) {
+          const returnUrl = `/auth/mcp-authorize?mcp_session=${encodeURIComponent(mcpSession)}`;
+          router.push(
+            `/auth/sign-in?redirect=${encodeURIComponent(returnUrl)}`,
+          );
+          return;
+        }
+
+        setUser({
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email,
+        });
+      } catch (err) {
+        console.error("[MCP Authorize] Auth check failed:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setUser({
-        email: session.user.email,
-        name: session.user.user_metadata?.full_name || session.user.email,
-      });
-      setLoading(false);
     };
 
     checkAuth();
