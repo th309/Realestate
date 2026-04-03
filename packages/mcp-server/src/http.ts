@@ -49,6 +49,7 @@ const transports: Record<string, StreamableHTTPServerTransport> = {};
 // Health check (no auth)
 // ---------------------------------------------------------------------------
 app.get("/health", (_req, res) => {
+  console.log("[MCP] GET /health");
   res.json({
     status: "healthy",
     service: "propertyiq-mcp",
@@ -65,13 +66,25 @@ mountOAuthRoutes(app);
 // MCP POST — initialize or tool calls
 // ---------------------------------------------------------------------------
 app.post("/mcp", async (req: Request, res: Response) => {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const authHeader = req.headers.authorization;
+  const authType = authHeader?.startsWith("Bearer piq_live_")
+    ? "piq_live"
+    : authHeader?.startsWith("Bearer ")
+      ? "oauth"
+      : "none";
+  const isInit = isInitializeRequest(req.body);
+  console.log(
+    `[MCP] POST /mcp | session=${sessionId ?? "none"} | auth=${authType} | initialize=${isInit}`,
+  );
+
   const auth = await extractAuth(req, res);
   if (!auth) return;
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
   try {
     // Existing session — forward request with auth context
     if (sessionId && transports[sessionId]) {
+      console.log(`[MCP] Existing session: ${sessionId}`);
       await authStore.run(auth, () =>
         transports[sessionId].handleRequest(req, res, req.body),
       );
@@ -79,10 +92,11 @@ app.post("/mcp", async (req: Request, res: Response) => {
     }
 
     // New session — must be initialize request
-    if (!sessionId && isInitializeRequest(req.body)) {
+    if (!sessionId && isInit) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sid: string) => {
+          console.log(`[MCP] New session created: ${sid}`);
           transports[sid] = transport;
         },
       });
@@ -123,9 +137,13 @@ app.post("/mcp", async (req: Request, res: Response) => {
 // MCP GET — SSE event stream (or unauthenticated server-info probe)
 app.get("/mcp", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const isDiscovery = !sessionId && !req.headers.authorization;
+  console.log(
+    `[MCP] GET /mcp | session=${sessionId ?? "none"} | discovery_probe=${isDiscovery}`,
+  );
 
   // No session ID and no auth → discovery probe (claude.ai connectors, health checks)
-  if (!sessionId && !req.headers.authorization) {
+  if (isDiscovery) {
     res.json({
       jsonrpc: "2.0",
       result: {
@@ -154,6 +172,7 @@ app.get("/mcp", async (req: Request, res: Response) => {
 // MCP DELETE — session termination
 app.delete("/mcp", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  console.log(`[MCP] DELETE /mcp | session=${sessionId ?? "none"}`);
   if (!sessionId || !transports[sessionId]) {
     res.status(400).send("Invalid or missing session ID");
     return;

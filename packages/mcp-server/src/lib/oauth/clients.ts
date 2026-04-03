@@ -19,6 +19,9 @@ interface ClientRecord {
 export async function registerClient(
   input: RegisterInput,
 ): Promise<ClientRecord> {
+  console.log(
+    `[OAuth:Clients] Registering client | name=${input.client_name || ""} | redirect_uris=${JSON.stringify(input.redirect_uris)}`,
+  );
   const sb = requireSupabase();
   const clientId = randomUUID();
   const record = {
@@ -47,6 +50,8 @@ export async function getClient(
     .eq("client_id", clientId)
     .single();
 
+  const found = !error && !!data;
+  console.log(`[OAuth:Clients] Looking up client=${clientId} | found=${found}`);
   if (error || !data) return null;
   return data as ClientRecord;
 }

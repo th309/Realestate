@@ -24,6 +24,9 @@ export async function createTokens(
   clientId: string,
   userId: string,
 ): Promise<TokenPair> {
+  console.log(
+    `[OAuth:Tokens] Creating tokens | clientId=${clientId} | userId=${userId}`,
+  );
   const sb = requireSupabase();
   const accessToken = randomBytes(48).toString("hex");
   const refreshToken = randomBytes(48).toString("hex");
@@ -35,7 +38,10 @@ export async function createTokens(
     user_id: userId,
   });
 
-  if (error) throw new Error(`Token creation failed: ${error.message}`);
+  if (error) {
+    console.log(`[OAuth:Tokens] Token creation failed: ${error.message}`);
+    throw new Error(`Token creation failed: ${error.message}`);
+  }
 
   return {
     access_token: accessToken,
@@ -49,6 +55,9 @@ export async function createTokens(
 export async function lookupAccessToken(
   accessToken: string,
 ): Promise<{ userId: string; clientId: string } | null> {
+  console.log(
+    `[OAuth:Tokens] Looking up token=${accessToken.substring(0, 8)}...`,
+  );
   const sb = requireSupabase();
 
   const { data, error } = await sb
@@ -57,16 +66,29 @@ export async function lookupAccessToken(
     .eq("access_token", accessToken)
     .single();
 
-  if (error || !data) return null;
-  if (data.revoked) return null;
-  if (new Date(data.access_expires_at) < new Date()) return null;
+  if (error || !data) {
+    console.log(`[OAuth:Tokens] Token lookup result: not_found`);
+    return null;
+  }
+  if (data.revoked) {
+    console.log(`[OAuth:Tokens] Token lookup result: revoked`);
+    return null;
+  }
+  if (new Date(data.access_expires_at) < new Date()) {
+    console.log(`[OAuth:Tokens] Token lookup result: expired`);
+    return null;
+  }
 
+  console.log(`[OAuth:Tokens] Token lookup result: found`);
   return { userId: data.user_id, clientId: data.client_id };
 }
 
 export async function refreshAccessToken(
   refreshToken: string,
 ): Promise<TokenPair> {
+  console.log(
+    `[OAuth:Tokens] Refreshing token=${refreshToken.substring(0, 8)}...`,
+  );
   const sb = requireSupabase();
 
   const { data, error } = await sb
@@ -75,12 +97,20 @@ export async function refreshAccessToken(
     .eq("refresh_token", refreshToken)
     .single();
 
-  if (error || !data) throw new Error("Invalid refresh token");
+  if (error || !data) {
+    console.log(`[OAuth:Tokens] Refresh result: error`);
+    throw new Error("Invalid refresh token");
+  }
 
   const record = data as TokenRecord;
-  if (record.revoked) throw new Error("Token has been revoked");
-  if (new Date(record.refresh_expires_at) < new Date())
+  if (record.revoked) {
+    console.log(`[OAuth:Tokens] Refresh result: error`);
+    throw new Error("Token has been revoked");
+  }
+  if (new Date(record.refresh_expires_at) < new Date()) {
+    console.log(`[OAuth:Tokens] Refresh result: error`);
     throw new Error("Refresh token expired");
+  }
 
   // Revoke old tokens
   await sb
@@ -89,5 +119,6 @@ export async function refreshAccessToken(
     .eq("refresh_token", refreshToken);
 
   // Issue new pair
+  console.log(`[OAuth:Tokens] Refresh result: success`);
   return createTokens(record.client_id, record.user_id);
 }

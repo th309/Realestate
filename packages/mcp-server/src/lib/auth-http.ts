@@ -16,8 +16,15 @@ export async function extractAuth(
   res: Response,
 ): Promise<SessionAuth | null> {
   const auth = req.headers.authorization;
+  const headerSnippet = auth
+    ? auth.startsWith("Bearer piq_live_")
+      ? "Bearer piq_live_*"
+      : `Bearer ${auth.slice(7, 15)}...`
+    : "none";
+  console.log(`[Auth] extractAuth called | auth_header=${headerSnippet}`);
 
   if (!auth?.startsWith("Bearer ")) {
+    console.log("[Auth] No Bearer token — returning 401");
     res.status(401).json({
       jsonrpc: "2.0",
       error: { code: -32001, message: "Authorization required" },
@@ -30,6 +37,7 @@ export async function extractAuth(
 
   // Path 1: piq_live_* API key
   if (token.startsWith("piq_live_")) {
+    console.log("[Auth] API key auth: piq_live_***");
     return { type: "api_key", apiKey: token };
   }
 
@@ -37,6 +45,7 @@ export async function extractAuth(
   try {
     const result = await lookupAccessToken(token);
     if (!result) {
+      console.log("[Auth] OAuth token lookup: not_found");
       res.status(401).json({
         jsonrpc: "2.0",
         error: { code: -32001, message: "Invalid or expired access token" },
@@ -44,9 +53,11 @@ export async function extractAuth(
       });
       return null;
     }
+    console.log(`[Auth] OAuth token lookup: found | userId=${result.userId}`);
 
     const allowed = await checkEntitlement(result.userId);
     if (!allowed) {
+      console.log(`[Auth] Entitlement check: denied | userId=${result.userId}`);
       res.status(403).json({
         jsonrpc: "2.0",
         error: {
@@ -59,8 +70,12 @@ export async function extractAuth(
       return null;
     }
 
+    console.log(`[Auth] Entitlement check: allowed | userId=${result.userId}`);
     return { type: "oauth", userId: result.userId };
-  } catch {
+  } catch (err) {
+    console.log(
+      `[Auth] Auth failed with error: ${err instanceof Error ? err.message : String(err)}`,
+    );
     res.status(401).json({
       jsonrpc: "2.0",
       error: { code: -32001, message: "Authentication failed" },

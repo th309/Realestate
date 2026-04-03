@@ -14,8 +14,13 @@ const BACKEND_URL =
 export async function checkEntitlement(userId: string): Promise<boolean> {
   const now = Date.now();
   const cached = cache.get(userId);
-  if (cached && now - cached.checkedAt < CACHE_TTL_MS) {
-    return cached.allowed;
+  const isCached = !!(cached && now - cached.checkedAt < CACHE_TTL_MS);
+  console.log(
+    `[Auth:Entitlements] Checking userId=${userId} | cached=${isCached}`,
+  );
+  if (isCached) {
+    console.log(`[Auth:Entitlements] Result: allowed=${cached!.allowed}`);
+    return cached!.allowed;
   }
 
   try {
@@ -26,9 +31,13 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
     const body = (await res.json()) as { allowed?: boolean };
     const allowed = body?.allowed === true;
     cache.set(userId, { allowed, checkedAt: now });
+    console.log(`[Auth:Entitlements] Result: allowed=${allowed}`);
     return allowed;
-  } catch {
+  } catch (err) {
     // On failure, allow access (fail open) but don't cache
+    console.log(
+      `[Auth:Entitlements] Check failed, failing open | error=${err instanceof Error ? err.message : String(err)}`,
+    );
     return true;
   }
 }

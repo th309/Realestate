@@ -20,6 +20,9 @@ interface CodeRecord {
 }
 
 export async function createAuthCode(input: CreateCodeInput): Promise<string> {
+  console.log(
+    `[OAuth:Codes] Creating auth code | clientId=${input.clientId} | userId=${input.userId}`,
+  );
   const sb = requireSupabase();
   const code = randomBytes(48).toString("hex");
 
@@ -40,6 +43,9 @@ export async function exchangeCode(
   redirectUri: string,
   codeVerifier: string,
 ): Promise<{ clientId: string; userId: string }> {
+  console.log(
+    `[OAuth:Codes] Exchanging code=${code.substring(0, 8)}... | redirect_uri=${redirectUri}`,
+  );
   const sb = requireSupabase();
 
   const { data, error } = await sb
@@ -48,15 +54,25 @@ export async function exchangeCode(
     .eq("code", code)
     .single();
 
-  if (error || !data) throw new Error("Invalid authorization code");
+  if (error || !data) {
+    console.log(`[OAuth:Codes] Code status: expired`);
+    throw new Error("Invalid authorization code");
+  }
 
   const record = data as CodeRecord;
 
-  if (record.used) throw new Error("Authorization code already used");
-  if (new Date(record.expires_at) < new Date())
+  if (record.used) {
+    console.log(`[OAuth:Codes] Code status: used`);
+    throw new Error("Authorization code already used");
+  }
+  if (new Date(record.expires_at) < new Date()) {
+    console.log(`[OAuth:Codes] Code status: expired`);
     throw new Error("Authorization code expired");
-  if (record.redirect_uri !== redirectUri)
+  }
+  if (record.redirect_uri !== redirectUri) {
+    console.log(`[OAuth:Codes] Code status: redirect_mismatch`);
     throw new Error("Redirect URI mismatch");
+  }
 
   // PKCE S256 verification
   const expectedChallenge = createHash("sha256")
@@ -64,11 +80,17 @@ export async function exchangeCode(
     .digest("base64url");
 
   if (expectedChallenge !== record.code_challenge) {
+    console.log(`[OAuth:Codes] Code status: pkce_failed`);
     throw new Error("PKCE verification failed");
   }
+
+  console.log(`[OAuth:Codes] Code status: valid`);
 
   // Mark as used
   await sb.from("mcp_oauth_codes").update({ used: true }).eq("code", code);
 
+  console.log(
+    `[OAuth:Codes] Code exchange success | clientId=${record.client_id} | userId=${record.user_id}`,
+  );
   return { clientId: record.client_id, userId: record.user_id };
 }

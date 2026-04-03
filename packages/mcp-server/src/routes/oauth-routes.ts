@@ -28,10 +28,12 @@ export function mountOAuthRoutes(app: Express): void {
   // ── Discovery (no auth) ──
 
   app.get("/.well-known/oauth-protected-resource", (_req, res) => {
+    console.log("[OAuth] GET /.well-known/oauth-protected-resource");
     res.json(protectedResourceMetadata());
   });
 
   app.get("/.well-known/oauth-authorization-server", (_req, res) => {
+    console.log("[OAuth] GET /.well-known/oauth-authorization-server");
     res.json(authorizationServerMetadata());
   });
 
@@ -41,6 +43,9 @@ export function mountOAuthRoutes(app: Express): void {
     try {
       const { client_name, redirect_uris, grant_types, response_types } =
         req.body;
+      console.log(
+        `[OAuth] POST /register | client_name=${client_name} | redirect_uris=${JSON.stringify(redirect_uris)}`,
+      );
       if (
         !redirect_uris ||
         !Array.isArray(redirect_uris) ||
@@ -55,6 +60,7 @@ export function mountOAuthRoutes(app: Express): void {
         grant_types,
         response_types,
       });
+      console.log(`[OAuth] Client registered: ${client.client_id}`);
       res.status(201).json({
         client_id: client.client_id,
         client_name: client.client_name,
@@ -84,6 +90,9 @@ export function mountOAuthRoutes(app: Express): void {
         state,
         response_type,
       } = req.query as Record<string, string>;
+      console.log(
+        `[OAuth] GET /authorize | client_id=${client_id} | redirect_uri=${redirect_uri} | state=${state}`,
+      );
 
       if (response_type !== "code") {
         res.status(400).json({ error: "unsupported_response_type" });
@@ -110,6 +119,7 @@ export function mountOAuthRoutes(app: Express): void {
         res.status(400).json({ error: "invalid_client" });
         return;
       }
+      console.log(`[OAuth] Client validated: ${client_id}`);
       if (!client.redirect_uris.includes(redirect_uri)) {
         res.status(400).json({
           error: "invalid_request",
@@ -133,6 +143,7 @@ export function mountOAuthRoutes(app: Express): void {
       // Redirect to frontend consent page
       const consentUrl = new URL("/auth/mcp-authorize", FRONTEND_URL);
       consentUrl.searchParams.set("mcp_session", mcpSession);
+      console.log(`[OAuth] Redirecting to consent: ${consentUrl.toString()}`);
       res.redirect(302, consentUrl.toString());
     } catch (error) {
       console.error("[OAuth] Authorize error:", error);
@@ -153,6 +164,9 @@ export function mountOAuthRoutes(app: Express): void {
         token,
         error: authError,
       } = req.query as Record<string, string>;
+      console.log(
+        `[OAuth] GET /oauth/callback | has_mcp_session=${!!mcp_session} | has_token=${!!token} | has_error=${!!authError}`,
+      );
 
       if (!mcp_session) {
         res.status(400).json({ error: "Missing mcp_session" });
@@ -169,10 +183,14 @@ export function mountOAuthRoutes(app: Express): void {
         return;
       }
 
+      console.log(
+        `[OAuth] JWT verified | client_id=${payload.client_id} | redirect_uri=${payload.redirect_uri}`,
+      );
       const redirectUri = new URL(payload.redirect_uri);
 
       // User denied
       if (authError) {
+        console.log(`[OAuth] User denied access, redirecting with error`);
         redirectUri.searchParams.set("error", authError);
         if (payload.state) redirectUri.searchParams.set("state", payload.state);
         res.redirect(302, redirectUri.toString());
@@ -200,6 +218,7 @@ export function mountOAuthRoutes(app: Express): void {
         res.status(400).json({ error: "Invalid user token" });
         return;
       }
+      console.log(`[OAuth] User validated: ${user.id} | email=${user.email}`);
 
       // Create authorization code
       const code = await createAuthCode({
@@ -210,6 +229,9 @@ export function mountOAuthRoutes(app: Express): void {
       });
 
       // Redirect to client callback with code and state
+      console.log(
+        `[OAuth] Auth code created, redirecting to: ${payload.redirect_uri} (code=${code.slice(0, 8)}...)`,
+      );
       redirectUri.searchParams.set("code", code);
       if (payload.state) redirectUri.searchParams.set("state", payload.state);
       res.redirect(302, redirectUri.toString());
@@ -225,13 +247,18 @@ export function mountOAuthRoutes(app: Express): void {
     try {
       const { grant_type, code, code_verifier, redirect_uri, refresh_token } =
         req.body;
+      console.log(`[OAuth] POST /token | grant_type=${grant_type}`);
 
       if (grant_type === "authorization_code") {
         if (!code || !code_verifier || !redirect_uri) {
           res.status(400).json({ error: "invalid_request" });
           return;
         }
+        console.log(
+          `[OAuth] Exchanging code=${code.slice(0, 8)}... | redirect_uri=${redirect_uri}`,
+        );
         const result = await exchangeCode(code, redirect_uri, code_verifier);
+        console.log(`[OAuth] Token exchange success | userId=${result.userId}`);
         const tokens = await createTokens(result.clientId, result.userId);
         res.json(tokens);
         return;
@@ -242,6 +269,7 @@ export function mountOAuthRoutes(app: Express): void {
           res.status(400).json({ error: "invalid_request" });
           return;
         }
+        console.log(`[OAuth] Refreshing token=${refresh_token.slice(0, 8)}...`);
         const tokens = await refreshAccessToken(refresh_token);
         res.json(tokens);
         return;
