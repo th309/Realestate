@@ -163,28 +163,40 @@ export function mountApiRoutes(app: Express): void {
 
   // Unified tool invocation
   app.post("/api/tools", async (req: Request, res: Response) => {
-    const { tool_name, arguments: args } = req.body ?? {};
-    console.log(`[API] POST /api/tools | tool=${tool_name}`);
+    const body = req.body ?? {};
+    const { tool_name, arguments: explicitArgs, ...flatArgs } = body;
+    console.log(
+      `[API] POST /api/tools | tool=${tool_name} | body=${JSON.stringify(body).slice(0, 200)}`,
+    );
 
     if (!tool_name || typeof tool_name !== "string") {
       res.status(400).json({ error: "tool_name is required" });
       return;
     }
 
+    // Clean tool_name — ChatGPT sometimes appends query strings or JSON
+    const cleanName = tool_name.split(/[?{ ]/)[0];
+
     const auth = await extractAuth(req, res);
     if (!auth) return;
 
-    const tool = toolMap.get(tool_name);
+    const tool = toolMap.get(cleanName);
     if (!tool) {
       res.status(400).json({
-        error: `Unknown tool '${tool_name}'. Use list_tools to see available tools.`,
+        error: `Unknown tool '${cleanName}'. Use list_tools to see available tools.`,
       });
       return;
     }
 
+    // Accept arguments in multiple formats ChatGPT might send:
+    // 1. { tool_name, arguments: { geography: "metro" } }  — intended format
+    // 2. { tool_name, geography: "metro" }                  — flat alongside tool_name
+    const args =
+      explicitArgs ?? (Object.keys(flatArgs).length > 0 ? flatArgs : {});
+
     // Validate arguments against tool's Zod schema
     const zodObj = z.object(tool.schema as AnySchema);
-    const parsed = zodObj.safeParse(args ?? {});
+    const parsed = zodObj.safeParse(args);
     if (!parsed.success) {
       res.status(400).json({
         error: "Invalid arguments",
