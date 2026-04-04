@@ -125,6 +125,7 @@ function buildOpenApiSpec() {
       },
     },
     components: {
+      schemas: {},
       securitySchemes: {
         oauth2: {
           type: "oauth2",
