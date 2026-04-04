@@ -46,8 +46,24 @@ app.options("/{*path}", (_req, res) => {
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
 // ---------------------------------------------------------------------------
-// Health check (no auth)
+// Root + Health check (no auth)
 // ---------------------------------------------------------------------------
+app.get("/", (_req, res) => {
+  console.log("[MCP] GET /");
+  res.json({
+    name: "propertyiq",
+    version: "0.2.0",
+    transport: "streamable-http",
+    auth: "oauth2.1",
+    endpoints: {
+      mcp: "/mcp",
+      health: "/health",
+      oauth_discovery: "/.well-known/oauth-authorization-server",
+      protected_resource: "/.well-known/oauth-protected-resource",
+    },
+  });
+});
+
 app.get("/health", (_req, res) => {
   console.log("[MCP] GET /health");
   res.json({
