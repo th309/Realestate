@@ -1,8 +1,9 @@
 /**
  * REST API wrapper for MCP tools — enables ChatGPT Custom GPT Actions.
  *
- * Exposes every MCP tool as POST /api/tools/:toolName and auto-generates
- * an OpenAPI 3.1 schema at GET /api/openapi.json.
+ * Single endpoint: POST /api/tools with { tool_name, arguments }.
+ * OpenAPI schema at GET /api/openapi.json (1 operation, under ChatGPT's 30 limit).
+ * Tool catalog at GET /api/tools (for GPT system instructions).
  */
 
 import type { Express, Request, Response } from "express";
@@ -17,70 +18,112 @@ const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tool schema union is too deep for TS
 type AnySchema = any;
 
-/** Build a Zod object schema from a tool's schema record */
-function buildZodObject(schema: AnySchema): z.ZodObject<any> {
-  return z.object(schema);
-}
+// Build a lookup map for tool handlers
+const toolMap = new Map(ALL_TOOLS.map((t) => [t.name, t]));
 
-/** Convert a tool's schema record to JSON Schema */
-function toJsonSchema(schema: AnySchema) {
-  const zodObj = buildZodObject(schema);
-  const jsonSchema = (zodToJsonSchema as any)(zodObj, { target: "openApi3" });
-  // zodToJsonSchema wraps in { type: "object", properties, required }
-  return jsonSchema;
-}
-
-/** Build OpenAPI 3.1 spec from all registered tools */
-function buildOpenApiSpec() {
-  const paths: Record<string, any> = {};
-
-  for (const tool of ALL_TOOLS) {
-    const jsonSchema = toJsonSchema(tool.schema);
-
-    paths[`/api/tools/${tool.name}`] = {
-      post: {
-        operationId: tool.name,
-        summary: tool.description,
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": { schema: jsonSchema },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Tool result",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    result: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          "400": { description: "Invalid input" },
-          "401": { description: "Authentication required" },
-          "403": { description: "Subscription required" },
-          "404": { description: "Tool not found" },
-        },
-        security: [{ oauth2: [] }],
-      },
+/** Build tool catalog — names, descriptions, and parameter schemas */
+function buildToolCatalog() {
+  return ALL_TOOLS.map((tool) => {
+    const zodObj = z.object(tool.schema as AnySchema);
+    const params = (zodToJsonSchema as any)(zodObj, { target: "openApi3" });
+    return {
+      name: tool.name,
+      description: tool.description,
+      parameters: params,
     };
-  }
+  });
+}
 
+let cachedCatalog: ReturnType<typeof buildToolCatalog> | null = null;
+function getToolCatalog() {
+  if (!cachedCatalog) cachedCatalog = buildToolCatalog();
+  return cachedCatalog;
+}
+
+/** OpenAPI 3.1 spec with a single invoke endpoint */
+function buildOpenApiSpec() {
   return {
     openapi: "3.1.0",
     info: {
       title: "PropertyIQ API",
       description:
-        "Real estate market intelligence API. Query PropertyIQ scores, market snapshots, home values, rents, demographics, and more for any US market.",
+        "Real estate market intelligence API. Call invoke_tool with a tool_name and arguments to query PropertyIQ scores, market snapshots, home values, rents, demographics, and more for any US market. GET /api/tools for the full tool catalog.",
       version: "0.2.0",
     },
     servers: [{ url: MCP_BASE_URL }],
-    paths,
+    paths: {
+      "/api/tools": {
+        get: {
+          operationId: "list_tools",
+          summary: "List all available PropertyIQ tools with their parameters",
+          responses: {
+            "200": {
+              description: "Tool catalog",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        description: { type: "string" },
+                        parameters: { type: "object" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          operationId: "invoke_tool",
+          summary:
+            "Invoke a PropertyIQ tool by name. Use list_tools to see available tools and their parameters.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["tool_name", "arguments"],
+                  properties: {
+                    tool_name: {
+                      type: "string",
+                      description:
+                        "Tool name from the catalog (e.g. search_markets, get_propertyiq_score, get_market_snapshot)",
+                    },
+                    arguments: {
+                      type: "object",
+                      description:
+                        "Arguments matching the tool's parameter schema",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Tool result",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: { result: { type: "string" } },
+                  },
+                },
+              },
+            },
+            "400": { description: "Invalid input or unknown tool" },
+            "401": { description: "Authentication required" },
+            "403": { description: "Subscription required" },
+          },
+          security: [{ oauth2: [] }],
+        },
+      },
+    },
     components: {
       securitySchemes: {
         oauth2: {
@@ -98,25 +141,68 @@ function buildOpenApiSpec() {
   };
 }
 
-// Pre-build the spec once at startup (tools don't change at runtime)
 let cachedSpec: ReturnType<typeof buildOpenApiSpec> | null = null;
-
 function getOpenApiSpec() {
   if (!cachedSpec) cachedSpec = buildOpenApiSpec();
   return cachedSpec;
 }
 
-// Build a lookup map for tool handlers
-const toolMap = new Map(ALL_TOOLS.map((t) => [t.name, t]));
-
 export function mountApiRoutes(app: Express): void {
-  // OpenAPI schema (no auth — ChatGPT needs to fetch this during setup)
+  // OpenAPI schema (no auth — ChatGPT fetches during setup)
   app.get("/api/openapi.json", (_req, res) => {
     console.log("[API] GET /api/openapi.json");
     res.json(getOpenApiSpec());
   });
 
-  // Generic tool invocation endpoint
+  // Tool catalog (no auth — used by GPT instructions and list_tools action)
+  app.get("/api/tools", (_req, res) => {
+    console.log("[API] GET /api/tools");
+    res.json(getToolCatalog());
+  });
+
+  // Unified tool invocation
+  app.post("/api/tools", async (req: Request, res: Response) => {
+    const { tool_name, arguments: args } = req.body ?? {};
+    console.log(`[API] POST /api/tools | tool=${tool_name}`);
+
+    if (!tool_name || typeof tool_name !== "string") {
+      res.status(400).json({ error: "tool_name is required" });
+      return;
+    }
+
+    const auth = await extractAuth(req, res);
+    if (!auth) return;
+
+    const tool = toolMap.get(tool_name);
+    if (!tool) {
+      res.status(400).json({
+        error: `Unknown tool '${tool_name}'. Use list_tools to see available tools.`,
+      });
+      return;
+    }
+
+    // Validate arguments against tool's Zod schema
+    const zodObj = z.object(tool.schema as AnySchema);
+    const parsed = zodObj.safeParse(args ?? {});
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "Invalid arguments",
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    try {
+      const result = await authStore.run(auth, () => tool.handler(parsed.data));
+      res.json({ result });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[API] Tool '${tool_name}' error: ${msg}`);
+      res.status(500).json({ error: msg });
+    }
+  });
+
+  // Keep the per-tool endpoint for direct API users
   app.post("/api/tools/:toolName", async (req: Request, res: Response) => {
     const { toolName } = req.params;
     console.log(`[API] POST /api/tools/${toolName}`);
@@ -130,8 +216,7 @@ export function mountApiRoutes(app: Express): void {
       return;
     }
 
-    // Validate input against Zod schema
-    const zodObj = buildZodObject(tool.schema as AnySchema);
+    const zodObj = z.object(tool.schema as AnySchema);
     const parsed = zodObj.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
