@@ -98,14 +98,16 @@ export function mountOAuthRoutes(app: Express): void {
         res.status(400).json({ error: "unsupported_response_type" });
         return;
       }
-      if (code_challenge_method !== "S256") {
+      // PKCE is required for MCP clients (Claude, etc.) but optional for
+      // ChatGPT Actions which uses plain OAuth 2.0 without code_challenge.
+      if (code_challenge && code_challenge_method !== "S256") {
         res.status(400).json({
           error: "invalid_request",
-          error_description: "S256 required",
+          error_description: "S256 required when using PKCE",
         });
         return;
       }
-      if (!client_id || !redirect_uri || !code_challenge) {
+      if (!client_id || !redirect_uri) {
         res.status(400).json({
           error: "invalid_request",
           error_description: "Missing required parameters",
@@ -250,7 +252,7 @@ export function mountOAuthRoutes(app: Express): void {
       console.log(`[OAuth] POST /token | grant_type=${grant_type}`);
 
       if (grant_type === "authorization_code") {
-        if (!code || !code_verifier || !redirect_uri) {
+        if (!code || !redirect_uri) {
           res.status(400).json({ error: "invalid_request" });
           return;
         }
