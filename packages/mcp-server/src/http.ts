@@ -46,24 +46,8 @@ app.options("/{*path}", (_req, res) => {
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
 // ---------------------------------------------------------------------------
-// Root + Health check (no auth)
+// Health check (no auth)
 // ---------------------------------------------------------------------------
-app.get("/", (_req, res) => {
-  console.log("[MCP] GET /");
-  res.json({
-    name: "propertyiq",
-    version: "0.2.0",
-    transport: "streamable-http",
-    auth: "oauth2.1",
-    endpoints: {
-      mcp: "/mcp",
-      health: "/health",
-      oauth_discovery: "/.well-known/oauth-authorization-server",
-      protected_resource: "/.well-known/oauth-protected-resource",
-    },
-  });
-});
-
 app.get("/health", (_req, res) => {
   console.log("[MCP] GET /health");
   res.json({
@@ -80,8 +64,11 @@ mountOAuthRoutes(app);
 
 // ---------------------------------------------------------------------------
 // MCP POST — initialize or tool calls
+// Mounted on both "/" (ChatGPT) and "/mcp" (Claude.ai) paths
 // ---------------------------------------------------------------------------
-app.post("/mcp", async (req: Request, res: Response) => {
+const MCP_PATHS = ["/", "/mcp"];
+
+app.post(MCP_PATHS, async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   const authHeader = req.headers.authorization;
   const authType = authHeader?.startsWith("Bearer ") ? "oauth" : "none";
@@ -147,7 +134,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
 });
 
 // MCP GET — SSE event stream (or unauthenticated server-info probe)
-app.get("/mcp", async (req: Request, res: Response) => {
+app.get(MCP_PATHS, async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   const isDiscovery = !sessionId && !req.headers.authorization;
   console.log(
@@ -182,7 +169,7 @@ app.get("/mcp", async (req: Request, res: Response) => {
 });
 
 // MCP DELETE — session termination
-app.delete("/mcp", async (req: Request, res: Response) => {
+app.delete(MCP_PATHS, async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   console.log(`[MCP] DELETE /mcp | session=${sessionId ?? "none"}`);
   if (!sessionId || !transports[sessionId]) {
