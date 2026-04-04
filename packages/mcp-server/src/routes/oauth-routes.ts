@@ -122,7 +122,19 @@ export function mountOAuthRoutes(app: Express): void {
         return;
       }
       console.log(`[OAuth] Client validated: ${client_id}`);
-      if (!client.redirect_uris.includes(redirect_uri)) {
+      // Trusted OAuth callback domains — ChatGPT generates a new GPT ID on
+      // every save, so exact redirect_uri matching is impossible. Allow any
+      // callback from trusted AI platform domains.
+      const TRUSTED_CALLBACK_PREFIXES = [
+        "https://chat.openai.com/aip/",
+        "https://chatgpt.com/aip/",
+        "https://claude.ai/api/mcp/",
+      ];
+      const isTrustedRedirect =
+        client.redirect_uris.includes(redirect_uri) ||
+        TRUSTED_CALLBACK_PREFIXES.some((p) => redirect_uri.startsWith(p));
+      if (!isTrustedRedirect) {
+        console.log(`[OAuth] Rejected redirect_uri: ${redirect_uri}`);
         res.status(400).json({
           error: "invalid_request",
           error_description: "redirect_uri not registered",
