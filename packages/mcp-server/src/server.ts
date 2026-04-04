@@ -8,7 +8,7 @@ import { brokerageTools } from "./tools/brokerage";
 import { propertyManagerTools } from "./tools/property-managers";
 
 /** All tool arrays, flattened into one list */
-const ALL_TOOLS = [
+export const ALL_TOOLS = [
   ...coreTools,
   ...contentSeoTools,
   ...agentTools,

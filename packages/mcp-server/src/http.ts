@@ -17,6 +17,7 @@ import { createServer } from "./server";
 import { authStore } from "./lib/session-context";
 import { extractAuth } from "./lib/auth-http";
 import { mountOAuthRoutes } from "./routes/oauth-routes";
+import { mountApiRoutes } from "./routes/api-routes";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
@@ -61,6 +62,7 @@ app.get("/health", (_req, res) => {
 // OAuth 2.1 routes (discovery, registration, authorize, callback, token)
 // ---------------------------------------------------------------------------
 mountOAuthRoutes(app);
+mountApiRoutes(app);
 
 // ---------------------------------------------------------------------------
 // MCP POST — initialize or tool calls
