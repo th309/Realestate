@@ -3,10 +3,10 @@
 /**
  * PropertyIQ MCP Server — Remote HTTP Transport
  *
- * Serves the PropertyIQ MCP server over Streamable HTTP so Claude Desktop
- * (and other MCP clients) can connect to it as a remote custom connector.
+ * Serves the PropertyIQ MCP server over Streamable HTTP.
+ * All clients (Claude.ai, Claude Code, Cursor, ChatGPT) connect here.
  *
- * Auth: Dual — piq_live_* API keys (existing) or OAuth 2.1 access tokens (new).
+ * Auth: OAuth 2.1 with PKCE and Dynamic Client Registration.
  */
 
 import { randomUUID } from "node:crypto";
@@ -68,11 +68,7 @@ mountOAuthRoutes(app);
 app.post("/mcp", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   const authHeader = req.headers.authorization;
-  const authType = authHeader?.startsWith("Bearer piq_live_")
-    ? "piq_live"
-    : authHeader?.startsWith("Bearer ")
-      ? "oauth"
-      : "none";
+  const authType = authHeader?.startsWith("Bearer ") ? "oauth" : "none";
   const isInit = isInitializeRequest(req.body);
   console.log(
     `[MCP] POST /mcp | session=${sessionId ?? "none"} | auth=${authType} | initialize=${isInit}`,
@@ -150,7 +146,7 @@ app.get("/mcp", async (req: Request, res: Response) => {
         name: "propertyiq",
         version: "0.2.0",
         transport: "streamable-http",
-        auth: "Bearer piq_live_*",
+        auth: "oauth2.1",
       },
       id: null,
     });
