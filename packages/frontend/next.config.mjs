@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
 
@@ -55,7 +57,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com https://*.google-analytics.com; connect-src 'self'${devConnectSrc} https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.railway.app https://*.supabase.co wss://*.supabase.co https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.google.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';` },
+          { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com https://*.google-analytics.com; connect-src 'self'${devConnectSrc} https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.railway.app https://*.supabase.co wss://*.supabase.co https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.google.com https://*.ingest.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';` },
         ],
       },
       {
@@ -70,4 +72,18 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organization and project (set in CI or locally for source map uploads).
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload source maps only in CI to avoid leaking them locally.
+  silent: true,
+  disableServerWebpackPlugin: !process.env.CI,
+  disableClientWebpackPlugin: !process.env.CI,
+
+  // Tree-shake Sentry debug logging out of production bundles.
+  hideSourceMaps: true,
+  widenClientFileUpload: true,
+});
