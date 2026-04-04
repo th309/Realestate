@@ -1,6 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { requireSupabase } from "./supabase";
 
+// ── In-memory token cache (avoids Supabase round-trip on every request) ──
+const TOKEN_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
+
+interface TokenCacheEntry {
+  userId: string;
+  clientId: string;
+  cachedAt: number;
+}
+
+const tokenCache = new Map<string, TokenCacheEntry>();
+
 interface TokenPair {
   access_token: string;
   refresh_token: string;
@@ -55,9 +66,16 @@ export async function createTokens(
 export async function lookupAccessToken(
   accessToken: string,
 ): Promise<{ userId: string; clientId: string } | null> {
-  console.log(
-    `[OAuth:Tokens] Looking up token=${accessToken.substring(0, 8)}...`,
-  );
+  const snippet = accessToken.substring(0, 8);
+
+  // Check in-memory cache first
+  const cached = tokenCache.get(accessToken);
+  if (cached && Date.now() - cached.cachedAt < TOKEN_CACHE_TTL_MS) {
+    console.log(`[OAuth:Tokens] Token ${snippet}... cache hit`);
+    return { userId: cached.userId, clientId: cached.clientId };
+  }
+
+  console.log(`[OAuth:Tokens] Looking up token=${snippet}...`);
   const sb = requireSupabase();
 
   const { data, error } = await sb
@@ -68,18 +86,27 @@ export async function lookupAccessToken(
 
   if (error || !data) {
     console.log(`[OAuth:Tokens] Token lookup result: not_found`);
+    tokenCache.delete(accessToken);
     return null;
   }
   if (data.revoked) {
     console.log(`[OAuth:Tokens] Token lookup result: revoked`);
+    tokenCache.delete(accessToken);
     return null;
   }
   if (new Date(data.access_expires_at) < new Date()) {
     console.log(`[OAuth:Tokens] Token lookup result: expired`);
+    tokenCache.delete(accessToken);
     return null;
   }
 
-  console.log(`[OAuth:Tokens] Token lookup result: found`);
+  // Cache the valid token
+  tokenCache.set(accessToken, {
+    userId: data.user_id,
+    clientId: data.client_id,
+    cachedAt: Date.now(),
+  });
+  console.log(`[OAuth:Tokens] Token lookup result: found (cached)`);
   return { userId: data.user_id, clientId: data.client_id };
 }
 
