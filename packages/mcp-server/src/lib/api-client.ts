@@ -1,7 +1,6 @@
 /** HTTP client wrapper for the PropertyIQ backend API */
 
 import { config } from "./config";
-import { clearCredentials } from "./auth";
 import { getSessionAuth } from "./session-context";
 
 export class ApiError extends Error {
@@ -34,13 +33,7 @@ export async function fetchApi<T = unknown>(
 
   const auth = getSessionAuth();
   if (auth) {
-    if (auth.type === "api_key") {
-      headers["Authorization"] = `Bearer ${auth.apiKey}`;
-    } else {
-      headers["x-user-id"] = auth.userId;
-    }
-  } else if (config.apiKey) {
-    headers["Authorization"] = `Bearer ${config.apiKey}`;
+    headers["x-user-id"] = auth.userId;
   }
 
   const controller = new AbortController();
@@ -53,11 +46,7 @@ export async function fetchApi<T = unknown>(
     });
 
     if (response.status === 401) {
-      clearCredentials();
-      throw new ApiError(
-        401,
-        "API key is invalid or revoked. Restart MCP server to re-authenticate.",
-      );
+      throw new ApiError(401, "Access token is invalid or expired.");
     }
 
     if (response.status === 403) {
