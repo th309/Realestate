@@ -24,12 +24,15 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
   }
 
   try {
+    const resource = "feature:mcp_access";
     const res = await fetch(
-      `${BACKEND_URL}/api/entitlements/check?resources=mcp_access`,
+      `${BACKEND_URL}/api/entitlements/check?resources=${resource}`,
       { headers: { "x-user-id": userId } },
     );
-    const body = (await res.json()) as { allowed?: boolean };
-    const allowed = body?.allowed === true;
+    const body = (await res.json()) as {
+      access?: Record<string, { level?: string }>;
+    };
+    const allowed = body?.access?.[resource]?.level === "full";
     cache.set(userId, { allowed, checkedAt: now });
     console.log(`[Auth:Entitlements] Result: allowed=${allowed}`);
     return allowed;
