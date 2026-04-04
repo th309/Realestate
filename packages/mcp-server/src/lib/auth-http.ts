@@ -3,6 +3,19 @@ import { lookupAccessToken } from "./oauth/tokens";
 import { checkEntitlement } from "./oauth/entitlements-cache";
 import type { SessionAuth } from "./session-context";
 
+const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
+const WWW_AUTHENTICATE = `Bearer resource_metadata="${MCP_BASE_URL}/.well-known/oauth-protected-resource", scope="mcp"`;
+
+/** Send 401 with WWW-Authenticate header so ChatGPT triggers OAuth sign-in */
+function send401(res: Response, message: string): void {
+  res.setHeader("WWW-Authenticate", WWW_AUTHENTICATE);
+  res.status(401).json({
+    jsonrpc: "2.0",
+    error: { code: -32001, message },
+    id: null,
+  });
+}
+
 /**
  * Extract and validate OAuth auth from request.
  * Returns a SessionAuth on success, or null (after sending error response).
@@ -17,11 +30,7 @@ export async function extractAuth(
 
   if (!auth?.startsWith("Bearer ")) {
     console.log("[Auth] No Bearer token — returning 401");
-    res.status(401).json({
-      jsonrpc: "2.0",
-      error: { code: -32001, message: "Authorization required" },
-      id: null,
-    });
+    send401(res, "Authorization required");
     return null;
   }
 
@@ -31,11 +40,7 @@ export async function extractAuth(
     const result = await lookupAccessToken(token);
     if (!result) {
       console.log("[Auth] OAuth token lookup: not_found");
-      res.status(401).json({
-        jsonrpc: "2.0",
-        error: { code: -32001, message: "Invalid or expired access token" },
-        id: null,
-      });
+      send401(res, "Invalid or expired access token");
       return null;
     }
     console.log(`[Auth] OAuth token lookup: found | userId=${result.userId}`);
@@ -61,11 +66,7 @@ export async function extractAuth(
     console.log(
       `[Auth] Auth failed with error: ${err instanceof Error ? err.message : String(err)}`,
     );
-    res.status(401).json({
-      jsonrpc: "2.0",
-      error: { code: -32001, message: "Authentication failed" },
-      id: null,
-    });
+    send401(res, "Authentication failed");
     return null;
   }
 }
