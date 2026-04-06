@@ -5,15 +5,16 @@
 
 import type { CountySlugEntry } from "./county-slugs";
 import rawData from "./county-slug-data.json";
+import { makeLazyMap } from "./lazy-map";
 
 export const COUNTY_SLUG_DATA: CountySlugEntry[] = rawData;
 
-/** Map from slug to county entry for O(1) lookup */
-export const SLUG_TO_COUNTY = new Map<string, CountySlugEntry>(
-  COUNTY_SLUG_DATA.map((e) => [e.slug, e]),
+/** Map from slug to county entry for O(1) lookup. Built lazily on first access. */
+export const SLUG_TO_COUNTY = makeLazyMap<string, CountySlugEntry>(
+  () => new Map(COUNTY_SLUG_DATA.map((e) => [e.slug, e])),
 );
 
-/** Map from FIPS code to county entry for O(1) lookup */
-export const FIPS_TO_COUNTY = new Map<string, CountySlugEntry>(
-  COUNTY_SLUG_DATA.map((e) => [e.fips, e]),
+/** Map from FIPS code to county entry for O(1) lookup. Built lazily on first access. */
+export const FIPS_TO_COUNTY = makeLazyMap<string, CountySlugEntry>(
+  () => new Map(COUNTY_SLUG_DATA.map((e) => [e.fips, e])),
 );
