@@ -46,7 +46,7 @@ export function FavoritesSection({
     return (
       <div className="px-4 py-2.5 border-b border-outline-variant/20">
         <Link
-          href="/auth/login"
+          href="/auth/sign-in"
           className="flex items-center gap-2 text-xs text-on-surface-variant hover:text-on-surface transition-colors"
         >
           <span>Save your favorite markets</span>

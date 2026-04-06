@@ -1,35 +1,33 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
+  // /api/og is a public OG image generator referenced by every market page's
+  // <meta property="og:image">. Crawlers must be able to fetch it for social
+  // previews, so we explicitly allow it while keeping the rest of /api/ blocked.
+  const commonAllow = ["/", "/api/og"];
+  const commonDisallow = ["/api/", "/admin/", "/auth/", "/account/"];
+
   return {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/api/",
-          "/admin/",
-          "/dev/",
-          "/auth/",
-          "/account/",
-          "/health/",
-          "/betatest/",
-        ],
+        allow: commonAllow,
+        disallow: [...commonDisallow, "/dev/", "/health/", "/betatest/"],
       },
       {
         userAgent: "GPTBot",
-        allow: "/",
-        disallow: ["/api/", "/admin/", "/auth/", "/account/"],
+        allow: commonAllow,
+        disallow: commonDisallow,
       },
       {
         userAgent: "ClaudeBot",
-        allow: "/",
-        disallow: ["/api/", "/admin/", "/auth/", "/account/"],
+        allow: commonAllow,
+        disallow: commonDisallow,
       },
       {
         userAgent: "PerplexityBot",
-        allow: "/",
-        disallow: ["/api/", "/admin/", "/auth/", "/account/"],
+        allow: commonAllow,
+        disallow: commonDisallow,
       },
     ],
     sitemap: "https://www.propertyiq.app/sitemap.xml",

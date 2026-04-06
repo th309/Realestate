@@ -45,7 +45,7 @@ export function SlotFavoritesSection({
   if (!user) {
     return (
       <Link
-        href="/auth/login"
+        href="/auth/sign-in"
         className="flex items-center gap-2 px-3 py-2.5 text-[11px] text-on-surface-variant hover:bg-surface-container transition-colors"
       >
         <span>&#11088;</span>

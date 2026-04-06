@@ -25,10 +25,16 @@ export async function generateMetadata({
 
   const { frontmatter } = post;
 
+  const allKeywords = [
+    ...(frontmatter.targetKeyword ? [frontmatter.targetKeyword] : []),
+    ...(frontmatter.keywords ?? []),
+  ];
+
   return {
     title: frontmatter.title,
     description: frontmatter.description,
     authors: [{ name: frontmatter.author }],
+    ...(allKeywords.length > 0 && { keywords: allKeywords }),
     alternates: { canonical: `https://www.propertyiq.app/blog/${slug}` },
     openGraph: {
       type: "article",
@@ -38,9 +44,15 @@ export async function generateMetadata({
       authors: [frontmatter.author],
       url: `https://www.propertyiq.app/blog/${slug}`,
       siteName: "PropertyIQ",
+      tags: frontmatter.tags,
       ...(frontmatter.image && {
         images: [{ url: frontmatter.image }],
       }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: frontmatter.title,
+      description: frontmatter.description,
     },
   };
 }

@@ -43,6 +43,66 @@ const nextConfig = {
   },
   transpilePackages: ['recharts'],
   turbopack: {},
+  // 301 redirects for old URLs that Google may have indexed.
+  // Fixes "Not found (404)" errors in Google Search Console.
+  async redirects() {
+    return [
+      // ── Blog: duplicate slugs (SEO cannibalization fix) ──────────
+      {
+        source: '/blog/huntsville-alabama-real-estate-market-2026',
+        destination: '/blog/huntsville-al-real-estate-market-2026',
+        permanent: true,
+      },
+      {
+        source: '/blog/knoxville-real-estate-market-2026',
+        destination: '/blog/knoxville-tn-real-estate-market-2026',
+        permanent: true,
+      },
+      {
+        source: '/blog/omaha-real-estate-market-2026',
+        destination: '/blog/omaha-ne-real-estate-market-2026',
+        permanent: true,
+      },
+      {
+        source: '/blog/richmond-virginia-real-estate-market-2026',
+        destination: '/blog/richmond-va-real-estate-market-2026',
+        permanent: true,
+      },
+      {
+        source: '/blog/spokane-real-estate-market-2026',
+        destination: '/blog/spokane-wa-real-estate-market-2026',
+        permanent: true,
+      },
+      // ── Auth: legacy /auth/login pattern ─────────────────────────
+      // Old links pointed to /auth/login; canonical route is /auth/sign-in.
+      {
+        source: '/auth/login',
+        destination: '/auth/sign-in',
+        permanent: true,
+      },
+      {
+        source: '/login',
+        destination: '/auth/sign-in',
+        permanent: true,
+      },
+      {
+        source: '/signup',
+        destination: '/auth/sign-up',
+        permanent: true,
+      },
+      {
+        source: '/auth/signup',
+        destination: '/auth/sign-up',
+        permanent: true,
+      },
+      // ── Methodology: top-level /methodology → /scores/methodology
+      {
+        source: '/methodology',
+        destination: '/scores/methodology',
+        permanent: true,
+      },
+    ];
+  },
   // Custom response headers
   async headers() {
     return [

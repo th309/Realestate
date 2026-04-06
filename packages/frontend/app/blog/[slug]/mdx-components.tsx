@@ -1,11 +1,10 @@
-import type { MDXComponents } from 'mdx/types';
+import type { MDXComponents } from "mdx/types";
+import { CTABlock } from "@/components/blog/CTABlock";
 
 export const mdxComponents: MDXComponents = {
+  CTABlock,
   h1: (props) => (
-    <h1
-      className="text-3xl font-bold text-on-surface mt-8 mb-4"
-      {...props}
-    />
+    <h1 className="text-3xl font-bold text-on-surface mt-8 mb-4" {...props} />
   ),
   h2: (props) => (
     <h2
@@ -14,22 +13,13 @@ export const mdxComponents: MDXComponents = {
     />
   ),
   h3: (props) => (
-    <h3
-      className="text-xl font-medium text-on-surface mt-6 mb-2"
-      {...props}
-    />
+    <h3 className="text-xl font-medium text-on-surface mt-6 mb-2" {...props} />
   ),
   p: (props) => (
-    <p
-      className="text-on-surface-variant leading-relaxed mb-4"
-      {...props}
-    />
+    <p className="text-on-surface-variant leading-relaxed mb-4" {...props} />
   ),
   a: (props) => (
-    <a
-      className="text-primary hover:text-primary/80 underline"
-      {...props}
-    />
+    <a className="text-primary hover:text-primary/80 underline" {...props} />
   ),
   ul: (props) => (
     <ul
@@ -43,9 +33,7 @@ export const mdxComponents: MDXComponents = {
       {...props}
     />
   ),
-  li: (props) => (
-    <li className="text-on-surface-variant" {...props} />
-  ),
+  li: (props) => <li className="text-on-surface-variant" {...props} />,
   blockquote: (props) => (
     <blockquote
       className="border-l-4 border-primary pl-4 italic text-on-surface-variant my-4"
@@ -64,10 +52,7 @@ export const mdxComponents: MDXComponents = {
     />
   ),
   td: (props) => (
-    <td
-      className="px-4 py-2 border-b border-outline-variant"
-      {...props}
-    />
+    <td className="px-4 py-2 border-b border-outline-variant" {...props} />
   ),
   code: (props) => (
     <code
