@@ -8,6 +8,7 @@ export interface BlogFrontmatter {
   tags: string[];
   targetKeyword: string;
   image?: string;
+  keywords?: string[];
 }
 
 export interface BlogPost {

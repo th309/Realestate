@@ -153,7 +153,7 @@ export function MethodologyFooter({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-3 border-t border-outline-variant">
           <div className="flex items-center gap-4">
             <a
-              href="/methodology"
+              href="/scores/methodology"
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
               <FileText className="w-3.5 h-3.5" />
