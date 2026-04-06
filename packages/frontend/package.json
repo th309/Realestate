@@ -36,6 +36,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@mapbox/polylabel": "^1.0.2",
     "@propertyiq/emails": "*",
+    "@sentry/nextjs": "^10.47.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.80.0",
     "@tanstack/react-query": "^5.90.7",

@@ -1,7 +1,9 @@
 // Build trigger: 2026-03-28
+import './instrument'; // Sentry — must run before NestJS loads any modules
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { AppModule } from './app.module';
 
 // Build trigger: 2026-01-28
@@ -10,6 +12,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalFilters(new SentryGlobalFilter());
 
   // Manual CORS middleware — cors@2.8.5 crashes on Express 5 with Origin header
   const httpAdapter = app.getHttpAdapter();
