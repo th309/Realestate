@@ -180,7 +180,8 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
 
   const handleSelectMarket = useCallback(
     (result: { name: string }) => {
-      const marketName = result.name.split(",")[0].trim().toLowerCase();
+      // Extract first word of the metro name: "Atlanta-Sandy Springs-Roswell, GA" → "atlanta"
+      const marketName = result.name.split(/[-,]/)[0].trim().toLowerCase();
       setMarketFilter(marketName);
       clearSearch();
     },
