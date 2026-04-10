@@ -1,0 +1,48 @@
+{
+  "mode": "comparison",
+  "primary": {
+    "market": "Austin, TX",
+    "score": 74,
+    "grade": "GOOD",
+    "periodDate": "2026-03-01",
+    "trend": "up",
+    "trendChange": 3,
+    "history": [
+      { "date": "2025-04-01", "score": 64 },
+      { "date": "2025-05-01", "score": 66 },
+      { "date": "2025-06-01", "score": 67 },
+      { "date": "2025-07-01", "score": 65 },
+      { "date": "2025-08-01", "score": 68 },
+      { "date": "2025-09-01", "score": 69 },
+      { "date": "2025-10-01", "score": 70 },
+      { "date": "2025-11-01", "score": 71 },
+      { "date": "2025-12-01", "score": 72 },
+      { "date": "2026-01-01", "score": 70 },
+      { "date": "2026-02-01", "score": 71 },
+      { "date": "2026-03-01", "score": 74 }
+    ],
+    "stats": {
+      "medianPrice": 485000,
+      "daysOnMarket": 28,
+      "demandScore": 72,
+      "pendingRatio": 0.68
+    }
+  },
+  "comparison": [
+    {
+      "market": "Dallas, TX",
+      "score": 71,
+      "grade": "GOOD",
+      "trend": "stable",
+      "trendChange": 0
+    },
+    {
+      "market": "San Antonio, TX",
+      "score": 68,
+      "grade": "FAIR",
+      "trend": "down",
+      "trendChange": -2
+    }
+  ],
+  "ctaUrl": "https://propertyiq.app/compare?markets=austin-tx,dallas-tx,san-antonio-tx&utm_source=youtube&utm_medium=video&utm_campaign=market-reveal"
+}

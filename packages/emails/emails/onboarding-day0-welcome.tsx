@@ -6,29 +6,30 @@ import EmailHeading from "./components/email-heading";
 export interface OnboardingDay0WelcomeProps {
   name: string;
   loginUrl: string;
+  unsubscribeUrl?: string;
 }
 
 export default function OnboardingDay0Welcome({
   name,
   loginUrl,
+  unsubscribeUrl,
 }: OnboardingDay0WelcomeProps) {
   const mapUrl = `${loginUrl}/map`;
 
   return (
-    <Layout preview={`Welcome to PropertyIQ, ${name}!`}>
-      <EmailHeading>Welcome to PropertyIQ</EmailHeading>
+    <Layout
+      preview={`Your free PropertyIQ Score is ready, ${name}`}
+      unsubscribeUrl={unsubscribeUrl}
+    >
+      <EmailHeading>Your Free PropertyIQ Score Is Ready</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         Hey {name},
       </Text>
-      <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        We&apos;re excited to have you here. PropertyIQ helps you find the best
-        real estate markets using data-driven scores, analytics, and AI-powered
-        reports — so you can make smarter decisions whether you&apos;re buying
-        your first home or building a portfolio.
-      </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-6">
-        The best place to start? The interactive map. Pick any market and see
-        how it scores:
+        Welcome. Here&apos;s how to get your first market score in 60 seconds:
+        open the map, search for any U.S. city or ZIP code, and click it.
+        You&apos;ll see a 0–100 PropertyIQ Score that captures supply, demand,
+        affordability, rent growth, and economic momentum — all in one number.
       </Text>
       <Section className="text-center mb-6">
         <BrandedButton href={mapUrl}>Explore the Map</BrandedButton>

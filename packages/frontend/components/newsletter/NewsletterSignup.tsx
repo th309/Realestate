@@ -2,24 +2,34 @@
 
 import { useState } from "react";
 
-export function NewsletterSignup() {
+interface NewsletterSignupProps {
+  source?: "homepage" | "city-page" | "exit-intent";
+  label?: string;
+  description?: string;
+  buttonText?: string;
+}
+
+export function NewsletterSignup({
+  source,
+  label = "Weekly Market Insights",
+  description = "Get data-driven housing market analysis delivered to your inbox every week.",
+  buttonText = "Subscribe",
+}: NewsletterSignupProps) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-
   const [website, setWebsite] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Honeypot: real users won't fill the hidden field
     if (website) return;
     setStatus("loading");
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, ...(source ? { source } : {}) }),
       });
       if (res.ok) {
         setStatus("success");
@@ -34,13 +44,8 @@ export function NewsletterSignup() {
 
   return (
     <section className="bg-surface-container-low rounded-xl p-6 my-8">
-      <h3 className="text-lg font-semibold text-on-surface mb-2">
-        Weekly Market Insights
-      </h3>
-      <p className="text-sm text-on-surface-variant mb-4">
-        Get data-driven housing market analysis delivered to your inbox every
-        week.
-      </p>
+      <h3 className="text-lg font-semibold text-on-surface mb-2">{label}</h3>
+      <p className="text-sm text-on-surface-variant mb-4">{description}</p>
 
       {status === "success" ? (
         <div className="text-emerald-600">
@@ -76,7 +81,7 @@ export function NewsletterSignup() {
             disabled={status === "loading"}
             className="px-6 py-2 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {status === "loading" ? "Subscribing..." : "Subscribe"}
+            {status === "loading" ? "Subscribing..." : buttonText}
           </button>
         </form>
       )}

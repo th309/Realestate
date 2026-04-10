@@ -49,6 +49,18 @@ const nextConfig = {
   // Fixes "Not found (404)" errors in Google Search Console.
   async redirects() {
     return [
+      // ── Non-www → www canonical redirect ─────────────────────────
+      // The middleware handles this for most routes, but its matcher
+      // explicitly excludes .xml and .txt extensions for performance,
+      // so robots.txt and sitemap.xml bypass it. This config-level
+      // redirect catches all paths on the non-www domain, including
+      // those file extensions.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'propertyiq.app' }],
+        destination: 'https://www.propertyiq.app/:path*',
+        permanent: true,
+      },
       // ── Blog: duplicate slugs (SEO cannibalization fix) ──────────
       {
         source: '/blog/huntsville-alabama-real-estate-market-2026',

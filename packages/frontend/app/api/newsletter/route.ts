@@ -1,11 +1,38 @@
 import { NextResponse } from "next/server";
+import { Resend } from "resend";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { RateLimiter } from "../_lib/rate-limiter";
 import { sendConfirmationEmail } from "./send-confirmation-email";
 
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
+
+async function addToResendContacts(
+  email: string,
+  source: string | undefined,
+): Promise<void> {
+  const segmentId = process.env.RESEND_SEGMENT_ID;
+  if (!resend) return;
+  try {
+    await resend.contacts.create({
+      email,
+      unsubscribed: false,
+      ...(source ? { properties: { source } } : {}),
+      ...(segmentId ? { segments: [{ id: segmentId }] } : {}),
+    });
+  } catch (err) {
+    // Non-fatal — contact may already exist
+    console.warn("Resend contact create skipped:", err);
+  }
+}
+
+const VALID_SOURCES = ["homepage", "city-page", "exit-intent", "newsletter-page"] as const;
+
 const newsletterSignupSchema = z.object({
   email: z.string().email("Invalid email address").max(320),
+  source: z.enum(VALID_SOURCES).optional(),
 });
 
 /** 5 requests per IP per 15-minute window. */
@@ -70,7 +97,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email } = parsed.data;
+  const { email, source } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
   // --- Check for existing confirmed subscriber ---
@@ -103,6 +130,7 @@ export async function POST(request: Request) {
         confirmation_token: confirmationToken,
         confirmed: false,
         confirmed_at: null,
+        ...(source ? { source } : {}),
       },
       { onConflict: "email" },
     );
@@ -111,6 +139,9 @@ export async function POST(request: Request) {
     console.error("Newsletter signup error:", upsertError);
     return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
   }
+
+  // --- Add to Resend contacts (non-blocking) ---
+  void addToResendContacts(normalizedEmail, source);
 
   // --- Send confirmation email ---
   const confirmationUrl = buildConfirmationUrl(confirmationToken);

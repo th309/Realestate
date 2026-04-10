@@ -1,0 +1,89 @@
+{
+  "mode": "comparison",
+  "primary": {
+    "market": "Rochester, NY",
+    "score": 99,
+    "grade": "EXCELLENT",
+    "periodDate": "2026-02-28",
+    "trend": "stable",
+    "trendChange": 0,
+    "history": [
+      { "date": "2025-03-31", "score": 99 },
+      { "date": "2025-04-30", "score": 99 },
+      { "date": "2025-05-31", "score": 99 },
+      { "date": "2025-06-30", "score": 99 },
+      { "date": "2025-07-31", "score": 99 },
+      { "date": "2025-08-31", "score": 99 },
+      { "date": "2025-09-30", "score": 99 },
+      { "date": "2025-10-31", "score": 99 },
+      { "date": "2025-11-30", "score": 99 },
+      { "date": "2025-12-31", "score": 99 },
+      { "date": "2026-01-31", "score": 99 },
+      { "date": "2026-02-28", "score": 99 }
+    ],
+    "stats": {
+      "medianPrice": 264120,
+      "daysOnMarket": 43,
+      "demandScore": 96,
+      "pendingRatio": 1.77
+    }
+  },
+  "comparison": [
+    {
+      "market": "Nashville, TN",
+      "score": 26,
+      "grade": "F",
+      "trend": "down",
+      "trendChange": -7,
+      "history": [
+        { "date": "2025-03-31", "score": 37 },
+        { "date": "2025-04-30", "score": 36 },
+        { "date": "2025-05-31", "score": 31 },
+        { "date": "2025-06-30", "score": 30 },
+        { "date": "2025-07-31", "score": 25 },
+        { "date": "2025-08-31", "score": 28 },
+        { "date": "2025-09-30", "score": 26 },
+        { "date": "2025-10-31", "score": 28 },
+        { "date": "2025-11-30", "score": 25 },
+        { "date": "2025-12-31", "score": 22 },
+        { "date": "2026-01-31", "score": 25 },
+        { "date": "2026-02-28", "score": 26 }
+      ],
+      "stats": {
+        "medianPrice": 527225,
+        "daysOnMarket": 60,
+        "demandScore": 11,
+        "pendingRatio": 0.46
+      }
+    },
+    {
+      "market": "Cincinnati, OH",
+      "score": 73,
+      "grade": "GOOD",
+      "trend": "up",
+      "trendChange": 5,
+      "history": [
+        { "date": "2025-03-31", "score": 61 },
+        { "date": "2025-04-30", "score": 58 },
+        { "date": "2025-05-31", "score": 63 },
+        { "date": "2025-06-30", "score": 68 },
+        { "date": "2025-07-31", "score": 70 },
+        { "date": "2025-08-31", "score": 69 },
+        { "date": "2025-09-30", "score": 71 },
+        { "date": "2025-10-31", "score": 70 },
+        { "date": "2025-11-30", "score": 72 },
+        { "date": "2025-12-31", "score": 71 },
+        { "date": "2026-01-31", "score": 72 },
+        { "date": "2026-02-28", "score": 73 }
+      ],
+      "stats": {
+        "medianPrice": 298744,
+        "daysOnMarket": 52,
+        "demandScore": 75,
+        "pendingRatio": 0.73
+      }
+    }
+  ],
+  "ctaUrl": "https://propertyiq.app/compare?markets=rochester-ny,nashville-tn,cincinnati-oh&utm_source=youtube&utm_medium=video&utm_campaign=score-gap",
+  "ctaLabel": "See scores for every U.S. market at"
+}

@@ -9,6 +9,8 @@ import {
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
+import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
+import { ToastProvider } from "@/components/ui/Toast";
 
 /**
  * Extract HTTP status code from an error.
@@ -136,11 +138,15 @@ export function Providers({
     <QueryClientProvider client={queryClient}>
       <AuthProvider initialUserId={initialUserId}>
         <QueryCacheCleaner />
-        <TourProvider>
-          <EntitlementsProvider>
-            <PaywallProvider>{children}</PaywallProvider>
-          </EntitlementsProvider>
-        </TourProvider>
+
+        <ToastProvider>
+          <TourProvider>
+            <EntitlementsProvider>
+              <PaywallProvider>{children}</PaywallProvider>
+            </EntitlementsProvider>
+          </TourProvider>
+          <ExitIntentModal />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/app/api/auth/send-welcome-email";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
@@ -44,12 +46,26 @@ export async function GET(request: NextRequest) {
           name: userName,
           loginUrl: `${origin}/map`,
         });
+
+        // Attribute referral if the user arrived via a referral link
+        const refCode = request.cookies.get("piq_ref")?.value;
+        if (refCode) {
+          attributeReferral(data.session?.access_token, refCode).catch(() => {
+            // Non-fatal — referral attribution is best-effort
+          });
+        }
       }
 
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/account?reset=true`);
       }
-      return NextResponse.redirect(`${origin}${next}`);
+
+      // Clear referral cookie on the redirect response (first-time signups)
+      const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+      if (!existingProfile && request.cookies.has("piq_ref")) {
+        redirectResponse.cookies.delete("piq_ref");
+      }
+      return redirectResponse;
     }
   }
 
@@ -57,6 +73,25 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(
     `${origin}/auth/sign-in?error=auth_callback_failed`,
   );
+}
+
+/**
+ * Fire-and-forget referral attribution. Calls the backend to link the new user
+ * to the referrer whose code is stored in the piq_ref cookie.
+ */
+async function attributeReferral(
+  accessToken: string | undefined,
+  code: string,
+): Promise<void> {
+  if (!accessToken) return;
+  await fetch(`${API_URL}/api/referrals/apply-code`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ code }),
+  });
 }
 
 /**

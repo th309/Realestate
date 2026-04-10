@@ -17,6 +17,29 @@ import { QuizStep, QUIZ_STEPS } from "./components/QuizStep";
 import { QuizProgress } from "./components/QuizProgress";
 import type { QuizAnswers } from "./hooks/useQuiz";
 
+/**
+ * Maps the user's quiz goal to the best landing page after onboarding.
+ *
+ * Goal values: first_time_buyer | relocating | investor_rental | investor_flip | exploring | null
+ *
+ * The map page accepts ?view=investor or ?view=homebuyer to pre-select the
+ * correct dashboard layout. Other routes like /scores or /graphs are also valid
+ * destinations for specific intent signals.
+ */
+function getRedirectUrl(answers: QuizAnswers): string {
+  switch (answers.goal) {
+    case "investor_rental":
+    case "investor_flip":
+      return "/map?view=investor";
+    case "first_time_buyer":
+    case "relocating":
+      return "/map?view=homebuyer";
+    case "exploring":
+    default:
+      return "/map";
+  }
+}
+
 export default function OnboardingQuizPage() {
   const router = useRouter();
 
@@ -30,9 +53,10 @@ export default function OnboardingQuizPage() {
     back,
     setAnswer,
     submit,
+    skip,
     canAdvance,
-  } = useQuiz(() => {
-    router.push("/map");
+  } = useQuiz((completedAnswers) => {
+    router.push(getRedirectUrl(completedAnswers));
   });
 
   const currentConfig = QUIZ_STEPS[step];
@@ -114,10 +138,10 @@ export default function OnboardingQuizPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => router.push("/map")}
-                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-on-surface rounded-full transition-colors duration-200"
+                onClick={skip}
+                className="px-4 py-2 text-xs text-on-surface-variant/60 hover:text-on-surface-variant rounded-full transition-colors duration-200"
               >
-                Skip
+                Skip for now
               </button>
             )}
 

@@ -11,6 +11,7 @@ import { useEntitlements } from "@/lib/entitlements";
 import { AIMarketAnalysis } from "./AIMarketAnalysis";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBenchmarks } from "@/lib/benchmarks/hooks";
+import { MarketLimitUpgradePrompt } from "@/components/entitlements";
 import {
   DashboardHeader,
   ViewToggle,
@@ -249,6 +250,7 @@ export function MarketDashboard({
       </main>
 
       <MobileViewToggle activeView={activeView} onViewChange={setActiveView} />
+      <MarketLimitUpgradePrompt />
     </div>
   );
 }

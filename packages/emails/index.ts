@@ -9,8 +9,12 @@ export { default as ContactFormNotification } from "./emails/contact-form-notifi
 export { default as OnboardingDay0Welcome } from "./emails/onboarding-day0-welcome";
 export { default as OnboardingDay1Scores } from "./emails/onboarding-day1-scores";
 export { default as OnboardingDay3Compare } from "./emails/onboarding-day3-compare";
+export { default as OnboardingDay5Upgrade } from "./emails/onboarding-day5-upgrade";
 export { default as OnboardingDay7Profile } from "./emails/onboarding-day7-profile";
+export { default as OnboardingDay10Zillow } from "./emails/onboarding-day10-zillow";
 export { default as OnboardingDay14Report } from "./emails/onboarding-day14-report";
+export { default as WinbackDay14 } from "./emails/winback-day14";
+export { default as NpsDay30 } from "./emails/nps-day30";
 export { default as MonthlyDigest } from "./emails/monthly-digest";
 export { default as ThresholdAlert } from "./emails/threshold-alert";
 
@@ -25,7 +29,11 @@ export type { ContactFormNotificationProps } from "./emails/contact-form-notific
 export type { OnboardingDay0WelcomeProps } from "./emails/onboarding-day0-welcome";
 export type { OnboardingDay1ScoresProps } from "./emails/onboarding-day1-scores";
 export type { OnboardingDay3CompareProps } from "./emails/onboarding-day3-compare";
+export type { OnboardingDay5UpgradeProps } from "./emails/onboarding-day5-upgrade";
 export type { OnboardingDay7ProfileProps } from "./emails/onboarding-day7-profile";
+export type { OnboardingDay10ZillowProps } from "./emails/onboarding-day10-zillow";
 export type { OnboardingDay14ReportProps } from "./emails/onboarding-day14-report";
+export type { WinbackDay14Props } from "./emails/winback-day14";
+export type { NpsDay30Props } from "./emails/nps-day30";
 export type { MonthlyDigestProps } from "./emails/monthly-digest";
 export type { ThresholdAlertProps } from "./emails/threshold-alert";

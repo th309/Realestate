@@ -8,13 +8,14 @@
  * preferences data layer.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   type UserGoal,
   type Timeline,
   type UpsertPreferencesPayload,
 } from "@/lib/data";
 import { usePreferences } from "@/lib/data/hooks/usePreferences";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,6 +67,8 @@ export interface UseQuizResult {
   ) => void;
   /** Submit all accumulated answers to the backend. */
   submit: () => Promise<void>;
+  /** Skip the quiz entirely (fires tracking event). */
+  skip: () => void;
   /** Whether the current step has a valid selection. */
   canAdvance: boolean;
 }
@@ -84,12 +87,21 @@ const INITIAL_ANSWERS: QuizAnswers = {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useQuiz(onComplete: () => void): UseQuizResult {
+export function useQuiz(onComplete: (answers: QuizAnswers) => void): UseQuizResult {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>(INITIAL_ANSWERS);
   const [submitError, setSubmitError] = useState<Error | null>(null);
+  const quizStarted = useRef(false);
 
   const { savePreferences, isSaving } = usePreferences();
+
+  // Track quiz start on mount
+  useEffect(() => {
+    if (!quizStarted.current) {
+      quizStarted.current = true;
+      trackEvent("onboarding.quiz_start", { total_steps: TOTAL_STEPS });
+    }
+  }, []);
 
   const setAnswer = useCallback(
     <K extends keyof QuizAnswers>(key: K, value: QuizAnswers[K]) => {
@@ -117,6 +129,7 @@ export function useQuiz(onComplete: () => void): UseQuizResult {
 
   const next = useCallback(() => {
     if (step < TOTAL_STEPS - 1) {
+      trackEvent("onboarding.quiz_step_complete", { step: step + 1, total_steps: TOTAL_STEPS });
       setStep((s) => s + 1);
     }
   }, [step]);
@@ -126,6 +139,11 @@ export function useQuiz(onComplete: () => void): UseQuizResult {
       setStep((s) => s - 1);
     }
   }, [step]);
+
+  const skip = useCallback(() => {
+    trackEvent("onboarding.quiz_skip", { at_step: step + 1, total_steps: TOTAL_STEPS });
+    onComplete(answers);
+  }, [step, answers, onComplete]);
 
   const submit = useCallback(async () => {
     setSubmitError(null);
@@ -147,7 +165,14 @@ export function useQuiz(onComplete: () => void): UseQuizResult {
 
     try {
       await savePreferences(payload);
-      onComplete();
+      trackEvent("onboarding.quiz_complete", {
+        goal: answers.goal,
+        budget: answers.budget,
+        timeline: answers.timeline,
+        priority_count: answers.priorities.length,
+        has_locations: answers.locationTags.length > 0,
+      });
+      onComplete(answers);
     } catch (err) {
       setSubmitError(err instanceof Error ? err : new Error(String(err)));
     }
@@ -163,6 +188,7 @@ export function useQuiz(onComplete: () => void): UseQuizResult {
     back,
     setAnswer,
     submit,
+    skip,
     canAdvance,
   };
 }

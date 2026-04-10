@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { fetchPricingSummary, type PricingTier } from "@/lib/data";
 import { startCheckout } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
 import { PricingCards } from "./components/PricingCards";
 import {
   AIInsightsSection,
@@ -56,7 +57,9 @@ function PricingContent() {
   useEffect(() => {
     if (!pricingViewFired.current) {
       pricingViewFired.current = true;
-      trackEvent("conversion.pricing_view", {
+      const variant = getPricingCtaVariant();
+      trackEvent("conversion.pricing_page_view", {
+        variant,
         from: searchParams.get("from") || "direct",
       });
     }
@@ -268,7 +271,11 @@ function PricingContent() {
                   Cancel anytime. No credit card to start.
                 </p>
                 <button
-                  onClick={() => handleUpgrade("pro")}
+                  onClick={() => {
+                    const variant = getPricingCtaVariant();
+                    trackEvent("conversion.pricing_cta_click", { variant, source: "pricing_page" });
+                    handleUpgrade("pro");
+                  }}
                   disabled={checkoutLoading === "pro"}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
@@ -279,7 +286,7 @@ function PricingContent() {
                     </>
                   ) : (
                     <>
-                      Start Your Free Trial <ArrowRight className="w-4 h-4" />
+                      {PRICING_CTA_COPY[getPricingCtaVariant()]} <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>

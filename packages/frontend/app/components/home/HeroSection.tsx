@@ -2,7 +2,6 @@
 
 import { useInView } from "./hooks/useInView";
 import { HeroSearchBar } from "./HeroSearchBar";
-import { V4_CLAIMS } from "@/lib/data/validation-claims";
 
 function fadeUp(inView: boolean, delay: string) {
   return {
@@ -13,35 +12,14 @@ function fadeUp(inView: boolean, delay: string) {
   } as const;
 }
 
-const PROOF_POINTS = [
-  {
-    value: `+$${V4_CLAIMS.scoreExtreme3YGap.toLocaleString()}`,
-    color: "text-[#00C853]",
-    lines: ["3-year equity edge choosing", "top vs bottom scored markets"],
-  },
-  {
-    value: `${V4_CLAIMS.yearHitRate1Y}%`,
-    color: "text-[#00C853]",
-    lines: ["of years tested, top-scored", "markets outperformed"],
-  },
-  {
-    value: `${V4_CLAIMS.backtestYears} years`,
-    color: "text-white",
-    lines: [
-      "of validated predictions",
-      `across ${V4_CLAIMS.metrosValidated.toLocaleString()}+ metros`,
-    ],
-  },
+const TRUST_SIGNALS = [
+  "400+ markets scored",
+  "Updated monthly with Zillow, Census, Realtor.com data",
+  "Used by investors, agents, and syndicators",
 ];
 
 export function HeroSection() {
   const [setRef, inView] = useInView();
-
-  const totalMarkets = (
-    V4_CLAIMS.metrosValidated +
-    V4_CLAIMS.countiesValidated +
-    V4_CLAIMS.zipsValidated
-  ).toLocaleString();
 
   return (
     <section
@@ -50,74 +28,73 @@ export function HeroSection() {
       aria-labelledby="hero-heading"
     >
       <div className="relative max-w-5xl mx-auto text-center z-10">
-        {/* Tagline — catchy brand line (visual emphasis, not the semantic H1) */}
-        <p
+        {/* H1 — CMO headline */}
+        <h1
+          id="hero-heading"
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1] font-[family-name:var(--font-source-serif)]"
           style={fadeUp(inView, "0s")}
         >
-          Know before you buy.{" "}
-          <span className="text-[#C5CAE9]/70">Not after.</span>
-        </p>
-
-        {/* H1 — keyword-rich for SEO, describes what the product does */}
-        <h1
-          id="hero-heading"
-          className="text-lg md:text-xl text-[#C5CAE9] mb-10 max-w-2xl mx-auto leading-relaxed"
-          style={fadeUp(inView, "0.1s")}
-        >
-          AI-powered real estate market analysis and investment scores for{" "}
-          {totalMarkets}+ metros, counties, and ZIP codes across America.
+          23,600+ U.S. Real Estate Markets.{" "}
+          <span className="text-[#00C853]">Scored.</span>
         </h1>
 
-        {/* Proof points — dollars and plain English, not jargon */}
-        {/* Proof points — fixed min-height prevents CLS during fade-in */}
-        <div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12 min-h-[280px] sm:min-h-[120px]"
-          style={fadeUp(inView, "0.2s")}
+        {/* Subhead — CMO copy */}
+        <p
+          className="text-lg md:text-xl text-[#C5CAE9] mb-8 max-w-2xl mx-auto leading-relaxed"
+          style={fadeUp(inView, "0.1s")}
         >
-          {PROOF_POINTS.map((point) => (
+          PropertyIQ gives every metro, county, and ZIP code a 0–100 score —
+          updated monthly. Know which markets are heating up, cooling off, or
+          flying under the radar before you commit capital.
+        </p>
+
+        {/* Trust signals — above the fold */}
+        <div
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-10"
+          style={fadeUp(inView, "0.15s")}
+        >
+          {TRUST_SIGNALS.map((signal) => (
             <div
-              key={point.value}
-              className="bg-white/10 backdrop-blur rounded-xl p-5 text-center min-h-[84px]"
+              key={signal}
+              className="flex items-center gap-2 text-sm text-[#C5CAE9]"
             >
-              <div
-                className={`text-[28px] font-bold ${point.color} font-mono leading-tight`}
+              <svg
+                className="w-4 h-4 text-[#00C853] flex-shrink-0"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                aria-hidden="true"
               >
-                {point.value}
-              </div>
-              {point.lines.map((line) => (
-                <div key={line} className="text-xs text-[#C5CAE9] leading-snug">
-                  {line}
-                </div>
-              ))}
+                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+              </svg>
+              {signal}
             </div>
           ))}
         </div>
 
         {/* Search bar */}
-        <div className="mb-8" style={fadeUp(inView, "0.3s")}>
+        <div className="mb-8" style={fadeUp(inView, "0.2s")}>
           <HeroSearchBar />
           <p className="text-xs text-[#C5CAE9]/60 mt-2">
             Try: Miami, Austin TX, 90210, Cook County
           </p>
         </div>
 
-        {/* CTAs */}
+        {/* CTAs — primary + secondary */}
         <div
-          className="flex items-center justify-center gap-4"
-          style={fadeUp(inView, "0.35s")}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          style={fadeUp(inView, "0.25s")}
         >
           <a
-            href="/map"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-[#1A237E] text-sm font-semibold shadow-md hover:bg-white/90 hover:shadow-lg transition-all duration-200"
+            href="/auth/sign-up"
+            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-[#1A237E] text-sm font-semibold shadow-md hover:bg-white/90 hover:shadow-lg transition-all duration-200"
           >
-            Explore the Map
+            Start Free — No Credit Card
           </a>
           <a
-            href="/scores"
+            href="#demo"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-all duration-200"
           >
-            See the Proof
+            See How It Works
           </a>
         </div>
       </div>

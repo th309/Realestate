@@ -15,6 +15,8 @@ import Link from 'next/link';
 import { X, Lock, Check, Minus } from 'lucide-react';
 import { startCheckout } from '@/lib/data/fetchers/billing';
 import { trackPaywallEvent } from '@/lib/entitlements/api';
+import { getPricingCtaVariant, PRICING_CTA_COPY } from '@/lib/ab';
+import { trackEvent } from '@/lib/analytics/tracker';
 
 interface FreeUserUpgradeModalProps {
   onDismiss: () => void;
@@ -30,6 +32,7 @@ const COMPARISON_ROWS = [
 
 export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const variant = getPricingCtaVariant();
 
   useEffect(() => {
     trackPaywallEvent('feature', 'site-paywall-free', 'view', window.location.pathname);
@@ -51,6 +54,7 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
 
   const handleUpgradeClick = useCallback(async () => {
     trackPaywallEvent('feature', 'site-paywall-free', 'click_upgrade', window.location.pathname);
+    trackEvent('conversion.pricing_cta_click', { variant, source: 'modal' });
     try {
       const checkoutUrl = await startCheckout('pro', 'month', window.location.pathname);
       window.location.href = checkoutUrl;
@@ -148,7 +152,7 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
           onClick={handleUpgradeClick}
           className="flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-on-primary shadow-md shadow-primary/20 transition-colors hover:bg-primary/90"
         >
-          Upgrade to Pro
+          {PRICING_CTA_COPY[variant]}
         </button>
 
         {/* Secondary */}

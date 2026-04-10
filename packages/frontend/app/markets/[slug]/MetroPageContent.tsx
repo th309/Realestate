@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
@@ -8,6 +8,7 @@ import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 import { MarketOverviewSection } from "./MarketOverviewSection";
 import { LeadMagnetModal } from "./components/LeadMagnetModal";
+import { useMilestone } from "@/lib/hooks/useMilestone";
 
 interface MetroPageContentProps {
   metro: MetroSlugEntry;
@@ -15,6 +16,17 @@ interface MetroPageContentProps {
 
 export function MetroPageContent({ metro }: MetroPageContentProps) {
   const [showLeadMagnet, setShowLeadMagnet] = useState(false);
+  const { recordMilestone } = useMilestone();
+
+  // Fire first_market_viewed after 5s dwell (intent: user actually read the page)
+  useEffect(() => {
+    const timer = setTimeout(
+      () => void recordMilestone("first_market_viewed"),
+      5000,
+    );
+    return () => clearTimeout(timer);
+  }, [recordMilestone]);
+
   const nearbyMetros = METRO_SLUG_DATA.filter(
     (m) => m.state === metro.state && m.cbsaCode !== metro.cbsaCode,
   ).slice(0, 5);
@@ -46,7 +58,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       </p>
 
       {/* Scores */}
-      <section className="mb-10">
+      <section className="mb-10" onMouseEnter={() => void recordMilestone("first_score_explored")}>
         <h2 className="text-xl font-semibold text-on-surface mb-4">
           PropertyIQ Scores
         </h2>
@@ -93,7 +105,12 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       </section>
 
       {/* Newsletter Signup */}
-      <NewsletterSignup />
+      <NewsletterSignup
+        source="city-page"
+        label="Get monthly score updates for this market"
+        description="Stay informed when the PropertyIQ score for this market changes."
+        buttonText="Subscribe"
+      />
 
       {/* Nearby Markets (internal linking) */}
       {nearbyMetros.length > 0 && (

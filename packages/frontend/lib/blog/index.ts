@@ -6,7 +6,12 @@ import type { BlogFrontmatter, BlogPost } from "./types";
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 
+const IS_PROD = process.env.NODE_ENV === "production";
+let _allPostsCache: BlogPost[] | undefined;
+
 export function getAllPosts(): BlogPost[] {
+  if (IS_PROD && _allPostsCache) return _allPostsCache;
+
   if (!fs.existsSync(BLOG_DIR)) return [];
 
   const files = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith(".mdx"));
@@ -22,14 +27,15 @@ export function getAllPosts(): BlogPost[] {
     .filter(
       (post): post is BlogPost =>
         post !== null && new Date(post.frontmatter.date) <= now,
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.frontmatter.date).getTime() -
+        new Date(a.frontmatter.date).getTime(),
     );
 
-  // Sort by date descending
-  return posts.sort(
-    (a, b) =>
-      new Date(b.frontmatter.date).getTime() -
-      new Date(a.frontmatter.date).getTime(),
-  );
+  if (IS_PROD) _allPostsCache = posts;
+  return posts;
 }
 
 export function getPostBySlug(slug: string): BlogPost | null {

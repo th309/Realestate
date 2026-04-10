@@ -37,3 +37,6 @@ export { Tooltip, RichTooltip, Popover, InfoTooltip } from './Tooltip';
 
 // Metric Links
 export { MetricLink, MetricLinkInline } from './MetricLink';
+
+// Toast notifications
+export { ToastProvider, useToast } from './Toast';

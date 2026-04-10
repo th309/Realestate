@@ -4,15 +4,16 @@
 
 import type { ZipSlugEntry } from "./zip-slugs";
 import rawData from "./zip-slug-data.json";
+import { makeLazyMap } from "./lazy-map";
 
 export const ZIP_SLUG_DATA: ZipSlugEntry[] = rawData;
 
-/** Map from slug to ZIP entry for O(1) lookup */
-export const SLUG_TO_ZIP = new Map<string, ZipSlugEntry>(
-  ZIP_SLUG_DATA.map((e) => [e.slug, e]),
+/** Map from slug to ZIP entry for O(1) lookup. Built lazily on first access. */
+export const SLUG_TO_ZIP = makeLazyMap<string, ZipSlugEntry>(
+  () => new Map(ZIP_SLUG_DATA.map((e) => [e.slug, e])),
 );
 
-/** Map from ZIP code to ZIP entry for O(1) lookup */
-export const ZIP_TO_ENTRY = new Map<string, ZipSlugEntry>(
-  ZIP_SLUG_DATA.map((e) => [e.zip, e]),
+/** Map from ZIP code to ZIP entry for O(1) lookup. Built lazily on first access. */
+export const ZIP_TO_ENTRY = makeLazyMap<string, ZipSlugEntry>(
+  () => new Map(ZIP_SLUG_DATA.map((e) => [e.zip, e])),
 );
