@@ -181,6 +181,19 @@ One minor backend change: add `sort` query param to `getTopMarkets` endpoint (co
 
 ---
 
+## Verification
+
+All verification must run against the live local backend (port 3001) connected to the real Supabase database — no mocks.
+
+1. **Backend `sort` param:** `curl` the `getTopMarkets` endpoint with `sort=asc` and `sort=desc`, confirm different result ordering and valid score data returned
+2. **ScoreTeaser renders real scores:** Load `http://localhost:3000` in a browser, confirm the teaser section shows actual metro names and scores (not placeholders or zeros), and that the top 5 / bottom 5 are correctly ordered
+3. **Hero CTAs navigate correctly:** Click "Explore the Map — Free" → lands on `/map` with the map visible (no auth redirect). Click "See a Sample AI Report" → lands on `/reports/sample` with report content visible
+4. **StickyScoreBar appears and functions:** Scroll past hero or wait 10 seconds — bar appears at bottom with real score data. Submit an email via the bar — confirm `POST /api/newsletter` fires and returns success. Dismiss the bar — refresh page, confirm it stays dismissed
+5. **Page section order:** Visual check that ScoreTeaser appears before ProblemSection, EmailCaptureBar is gone from inline flow
+6. **Mobile responsive:** Resize to 375px width, confirm sticky bar stacks cleanly and score teaser table is readable
+
+---
+
 ## Out of Scope
 
 - Blog post CTAs (separate recommendation in the report)
