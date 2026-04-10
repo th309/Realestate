@@ -199,17 +199,22 @@ No backend changes required.
 
 ---
 
-## Verification
+## Verification (REQUIRED — Implementation Is Not Complete Without This)
 
-All verification against live local servers (frontend 3000, backend 3001).
+The implementation plan MUST include a dedicated verification task that runs every check below against the live local backend (port 3001) and frontend (port 3000) connected to the real Supabase database. No mocks, no skipping.
 
-1. **Hero search preview:** Type "Atlanta" in homepage search → select result → score preview card appears with real score → "Explore on Map" navigates to `/map` → "See Full Market Data" navigates to `/markets/atlanta-ga`
-2. **Blog product CTA:** Visit `/blog/atlanta-real-estate-market-2026` → scroll to bottom → see "Explore Atlanta on PropertyIQ" card with link to `/markets/atlanta-ga` → verify methodology posts don't show the CTA
-3. **Newsletter copy:** On Atlanta blog post, newsletter section says "Get Atlanta Market Updates" instead of generic copy
-4. **Blog index search:** Visit `/blog` → use market search to find "Atlanta" → post list filters to Atlanta-tagged posts → clear filter restores full view
-5. **Blog index structure:** Featured section shows 3 most recent posts → category sections show with correct groupings → "Show all" expands correctly
-6. **Blog index text filter:** Type "investment" → posts filter by title/description match
-7. **Mobile responsive:** All new components render cleanly at 375px width
+1. **Hero search preview — live score fetch:** Type "Atlanta" in homepage search → select result → verify the score preview card fetches and displays a real score from the backend (not hardcoded) → confirm the score value matches `curl http://localhost:3001/api/scores?geography=metro&location_id=12060` → "Explore on Map" navigates to `/map` → "See Full Market Data" navigates to `/markets/atlanta-ga`
+2. **Hero search preview — error handling:** Disconnect backend or use an invalid ID → verify card does NOT appear and search falls back to direct `/map` navigation
+3. **Blog product CTA — city post:** Visit `/blog/atlanta-real-estate-market-2026` → scroll to bottom → see "Explore Atlanta on PropertyIQ" card → click link → arrives at `/markets/atlanta-ga`
+4. **Blog product CTA — non-city post:** Visit a methodology or thematic post → verify BlogMarketCTA does NOT render
+5. **Newsletter copy — personalized:** On Atlanta blog post, newsletter section says "Get Atlanta Market Updates"
+6. **Newsletter copy — generic fallback:** On methodology post, newsletter section shows default "PropertyIQ Market Pulse" copy
+7. **Blog index — market search with live data:** Visit `/blog` → type "Atlanta" in market search → select from universal search dropdown → posts filter to Atlanta-tagged posts → "Showing posts about Atlanta" chip visible → clear filter restores full view
+8. **Blog index — text filter:** Type "investment" in text filter → posts filter by title/description match → combine with market filter and verify intersection works
+9. **Blog index — featured section:** 3 most recent posts displayed as larger cards at top
+10. **Blog index — category grouping:** Posts correctly grouped into City Analysis, State Roundups, Comparisons, Strategy → counts match → "Show all" expands each section
+11. **Blog index — empty state:** Filter to a term with no matches → shows empty state message
+12. **Mobile responsive:** Resize to 375px → hero preview card, blog CTA, blog index all render without overflow
 
 ---
 
