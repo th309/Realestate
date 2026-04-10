@@ -18,6 +18,13 @@ const GENERIC_TAGS = new Set([
   "market-recovery",
   "market-comparison",
   "state-roundup",
+  "scoring",
+  "data-science",
+  "real-estate-analytics",
+  "demand-signal",
+  "affordable",
+  "rental-market",
+  "PropertyIQ Score",
   "housing-market",
 ]);
 
