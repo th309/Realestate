@@ -1,9 +1,23 @@
-import {
-  getScoreColor,
-  getScoreLabel,
-} from "@/app/components/scoring/ScoreDisplay";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+// Inlined from ScoreDisplay — that module is "use client" and can't be
+// called from a Server Component.
+function getScoreColor(value: number): string {
+  const percentage = Math.min(Math.max(value / 100, 0), 1);
+  const hue = percentage * 120;
+  return `hsl(${hue}, 100%, 50%)`;
+}
+
+function getScoreLabel(score: number): string {
+  if (score >= 90) return "EXCELLENT";
+  if (score >= 80) return "GREAT";
+  if (score >= 70) return "GOOD";
+  if (score >= 60) return "FAIR";
+  if (score >= 50) return "AVERAGE";
+  if (score >= 40) return "BELOW AVG";
+  if (score >= 20) return "POOR";
+  return "VERY POOR";
+}
 
 interface MarketScore {
   location_id: string;
