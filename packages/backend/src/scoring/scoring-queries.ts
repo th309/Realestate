@@ -307,6 +307,7 @@ export async function getTopMarkets(
   limit: number = 10,
   periodDate?: string,
   state?: string,
+  ascending: boolean = false,
 ): Promise<
   Array<{
     location_id: string;
@@ -351,7 +352,7 @@ export async function getTopMarkets(
         .eq('score_type', scoreType)
         .eq('score_date', targetDate)
         .ilike('location_name', `%, ${state.toUpperCase()}%`)
-        .order('score', { ascending: false })
+        .order('score', { ascending })
         .limit(limit);
 
       return fallbackData ?? [];
@@ -376,13 +377,15 @@ export async function getTopMarkets(
         .eq('score_type', scoreType)
         .eq('score_date', targetDate)
         .in('location_id', batch)
-        .order('score', { ascending: false })
+        .order('score', { ascending })
         .limit(limit);
 
       if (data) allResults.push(...data);
     }
 
-    allResults.sort((a, b) => b.score - a.score);
+    allResults.sort((a, b) =>
+      ascending ? a.score - b.score : b.score - a.score,
+    );
     return enrichZipNames(supabase, geography, allResults.slice(0, limit));
   }
 
@@ -393,7 +396,7 @@ export async function getTopMarkets(
     .eq('geography', geography)
     .eq('score_type', scoreType)
     .eq('score_date', targetDate)
-    .order('score', { ascending: false })
+    .order('score', { ascending })
     .limit(limit);
 
   return enrichZipNames(supabase, geography, data || []);

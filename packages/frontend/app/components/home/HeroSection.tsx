@@ -85,16 +85,16 @@ export function HeroSection() {
           style={fadeUp(inView, "0.25s")}
         >
           <a
-            href="/auth/sign-up"
+            href="/map"
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-[#1A237E] text-sm font-semibold shadow-md hover:bg-white/90 hover:shadow-lg transition-all duration-200"
           >
-            Start Free — No Credit Card
+            Explore the Map — Free
           </a>
           <a
-            href="#demo"
+            href="/reports/sample"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-all duration-200"
           >
-            See How It Works
+            See a Sample AI Report
           </a>
         </div>
       </div>
