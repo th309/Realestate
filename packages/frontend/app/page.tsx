@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   BrandBanner,
   HeroSection,
-  EmailCaptureBar,
+  ScoreTeaser,
   ProblemSection,
   StatsSection,
   MapShowcase,
@@ -15,6 +15,7 @@ import {
   CTASection,
   Footer,
   JsonLd,
+  StickyScoreBar,
 } from "./components/home";
 
 export const metadata: Metadata = {
@@ -44,19 +45,27 @@ export const metadata: Metadata = {
   },
 };
 
+const STICKY_SCORES = [
+  { name: "Rochester NY", score: 99 },
+  { name: "Buffalo NY", score: 98 },
+  { name: "Miami FL", score: 13 },
+];
+
 /**
  * PropertyIQ Homepage
  *
  * Structure follows CMO-defined landing page order:
- * 1. Hero — CMO headline + subhead + CTAs + trust signals
- * 2. Social Proof — market coverage stats (immediately after hero)
- * 3. The Problem — why blind investing fails
- * 4. The Score — what PropertyIQ measures and why it matters (value props + alpha callout)
- * 5. Map — map showcase
- * 6. Data depth — graphs, AI integrations
- * 7. Use Cases — investor, agent, syndicator personas
- * 8. Pricing — Free, Pro, Enterprise tiers
- * 9. Final CTA + Footer
+ * 1. Hero — headline + CTAs pointing to /map and /reports/sample
+ * 2. Social Proof — market coverage stats
+ * 3. Live Score Teaser — top 5 / bottom 5 metros (proof before problem)
+ * 4. The Problem — why blind investing fails
+ * 5. The Score — value props + alpha callout
+ * 6. Map — map showcase
+ * 7. Data depth — graphs, AI integrations
+ * 8. Use Cases — investor, agent, syndicator personas
+ * 9. Pricing — Free, Pro, Enterprise tiers
+ * 10. Final CTA + Footer
+ * + Sticky score ticker bar (appears on scroll/after 10s)
  */
 export default function HomePage() {
   return (
@@ -65,8 +74,9 @@ export default function HomePage() {
       <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
         <BrandBanner />
         <HeroSection />
-        <EmailCaptureBar />
         <StatsSection />
+        {/* @ts-expect-error Async Server Component */}
+        <ScoreTeaser />
         <ProblemSection />
         <ValuePropsSection />
         <AlphaCallout />
@@ -78,6 +88,7 @@ export default function HomePage() {
         <CTASection />
         <Footer />
       </div>
+      <StickyScoreBar scores={STICKY_SCORES} />
     </>
   );
 }

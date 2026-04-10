@@ -14,4 +14,5 @@ export { CTASection } from "./CTASection";
 export { Footer } from "./Footer";
 export { AnimatedCounter } from "./AnimatedCounter";
 export { JsonLd } from "./JsonLd";
-export { EmailCaptureBar } from "./EmailCaptureBar";
+export { ScoreTeaser } from "./ScoreTeaser";
+export { StickyScoreBar } from "./StickyScoreBar";
