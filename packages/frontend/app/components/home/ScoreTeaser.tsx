@@ -44,12 +44,12 @@ function ScoreRow({ market }: { market: MarketScore }) {
   const label = getScoreLabel(market.score);
 
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-[#C5CAE9]/30 last:border-0">
-      <span className="text-sm text-[#1A237E] font-medium truncate mr-4">
+    <div className="flex items-center justify-between py-2.5 border-b border-white/10 last:border-0">
+      <span className="text-sm text-white font-medium truncate mr-4">
         {market.location_name}
       </span>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xs text-[#3949AB] uppercase tracking-wide">
+        <span className="text-xs text-[#C5CAE9] uppercase tracking-wide">
           {label}
         </span>
         <span
@@ -78,20 +78,20 @@ export async function ScoreTeaser() {
     >
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
-          <span className="text-xs font-semibold text-[#3949AB] uppercase tracking-[0.15em] mb-3 block">
+          <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
             Live Data
           </span>
           <h2
             id="score-teaser-heading"
-            className="text-2xl md:text-3xl font-bold text-[#1A237E] tracking-tight leading-tight font-[family-name:var(--font-source-serif)]"
+            className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight font-[family-name:var(--font-source-serif)]"
           >
             The hottest — and coldest — markets right now.
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="rounded-2xl bg-white/80 border border-[#C5CAE9] p-6">
-            <h3 className="text-sm font-semibold text-[#3949AB] uppercase tracking-wide mb-3">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
+            <h3 className="text-sm font-semibold text-[#C5CAE9] uppercase tracking-wide mb-3">
               Hottest Markets
             </h3>
             {hottest.map((m) => (
@@ -99,8 +99,8 @@ export async function ScoreTeaser() {
             ))}
           </div>
 
-          <div className="rounded-2xl bg-white/80 border border-[#C5CAE9] p-6">
-            <h3 className="text-sm font-semibold text-[#3949AB] uppercase tracking-wide mb-3">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
+            <h3 className="text-sm font-semibold text-[#C5CAE9] uppercase tracking-wide mb-3">
               Coldest Markets
             </h3>
             {coldest.map((m) => (
@@ -112,7 +112,7 @@ export async function ScoreTeaser() {
         <div className="text-center">
           <a
             href="/markets"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-[#3949AB] hover:text-[#1A237E] transition-colors group"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors group"
           >
             See all 925 metros
             <span
