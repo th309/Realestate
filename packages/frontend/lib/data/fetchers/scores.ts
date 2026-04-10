@@ -38,6 +38,7 @@ export async function fetchTopMarkets(
   scoreType: TopMarketsScoreType,
   limit: number = 10,
   state?: string,
+  sort?: "asc" | "desc",
 ): Promise<TopMarketEntry[]> {
   try {
     const params: Record<string, string> = {
@@ -46,6 +47,7 @@ export async function fetchTopMarkets(
       limit: String(limit),
     };
     if (state) params.state = state;
+    if (sort) params.sort = sort;
 
     const data = await fetchAPIWithParams<TopMarketEntry[]>(
       "/api/scores/top",
