@@ -169,12 +169,19 @@ export class ScoringController {
     required: false,
     description: 'Two-letter state code (e.g. IL) to filter within',
   })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    description: 'Sort order: "asc" or "desc" (default "desc")',
+    enum: ['asc', 'desc'],
+  })
   async getTopMarkets(
     @Query('geography') geography: string,
     @Query('score_type') scoreType: string,
     @Query('limit') limitStr?: string,
     @Query('date') date?: string,
     @Query('state') state?: string,
+    @Query('sort') sort?: string,
   ): Promise<
     {
       location_id: string;
@@ -205,12 +212,21 @@ export class ScoringController {
       ? normalizeStateToCode(state.trim())
       : undefined;
 
+    if (sort !== undefined && sort !== 'asc' && sort !== 'desc') {
+      throw new HttpException(
+        'Invalid sort value. Must be "asc" or "desc".',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const ascending = sort === 'asc';
     return this.scoringService.getTopMarkets(
       geoLevel,
       validScoreType,
       limit,
       date,
       normalizedState,
+      ascending,
     );
   }
 

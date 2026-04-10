@@ -398,6 +398,7 @@ export class ScoringService {
     limit: number = 10,
     periodDate?: string,
     state?: string,
+    ascending: boolean = false,
   ) {
     return queryTopMarkets(
       this.supabase,
@@ -406,6 +407,7 @@ export class ScoringService {
       limit,
       periodDate,
       state,
+      ascending,
     );
   }
 
