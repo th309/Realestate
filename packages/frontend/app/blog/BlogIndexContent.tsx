@@ -166,10 +166,9 @@ function PostSection({
 
 export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
   const [textFilter, setTextFilter] = useState("");
-  const [marketFilter, setMarketFilter] = useState<string | null>(null);
-  const [marketDisplayName, setMarketDisplayName] = useState<string | null>(
-    null,
-  );
+  const [marketFilters, setMarketFilters] = useState<
+    { key: string; display: string }[]
+  >([]);
   const {
     searchQuery,
     searchResults,
@@ -183,30 +182,35 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
 
   const handleSelectMarket = useCallback(
     (result: { name: string }) => {
-      // Store the primary name before comma: "Atlanta-Sandy Springs-Roswell, GA" → "atlanta-sandy springs-roswell"
-      const marketName = result.name.split(",")[0].trim().toLowerCase();
-      setMarketFilter(marketName);
-      setMarketDisplayName(result.name.split(",")[0].trim());
+      const key = result.name.split(",")[0].trim().toLowerCase();
+      const display = result.name.split(",")[0].trim();
+      setMarketFilters((prev) => {
+        if (prev.some((f) => f.key === key)) return prev; // no duplicates
+        return [...prev, { key, display }];
+      });
       clearSearch();
     },
     [clearSearch],
   );
 
-  const clearMarketFilter = useCallback(() => {
-    setMarketFilter(null);
-    setMarketDisplayName(null);
+  const removeMarketFilter = useCallback((key: string) => {
+    setMarketFilters((prev) => prev.filter((f) => f.key !== key));
+  }, []);
+
+  const clearAllMarketFilters = useCallback(() => {
+    setMarketFilters([]);
   }, []);
 
   const filteredPosts = useMemo(() => {
     let result = posts;
-    if (marketFilter) {
+    if (marketFilters.length > 0) {
       result = result.filter((p) =>
-        p.frontmatter.tags.some((tag) => {
-          const t = tag.toLowerCase();
-          // Match bidirectionally: tag "atlanta" is in filter "atlanta-sandy springs-roswell"
-          // OR filter "atlanta" is in tag "atlanta-real-estate"
-          return marketFilter.includes(t) || t.includes(marketFilter);
-        }),
+        marketFilters.some((filter) =>
+          p.frontmatter.tags.some((tag) => {
+            const t = tag.toLowerCase();
+            return filter.key.includes(t) || t.includes(filter.key);
+          }),
+        ),
       );
     }
     if (textFilter.length >= 2) {
@@ -218,9 +222,9 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
       );
     }
     return result;
-  }, [posts, marketFilter, textFilter]);
+  }, [posts, marketFilters, textFilter]);
 
-  const isFiltered = marketFilter || textFilter.length >= 2;
+  const isFiltered = marketFilters.length > 0 || textFilter.length >= 2;
 
   const grouped = useMemo(() => {
     const groups: Record<BlogGroup, BlogPostSummary[]> = {
@@ -310,21 +314,34 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
         </div>
       </div>
 
-      {marketFilter && (
-        <div className="mt-3 flex items-center gap-2">
+      {marketFilters.length > 0 && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
           <span className="text-sm text-on-surface-variant">
             Showing posts about
           </span>
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-medium">
-            {marketDisplayName || marketFilter}
-            <button
-              onClick={clearMarketFilter}
-              className="ml-1 hover:text-primary"
-              aria-label="Clear filter"
+          {marketFilters.map((f) => (
+            <span
+              key={f.key}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-medium"
             >
-              <X className="w-3 h-3" />
+              {f.display}
+              <button
+                onClick={() => removeMarketFilter(f.key)}
+                className="ml-1 hover:text-primary"
+                aria-label={`Remove ${f.display}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          {marketFilters.length > 1 && (
+            <button
+              onClick={clearAllMarketFilters}
+              className="text-xs text-on-surface-variant hover:text-primary transition-colors"
+            >
+              Clear all
             </button>
-          </span>
+          )}
         </div>
       )}
 
