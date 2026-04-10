@@ -167,6 +167,9 @@ function PostSection({
 export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
   const [textFilter, setTextFilter] = useState("");
   const [marketFilter, setMarketFilter] = useState<string | null>(null);
+  const [marketDisplayName, setMarketDisplayName] = useState<string | null>(
+    null,
+  );
   const {
     searchQuery,
     searchResults,
@@ -183,6 +186,7 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
       // Store the primary name before comma: "Atlanta-Sandy Springs-Roswell, GA" → "atlanta-sandy springs-roswell"
       const marketName = result.name.split(",")[0].trim().toLowerCase();
       setMarketFilter(marketName);
+      setMarketDisplayName(result.name.split(",")[0].trim());
       clearSearch();
     },
     [clearSearch],
@@ -190,6 +194,7 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
 
   const clearMarketFilter = useCallback(() => {
     setMarketFilter(null);
+    setMarketDisplayName(null);
   }, []);
 
   const filteredPosts = useMemo(() => {
@@ -311,7 +316,7 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
             Showing posts about
           </span>
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-medium">
-            {marketFilter.charAt(0).toUpperCase() + marketFilter.slice(1)}
+            {marketDisplayName || marketFilter}
             <button
               onClick={clearMarketFilter}
               className="ml-1 hover:text-primary"
