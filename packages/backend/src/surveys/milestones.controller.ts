@@ -11,7 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Inject } from '@nestjs/common';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { AuthUserId } from '../common/decorators/auth-user-id.decorator';
+import { AuthUserId } from '../common/decorators/auth-user';
 
 const VALID_MILESTONE_KEYS = new Set([
   'first_market_viewed',
