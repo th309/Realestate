@@ -104,7 +104,7 @@ export class AiProviderService {
 
     const model =
       this.configService.get<string>('CLAUDE_INSIGHTS_MODEL') ||
-      'claude-sonnet-4-6-20250514';
+      'claude-sonnet-4-6';
 
     const stream = await this.anthropicClient.messages.stream({
       model,
