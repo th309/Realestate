@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { getAllPosts } from "@/lib/blog";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
-import { BlogFilterableList } from "./BlogFilterableList";
+import { BlogIndexContent } from "./BlogIndexContent";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -95,7 +95,7 @@ export default function BlogIndexPage() {
           icon={<BookOpen className="w-5 h-5" />}
         />
 
-        <BlogFilterableList posts={postSummaries} />
+        <BlogIndexContent posts={postSummaries} />
       </div>
     </>
   );
