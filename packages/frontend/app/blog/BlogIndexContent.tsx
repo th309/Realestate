@@ -180,8 +180,8 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
 
   const handleSelectMarket = useCallback(
     (result: { name: string }) => {
-      // Extract first word of the metro name: "Atlanta-Sandy Springs-Roswell, GA" → "atlanta"
-      const marketName = result.name.split(/[-,]/)[0].trim().toLowerCase();
+      // Store the primary name before comma: "Atlanta-Sandy Springs-Roswell, GA" → "atlanta-sandy springs-roswell"
+      const marketName = result.name.split(",")[0].trim().toLowerCase();
       setMarketFilter(marketName);
       clearSearch();
     },
@@ -196,9 +196,12 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
     let result = posts;
     if (marketFilter) {
       result = result.filter((p) =>
-        p.frontmatter.tags.some((tag) =>
-          tag.toLowerCase().includes(marketFilter),
-        ),
+        p.frontmatter.tags.some((tag) => {
+          const t = tag.toLowerCase();
+          // Match bidirectionally: tag "atlanta" is in filter "atlanta-sandy springs-roswell"
+          // OR filter "atlanta" is in tag "atlanta-real-estate"
+          return marketFilter.includes(t) || t.includes(marketFilter);
+        }),
       );
     }
     if (textFilter.length >= 2) {
