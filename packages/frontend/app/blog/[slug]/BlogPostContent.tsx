@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { BlogPost } from "@/lib/blog/types";
 import { mdxComponents } from "./mdx-components";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import { BlogMarketCTA } from "./BlogMarketCTA";
+import { extractMarketFromTags } from "@/lib/blog/extract-market";
 
 interface BlogPostContentProps {
   post: BlogPost;
@@ -62,40 +64,60 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
         <MDXRemote source={post.content} components={mdxComponents} />
       </div>
 
-      {/* Newsletter footer CTA */}
-      <p className="mt-6 text-sm text-on-surface-variant">
-        <strong className="text-on-surface">Want the weekly summary?</strong>{" "}
-        The{" "}
-        <a
-          href="https://propertyiq.app/newsletter?utm_source=blog&utm_medium=cta&utm_campaign=newsletter-footer"
-          className="text-primary underline hover:no-underline"
-        >
-          PropertyIQ Market Pulse
-        </a>{" "}
-        delivers three scored markets, what changed, and what it means for
-        investors — free, every week.
-      </p>
+      {/* Product CTA -- links to market page */}
+      <BlogMarketCTA tags={post.frontmatter.tags} />
 
-      {/* Tags */}
-      {post.frontmatter.tags?.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-outline-variant">
-          {post.frontmatter.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-3 py-1 bg-surface-container-low text-on-surface-variant text-sm rounded-full"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Newsletter footer CTA + Tags + Signup */}
+      {(() => {
+        const market = extractMarketFromTags(post.frontmatter.tags);
+        return (
+          <>
+            <p className="mt-6 text-sm text-on-surface-variant">
+              <strong className="text-on-surface">
+                Want the weekly summary?
+              </strong>{" "}
+              The{" "}
+              <a
+                href="https://propertyiq.app/newsletter?utm_source=blog&utm_medium=cta&utm_campaign=newsletter-footer"
+                className="text-primary underline hover:no-underline"
+              >
+                PropertyIQ Market Pulse
+              </a>{" "}
+              delivers three scored markets, what changed, and what it means for
+              investors — free, every week.
+            </p>
 
-      {/* Newsletter Signup */}
-      <NewsletterSignup
-        label="PropertyIQ Market Pulse"
-        description="Get the weekly PropertyIQ Market Pulse — data-driven housing market analysis for 400+ U.S. markets, delivered free every week."
-        buttonText="Subscribe Free"
-      />
+            {/* Tags */}
+            {post.frontmatter.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-outline-variant">
+                {post.frontmatter.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-surface-container-low text-on-surface-variant text-sm rounded-full"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Newsletter Signup */}
+            <NewsletterSignup
+              label={
+                market
+                  ? `Get ${market.city} Market Updates`
+                  : "PropertyIQ Market Pulse"
+              }
+              description={
+                market
+                  ? `Free weekly data on ${market.city} and 400+ U.S. markets — scores, trends, and investment signals delivered to your inbox.`
+                  : "Get the weekly PropertyIQ Market Pulse — data-driven housing market analysis for 400+ U.S. markets, delivered free every week."
+              }
+              buttonText="Subscribe Free"
+            />
+          </>
+        );
+      })()}
     </article>
   );
 }
