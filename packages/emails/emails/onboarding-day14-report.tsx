@@ -6,36 +6,57 @@ import EmailHeading from "./components/email-heading";
 export interface OnboardingDay14ReportProps {
   name: string;
   loginUrl: string;
+  unsubscribeUrl?: string;
 }
 
 export default function OnboardingDay14Report({
   name,
   loginUrl,
+  unsubscribeUrl,
 }: OnboardingDay14ReportProps) {
-  const reportsUrl = `${loginUrl}/reports`;
+  const mapUrl = `${loginUrl}/map`;
+  const pricingUrl = `${loginUrl}/pricing?from=email_day14`;
 
   return (
-    <Layout preview="Your first market report is on us">
-      <EmailHeading>Your First Market Report Is on Us</EmailHeading>
+    <Layout
+      preview="One thing before you go"
+      unsubscribeUrl={unsubscribeUrl}
+    >
+      <EmailHeading>One Thing Before You Go</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         Hey {name},
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        Ready to go deeper on a market? PropertyIQ can generate an AI-powered
-        report for any market — covering scores, trends, demographics, risk
-        factors, and a plain-English summary of what it all means.
+        You&apos;ve had two weeks of PropertyIQ. Here&apos;s where things stand:
+      </Text>
+      <Text className="text-base text-gray-700 leading-6 m-0 mb-2">
+        Your free account gives you access to scores across 400+ markets, the
+        interactive map, and Quinn — our AI analyst — forever. No credit card,
+        no expiration.
+      </Text>
+      <Text className="text-base text-gray-700 leading-6 m-0 mb-5">
+        If you&apos;ve been curious about what&apos;s behind the scores — the
+        40+ data metrics, AI-generated market reports, score breakdowns, and
+        unlimited market comparisons — that&apos;s Pro.
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-6">
-        Reports are easy to share with partners, agents, or family. Pick a
-        market and generate your first one — it&apos;s free:
+        One number per market is powerful. The full picture is how investors
+        make the call with confidence.
       </Text>
-      <Section className="text-center mb-6">
-        <BrandedButton href={reportsUrl}>Generate a Free Report</BrandedButton>
+      <Section className="text-center mb-5">
+        <BrandedButton href={pricingUrl}>Explore Pro</BrandedButton>
       </Section>
+      <Text className="text-sm text-gray-500 leading-5 m-0 mb-3">
+        Not ready? No problem —{" "}
+        <Link href={mapUrl} className="text-brand underline">
+          your free access
+        </Link>{" "}
+        is always here.
+      </Text>
       <Text className="text-sm text-gray-500 leading-5 m-0">
         If the button doesn&apos;t work, copy this link:{" "}
-        <Link href={reportsUrl} className="text-brand underline">
-          {reportsUrl}
+        <Link href={pricingUrl} className="text-brand underline">
+          {pricingUrl}
         </Link>
       </Text>
     </Layout>

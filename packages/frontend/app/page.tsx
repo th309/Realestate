@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import {
   BrandBanner,
   HeroSection,
+  EmailCaptureBar,
+  ProblemSection,
   StatsSection,
   MapShowcase,
   ValuePropsSection,
   AlphaCallout,
   GraphsShowcase,
   AIIntegrationsSection,
+  UseCasesSection,
   PricingSection,
   CTASection,
   Footer,
@@ -44,13 +47,16 @@ export const metadata: Metadata = {
 /**
  * PropertyIQ Homepage
  *
- * Structure follows proven SaaS landing page patterns:
- * 1. Hero — bold value prop + real product screenshot
- * 2. Stats — credibility numbers
- * 3. Value Props — 3 alternating image+text sections with real product images
- * 4. Pricing
- * 5. Final CTA
- * 6. Footer
+ * Structure follows CMO-defined landing page order:
+ * 1. Hero — CMO headline + subhead + CTAs + trust signals
+ * 2. Social Proof — market coverage stats (immediately after hero)
+ * 3. The Problem — why blind investing fails
+ * 4. The Score — what PropertyIQ measures and why it matters (value props + alpha callout)
+ * 5. Map — map showcase
+ * 6. Data depth — graphs, AI integrations
+ * 7. Use Cases — investor, agent, syndicator personas
+ * 8. Pricing — Free, Pro, Enterprise tiers
+ * 9. Final CTA + Footer
  */
 export default function HomePage() {
   return (
@@ -59,12 +65,15 @@ export default function HomePage() {
       <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
         <BrandBanner />
         <HeroSection />
+        <EmailCaptureBar />
         <StatsSection />
-        <MapShowcase />
+        <ProblemSection />
         <ValuePropsSection />
         <AlphaCallout />
+        <MapShowcase />
         <GraphsShowcase />
         <AIIntegrationsSection />
+        <UseCasesSection />
         <PricingSection />
         <CTASection />
         <Footer />

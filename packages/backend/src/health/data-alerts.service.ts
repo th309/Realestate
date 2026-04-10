@@ -185,6 +185,39 @@ export class DataAlertsService {
     }
   }
 
+  /**
+   * Returns true if there is already an open alert for the given source/pipeline + type.
+   * Used by the cron to avoid creating duplicates before calling createAlert().
+   */
+  async hasOpenAlert(
+    alertType: DataAlert['alertType'],
+    sourceName?: string,
+    pipelineName?: string,
+  ): Promise<boolean> {
+    const client = this.supabase.getClient();
+
+    try {
+      let query = client
+        .from('data_ingest_alerts')
+        .select('id', { count: 'exact', head: true })
+        .eq('alert_type', alertType)
+        .eq('status', 'open');
+
+      if (sourceName) query = query.eq('source_name', sourceName);
+      if (pipelineName) query = query.eq('pipeline_name', pipelineName);
+
+      const { count, error } = await query;
+      if (error) {
+        this.logger.warn(`hasOpenAlert query failed: ${error.message}`);
+        return false;
+      }
+      return (count ?? 0) > 0;
+    } catch (error) {
+      this.logger.error('hasOpenAlert exception:', error);
+      return false;
+    }
+  }
+
   private calculateSummary(alerts: DataAlert[]) {
     return {
       total: alerts.length,

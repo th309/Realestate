@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
+import { STATE_SLUG_DATA } from "@/lib/data/state-slug-data";
 import { MarketSearch } from "./MarketSearch";
 
 export const metadata: Metadata = {
@@ -42,6 +44,24 @@ export default function MarketsIndexPage() {
         US metro areas. Each market page includes PropertyIQ scores, key
         metrics, and price trends.
       </p>
+
+      {/* Browse by State — static server-rendered links for SEO crawlability */}
+      <section className="mb-10">
+        <h2 className="text-xl font-semibold text-on-surface mb-4">
+          Browse by State
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          {STATE_SLUG_DATA.map((s) => (
+            <Link
+              key={s.abbrev}
+              href={`/markets/state/${s.slug}`}
+              className="text-sm text-primary hover:text-primary/80 underline underline-offset-4 py-1"
+            >
+              {s.name}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <MarketSearch metros={METRO_SLUG_DATA} />
     </div>

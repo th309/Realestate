@@ -33,6 +33,8 @@ jest.setTimeout(60000);
 describe('AI Providers Integration', () => {
     let anthropicProvider: AnthropicProvider;
     let openaiProvider: OpenAIProvider;
+    // Computed once in beforeAll, read in tests — hoisted to describe scope
+    let isDeepSeekProvider: boolean;
 
     const mockToolDefinition = {
         name: 'test_tool',
@@ -63,22 +65,22 @@ describe('AI Providers Integration', () => {
         }
 
         // Setup OpenAI / DeepSeek
-        // Note: Check if using DeepSeek base URL
-        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-        // If AI_BASE_URL is set to Anthropic, we shouldn't use it for OpenAI/DeepSeek provider
-        let baseURL = 'https://api.deepseek.com';
-
-        if (process.env.AI_BASE_URL && !process.env.AI_BASE_URL.includes('anthropic.com')) {
-            baseURL = process.env.AI_BASE_URL;
-        }
+        // Mirror the service's provider selection logic: only pass a custom baseURL for
+        // DeepSeek/Novita (OpenAI-compatible at non-standard endpoints). Real OpenAI should
+        // use the SDK default (https://api.openai.com/v1).
+        const rawProvider = (process.env.AI_PROVIDER || 'deepseek').toLowerCase();
+        isDeepSeekProvider = rawProvider === 'deepseek' || rawProvider === 'novita';
+        const apiKey = isDeepSeekProvider
+            ? (process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY)
+            : (process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY);
+        const baseURL = isDeepSeekProvider
+            ? (process.env.AI_BASE_URL || 'https://api.deepseek.com/v1')
+            : undefined;
 
         if (apiKey) {
-            const openaiClient = new OpenAI({
-                apiKey: apiKey,
-                baseURL: baseURL
-            });
+            const openaiClient = new OpenAI({ apiKey, baseURL });
             openaiProvider = new OpenAIProvider(openaiClient, mockToolsService);
-            console.log(`OpenAI Provider initialized with Base URL: ${baseURL}`);
+            console.log(`OpenAI Provider initialized | provider=${rawProvider} baseURL=${baseURL ?? '(sdk default)'}`);
         }
     });
 
@@ -125,8 +127,10 @@ describe('AI Providers Integration', () => {
         it('should perform a basic chat', async () => {
             if (!openaiProvider) return;
 
-            // Use model from env if not set to an anthropic model, otherwise deepseek-chat
-            let model = 'deepseek-chat';
+            // Use AI_MODEL from env if it's not a Claude model; fall back to the
+            // provider-appropriate default (deepseek-chat vs gpt-4o).
+            const defaultModel = isDeepSeekProvider ? 'deepseek-chat' : 'gpt-4o';
+            let model = defaultModel;
             if (process.env.AI_MODEL && !process.env.AI_MODEL.includes('claude')) {
                 model = process.env.AI_MODEL;
             }
@@ -154,7 +158,8 @@ describe('AI Providers Integration', () => {
         it('should use tools when requested', async () => {
             if (!openaiProvider) return;
 
-            let model = 'deepseek-chat';
+            const defaultModel = isDeepSeekProvider ? 'deepseek-chat' : 'gpt-4o';
+            let model = defaultModel;
             if (process.env.AI_MODEL && !process.env.AI_MODEL.includes('claude')) {
                 model = process.env.AI_MODEL;
             }

@@ -11,6 +11,27 @@ import {
 } from '../types';
 import { normalizeZipKey } from '../../common/zip';
 
+const PIPELINE_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+
+async function reportPipelineStatus(
+    source: string,
+    status: 'success' | 'partial' | 'failed',
+    totalInserted: number,
+    totalFailed: number,
+    durationMs: number,
+    geographies: Array<{ id: string; table: string; status: 'success' | 'partial' | 'failed' | 'skipped'; inserted: number; failed: number }>
+): Promise<void> {
+    const apiKey = process.env.PIPELINE_API_KEY;
+    if (!apiKey) return;
+    try {
+        await fetch(`${PIPELINE_API_URL}/api/health/pipeline-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({ source, status, totalInserted, totalFailed, durationMs, geographies, timestamp: new Date().toISOString() })
+        });
+    } catch { /* fire-and-forget: never block import on reporting failure */ }
+}
+
 @Injectable()
 export class CensusService {
     private readonly logger = new Logger(CensusService.name);
@@ -261,6 +282,8 @@ export class CensusService {
         this.logger.log(`Starting Census import for: ${variables.join(', ')}`);
         this.logger.log(`Year: ${year}, Geographic Level: ${geoLevel}`);
 
+        const startedAt = Date.now();
+
         const dataset = 'acs/acs5';
         const variablesList = variables
             .map(v => CENSUS_VARIABLES[v as keyof typeof CENSUS_VARIABLES])
@@ -388,6 +411,16 @@ export class CensusService {
                 this.logger.error(`Errors: ${errors.length}`);
             }
 
+            const overallStatus = errors.length === 0 ? 'success' : totalRecordsInserted > 0 ? 'partial' : 'failed';
+            const censusTable = geoLevel === 'state' ? 'census_state'
+                : geoLevel === 'metropolitan statistical area/micropolitan statistical area' ? 'census_metro'
+                : geoLevel === 'place' ? 'census_city'
+                : geoLevel === 'zip code tabulation area' ? 'census_zip'
+                : 'census';
+            await reportPipelineStatus('census', overallStatus, totalRecordsInserted, errors.length, Date.now() - startedAt, [
+                { id: geoLevel, table: censusTable, status: overallStatus, inserted: totalRecordsInserted, failed: errors.length }
+            ]);
+
             return {
                 success: errors.length === 0,
                 recordsInserted: totalRecordsInserted,
@@ -397,6 +430,9 @@ export class CensusService {
 
         } catch (error: any) {
             this.logger.error(`Error fetching Census data: ${error.message}`);
+            await reportPipelineStatus('census', 'failed', 0, 1, Date.now() - startedAt, [
+                { id: geoLevel, table: 'census', status: 'failed', inserted: 0, failed: 1 }
+            ]);
             throw error;
         }
     }

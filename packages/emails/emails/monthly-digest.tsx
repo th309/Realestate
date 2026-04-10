@@ -210,6 +210,17 @@ export default function MonthlyDigest({
         This digest is personalized based on your quiz answers. Update your
         preferences anytime from your dashboard.
       </Text>
+
+      <Hr className="border-solid border-gray-200 my-4" />
+      <Text className="text-xs text-gray-400 text-center m-0">
+        Get the weekly update: sign up for the PropertyIQ Market Pulse at{" "}
+        <a
+          href="https://www.propertyiq.app/newsletter"
+          style={{ color: "#6d28d9" }}
+        >
+          propertyiq.app/newsletter
+        </a>
+      </Text>
     </Layout>
   );
 }

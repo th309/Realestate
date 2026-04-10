@@ -1,6 +1,9 @@
 # Worktrees
 .worktrees/
 
+# Graphics/assets
+Graphics/
+
 # Dependencies
 node_modules/
 venv/
@@ -11,6 +14,9 @@ venv/
 # Testing
 coverage/
 .nyc_output
+test-results/
+packages/frontend/test-results/
+screenshots/
 
 # Next.js
 .next/
@@ -117,6 +123,8 @@ data/zillow/*.csv
 .zencoder/
 .playwright-mcp/
 skills-lock.json
+Skills/
+.superpowers/brainstorm/
 
 # Loose QA artifacts at repo root
 *.png

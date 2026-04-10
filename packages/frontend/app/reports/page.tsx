@@ -632,7 +632,7 @@ function ReportCreationPage() {
       >
         <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20 bg-primary" />
 
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 relative">
           <div className="flex items-center gap-4 mb-2">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-primary/15 text-primary">
               <BarChart3 className="w-6 h-6" />
@@ -649,80 +649,136 @@ function ReportCreationPage() {
         </div>
       </div>
 
-      {/* Form */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        <section>
-          <h2 className="text-lg font-semibold text-on-surface mb-1">
-            Select your market(s)
-          </h2>
-          <p className="text-sm text-on-surface-variant mb-4">
-            Choose up to 5 markets to analyze
-          </p>
-          <MarketSelector
-            markets={markets}
-            onAdd={(market) => setMarkets([...markets, market])}
-            onRemove={(id) => setMarkets(markets.filter((m) => m.id !== id))}
-            accentColor="primary"
-          />
-        </section>
+      {/* Form + Custom Research side by side */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          {/* Left: Report Builder */}
+          <div className="lg:col-span-3 space-y-8">
+            <section>
+              <h2 className="text-lg font-semibold text-on-surface mb-1">
+                Select your market(s)
+              </h2>
+              <p className="text-sm text-on-surface-variant mb-4">
+                Choose up to 5 markets to analyze
+              </p>
+              <MarketSelector
+                markets={markets}
+                onAdd={(market) => setMarkets([...markets, market])}
+                onRemove={(id) =>
+                  setMarkets(markets.filter((m) => m.id !== id))
+                }
+                accentColor="primary"
+              />
+            </section>
 
-        <section>
-          <PersonalizationPanel
-            values={inputs}
-            onChange={(key, value) => setInputs({ ...inputs, [key]: value })}
-          />
-        </section>
+            <section>
+              <PersonalizationPanel
+                values={inputs}
+                onChange={(key, value) =>
+                  setInputs({ ...inputs, [key]: value })
+                }
+              />
+            </section>
 
-        <motion.button
-          onClick={handleGenerate}
-          disabled={!canGenerate || isGenerating}
-          className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
+            <motion.button
+              onClick={handleGenerate}
+              disabled={!canGenerate || isGenerating}
+              className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
             flex items-center justify-center gap-3
             transition-all duration-300
             disabled:opacity-50 disabled:cursor-not-allowed
             bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
-          whileHover={canGenerate ? { scale: 1.01 } : {}}
-          whileTap={canGenerate ? { scale: 0.99 } : {}}
-        >
-          {isGenerating ? (
-            <>
-              <motion.div
-                className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              Generating your report...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generate Report
-            </>
-          )}
-        </motion.button>
-
-        {!canGenerate && (
-          <p className="text-center text-sm text-on-surface-variant">
-            Select at least one market to continue
-          </p>
-        )}
-
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-4 rounded-xl bg-error-container/30 border border-error/30"
-          >
-            <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
-            <p className="text-sm text-error">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-error hover:text-error/80"
+              whileHover={canGenerate ? { scale: 1.01 } : {}}
+              whileTap={canGenerate ? { scale: 0.99 } : {}}
             >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
+              {isGenerating ? (
+                <>
+                  <motion.div
+                    className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                  />
+                  Generating your report...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Generate Report
+                </>
+              )}
+            </motion.button>
+
+            {!canGenerate && (
+              <p className="text-center text-sm text-on-surface-variant">
+                Select at least one market to continue
+              </p>
+            )}
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 p-4 rounded-xl bg-error-container/30 border border-error/30"
+              >
+                <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
+                <p className="text-sm text-error">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-auto text-error hover:text-error/80"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Right: Custom Research */}
+          <div className="lg:col-span-2 flex">
+            <motion.button
+              onClick={() => router.push("/reports/research")}
+              className="
+              group relative overflow-hidden
+              w-full text-left rounded-3xl p-6 lg:p-8
+              flex flex-col
+              transition-all duration-500 ease-out
+              bg-gradient-to-br from-secondary/5 via-secondary/10 to-secondary/5
+              hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
+              border border-outline-variant/30 hover:border-outline-variant/60
+              hover:shadow-xl hover:shadow-black/5
+              self-stretch
+            "
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50 bg-secondary" />
+              <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-secondary/15 text-secondary">
+                <FileText className="w-7 h-7" />
+              </div>
+              <div className="relative flex-1">
+                <h2 className="text-xl lg:text-2xl font-semibold text-on-surface mb-2 tracking-tight">
+                  Custom Research
+                </h2>
+                <p className="text-on-surface-variant text-sm lg:text-base leading-relaxed">
+                  Ask any real estate question. Get an AI-powered research brief
+                  backed by PropertyIQ data.
+                </p>
+              </div>
+              <div className="relative flex items-center justify-between mt-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
+                  <Sparkles className="w-4 h-4" />
+                  AI Research Agent
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-secondary text-on-secondary">
+                  <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </div>
+            </motion.button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -815,55 +871,13 @@ function ReportHistory() {
 // ============================================================================
 
 function ReportsContent() {
-  const router = useRouter();
-
   return (
     <div className="min-h-screen bg-surface" data-tour="reports-section">
       {/* Report creation form — direct to market selection, no type picker */}
       <ReportCreationPage />
 
-      {/* Below the form: Custom Research CTA + Recent Reports */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-8 space-y-10">
-        {/* Custom Research Card */}
-        <motion.button
-          onClick={() => router.push("/reports/research")}
-          className="
-            group relative overflow-hidden
-            w-full text-left rounded-3xl p-8 md:p-10
-            flex flex-col
-            transition-all duration-500 ease-out
-            bg-gradient-to-br from-secondary/5 via-secondary/10 to-secondary/5
-            hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
-            border border-outline-variant/30 hover:border-outline-variant/60
-            hover:shadow-xl hover:shadow-black/5
-          "
-          whileHover={{ y: -4 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50 bg-secondary" />
-          <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-secondary/15 text-secondary">
-            <FileText className="w-7 h-7" />
-          </div>
-          <div className="relative flex-1">
-            <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
-              Custom Research
-            </h2>
-            <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
-              Ask any real estate question. Get an AI-powered research brief
-              backed by PropertyIQ data.
-            </p>
-          </div>
-          <div className="relative flex items-center justify-between mt-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
-              <Sparkles className="w-4 h-4" />
-              AI Research Agent
-            </div>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-secondary text-on-secondary">
-              <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </div>
-        </motion.button>
-
+      {/* Recent Reports */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8">
         {/* Recent Reports */}
         <div>
           <div className="flex items-center gap-3 mb-4">

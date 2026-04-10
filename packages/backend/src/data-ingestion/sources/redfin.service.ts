@@ -6,6 +6,27 @@ import { ImportResult, RedfinImportResult, TimeSeriesRecord } from '../types';
 import { GeoMappingService } from '../utils/geo-mapping.service';
 import { DataQualityService } from '../utils/data-quality.service';
 
+const PIPELINE_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+
+async function reportPipelineStatus(
+    source: string,
+    status: 'success' | 'partial' | 'failed',
+    totalInserted: number,
+    totalFailed: number,
+    durationMs: number,
+    geographies: Array<{ id: string; table: string; status: 'success' | 'partial' | 'failed' | 'skipped'; inserted: number; failed: number }>
+): Promise<void> {
+    const apiKey = process.env.PIPELINE_API_KEY;
+    if (!apiKey) return;
+    try {
+        await fetch(`${PIPELINE_API_URL}/api/health/pipeline-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({ source, status, totalInserted, totalFailed, durationMs, geographies, timestamp: new Date().toISOString() })
+        });
+    } catch { /* fire-and-forget: never block import on reporting failure */ }
+}
+
 @Injectable()
 export class RedfinService {
     private readonly logger = new Logger(RedfinService.name);
@@ -26,6 +47,8 @@ export class RedfinService {
         const supabase = this.supabaseService.getClient();
         this.logger.log(`Starting Redfin import for: ${metricName}`);
 
+        const startedAt = Date.now();
+
         let csvData = csvContent;
 
         if (!csvData) {
@@ -33,11 +56,17 @@ export class RedfinService {
                 csvData = await this.puppeteerService.downloadRedfinCSV(metricName, downloadUrl);
             } catch (error: any) {
                 this.logger.error(`Failed to download Redfin data: ${error.message}`);
+                await reportPipelineStatus('redfin', 'failed', 0, 1, Date.now() - startedAt, [
+                    { id: metricName, table: 'redfin', status: 'failed', inserted: 0, failed: 1 }
+                ]);
                 throw error;
             }
         }
 
         if (!csvData) {
+            await reportPipelineStatus('redfin', 'failed', 0, 1, Date.now() - startedAt, [
+                { id: metricName, table: 'redfin', status: 'failed', inserted: 0, failed: 1 }
+            ]);
             throw new Error('No CSV data available');
         }
 
@@ -181,6 +210,11 @@ export class RedfinService {
             timeSeriesInserted = 0;
             errors++;
         }
+
+        const overallStatus = errors === 0 ? 'success' : timeSeriesInserted > 0 ? 'partial' : 'failed';
+        await reportPipelineStatus('redfin', overallStatus, timeSeriesInserted, errors, Date.now() - startedAt, [
+            { id: metricName, table: 'redfin', status: overallStatus, inserted: timeSeriesInserted, failed: errors }
+        ]);
 
         return {
             success: errors === 0,

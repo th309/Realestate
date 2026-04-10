@@ -87,7 +87,7 @@ function buildOpenApiSpec() {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["tool_name", "arguments"],
+                  required: ["tool_name", "params"],
                   properties: {
                     tool_name: {
                       type: "string",
@@ -164,7 +164,7 @@ export function mountApiRoutes(app: Express): void {
   // Unified tool invocation
   app.post("/api/tools", async (req: Request, res: Response) => {
     const body = req.body ?? {};
-    const { tool_name, arguments: explicitArgs, ...flatArgs } = body;
+    const { tool_name, params: explicitArgs, ...flatArgs } = body;
     console.log(
       `[API] POST /api/tools | tool=${tool_name} | body=${JSON.stringify(body).slice(0, 200)}`,
     );

@@ -4,6 +4,8 @@ import { Check, Sparkles, Loader2 } from "lucide-react";
 import type { PricingTier } from "@/lib/data/fetchers/pricing";
 import type { TrialInfo } from "@/lib/entitlements/types";
 import { FALLBACK_BULLETS } from "./build-feature-bullets";
+import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface PricingCardsProps {
   plans: PricingTier[];
@@ -127,7 +129,8 @@ function PricingCard({
   const priceDisplay =
     effectiveMonthly === 0 ? "$0" : `$${Math.round(effectiveMonthly)}`;
   const periodDisplay = effectiveMonthly === 0 ? "forever" : "/month";
-  const ctaText = plan.slug === "pro" ? "Start Free Trial" : "Get Started";
+  const variant = plan.slug === "pro" ? getPricingCtaVariant() : null;
+  const ctaText = plan.slug === "pro" ? PRICING_CTA_COPY[variant!] : "Get Started";
 
   const featureBullets =
     plan.pricing_card_items?.length > 0
@@ -212,6 +215,7 @@ function PricingCard({
         isTrialPlan={!!isTrialPlan}
         isHighlighted={isHighlighted}
         ctaText={ctaText}
+        variant={variant ?? undefined}
         checkoutLoading={checkoutLoading}
         onUpgrade={onUpgrade}
       />
@@ -229,6 +233,7 @@ function CardCTA({
   isTrialPlan,
   isHighlighted,
   ctaText,
+  variant,
   checkoutLoading,
   onUpgrade,
 }: {
@@ -237,6 +242,7 @@ function CardCTA({
   isTrialPlan: boolean;
   isHighlighted: boolean;
   ctaText: string;
+  variant?: string;
   checkoutLoading: string | null;
   onUpgrade: (s: string) => void;
 }) {
@@ -259,7 +265,12 @@ function CardCTA({
   }
   return (
     <button
-      onClick={() => onUpgrade(slug)}
+      onClick={() => {
+        if (variant) {
+          trackEvent("conversion.pricing_cta_click", { variant, source: "pricing_page" });
+        }
+        onUpgrade(slug);
+      }}
       disabled={checkoutLoading === slug}
       className={`
         block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors

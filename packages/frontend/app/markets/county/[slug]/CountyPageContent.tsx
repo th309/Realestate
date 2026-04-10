@@ -85,7 +85,11 @@ export function CountyPageContent({
 
       {/* Newsletter */}
       <section className="mb-10">
-        <NewsletterSignup variant="inline" />
+        <NewsletterSignup
+          source="city-page"
+          label="Get monthly score updates for this county"
+          description="Stay informed when the PropertyIQ score for this county changes."
+        />
       </section>
     </div>
   );

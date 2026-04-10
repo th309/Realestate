@@ -7,3 +7,4 @@ export { AlertHistorySection } from "./AlertHistorySection";
 export { RecentReportsSection } from "./RecentReportsSection";
 export { NotificationsSection } from "./NotificationsSection";
 export { AccountSecuritySection } from "./AccountSecuritySection";
+export { ReferralSection } from "./ReferralSection";

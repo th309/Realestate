@@ -148,12 +148,19 @@ export class AnalyticsChatService {
       : this.configService.get<string>('OPENAI_API_KEY') ||
         this.configService.get<string>('DEEPSEEK_API_KEY');
 
-    const baseURL = this.configService.get<string>('AI_BASE_URL');
+    // Only apply a custom baseURL for providers that run OpenAI-compatible APIs at
+    // non-standard endpoints (DeepSeek, Novita). Real OpenAI and Groq have their own
+    // SDK defaults — passing a wrong baseURL here causes auth failures.
+    const baseURL = isDeepSeekRequest
+      ? this.configService.get<string>('AI_BASE_URL')
+      : undefined;
 
-    // Model Selection
+    // Model Selection — use env override if set; fall back to a provider-appropriate default.
+    // deepseek/novita → deepseek-chat, real openai → gpt-4o, anthropic → claude balanced
+    const openaiDefaultModel = isDeepSeekRequest ? 'deepseek-chat' : 'gpt-4o';
     this.modelName =
       this.configService.get<string>('AI_MODEL') ||
-      (this.provider === 'openai' ? 'deepseek-chat' : this.MODEL_BALANCED);
+      (this.provider === 'openai' ? openaiDefaultModel : this.MODEL_BALANCED);
 
     this.logger.log(
       `[Quinn Init] Configured Provider: ${this.provider.toUpperCase()}`,

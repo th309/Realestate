@@ -1,0 +1,25 @@
+{
+  "name": "@propertyiq/video-template",
+  "version": "1.0.0",
+  "description": "Remotion video template for PropertyIQ YouTube channel",
+  "private": true,
+  "scripts": {
+    "start": "npx remotion studio",
+    "render": "npx remotion render StudioComposition out.mp4",
+    "render:shorts": "npx remotion render ShortsComposition out-shorts.mp4",
+    "build": "npx remotion bundle"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.253",
+    "@remotion/renderer": "^4.0.253",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.253",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "remotion": "^4.0.253",
+    "typescript": "^5.0.0"
+  }
+}

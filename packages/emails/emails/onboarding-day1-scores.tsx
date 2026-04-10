@@ -6,16 +6,18 @@ import EmailHeading from "./components/email-heading";
 export interface OnboardingDay1ScoresProps {
   name: string;
   loginUrl: string;
+  unsubscribeUrl?: string;
 }
 
 export default function OnboardingDay1Scores({
   name,
   loginUrl,
+  unsubscribeUrl,
 }: OnboardingDay1ScoresProps) {
   const mapUrl = `${loginUrl}/map`;
 
   return (
-    <Layout preview="How to read your PropertyIQ scores">
+    <Layout preview="What does a 74 actually mean?" unsubscribeUrl={unsubscribeUrl}>
       <EmailHeading>How to Read Your Scores</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         Hey {name},

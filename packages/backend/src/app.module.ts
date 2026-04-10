@@ -1,6 +1,7 @@
 // Backend v1.2.0 - Added affordable_home_price endpoints
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -57,6 +58,8 @@ import { PlatformApiModule } from './platform-api/platform-api.module';
 import { DeviceAuthModule } from './device-auth/device-auth.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 import { AdminMetricsModule } from './admin-metrics/admin-metrics.module';
+import { SurveysModule } from './surveys/surveys.module';
+import { ReferralsModule } from './referrals/referrals.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 
 @Module({
@@ -133,6 +136,8 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     PlatformApiModule,
     DeviceAuthModule,
     AdminMetricsModule,
+    SurveysModule,
+    ReferralsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -148,4 +153,8 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

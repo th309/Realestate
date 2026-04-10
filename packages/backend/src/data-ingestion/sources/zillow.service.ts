@@ -6,6 +6,42 @@ import { ZILLOW_URLS } from '../config/zillow-urls';
 import { ImportResult, TimeSeriesRecord } from '../types';
 import { normalizeZipKey } from '../../common/zip';
 
+const PIPELINE_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+
+async function reportPipelineStatus(
+    source: string,
+    status: 'success' | 'partial' | 'failed',
+    totalInserted: number,
+    totalFailed: number,
+    durationMs: number,
+    geographies: Array<{ id: string; table: string; status: 'success' | 'partial' | 'failed' | 'skipped'; inserted: number; failed: number }>
+): Promise<void> {
+    const apiKey = process.env.PIPELINE_API_KEY;
+    if (!apiKey) return;
+    try {
+        await fetch(`${PIPELINE_API_URL}/api/health/pipeline-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({ source, status, totalInserted, totalFailed, durationMs, geographies, timestamp: new Date().toISOString() })
+        });
+    } catch { /* fire-and-forget: never block import on reporting failure */ }
+}
+
+const VALID_RANGES: Record<string, [number, number]> = {
+    zhvi: [10_000, 10_000_000],
+    zori: [200, 20_000],
+    zordi: [200, 20_000],
+    yoy_change: [-0.50, 1.00],
+    unemployment_rate: [0, 30],
+    population: [100, 50_000_000],
+};
+
+function validateTimeSeriesValue(metricName: string, value: number): boolean {
+    const range = VALID_RANGES[metricName];
+    if (!range) return true; // No defined range — pass through
+    return value >= range[0] && value <= range[1];
+}
+
 /**
  * Normalize metric key to base metric name for database storage.
  * e.g., 'zori_county' → 'zori', 'zordi' → 'zordi'
@@ -47,6 +83,8 @@ export class ZillowService {
 
         this.logger.log(`Downloading from: ${url}`);
 
+        const startedAt = Date.now();
+
         try {
             const response = await axios.get(url, {
                 timeout: 30000,
@@ -70,6 +108,7 @@ export class ZillowService {
             let marketsCreated = 0;
             let timeSeriesInserted = 0;
             let errors = 0;
+            let validationErrors = 0;
             const errorDetails: any[] = [];
 
             for (const [index, record] of recordsToProcess.entries()) {
@@ -147,6 +186,11 @@ export class ZillowService {
 
                         // Skip null/empty values
                         if (!isNaN(value) && value !== null && value !== 0) {
+                            if (!validateTimeSeriesValue(normalizedMetricName, value)) {
+                                this.logger.warn(`Out-of-range value for ${normalizedMetricName} [${regionId}/${dateCol}]: ${value}`);
+                                validationErrors++;
+                                continue;
+                            }
                             recordsToInsert.push({
                                 region_id: regionId,
                                 region_name: regionName,
@@ -195,30 +239,59 @@ export class ZillowService {
                 }
             }
 
-            this.logger.log(`Import Summary: Markets created: ${marketsCreated}, Time series inserted: ${timeSeriesInserted}, Errors: ${errors}`);
+            this.logger.log(`Import Summary: Markets created: ${marketsCreated}, Time series inserted: ${timeSeriesInserted}, Errors: ${errors}, Validation errors: ${validationErrors}`);
+
+            const totalAttempted = timeSeriesInserted + validationErrors;
+            const validationErrorRate = totalAttempted > 0 ? validationErrors / totalAttempted : 0;
+            const hasHighValidationErrorRate = validationErrorRate > 0.05;
+
+            let overallStatus: 'success' | 'partial' | 'failed';
+            if (errors === 0 && validationErrors === 0) {
+                overallStatus = 'success';
+            } else if (timeSeriesInserted > 0) {
+                overallStatus = 'partial';
+            } else {
+                overallStatus = 'failed';
+            }
+
+            const errorSummary = [
+                errors > 0 ? `${errors} DB errors` : null,
+                hasHighValidationErrorRate
+                    ? `${validationErrors} validation errors (${(validationErrorRate * 100).toFixed(1)}% of records out of range)`
+                    : validationErrors > 0
+                    ? `${validationErrors} validation errors`
+                    : null,
+            ].filter(Boolean).join('; ');
 
             // Log to data_ingestion_logs
             await supabase.from('data_ingestion_logs').insert({
                 source: 'zillow',
                 dataset: metricName,
-                status: errors > 0 ? 'partial' : 'success',
+                status: overallStatus,
                 records_processed: recordsToProcess.length,
                 records_inserted: timeSeriesInserted,
-                error_message: errors > 0 ? `${errors} errors` : null
+                error_message: errorSummary || null
             });
+            await reportPipelineStatus('zillow', overallStatus, timeSeriesInserted, errors + validationErrors, Date.now() - startedAt, [
+                { id: metricName, table: 'zillow', status: overallStatus, inserted: timeSeriesInserted, failed: errors + validationErrors }
+            ]);
 
             return {
-                success: errors === 0,
+                success: overallStatus === 'success',
                 message: `Imported ${metricName}: ${marketsCreated} markets, ${timeSeriesInserted} records`,
                 details: {
                     marketsCreated,
                     timeSeriesInserted,
                     errors,
+                    validationErrors,
                     errorDetails
                 }
             };
         } catch (error: any) {
             this.logger.error(`Error downloading or parsing Zillow data: ${error.message}`);
+            await reportPipelineStatus('zillow', 'failed', 0, 1, Date.now() - startedAt, [
+                { id: metricName, table: 'zillow', status: 'failed', inserted: 0, failed: 1 }
+            ]);
             throw error;
         }
     }

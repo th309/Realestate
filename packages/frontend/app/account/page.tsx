@@ -20,6 +20,7 @@ import {
   RecentReportsSection,
   NotificationsSection,
   AccountSecuritySection,
+  ReferralSection,
 } from "@/components/account/sections";
 
 // --- Tier badge styling ------------------------------------------------------
@@ -235,7 +236,10 @@ function AccountPageContent() {
           {/* 8. Notifications */}
           <NotificationsSection />
 
-          {/* 9. Account & Security */}
+          {/* 9. Referrals */}
+          <ReferralSection />
+
+          {/* 10. Account & Security */}
           <AccountSecuritySection user={effectiveUser} />
         </div>
       </div>

@@ -62,6 +62,20 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
         <MDXRemote source={post.content} components={mdxComponents} />
       </div>
 
+      {/* Newsletter footer CTA */}
+      <p className="mt-6 text-sm text-on-surface-variant">
+        <strong className="text-on-surface">Want the weekly summary?</strong>{" "}
+        The{" "}
+        <a
+          href="https://propertyiq.app/newsletter?utm_source=blog&utm_medium=cta&utm_campaign=newsletter-footer"
+          className="text-primary underline hover:no-underline"
+        >
+          PropertyIQ Market Pulse
+        </a>{" "}
+        delivers three scored markets, what changed, and what it means for
+        investors — free, every week.
+      </p>
+
       {/* Tags */}
       {post.frontmatter.tags?.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-outline-variant">
@@ -77,7 +91,11 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
       )}
 
       {/* Newsletter Signup */}
-      <NewsletterSignup />
+      <NewsletterSignup
+        label="PropertyIQ Market Pulse"
+        description="Get the weekly PropertyIQ Market Pulse — data-driven housing market analysis for 400+ U.S. markets, delivered free every week."
+        buttonText="Subscribe Free"
+      />
     </article>
   );
 }

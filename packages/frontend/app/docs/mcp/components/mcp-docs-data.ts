@@ -43,6 +43,18 @@ export const MCP_SERVER_URL = "https://mcp.propertyiq.app/mcp";
 /* ─── Client configuration examples ─── */
 
 export const SETUP_CONFIGS = {
+  claudeAi: `# No API key or config file needed — Claude.ai handles auth automatically.
+
+1. Go to claude.ai → Settings → Connectors
+2. Click "+" to add a custom connector
+3. Enter a name (e.g. "PropertyIQ")
+4. Paste this URL:
+
+   ${MCP_SERVER_URL}
+
+5. Click "Add" — this opens the connector page
+6. Click "Connect" and authorize with your PropertyIQ login — done!`,
+
   claudeCode: `claude mcp add propertyiq \\
   --transport http \\
   "${MCP_SERVER_URL}" \\
@@ -126,12 +138,12 @@ export const MCP_FAQ = [
   {
     question: "Do I need an API key?",
     answer:
-      "Yes. You need a PropertyIQ API key (starts with piq_live_) which you can generate from your account settings. A Pro or Enterprise subscription is required for MCP access.",
+      "For most clients (Claude Code, Claude Desktop, Cursor, etc.), yes — you need a PropertyIQ API key (starts with piq_live_). For Claude.ai, no API key is needed — just add PropertyIQ as a custom connector in Settings → Connectors and sign in with your PropertyIQ account. A Pro or Enterprise subscription is required either way.",
   },
   {
     question: "Which AI clients support MCP?",
     answer:
-      "Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (GitHub Copilot), Cline, and any client that supports remote MCP servers over HTTP.",
+      "Claude.ai (web), Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (GitHub Copilot), Cline, and any client that supports remote MCP servers over HTTP.",
   },
   {
     question: "Can I use this with ChatGPT or Gemini?",

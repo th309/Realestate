@@ -23,6 +23,7 @@ interface SendEmailOptions {
   userId?: string;
   emailType: string;
   metadata?: Record<string, unknown>;
+  replyTo?: string;
 }
 
 @Injectable()
@@ -49,6 +50,7 @@ export class EmailService {
         const { error } = await this.resend.emails.send({
           from: this.fromEmail,
           to: [options.to],
+          replyTo: options.replyTo,
           subject: options.subject,
           react: options.react,
           html: options.react ? undefined : options.html,

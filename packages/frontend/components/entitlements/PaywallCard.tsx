@@ -5,6 +5,8 @@ import { useEntitlements, ResourceType, UserTier } from "@/lib/entitlements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface PaywallCardProps {
   type: ResourceType;
@@ -40,8 +42,11 @@ export function PaywallCard({
     });
   }, []);
 
+  const variant = getPricingCtaVariant();
+
   const handleUpgradeClick = () => {
     trackUpgradeClick(type, id);
+    trackEvent("conversion.pricing_cta_click", { variant, source: "paywall" });
   };
 
   return (
@@ -81,7 +86,7 @@ export function PaywallCard({
           hover:bg-primary/90 transition-colors
         "
       >
-        {isAuthenticated ? "View Plans" : "Sign Up Free"}
+        {isAuthenticated ? PRICING_CTA_COPY[variant] : "Sign Up Free"}
       </Link>
     </div>
   );

@@ -1,0 +1,151 @@
+---
+title: "How the PropertyIQ Score Works: A Transparent Look at Our Demand Signal Model"
+description: "The PropertyIQ Score measures real-time market demand using three Redfin metrics, ranked within each state. Here is exactly how it works, why we built it this way, and what the score actually tells you."
+date: "2026-03-31"
+author: "PropertyIQ Research"
+authorTitle: "Data Science & Market Analysis"
+category: "methodology"
+tags: ["methodology", "PropertyIQ Score", "demand-signal", "scoring", "data-science", "real-estate-analytics"]
+targetKeyword: "PropertyIQ Score methodology"
+---
+
+# How the PropertyIQ Score Works: A Transparent Look at Our Demand Signal Model
+
+Most real estate platforms bury their methodology. We publish ours. The PropertyIQ Score is a demand signal model that ranks markets relative to their state average using three metrics — all from the same source, all updated monthly, all publicly verifiable. No black boxes, no proprietary data you cannot check, no vague references to "AI" doing something unspecified.
+
+This article explains exactly how the score is calculated, what it measures, what it does not measure, and how to use it.
+
+## What the Score Measures
+
+The PropertyIQ Score answers one question: **is this market experiencing stronger or weaker buyer demand than its state average?**
+
+A score of 50 means the market is performing exactly at its state average. Higher means stronger demand. Lower means weaker. The scale runs from 1 to 99.
+
+This is intentionally narrow. We are not trying to predict whether home prices will go up nationwide (that is beta — everyone gets it right). We are measuring which specific markets within a state are outperforming their peers right now (that is alpha — the insight worth paying for).
+
+## The Formula
+
+The score is built on exactly three inputs, all sourced from Redfin:
+
+| Metric | What It Measures | Direction |
+|--------|-----------------|-----------|
+| **% Sold Above List** | Share of homes that sold above asking price | Higher = hotter demand |
+| **Median Days on Market** | How long homes sit before going under contract | Lower = hotter demand |
+| **Months of Supply** | Active inventory divided by monthly sales pace | Lower = hotter demand |
+
+The calculation:
+
+1. **Z-score each metric** across all locations within the same geography level (metro vs. metro, county vs. county, ZIP vs. ZIP)
+2. **Combine into a signal**: `signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)`
+3. **Percentile rank** the signal values (ties receive the average rank)
+4. **Re-center** so that the state-average performance maps to a score of 50
+5. **Clamp** to the range 1–99
+
+That is it. No hidden weighting, no proprietary adjustments, no "AI" layer on top. The formula is deterministic: given the same inputs, it always produces the same output.
+
+### Why These Three Metrics
+
+We tested dozens of potential inputs during development — home values, rent indices, employment figures, permit data, income growth, population trends. Most of them either lagged too far behind actual market conditions or added noise without improving the signal.
+
+These three Redfin metrics won because they are:
+
+- **Coincident indicators**: They reflect what buyers and sellers are doing right now, not what happened six months ago
+- **Available at every geography level**: Metro, county, and ZIP code
+- **From a single source**: No cross-source alignment issues, no conflicting update schedules
+- **Publicly verifiable**: You can check the underlying Redfin data yourself
+
+The formula's simplicity is a feature, not a limitation. Three clean signals outperformed every complex model we tested in out-of-sample validation.
+
+## Score Grades
+
+Every score maps to a letter grade based on percentile position:
+
+| Grade | Score Range | Meaning |
+|-------|------------|---------|
+| **A+** | 97–99 | Top 3% — exceptional demand signal |
+| **A** | 93–96 | Top 7% — very strong demand |
+| **A-** | 90–92 | Top 10% — strong demand |
+| **B+** | 87–89 | Above average, clear positive signal |
+| **B** | 83–86 | Solid demand above state average |
+| **B-** | 80–82 | Moderately above average |
+| **C+** | 77–79 | Slightly above average |
+| **C** | 73–76 | Near average, mild positive signal |
+| **C-** | 70–72 | Near average |
+| **D+** | 67–69 | Slightly below average |
+| **D** | 63–66 | Below average demand |
+| **D-** | 60–62 | Weak demand signal |
+| **F** | 1–59 | Significantly below state average |
+
+A score of 50 is not "bad." It means the market is performing at exactly its state average. Context matters: a 50 in California represents a very different market than a 50 in Mississippi.
+
+## Confidence: How Much to Trust the Score
+
+Every score comes with a separate **confidence rating** that measures data quality — not how good the market is. A market can have a high score with low confidence (promising but we lack data to be sure) or a low score with high confidence (reliably underperforming).
+
+Confidence is calculated from metric completeness: how many of the three input metrics have valid, recent data for that location.
+
+| Confidence Level | Range | Meaning |
+|-----------------|-------|---------|
+| **A** | 80–100% | All three metrics available — high trust |
+| **B** | 65–79% | Two of three metrics, or minor data gaps |
+| **C** | 45–64% | Notable gaps — use with caution |
+| **F** | 0–44% | Insufficient data — score may be unreliable |
+
+At the ZIP code level, months of supply is often unavailable. The model degrades gracefully: it requires at least two of three metrics to produce a score. A ZIP with only sold-above-list and median DOM data will still receive a score, but with lower confidence.
+
+## Coverage
+
+The PropertyIQ Score currently covers:
+
+- **746 metropolitan areas** (CBSAs)
+- **2,983 counties**
+- **19,880 ZIP codes**
+
+Scores are recalculated monthly as new Redfin data arrives. Every score includes a date stamp showing which data period it reflects.
+
+## What the Score Does Not Do
+
+Transparency means being honest about limitations:
+
+- **It does not forecast appreciation.** The score measures current demand conditions, not future price movement. Markets with high scores have historically outperformed, but the score is not a price prediction.
+- **It does not account for affordability.** A market can have a score of 95 and still be unaffordable for most buyers. Use the score alongside affordability metrics, not instead of them.
+- **It does not compare across states.** A 70 in Texas and a 70 in Ohio mean each market is performing at the same relative position within its own state. They are not directly comparable to each other.
+- **It does not incorporate employment, income, or demographic data.** We display these metrics on the platform for context, but they are not inputs to the score formula.
+
+## Validation: Does It Actually Work?
+
+We validated the PropertyIQ Score against 13 years of historical data (2012–2025) across 746 metropolitan areas. The test: do markets that score higher actually deliver better returns?
+
+The results:
+
+- **Top-scored markets outperformed in 100% of years tested** — every single calendar year, the top quintile beat the bottom quintile on 3-year excess returns versus state average
+- **Average outperformance of $18,100** in home equity over 3 years for top-scored versus bottom-scored markets
+- **7.83 percentage points of alpha** — the spread between top and bottom quintile 3-year returns, out of sample
+
+"Out of sample" is the key phrase. These results are from data the model never saw during development. We used walk-forward validation: train on past data, test on future data, repeat for every year. No peeking.
+
+The score measures demand signal, not price levels. It turns out that markets with stronger demand signals today tend to deliver better relative returns over the next few years. Not always, and not guaranteed — but consistently enough to be useful.
+
+## Why We Moved to a Single Score
+
+PropertyIQ previously used three separate scores (HomeReady, InvestorEdge, Market Health), each built from dozens of weighted inputs across multiple data sources. We replaced all three with the single PropertyIQ Score in early 2026.
+
+The reason: the simpler model performed better. In out-of-sample testing, the three-input demand signal formula delivered stronger separation between winner and loser markets than the complex multi-factor models. More inputs meant more noise, more overfitting risk, and more opportunities for stale or misaligned data to corrupt the signal.
+
+We still display all 40+ metrics on the platform — home values, rent trends, employment, demographics, affordability indices — because they provide valuable context for decision-making. But the score itself is built on three metrics that earned their place through validation, not intuition.
+
+## How to Use the Score
+
+The PropertyIQ Score is one input into a decision, not the decision itself. Here is how we recommend using it:
+
+1. **Screen markets**: Use the score to identify which markets within your target states are showing the strongest demand signals
+2. **Layer in context**: Check affordability, employment trends, and rental yields on the [interactive map](/map) or in an [AI market report](/reports)
+3. **Compare within states**: A score of 80 in Florida tells you that market is outperforming most other Florida markets. Compare it to other Florida markets, not to markets in Ohio
+4. **Track over time**: Scores change monthly. A rising score means demand conditions are improving; a falling score means they are softening
+5. **Check confidence**: Before acting on a score, verify the confidence level. An A-confidence score of 75 is more actionable than an F-confidence score of 95
+
+Explore scores for every market in the country on the [PropertyIQ scores dashboard](/scores), or dive into individual markets on the [interactive map](/map).
+
+---
+
+*The PropertyIQ Score methodology is version v4.0 (demand signal). Full scoring code is deterministic and reproducible. If you have questions about the methodology, reach out at [info@propertyiq.app](mailto:info@propertyiq.app).*

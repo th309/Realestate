@@ -102,7 +102,11 @@ export function ZipPageContent({
 
       {/* Newsletter */}
       <section className="mb-10">
-        <NewsletterSignup variant="inline" />
+        <NewsletterSignup
+          source="city-page"
+          label="Get monthly score updates for this ZIP code"
+          description="Stay informed when the PropertyIQ score for this ZIP code changes."
+        />
       </section>
     </div>
   );

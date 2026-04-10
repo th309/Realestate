@@ -1,0 +1,43 @@
+
+# Post 1 (March)
+SEO Title: Best Housing Markets for Homebuyers in 2026 and 2027, Ranked by PropertyIQ Score
+Slug: /blog/best-housing-markets-homebuyers-2026-2027
+Target Keywords: best housing markets 2026, best cities to buy a home 2027, housing market forecast 2026, where to buy a home 2026, real estate market predictions 2027
+H2s: How the PropertyIQ Score Works / The Top 10 Markets for Homebuyers Right Now / What These Markets Have in Common / Markets That Almost Made the List / How to Use This Data in Your Home Search
+CTA: Link to city market pages
+
+# Post 2 (March)
+SEO Title: Housing Market Risk in 2026: Where the PropertyIQ Score Is Flashing Caution
+Slug: /blog/overvalued-housing-markets-risk-2026
+Target Keywords: overvalued housing markets 2026, housing market risk 2026, real estate market warning signs, housing bubble markets 2026, markets to avoid real estate 2026
+H2s: Why Our Model Scores Risk Not Just Upside / The Metros Our Score Has Cooled On / What Is Driving the Risk Signal / How to Interpret a Low PropertyIQ Score / What to Do If You Are Already in One of These Markets
+CTA: Compare your target market on PropertyIQ
+
+# Post 3 (March)
+SEO Title: Supply-Constrained Housing Markets: Where PropertyIQ Forecasts the Strongest Appreciation Through 2027
+Slug: /blog/supply-constrained-housing-markets-appreciation-2027
+Target Keywords: supply constrained housing markets 2026, low housing inventory markets 2027, housing appreciation forecast 2026, best markets for home price growth, real estate appreciation forecast 2027
+H2s: Why Supply Constraints Drive Our Highest Scores / The Markets Our Model Flags for Sustained Appreciation / Short-Term Tightness vs Structural Shortage / How Job Growth Interacts With Supply / What a 3-Year Appreciation Window Looks Like
+CTA: Run a full market report
+
+# Post 4 (April)
+SEO Title: Sunbelt vs. Midwest Real Estate in 2026: What the PropertyIQ Score Actually Shows
+Slug: /blog/sunbelt-vs-midwest-housing-market-2026
+Target Keywords: sunbelt real estate market 2026, midwest housing market forecast 2026, best real estate markets midwest 2026, sunbelt housing market correction, sunbelt vs midwest real estate
+H2s: The Sunbelt Narrative vs What Our Model Actually Shows / Midwest Markets That Have Moved Up Our Rankings / Sunbelt Markets Still Scoring High / Sunbelt Markets Our Score Has Downgraded / Which Region Makes More Sense for a 3-Year Horizon
+CTA: Side-by-side market comparison
+
+# Post 5 (April)
+SEO Title: PropertyIQ Score Updates: 5 Housing Markets We Just Upgraded for 2026
+Slug: /blog/housing-markets-upgraded-propertyiq-score-2026
+Target Keywords: housing markets to watch 2026, up and coming real estate markets 2026, real estate market predictions spring 2026, best markets to invest in real estate 2026, housing markets gaining momentum
+H2s: Why Our Score Changes and Why That Matters / The 5 Markets That Moved Up This Quarter / The Common Thread Behind These Upgrades / What Early Movers Can Gain From a Score Shift / How to Track Future Score Changes
+CTA: Sign up for score alerts
+
+# Post 6 (April)
+SEO Title: Real Estate Markets PropertyIQ Is Cooling On Heading Into 2026 and 2027
+Slug: /blog/housing-markets-propertyiq-cooling-2026-2027
+Target Keywords: housing markets slowing down 2026, real estate markets to avoid 2027, declining housing markets 2026, housing market forecast bearish 2026, overheated real estate markets 2026
+H2s: What a Declining Score Actually Signals / The Markets Our Model Has Downgraded This Quarter / Rate Sensitivity: The Hidden Risk in High-Score Markets That Slipped / Is Cooling the Same as Crashing / How to Factor a Declining Score Into Your Decision
+CTA: Full market report before you commit
+EOF

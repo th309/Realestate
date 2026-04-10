@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { OrgBillingWebhookService } from '../org-billing/org-billing-webhook.service';
+import { ReferralCreditService } from '../referrals/referral-credit.service';
 import Stripe from 'stripe';
 
 /**
@@ -19,6 +20,8 @@ export class BillingWebhookService {
     @Optional()
     @Inject(OrgBillingWebhookService)
     private readonly orgWebhook?: OrgBillingWebhookService,
+    @Optional()
+    private readonly referralCredit?: ReferralCreditService,
   ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -78,6 +81,13 @@ export class BillingWebhookService {
     }
 
     await this.syncUserTier(userId, tier, subscriptionId);
+
+    // Credit any referrer when this user converts to a paid plan
+    if (this.referralCredit) {
+      this.referralCredit.handleConversion(userId).catch((err: Error) =>
+        this.logger.warn(`Referral credit processing failed: ${err.message}`),
+      );
+    }
   }
 
   private async handleSubscriptionUpdated(

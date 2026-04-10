@@ -298,4 +298,40 @@ export class StripeService {
     const stripe = this.getStripeClient();
     return stripe.invoices.createPreview({ customer: customerId });
   }
+
+  /**
+   * Extend a subscription's effective end date by the given number of days.
+   * Uses trial_end so the billing cycle is not disrupted.
+   * If the subscription is already in trial, extends from the existing trial_end.
+   */
+  async extendSubscriptionByDays(
+    customerId: string,
+    days: number,
+  ): Promise<void> {
+    const stripe = this.getStripeClient();
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      limit: 1,
+      expand: ['data.items'],
+    });
+
+    let sub = subscriptions.data.find(
+      (s) => s.status === 'active' || s.status === 'trialing',
+    );
+    if (!sub) return;
+
+    const extraSeconds = days * 24 * 60 * 60;
+    // current_period_end lives on SubscriptionItem in Stripe SDK v18+
+    const periodEnd = sub.items.data[0]?.current_period_end ?? 0;
+    const base =
+      sub.trial_end && sub.trial_end > Math.floor(Date.now() / 1000)
+        ? sub.trial_end
+        : periodEnd;
+
+    await stripe.subscriptions.update(sub.id, {
+      trial_end: base + extraSeconds,
+      proration_behavior: 'none',
+    });
+  }
 }
