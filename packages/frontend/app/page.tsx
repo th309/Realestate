@@ -45,11 +45,32 @@ export const metadata: Metadata = {
   },
 };
 
-const STICKY_SCORES = [
-  { name: "Rochester NY", score: 99 },
-  { name: "Buffalo NY", score: 98 },
-  { name: "Miami FL", score: 13 },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+async function fetchStickyScores(): Promise<{ name: string; score: number }[]> {
+  try {
+    const [topRes, bottomRes] = await Promise.all([
+      fetch(
+        `${API_URL}/api/scores/top?geography=metro&score_type=propertyiq&limit=2&sort=desc`,
+        { next: { revalidate: 3600 } },
+      ),
+      fetch(
+        `${API_URL}/api/scores/top?geography=metro&score_type=propertyiq&limit=1&sort=asc`,
+        { next: { revalidate: 3600 } },
+      ),
+    ]);
+    if (!topRes.ok || !bottomRes.ok) return [];
+    const top: { location_name: string; score: number }[] = await topRes.json();
+    const bottom: { location_name: string; score: number }[] =
+      await bottomRes.json();
+    return [...top, ...bottom].map((m) => ({
+      name: m.location_name.split(",")[0].trim(),
+      score: m.score,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 /**
  * PropertyIQ Homepage
@@ -67,7 +88,9 @@ const STICKY_SCORES = [
  * 10. Final CTA + Footer
  * + Sticky score ticker bar (appears on scroll/after 10s)
  */
-export default function HomePage() {
+export default async function HomePage() {
+  const stickyScores = await fetchStickyScores();
+
   return (
     <>
       <JsonLd />
@@ -88,7 +111,7 @@ export default function HomePage() {
         <CTASection />
         <Footer />
       </div>
-      <StickyScoreBar scores={STICKY_SCORES} />
+      {stickyScores.length > 0 && <StickyScoreBar scores={stickyScores} />}
     </>
   );
 }
