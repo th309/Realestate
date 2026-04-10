@@ -48,12 +48,12 @@ export function UseCasesSection() {
             transition: "opacity 0.6s ease, transform 0.6s ease",
           }}
         >
-          <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
+          <span className="text-xs font-semibold text-[#3949AB] uppercase tracking-[0.15em] mb-3 block">
             Use Cases
           </span>
           <h2
             id="use-cases-heading"
-            className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight font-[family-name:var(--font-source-serif)]"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold text-[#1A237E] tracking-tight leading-tight font-[family-name:var(--font-source-serif)]"
           >
             Built for the people who move markets.
           </h2>
@@ -65,7 +65,7 @@ export function UseCasesSection() {
             return (
               <div
                 key={item.persona}
-                className="rounded-2xl bg-white/5 border border-white/10 p-7 flex flex-col"
+                className="rounded-2xl bg-white/80 border border-[#C5CAE9] p-7 flex flex-col"
                 style={{
                   opacity: inView ? 1 : 0,
                   transform: inView ? "translateY(0)" : "translateY(20px)",
@@ -73,18 +73,18 @@ export function UseCasesSection() {
                   transitionDelay: `${i * 0.1}s`,
                 }}
               >
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-5">
-                  <Icon className="w-5 h-5 text-[#C5CAE9]" aria-hidden="true" />
+                <div className="w-10 h-10 rounded-xl bg-[#E8EAF6] flex items-center justify-center mb-5">
+                  <Icon className="w-5 h-5 text-[#3949AB]" aria-hidden="true" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-3">
+                <h3 className="text-lg font-bold text-[#1A237E] mb-3">
                   {item.persona}
                 </h3>
-                <p className="text-sm text-[#C5CAE9] leading-relaxed mb-6 flex-1">
+                <p className="text-sm text-[#3949AB] leading-relaxed mb-6 flex-1">
                   {item.description}
                 </p>
                 <a
                   href={item.href}
-                  className="text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors inline-flex items-center gap-1 group"
+                  className="text-sm font-semibold text-[#3949AB] hover:text-[#1A237E] transition-colors inline-flex items-center gap-1 group"
                 >
                   {item.cta}
                   <span
