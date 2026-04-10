@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { BlogPost } from "@/lib/blog/types";
 import { mdxComponents } from "./mdx-components";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import { BlogMarketCTA } from "./BlogMarketCTA";
 
 interface BlogPostContentProps {
   post: BlogPost;
@@ -61,6 +62,9 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
       <div className="prose prose-lg max-w-none">
         <MDXRemote source={post.content} components={mdxComponents} />
       </div>
+
+      {/* Product CTA -- links to market page */}
+      <BlogMarketCTA tags={post.frontmatter.tags} />
 
       {/* Newsletter footer CTA */}
       <p className="mt-6 text-sm text-on-surface-variant">
