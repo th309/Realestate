@@ -1,13 +1,21 @@
 const BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
 
 /**
- * Derive the resource URL from the incoming request's Host header.
+ * Derive the server URL from the incoming request's host headers.
  *
- * MCP SDK clients validate that the `resource` in the protected-resource
- * metadata matches the server URL they connected to. Our server is reachable
- * via two hostnames (custom domain + Railway URL), so we return whichever URL
- * the client actually used rather than a hardcoded canonical URL. The
- * authorization server always stays pinned to BASE_URL (the custom domain).
+ * Both well-known endpoints must report a URL that matches the URL the
+ * client actually fetched the metadata from:
+ *   • RFC 9728 (protected-resource metadata) — the `resource` field must
+ *     equal the connection URL or be its origin ancestor.
+ *   • RFC 8414 §2 (authorization-server metadata) — the `issuer` field
+ *     must be byte-for-byte equal to the URL the well-known document was
+ *     fetched from. Strict OAuth client libraries reject any mismatch as
+ *     a metadata-spoofing signal.
+ *
+ * Since this server is reachable on multiple hostnames (custom domain +
+ * Railway URL), we return whichever URL the client actually used. All
+ * OAuth endpoints are served by the same Express app under each hostname,
+ * so token/authorize/register all answer correctly at either URL.
  */
 export function resolveResourceUrl(
   host: string | undefined,
@@ -18,20 +26,22 @@ export function resolveResourceUrl(
   return `${scheme}://${host}`;
 }
 
-export function protectedResourceMetadata(resourceUrl?: string) {
+export function protectedResourceMetadata(serverUrl?: string) {
+  const url = serverUrl ?? BASE_URL;
   return {
-    resource: resourceUrl ?? BASE_URL,
-    authorization_servers: [BASE_URL],
+    resource: url,
+    authorization_servers: [url],
     bearer_methods_supported: ["header"],
   };
 }
 
-export function authorizationServerMetadata() {
+export function authorizationServerMetadata(serverUrl?: string) {
+  const url = serverUrl ?? BASE_URL;
   return {
-    issuer: BASE_URL,
-    authorization_endpoint: `${BASE_URL}/authorize`,
-    token_endpoint: `${BASE_URL}/token`,
-    registration_endpoint: `${BASE_URL}/register`,
+    issuer: url,
+    authorization_endpoint: `${url}/authorize`,
+    token_endpoint: `${url}/token`,
+    registration_endpoint: `${url}/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
