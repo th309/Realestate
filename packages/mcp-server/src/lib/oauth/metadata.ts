@@ -1,8 +1,26 @@
 const BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
 
-export function protectedResourceMetadata() {
+/**
+ * Derive the resource URL from the incoming request's Host header.
+ *
+ * MCP SDK clients validate that the `resource` in the protected-resource
+ * metadata matches the server URL they connected to. Our server is reachable
+ * via two hostnames (custom domain + Railway URL), so we return whichever URL
+ * the client actually used rather than a hardcoded canonical URL. The
+ * authorization server always stays pinned to BASE_URL (the custom domain).
+ */
+export function resolveResourceUrl(
+  host: string | undefined,
+  forwardedProto?: string,
+): string {
+  if (!host) return BASE_URL;
+  const scheme = forwardedProto?.split(",")[0]?.trim() ?? "https";
+  return `${scheme}://${host}`;
+}
+
+export function protectedResourceMetadata(resourceUrl?: string) {
   return {
-    resource: BASE_URL,
+    resource: resourceUrl ?? BASE_URL,
     authorization_servers: [BASE_URL],
     bearer_methods_supported: ["header"],
   };
