@@ -11,7 +11,24 @@ const BACKEND_URL =
   process.env.PROPERTYIQ_API_URL ||
   "https://backend-production-ee4d.up.railway.app";
 
+// Manual bypass list — comma-separated user IDs that skip the backend
+// entitlement check entirely and are always allowed. Used to keep trusted
+// agents (e.g. paperclip CMO heartbeat) online independently of the
+// backend entitlements service. Revoke by removing the ID from the env var
+// and redeploying.
+const ALLOWLIST = new Set(
+  (process.env.MCP_ENTITLEMENT_ALLOWLIST || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean),
+);
+
 export async function checkEntitlement(userId: string): Promise<boolean> {
+  if (ALLOWLIST.has(userId)) {
+    console.log(`[Auth:Entitlements] Allowlist bypass | userId=${userId}`);
+    return true;
+  }
+
   const now = Date.now();
   const cached = cache.get(userId);
   const isCached = !!(cached && now - cached.checkedAt < CACHE_TTL_MS);

@@ -12,7 +12,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalFilters(new SentryGlobalFilter());
+
+  // Only attach Sentry exception filter when DSN is configured (production).
+  // Without a DSN, SentryGlobalFilter crashes on 'isHeadersSent' in local dev.
+  if (process.env.SENTRY_DSN) {
+    app.useGlobalFilters(new SentryGlobalFilter());
+  }
 
   // Manual CORS middleware — cors@2.8.5 crashes on Express 5 with Origin header
   const httpAdapter = app.getHttpAdapter();

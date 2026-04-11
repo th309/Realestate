@@ -21,6 +21,26 @@ import { mountApiRoutes } from "./routes/api-routes";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
+// Host allowlist — comma-separated list of hostnames the server will answer
+// on. Requests on any other host get 421 Misdirected Request, which closes
+// the Host-header spoofing hole in the dynamic protected-resource metadata
+// (an attacker pointing DNS at our Railway IP could otherwise coerce the
+// server into minting OAuth metadata under their hostname). Default allows
+// only the canonical host derived from MCP_BASE_URL; add the Railway URL
+// (and any other known-good hosts) via MCP_HOST_ALLOWLIST.
+const CANONICAL_HOST = new URL(
+  process.env.MCP_BASE_URL || "https://mcp.propertyiq.app",
+).host;
+const HOST_ALLOWLIST = new Set(
+  [
+    CANONICAL_HOST,
+    ...(process.env.MCP_HOST_ALLOWLIST || "")
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean),
+  ].map((h) => h.toLowerCase()),
+);
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -34,6 +54,31 @@ app.use((_req, res, next) => {
     "Content-Type, Authorization, Mcp-Session-Id",
   );
   res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+  next();
+});
+
+// Host allowlist guard — 421 Misdirected Request on unknown hostnames.
+// /health is exempted so Railway's platform probe keeps working on the
+// internal hostname. OPTIONS is exempted so CORS preflight works anywhere.
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS" || req.path === "/health") {
+    next();
+    return;
+  }
+  const rawHost =
+    (req.headers["x-forwarded-host"] as string | undefined) || req.get("host");
+  const host = rawHost?.split(",")[0]?.trim().toLowerCase();
+  if (!host || !HOST_ALLOWLIST.has(host)) {
+    console.log(
+      `[MCP] 421 misdirected | host=${host ?? "none"} | path=${req.originalUrl}`,
+    );
+    res.status(421).json({
+      error: "misdirected_request",
+      error_description: `This server only answers on the configured host allowlist. Use https://${CANONICAL_HOST} or contact the administrator to add your host.`,
+      canonical_url: `https://${CANONICAL_HOST}${req.originalUrl}`,
+    });
+    return;
+  }
   next();
 });
 

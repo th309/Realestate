@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   protectedResourceMetadata,
   authorizationServerMetadata,
+  resolveResourceUrl,
 } from "../lib/oauth/metadata";
 import { registerClient, getClient } from "../lib/oauth/clients";
 import { createAuthCode, exchangeCode } from "../lib/oauth/codes";
@@ -27,9 +28,15 @@ const JWT_SECRET = process.env.MCP_OAUTH_JWT_SECRET
 export function mountOAuthRoutes(app: Express): void {
   // ── Discovery (no auth) ──
 
-  app.get("/.well-known/oauth-protected-resource", (_req, res) => {
-    console.log("[OAuth] GET /.well-known/oauth-protected-resource");
-    res.json(protectedResourceMetadata());
+  app.get("/.well-known/oauth-protected-resource", (req, res) => {
+    const resourceUrl = resolveResourceUrl(
+      req.headers["x-forwarded-host"] as string | undefined ?? req.headers.host,
+      req.headers["x-forwarded-proto"] as string | undefined,
+    );
+    console.log(
+      `[OAuth] GET /.well-known/oauth-protected-resource | resource=${resourceUrl}`,
+    );
+    res.json(protectedResourceMetadata(resourceUrl));
   });
 
   app.get("/.well-known/oauth-authorization-server", (_req, res) => {
