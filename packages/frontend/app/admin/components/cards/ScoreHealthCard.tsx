@@ -8,9 +8,14 @@ import { useAdminTimeSeries } from "../hooks/useAdminTimeSeries";
 interface ScoreSnapshot {
   timestamp: string;
   score_type: string;
-  correlation_1y: number;
-  hit_rate_1y: number;
+  correlation_1y: number | null;
+  correlation_3y: number | null;
+  hit_rate_1y: number | null;
+  hit_rate_3y: number | null;
+  top_quintile_hit_rate_1y: number | null;
+  top_quintile_hit_rate_3y: number | null;
   scores_validated: number;
+  scores_validated_3y: number;
   scores_pending: number;
   scores_failed: number;
 }
@@ -18,6 +23,11 @@ interface ScoreSnapshot {
 interface ScoreHealthCardProps {
   refreshTrigger: number;
   onClick: () => void;
+}
+
+function formatPct(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "\u2014";
+  return `${(value * 100).toFixed(0)}%`;
 }
 
 export function ScoreHealthCard({
@@ -30,29 +40,41 @@ export function ScoreHealthCard({
     { refreshTrigger },
   );
 
-  const rows = data ?? [];
-  const latest = rows.length > 0 ? rows[rows.length - 1] : null;
-  const hitRateSparkline = rows.map((r) => r.hit_rate_1y * 100);
+  // Filter to the unified propertyiq score only and sort newest-first.
+  // Backend returns DESC by timestamp already, but we defensively re-sort.
+  const rows = (data ?? [])
+    .filter((r) => r.score_type === "propertyiq")
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
-  const hitRatePct = latest ? (latest.hit_rate_1y * 100).toFixed(1) : "\u2014";
-  const correlationPct = latest
-    ? (latest.correlation_1y * 100).toFixed(1)
-    : "\u2014";
+  const latest = rows[0] ?? null;
 
-  const badgeColor = latest
-    ? latest.hit_rate_1y >= 0.7
-      ? "bg-green-500/10 text-green-700"
-      : latest.hit_rate_1y >= 0.5
-        ? "bg-amber-500/10 text-amber-700"
-        : "bg-red-500/10 text-red-700"
-    : "bg-surface-container text-on-surface-variant";
+  // Headline metric: 3Y top-quintile hit rate (most rigorous long-horizon signal).
+  const headlinePct = formatPct(latest?.top_quintile_hit_rate_3y);
+
+  // Sparkline: top-quintile 3Y over time, oldest-to-newest.
+  const sparkline = rows
+    .slice()
+    .reverse()
+    .map((r) => (r.top_quintile_hit_rate_3y ?? 0) * 100);
+
+  const headlineValue = latest?.top_quintile_hit_rate_3y ?? null;
+  const badgeColor =
+    headlineValue == null
+      ? "bg-surface-container text-on-surface-variant"
+      : headlineValue >= 0.6
+        ? "bg-green-500/10 text-green-700"
+        : headlineValue >= 0.5
+          ? "bg-amber-500/10 text-amber-700"
+          : "bg-red-500/10 text-red-700";
 
   return (
     <DashboardCard
       title="Score Health"
       icon={TrendingUp}
       badge={
-        latest ? { text: `${hitRatePct}% hit`, color: badgeColor } : undefined
+        latest
+          ? { text: `${headlinePct} top-q 3Y`, color: badgeColor }
+          : undefined
       }
       loading={isLoading}
       error={error?.message ?? null}
@@ -63,27 +85,34 @@ export function ScoreHealthCard({
           <div className="flex items-end justify-between">
             <div>
               <div className="text-xs text-on-surface-variant">
-                1Y Hit Rate / Correlation
+                3Y Top-Quintile Hit Rate
               </div>
-              <div className="text-lg font-semibold text-on-surface font-mono">
-                {hitRatePct}%
-                <span className="text-xs text-on-surface-variant font-normal">
-                  {" "}
-                  /{" "}
-                </span>
-                {correlationPct}%
+              <div className="text-2xl font-semibold text-on-surface font-mono">
+                {headlinePct}
               </div>
             </div>
             <SparklineChart
-              data={hitRateSparkline.slice(-20)}
+              data={sparkline.slice(-20)}
               width={80}
               height={24}
             />
           </div>
+          <div className="space-y-0.5 text-xs text-on-surface-variant font-mono">
+            <div>
+              1Y: {formatPct(latest.hit_rate_1y)} overall /{" "}
+              {formatPct(latest.top_quintile_hit_rate_1y)} top-q
+            </div>
+            <div>
+              3Y: {formatPct(latest.hit_rate_3y)} overall /{" "}
+              {formatPct(latest.top_quintile_hit_rate_3y)} top-q
+            </div>
+          </div>
           <div className="flex justify-between text-xs text-on-surface-variant">
-            <span>{latest.scores_validated} validated</span>
-            <span>{latest.scores_pending} pending</span>
-            <span>{latest.scores_failed} failed</span>
+            <span>{latest.scores_validated.toLocaleString()} validated 1Y</span>
+            <span>
+              {latest.scores_validated_3y.toLocaleString()} validated 3Y
+            </span>
+            <span>{latest.scores_pending.toLocaleString()} pending</span>
           </div>
         </div>
       ) : (
