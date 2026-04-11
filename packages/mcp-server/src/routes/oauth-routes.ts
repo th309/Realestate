@@ -1,18 +1,15 @@
 /**
  * OAuth 2.1 routes for the PropertyIQ MCP server.
  *
- * Endpoints: discovery, dynamic client registration, authorization,
- * callback, and token exchange.
+ * Endpoints: dynamic client registration, authorization, callback, and token
+ * exchange. Discovery endpoints (RFC 9728 / RFC 8414) live in
+ * `oauth-discovery-routes.ts`.
  */
 
 import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import { createClient } from "@supabase/supabase-js";
-import {
-  protectedResourceMetadata,
-  authorizationServerMetadata,
-  resolveResourceUrl,
-} from "../lib/oauth/metadata";
+import { mountOAuthDiscoveryRoutes } from "./oauth-discovery-routes";
 import { registerClient, getClient } from "../lib/oauth/clients";
 import { createAuthCode, exchangeCode } from "../lib/oauth/codes";
 import { createTokens, refreshAccessToken } from "../lib/oauth/tokens";
@@ -26,23 +23,7 @@ const JWT_SECRET = process.env.MCP_OAUTH_JWT_SECRET
  * Mount all OAuth 2.1 routes on the given Express app.
  */
 export function mountOAuthRoutes(app: Express): void {
-  // ── Discovery (no auth) ──
-
-  app.get("/.well-known/oauth-protected-resource", (req, res) => {
-    const resourceUrl = resolveResourceUrl(
-      req.headers["x-forwarded-host"] as string | undefined ?? req.headers.host,
-      req.headers["x-forwarded-proto"] as string | undefined,
-    );
-    console.log(
-      `[OAuth] GET /.well-known/oauth-protected-resource | resource=${resourceUrl}`,
-    );
-    res.json(protectedResourceMetadata(resourceUrl));
-  });
-
-  app.get("/.well-known/oauth-authorization-server", (_req, res) => {
-    console.log("[OAuth] GET /.well-known/oauth-authorization-server");
-    res.json(authorizationServerMetadata());
-  });
+  mountOAuthDiscoveryRoutes(app);
 
   // ── Dynamic client registration (no auth) ──
 
