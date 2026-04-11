@@ -7,10 +7,10 @@
 **Design doc:** `docs/plans/2026-02-07-entitlements-gating-integration-design.md`
 
 **Constraints:**
-- 300-line file limit (project_instructions.md)
+- 300-line file limit (CLAUDE.md)
 - Modular/colocation pattern - related utils stay in same feature folder
 - All data fetching through `@/lib/data` (CLAUDE.md)
-- Material Design 3 styling (project_instructions.md)
+- Material Design 3 styling (CLAUDE.md)
 - No hardcoded values - use registry as source of truth
 
 ---

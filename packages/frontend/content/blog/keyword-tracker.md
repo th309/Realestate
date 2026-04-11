@@ -6,3 +6,5 @@
 | best real estate markets to invest in 2026 | best-cities-to-buy-2026 | 2026-02-25 | Published |
 | AI real estate analytics | propertyiq-methodology | 2026-02-25 | Published |
 | is it a good time to buy a house | is-it-a-good-time-to-buy | 2026-02-25 | Published |
+| best real estate markets under 200k 2026 | best-real-estate-markets-under-200k-2026 | 2026-04-11 | Draft |
+| best real estate markets in Georgia 2026 | best-real-estate-markets-georgia-2026 | 2026-04-11 | Draft |

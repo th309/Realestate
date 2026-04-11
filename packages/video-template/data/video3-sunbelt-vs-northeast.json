@@ -1,0 +1,89 @@
+{
+  "mode": "comparison",
+  "primary": {
+    "market": "Austin, TX",
+    "score": 18,
+    "grade": "F",
+    "periodDate": "2026-02-28",
+    "trend": "up",
+    "trendChange": 3,
+    "history": [
+      { "date": "2025-03-31", "score": 28 },
+      { "date": "2025-04-30", "score": 30 },
+      { "date": "2025-05-31", "score": 27 },
+      { "date": "2025-06-30", "score": 16 },
+      { "date": "2025-07-31", "score": 18 },
+      { "date": "2025-08-31", "score": 16 },
+      { "date": "2025-09-30", "score": 11 },
+      { "date": "2025-10-31", "score": 12 },
+      { "date": "2025-11-30", "score": 15 },
+      { "date": "2025-12-31", "score": 12 },
+      { "date": "2026-01-31", "score": 15 },
+      { "date": "2026-02-28", "score": 18 }
+    ],
+    "stats": {
+      "medianPrice": 426643,
+      "daysOnMarket": 76,
+      "demandScore": 6,
+      "pendingRatio": 0.37
+    }
+  },
+  "comparison": [
+    {
+      "market": "Rochester, NY",
+      "score": 99,
+      "grade": "A+",
+      "trend": "stable",
+      "trendChange": 0,
+      "history": [
+        { "date": "2025-03-31", "score": 99 },
+        { "date": "2025-04-30", "score": 99 },
+        { "date": "2025-05-31", "score": 99 },
+        { "date": "2025-06-30", "score": 99 },
+        { "date": "2025-07-31", "score": 99 },
+        { "date": "2025-08-31", "score": 99 },
+        { "date": "2025-09-30", "score": 99 },
+        { "date": "2025-10-31", "score": 99 },
+        { "date": "2025-11-30", "score": 99 },
+        { "date": "2025-12-31", "score": 99 },
+        { "date": "2026-01-31", "score": 99 },
+        { "date": "2026-02-28", "score": 99 }
+      ],
+      "stats": {
+        "medianPrice": 264121,
+        "daysOnMarket": 43,
+        "demandScore": 96,
+        "pendingRatio": 1.77
+      }
+    },
+    {
+      "market": "Nashville, TN",
+      "score": 26,
+      "grade": "F",
+      "trend": "down",
+      "trendChange": -11,
+      "history": [
+        { "date": "2025-03-31", "score": 37 },
+        { "date": "2025-04-30", "score": 36 },
+        { "date": "2025-05-31", "score": 31 },
+        { "date": "2025-06-30", "score": 30 },
+        { "date": "2025-07-31", "score": 25 },
+        { "date": "2025-08-31", "score": 28 },
+        { "date": "2025-09-30", "score": 26 },
+        { "date": "2025-10-31", "score": 28 },
+        { "date": "2025-11-30", "score": 25 },
+        { "date": "2025-12-31", "score": 22 },
+        { "date": "2026-01-31", "score": 25 },
+        { "date": "2026-02-28", "score": 26 }
+      ],
+      "stats": {
+        "medianPrice": 447700,
+        "daysOnMarket": 60,
+        "demandScore": 11,
+        "pendingRatio": 0.46
+      }
+    }
+  ],
+  "ctaUrl": "https://propertyiq.app/compare?markets=austin-tx,rochester-ny,nashville-tn&utm_source=youtube&utm_medium=video&utm_campaign=sunbelt-vs-northeast",
+  "ctaLabel": "See scores for every U.S. market at"
+}

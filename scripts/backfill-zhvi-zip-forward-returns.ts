@@ -24,7 +24,7 @@ const CONFIG = {
   ssl: { rejectUnauthorized: false },
 };
 
-const START_YEAR = 2017; // 2000-2016 already done
+const START_YEAR = 2020; // 2000-2019 already done
 const END_YEAR = 2026;
 
 const INSERT_SQL = `
