@@ -206,11 +206,11 @@ export function ClientSetupDetails({ apiKey }: ClientSetupDetailsProps) {
             code={replaceKey(SETUP_CONFIGS.cursor, apiKey)}
             language="json"
           />
-          {!hasKey && (
-            <p>
-              Replace <Code>YOUR_PIQ_API_KEY</Code> with your actual API key.
-            </p>
-          )}
+          <p>
+            No API key is required — Cursor discovers OAuth from the server and
+            opens a browser sign-in to PropertyIQ the first time the MCP
+            connection is used.
+          </p>
           <p>
             <strong className="text-on-surface">2.</strong> Restart Cursor. The
             tools will be available in Agent mode (not Ask mode).
