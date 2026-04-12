@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     homeValue && { value: homeValue, label: "Home Value" },
     appreciation && { value: appreciation, label: "YoY Change" },
     dom && { value: dom, label: "Days on Mkt" },
-    supply && { value: supply, label: "Supply" },
+    supply && { value: supply, label: "Pending Ratio" },
   ].filter(Boolean) as Array<{ value: string; label: string }>;
 
   const score = scoreRaw ? Math.min(Math.max(Number(scoreRaw), 0), 100) : null;

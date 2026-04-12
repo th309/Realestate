@@ -260,7 +260,7 @@ export function MarketDashboard({
             : undefined
         }
         dom={displayData["days_on_market"]?.formattedValue}
-        supply={displayData["months_supply"]?.formattedValue}
+        supply={displayData["pending_ratio"]?.formattedValue}
       />
     </div>
   );

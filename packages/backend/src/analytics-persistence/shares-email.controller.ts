@@ -76,7 +76,7 @@ export class SharesEmailController {
         market?.dom &&
           `<td style="padding:0 16px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A237E;">${market.dom}</div><div style="font-size:12px;color:#64748b;">Days on Mkt</div></td>`,
         market?.supply &&
-          `<td style="padding:0 16px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A237E;">${market.supply}</div><div style="font-size:12px;color:#64748b;">Supply</div></td>`,
+          `<td style="padding:0 16px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#1A237E;">${market.supply}</div><div style="font-size:12px;color:#64748b;">Pending Ratio</div></td>`,
       ]
         .filter(Boolean)
         .join('');
