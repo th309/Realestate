@@ -60,6 +60,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
 import { AdminMetricsModule } from './admin-metrics/admin-metrics.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { ReferralsModule } from './referrals/referrals.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 
 @Module({
@@ -138,6 +139,7 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     AdminMetricsModule,
     SurveysModule,
     ReferralsModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [

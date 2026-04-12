@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { SupabaseModule } from '../supabase/supabase.module';
+import { OnboardingService } from './onboarding.service';
+import { OnboardingController } from './onboarding.controller';
+
+@Module({
+  imports: [SupabaseModule],
+  controllers: [OnboardingController],
+  providers: [OnboardingService],
+  exports: [OnboardingService],
+})
+export class OnboardingModule {}
