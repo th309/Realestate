@@ -4,6 +4,7 @@
  * REST endpoints for shareable links.
  * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
  * Exception: The access/:token endpoint is public (share viewers don't need auth).
+ * Email delivery is handled by SharesEmailController.
  */
 
 import {
@@ -38,19 +39,11 @@ export class SharesController {
   @Get()
   async getAll(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/shares for user ${userId}`);
-
     try {
       const shares = await this.sharesService.getAll(userId);
-      return {
-        success: true,
-        data: shares,
-        count: shares.length,
-      };
+      return { success: true, data: shares, count: shares.length };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -65,13 +58,11 @@ export class SharesController {
     @Query('email') email?: string,
   ) {
     this.logger.log(`GET /analytics/shares/access/${token}`);
-
     try {
       const result = await this.sharesService.access(token, {
         password,
         email,
       });
-
       if (!result.accessGranted) {
         return {
           success: false,
@@ -80,16 +71,9 @@ export class SharesController {
           requiresEmail: result.reason === 'Email not authorized',
         };
       }
-
-      return {
-        success: true,
-        data: result.share,
-      };
+      return { success: true, data: result.share };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -101,24 +85,12 @@ export class SharesController {
   @Get(':id')
   async getById(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/shares/${id}`);
-
     try {
       const share = await this.sharesService.getById(userId, id);
-      if (!share) {
-        return {
-          success: false,
-          error: 'Share not found',
-        };
-      }
-      return {
-        success: true,
-        data: share,
-      };
+      if (!share) return { success: false, error: 'Share not found' };
+      return { success: true, data: share };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -130,14 +102,12 @@ export class SharesController {
   @Post()
   async create(@AuthUserId() userId: string, @Body() dto: CreateShareDto) {
     this.logger.log('POST /analytics/shares');
-
     if (!dto.content_type || !dto.content) {
       throw new HttpException(
         'content_type and content are required',
         HttpStatus.BAD_REQUEST,
       );
     }
-
     try {
       const share = await this.sharesService.create(userId, dto);
       return {
@@ -146,10 +116,7 @@ export class SharesController {
         shareUrl: `/share/${share.share_token}`,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -174,18 +141,11 @@ export class SharesController {
     }>,
   ) {
     this.logger.log(`PUT /analytics/shares/${id}`);
-
     try {
       const share = await this.sharesService.update(userId, id, updates);
-      return {
-        success: true,
-        data: share,
-      };
+      return { success: true, data: share };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -197,18 +157,11 @@ export class SharesController {
   @Delete(':id')
   async delete(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`DELETE /analytics/shares/${id}`);
-
     try {
       await this.sharesService.delete(userId, id);
-      return {
-        success: true,
-        deleted: true,
-      };
+      return { success: true, deleted: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
   }
 }
