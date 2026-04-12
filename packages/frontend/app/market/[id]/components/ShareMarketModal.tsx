@@ -77,7 +77,7 @@ export function ShareMarketModal({
 
   // Create share record when modal opens
   useEffect(() => {
-    if (!open || share || isCreating) return;
+    if (!open || share || isCreating || error) return;
 
     setIsCreating(true);
     setError(null);

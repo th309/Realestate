@@ -13,10 +13,9 @@ interface SharePageProps {
 // preventing double view-count increments from the access endpoint.
 const fetchShareData = cache(async function fetchShareData(token: string) {
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/analytics/shares/access/${token}`,
-      { cache: "no-store" },
-    );
+    const res = await fetch(`${BACKEND_URL}/analytics/shares/access/${token}`, {
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     const json = await res.json();
     if (!json.success) return null;

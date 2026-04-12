@@ -33,7 +33,7 @@ export async function createMarketShare(
 ): Promise<MarketShareResult> {
   const authHeaders = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/analytics/shares`, {
+  const response = await fetch(`${API_URL}/analytics/shares`, {
     method: "POST",
     headers: {
       ...authHeaders,
@@ -84,7 +84,7 @@ export async function sendMarketShareEmail(data: {
 }): Promise<void> {
   const authHeaders = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/analytics/shares/market-email`, {
+  const response = await fetch(`${API_URL}/analytics/shares/market-email`, {
     method: "POST",
     headers: {
       ...authHeaders,
