@@ -23,6 +23,7 @@ import {
   DashboardErrorState,
   DashboardGeoGateWall,
   PREMIUM_GEO_LEVELS,
+  ShareMarketModal,
 } from "./components";
 
 interface MarketDashboardProps {
@@ -41,6 +42,7 @@ export function MarketDashboard({
   const [activeView, setActiveView] = useState<"investor" | "homebuyer">(
     userView,
   );
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Check entitlements for geography level
@@ -51,14 +53,6 @@ export function MarketDashboard({
     geoAccess.level === "preview" ||
     !PREMIUM_GEO_LEVELS.includes(geographyType);
   const canExport = canAccess("feature", "export_csv");
-
-  const handleShareMarket = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch {
-      // Fallback: silent
-    }
-  }, []);
 
   const handleDownloadMarket = useCallback(() => {
     if (!canExport) return;
@@ -158,7 +152,7 @@ export function MarketDashboard({
         updatedDateLabel={updatedDateLabel}
         canExport={canExport}
         onRefresh={handleRefresh}
-        onShare={handleShareMarket}
+        onShare={() => setShareModalOpen(true)}
         onDownload={handleDownloadMarket}
       />
 
@@ -251,6 +245,23 @@ export function MarketDashboard({
 
       <MobileViewToggle activeView={activeView} onViewChange={setActiveView} />
       <MarketLimitUpgradePrompt />
+
+      <ShareMarketModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        geoLevel={geographyType}
+        geoId={geographyId}
+        geoName={geography.name}
+        score={primaryScore?.score}
+        homeValue={displayData["home_value"]?.formattedValue}
+        appreciation={
+          displayData["home_value"]?.percentChange != null
+            ? `${displayData["home_value"].percentChange > 0 ? "+" : ""}${displayData["home_value"].percentChange.toFixed(1)}%`
+            : undefined
+        }
+        dom={displayData["median_dom"]?.formattedValue}
+        supply={displayData["months_of_supply"]?.formattedValue}
+      />
     </div>
   );
 }
