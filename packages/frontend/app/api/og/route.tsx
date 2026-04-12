@@ -47,6 +47,18 @@ export async function GET(request: NextRequest) {
   const scoreRaw = searchParams.get("score");
   const insight = searchParams.get("insight");
 
+  const homeValue = searchParams.get("homeValue");
+  const appreciation = searchParams.get("appreciation");
+  const dom = searchParams.get("dom");
+  const supply = searchParams.get("supply");
+
+  const metrics = [
+    homeValue && { value: homeValue, label: "Home Value" },
+    appreciation && { value: appreciation, label: "YoY Change" },
+    dom && { value: dom, label: "Days on Mkt" },
+    supply && { value: supply, label: "Supply" },
+  ].filter(Boolean) as Array<{ value: string; label: string }>;
+
   const score = scoreRaw ? Math.min(Math.max(Number(scoreRaw), 0), 100) : null;
   const scoreColor = score !== null ? getScoreColor(score) : null;
   const scoreLabel = score !== null ? getScoreLabel(score) : null;
@@ -190,6 +202,49 @@ export async function GET(request: NextRequest) {
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Metrics row */}
+      {metrics.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: "40px",
+            marginTop: score !== null ? "36px" : "24px",
+          }}
+        >
+          {metrics.map((m) => (
+            <div
+              key={m.label}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  color: "#f8fafc",
+                }}
+              >
+                {m.value}
+              </span>
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  color: "#94a3b8",
+                  textTransform: "uppercase" as const,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {m.label}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
