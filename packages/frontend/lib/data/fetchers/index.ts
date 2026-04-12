@@ -186,6 +186,8 @@ export {
   completeOnboarding,
   resetOnboarding,
   saveOnboardingPreferences,
+  startOnboardingTrial,
+  saveOnboardingMarketSelection,
 } from "./onboarding";
 export type { OnboardingState } from "./onboarding";
 

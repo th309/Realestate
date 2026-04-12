@@ -17,6 +17,7 @@ const PROTECTED_PREFIXES = [
   "/reports",
   "/admin",
   "/upgrade",
+  "/get-started",
 ];
 const PUBLIC_PATHS = ["/reports/sample", "/reports/shared"];
 const AUTH_ROUTES = ["/auth/sign-in", "/auth/sign-up", "/auth/forgot-password"];

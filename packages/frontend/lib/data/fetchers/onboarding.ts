@@ -6,6 +6,7 @@
  */
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { API_URL } from "./base";
 
 export interface OnboardingState {
   onboarding_completed_at: string | null;
@@ -79,4 +80,38 @@ export async function saveOnboardingPreferences(
   if (!user) return;
 
   await supabase.from("user_profiles").update(preferences).eq("id", user.id);
+}
+
+export async function startOnboardingTrial(): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await fetch(`${API_URL}/api/onboarding/start-trial`, {
+    method: "POST",
+    headers: { "x-user-id": user.id },
+  });
+}
+
+export async function saveOnboardingMarketSelection(market: {
+  geoLevel: string;
+  geoId: string;
+  name: string;
+}): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await fetch(`${API_URL}/api/onboarding/save-market`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": user.id,
+    },
+    body: JSON.stringify(market),
+  });
 }

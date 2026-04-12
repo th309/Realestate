@@ -267,6 +267,8 @@ export {
   completeOnboarding,
   resetOnboarding,
   saveOnboardingPreferences,
+  startOnboardingTrial,
+  saveOnboardingMarketSelection,
   type OnboardingState,
 
   // Insights
