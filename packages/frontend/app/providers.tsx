@@ -138,7 +138,7 @@ function OnboardingBeaconProvider({ children }: { children: React.ReactNode }) {
   return (
     <BeaconProvider
       completedTasks={onboardingState?.onboarding_checklist ?? []}
-      dismissedBeacons={(onboardingState as any)?.dismissed_beacons ?? []}
+      dismissedBeacons={onboardingState?.dismissed_beacons ?? []}
     >
       {children}
     </BeaconProvider>
