@@ -19,10 +19,24 @@ export const runtime = "edge";
 // function has zero imports outside next/og)
 // ---------------------------------------------------------------------------
 
+// Brand palette from CLAUDE.md §8.2
+const BRAND = {
+  primaryDark: "#1A237E",
+  primary: "#3949AB",
+  primaryMedium: "#5C6BC0",
+  primaryLight: "#C5CAE9",
+  primaryContainer: "#E8EAF6",
+  accentGreen: "#00C853",
+  errorRed: "#B3261E",
+  warningAmber: "#FF8F00",
+  surface: "#FAFBFF",
+} as const;
+
 function getScoreColor(value: number): string {
-  const pct = Math.min(Math.max(value / 100, 0), 1);
-  const hue = pct * 120; // 0 = red, 120 = green
-  return `hsl(${hue}, 85%, 55%)`;
+  if (value >= 70) return BRAND.accentGreen;
+  if (value >= 50) return BRAND.primaryMedium;
+  if (value >= 40) return BRAND.warningAmber;
+  return BRAND.errorRed;
 }
 
 function getScoreLabel(score: number): string {
@@ -72,39 +86,48 @@ export async function GET(request: NextRequest) {
         flexDirection: "column",
         justifyContent: "center",
         padding: "60px 80px",
-        background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
-        fontFamily: "sans-serif",
-        color: "#f1f5f9",
+        background: `linear-gradient(145deg, ${BRAND.primaryDark} 0%, #283593 60%, ${BRAND.primary} 100%)`,
+        fontFamily: "Roboto, sans-serif",
+        color: "#fff",
       }}
     >
-      {/* Top bar: logo + tagline */}
+      {/* Top bar: brand mark + name */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "16px",
+          gap: "14px",
           marginBottom: "40px",
         }}
       >
-        {/* Accent dot as simple brand mark */}
         <div
           style={{
-            width: "14px",
-            height: "14px",
+            width: "16px",
+            height: "16px",
             borderRadius: "50%",
-            background: "#3949AB",
+            background: BRAND.primaryLight,
             flexShrink: 0,
           }}
         />
         <span
           style={{
-            fontSize: "24px",
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-            color: "#94a3b8",
+            fontSize: "22px",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
+            color: BRAND.primaryLight,
           }}
         >
           PropertyIQ
+        </span>
+        <span
+          style={{
+            fontSize: "14px",
+            fontWeight: 400,
+            color: BRAND.primaryMedium,
+            marginLeft: "4px",
+          }}
+        >
+          The IQ Behind Every Market
         </span>
       </div>
 
@@ -116,7 +139,7 @@ export async function GET(request: NextRequest) {
           lineHeight: 1.1,
           letterSpacing: "-0.03em",
           marginBottom: "12px",
-          color: "#f8fafc",
+          color: "#fff",
         }}
       >
         {title}
@@ -125,13 +148,13 @@ export async function GET(request: NextRequest) {
       {/* Subtitle */}
       <div
         style={{
-          fontSize: "28px",
+          fontSize: "26px",
           fontWeight: 400,
-          color: "#94a3b8",
+          color: BRAND.primaryLight,
           marginBottom: score !== null ? "36px" : "0px",
         }}
       >
-        Housing Market Analysis 2026
+        Market Intelligence Report
       </div>
 
       {/* Score block (only if score provided) */}
@@ -141,61 +164,76 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             gap: "24px",
+            background: "rgba(255,255,255,0.08)",
+            borderRadius: "20px",
+            padding: "20px 28px",
           }}
         >
           {/* Score circle */}
           <div
             style={{
-              width: "96px",
-              height: "96px",
+              width: "88px",
+              height: "88px",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: `4px solid ${scoreColor}`,
-              background: "rgba(255,255,255,0.05)",
+              border: `5px solid ${scoreColor}`,
+              background: "rgba(255,255,255,0.06)",
             }}
           >
             <span
               style={{
-                fontSize: "40px",
+                fontSize: "38px",
                 fontWeight: 800,
-                color: scoreColor ?? "#f8fafc",
+                fontFamily: "Roboto Mono, monospace",
+                color: "#fff",
               }}
             >
               {Math.round(score)}
             </span>
           </div>
 
-          {/* Score label + insight */}
+          {/* Score label */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "6px",
+              gap: "4px",
             }}
           >
             <span
               style={{
-                fontSize: "22px",
+                fontSize: "24px",
                 fontWeight: 700,
                 textTransform: "uppercase" as const,
-                letterSpacing: "0.08em",
-                color: scoreColor ?? "#f8fafc",
+                letterSpacing: "0.06em",
+                color: scoreColor ?? "#fff",
               }}
             >
               {scoreLabel}
             </span>
+            <span
+              style={{
+                fontSize: "15px",
+                fontWeight: 400,
+                color: BRAND.primaryLight,
+                letterSpacing: "0.02em",
+              }}
+            >
+              PropertyIQ Score
+            </span>
             {insight && (
               <span
                 style={{
-                  fontSize: "20px",
+                  fontSize: "18px",
                   fontWeight: 400,
-                  color: "#cbd5e1",
-                  maxWidth: "800px",
+                  color: BRAND.primaryLight,
+                  maxWidth: "700px",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
+                  marginTop: "2px",
                 }}
               >
                 {insight}
@@ -210,8 +248,9 @@ export async function GET(request: NextRequest) {
         <div
           style={{
             display: "flex",
-            gap: "40px",
-            marginTop: score !== null ? "36px" : "24px",
+            gap: "48px",
+            marginTop: "32px",
+            padding: "0 4px",
           }}
         >
           {metrics.map((m) => (
@@ -220,25 +259,26 @@ export async function GET(request: NextRequest) {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "4px",
+                gap: "6px",
               }}
             >
               <span
                 style={{
-                  fontSize: "28px",
+                  fontSize: "30px",
                   fontWeight: 700,
-                  color: "#f8fafc",
+                  fontFamily: "Roboto Mono, monospace",
+                  color: "#fff",
                 }}
               >
                 {m.value}
               </span>
               <span
                 style={{
-                  fontSize: "14px",
-                  fontWeight: 400,
-                  color: "#94a3b8",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: BRAND.primaryLight,
                   textTransform: "uppercase" as const,
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.08em",
                 }}
               >
                 {m.label}
@@ -248,16 +288,15 @@ export async function GET(request: NextRequest) {
         </div>
       )}
 
-      {/* Bottom accent line */}
+      {/* Bottom accent bar */}
       <div
         style={{
           position: "absolute",
           bottom: "0",
           left: "0",
           right: "0",
-          height: "4px",
-          background:
-            "linear-gradient(90deg, #1A237E 0%, #3949AB 50%, #5C6BC0 100%)",
+          height: "6px",
+          background: `linear-gradient(90deg, ${BRAND.accentGreen} 0%, ${BRAND.primaryLight} 50%, ${BRAND.primaryMedium} 100%)`,
         }}
       />
     </div>,

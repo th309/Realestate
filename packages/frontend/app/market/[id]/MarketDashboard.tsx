@@ -259,8 +259,8 @@ export function MarketDashboard({
             ? `${displayData["home_value"].percentChange > 0 ? "+" : ""}${displayData["home_value"].percentChange.toFixed(1)}%`
             : undefined
         }
-        dom={displayData["median_dom"]?.formattedValue}
-        supply={displayData["months_of_supply"]?.formattedValue}
+        dom={displayData["days_on_market"]?.formattedValue}
+        supply={displayData["months_supply"]?.formattedValue}
       />
     </div>
   );

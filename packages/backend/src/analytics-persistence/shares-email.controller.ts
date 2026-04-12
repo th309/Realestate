@@ -87,16 +87,16 @@ export class SharesEmailController {
 
       const html = `
         <div style="max-width:560px;margin:0 auto;font-family:Roboto,Arial,sans-serif;">
-          <div style="background:linear-gradient(145deg,#0f172a,#1e293b);border-radius:12px;padding:32px;color:#f1f5f9;margin-bottom:24px;">
-            <p style="font-size:12px;color:#94a3b8;margin:0 0 8px;">● PropertyIQ</p>
-            <h1 style="font-size:28px;font-weight:800;margin:0 0 4px;color:#f8fafc;">${geoName}</h1>
-            <p style="font-size:14px;color:#94a3b8;margin:0;">Market Analysis</p>
+          <div style="background:linear-gradient(145deg,#1A237E,#3949AB);border-radius:16px;padding:32px;color:#fff;margin-bottom:24px;">
+            <p style="font-size:13px;color:#C5CAE9;margin:0 0 16px;letter-spacing:0.02em;">● PropertyIQ <span style="color:#5C6BC0;margin-left:6px;">The IQ Behind Every Market</span></p>
+            <h1 style="font-size:28px;font-weight:800;margin:0 0 4px;color:#fff;">${geoName}</h1>
+            <p style="font-size:14px;color:#C5CAE9;margin:0;">Market Intelligence Report</p>
             ${scoreSection}
           </div>
           ${metricsHtml ? `<table style="margin:0 auto 24px;"><tr>${metricsHtml}</tr></table>` : ''}
           ${messageSection}
           <a href="${shareUrl}" style="display:block;text-align:center;background:#3949AB;color:#fff;padding:14px 24px;border-radius:999px;text-decoration:none;font-weight:600;font-size:16px;">View Market Report</a>
-          <p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:24px;">Sent via <a href="https://propertyiq.app" style="color:#3949AB;">PropertyIQ</a></p>
+          <p style="text-align:center;font-size:12px;color:#5C6BC0;margin-top:24px;">Sent via <a href="https://propertyiq.app" style="color:#3949AB;font-weight:600;">PropertyIQ</a></p>
         </div>
       `;
 
