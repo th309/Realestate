@@ -98,9 +98,9 @@ export function SetupTab() {
         <ul className="space-y-3">
           {[
             {
-              title: "A PropertyIQ API key",
+              title: "A PropertyIQ API key (optional)",
               detail:
-                "Generate one in step 3 below. Keys start with piq_live_. Requires a Pro or Enterprise plan. (Not needed for Claude.ai — it uses your PropertyIQ login instead.)",
+                "Only for clients that use a static key in config (e.g. Claude Code, Claude Desktop, Windsurf). Keys start with piq_live_. Not needed for Claude.ai or Cursor — those use OAuth sign-in. Requires a Pro or Enterprise plan.",
             },
             {
               title: "An MCP-compatible AI client",
@@ -122,8 +122,9 @@ export function SetupTab() {
         </ul>
 
         <p className="text-sm text-on-surface-variant mt-4">
-          No installation required. PropertyIQ runs a hosted MCP server — just
-          point your AI client at the URL with your API key.
+          No installation required. PropertyIQ runs a hosted MCP server — point
+          your client at the URL; use OAuth (Claude.ai, Cursor) or an API key in
+          config where your client requires it.
         </p>
       </section>
 

@@ -24,52 +24,10 @@ import {
 } from "./redfin-config";
 import { mapTsvRowToRecord } from "./redfin-column-maps";
 import { downloadToMemory, downloadToDisk } from "./redfin-download";
+import { initCountyFipsLookup, lookupCountyFips } from "./county-fips-lookup";
 
 /** Geo levels small enough to load into memory as a string. */
 const IN_MEMORY_GEOS = new Set(["national", "state"]);
-
-// ---------------------------------------------------------------------------
-// County FIPS lookup
-// ---------------------------------------------------------------------------
-
-let countyFipsMap: Map<string, string> | null = null;
-
-async function initCountyFipsLookup(): Promise<void> {
-  if (countyFipsMap) return;
-  const supabase = getSupabaseClient();
-  countyFipsMap = new Map();
-
-  const { data, error } = await supabase
-    .from("geography_crosswalk")
-    .select("county_name, state_code, county_fips")
-    .not("county_fips", "is", null);
-
-  if (error || !data) {
-    console.warn(
-      "  Warning: Could not load county FIPS lookup:",
-      error?.message,
-    );
-    return;
-  }
-
-  for (const row of data) {
-    if (row.county_name && row.state_code && row.county_fips) {
-      const key = `${row.county_name.toLowerCase()}|${row.state_code.toUpperCase()}`;
-      countyFipsMap.set(key, row.county_fips);
-    }
-  }
-  console.log(`  County FIPS lookup loaded: ${countyFipsMap.size} entries`);
-}
-
-function lookupCountyFips(
-  county: string | null,
-  state: string | null,
-): string | null {
-  if (!county || !state || !countyFipsMap) return null;
-  return (
-    countyFipsMap.get(`${county.toLowerCase()}|${state.toUpperCase()}`) || null
-  );
-}
 
 // ---------------------------------------------------------------------------
 // In-memory import (small files: national, state)
@@ -249,7 +207,7 @@ export async function importRedfinGeography(
     const downloadUrl = REDFIN_S3_URLS[geoLevel];
     if (!downloadUrl) throw new Error(`No S3 URL configured for: ${geoLevel}`);
 
-    if (geoLevel === "county") await initCountyFipsLookup();
+    if (geoLevel === "county") initCountyFipsLookup();
 
     // Compute date cutoff for --recent flag
     let dateCutoff: string | null = null;

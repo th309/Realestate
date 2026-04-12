@@ -7,13 +7,13 @@ import { DashboardCard } from "../shared/DashboardCard";
 import { StatusDot } from "../shared/StatusDot";
 
 interface PipelineRun {
-  pipeline_name: string;
-  display_name?: string;
+  pipelineName: string;
+  displayName?: string;
   status: string;
-  started_at: string;
-  ended_at: string | null;
-  records_processed?: number;
-  duration_ms?: number;
+  startedAt: string;
+  endedAt: string | null;
+  recordsProcessed?: number;
+  durationMs?: number;
 }
 
 interface PipelineRunsCardProps {
@@ -62,9 +62,9 @@ export function PipelineRunsCard({
         const res = await fetchAPIRaw("/api/health/pipeline-runs");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const list = Array.isArray(json)
+        const list: PipelineRun[] = Array.isArray(json)
           ? json
-          : (json.data ?? json.runs ?? []);
+          : (json.pipelines ?? json.data ?? json.runs ?? []);
         if (!cancelled) setRuns(list);
       } catch (err) {
         if (!cancelled)
@@ -106,7 +106,7 @@ export function PipelineRunsCard({
         <ul className="space-y-1.5">
           {recent.map((run, i) => (
             <li
-              key={`${run.pipeline_name}-${i}`}
+              key={`${run.pipelineName}-${i}`}
               className="flex items-center justify-between text-xs"
             >
               <div className="flex items-center gap-2">
@@ -115,12 +115,12 @@ export function PipelineRunsCard({
                   pulse={run.status === "running"}
                 />
                 <span className="text-on-surface truncate max-w-[140px]">
-                  {run.display_name ?? run.pipeline_name}
+                  {run.displayName ?? run.pipelineName}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-on-surface-variant font-mono">
-                <span>{formatDuration(run.duration_ms)}</span>
-                <span>{formatRelativeTime(run.started_at)}</span>
+                <span>{formatDuration(run.durationMs)}</span>
+                <span>{formatRelativeTime(run.startedAt)}</span>
               </div>
             </li>
           ))}

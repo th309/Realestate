@@ -69,8 +69,11 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
   // Total Users
   const totalUsersFormatted = (users.count ?? 0).toLocaleString();
 
-  // Score Health
-  const scoreHealthFormatted = `${(scores.hit_rate_1y ?? 0).toFixed(1)}%`;
+  // Score Health — hit_rate_1y is stored as a fraction (0..1), display as %.
+  const scoreHealthFormatted =
+    scores.hit_rate_1y == null
+      ? "—"
+      : `${(scores.hit_rate_1y * 100).toFixed(0)}%`;
 
   return (
     <div data-testid="hero-stats-row" className="flex gap-4">

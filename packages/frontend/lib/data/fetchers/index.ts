@@ -340,6 +340,14 @@ export {
   type GraceStatus,
 } from "./grace-status";
 
+// Shares
+export {
+  createMarketShare,
+  sendMarketShareEmail,
+  type CreateMarketShareData,
+  type MarketShareResult,
+} from "./shares";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

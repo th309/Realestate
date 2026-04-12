@@ -81,10 +81,7 @@ export const SETUP_CONFIGS = {
   cursor: `{
   "mcpServers": {
     "propertyiq": {
-      "url": "${MCP_SERVER_URL}",
-      "headers": {
-        "Authorization": "Bearer YOUR_PIQ_API_KEY"
-      }
+      "url": "${MCP_SERVER_URL}"
     }
   }
 }`,
@@ -138,7 +135,7 @@ export const MCP_FAQ = [
   {
     question: "Do I need an API key?",
     answer:
-      "For most clients (Claude Code, Claude Desktop, Cursor, etc.), yes — you need a PropertyIQ API key (starts with piq_live_). For Claude.ai, no API key is needed — just add PropertyIQ as a custom connector in Settings → Connectors and sign in with your PropertyIQ account. A Pro or Enterprise subscription is required either way.",
+      "For Claude.ai and Cursor (remote MCP over Streamable HTTP), no — you sign in with OAuth using your PropertyIQ account. For some other clients (Claude Code, Claude Desktop, Windsurf, etc.), you may still use a PropertyIQ API key (starts with piq_live_) where the client does not run the OAuth browser flow. A Pro or Enterprise subscription is required for MCP access.",
   },
   {
     question: "Which AI clients support MCP?",

@@ -5,66 +5,78 @@
  * Fetches data from 4 APIs (Census ACS, BEA, FRED, BLS) and upserts
  * into census_* and economic_* database tables.
  *
- * Unlike Zillow/Realtor adapters, this source is API-based rather than
- * CSV file-based, so it cannot use runSourceImport() directly. Instead
- * it calls each API client, collects records, then uses batchUpsert()
- * from the shared framework.
- *
  * Usage:
  *   npx tsx scripts/sources/census-economic/import-census-economic.ts
  *   npx tsx scripts/sources/census-economic/import-census-economic.ts --census
  *   npx tsx scripts/sources/census-economic/import-census-economic.ts --economic
  *   npx tsx scripts/sources/census-economic/import-census-economic.ts --quick
+ *   npx tsx scripts/sources/census-economic/import-census-economic.ts --recent 6
  */
 
-import type { IngestionSource } from '../../utils/ingestion-logger';
+import type { IngestionSource } from "../../utils/ingestion-logger";
+import { computeDateCutoff } from "../../lib";
 import {
   CENSUS_YEARS_FULL,
   CENSUS_YEARS_QUICK,
   CENSUS_TABLES,
-  ECONOMIC_TABLES,
-} from './census-economic-config';
+} from "./census-economic-config";
 import {
-  fetchCensusNational, fetchCensusStates, fetchCensusMetros,
-  fetchCensusCounties, fetchCensusCities, fetchCensusZips,
-} from './census-api-client';
-import {
-  fetchBeaStateGdp, fetchBeaStateRealGdp, fetchBeaStateRpp,
-  fetchBeaMetroGdp, fetchBeaMetroRpp,
-  fetchBeaCountyGdp,
-} from './bea-api-client';
-import {
-  fetchFredNationalUnemployment, fetchFredNationalEmployment,
-  fetchFredStateUnemployment, fetchFredStateEmployment,
-  fetchFredMetroUnemployment, fetchFredMetroEmployment,
-} from './fred-api-client';
-import { fetchBlsCountyUnemployment } from './bls-api-client';
-import { upsertWithLogging, mergeByKey } from './census-economic-upsert';
+  fetchCensusNational,
+  fetchCensusStates,
+  fetchCensusMetros,
+  fetchCensusCounties,
+  fetchCensusCities,
+  fetchCensusZips,
+} from "./census-api-client";
+import { upsertWithLogging } from "./census-economic-upsert";
+import { importAllEconomicData } from "./economic-importer";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
 const args = process.argv.slice(2);
-const hasCensusFlag = args.includes('--census');
-const hasEconomicFlag = args.includes('--economic');
+const hasCensusFlag = args.includes("--census");
+const hasEconomicFlag = args.includes("--economic");
 // If neither --census nor --economic is specified, import both by default.
 // This prevents unrelated flags (e.g. --quick) from accidentally disabling imports.
 const importCensus = hasCensusFlag || !hasEconomicFlag;
 const importEconomic = hasEconomicFlag || !hasCensusFlag;
-const quickMode = args.includes('--quick');
+const quickMode = args.includes("--quick");
 
-const censusYears = quickMode ? CENSUS_YEARS_QUICK : CENSUS_YEARS_FULL;
-const fredStartYear = quickMode ? 2020 : 2000;
+function parseArgValue(flag: string): string | null {
+  const eqArg = args.find((a) => a.startsWith(`${flag}=`));
+  if (eqArg) return eqArg.split("=")[1];
+  const idx = args.indexOf(flag);
+  return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
+}
+
+const recentMonthsRaw = parseArgValue("--recent");
+const recentMonths = recentMonthsRaw
+  ? parseInt(recentMonthsRaw, 10)
+  : undefined;
+const dateCutoff = recentMonths ? computeDateCutoff(recentMonths) : undefined;
+
+// --recent implies --quick for Census (no point fetching years we'll discard)
+const censusYears =
+  quickMode || recentMonths ? CENSUS_YEARS_QUICK : CENSUS_YEARS_FULL;
+const fredStartYear = recentMonths
+  ? new Date().getFullYear() - 1
+  : quickMode
+    ? 2020
+    : 2000;
 
 // ---------------------------------------------------------------------------
 // Census data import (Census ACS 5-Year)
 // ---------------------------------------------------------------------------
 
-async function importAllCensusData(): Promise<{ inserted: number; failed: number }> {
-  console.log('\n' + '='.repeat(60));
+async function importAllCensusData(): Promise<{
+  inserted: number;
+  failed: number;
+}> {
+  console.log("\n" + "=".repeat(60));
   console.log(`Importing Census ACS Data for ${censusYears.length} years`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   let totalInserted = 0;
   let totalFailed = 0;
@@ -78,21 +90,25 @@ async function importAllCensusData(): Promise<{ inserted: number; failed: number
 
   for (const year of censusYears) {
     console.log(`\n--- Census ACS Year ${year} ---`);
-    allNational.push(...await fetchCensusNational(year));
-    allStates.push(...await fetchCensusStates(year));
-    allMetros.push(...await fetchCensusMetros(year));
-    allCounties.push(...await fetchCensusCounties(year));
-    allCities.push(...await fetchCensusCities(year));
-    allZips.push(...await fetchCensusZips(year));
+    allNational.push(...(await fetchCensusNational(year)));
+    allStates.push(...(await fetchCensusStates(year)));
+    allMetros.push(...(await fetchCensusMetros(year)));
+    allCounties.push(...(await fetchCensusCounties(year)));
+    allCities.push(...(await fetchCensusCities(year)));
+    allZips.push(...(await fetchCensusZips(year)));
   }
 
-  const geoData: Array<{ records: Record<string, unknown>[]; geo: string; source: IngestionSource }> = [
-    { records: allNational, geo: 'national', source: 'census' },
-    { records: allStates, geo: 'state', source: 'census' },
-    { records: allMetros, geo: 'metro', source: 'census' },
-    { records: allCounties, geo: 'county', source: 'census' },
-    { records: allCities, geo: 'city', source: 'census' },
-    { records: allZips, geo: 'zip', source: 'census' },
+  const geoData: Array<{
+    records: Record<string, unknown>[];
+    geo: string;
+    source: IngestionSource;
+  }> = [
+    { records: allNational, geo: "national", source: "census" },
+    { records: allStates, geo: "state", source: "census" },
+    { records: allMetros, geo: "metro", source: "census" },
+    { records: allCounties, geo: "county", source: "census" },
+    { records: allCities, geo: "city", source: "census" },
+    { records: allZips, geo: "zip", source: "census" },
   ];
 
   for (const { records, geo, source } of geoData) {
@@ -112,95 +128,20 @@ async function importAllCensusData(): Promise<{ inserted: number; failed: number
 }
 
 // ---------------------------------------------------------------------------
-// Economic data import (BEA + FRED + BLS)
-// ---------------------------------------------------------------------------
-
-async function importAllEconomicData(): Promise<{ inserted: number; failed: number }> {
-  console.log('\n' + '='.repeat(60));
-  console.log(`Importing Economic Data (BEA + FRED + BLS) from ${fredStartYear}`);
-  console.log('='.repeat(60));
-
-  let totalInserted = 0;
-  let totalFailed = 0;
-
-  // National: FRED unemployment + employment merged by date
-  const nationalMerged = mergeByKey(
-    [...await fetchFredNationalUnemployment(fredStartYear), ...await fetchFredNationalEmployment(fredStartYear)],
-    'period_date',
-  );
-  const natResult = await upsertWithLogging({
-    source: 'fred', tableName: ECONOMIC_TABLES.national.tableName,
-    conflictKeys: ECONOMIC_TABLES.national.conflictKeys,
-    datasetId: 'economic-national', records: nationalMerged,
-  });
-  totalInserted += natResult.inserted;
-  totalFailed += natResult.failed;
-
-  // State: FRED unemployment + employment + BEA GDP + real GDP + RPP
-  // Source is 'census' (the Census/Economic umbrella) because data merges FRED + BEA
-  const stateAll = [
-    ...await fetchFredStateUnemployment(fredStartYear),
-    ...await fetchFredStateEmployment(fredStartYear),
-    ...await fetchBeaStateGdp(),
-    ...await fetchBeaStateRealGdp(),
-    ...await fetchBeaStateRpp(),
-  ];
-  const stateResult = await upsertWithLogging({
-    source: 'census', tableName: ECONOMIC_TABLES.state.tableName,
-    conflictKeys: ECONOMIC_TABLES.state.conflictKeys,
-    datasetId: 'economic-state', records: mergeByKey(stateAll, 'period_date', 'state_fips'),
-  });
-  totalInserted += stateResult.inserted;
-  totalFailed += stateResult.failed;
-
-  // Metro: FRED unemployment + employment + BEA GDP + RPP
-  // Source is 'census' (the Census/Economic umbrella) because data merges FRED + BEA
-  const metroAll = [
-    ...await fetchFredMetroUnemployment(fredStartYear),
-    ...await fetchFredMetroEmployment(fredStartYear),
-    ...await fetchBeaMetroGdp(),
-    ...await fetchBeaMetroRpp(),
-  ];
-  const metroResult = await upsertWithLogging({
-    source: 'census', tableName: ECONOMIC_TABLES.metro.tableName,
-    conflictKeys: ECONOMIC_TABLES.metro.conflictKeys,
-    datasetId: 'economic-metro', records: mergeByKey(metroAll, 'period_date', 'cbsa_code'),
-  });
-  totalInserted += metroResult.inserted;
-  totalFailed += metroResult.failed;
-
-  // County: BEA GDP + BLS unemployment
-  // Source is 'census' (the Census/Economic umbrella) because data merges BEA + BLS
-  const countyGdp = await fetchBeaCountyGdp();
-  const countyFipsList = [...new Set(countyGdp.map(r => String(r.fips_code)).filter(Boolean))];
-  console.log(`  Found ${countyFipsList.length} counties from BEA GDP for BLS fetch`);
-  const countyUnemployment = await fetchBlsCountyUnemployment(countyFipsList, fredStartYear);
-  const countyResult = await upsertWithLogging({
-    source: 'census', tableName: ECONOMIC_TABLES.county.tableName,
-    conflictKeys: ECONOMIC_TABLES.county.conflictKeys,
-    datasetId: 'economic-county',
-    records: mergeByKey([...countyGdp, ...countyUnemployment], 'period_date', 'fips_code'),
-  });
-  totalInserted += countyResult.inserted;
-  totalFailed += countyResult.failed;
-
-  return { inserted: totalInserted, failed: totalFailed };
-}
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
   const startTime = Date.now();
 
-  console.log('Census & Economic Unified Data Import');
-  console.log('='.repeat(60));
+  console.log("Census & Economic Unified Data Import");
+  console.log("=".repeat(60));
   console.log(`Date:   ${new Date().toISOString()}`);
-  console.log(`Mode:   ${quickMode ? 'QUICK (2 years)' : 'FULL HISTORICAL'}`);
-  console.log(`Census: ${importCensus ? 'YES' : 'SKIP'}`);
-  console.log(`Econ:   ${importEconomic ? 'YES' : 'SKIP'}`);
-  console.log('');
+  console.log(`Mode:   ${quickMode ? "QUICK (2 years)" : "FULL HISTORICAL"}`);
+  if (dateCutoff) console.log(`Recent: cutoff ${dateCutoff}`);
+  console.log(`Census: ${importCensus ? "YES" : "SKIP"}`);
+  console.log(`Econ:   ${importEconomic ? "YES" : "SKIP"}`);
+  console.log("");
 
   let totalInserted = 0;
   let totalFailed = 0;
@@ -212,26 +153,26 @@ async function main(): Promise<void> {
   }
 
   if (importEconomic) {
-    const econ = await importAllEconomicData();
+    const econ = await importAllEconomicData(fredStartYear, dateCutoff);
     totalInserted += econ.inserted;
     totalFailed += econ.failed;
   }
 
   const duration = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
-  console.log('\n' + '='.repeat(60));
-  console.log('  CENSUS & ECONOMIC IMPORT COMPLETE');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("  CENSUS & ECONOMIC IMPORT COMPLETE");
+  console.log("=".repeat(60));
   console.log(`  Total inserted: ${totalInserted}`);
   console.log(`  Total failed:   ${totalFailed}`);
   console.log(`  Duration:       ${duration} minutes`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   if (totalFailed > 0) {
     process.exit(1);
   }
 }
 
-main().catch(error => {
-  console.error('Fatal error:', error);
+main().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });

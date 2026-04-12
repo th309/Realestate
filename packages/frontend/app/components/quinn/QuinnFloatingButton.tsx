@@ -6,7 +6,7 @@
  * A floating button that appears in the bottom-right corner of every page.
  * When clicked, it opens the Quinn AI assistant chat panel.
  * 
- * Design: Material Design 3 compliant per project_instructions.md §5
+ * Design: Material Design 3 compliant per CLAUDE.md Section 8 (Brand & Design)
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';

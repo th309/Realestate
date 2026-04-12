@@ -413,6 +413,14 @@ export {
   type GraceStatus,
 } from "./fetchers";
 
+// Shares
+export {
+  createMarketShare,
+  sendMarketShareEmail,
+  type CreateMarketShareData,
+  type MarketShareResult,
+} from "./fetchers";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";

@@ -227,6 +227,12 @@ export function McpTroubleshootingTab() {
                 Check Cursor&apos;s MCP panel (bottom bar) to verify connection
                 status.
               </li>
+              <li>
+                If the server returns 401 until you sign in, complete the OAuth
+                flow in the browser when Cursor opens it (PropertyIQ uses
+                dynamic client registration — no API key in{" "}
+                <Code>mcp.json</Code>).
+              </li>
             </ul>
           </div>
 

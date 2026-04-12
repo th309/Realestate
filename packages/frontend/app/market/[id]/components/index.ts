@@ -17,3 +17,4 @@ export type {
   GeographyInfo,
 } from "./types";
 export { PREMIUM_GEO_LEVELS } from "./types";
+export { ShareMarketModal } from "./ShareMarketModal";
