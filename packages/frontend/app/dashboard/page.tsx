@@ -20,6 +20,7 @@ import { TopMarketsList } from "./components/TopMarketsList";
 import { MarketsToWatch } from "./components/MarketsToWatch";
 import { WatchlistUpdates } from "./components/WatchlistUpdates";
 import { ProgressChecklist } from "./components/ProgressChecklist";
+import { SampleReportCard } from "./components/SampleReportCard";
 
 // ---------------------------------------------------------------------------
 // Onboarding banner (shown when quiz not completed)
@@ -96,6 +97,11 @@ export default function DashboardPage() {
 
       {/* Getting-started checklist (hides itself when all done or dismissed) */}
       <ProgressChecklist completedTasks={completedTasks} />
+
+      {/* Sample report card for post-trial free users */}
+      <SampleReportCard
+        onboardingMarket={onboardingState?.onboarding_market ?? null}
+      />
 
       {/* Onboarding banner or profile summary */}
       {!quizCompleted ? (
