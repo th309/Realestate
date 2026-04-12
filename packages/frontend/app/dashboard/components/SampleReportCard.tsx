@@ -19,12 +19,12 @@ export function SampleReportCard({ onboardingMarket }: SampleReportCardProps) {
   const { trial, tier } = useEntitlements();
   const market = onboardingMarket ?? FALLBACK_MARKET;
 
-  const { data: scoreData } = useScoreData(
+  const { propertyiq } = useScoreData(
     market.geoLevel as GeoLevel,
     market.geoId,
     { enabled: tier === "free" && !trial?.active },
   );
-  const score = scoreData?.propertyiq?.score ?? null;
+  const score = propertyiq?.score ?? null;
 
   if (trial?.active || tier !== "free") return null;
 
