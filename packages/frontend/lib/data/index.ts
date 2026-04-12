@@ -423,6 +423,12 @@ export {
   type MarketShareResult,
 } from "./fetchers";
 
+// Social proof (engagement stats for geography)
+export {
+  fetchSocialProof,
+  type SocialProofStats,
+} from "./fetchers/social-proof";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";

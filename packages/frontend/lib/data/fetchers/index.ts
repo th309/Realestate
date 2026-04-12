@@ -350,6 +350,9 @@ export {
   type MarketShareResult,
 } from "./shares";
 
+// Social proof (engagement stats for geography)
+export { fetchSocialProof, type SocialProofStats } from "./social-proof";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";
