@@ -19,6 +19,7 @@ export function ScoreColumn({ activeView, primaryScore }: ScoreColumnProps) {
     <div className="lg:col-span-4 space-y-6">
       {/* Main Score Card */}
       <motion.div
+        data-tour="propertyiq-score"
         className="bg-surface-container rounded-3xl p-8 border border-outline-variant/30 text-center"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

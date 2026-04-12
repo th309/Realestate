@@ -18,6 +18,13 @@ export interface OnboardingState {
     geoId: string;
     name: string;
   }> | null;
+  onboarding_market: {
+    geoLevel: string;
+    geoId: string;
+    name: string;
+  } | null;
+  onboarding_checklist: string[];
+  free_report_credits: number;
 }
 
 export async function fetchOnboardingState(): Promise<OnboardingState | null> {
@@ -30,7 +37,7 @@ export async function fetchOnboardingState(): Promise<OnboardingState | null> {
   const { data, error } = await supabase
     .from("user_profiles")
     .select(
-      "onboarding_completed_at, user_type, investment_goal, experience_level, preferred_markets",
+      "onboarding_completed_at, user_type, investment_goal, experience_level, preferred_markets, onboarding_market, onboarding_checklist, free_report_credits",
     )
     .eq("id", user.id)
     .single();

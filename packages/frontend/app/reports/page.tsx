@@ -681,6 +681,7 @@ function ReportCreationPage() {
             </section>
 
             <motion.button
+              data-tour="reports-generate-btn"
               onClick={handleGenerate}
               disabled={!canGenerate || isGenerating}
               className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
