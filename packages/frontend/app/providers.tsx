@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import {
   QueryClient,
   QueryClientProvider,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -11,6 +12,8 @@ import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
 import { ToastProvider } from "@/components/ui/Toast";
+import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
+import { fetchOnboardingState } from "@/lib/data";
 
 /**
  * Extract HTTP status code from an error.
@@ -125,6 +128,23 @@ function QueryCacheCleaner() {
   return null;
 }
 
+function OnboardingBeaconProvider({ children }: { children: React.ReactNode }) {
+  const { data: onboardingState } = useQuery({
+    queryKey: ["onboarding-state"],
+    queryFn: fetchOnboardingState,
+    staleTime: Infinity,
+  });
+
+  return (
+    <BeaconProvider
+      completedTasks={onboardingState?.onboarding_checklist ?? []}
+      dismissedBeacons={(onboardingState as any)?.dismissed_beacons ?? []}
+    >
+      {children}
+    </BeaconProvider>
+  );
+}
+
 export function Providers({
   children,
   initialUserId,
@@ -142,7 +162,9 @@ export function Providers({
         <ToastProvider>
           <TourProvider>
             <EntitlementsProvider>
-              <PaywallProvider>{children}</PaywallProvider>
+              <OnboardingBeaconProvider>
+                <PaywallProvider>{children}</PaywallProvider>
+              </OnboardingBeaconProvider>
             </EntitlementsProvider>
           </TourProvider>
           <ExitIntentModal />
