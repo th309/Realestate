@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 
 interface UsageStats {
   markets_viewed: number;
@@ -11,12 +12,16 @@ interface UsageStats {
 interface PersonalizedPaywallProps {
   usageStats: UsageStats;
   featureBlocked?: string;
+  geoLevel?: string;
+  geoId?: string;
   onDismiss: () => void;
 }
 
 export function PersonalizedPaywall({
   usageStats,
   featureBlocked,
+  geoLevel,
+  geoId,
   onDismiss,
 }: PersonalizedPaywallProps) {
   const hasActivity =
@@ -38,6 +43,16 @@ export function PersonalizedPaywall({
             ? "Keep your market intelligence flowing"
             : "Unlock the full PropertyIQ experience"}
         </h2>
+
+        {geoLevel && geoId && (
+          <div className="mb-3">
+            <SocialProofBadge
+              geoLevel={geoLevel}
+              geoId={geoId}
+              variant="tracking"
+            />
+          </div>
+        )}
 
         {hasActivity && (
           <div className="flex gap-4 my-5 py-4 border-y border-outline-variant/20">

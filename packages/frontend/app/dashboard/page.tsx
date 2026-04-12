@@ -21,6 +21,7 @@ import { MarketsToWatch } from "./components/MarketsToWatch";
 import { WatchlistUpdates } from "./components/WatchlistUpdates";
 import { ProgressChecklist } from "./components/ProgressChecklist";
 import { SampleReportCard } from "./components/SampleReportCard";
+import { TrialExpirationBanner } from "./components/TrialExpirationBanner";
 
 // ---------------------------------------------------------------------------
 // Onboarding banner (shown when quiz not completed)
@@ -94,6 +95,11 @@ export default function DashboardPage() {
           ? `Welcome back, ${user.user_metadata.display_name}`
           : "Your Dashboard"}
       </h1>
+
+      {/* Trial expiration banner (visible 4 days before trial ends) */}
+      <TrialExpirationBanner
+        usageStats={onboardingState?.usage_stats ?? null}
+      />
 
       {/* Getting-started checklist (hides itself when all done or dismissed) */}
       <ProgressChecklist completedTasks={completedTasks} />

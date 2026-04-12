@@ -45,6 +45,7 @@ import {
   generateReport as generateReportAPI,
   fetchReportList,
 } from "@/lib/data";
+import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 
 // ============================================================================
 // TYPES
@@ -669,6 +670,15 @@ function ReportCreationPage() {
                 }
                 accentColor="primary"
               />
+              {markets[0] && (
+                <div className="mt-3">
+                  <SocialProofBadge
+                    geoLevel={markets[0].type || "metro"}
+                    geoId={markets[0].id || ""}
+                    variant="reports"
+                  />
+                </div>
+              )}
             </section>
 
             <section>
