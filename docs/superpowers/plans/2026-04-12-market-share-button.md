@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-12-market-share-button-design.md`
 
+**Verification requirement:** All features MUST be verified with live data against real running servers (backend + frontend) before reporting completion. No mock data. The share must create a real record in Supabase, the OG image must render with real market metrics, the redirect page must serve real OG tags, and the email must send via Resend. Open `/market/29460?type=metro&view=investor` in a browser and exercise every share channel.
+
 ---
 
 ## File Structure
@@ -1172,73 +1174,102 @@ git commit -m "feat(share): add /s/[token] redirect page with dynamic OG metadat
 
 ---
 
-## Task 8: End-to-End Manual Test
+## Task 8: Live End-to-End Verification (REQUIRED — no mock data)
 
-**Files:** None — testing only.
+**Files:** None — testing only. ALL verification must use live running servers with real Supabase data.
 
 - [ ] **Step 1: Start dev servers**
 
-Run both frontend and backend:
+Start both frontend and backend. Verify backend connects to Supabase (check console for connection logs):
 
 ```bash
 cd packages/backend && npm run start:dev &
 cd packages/frontend && npm run dev &
 ```
 
-- [ ] **Step 2: Navigate to a market page**
+Wait for both to be ready before proceeding.
 
-Open: `http://localhost:3000/market/29460?type=metro&view=investor`
+- [ ] **Step 2: Navigate to a real market page in a browser**
 
-- [ ] **Step 3: Click Share button**
+Open in Playwright or a real browser: `http://localhost:3000/market/29460?type=metro&view=investor`
 
-Expected: Modal opens showing:
+Verify the page loads with **real data** — check that the PIQ score, home value, and other metrics are populated (not "--" or loading forever). If the page doesn't load or shows errors, debug before proceeding.
 
-- OG card preview with market name, score, and 4 metrics
-- Loading spinner briefly while share record is created
-- Grid of share channels (Copy Link, Email, X, Facebook, LinkedIn, Reddit, Download Card)
+- [ ] **Step 3: Click Share button and verify modal with live data**
 
-- [ ] **Step 4: Test Copy Link**
+Click the Share button. Verify:
 
-Click "Copy Link". Expected:
+- Modal opens showing the OG card preview with the **actual market name** from the database (e.g., "Lakeland-Winter Haven, FL")
+- The card preview shows the **real PIQ score** and **real metric values** from the dashboard
+- Share record was created in Supabase — verify by checking backend logs for `Created share for user`
+- Grid of share channels renders: Copy Link, Email, X, Facebook, LinkedIn, Reddit, Download Card
 
-- Icon changes to green check
-- Button text changes to "Copied!"
-- Paste from clipboard — should be a URL like `http://localhost:3000/s/<token>`
+- [ ] **Step 4: Test Copy Link with real share token**
 
-- [ ] **Step 5: Test social share**
+Click "Copy Link". Verify:
 
-Click "X (Twitter)". Expected:
+- Icon changes to green check, text changes to "Copied!"
+- Paste from clipboard — must be a URL like `http://localhost:3000/s/<real-token>`
+- The token is a real base64url string, not a placeholder
 
-- New window opens to `twitter.com/intent/tweet` with the share URL pre-filled.
+- [ ] **Step 5: Test social share opens correct URL**
 
-- [ ] **Step 6: Test Download Card**
+Click "X (Twitter)". Verify:
 
-Click "Download Card Image". Expected:
+- New window opens to `twitter.com/intent/tweet` with the real share URL pre-filled
+- The share URL in the tweet compose window is the `/s/<token>` URL, not the raw market page URL
 
-- PNG file downloads with name like `propertyiq-lakeland-winter-haven--fl.png`
-- Image shows the OG card with metrics
+- [ ] **Step 6: Test Download Card produces real image**
 
-- [ ] **Step 7: Test email**
+Click "Download Card Image". Verify:
 
-Click Email, enter a test email and optional message, click Send. Expected:
+- PNG file downloads
+- Open the downloaded image — it must show the **real market name, real score, and real metrics** from the database, not placeholder values
 
-- Email delivered via Resend with market card and link.
+- [ ] **Step 7: Test email sends via Resend**
 
-- [ ] **Step 8: Test redirect page**
+Click Email, enter a real test email address and an optional message, click Send. Verify:
 
-Open the share URL (pasted from clipboard in Step 4). Expected:
+- Backend logs show `POST /analytics/shares/market-email` request
+- Email is actually delivered (check inbox or Resend dashboard)
+- Email contains the real market name and a working link
+- If `RESEND_API_KEY` is not set locally, backend should log `[DEV] Would send email` — this is acceptable for local dev, but note it in the report
 
-- Brief "Redirecting to..." message
-- Redirects to the full market page
+- [ ] **Step 8: Test redirect page with real share token**
 
-- [ ] **Step 9: Test OG tags with curl**
+Open the share URL from Step 4 in a browser. Verify:
+
+- Brief "Redirecting to..." message appears with the **real market name**
+- Page redirects to `/market/29460?type=metro`
+- The redirected market page loads with real data
+
+- [ ] **Step 9: Verify OG tags are served with real data**
 
 ```bash
-curl -s http://localhost:3000/s/<token> | grep -i "og:"
+curl -s http://localhost:3000/s/<token-from-step-4> | grep -i "og:"
 ```
 
-Expected: `og:title`, `og:description`, `og:image` meta tags present with market data.
+Verify:
 
-- [ ] **Step 10: Commit any fixes discovered during testing**
+- `og:title` contains the real market name (e.g., "Lakeland-Winter Haven, FL Market Report")
+- `og:description` contains real score and metric values
+- `og:image` URL points to `/api/og` with real query params
+- Fetch the `og:image` URL directly — verify it returns a valid PNG
 
-If any issues found, fix and commit with descriptive message.
+- [ ] **Step 10: Verify share record exists in Supabase**
+
+Check the database has a real share record:
+
+```bash
+curl -s "http://localhost:3001/api/analytics/shares" -H "Authorization: Bearer <jwt>" | head -50
+```
+
+Or check backend logs. Verify:
+
+- `content_type` is `market_share`
+- `content.market` contains real geo data matching the market page
+- `view_count` incremented after Step 8
+
+- [ ] **Step 11: Commit any fixes discovered during testing**
+
+If any issues found during live testing, fix the root cause (not a band-aid) and commit with a descriptive message. Re-run the failing verification step after fixing.
