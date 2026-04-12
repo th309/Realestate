@@ -131,3 +131,134 @@ export function buildTrialExpiredEmail(
   `;
   return wrapEmail(body, unsubscribeUrl);
 }
+
+export function buildWelcomeEmail(
+  name: string,
+  getStartedUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Welcome to PropertyIQ, ${name}.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You now have access to real-time market intelligence for over 20,000 ZIP codes, 3,000 counties, and 750 metros across the US.
+    </p>
+    <p style="margin:0 0 8px; font-size:15px; font-weight:600; color:#1A237E;">Here's what to do first:</p>
+    <ul style="margin:0 0 24px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li>Search any market and check its PropertyIQ Score</li>
+      <li>Compare metros side-by-side</li>
+      <li>Generate your first market report</li>
+    </ul>
+    <a href="${getStartedUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Get Started
+    </a>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
+export function buildActiveExplorerEmail(
+  name: string,
+  dashboardUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">You're asking the right questions, ${name}.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You've already checked several PropertyIQ Scores — here's how experienced investors use them to time their moves.
+    </p>
+    <p style="margin:0 0 8px; font-size:15px; font-weight:600; color:#1A237E;">The investor playbook:</p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li><strong>Score 70+:</strong> Strong demand signal — competition is high, act fast</li>
+      <li><strong>Score 50–69:</strong> Balanced market — good for negotiation leverage</li>
+      <li><strong>Score &lt;50:</strong> Buyer's market — price concessions are common</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      Scores are calculated from sold-above-list rate, days on market, and months of supply — updated monthly from Redfin data.
+    </p>
+    <a href="${dashboardUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Keep Exploring Markets
+    </a>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
+export function buildReportGeneratedEmail(
+  name: string,
+  reportsUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Your report is ready, ${name}.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Here's how to get the most out of your PropertyIQ market report:
+    </p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li><strong>PropertyIQ Score</strong> — demand signal relative to the state average (50 = average)</li>
+      <li><strong>Trend charts</strong> — scroll down to see how key metrics have moved over 3–5 years</li>
+      <li><strong>AI narrative</strong> — plain-language summary of what the data means for buyers and investors</li>
+      <li><strong>Share link</strong> — send a read-only version to clients or partners</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      You can access all your reports from the Reports tab any time.
+    </p>
+    <a href="${reportsUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      View My Reports
+    </a>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
+export function buildPaywallHitEmail(
+  name: string,
+  featureName: string,
+  upgradeUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">You found something good, ${name}.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You tried to access <strong>${featureName}</strong> — that's a Pro feature. Upgrade now to unlock it along with:
+    </p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li>Full market deep-dive reports</li>
+      <li>ZIP-level PropertyIQ Scores</li>
+      <li>Historical trend data (5 years)</li>
+      <li>Unlimited market comparisons</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      Start a free 14-day trial — no credit card required.
+    </p>
+    <a href="${upgradeUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Unlock Pro Features
+    </a>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
+export function buildPostTrial7dEmail(
+  name: string,
+  reportsUrl: string,
+  upgradeUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Your free report credit is still waiting, ${name}.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      It's been a week since your Pro trial ended. You still have a free report credit on your account — use it to generate a full market deep-dive at no cost.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Pick any market — city, county, or ZIP — and get a complete analysis with PropertyIQ Scores, trend charts, and an AI narrative.
+    </p>
+    <a href="${reportsUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Use My Free Report
+    </a>
+    <p style="margin:16px 0 0; font-size:13px; color:#757575;">
+      Ready to go Pro? <a href="${upgradeUrl}" style="color:#3949AB; text-decoration:none;">See plans</a>
+    </p>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}

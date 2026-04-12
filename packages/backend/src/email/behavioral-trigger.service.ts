@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { EngagementTriggerService } from './engagement-trigger.service';
 import {
   EligibleUser,
   getFutureDayBoundaries,
@@ -28,6 +29,7 @@ export class BehavioralTriggerService {
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
     private readonly lockService: RedisLockService,
+    private readonly engagementTriggers: EngagementTriggerService,
   ) {
     this.appUrl =
       this.config.get<string>('FRONTEND_URL') ?? 'https://propertyiq.app';
@@ -47,6 +49,7 @@ export class BehavioralTriggerService {
     }
     try {
       this.logger.log('Starting behavioral trigger processing...');
+      await this.engagementTriggers.processAll();
       await this.fireInactive24h();
       await this.fireTrialDay10();
       await this.fireTrialDay13();
