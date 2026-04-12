@@ -182,6 +182,21 @@ export class DripService {
         continue;
       }
 
+      // Skip users with active reverse trial — they get behavioral emails instead
+      const { data: activeTrial } = await this.supabase
+        .from('user_trials')
+        .select('id')
+        .eq('user_id', user.id)
+        .is('converted_at', null)
+        .is('cancelled_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (activeTrial) {
+        skipped++;
+        continue;
+      }
+
       try {
         const displayName = user.email.split('@')[0];
         const unsubscribeUrl = `${this.appUrl}/account/notifications`;
@@ -251,7 +266,9 @@ export class DripService {
         .lt('last_activity_at', churnCutoffEnd);
 
       if (sessionsError) {
-        this.logger.error(`Win-back: session query failed: ${sessionsError.message}`);
+        this.logger.error(
+          `Win-back: session query failed: ${sessionsError.message}`,
+        );
         return;
       }
 
@@ -300,7 +317,11 @@ export class DripService {
       let failed = 0;
 
       for (const user of profiles) {
-        if (!user.email || alreadySentIds.has(user.id) || optedOutIds.has(user.id)) {
+        if (
+          !user.email ||
+          alreadySentIds.has(user.id) ||
+          optedOutIds.has(user.id)
+        ) {
           skipped++;
           continue;
         }
@@ -376,7 +397,10 @@ export class DripService {
       }
 
       const userIds = eligibleUsers.map((u) => u.id);
-      const alreadySentIds = await this.getAlreadySentUserIds(userIds, 'nps_day30');
+      const alreadySentIds = await this.getAlreadySentUserIds(
+        userIds,
+        'nps_day30',
+      );
       const optedOutIds = await this.getMarketingOptOutIds(userIds);
 
       let sent = 0;
@@ -384,7 +408,11 @@ export class DripService {
       let failed = 0;
 
       for (const user of eligibleUsers) {
-        if (!user.email || alreadySentIds.has(user.id) || optedOutIds.has(user.id)) {
+        if (
+          !user.email ||
+          alreadySentIds.has(user.id) ||
+          optedOutIds.has(user.id)
+        ) {
           skipped++;
           continue;
         }
