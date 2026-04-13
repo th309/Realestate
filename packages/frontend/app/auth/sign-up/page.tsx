@@ -112,14 +112,25 @@ function SignUpContent() {
     }
 
     // With autoconfirm enabled, signup returns a session immediately.
-    // Record ToS acceptance and redirect to dashboard.
+    // Upsert profile row (trigger creates it, but belt-and-suspenders)
+    // and send welcome email since the Supabase email hook is skipped.
     if (session) {
       trackEvent("conversion.signup_complete", { method: "email" });
       const supabase = createSupabaseBrowserClient();
-      await supabase
-        .from("user_profiles")
-        .update({ tos_accepted_at: new Date().toISOString() })
-        .eq("id", session.user.id);
+      await supabase.from("user_profiles").upsert(
+        {
+          id: session.user.id,
+          email: session.user.email,
+          full_name:
+            (session.user.user_metadata?.full_name as string) ||
+            email.split("@")[0],
+          tos_accepted_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
+      );
+
+      // Fire-and-forget welcome email
+      fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
 
       router.push(redirectTo);
       return;
