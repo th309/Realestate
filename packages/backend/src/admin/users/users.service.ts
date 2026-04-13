@@ -768,6 +768,24 @@ export class UsersService {
       { table: 'analytics_saved_queries', column: 'user_id' },
       { table: 'analytics_watchlist', column: 'user_id' },
       { table: 'analytics_alerts', column: 'user_id' },
+      { table: 'email_log', column: 'user_id' },
+      { table: 'email_triggers', column: 'user_id' },
+      { table: 'user_sessions', column: 'user_id' },
+      { table: 'user_events', column: 'user_id' },
+      { table: 'analytics_events', column: 'user_id' },
+      { table: 'visitor_identities', column: 'user_id' },
+    ];
+
+    // Tables where we nullify the reference instead of deleting the row
+    // (shared resources like audit logs, configs, org assets)
+    const nullifyTables = [
+      { table: 'trial_config', column: 'updated_by' },
+      { table: 'organization_audit_log', column: 'actor_id' },
+      { table: 'organization_api_keys', column: 'created_by' },
+      { table: 'organization_embed_tokens', column: 'created_by' },
+      { table: 'organization_invites', column: 'invited_by' },
+      { table: 'funnel_definitions', column: 'created_by' },
+      { table: 'analytics_annotations', column: 'created_by' },
     ];
 
     for (const { table, column } of dependentTables) {
@@ -777,6 +795,18 @@ export class UsersService {
           `Failed to clean ${table} for user ${userId}: ${error.message}`,
         );
         // Continue — table may not exist or have no rows for this user
+      }
+    }
+
+    for (const { table, column } of nullifyTables) {
+      const { error } = await client
+        .from(table)
+        .update({ [column]: null })
+        .eq(column, userId);
+      if (error) {
+        this.logger.warn(
+          `Failed to nullify ${table}.${column} for user ${userId}: ${error.message}`,
+        );
       }
     }
 
