@@ -129,8 +129,8 @@ function CallbackHandler() {
       bridgePkceVerifier();
 
       // Create a localStorage-based client with PKCE. On construction,
-      // it auto-detects ?code= in the URL and exchanges it using the
-      // bridged verifier — no manual exchangeCodeForSession needed.
+      // it auto-detects ?code= in the URL and exchanges the auth code
+      // asynchronously using the bridged verifier.
       setStatus("Verifying your account...");
       const exchangeClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -138,15 +138,28 @@ function CallbackHandler() {
         { auth: { flowType: "pkce" } },
       );
 
-      // Wait for the auto-exchange to complete
-      const {
-        data: { session },
-      } = await exchangeClient.auth.getSession();
+      // Wait for the async auto-exchange to produce a session.
+      // getSession() returns before the exchange finishes, so we
+      // listen for the SIGNED_IN auth state change instead.
+      const session = await new Promise<
+        Awaited<
+          ReturnType<typeof exchangeClient.auth.getSession>
+        >["data"]["session"]
+      >((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 10000);
+        const {
+          data: { subscription },
+        } = exchangeClient.auth.onAuthStateChange((event, sess) => {
+          if (event === "SIGNED_IN" && sess) {
+            clearTimeout(timeout);
+            subscription.unsubscribe();
+            resolve(sess);
+          }
+        });
+      });
 
       if (!session) {
-        debugLog("3_no_session", {
-          msg: "Auto-exchange did not produce a session",
-        });
+        debugLog("3_no_session", { msg: "Auth exchange timed out" });
         setStatus("Verification failed. Please sign in with your password.");
         setTimeout(() => router.replace("/auth/sign-in"), 2000);
         return;
