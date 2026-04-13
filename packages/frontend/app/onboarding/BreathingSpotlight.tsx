@@ -133,8 +133,14 @@ export function BreathingSpotlight({
         }}
       />
 
-      {/* Click handler overlay (everything except spotlight area) */}
-      <div className="fixed inset-0 z-[9998]" onClick={onClick} />
+      {/* Click handler overlay — pointer-events only when there's a dismiss handler.
+          For action-gated steps (onClick is undefined), clicks must pass through
+          to the spotlighted element so the action listener can fire. */}
+      <div
+        className="fixed inset-0 z-[9998]"
+        onClick={onClick}
+        style={{ pointerEvents: onClick ? "auto" : "none" }}
+      />
 
       <style>{`
         @keyframes breathe {
