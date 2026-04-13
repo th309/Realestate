@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useTourState } from "./useTourState";
 import { ONBOARDING_STEPS } from "./onboarding-steps";
@@ -17,6 +18,7 @@ import { BreathingSpotlight } from "./BreathingSpotlight";
 import { ConnectedTooltip } from "./ConnectedTooltip";
 import { OnboardingProgressBar } from "./OnboardingProgressBar";
 import { triggerConfetti } from "./celebrations";
+import { updateChecklistTask, incrementUsageStat } from "@/lib/data";
 
 type TourPhase = "idle" | "guided";
 
@@ -37,6 +39,7 @@ export const useTour = () => useContext(TourContext);
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { onboardingState, markComplete, resetTour } = useTourState();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,8 +81,22 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       if (!el) return;
 
       const handler = () => {
-        if (step.id === "generate-report") {
+        // Mark checklist + usage for the completed step
+        if (step.id === "view-score") {
+          Promise.allSettled([
+            updateChecklistTask("view_score"),
+            incrementUsageStat("scores_checked"),
+          ]).then(() =>
+            queryClient.invalidateQueries({ queryKey: ["onboarding-state"] }),
+          );
+        } else if (step.id === "generate-report") {
           triggerConfetti();
+          Promise.allSettled([
+            updateChecklistTask("generate_report"),
+            incrementUsageStat("reports_generated"),
+          ]).then(() =>
+            queryClient.invalidateQueries({ queryKey: ["onboarding-state"] }),
+          );
         }
 
         if (stepIndex < ONBOARDING_STEPS.length - 1) {

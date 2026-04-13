@@ -269,6 +269,9 @@ export {
   saveOnboardingPreferences,
   startOnboardingTrial,
   saveOnboardingMarketSelection,
+  updateChecklistTask,
+  incrementUsageStat,
+  dismissBeaconTask,
   type OnboardingState,
 
   // Insights

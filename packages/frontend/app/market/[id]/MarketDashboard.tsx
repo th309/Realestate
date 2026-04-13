@@ -1,10 +1,17 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   useMarketSnapshot,
   type GeoLevel,
   isMetricSupportedForGeo,
+  incrementUsageStat,
 } from "@/lib/data";
 import { getMetricCategories } from "@/app/map/config/metric-categories";
 import { useEntitlements } from "@/lib/entitlements";
@@ -45,6 +52,14 @@ export function MarketDashboard({
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  // Track market view for onboarding (once per geography)
+  const trackedGeoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (trackedGeoRef.current === geographyId) return;
+    trackedGeoRef.current = geographyId;
+    incrementUsageStat("markets_viewed").catch(console.error);
+  }, [geographyId]);
 
   // Check entitlements for geography level
   const { getAccess, canAccess } = useEntitlements();
