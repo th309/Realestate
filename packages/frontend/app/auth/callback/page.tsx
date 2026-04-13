@@ -122,54 +122,50 @@ function CallbackHandler() {
         return;
       }
 
-      // Bridge PKCE verifier from cookie → localStorage so createClient
-      // (which reads localStorage) can find it. createBrowserClient from
-      // @supabase/ssr uses its own cookie adapter that can't read the
-      // verifier it stored — a known mismatch.
-      const bridged = bridgePkceVerifier();
-      debugLog("2_pkce_bridge", { bridged });
+      // Bridge PKCE verifier from cookie → localStorage.
+      // createBrowserClient (@supabase/ssr) stores it in cookies but its
+      // own storage adapter can't read it back. We bridge to localStorage
+      // so createClient (@supabase/supabase-js) can find it.
+      bridgePkceVerifier();
 
-      // Use createClient (localStorage-based) for the PKCE exchange,
-      // then transfer the session to the cookie-based SSR client.
+      // Create a localStorage-based client with PKCE. On construction,
+      // it auto-detects ?code= in the URL and exchanges it using the
+      // bridged verifier — no manual exchangeCodeForSession needed.
+      setStatus("Verifying your account...");
       const exchangeClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         { auth: { flowType: "pkce" } },
       );
 
-      setStatus("Exchanging auth code...");
-      const { data, error: exchangeError } =
-        await exchangeClient.auth.exchangeCodeForSession(code);
+      // Wait for the auto-exchange to complete
+      const {
+        data: { session },
+      } = await exchangeClient.auth.getSession();
 
-      if (exchangeError || !data.user || !data.session) {
-        debugLog(
-          "3_exchange_FAILED",
-          {
-            msg: exchangeError?.message,
-            status: exchangeError?.status,
-          },
-          exchangeError?.message,
-        );
-
+      if (!session) {
+        debugLog("3_no_session", {
+          msg: "Auto-exchange did not produce a session",
+        });
         setStatus("Verification failed. Please sign in with your password.");
         setTimeout(() => router.replace("/auth/sign-in"), 2000);
         return;
       }
 
-      debugLog("3_exchange_OK", {
-        userId: data.user.id,
-        email: data.user.email,
+      debugLog("3_session_OK", {
+        userId: session.user.id,
+        email: session.user.email,
       });
 
       // Transfer session to the SSR cookie-based client so middleware
       // and server components can see the authenticated user.
       const supabase = createSupabaseBrowserClient();
       await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
       });
 
-      const user = data.user;
+      const user = session.user;
       setStatus("Setting up your account...");
 
       // Post-signup: check profile, record ToS, send welcome email
@@ -195,14 +191,14 @@ function CallbackHandler() {
         fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
 
         const refCode = getCookie("piq_ref");
-        if (refCode && data.session?.access_token) {
+        if (refCode && session.access_token) {
           fetch(
             `${process.env.NEXT_PUBLIC_API_URL || ""}/api/referrals/apply-code`,
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${data.session.access_token}`,
+                Authorization: `Bearer ${session.access_token}`,
               },
               body: JSON.stringify({ code: refCode }),
             },
