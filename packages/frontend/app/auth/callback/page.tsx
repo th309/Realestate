@@ -43,12 +43,14 @@ function bridgePkceVerifier(): boolean {
     const cookieValue = match.substring(match.indexOf("=") + 1);
     if (!cookieValue) return false;
 
-    // @supabase/ssr wraps values with base64- prefix; the auth library
-    // stores raw JSON in localStorage. Decode if prefixed, pass through otherwise.
+    // @supabase/ssr stores cookie values as base64-{btoa(JSON.stringify(val))}.
+    // @supabase/supabase-js reads localStorage values as raw strings (no JSON wrapper).
+    // We must: strip prefix → base64 decode → JSON.parse to get the raw verifier.
     let rawValue = cookieValue;
     if (cookieValue.startsWith("base64-")) {
       try {
-        rawValue = atob(cookieValue.slice(7));
+        const decoded = atob(cookieValue.slice(7)); // → JSON string e.g. '"abc123"'
+        rawValue = JSON.parse(decoded); // → raw string e.g. 'abc123'
       } catch {
         rawValue = cookieValue;
       }
@@ -132,7 +134,7 @@ function CallbackHandler() {
       const exchangeClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { auth: { flowType: "pkce", persistSession: false } },
+        { auth: { flowType: "pkce" } },
       );
 
       setStatus("Exchanging auth code...");
