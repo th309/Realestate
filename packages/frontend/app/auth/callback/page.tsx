@@ -3,64 +3,25 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const SUPABASE_REF = (process.env.NEXT_PUBLIC_SUPABASE_URL || "")
-  .replace("https://", "")
-  .split(".")[0];
+/**
+ * Auth callback page — handles session establishment after email
+ * verification, OAuth, and password recovery redirects.
+ *
+ * With implicit flow, Supabase redirects here with tokens in the URL
+ * hash (#access_token=...&refresh_token=...). The browser Supabase
+ * client auto-detects them via onAuthStateChange and establishes the
+ * session. No PKCE code exchange needed.
+ */
 
-const VERIFIER_COOKIE = `sb-${SUPABASE_REF}-auth-token-code-verifier`;
-
-function debugLog(step: string, data?: unknown, error?: unknown) {
-  console.log(`[auth/callback] ${step}`, data, error);
+function debugLog(step: string, data?: unknown) {
+  console.log(`[auth/callback] ${step}`, data);
   fetch("/api/auth/debug-log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      step,
-      data,
-      error: error ? String(error) : undefined,
-    }),
+    body: JSON.stringify({ step, data }),
   }).catch(() => {});
-}
-
-/**
- * Bridge the PKCE code verifier from cookies (set by @supabase/ssr) into
- * localStorage (where @supabase/supabase-js auth internals look for it).
- * Without this, exchangeCodeForSession fails with "PKCE code verifier
- * not found in storage" even though the cookie exists.
- */
-function bridgePkceVerifier(): boolean {
-  try {
-    const match = document.cookie
-      .split(";")
-      .map((c) => c.trim())
-      .find((c) => c.startsWith(VERIFIER_COOKIE + "="));
-
-    if (!match) return false;
-
-    const cookieValue = match.substring(match.indexOf("=") + 1);
-    if (!cookieValue) return false;
-
-    // @supabase/ssr stores cookie values as base64-{btoa(JSON.stringify(val))}.
-    // @supabase/supabase-js reads localStorage values as raw strings (no JSON wrapper).
-    // We must: strip prefix → base64 decode → JSON.parse to get the raw verifier.
-    let rawValue = cookieValue;
-    if (cookieValue.startsWith("base64-")) {
-      try {
-        const decoded = atob(cookieValue.slice(7)); // → JSON string e.g. '"abc123"'
-        rawValue = JSON.parse(decoded); // → raw string e.g. 'abc123'
-      } catch {
-        rawValue = cookieValue;
-      }
-    }
-
-    localStorage.setItem(VERIFIER_COOKIE, rawValue);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export default function AuthCallbackPage() {
@@ -85,152 +46,97 @@ function CallbackSpinner() {
 function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState("Processing...");
+  const [status, setStatus] = useState("Completing sign-in...");
   const ran = useRef(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    handleCallback();
 
-    async function handleCallback() {
-      const code = searchParams.get("code");
-      const errorParam = searchParams.get("error");
-      const errorDesc = searchParams.get("error_description");
-      const type = searchParams.get("type");
-      const next = searchParams.get("next") ?? "/map";
-      const tosFromParam = searchParams.get("tos") === "1";
+    const type = searchParams.get("type");
+    const next = searchParams.get("next") ?? "/map";
+    const tosFromParam = searchParams.get("tos") === "1";
+    const errorParam = searchParams.get("error");
+    const errorDesc = searchParams.get("error_description");
 
-      debugLog("1_params", { hasCode: !!code, errorParam, errorDesc, type });
+    debugLog("1_params", {
+      type,
+      next,
+      hasHash: window.location.hash.length > 1,
+      errorParam,
+    });
 
-      // Supabase returned an error instead of a code (e.g. otp_expired)
-      if (errorParam && !code) {
-        debugLog("1_supabase_error", { errorParam, errorDesc });
-        if (errorParam === "access_denied" && errorDesc?.includes("expired")) {
-          setStatus("Verification link expired. Please sign up again.");
-        } else {
-          setStatus(errorDesc || "Authentication failed");
-        }
-        setTimeout(() => {
-          router.replace("/auth/sign-in?error=auth_callback_failed");
-        }, 3000);
-        return;
-      }
-
-      if (!code) {
-        router.replace("/auth/sign-in?error=auth_callback_failed");
-        return;
-      }
-
-      // Bridge PKCE verifier from cookie → localStorage.
-      // createBrowserClient (@supabase/ssr) stores it in cookies but its
-      // own storage adapter can't read it back. We bridge to localStorage
-      // so createClient (@supabase/supabase-js) can find it.
-      bridgePkceVerifier();
-
-      // Create a localStorage-based client with PKCE. On construction,
-      // it auto-detects ?code= in the URL and exchanges the auth code
-      // asynchronously using the bridged verifier.
-      setStatus("Verifying your account...");
-      const exchangeClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { auth: { flowType: "pkce" } },
-      );
-
-      // Wait for the async auto-exchange to produce a session.
-      // getSession() returns before the exchange finishes, so we
-      // listen for the SIGNED_IN auth state change instead.
-      const session = await new Promise<
-        Awaited<
-          ReturnType<typeof exchangeClient.auth.getSession>
-        >["data"]["session"]
-      >((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 10000);
-        const {
-          data: { subscription },
-        } = exchangeClient.auth.onAuthStateChange((event, sess) => {
-          if (event === "SIGNED_IN" && sess) {
-            clearTimeout(timeout);
-            subscription.unsubscribe();
-            resolve(sess);
-          }
-        });
-      });
-
-      if (!session) {
-        debugLog("3_no_session", { msg: "Auth exchange timed out" });
-        setStatus("Verification failed. Please sign in with your password.");
-        setTimeout(() => router.replace("/auth/sign-in"), 2000);
-        return;
-      }
-
-      debugLog("3_session_OK", {
-        userId: session.user.id,
-        email: session.user.email,
-      });
-
-      // Transfer session to the SSR cookie-based client so middleware
-      // and server components can see the authenticated user.
-      const supabase = createSupabaseBrowserClient();
-      await supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      });
-
-      const user = session.user;
-      setStatus("Setting up your account...");
-
-      // Post-signup: check profile, record ToS, send welcome email
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("id, tos_accepted_at")
-        .eq("id", user.id)
-        .single();
-
-      const isNewSignup = profile && !profile.tos_accepted_at;
-
-      const tosAccepted = tosFromParam || !!user.user_metadata?.tos_accepted_at;
-      if (tosAccepted) {
-        await supabase
-          .from("user_profiles")
-          .upsert(
-            { id: user.id, tos_accepted_at: new Date().toISOString() },
-            { onConflict: "id" },
-          );
-      }
-
-      if (isNewSignup) {
-        fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
-
-        const refCode = getCookie("piq_ref");
-        if (refCode && session.access_token) {
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || ""}/api/referrals/apply-code`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ code: refCode }),
-            },
-          ).catch(() => {});
-          document.cookie =
-            "piq_ref=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        }
-      }
-
-      if (type === "recovery") {
-        router.replace("/account?reset=true");
-        return;
-      }
-
-      // New signups → onboarding; returning users → requested page
-      const destination = isNewSignup ? "/get-started" : next;
-      debugLog("9_redirect", { to: destination, isNewSignup });
-      router.replace(destination);
+    // Supabase error (e.g. otp_expired)
+    if (errorParam) {
+      const msg = errorDesc?.includes("expired")
+        ? "Verification link expired. Please sign up again."
+        : errorDesc || "Authentication failed";
+      setStatus(msg);
+      setTimeout(() => router.replace("/auth/sign-in"), 3000);
+      return;
     }
+
+    const supabase = createSupabaseBrowserClient();
+
+    // Listen for the session to be established.
+    // With implicit flow, tokens arrive in the URL hash and the
+    // Supabase client processes them automatically.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (
+        event: string,
+        session: {
+          user: {
+            id: string;
+            email?: string;
+            user_metadata?: Record<string, unknown>;
+          };
+          access_token: string;
+        } | null,
+      ) => {
+        if (event === "SIGNED_IN" && session) {
+          subscription.unsubscribe();
+          debugLog("2_signed_in", {
+            userId: session.user.id,
+            email: session.user.email,
+          });
+
+          setStatus("Setting up your account...");
+          await handlePostSignup(supabase, session, tosFromParam);
+
+          if (type === "recovery") {
+            router.replace("/account?reset=true");
+            return;
+          }
+
+          // New signups → onboarding; returning users → requested page
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("tos_accepted_at")
+            .eq("id", session.user.id)
+            .single();
+
+          const isNewSignup = profile && !profile.tos_accepted_at;
+          const destination = isNewSignup ? "/get-started" : next;
+          debugLog("3_redirect", { to: destination, isNewSignup });
+          router.replace(destination);
+        }
+      },
+    );
+
+    // Timeout fallback
+    const timeout = setTimeout(() => {
+      subscription.unsubscribe();
+      debugLog("timeout", { msg: "No session after 10s" });
+      setStatus("Could not verify. Please sign in.");
+      setTimeout(() => router.replace("/auth/sign-in"), 2000);
+    }, 10000);
+
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [searchParams, router]);
 
   return (
@@ -241,6 +147,45 @@ function CallbackHandler() {
       </div>
     </div>
   );
+}
+
+async function handlePostSignup(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  session: {
+    user: { id: string; user_metadata?: Record<string, unknown> };
+    access_token: string;
+  },
+  tosFromParam: boolean,
+) {
+  const user = session.user;
+
+  // Record ToS acceptance
+  const tosAccepted = tosFromParam || !!user.user_metadata?.tos_accepted_at;
+  if (tosAccepted) {
+    await supabase
+      .from("user_profiles")
+      .upsert(
+        { id: user.id, tos_accepted_at: new Date().toISOString() },
+        { onConflict: "id" },
+      );
+  }
+
+  // Welcome email (fire-and-forget)
+  fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
+
+  // Referral attribution
+  const refCode = getCookie("piq_ref");
+  if (refCode) {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/referrals/apply-code`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ code: refCode }),
+    }).catch(() => {});
+    document.cookie = "piq_ref=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
 }
 
 function getCookie(name: string): string | null {

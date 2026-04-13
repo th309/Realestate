@@ -18,7 +18,7 @@ export function createSupabaseBrowserClient() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          flowType: "pkce",
+          flowType: "implicit",
           // Prevent "Lock broken by another request with the 'steal' option"
           // AbortError in Next.js 16. The default uses navigator.locks with
           // steal mode which races when multiple components call getSession()
