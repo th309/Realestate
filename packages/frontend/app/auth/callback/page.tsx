@@ -96,9 +96,26 @@ function CallbackHandler() {
           email: session.user.email,
         });
 
+        // Ensure the session is persisted in the cookie-based client
+        // so RLS-authenticated queries work
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+
         try {
           setStatus("Setting up your account...");
-          await handlePostSignup(supabase, session, tosFromParam);
+
+          // Use Promise.race with timeout to prevent hanging queries
+          const withTimeout = <T,>(p: Promise<T>, ms = 5000): Promise<T> =>
+            Promise.race([
+              p,
+              new Promise<never>((_, rej) =>
+                setTimeout(() => rej(new Error("timeout")), ms),
+              ),
+            ]);
+
+          await withTimeout(handlePostSignup(supabase, session, tosFromParam));
 
           if (type === "recovery") {
             router.replace("/account?reset=true");
@@ -106,11 +123,15 @@ function CallbackHandler() {
           }
 
           // New signups → onboarding; returning users → requested page
-          const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("tos_accepted_at")
-            .eq("id", session.user.id)
-            .single();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const profileResult: any = await withTimeout(
+            supabase
+              .from("user_profiles")
+              .select("tos_accepted_at")
+              .eq("id", session.user.id)
+              .single(),
+          );
+          const profile = profileResult?.data;
 
           const isNewSignup = profile && !profile.tos_accepted_at;
           const destination = isNewSignup ? "/get-started" : next;
