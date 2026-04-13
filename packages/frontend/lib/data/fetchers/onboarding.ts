@@ -128,3 +128,44 @@ export async function saveOnboardingMarketSelection(market: {
     body: JSON.stringify(market),
   });
 }
+
+export async function updateChecklistTask(taskId: string): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await fetch(`${API_URL}/api/onboarding/checklist/${taskId}`, {
+    method: "POST",
+    headers: { "x-user-id": user.id },
+  });
+}
+
+export async function incrementUsageStat(
+  stat: "markets_viewed" | "scores_checked" | "reports_generated",
+): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await fetch(`${API_URL}/api/onboarding/usage/${stat}`, {
+    method: "POST",
+    headers: { "x-user-id": user.id },
+  });
+}
+
+export async function dismissBeaconTask(beaconId: string): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await fetch(`${API_URL}/api/onboarding/beacon/${beaconId}/dismiss`, {
+    method: "POST",
+    headers: { "x-user-id": user.id },
+  });
+}

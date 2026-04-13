@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
-import { useAuth } from "@/lib/auth";
+import { dismissBeaconTask } from "@/lib/data";
 import { Beacon } from "./Beacon";
 
 interface BeaconDef {
@@ -62,23 +62,14 @@ export function BeaconProvider({
   completedTasks,
   dismissedBeacons,
 }: BeaconProviderProps) {
-  const { user } = useAuth();
   const [localDismissed, setLocalDismissed] = useState<Set<string>>(
     new Set(dismissedBeacons),
   );
 
-  const dismissBeacon = useCallback(
-    async (id: string) => {
-      setLocalDismissed((prev) => new Set([...prev, id]));
-      if (user?.id) {
-        fetch(`/api/onboarding/beacon/${id}/dismiss`, {
-          method: "POST",
-          headers: { "x-user-id": user.id },
-        });
-      }
-    },
-    [user],
-  );
+  const dismissBeacon = useCallback(async (id: string) => {
+    setLocalDismissed((prev) => new Set([...prev, id]));
+    dismissBeaconTask(id).catch(console.error);
+  }, []);
 
   const completedSet = new Set(completedTasks);
   const allComplete = [

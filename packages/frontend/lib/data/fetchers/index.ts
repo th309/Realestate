@@ -188,6 +188,9 @@ export {
   saveOnboardingPreferences,
   startOnboardingTrial,
   saveOnboardingMarketSelection,
+  updateChecklistTask,
+  incrementUsageStat,
+  dismissBeaconTask,
 } from "./onboarding";
 export type { OnboardingState } from "./onboarding";
 

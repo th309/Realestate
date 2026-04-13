@@ -135,6 +135,13 @@ export class OnboardingService {
       .update({ usage_stats: current })
       .eq('id', userId);
     if (error) throw new Error(`Failed to update usage stat: ${error.message}`);
+
+    // Auto-mark "compare_markets" checklist when user views 2+ markets
+    if (stat === 'markets_viewed' && current.markets_viewed >= 2) {
+      await this.updateChecklist(userId, 'compare_markets').catch((e) =>
+        this.logger.warn(`Auto-mark compare_markets failed: ${e.message}`),
+      );
+    }
   }
 
   async dismissBeacon(userId: string, beaconId: string) {

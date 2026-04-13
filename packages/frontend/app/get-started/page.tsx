@@ -8,6 +8,8 @@ import {
   saveOnboardingPreferences,
   saveOnboardingMarketSelection,
   startOnboardingTrial,
+  updateChecklistTask,
+  incrementUsageStat,
 } from "@/lib/data";
 import type { SearchResult } from "@/app/map/types";
 
@@ -35,10 +37,12 @@ export default function GetStartedPage() {
       name: result.name,
     };
 
-    // Run both in parallel — neither is blocking for navigation
+    // Run all in parallel — none are blocking for navigation
     await Promise.allSettled([
       saveOnboardingMarketSelection(market),
       startOnboardingTrial(),
+      updateChecklistTask("search_market"),
+      incrementUsageStat("markets_viewed"),
     ]);
 
     router.push(`/market/${result.id}?type=${result.type}&onboarding=true`);
