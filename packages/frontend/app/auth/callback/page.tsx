@@ -77,31 +77,26 @@ function CallbackHandler() {
     }
 
     const supabase = createSupabaseBrowserClient();
+    let timeoutId: ReturnType<typeof setTimeout>;
 
-    // Listen for the session to be established.
-    // With implicit flow, tokens arrive in the URL hash and the
-    // Supabase client processes them automatically.
+    // Listen for session establishment. Works for both implicit flow
+    // (tokens in hash) and PKCE (code auto-exchanged by the client).
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      async (
-        event: string,
-        session: {
-          user: {
-            id: string;
-            email?: string;
-            user_metadata?: Record<string, unknown>;
-          };
-          access_token: string;
-        } | null,
-      ) => {
-        if (event === "SIGNED_IN" && session) {
-          subscription.unsubscribe();
-          debugLog("2_signed_in", {
-            userId: session.user.id,
-            email: session.user.email,
-          });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (event: string, session: any) => {
+        if (event !== "SIGNED_IN" || !session) return;
 
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+
+        debugLog("2_signed_in", {
+          userId: session.user.id,
+          email: session.user.email,
+        });
+
+        try {
           setStatus("Setting up your account...");
           await handlePostSignup(supabase, session, tosFromParam);
 
@@ -121,20 +116,23 @@ function CallbackHandler() {
           const destination = isNewSignup ? "/get-started" : next;
           debugLog("3_redirect", { to: destination, isNewSignup });
           router.replace(destination);
+        } catch (err) {
+          debugLog("post_signup_error", { error: String(err) });
+          // Auth succeeded even if post-signup tasks failed — redirect
+          router.replace(next);
         }
       },
     );
 
-    // Timeout fallback
-    const timeout = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       subscription.unsubscribe();
-      debugLog("timeout", { msg: "No session after 10s" });
+      debugLog("timeout", { msg: "No session after 15s" });
       setStatus("Could not verify. Please sign in.");
       setTimeout(() => router.replace("/auth/sign-in"), 2000);
-    }, 10000);
+    }, 15000);
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, [searchParams, router]);
