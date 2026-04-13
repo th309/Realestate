@@ -1,5 +1,7 @@
-export * from './types';
-export * from './api';
-export { EntitlementsProvider, useEntitlements } from './EntitlementsContext';
-export { usePaywallPageTracking } from './usePaywallPageTracking';
-export { PaywallProvider } from './PaywallProvider';
+export * from "./types";
+export * from "./api";
+export { EntitlementsProvider, useEntitlements } from "./EntitlementsContext";
+export { usePaywallPageTracking } from "./usePaywallPageTracking";
+export { PaywallProvider } from "./PaywallProvider";
+export { usePostTrialState } from "./usePostTrialState";
+export type { PostTrialState } from "./usePostTrialState";

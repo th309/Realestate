@@ -267,6 +267,8 @@ export {
   completeOnboarding,
   resetOnboarding,
   saveOnboardingPreferences,
+  startOnboardingTrial,
+  saveOnboardingMarketSelection,
   type OnboardingState,
 
   // Insights
@@ -420,6 +422,12 @@ export {
   type CreateMarketShareData,
   type MarketShareResult,
 } from "./fetchers";
+
+// Social proof (engagement stats for geography)
+export {
+  fetchSocialProof,
+  type SocialProofStats,
+} from "./fetchers/social-proof";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";

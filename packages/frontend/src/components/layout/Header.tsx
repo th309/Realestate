@@ -21,6 +21,7 @@ import {
 import { NAV, isDropdown } from "./header-nav-data";
 import { NavDropdownMenu } from "./NavDropdownMenu";
 import { MobileMenu } from "./MobileMenu";
+import { TrialBadge } from "./TrialBadge";
 
 /* ─── Profile dropdown item ─── */
 
@@ -147,78 +148,83 @@ export function Header() {
           {/* Right Side Actions */}
           <div className="hidden md:flex items-center gap-4">
             {loading ? null : !!user ? (
-              <div className="relative">
-                <button
-                  data-testid="user-menu"
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  onBlur={() => setTimeout(() => setIsProfileOpen(false), 200)}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
-                >
-                  <PersonIcon className="w-5 h-5" />
-                </button>
+              <>
+                <TrialBadge />
+                <div className="relative">
+                  <button
+                    data-testid="user-menu"
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    onBlur={() =>
+                      setTimeout(() => setIsProfileOpen(false), 200)
+                    }
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
+                  >
+                    <PersonIcon className="w-5 h-5" />
+                  </button>
 
-                {/* Profile Dropdown */}
-                <div
-                  className={`absolute right-0 mt-2 w-64 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant transition-all duration-200 origin-top-right overflow-hidden ${
-                    isProfileOpen
-                      ? "transform opacity-100 scale-100 visible"
-                      : "transform opacity-0 scale-95 invisible"
-                  }`}
-                >
-                  <div className="p-4 border-b border-outline-variant bg-surface-container/50">
-                    <p className="text-sm font-semibold text-on-surface">
-                      {user?.user_metadata?.display_name || user?.email}
-                    </p>
-                    <p className="text-xs text-on-surface-variant truncate">
-                      {user?.email}
-                    </p>
-                  </div>
-                  <div className="p-2 space-y-0.5">
-                    <DropdownItem icon={HomeIcon} label="Home" href="/" />
-                    <DropdownItem
-                      icon={SettingsIcon}
-                      label="Settings"
-                      href="/account"
-                    />
-                    <DropdownItem
-                      icon={CreditCardIcon}
-                      label="Billing"
-                      href="/account"
-                    />
-                    <DropdownItem
-                      icon={BookIcon}
-                      label="Data Glossary"
-                      href="/data"
-                    />
-                    {tier === "enterprise" && org?.slug && (
-                      <DropdownItem
-                        icon={BuildingIcon}
-                        label="Organization"
-                        href={`/org/${org.slug}/admin`}
-                      />
-                    )}
-                    <DropdownItem icon={HelpIcon} label="Help" href="/help" />
-                    {tier === "admin" && (
+                  {/* Profile Dropdown */}
+                  <div
+                    className={`absolute right-0 mt-2 w-64 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant transition-all duration-200 origin-top-right overflow-hidden ${
+                      isProfileOpen
+                        ? "transform opacity-100 scale-100 visible"
+                        : "transform opacity-0 scale-95 invisible"
+                    }`}
+                  >
+                    <div className="p-4 border-b border-outline-variant bg-surface-container/50">
+                      <p className="text-sm font-semibold text-on-surface">
+                        {user?.user_metadata?.display_name || user?.email}
+                      </p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {user?.email}
+                      </p>
+                    </div>
+                    <div className="p-2 space-y-0.5">
+                      <DropdownItem icon={HomeIcon} label="Home" href="/" />
                       <DropdownItem
                         icon={SettingsIcon}
-                        label="Admin Dashboard"
-                        href="/admin"
+                        label="Settings"
+                        href="/account"
                       />
-                    )}
-                    <div className="my-1 h-px bg-outline-variant" />
-                    <button
-                      onClick={async () => {
-                        await signOut();
-                        router.push("/");
-                      }}
-                      className="w-full flex items-center px-3 py-2 text-sm font-medium text-error rounded-lg hover:bg-error-container/30 transition-colors"
-                    >
-                      <LogoutIcon className="w-4 h-4 mr-3" />
-                      Sign out
-                    </button>
+                      <DropdownItem
+                        icon={CreditCardIcon}
+                        label="Billing"
+                        href="/account"
+                      />
+                      <DropdownItem
+                        icon={BookIcon}
+                        label="Data Glossary"
+                        href="/data"
+                      />
+                      {tier === "enterprise" && org?.slug && (
+                        <DropdownItem
+                          icon={BuildingIcon}
+                          label="Organization"
+                          href={`/org/${org.slug}/admin`}
+                        />
+                      )}
+                      <DropdownItem icon={HelpIcon} label="Help" href="/help" />
+                      {tier === "admin" && (
+                        <DropdownItem
+                          icon={SettingsIcon}
+                          label="Admin Dashboard"
+                          href="/admin"
+                        />
+                      )}
+                      <div className="my-1 h-px bg-outline-variant" />
+                      <button
+                        onClick={async () => {
+                          await signOut();
+                          router.push("/");
+                        }}
+                        className="w-full flex items-center px-3 py-2 text-sm font-medium text-error rounded-lg hover:bg-error-container/30 transition-colors"
+                      >
+                        <LogoutIcon className="w-4 h-4 mr-3" />
+                        Sign out
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             ) : (
               <div className="flex items-center gap-3">
                 <button

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import { DashboardScoreBadge } from "./DashboardScoreBadge";
+import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 
 interface ScoreData {
   score: number;
@@ -12,13 +13,21 @@ interface ScoreColumnProps {
   activeView: "investor" | "homebuyer";
   primaryScore: ScoreData | null | undefined;
   marketHealthScore?: ScoreData | null | undefined;
+  geoLevel: string;
+  geoId: string;
 }
 
-export function ScoreColumn({ activeView, primaryScore }: ScoreColumnProps) {
+export function ScoreColumn({
+  activeView,
+  primaryScore,
+  geoLevel,
+  geoId,
+}: ScoreColumnProps) {
   return (
     <div className="lg:col-span-4 space-y-6">
       {/* Main Score Card */}
       <motion.div
+        data-tour="propertyiq-score"
         className="bg-surface-container rounded-3xl p-8 border border-outline-variant/30 text-center"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -55,6 +64,13 @@ export function ScoreColumn({ activeView, primaryScore }: ScoreColumnProps) {
         </motion.div>
 
         <p className="text-on-surface-variant">PropertyIQ Score</p>
+        <div className="mt-3">
+          <SocialProofBadge
+            geoLevel={geoLevel}
+            geoId={geoId}
+            variant="score_checks"
+          />
+        </div>
       </motion.div>
     </div>
   );

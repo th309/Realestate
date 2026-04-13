@@ -6,22 +6,23 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTourState } from "./useTourState";
-import { TOUR_STEPS, DEFAULT_DEMO_MARKET } from "./tour-steps";
-import type { TourStep } from "./tour-steps";
-import { TourOverlay } from "./TourOverlay";
-import { TourTooltip } from "./TourTooltip";
-import { WelcomeWizard } from "./WelcomeWizard";
-import type { WizardPreferences } from "./WelcomeWizard";
+import { ONBOARDING_STEPS } from "./onboarding-steps";
+import type { OnboardingStep } from "./onboarding-steps";
+import { BreathingSpotlight } from "./BreathingSpotlight";
+import { ConnectedTooltip } from "./ConnectedTooltip";
+import { OnboardingProgressBar } from "./OnboardingProgressBar";
+import { triggerConfetti } from "./celebrations";
 
-type TourPhase = "idle" | "wizard" | "tour";
+type TourPhase = "idle" | "guided";
 
 interface TourContextValue {
   isActive: boolean;
-  currentStep: TourStep | null;
+  currentStep: OnboardingStep | null;
   restartTour: () => void;
 }
 
@@ -34,150 +35,148 @@ const TourContext = createContext<TourContextValue>({
 export const useTour = () => useContext(TourContext);
 
 export function TourProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
-  const {
-    shouldShowTour,
-    isLoading,
-    markComplete,
-    savePreferences,
-    resetTour,
-    onboardingState,
-  } = useTourState();
+  const { user } = useAuth();
+  const { onboardingState, markComplete, resetTour } = useTourState();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [phase, setPhase] = useState<TourPhase>("idle");
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /get-started
   const [navigating, setNavigating] = useState(false);
+  const actionListenerRef = useRef<(() => void) | null>(null);
 
-  // Auto-trigger tour for first-time users
+  // Detect ?onboarding=true (set by /get-started after market selection)
   useEffect(() => {
-    if (
-      !authLoading &&
-      !isLoading &&
-      user &&
-      shouldShowTour &&
-      phase === "idle"
-    ) {
-      setPhase("wizard");
+    if (searchParams?.get("onboarding") === "true" && phase === "idle") {
+      setPhase("guided");
+      setStepIndex(1); // Step 1: view-score
     }
-  }, [authLoading, isLoading, user, shouldShowTour, phase]);
+  }, [searchParams, phase]);
 
-  // Reset tour when user signs out
+  // Reset on signout
   useEffect(() => {
     if (!user && phase !== "idle") {
       setPhase("idle");
-      setStepIndex(0);
+      setStepIndex(1);
     }
   }, [user, phase]);
 
-  const resolveStepRoute = useCallback(
-    (step: TourStep): string | null => {
-      if (step.id === "ai-assessment") {
-        const preferredMarket = onboardingState?.preferred_markets?.[0];
-        if (preferredMarket) {
-          return `/market/${preferredMarket.geoId}`;
+  // Set up action listeners for action-gated steps
+  useEffect(() => {
+    if (actionListenerRef.current) {
+      actionListenerRef.current();
+      actionListenerRef.current = null;
+    }
+
+    if (phase !== "guided") return;
+    const step = ONBOARDING_STEPS[stepIndex];
+    if (!step?.actionSelector || !step.actionEvent) return;
+
+    const setupListener = () => {
+      const el = document.querySelector(step.actionSelector!);
+      if (!el) return;
+
+      const handler = () => {
+        if (step.id === "generate-report") {
+          triggerConfetti();
         }
-        return `/market/${DEFAULT_DEMO_MARKET.geoId}`;
+
+        if (stepIndex < ONBOARDING_STEPS.length - 1) {
+          const nextStep = ONBOARDING_STEPS[stepIndex + 1];
+          if (nextStep.route && pathname !== nextStep.route) {
+            setNavigating(true);
+            router.push(nextStep.route);
+            setTimeout(() => {
+              setNavigating(false);
+              setStepIndex(stepIndex + 1);
+            }, 1000);
+          } else {
+            setStepIndex(stepIndex + 1);
+          }
+        } else {
+          markComplete();
+          setPhase("idle");
+        }
+      };
+
+      el.addEventListener(step.actionEvent!, handler, { once: true });
+      actionListenerRef.current = () => {
+        el.removeEventListener(step.actionEvent!, handler);
+      };
+    };
+
+    let attempts = 0;
+    const pollId = setInterval(() => {
+      attempts++;
+      const el = document.querySelector(step.actionSelector!);
+      if (el) {
+        setupListener();
+        clearInterval(pollId);
       }
-      return step.route;
-    },
-    [onboardingState],
-  );
+      if (attempts > 30) clearInterval(pollId);
+    }, 200);
 
-  const navigateToStep = useCallback(
-    async (index: number) => {
-      const step = TOUR_STEPS[index];
-      const route = resolveStepRoute(step);
-
-      if (route && pathname !== route) {
-        setNavigating(true);
-        router.push(route);
-        // Wait for navigation to complete and DOM to settle
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setNavigating(false);
+    return () => {
+      clearInterval(pollId);
+      if (actionListenerRef.current) {
+        actionListenerRef.current();
+        actionListenerRef.current = null;
       }
+    };
+  }, [phase, stepIndex, pathname, router, markComplete]);
 
-      setStepIndex(index);
-    },
-    [pathname, router, resolveStepRoute],
-  );
-
-  const handleWizardComplete = useCallback(
-    (preferences: WizardPreferences) => {
-      savePreferences(preferences);
-      markComplete();
-      setPhase("tour");
-      setStepIndex(0);
-      navigateToStep(0);
-    },
-    [savePreferences, markComplete, navigateToStep],
-  );
-
-  const handleWizardSkip = useCallback(() => {
+  const handleDismiss = useCallback(() => {
     markComplete();
     setPhase("idle");
   }, [markComplete]);
 
-  const handleNext = useCallback(() => {
-    if (stepIndex < TOUR_STEPS.length - 1) {
-      navigateToStep(stepIndex + 1);
-    } else {
-      setPhase("idle");
-    }
-  }, [stepIndex, navigateToStep]);
-
-  const handleBack = useCallback(() => {
-    if (stepIndex > 0) {
-      navigateToStep(stepIndex - 1);
-    }
-  }, [stepIndex, navigateToStep]);
-
-  const handleSkip = useCallback(() => {
-    setPhase("idle");
-  }, []);
-
   const restartTourHandler = useCallback(() => {
     resetTour();
     setStepIndex(0);
-    setPhase("wizard");
-  }, [resetTour]);
+    router.push("/get-started");
+  }, [resetTour, router]);
 
-  const currentStep = phase === "tour" ? TOUR_STEPS[stepIndex] : null;
+  const currentStep = phase === "guided" ? ONBOARDING_STEPS[stepIndex] : null;
+
+  // Resolve persona-specific body text
+  const resolvedStep = currentStep
+    ? {
+        ...currentStep,
+        body:
+          currentStep.personaBody?.[onboardingState?.user_type ?? ""] ??
+          currentStep.body,
+      }
+    : null;
 
   return (
     <TourContext.Provider
       value={{
         isActive: phase !== "idle",
-        currentStep,
+        currentStep: resolvedStep,
         restartTour: restartTourHandler,
       }}
     >
       {children}
 
-      {/* Welcome Wizard */}
-      {phase === "wizard" && (
-        <WelcomeWizard
-          onComplete={handleWizardComplete}
-          onSkip={handleWizardSkip}
-        />
-      )}
+      <OnboardingProgressBar
+        currentStep={stepIndex}
+        totalSteps={ONBOARDING_STEPS.length}
+        visible={phase === "guided"}
+      />
 
-      {/* Guided Tour */}
-      {phase === "tour" && currentStep && !navigating && (
+      {phase === "guided" && resolvedStep && !navigating && (
         <>
-          <TourOverlay
-            targetSelector={currentStep.targetSelector}
+          <BreathingSpotlight
+            targetSelector={resolvedStep.targetSelector}
             visible
-            onClick={handleSkip}
+            onClick={resolvedStep.actionSelector ? undefined : handleDismiss}
           />
-          <TourTooltip
-            step={currentStep}
+          <ConnectedTooltip
+            step={resolvedStep}
             currentIndex={stepIndex}
-            totalSteps={TOUR_STEPS.length}
-            onNext={handleNext}
-            onBack={handleBack}
-            onSkip={handleSkip}
+            totalSteps={ONBOARDING_STEPS.length}
+            onDismiss={handleDismiss}
           />
         </>
       )}

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { PostTrialGate } from "@/components/entitlements/PostTrialGate";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 import { useAuth } from "@/lib/auth";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
@@ -45,6 +46,7 @@ import {
   generateReport as generateReportAPI,
   fetchReportList,
 } from "@/lib/data";
+import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 
 // ============================================================================
 // TYPES
@@ -669,6 +671,15 @@ function ReportCreationPage() {
                 }
                 accentColor="primary"
               />
+              {markets[0] && (
+                <div className="mt-3">
+                  <SocialProofBadge
+                    geoLevel={markets[0].type || "metro"}
+                    geoId={markets[0].id || ""}
+                    variant="reports"
+                  />
+                </div>
+              )}
             </section>
 
             <section>
@@ -681,6 +692,7 @@ function ReportCreationPage() {
             </section>
 
             <motion.button
+              data-tour="reports-generate-btn"
               onClick={handleGenerate}
               disabled={!canGenerate || isGenerating}
               className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
@@ -1027,7 +1039,15 @@ export default function ReportsPage() {
       <EntitlementGate
         type="feature"
         id="reports"
-        fallback={<ReportsLanding />}
+        fallback={
+          <PostTrialGate
+            feature="reports"
+            featureName="Market Reports"
+            fallback={<ReportsLanding />}
+          >
+            <ReportsContent />
+          </PostTrialGate>
+        }
         loadingFallback={<LoadingFallback />}
       >
         <ReportsContent />

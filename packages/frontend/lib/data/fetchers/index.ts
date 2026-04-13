@@ -186,6 +186,8 @@ export {
   completeOnboarding,
   resetOnboarding,
   saveOnboardingPreferences,
+  startOnboardingTrial,
+  saveOnboardingMarketSelection,
 } from "./onboarding";
 export type { OnboardingState } from "./onboarding";
 
@@ -347,6 +349,9 @@ export {
   type CreateMarketShareData,
   type MarketShareResult,
 } from "./shares";
+
+// Social proof (engagement stats for geography)
+export { fetchSocialProof, type SocialProofStats } from "./social-proof";
 
 // Admin analytics
 export * from "./admin-analytics";

@@ -25,6 +25,7 @@ import {
   PREMIUM_GEO_LEVELS,
   ShareMarketModal,
 } from "./components";
+import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 
 interface MarketDashboardProps {
   geographyId: string;
@@ -155,12 +156,24 @@ export function MarketDashboard({
         onShare={() => setShareModalOpen(true)}
         onDownload={handleDownloadMarket}
       />
+      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-2">
+        <SocialProofBadge
+          geoLevel={geographyType}
+          geoId={geographyId}
+          variant="tracking"
+        />
+      </div>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
         <ViewToggle activeView={activeView} onViewChange={setActiveView} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <ScoreColumn activeView={activeView} primaryScore={primaryScore} />
+          <ScoreColumn
+            activeView={activeView}
+            primaryScore={primaryScore}
+            geoLevel={geographyType}
+            geoId={geographyId}
+          />
 
           {/* Right Column - Details */}
           <div className="lg:col-span-8 space-y-6">

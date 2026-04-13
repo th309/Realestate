@@ -12,12 +12,16 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { usePreferences } from "@/lib/data";
+import { useQuery } from "@tanstack/react-query";
+import { usePreferences, fetchOnboardingState } from "@/lib/data";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ProfileSummary } from "./components/ProfileSummary";
 import { TopMarketsList } from "./components/TopMarketsList";
 import { MarketsToWatch } from "./components/MarketsToWatch";
 import { WatchlistUpdates } from "./components/WatchlistUpdates";
+import { ProgressChecklist } from "./components/ProgressChecklist";
+import { SampleReportCard } from "./components/SampleReportCard";
+import { TrialExpirationBanner } from "./components/TrialExpirationBanner";
 
 // ---------------------------------------------------------------------------
 // Onboarding banner (shown when quiz not completed)
@@ -69,9 +73,15 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const { preferences, isLoading: prefsLoading } = usePreferences();
+  const { data: onboardingState } = useQuery({
+    queryKey: ["onboarding-state"],
+    queryFn: fetchOnboardingState,
+    staleTime: 1000 * 60 * 60 * 2, // 2 hours
+  });
 
   const isLoading = authLoading || prefsLoading;
   const quizCompleted = !!preferences?.quiz_completed_at;
+  const completedTasks = onboardingState?.onboarding_checklist ?? [];
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -85,6 +95,19 @@ export default function DashboardPage() {
           ? `Welcome back, ${user.user_metadata.display_name}`
           : "Your Dashboard"}
       </h1>
+
+      {/* Trial expiration banner (visible 4 days before trial ends) */}
+      <TrialExpirationBanner
+        usageStats={onboardingState?.usage_stats ?? null}
+      />
+
+      {/* Getting-started checklist (hides itself when all done or dismissed) */}
+      <ProgressChecklist completedTasks={completedTasks} />
+
+      {/* Sample report card for post-trial free users */}
+      <SampleReportCard
+        onboardingMarket={onboardingState?.onboarding_market ?? null}
+      />
 
       {/* Onboarding banner or profile summary */}
       {!quizCompleted ? (

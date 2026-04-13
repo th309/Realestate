@@ -8,6 +8,8 @@ import { DigestService } from './digest.service';
 import { DripService } from './drip.service';
 import { MonthlyDigestService } from './monthly-digest.service';
 import { MonthlyDigestDataService } from './monthly-digest-data.service';
+import { BehavioralTriggerService } from './behavioral-trigger.service';
+import { EngagementTriggerService } from './engagement-trigger.service';
 
 @Module({
   imports: [SupabaseModule, ConfigModule, PreferencesModule],
@@ -18,6 +20,8 @@ import { MonthlyDigestDataService } from './monthly-digest-data.service';
     DripService,
     MonthlyDigestService,
     MonthlyDigestDataService,
+    BehavioralTriggerService,
+    EngagementTriggerService,
   ],
   exports: [EmailService],
 })
