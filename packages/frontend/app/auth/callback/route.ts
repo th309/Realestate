@@ -24,6 +24,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    if (error) {
+      console.error(
+        `[auth/callback] Code exchange failed: ${error.message} (code prefix: ${code.slice(0, 8)}...)`,
+      );
+    }
+
     if (!error && data.user) {
       // Check if this is a first-time signup (no existing profile row)
       const { data: existingProfile } = await supabase
