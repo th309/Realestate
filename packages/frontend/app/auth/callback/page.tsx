@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const SUPABASE_REF = (process.env.NEXT_PUBLIC_SUPABASE_URL || "")
@@ -119,17 +120,26 @@ function CallbackHandler() {
         return;
       }
 
-      // Bridge PKCE verifier from cookie → localStorage before exchange
+      // Bridge PKCE verifier from cookie → localStorage so createClient
+      // (which reads localStorage) can find it. createBrowserClient from
+      // @supabase/ssr uses its own cookie adapter that can't read the
+      // verifier it stored — a known mismatch.
       const bridged = bridgePkceVerifier();
-      debugLog("2_pkce_bridge", { bridged, verifierCookie: VERIFIER_COOKIE });
+      debugLog("2_pkce_bridge", { bridged });
 
-      const supabase = createSupabaseBrowserClient();
+      // Use createClient (localStorage-based) for the PKCE exchange,
+      // then transfer the session to the cookie-based SSR client.
+      const exchangeClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { flowType: "pkce", persistSession: false } },
+      );
 
       setStatus("Exchanging auth code...");
       const { data, error: exchangeError } =
-        await supabase.auth.exchangeCodeForSession(code);
+        await exchangeClient.auth.exchangeCodeForSession(code);
 
-      if (exchangeError || !data.user) {
+      if (exchangeError || !data.user || !data.session) {
         debugLog(
           "3_exchange_FAILED",
           {
@@ -140,15 +150,21 @@ function CallbackHandler() {
         );
 
         setStatus("Verification failed. Please sign in with your password.");
-        setTimeout(() => {
-          router.replace("/auth/sign-in");
-        }, 2000);
+        setTimeout(() => router.replace("/auth/sign-in"), 2000);
         return;
       }
 
       debugLog("3_exchange_OK", {
         userId: data.user.id,
         email: data.user.email,
+      });
+
+      // Transfer session to the SSR cookie-based client so middleware
+      // and server components can see the authenticated user.
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
       });
 
       const user = data.user;
