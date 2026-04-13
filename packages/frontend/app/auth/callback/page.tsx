@@ -5,7 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-// Post to server so logs appear in Railway (client console.log is invisible)
+const SUPABASE_REF = (process.env.NEXT_PUBLIC_SUPABASE_URL || "")
+  .replace("https://", "")
+  .split(".")[0];
+
+const VERIFIER_COOKIE = `sb-${SUPABASE_REF}-auth-token-code-verifier`;
+
 function debugLog(step: string, data?: unknown, error?: unknown) {
   console.log(`[auth/callback] ${step}`, data, error);
   fetch("/api/auth/debug-log", {
@@ -17,6 +22,42 @@ function debugLog(step: string, data?: unknown, error?: unknown) {
       error: error ? String(error) : undefined,
     }),
   }).catch(() => {});
+}
+
+/**
+ * Bridge the PKCE code verifier from cookies (set by @supabase/ssr) into
+ * localStorage (where @supabase/supabase-js auth internals look for it).
+ * Without this, exchangeCodeForSession fails with "PKCE code verifier
+ * not found in storage" even though the cookie exists.
+ */
+function bridgePkceVerifier(): boolean {
+  try {
+    const match = document.cookie
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(VERIFIER_COOKIE + "="));
+
+    if (!match) return false;
+
+    const cookieValue = match.substring(match.indexOf("=") + 1);
+    if (!cookieValue) return false;
+
+    // @supabase/ssr wraps values with base64- prefix; the auth library
+    // stores raw JSON in localStorage. Decode if prefixed, pass through otherwise.
+    let rawValue = cookieValue;
+    if (cookieValue.startsWith("base64-")) {
+      try {
+        rawValue = atob(cookieValue.slice(7));
+      } catch {
+        rawValue = cookieValue;
+      }
+    }
+
+    localStorage.setItem(VERIFIER_COOKIE, rawValue);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export default function AuthCallbackPage() {
@@ -50,86 +91,70 @@ function CallbackHandler() {
     handleCallback();
 
     async function handleCallback() {
-      // Step 1: Read URL params
       const code = searchParams.get("code");
+      const errorParam = searchParams.get("error");
+      const errorDesc = searchParams.get("error_description");
       const type = searchParams.get("type");
       const next = searchParams.get("next") ?? "/map";
       const tosFromParam = searchParams.get("tos") === "1";
 
-      debugLog("1_params", {
-        hasCode: !!code,
-        codePrefix: code?.slice(0, 8),
-        type,
-        next,
-        tos: tosFromParam,
-        url: window.location.href,
-      });
+      debugLog("1_params", { hasCode: !!code, errorParam, errorDesc, type });
 
-      if (!code) {
-        debugLog("1_no_code", { search: window.location.search });
-        setStatus("No auth code found");
-        router.replace("/auth/sign-in?error=auth_callback_failed");
-        return;
-      }
-
-      // Step 2: Check cookies for PKCE verifier
-      const allCookies = document.cookie;
-      const codeVerifierCookie = allCookies
-        .split(";")
-        .map((c) => c.trim())
-        .find(
-          (c) => c.includes("code-verifier") || c.includes("code_verifier"),
-        );
-
-      debugLog("2_cookies", {
-        cookieCount: allCookies.split(";").length,
-        hasCodeVerifier: !!codeVerifierCookie,
-        codeVerifierPrefix: codeVerifierCookie?.slice(0, 60),
-        cookieNames: allCookies
-          .split(";")
-          .map((c) => c.trim().split("=")[0])
-          .filter(Boolean),
-      });
-
-      // Step 3: Create Supabase client
-      const supabase = createSupabaseBrowserClient();
-      debugLog("3_client_created");
-
-      // Step 4: Exchange code for session
-      setStatus("Exchanging auth code...");
-      const { data, error: exchangeError } =
-        await supabase.auth.exchangeCodeForSession(code);
-
-      if (exchangeError || !data.user) {
-        debugLog(
-          "4_exchange_FAILED",
-          {
-            errorMessage: exchangeError?.message,
-            errorStatus: exchangeError?.status,
-            hasData: !!data,
-            hasUser: !!data?.user,
-          },
-          exchangeError?.message,
-        );
-        setStatus(`Exchange failed: ${exchangeError?.message}`);
-        // Don't redirect immediately — leave the error visible for debugging
+      // Supabase returned an error instead of a code (e.g. otp_expired)
+      if (errorParam && !code) {
+        debugLog("1_supabase_error", { errorParam, errorDesc });
+        if (errorParam === "access_denied" && errorDesc?.includes("expired")) {
+          setStatus("Verification link expired. Please sign up again.");
+        } else {
+          setStatus(errorDesc || "Authentication failed");
+        }
         setTimeout(() => {
           router.replace("/auth/sign-in?error=auth_callback_failed");
         }, 3000);
         return;
       }
 
-      debugLog("4_exchange_OK", {
+      if (!code) {
+        router.replace("/auth/sign-in?error=auth_callback_failed");
+        return;
+      }
+
+      // Bridge PKCE verifier from cookie → localStorage before exchange
+      const bridged = bridgePkceVerifier();
+      debugLog("2_pkce_bridge", { bridged, verifierCookie: VERIFIER_COOKIE });
+
+      const supabase = createSupabaseBrowserClient();
+
+      setStatus("Exchanging auth code...");
+      const { data, error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code);
+
+      if (exchangeError || !data.user) {
+        debugLog(
+          "3_exchange_FAILED",
+          {
+            msg: exchangeError?.message,
+            status: exchangeError?.status,
+          },
+          exchangeError?.message,
+        );
+
+        setStatus("Verification failed. Please sign in with your password.");
+        setTimeout(() => {
+          router.replace("/auth/sign-in");
+        }, 2000);
+        return;
+      }
+
+      debugLog("3_exchange_OK", {
         userId: data.user.id,
         email: data.user.email,
-        hasSession: !!data.session,
       });
 
       const user = data.user;
-
-      // Step 5: Post-signup tasks
       setStatus("Setting up your account...");
 
+      // Post-signup: check profile, record ToS, send welcome email
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("id, tos_accepted_at")
@@ -138,36 +163,21 @@ function CallbackHandler() {
 
       const isNewSignup = profile && !profile.tos_accepted_at;
 
-      debugLog("5_profile", {
-        hasProfile: !!profile,
-        isNewSignup,
-        tosAccepted: !!profile?.tos_accepted_at,
-      });
-
-      // ToS recording
       const tosAccepted = tosFromParam || !!user.user_metadata?.tos_accepted_at;
       if (tosAccepted) {
-        const { error: tosErr } = await supabase
+        await supabase
           .from("user_profiles")
           .upsert(
             { id: user.id, tos_accepted_at: new Date().toISOString() },
             { onConflict: "id" },
           );
-        debugLog("6_tos", { recorded: !tosErr, error: tosErr?.message });
       }
 
-      // Welcome email
       if (isNewSignup) {
-        fetch("/api/auth/welcome", { method: "POST" })
-          .then(() => debugLog("7_welcome_email_sent"))
-          .catch((e) => debugLog("7_welcome_email_failed", null, e));
-      }
+        fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
 
-      // Referral
-      if (isNewSignup) {
         const refCode = getCookie("piq_ref");
         if (refCode && data.session?.access_token) {
-          debugLog("8_referral", { refCode });
           fetch(
             `${process.env.NEXT_PUBLIC_API_URL || ""}/api/referrals/apply-code`,
             {
@@ -184,15 +194,15 @@ function CallbackHandler() {
         }
       }
 
-      // Recovery flow
       if (type === "recovery") {
-        debugLog("9_redirect", { to: "/account?reset=true" });
         router.replace("/account?reset=true");
         return;
       }
 
-      debugLog("9_redirect", { to: next });
-      router.replace(next);
+      // New signups → onboarding; returning users → requested page
+      const destination = isNewSignup ? "/get-started" : next;
+      debugLog("9_redirect", { to: destination, isNewSignup });
+      router.replace(destination);
     }
   }, [searchParams, router]);
 
