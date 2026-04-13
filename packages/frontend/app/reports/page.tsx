@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { PostTrialGate } from "@/components/entitlements/PostTrialGate";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 import { useAuth } from "@/lib/auth";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
@@ -1038,7 +1039,15 @@ export default function ReportsPage() {
       <EntitlementGate
         type="feature"
         id="reports"
-        fallback={<ReportsLanding />}
+        fallback={
+          <PostTrialGate
+            feature="reports"
+            featureName="Market Reports"
+            fallback={<ReportsLanding />}
+          >
+            <ReportsContent />
+          </PostTrialGate>
+        }
         loadingFallback={<LoadingFallback />}
       >
         <ReportsContent />
