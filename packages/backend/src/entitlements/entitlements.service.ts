@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UserFeaturesService } from '../admin/features/user-features.service';
 import { RedisService } from '../redis/redis.service';
+import { TrialFeatureUsageEmitterService } from './trial-feature-usage-emitter.service';
 
 export interface AccessCheck {
   level: 'full' | 'preview' | 'none';
@@ -27,6 +28,7 @@ export class EntitlementsService {
     private readonly supabase: SupabaseService,
     private readonly userFeatures: UserFeaturesService,
     private readonly redis: RedisService,
+    private readonly trialUsageEmitter: TrialFeatureUsageEmitterService,
   ) {}
 
   async checkAccess(
@@ -38,6 +40,10 @@ export class EntitlementsService {
     let tier = tierOverride || 'free';
     let trial: EntitlementsResponse['trial'] = null;
     let needsPerUserQuery = false;
+    // Baseline tier = what tier the user would be on WITHOUT their active trial.
+    // Used to decide whether to emit trial.pro_feature_used (we only emit when
+    // the trial genuinely granted access the user wouldn't otherwise have).
+    let baselineTierWithoutTrial: string | null = null;
 
     if (userId && !tierOverride) {
       // Check for active trial (per-user, cannot be cached by tier)
@@ -50,6 +56,25 @@ export class EntitlementsService {
           tier: trialInfo.tier,
         };
         needsPerUserQuery = true;
+
+        // Check subscription tier to determine if trial is actually granting
+        // access. If user is already Pro/Enterprise, the trial is redundant.
+        const { data: profile } = await this.supabase
+          .getClient()
+          .from('user_profiles')
+          .select('subscription_tier, subscription_status')
+          .eq('id', userId)
+          .single();
+
+        const paidTier =
+          profile?.subscription_tier &&
+          profile.subscription_tier !== 'free' &&
+          (profile.subscription_tier === 'admin' ||
+            profile.subscription_status === 'active' ||
+            !profile.subscription_status)
+            ? profile.subscription_tier
+            : 'free';
+        baselineTierWithoutTrial = paidTier;
       } else {
         // Check subscription tier from Stripe sync
         const { data: profile } = await this.supabase
@@ -148,6 +173,23 @@ export class EntitlementsService {
       const ttl = this.redis.getTTL('entitlements'); // 30 minutes
       await this.redis.setByKey(cacheKey, { tier, access }, ttl);
       this.logger.debug(`[Entitlements] Cached tier=${tier} (TTL: ${ttl}s)`);
+    }
+
+    // Emit trial.pro_feature_used when a trial user is granted access to a
+    // Pro-gated feature specifically because of their trial. Fire per
+    // granted resource so downstream analytics can aggregate per-feature
+    // engagement. Fire-and-forget: analytics must never break entitlement
+    // checks. Skipped when baseline tier is already paid (trial is
+    // redundant) or when access would have been granted on free tier.
+    if (
+      userId &&
+      trial?.active &&
+      baselineTierWithoutTrial === 'free' &&
+      Object.keys(access).length > 0
+    ) {
+      this.trialUsageEmitter
+        .emitForGrantedAccess(userId, access)
+        .catch(() => {});
     }
 
     return response;
