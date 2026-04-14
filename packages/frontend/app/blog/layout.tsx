@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SeoPageConversionBar } from "@/app/components/seo/SeoPageConversionBar";
 
 export const metadata: Metadata = {
   title: "Blog - Housing Market Insights & Analysis",
@@ -32,5 +33,10 @@ export default function BlogLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="max-w-4xl mx-auto px-4 py-8">{children}</div>;
+  return (
+    <>
+      <div className="max-w-4xl mx-auto px-4 py-8">{children}</div>
+      <SeoPageConversionBar context="blog" />
+    </>
+  );
 }
