@@ -136,7 +136,6 @@ export async function POST(request: Request) {
     .upsert(
       {
         email: normalizedEmail,
-        subscribed_at: new Date().toISOString(),
         confirmation_token: confirmationToken,
         confirmed: false,
         confirmed_at: null,
