@@ -38,7 +38,6 @@ import { BenchmarksModule } from './benchmarks/benchmarks.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { EmailModule } from './email/email.module';
-import { AnalyticsEventsModule } from './analytics-events/analytics-events.module';
 import { SupportModule } from './support/support.module';
 import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { PricingModule } from './pricing/pricing.module';
@@ -120,7 +119,6 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     AlertsModule,
     RecommendationsModule,
     EmailModule,
-    AnalyticsEventsModule,
     SupportModule,
     MetricResolutionModule,
     PricingModule,
