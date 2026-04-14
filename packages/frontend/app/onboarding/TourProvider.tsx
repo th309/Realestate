@@ -19,6 +19,7 @@ import { ConnectedTooltip } from "./ConnectedTooltip";
 import { OnboardingProgressBar } from "./OnboardingProgressBar";
 import { triggerConfetti } from "./celebrations";
 import { updateChecklistTask, incrementUsageStat } from "@/lib/data";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 type TourPhase = "idle" | "guided";
 
@@ -48,6 +49,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /get-started
   const [navigating, setNavigating] = useState(false);
   const actionListenerRef = useRef<(() => void) | null>(null);
+  const stepMountedAtRef = useRef<number>(0);
 
   // Detect ?onboarding=true (set by /get-started after market selection)
   useEffect(() => {
@@ -65,6 +67,18 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, phase]);
 
+  // Fire spotlight_step_viewed when a step becomes active
+  useEffect(() => {
+    if (phase !== "guided" || navigating) return;
+    const step = ONBOARDING_STEPS[stepIndex];
+    if (!step) return;
+    stepMountedAtRef.current = Date.now();
+    trackEvent("onboarding.spotlight_step_viewed", {
+      step_name: step.id,
+      step_index: stepIndex,
+    });
+  }, [phase, stepIndex, navigating]);
+
   // Set up action listeners for action-gated steps
   useEffect(() => {
     if (actionListenerRef.current) {
@@ -81,6 +95,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       if (!el) return;
 
       const handler = () => {
+        trackEvent("onboarding.spotlight_step_completed", {
+          step_name: step.id,
+          step_index: stepIndex,
+          duration_ms: Date.now() - stepMountedAtRef.current,
+        });
         // Mark checklist + usage for the completed step
         if (step.id === "view-score") {
           Promise.allSettled([
@@ -144,9 +163,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, [phase, stepIndex, pathname, router, markComplete]);
 
   const handleDismiss = useCallback(() => {
+    const step = ONBOARDING_STEPS[stepIndex];
+    trackEvent("onboarding.spotlight_dismissed", {
+      at_step: step?.id ?? `index_${stepIndex}`,
+      duration_ms: Date.now() - stepMountedAtRef.current,
+    });
     markComplete();
     setPhase("idle");
-  }, [markComplete]);
+  }, [markComplete, stepIndex]);
 
   const restartTourHandler = useCallback(() => {
     resetTour();
