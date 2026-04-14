@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent } from "@/lib/analytics/tracker";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 
 interface PasswordRequirement {
   label: string;
@@ -116,6 +116,7 @@ function SignUpContent() {
     // and send welcome email since the Supabase email hook is skipped.
     if (session) {
       trackEvent("conversion.signup_complete", { method: "email" });
+      flush(); // Send queued events via sendBeacon BEFORE any navigation unmounts this page
       const supabase = createSupabaseBrowserClient();
       await supabase.from("user_profiles").upsert(
         {
