@@ -61,7 +61,12 @@ function SignUpContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/map";
+  // New signups flow through /get-started by default. If the user arrived with an explicit
+  // ?redirect=..., preserve it via /get-started?next=... so onboarding can forward them on.
+  const explicitRedirect = searchParams.get("redirect");
+  const redirectTo = explicitRedirect
+    ? `/get-started?next=${encodeURIComponent(explicitRedirect)}`
+    : "/get-started";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -395,8 +400,8 @@ function SignUpContent() {
               Already have an account?{" "}
               <Link
                 href={
-                  redirectTo !== "/map"
-                    ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}`
+                  explicitRedirect
+                    ? `/auth/sign-in?redirect=${encodeURIComponent(explicitRedirect)}`
                     : "/auth/sign-in"
                 }
                 className="text-primary hover:text-primary/80 font-medium"
