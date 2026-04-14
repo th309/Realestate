@@ -8,6 +8,7 @@ interface BeaconDef {
   id: string;
   trigger: string;
   targetSelector: string;
+  targetFeature: string;
   tooltip: string;
   href?: string;
 }
@@ -17,6 +18,7 @@ const BEACON_DEFS: BeaconDef[] = [
     id: "compare-markets",
     trigger: "view_score",
     targetSelector: '[data-beacon="compare-markets"]',
+    targetFeature: "compare_markets",
     tooltip: "See how this market stacks up against others",
     href: "/market",
   },
@@ -24,6 +26,7 @@ const BEACON_DEFS: BeaconDef[] = [
     id: "time-series",
     trigger: "search_market",
     targetSelector: '[data-beacon="time-series"]',
+    targetFeature: "time_series",
     tooltip: "Track how this metric has changed over time",
     href: "/graphs",
   },
@@ -31,12 +34,14 @@ const BEACON_DEFS: BeaconDef[] = [
     id: "share-report",
     trigger: "generate_report",
     targetSelector: '[data-beacon="share-report"]',
+    targetFeature: "share_report",
     tooltip: "Share this report with your team or clients",
   },
   {
     id: "market-alerts",
     trigger: "all_complete",
     targetSelector: '[data-beacon="market-alerts"]',
+    targetFeature: "market_alerts",
     tooltip: "Get notified when this market moves",
     href: "/alerts",
   },
@@ -94,6 +99,7 @@ export function BeaconProvider({
           key={b.id}
           id={b.id}
           targetSelector={b.targetSelector}
+          targetFeature={b.targetFeature}
           tooltip={b.tooltip}
           href={b.href}
           onDismiss={dismissBeacon}
