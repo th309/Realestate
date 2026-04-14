@@ -8,7 +8,6 @@ import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
 import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
 import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "./components/AppFooter";
-import { BetaBanner } from "./components/BetaBanner";
 import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
 import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
@@ -180,7 +179,6 @@ export default async function RootLayout({
         <GoogleAnalytics />
         <Providers initialUserId={initialUserId}>
           <Header />
-          <BetaBanner />
           <EnterpriseGraceBanner />
           <EnterpriseOnboardingGate>
             <AnalyticsProvider>
