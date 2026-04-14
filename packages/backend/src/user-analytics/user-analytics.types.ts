@@ -25,6 +25,26 @@ export interface FunnelStep {
   rateFromFirst: number;
 }
 
+/** Single-event step — the existing shape, preserved for the 2 pre-existing funnel rows. */
+export type FunnelStepSingle = {
+  event_category: string;
+  event_action: string;
+  label?: string;
+};
+
+/** Multi-event step — visitor qualifies if they fired ANY of the listed events. */
+export type FunnelStepMulti = {
+  any_of: Array<{ event_category: string; event_action: string }>;
+  label?: string;
+};
+
+export type FunnelStepDef = FunnelStepSingle | FunnelStepMulti;
+
+/** Type guard for multi-event step. */
+export function isMultiStep(step: FunnelStepDef): step is FunnelStepMulti {
+  return 'any_of' in step;
+}
+
 export interface Annotation {
   id: string;
   annotationDate: string;
