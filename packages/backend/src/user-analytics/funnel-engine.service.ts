@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RedisService } from '../redis/redis.service';
-import type { FunnelStep } from './user-analytics.types';
+import type { FunnelStep, FunnelStepDef } from './user-analytics.types';
+import { isMultiStep } from './user-analytics.types';
 
 @Injectable()
 export class FunnelEngineService {
@@ -29,11 +30,30 @@ export class FunnelEngineService {
 
     if (!funnel) throw new Error(`Funnel ${funnelId} not found`);
 
-    const steps = funnel.steps as {
-      event_category: string;
-      event_action: string;
-      label?: string;
-    }[];
+    const steps = funnel.steps as FunnelStepDef[];
+
+    // Precompute matchers per step: a step matches if a visitor fired ANY of its matchers.
+    // Single-event steps collapse to a 1-element matcher array.
+    const matchersPerStep = steps.map((step) =>
+      isMultiStep(step)
+        ? step.any_of
+        : [
+            {
+              event_category: step.event_category,
+              event_action: step.event_action,
+            },
+          ],
+    );
+
+    const stepName = (s: FunnelStepDef): string => {
+      if (s.label) return s.label;
+      if (isMultiStep(s)) {
+        return s.any_of
+          .map((m) => `${m.event_category}.${m.event_action}`)
+          .join(' | ');
+      }
+      return `${s.event_category}.${s.event_action}`;
+    };
 
     // For each step, find visitors who completed that step AND all previous steps
     const { data: events } = await client
@@ -43,7 +63,7 @@ export class FunnelEngineService {
 
     if (!events?.length) {
       return steps.map((s) => ({
-        name: s.label || `${s.event_category}.${s.event_action}`,
+        name: stepName(s),
         count: 0,
         rateFromPrevious: 0,
         rateFromFirst: 0,
@@ -53,12 +73,15 @@ export class FunnelEngineService {
     // Build visitor sets per step using sequential intersection
     const visitorsByStep: Set<string>[] = [];
     for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
+      const matchers = matchersPerStep[i];
       const matchingVisitors = new Set(
         events
-          .filter(
-            (e) =>
-              e.event_category === step.event_category && e.event_action === step.event_action,
+          .filter((e) =>
+            matchers.some(
+              (m) =>
+                e.event_category === m.event_category &&
+                e.event_action === m.event_action,
+            ),
           )
           .map((e) => e.visitor_id),
       );
@@ -68,7 +91,9 @@ export class FunnelEngineService {
       } else {
         // Intersection with previous step's visitors
         const prev = visitorsByStep[i - 1];
-        const intersected = new Set([...matchingVisitors].filter((v) => prev.has(v)));
+        const intersected = new Set(
+          [...matchingVisitors].filter((v) => prev.has(v)),
+        );
         visitorsByStep.push(intersected);
       }
     }
@@ -76,9 +101,9 @@ export class FunnelEngineService {
     const firstCount = visitorsByStep[0]?.size || 0;
     const result: FunnelStep[] = steps.map((s, i) => {
       const count = visitorsByStep[i]?.size || 0;
-      const prevCount = i > 0 ? (visitorsByStep[i - 1]?.size || 0) : count;
+      const prevCount = i > 0 ? visitorsByStep[i - 1]?.size || 0 : count;
       return {
-        name: s.label || `${s.event_category}.${s.event_action}`,
+        name: stepName(s),
         count,
         rateFromPrevious: prevCount > 0 ? count / prevCount : 0,
         rateFromFirst: firstCount > 0 ? count / firstCount : 0,
