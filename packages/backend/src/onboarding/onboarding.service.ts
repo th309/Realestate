@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { ServerEventEmitterService } from '../user-analytics/server-event-emitter.service';
 
 export interface OnboardingMarket {
   geoLevel: string;
@@ -22,6 +23,7 @@ export class OnboardingService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly eventEmitter: ServerEventEmitterService,
   ) {}
 
   /**
@@ -84,6 +86,14 @@ export class OnboardingService {
     this.logger.log(
       `Started ${config.duration_days}d ${config.trial_tier} trial for ${userId}`,
     );
+
+    // Emit only on first-time trial creation (not on existing-trial returns or
+    // race-loser returns), so trial.started fires exactly once per trial.
+    await this.eventEmitter.emit('trial', 'started', userId, {
+      trial_duration_days: config.duration_days,
+      trial_tier: config.trial_tier,
+    });
+
     return trial;
   }
 
