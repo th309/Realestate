@@ -63,6 +63,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { SocialProofModule } from './social-proof/social-proof.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
+import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
 
 @Module({
   imports: [
@@ -142,6 +143,7 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     OnboardingModule,
     SocialProofModule,
     SchedulingModule,
+    ContentPipelineModule,
   ],
   controllers: [AppController],
   providers: [
