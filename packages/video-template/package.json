@@ -12,8 +12,10 @@
   "dependencies": {
     "@remotion/bundler": "^4.0.253",
     "@remotion/renderer": "^4.0.253",
+    "commander": "^13.1.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@remotion/cli": "^4.0.253",
