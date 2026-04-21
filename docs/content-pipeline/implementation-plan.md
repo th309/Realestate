@@ -8056,7 +8056,7 @@ export function MarketStep({
           >
             <div className="font-medium">{m.canonical_name}</div>
             <div className="text-xs text-outline">
-              {m.geography} {m.state ? `— ${m.state}` : ""}
+              {m.geography} {m.state ? `, ${m.state}` : ""}
             </div>
           </button>
         ))}
@@ -8771,7 +8771,7 @@ export function ReviewCard({ run, onNext }: { run: any; onNext: () => void }) {
                 {(gateBFail.details?.violations ?? []).map(
                   (v: any, i: number) => (
                     <li key={i}>
-                      "{v.claim?.quote}" — {v.claim?.subject}
+                      "{v.claim?.quote}" ({v.claim?.subject})
                     </li>
                   ),
                 )}
@@ -10382,4 +10382,8983 @@ git add packages/video-template/src/primitives/CaptionOverlay.tsx packages/video
 git commit -m "feat(content-pipeline): caption burn-in plus time-captions handler"
 ```
 
-<!-- PLAN_INSERT_HERE -->
+## Task 2.10: TikTokPublisher
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/tiktok-publisher.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/tiktok-publisher.spec.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-tiktok.handler.ts`
+
+TikTok Content Posting API uses a two-step flow: INIT creates a publish session, UPLOAD sends the video, and status is polled until FINISHED.
+
+- [ ] **Step 1: Write TikTokPublisher tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/tiktok-publisher.spec.ts
+import axios from "axios";
+import { TikTokPublisher } from "./tiktok-publisher";
+
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe("TikTokPublisher", () => {
+  beforeAll(() => {
+    process.env.TIKTOK_CLIENT_KEY = "test-key";
+    process.env.TIKTOK_CLIENT_SECRET = "test-secret";
+    process.env.TIKTOK_OAUTH_REFRESH_TOKEN = "test-refresh";
+  });
+
+  it("isConfigured requires all three env vars", () => {
+    expect(new TikTokPublisher().isConfigured()).toBe(true);
+    const saved = process.env.TIKTOK_OAUTH_REFRESH_TOKEN;
+    delete process.env.TIKTOK_OAUTH_REFRESH_TOKEN;
+    expect(new TikTokPublisher().isConfigured()).toBe(false);
+    process.env.TIKTOK_OAUTH_REFRESH_TOKEN = saved;
+  });
+
+  it("publish initializes upload, uploads video, polls FINISHED", async () => {
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (url.includes("oauth/token"))
+        return {
+          data: { access_token: "fresh-token", expires_in: 3600 },
+        } as any;
+      if (url.includes("publish/video/init"))
+        return {
+          data: {
+            data: {
+              publish_id: "pub-1",
+              upload_url: "https://upload.tiktok/u1",
+            },
+          },
+        } as any;
+      if (url.includes("upload.tiktok")) return { data: {} } as any;
+      return { data: {} } as any;
+    });
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        data: {
+          status: "PUBLISH_COMPLETE",
+          publicaly_available_post_id: ["12345"],
+        },
+      },
+    } as any);
+
+    const pub = new TikTokPublisher();
+    const result = await pub.publish({
+      runId: "r1",
+      videoPath: "/tmp/v.mp4",
+      title: "Cleveland PIQ 78",
+      description: "Market score hit 78",
+      tags: ["realestate"],
+      postMode: "direct",
+    });
+
+    expect(result.externalId).toBe("12345");
+    expect(result.externalUrl).toContain("tiktok.com");
+  });
+
+  it("draft mode uses MEDIA_UPLOAD post_mode", async () => {
+    let capturedBody: any;
+    mockedAxios.post.mockImplementation(async (url: string, body: any) => {
+      if (url.includes("publish/video/init")) {
+        capturedBody = body;
+        return {
+          data: {
+            data: {
+              publish_id: "pub-2",
+              upload_url: "https://upload.tiktok/u2",
+            },
+          },
+        } as any;
+      }
+      if (url.includes("oauth/token"))
+        return { data: { access_token: "t", expires_in: 3600 } } as any;
+      return { data: {} } as any;
+    });
+    mockedAxios.get.mockResolvedValue({
+      data: { data: { status: "PUBLISH_COMPLETE" } },
+    } as any);
+
+    await new TikTokPublisher().publish({
+      runId: "r1",
+      videoPath: "/tmp/v.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "draft",
+    });
+    expect(capturedBody.post_info.post_mode).toBe("MEDIA_UPLOAD");
+  });
+});
+```
+
+- [ ] **Step 2: Run to confirm failure.**
+
+```bash
+cd packages/backend && npm run test -- tiktok-publisher.spec
+```
+
+Expected: FAIL (class not defined).
+
+- [ ] **Step 3: Implement TikTokPublisher.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/tiktok-publisher.ts
+import { Injectable, Logger } from "@nestjs/common";
+import axios from "axios";
+import { createReadStream, statSync } from "fs";
+import {
+  PlatformPublisher,
+  PublishRequest,
+  PublishResult,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+const TIKTOK_API = "https://open.tiktokapis.com";
+
+@Injectable()
+export class TikTokPublisher implements PlatformPublisher {
+  readonly platform: Platform = "tiktok";
+  private readonly logger = new Logger(TikTokPublisher.name);
+  private accessToken: string | null = null;
+  private tokenExpiresAt = 0;
+
+  isConfigured(): boolean {
+    return !!(
+      process.env.TIKTOK_CLIENT_KEY &&
+      process.env.TIKTOK_CLIENT_SECRET &&
+      process.env.TIKTOK_OAUTH_REFRESH_TOKEN
+    );
+  }
+
+  private async ensureToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiresAt - 60_000)
+      return this.accessToken;
+    const response = await axios.post(
+      `${TIKTOK_API}/v2/oauth/token/`,
+      new URLSearchParams({
+        client_key: process.env.TIKTOK_CLIENT_KEY!,
+        client_secret: process.env.TIKTOK_CLIENT_SECRET!,
+        grant_type: "refresh_token",
+        refresh_token: process.env.TIKTOK_OAUTH_REFRESH_TOKEN!,
+      }).toString(),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+    );
+    this.accessToken = response.data.access_token;
+    this.tokenExpiresAt = Date.now() + response.data.expires_in * 1000;
+    return this.accessToken!;
+  }
+
+  async publish(req: PublishRequest): Promise<PublishResult> {
+    if (!this.isConfigured()) throw new Error("TikTokPublisher not configured");
+    const token = await this.ensureToken();
+    const fileSize = statSync(req.videoPath).size;
+
+    const initResponse = await axios.post(
+      `${TIKTOK_API}/v2/post/publish/video/init/`,
+      {
+        post_info: {
+          title: req.title.substring(0, 90),
+          description: req.description.substring(0, 2200),
+          post_mode: req.postMode === "draft" ? "MEDIA_UPLOAD" : "DIRECT_POST",
+          privacy_level:
+            req.postMode === "draft" ? "SELF_ONLY" : "PUBLIC_TO_EVERYONE",
+        },
+        source_info: {
+          source: "FILE_UPLOAD",
+          video_size: fileSize,
+          chunk_size: fileSize,
+          total_chunk_count: 1,
+        },
+      },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+
+    const publishId = initResponse.data.data.publish_id;
+    const uploadUrl = initResponse.data.data.upload_url;
+
+    await axios.put(uploadUrl, createReadStream(req.videoPath), {
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Range": `bytes 0-${fileSize - 1}/${fileSize}`,
+      },
+      maxBodyLength: fileSize,
+      maxContentLength: fileSize,
+    });
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statusResponse = await axios.get(
+        `${TIKTOK_API}/v2/post/publish/status/fetch/`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { publish_id: publishId },
+        },
+      );
+      const status = statusResponse.data.data.status;
+      if (status === "PUBLISH_COMPLETE") {
+        const externalId =
+          statusResponse.data.data.publicaly_available_post_id?.[0] ??
+          publishId;
+        return {
+          externalId,
+          externalUrl: `https://www.tiktok.com/@yourhandle/video/${externalId}`,
+          cost: {
+            provider: "tiktok",
+            amount_usd: 0,
+            units: 1,
+            unit_type: "requests",
+          },
+          providerResponse: statusResponse.data,
+        };
+      }
+      if (status === "FAILED")
+        throw new Error(
+          `TikTok publish failed: ${JSON.stringify(statusResponse.data)}`,
+        );
+    }
+    throw new Error("TikTok publish status timeout after 150 seconds");
+  }
+
+  async refreshCredentials(): Promise<void> {
+    this.accessToken = null;
+    await this.ensureToken();
+  }
+}
+```
+
+- [ ] **Step 4: Write publish-tiktok handler.**
+
+```typescript
+// packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-tiktok.handler.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../../supabase/supabase.service";
+import { RunOrchestratorService } from "../run-orchestrator.service";
+import { TikTokPublisher } from "../../drivers/tiktok-publisher";
+import { ShortLinkService } from "../../short-links/short-link.service";
+import { join } from "path";
+import { tmpdir } from "os";
+import { writeFileSync } from "fs";
+
+@Injectable()
+export class PublishTikTokHandler {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly orchestrator: RunOrchestratorService,
+    private readonly publisher: TikTokPublisher,
+    private readonly shortLinks: ShortLinkService,
+  ) {}
+
+  async handle(runId: string): Promise<void> {
+    const client = this.supabase.getClient();
+    try {
+      const { data: run } = await client
+        .from("content_runs")
+        .select("format, resolved_geo, hook_variants, approval_mode")
+        .eq("id", runId)
+        .single();
+      const { data: video } = await client
+        .from("content_assets")
+        .select("storage_url")
+        .eq("run_id", runId)
+        .eq("kind", "video_master")
+        .single();
+
+      const videoPath = await this.downloadVideo(video.storage_url);
+      const script = (run.hook_variants as any[])[0];
+
+      const result = await this.publisher.publish({
+        runId,
+        videoPath,
+        title:
+          `${run.resolved_geo.canonical_name} ${run.format.replaceAll("_", " ")}`.substring(
+            0,
+            90,
+          ),
+        description: `${script.hook}\n\n${script.body}\n\n${script.cta}`,
+        tags: [
+          "realestate",
+          run.resolved_geo.canonical_name.split(",")[0].toLowerCase(),
+        ],
+        postMode: run.approval_mode === "draft" ? "draft" : "direct",
+      });
+
+      const { data: postRow } = await client
+        .from("platform_posts")
+        .insert({
+          run_id: runId,
+          platform: "tiktok",
+          external_id: result.externalId,
+          external_url: result.externalUrl,
+          post_mode: run.approval_mode === "draft" ? "draft" : "direct",
+          hook_variant_id: "A",
+          status: "posted",
+        })
+        .select()
+        .single();
+
+      const link = await this.shortLinks.create({
+        runId,
+        format: run.format,
+        platform: "tiktok",
+        targetUrl: await this.resolveLanding(client, run.format, runId),
+      });
+      await client
+        .from("platform_posts")
+        .update({ short_link_id: link.id })
+        .eq("id", postRow.id);
+    } catch (err) {
+      await client.from("platform_posts").insert({
+        run_id: runId,
+        platform: "tiktok",
+        status: "failed",
+        error: (err as Error).message,
+      });
+    }
+  }
+
+  private async downloadVideo(storageUrl: string): Promise<string> {
+    const match = storageUrl.match(/^supabase:\/\/([^/]+)\/(.+)$/)!;
+    const { data } = await this.supabase
+      .getClient()
+      .storage.from(match[1])
+      .download(match[2]);
+    const localPath = join(tmpdir(), `tt-${Date.now()}.mp4`);
+    writeFileSync(localPath, Buffer.from(await data!.arrayBuffer()));
+    return localPath;
+  }
+
+  private async resolveLanding(
+    client: any,
+    format: string,
+    runId: string,
+  ): Promise<string> {
+    const { data: binding } = await client
+      .from("format_magnet_bindings")
+      .select("magnet_kind")
+      .eq("format", format)
+      .eq("enabled", true)
+      .single();
+    const { data: magnet } = await client
+      .from("lead_magnet_definitions")
+      .select("landing_page_path")
+      .eq("kind", binding?.magnet_kind)
+      .single();
+    return `https://propertyiq.app${magnet?.landing_page_path ?? "/"}?run=${runId}`;
+  }
+}
+```
+
+- [ ] **Step 5: Register in HandlersBootstrapService for `publish-tiktok` queue, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- tiktok-publisher.spec
+git add packages/backend/src/content-pipeline/drivers/tiktok-publisher.ts packages/backend/src/content-pipeline/drivers/tiktok-publisher.spec.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-tiktok.handler.ts
+git commit -m "feat(content-pipeline): TikTokPublisher with INIT+UPLOAD+status-poll flow"
+```
+
+## Task 2.11: InstagramReelsPublisher
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.spec.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-instagram.handler.ts`
+
+Instagram Graph API uses a two-step container flow: POST to `/<ig-user-id>/media` creates a container, POST to `/<ig-user-id>/media_publish` publishes it.
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.spec.ts
+import axios from "axios";
+import { InstagramReelsPublisher } from "./instagram-reels-publisher";
+
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe("InstagramReelsPublisher", () => {
+  beforeAll(() => {
+    process.env.META_GRAPH_APP_ID = "app-1";
+    process.env.META_GRAPH_APP_SECRET = "secret-1";
+    process.env.META_INSTAGRAM_ACCESS_TOKEN = "igtoken";
+    ((process.env.META_INSTAGRAM_USER_ID = "17841405"),
+      (process.env.VIDEO_PUBLIC_BASE_URL = "https://staging.piq.sh/videos"));
+  });
+
+  it("publishes a reel with container flow", async () => {
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (url.includes("/media_publish"))
+        return { data: { id: "ig-published-1" } } as any;
+      if (url.includes("/media"))
+        return { data: { id: "ig-container-1" } } as any;
+      return { data: {} } as any;
+    });
+    mockedAxios.get.mockResolvedValue({
+      data: { status_code: "FINISHED" },
+    } as any);
+
+    const pub = new InstagramReelsPublisher();
+    const result = await pub.publish({
+      runId: "r1",
+      videoPath: "https://staging.piq.sh/videos/r1.mp4",
+      title: "t",
+      description: "d",
+      tags: ["realestate"],
+      postMode: "direct",
+    });
+    expect(result.externalId).toBe("ig-published-1");
+  });
+
+  it("draft mode skips publish step and returns container id", async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: { id: "ig-container-2" },
+    } as any);
+    mockedAxios.get.mockResolvedValue({
+      data: { status_code: "FINISHED" },
+    } as any);
+
+    const pub = new InstagramReelsPublisher();
+    const result = await pub.publish({
+      runId: "r1",
+      videoPath: "https://staging.piq.sh/videos/r1.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "draft",
+    });
+    expect(result.externalId).toBe("ig-container-2");
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.ts
+import { Injectable } from "@nestjs/common";
+import axios from "axios";
+import {
+  PlatformPublisher,
+  PublishRequest,
+  PublishResult,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+@Injectable()
+export class InstagramReelsPublisher implements PlatformPublisher {
+  readonly platform: Platform = "instagram_reels";
+
+  isConfigured(): boolean {
+    return !!(
+      process.env.META_GRAPH_APP_ID &&
+      process.env.META_INSTAGRAM_ACCESS_TOKEN &&
+      process.env.META_INSTAGRAM_USER_ID
+    );
+  }
+
+  async publish(req: PublishRequest): Promise<PublishResult> {
+    if (!this.isConfigured())
+      throw new Error("InstagramReelsPublisher not configured");
+    const token = process.env.META_INSTAGRAM_ACCESS_TOKEN!;
+    const userId = process.env.META_INSTAGRAM_USER_ID!;
+
+    const caption =
+      `${req.description}\n\n${req.tags.map((t) => `#${t}`).join(" ")}`.substring(
+        0,
+        2200,
+      );
+
+    const containerResponse = await axios.post(
+      `${GRAPH}/${userId}/media`,
+      null,
+      {
+        params: {
+          media_type: "REELS",
+          video_url: req.videoPath,
+          caption,
+          access_token: token,
+        },
+      },
+    );
+    const containerId = containerResponse.data.id;
+
+    for (let i = 0; i < 30; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statusResponse = await axios.get(`${GRAPH}/${containerId}`, {
+        params: { fields: "status_code", access_token: token },
+      });
+      if (statusResponse.data.status_code === "FINISHED") break;
+      if (statusResponse.data.status_code === "ERROR")
+        throw new Error(
+          `Instagram container error: ${JSON.stringify(statusResponse.data)}`,
+        );
+    }
+
+    if (req.postMode === "draft") {
+      return {
+        externalId: containerId,
+        externalUrl: `https://www.instagram.com/draft/${containerId}`,
+        cost: {
+          provider: "instagram",
+          amount_usd: 0,
+          units: 1,
+          unit_type: "requests",
+        },
+        providerResponse: { container: containerId, mode: "draft" },
+      };
+    }
+
+    const publishResponse = await axios.post(
+      `${GRAPH}/${userId}/media_publish`,
+      null,
+      { params: { creation_id: containerId, access_token: token } },
+    );
+    return {
+      externalId: publishResponse.data.id,
+      externalUrl: `https://www.instagram.com/reel/${publishResponse.data.id}`,
+      cost: {
+        provider: "instagram",
+        amount_usd: 0,
+        units: 1,
+        unit_type: "requests",
+      },
+      providerResponse: publishResponse.data,
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Write publish-instagram handler matching TikTok pattern.**
+
+Same structure as Task 2.10 Step 4, but dispatches `InstagramReelsPublisher.publish` and requires the video to be publicly accessible (Instagram cannot pull from Supabase Storage with auth). Upload the video to Supabase Storage with a signed URL, or use a public bucket `content-pipeline-public` for Instagram-readable videos.
+
+```typescript
+// packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-instagram.handler.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../../supabase/supabase.service";
+import { RunOrchestratorService } from "../run-orchestrator.service";
+import { InstagramReelsPublisher } from "../../drivers/instagram-reels-publisher";
+import { ShortLinkService } from "../../short-links/short-link.service";
+
+@Injectable()
+export class PublishInstagramHandler {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly orchestrator: RunOrchestratorService,
+    private readonly publisher: InstagramReelsPublisher,
+    private readonly shortLinks: ShortLinkService,
+  ) {}
+
+  async handle(runId: string): Promise<void> {
+    const client = this.supabase.getClient();
+    try {
+      const { data: run } = await client
+        .from("content_runs")
+        .select("format, resolved_geo, hook_variants, approval_mode")
+        .eq("id", runId)
+        .single();
+      const { data: video } = await client
+        .from("content_assets")
+        .select("storage_url")
+        .eq("run_id", runId)
+        .eq("kind", "video_master")
+        .single();
+
+      const { data: signed } = await client.storage
+        .from("content-pipeline")
+        .createSignedUrl(
+          video.storage_url.replace(/^supabase:\/\/content-pipeline\//, ""),
+          3600,
+        );
+      const publicVideoUrl = signed?.signedUrl ?? "";
+
+      const script = (run.hook_variants as any[])[0];
+      const result = await this.publisher.publish({
+        runId,
+        videoPath: publicVideoUrl,
+        title: "",
+        description: `${script.hook}\n${script.body}\n\n${script.cta}`,
+        tags: ["realestate", "propertyiq"],
+        postMode: run.approval_mode === "draft" ? "draft" : "direct",
+      });
+
+      const { data: postRow } = await client
+        .from("platform_posts")
+        .insert({
+          run_id: runId,
+          platform: "instagram_reels",
+          external_id: result.externalId,
+          external_url: result.externalUrl,
+          post_mode: run.approval_mode === "draft" ? "draft" : "direct",
+          hook_variant_id: "A",
+          status: "posted",
+        })
+        .select()
+        .single();
+
+      const link = await this.shortLinks.create({
+        runId,
+        format: run.format,
+        platform: "instagram_reels",
+        targetUrl: `https://propertyiq.app/${run.format.replaceAll("_", "-")}?run=${runId}`,
+      });
+      await client
+        .from("platform_posts")
+        .update({ short_link_id: link.id })
+        .eq("id", postRow.id);
+    } catch (err) {
+      await client.from("platform_posts").insert({
+        run_id: runId,
+        platform: "instagram_reels",
+        status: "failed",
+        error: (err as Error).message,
+      });
+    }
+  }
+}
+```
+
+- [ ] **Step 4: Run tests, register handler for `publish-instagram` queue, commit.**
+
+```bash
+cd packages/backend && npm run test -- instagram-reels-publisher.spec
+git add packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.ts packages/backend/src/content-pipeline/drivers/instagram-reels-publisher.spec.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-instagram.handler.ts
+git commit -m "feat(content-pipeline): InstagramReelsPublisher with Graph API container flow"
+```
+
+## Task 2.12: FacebookReelsPublisher
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.spec.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-facebook.handler.ts`
+
+- [ ] **Step 1: Write tests (pattern similar to Instagram).**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.spec.ts
+import axios from "axios";
+import { FacebookReelsPublisher } from "./facebook-reels-publisher";
+
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe("FacebookReelsPublisher", () => {
+  beforeAll(() => {
+    process.env.META_FACEBOOK_PAGE_ID = "99887766";
+    process.env.META_FACEBOOK_PAGE_ACCESS_TOKEN = "pagetoken";
+    process.env.VIDEO_PUBLIC_BASE_URL = "https://staging.piq.sh/videos";
+  });
+
+  it("publishes direct and returns video id", async () => {
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (url.includes("/video_reels"))
+        return {
+          data: { id: "init-1", upload_url: "https://upload.fb/u1" },
+        } as any;
+      if (url.includes("/videos/finish"))
+        return { data: { success: true, post_id: "post-1" } } as any;
+      if (url.includes("upload.fb")) return { data: {} } as any;
+      return { data: {} } as any;
+    });
+    const pub = new FacebookReelsPublisher();
+    const result = await pub.publish({
+      runId: "r1",
+      videoPath: "/tmp/v.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "direct",
+    });
+    expect(result.externalId).toBe("post-1");
+  });
+
+  it("draft mode uses unpublished=true", async () => {
+    let capturedParams: any;
+    mockedAxios.post.mockImplementation(
+      async (_url: string, _body: any, config: any) => {
+        capturedParams = config?.params ?? capturedParams;
+        if (_url.includes("/videos/finish"))
+          return { data: { success: true, post_id: "draft-1" } } as any;
+        return { data: { id: "x", upload_url: "https://upload/x" } } as any;
+      },
+    );
+    await new FacebookReelsPublisher().publish({
+      runId: "r",
+      videoPath: "/tmp/v.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "draft",
+    });
+    expect(capturedParams?.published).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.ts
+import { Injectable } from "@nestjs/common";
+import axios from "axios";
+import { createReadStream, statSync } from "fs";
+import {
+  PlatformPublisher,
+  PublishRequest,
+  PublishResult,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+@Injectable()
+export class FacebookReelsPublisher implements PlatformPublisher {
+  readonly platform: Platform = "facebook_reels";
+
+  isConfigured(): boolean {
+    return !!(
+      process.env.META_FACEBOOK_PAGE_ID &&
+      process.env.META_FACEBOOK_PAGE_ACCESS_TOKEN
+    );
+  }
+
+  async publish(req: PublishRequest): Promise<PublishResult> {
+    if (!this.isConfigured())
+      throw new Error("FacebookReelsPublisher not configured");
+    const pageId = process.env.META_FACEBOOK_PAGE_ID!;
+    const token = process.env.META_FACEBOOK_PAGE_ACCESS_TOKEN!;
+    const fileSize = statSync(req.videoPath).size;
+
+    const initResponse = await axios.post(
+      `${GRAPH}/${pageId}/video_reels`,
+      null,
+      {
+        params: { upload_phase: "start", access_token: token },
+      },
+    );
+    const videoId = initResponse.data.video_id ?? initResponse.data.id;
+    const uploadUrl = initResponse.data.upload_url;
+
+    await axios.post(uploadUrl, createReadStream(req.videoPath), {
+      headers: {
+        Authorization: `OAuth ${token}`,
+        offset: "0",
+        file_size: String(fileSize),
+      },
+      maxBodyLength: fileSize,
+      maxContentLength: fileSize,
+    });
+
+    const description = `${req.description}\n\n${req.tags.map((t) => `#${t}`).join(" ")}`;
+    const finishParams: any = {
+      upload_phase: "finish",
+      video_id: videoId,
+      description: description.substring(0, 2200),
+      access_token: token,
+    };
+    if (req.postMode === "direct") {
+      finishParams.video_state = "PUBLISHED";
+      finishParams.published = true;
+    } else {
+      finishParams.video_state = "DRAFT";
+      finishParams.published = false;
+    }
+
+    const finishResponse = await axios.post(
+      `${GRAPH}/${pageId}/videos/finish`,
+      null,
+      { params: finishParams },
+    );
+    const externalId = finishResponse.data.post_id ?? videoId;
+    return {
+      externalId,
+      externalUrl: `https://www.facebook.com/reel/${externalId}`,
+      cost: {
+        provider: "facebook",
+        amount_usd: 0,
+        units: 1,
+        unit_type: "requests",
+      },
+      providerResponse: finishResponse.data,
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Write publish-facebook handler (same pattern as TikTok), run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- facebook-reels-publisher.spec
+git add packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.ts packages/backend/src/content-pipeline/drivers/facebook-reels-publisher.spec.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-facebook.handler.ts
+git commit -m "feat(content-pipeline): FacebookReelsPublisher with resumable upload"
+```
+
+## Task 2.13: LinkedInPublisher
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/linkedin-publisher.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/linkedin-publisher.spec.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-linkedin.handler.ts`
+
+LinkedIn API v2 uses a three-step flow for video: registerUpload -> PUT binary to returned upload URL -> create UGC post referencing the asset.
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/linkedin-publisher.spec.ts
+import axios from "axios";
+import { LinkedInPublisher } from "./linkedin-publisher";
+
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe("LinkedInPublisher", () => {
+  beforeAll(() => {
+    process.env.LINKEDIN_ACCESS_TOKEN = "li-token";
+    process.env.LINKEDIN_ORGANIZATION_URN = "urn:li:organization:12345";
+  });
+
+  it("publishes through registerUpload + upload + post flow", async () => {
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (url.includes("registerUpload"))
+        return {
+          data: {
+            value: {
+              uploadMechanism: {
+                "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                  uploadUrl: "https://up.li/x",
+                },
+              },
+              asset: "urn:li:digitalmediaAsset:abc",
+            },
+          },
+        } as any;
+      if (url.includes("/ugcPosts"))
+        return { data: { id: "urn:li:share:123" } } as any;
+      return { data: {} } as any;
+    });
+    mockedAxios.put.mockResolvedValue({ status: 201 } as any);
+
+    const pub = new LinkedInPublisher();
+    const result = await pub.publish({
+      runId: "r",
+      videoPath: "/tmp/v.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "direct",
+    });
+    expect(result.externalId).toBe("urn:li:share:123");
+  });
+
+  it("draft mode requests visibility=DRAFT", async () => {
+    let capturedBody: any;
+    mockedAxios.post.mockImplementation(async (url: string, body: any) => {
+      if (url.includes("/ugcPosts")) {
+        capturedBody = body;
+        return { data: { id: "urn:li:share:draft" } } as any;
+      }
+      if (url.includes("registerUpload"))
+        return {
+          data: {
+            value: {
+              uploadMechanism: {
+                "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                  uploadUrl: "https://up.li/x",
+                },
+              },
+              asset: "urn:li:digitalmediaAsset:a",
+            },
+          },
+        } as any;
+      return { data: {} } as any;
+    });
+    mockedAxios.put.mockResolvedValue({ status: 201 } as any);
+
+    await new LinkedInPublisher().publish({
+      runId: "r",
+      videoPath: "/tmp/v.mp4",
+      title: "t",
+      description: "d",
+      tags: [],
+      postMode: "draft",
+    });
+    expect(
+      capturedBody?.visibility?.["com.linkedin.ugc.MemberNetworkVisibility"],
+    ).toBe("CONNECTIONS");
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/linkedin-publisher.ts
+import { Injectable } from "@nestjs/common";
+import axios from "axios";
+import { readFileSync } from "fs";
+import {
+  PlatformPublisher,
+  PublishRequest,
+  PublishResult,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+const LI = "https://api.linkedin.com/v2";
+
+@Injectable()
+export class LinkedInPublisher implements PlatformPublisher {
+  readonly platform: Platform = "linkedin";
+
+  isConfigured(): boolean {
+    return !!(
+      process.env.LINKEDIN_ACCESS_TOKEN && process.env.LINKEDIN_ORGANIZATION_URN
+    );
+  }
+
+  async publish(req: PublishRequest): Promise<PublishResult> {
+    if (!this.isConfigured())
+      throw new Error("LinkedInPublisher not configured");
+    const token = process.env.LINKEDIN_ACCESS_TOKEN!;
+    const ownerUrn = process.env.LINKEDIN_ORGANIZATION_URN!;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+    };
+
+    const registerResponse = await axios.post(
+      `${LI}/assets?action=registerUpload`,
+      {
+        registerUploadRequest: {
+          recipes: ["urn:li:digitalmediaRecipe:feedshare-video"],
+          owner: ownerUrn,
+          serviceRelationships: [
+            {
+              relationshipType: "OWNER",
+              identifier: "urn:li:userGeneratedContent",
+            },
+          ],
+        },
+      },
+      { headers },
+    );
+
+    const uploadUrl =
+      registerResponse.data.value.uploadMechanism[
+        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+      ].uploadUrl;
+    const assetUrn = registerResponse.data.value.asset;
+    const videoBuffer = readFileSync(req.videoPath);
+
+    await axios.put(uploadUrl, videoBuffer, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/octet-stream",
+      },
+      maxBodyLength: Number.MAX_SAFE_INTEGER,
+      maxContentLength: Number.MAX_SAFE_INTEGER,
+    });
+
+    const visibility = req.postMode === "draft" ? "CONNECTIONS" : "PUBLIC";
+    const shareResponse = await axios.post(
+      `${LI}/ugcPosts`,
+      {
+        author: ownerUrn,
+        lifecycleState: "PUBLISHED",
+        specificContent: {
+          "com.linkedin.ugc.ShareContent": {
+            shareCommentary: {
+              text: `${req.description}\n\n${req.tags.map((t) => `#${t}`).join(" ")}`.substring(
+                0,
+                3000,
+              ),
+            },
+            shareMediaCategory: "VIDEO",
+            media: [
+              {
+                status: "READY",
+                description: { text: req.title },
+                media: assetUrn,
+                title: { text: req.title },
+              },
+            ],
+          },
+        },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": visibility },
+      },
+      { headers },
+    );
+
+    return {
+      externalId: shareResponse.data.id,
+      externalUrl: `https://www.linkedin.com/feed/update/${encodeURIComponent(shareResponse.data.id)}/`,
+      cost: {
+        provider: "linkedin",
+        amount_usd: 0,
+        units: 1,
+        unit_type: "requests",
+      },
+      providerResponse: shareResponse.data,
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Write publish-linkedin handler, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- linkedin-publisher.spec
+git add packages/backend/src/content-pipeline/drivers/linkedin-publisher.ts packages/backend/src/content-pipeline/drivers/linkedin-publisher.spec.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-linkedin.handler.ts
+git commit -m "feat(content-pipeline): LinkedInPublisher with video registerUpload+UGC post flow"
+```
+
+## Task 2.14: PlatformPublisherRegistry
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/platform-publisher.registry.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/platform-publisher.registry.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.module.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/platform-publisher.registry.spec.ts
+import { PlatformPublisherRegistry } from "./platform-publisher.registry";
+
+describe("PlatformPublisherRegistry", () => {
+  it("returns configured publishers only", () => {
+    const ytConfigured = {
+      platform: "youtube_shorts",
+      isConfigured: () => true,
+      publish: jest.fn(),
+    } as any;
+    const ttUnconfigured = {
+      platform: "tiktok",
+      isConfigured: () => false,
+      publish: jest.fn(),
+    } as any;
+    const registry = new PlatformPublisherRegistry([
+      ytConfigured,
+      ttUnconfigured,
+    ]);
+
+    expect(registry.forPlatform("youtube_shorts")).toBe(ytConfigured);
+    expect(registry.forPlatform("tiktok")).toBeNull();
+    expect(registry.listConfigured().map((p) => p.platform)).toEqual([
+      "youtube_shorts",
+    ]);
+    expect(registry.listAll()).toHaveLength(2);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/platform-publisher.registry.ts
+import { Injectable, Inject } from "@nestjs/common";
+import {
+  PlatformPublisher,
+  PLATFORM_PUBLISHERS,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+@Injectable()
+export class PlatformPublisherRegistry {
+  constructor(
+    @Inject(PLATFORM_PUBLISHERS) private readonly all: PlatformPublisher[],
+  ) {}
+
+  forPlatform(platform: Platform): PlatformPublisher | null {
+    return (
+      this.all.find((p) => p.platform === platform && p.isConfigured()) ?? null
+    );
+  }
+
+  listAll(): PlatformPublisher[] {
+    return this.all;
+  }
+
+  listConfigured(): PlatformPublisher[] {
+    return this.all.filter((p) => p.isConfigured());
+  }
+}
+```
+
+- [ ] **Step 3: Update module to inject ALL 5 publishers into PLATFORM_PUBLISHERS token.**
+
+```typescript
+// content-pipeline.module.ts
+import { TikTokPublisher } from './drivers/tiktok-publisher';
+import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
+import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
+import { LinkedInPublisher } from './drivers/linkedin-publisher';
+import { PlatformPublisherRegistry } from './drivers/platform-publisher.registry';
+
+// providers:
+YouTubeShortsPublisher, TikTokPublisher, InstagramReelsPublisher,
+FacebookReelsPublisher, LinkedInPublisher,
+PlatformPublisherRegistry,
+{
+  provide: PLATFORM_PUBLISHERS,
+  useFactory: (yt, tt, ig, fb, li) => [yt, tt, ig, fb, li],
+  inject: [YouTubeShortsPublisher, TikTokPublisher, InstagramReelsPublisher, FacebookReelsPublisher, LinkedInPublisher],
+},
+```
+
+- [ ] **Step 4: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- platform-publisher.registry.spec
+git add packages/backend/src/content-pipeline/
+git commit -m "feat(content-pipeline): PlatformPublisherRegistry injecting all 5 publishers"
+```
+
+## Task 2.15: OpenAITTSDriver and auto-fallback policy
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/openai-tts-driver.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/openai-tts-driver.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/drivers/tts-driver.factory.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/synthesize-audio.handler.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/openai-tts-driver.spec.ts
+import { OpenAITTSDriver } from "./openai-tts-driver";
+
+jest.mock("openai", () => ({
+  default: jest.fn().mockImplementation(() => ({
+    audio: {
+      speech: {
+        create: jest.fn().mockResolvedValue({
+          arrayBuffer: async () => new ArrayBuffer(12345),
+        }),
+      },
+    },
+  })),
+}));
+
+describe("OpenAITTSDriver", () => {
+  beforeAll(() => {
+    process.env.OPENAI_API_KEY = "test-key";
+  });
+
+  it("isConfigured when OPENAI_API_KEY set", () => {
+    expect(new OpenAITTSDriver().isConfigured()).toBe(true);
+  });
+
+  it("synthesize returns cost in USD per character", async () => {
+    const driver = new OpenAITTSDriver();
+    const result = await driver.synthesize({
+      text: "hello world this is a test",
+      voiceId: "alloy",
+      outputPath: "/tmp/out.mp3",
+      format: "mp3",
+    });
+    expect(result.cost.provider).toBe("openai-tts");
+    expect(result.cost.units).toBe(26);
+    expect(result.cost.amount_usd).toBeGreaterThan(0);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/openai-tts-driver.ts
+import { Injectable } from "@nestjs/common";
+import OpenAI from "openai";
+import { writeFileSync } from "fs";
+import {
+  TTSDriver,
+  TTSSynthesisRequest,
+  TTSSynthesisResult,
+} from "./tts-driver.interface";
+
+const OPENAI_TTS_USD_PER_1K_CHARS = 0.015; // tts-1-hd pricing as of 2026-04
+
+@Injectable()
+export class OpenAITTSDriver implements TTSDriver {
+  readonly provider = "openai" as const;
+  private client: OpenAI | null = null;
+
+  isConfigured(): boolean {
+    return !!process.env.OPENAI_API_KEY;
+  }
+
+  private getClient(): OpenAI {
+    if (!this.client) {
+      if (!process.env.OPENAI_API_KEY)
+        throw new Error("OPENAI_API_KEY is required");
+      this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+    return this.client;
+  }
+
+  async synthesize(req: TTSSynthesisRequest): Promise<TTSSynthesisResult> {
+    const start = Date.now();
+    const response = await this.getClient().audio.speech.create({
+      model: "tts-1-hd",
+      voice: req.voiceId as any,
+      input: req.text,
+      response_format: "mp3",
+    });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    writeFileSync(req.outputPath, buffer);
+    const wallMs = Date.now() - start;
+
+    return {
+      durationMs: wallMs,
+      bitrate: buffer.length > 0 ? (buffer.length * 8) / (wallMs / 1000) : 0,
+      cost: {
+        provider: "openai-tts",
+        amount_usd: (req.text.length / 1000) * OPENAI_TTS_USD_PER_1K_CHARS,
+        units: req.text.length,
+        unit_type: "chars",
+      },
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Update factory to support OpenAI plus add auto-fallback helper.**
+
+```typescript
+// drivers/tts-driver.factory.ts
+import { Injectable } from "@nestjs/common";
+import { TTSDriver } from "./tts-driver.interface";
+import { EdgeTTSDriver } from "./edge-tts-driver";
+import { OpenAITTSDriver } from "./openai-tts-driver";
+
+@Injectable()
+export class TTSDriverFactory {
+  constructor(
+    private readonly edge: EdgeTTSDriver,
+    private readonly openai: OpenAITTSDriver,
+  ) {}
+
+  forProvider(provider: "edge" | "elevenlabs" | "openai"): TTSDriver {
+    switch (provider) {
+      case "edge":
+        if (!this.edge.isConfigured())
+          throw new Error("Edge TTS not configured");
+        return this.edge;
+      case "openai":
+        if (!this.openai.isConfigured())
+          throw new Error("OpenAI TTS not configured");
+        return this.openai;
+      case "elevenlabs":
+        throw new Error("ElevenLabs driver ships in P3");
+    }
+  }
+
+  fallbackForEdge(): TTSDriver | null {
+    return this.openai.isConfigured() ? this.openai : null;
+  }
+}
+```
+
+- [ ] **Step 4: Add auto-fallback to synthesize-audio handler.**
+
+Modify `synthesize-audio.handler.ts` so that if `TTSDriver.synthesize` throws and provider was 'edge', it retries once with the fallback:
+
+```typescript
+// inside synthesize-audio.handler.ts handle()
+const driver = this.ttsFactory.forProvider(run.tts_provider);
+let result;
+try {
+  result = await driver.synthesize({ ...req });
+} catch (err) {
+  if (run.tts_provider === "edge") {
+    const fallback = this.ttsFactory.fallbackForEdge();
+    if (fallback) {
+      await client.from("content_run_events").insert({
+        run_id: runId,
+        event_type: "tts_fallback",
+        payload: {
+          from: "edge",
+          to: fallback.provider,
+          reason: (err as Error).message,
+        },
+      });
+      result = await fallback.synthesize({ ...req, voiceId: "alloy" });
+    } else {
+      throw err;
+    }
+  } else {
+    throw err;
+  }
+}
+```
+
+- [ ] **Step 5: Register OpenAITTSDriver, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- openai-tts-driver.spec
+git add packages/backend/src/content-pipeline/
+git commit -m "feat(content-pipeline): OpenAI TTS driver with auto-fallback from Edge TTS on error"
+```
+
+## Task 2.16: Thumbnail rendering in Remotion
+
+**Files:**
+
+- Create: `packages/video-template/src/cli/render-thumbnail-cli.ts`
+- Modify: `packages/video-template/src/cli/render.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-thumbnail.handler.ts`
+
+- [ ] **Step 1: Add `renderThumbnail` to video-template cli/render.ts.**
+
+```typescript
+// packages/video-template/src/cli/render.ts (append)
+import { renderStill } from "@remotion/renderer";
+
+export interface RenderThumbnailOptions {
+  format: FormatKey;
+  props: VideoProps;
+  frame: number;
+  outputPath: string;
+}
+
+export async function renderThumbnail(
+  opts: RenderThumbnailOptions,
+): Promise<{ outputPath: string; renderWallMs: number }> {
+  const bundled = await bundle({
+    entryPoint: path.resolve(__dirname, "..", "index.ts"),
+  });
+  const start = Date.now();
+  await renderStill({
+    serveUrl: bundled,
+    composition: {
+      id: opts.format,
+      width: 1280,
+      height: 720,
+      fps: 30,
+      durationInFrames: 900,
+    } as any,
+    frame: opts.frame,
+    output: opts.outputPath,
+    inputProps: opts.props,
+  });
+  return { outputPath: opts.outputPath, renderWallMs: Date.now() - start };
+}
+```
+
+- [ ] **Step 2: Create CLI entry.**
+
+```typescript
+// packages/video-template/src/cli/render-thumbnail-cli.ts
+#!/usr/bin/env node
+import { Command } from 'commander';
+import { readFileSync } from 'fs';
+import { renderThumbnail } from './render';
+
+const program = new Command();
+program
+  .requiredOption('--format <format>', 'format key')
+  .requiredOption('--props-json <path>', 'path to JSON')
+  .requiredOption('--output <path>', 'output png path')
+  .option('--frame <n>', 'frame to render', '210') // frame 210 is inside ScoreReveal for grade_reveal
+  .parse();
+
+const opts = program.opts();
+(async () => {
+  try {
+    const props = JSON.parse(readFileSync(opts.propsJson, 'utf8'));
+    props.format = opts.format;
+    const result = await renderThumbnail({ format: opts.format, props, frame: parseInt(opts.frame, 10), outputPath: opts.output });
+    console.log(JSON.stringify({ ok: true, ...result }));
+  } catch (err) {
+    console.error(JSON.stringify({ ok: false, error: (err as Error).message }));
+    process.exit(1);
+  }
+})();
+```
+
+- [ ] **Step 3: Add bin entry in package.json.**
+
+```json
+"bin": {
+  "render-video": "./dist/cli/render-cli.js",
+  "render-thumbnail": "./dist/cli/render-thumbnail-cli.js"
+}
+```
+
+- [ ] **Step 4: Write render-thumbnail handler.**
+
+```typescript
+// packages/backend/src/content-pipeline/orchestrator/job-handlers/render-thumbnail.handler.ts
+import { Injectable } from "@nestjs/common";
+import { spawn } from "child_process";
+import { join } from "path";
+import { tmpdir } from "os";
+import { writeFileSync, readFileSync } from "fs";
+import { SupabaseService } from "../../../supabase/supabase.service";
+import { RunOrchestratorService } from "../run-orchestrator.service";
+
+@Injectable()
+export class RenderThumbnailHandler {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly orchestrator: RunOrchestratorService,
+  ) {}
+
+  async handle(runId: string): Promise<void> {
+    const client = this.supabase.getClient();
+    try {
+      const { data: run } = await client
+        .from("content_runs")
+        .select("format, resolved_geo, hook_variants")
+        .eq("id", runId)
+        .single();
+      const { data: payload } = await client
+        .from("content_assets")
+        .select("metadata")
+        .eq("run_id", runId)
+        .eq("kind", "mcp_payload")
+        .single();
+
+      const propsFile = join(tmpdir(), `thumb-props-${runId}.json`);
+      writeFileSync(
+        propsFile,
+        JSON.stringify({
+          format: run.format,
+          resolvedMarket: run.resolved_geo,
+          dataBundle: payload.metadata,
+          ctaUrl: "",
+        }),
+      );
+      const outputPath = join(tmpdir(), `thumb-${runId}.png`);
+
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn("node", [
+          join(
+            process.cwd(),
+            "node_modules/@propertyiq/video-template/dist/cli/render-thumbnail-cli.js",
+          ),
+          "--format",
+          run.format,
+          "--props-json",
+          propsFile,
+          "--output",
+          outputPath,
+        ]);
+        let stderr = "";
+        proc.stderr.on("data", (d) => {
+          stderr += d.toString();
+        });
+        proc.on("close", (code) =>
+          code === 0
+            ? resolve()
+            : reject(new Error(`thumbnail render failed: ${stderr}`)),
+        );
+      });
+
+      const storagePath = `runs/${runId}/thumbnail.png`;
+      await client.storage
+        .from("content-pipeline")
+        .upload(storagePath, readFileSync(outputPath), {
+          contentType: "image/png",
+          upsert: true,
+        });
+      const storageUrl = `supabase://content-pipeline/${storagePath}`;
+
+      await client.from("content_assets").insert({
+        run_id: runId,
+        kind: "thumbnail",
+        storage_url: storageUrl,
+        metadata: { width: 1280, height: 720 },
+      });
+    } catch (err) {
+      await client.from("content_run_events").insert({
+        run_id: runId,
+        event_type: "thumbnail_render_failed",
+        payload: { error: (err as Error).message },
+      });
+    }
+  }
+}
+```
+
+- [ ] **Step 5: Wire into orchestrator: after `rendering_video` success, enqueue thumbnail job on same `render-video` queue before moving to publishing. Alternative: make thumbnail a silent step; publishes use default thumbnail if missing.**
+
+- [ ] **Step 6: Run sample thumbnail render, commit.**
+
+```bash
+cd packages/video-template && npm run build:cli && \
+node dist/cli/render-thumbnail-cli.js --format grade_reveal --props-json sample.json --output thumb.png
+git add packages/video-template/src/cli/ packages/video-template/package.json packages/backend/src/content-pipeline/orchestrator/
+git commit -m "feat(content-pipeline): thumbnail rendering via Remotion renderStill plus handler"
+```
+
+## Task 2.17: Thumbnail editor in review queue
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/review/review-card.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/review/thumbnail-editor.tsx`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.controller.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+
+- [ ] **Step 1: Add backend endpoint to regenerate thumbnail from a different frame.**
+
+```typescript
+// content-pipeline.service.ts (add)
+async regenerateThumbnail(runId: string, frame: number): Promise<void> {
+  await this.queueService.send('render-video', { runId, status: 'render_thumbnail', frame });
+}
+
+async replaceThumbnail(runId: string, imageBuffer: Buffer): Promise<string> {
+  const client = this.supabase.getClient();
+  const storagePath = `runs/${runId}/thumbnail-override.png`;
+  await client.storage.from('content-pipeline').upload(storagePath, imageBuffer, {
+    contentType: 'image/png', upsert: true,
+  });
+  const storageUrl = `supabase://content-pipeline/${storagePath}`;
+  await client.from('content_assets').insert({
+    run_id: runId, kind: 'thumbnail', variant: 'override',
+    storage_url: storageUrl, metadata: { source: 'operator_upload' },
+  });
+  return storageUrl;
+}
+```
+
+```typescript
+// content-pipeline.controller.ts
+@Post('runs/:id/thumbnail/regenerate')
+async regenerateThumbnail(@Param('id') id: string, @Body() body: { frame: number }) {
+  await this.service.regenerateThumbnail(id, body.frame);
+  return { success: true, data: { queued: true } };
+}
+
+@Post('runs/:id/thumbnail/replace')
+@UseInterceptors(FileInterceptor('file'))
+async replaceThumbnail(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  const url = await this.service.replaceThumbnail(id, file.buffer);
+  return { success: true, data: { storage_url: url } };
+}
+```
+
+- [ ] **Step 2: Write thumbnail-editor component.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/review/thumbnail-editor.tsx
+"use client";
+import { useState, useRef } from "react";
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function ThumbnailEditor({
+  runId,
+  currentUrl,
+  onClose,
+}: {
+  runId: string;
+  currentUrl: string;
+  onClose: () => void;
+}) {
+  const [frame, setFrame] = useState(210);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function regenerate() {
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/runs/${runId}/thumbnail/regenerate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frame }),
+      },
+    );
+    onClose();
+  }
+
+  async function uploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/runs/${runId}/thumbnail/replace`,
+      { method: "POST", body: fd },
+    );
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
+      <div className="bg-surface rounded-xl p-6 w-full max-w-xl">
+        <h3 className="font-semibold mb-4">Thumbnail</h3>
+        <img
+          src={currentUrl}
+          alt="current thumbnail"
+          className="w-full rounded-lg mb-4"
+        />
+        <label className="block mb-4">
+          <span className="text-sm mb-1 block">
+            Frame to extract (0 to 900)
+          </span>
+          <input
+            type="number"
+            value={frame}
+            onChange={(e) => setFrame(parseInt(e.target.value, 10))}
+            className="w-full rounded-lg border border-outline-variant p-2"
+          />
+        </label>
+        <div className="flex gap-3">
+          <button
+            onClick={regenerate}
+            className="bg-primary text-on-primary rounded-full px-5 py-2 font-semibold"
+          >
+            Regenerate from frame
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            onChange={uploadFile}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="bg-surface-container-high rounded-full px-5 py-2 font-semibold"
+          >
+            {uploading ? "Uploading..." : "Upload custom"}
+          </button>
+          <button onClick={onClose} className="px-5 py-2">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Add thumbnail button to ReviewCard that opens editor.**
+
+Modify review-card.tsx to show the current thumbnail above the video, with an "Edit thumbnail" button that opens the ThumbnailEditor modal.
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/review/ packages/backend/src/content-pipeline/
+git commit -m "feat(content-pipeline): thumbnail editor in review queue (regenerate or upload)"
+```
+
+## Task 2.18: Approval modes fully wired
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish.handler.ts`
+- Modify: all 5 publisher handlers to pass `postMode` correctly
+- Create: `packages/backend/test/integration/approval-modes.integration.spec.ts`
+
+- [ ] **Step 1: Update render-video handler to branch on approval_mode.**
+
+```typescript
+// inside render-video.handler.ts handle() after video asset is saved:
+const { data: runRow } = await client
+  .from("content_runs")
+  .select("approval_mode")
+  .eq("id", runId)
+  .single();
+if (runRow.approval_mode === "review") {
+  await this.orchestrator.transitionTo(runId, "ready_for_review", {
+    enqueueNext: false,
+  });
+} else {
+  // auto or draft both go to publishing; publishers check postMode
+  await this.orchestrator.transitionTo(runId, "publishing", {
+    enqueueNext: true,
+  });
+}
+```
+
+- [ ] **Step 2: Verify each publisher handler forwards `approval_mode === 'draft' ? 'draft' : 'direct'` into `postMode`.**
+
+Already done in tasks 2.10 through 2.13 for the new publishers; verify Task 1.25 YouTubeShorts handler also respects the flag.
+
+- [ ] **Step 3: Write integration tests.**
+
+```typescript
+// packages/backend/test/integration/approval-modes.integration.spec.ts
+import { Test } from "@nestjs/testing";
+import { AppModule } from "../../src/app.module";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { v4 as uuid } from "uuid";
+
+describe("approval modes integration", () => {
+  let app: INestApplication;
+  const adminJwt = process.env.E2E_ADMIN_JWT;
+
+  beforeAll(async () => {
+    const moduleFixture = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => await app?.close());
+
+  async function createRun(approvalMode: "auto" | "review" | "draft") {
+    return request(app.getHttpServer())
+      .post("/api/admin/content-pipeline/runs")
+      .set("Authorization", `Bearer ${adminJwt}`)
+      .send({
+        format: "grade_reveal",
+        marketQuery: "Cleveland, OH",
+        idempotencyKey: uuid(),
+        approvalMode,
+      });
+  }
+
+  it("auto mode reaches published without human step", async () => {
+    const res = await createRun("auto");
+    const runId = res.body.data.id;
+    // Poll for 10 min
+    const status = await pollUntilTerminal(runId, 600_000);
+    expect(status).toBe("published");
+  }, 720_000);
+
+  it("review mode parks at ready_for_review", async () => {
+    const res = await createRun("review");
+    const runId = res.body.data.id;
+    const status = await pollUntilTerminal(runId, 300_000);
+    expect(status).toBe("ready_for_review");
+  }, 360_000);
+
+  it("draft mode publishes with draft flag", async () => {
+    const res = await createRun("draft");
+    const runId = res.body.data.id;
+    await pollUntilTerminal(runId, 600_000);
+    const detailRes = await request(app.getHttpServer())
+      .get(`/api/admin/content-pipeline/runs/${runId}`)
+      .set("Authorization", `Bearer ${adminJwt}`);
+    const posts = detailRes.body.data.posts;
+    for (const post of posts) {
+      expect(post.post_mode).toBe("draft");
+    }
+  }, 720_000);
+
+  async function pollUntilTerminal(
+    runId: string,
+    timeoutMs: number,
+  ): Promise<string> {
+    const start = Date.now();
+    const terminal = [
+      "published",
+      "published_partial",
+      "failed",
+      "rejected",
+      "ready_for_review",
+    ];
+    while (Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const detailRes = await request(app.getHttpServer())
+        .get(`/api/admin/content-pipeline/runs/${runId}`)
+        .set("Authorization", `Bearer ${adminJwt}`);
+      const status = detailRes.body.data.run.status;
+      if (terminal.includes(status)) return status;
+    }
+    throw new Error("timeout");
+  }
+});
+```
+
+- [ ] **Step 4: Run integration tests, commit.**
+
+```bash
+cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- approval-modes
+git add packages/backend/src/content-pipeline/orchestrator/ packages/backend/test/integration/
+git commit -m "feat(content-pipeline): approval modes auto/review/draft fully wired with integration tests"
+```
+
+## Task 2.19: Per-format defaults UI in Settings
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/settings/page.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/settings/format-defaults.tsx`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.controller.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+- Create: `packages/backend/src/content-pipeline/dto/update-format.dto.ts`
+
+- [ ] **Step 1: DTO.**
+
+```typescript
+// packages/backend/src/content-pipeline/dto/update-format.dto.ts
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsBoolean,
+} from "class-validator";
+export class UpdateFormatDto {
+  @IsOptional()
+  @IsIn(["auto", "review", "draft"])
+  default_approval_mode?: string;
+  @IsOptional() @IsString() default_tts_voice_id?: string;
+  @IsOptional() @IsArray() default_platforms?: string[];
+  @IsOptional() @IsBoolean() enabled?: boolean;
+}
+```
+
+- [ ] **Step 2: Service + endpoint.**
+
+```typescript
+// content-pipeline.service.ts (add)
+async updateFormat(format: string, dto: UpdateFormatDto) {
+  const client = this.supabase.getClient();
+  const patch: any = { ...dto };
+  await client.from('format_templates').update(patch).eq('format', format);
+  const { data } = await client.from('format_templates').select('*').eq('format', format).single();
+  return data;
+}
+```
+
+```typescript
+// content-pipeline.controller.ts
+@Patch('formats/:format')
+async updateFormat(@Param('format') format: string, @Body() dto: UpdateFormatDto) {
+  return { success: true, data: await this.service.updateFormat(format, dto) };
+}
+```
+
+- [ ] **Step 3: Write format-defaults table component with inline editing.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/settings/format-defaults.tsx
+"use client";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function FormatDefaults({ formats }: { formats: Array<any> }) {
+  const qc = useQueryClient();
+  const update = useMutation({
+    mutationFn: async ({ format, patch }: { format: string; patch: any }) => {
+      await fetchAPIRaw(`/api/admin/content-pipeline/formats/${format}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["content-pipeline-settings"] }),
+  });
+
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-outline">
+          <th className="py-2">Format</th>
+          <th>Enabled</th>
+          <th>Approval mode</th>
+          <th>Voice</th>
+          <th>Platforms</th>
+        </tr>
+      </thead>
+      <tbody>
+        {formats.map((f) => (
+          <tr key={f.format} className="border-t border-outline-variant">
+            <td className="py-2">{f.display_name}</td>
+            <td>
+              <input
+                type="checkbox"
+                checked={f.enabled}
+                onChange={(e) =>
+                  update.mutate({
+                    format: f.format,
+                    patch: { enabled: e.target.checked },
+                  })
+                }
+              />
+            </td>
+            <td>
+              <select
+                value={f.default_approval_mode}
+                onChange={(e) =>
+                  update.mutate({
+                    format: f.format,
+                    patch: { default_approval_mode: e.target.value },
+                  })
+                }
+                className="border border-outline-variant rounded p-1"
+              >
+                <option value="auto">auto</option>
+                <option value="review">review</option>
+                <option value="draft">draft</option>
+              </select>
+            </td>
+            <td>{f.default_tts_voice_id ?? "(long-form)"}</td>
+            <td className="text-xs">{f.default_platforms?.join(", ")}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+- [ ] **Step 4: Wire into settings/page.tsx replacing inline table. Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/settings/ packages/backend/src/content-pipeline/
+git commit -m "feat(content-pipeline): inline editing of per-format defaults in Settings"
+```
+
+## Task 2.20: Lead Magnet Library admin page and endpoints
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/magnets/magnet-library.service.ts`
+- Create: `packages/backend/src/content-pipeline/magnets/magnet-library.controller.ts`
+- Create: `packages/backend/src/content-pipeline/magnets/magnet-library.service.spec.ts`
+- Create: `packages/backend/src/content-pipeline/dto/update-magnet.dto.ts`
+- Create: `packages/backend/src/content-pipeline/dto/bind-magnet.dto.ts`
+- Create: `packages/frontend/app/admin/content-pipeline/lead-magnets/page.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/lead-magnets/magnet-card.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/lead-magnets/edit-dialog.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/lead-magnets/bind-dialog.tsx`
+
+- [ ] **Step 1: DTOs.**
+
+```typescript
+// packages/backend/src/content-pipeline/dto/update-magnet.dto.ts
+import { IsString, IsOptional, IsIn, IsBoolean } from "class-validator";
+export class UpdateMagnetDto {
+  @IsOptional() @IsString() display_name?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional()
+  @IsIn(["investor", "agent", "broker", "mixed"])
+  audience?: string;
+  @IsOptional() @IsString() cover_image_url?: string;
+  @IsOptional() @IsBoolean() enabled?: boolean;
+}
+
+// packages/backend/src/content-pipeline/dto/bind-magnet.dto.ts
+import {
+  IsString,
+  IsNumber,
+  Min,
+  Max,
+  IsOptional,
+  IsBoolean,
+} from "class-validator";
+export class BindMagnetDto {
+  @IsString() format!: string;
+  @IsString() magnet_kind!: string;
+  @IsString() cta_text!: string;
+  @IsOptional() @IsNumber() @Min(0) @Max(1) weight?: number;
+  @IsOptional() @IsBoolean() enabled?: boolean;
+}
+```
+
+- [ ] **Step 2: Service tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/magnets/magnet-library.service.spec.ts
+import { Test } from "@nestjs/testing";
+import { MagnetLibraryService } from "./magnet-library.service";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+describe("MagnetLibraryService", () => {
+  let svc: MagnetLibraryService;
+  let fromCalls: string[] = [];
+  let mockData: Record<string, any[]> = {};
+
+  beforeEach(async () => {
+    fromCalls = [];
+    mockData = { lead_magnet_definitions: [], format_magnet_bindings: [] };
+
+    const supabase = {
+      getClient: () => ({
+        from: jest.fn((tbl: string) => {
+          fromCalls.push(tbl);
+          const chain: any = {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            order: jest
+              .fn()
+              .mockResolvedValue({ data: mockData[tbl] ?? [], error: null }),
+            update: jest.fn().mockReturnThis(),
+            upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+            insert: jest.fn().mockReturnThis(),
+            delete: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({
+              data: mockData[tbl]?.[0] ?? null,
+              error: null,
+            }),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: mockData[tbl]?.[0] ?? null,
+              error: null,
+            }),
+          };
+          return chain;
+        }),
+      }),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        MagnetLibraryService,
+        { provide: SupabaseService, useValue: supabase },
+      ],
+    }).compile();
+    svc = module.get(MagnetLibraryService);
+  });
+
+  it("lists magnets with bindings", async () => {
+    mockData.lead_magnet_definitions = [{ kind: "m1", display_name: "M1" }];
+    mockData.format_magnet_bindings = [
+      { format: "grade_reveal", magnet_kind: "m1", weight: 1 },
+    ];
+    const result = await svc.listMagnets();
+    expect(result).toHaveLength(1);
+    expect(result[0].kind).toBe("m1");
+  });
+});
+```
+
+- [ ] **Step 3: Implement service.**
+
+```typescript
+// packages/backend/src/content-pipeline/magnets/magnet-library.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { UpdateMagnetDto } from "../dto/update-magnet.dto";
+import { BindMagnetDto } from "../dto/bind-magnet.dto";
+
+@Injectable()
+export class MagnetLibraryService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async listMagnets() {
+    const client = this.supabase.getClient();
+    const { data: magnets } = await client
+      .from("lead_magnet_definitions")
+      .select("*")
+      .order("kind");
+    const { data: bindings } = await client
+      .from("format_magnet_bindings")
+      .select("*")
+      .order("format");
+    const byKind = new Map<string, any[]>();
+    for (const b of bindings ?? []) {
+      if (!byKind.has(b.magnet_kind)) byKind.set(b.magnet_kind, []);
+      byKind.get(b.magnet_kind)!.push(b);
+    }
+    return (magnets ?? []).map((m) => ({
+      ...m,
+      bindings: byKind.get(m.kind) ?? [],
+    }));
+  }
+
+  async updateMagnet(kind: string, dto: UpdateMagnetDto) {
+    const client = this.supabase.getClient();
+    await client
+      .from("lead_magnet_definitions")
+      .update({ ...dto, updated_at: new Date().toISOString() })
+      .eq("kind", kind);
+    const { data } = await client
+      .from("lead_magnet_definitions")
+      .select("*")
+      .eq("kind", kind)
+      .single();
+    return data;
+  }
+
+  async archiveMagnet(kind: string) {
+    await this.updateMagnet(kind, { enabled: false });
+  }
+
+  async cloneMagnet(kind: string): Promise<string> {
+    const client = this.supabase.getClient();
+    const { data: source } = await client
+      .from("lead_magnet_definitions")
+      .select("*")
+      .eq("kind", kind)
+      .single();
+    if (!source) throw new Error("source magnet not found");
+    const newKind = `${kind}_copy_${Date.now()}`;
+    await client.from("lead_magnet_definitions").insert({
+      ...source,
+      kind: newKind,
+      display_name: `${source.display_name} (copy)`,
+      enabled: false,
+      version: 1,
+    });
+    return newKind;
+  }
+
+  async upsertBinding(dto: BindMagnetDto) {
+    const client = this.supabase.getClient();
+    await client.from("format_magnet_bindings").upsert(
+      {
+        format: dto.format,
+        magnet_kind: dto.magnet_kind,
+        cta_text: dto.cta_text,
+        weight: dto.weight ?? 1.0,
+        enabled: dto.enabled ?? true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "format,magnet_kind" },
+    );
+  }
+
+  async deleteBinding(bindingId: string) {
+    const client = this.supabase.getClient();
+    await client.from("format_magnet_bindings").delete().eq("id", bindingId);
+  }
+}
+```
+
+- [ ] **Step 4: Controller.**
+
+```typescript
+// packages/backend/src/content-pipeline/magnets/magnet-library.controller.ts
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from "@nestjs/common";
+import { AdminGuard } from "../../common/guards/admin-auth.guard";
+import { MagnetLibraryService } from "./magnet-library.service";
+import { UpdateMagnetDto } from "../dto/update-magnet.dto";
+import { BindMagnetDto } from "../dto/bind-magnet.dto";
+
+@UseGuards(AdminGuard)
+@Controller("api/admin/content-pipeline/magnets")
+export class MagnetLibraryController {
+  constructor(private readonly service: MagnetLibraryService) {}
+
+  @Get()
+  async list() {
+    return {
+      success: true,
+      data: { magnets: await this.service.listMagnets() },
+    };
+  }
+
+  @Patch(":kind")
+  async update(@Param("kind") kind: string, @Body() dto: UpdateMagnetDto) {
+    return { success: true, data: await this.service.updateMagnet(kind, dto) };
+  }
+
+  @Post(":kind/archive")
+  async archive(@Param("kind") kind: string) {
+    await this.service.archiveMagnet(kind);
+    return { success: true, data: { enabled: false } };
+  }
+
+  @Post(":kind/clone")
+  async clone(@Param("kind") kind: string) {
+    return {
+      success: true,
+      data: { newKind: await this.service.cloneMagnet(kind) },
+    };
+  }
+
+  @Post("bindings")
+  async upsertBinding(@Body() dto: BindMagnetDto) {
+    await this.service.upsertBinding(dto);
+    return { success: true, data: { ok: true } };
+  }
+
+  @Delete("bindings/:id")
+  async deleteBinding(@Param("id") id: string) {
+    await this.service.deleteBinding(id);
+    return { success: true, data: { deleted: true } };
+  }
+}
+```
+
+- [ ] **Step 5: Write Lead Magnet Library admin page and components.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/lead-magnets/page.tsx
+"use client";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAPI } from "@/lib/data/fetchers/base";
+import { MagnetCard } from "./magnet-card";
+import { EditDialog } from "./edit-dialog";
+import { BindDialog } from "./bind-dialog";
+
+export default function LeadMagnetLibraryPage() {
+  const [editingKind, setEditingKind] = useState<string | null>(null);
+  const [bindingKind, setBindingKind] = useState<string | null>(null);
+
+  const { data, refetch } = useQuery({
+    queryKey: ["magnets"],
+    queryFn: async () =>
+      (
+        await fetchAPI<{ data: { magnets: any[] } }>(
+          "/api/admin/content-pipeline/magnets",
+        )
+      ).data.magnets,
+  });
+
+  return (
+    <div className="p-8 space-y-6">
+      <h1 className="text-2xl font-semibold">Lead Magnet Library</h1>
+      <div className="grid grid-cols-3 gap-6">
+        {(data ?? []).map((m) => (
+          <MagnetCard
+            key={m.kind}
+            magnet={m}
+            onEdit={() => setEditingKind(m.kind)}
+            onBind={() => setBindingKind(m.kind)}
+            onChange={refetch}
+          />
+        ))}
+      </div>
+      {editingKind && (
+        <EditDialog
+          kind={editingKind}
+          onClose={() => {
+            setEditingKind(null);
+            refetch();
+          }}
+        />
+      )}
+      {bindingKind && (
+        <BindDialog
+          kind={bindingKind}
+          onClose={() => {
+            setBindingKind(null);
+            refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/lead-magnets/magnet-card.tsx
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function MagnetCard({ magnet, onEdit, onBind, onChange }: any) {
+  async function archive() {
+    if (!confirm(`Archive ${magnet.display_name}?`)) return;
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/magnets/${magnet.kind}/archive`,
+      { method: "POST" },
+    );
+    onChange();
+  }
+  async function clone() {
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/magnets/${magnet.kind}/clone`,
+      { method: "POST" },
+    );
+    onChange();
+  }
+
+  return (
+    <div className="rounded-xl bg-surface-container-low shadow-sm overflow-hidden">
+      {magnet.cover_image_url && (
+        <img
+          src={magnet.cover_image_url}
+          alt={magnet.display_name}
+          className="w-full aspect-video object-cover"
+        />
+      )}
+      <div className="p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold">{magnet.display_name}</div>
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${magnet.enabled ? "bg-accent/10 text-accent" : "bg-outline/10 text-outline"}`}
+          >
+            {magnet.enabled ? "Enabled" : "Archived"}
+          </span>
+        </div>
+        <div className="text-xs text-outline">{magnet.audience}</div>
+        <p className="text-sm line-clamp-2">{magnet.description}</p>
+        <div className="text-xs text-outline">
+          Bound to:{" "}
+          {magnet.bindings.map((b: any) => b.format).join(", ") || "nothing"}
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={onEdit}
+            className="text-sm bg-surface-container rounded-full px-3 py-1"
+          >
+            Edit
+          </button>
+          <button
+            onClick={onBind}
+            className="text-sm bg-surface-container rounded-full px-3 py-1"
+          >
+            Bind
+          </button>
+          <button
+            onClick={clone}
+            className="text-sm bg-surface-container rounded-full px-3 py-1"
+          >
+            Clone
+          </button>
+          <button
+            onClick={archive}
+            className="text-sm bg-error/10 text-error rounded-full px-3 py-1"
+          >
+            Archive
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/lead-magnets/edit-dialog.tsx
+"use client";
+import { useEffect, useState } from "react";
+import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function EditDialog({
+  kind,
+  onClose,
+}: {
+  kind: string;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await fetchAPI<{ data: { magnets: any[] } }>(
+        "/api/admin/content-pipeline/magnets",
+      );
+      setForm(data.magnets.find((m) => m.kind === kind));
+    })();
+  }, [kind]);
+
+  if (!form) return null;
+  async function save() {
+    await fetchAPIRaw(`/api/admin/content-pipeline/magnets/${kind}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        display_name: form.display_name,
+        description: form.description,
+        audience: form.audience,
+        cover_image_url: form.cover_image_url,
+      }),
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
+      <div className="bg-surface rounded-xl p-6 w-full max-w-xl">
+        <h3 className="font-semibold mb-4">Edit {kind}</h3>
+        <label className="block mb-3">
+          <span className="text-sm">Display name</span>
+          <input
+            value={form.display_name}
+            onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          />
+        </label>
+        <label className="block mb-3">
+          <span className="text-sm">Description</span>
+          <textarea
+            value={form.description ?? ""}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="w-full border border-outline-variant rounded p-2 mt-1 h-24"
+          />
+        </label>
+        <label className="block mb-3">
+          <span className="text-sm">Cover image URL</span>
+          <input
+            value={form.cover_image_url ?? ""}
+            onChange={(e) =>
+              setForm({ ...form, cover_image_url: e.target.value })
+            }
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose}>Cancel</button>
+          <button
+            onClick={save}
+            className="bg-primary text-on-primary rounded-full px-5 py-2"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/lead-magnets/bind-dialog.tsx
+"use client";
+import { useState } from "react";
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+const ALL_FORMATS = [
+  "grade_reveal",
+  "top_10_ranking",
+  "score_mover",
+  "head_to_head",
+  "farm_area_spotlight",
+  "brokerage_market_share",
+  "recruitment_angle",
+  "long_form_deep_dive",
+];
+
+export function BindDialog({
+  kind,
+  onClose,
+}: {
+  kind: string;
+  onClose: () => void;
+}) {
+  const [format, setFormat] = useState("grade_reveal");
+  const [ctaText, setCtaText] = useState("Get your free ");
+  const [weight, setWeight] = useState(1.0);
+
+  async function save() {
+    await fetchAPIRaw("/api/admin/content-pipeline/magnets/bindings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        format,
+        magnet_kind: kind,
+        cta_text: ctaText,
+        weight,
+        enabled: true,
+      }),
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
+      <div className="bg-surface rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold mb-4">Bind {kind} to a format</h3>
+        <label className="block mb-3">
+          <span className="text-sm">Format</span>
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          >
+            {ALL_FORMATS.map((f) => (
+              <option key={f}>{f}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block mb-3">
+          <span className="text-sm">CTA text</span>
+          <input
+            value={ctaText}
+            onChange={(e) => setCtaText(e.target.value)}
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          />
+        </label>
+        <label className="block mb-3">
+          <span className="text-sm">Weight (0 to 1)</span>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            max="1"
+            value={weight}
+            onChange={(e) => setWeight(parseFloat(e.target.value))}
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose}>Cancel</button>
+          <button
+            onClick={save}
+            className="bg-primary text-on-primary rounded-full px-5 py-2"
+          >
+            Bind
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 6: Register module, nav entry, run tests, commit.**
+
+Register `MagnetLibraryController` and `MagnetLibraryService` in ContentPipelineModule. Add "Lead Magnets" entry to admin nav sidebar.
+
+```bash
+cd packages/backend && npm run test -- magnet-library.service.spec
+git add packages/backend/src/content-pipeline/magnets/ packages/backend/src/content-pipeline/dto/ packages/frontend/app/admin/content-pipeline/lead-magnets/
+git commit -m "feat(content-pipeline): Lead Magnet Library admin page with CRUD and bindings"
+```
+
+## Task 2.21: P2 lead magnet HTML/EJS templates
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/top_50_cashflow.html.ejs`
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/movers_report.html.ejs`
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/market_comparison.html.ejs`
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/farm_area_audit.html.ejs`
+
+- [ ] **Step 1: top_50_cashflow.html.ejs.**
+
+```html
+<h1>Top 50 Cashflow Markets, <%= dataBundle.state %></h1>
+<p>Prepared for <%= userContext.userName %> on <%= today %></p>
+
+<h2>Top 50 ranked by rent-to-price ratio</h2>
+<table style="width:100%; border-collapse:collapse; margin-top:16px;">
+  <thead style="background:var(--primary); color:white;">
+    <tr>
+      <th style="padding:8px; text-align:left;">Rank</th>
+      <th>Market</th>
+      <th>Median Home</th>
+      <th>Median Rent</th>
+      <th>R/P Ratio</th>
+      <th>PIQ Score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% dataBundle.markets.slice(0, 50).forEach(function(m) { %>
+    <tr style="border-bottom:1px solid var(--outline);">
+      <td style="padding:6px 8px;"><%= m.rank %></td>
+      <td><%= m.name %></td>
+      <td>$<%= Math.round(m.home_value/1000).toLocaleString() %>K</td>
+      <td>$<%= m.rent.toLocaleString() %></td>
+      <td><%= m.rent_to_price_ratio.toFixed(2) %>%</td>
+      <td><%= m.propertyiq_score ?? '-' %></td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2>Methodology</h2>
+<p>
+  Markets are ranked by gross rent-to-price ratio. PropertyIQ Score reflects
+  market-demand signal relative to state average.
+</p>
+```
+
+- [ ] **Step 2: movers_report.html.ejs.**
+
+```html
+<h1>Movers and Shakers, Monthly Report</h1>
+<p>
+  Markets that moved 5 or more PropertyIQ points in the last month. Prepared for
+  <%= userContext.userName %>.
+</p>
+
+<h2>Rising (top 15)</h2>
+<% dataBundle.rising_markets.slice(0, 15).forEach(function(m) { %>
+<div class="stat-card" style="margin:8px 0;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <strong><%= m.canonical_name %></strong>
+      <div style="font-size:11pt; color:var(--primary);">
+        PropertyIQ Score: <%= m.current_score %> (+<%= m.delta %>)
+      </div>
+    </div>
+    <div class="score-ring" style="width:72px; height:72px; font-size:22pt;">
+      <%= m.current_score %>
+    </div>
+  </div>
+</div>
+<% }); %>
+
+<h2>Falling (top 10)</h2>
+<% dataBundle.falling_markets.slice(0, 10).forEach(function(m) { %>
+<div class="stat-card" style="margin:8px 0; border-color: var(--error);">
+  <strong><%= m.canonical_name %></strong>: <%= m.current_score %> (<%= m.delta
+  %>)
+</div>
+<% }); %>
+```
+
+- [ ] **Step 3: market_comparison.html.ejs.**
+
+```html
+<h1>5-Market Deep Comparison</h1>
+<p>Side-by-side comparison prepared for <%= userContext.userName %>.</p>
+
+<table style="width:100%; border-collapse:collapse; margin-top:16px;">
+  <thead style="background:var(--primary); color:white;">
+    <tr>
+      <th style="padding:10px; text-align:left;">Metric</th>
+      <% dataBundle.markets.forEach(function(m) { %>
+      <th><%= m.canonical_name %></th>
+      <% }); %>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:8px;">PropertyIQ Score</td>
+      <% dataBundle.markets.forEach(function(m) { %>
+      <td style="text-align:center;"><%= m.score.propertyiq_score %></td>
+      <% }); %>
+    </tr>
+    <tr>
+      <td style="padding:8px;">Median Home Value</td>
+      <% dataBundle.markets.forEach(function(m) { %>
+      <td style="text-align:center;">
+        $<%= Math.round(m.home_value.value/1000).toLocaleString() %>K
+      </td>
+      <% }); %>
+    </tr>
+    <tr>
+      <td style="padding:8px;">Median Rent</td>
+      <% dataBundle.markets.forEach(function(m) { %>
+      <td style="text-align:center;">$<%= m.rent.value.toLocaleString() %></td>
+      <% }); %>
+    </tr>
+    <tr>
+      <td style="padding:8px;">Unemployment</td>
+      <% dataBundle.markets.forEach(function(m) { %>
+      <td style="text-align:center;">
+        <%= m.economic.unemployment_rate.toFixed(1) %>%
+      </td>
+      <% }); %>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Notes</h2>
+<p>
+  Values sourced from Zillow, Census, and BLS. PropertyIQ Score is updated
+  monthly.
+</p>
+```
+
+- [ ] **Step 4: farm_area_audit.html.ejs.**
+
+```html
+<h1>Farm Area Audit: <%= dataBundle.geo.canonical_name %></h1>
+<p>
+  Prepared for <%= userContext.userName %>. Top 20 farm areas ranked for agent
+  activity.
+</p>
+
+<% dataBundle.farm_zips.slice(0, 20).forEach(function(zip, i) { %>
+<div class="stat-card" style="margin:10px 0;">
+  <h3 style="margin:0 0 8px;">#<%= i + 1 %> ZIP <%= zip.zip %></h3>
+  <div
+    style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; font-size:11pt;"
+  >
+    <div>
+      <strong>Median price</strong><br />$<%=
+      Math.round(zip.median_price/1000).toLocaleString() %>K
+    </div>
+    <div>
+      <strong>Turnover</strong><br /><%= zip.turnover_pct.toFixed(1) %>%
+    </div>
+    <div>
+      <strong>Absentee</strong><br /><%= zip.absentee_pct.toFixed(1) %>%
+    </div>
+    <div><strong>Days on market</strong><br /><%= zip.median_dom %> days</div>
+    <div>
+      <strong>Avg listing time</strong><br /><%= zip.avg_listing_time_days %>
+      days
+    </div>
+    <div>
+      <strong>Population</strong><br /><%= zip.population.toLocaleString() %>
+    </div>
+  </div>
+</div>
+<% }); %>
+
+<h2>How to use this</h2>
+<p>
+  High turnover plus high absentee rates signal listing-side opportunity. Low
+  days-on-market plus high absentee signal rental and investor activity. Use
+  this audit to pick which ZIPs to farm in the next 90 days.
+</p>
+```
+
+- [ ] **Step 5: Run a PDF render per template in test to verify EJS compiles and Puppeteer produces a valid PDF.**
+
+```bash
+cd packages/backend && npm run test -- puppeteer-lead-magnet-renderer.spec
+```
+
+Extend the spec to exercise each of the 4 new templates with sample dataBundles.
+
+- [ ] **Step 6: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/lead-magnets/templates/
+git commit -m "feat(content-pipeline): P2 lead magnet templates (cashflow, movers, comparison, farm area)"
+```
+
+## Task 2.22: Platforms page updated for all 5 platforms plus OAuth flows
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/platforms/page.tsx`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.controller.ts`
+
+- [ ] **Step 1: Extend `startOAuth` for all 4 new platforms.**
+
+```typescript
+// content-pipeline.service.ts (extend startOAuth)
+async startOAuth(platform: string): Promise<{ authUrl: string }> {
+  const redirectBase = `${process.env.APP_BASE_URL}/admin/content-pipeline/platforms`;
+  switch (platform) {
+    case 'youtube_shorts': /* existing */
+    case 'tiktok': {
+      const clientKey = process.env.TIKTOK_CLIENT_KEY!;
+      const scope = encodeURIComponent('user.info.basic,video.upload,video.publish');
+      const redirect = encodeURIComponent(`${redirectBase}/tiktok/oauth-callback`);
+      return { authUrl: `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&response_type=code&scope=${scope}&redirect_uri=${redirect}` };
+    }
+    case 'instagram_reels':
+    case 'facebook_reels': {
+      const appId = process.env.META_GRAPH_APP_ID!;
+      const redirect = encodeURIComponent(`${redirectBase}/${platform}/oauth-callback`);
+      const scope = encodeURIComponent('instagram_content_publish,pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic');
+      return { authUrl: `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirect}&scope=${scope}` };
+    }
+    case 'linkedin': {
+      const clientId = process.env.LINKEDIN_CLIENT_ID!;
+      const redirect = encodeURIComponent(`${redirectBase}/linkedin/oauth-callback`);
+      const scope = encodeURIComponent('w_member_social w_organization_social r_organization_social rw_organization_admin');
+      return { authUrl: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirect}&scope=${scope}` };
+    }
+    default: throw new Error(`platform ${platform} not supported`);
+  }
+}
+```
+
+- [ ] **Step 2: Add OAuth callback handler (generic across platforms).**
+
+```typescript
+// content-pipeline.controller.ts
+@Post('platforms/:platform/oauth-callback')
+async oauthCallback(@Param('platform') platform: string, @Body() body: { code: string; state?: string }) {
+  await this.service.completeOAuth(platform, body.code);
+  return { success: true, data: { connected: true } };
+}
+```
+
+```typescript
+// content-pipeline.service.ts (add)
+async completeOAuth(platform: string, code: string): Promise<void> {
+  const crypto = new CredentialCrypto();
+  const tokenResponse = await this.exchangeCode(platform, code);
+  const client = this.supabase.getClient();
+  const encrypted = crypto.encrypt(JSON.stringify(tokenResponse));
+  await client.from('platform_credentials').upsert({
+    platform, encrypted_tokens: encrypted, connected_at: new Date().toISOString(),
+  }, { onConflict: 'platform' });
+}
+
+private async exchangeCode(platform: string, code: string): Promise<any> {
+  // Platform-specific token exchange using axios to each provider's /oauth/token endpoint.
+  // Returns { access_token, refresh_token, expires_at } shape.
+  // Implementations per platform; see docs/content-pipeline/platform-setup/*.md for specifics.
+  throw new Error(`exchangeCode for ${platform} to be implemented per task 2.24 setup doc`);
+}
+```
+
+Note: the `platform_credentials` table is new for P2. Add a migration:
+
+**File:** `supabase/migrations/20260422000300_content_pipeline_platform_credentials.sql`
+
+```sql
+CREATE TABLE IF NOT EXISTS platform_credentials (
+  platform TEXT PRIMARY KEY,
+  encrypted_tokens TEXT NOT NULL,
+  connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ,
+  last_error TEXT
+);
+ALTER TABLE platform_credentials ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON platform_credentials FOR ALL USING (true);
+GRANT ALL ON platform_credentials TO service_role;
+```
+
+- [ ] **Step 3: Platforms page lists all 5 with setup walkthrough links.**
+
+Modify `platforms/page.tsx` to loop over all 5 platforms returned from `/platforms` endpoint. Each row includes a link to `/docs/content-pipeline/platform-setup/<platform>.md` (served as a static doc or embedded inline).
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add supabase/migrations/20260422000300_content_pipeline_platform_credentials.sql packages/backend/src/content-pipeline/ packages/frontend/app/admin/content-pipeline/platforms/
+git commit -m "feat(content-pipeline): platform credentials storage and OAuth flows for 5 platforms"
+```
+
+## Task 2.23: Platform setup documentation for 4 new platforms
+
+**Files:**
+
+- Create: `docs/content-pipeline/platform-setup/tiktok.md`
+- Create: `docs/content-pipeline/platform-setup/instagram.md`
+- Create: `docs/content-pipeline/platform-setup/facebook.md`
+- Create: `docs/content-pipeline/platform-setup/linkedin.md`
+
+- [ ] **Step 1: tiktok.md.**
+
+Content covers: create TikTok for Business account, register app on developers.tiktok.com, enable Content Posting API product, required scopes (`user.info.basic`, `video.upload`, `video.publish`), app-review timeline (3 to 14 days), redirect URL registration, curl smoke test:
+
+```bash
+curl -X POST https://open.tiktokapis.com/v2/oauth/token/ \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'client_key=$TIKTOK_CLIENT_KEY&client_secret=$TIKTOK_CLIENT_SECRET&grant_type=refresh_token&refresh_token=$TIKTOK_OAUTH_REFRESH_TOKEN'
+```
+
+Include troubleshooting: "app not approved", "domain not verified", rate limits (6 posts per minute).
+
+- [ ] **Step 2: instagram.md.**
+
+Covers: requires Business account, must link to Facebook Page, Meta Graph app must have `instagram_content_publish` and `pages_manage_posts`, app-review notes for those scopes, video requirements (9x16 recommended, 15 to 90 seconds for Reels, mp4, h264 codec, aac audio), public URL requirement for video ingestion, curl smoke test:
+
+```bash
+curl "https://graph.facebook.com/v21.0/$IG_USER_ID/media?media_type=REELS&video_url=<url>&caption=test&access_token=$TOKEN"
+```
+
+- [ ] **Step 3: facebook.md.**
+
+Covers: Page access token with `pages_manage_posts`, `pages_read_engagement`, and `pages_show_list` scopes. Resumable upload flow. Short-lived vs long-lived token exchange. Content policy notes.
+
+- [ ] **Step 4: linkedin.md.**
+
+Covers: create LinkedIn app, add "Share on LinkedIn" and "Sign In with LinkedIn" products, request `w_member_social` scope, company-page specific setup if posting as Organization. 3-step flow recap.
+
+- [ ] **Step 5: Commit.**
+
+```bash
+git add docs/content-pipeline/platform-setup/
+git commit -m "docs(content-pipeline): platform setup walkthroughs for TikTok, IG, FB, LinkedIn"
+```
+
+## Task 2.24: Format landing pages
+
+**Files:**
+
+- Create: `packages/frontend/app/top-cashflow-report/page.tsx`
+- Create: `packages/frontend/app/movers-report/page.tsx`
+- Create: `packages/frontend/app/market-comparison/page.tsx`
+- Create: `packages/frontend/app/farm-area-audit/page.tsx`
+
+- [ ] **Step 1: Each landing page follows the pattern of `grade-reveal-signup/page.tsx`.**
+
+Adjust heading, subheading, and CTA copy per format:
+
+| Page                | Heading                             | Subheading                                                                                 |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| top-cashflow-report | "Top 50 Cashflow Markets, free"     | "Get the full ranked report with rent-to-price ratios and PropertyIQ Scores."              |
+| movers-report       | "Monthly Movers and Shakers Report" | "See every market that moved 5+ PIQ points this month, plus why."                          |
+| market-comparison   | "Compare 5 Markets Side-by-Side"    | "We will build a comparison of 5 comparable markets for your metro of choice."             |
+| farm-area-audit     | "Free Farm Area Audit for Agents"   | "Top 20 farm areas in your metro, ranked by turnover and absentee rates. For agents only." |
+
+Each form submits `magnetKind` appropriate to the landing page: `top_50_cashflow_report`, `movers_report`, `market_comparison`, `farm_area_audit`.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/frontend/app/top-cashflow-report/ packages/frontend/app/movers-report/ packages/frontend/app/market-comparison/ packages/frontend/app/farm-area-audit/
+git commit -m "feat(content-pipeline): 4 P2 format landing pages with lead magnet signup"
+```
+
+## Task 2.25: VisionExtractorService for thumbnail style references
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/style-references/vision-extractor.service.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/vision-extractor.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/vision-extractor.service.spec.ts
+import { VisionExtractorService } from "./vision-extractor.service";
+
+jest.mock("@anthropic-ai/sdk", () =>
+  jest.fn().mockImplementation(() => ({
+    messages: {
+      create: jest.fn().mockResolvedValue({
+        content: [
+          {
+            type: "tool_use",
+            name: "emit_attributes",
+            input: {
+              dominant_palette: ["#FFE600", "#000000", "#FFFFFF"],
+              text_regions: [
+                {
+                  position: "bottom-center",
+                  approximate_height_pct: 20,
+                  color: "#000000",
+                },
+              ],
+              subject_anchor: { x_pct: 50, y_pct: 40 },
+              graphic_elements: ["arrow", "circle", "emoji"],
+              energy_tag: "high",
+              mood_tags: ["bold", "urgent"],
+            },
+          },
+        ],
+        usage: { input_tokens: 500, output_tokens: 150 },
+      }),
+    },
+  })),
+);
+
+describe("VisionExtractorService", () => {
+  beforeAll(() => {
+    process.env.ANTHROPIC_API_KEY = "test";
+  });
+
+  it("extracts thumbnail attributes as structured JSON", async () => {
+    const svc = new VisionExtractorService();
+    const result = await svc.extractThumbnail(Buffer.from("test"));
+    expect(result.attributes.dominant_palette).toContain("#FFE600");
+    expect(result.attributes.energy_tag).toBe("high");
+    expect(result.cost.amount_usd).toBeGreaterThan(0);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/vision-extractor.service.ts
+import { Injectable } from "@nestjs/common";
+import Anthropic from "@anthropic-ai/sdk";
+import { DriverCost } from "../drivers/driver-cost.types";
+
+const EXTRACT_TOOL = {
+  name: "emit_attributes",
+  description: "Emit extracted style attributes as structured JSON.",
+  input_schema: {
+    type: "object",
+    required: ["dominant_palette", "text_regions", "energy_tag"],
+    properties: {
+      dominant_palette: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 6,
+      },
+      text_regions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            position: { type: "string" },
+            approximate_height_pct: { type: "number" },
+            color: { type: "string" },
+          },
+        },
+      },
+      subject_anchor: {
+        type: "object",
+        properties: { x_pct: { type: "number" }, y_pct: { type: "number" } },
+      },
+      graphic_elements: { type: "array", items: { type: "string" } },
+      energy_tag: { type: "string", enum: ["calm", "medium", "high"] },
+      mood_tags: { type: "array", items: { type: "string" } },
+    },
+  },
+} as const;
+
+@Injectable()
+export class VisionExtractorService {
+  private readonly client: Anthropic;
+
+  constructor() {
+    this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+
+  async extractThumbnail(
+    imageBuffer: Buffer,
+  ): Promise<{ attributes: any; cost: DriverCost }> {
+    const base64 = imageBuffer.toString("base64");
+    const response = await this.client.messages.create({
+      model: process.env.SCRIPT_LLM_MODEL ?? "claude-sonnet-4-6",
+      max_tokens: 1000,
+      tools: [EXTRACT_TOOL as unknown as Anthropic.Messages.Tool],
+      tool_choice: { type: "tool", name: "emit_attributes" },
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/png", data: base64 },
+            },
+            {
+              type: "text",
+              text: "Extract structured style attributes from this thumbnail using the provided tool. Focus on palette, text positions, subject position, graphic elements, and energy level.",
+            },
+          ],
+        },
+      ],
+    });
+    const toolBlock = response.content.find((c) => c.type === "tool_use");
+    if (!toolBlock || toolBlock.type !== "tool_use")
+      throw new Error("Vision extraction did not return tool_use");
+
+    const inputTokens = response.usage.input_tokens;
+    const outputTokens = response.usage.output_tokens;
+    const costUsd = (inputTokens * 3.0 + outputTokens * 15.0) / 1_000_000;
+
+    return {
+      attributes: toolBlock.input,
+      cost: {
+        provider: "anthropic-vision",
+        amount_usd: costUsd,
+        units: inputTokens + outputTokens,
+        unit_type: "tokens_input",
+      },
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Register in module, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- vision-extractor.service.spec
+git add packages/backend/src/content-pipeline/style-references/
+git commit -m "feat(content-pipeline): VisionExtractorService for thumbnail style references"
+```
+
+## Task 2.26: StyleReferenceService and endpoints
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/style-references/style-reference.service.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/style-reference.controller.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/style-reference.service.spec.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/image-downloader.service.ts`
+- Create: `packages/backend/src/content-pipeline/dto/upload-style-reference.dto.ts`
+- Create: `packages/backend/src/content-pipeline/dto/ingest-style-url.dto.ts`
+
+- [ ] **Step 1: DTOs.**
+
+```typescript
+// dto/upload-style-reference.dto.ts
+import { IsString } from "class-validator";
+export class UploadStyleReferenceDto {
+  @IsString() label!: string;
+}
+
+// dto/ingest-style-url.dto.ts
+import { IsString, IsUrl } from "class-validator";
+export class IngestStyleUrlDto {
+  @IsString() label!: string;
+  @IsUrl({ protocols: ["http", "https"] }) url!: string;
+}
+```
+
+- [ ] **Step 2: ImageDownloader.**
+
+```typescript
+// style-references/image-downloader.service.ts
+import { Injectable } from "@nestjs/common";
+import axios from "axios";
+
+const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
+@Injectable()
+export class ImageDownloaderService {
+  async download(url: string): Promise<Buffer> {
+    const response = await axios.get(url, {
+      responseType: "arraybuffer",
+      maxContentLength: MAX_SIZE_BYTES,
+    });
+    if (
+      !["image/png", "image/jpeg", "image/webp"].includes(
+        response.headers["content-type"],
+      )
+    ) {
+      throw new Error(
+        `unsupported content type: ${response.headers["content-type"]}`,
+      );
+    }
+    return Buffer.from(response.data);
+  }
+}
+```
+
+- [ ] **Step 3: StyleReferenceService.**
+
+```typescript
+// style-references/style-reference.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { VisionExtractorService } from "./vision-extractor.service";
+import { ImageDownloaderService } from "./image-downloader.service";
+
+@Injectable()
+export class StyleReferenceService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly vision: VisionExtractorService,
+    private readonly downloader: ImageDownloaderService,
+  ) {}
+
+  async ingestFromUpload(userId: string, buffer: Buffer, label: string) {
+    return this.ingest(userId, buffer, label, null);
+  }
+
+  async ingestFromUrl(userId: string, url: string, label: string) {
+    const buffer = await this.downloader.download(url);
+    return this.ingest(userId, buffer, label, url);
+  }
+
+  private async ingest(
+    userId: string,
+    buffer: Buffer,
+    label: string,
+    sourceUrl: string | null,
+  ) {
+    const extraction = await this.vision.extractThumbnail(buffer);
+    const client = this.supabase.getClient();
+    const previewPath = `style-references/${userId}/${Date.now()}-preview.png`;
+    await client.storage.from("content-pipeline").upload(previewPath, buffer, {
+      contentType: "image/png",
+      upsert: true,
+    });
+
+    const { data } = await client
+      .from("style_references")
+      .insert({
+        user_id: userId,
+        kind: "thumbnail",
+        label,
+        source_url: sourceUrl,
+        preview_strip_url: `supabase://content-pipeline/${previewPath}`,
+        extracted_attributes: extraction.attributes,
+        vision_cost_usd: extraction.cost.amount_usd,
+      })
+      .select()
+      .single();
+    return data;
+  }
+
+  async list(userId: string) {
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from("style_references")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    return data ?? [];
+  }
+
+  async archive(id: string, userId: string) {
+    const client = this.supabase.getClient();
+    await client
+      .from("style_references")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+  }
+
+  async reanalyze(id: string, userId: string) {
+    const client = this.supabase.getClient();
+    const { data: ref } = await client
+      .from("style_references")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+    if (!ref) throw new Error("not found");
+    const match = ref.preview_strip_url.match(/^supabase:\/\/([^/]+)\/(.+)$/)!;
+    const { data: file } = await client.storage
+      .from(match[1])
+      .download(match[2]);
+    const buffer = Buffer.from(await file!.arrayBuffer());
+    const extraction = await this.vision.extractThumbnail(buffer);
+    await client
+      .from("style_references")
+      .update({
+        extracted_attributes: extraction.attributes,
+        vision_cost_usd: ref.vision_cost_usd + extraction.cost.amount_usd,
+      })
+      .eq("id", id);
+  }
+}
+```
+
+- [ ] **Step 4: Controller.**
+
+```typescript
+// style-references/style-reference.controller.ts
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Req,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { AdminGuard } from "../../common/guards/admin-auth.guard";
+import { StyleReferenceService } from "./style-reference.service";
+import { IngestStyleUrlDto } from "../dto/ingest-style-url.dto";
+
+@UseGuards(AdminGuard)
+@Controller("api/admin/content-pipeline/style-references")
+export class StyleReferenceController {
+  constructor(private readonly service: StyleReferenceService) {}
+
+  @Get()
+  async list(@Req() req: any) {
+    return {
+      success: true,
+      data: { references: await this.service.list(req.user.id) },
+    };
+  }
+
+  @Post("upload")
+  @UseInterceptors(FileInterceptor("file"))
+  async upload(
+    @Req() req: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body("label") label: string,
+  ) {
+    return {
+      success: true,
+      data: await this.service.ingestFromUpload(
+        req.user.id,
+        file.buffer,
+        label,
+      ),
+    };
+  }
+
+  @Post("ingest-url")
+  async ingestUrl(@Req() req: any, @Body() dto: IngestStyleUrlDto) {
+    return {
+      success: true,
+      data: await this.service.ingestFromUrl(req.user.id, dto.url, dto.label),
+    };
+  }
+
+  @Delete(":id")
+  async archive(@Req() req: any, @Param("id") id: string) {
+    await this.service.archive(id, req.user.id);
+    return { success: true, data: { archived: true } };
+  }
+
+  @Post(":id/re-analyze")
+  async reanalyze(@Req() req: any, @Param("id") id: string) {
+    await this.service.reanalyze(id, req.user.id);
+    return { success: true, data: { reanalyzed: true } };
+  }
+}
+```
+
+- [ ] **Step 5: Register in module, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- style-reference.service.spec
+git add packages/backend/src/content-pipeline/style-references/ packages/backend/src/content-pipeline/dto/
+git commit -m "feat(content-pipeline): StyleReferenceService with upload and URL ingest for thumbnails"
+```
+
+## Task 2.27: Style Library admin UI page
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/style-library/page.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/style-library/reference-card.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/style-library/upload-dialog.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/style-library/attributes-panel.tsx`
+
+- [ ] **Step 1: Upload dialog with URL and file tabs.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/style-library/upload-dialog.tsx
+"use client";
+import { useState, useRef } from "react";
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function UploadDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [tab, setTab] = useState<"url" | "file">("url");
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function submitUrl() {
+    setUploading(true);
+    try {
+      await fetchAPIRaw(
+        "/api/admin/content-pipeline/style-references/ingest-url",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, label }),
+        },
+      );
+      onCreated();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function submitFile() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("label", label);
+      await fetchAPIRaw("/api/admin/content-pipeline/style-references/upload", {
+        method: "POST",
+        body: fd,
+      });
+      onCreated();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
+      <div className="bg-surface rounded-xl p-6 w-full max-w-xl">
+        <h3 className="font-semibold mb-4">Add style reference</h3>
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setTab("url")}
+            className={`px-4 py-2 rounded-full ${tab === "url" ? "bg-primary text-on-primary" : "bg-surface-container"}`}
+          >
+            Paste a link
+          </button>
+          <button
+            onClick={() => setTab("file")}
+            className={`px-4 py-2 rounded-full ${tab === "file" ? "bg-primary text-on-primary" : "bg-surface-container"}`}
+          >
+            Upload a file
+          </button>
+        </div>
+        <label className="block mb-3">
+          <span className="text-sm">Label</span>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g., Grant Cardone high-energy"
+            className="w-full border border-outline-variant rounded p-2 mt-1"
+          />
+        </label>
+        {tab === "url" ? (
+          <>
+            <label className="block mb-3">
+              <span className="text-sm">Image URL</span>
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full border border-outline-variant rounded p-2 mt-1"
+              />
+            </label>
+            <button
+              onClick={submitUrl}
+              disabled={uploading || !url || !label}
+              className="bg-primary text-on-primary rounded-full px-5 py-2 font-semibold disabled:opacity-50"
+            >
+              {uploading ? "Analyzing..." : "Analyze"}
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              ref={fileRef}
+              className="block mb-3"
+            />
+            <button
+              onClick={submitFile}
+              disabled={uploading || !label}
+              className="bg-primary text-on-primary rounded-full px-5 py-2 font-semibold disabled:opacity-50"
+            >
+              {uploading ? "Analyzing..." : "Upload and Analyze"}
+            </button>
+          </>
+        )}
+        <button onClick={onClose} className="ml-2">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 2: Reference card and attributes panel.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/style-library/reference-card.tsx
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function ReferenceCard({
+  ref,
+  onChange,
+}: {
+  ref: any;
+  onChange: () => void;
+}) {
+  async function archive() {
+    if (!confirm("Archive this reference?")) return;
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/style-references/${ref.id}`,
+      { method: "DELETE" },
+    );
+    onChange();
+  }
+  async function reanalyze() {
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/style-references/${ref.id}/re-analyze`,
+      { method: "POST" },
+    );
+    onChange();
+  }
+
+  const attrs = ref.extracted_attributes ?? {};
+  const palette: string[] = attrs.dominant_palette ?? [];
+
+  return (
+    <div className="rounded-xl bg-surface-container-low shadow-sm overflow-hidden">
+      <div
+        className="aspect-video bg-outline"
+        style={{
+          backgroundImage: `url(${publicUrl(ref.preview_strip_url)})`,
+          backgroundSize: "cover",
+        }}
+      />
+      <div className="p-4 space-y-2">
+        <div className="font-semibold">{ref.label}</div>
+        <div className="flex gap-1">
+          {palette.slice(0, 5).map((c) => (
+            <div
+              key={c}
+              style={{
+                width: 20,
+                height: 20,
+                backgroundColor: c,
+                borderRadius: 4,
+              }}
+              title={c}
+            />
+          ))}
+        </div>
+        <div className="text-xs text-outline">
+          {attrs.energy_tag ?? "unknown"} energy; text in{" "}
+          {attrs.text_regions?.[0]?.position ?? "unknown"}
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={reanalyze}
+            className="text-sm bg-surface-container rounded-full px-3 py-1"
+          >
+            Re-analyze
+          </button>
+          <button
+            onClick={archive}
+            className="text-sm bg-error/10 text-error rounded-full px-3 py-1"
+          >
+            Archive
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function publicUrl(s: string) {
+  const m = s.match(/^supabase:\/\/([^/]+)\/(.+)$/);
+  if (!m) return s;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${m[1]}/${m[2]}`;
+}
+```
+
+- [ ] **Step 3: Main page.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/style-library/page.tsx
+"use client";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAPI } from "@/lib/data/fetchers/base";
+import { UploadDialog } from "./upload-dialog";
+import { ReferenceCard } from "./reference-card";
+
+export default function StyleLibraryPage() {
+  const [uploading, setUploading] = useState(false);
+  const { data = [], refetch } = useQuery({
+    queryKey: ["style-references"],
+    queryFn: async () =>
+      (
+        await fetchAPI<{ data: { references: any[] } }>(
+          "/api/admin/content-pipeline/style-references",
+        )
+      ).data.references,
+  });
+
+  return (
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Style Reference Library</h1>
+        <button
+          onClick={() => setUploading(true)}
+          className="bg-primary text-on-primary rounded-full px-5 py-2 font-semibold"
+        >
+          + Add Reference
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-6">
+        {data.map((r) => (
+          <ReferenceCard key={r.id} ref={r} onChange={refetch} />
+        ))}
+      </div>
+      {uploading && (
+        <UploadDialog
+          onClose={() => setUploading(false)}
+          onCreated={() => {
+            setUploading(false);
+            refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Register nav entry, commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/style-library/
+git commit -m "feat(content-pipeline): Style Reference Library admin page with upload and URL ingest"
+```
+
+## Task 2.28: Remotion thumbnail style variants
+
+**Files:**
+
+- Create: `packages/video-template/src/presets/style-variants/index.ts`
+- Create: `packages/video-template/src/presets/style-variants/high-energy.ts`
+- Create: `packages/video-template/src/presets/style-variants/medium-energy.ts`
+- Create: `packages/video-template/src/presets/style-variants/calm-explainer.ts`
+- Modify: `packages/video-template/src/PropertyIQVideo.tsx`
+
+- [ ] **Step 1: Define variant preset type and three variants.**
+
+```typescript
+// packages/video-template/src/presets/style-variants/index.ts
+export interface StyleVariantPreset {
+  textPosition: "top" | "bottom" | "center";
+  textSize: "small" | "medium" | "large";
+  paletteOverride?: { primary?: string; accent?: string };
+  graphicDensity: "minimal" | "moderate" | "dense";
+}
+
+export { highEnergy } from "./high-energy";
+export { mediumEnergy } from "./medium-energy";
+export { calmExplainer } from "./calm-explainer";
+```
+
+```typescript
+// packages/video-template/src/presets/style-variants/high-energy.ts
+import { StyleVariantPreset } from "./index";
+export const highEnergy: StyleVariantPreset = {
+  textPosition: "bottom",
+  textSize: "large",
+  paletteOverride: { primary: "#FFE600", accent: "#FF0033" },
+  graphicDensity: "dense",
+};
+```
+
+```typescript
+// packages/video-template/src/presets/style-variants/medium-energy.ts
+import { StyleVariantPreset } from "./index";
+export const mediumEnergy: StyleVariantPreset = {
+  textPosition: "center",
+  textSize: "medium",
+  graphicDensity: "moderate",
+};
+```
+
+```typescript
+// packages/video-template/src/presets/style-variants/calm-explainer.ts
+import { StyleVariantPreset } from "./index";
+export const calmExplainer: StyleVariantPreset = {
+  textPosition: "top",
+  textSize: "small",
+  paletteOverride: { primary: "#3949AB", accent: "#00C853" },
+  graphicDensity: "minimal",
+};
+```
+
+- [ ] **Step 2: Selector maps `styleVariant` prop to preset; `PropertyIQVideo` reads it and passes to child components where applicable.**
+
+```typescript
+// packages/video-template/src/presets/style-variants/select.ts
+import {
+  StyleVariantPreset,
+  highEnergy,
+  mediumEnergy,
+  calmExplainer,
+} from "./index";
+export function selectVariant(name?: string): StyleVariantPreset {
+  switch (name) {
+    case "high-energy":
+      return highEnergy;
+    case "calm-explainer":
+      return calmExplainer;
+    case "medium-energy":
+    default:
+      return mediumEnergy;
+  }
+}
+```
+
+- [ ] **Step 3: Wire `styleVariant` from `content_runs.style_reference_id` lookup in the render handler.**
+
+In `render-video.handler.ts`, before spawning the CLI, fetch the style reference if any and decide the variant name based on attributes (e.g., `energy_tag === 'high' ? 'high-energy' : ...`).
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/video-template/src/presets/ packages/video-template/src/PropertyIQVideo.tsx packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts
+git commit -m "feat(video-template): three thumbnail style variants with selector"
+```
+
+## Task 2.29: Phase 2 E2E suite
+
+**Files:**
+
+- Create: `packages/backend/test/e2e/content-pipeline-p2-format-coverage.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p2-style-reference.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p2-approval-modes.e2e.spec.ts`
+
+**Per project memory: E2E must hit real staging DB, not mocks.**
+
+- [ ] **Step 1: Write format-coverage E2E.**
+
+```typescript
+// packages/backend/test/e2e/content-pipeline-p2-format-coverage.e2e.spec.ts
+import { Test } from "@nestjs/testing";
+import { AppModule } from "../../src/app.module";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { v4 as uuid } from "uuid";
+
+describe("E2E: each P2 format publishes to all 5 platforms", () => {
+  let app: INestApplication;
+  const adminJwt = process.env.E2E_ADMIN_JWT;
+
+  beforeAll(async () => {
+    const moduleFixture = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => await app?.close());
+
+  const formats = [
+    "top_10_ranking",
+    "score_mover",
+    "head_to_head",
+    "farm_area_spotlight",
+  ];
+
+  it.each(formats)(
+    "%s publishes to YT, TikTok, IG, FB, LinkedIn",
+    async (format) => {
+      const res = await request(app.getHttpServer())
+        .post("/api/admin/content-pipeline/runs")
+        .set("Authorization", `Bearer ${adminJwt}`)
+        .send({
+          format,
+          marketQuery: "Cleveland, OH",
+          idempotencyKey: uuid(),
+          approvalMode: "auto",
+          selectedPlatforms: [
+            "youtube_shorts",
+            "tiktok",
+            "instagram_reels",
+            "facebook_reels",
+            "linkedin",
+          ],
+        });
+      const runId = res.body.data.id;
+
+      const start = Date.now();
+      while (Date.now() - start < 900_000) {
+        await new Promise((r) => setTimeout(r, 10_000));
+        const d = await request(app.getHttpServer())
+          .get(`/api/admin/content-pipeline/runs/${runId}`)
+          .set("Authorization", `Bearer ${adminJwt}`);
+        if (
+          ["published", "published_partial", "failed"].includes(
+            d.body.data.run.status,
+          )
+        )
+          break;
+      }
+      const final = await request(app.getHttpServer())
+        .get(`/api/admin/content-pipeline/runs/${runId}`)
+        .set("Authorization", `Bearer ${adminJwt}`);
+      expect(final.body.data.run.status).toBe("published");
+      expect(final.body.data.posts.length).toBe(5);
+      const platforms = final.body.data.posts
+        .map((p: any) => p.platform)
+        .sort();
+      expect(platforms).toEqual([
+        "facebook_reels",
+        "instagram_reels",
+        "linkedin",
+        "tiktok",
+        "youtube_shorts",
+      ]);
+    },
+    1_000_000,
+  );
+});
+```
+
+- [ ] **Step 2: Write style-reference E2E.**
+
+```typescript
+// packages/backend/test/e2e/content-pipeline-p2-style-reference.e2e.spec.ts
+describe("E2E: thumbnail style reference applied", () => {
+  // Upload a known-energy thumbnail (fixture image in tests/fixtures/)
+  // Run a Farm Area Spotlight with that reference
+  // Download the resulting thumbnail asset
+  // Assert dominant palette overlap >= 60% with reference palette
+});
+```
+
+Full implementation analyzes the rendered thumbnail PNG via Sharp or equivalent to verify palette match.
+
+- [ ] **Step 3: Write approval-modes E2E (same pattern as Task 2.18 integration test, but run against staging real publishers).**
+
+- [ ] **Step 4: Run E2E, commit.**
+
+```bash
+cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- content-pipeline-p2
+git add packages/backend/test/e2e/
+git commit -m "test(content-pipeline): P2 E2E suite (format coverage, style reference, approval modes)"
+```
+
+---
+
+# Phase 3: Long-form and remaining agent/broker formats
+
+**Duration:** 2 to 3 weeks. **Complexity:** Medium. **Tasks:** 22.
+
+## Phase 3 scope
+
+Long-Form Deep Dive format (5 to 12 minute, 16:9, YouTube long-form). ElevenLabs Turbo v2.5 voice for long-form only. Brokerage Market Share and Recruitment Angle (LinkedIn-first) short-form formats. Video style references via yt-dlp URL ingest plus FFmpeg frame sampling. Gated dashboard page for lead magnets (5a iii progression from email-only to email plus dashboard plus PDF). SRT caption output for long-form YouTube uploads.
+
+## Phase 3 deliverables
+
+- Long-Form Deep Dive renders at 16x9 aspect, 5 to 12 minutes, with ElevenLabs voice and SRT captions uploaded to YouTube.
+- Brokerage Market Share and Recruitment Angle formats available with their own Remotion primitives (BrokerageBar, recruitment-specific layout).
+- Video style references can be ingested via yt-dlp from YouTube, TikTok, IG, Facebook, Twitter/X.
+- Users can view their delivered lead magnets on `propertyiq.app/dashboard/magnets` in addition to email.
+
+## Phase 3 acceptance criteria
+
+1. All P3 migrations apply cleanly.
+2. `npm run test` passes P3 unit tests.
+3. `npm run test:e2e` passes P3 E2E suite.
+4. Long-Form Deep Dive renders a valid 16:9 MP4 between 5 and 12 minutes.
+5. ElevenLabs synthesis runs only when tts_provider='elevenlabs'; short-form continues on Edge TTS.
+6. SRT caption file uploads successfully to YouTube via captions.insert.
+7. Style reference via YouTube URL extracts attributes via Claude vision and stores them.
+8. Gated dashboard at /dashboard/magnets lists the user's delivered magnets with download links and refresh-data button.
+
+## Phase 3 prerequisites
+
+- P1 and P2 merged and running in staging.
+- ElevenLabs account with API key, at least Creator plan for Turbo v2.5.
+- yt-dlp and ffmpeg binaries installable via Dockerfile (apt-get and pip3).
+- YouTube test channel approved for long-form uploads (some accounts have 15-minute limits pre-verification).
+
+## Task 3.1: P3 dependencies and Dockerfile
+
+**Files:**
+
+- Modify: `packages/backend/package.json`
+- Modify: `packages/backend/Dockerfile`
+
+- [ ] **Step 1: Install backend deps.**
+
+```bash
+cd packages/backend
+npm install elevenlabs@^0.18.0
+```
+
+- [ ] **Step 2: Update Dockerfile with ffmpeg and yt-dlp.**
+
+```dockerfile
+# Append to the Python install block from P1:
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir --break-system-packages yt-dlp==2025.3.26
+```
+
+- [ ] **Step 3: Build image and verify.**
+
+```bash
+docker build -f packages/backend/Dockerfile -t piq-backend-p3 packages/backend
+docker run --rm piq-backend-p3 yt-dlp --version
+docker run --rm piq-backend-p3 ffmpeg -version
+```
+
+Expected: version strings.
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/package.json packages/backend/package-lock.json packages/backend/Dockerfile
+git commit -m "feat(content-pipeline): P3 dependencies (elevenlabs, ffmpeg, yt-dlp) in Dockerfile"
+```
+
+## Task 3.2: P3 migrations (magnets, voices, enable formats)
+
+**Files:**
+
+- Create: `supabase/migrations/20260423000100_content_pipeline_seed_p3_magnets.sql`
+- Create: `supabase/migrations/20260423000200_content_pipeline_seed_p3_voices.sql`
+- Create: `supabase/migrations/20260423000300_content_pipeline_seed_p3_formats_enable.sql`
+
+- [ ] **Step 1: seed p3 voices.**
+
+```sql
+INSERT INTO tts_voices (id, provider, provider_voice_id, display_name, audience_tag, cost_per_1k_chars, enabled)
+VALUES
+  ('elevenlabs-rachel', 'elevenlabs', '21m00Tcm4TlvDq8ikWAM', 'Rachel (long-form)', 'long_form', 0.30, true),
+  ('elevenlabs-antoni', 'elevenlabs', 'ErXwobaYiN019PkySvjV', 'Antoni (long-form alt)', 'long_form', 0.30, true)
+ON CONFLICT (id) DO NOTHING;
+```
+
+- [ ] **Step 2: seed p3 magnets.**
+
+```sql
+INSERT INTO lead_magnet_definitions (kind, display_name, description, audience, template_path, data_method, email_template_key, landing_page_path, enabled)
+VALUES
+  ('brokerage_coverage_report', 'Brokerage Coverage Report', '6-page executive summary of brokerage market share across a metro or state.', 'broker',
+   'packages/backend/src/content-pipeline/lead-magnets/templates/brokerage_coverage.html.ejs', 'getBrokerageMarketCoverage',
+   'lead-magnet-delivery', '/brokerage-coverage', true),
+  ('agent_recruitment_kit', 'Agent Recruitment Kit', '8-page PDF: market-specific recruiting angles, market share data, and referral-network opportunities.', 'broker',
+   'packages/backend/src/content-pipeline/lead-magnets/templates/agent_recruitment_kit.html.ejs', 'getAgentRecruitmentPitch',
+   'lead-magnet-delivery', '/agent-recruitment-kit', true),
+  ('long_form_companion', 'Long-Form Companion', 'Written version of the narrative deep dive for email forwarding.', 'mixed',
+   'packages/backend/src/content-pipeline/lead-magnets/templates/long_form_companion.html.ejs', 'getMarketNarrative',
+   'lead-magnet-delivery', '/market-narrative', true)
+ON CONFLICT (kind) DO NOTHING;
+
+INSERT INTO format_magnet_bindings (format, magnet_kind, cta_text, weight, enabled)
+VALUES
+  ('brokerage_market_share', 'brokerage_coverage_report', 'Get the full Brokerage Coverage Report at ', 1.0, true),
+  ('recruitment_angle', 'agent_recruitment_kit', 'Download the Agent Recruitment Kit at ', 1.0, true),
+  ('long_form_deep_dive', 'long_form_companion', 'Get the written companion at ', 1.0, true)
+ON CONFLICT (format, magnet_kind) DO NOTHING;
+```
+
+- [ ] **Step 3: enable p3 formats.**
+
+```sql
+UPDATE format_templates SET default_tts_voice_id = 'elevenlabs-rachel', enabled = true
+WHERE format = 'long_form_deep_dive';
+
+UPDATE format_templates SET enabled = true
+WHERE format IN ('brokerage_market_share', 'recruitment_angle');
+```
+
+- [ ] **Step 4: Apply and commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260423000100_content_pipeline_seed_p3_magnets.sql supabase/migrations/20260423000200_content_pipeline_seed_p3_voices.sql supabase/migrations/20260423000300_content_pipeline_seed_p3_formats_enable.sql
+git commit -m "feat(content-pipeline): P3 migrations (magnets, ElevenLabs voices, enable 3 formats)"
+```
+
+## Task 3.3: ElevenLabsTTSDriver
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/elevenlabs-tts-driver.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/elevenlabs-tts-driver.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/drivers/tts-driver.factory.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/elevenlabs-tts-driver.spec.ts
+import { ElevenLabsTTSDriver } from "./elevenlabs-tts-driver";
+import { Readable } from "stream";
+
+jest.mock("elevenlabs", () => ({
+  ElevenLabsClient: jest.fn().mockImplementation(() => ({
+    generate: jest.fn().mockImplementation(async () => {
+      return Readable.from(Buffer.from("fake-mp3-audio-data"));
+    }),
+  })),
+}));
+
+describe("ElevenLabsTTSDriver", () => {
+  beforeAll(() => {
+    process.env.ELEVENLABS_API_KEY = "test-key";
+  });
+
+  it("isConfigured requires API key", () => {
+    expect(new ElevenLabsTTSDriver().isConfigured()).toBe(true);
+    const saved = process.env.ELEVENLABS_API_KEY;
+    delete process.env.ELEVENLABS_API_KEY;
+    expect(new ElevenLabsTTSDriver().isConfigured()).toBe(false);
+    process.env.ELEVENLABS_API_KEY = saved;
+  });
+
+  it("synthesize calculates cost at $0.30/1k chars", async () => {
+    const driver = new ElevenLabsTTSDriver();
+    const result = await driver.synthesize({
+      text: "a".repeat(1000),
+      voiceId: "21m00Tcm4TlvDq8ikWAM",
+      outputPath: "/tmp/out.mp3",
+      format: "mp3",
+    });
+    expect(result.cost.provider).toBe("elevenlabs");
+    expect(result.cost.amount_usd).toBeCloseTo(0.3, 2);
+    expect(result.cost.units).toBe(1000);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/elevenlabs-tts-driver.ts
+import { Injectable } from "@nestjs/common";
+import { ElevenLabsClient } from "elevenlabs";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import {
+  TTSDriver,
+  TTSSynthesisRequest,
+  TTSSynthesisResult,
+} from "./tts-driver.interface";
+
+const ELEVENLABS_USD_PER_1K_CHARS = 0.3;
+
+@Injectable()
+export class ElevenLabsTTSDriver implements TTSDriver {
+  readonly provider = "elevenlabs" as const;
+  private client: ElevenLabsClient | null = null;
+
+  isConfigured(): boolean {
+    return !!process.env.ELEVENLABS_API_KEY;
+  }
+
+  private getClient(): ElevenLabsClient {
+    if (!this.client) {
+      if (!process.env.ELEVENLABS_API_KEY)
+        throw new Error("ELEVENLABS_API_KEY is required");
+      this.client = new ElevenLabsClient({
+        apiKey: process.env.ELEVENLABS_API_KEY,
+      });
+    }
+    return this.client;
+  }
+
+  async synthesize(req: TTSSynthesisRequest): Promise<TTSSynthesisResult> {
+    const start = Date.now();
+    const stream = await this.getClient().generate({
+      voice: req.voiceId,
+      text: req.text,
+      model_id: "eleven_turbo_v2_5",
+      output_format: "mp3_44100_128",
+    });
+    await pipeline(stream, createWriteStream(req.outputPath));
+    const wallMs = Date.now() - start;
+
+    return {
+      durationMs: wallMs,
+      bitrate: 128_000,
+      cost: {
+        provider: "elevenlabs",
+        amount_usd: (req.text.length / 1000) * ELEVENLABS_USD_PER_1K_CHARS,
+        units: req.text.length,
+        unit_type: "chars",
+      },
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Update factory.**
+
+```typescript
+// drivers/tts-driver.factory.ts (update)
+case 'elevenlabs':
+  if (!this.elevenlabs.isConfigured()) throw new Error('ElevenLabs not configured');
+  return this.elevenlabs;
+```
+
+Inject `ElevenLabsTTSDriver` into factory constructor.
+
+- [ ] **Step 4: Register in module, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- elevenlabs-tts-driver.spec
+git add packages/backend/src/content-pipeline/drivers/
+git commit -m "feat(content-pipeline): ElevenLabs TTS driver with Turbo v2.5 and cost accounting"
+```
+
+## Task 3.4: Prompts for P3 formats
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/prompts/long_form_deep_dive.md`
+- Create: `packages/backend/src/content-pipeline/prompts/brokerage_market_share.md`
+- Create: `packages/backend/src/content-pipeline/prompts/recruitment_angle.md`
+
+- [ ] **Step 1: long_form_deep_dive.md.**
+
+```markdown
+Write a long-form narrative deep-dive script for {{canonical_name}}. Target total duration: 8 minutes at natural pace, roughly 1100 to 1300 words.
+
+Data bundle:
+{{dataBundle}}
+
+Structure as 5 chapters. Each chapter gets 60 to 120 seconds of narration.
+
+Chapter 1, Opening hook: lead with the most unexpected finding from the data. One minute.
+Chapter 2, Market context: population, economy, employment trends. Two minutes.
+Chapter 3, Real estate fundamentals: home values, rents, inventory, PropertyIQ Score with history. Three minutes.
+Chapter 4, Who this market is for: investor profile, agent opportunity, broker positioning. One minute.
+Chapter 5, Close plus CTA: {{cta_text}}{{shortLinkPlaceholder}}. One minute.
+
+Hook options: produce {{variantCount}} hook variants for chapter 1 only.
+
+Output JSON via the emit_script tool. Include one chapterBreakdown entry per chapter in sceneBreakdown with `sceneKey` set to `chapter_1` through `chapter_5`.
+
+Voice: informed but approachable. No filler; every sentence earns its place. No em dashes. Only "PropertyIQ Score" or "PIQ Score" for scores.
+```
+
+- [ ] **Step 2: brokerage_market_share.md.**
+
+```markdown
+Write a 75-second Brokerage Market Share script for {{canonical_name}}.
+
+Data bundle (top 8 brokerages by listing share):
+{{dataBundle}}
+
+Structure:
+
+- Hook (3s): lead with the dominant brokerage
+- Body (55s): walk through 4 or 5 major brokerages; cite listing share and any year-over-year delta
+- Market summary (10s): one sentence on whether the market is consolidated or fragmented
+- CTA (7s): {{cta_text}}{{shortLinkPlaceholder}}
+
+Produce {{variantCount}} hooks. Professional tone for LinkedIn audience.
+```
+
+- [ ] **Step 3: recruitment_angle.md.**
+
+```markdown
+Write a 90-second Recruitment Angle script for {{canonical_name}}. Audience: brokerage owners considering recruiting or market entry.
+
+Data bundle (includes market snapshot plus referral-network opportunities):
+{{dataBundle}}
+
+Structure:
+
+- Hook (3s): specific recruiting pitch tied to one data point (PropertyIQ Score movement, referral opportunity, or agent-density figure)
+- Market fundamentals (20s): why this metro is worth recruiting into
+- Recruitment angle (40s): specific positioning for attracting agents (e.g. "low concentration of luxury-focused brokerages, wide-open lane")
+- Referral network (20s): connected metros where their agents could source leads
+- CTA (7s): {{cta_text}}{{shortLinkPlaceholder}}
+
+Produce {{variantCount}} hooks. LinkedIn-first professional tone, no TikTok energy.
+```
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/prompts/
+git commit -m "feat(content-pipeline): prompts for 3 P3 formats (long-form, brokerage, recruitment)"
+```
+
+## Task 3.5: LongFormChapterCard primitive and Long-Form composition
+
+**Files:**
+
+- Create: `packages/video-template/src/primitives/LongFormChapterCard.tsx`
+- Modify: `packages/video-template/src/PropertyIQVideo.tsx`
+- Create: `packages/video-template/src/presets/longform.ts`
+- Create: `packages/video-template/tests/long-form.test.tsx`
+
+- [ ] **Step 1: Write LongFormChapterCard.**
+
+```tsx
+// packages/video-template/src/primitives/LongFormChapterCard.tsx
+import React from "react";
+import { spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
+
+export interface LongFormChapterCardProps {
+  chapterNumber: number;
+  title: string;
+  synopsis: string;
+}
+
+export const LongFormChapterCard: React.FC<LongFormChapterCardProps> = ({
+  chapterNumber,
+  title,
+  synopsis,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const { scale } = useLayoutConfig();
+  const opacity = spring({ frame, fps, config: { damping: 20 } });
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundColor: "#1A237E",
+        color: "#FFFFFF",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        padding: 80 * scale,
+        opacity,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "Roboto Mono",
+          fontSize: 24 * scale,
+          color: "#C5CAE9",
+        }}
+      >
+        Chapter {chapterNumber}
+      </div>
+      <h1
+        style={{
+          fontFamily: "Source Serif 4, serif",
+          fontSize: 80 * scale,
+          margin: "16px 0",
+          maxWidth: "80%",
+        }}
+      >
+        {title}
+      </h1>
+      <p style={{ fontSize: 28 * scale, color: "#E8EAF6", maxWidth: "70%" }}>
+        {synopsis}
+      </p>
+    </div>
+  );
+};
+```
+
+- [ ] **Step 2: Long-form preset.**
+
+```typescript
+// packages/video-template/src/presets/longform.ts
+export const LONGFORM_CHAPTER_FRAMES = {
+  chapterCard: 120, // 4 seconds per chapter intro
+  chapterBody: 1800, // 60 seconds body (caller can override per chapter)
+};
+
+export const LONGFORM_DEFAULT_DURATION_FRAMES = 18000; // 10 minutes at 30fps
+```
+
+- [ ] **Step 3: Add LongFormDeepDiveLayout in PropertyIQVideo.**
+
+```tsx
+const LongFormDeepDiveLayout: React.FC<VideoProps> = (props) => {
+  const chapters = (props.dataBundle as any)?.chapters ?? [];
+  let cursor = 60; // after BrandBumper
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      {chapters.map((chapter: any, i: number) => {
+        const cardFrom = cursor;
+        const bodyFrom = cursor + 120;
+        const bodyDuration = chapter.durationFrames ?? 1800;
+        cursor = bodyFrom + bodyDuration;
+        return (
+          <React.Fragment key={i}>
+            <Sequence from={cardFrom} durationInFrames={120}>
+              <LongFormChapterCard
+                chapterNumber={i + 1}
+                title={chapter.title}
+                synopsis={chapter.synopsis}
+              />
+            </Sequence>
+            <Sequence from={bodyFrom} durationInFrames={bodyDuration}>
+              {/* Body scenes: use TrendChart, StatCards, Comparison, ScoreReveal per chapter.sceneKey */}
+              {chapter.sceneKey === "chapter_3" && (
+                <TrendChart dataBundle={props.dataBundle as any} />
+              )}
+              {chapter.sceneKey === "chapter_2" && (
+                <StatCards dataBundle={props.dataBundle as any} />
+              )}
+              {/* Default fallback */}
+              {!["chapter_2", "chapter_3"].includes(chapter.sceneKey) && (
+                <AbsoluteFill
+                  style={{
+                    background: "#1A1A2E",
+                    color: "white",
+                    padding: 80,
+                    fontSize: 40,
+                  }}
+                >
+                  {chapter.bodyText ?? ""}
+                </AbsoluteFill>
+              )}
+            </Sequence>
+          </React.Fragment>
+        );
+      })}
+      <Sequence from={cursor} durationInFrames={180}>
+        <Outro marketName={props.resolvedMarket.canonical_name} />
+      </Sequence>
+      <Sequence from={cursor + 180} durationInFrames={120}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} />
+      </Sequence>
+    </>
+  );
+};
+```
+
+- [ ] **Step 4: Snapshot tests, run sample 5-minute render, commit.**
+
+```bash
+cd packages/video-template && npm run build:cli && \
+  node dist/cli/render-cli.js --format long_form_deep_dive --props-json sample-longform.json --output longform-out.mp4
+git add packages/video-template/src/primitives/LongFormChapterCard.tsx packages/video-template/src/presets/longform.ts packages/video-template/src/PropertyIQVideo.tsx packages/video-template/tests/
+git commit -m "feat(video-template): LongFormChapterCard primitive and long-form composition"
+```
+
+## Task 3.6: YouTubeLongFormPublisher with SRT upload
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/drivers/youtube-longform-publisher.ts`
+- Create: `packages/backend/src/content-pipeline/drivers/youtube-longform-publisher.spec.ts`
+- Create: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-youtube-longform.handler.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/youtube-longform-publisher.spec.ts
+import { YouTubeLongFormPublisher } from "./youtube-longform-publisher";
+
+jest.mock("googleapis", () => ({
+  google: {
+    auth: {
+      OAuth2: jest
+        .fn()
+        .mockImplementation(() => ({ setCredentials: jest.fn() })),
+    },
+    youtube: jest.fn().mockReturnValue({
+      videos: {
+        insert: jest.fn().mockResolvedValue({ data: { id: "long123" } }),
+      },
+      captions: {
+        insert: jest.fn().mockResolvedValue({ data: { id: "cap123" } }),
+      },
+    }),
+  },
+}));
+
+describe("YouTubeLongFormPublisher", () => {
+  beforeAll(() => {
+    process.env.YOUTUBE_OAUTH_CLIENT_ID = "c";
+    process.env.YOUTUBE_OAUTH_CLIENT_SECRET = "s";
+    process.env.YOUTUBE_OAUTH_REFRESH_TOKEN = "r";
+  });
+
+  it("publishes long-form video then uploads SRT caption track", async () => {
+    const pub = new YouTubeLongFormPublisher();
+    const result = await pub.publish({
+      runId: "r1",
+      videoPath: "/tmp/long.mp4",
+      title: "Deep Dive Cleveland",
+      description: "Ten minute narrative",
+      tags: ["realestate", "cleveland"],
+      captionsSrtPath: "/tmp/captions.srt",
+      postMode: "direct",
+    });
+    expect(result.externalId).toBe("long123");
+    expect(result.externalUrl).toContain("youtube.com/watch");
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/drivers/youtube-longform-publisher.ts
+import { Injectable } from "@nestjs/common";
+import { google } from "googleapis";
+import { createReadStream } from "fs";
+import {
+  PlatformPublisher,
+  PublishRequest,
+  PublishResult,
+} from "./platform-publisher.interface";
+import { Platform } from "../types";
+
+@Injectable()
+export class YouTubeLongFormPublisher implements PlatformPublisher {
+  readonly platform: Platform = "youtube_long";
+  private oauth2: any;
+
+  isConfigured(): boolean {
+    return !!(
+      process.env.YOUTUBE_OAUTH_CLIENT_ID &&
+      process.env.YOUTUBE_OAUTH_CLIENT_SECRET &&
+      process.env.YOUTUBE_OAUTH_REFRESH_TOKEN
+    );
+  }
+
+  private getAuth() {
+    if (!this.oauth2) {
+      this.oauth2 = new google.auth.OAuth2(
+        process.env.YOUTUBE_OAUTH_CLIENT_ID,
+        process.env.YOUTUBE_OAUTH_CLIENT_SECRET,
+      );
+      this.oauth2.setCredentials({
+        refresh_token: process.env.YOUTUBE_OAUTH_REFRESH_TOKEN,
+      });
+    }
+    return this.oauth2;
+  }
+
+  async publish(req: PublishRequest): Promise<PublishResult> {
+    if (!this.isConfigured())
+      throw new Error("YouTubeLongFormPublisher not configured");
+    const yt = google.youtube({ version: "v3", auth: this.getAuth() });
+    const privacyStatus = req.postMode === "direct" ? "public" : "private";
+
+    const videoResponse = await yt.videos.insert({
+      part: ["snippet", "status"],
+      requestBody: {
+        snippet: {
+          title: req.title.substring(0, 100),
+          description: req.description.substring(0, 5000),
+          tags: req.tags,
+          categoryId: "22",
+        },
+        status: {
+          privacyStatus,
+          selfDeclaredMadeForKids: false,
+          publishAt: req.scheduledFor?.toISOString(),
+        },
+      },
+      media: { body: createReadStream(req.videoPath) },
+    });
+
+    const videoId = (videoResponse.data as any).id;
+
+    if (req.captionsSrtPath) {
+      await yt.captions.insert({
+        part: ["snippet"],
+        requestBody: {
+          snippet: {
+            videoId,
+            language: "en",
+            name: "English (auto)",
+            isDraft: false,
+          },
+        },
+        media: {
+          mimeType: "application/octet-stream",
+          body: createReadStream(req.captionsSrtPath),
+        },
+      });
+    }
+
+    return {
+      externalId: videoId,
+      externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      cost: {
+        provider: "youtube",
+        amount_usd: 0,
+        units: 1,
+        unit_type: "requests",
+      },
+      providerResponse: videoResponse.data,
+    };
+  }
+}
+```
+
+- [ ] **Step 3: Publish handler same pattern as youtube-shorts handler, but reads `captions_srt` asset if present.**
+
+- [ ] **Step 4: Register in module, register in publisher registry, run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- youtube-longform-publisher.spec
+git add packages/backend/src/content-pipeline/drivers/ packages/backend/src/content-pipeline/orchestrator/
+git commit -m "feat(content-pipeline): YouTubeLongFormPublisher with SRT caption upload"
+```
+
+## Task 3.7: youtube-longform.md platform setup doc
+
+**Files:**
+
+- Create: `docs/content-pipeline/platform-setup/youtube-longform.md`
+
+- [ ] **Step 1: Write doc.**
+
+Content covers: additional scopes required over Shorts (`youtube.force-ssl` for captions), YouTube account verification for uploads over 15 minutes, monetization eligibility, Community Guidelines warnings, long-form content policy notes, how to request quota increase for production use.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add docs/content-pipeline/platform-setup/youtube-longform.md
+git commit -m "docs(content-pipeline): YouTube long-form platform setup walkthrough"
+```
+
+## Task 3.8: BrokerageBar primitive and Brokerage Market Share composition
+
+**Files:**
+
+- Create: `packages/video-template/src/primitives/BrokerageBar.tsx`
+- Modify: `packages/video-template/src/PropertyIQVideo.tsx`
+- Create: `packages/video-template/tests/brokerage.test.tsx`
+
+- [ ] **Step 1: Write BrokerageBar.**
+
+```tsx
+// packages/video-template/src/primitives/BrokerageBar.tsx
+import React from "react";
+import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
+
+export interface BrokerageBarProps {
+  brokerages: Array<{ brand: string; share_pct: number; delta_pct?: number }>;
+}
+
+export const BrokerageBar: React.FC<BrokerageBarProps> = ({ brokerages }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const { scale } = useLayoutConfig();
+  const top = brokerages.slice(0, 8);
+  const maxShare = Math.max(...top.map((b) => b.share_pct));
+
+  return (
+    <div
+      style={{
+        padding: 60 * scale,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12 * scale,
+      }}
+    >
+      {top.map((b, i) => {
+        const animate = spring({
+          frame: frame - i * 8,
+          fps,
+          config: { damping: 14 },
+        });
+        const width = interpolate(
+          animate,
+          [0, 1],
+          [0, (b.share_pct / maxShare) * 100],
+        );
+        const color =
+          b.delta_pct === undefined
+            ? "#3949AB"
+            : b.delta_pct >= 0
+              ? "#00C853"
+              : "#B3261E";
+        return (
+          <div
+            key={b.brand}
+            style={{ display: "flex", alignItems: "center", gap: 12 * scale }}
+          >
+            <div
+              style={{
+                width: 220 * scale,
+                fontSize: 20 * scale,
+                color: "#FFFFFF",
+                textAlign: "right",
+              }}
+            >
+              {b.brand}
+            </div>
+            <div
+              style={{
+                flex: 1,
+                height: 36 * scale,
+                background: "#1A1A2E",
+                borderRadius: 8 * scale,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${width}%`,
+                  height: "100%",
+                  background: color,
+                  transition: "width 0.3s",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                width: 80 * scale,
+                fontFamily: "Roboto Mono",
+                fontWeight: 700,
+                color: "#FFFFFF",
+              }}
+            >
+              {b.share_pct.toFixed(1)}%
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+```
+
+- [ ] **Step 2: Add BrokerageMarketShareLayout in PropertyIQVideo.**
+
+```tsx
+const BrokerageMarketShareLayout: React.FC<VideoProps> = (props) => {
+  const brokerages = (props.dataBundle as any)?.brokerages ?? [];
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      <Sequence from={60} durationInFrames={90}>
+        <Intro
+          marketName={`Brokerage Share: ${props.resolvedMarket.canonical_name}`}
+        />
+      </Sequence>
+      <Sequence from={150} durationInFrames={1800}>
+        <BrokerageBar brokerages={brokerages} />
+      </Sequence>
+      <Sequence from={1950} durationInFrames={210}>
+        <Outro marketName={props.resolvedMarket.canonical_name} />
+      </Sequence>
+      <Sequence from={2160} durationInFrames={90}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} />
+      </Sequence>
+    </>
+  );
+};
+```
+
+- [ ] **Step 3: Snapshot tests and commit.**
+
+```bash
+git add packages/video-template/src/primitives/BrokerageBar.tsx packages/video-template/src/PropertyIQVideo.tsx packages/video-template/tests/
+git commit -m "feat(video-template): BrokerageBar primitive and Brokerage Market Share composition"
+```
+
+## Task 3.9: Recruitment Angle composition
+
+**Files:**
+
+- Modify: `packages/video-template/src/PropertyIQVideo.tsx`
+- Create: `packages/video-template/tests/recruitment.test.tsx`
+
+- [ ] **Step 1: Add RecruitmentAngleLayout.**
+
+```tsx
+const RecruitmentAngleLayout: React.FC<VideoProps> = (props) => {
+  const score = (props.dataBundle as any)?.score?.propertyiq_score ?? 50;
+  const brokerages = (props.dataBundle as any)?.brokerages ?? [];
+  const referralMarkets = (props.dataBundle as any)?.referral_markets ?? [];
+
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      <Sequence from={60} durationInFrames={90}>
+        <Intro marketName={props.resolvedMarket.canonical_name} />
+      </Sequence>
+      <Sequence from={150} durationInFrames={600}>
+        <ScoreReveal score={score} />
+      </Sequence>
+      <Sequence from={750} durationInFrames={1200}>
+        <BrokerageBar brokerages={brokerages} />
+      </Sequence>
+      <Sequence from={1950} durationInFrames={600}>
+        <AbsoluteFill
+          style={{ padding: "6%", background: "#1A1A2E", color: "white" }}
+        >
+          <h2 style={{ fontSize: 40 }}>Referral Corridors</h2>
+          <ul>
+            {referralMarkets.slice(0, 5).map((m: any) => (
+              <li
+                key={m.canonical_name}
+                style={{ fontSize: 28, margin: "8px 0" }}
+              >
+                {m.canonical_name}, {m.inbound_relocators_pct?.toFixed(1)}%
+                relocate from here
+              </li>
+            ))}
+          </ul>
+        </AbsoluteFill>
+      </Sequence>
+      <Sequence from={2550} durationInFrames={120}>
+        <Outro marketName={props.resolvedMarket.canonical_name} />
+      </Sequence>
+      <Sequence from={2670} durationInFrames={30}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} />
+      </Sequence>
+    </>
+  );
+};
+```
+
+- [ ] **Step 2: Snapshot tests and commit.**
+
+```bash
+git add packages/video-template/src/PropertyIQVideo.tsx packages/video-template/tests/
+git commit -m "feat(video-template): Recruitment Angle composition"
+```
+
+## Task 3.10: Extend ContentDataService with P3 methods
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/data/content-data.service.ts`
+- Modify: `packages/backend/src/content-pipeline/data/content-data.types.ts`
+- Modify: `packages/backend/src/content-pipeline/data/content-data.service.spec.ts`
+
+- [ ] **Step 1: Add new types.**
+
+```typescript
+// data/content-data.types.ts (append)
+export interface BrokerageCoverage {
+  geo: GeoRef;
+  brokerages: Array<{
+    brand: string;
+    share_pct: number;
+    delta_pct: number;
+    listings_count: number;
+  }>;
+  market_shape: "consolidated" | "fragmented" | "contested";
+}
+
+export interface AgentRecruitmentPitch {
+  geo: GeoRef;
+  score: PropertyIQScoreResult;
+  brokerages: BrokerageCoverage["brokerages"];
+  recruiting_angles: string[];
+}
+
+export interface ReferralNetwork {
+  origin: GeoRef;
+  markets: Array<{
+    canonical_name: string;
+    geo: GeoRef;
+    inbound_relocators_pct: number;
+  }>;
+}
+
+export interface MarketNarrative {
+  geo: GeoRef;
+  snapshot: MarketSnapshot;
+  chapters: Array<{
+    sceneKey: string;
+    title: string;
+    synopsis: string;
+    bodyText: string;
+    durationFrames: number;
+  }>;
+}
+```
+
+- [ ] **Step 2: Add service methods.**
+
+```typescript
+// content-data.service.ts (add)
+async getBrokerageMarketCoverage(geos: GeoRef | GeoRef[]): Promise<BrokerageCoverage> {
+  const geoList = Array.isArray(geos) ? geos : [geos];
+  return this.brokerage.getCoverage(geoList);
+}
+
+async getAgentRecruitmentPitch(geo: GeoRef): Promise<AgentRecruitmentPitch> {
+  const [score, brokerage] = await Promise.all([
+    this.scoring.getScoreWithHistory(geo, 12),
+    this.brokerage.getCoverage([geo]),
+  ]);
+  return {
+    geo, score,
+    brokerages: brokerage.brokerages,
+    recruiting_angles: this.deriveRecruitingAngles(score, brokerage),
+  };
+}
+
+async getReferralNetwork(origin: GeoRef, limit: number): Promise<ReferralNetwork> {
+  return this.relocation.getReferralCorridors(origin, limit);
+}
+
+async getMarketNarrative(geo: GeoRef): Promise<MarketNarrative> {
+  const snapshot = await this.getMarketSnapshot(geo);
+  return { geo, snapshot, chapters: this.buildChapters(geo, snapshot) };
+}
+
+private deriveRecruitingAngles(score: PropertyIQScoreResult, coverage: BrokerageCoverage): string[] {
+  const angles: string[] = [];
+  const topShare = coverage.brokerages[0]?.share_pct ?? 0;
+  if (coverage.market_shape === 'fragmented') angles.push('Market is fragmented; no clear dominant brokerage to beat');
+  if (topShare < 15) angles.push(`No brokerage exceeds 15% share; open market positioning available`);
+  if (score.score >= 70) angles.push(`Market momentum: PropertyIQ Score ${score.score} indicates strong demand`);
+  return angles;
+}
+
+private buildChapters(geo: GeoRef, snapshot: MarketSnapshot): MarketNarrative['chapters'] {
+  return [
+    { sceneKey: 'chapter_1', title: 'Opening', synopsis: 'What the data tells us first.', bodyText: '', durationFrames: 1800 },
+    { sceneKey: 'chapter_2', title: 'Market Context', synopsis: 'Population, economy, employment.', bodyText: '', durationFrames: 3600 },
+    { sceneKey: 'chapter_3', title: 'Real Estate Fundamentals', synopsis: 'Values, rents, inventory, score.', bodyText: '', durationFrames: 5400 },
+    { sceneKey: 'chapter_4', title: 'Who This Is For', synopsis: 'Investor, agent, broker profiles.', bodyText: '', durationFrames: 1800 },
+    { sceneKey: 'chapter_5', title: 'Close', synopsis: 'Takeaways and CTA.', bodyText: '', durationFrames: 1800 },
+  ];
+}
+```
+
+The `brokerage` and `relocation` services are injected; add them to the constructor and module imports. Both must exist in the backend per Prerequisite 2 discovery.
+
+- [ ] **Step 3: Extend unit tests for the 4 new methods.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/data/
+git commit -m "feat(content-pipeline): ContentDataService extended with P3 data methods"
+```
+
+## Task 3.11: P3 lead magnet templates
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/brokerage_coverage.html.ejs`
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/agent_recruitment_kit.html.ejs`
+- Create: `packages/backend/src/content-pipeline/lead-magnets/templates/long_form_companion.html.ejs`
+
+- [ ] **Step 1: brokerage_coverage.html.ejs.**
+
+```html
+<h1>Brokerage Coverage Report</h1>
+<p>Prepared for <%= userContext.userName %> on <%= today %></p>
+<p>Market: <%= dataBundle.geo.canonical_name %></p>
+
+<h2>Market Shape: <%= dataBundle.market_shape %></h2>
+
+<table style="width:100%; border-collapse:collapse; margin-top:16px;">
+  <thead style="background:var(--primary); color:white;">
+    <tr>
+      <th style="padding:8px; text-align:left;">Rank</th>
+      <th>Brokerage</th>
+      <th>Share</th>
+      <th>YoY Delta</th>
+      <th>Listings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% dataBundle.brokerages.forEach(function(b, i) { %>
+    <tr style="border-bottom:1px solid var(--outline);">
+      <td style="padding:6px 8px;"><%= i + 1 %></td>
+      <td><%= b.brand %></td>
+      <td><%= b.share_pct.toFixed(1) %>%</td>
+      <td
+        style="color: <%= b.delta_pct >= 0 ? 'var(--accent)' : 'var(--error)' %>"
+      >
+        <%= b.delta_pct >= 0 ? '+' : '' %><%= b.delta_pct.toFixed(1) %>%
+      </td>
+      <td><%= b.listings_count.toLocaleString() %></td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2>Interpretation</h2>
+<p>
+  <% if (dataBundle.market_shape === 'consolidated') { %> One brokerage
+  dominates with significant share. New entrants face steep competition but
+  share gains above the dominant player are highly visible. <% } else if
+  (dataBundle.market_shape === 'fragmented') { %> No single brokerage exceeds
+  meaningful share. Many small players compete, which creates an opening for a
+  consolidator or a differentiated brand. <% } else { %> Two or three brokerages
+  are contesting dominance. Competitive dynamics are moving; next 12 months will
+  show a clear leader. <% } %>
+</p>
+```
+
+- [ ] **Step 2: agent_recruitment_kit.html.ejs.**
+
+```html
+<h1>Agent Recruitment Kit: <%= dataBundle.geo.canonical_name %></h1>
+<p>
+  Prepared for <%= userContext.userName %>. Market-specific recruiting
+  intelligence.
+</p>
+
+<div style="display:flex; align-items:center; gap:24px; margin:24px 0;">
+  <div class="score-ring"><%= dataBundle.score.score %></div>
+  <div>
+    <h2 style="margin:0;">PropertyIQ Score</h2>
+    <p style="font-size:12pt; color:var(--primary);">
+      Grade <%= dataBundle.score.grade %> . Confidence <%=
+      dataBundle.score.confidence_level %>
+    </p>
+  </div>
+</div>
+
+<h2>Recruiting Angles</h2>
+<ul>
+  <% dataBundle.recruiting_angles.forEach(function(a) { %>
+  <li style="margin:8px 0;"><%= a %></li>
+  <% }); %>
+</ul>
+
+<h2>Brokerage Landscape</h2>
+<p>Current top brokerages you are recruiting against:</p>
+<ul style="font-size:11pt;">
+  <% dataBundle.brokerages.slice(0, 5).forEach(function(b) { %>
+  <li>
+    <%= b.brand %>: <%= b.share_pct.toFixed(1) %>% share (<%= b.delta_pct >= 0 ?
+    '+' : '' %><%= b.delta_pct.toFixed(1) %>% YoY)
+  </li>
+  <% }); %>
+</ul>
+
+<h2>Pitch Script Starter</h2>
+<p>
+  Use this as the opener of your next recruiting call: "I noticed that the <%=
+  dataBundle.geo.canonical_name %> market has a PropertyIQ Score of <%=
+  dataBundle.score.score %>, meaning <%= dataBundle.score.label %>. The top
+  brokerage holds <%= dataBundle.brokerages[0]?.share_pct?.toFixed(1) ?? 'N/A'
+  %>% share. Where is your market share right now, and where do you want it next
+  year?"
+</p>
+```
+
+- [ ] **Step 3: long_form_companion.html.ejs.**
+
+```html
+<h1><%= dataBundle.geo.canonical_name %>: The Full Narrative</h1>
+<p>
+  Written companion to the Long-Form Deep Dive video. Prepared for <%=
+  userContext.userName %>.
+</p>
+
+<% dataBundle.chapters.forEach(function(chapter, i) { %>
+<h2>Chapter <%= i + 1 %>: <%= chapter.title %></h2>
+<p style="font-style:italic; color:var(--primary); margin-top:0;">
+  <%= chapter.synopsis %>
+</p>
+<p
+  style="font-family:'Source Serif 4', serif; line-height:1.6; font-size:13pt;"
+>
+  <%= chapter.bodyText %>
+</p>
+<% }); %>
+
+<h2>Data Sources</h2>
+<p style="font-size:10pt; color:var(--primary);">
+  Home values and rents: Zillow ZHVI and ZORI. Economic indicators: BLS, FRED.
+  Demographics: US Census. PropertyIQ Score: PropertyIQ proprietary.
+</p>
+```
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/lead-magnets/templates/
+git commit -m "feat(content-pipeline): P3 lead magnet templates (brokerage, recruitment, narrative companion)"
+```
+
+## Task 3.12: P3 format landing pages
+
+**Files:**
+
+- Create: `packages/frontend/app/brokerage-coverage/page.tsx`
+- Create: `packages/frontend/app/agent-recruitment-kit/page.tsx`
+- Create: `packages/frontend/app/market-narrative/page.tsx`
+
+- [ ] **Step 1: Each page follows landing-page pattern from P1/P2 with format-specific copy.**
+
+| Page                  | Heading                                      | Magnet                    |
+| --------------------- | -------------------------------------------- | ------------------------- |
+| brokerage-coverage    | "Free Brokerage Coverage Report"             | brokerage_coverage_report |
+| agent-recruitment-kit | "Free Agent Recruitment Kit for Brokers"     | agent_recruitment_kit     |
+| market-narrative      | "Get the Written Companion to the Deep Dive" | long_form_companion       |
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/frontend/app/brokerage-coverage/ packages/frontend/app/agent-recruitment-kit/ packages/frontend/app/market-narrative/
+git commit -m "feat(content-pipeline): P3 landing pages for brokerage, recruitment, narrative"
+```
+
+## Task 3.13: Gated dashboard for lead magnets
+
+**Files:**
+
+- Create: `packages/frontend/app/dashboard/magnets/page.tsx`
+- Create: `packages/backend/src/content-pipeline/magnets/dashboard-magnets.service.ts`
+- Create: `packages/backend/src/content-pipeline/magnets/dashboard-magnets.controller.ts`
+
+- [ ] **Step 1: Backend service fetches a user's delivered magnets with refresh capability.**
+
+```typescript
+// packages/backend/src/content-pipeline/magnets/dashboard-magnets.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { QueueService } from "../orchestrator/queue.service";
+
+@Injectable()
+export class DashboardMagnetsService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly queue: QueueService,
+  ) {}
+
+  async getUserMagnets(userId: string) {
+    const client = this.supabase.getClient();
+    const { data: deliveries } = await client
+      .from("lead_magnet_deliveries")
+      .select(
+        "*, lead_magnet_definitions(display_name, audience), content_assets(storage_url)",
+      )
+      .eq("user_id", userId)
+      .order("generated_at", { ascending: false });
+    return deliveries ?? [];
+  }
+
+  async refresh(userId: string, magnetKind: string, geo: any) {
+    await this.queue.send("render-pdf", {
+      userId,
+      magnetKind,
+      resolvedGeo: geo,
+      userEmail: "",
+      userName: "",
+    });
+  }
+}
+```
+
+- [ ] **Step 2: Controller (not AdminGuard; requires signed-in user auth).**
+
+```typescript
+// packages/backend/src/content-pipeline/magnets/dashboard-magnets.controller.ts
+import { Controller, Get, Post, Body, Req, UseGuards } from "@nestjs/common";
+import { SupabaseAuthGuard } from "../../auth-hooks/supabase-auth.guard";
+import { DashboardMagnetsService } from "./dashboard-magnets.service";
+
+@UseGuards(SupabaseAuthGuard)
+@Controller("api/dashboard/magnets")
+export class DashboardMagnetsController {
+  constructor(private readonly service: DashboardMagnetsService) {}
+
+  @Get()
+  async list(@Req() req: any) {
+    return {
+      success: true,
+      data: { magnets: await this.service.getUserMagnets(req.user.id) },
+    };
+  }
+
+  @Post("refresh")
+  async refresh(
+    @Req() req: any,
+    @Body() body: { magnetKind: string; geo: any },
+  ) {
+    await this.service.refresh(req.user.id, body.magnetKind, body.geo);
+    return { success: true, data: { queued: true } };
+  }
+}
+```
+
+- [ ] **Step 3: Frontend dashboard page.**
+
+```tsx
+// packages/frontend/app/dashboard/magnets/page.tsx
+"use client";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export default function DashboardMagnetsPage() {
+  const { data = [], refetch } = useQuery({
+    queryKey: ["dashboard-magnets"],
+    queryFn: async () =>
+      (await fetchAPI<{ data: { magnets: any[] } }>("/api/dashboard/magnets"))
+        .data.magnets,
+  });
+
+  async function refresh(magnet: any) {
+    await fetchAPIRaw("/api/dashboard/magnets/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        magnetKind: magnet.magnet_kind,
+        geo: magnet.resolved_geo,
+      }),
+    });
+    refetch();
+  }
+
+  return (
+    <main className="max-w-4xl mx-auto p-8 space-y-6">
+      <h1 className="text-3xl font-semibold">Your Market Reports</h1>
+      {data.length === 0 && (
+        <p className="text-outline">You have not received any magnets yet.</p>
+      )}
+      <div className="grid grid-cols-2 gap-6">
+        {data.map((m) => (
+          <div
+            key={m.id}
+            className="rounded-xl bg-surface-container-low p-6 shadow-sm"
+          >
+            <h3 className="font-semibold">
+              {m.lead_magnet_definitions?.display_name}
+            </h3>
+            <p className="text-sm text-outline">
+              {m.resolved_geo?.canonical_name}
+            </p>
+            <p className="text-xs text-outline">
+              Generated {new Date(m.generated_at).toLocaleDateString()}
+            </p>
+            <div className="flex gap-2 mt-4">
+              <a
+                href={publicUrl(m.content_assets?.storage_url)}
+                download
+                className="text-sm bg-primary text-on-primary rounded-full px-4 py-1.5"
+              >
+                Download PDF
+              </a>
+              <button
+                onClick={() => refresh(m)}
+                className="text-sm bg-surface-container rounded-full px-4 py-1.5"
+              >
+                Refresh data
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function publicUrl(s: string | undefined) {
+  if (!s) return "#";
+  const m = s.match(/^supabase:\/\/([^/]+)\/(.+)$/);
+  if (!m) return s;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${m[1]}/${m[2]}`;
+}
+```
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/magnets/dashboard-magnets.service.ts packages/backend/src/content-pipeline/magnets/dashboard-magnets.controller.ts packages/frontend/app/dashboard/magnets/
+git commit -m "feat(content-pipeline): gated user dashboard for delivered lead magnets"
+```
+
+## Task 3.14: FFmpegWrapperService
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.spec.ts
+import { FFmpegWrapperService } from "./ffmpeg-wrapper.service";
+import * as child_process from "child_process";
+import { EventEmitter } from "events";
+
+jest.mock("child_process");
+
+describe("FFmpegWrapperService", () => {
+  beforeAll(() => {
+    process.env.FFMPEG_BIN = "/usr/bin/ffmpeg";
+  });
+
+  it("extractFrames spawns ffmpeg with correct args", async () => {
+    const fakeProc: any = new EventEmitter();
+    fakeProc.stderr = new EventEmitter();
+    (child_process.spawn as jest.Mock).mockReturnValue(fakeProc);
+    setTimeout(() => fakeProc.emit("close", 0), 20);
+
+    const svc = new FFmpegWrapperService();
+    const frames = await svc.extractFrames("/tmp/v.mp4", 1);
+
+    const args = (child_process.spawn as jest.Mock).mock.calls[0][1];
+    expect(args).toContain("-i");
+    expect(args).toContain("/tmp/v.mp4");
+    expect(args).toContain("-vf");
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.ts
+import { Injectable } from "@nestjs/common";
+import { spawn } from "child_process";
+import { readdirSync, unlinkSync, mkdirSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import { randomBytes } from "crypto";
+
+const FRAMES_MAX = 60;
+
+@Injectable()
+export class FFmpegWrapperService {
+  private readonly bin = process.env.FFMPEG_BIN ?? "/usr/bin/ffmpeg";
+
+  async extractFrames(
+    videoPath: string,
+    intervalSeconds: number,
+  ): Promise<string[]> {
+    const outputDir = join(
+      tmpdir(),
+      `frames-${randomBytes(6).toString("hex")}`,
+    );
+    mkdirSync(outputDir, { recursive: true });
+
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(this.bin, [
+        "-i",
+        videoPath,
+        "-vf",
+        `fps=1/${intervalSeconds}`,
+        "-frames:v",
+        String(FRAMES_MAX),
+        "-y",
+        join(outputDir, "frame-%03d.jpg"),
+      ]);
+      let stderr = "";
+      proc.stderr.on("data", (d) => {
+        stderr += d.toString();
+      });
+      proc.on("close", (code) =>
+        code === 0 ? resolve() : reject(new Error(`ffmpeg ${code}: ${stderr}`)),
+      );
+    });
+
+    return readdirSync(outputDir)
+      .sort()
+      .map((f) => join(outputDir, f));
+  }
+
+  cleanupDir(framePath: string): void {
+    try {
+      for (const f of readdirSync(framePath)) unlinkSync(join(framePath, f));
+    } catch {}
+  }
+}
+```
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- ffmpeg-wrapper.service.spec
+git add packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.ts packages/backend/src/content-pipeline/style-references/ffmpeg-wrapper.service.spec.ts
+git commit -m "feat(content-pipeline): FFmpegWrapperService for frame sampling"
+```
+
+## Task 3.15: YtDlpWrapperService
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.ts`
+- Create: `packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.spec.ts
+import { YtDlpWrapperService } from "./yt-dlp-wrapper.service";
+import * as child_process from "child_process";
+import { EventEmitter } from "events";
+
+jest.mock("child_process");
+
+describe("YtDlpWrapperService", () => {
+  beforeAll(() => {
+    process.env.YT_DLP_BIN = "/usr/local/bin/yt-dlp";
+  });
+
+  it("rejects URLs outside allowlist", async () => {
+    const svc = new YtDlpWrapperService();
+    await expect(
+      svc.download("https://evil.example.com/video.mp4"),
+    ).rejects.toThrow(/allowlist/);
+  });
+
+  it("accepts YouTube URL", async () => {
+    const fakeProc: any = new EventEmitter();
+    fakeProc.stderr = new EventEmitter();
+    (child_process.spawn as jest.Mock).mockReturnValue(fakeProc);
+    setTimeout(() => fakeProc.emit("close", 0), 20);
+
+    const svc = new YtDlpWrapperService();
+    await expect(
+      svc.download("https://www.youtube.com/watch?v=abc"),
+    ).resolves.toBeDefined();
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.ts
+import { Injectable } from "@nestjs/common";
+import { spawn } from "child_process";
+import { join } from "path";
+import { tmpdir } from "os";
+import { randomBytes } from "crypto";
+
+const ALLOWED_HOSTS = [
+  "youtube.com",
+  "www.youtube.com",
+  "youtu.be",
+  "m.youtube.com",
+  "tiktok.com",
+  "www.tiktok.com",
+  "vm.tiktok.com",
+  "instagram.com",
+  "www.instagram.com",
+  "facebook.com",
+  "www.facebook.com",
+  "fb.watch",
+  "twitter.com",
+  "x.com",
+];
+
+export interface DownloadResult {
+  videoPath: string;
+  durationSec: number;
+  title?: string;
+}
+
+@Injectable()
+export class YtDlpWrapperService {
+  private readonly bin = process.env.YT_DLP_BIN ?? "/usr/local/bin/yt-dlp";
+
+  async download(url: string): Promise<DownloadResult> {
+    const parsed = new URL(url);
+    if (!ALLOWED_HOSTS.includes(parsed.hostname)) {
+      throw new Error(`URL host ${parsed.hostname} not in allowlist`);
+    }
+
+    const outputPath = join(
+      tmpdir(),
+      `yt-${randomBytes(6).toString("hex")}.mp4`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(this.bin, [
+        "-f",
+        "best[height<=720]/best",
+        "--max-filesize",
+        "200M",
+        "--download-sections",
+        "*0-300", // first 5 minutes only
+        "-o",
+        outputPath,
+        url,
+      ]);
+      let stderr = "";
+      proc.stderr.on("data", (d) => {
+        stderr += d.toString();
+      });
+      proc.on("close", (code) =>
+        code === 0 ? resolve() : reject(new Error(`yt-dlp ${code}: ${stderr}`)),
+      );
+    });
+
+    return { videoPath: outputPath, durationSec: 300 };
+  }
+}
+```
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- yt-dlp-wrapper.service.spec
+git add packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.ts packages/backend/src/content-pipeline/style-references/yt-dlp-wrapper.service.spec.ts
+git commit -m "feat(content-pipeline): YtDlpWrapperService with source allowlist and 5-minute cap"
+```
+
+## Task 3.16: Video style reference ingest and analysis
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/style-references/style-reference.service.ts`
+- Modify: `packages/backend/src/content-pipeline/style-references/vision-extractor.service.ts`
+
+- [ ] **Step 1: Extend VisionExtractorService with `extractFromFrames()`.**
+
+```typescript
+// vision-extractor.service.ts (add)
+async extractFromFrames(framePaths: string[]): Promise<{ attributes: any; cost: DriverCost }> {
+  const imageBlocks = framePaths.slice(0, 12).map((p) => {
+    const base64 = readFileSync(p).toString('base64');
+    return { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 } };
+  });
+
+  const VIDEO_EXTRACT_TOOL = {
+    name: 'emit_video_attributes',
+    description: 'Extract structured video style attributes.',
+    input_schema: {
+      type: 'object',
+      required: ['cuts_per_10_sec', 'hook_archetype', 'caption_style', 'energy_tag'],
+      properties: {
+        cuts_per_10_sec: { type: 'number' },
+        hook_archetype: { type: 'string', enum: ['question', 'statistic', 'bold-claim', 'callout', 'countdown', 'pattern-interrupt'] },
+        text_density_over_time: { type: 'array', items: { type: 'number' } },
+        caption_style: { type: 'string', enum: ['none', 'single-line-burn-in', 'kinetic-multi-line', 'traditional-subtitle'] },
+        aspect: { type: 'string', enum: ['9x16', '16x9', '1x1', 'other'] },
+        energy_tag: { type: 'string', enum: ['calm', 'medium', 'high'] },
+        dominant_palette: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  } as const;
+
+  const response = await this.client.messages.create({
+    model: process.env.SCRIPT_LLM_MODEL ?? 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    tools: [VIDEO_EXTRACT_TOOL as unknown as Anthropic.Messages.Tool],
+    tool_choice: { type: 'tool', name: 'emit_video_attributes' },
+    messages: [{ role: 'user', content: [
+      ...imageBlocks,
+      { type: 'text', text: 'These frames are sampled 1 second apart from a video reference. Extract style attributes using the tool. Estimate cuts_per_10_sec from frame-to-frame visual changes. Do not copy any visible text from the frames; only describe text placement abstractly.' },
+    ] }],
+  });
+
+  const toolBlock = response.content.find((c) => c.type === 'tool_use');
+  if (!toolBlock || toolBlock.type !== 'tool_use') throw new Error('video vision did not return tool_use');
+
+  const inputTokens = response.usage.input_tokens;
+  const outputTokens = response.usage.output_tokens;
+
+  return {
+    attributes: toolBlock.input,
+    cost: {
+      provider: 'anthropic-vision',
+      amount_usd: (inputTokens * 3.0 + outputTokens * 15.0) / 1_000_000,
+      units: inputTokens + outputTokens, unit_type: 'tokens_input',
+    },
+  };
+}
+```
+
+- [ ] **Step 2: StyleReferenceService extends to video ingest.**
+
+```typescript
+// style-reference.service.ts (add)
+async ingestVideoFromUpload(userId: string, buffer: Buffer, label: string) {
+  const videoPath = join(tmpdir(), `upload-${Date.now()}.mp4`);
+  writeFileSync(videoPath, buffer);
+  return this.processVideo(userId, videoPath, label, null);
+}
+
+async ingestVideoFromUrl(userId: string, url: string, label: string) {
+  const download = await this.ytdlp.download(url);
+  return this.processVideo(userId, download.videoPath, label, url);
+}
+
+private async processVideo(userId: string, videoPath: string, label: string, sourceUrl: string | null) {
+  const frames = await this.ffmpeg.extractFrames(videoPath, 1);
+  const extraction = await this.vision.extractFromFrames(frames);
+
+  const previewStripBuffer = await this.buildPreviewStrip(frames.slice(0, 9));
+  const client = this.supabase.getClient();
+  const previewPath = `style-references/${userId}/${Date.now()}-preview.jpg`;
+  await client.storage.from('content-pipeline').upload(previewPath, previewStripBuffer, {
+    contentType: 'image/jpeg', upsert: true,
+  });
+
+  const { data } = await client.from('style_references').insert({
+    user_id: userId, kind: 'video', label, source_url: sourceUrl,
+    preview_strip_url: `supabase://content-pipeline/${previewPath}`,
+    extracted_attributes: extraction.attributes,
+    vision_cost_usd: extraction.cost.amount_usd,
+  }).select().single();
+
+  // delete raw video per 24h TTL; fire-and-forget
+  try { unlinkSync(videoPath); } catch {}
+
+  return data;
+}
+
+private async buildPreviewStrip(framePaths: string[]): Promise<Buffer> {
+  // For simplicity, concatenate 9 frames via ffmpeg tile filter. Implementation:
+  const outputPath = join(tmpdir(), `strip-${Date.now()}.jpg`);
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn(process.env.FFMPEG_BIN ?? 'ffmpeg', [
+      '-i', framePaths[0],
+      ...framePaths.slice(1).flatMap((p) => ['-i', p]),
+      '-filter_complex', 'tile=3x3',
+      '-y', outputPath,
+    ]);
+    let stderr = '';
+    proc.stderr.on('data', (d) => { stderr += d.toString(); });
+    proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`tile ${code}: ${stderr}`)));
+  });
+  return readFileSync(outputPath);
+}
+```
+
+Inject `YtDlpWrapperService` and `FFmpegWrapperService` into the StyleReferenceService constructor.
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- style-reference.service.spec
+git add packages/backend/src/content-pipeline/style-references/
+git commit -m "feat(content-pipeline): video style reference ingest with frame sampling and vision analysis"
+```
+
+## Task 3.17: Video ingest endpoints
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/style-references/style-reference.controller.ts`
+
+- [ ] **Step 1: Add video ingest endpoints.**
+
+```typescript
+// style-reference.controller.ts (add)
+@Post('upload-video')
+@UseInterceptors(FileInterceptor('file'))
+async uploadVideo(@Req() req: any, @UploadedFile() file: Express.Multer.File, @Body('label') label: string) {
+  try {
+    return { success: true, data: await this.service.ingestVideoFromUpload(req.user.id, file.buffer, label) };
+  } catch (err) {
+    return { success: false, error: this.mapError(err) };
+  }
+}
+
+@Post('ingest-video-url')
+async ingestVideoUrl(@Req() req: any, @Body() body: { url: string; label: string }) {
+  try {
+    return { success: true, data: await this.service.ingestVideoFromUrl(req.user.id, body.url, body.label) };
+  } catch (err) {
+    return { success: false, error: this.mapError(err) };
+  }
+}
+
+private mapError(err: unknown): string {
+  const msg = (err as Error).message;
+  if (msg.includes('allowlist')) return 'That URL is not from a supported source. Upload the file instead.';
+  if (msg.includes('private') || msg.includes('geo')) return "Couldn't access this, might be private or geo-blocked.";
+  if (msg.includes('filesize') || msg.includes('too long')) return "Video is too long; we'll analyze just the first 5 minutes.";
+  return msg;
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/style-references/style-reference.controller.ts
+git commit -m "feat(content-pipeline): video style reference endpoints (upload + URL ingest)"
+```
+
+## Task 3.18: Style Library UI video tab
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/style-library/upload-dialog.tsx`
+
+- [ ] **Step 1: Add video-ingest UI to upload dialog.**
+
+Extend the upload dialog with a toggle between `thumbnail` and `video` reference kind. Video tab exposes URL input and file upload. File accept extended to `video/mp4,video/quicktime`. Video ingest calls `/api/admin/content-pipeline/style-references/upload-video` or `ingest-video-url`.
+
+```tsx
+// extend upload-dialog.tsx, add kind state and conditional endpoint selection:
+const [kind, setKind] = useState<"thumbnail" | "video">("thumbnail");
+
+// conditionally route submit:
+const endpoint =
+  kind === "video"
+    ? tab === "url"
+      ? "/ingest-video-url"
+      : "/upload-video"
+    : tab === "url"
+      ? "/ingest-url"
+      : "/upload";
+```
+
+Display extracted video-specific attributes on the reference card: cuts_per_10_sec, hook_archetype, caption_style, 9-frame preview strip.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/style-library/upload-dialog.tsx
+git commit -m "feat(content-pipeline): style library UI supports video references (upload and URL)"
+```
+
+## Task 3.19: Video-reference style variants and selection
+
+**Files:**
+
+- Create: `packages/video-template/src/presets/style-variants/pattern-interrupt-hook.ts`
+- Create: `packages/video-template/src/presets/style-variants/countdown-hook.ts`
+- Create: `packages/video-template/src/presets/style-variants/question-hook.ts`
+- Modify: `packages/video-template/src/presets/style-variants/index.ts`
+- Modify: `packages/video-template/src/presets/style-variants/select.ts`
+
+- [ ] **Step 1: Write 3 new variants keyed by hook archetype.**
+
+```typescript
+// pattern-interrupt-hook.ts
+export const patternInterruptHook: StyleVariantPreset = {
+  textPosition: "center",
+  textSize: "large",
+  graphicDensity: "dense",
+  openingSceneDuration: 45, // shorter hook
+};
+
+// countdown-hook.ts
+export const countdownHook: StyleVariantPreset = {
+  textPosition: "top",
+  textSize: "medium",
+  graphicDensity: "moderate",
+  openingSceneDuration: 90, // slightly longer for countdown
+};
+
+// question-hook.ts
+export const questionHook: StyleVariantPreset = {
+  textPosition: "center",
+  textSize: "medium",
+  graphicDensity: "minimal",
+  openingSceneDuration: 60,
+};
+```
+
+- [ ] **Step 2: Selection logic reads `hook_archetype` and `energy_tag` from style_references.extracted_attributes.**
+
+```typescript
+// select.ts (extend)
+export function selectVariant(attrs?: any): StyleVariantPreset {
+  if (!attrs) return mediumEnergy;
+  if (attrs.hook_archetype === "pattern-interrupt") return patternInterruptHook;
+  if (attrs.hook_archetype === "countdown") return countdownHook;
+  if (attrs.hook_archetype === "question") return questionHook;
+  if (attrs.energy_tag === "high") return highEnergy;
+  if (attrs.energy_tag === "calm") return calmExplainer;
+  return mediumEnergy;
+}
+```
+
+- [ ] **Step 3: Wire into render-video.handler.ts to pass chosen variant name into Remotion props.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/video-template/src/presets/style-variants/
+git commit -m "feat(video-template): 3 video-reference style variants (pattern-interrupt, countdown, question)"
+```
+
+## Task 3.20: Transient storage cleanup cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/cleanup-transient-refs.cron.ts`
+
+- [ ] **Step 1: Write cron.**
+
+```typescript
+// packages/backend/src/content-pipeline/crons/cleanup-transient-refs.cron.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+@Injectable()
+export class CleanupTransientRefsCron {
+  private readonly logger = new Logger(CleanupTransientRefsCron.name);
+  constructor(private readonly supabase: SupabaseService) {}
+
+  @Cron("0 */6 * * *") // every 6 hours
+  async run(): Promise<void> {
+    const client = this.supabase.getClient();
+    const cutoff = new Date(Date.now() - 24 * 3600 * 1000);
+
+    const { data: files } = await client.storage
+      .from("style-references-transient")
+      .list("", { limit: 1000 });
+    let deleted = 0;
+    for (const f of files ?? []) {
+      if (new Date(f.created_at ?? 0) < cutoff) {
+        await client.storage
+          .from("style-references-transient")
+          .remove([f.name]);
+        deleted++;
+      }
+    }
+    if (deleted > 0)
+      this.logger.log(`cleaned up ${deleted} transient style-reference files`);
+  }
+}
+```
+
+- [ ] **Step 2: Register in module, commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/cleanup-transient-refs.cron.ts
+git commit -m "feat(content-pipeline): cleanup-transient-refs cron deletes style-reference raw files after 24h"
+```
+
+## Task 3.21: Phase 3 E2E tests
+
+**Files:**
+
+- Create: `packages/backend/test/e2e/content-pipeline-p3-long-form.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p3-video-style-ref.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p3-gated-dashboard.e2e.spec.ts`
+
+**Per project memory: real staging DB, no mocks.**
+
+- [ ] **Step 1: long-form end-to-end.**
+
+```typescript
+// packages/backend/test/e2e/content-pipeline-p3-long-form.e2e.spec.ts
+describe("E2E: Long-Form Deep Dive end-to-end", () => {
+  // Create long_form_deep_dive run for Cleveland, OH with tts_provider=elevenlabs
+  // Poll until published (up to 25 min)
+  // Verify YouTube video uploaded with valid URL
+  // Verify video duration between 5 and 12 minutes
+  // Verify captions.insert succeeded (request captions list and check for en caption track)
+  // Verify SRT asset exists in content_assets
+});
+```
+
+- [ ] **Step 2: video style reference via URL.**
+
+```typescript
+describe("E2E: Video style reference via YouTube URL", () => {
+  // POST /style-references/ingest-video-url with a public YouTube URL known to be style-relevant
+  // Expect 200 within 90s (yt-dlp download + frame sample + vision analysis)
+  // Verify extracted_attributes contains cuts_per_10_sec, hook_archetype, energy_tag
+  // Verify preview strip exists in storage
+});
+```
+
+- [ ] **Step 3: gated dashboard access.**
+
+```typescript
+describe("E2E: Gated dashboard shows delivered magnets", () => {
+  // Simulate a lead magnet delivery for a test user
+  // Authenticate as that user and GET /api/dashboard/magnets
+  // Expect the delivered magnet in response with download link
+  // Verify unauthenticated request returns 401
+});
+```
+
+- [ ] **Step 4: Run E2E, commit.**
+
+```bash
+cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- content-pipeline-p3
+git add packages/backend/test/e2e/
+git commit -m "test(content-pipeline): P3 E2E suite (long-form, video style ref, gated dashboard)"
+```
+
+## Task 3.22: Update internal services map for P3 data methods
+
+**Files:**
+
+- Modify: `docs/content-pipeline/internal-services-map.md`
+
+- [ ] **Step 1: Extend the services map from Task 1.12 with P3 tools.**
+
+Append rows for `farm_area_analysis`, `brokerage_market_coverage_report`, `agent_recruitment_pitch`, `referral_network_finder`, `generate_market_narrative`, `compare_markets_for_content`. For each, document the backend internal service or endpoint that supplies the data, or flag as "requires lifting from MCP tool file" if no backend service exists.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add docs/content-pipeline/internal-services-map.md
+git commit -m "docs(content-pipeline): internal services map updated with P3 data methods"
+```
+
+---
+
+# Phase 4: Automation trust matures
+
+**Duration:** 2 weeks. **Complexity:** Medium. **Tasks:** 24.
+
+## Phase 4 scope
+
+7-day and 30-day metrics pulls. Hook A/B winner detection with significance testing. Revenue-per-video attribution through billing. Observability maturity for C (publish reliability) and D (render correctness). Performance page full build with narrative cards and rules engine. Lead magnet A/B with auto-promotion. Style reference A/B.
+
+## Phase 4 deliverables
+
+- 7d and 30d metrics pulled automatically for every platform.
+- Hook A/B winner auto-promotes to default prompt when significance threshold met.
+- Revenue-per-video visible in Performance page, joining signup_attributions to Stripe tier upgrades.
+- Slack alerts fire on credential expiry, stall, retry exhaustion, queue depth, per-platform error rate.
+- Render pre-flight catches text overflow and asset-load failures before full render.
+- Performance page has Hero Card, Format Conversion Panel, Hook Patterns Panel, Suggested Runs Panel, and Runs Table.
+- Lead magnet A/B fully functional: 2 bindings per format with weight, conversion-rate leaderboard, auto-promotion.
+
+## Phase 4 acceptance criteria
+
+1. P4 migrations apply cleanly (hook_archetypes, alerts_sent, observability_queue_samples, magnet_ab, style_ab).
+2. `npm run test` passes P4 unit tests (minimum 60 new).
+3. `npm run test:e2e` passes P4 E2E suite (revenue round-trip, hook A/B, render pre-flight, alert dedup, credential expiry).
+4. Running a full run with 2 hook variants produces 2 platform_posts with correct hook_variant_id.
+5. Seeding 100 runs with known A/B split where A wins by >30% triggers auto-promotion.
+6. A run with intentionally long market name hits render pre-flight and routes to failed with overflow detail.
+
+## Phase 4 prerequisites
+
+- P1, P2, P3 all merged and running in production for at least 2 weeks.
+- At least 50 published runs in production to drive analytics.
+- Stripe webhook integration confirmed with existing billing tables (see Task 4.8 discovery).
+- Slack workspace with webhook URL.
+
+## Task 4.1: 7d metrics pull cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/pull-7d-metrics.cron.ts`
+
+- [ ] **Step 1: Copy pattern from `pull-24h-metrics.cron.ts`, change window to '7d'.**
+
+```typescript
+// packages/backend/src/content-pipeline/crons/pull-7d-metrics.cron.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { MetricsPullerService } from "../analytics/metrics-puller.service";
+
+@Injectable()
+export class Pull7dMetricsCron {
+  private readonly logger = new Logger(Pull7dMetricsCron.name);
+  constructor(private readonly puller: MetricsPullerService) {}
+
+  @Cron("15 3 * * *", { timeZone: "UTC" })
+  async run(): Promise<void> {
+    const count = await this.puller.pullWindow("7d");
+    this.logger.log(`pulled 7d metrics for ${count} posts`);
+  }
+}
+```
+
+- [ ] **Step 2: Register, commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/pull-7d-metrics.cron.ts
+git commit -m "feat(content-pipeline): 7-day metrics pull cron"
+```
+
+## Task 4.2: 30d metrics pull cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/pull-30d-metrics.cron.ts`
+
+- [ ] **Step 1: Same pattern with window '30d'.**
+
+```typescript
+@Injectable()
+export class Pull30dMetricsCron {
+  constructor(private readonly puller: MetricsPullerService) {}
+  @Cron("30 3 * * *", { timeZone: "UTC" })
+  async run(): Promise<void> {
+    await this.puller.pullWindow("30d");
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/pull-30d-metrics.cron.ts
+git commit -m "feat(content-pipeline): 30-day metrics pull cron"
+```
+
+## Task 4.3: Per-platform metric pullers (TikTok, IG, FB, LinkedIn)
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/analytics/tiktok-metrics.service.ts`
+- Create: `packages/backend/src/content-pipeline/analytics/instagram-metrics.service.ts`
+- Create: `packages/backend/src/content-pipeline/analytics/facebook-metrics.service.ts`
+- Create: `packages/backend/src/content-pipeline/analytics/linkedin-metrics.service.ts`
+- Modify: `packages/backend/src/content-pipeline/analytics/metrics-puller.service.ts`
+
+- [ ] **Step 1: Write each service following YouTubeMetricsService pattern.**
+
+TikTok: `GET /v2/video/query/` with video ID filter, fields for views, likes, comments, shares, total_time_watched. Instagram Graph: `GET /<media-id>/insights?metric=views,reach,likes,comments,saved,shares`. Facebook Graph: `GET /<post-id>/insights?metric=post_video_views,post_reactions_like_total,...`. LinkedIn: `GET /ugcPosts/<share-id>?fields=statistics`.
+
+Each implements a `fetchMetrics(externalId, window)` returning the same shape as `YouTubeMetricsResult`.
+
+- [ ] **Step 2: Update MetricsPullerService to dispatch per platform.**
+
+```typescript
+// metrics-puller.service.ts (modify pullWindow)
+switch (post.platform) {
+  case "youtube_shorts":
+  case "youtube_long":
+    metrics = await this.youtube.fetchMetrics(post.external_id, window);
+    break;
+  case "tiktok":
+    metrics = await this.tiktok.fetchMetrics(post.external_id, window);
+    break;
+  case "instagram_reels":
+    metrics = await this.instagram.fetchMetrics(post.external_id, window);
+    break;
+  case "facebook_reels":
+    metrics = await this.facebook.fetchMetrics(post.external_id, window);
+    break;
+  case "linkedin":
+    metrics = await this.linkedin.fetchMetrics(post.external_id, window);
+    break;
+}
+```
+
+- [ ] **Step 3: Unit tests per puller, commit.**
+
+```bash
+cd packages/backend && npm run test -- 'metrics.service'
+git add packages/backend/src/content-pipeline/analytics/
+git commit -m "feat(content-pipeline): metric pullers for TikTok, IG, FB, LinkedIn"
+```
+
+## Task 4.4: HookABService with significance testing
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/analytics/hook-ab.service.ts`
+- Create: `packages/backend/src/content-pipeline/analytics/hook-ab.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// packages/backend/src/content-pipeline/analytics/hook-ab.service.spec.ts
+import { Test } from "@nestjs/testing";
+import { HookABService } from "./hook-ab.service";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+describe("HookABService", () => {
+  // Generate synthetic data where variant A has 50% retention at 60 samples
+  // and variant B has 20% retention at 60 samples.
+  // Service should identify A as winner with >95% confidence.
+
+  it("identifies winner when lift >= 30% and confidence >= 95%", async () => {
+    const aSamples = 60,
+      bSamples = 60;
+    const aSuccesses = 30,
+      bSuccesses = 12;
+    // ... build mock Supabase response
+
+    // Invoke HookABService.determineWinner('grade_reveal')
+    // Expect returns { winner: 'A', lift: >= 0.3, confidence: >= 0.95 }
+  });
+
+  it("returns null when lift is insufficient", async () => {
+    // A: 30/60, B: 28/60, lift under 30%
+    // Expect null winner
+  });
+
+  it("returns null when sample size below 50 per variant", async () => {
+    // Expect null winner
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// packages/backend/src/content-pipeline/analytics/hook-ab.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { ContentFormat } from "../types";
+
+export interface HookWinner {
+  variantId: "A" | "B";
+  lift: number;
+  confidence: number;
+  aRetention: number;
+  bRetention: number;
+  aSamples: number;
+  bSamples: number;
+}
+
+const MIN_SAMPLES_PER_ARM = 50;
+const MIN_LIFT = 0.3;
+const MIN_CONFIDENCE = 0.95;
+
+@Injectable()
+export class HookABService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async determineWinner(format: ContentFormat): Promise<HookWinner | null> {
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from("platform_posts")
+      .select("hook_variant_id, content_metrics!inner(avg_retention_pct)")
+      .eq("content_runs.format", format)
+      .eq("content_metrics.pulled_at_window", "7d");
+
+    if (!data) return null;
+
+    const aMetrics = data
+      .filter((d: any) => d.hook_variant_id === "A")
+      .map((d: any) => d.content_metrics.avg_retention_pct);
+    const bMetrics = data
+      .filter((d: any) => d.hook_variant_id === "B")
+      .map((d: any) => d.content_metrics.avg_retention_pct);
+
+    if (
+      aMetrics.length < MIN_SAMPLES_PER_ARM ||
+      bMetrics.length < MIN_SAMPLES_PER_ARM
+    )
+      return null;
+
+    const aMean = aMetrics.reduce((s, v) => s + v, 0) / aMetrics.length;
+    const bMean = bMetrics.reduce((s, v) => s + v, 0) / bMetrics.length;
+    const lift = Math.abs(aMean - bMean) / Math.min(aMean, bMean);
+
+    if (lift < MIN_LIFT) return null;
+
+    const z = this.zScoreForMeans(aMetrics, bMetrics);
+    const confidence = this.pValueFromZ(z);
+    if (confidence < MIN_CONFIDENCE) return null;
+
+    const winner = aMean > bMean ? "A" : "B";
+    return {
+      variantId: winner,
+      lift,
+      confidence,
+      aRetention: aMean,
+      bRetention: bMean,
+      aSamples: aMetrics.length,
+      bSamples: bMetrics.length,
+    };
+  }
+
+  private zScoreForMeans(a: number[], b: number[]): number {
+    const aMean = a.reduce((s, v) => s + v, 0) / a.length;
+    const bMean = b.reduce((s, v) => s + v, 0) / b.length;
+    const aVar = a.reduce((s, v) => s + (v - aMean) ** 2, 0) / a.length;
+    const bVar = b.reduce((s, v) => s + (v - bMean) ** 2, 0) / b.length;
+    const se = Math.sqrt(aVar / a.length + bVar / b.length);
+    return Math.abs(aMean - bMean) / se;
+  }
+
+  private pValueFromZ(z: number): number {
+    return 1 - 0.5 * (1 + this.erf(z / Math.SQRT2));
+  }
+
+  private erf(x: number): number {
+    const sign = Math.sign(x);
+    const ax = Math.abs(x);
+    const a1 = 0.254829592,
+      a2 = -0.284496736,
+      a3 = 1.421413741,
+      a4 = -1.453152027,
+      a5 = 1.061405429,
+      p = 0.3275911;
+    const t = 1 / (1 + p * ax);
+    const y =
+      1 -
+      ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-ax * ax);
+    return sign * y;
+  }
+}
+```
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- hook-ab.service.spec
+git add packages/backend/src/content-pipeline/analytics/
+git commit -m "feat(content-pipeline): HookABService with two-sample z-test significance"
+```
+
+## Task 4.5: Hook archetype auto-promotion
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000040_content_pipeline_hook_archetypes.sql`
+- Create: `packages/backend/src/content-pipeline/analytics/hook-promoter.service.ts`
+- Create: `packages/backend/src/content-pipeline/crons/hook-promotion.cron.ts`
+
+- [ ] **Step 1: Migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS hook_archetypes (
+  format TEXT PRIMARY KEY REFERENCES format_templates(format),
+  active_archetype TEXT NOT NULL,
+  active_prompt_append TEXT,
+  last_promoted_at TIMESTAMPTZ,
+  last_winner_variant TEXT,
+  last_winner_confidence NUMERIC,
+  last_winner_lift NUMERIC
+);
+ALTER TABLE hook_archetypes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON hook_archetypes FOR ALL USING (true);
+GRANT ALL ON hook_archetypes TO service_role;
+GRANT ALL ON hook_archetypes TO authenticated;
+```
+
+- [ ] **Step 2: Promoter service.**
+
+```typescript
+// hook-promoter.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { HookABService } from "./hook-ab.service";
+import { AlertDispatcherService } from "../observability/alert-dispatcher.service";
+import { ContentFormat } from "../types";
+
+@Injectable()
+export class HookPromoterService {
+  private readonly logger = new Logger(HookPromoterService.name);
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly hookAb: HookABService,
+    private readonly alerts: AlertDispatcherService,
+  ) {}
+
+  async evaluate(format: ContentFormat): Promise<void> {
+    const winner = await this.hookAb.determineWinner(format);
+    if (!winner) return;
+
+    const client = this.supabase.getClient();
+    await client.from("hook_archetypes").upsert({
+      format,
+      active_archetype: `variant_${winner.variantId}`,
+      last_promoted_at: new Date().toISOString(),
+      last_winner_variant: winner.variantId,
+      last_winner_confidence: winner.confidence,
+      last_winner_lift: winner.lift,
+    });
+
+    await this.alerts.sendAlert(
+      "info",
+      "hook_promotion",
+      `Hook variant ${winner.variantId} auto-promoted for ${format} with ${(winner.lift * 100).toFixed(0)}% lift at ${(winner.confidence * 100).toFixed(0)}% confidence.`,
+    );
+  }
+}
+```
+
+- [ ] **Step 3: Weekly cron.**
+
+```typescript
+// crons/hook-promotion.cron.ts
+@Injectable()
+export class HookPromotionCron {
+  constructor(private readonly promoter: HookPromoterService) {}
+
+  @Cron("0 4 * * 1", { timeZone: "UTC" }) // Monday 4am UTC
+  async run(): Promise<void> {
+    const formats: ContentFormat[] = [
+      "grade_reveal",
+      "top_10_ranking",
+      "score_mover",
+      "head_to_head",
+      "long_form_deep_dive",
+      "farm_area_spotlight",
+      "brokerage_market_share",
+      "recruitment_angle",
+    ];
+    for (const f of formats) await this.promoter.evaluate(f);
+  }
+}
+```
+
+- [ ] **Step 4: ScriptGenerator reads `hook_archetypes.active_archetype` and appends to per-format prompt if set.**
+
+```typescript
+// anthropic-script-generator.ts (extend generate())
+const { data: archetype } = await this.supabase
+  .getClient()
+  .from("hook_archetypes")
+  .select("active_prompt_append")
+  .eq("format", req.format)
+  .maybeSingle();
+const promoted = archetype?.active_prompt_append ?? "";
+// append `promoted` to the userPrompt before sending to Anthropic
+```
+
+- [ ] **Step 5: Commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000040_content_pipeline_hook_archetypes.sql packages/backend/src/content-pipeline/analytics/hook-promoter.service.ts packages/backend/src/content-pipeline/crons/hook-promotion.cron.ts
+git commit -m "feat(content-pipeline): hook archetype auto-promotion with weekly cron"
+```
+
+## Task 4.6: Billing schema discovery
+
+**Files:**
+
+- Create: `docs/content-pipeline/billing-schema-map.md`
+
+- [ ] **Step 1: Discovery.**
+
+Inspect `packages/backend/src/billing/` and `packages/backend/src/stripe/` for the existing billing tables (subscriptions, customers, trial conversions, etc.). Document:
+
+- Table names and key columns.
+- How user_id (`auth.users`) links to subscription rows.
+- How tier is represented (e.g., `tier` column, or inferred from `stripe_price_id`).
+- How tier-change events are captured (webhook table? table with last_tier and current_tier?).
+
+- [ ] **Step 2: Write findings to billing-schema-map.md.**
+
+Include a SQL query template that, given a user_id, returns their tier history with timestamps. This query backs RevenueAttributionService.
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add docs/content-pipeline/billing-schema-map.md
+git commit -m "docs(content-pipeline): billing schema map for revenue attribution"
+```
+
+## Task 4.7: RevenueAttributionService
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/analytics/revenue-attribution.service.ts`
+- Create: `packages/backend/src/content-pipeline/analytics/revenue-attribution.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// analytics/revenue-attribution.service.spec.ts
+describe("RevenueAttributionService.getRevenueByRun", () => {
+  // Mock Supabase responses for signup_attributions joined to billing
+  // Include a user who upgraded from free to pro within 30 days of signup
+  // Verify service returns tier: 'pro', mrr_contribution_usd: (subscription price)
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// analytics/revenue-attribution.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+export interface RunRevenue {
+  runId: string;
+  signups: number;
+  conversions_to_pro: number;
+  conversions_to_enterprise: number;
+  total_mrr_contribution_usd: number;
+}
+
+@Injectable()
+export class RevenueAttributionService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async getRevenueByRun(runId: string): Promise<RunRevenue> {
+    const client = this.supabase.getClient();
+    const { data: attributions } = await client
+      .from("signup_attributions")
+      .select("user_id, tier_at_signup")
+      .eq("attributed_run_id", runId);
+
+    const signups = attributions?.length ?? 0;
+    let pro = 0,
+      enterprise = 0,
+      mrr = 0;
+
+    for (const a of attributions ?? []) {
+      const { data: sub } = await client
+        .from("stripe_subscriptions")
+        .select("tier, price_usd_monthly, status")
+        .eq("user_id", a.user_id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!sub) continue;
+      if (sub.tier === "pro") pro++;
+      if (sub.tier === "enterprise") enterprise++;
+      if (sub.price_usd_monthly) mrr += Number(sub.price_usd_monthly);
+    }
+    return {
+      runId,
+      signups,
+      conversions_to_pro: pro,
+      conversions_to_enterprise: enterprise,
+      total_mrr_contribution_usd: mrr,
+    };
+  }
+}
+```
+
+Adjust table name per Task 4.6 findings if it is not `stripe_subscriptions`.
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- revenue-attribution.service.spec
+git add packages/backend/src/content-pipeline/analytics/revenue-attribution.service.ts packages/backend/src/content-pipeline/analytics/revenue-attribution.service.spec.ts
+git commit -m "feat(content-pipeline): RevenueAttributionService joining signup_attributions to billing"
+```
+
+## Task 4.8: AlertDispatcherService with Slack and email
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/observability/alert-dispatcher.service.ts`
+- Create: `packages/backend/src/content-pipeline/observability/alert-dispatcher.service.spec.ts`
+- Create: `supabase/migrations/20260424000050_content_pipeline_alerts_sent.sql`
+
+- [ ] **Step 1: Migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS alerts_sent (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL,
+  metadata_hash TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (code, metadata_hash, sent_at)
+);
+CREATE INDEX idx_alerts_sent_code_hash ON alerts_sent (code, metadata_hash, sent_at DESC);
+ALTER TABLE alerts_sent ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON alerts_sent FOR ALL USING (true);
+GRANT ALL ON alerts_sent TO service_role;
+```
+
+- [ ] **Step 2: Implement service.**
+
+```typescript
+// observability/alert-dispatcher.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import axios from "axios";
+import { createHash } from "crypto";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { EmailService } from "../../email/email.service";
+
+export type AlertSeverity = "info" | "warning" | "error" | "critical";
+
+const DEDUP_WINDOW_MS = 3600_000;
+
+@Injectable()
+export class AlertDispatcherService {
+  private readonly logger = new Logger(AlertDispatcherService.name);
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly email: EmailService,
+  ) {}
+
+  async sendAlert(
+    severity: AlertSeverity,
+    code: string,
+    message: string,
+    metadata: Record<string, unknown> = {},
+  ): Promise<void> {
+    const metadataHash = createHash("sha256")
+      .update(JSON.stringify(metadata, Object.keys(metadata).sort()))
+      .digest("hex");
+    const client = this.supabase.getClient();
+
+    const cutoff = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
+    const { data: recent } = await client
+      .from("alerts_sent")
+      .select("id")
+      .eq("code", code)
+      .eq("metadata_hash", metadataHash)
+      .gte("sent_at", cutoff)
+      .limit(1);
+    if (recent && recent.length > 0) {
+      this.logger.debug(`alert dedup: ${code} already sent in last hour`);
+      return;
+    }
+
+    const slackUrl = process.env.SLACK_ALERT_WEBHOOK_URL;
+    if (slackUrl) {
+      try {
+        await axios.post(slackUrl, {
+          text: this.formatSlack(severity, code, message, metadata),
+        });
+        await client.from("alerts_sent").insert({
+          code,
+          metadata_hash: metadataHash,
+          severity,
+          channel: "slack",
+        });
+        return;
+      } catch (err) {
+        this.logger.warn(
+          `Slack alert failed, falling back to email: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    const adminEmail =
+      process.env.ADMIN_ALERT_EMAIL ?? "troyhouston76@gmail.com";
+    await this.email.sendEmail({
+      to: adminEmail,
+      subject: `[${severity.toUpperCase()}] ${code}`,
+      html: `<p>${message}</p><pre>${JSON.stringify(metadata, null, 2)}</pre>`,
+    });
+    await client.from("alerts_sent").insert({
+      code,
+      metadata_hash: metadataHash,
+      severity,
+      channel: "email",
+    });
+  }
+
+  private formatSlack(
+    severity: AlertSeverity,
+    code: string,
+    message: string,
+    metadata: Record<string, unknown>,
+  ): string {
+    const icon =
+      severity === "critical"
+        ? ":rotating_light:"
+        : severity === "error"
+          ? ":red_circle:"
+          : severity === "warning"
+            ? ":warning:"
+            : ":information_source:";
+    return `${icon} *${code}* [${severity}]\n${message}\n\`\`\`${JSON.stringify(metadata, null, 2)}\`\`\``;
+  }
+}
+```
+
+- [ ] **Step 3: Tests.**
+
+```typescript
+// observability/alert-dispatcher.service.spec.ts
+describe("AlertDispatcherService dedup", () => {
+  it("sends alert once, then suppresses same alert for 1 hour", async () => {
+    // First call writes to alerts_sent and posts to Slack
+    // Second call within 1 hour checks alerts_sent, sees recent row, does NOT post Slack
+    // After 1+ hour, third call sends again
+  });
+});
+```
+
+- [ ] **Step 4: Register, commit.**
+
+```bash
+supabase db push
+cd packages/backend && npm run test -- alert-dispatcher.service.spec
+git add supabase/migrations/20260424000050_content_pipeline_alerts_sent.sql packages/backend/src/content-pipeline/observability/
+git commit -m "feat(content-pipeline): AlertDispatcherService with Slack primary, email fallback, 1h dedup"
+```
+
+## Task 4.9: StallDetectorService integrated into recover-stuck-runs cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/observability/stall-detector.service.ts`
+- Modify: `packages/backend/src/content-pipeline/crons/recover-stuck-runs.cron.ts`
+
+- [ ] **Step 1: Implement service that classifies stall severity and fires alert.**
+
+```typescript
+@Injectable()
+export class StallDetectorService {
+  constructor(private readonly alerts: AlertDispatcherService) {}
+
+  async reportStall(
+    runId: string,
+    status: string,
+    ageMinutes: number,
+  ): Promise<void> {
+    if (ageMinutes > 30) {
+      await this.alerts.sendAlert(
+        "error",
+        "run_stalled",
+        `Run ${runId} stalled in ${status} for ${ageMinutes.toFixed(0)} minutes.`,
+        { runId, status },
+      );
+    } else if (ageMinutes > 60) {
+      await this.alerts.sendAlert(
+        "critical",
+        "run_stalled_severe",
+        `Run ${runId} stalled 60+ minutes in ${status}.`,
+        { runId, status },
+      );
+    }
+  }
+}
+```
+
+- [ ] **Step 2: Update recover-stuck-runs cron to call StallDetector when re-enqueuing.**
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/observability/stall-detector.service.ts packages/backend/src/content-pipeline/crons/recover-stuck-runs.cron.ts
+git commit -m "feat(content-pipeline): StallDetectorService integrated with recovery cron"
+```
+
+## Task 4.10: credential-health-probe cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/credential-health-probe.cron.ts`
+
+- [ ] **Step 1: Implement cron that every 6h probes each configured publisher.**
+
+```typescript
+@Injectable()
+export class CredentialHealthProbeCron {
+  constructor(
+    private readonly publishers: PlatformPublisherRegistry,
+    private readonly alerts: AlertDispatcherService,
+    private readonly supabase: SupabaseService,
+  ) {}
+
+  @Cron("0 */6 * * *")
+  async run(): Promise<void> {
+    for (const pub of this.publishers.listAll()) {
+      if (!pub.isConfigured()) continue;
+      try {
+        if (pub.refreshCredentials) await pub.refreshCredentials();
+      } catch (err) {
+        await this.alerts.sendAlert(
+          "critical",
+          "credential_rotten",
+          `Credentials for ${pub.platform} failed refresh: ${(err as Error).message}`,
+          { platform: pub.platform },
+        );
+      }
+    }
+  }
+}
+```
+
+- [ ] **Step 2: Register, commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/credential-health-probe.cron.ts
+git commit -m "feat(content-pipeline): credential-health-probe cron with alert on rotten credentials"
+```
+
+## Task 4.11: Queue-depth monitoring
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000060_content_pipeline_queue_samples.sql`
+- Create: `packages/backend/src/content-pipeline/observability/queue-monitor.service.ts`
+- Create: `packages/backend/src/content-pipeline/crons/queue-monitor.cron.ts`
+
+- [ ] **Step 1: Migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS observability_queue_samples (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  queue_name TEXT NOT NULL,
+  depth INTEGER NOT NULL,
+  sampled_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_queue_samples_queue_time ON observability_queue_samples (queue_name, sampled_at DESC);
+ALTER TABLE observability_queue_samples ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON observability_queue_samples FOR ALL USING (true);
+GRANT ALL ON observability_queue_samples TO service_role;
+```
+
+- [ ] **Step 2: Monitor service + cron.**
+
+```typescript
+// queue-monitor.service.ts
+@Injectable()
+export class QueueMonitorService {
+  constructor(
+    private readonly queue: QueueService,
+    private readonly supabase: SupabaseService,
+    private readonly alerts: AlertDispatcherService,
+  ) {}
+
+  async sampleAll(): Promise<void> {
+    const queues: QueueName[] = [
+      "orchestrator",
+      "render-audio",
+      "render-captions",
+      "render-video",
+      "render-pdf",
+      "publish-youtube",
+      "publish-tiktok",
+      "publish-instagram",
+      "publish-facebook",
+      "publish-linkedin",
+      "metrics-pull",
+    ];
+    const client = this.supabase.getClient();
+
+    for (const q of queues) {
+      const depth = await this.queue.getBoss().getQueueSize(q);
+      await client
+        .from("observability_queue_samples")
+        .insert({ queue_name: q, depth });
+    }
+
+    // For each queue, if last 10 min of samples all have depth > 20, alert
+    for (const q of queues) {
+      const since = new Date(Date.now() - 10 * 60_000).toISOString();
+      const { data: recent } = await client
+        .from("observability_queue_samples")
+        .select("depth")
+        .eq("queue_name", q)
+        .gte("sampled_at", since);
+      if (recent && recent.length >= 3 && recent.every((r) => r.depth > 20)) {
+        await this.alerts.sendAlert(
+          "warning",
+          "queue_backlog",
+          `Queue ${q} depth sustained above 20 for 10+ minutes.`,
+          { queue: q },
+        );
+      }
+    }
+  }
+}
+
+// queue-monitor.cron.ts
+@Injectable()
+export class QueueMonitorCron {
+  constructor(private readonly monitor: QueueMonitorService) {}
+  @Cron("*/3 * * * *") // every 3 min
+  async run(): Promise<void> {
+    await this.monitor.sampleAll();
+  }
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000060_content_pipeline_queue_samples.sql packages/backend/src/content-pipeline/observability/queue-monitor.service.ts packages/backend/src/content-pipeline/crons/queue-monitor.cron.ts
+git commit -m "feat(content-pipeline): queue-depth monitoring with sample persistence and alerts"
+```
+
+## Task 4.12: Render pre-flight checks
+
+**Files:**
+
+- Modify: `packages/video-template/src/cli/render.ts`
+- Create: `packages/video-template/src/cli/preflight.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
+
+- [ ] **Step 1: video-template preflight.ts.**
+
+```typescript
+// packages/video-template/src/cli/preflight.ts
+import { bundle } from "@remotion/bundler";
+import { renderStill } from "@remotion/renderer";
+import { PNG } from "pngjs";
+import { readFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import path from "path";
+import { VideoProps, FORMAT_CONFIGS } from "../types";
+
+export interface PreflightReport {
+  ok: boolean;
+  overflowFrames?: number[];
+  assetLoadFailures?: string[];
+}
+
+export async function preflight(
+  format: VideoProps["format"],
+  props: VideoProps,
+): Promise<PreflightReport> {
+  const cfg = FORMAT_CONFIGS[format];
+  const bundled = await bundle({
+    entryPoint: path.resolve(__dirname, "..", "index.ts"),
+  });
+
+  const framesToCheck = [
+    Math.floor(cfg.durationInFrames * 0.1),
+    Math.floor(cfg.durationInFrames * 0.5),
+    Math.floor(cfg.durationInFrames * 0.9),
+  ];
+
+  const overflowFrames: number[] = [];
+  for (const frame of framesToCheck) {
+    const outPath = join(tmpdir(), `preflight-${frame}.png`);
+    await renderStill({
+      serveUrl: bundled,
+      composition: {
+        id: format,
+        width: cfg.width,
+        height: cfg.height,
+        fps: cfg.fps,
+        durationInFrames: cfg.durationInFrames,
+      } as any,
+      frame,
+      output: outPath,
+      inputProps: props,
+    });
+    const png = PNG.sync.read(readFileSync(outPath));
+    // Detect overflow by checking 4-pixel border for non-background pixels (indicating content bleeding off)
+    let borderHits = 0;
+    for (let x = 0; x < png.width; x++) {
+      for (const y of [
+        0,
+        1,
+        2,
+        3,
+        png.height - 4,
+        png.height - 3,
+        png.height - 2,
+        png.height - 1,
+      ]) {
+        const i = (y * png.width + x) * 4;
+        if (png.data[i] > 50 || png.data[i + 1] > 50 || png.data[i + 2] > 50)
+          borderHits++;
+      }
+    }
+    if (borderHits > png.width) overflowFrames.push(frame);
+  }
+
+  return {
+    ok: overflowFrames.length === 0,
+    overflowFrames: overflowFrames.length > 0 ? overflowFrames : undefined,
+  };
+}
+```
+
+- [ ] **Step 2: Expose preflight CLI entry plus add to render-cli as `--preflight-only` flag.**
+
+- [ ] **Step 3: render-video.handler.ts runs preflight before full render.**
+
+```typescript
+// Before spawning the full render CLI:
+const preflightResult = await this.spawnPreflight(run.format, props);
+if (!preflightResult.ok) {
+  await this.orchestrator.handleStepFailure(
+    runId,
+    `rendering_video: preflight overflow on frames ${preflightResult.overflowFrames}`,
+  );
+  return;
+}
+```
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/video-template/src/cli/preflight.ts packages/video-template/src/cli/render.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts
+git commit -m "feat(content-pipeline): render pre-flight catches text overflow before full render"
+```
+
+## Task 4.13: Audio-script length mismatch detection
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/synthesize-audio.handler.ts`
+
+- [ ] **Step 1: After synthesis, compute expected duration from word count (150 wpm) and compare to actual audio duration. If delta > 20%, insert a warning event.**
+
+```typescript
+// inside synthesize-audio.handler.ts handle() after upload:
+const expectedDurationMs = (script.fullText.split(/\s+/).length / 150) * 60_000;
+const actualDurationMs = result.durationMs;
+const deltaPct =
+  Math.abs(actualDurationMs - expectedDurationMs) / expectedDurationMs;
+if (deltaPct > 0.2) {
+  await client.from("content_run_events").insert({
+    run_id: runId,
+    event_type: "audio_length_mismatch",
+    payload: { expectedDurationMs, actualDurationMs, deltaPct },
+  });
+  await this.alerts.sendAlert(
+    "warning",
+    "audio_length_mismatch",
+    `Run ${runId} audio duration differs from script estimate by ${(deltaPct * 100).toFixed(0)}%.`,
+    { runId, deltaPct },
+  );
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/orchestrator/job-handlers/synthesize-audio.handler.ts
+git commit -m "feat(content-pipeline): audio-script length mismatch detection with warning alert"
+```
+
+## Task 4.14: Per-format success rate tracking
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/analytics/success-rate.service.ts`
+- Create: `packages/backend/src/content-pipeline/crons/success-rate-check.cron.ts`
+
+- [ ] **Step 1: Service computes rolling weekly success rate per format.**
+
+```typescript
+@Injectable()
+export class SuccessRateService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly alerts: AlertDispatcherService,
+  ) {}
+
+  async checkAll(): Promise<void> {
+    const client = this.supabase.getClient();
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const { data: runs } = await client
+      .from("content_runs")
+      .select("format, status")
+      .gte("created_at", weekAgo);
+    if (!runs) return;
+
+    const byFormat = new Map<string, { total: number; success: number }>();
+    for (const r of runs) {
+      const f = r.format;
+      if (!byFormat.has(f)) byFormat.set(f, { total: 0, success: 0 });
+      const entry = byFormat.get(f)!;
+      entry.total++;
+      if (r.status === "published" || r.status === "published_partial")
+        entry.success++;
+    }
+
+    for (const [format, { total, success }] of byFormat.entries()) {
+      if (total < 5) continue; // not enough signal
+      const rate = success / total;
+      if (rate < 0.95) {
+        await this.alerts.sendAlert(
+          "warning",
+          "format_success_rate_low",
+          `Format ${format} success rate is ${(rate * 100).toFixed(0)}% over last 7 days (${success}/${total}).`,
+          { format, rate },
+        );
+      }
+    }
+  }
+}
+
+// cron
+@Injectable()
+export class SuccessRateCheckCron {
+  constructor(private readonly svc: SuccessRateService) {}
+  @Cron("0 5 * * *") // daily 5am UTC
+  async run(): Promise<void> {
+    await this.svc.checkAll();
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/analytics/success-rate.service.ts packages/backend/src/content-pipeline/crons/success-rate-check.cron.ts
+git commit -m "feat(content-pipeline): per-format weekly success-rate tracking with alert on <95%"
+```
+
+## Task 4.15: Lead magnet A/B support
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000070_content_pipeline_magnet_ab.sql`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-youtube-shorts.handler.ts` (and all other publisher handlers) to select binding by weight
+- Modify: `packages/backend/src/content-pipeline/lead-magnets/lead-magnet.service.ts`
+
+- [ ] **Step 1: Migration (adds variant tracking columns to bindings plus a selected_magnet_binding_id to content_runs).**
+
+```sql
+ALTER TABLE content_runs ADD COLUMN IF NOT EXISTS selected_magnet_binding_id UUID REFERENCES format_magnet_bindings(id);
+ALTER TABLE lead_magnet_deliveries ADD COLUMN IF NOT EXISTS binding_id UUID REFERENCES format_magnet_bindings(id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_binding ON lead_magnet_deliveries (binding_id);
+```
+
+- [ ] **Step 2: Service picks binding by weight.**
+
+```typescript
+// lead-magnet.service.ts (add)
+async pickBinding(format: string): Promise<{ magnet_kind: string; cta_text: string; id: string } | null> {
+  const client = this.supabase.getClient();
+  const { data: bindings } = await client.from('format_magnet_bindings')
+    .select('*').eq('format', format).eq('enabled', true);
+  if (!bindings || bindings.length === 0) return null;
+  const total = bindings.reduce((s, b) => s + b.weight, 0);
+  let r = Math.random() * total;
+  for (const b of bindings) { r -= b.weight; if (r <= 0) return b; }
+  return bindings[bindings.length - 1];
+}
+```
+
+- [ ] **Step 3: All publisher handlers reference `selected_magnet_binding_id` when constructing short-link target URL.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000070_content_pipeline_magnet_ab.sql packages/backend/src/content-pipeline/lead-magnets/lead-magnet.service.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/
+git commit -m "feat(content-pipeline): lead magnet A/B binding selection by weight"
+```
+
+## Task 4.16: Magnet conversion tracking and auto-promoter
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/magnets/magnet-ab-promoter.service.ts`
+- Create: `packages/backend/src/content-pipeline/crons/magnet-promotion.cron.ts`
+
+- [ ] **Step 1: Service measures per-binding conversion and auto-disables losing bindings.**
+
+```typescript
+// magnets/magnet-ab-promoter.service.ts
+@Injectable()
+export class MagnetABPromoterService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly alerts: AlertDispatcherService,
+  ) {}
+
+  async evaluate(format: string): Promise<void> {
+    const client = this.supabase.getClient();
+    const { data: bindings } = await client
+      .from("format_magnet_bindings")
+      .select("id, magnet_kind")
+      .eq("format", format)
+      .eq("enabled", true);
+    if (!bindings || bindings.length < 2) return;
+
+    const results: Array<{
+      bindingId: string;
+      delivered: number;
+      converted: number;
+    }> = [];
+    for (const b of bindings) {
+      const { data: deliveries } = await client
+        .from("lead_magnet_deliveries")
+        .select("user_id")
+        .eq("binding_id", b.id);
+      const userIds = (deliveries ?? []).map((d: any) => d.user_id);
+      if (userIds.length === 0) {
+        results.push({ bindingId: b.id, delivered: 0, converted: 0 });
+        continue;
+      }
+
+      const { count: converted } = await client
+        .from("signup_attributions")
+        .select("id", { count: "exact", head: true })
+        .in("user_id", userIds)
+        .neq("tier_at_signup", "free");
+      results.push({
+        bindingId: b.id,
+        delivered: userIds.length,
+        converted: converted ?? 0,
+      });
+    }
+
+    const eligible = results.filter((r) => r.delivered >= 50);
+    if (eligible.length < 2) return;
+
+    eligible.sort(
+      (a, b) => b.converted / b.delivered - a.converted / a.delivered,
+    );
+    const winner = eligible[0];
+    const loser = eligible[1];
+    const winnerRate = winner.converted / winner.delivered;
+    const loserRate = loser.converted / loser.delivered;
+    if (loserRate === 0) return;
+    const lift = (winnerRate - loserRate) / loserRate;
+    if (lift < 0.3) return;
+
+    await client
+      .from("format_magnet_bindings")
+      .update({ enabled: false })
+      .eq("id", loser.bindingId);
+    await this.alerts.sendAlert(
+      "info",
+      "magnet_auto_promoted",
+      `Lead magnet winner promoted for ${format}. Loser binding disabled.`,
+      { format, winner: winner.bindingId, loser: loser.bindingId },
+    );
+  }
+}
+
+// crons/magnet-promotion.cron.ts
+@Injectable()
+export class MagnetPromotionCron {
+  constructor(private readonly promoter: MagnetABPromoterService) {}
+  @Cron("0 6 * * 1") // Monday 6am UTC
+  async run(): Promise<void> {
+    const formats = [
+      "grade_reveal",
+      "top_10_ranking",
+      "score_mover",
+      "head_to_head",
+      "farm_area_spotlight",
+      "long_form_deep_dive",
+      "brokerage_market_share",
+      "recruitment_angle",
+    ];
+    for (const f of formats) await this.promoter.evaluate(f);
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/magnets/magnet-ab-promoter.service.ts packages/backend/src/content-pipeline/crons/magnet-promotion.cron.ts
+git commit -m "feat(content-pipeline): lead magnet A/B auto-promotion with 50-sample 30%-lift threshold"
+```
+
+## Task 4.17: Style reference A/B support
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000080_content_pipeline_style_ab.sql`
+- Create: `packages/backend/src/content-pipeline/style-references/style-ab.service.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
+
+- [ ] **Step 1: Migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS format_style_bindings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  format TEXT NOT NULL,
+  style_reference_id UUID NOT NULL REFERENCES style_references(id) ON DELETE CASCADE,
+  weight REAL NOT NULL DEFAULT 1.0,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE (format, style_reference_id)
+);
+ALTER TABLE content_runs ADD COLUMN IF NOT EXISTS selected_style_binding_id UUID REFERENCES format_style_bindings(id);
+ALTER TABLE format_style_bindings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON format_style_bindings FOR ALL USING (true);
+GRANT ALL ON format_style_bindings TO service_role;
+GRANT ALL ON format_style_bindings TO authenticated;
+```
+
+- [ ] **Step 2: StyleAB service picks binding by weight.**
+
+```typescript
+// style-references/style-ab.service.ts
+@Injectable()
+export class StyleABService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async pickBinding(
+    format: string,
+  ): Promise<{ id: string; style_reference_id: string } | null> {
+    const client = this.supabase.getClient();
+    const { data: bindings } = await client
+      .from("format_style_bindings")
+      .select("*")
+      .eq("format", format)
+      .eq("enabled", true);
+    if (!bindings || bindings.length === 0) return null;
+    const total = bindings.reduce((s: number, b: any) => s + b.weight, 0);
+    let r = Math.random() * total;
+    for (const b of bindings) {
+      r -= b.weight;
+      if (r <= 0) return b;
+    }
+    return bindings[bindings.length - 1];
+  }
+}
+```
+
+- [ ] **Step 3: render-video handler calls pickBinding if no style_reference_id set on run.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000080_content_pipeline_style_ab.sql packages/backend/src/content-pipeline/style-references/style-ab.service.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts
+git commit -m "feat(content-pipeline): style reference A/B binding selection by weight"
+```
+
+## Task 4.18: Performance page, Hero Card
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/performance/hero-card.tsx`
+- Modify: `packages/frontend/app/admin/content-pipeline/performance/page.tsx`
+- Create: `packages/backend/src/content-pipeline/analytics/performance.service.ts`
+
+- [ ] **Step 1: PerformanceService.**
+
+```typescript
+@Injectable()
+export class PerformanceService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly revenue: RevenueAttributionService,
+  ) {}
+
+  async getHero(sinceDays: number): Promise<any> {
+    const client = this.supabase.getClient();
+    const since = new Date(
+      Date.now() - sinceDays * 24 * 3600 * 1000,
+    ).toISOString();
+    const { data: posts } = await client
+      .from("platform_posts")
+      .select(
+        "run_id, platform, external_url, content_metrics(views, avg_retention_pct)",
+      )
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+    if (!posts || posts.length === 0) return null;
+
+    let best: any = null;
+    for (const p of posts) {
+      const views = p.content_metrics?.[0]?.views ?? 0;
+      if (!best || views > (best.views ?? 0)) best = { ...p, views };
+    }
+    const rev = best ? await this.revenue.getRevenueByRun(best.run_id) : null;
+    return { bestPost: best, revenue: rev };
+  }
+}
+```
+
+- [ ] **Step 2: Hero card component.**
+
+```tsx
+// performance/hero-card.tsx
+export function HeroCard({ data }: { data: any }) {
+  if (!data) return null;
+  return (
+    <div className="bg-primary text-on-primary rounded-xl p-6 shadow-md">
+      <div className="text-sm opacity-80">Your hero this week</div>
+      <h2 className="text-2xl font-semibold mt-1">
+        {data.bestPost?.platform} video
+      </h2>
+      <div className="mt-2 flex gap-6">
+        <div>
+          <div className="text-xs opacity-80">Views</div>
+          <div className="text-2xl font-mono">
+            {(data.bestPost?.views ?? 0).toLocaleString()}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs opacity-80">Signups</div>
+          <div className="text-2xl font-mono">{data.revenue?.signups ?? 0}</div>
+        </div>
+        <div>
+          <div className="text-xs opacity-80">MRR</div>
+          <div className="text-2xl font-mono">
+            ${(data.revenue?.total_mrr_contribution_usd ?? 0).toFixed(0)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/performance/ packages/backend/src/content-pipeline/analytics/performance.service.ts
+git commit -m "feat(content-pipeline): performance page hero card with best-performing run"
+```
+
+## Task 4.19: Performance page, format conversion panel
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/performance/format-conversion-panel.tsx`
+- Modify: `packages/backend/src/content-pipeline/analytics/performance.service.ts`
+
+- [ ] **Step 1: Service method returns per-format signups-per-view ranking.**
+
+- [ ] **Step 2: Component renders the ranking with explanatory one-sentence "why" per format.**
+
+Rules-based v1 explanation: "Agent-targeted formats convert better for you." / "Short-form converts 3x higher than long-form for your audience."
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/performance/format-conversion-panel.tsx packages/backend/src/content-pipeline/analytics/performance.service.ts
+git commit -m "feat(content-pipeline): performance page format conversion panel"
+```
+
+## Task 4.20: Performance page, hook patterns and suggested runs
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/performance/hook-patterns-panel.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/performance/suggested-runs-panel.tsx`
+- Create: `packages/backend/src/content-pipeline/analytics/suggested-runs.service.ts`
+
+- [ ] **Step 1: SuggestedRunsService applies 3 rules.**
+
+Rule 1: markets with >= 8 PIQ movement in last 30 days that have not been covered. Rule 2: top state by conversion plus markets within that state unseen. Rule 3: underserved formats by audience.
+
+- [ ] **Step 2: Panels render suggestions with one-click "create run" buttons.**
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/performance/ packages/backend/src/content-pipeline/analytics/suggested-runs.service.ts
+git commit -m "feat(content-pipeline): performance page hook patterns and suggested runs"
+```
+
+## Task 4.21: Performance page, runs table
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/performance/runs-table.tsx`
+- Modify: `packages/frontend/app/admin/content-pipeline/performance/page.tsx`
+
+- [ ] **Step 1: Table lists all runs with filterable columns (format, status, platform, date range, views, signups, MRR).**
+
+- [ ] **Step 2: Drill-down click navigates to run detail.**
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/performance/
+git commit -m "feat(content-pipeline): performance page runs table with filters"
+```
+
+## Task 4.22: Performance page endpoint and wire-up
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.controller.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+
+- [ ] **Step 1: Add endpoints.**
+
+```typescript
+@Get('performance/overview')
+async performanceOverview() {
+  const [hero, formatConversion, suggestions] = await Promise.all([
+    this.performance.getHero(7),
+    this.performance.getFormatConversion(30),
+    this.suggestedRuns.generate(5),
+  ]);
+  return { success: true, data: { hero, formatConversion, suggestions } };
+}
+
+@Get('performance/hook-ab')
+async performanceHookAB() { /* reads hook_archetypes and returns winners per format */ }
+
+@Get('performance/revenue-by-video')
+async performanceRevenue() { /* returns last 30 days of revenue attribution by run */ }
+```
+
+- [ ] **Step 2: Full performance page fetches all panels and renders.**
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/content-pipeline.controller.ts packages/backend/src/content-pipeline/content-pipeline.service.ts packages/frontend/app/admin/content-pipeline/performance/page.tsx
+git commit -m "feat(content-pipeline): performance page fully wired to backend endpoints"
+```
+
+## Task 4.23: P4 E2E suite
+
+**Files:**
+
+- Create: `packages/backend/test/e2e/content-pipeline-p4-revenue-attribution.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p4-hook-ab.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p4-render-preflight.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p4-alert-dedup.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p4-credential-expiry.e2e.spec.ts`
+
+**Per project memory: real staging DB, no mocks.**
+
+- [ ] **Step 1: revenue-attribution round-trip.**
+
+Create a run. Simulate a short-link click. Simulate a signup. Upgrade the test user to Pro in Stripe test mode (via webhook or direct DB update). Query `revenue_by_video` endpoint. Expect the run is attributed as MRR source.
+
+- [ ] **Step 2: hook-ab winner detection.**
+
+Seed 100 `platform_posts` rows for `grade_reveal` with known A/B retention split (A: 0.5 avg retention, B: 0.2 avg retention). Run `HookPromoterService.evaluate('grade_reveal')`. Expect `hook_archetypes` row written with `variant_A` and confidence >= 95%.
+
+- [ ] **Step 3: render-preflight catches overflow.**
+
+Create a run with a market query that produces an abnormally long market name (e.g., a fixture city with 80-character canonical name). Run the pipeline through render. Expect run ends in `failed` with status_reason referencing preflight overflow.
+
+- [ ] **Step 4: alert dedup.**
+
+Call `AlertDispatcher.sendAlert` three times with identical code+metadata. Expect only one Slack POST and one `alerts_sent` row within the hour. After advancing clock 1 hour, expect a second send succeeds.
+
+- [ ] **Step 5: credential-health-probe.**
+
+Manually set YOUTUBE_OAUTH_REFRESH_TOKEN to an invalid value. Run the probe cron. Expect a `credential_rotten` alert fired.
+
+- [ ] **Step 6: Run E2E, commit.**
+
+```bash
+cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- content-pipeline-p4
+git add packages/backend/test/e2e/
+git commit -m "test(content-pipeline): P4 E2E suite (revenue, hook A/B, preflight, alert dedup, credential expiry)"
+```
+
+## Task 4.24: Lead magnet conversion panel on Library page
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/lead-magnets/conversion-panel.tsx`
+- Modify: `packages/frontend/app/admin/content-pipeline/lead-magnets/magnet-card.tsx`
+- Modify: `packages/backend/src/content-pipeline/magnets/magnet-library.service.ts`
+
+- [ ] **Step 1: Backend service adds `delivered_count` and `converted_to_paid_pct` per magnet.**
+
+- [ ] **Step 2: Card displays these numbers; expanded panel shows per-binding conversion over time.**
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/lead-magnets/ packages/backend/src/content-pipeline/magnets/magnet-library.service.ts
+git commit -m "feat(content-pipeline): lead magnet conversion rates shown on Library page"
+```
+
+---
+
+# Phase 5: Auto-ideation
+
+**Duration:** 1 to 2 weeks. **Complexity:** Low-Medium. **Tasks:** 20.
+
+## Phase 5 scope
+
+Auto-ideation. Cron watches PropertyIQ score movements and top-market rank changes. Automatically enqueues runs when configured thresholds cross. Enforces daily USD cost cap at enqueue time. Enforces per-format daily-run caps. Admin UI for managing trigger rules. Preview of upcoming auto-enqueued runs.
+
+## Phase 5 deliverables
+
+- Three trigger types available: score_movement, rank_change, threshold_cross.
+- Daily cost cap and per-format run cap enforced at enqueue time.
+- Admin UI at `/admin/content-pipeline/auto-ideation` for rule CRUD.
+- "Run now" button per rule for manual firing.
+- "Upcoming auto-runs" preview on the dashboard.
+- 3 seeded starter rules, all disabled by default.
+
+## Phase 5 acceptance criteria
+
+1. P5 migrations apply cleanly.
+2. `npm run test` passes P5 unit tests (minimum 30 new).
+3. `npm run test:e2e` passes P5 E2E suite.
+4. A synthetic score movement of +12 points triggers a Score Mover run automatically.
+5. When `CONTENT_PIPELINE_DAILY_USD_MAX` is breached, subsequent auto-enqueues are blocked with a `auto_ideation_capped` event logged.
+6. Per-format daily cap blocks overruns once the cap is reached.
+
+## Phase 5 prerequisites
+
+- P1 through P4 running in production for at least 4 weeks.
+- At least 4 weeks of historical PropertyIQ score data in `propertyiq_scores` table (to enable score movement detection with a meaningful baseline).
+- Performance page showing real data (required to validate that auto-ideation doesn't flood low-converting formats).
+- Settings UI updated to expose daily cost cap toggle (inherited from P1 Settings page; extend with the cap input in P5).
+
+## Task 5.1: P5 migration, auto-ideation rules
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000100_content_pipeline_auto_ideation_rules.sql`
+
+- [ ] **Step 1: Write migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS auto_ideation_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_name TEXT NOT NULL UNIQUE,
+  trigger_type TEXT NOT NULL CHECK (trigger_type IN ('score_movement', 'rank_change', 'threshold_cross')),
+  trigger_config JSONB NOT NULL DEFAULT '{}',
+  target_format TEXT NOT NULL REFERENCES format_templates(format),
+  approval_mode_override TEXT CHECK (approval_mode_override IN ('auto', 'review', 'draft')),
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  last_fired_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_rules_enabled ON auto_ideation_rules (enabled) WHERE enabled = true;
+ALTER TABLE auto_ideation_rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON auto_ideation_rules FOR ALL USING (true);
+GRANT ALL ON auto_ideation_rules TO service_role;
+GRANT ALL ON auto_ideation_rules TO authenticated;
+
+CREATE TABLE IF NOT EXISTS auto_ideation_capped_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_id UUID REFERENCES auto_ideation_rules(id) ON DELETE CASCADE,
+  format TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE auto_ideation_capped_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON auto_ideation_capped_events FOR ALL USING (true);
+GRANT ALL ON auto_ideation_capped_events TO service_role;
+```
+
+- [ ] **Step 2: Apply and verify, commit.**
+
+```bash
+supabase db push
+supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_name IN ('auto_ideation_rules','auto_ideation_capped_events');"
+git add supabase/migrations/20260424000100_content_pipeline_auto_ideation_rules.sql
+git commit -m "feat(content-pipeline): P5 migration for auto_ideation_rules table"
+```
+
+## Task 5.2: P5 migration, daily cost cap
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000200_content_pipeline_daily_cost_cap.sql`
+
+- [ ] **Step 1: Write migration.**
+
+```sql
+CREATE TABLE IF NOT EXISTS cost_cap_daily (
+  date DATE PRIMARY KEY,
+  usd_spent NUMERIC NOT NULL DEFAULT 0,
+  usd_cap NUMERIC NOT NULL,
+  breach_at TIMESTAMPTZ
+);
+ALTER TABLE cost_cap_daily ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON cost_cap_daily FOR ALL USING (true);
+GRANT ALL ON cost_cap_daily TO service_role;
+GRANT ALL ON cost_cap_daily TO authenticated;
+
+CREATE TABLE IF NOT EXISTS format_daily_run_counts (
+  format TEXT NOT NULL,
+  date DATE NOT NULL,
+  run_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (format, date)
+);
+ALTER TABLE format_daily_run_counts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY service_role_all ON format_daily_run_counts FOR ALL USING (true);
+GRANT ALL ON format_daily_run_counts TO service_role;
+```
+
+- [ ] **Step 2: Apply, commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000200_content_pipeline_daily_cost_cap.sql
+git commit -m "feat(content-pipeline): P5 migration for cost_cap_daily and format_daily_run_counts"
+```
+
+## Task 5.3: CostCapService
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/auto-ideation/cost-cap.service.ts`
+- Create: `packages/backend/src/content-pipeline/auto-ideation/cost-cap.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+// auto-ideation/cost-cap.service.spec.ts
+import { Test } from "@nestjs/testing";
+import { CostCapService } from "./cost-cap.service";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+describe("CostCapService", () => {
+  let svc: CostCapService;
+
+  beforeEach(async () => {
+    process.env.CONTENT_PIPELINE_DAILY_USD_MAX = "50";
+    // mock supabase to return a row with usd_spent: 45, usd_cap: 50
+    const client = {
+      from: jest.fn().mockImplementation((tbl: string) => {
+        if (tbl === "cost_cap_daily")
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: () =>
+                  Promise.resolve({
+                    data: { usd_spent: 45, usd_cap: 50 },
+                    error: null,
+                  }),
+              }),
+            }),
+            upsert: jest.fn().mockResolvedValue({ error: null }),
+          };
+        if (tbl === "format_daily_run_counts")
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({ data: { run_count: 5 } }),
+                }),
+              }),
+            }),
+            upsert: jest.fn().mockResolvedValue({ error: null }),
+          };
+        return {};
+      }),
+    };
+    const supabase = { getClient: () => client };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        CostCapService,
+        { provide: SupabaseService, useValue: supabase },
+      ],
+    }).compile();
+    svc = module.get(CostCapService);
+  });
+
+  it("allows when estimated cost fits remaining budget", async () => {
+    const result = await svc.canEnqueue(2);
+    expect(result.allowed).toBe(true);
+    expect(result.remainingUsd).toBeCloseTo(5, 2);
+  });
+
+  it("blocks when estimate exceeds remaining", async () => {
+    const result = await svc.canEnqueue(10);
+    expect(result.allowed).toBe(false);
+  });
+
+  it("per-format cap respects env var", async () => {
+    process.env.CONTENT_PIPELINE_FORMAT_DAILY_CAP_SCORE_MOVER = "5";
+    const result = await svc.canEnqueueFormat("score_mover");
+    expect(result.allowed).toBe(false);
+    expect(result.count).toBe(5);
+    expect(result.cap).toBe(5);
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// auto-ideation/cost-cap.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { DriverCost } from "../drivers/driver-cost.types";
+
+const DEFAULT_FORMAT_CAP = 10;
+
+@Injectable()
+export class CostCapService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async canEnqueue(estimatedUsd: number): Promise<{
+    allowed: boolean;
+    remainingUsd: number;
+    usdSpent: number;
+    usdCap: number;
+  }> {
+    const client = this.supabase.getClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const cap = parseFloat(process.env.CONTENT_PIPELINE_DAILY_USD_MAX ?? "50");
+
+    const { data } = await client
+      .from("cost_cap_daily")
+      .select("usd_spent, usd_cap")
+      .eq("date", today)
+      .maybeSingle();
+    const usdSpent = Number(data?.usd_spent ?? 0);
+    const usdCap = Number(data?.usd_cap ?? cap);
+    const remaining = Math.max(0, usdCap - usdSpent);
+    return {
+      allowed: estimatedUsd <= remaining,
+      remainingUsd: remaining,
+      usdSpent,
+      usdCap,
+    };
+  }
+
+  async canEnqueueFormat(
+    format: string,
+  ): Promise<{ allowed: boolean; count: number; cap: number }> {
+    const client = this.supabase.getClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const envKey = `CONTENT_PIPELINE_FORMAT_DAILY_CAP_${format.toUpperCase()}`;
+    const cap = parseInt(process.env[envKey] ?? String(DEFAULT_FORMAT_CAP), 10);
+
+    const { data } = await client
+      .from("format_daily_run_counts")
+      .select("run_count")
+      .eq("format", format)
+      .eq("date", today)
+      .maybeSingle();
+    const count = data?.run_count ?? 0;
+    return { allowed: count < cap, count, cap };
+  }
+
+  async recordSpend(costs: DriverCost[]): Promise<void> {
+    const client = this.supabase.getClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const usd = costs.reduce((s, c) => s + c.amount_usd, 0);
+    const { data: existing } = await client
+      .from("cost_cap_daily")
+      .select("usd_spent, usd_cap")
+      .eq("date", today)
+      .maybeSingle();
+    const cap = parseFloat(process.env.CONTENT_PIPELINE_DAILY_USD_MAX ?? "50");
+    await client.from("cost_cap_daily").upsert({
+      date: today,
+      usd_spent: Number(existing?.usd_spent ?? 0) + usd,
+      usd_cap: existing?.usd_cap ?? cap,
+    });
+  }
+
+  async incrementFormatCount(format: string): Promise<void> {
+    const client = this.supabase.getClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await client
+      .from("format_daily_run_counts")
+      .select("run_count")
+      .eq("format", format)
+      .eq("date", today)
+      .maybeSingle();
+    await client.from("format_daily_run_counts").upsert({
+      format,
+      date: today,
+      run_count: (data?.run_count ?? 0) + 1,
+    });
+  }
+}
+```
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- cost-cap.service.spec
+git add packages/backend/src/content-pipeline/auto-ideation/cost-cap.service.ts packages/backend/src/content-pipeline/auto-ideation/cost-cap.service.spec.ts
+git commit -m "feat(content-pipeline): CostCapService with daily USD cap and per-format run cap"
+```
+
+## Task 5.4: Wire CostCap into run creation
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+
+- [ ] **Step 1: Extend createRun to check caps when triggered_by='auto_ideation'.**
+
+```typescript
+// content-pipeline.service.ts createRun additions:
+if (dto.triggered_by === "auto_ideation") {
+  const costCheck = await this.costCap.canEnqueue(
+    this.estimateCostUsd(dto.format),
+  );
+  if (!costCheck.allowed) {
+    await client.from("auto_ideation_capped_events").insert({
+      format: dto.format,
+      reason: "daily_cost_cap",
+      metadata: {
+        remainingUsd: costCheck.remainingUsd,
+        estimateUsd: this.estimateCostUsd(dto.format),
+      },
+    });
+    return { id: null, idempotencyKey: dto.idempotencyKey, status: "capped" };
+  }
+  const formatCheck = await this.costCap.canEnqueueFormat(dto.format);
+  if (!formatCheck.allowed) {
+    await client.from("auto_ideation_capped_events").insert({
+      format: dto.format,
+      reason: "format_daily_cap",
+      metadata: { count: formatCheck.count, cap: formatCheck.cap },
+    });
+    return { id: null, idempotencyKey: dto.idempotencyKey, status: "capped" };
+  }
+  await this.costCap.incrementFormatCount(dto.format);
+}
+```
+
+- [ ] **Step 2: Add `estimateCostUsd(format)` helper.**
+
+```typescript
+// cost estimates per format (tuned from P1-P4 cost data)
+private readonly FORMAT_COST_ESTIMATES: Record<string, number> = {
+  grade_reveal: 0.05, top_10_ranking: 0.08, score_mover: 0.05,
+  head_to_head: 0.08, farm_area_spotlight: 0.09,
+  brokerage_market_share: 0.09, recruitment_angle: 0.10,
+  long_form_deep_dive: 2.20,
+};
+
+private estimateCostUsd(format: string): number {
+  return this.FORMAT_COST_ESTIMATES[format] ?? 0.10;
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/content-pipeline.service.ts
+git commit -m "feat(content-pipeline): auto-ideation createRun respects daily and per-format caps"
+```
+
+## Task 5.5: TriggerRuleEvaluator for score_movement
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/auto-ideation/trigger-rule.types.ts`
+- Create: `packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.ts`
+- Create: `packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.spec.ts`
+
+- [ ] **Step 1: Types.**
+
+```typescript
+// trigger-rule.types.ts
+export type TriggerType = "score_movement" | "rank_change" | "threshold_cross";
+
+export interface ScoreMovementConfig {
+  min_delta_points: number;
+  direction: "up" | "down" | "both";
+  lookback_days: number;
+  geography: "state" | "metro" | "county" | "zip";
+}
+
+export interface RankChangeConfig {
+  min_rank_delta: number;
+  direction: "up" | "down" | "both";
+  geography: "state" | "metro" | "county" | "zip";
+  top_n: number;
+}
+
+export interface ThresholdCrossConfig {
+  threshold_value: number;
+  direction: "up" | "down";
+  metric: "propertyiq_score" | "home_value_yoy" | "rent_yoy";
+}
+
+export interface AutoIdeationRule {
+  id: string;
+  rule_name: string;
+  trigger_type: TriggerType;
+  trigger_config: ScoreMovementConfig | RankChangeConfig | ThresholdCrossConfig;
+  target_format: string;
+  approval_mode_override?: "auto" | "review" | "draft";
+  enabled: boolean;
+  last_fired_at?: string;
+}
+
+export interface TriggerMatch {
+  geo: { geography: string; id: string; canonical_name: string };
+  payload: Record<string, unknown>;
+}
+```
+
+- [ ] **Step 2: Tests (score movement only for Task 5.5; rank_change and threshold_cross in Tasks 5.6 and 5.7).**
+
+```typescript
+describe("TriggerRuleEvaluator.evaluate for score_movement", () => {
+  it("returns markets moving >= threshold in last N days", async () => {
+    // Mock propertyiq_scores rows: Cleveland 70 -> 82 (delta +12)
+    // Rule: min_delta=10, direction=up, lookback_days=30
+    // Expect 1 match for Cleveland
+  });
+
+  it("respects direction=up (ignores drops)", async () => {
+    // Cleveland drops 12 points; rule direction=up; expect 0 matches
+  });
+});
+```
+
+- [ ] **Step 3: Implement evaluator.**
+
+```typescript
+// trigger-rule-evaluator.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import {
+  AutoIdeationRule,
+  ScoreMovementConfig,
+  RankChangeConfig,
+  ThresholdCrossConfig,
+  TriggerMatch,
+} from "./trigger-rule.types";
+
+@Injectable()
+export class TriggerRuleEvaluatorService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async evaluate(rule: AutoIdeationRule): Promise<TriggerMatch[]> {
+    switch (rule.trigger_type) {
+      case "score_movement":
+        return this.evaluateScoreMovement(
+          rule.trigger_config as ScoreMovementConfig,
+        );
+      case "rank_change":
+        return this.evaluateRankChange(rule.trigger_config as RankChangeConfig);
+      case "threshold_cross":
+        return this.evaluateThresholdCross(
+          rule.trigger_config as ThresholdCrossConfig,
+        );
+    }
+  }
+
+  private async evaluateScoreMovement(
+    config: ScoreMovementConfig,
+  ): Promise<TriggerMatch[]> {
+    const client = this.supabase.getClient();
+    const lookback = new Date(
+      Date.now() - config.lookback_days * 24 * 3600 * 1000,
+    ).toISOString();
+
+    const { data } = await client.rpc("auto_ideation_score_movement", {
+      p_geography: config.geography,
+      p_lookback: lookback,
+      p_min_delta: config.min_delta_points,
+      p_direction: config.direction,
+    });
+    return (data ?? []).map((r: any) => ({
+      geo: {
+        geography: config.geography,
+        id: r.geo_id,
+        canonical_name: r.canonical_name,
+      },
+      payload: {
+        current_score: r.current_score,
+        previous_score: r.previous_score,
+        delta: r.delta,
+      },
+    }));
+  }
+
+  private async evaluateRankChange(
+    config: RankChangeConfig,
+  ): Promise<TriggerMatch[]> {
+    // Implementation in Task 5.6
+    return [];
+  }
+
+  private async evaluateThresholdCross(
+    config: ThresholdCrossConfig,
+  ): Promise<TriggerMatch[]> {
+    // Implementation in Task 5.7
+    return [];
+  }
+}
+```
+
+The `auto_ideation_score_movement` Postgres RPC is defined alongside the migration (add in Task 5.1 or a supporting migration):
+
+```sql
+CREATE OR REPLACE FUNCTION auto_ideation_score_movement(p_geography TEXT, p_lookback TIMESTAMPTZ, p_min_delta NUMERIC, p_direction TEXT)
+RETURNS TABLE(geo_id TEXT, canonical_name TEXT, current_score NUMERIC, previous_score NUMERIC, delta NUMERIC)
+LANGUAGE sql STABLE AS $$
+  WITH recent AS (
+    SELECT DISTINCT ON (s.geo_id) s.geo_id, s.canonical_name, s.propertyiq_score AS score, s.computed_at
+    FROM propertyiq_scores s
+    WHERE s.geography_level = p_geography AND s.computed_at >= NOW() - INTERVAL '7 days'
+    ORDER BY s.geo_id, s.computed_at DESC
+  ),
+  baseline AS (
+    SELECT DISTINCT ON (s.geo_id) s.geo_id, s.propertyiq_score AS score
+    FROM propertyiq_scores s
+    WHERE s.geography_level = p_geography AND s.computed_at < p_lookback
+    ORDER BY s.geo_id, s.computed_at DESC
+  )
+  SELECT r.geo_id, r.canonical_name, r.score AS current_score, b.score AS previous_score, (r.score - b.score) AS delta
+  FROM recent r JOIN baseline b USING (geo_id)
+  WHERE
+    (p_direction = 'up' AND (r.score - b.score) >= p_min_delta)
+    OR (p_direction = 'down' AND (b.score - r.score) >= p_min_delta)
+    OR (p_direction = 'both' AND abs(r.score - b.score) >= p_min_delta);
+$$;
+```
+
+- [ ] **Step 4: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- trigger-rule-evaluator.service.spec
+git add packages/backend/src/content-pipeline/auto-ideation/
+git commit -m "feat(content-pipeline): TriggerRuleEvaluator for score_movement plus RPC"
+```
+
+## Task 5.6: Rank-change trigger
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.ts`
+- Add: Postgres RPC `auto_ideation_rank_change`
+
+- [ ] **Step 1: Add RPC.**
+
+```sql
+CREATE OR REPLACE FUNCTION auto_ideation_rank_change(p_geography TEXT, p_top_n INTEGER, p_min_delta INTEGER, p_direction TEXT)
+RETURNS TABLE(geo_id TEXT, canonical_name TEXT, current_rank INTEGER, previous_rank INTEGER, rank_delta INTEGER)
+LANGUAGE sql STABLE AS $$
+  WITH ranked_now AS (
+    SELECT geo_id, canonical_name, RANK() OVER (ORDER BY propertyiq_score DESC) AS rank
+    FROM propertyiq_scores
+    WHERE geography_level = p_geography
+      AND computed_at >= NOW() - INTERVAL '7 days'
+  ),
+  ranked_then AS (
+    SELECT geo_id, RANK() OVER (ORDER BY propertyiq_score DESC) AS rank
+    FROM propertyiq_scores
+    WHERE geography_level = p_geography
+      AND computed_at >= NOW() - INTERVAL '37 days'
+      AND computed_at < NOW() - INTERVAL '30 days'
+  )
+  SELECT n.geo_id, n.canonical_name, n.rank AS current_rank, t.rank AS previous_rank, (t.rank - n.rank) AS rank_delta
+  FROM ranked_now n JOIN ranked_then t USING (geo_id)
+  WHERE n.rank <= p_top_n
+    AND (
+      (p_direction = 'up' AND (t.rank - n.rank) >= p_min_delta)
+      OR (p_direction = 'down' AND (n.rank - t.rank) >= p_min_delta)
+      OR (p_direction = 'both' AND abs(t.rank - n.rank) >= p_min_delta)
+    );
+$$;
+```
+
+- [ ] **Step 2: Implement evaluateRankChange to call the RPC.**
+
+- [ ] **Step 3: Tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- trigger-rule-evaluator.service.spec
+git add packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.ts supabase/migrations/
+git commit -m "feat(content-pipeline): rank-change trigger evaluator plus RPC"
+```
+
+## Task 5.7: Threshold-cross trigger
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.ts`
+- Add: Postgres RPC `auto_ideation_threshold_cross`
+
+- [ ] **Step 1: Add RPC that finds geos whose metric crossed a threshold in the last 7 days (rising or falling).**
+
+```sql
+CREATE OR REPLACE FUNCTION auto_ideation_threshold_cross(p_metric TEXT, p_threshold NUMERIC, p_direction TEXT)
+RETURNS TABLE(geo_id TEXT, canonical_name TEXT, current_value NUMERIC, previous_value NUMERIC)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  RETURN QUERY EXECUTE format($q$
+    WITH curr AS (
+      SELECT DISTINCT ON (geo_id) geo_id, canonical_name, %I AS value
+      FROM propertyiq_scores
+      WHERE computed_at >= NOW() - INTERVAL '7 days'
+      ORDER BY geo_id, computed_at DESC
+    ),
+    prev AS (
+      SELECT DISTINCT ON (geo_id) geo_id, %I AS value
+      FROM propertyiq_scores
+      WHERE computed_at < NOW() - INTERVAL '7 days'
+      ORDER BY geo_id, computed_at DESC
+    )
+    SELECT c.geo_id, c.canonical_name, c.value, p.value
+    FROM curr c JOIN prev p USING (geo_id)
+    WHERE (
+      ($2 = 'up' AND c.value >= $1 AND p.value < $1)
+      OR ($2 = 'down' AND c.value <= $1 AND p.value > $1)
+    )
+  $q$, p_metric, p_metric) USING p_threshold, p_direction;
+END $$;
+```
+
+Note: `p_metric` must be a column on `propertyiq_scores` (e.g., `propertyiq_score`, `home_value_yoy`, `rent_yoy`). Validate at application layer.
+
+- [ ] **Step 2: Implement evaluateThresholdCross.**
+
+- [ ] **Step 3: Tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- trigger-rule-evaluator.service.spec
+git add packages/backend/src/content-pipeline/auto-ideation/trigger-rule-evaluator.service.ts supabase/migrations/
+git commit -m "feat(content-pipeline): threshold-cross trigger evaluator plus RPC"
+```
+
+## Task 5.8: AutoIdeationService orchestrator
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/auto-ideation/auto-ideation.service.ts`
+- Create: `packages/backend/src/content-pipeline/auto-ideation/auto-ideation.service.spec.ts`
+
+- [ ] **Step 1: Write tests.**
+
+```typescript
+describe("AutoIdeationService.runEnabledRules", () => {
+  it("for each enabled rule, evaluates matches and creates runs", async () => {
+    // Mock: 1 enabled rule (score_movement), 2 matches returned by evaluator
+    // Mock createRun to return successfully
+    // Call runEnabledRules()
+    // Expect createRun called twice with correct payloads
+    // Expect auto_ideation_rules.last_fired_at updated
+  });
+
+  it("respects CostCapService blocks", async () => {
+    // Mock CostCapService.canEnqueue returning { allowed: false }
+    // Verify no runs created, capped event written
+  });
+});
+```
+
+- [ ] **Step 2: Implement.**
+
+```typescript
+// auto-ideation/auto-ideation.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { TriggerRuleEvaluatorService } from "./trigger-rule-evaluator.service";
+import { ContentPipelineService } from "../content-pipeline.service";
+import { AutoIdeationRule } from "./trigger-rule.types";
+import { v4 as uuid } from "uuid";
+
+@Injectable()
+export class AutoIdeationService {
+  private readonly logger = new Logger(AutoIdeationService.name);
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly evaluator: TriggerRuleEvaluatorService,
+    private readonly pipeline: ContentPipelineService,
+  ) {}
+
+  async runEnabledRules(
+    typeFilter?: "score_movement" | "rank_change" | "threshold_cross",
+  ): Promise<void> {
+    const client = this.supabase.getClient();
+    const query = client
+      .from("auto_ideation_rules")
+      .select("*")
+      .eq("enabled", true);
+    const { data: rules } = typeFilter
+      ? await query.eq("trigger_type", typeFilter)
+      : await query;
+
+    for (const rule of rules ?? []) {
+      try {
+        await this.evaluateAndEnqueue(rule as AutoIdeationRule);
+        await client
+          .from("auto_ideation_rules")
+          .update({ last_fired_at: new Date().toISOString() })
+          .eq("id", rule.id);
+      } catch (err) {
+        this.logger.error(
+          `rule ${rule.rule_name} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+  }
+
+  private async evaluateAndEnqueue(rule: AutoIdeationRule): Promise<void> {
+    const matches = await this.evaluator.evaluate(rule);
+    this.logger.log(`rule ${rule.rule_name} matched ${matches.length} markets`);
+
+    for (const match of matches) {
+      const result = await this.pipeline.createRun({
+        format: rule.target_format as any,
+        marketQuery: match.geo.canonical_name,
+        idempotencyKey: uuid(),
+        approvalMode: rule.approval_mode_override ?? ("review" as any),
+        triggered_by: "auto_ideation",
+      } as any);
+      if (result.status === "capped") {
+        this.logger.warn(
+          `rule ${rule.rule_name} capped for ${match.geo.canonical_name}`,
+        );
+        break; // stop iterating this rule for today
+      }
+    }
+  }
+}
+```
+
+- [ ] **Step 3: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- auto-ideation.service.spec
+git add packages/backend/src/content-pipeline/auto-ideation/
+git commit -m "feat(content-pipeline): AutoIdeationService orchestrator evaluating rules and creating runs"
+```
+
+## Task 5.9: score-scan cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/auto-ideation-score-scan.cron.ts`
+
+- [ ] **Step 1: Cron every 30 min runs score_movement rules.**
+
+```typescript
+@Injectable()
+export class AutoIdeationScoreScanCron {
+  constructor(private readonly autoIdeation: AutoIdeationService) {}
+
+  @Cron("*/30 * * * *")
+  async run(): Promise<void> {
+    await this.autoIdeation.runEnabledRules("score_movement");
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/auto-ideation-score-scan.cron.ts
+git commit -m "feat(content-pipeline): auto-ideation-score-scan cron every 30 min"
+```
+
+## Task 5.10: rank-scan cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/auto-ideation-rank-scan.cron.ts`
+
+- [ ] **Step 1: Daily 5am UTC cron runs rank_change rules.**
+
+```typescript
+@Injectable()
+export class AutoIdeationRankScanCron {
+  constructor(private readonly autoIdeation: AutoIdeationService) {}
+  @Cron("0 5 * * *", { timeZone: "UTC" })
+  async run(): Promise<void> {
+    await this.autoIdeation.runEnabledRules("rank_change");
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/auto-ideation-rank-scan.cron.ts
+git commit -m "feat(content-pipeline): auto-ideation-rank-scan cron daily at 5am UTC"
+```
+
+## Task 5.11: threshold-scan cron
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/crons/auto-ideation-threshold-scan.cron.ts`
+
+- [ ] **Step 1: Hourly cron for threshold_cross rules.**
+
+```typescript
+@Injectable()
+export class AutoIdeationThresholdScanCron {
+  constructor(private readonly autoIdeation: AutoIdeationService) {}
+  @Cron("0 * * * *")
+  async run(): Promise<void> {
+    await this.autoIdeation.runEnabledRules("threshold_cross");
+  }
+}
+```
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/crons/auto-ideation-threshold-scan.cron.ts
+git commit -m "feat(content-pipeline): auto-ideation-threshold-scan hourly cron"
+```
+
+## Task 5.12: Trigger-rule CRUD endpoints
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/auto-ideation/auto-ideation.controller.ts`
+- Create: `packages/backend/src/content-pipeline/dto/create-trigger-rule.dto.ts`
+- Create: `packages/backend/src/content-pipeline/dto/update-trigger-rule.dto.ts`
+
+- [ ] **Step 1: DTOs with class-validator and discriminated-union validation of trigger_config.**
+
+```typescript
+// dto/create-trigger-rule.dto.ts
+import {
+  IsString,
+  IsIn,
+  IsOptional,
+  IsBoolean,
+  IsObject,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
+
+export class CreateTriggerRuleDto {
+  @IsString() rule_name!: string;
+  @IsIn(["score_movement", "rank_change", "threshold_cross"])
+  trigger_type!: string;
+  @IsObject() trigger_config!: Record<string, any>;
+  @IsString() target_format!: string;
+  @IsOptional()
+  @IsIn(["auto", "review", "draft"])
+  approval_mode_override?: string;
+  @IsOptional() @IsBoolean() enabled?: boolean;
+}
+
+// dto/update-trigger-rule.dto.ts
+export class UpdateTriggerRuleDto {
+  @IsOptional() @IsString() rule_name?: string;
+  @IsOptional() @IsObject() trigger_config?: Record<string, any>;
+  @IsOptional() @IsString() target_format?: string;
+  @IsOptional()
+  @IsIn(["auto", "review", "draft"])
+  approval_mode_override?: string;
+  @IsOptional() @IsBoolean() enabled?: boolean;
+}
+```
+
+- [ ] **Step 2: Controller.**
+
+```typescript
+// auto-ideation.controller.ts
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from "@nestjs/common";
+import { AdminGuard } from "../../common/guards/admin-auth.guard";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { CreateTriggerRuleDto } from "../dto/create-trigger-rule.dto";
+import { UpdateTriggerRuleDto } from "../dto/update-trigger-rule.dto";
+import { AutoIdeationService } from "./auto-ideation.service";
+
+@UseGuards(AdminGuard)
+@Controller("api/admin/content-pipeline/auto-ideation")
+export class AutoIdeationController {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly service: AutoIdeationService,
+  ) {}
+
+  @Get("rules")
+  async list() {
+    const { data } = await this.supabase
+      .getClient()
+      .from("auto_ideation_rules")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return { success: true, data: { rules: data ?? [] } };
+  }
+
+  @Post("rules")
+  async create(@Body() dto: CreateTriggerRuleDto) {
+    const { data } = await this.supabase
+      .getClient()
+      .from("auto_ideation_rules")
+      .insert({ ...dto, enabled: dto.enabled ?? false })
+      .select()
+      .single();
+    return { success: true, data };
+  }
+
+  @Patch("rules/:id")
+  async update(@Param("id") id: string, @Body() dto: UpdateTriggerRuleDto) {
+    const { data } = await this.supabase
+      .getClient()
+      .from("auto_ideation_rules")
+      .update({ ...dto, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    return { success: true, data };
+  }
+
+  @Delete("rules/:id")
+  async remove(@Param("id") id: string) {
+    await this.supabase
+      .getClient()
+      .from("auto_ideation_rules")
+      .delete()
+      .eq("id", id);
+    return { success: true, data: { deleted: true } };
+  }
+
+  @Post("rules/:id/fire-now")
+  async fireNow(@Param("id") id: string) {
+    const { data } = await this.supabase
+      .getClient()
+      .from("auto_ideation_rules")
+      .select("*")
+      .eq("id", id)
+      .single();
+    await (this.service as any).evaluateAndEnqueue(data);
+    return { success: true, data: { fired: true } };
+  }
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/auto-ideation/auto-ideation.controller.ts packages/backend/src/content-pipeline/dto/create-trigger-rule.dto.ts packages/backend/src/content-pipeline/dto/update-trigger-rule.dto.ts
+git commit -m "feat(content-pipeline): auto-ideation trigger rule CRUD endpoints"
+```
+
+## Task 5.13: Upcoming auto-runs preview endpoint
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/auto-ideation/auto-ideation.controller.ts`
+- Modify: `packages/backend/src/content-pipeline/auto-ideation/auto-ideation.service.ts`
+
+- [ ] **Step 1: Add service method that dry-runs enabled rules without enqueueing.**
+
+```typescript
+// auto-ideation.service.ts (add)
+async previewUpcoming(): Promise<Array<{ rule_name: string; format: string; matches: TriggerMatch[] }>> {
+  const client = this.supabase.getClient();
+  const { data: rules } = await client.from('auto_ideation_rules').select('*').eq('enabled', true);
+  const results: any[] = [];
+  for (const rule of rules ?? []) {
+    const matches = await this.evaluator.evaluate(rule as AutoIdeationRule);
+    results.push({ rule_name: rule.rule_name, format: rule.target_format, matches });
+  }
+  return results;
+}
+```
+
+- [ ] **Step 2: Controller endpoint.**
+
+```typescript
+@Get('upcoming')
+async upcoming() {
+  return { success: true, data: { upcoming: await this.service.previewUpcoming() } };
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/auto-ideation/
+git commit -m "feat(content-pipeline): upcoming auto-runs preview endpoint"
+```
+
+## Task 5.14: Admin UI for trigger rules
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/auto-ideation/page.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/auto-ideation/rule-editor.tsx`
+
+- [ ] **Step 1: Main page lists rules with toggle to enable/disable, edit button, delete, run-now.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/auto-ideation/page.tsx
+"use client";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
+import { RuleEditor } from "./rule-editor";
+
+export default function AutoIdeationPage() {
+  const [editing, setEditing] = useState<any | "new" | null>(null);
+  const { data = [], refetch } = useQuery({
+    queryKey: ["auto-ideation-rules"],
+    queryFn: async () =>
+      (
+        await fetchAPI<{ data: { rules: any[] } }>(
+          "/api/admin/content-pipeline/auto-ideation/rules",
+        )
+      ).data.rules,
+  });
+
+  async function toggle(rule: any) {
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/auto-ideation/rules/${rule.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !rule.enabled }),
+      },
+    );
+    refetch();
+  }
+  async function del(rule: any) {
+    if (!confirm(`Delete rule ${rule.rule_name}?`)) return;
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/auto-ideation/rules/${rule.id}`,
+      { method: "DELETE" },
+    );
+    refetch();
+  }
+  async function fireNow(rule: any) {
+    await fetchAPIRaw(
+      `/api/admin/content-pipeline/auto-ideation/rules/${rule.id}/fire-now`,
+      { method: "POST" },
+    );
+    alert("Fired. See dashboard for new runs.");
+  }
+
+  return (
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Auto-Ideation Rules</h1>
+        <button
+          onClick={() => setEditing("new")}
+          className="bg-primary text-on-primary rounded-full px-5 py-2 font-semibold"
+        >
+          + New Rule
+        </button>
+      </div>
+      <div className="space-y-3">
+        {data.map((r: any) => (
+          <div
+            key={r.id}
+            className="rounded-xl bg-surface-container-low p-4 shadow-sm flex items-center justify-between"
+          >
+            <div>
+              <div className="font-semibold">{r.rule_name}</div>
+              <div className="text-xs text-outline">
+                {r.trigger_type} • target: {r.target_format} • last fired:{" "}
+                {r.last_fired_at
+                  ? new Date(r.last_fired_at).toLocaleString()
+                  : "never"}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={r.enabled}
+                  onChange={() => toggle(r)}
+                />
+                Enabled
+              </label>
+              <button
+                onClick={() => fireNow(r)}
+                className="text-sm bg-surface-container rounded-full px-3 py-1"
+              >
+                Run now
+              </button>
+              <button
+                onClick={() => setEditing(r)}
+                className="text-sm bg-surface-container rounded-full px-3 py-1"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => del(r)}
+                className="text-sm bg-error/10 text-error rounded-full px-3 py-1"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing && (
+        <RuleEditor
+          rule={editing === "new" ? null : editing}
+          onClose={() => {
+            setEditing(null);
+            refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 2: Rule editor with three conditional sub-forms per trigger_type.**
+
+```tsx
+// packages/frontend/app/admin/content-pipeline/auto-ideation/rule-editor.tsx
+"use client";
+import { useState } from "react";
+import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+
+export function RuleEditor({
+  rule,
+  onClose,
+}: {
+  rule: any | null;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    rule_name: rule?.rule_name ?? "",
+    trigger_type: rule?.trigger_type ?? "score_movement",
+    trigger_config: rule?.trigger_config ?? {
+      min_delta_points: 10,
+      direction: "up",
+      lookback_days: 30,
+      geography: "metro",
+    },
+    target_format: rule?.target_format ?? "score_mover",
+    approval_mode_override: rule?.approval_mode_override ?? "review",
+  });
+
+  async function save() {
+    const url = rule
+      ? `/api/admin/content-pipeline/auto-ideation/rules/${rule.id}`
+      : "/api/admin/content-pipeline/auto-ideation/rules";
+    const method = rule ? "PATCH" : "POST";
+    await fetchAPIRaw(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
+      <div className="bg-surface rounded-xl p-6 w-full max-w-xl space-y-3">
+        <h3 className="font-semibold">{rule ? "Edit rule" : "New rule"}</h3>
+        <label className="block">
+          <span className="text-sm">Rule name</span>
+          <input
+            value={form.rule_name}
+            onChange={(e) => setForm({ ...form, rule_name: e.target.value })}
+            className="w-full border border-outline-variant rounded p-2"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm">Trigger type</span>
+          <select
+            value={form.trigger_type}
+            onChange={(e) => setForm({ ...form, trigger_type: e.target.value })}
+            className="w-full border border-outline-variant rounded p-2"
+          >
+            <option value="score_movement">Score movement</option>
+            <option value="rank_change">Rank change</option>
+            <option value="threshold_cross">Threshold cross</option>
+          </select>
+        </label>
+        {form.trigger_type === "score_movement" && (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-sm">Min delta points</span>
+              <input
+                type="number"
+                value={form.trigger_config.min_delta_points ?? 10}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      min_delta_points: parseInt(e.target.value, 10),
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm">Direction</span>
+              <select
+                value={form.trigger_config.direction ?? "up"}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      direction: e.target.value,
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              >
+                <option value="up">Up</option>
+                <option value="down">Down</option>
+                <option value="both">Both</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm">Lookback days</span>
+              <input
+                type="number"
+                value={form.trigger_config.lookback_days ?? 30}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      lookback_days: parseInt(e.target.value, 10),
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              />
+            </label>
+          </div>
+        )}
+        {form.trigger_type === "rank_change" && (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-sm">Min rank delta</span>
+              <input
+                type="number"
+                value={form.trigger_config.min_rank_delta ?? 5}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      min_rank_delta: parseInt(e.target.value, 10),
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm">Top N</span>
+              <input
+                type="number"
+                value={form.trigger_config.top_n ?? 10}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      top_n: parseInt(e.target.value, 10),
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              />
+            </label>
+          </div>
+        )}
+        {form.trigger_type === "threshold_cross" && (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-sm">Metric</span>
+              <select
+                value={form.trigger_config.metric ?? "propertyiq_score"}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      metric: e.target.value,
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              >
+                <option value="propertyiq_score">PropertyIQ Score</option>
+                <option value="home_value_yoy">Home value YoY</option>
+                <option value="rent_yoy">Rent YoY</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm">Threshold value</span>
+              <input
+                type="number"
+                value={form.trigger_config.threshold_value ?? 80}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    trigger_config: {
+                      ...form.trigger_config,
+                      threshold_value: parseFloat(e.target.value),
+                    },
+                  })
+                }
+                className="w-full border border-outline-variant rounded p-2"
+              />
+            </label>
+          </div>
+        )}
+        <label className="block">
+          <span className="text-sm">Target format</span>
+          <select
+            value={form.target_format}
+            onChange={(e) =>
+              setForm({ ...form, target_format: e.target.value })
+            }
+            className="w-full border border-outline-variant rounded p-2"
+          >
+            {[
+              "grade_reveal",
+              "top_10_ranking",
+              "score_mover",
+              "head_to_head",
+              "farm_area_spotlight",
+              "brokerage_market_share",
+              "recruitment_angle",
+              "long_form_deep_dive",
+            ].map((f) => (
+              <option key={f}>{f}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-sm">Approval mode override</span>
+          <select
+            value={form.approval_mode_override}
+            onChange={(e) =>
+              setForm({ ...form, approval_mode_override: e.target.value })
+            }
+            className="w-full border border-outline-variant rounded p-2"
+          >
+            <option value="review">Review</option>
+            <option value="auto">Auto</option>
+            <option value="draft">Draft</option>
+          </select>
+        </label>
+        <div className="flex gap-2 justify-end pt-3">
+          <button onClick={onClose}>Cancel</button>
+          <button
+            onClick={save}
+            className="bg-primary text-on-primary rounded-full px-5 py-2"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Register nav entry, commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/auto-ideation/
+git commit -m "feat(content-pipeline): auto-ideation admin page with rule editor"
+```
+
+## Task 5.15: Upcoming auto-runs on dashboard
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/page.tsx`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+
+- [ ] **Step 1: Add `upcomingAutoRuns` to dashboard response.**
+
+```typescript
+// content-pipeline.service.ts getDashboard() addition:
+const upcoming = await this.autoIdeation.previewUpcoming();
+return { ...existing, upcomingAutoRuns: upcoming };
+```
+
+- [ ] **Step 2: Dashboard page renders upcoming section.**
+
+```tsx
+{
+  data.upcomingAutoRuns && data.upcomingAutoRuns.length > 0 && (
+    <div className="rounded-xl bg-accent/5 border border-accent p-6">
+      <h3 className="font-semibold mb-2">Auto-ideation upcoming</h3>
+      <ul className="text-sm space-y-1">
+        {data.upcomingAutoRuns.map((u: any) => (
+          <li key={u.rule_name}>
+            {u.rule_name} will enqueue {u.matches.length} {u.format} run
+            {u.matches.length === 1 ? "" : "s"} on next trigger.
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/page.tsx packages/backend/src/content-pipeline/content-pipeline.service.ts
+git commit -m "feat(content-pipeline): dashboard shows upcoming auto-ideation runs"
+```
+
+## Task 5.16: Cost-cap breach UI banner
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/layout.tsx` (or the main admin layout)
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.service.ts`
+
+- [ ] **Step 1: Add `costCapStatus` to dashboard response.**
+
+```typescript
+// content-pipeline.service.ts
+async getCostCapStatus() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await this.supabase.getClient().from('cost_cap_daily').select('*').eq('date', today).maybeSingle();
+  const cap = Number(data?.usd_cap ?? process.env.CONTENT_PIPELINE_DAILY_USD_MAX ?? 50);
+  const spent = Number(data?.usd_spent ?? 0);
+  return { breached: spent >= cap, usdSpent: spent, usdCap: cap };
+}
+```
+
+- [ ] **Step 2: Render banner when breached.**
+
+```tsx
+{
+  costCap?.breached && (
+    <div className="bg-warning/10 border border-warning text-warning px-4 py-3 text-sm">
+      Today's content pipeline budget hit (${costCap.usdSpent.toFixed(2)} / $
+      {costCap.usdCap}). Auto-ideation paused until tomorrow. Increase with
+      `CONTENT_PIPELINE_DAILY_USD_MAX`.
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/ packages/backend/src/content-pipeline/content-pipeline.service.ts
+git commit -m "feat(content-pipeline): cost-cap breach banner on admin pages"
+```
+
+## Task 5.17: Human override indicator in review queue
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/content-pipeline/review/review-card.tsx`
+
+- [ ] **Step 1: When `run.triggered_by === 'auto_ideation'`, show a visual badge: "Auto-queued by rule: [rule_name]".**
+
+Add to review card:
+
+```tsx
+{
+  run.run.triggered_by === "auto_ideation" && (
+    <div className="bg-accent/10 text-accent rounded-full px-3 py-1 inline-flex items-center gap-2 mb-3">
+      <span>Auto-queued</span>
+      <span className="text-xs opacity-80">
+        rule: {run.run.metadata?.rule_name ?? "unknown"}
+      </span>
+    </div>
+  );
+}
+```
+
+Requires adding rule_name to the run's event/metadata when auto-ideation creates it. Update AutoIdeationService.evaluateAndEnqueue to pass rule_name in a new field on content_runs or in content_run_events.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/review/review-card.tsx packages/backend/src/content-pipeline/auto-ideation/
+git commit -m "feat(content-pipeline): review queue shows auto-queued indicator with rule name"
+```
+
+## Task 5.18: Seed 3 starter rules (disabled)
+
+**Files:**
+
+- Create: `supabase/migrations/20260424000300_content_pipeline_seed_auto_ideation_rules.sql`
+
+- [ ] **Step 1: Write migration.**
+
+```sql
+INSERT INTO auto_ideation_rules (rule_name, trigger_type, trigger_config, target_format, approval_mode_override, enabled)
+VALUES
+  ('PIQ moved +10 or more (month-over-month)', 'score_movement',
+   '{"min_delta_points": 10, "direction": "up", "lookback_days": 30, "geography": "metro"}'::jsonb,
+   'score_mover', 'review', false),
+  ('New market entered top 10 cashflow', 'rank_change',
+   '{"min_rank_delta": 1, "direction": "up", "geography": "metro", "top_n": 10}'::jsonb,
+   'top_10_ranking', 'review', false),
+  ('PIQ crossed 80 threshold', 'threshold_cross',
+   '{"threshold_value": 80, "direction": "up", "metric": "propertyiq_score"}'::jsonb,
+   'grade_reveal', 'review', false)
+ON CONFLICT (rule_name) DO NOTHING;
+```
+
+All three start disabled to avoid unintended auto-firing on deploy. Operator enables from the admin UI.
+
+- [ ] **Step 2: Apply, commit.**
+
+```bash
+supabase db push
+git add supabase/migrations/20260424000300_content_pipeline_seed_auto_ideation_rules.sql
+git commit -m "feat(content-pipeline): seed 3 starter auto-ideation rules (disabled)"
+```
+
+## Task 5.19: Nav entry for Auto-Ideation page
+
+**Files:**
+
+- Modify: `packages/frontend/app/admin/components/AdminCommandSidebar.tsx`
+
+- [ ] **Step 1: Add to the Content nav group.**
+
+```tsx
+{ label: 'Auto-ideation', href: '/admin/content-pipeline/auto-ideation', icon: Zap },
+```
+
+Add `Zap` icon import from lucide-react.
+
+- [ ] **Step 2: Commit.**
+
+```bash
+git add packages/frontend/app/admin/components/AdminCommandSidebar.tsx
+git commit -m "feat(content-pipeline): add Auto-ideation nav entry"
+```
+
+## Task 5.20: Phase 5 E2E suite
+
+**Files:**
+
+- Create: `packages/backend/test/e2e/content-pipeline-p5-score-movement.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p5-rank-change.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p5-cost-cap.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p5-format-cap.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p5-upcoming-preview.e2e.spec.ts`
+
+**Per project memory: real staging DB, no mocks.**
+
+- [ ] **Step 1: score-movement E2E.**
+
+Insert a synthetic score movement into `propertyiq_scores` for a test metro moving +12 points. Create an enabled rule with `min_delta=10, direction=up`. POST `/rules/:id/fire-now`. Expect: one new `content_runs` row created with `triggered_by='auto_ideation'`, `format='score_mover'`, `market_query` matching the moved metro.
+
+- [ ] **Step 2: rank-change E2E.**
+
+Similar pattern. Insert two rank states for a market (rank 15 -> rank 3). Rule `min_rank_delta=5, direction=up`. Verify run created.
+
+- [ ] **Step 3: cost-cap E2E.**
+
+Set `CONTENT_PIPELINE_DAILY_USD_MAX=0.01`. Insert `cost_cap_daily` row with `usd_spent=0.005, usd_cap=0.01`. Fire rule manually. Expect NO new `content_runs` row, one `auto_ideation_capped_events` row with `reason='daily_cost_cap'`.
+
+- [ ] **Step 4: format-cap E2E.**
+
+Set `CONTENT_PIPELINE_FORMAT_DAILY_CAP_SCORE_MOVER=1`. Insert `format_daily_run_counts` row with `run_count=1`. Fire rule. Expect no new run, capped event with `reason='format_daily_cap'`.
+
+- [ ] **Step 5: upcoming-preview E2E.**
+
+Create 2 enabled rules. GET `/auto-ideation/upcoming`. Expect both rules returned with match counts. Insert fake score movements matching rule 1. GET again. Expect rule 1's matches count increased.
+
+- [ ] **Step 6: Run E2E suite, commit.**
+
+```bash
+cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- content-pipeline-p5
+git add packages/backend/test/e2e/
+git commit -m "test(content-pipeline): P5 E2E suite (score movement, rank change, cost caps, preview)"
+```
+
+---
+
+# Appendix
+
+## Global risks (plan-specific additions to design.md risks)
+
+Authoritative risk list lives in `docs/content-pipeline/design.md` section "Risks." Plan-phase additions:
+
+1. **Plan staleness between phases.** Phases 2 through 5 are planned now but executed weeks or months later. Dependencies, internal APIs, and platform API contracts can drift. Mitigation: re-invoke `writing-plans` at the start of each phase to refresh its plan against the then-current repo state. At minimum, re-run Prerequisite 2 (internal service map) before P2, P3, P4.
+
+2. **pg-boss schema bootstrap friction.** pg-boss tries to create its own schema at runtime but managed Supabase may reject that. Mitigation: migration `20260421010000_pgboss_schema_bootstrap.sql` pre-creates the schema before pg-boss boots.
+
+3. **Remotion React 18 vs frontend React 19.** The CLI-spawn boundary isolates them. If any import bridge opens (e.g., a shared React component imported by both packages), builds fail cryptically. Mitigation: a CI check greps for cross-package React imports and fails the build.
+
+4. **Puppeteer browser pool contention.** The existing Redfin scraper and our lead-magnet renderer both use Puppeteer. Mitigation: a shared `BrowserPoolService` with a configurable concurrency cap, both consumers use it. If not already present, create as part of Task 1.23 extension.
+
+5. **Seed migration order vs schema migration order.** Seed migrations for formats, voices, magnets depend on their schema migrations. File timestamps enforce order, but they must never be edited after apply (Supabase hash-tracks). Mitigation: strict timestamp ordering documented in the top-level migrations index; seed migrations always after schema migrations; test on staging before production.
+
+6. **TikTok Content Posting API app-review timing.** Approval can take 3 to 14 days. Risk: P2 blocked waiting on app approval. Mitigation: start TikTok app review in parallel with P1 engineering.
+
+7. **Instagram Business account requirements.** Instagram publishing requires a Business account linked to a Facebook Page, plus the Meta Graph app must pass review for `instagram_content_publish`. Cannot use personal Instagram. Mitigation: flag to Troy that a test Business IG account must exist before Task 2.11.
+
+8. **YouTube Analytics API data latency.** The API does not report video-level metrics for videos under roughly 24 hours old. Mitigation: 24h metric pull cron retries on empty response for runs under 24h, and `pull-24h-metrics` cron treats empty responses as a soft fail not an error.
+
+9. **ElevenLabs cost exposure.** Turbo v2.5 costs approximately $0.30 per 1000 characters. A 10-minute long-form script is approximately 1200 words or 7200 characters, about $2.16 per long-form run. At 1 long-form run per day, that is $65 per month. Acceptable for v1 but the `CONTENT_PIPELINE_DAILY_USD_MAX` must be set high enough to accommodate.
+
+10. **Edge TTS upstream instability.** The `edge-tts` Python package interacts with a reverse-engineered Microsoft endpoint. If Microsoft changes the endpoint, all short-form TTS breaks. Mitigation: auto-fallback from Edge to OpenAI TTS (implemented in Task 2.15). Monitor the `edge-tts` GitHub issues; the package is well-maintained but not officially supported.
+
+11. **Short-link domain hijack risk.** A compromised short-link domain redirects users to attacker-controlled pages. Mitigation: DNS hardening, CAA records restricting certificate issuance, 2FA on the domain registrar account. Short-link base URL must be HTTPS only and HSTS-preloaded.
+
+12. **Style-reference raw video retention.** 24-hour TTL on transient storage protects us legally, but if the cleanup cron fails, raw videos accumulate. Mitigation: alert fires if cleanup cron skips 2 consecutive runs.
+
+13. **LinkedIn API rate limits.** LinkedIn is stricter than most platforms on organization-side posting. If the pipeline sends too many posts in a day, LinkedIn may throttle the app. Mitigation: `publish-linkedin` queue concurrency stays at 1 with 180s backoff on 429 errors.
+
+14. **Auto-ideation runaway scenario.** A misconfigured rule could try to enqueue dozens of runs on a busy data day. Mitigation: daily USD cap plus per-format cap both enforced at enqueue time. Monitor `auto_ideation_capped_events` for sustained capping, which indicates rule-tuning needed.
+
+## Global security notes (plan-specific additions to design.md security)
+
+Authoritative list in `docs/content-pipeline/design.md` section "Security and privacy." Plan-phase additions:
+
+1. **OAuth state parameter.** Every platform OAuth connect flow must generate a cryptographic state parameter, store it with TTL, and validate on callback. Prevents CSRF. Implement in Task 2.22 alongside the connect endpoint.
+
+2. **Short-link slug enumeration defense.** Rate limit `/s/:slug` to 60 requests per minute per IP (Task 1.29 Step 5). Slugs are 8-character base64url, approximately 2.8 trillion space, which makes brute-force discovery slow but not impossible; rate limit converts it to infeasible.
+
+3. **Service-role key never in frontend bundle.** Audited by existing ESLint rule in `packages/frontend/.eslintrc.js` blocking `@/lib/api/client*` imports. No new rule required per CLAUDE.md guidance.
+
+4. **Platform credentials encryption at rest.** AES-256-GCM via `PLATFORM_CREDENTIALS_ENCRYPTION_KEY` env var (32 bytes base64). Never default; app crashes if missing. Implemented in Task 1.25 `CredentialCrypto`.
+
+5. **PDF generation sandbox.** Puppeteer runs with Chromium sandbox enabled in production (`--no-sandbox` NOT set). In test/dev environments where Chromium sandbox is unreliable, `PUPPETEER_NO_SANDBOX=1` permits the flag but must not be set in production env vars. Task 1.23 step 7.
+
+6. **Stripe webhook signature verification.** If P4 revenue attribution consumes Stripe webhooks, the existing `packages/backend/src/stripe/stripe-webhook.controller.ts` already verifies signatures with `stripe.webhooks.constructEvent`. Task 4.6 discovery confirms this and reuses the pattern.
+
+7. **Lead magnet PDF access control.** PDFs for delivered magnets are stored in Supabase Storage at `content-pipeline/lead-magnets/<user_id>/...`. RLS policies ensure only the owning user (via `auth.uid()`) can list or download their own magnets. Admin has full access via service_role. Task 1.23 documents the bucket policy.
+
+8. **Attribution cookie privacy.** `__piq_attr` is first-party only, 30-day TTL, httpOnly=false (to let frontend read it for UX). No PII encoded: only run_id, slug, platform, and first-touch timestamp. Not used for cross-domain tracking.
+
+9. **Audit log.** Every operator action (approve, reject, edit-script, pause, enable-rule) writes a `content_run_events` row or an equivalent audit record. This is the operational audit trail. For sensitive actions (enabling auto-ideation rules, changing approval modes), consider augmenting with a dedicated `admin_audit_log` table in P4.
+
+10. **Style-reference raw video bucket privacy.** `style-references-transient` Supabase Storage bucket is private, never public-accessible, service_role-only. Even if URL leaks, download requires service_role key.
+
+## Open questions for Troy
+
+These need explicit answers before or during execution. Some were raised in `docs/content-pipeline/design.md` and remain open; others are plan-phase specific.
+
+1. **Internal service mapping.** Prerequisite 2 task asks us to enumerate which internal backend services back each MCP tool. Plan phase assumes `MarketsService`, `ScoringService`, and `GeographyService` cover the bulk, but that is not verified. Troy confirms: should we lift all tool logic out of `packages/mcp-server/src/tools/*.ts` into the backend, or call MCP over HTTP for tools that have no backend equivalent?
+
+2. **Short-link domain registration.** Plan uses `piq.sh` as the example `SHORT_LINK_BASE_URL`. Is the domain registered? Does Troy prefer an alternative (`s.propertyiq.app` on existing DNS)? Task 1.29 cannot deploy until this is answered.
+
+3. **Test platform accounts.** The plan assumes these do not yet exist:
+   - Test YouTube channel (separate from production)
+   - Test TikTok Business account
+   - Test Instagram Business account on a test Facebook Page
+   - Test Facebook Page
+   - Test LinkedIn company page
+     Creating them is blocking for the respective phase's E2E tests. Who creates them and when?
+
+4. **Dockerfile source of truth.** Prerequisite 3 asks which Dockerfile Railway builds from. If `packages/backend/Dockerfile` is not the source, we need to update the correct path.
+
+5. **Stripe webhook integration timing.** Task 4.6 discovery will confirm, but Troy confirms: can we consume existing Stripe webhook events for revenue attribution, or is this net-new plumbing?
+
+6. **AI-content disclosure policy per platform.** TikTok, Instagram, and YouTube have AI-generated content disclosure policies. EU AI Act requirements kick in mid-2026. Who decides the disclosure approach (captions, hashtags, metadata flags), and by when? Decision affects Task 2.10 through 2.13 publisher implementations.
+
+7. **Real-agent validation of lead magnet templates.** Design doc flagged this as a risk. Plan recommends one afternoon of 2 to 3 user interviews with real agents before P2 Task 2.21 (P2 lead magnet templates) locks in. Is this time allocated?
+
+8. **Cost ceiling for Anthropic E2E runs.** Plan caps each E2E Anthropic call at $5. Is there a stricter daily-total cap Troy wants on CI runs to avoid surprise bills?
+
+9. **Review queue auto-advance behavior.** Plan assumes "K" (skip to next) is the only advance action, and "L" (approve and publish) moves to the next item automatically. Confirm: is auto-advance preferred, or should operator stay on the current card after approving?
+
+10. **Short-form post-time defaults.** Task 2.19 per-format defaults UI exposes default post-time windows. Plan suggests: YouTube Shorts 11am-1pm local, TikTok 6pm-9pm, Instagram noon-2pm, Facebook noon-2pm, LinkedIn 8am-10am weekdays. Does Troy want to override any of these?
+
+11. **Auto-ideation rule thresholds.** Task 5.18 seeds 3 starter rules. Defaults: PIQ moved 10+ points month-over-month, new market entered top 10, PIQ crossed 80. Are these thresholds right, or would Troy prefer different defaults?
+
+12. **Whether P1 ships Grade Reveal or a different first format.** Plan picks Grade Reveal because the Remotion scenes are roughly 80% assembled. If Troy wants a different format first for strategic reasons (e.g., a Farm Area Spotlight to hit the money audience immediately), P1 grows by the primitives needed for that format.
+
+13. **Gate B LLM judge score threshold.** Plan sets `GATE_B_MIN_SCORE=4` out of 5. Is that the right starting threshold, knowing we will tune post-launch based on how many scripts get flagged?
+
+14. **ElevenLabs to Edge TTS fallback preference.** Task 2.15 implements auto-fallback from Edge to OpenAI. Is the inverse ever desired (ElevenLabs fails, fall back to Edge)? Plan says no because ElevenLabs is only used for long-form where quality matters more than reliability, but Troy should confirm.
+
+15. **Style-reference raw video 24h TTL.** Plan hard-codes 24-hour retention for uploaded reference videos. Is 24h the right number, or does Troy want shorter (e.g., 1 hour post-analysis) or longer (e.g., 7 days for debugging)?
