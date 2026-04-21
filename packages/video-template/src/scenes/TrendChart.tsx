@@ -2,27 +2,28 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, interpolate, Easing } from "remotion";
 import { COLORS, scoreTierColor } from "../constants";
 import type { ScoreHistoryPoint } from "../types";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface TrendChartProps {
   market: string;
   history: ScoreHistoryPoint[];
   currentScore: number;
-  isVertical?: boolean;
 }
 
 export const TrendChart: React.FC<TrendChartProps> = ({
   market,
   history,
   currentScore,
-  isVertical,
 }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   // Filter out null values and limit to 12 months
-  const validPoints = history
-    .filter((p) => p.score !== null)
-    .slice(-12) as { date: string; score: number }[];
+  const validPoints = history.filter((p) => p.score !== null).slice(-12) as {
+    date: string;
+    score: number;
+  }[];
 
   if (validPoints.length === 0) return null;
 
@@ -81,8 +82,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         }}
       >
         12-Month Score Trend
-        <span style={{ color: COLORS.textMuted, fontWeight: 400, fontSize: titleSize * 0.65 }}>
-          {" "}— {market}
+        <span
+          style={{
+            color: COLORS.textMuted,
+            fontWeight: 400,
+            fontSize: titleSize * 0.65,
+          }}
+        >
+          {" "}
+          — {market}
         </span>
       </div>
 
@@ -134,12 +142,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               easing: Easing.out(Easing.cubic),
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
-            }
+            },
           );
           const bh = barHeight(point.score) * barProgress;
           const isLast = i === validPoints.length - 1;
           const barColor = isLast ? scoreTierColor(point.score) : COLORS.bgCard;
-          const borderColor = isLast ? scoreTierColor(point.score) : COLORS.textDim;
+          const borderColor = isLast
+            ? scoreTierColor(point.score)
+            : COLORS.textDim;
 
           return (
             <div
@@ -159,7 +169,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                   style={{
                     fontSize: valueSize,
                     fontWeight: isLast ? 700 : 400,
-                    color: isLast ? scoreTierColor(point.score) : COLORS.textMuted,
+                    color: isLast
+                      ? scoreTierColor(point.score)
+                      : COLORS.textMuted,
                     opacity: interpolate(barProgress, [0.8, 1], [0, 1], {
                       extrapolateLeft: "clamp",
                       extrapolateRight: "clamp",
@@ -196,7 +208,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                   whiteSpace: "nowrap",
                 }}
               >
-                {new Date(point.date).toLocaleDateString("en-US", { month: "short" })}
+                {new Date(point.date).toLocaleDateString("en-US", {
+                  month: "short",
+                })}
               </div>
             </div>
           );

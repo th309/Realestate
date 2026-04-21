@@ -2,11 +2,11 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
 import { COLORS, scoreTierColor, scoreTierLabel } from "../constants";
 import type { MarketData, ComparisonMarket } from "../types";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface ComparisonProps {
   primary: MarketData;
   others: ComparisonMarket[];
-  isVertical?: boolean;
 }
 
 interface MarketColumnProps {
@@ -52,10 +52,16 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
     config: { damping: 22, stiffness: 70 },
     durationInFrames: 90,
   });
-  const displayScore = Math.round(interpolate(counterProgress, [0, 1], [0, score]));
+  const displayScore = Math.round(
+    interpolate(counterProgress, [0, 1], [0, score]),
+  );
 
   const trendColor =
-    trend === "up" ? COLORS.trendUp : trend === "down" ? COLORS.trendDown : COLORS.trendStable;
+    trend === "up"
+      ? COLORS.trendUp
+      : trend === "down"
+        ? COLORS.trendDown
+        : COLORS.trendStable;
   const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "●";
 
   const marketSize = isVertical ? 36 : 26;
@@ -78,7 +84,9 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
         padding: isVertical ? "24px 16px" : "20px 16px",
         background: isPrimary ? `${tierColor}0a` : COLORS.bgCard,
         borderRadius: 24,
-        border: isPrimary ? `2px solid ${tierColor}40` : `1px solid ${COLORS.bgCardAlt}`,
+        border: isPrimary
+          ? `2px solid ${tierColor}40`
+          : `1px solid ${COLORS.bgCardAlt}`,
         position: "relative",
       }}
     >
@@ -118,7 +126,12 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
         <svg
           width={arcSize}
           height={arcSize}
-          style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            transform: "rotate(-90deg)",
+          }}
         >
           <circle
             cx={arcSize / 2}
@@ -137,10 +150,13 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
             strokeWidth={12}
             strokeDasharray={circumference}
             strokeDashoffset={
-              circumference * (1 - (score / 100) * interpolate(counterProgress, [0, 1], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }))
+              circumference *
+              (1 -
+                (score / 100) *
+                  interpolate(counterProgress, [0, 1], [0, 1], {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "clamp",
+                  }))
             }
             strokeLinecap="round"
           />
@@ -207,9 +223,10 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
   );
 };
 
-export const Comparison: React.FC<ComparisonProps> = ({ primary, others, isVertical }) => {
+export const Comparison: React.FC<ComparisonProps> = ({ primary, others }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   const sceneOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
@@ -218,7 +235,13 @@ export const Comparison: React.FC<ComparisonProps> = ({ primary, others, isVerti
 
   const allMarkets = [
     { ...primary, isPrimary: true },
-    ...others.map((o) => ({ ...o, stats: primary.stats, history: [], periodDate: primary.periodDate, isPrimary: false })),
+    ...others.map((o) => ({
+      ...o,
+      stats: primary.stats,
+      history: [],
+      periodDate: primary.periodDate,
+      isPrimary: false,
+    })),
   ];
 
   const titleSize = isVertical ? 48 : 36;
