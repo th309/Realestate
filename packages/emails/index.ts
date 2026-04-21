@@ -17,6 +17,7 @@ export { default as WinbackDay14 } from "./emails/winback-day14";
 export { default as NpsDay30 } from "./emails/nps-day30";
 export { default as MonthlyDigest } from "./emails/monthly-digest";
 export { default as ThresholdAlert } from "./emails/threshold-alert";
+export { LeadMagnetDelivery } from "./emails/lead-magnet-delivery";
 
 // Types
 export type { WelcomeEmailProps } from "./emails/welcome";
@@ -37,3 +38,4 @@ export type { WinbackDay14Props } from "./emails/winback-day14";
 export type { NpsDay30Props } from "./emails/nps-day30";
 export type { MonthlyDigestProps } from "./emails/monthly-digest";
 export type { ThresholdAlertProps } from "./emails/threshold-alert";
+export type { LeadMagnetDeliveryProps } from "./emails/lead-magnet-delivery";

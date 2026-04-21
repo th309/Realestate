@@ -15,7 +15,7 @@ function normalizeFromEmail(from: string): string {
   return `PropertyIQ <${from.trim()}>`;
 }
 
-interface SendEmailOptions {
+export interface SendEmailOptions {
   to: string;
   subject: string;
   html?: string;
@@ -24,6 +24,7 @@ interface SendEmailOptions {
   emailType: string;
   metadata?: Record<string, unknown>;
   replyTo?: string;
+  attachments?: Array<{ filename: string; path: string }>;
 }
 
 @Injectable()
@@ -47,14 +48,20 @@ export class EmailService {
   async sendEmail(options: SendEmailOptions): Promise<boolean> {
     try {
       if (this.resend) {
-        const { error } = await this.resend.emails.send({
+        const payload: Record<string, unknown> = {
           from: this.fromEmail,
           to: [options.to],
           replyTo: options.replyTo,
           subject: options.subject,
           react: options.react,
           html: options.react ? undefined : options.html,
-        });
+        };
+        if (options.attachments && options.attachments.length > 0) {
+          payload.attachments = options.attachments;
+        }
+        const { error } = await this.resend.emails.send(
+          payload as unknown as Parameters<typeof this.resend.emails.send>[0],
+        );
 
         if (error) {
           this.logger.error(`Resend SDK error: ${JSON.stringify(error)}`);

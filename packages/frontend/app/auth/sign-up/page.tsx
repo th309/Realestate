@@ -34,6 +34,18 @@ function allRequirementsMet(password: string): boolean {
   return getPasswordRequirements(password).every((r) => r.met);
 }
 
+/** Read the content-pipeline attribution cookie set by /go/[slug]. */
+function readAttributionCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)__piq_attr=([^;]+)/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
 /** Map raw Supabase/OAuth error messages to user-friendly text. */
 function friendlyAuthError(message: string): string {
   const lower = message.toLowerCase();
@@ -137,6 +149,25 @@ function SignUpContent() {
 
       // Fire-and-forget welcome email
       fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
+
+      // Capture content-pipeline attribution: read the __piq_attr cookie
+      // set by /go/[slug] on first touch and forward it to the backend.
+      // Fire-and-forget; never block signup on attribution.
+      const attributionCookie = readAttributionCookie();
+      if (attributionCookie) {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        fetch(`${apiUrl}/api/auth-hooks/on-user-created`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: session.user.id,
+            cookieValue: attributionCookie,
+            tierAtSignup: "free",
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      }
 
       router.push(redirectTo);
       return;
