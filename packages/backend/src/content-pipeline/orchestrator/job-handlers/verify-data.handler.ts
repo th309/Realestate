@@ -17,20 +17,27 @@ export class VerifyDataHandler {
     this.logger.log(`[PIPE] verify-data.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
-      const { data: scriptAsset } = await client
+      // Use order-by-created + limit(1) instead of .single() because retries
+      // insert fresh script/payload rows alongside the originals — .single()
+      // throws on multi-row even when the data is valid.
+      const { data: scriptRows } = await client
         .from('content_assets')
         .select('metadata')
         .eq('run_id', runId)
         .eq('kind', 'script')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const scriptAsset = scriptRows?.[0];
       if (!scriptAsset) throw new Error('script asset not found');
 
-      const { data: payloadAsset } = await client
+      const { data: payloadRows } = await client
         .from('content_assets')
         .select('metadata')
         .eq('run_id', runId)
         .eq('kind', 'mcp_payload')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const payloadAsset = payloadRows?.[0];
       if (!payloadAsset) throw new Error('mcp_payload asset not found');
 
       const script = scriptAsset.metadata.scripts[0];

@@ -49,12 +49,19 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     if (!connectionString) {
       throw new Error('SUPABASE_DB_URL is required for content-pipeline queue');
     }
+    // Local dev and Railway share the same Postgres, so they'd otherwise
+    // fight over the same pg-boss queue — local retries get stolen by
+    // Railway and vice versa. Segmenting by schema gives each environment
+    // its own queue tables. Set PGBOSS_SCHEMA=pgboss_local in .env.local;
+    // Railway leaves it unset to keep the prod default.
+    const schema = process.env.PGBOSS_SCHEMA ?? 'pgboss';
     this.boss = new PgBoss({
       connectionString,
-      schema: 'pgboss',
+      schema,
       retryLimit: 0,
       retentionDays: 30,
     });
+    this.logger.log(`pg-boss schema=${schema}`);
     this.boss.on('error', (err) => this.logger.error('pg-boss error', err));
     await this.boss.start();
 

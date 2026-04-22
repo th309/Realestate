@@ -5,6 +5,7 @@ import {
   VIDEO_RENDERER,
   VideoRenderer,
 } from '../../drivers/video-renderer.interface';
+import { getAssetSignedUrl } from '../../asset-signing';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { readFileSync } from 'fs';
@@ -38,18 +39,15 @@ export class RenderVideoHandler {
         .single();
       if (!payload) throw new Error('mcp_payload asset not found');
 
-      const { data: audio } = await client
-        .from('content_assets')
-        .select('storage_url')
-        .eq('run_id', runId)
-        .eq('kind', 'audio')
-        .single();
-      if (!audio) throw new Error('audio asset not found');
+      // Voiceover travels into the Remotion composition via a signed URL —
+      // the compositor's <Audio> component fetches it and mixes natively,
+      // so there's no download-to-tmp or ffmpeg post-mux step.
+      const audioSigned = await getAssetSignedUrl(client, runId, 'audio');
+      if (!audioSigned) throw new Error('audio asset not found');
 
-      const audioPath = await this.downloadFromStorage(audio.storage_url);
       const videoPath = join(tmpdir(), `video-${runId}.mp4`);
       this.logger.log(
-        `[PIPE] render-video run=${runId} audioPath=${audioPath} outputPath=${videoPath} format=${run.format}`,
+        `[PIPE] render-video run=${runId} audioUrl=<signed> outputPath=${videoPath} format=${run.format}`,
       );
       this.logger.log(
         `[PIPE] render-video run=${runId} dataBundle.score=${JSON.stringify(payload.metadata?.score)}`,
@@ -62,9 +60,9 @@ export class RenderVideoHandler {
           resolvedMarket: run.resolved_geo,
           dataBundle: payload.metadata,
           ctaUrl: '',
+          audioUrl: audioSigned.url,
         },
         outputPath: videoPath,
-        audioPath,
       });
       this.logger.log(
         `[PIPE] render-video run=${runId} result.videoPath=${result.videoPath} durationMs=${result.durationMs} renderWallMs=${result.renderWallMs}`,
@@ -95,20 +93,6 @@ export class RenderVideoHandler {
         `rendering_video: ${(err as Error).message}`,
       );
     }
-  }
-
-  private async downloadFromStorage(supabaseUrl: string): Promise<string> {
-    const match = supabaseUrl.match(/^supabase:\/\/([^/]+)\/(.+)$/);
-    if (!match) throw new Error(`invalid supabase url: ${supabaseUrl}`);
-    const [, bucket, path] = match;
-    const client = this.supabase.getClient();
-    const { data, error } = await client.storage.from(bucket).download(path);
-    if (error) throw error;
-    if (!data) throw new Error(`no data downloaded from ${supabaseUrl}`);
-    const { writeFileSync } = await import('fs');
-    const localPath = join(tmpdir(), `dl-${Date.now()}.bin`);
-    writeFileSync(localPath, Buffer.from(await data.arrayBuffer()));
-    return localPath;
   }
 
   private async uploadToStorage(

@@ -5,7 +5,6 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { renderVideo } from "./render";
 
-// Unconditional trace so we see every invocation regardless of stdout capture
 const traceLog = join(tmpdir(), "render-cli-trace.log");
 try {
   appendFileSync(
@@ -21,18 +20,9 @@ program
   .requiredOption("--format <format>", "format key")
   .requiredOption("--props-json <path>", "path to JSON file with props")
   .requiredOption("--output <path>", "output mp4 path")
-  .option("--audio <path>", "pre-rendered audio path")
   .parse();
 
 const opts = program.opts();
-try {
-  appendFileSync(
-    traceLog,
-    `[${new Date().toISOString()}] parsed opts=${JSON.stringify(opts)}\n`,
-  );
-} catch {
-  // ignore
-}
 
 (async () => {
   try {
@@ -41,7 +31,6 @@ try {
     const result = await renderVideo({
       props,
       outputPath: opts.output,
-      audioPath: opts.audio,
     });
     console.log(JSON.stringify({ ok: true, ...result }));
   } catch (err) {

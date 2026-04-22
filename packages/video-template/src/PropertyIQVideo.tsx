@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence } from "remotion";
+import { AbsoluteFill, Audio, Sequence } from "remotion";
 import { VideoProps, FORMAT_CONFIGS } from "./types";
 import { VideoLayout } from "./layout/VideoLayout";
 import { BrandBumper } from "./primitives/BrandBumper";
@@ -48,6 +48,7 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
+      {props.audioUrl && <Audio src={props.audioUrl} />}
     </VideoLayout>
   );
 };
