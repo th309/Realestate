@@ -40,7 +40,12 @@ export function nextStateOnSuccess(
     case 'linting_voice':
       return 'rendering_voice';
     case 'rendering_voice':
-      return 'timing_captions';
+      // Captions feature is P2. Until CAPTIONS_ENABLED=true is set and a
+      // time-captions handler is wired to the render-captions queue, skip
+      // directly to rendering_video so P1 runs complete without stalling.
+      return process.env.CAPTIONS_ENABLED === 'true'
+        ? 'timing_captions'
+        : 'rendering_video';
     case 'timing_captions':
       return 'rendering_video';
     case 'rendering_video':

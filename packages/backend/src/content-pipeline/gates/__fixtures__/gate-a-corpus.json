@@ -86,7 +86,7 @@
     },
     {
       "name": "multiple_claims_one_bad",
-      "script": "Cleveland's PIQ is 78 and Austin's is 80.",
+      "script": "Cleveland's PIQ is 78 and Austin's is 95.",
       "payload": { "scores": { "Cleveland": 78, "Austin": 82 } },
       "expectPass": false,
       "expectViolation": "score"

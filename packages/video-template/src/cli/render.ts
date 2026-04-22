@@ -19,14 +19,20 @@ export async function renderVideo(
 ): Promise<{ outputPath: string; durationMs: number }> {
   const validated = VideoPropsSchema.parse(opts.props);
 
+  // At runtime this file lives at either:
+  //   src/cli/render.ts   (when running via ts-node in dev)
+  //   dist/cli/render.js  (when running the compiled CLI)
+  // In both cases the Remotion root lives at <package>/src/index.ts.
+  // Walk up two levels from __dirname (cli -> pkg root) then into src/.
   const bundled = await bundle({
-    entryPoint: path.resolve(__dirname, "..", "index.ts"),
+    entryPoint: path.resolve(__dirname, "..", "..", "src", "index.ts"),
     webpackOverride: (config) => config,
   });
 
+  const compositionId = validated.format.replace(/_/g, "-");
   const composition = await selectComposition({
     serveUrl: bundled,
-    id: validated.format,
+    id: compositionId,
     inputProps: validated as unknown as Record<string, unknown>,
   });
 
