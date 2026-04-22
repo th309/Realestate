@@ -17,32 +17,88 @@ This document walks through the one-time OAuth setup for the YouTube Shorts publ
 
 ## Step 2: Create OAuth client
 
-1. In the same project, go to APIs and Services, Credentials.
-2. Click "Create credentials", "OAuth client ID".
-3. Application type: "Web application".
-4. Authorized redirect URIs: add your backend's callback URL.
-   - Local development: `http://localhost:3001/api/admin/content-pipeline/platforms/youtube_shorts/oauth-callback`
-   - Staging: `https://<staging-domain>/api/admin/content-pipeline/platforms/youtube_shorts/oauth-callback`
-5. Save. Copy the client ID and client secret.
+**Important:** Steps 3 and 4 must be done BEFORE Step 2 in Google's current UI. Google refuses to let you create an OAuth client until the consent screen is configured. Do Steps 3, 4, then 2.
 
-## Step 3: OAuth consent screen
+Store the client ID and secret from Step 2 in your password manager. Never commit them to git.
 
-1. Navigate to APIs and Services, OAuth consent screen.
-2. User type: External.
-3. Fill in app name, user support email, developer contact. App domain: `propertyiq.app`.
-4. Scopes: add `https://www.googleapis.com/auth/youtube.upload` and `https://www.googleapis.com/auth/youtube.readonly`.
-5. Test users: add the email of the test YouTube channel's owner.
-6. Save. Do not publish (keeps us in test mode; we do not need public OAuth consent for a single-operator pipeline).
+## Step 3: Configure the OAuth consent screen (renamed to "Auth platform" in late 2025)
 
-## Step 4: Exchange for a refresh token
+Google split the old single-page consent screen into four tabs. You fill out all four.
 
-Either use the Connect button in the admin UI (Platforms page, YouTube Shorts row), or use the OAuth Playground:
+1. In your Cloud project, go to **APIs & Services → OAuth consent screen** (sidebar). In the new UI, this page now shows as **APIs & Services → Auth platform** with a left sub-nav.
 
-1. Go to https://developers.google.com/oauthplayground/
-2. In the gear icon, "Use your own OAuth credentials", paste client ID and secret.
-3. In the left panel, find YouTube Data API v3, select the two scopes.
-4. Click "Authorize APIs", sign in with the test channel owner, grant access.
-5. Click "Exchange authorization code for tokens". Copy the refresh token.
+2. **Audience** tab
+   - Click "Audience" in the left sub-nav.
+   - User type: **External**. Save.
+   - Scroll to "Test users" and add the email of your test YouTube channel's owner (and your own email if different). Save.
+   - Keep "Publishing status" as **Testing**. Do not click "Publish app".
+
+3. **Branding** tab
+   - App name: `PropertyIQ Content Pipeline`
+   - User support email: your email
+   - Authorized domains: add `propertyiq.app`
+   - Developer contact information: your email
+   - Save.
+
+4. **Data access** tab (where scopes live now)
+   - Click "Add or remove scopes".
+   - In the scope picker, search for `youtube`.
+   - Check these two scopes:
+     - `.../auth/youtube.upload` (Manage your YouTube videos)
+     - `.../auth/youtube.readonly` (View your YouTube account)
+   - Click "Update", then **Save** at the bottom of the Data access page.
+
+5. **Clients** tab
+   - Leave empty for now. You'll create the client in Step 2 below.
+
+## Step 2: Create the OAuth client
+
+Now that the consent screen is configured, Google will let you create the client.
+
+1. Still under **APIs & Services → Auth platform**, click the **Clients** tab.
+2. Click **Create client**.
+3. Application type: **Web application**.
+4. Name: `content-pipeline-youtube` (anything, just a label).
+5. Authorized redirect URIs: click **Add URI** and paste exactly: `https://developers.google.com/oauthplayground`
+   - This single URI lets you get the refresh token via OAuth Playground in Step 4. You do NOT need to add your backend's callback URL because the backend never runs the interactive OAuth flow; it only uses the refresh token saved in env vars.
+6. Click **Create**.
+7. A dialog shows "Client ID" and "Client secret". Copy both immediately — you can revisit them later but only the client secret stays hidden unless you click a show-icon.
+
+**Fill in below then clear/redact before committing:**
+
+```
+Client ID:      <paste>.apps.googleusercontent.com
+Client secret:  GOCSPX-<paste>
+```
+
+## Step 4: Exchange for a refresh token via OAuth Playground
+
+OAuth Playground is Google's browser tool for getting tokens out of an OAuth app without spinning up your own redirect server.
+
+1. Open https://developers.google.com/oauthplayground/
+2. Click the **gear icon** (top right).
+3. Check the box: **Use your own OAuth credentials**.
+4. Paste the Client ID and Client secret from Step 2. Do NOT close the gear panel yet.
+5. Confirm "OAuth flow" is **Server-side** and "Access type" is **Offline** (this is what triggers a refresh token being returned). Then close the panel.
+6. In the **left panel "Step 1 Select & authorize APIs"**:
+   - Do NOT paste scope URLs into the box at the top. Scroll the list of services below instead.
+   - Find "YouTube Data API v3" in the list. Click it to expand.
+   - Check both scopes:
+     - `https://www.googleapis.com/auth/youtube.readonly`
+     - `https://www.googleapis.com/auth/youtube.upload`
+   - Click the blue **Authorize APIs** button.
+7. Google opens a consent page. Sign in with the **test YouTube channel owner's account** (not any other Google account — it must be one of the Test users you added in Step 3).
+8. You'll see a yellow warning: "Google hasn't verified this app". Click **Advanced**, then **Go to PropertyIQ Content Pipeline (unsafe)**. This is normal because your app is in Testing mode. Only Test users can click through this warning.
+9. Grant the two scopes.
+10. You're redirected back to OAuth Playground at "Step 2 Exchange authorization code for tokens". Click the blue **Exchange authorization code for tokens** button.
+11. A panel shows `access_token`, `refresh_token`, and other fields. **Copy the `refresh_token` value** (starts with `1//`). This is the long-lived credential the backend will use.
+
+**Troubleshooting**
+
+- "Error 400: redirect_uri_mismatch" → the redirect URI on your OAuth client doesn't match `https://developers.google.com/oauthplayground`. Go back to Step 2.5 and verify it's set exactly, no trailing slash.
+- "Error 403: access_denied" → the Google account you signed in with isn't in the Test users list. Add it in Step 3.2 and retry.
+- No `refresh_token` field in the response → Access type wasn't "Offline" in the gear panel. Redo from Step 4.2.
+- Accidentally clicked "Publish app" in the Audience tab → roll it back to Testing; or complete Google's app verification (takes weeks). For a single-operator pipeline, always stay in Testing.
 
 ## Step 5: Configure environment variables
 
