@@ -16,6 +16,7 @@ coverage/
 .nyc_output
 test-results/
 packages/frontend/test-results/
+packages/frontend/playwright-report/
 screenshots/
 
 # Next.js
@@ -52,6 +53,7 @@ Thumbs.db
 
 # Supabase
 .supabase/
+supabase/.temp/
 
 # Logs
 logs/
