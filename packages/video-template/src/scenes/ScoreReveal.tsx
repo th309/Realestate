@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import { COLORS, scoreTierColor, scoreTierLabel } from "../constants";
 import type { TrendDirection } from "../types";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface ScoreRevealProps {
   market: string;
@@ -16,7 +17,6 @@ interface ScoreRevealProps {
   trend: TrendDirection;
   trendChange: number;
   periodDate: string;
-  isVertical?: boolean;
 }
 
 export const ScoreReveal: React.FC<ScoreRevealProps> = ({
@@ -26,10 +26,10 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
   trend,
   trendChange,
   periodDate,
-  isVertical,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   const tierColor = scoreTierColor(score);
 
@@ -46,7 +46,9 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
     config: { damping: 20, stiffness: 80, mass: 1 },
     durationInFrames: 120,
   });
-  const displayScore = Math.round(interpolate(counterProgress, [0, 1], [0, score]));
+  const displayScore = Math.round(
+    interpolate(counterProgress, [0, 1], [0, score]),
+  );
 
   // Arc circle animation (SVG stroke-dashoffset trick)
   const circumference = 2 * Math.PI * 160;
@@ -66,7 +68,11 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
   });
 
   const trendColor =
-    trend === "up" ? COLORS.trendUp : trend === "down" ? COLORS.trendDown : COLORS.trendStable;
+    trend === "up"
+      ? COLORS.trendUp
+      : trend === "down"
+        ? COLORS.trendDown
+        : COLORS.trendStable;
   const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "●";
   const trendLabel =
     trend === "stable"
@@ -113,7 +119,12 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
         <svg
           width={arcSize}
           height={arcSize}
-          style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            transform: "rotate(-90deg)",
+          }}
         >
           {/* Track */}
           <circle
@@ -220,7 +231,11 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
           opacity: trendOpacity,
         }}
       >
-        Scored {new Date(periodDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        Scored{" "}
+        {new Date(periodDate).toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })}
       </div>
     </div>
   );

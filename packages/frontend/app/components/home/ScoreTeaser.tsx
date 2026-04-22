@@ -1,3 +1,6 @@
+import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
+import { ScoreTeaserRow } from "./ScoreTeaserRow";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // Inlined from ScoreDisplay — that module is "use client" and can't be
@@ -39,28 +42,9 @@ async function fetchTopScores(sort: "asc" | "desc"): Promise<MarketScore[]> {
   }
 }
 
-function ScoreRow({ market }: { market: MarketScore }) {
-  const color = getScoreColor(market.score);
-  const label = getScoreLabel(market.score);
-
-  return (
-    <div className="flex items-center justify-between py-2.5 border-b border-white/10 last:border-0">
-      <span className="text-sm text-white font-medium truncate mr-4">
-        {market.location_name}
-      </span>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xs text-[#C5CAE9] uppercase tracking-wide">
-          {label}
-        </span>
-        <span
-          className="font-[family-name:var(--font-roboto-mono)] text-sm font-bold w-8 text-center rounded-md px-1.5 py-0.5"
-          style={{ color, textShadow: "0 0 1px rgba(0,0,0,0.1)" }}
-        >
-          {market.score}
-        </span>
-      </div>
-    </div>
-  );
+function resolveMetroHref(cbsaCode: string): string {
+  const metro = CBSA_TO_METRO.get(cbsaCode);
+  return metro ? `/markets/${metro.slug}` : `/map?geo=metro&id=${cbsaCode}`;
 }
 
 export async function ScoreTeaser() {
@@ -94,8 +78,19 @@ export async function ScoreTeaser() {
             <h3 className="text-sm font-semibold text-[#C5CAE9] uppercase tracking-wide mb-3">
               Hottest Markets
             </h3>
-            {hottest.map((m) => (
-              <ScoreRow key={m.location_id} market={m} />
+            {hottest.map((m, i) => (
+              <ScoreTeaserRow
+                key={m.location_id}
+                rank={i + 1}
+                geoLevel="metro"
+                geoId={m.location_id}
+                name={m.location_name}
+                score={m.score}
+                hotOrCold="hot"
+                href={resolveMetroHref(m.location_id)}
+                label={getScoreLabel(m.score)}
+                color={getScoreColor(m.score)}
+              />
             ))}
           </div>
 
@@ -103,8 +98,19 @@ export async function ScoreTeaser() {
             <h3 className="text-sm font-semibold text-[#C5CAE9] uppercase tracking-wide mb-3">
               Coldest Markets
             </h3>
-            {coldest.map((m) => (
-              <ScoreRow key={m.location_id} market={m} />
+            {coldest.map((m, i) => (
+              <ScoreTeaserRow
+                key={m.location_id}
+                rank={i + 1}
+                geoLevel="metro"
+                geoId={m.location_id}
+                name={m.location_name}
+                score={m.score}
+                hotOrCold="cold"
+                href={resolveMetroHref(m.location_id)}
+                label={getScoreLabel(m.score)}
+                color={getScoreColor(m.score)}
+              />
             ))}
           </div>
         </div>

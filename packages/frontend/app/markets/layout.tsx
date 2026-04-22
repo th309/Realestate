@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SeoPageConversionBar } from "@/app/components/seo/SeoPageConversionBar";
 
 export const metadata: Metadata = {
   title: "Housing Markets - Browse 925+ US Metro Areas",
@@ -12,5 +13,10 @@ export default function MarketsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <SeoPageConversionBar context="market" />
+    </>
+  );
 }

@@ -1,0 +1,69 @@
+<!-- packages/backend/src/content-pipeline/lead-magnets/templates/market_snapshot.html.ejs -->
+<h1><%= dataBundle.geo.canonical_name %> Market Snapshot</h1>
+<p style="font-size: 11pt; color: #5C6BC0;">
+  Prepared for <%= userContext.userName %> on <%= today %>
+</p>
+
+<div style="display: flex; align-items: center; gap: 32px; margin: 32px 0;">
+  <div class="score-ring"><%= dataBundle.score.propertyiq_score %></div>
+  <div>
+    <h2>PropertyIQ Score</h2>
+    <p style="font-size: 14pt; margin: 0;">
+      Grade: <strong><%= dataBundle.score.grade %></strong>
+    </p>
+    <p style="font-size: 10pt; color: #5C6BC0; margin: 4px 0 0;">
+      Confidence: <%= dataBundle.score.confidence %>
+    </p>
+  </div>
+</div>
+
+<h2>Key Metrics</h2>
+<div
+  style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;"
+>
+  <% if (dataBundle.home_value) { %>
+  <div class="stat-card">
+    <div class="stat-value">
+      $<%= Math.round(dataBundle.home_value.value / 1000).toLocaleString() %>K
+    </div>
+    <div class="stat-label">
+      Median Home Value (<%= dataBundle.home_value.yoy_pct >= 0 ? '+' : '' %><%=
+      dataBundle.home_value.yoy_pct.toFixed(1) %>% YoY)
+    </div>
+  </div>
+  <% } %> <% if (dataBundle.rent) { %>
+  <div class="stat-card">
+    <div class="stat-value">$<%= dataBundle.rent.value.toLocaleString() %></div>
+    <div class="stat-label">
+      Median Rent (<%= dataBundle.rent.yoy_pct >= 0 ? '+' : '' %><%=
+      dataBundle.rent.yoy_pct.toFixed(1) %>% YoY)
+    </div>
+  </div>
+  <% } %> <% if (dataBundle.economic) { %>
+  <div class="stat-card">
+    <div class="stat-value">
+      <%= dataBundle.economic.unemployment_rate.toFixed(1) %>%
+    </div>
+    <div class="stat-label">Unemployment</div>
+  </div>
+  <% } %> <% if (dataBundle.demographics) { %>
+  <div class="stat-card">
+    <div class="stat-value">
+      <%= (dataBundle.demographics.population / 1000).toFixed(0) %>K
+    </div>
+    <div class="stat-label">Population</div>
+  </div>
+  <% } %>
+</div>
+
+<h2>What this means</h2>
+<p style="font-size: 11pt; line-height: 1.5;">
+  The PropertyIQ Score blends inventory, days on market, and sold-above-list
+  signals into a single 0-99 rating. A score of <%=
+  dataBundle.score.propertyiq_score %> places <%= dataBundle.geo.canonical_name
+  %> in the <% if (dataBundle.score.propertyiq_score >= 80) { %>top tier for
+  seller advantage. <% } else if (dataBundle.score.propertyiq_score >= 60) {
+  %>upper-middle range for healthy demand. <% } else if
+  (dataBundle.score.propertyiq_score >= 40) { %>balanced range with neither side
+  dominant. <% } else { %>buyer-favorable range.<% } %>
+</p>

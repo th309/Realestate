@@ -28,11 +28,21 @@ async function addToResendContacts(
   }
 }
 
-const VALID_SOURCES = ["homepage", "city-page", "exit-intent", "newsletter-page"] as const;
+const VALID_SOURCES = [
+  "homepage",
+  "city-page",
+  "exit-intent",
+  "newsletter-page",
+  "sticky-bar",
+  "seo_conversion_bar",
+] as const;
+
+const VALID_CONTEXTS = ["market", "blog"] as const;
 
 const newsletterSignupSchema = z.object({
   email: z.string().email("Invalid email address").max(320),
   source: z.enum(VALID_SOURCES).optional(),
+  context: z.enum(VALID_CONTEXTS).optional(),
 });
 
 /** 5 requests per IP per 15-minute window. */
@@ -97,7 +107,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, source } = parsed.data;
+  const { email, source, context } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
   // --- Check for existing confirmed subscriber ---
@@ -126,11 +136,11 @@ export async function POST(request: Request) {
     .upsert(
       {
         email: normalizedEmail,
-        subscribed_at: new Date().toISOString(),
         confirmation_token: confirmationToken,
         confirmed: false,
         confirmed_at: null,
         ...(source ? { source } : {}),
+        ...(context ? { context } : {}),
       },
       { onConflict: "email" },
     );

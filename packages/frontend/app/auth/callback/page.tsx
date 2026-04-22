@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 
 /**
  * Auth callback page — handles session establishment after email
@@ -54,7 +55,8 @@ function CallbackHandler() {
     ran.current = true;
 
     const type = searchParams.get("type");
-    const next = searchParams.get("next") ?? "/map";
+    const explicitNext = searchParams.get("next");
+    const next = explicitNext ?? "/map";
     const tosFromParam = searchParams.get("tos") === "1";
     const errorParam = searchParams.get("error");
     const errorDesc = searchParams.get("error_description");
@@ -122,19 +124,38 @@ function CallbackHandler() {
             return;
           }
 
-          // New signups → onboarding; returning users → requested page
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const profileResult: any = await withTimeout(
-            supabase
-              .from("user_profiles")
-              .select("tos_accepted_at")
-              .eq("id", session.user.id)
-              .single(),
-          );
-          const profile = profileResult?.data;
+          // Detect new OAuth signup: profile created within last 60 seconds.
+          // Supabase's OAuth callback doesn't expose an is_new_user flag, so we use this
+          // heuristic — safe because returning sign-ins have profiles created long ago.
+          let isNewSignup = false;
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const profileResult: any = await withTimeout(
+              supabase
+                .from("user_profiles")
+                .select("created_at")
+                .eq("id", session.user.id)
+                .maybeSingle(),
+            );
+            const profile = profileResult?.data;
+            isNewSignup =
+              !!profile &&
+              Date.now() - new Date(profile.created_at).getTime() < 60_000;
+            if (isNewSignup) {
+              trackEvent("conversion.signup_complete", { method: "oauth" });
+              flush();
+            }
+          } catch (err) {
+            // Analytics must never break auth. Swallow and continue.
+            console.error("OAuth signup event tracking failed", err);
+          }
 
-          const isNewSignup = profile && !profile.tos_accepted_at;
-          const destination = isNewSignup ? "/get-started" : next;
+          // New signups → onboarding; returning users → requested page
+          const destination = isNewSignup
+            ? explicitNext
+              ? `/get-started?next=${encodeURIComponent(explicitNext)}`
+              : "/get-started"
+            : next;
           debugLog("3_redirect", { to: destination, isNewSignup });
           router.replace(destination);
         } catch (err) {

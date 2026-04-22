@@ -1,0 +1,138 @@
+{
+  "cases": [
+    {
+      "name": "hallucinated_ranking",
+      "script": "Cleveland is the number 1 cashflow market in Ohio.",
+      "payload": {
+        "top_cashflow_markets": [
+          { "rank": 1, "name": "Cincinnati" },
+          { "rank": 2, "name": "Cleveland" }
+        ]
+      },
+      "expectPass": false,
+      "expectViolation": "ranking"
+    },
+    {
+      "name": "drifted_price",
+      "script": "The median home price in Hartford is $450,000.",
+      "payload": { "home_value": { "value": 385000 } },
+      "expectPass": false,
+      "expectViolation": "price"
+    },
+    {
+      "name": "exact_score_match",
+      "script": "The PropertyIQ Score for Austin is 82.",
+      "payload": { "score": { "propertyiq_score": 82 } },
+      "expectPass": true
+    },
+    {
+      "name": "price_within_tolerance",
+      "script": "Homes in Denver go for about $600,000.",
+      "payload": { "home_value": { "value": 599500 } },
+      "expectPass": true
+    },
+    {
+      "name": "percent_within_tolerance",
+      "script": "Rents grew 4 percent in Tampa.",
+      "payload": { "rent": { "yoy_pct": 4.3 } },
+      "expectPass": true
+    },
+    {
+      "name": "percent_out_of_tolerance",
+      "script": "Unemployment in Phoenix is at 2 percent.",
+      "payload": { "economic": { "unemployment_rate": 4.1 } },
+      "expectPass": false,
+      "expectViolation": "percentage"
+    },
+    {
+      "name": "score_off_by_one",
+      "script": "Cleveland scored 79.",
+      "payload": { "score": { "propertyiq_score": 78 } },
+      "expectPass": false,
+      "expectViolation": "score"
+    },
+    {
+      "name": "missing_data",
+      "script": "Boise has a PropertyIQ Score of 65.",
+      "payload": { "score": null },
+      "expectPass": false,
+      "expectViolation": "score"
+    },
+    {
+      "name": "ranking_swap",
+      "script": "Austin is rank 3 in appreciation.",
+      "payload": { "rankings": [{ "rank": 1, "name": "Austin" }] },
+      "expectPass": false,
+      "expectViolation": "ranking"
+    },
+    {
+      "name": "count_mismatch",
+      "script": "We analyzed 100 markets.",
+      "payload": { "count": 50 },
+      "expectPass": false,
+      "expectViolation": "count"
+    },
+    {
+      "name": "decimal_handling",
+      "script": "The home value grew 3.5 percent.",
+      "payload": { "home_value": { "yoy_pct": 3.6 } },
+      "expectPass": true
+    },
+    {
+      "name": "percentage_point_confusion",
+      "script": "Unemployment fell 2 percentage points.",
+      "payload": { "economic": { "unemployment_delta_pp": 1.8 } },
+      "expectPass": true
+    },
+    {
+      "name": "multiple_claims_one_bad",
+      "script": "Cleveland's PIQ is 78 and Austin's is 80.",
+      "payload": { "scores": { "Cleveland": 78, "Austin": 82 } },
+      "expectPass": false,
+      "expectViolation": "score"
+    },
+    {
+      "name": "multiple_claims_all_good",
+      "script": "Cleveland's PIQ is 78 and Austin's is 82.",
+      "payload": { "scores": { "Cleveland": 78, "Austin": 82 } },
+      "expectPass": true
+    },
+    {
+      "name": "negative_delta",
+      "script": "The score fell 5 points.",
+      "payload": { "delta": -5 },
+      "expectPass": true
+    },
+    {
+      "name": "date_within_tolerance",
+      "script": "As of March 2026, ...",
+      "payload": { "period_date": "2026-02-15" },
+      "expectPass": true
+    },
+    {
+      "name": "date_out_of_tolerance",
+      "script": "As of 2025, ...",
+      "payload": { "period_date": "2026-03-01" },
+      "expectPass": false,
+      "expectViolation": "date"
+    },
+    {
+      "name": "rent_exact",
+      "script": "Median rent is $2,400.",
+      "payload": { "rent": { "value": 2400 } },
+      "expectPass": true
+    },
+    {
+      "name": "percent_vs_ratio_confusion",
+      "script": "Sold 8 percent above list.",
+      "payload": { "sold_above_list_pct": 8.2 },
+      "expectPass": true
+    },
+    {
+      "name": "rounded_price",
+      "script": "About $1 million.",
+      "payload": { "home_value": { "value": 1004500 } },
+      "expectPass": true
+    }
+  ]
+}

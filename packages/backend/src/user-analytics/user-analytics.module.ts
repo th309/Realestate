@@ -17,6 +17,7 @@ import { ConversionAnalyticsService } from './conversion-analytics.service';
 import { DailyRollupService } from './daily-rollup.service';
 import { FunnelEngineService } from './funnel-engine.service';
 import { PageClassifierService } from './page-classifier.service';
+import { ServerEventEmitterService } from './server-event-emitter.service';
 import { UserAnalyticsController } from './user-analytics.controller';
 
 @Module({
@@ -40,6 +41,7 @@ import { UserAnalyticsController } from './user-analytics.controller';
     DailyRollupService,
     FunnelEngineService,
     PageClassifierService,
+    ServerEventEmitterService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [
@@ -53,6 +55,7 @@ import { UserAnalyticsController } from './user-analytics.controller';
     ConversionAnalyticsService,
     FunnelEngineService,
     PageClassifierService,
+    ServerEventEmitterService,
   ],
 })
 export class UserAnalyticsModule {}

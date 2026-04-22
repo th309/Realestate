@@ -21,6 +21,11 @@ import {
   ArrowLeft,
   Menu,
   X,
+  Plus,
+  Inbox,
+  Share2,
+  Settings,
+  Film,
 } from "lucide-react";
 
 interface NavItem {
@@ -92,6 +97,42 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Playbook",
         href: "/admin/entitlements/playbook",
         icon: BookOpen,
+      },
+    ],
+  },
+  {
+    title: "Content Pipeline",
+    items: [
+      {
+        label: "Dashboard",
+        href: "/admin/content-pipeline",
+        icon: Film,
+        exactMatch: true,
+      },
+      {
+        label: "Create Run",
+        href: "/admin/content-pipeline/new",
+        icon: Plus,
+      },
+      {
+        label: "Review Queue",
+        href: "/admin/content-pipeline/review",
+        icon: Inbox,
+      },
+      {
+        label: "Performance",
+        href: "/admin/content-pipeline/performance",
+        icon: BarChart3,
+      },
+      {
+        label: "Platforms",
+        href: "/admin/content-pipeline/platforms",
+        icon: Share2,
+      },
+      {
+        label: "Settings",
+        href: "/admin/content-pipeline/settings",
+        icon: Settings,
       },
     ],
   },

@@ -3,22 +3,31 @@
   "version": "1.0.0",
   "description": "Remotion video template for PropertyIQ YouTube channel",
   "private": true,
+  "bin": {
+    "render-video": "./dist/cli/render-cli.js"
+  },
   "scripts": {
     "start": "npx remotion studio",
-    "render": "npx remotion render StudioComposition out.mp4",
-    "render:shorts": "npx remotion render ShortsComposition out-shorts.mp4",
-    "build": "npx remotion bundle"
+    "render": "npx remotion render grade_reveal out.mp4",
+    "render:shorts": "npx remotion render grade_reveal out-shorts.mp4",
+    "build": "npx remotion bundle",
+    "build:cli": "tsc --project tsconfig.json",
+    "test": "jest"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.253",
     "@remotion/renderer": "^4.0.253",
+    "commander": "^13.1.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@remotion/cli": "^4.0.253",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "pngjs": "^7.0.0",
     "remotion": "^4.0.253",
     "typescript": "^5.0.0"
   }

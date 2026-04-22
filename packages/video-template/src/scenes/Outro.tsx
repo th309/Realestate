@@ -1,16 +1,24 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring, Easing } from "remotion";
+import {
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  spring,
+  Easing,
+} from "remotion";
 import { COLORS } from "../constants";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface OutroProps {
   ctaUrl: string;
   ctaLabel?: string;
-  isVertical?: boolean;
+  marketName?: string;
 }
 
-export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel, isVertical }) => {
+export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   const sceneOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: "clamp",
@@ -148,7 +156,14 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel, isVertical }) =>
       />
 
       {/* CTA */}
-      <div style={{ opacity: ctaOpacity, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          opacity: ctaOpacity,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
         <div
           style={{
             fontSize: ctaSize,

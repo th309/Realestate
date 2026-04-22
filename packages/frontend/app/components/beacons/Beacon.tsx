@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 
 interface BeaconProps {
   id: string;
   targetSelector: string;
+  targetFeature?: string;
   tooltip: string;
   href?: string;
   onDismiss: (id: string) => void;
@@ -13,6 +15,7 @@ interface BeaconProps {
 export function Beacon({
   id,
   targetSelector,
+  targetFeature,
   tooltip,
   href,
   onDismiss,
@@ -22,6 +25,7 @@ export function Beacon({
     top: number;
     right: number;
   } | null>(null);
+  const shownFiredRef = useRef(false);
 
   useEffect(() => {
     const el = document.querySelector(targetSelector);
@@ -40,11 +44,30 @@ export function Beacon({
     return () => window.removeEventListener("resize", handleResize);
   }, [targetSelector]);
 
+  useEffect(() => {
+    if (!position || shownFiredRef.current) return;
+    shownFiredRef.current = true;
+    trackEvent("beacon.shown", {
+      beacon_id: id,
+      target_feature: targetFeature ?? id,
+    });
+  }, [position, id, targetFeature]);
+
   if (!position) return null;
 
   const handleClick = () => {
-    onDismiss(id);
-    if (href) window.location.href = href;
+    if (href) {
+      trackEvent("beacon.clicked", {
+        beacon_id: id,
+        target_feature: targetFeature ?? id,
+      });
+      flush();
+      onDismiss(id);
+      window.location.href = href;
+    } else {
+      trackEvent("beacon.dismissed", { beacon_id: id });
+      onDismiss(id);
+    }
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { useInView } from "./hooks/useInView";
 import { HeroSearchBar } from "./HeroSearchBar";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 
 function fadeUp(inView: boolean, delay: string) {
   return {
@@ -86,12 +87,28 @@ export function HeroSection() {
         >
           <a
             href="/map"
+            onMouseDown={() => {
+              trackEvent("hero.cta_click", {
+                cta_id: "explore_map",
+                cta_label: "Explore the Map — Free",
+                destination: "/map",
+              });
+              flush();
+            }}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-[#1A237E] text-sm font-semibold shadow-md hover:bg-white/90 hover:shadow-lg transition-all duration-200"
           >
             Explore the Map — Free
           </a>
           <a
             href="/reports/sample"
+            onMouseDown={() => {
+              trackEvent("hero.cta_click", {
+                cta_id: "sample_report",
+                cta_label: "See a Sample AI Report",
+                destination: "/reports/sample",
+              });
+              flush();
+            }}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-all duration-200"
           >
             See a Sample AI Report

@@ -6,10 +6,7 @@ import { useHeartbeat } from "./heartbeat";
 import { setUserId, setTrackingExcluded } from "./tracker";
 import { useAuth } from "@/lib/auth";
 
-const EXCLUDED_EMAILS = new Set([
-  "troyhouston76@gmail.com",
-  "troy@propertyiq.app",
-]);
+const EXCLUDED_EMAILS = new Set<string>();
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

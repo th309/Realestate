@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PersonaCards } from "./PersonaCards";
 import { OnboardingSearch } from "./OnboardingSearch";
 import {
@@ -16,7 +16,18 @@ import type { SearchResult } from "@/app/map/types";
 type Phase = "persona" | "search";
 
 export default function GetStartedPage() {
+  return (
+    <Suspense>
+      <GetStartedContent />
+    </Suspense>
+  );
+}
+
+function GetStartedContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
+
   const [phase, setPhase] = useState<Phase>("persona");
   const [searchPlaceholder, setSearchPlaceholder] = useState(
     "Search for any market to analyze...",
@@ -45,7 +56,13 @@ export default function GetStartedPage() {
       incrementUsageStat("markets_viewed"),
     ]);
 
-    router.push(`/market/${result.id}?type=${result.type}&onboarding=true`);
+    // If the signup flow brought the user here with an intended destination, forward them
+    // after onboarding completes rather than trapping them on /market/...
+    if (nextPath) {
+      router.push(nextPath);
+    } else {
+      router.push(`/market/${result.id}?type=${result.type}&onboarding=true`);
+    }
   }
 
   return (

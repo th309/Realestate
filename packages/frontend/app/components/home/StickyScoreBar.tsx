@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface StickyScore {
   name: string;
@@ -20,6 +21,8 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [website, setWebsite] = useState(""); // honeypot
+  const shownFiredRef = useRef(false);
+  const triggerRef = useRef<"timer" | "scroll" | null>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem("piq_sticky_dismissed")) {
@@ -27,14 +30,22 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
       return;
     }
 
-    const timer = setTimeout(() => setVisible(true), 10_000);
+    const reveal = (trigger: "timer" | "scroll") => {
+      setVisible((prev) => {
+        if (prev) return prev;
+        triggerRef.current = trigger;
+        return true;
+      });
+    };
+
+    const timer = setTimeout(() => reveal("timer"), 10_000);
 
     const hero = document.getElementById("hero-heading");
     if (!hero) return () => clearTimeout(timer);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) setVisible(true);
+        if (!entry.isIntersecting) reveal("scroll");
       },
       { threshold: 0 },
     );
@@ -46,7 +57,16 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!visible || shownFiredRef.current) return;
+    shownFiredRef.current = true;
+    trackEvent("home.sticky_bar_shown", {
+      trigger: triggerRef.current ?? "unknown",
+    });
+  }, [visible]);
+
   function handleDismiss() {
+    trackEvent("home.sticky_bar_dismissed", {});
     setDismissed(true);
     sessionStorage.setItem("piq_sticky_dismissed", "1");
   }
@@ -64,6 +84,7 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
       if (res.ok) {
         setStatus("success");
         setEmail("");
+        trackEvent("home.sticky_bar_email_submitted", {});
       } else {
         setStatus("error");
       }

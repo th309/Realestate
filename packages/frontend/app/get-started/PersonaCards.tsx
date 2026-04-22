@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 const PERSONAS = [
   {
@@ -52,6 +53,10 @@ export function PersonaCards({ onSelect }: PersonaCardsProps) {
             key={p.value}
             onClick={() => {
               setSelected(p.value);
+              trackEvent("onboarding.persona_selected", {
+                persona: p.value,
+                persona_label: p.label,
+              });
               onSelect(p.value, p.searchPlaceholder);
             }}
             className={`rounded-xl border-2 p-5 text-center transition-all duration-200 ${

@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * - Redirects unauthenticated users away from protected routes
  * - Redirects authenticated users away from auth routes
  * - Blocks /_dev routes in production
+ * - Rate-limits content-pipeline short-link traffic on /go/
  */
 
 const PROTECTED_PREFIXES = [
@@ -22,6 +23,40 @@ const PROTECTED_PREFIXES = [
 const PUBLIC_PATHS = ["/reports/sample", "/reports/shared"];
 const AUTH_ROUTES = ["/auth/sign-in", "/auth/sign-up", "/auth/forgot-password"];
 
+/**
+ * In-memory rate limiter for short-link redirects.
+ *
+ * LIMITATIONS:
+ *  - Module-scoped Map; resets on every deploy.
+ *  - Per-edge-instance (Railway / Vercel may scale horizontally), so the
+ *    effective cap is `60 * instance_count` requests per minute per IP.
+ *  - Fine for slug-enumeration defense (plan security review item);
+ *    upgrade to Upstash Redis or similar for precise global limits.
+ */
+const SHORT_LINK_RATE_LIMIT = 60; // requests per window per IP
+const SHORT_LINK_RATE_WINDOW_MS = 60_000;
+const shortLinkHits = new Map<string, { count: number; resetAt: number }>();
+
+function checkShortLinkRate(ip: string): boolean {
+  const now = Date.now();
+  const entry = shortLinkHits.get(ip);
+  if (!entry || entry.resetAt < now) {
+    shortLinkHits.set(ip, {
+      count: 1,
+      resetAt: now + SHORT_LINK_RATE_WINDOW_MS,
+    });
+    // Opportunistic eviction so the Map doesn't grow unbounded in a long-lived edge instance.
+    if (shortLinkHits.size > 10_000) {
+      for (const [key, value] of shortLinkHits) {
+        if (value.resetAt < now) shortLinkHits.delete(key);
+      }
+    }
+    return true;
+  }
+  entry.count++;
+  return entry.count <= SHORT_LINK_RATE_LIMIT;
+}
+
 export async function middleware(request: NextRequest) {
   // Non-www → www redirect (301 permanent)
   const host = request.headers.get("host") || "";
@@ -30,6 +65,21 @@ export async function middleware(request: NextRequest) {
     url.host = "www.propertyiq.app";
     url.port = "";
     return NextResponse.redirect(url, 301);
+  }
+
+  // Short-link rate limit: 60 req/min per IP on the /go/ prefix.
+  // Runs before Supabase session work so hot paths stay cheap.
+  if (request.nextUrl.pathname.startsWith("/go/")) {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "unknown";
+    if (!checkShortLinkRate(ip)) {
+      return new NextResponse("rate limited", {
+        status: 429,
+        headers: { "retry-after": "60" },
+      });
+    }
   }
 
   let supabaseResponse = NextResponse.next({ request });

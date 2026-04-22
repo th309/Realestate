@@ -1,15 +1,16 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig, interpolate, Easing } from "remotion";
 import { COLORS, FPS } from "../constants";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface IntroProps {
   marketName: string;
-  isVertical?: boolean;
 }
 
-export const Intro: React.FC<IntroProps> = ({ marketName, isVertical }) => {
+export const Intro: React.FC<IntroProps> = ({ marketName }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   const opacity = interpolate(frame, [0, 20, 50, 60], [0, 1, 1, 0], {
     easing: Easing.ease,

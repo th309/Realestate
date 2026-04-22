@@ -38,7 +38,6 @@ import { BenchmarksModule } from './benchmarks/benchmarks.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { EmailModule } from './email/email.module';
-import { AnalyticsEventsModule } from './analytics-events/analytics-events.module';
 import { SupportModule } from './support/support.module';
 import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { PricingModule } from './pricing/pricing.module';
@@ -62,7 +61,9 @@ import { SurveysModule } from './surveys/surveys.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { SocialProofModule } from './social-proof/social-proof.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
+import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
 
 @Module({
   imports: [
@@ -120,7 +121,6 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     AlertsModule,
     RecommendationsModule,
     EmailModule,
-    AnalyticsEventsModule,
     SupportModule,
     MetricResolutionModule,
     PricingModule,
@@ -142,6 +142,8 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
     ReferralsModule,
     OnboardingModule,
     SocialProofModule,
+    SchedulingModule,
+    ContentPipelineModule,
   ],
   controllers: [AppController],
   providers: [

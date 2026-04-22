@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent } from "@/lib/analytics/tracker";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 
 interface PasswordRequirement {
   label: string;
@@ -32,6 +32,18 @@ function getPasswordRequirements(password: string): PasswordRequirement[] {
 
 function allRequirementsMet(password: string): boolean {
   return getPasswordRequirements(password).every((r) => r.met);
+}
+
+/** Read the content-pipeline attribution cookie set by /go/[slug]. */
+function readAttributionCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)__piq_attr=([^;]+)/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 /** Map raw Supabase/OAuth error messages to user-friendly text. */
@@ -61,7 +73,12 @@ function SignUpContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/map";
+  // New signups flow through /get-started by default. If the user arrived with an explicit
+  // ?redirect=..., preserve it via /get-started?next=... so onboarding can forward them on.
+  const explicitRedirect = searchParams.get("redirect");
+  const redirectTo = explicitRedirect
+    ? `/get-started?next=${encodeURIComponent(explicitRedirect)}`
+    : "/get-started";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -116,6 +133,7 @@ function SignUpContent() {
     // and send welcome email since the Supabase email hook is skipped.
     if (session) {
       trackEvent("conversion.signup_complete", { method: "email" });
+      flush(); // Send queued events via sendBeacon BEFORE any navigation unmounts this page
       const supabase = createSupabaseBrowserClient();
       await supabase.from("user_profiles").upsert(
         {
@@ -131,6 +149,25 @@ function SignUpContent() {
 
       // Fire-and-forget welcome email
       fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
+
+      // Capture content-pipeline attribution: read the __piq_attr cookie
+      // set by /go/[slug] on first touch and forward it to the backend.
+      // Fire-and-forget; never block signup on attribution.
+      const attributionCookie = readAttributionCookie();
+      if (attributionCookie) {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        fetch(`${apiUrl}/api/auth-hooks/on-user-created`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: session.user.id,
+            cookieValue: attributionCookie,
+            tierAtSignup: "free",
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      }
 
       router.push(redirectTo);
       return;
@@ -394,8 +431,8 @@ function SignUpContent() {
               Already have an account?{" "}
               <Link
                 href={
-                  redirectTo !== "/map"
-                    ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}`
+                  explicitRedirect
+                    ? `/auth/sign-in?redirect=${encodeURIComponent(explicitRedirect)}`
                     : "/auth/sign-in"
                 }
                 className="text-primary hover:text-primary/80 font-medium"

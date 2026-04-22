@@ -1,12 +1,18 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring, Easing } from "remotion";
+import {
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  spring,
+  Easing,
+} from "remotion";
 import { COLORS } from "../constants";
 import type { MarketStats } from "../types";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface StatCardsProps {
   market: string;
   stats: MarketStats;
-  isVertical?: boolean;
 }
 
 function formatPrice(n: number): string {
@@ -59,7 +65,14 @@ interface CardProps {
   isVertical: boolean;
 }
 
-const StatCard: React.FC<CardProps> = ({ label, icon, value, description, delay, isVertical }) => {
+const StatCard: React.FC<CardProps> = ({
+  label,
+  icon,
+  value,
+  description,
+  delay,
+  isVertical,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -103,7 +116,13 @@ const StatCard: React.FC<CardProps> = ({ label, icon, value, description, delay,
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: iconSize }}>{icon}</span>
-        <span style={{ fontSize: labelSize, color: COLORS.textMuted, fontWeight: 500 }}>
+        <span
+          style={{
+            fontSize: labelSize,
+            color: COLORS.textMuted,
+            fontWeight: 500,
+          }}
+        >
           {label}
         </span>
       </div>
@@ -118,14 +137,17 @@ const StatCard: React.FC<CardProps> = ({ label, icon, value, description, delay,
       >
         {value}
       </div>
-      <div style={{ fontSize: descSize, color: COLORS.textDim }}>{description}</div>
+      <div style={{ fontSize: descSize, color: COLORS.textDim }}>
+        {description}
+      </div>
     </div>
   );
 };
 
-export const StatCards: React.FC<StatCardsProps> = ({ market, stats, isVertical }) => {
+export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
+  const { isVertical } = useLayoutConfig();
 
   const sceneOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",

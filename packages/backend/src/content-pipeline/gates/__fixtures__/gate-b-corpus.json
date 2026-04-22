@@ -1,0 +1,59 @@
+{
+  "deterministic_fails": [
+    { "name": "em_dash", "script": "Cleveland just hit 78 — a great score." },
+    { "name": "en_dash", "script": "Cleveland just hit 78 – a great score." },
+    { "name": "game_changer", "script": "This market is a game-changer." },
+    { "name": "crushing_it", "script": "Cleveland is absolutely crushing it." },
+    { "name": "no_brainer", "script": "Investing here is a no-brainer." },
+    { "name": "literally", "script": "Rents literally doubled." },
+    { "name": "investor_edge", "script": "The InvestorEdge rating moved up." },
+    {
+      "name": "home_ready",
+      "script": "The HomeReady score says this is strong."
+    },
+    {
+      "name": "market_health",
+      "script": "Per the Market Health Index, this leads."
+    },
+    { "name": "bare_score", "script": "This score is 78." }
+  ],
+  "deterministic_passes": [
+    {
+      "name": "clean_hook",
+      "script": "The PropertyIQ Score for Cleveland just hit 78."
+    },
+    {
+      "name": "piq_prefix",
+      "script": "PIQ Score of 78 puts Cleveland in the top 20 percent."
+    },
+    {
+      "name": "hyphen_ok",
+      "script": "Class-A properties are leading the market."
+    },
+    { "name": "clean_body", "script": "Rents grew 4 percent year over year." },
+    {
+      "name": "cta_ok",
+      "script": "Get your free Market Snapshot at propertyiq.app."
+    },
+    {
+      "name": "data_citation",
+      "script": "Homes sold 8 percent above list with 12 days on market."
+    },
+    {
+      "name": "contrast",
+      "script": "Cleveland outscored Austin by 4 points on PIQ."
+    },
+    {
+      "name": "timeframe",
+      "script": "Over the past year, the PropertyIQ Score rose 6 points."
+    },
+    {
+      "name": "demographics",
+      "script": "Population grew 2 percent while income rose 5 percent."
+    },
+    {
+      "name": "direct_call",
+      "script": "The PropertyIQ Score is the only rating in town."
+    }
+  ]
+}

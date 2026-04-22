@@ -1,0 +1,73 @@
+/* packages/backend/src/content-pipeline/lead-magnets/shared/brand.css */
+:root {
+  --primary: #3949ab;
+  --primary-dark: #1a237e;
+  --primary-light: #c5cae9;
+  --accent: #00c853;
+  --error: #b3261e;
+  --warning: #ff8f00;
+  --surface: #fafbff;
+  --on-surface: #1a237e;
+  --outline: #e8eaf6;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Roboto, Arial, sans-serif;
+  color: var(--on-surface);
+  background: var(--surface);
+  margin: 0;
+  padding: 48px;
+}
+h1 {
+  font-size: 32pt;
+  color: var(--primary-dark);
+  margin: 0 0 16px;
+}
+h2 {
+  font-size: 20pt;
+  color: var(--primary);
+  margin: 24px 0 12px;
+}
+.score-ring {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 56pt;
+  font-weight: 700;
+}
+.stat-card {
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  padding: 20px;
+  background: white;
+}
+.stat-value {
+  font-family: 'Roboto Mono';
+  font-size: 24pt;
+  color: var(--primary-dark);
+}
+.stat-label {
+  font-size: 11pt;
+  color: #5c6bc0;
+}
+.footer {
+  position: fixed;
+  bottom: 20px;
+  left: 48px;
+  right: 48px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9pt;
+  color: var(--primary);
+  border-top: 1px solid var(--outline);
+  padding-top: 8px;
+}

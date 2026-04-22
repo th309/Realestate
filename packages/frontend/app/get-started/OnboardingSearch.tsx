@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { SearchWidget } from "@/app/map/components/SearchWidget";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
 import type { SearchResult } from "@/app/map/types";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface OnboardingSearchProps {
   placeholder: string;
@@ -48,7 +49,14 @@ export function OnboardingSearch({
         showSearchResults={showSearchResults}
         searchRef={searchRef}
         onSearch={handleSearch}
-        onSelectResult={onMarketSelect}
+        onSelectResult={(result) => {
+          trackEvent("onboarding.get_started_search", {
+            geoLevel: result.type,
+            geoId: result.id,
+            geoName: result.name,
+          });
+          onMarketSelect(result);
+        }}
         onFocus={() => {}}
         placeholder={placeholder}
         showFavorites={false}
