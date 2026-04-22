@@ -45,6 +45,9 @@ import { MetricsPullerService } from './analytics/metrics-puller.service';
 import { Pull24hMetricsCron } from './crons/pull-24h-metrics.cron';
 import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
 
+import { PlatformManagerService } from './platform-manager.service';
+import { PipelineSettingsService } from './pipeline-settings.service';
+
 @Module({
   imports: [
     SupabaseModule,
@@ -101,6 +104,9 @@ import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
     PublishYouTubeShortsHandler,
     GenerateLeadMagnetHandler,
     HandlersBootstrapService,
+
+    PlatformManagerService,
+    PipelineSettingsService,
   ],
   exports: [
     ContentPipelineService,
