@@ -4,13 +4,28 @@
 FROM node:22-bookworm-slim AS base
 
 # 1. System dependencies - cached unless this layer changes
+# content-pipeline P1 adds Python 3 + edge-tts (short-form TTS) and
+# system Chromium + fonts for Puppeteer (lead-magnet PDF rendering).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     wget \
+    python3 \
+    python3-pip \
+    python3-venv \
+    chromium \
+    fonts-liberation \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
-# Skip Puppeteer Chromium download — Puppeteer is dev-only (local Redfin scraping)
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# Install edge-tts (Microsoft's free TTS accessed via Python CLI).
+# `--break-system-packages` is required on Debian bookworm to install
+# into the system site-packages; safe because this is a container.
+RUN pip3 install --no-cache-dir --break-system-packages edge-tts==6.1.12
+
+# Puppeteer uses the system-installed Chromium above instead of downloading its own.
+# Skipping the in-package download saves ~170MB on image size and build time.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
