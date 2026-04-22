@@ -1,5 +1,5 @@
 // packages/backend/src/content-pipeline/gates/data-verifier.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { NumericClaim, GateResult, GateViolation } from './gate.types';
 
@@ -50,6 +50,7 @@ const EXTRACT_TOOL = {
 
 @Injectable()
 export class DataVerifierService {
+  private readonly logger = new Logger(DataVerifierService.name);
   private readonly client: Anthropic;
 
   constructor() {
@@ -60,14 +61,26 @@ export class DataVerifierService {
     const claims = await this.extractClaims(scriptText);
     const violations: GateViolation[] = [];
     const candidates = this.extractNumericValues(mcpPayload);
+    this.logger.log(
+      `[V2] verify: ${claims.length} claims vs ${candidates.length} candidates sample=${JSON.stringify(candidates.slice(0, 10))}`,
+    );
     for (const claim of claims) {
       const tolerance = this.toleranceFor(claim.category, claim.value);
+      this.logger.log(
+        `[V2]   claim val=${claim.value} cat=${claim.category} tol=${tolerance}`,
+      );
       const hit = candidates.find((n) => {
         const diff = Math.abs(n - claim.value);
         if (diff <= tolerance) return true;
-        // For count/duration claims, treat sign-flipped deltas as equivalent
-        // ("fell 5 points" in script vs -5 delta in payload).
-        if (claim.category === 'count' || claim.category === 'duration') {
+        // Scripts often phrase direction verbally ("down 2.28%", "fell 5
+        // points") while the payload stores a signed number (-2.27, -5).
+        // Accept absolute-value matches for categories where sign is
+        // typically expressed in the surrounding prose, not the number.
+        if (
+          claim.category === 'count' ||
+          claim.category === 'duration' ||
+          claim.category === 'percentage'
+        ) {
           if (Math.abs(Math.abs(n) - Math.abs(claim.value)) <= tolerance) {
             return true;
           }
@@ -152,26 +165,29 @@ export class DataVerifierService {
   }
 
   private async extractClaims(scriptText: string): Promise<NumericClaim[]> {
-    const response = await this.client.messages.create({
-      model: process.env.SCRIPT_LLM_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      tools: [EXTRACT_TOOL as unknown as Anthropic.Messages.Tool],
-      tool_choice: { type: 'tool', name: 'extract_claims' },
-      messages: [
-        {
-          role: 'user',
-          content:
-            'Extract every factual numeric claim from this script. ' +
-            'Rules for what is NOT a claim and should be OMITTED:\n' +
-            '- Scale denominators (e.g., "out of 100", "out of 5", "on a 1 to 10 scale") are not factual claims about the subject. Only extract the score value, not the scale.\n' +
-            '- Generic fractions or colloquial phrases like "one in five", "a third of", "half of" without a specific numeric subject.\n' +
-            '- Numbers inside URLs, hashtags, or brand names.\n' +
-            'Only extract numbers that assert a specific measurable fact (a price, percentage, score, ranking, count, duration, or date). If uncertain, omit.\n\n' +
-            'Script:\n' +
-            scriptText,
-        },
-      ],
-    });
+    const response = await this.client.messages.create(
+      {
+        model: process.env.SCRIPT_LLM_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        tools: [EXTRACT_TOOL as unknown as Anthropic.Messages.Tool],
+        tool_choice: { type: 'tool', name: 'extract_claims' },
+        messages: [
+          {
+            role: 'user',
+            content:
+              'Extract every factual numeric claim from this script. ' +
+              'Rules for what is NOT a claim and should be OMITTED:\n' +
+              '- Scale denominators (e.g., "out of 100", "out of 5", "on a 1 to 10 scale") are not factual claims about the subject. Only extract the score value, not the scale.\n' +
+              '- Generic fractions or colloquial phrases like "one in five", "a third of", "half of" without a specific numeric subject.\n' +
+              '- Numbers inside URLs, hashtags, or brand names.\n' +
+              'Only extract numbers that assert a specific measurable fact (a price, percentage, score, ranking, count, duration, or date). If uncertain, omit.\n\n' +
+              'Script:\n' +
+              scriptText,
+          },
+        ],
+      },
+      { timeout: 60_000 },
+    );
     const toolBlock = response.content.find((c) => c.type === 'tool_use');
     if (!toolBlock || toolBlock.type !== 'tool_use') return [];
     return (toolBlock.input as { claims: NumericClaim[] }).claims;

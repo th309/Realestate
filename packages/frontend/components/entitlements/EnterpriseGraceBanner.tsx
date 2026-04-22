@@ -13,18 +13,21 @@ import { useState, useEffect, useCallback } from "react";
 import { CreditCard } from "lucide-react";
 import { fetchGraceStatus, setupEnterpriseBilling } from "@/lib/data";
 import type { GraceStatus } from "@/lib/data/fetchers/grace-status";
+import { useAuth } from "@/lib/auth";
 
 export function EnterpriseGraceBanner() {
+  const { user, loading: authLoading } = useAuth();
   const [graceStatus, setGraceStatus] = useState<GraceStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchGraceStatus()
       .then(setGraceStatus)
       .catch(() => {
         // Silently fail — banner simply won't show
       });
-  }, []);
+  }, [authLoading, user]);
 
   const handleSetupBilling = useCallback(async () => {
     setLoading(true);

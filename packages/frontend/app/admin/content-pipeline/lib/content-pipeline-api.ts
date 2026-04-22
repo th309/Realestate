@@ -37,6 +37,7 @@ export interface RunSummary {
   market_query: string;
   created_at: string;
   thumbnail_url?: string;
+  has_video?: boolean;
   views?: number;
   signups?: number;
 }
@@ -97,6 +98,18 @@ export async function rejectRun(id: string, reason: string) {
   });
 }
 
+export async function retryRun(id: string) {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/runs/${id}/retry`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`retryRun failed: ${res.status} ${body}`);
+  }
+  return (await res.json()) as { success: boolean; data: { status: string } };
+}
+
 export async function editScript(
   id: string,
   variantId: "A" | "B",
@@ -110,15 +123,26 @@ export async function editScript(
 }
 
 export async function resolveMarket(query: string) {
-  const res = await fetchAPI<{ data: { matches: any[] } }>(
-    "/api/admin/content-pipeline/resolve-market",
-    {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    } as RequestInit,
+  const res = await fetchAPIRaw("/api/admin/content-pipeline/resolve-market", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  if (!res.ok) throw new Error(`resolveMarket failed: ${res.status}`);
+  const json = (await res.json()) as { data: { matches: any[] } };
+  return json.data.matches;
+}
+
+export async function fetchAssetSignedUrl(
+  runId: string,
+  kind: "video_master" | "audio",
+): Promise<{ url: string; kind: string } | null> {
+  const res = await fetchAPI<{
+    data: { url: string; kind: string } | null;
+  }>(
+    `/api/admin/content-pipeline/runs/${runId}/asset-url?kind=${encodeURIComponent(kind)}`,
   );
-  return res.data.matches;
+  return res.data;
 }
 
 export async function fetchReviewQueue() {

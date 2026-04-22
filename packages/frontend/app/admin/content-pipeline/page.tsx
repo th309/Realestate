@@ -2,7 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { fetchDashboard } from "./lib/content-pipeline-api";
+import {
+  fetchDashboard,
+  fetchAssetSignedUrl,
+  type RunSummary,
+} from "./lib/content-pipeline-api";
 import { STATE_LABELS } from "./lib/state-labels";
 import type { PipelineStatus } from "./lib/content-pipeline-api";
 
@@ -63,28 +67,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {data.recentRuns.map((run) => (
-                <Link
-                  key={run.id}
-                  href={`/admin/content-pipeline/runs/${run.id}`}
-                  className="block rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
-                >
-                  <div className="aspect-[9/16] rounded-lg bg-surface-container mb-2 overflow-hidden">
-                    {run.thumbnail_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={run.thumbnail_url}
-                        alt={run.market_query}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="text-xs font-medium truncate text-on-surface">
-                    {run.market_query}
-                  </div>
-                  <div className="text-xs text-on-surface-variant truncate">
-                    {STATE_LABELS[run.status as PipelineStatus] ?? run.status}
-                  </div>
-                </Link>
+                <RunCard key={run.id} run={run} />
               ))}
             </div>
           )}
@@ -112,5 +95,60 @@ function Stat({ label, value }: { label: string; value: number | string }) {
         {value}
       </div>
     </div>
+  );
+}
+
+function RunCard({ run }: { run: RunSummary }) {
+  const { data: videoData } = useQuery({
+    queryKey: ["content-pipeline-asset-url", run.id, "video_master"],
+    queryFn: () => fetchAssetSignedUrl(run.id, "video_master"),
+    enabled: Boolean(run.has_video),
+    staleTime: 50 * 60 * 1000,
+  });
+
+  return (
+    <Link
+      href={`/admin/content-pipeline/runs/${run.id}`}
+      className="block rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
+    >
+      <div className="aspect-[9/16] rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high mb-2 overflow-hidden flex items-center justify-center">
+        {videoData?.url ? (
+          <video
+            src={videoData.url}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onMouseEnter={(e) => {
+              const v = e.currentTarget;
+              v.play().catch(() => {});
+            }}
+            onMouseLeave={(e) => {
+              const v = e.currentTarget;
+              v.pause();
+              v.currentTime = 0;
+            }}
+            className="w-full h-full object-cover"
+          />
+        ) : run.thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={run.thumbnail_url}
+            alt={run.market_query}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-on-primary-container text-xs font-semibold text-center px-2">
+            {run.market_query.split(",")[0]}
+          </div>
+        )}
+      </div>
+      <div className="text-xs font-medium truncate text-on-surface">
+        {run.market_query}
+      </div>
+      <div className="text-xs text-on-surface-variant truncate">
+        {STATE_LABELS[run.status as PipelineStatus] ?? run.status}
+      </div>
+    </Link>
   );
 }

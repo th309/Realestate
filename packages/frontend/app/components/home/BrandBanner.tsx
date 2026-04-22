@@ -38,14 +38,25 @@ export function BrandBanner() {
         <circle cx="82%" cy="25%" r="1.5" fill="#00C853" opacity="0.4" />
         <circle cx="88%" cy="20%" r="2.5" fill="#C5CAE9" opacity="0.15" />
 
-        {/* Ascending chart line - bottom left */}
-        <polyline
-          points="5%,95% 12%,88% 18%,90% 25%,82% 30%,84% 35%,75%"
-          fill="none"
-          stroke="#C5CAE9"
-          strokeWidth="1.5"
-          opacity="0.2"
-        />
+        {/* Ascending chart line - bottom left (split into segments because SVG polyline/points doesn't accept percentage units; <line> does) */}
+        {[
+          ["5%", "95%", "12%", "88%"],
+          ["12%", "88%", "18%", "90%"],
+          ["18%", "90%", "25%", "82%"],
+          ["25%", "82%", "30%", "84%"],
+          ["30%", "84%", "35%", "75%"],
+        ].map(([x1, y1, x2, y2], i) => (
+          <line
+            key={`bl-${i}`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#C5CAE9"
+            strokeWidth="1.5"
+            opacity="0.2"
+          />
+        ))}
         <circle cx="5%" cy="95%" r="2.5" fill="#C5CAE9" opacity="0.25" />
         <circle cx="12%" cy="88%" r="2.5" fill="#C5CAE9" opacity="0.25" />
         <circle cx="18%" cy="90%" r="2.5" fill="#00C853" opacity="0.35" />
@@ -54,13 +65,24 @@ export function BrandBanner() {
         <circle cx="35%" cy="75%" r="2.5" fill="#C5CAE9" opacity="0.25" />
 
         {/* Ascending chart line - bottom right */}
-        <polyline
-          points="70%,95% 78%,88% 82%,85% 88%,72% 92%,68% 97%,55%"
-          fill="none"
-          stroke="#C5CAE9"
-          strokeWidth="1.5"
-          opacity="0.2"
-        />
+        {[
+          ["70%", "95%", "78%", "88%"],
+          ["78%", "88%", "82%", "85%"],
+          ["82%", "85%", "88%", "72%"],
+          ["88%", "72%", "92%", "68%"],
+          ["92%", "68%", "97%", "55%"],
+        ].map(([x1, y1, x2, y2], i) => (
+          <line
+            key={`br-${i}`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#C5CAE9"
+            strokeWidth="1.5"
+            opacity="0.2"
+          />
+        ))}
         <circle cx="70%" cy="95%" r="2.5" fill="#C5CAE9" opacity="0.25" />
         <circle cx="78%" cy="88%" r="2.5" fill="#00C853" opacity="0.35" />
         <circle cx="82%" cy="85%" r="2.5" fill="#C5CAE9" opacity="0.25" />

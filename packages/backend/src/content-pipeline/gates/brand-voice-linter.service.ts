@@ -124,20 +124,23 @@ export class BrandVoiceLinterService {
       'https://propertyiq.app/go/example',
     );
 
-    const response = await this.client.messages.create({
-      model: process.env.GATE_B_JUDGE_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 800,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: [JUDGE_TOOL as unknown as Anthropic.Messages.Tool],
-      tool_choice: { type: 'tool', name: 'judge_brand_voice' },
-      messages: [{ role: 'user', content: scriptForJudge }],
-    });
+    const response = await this.client.messages.create(
+      {
+        model: process.env.GATE_B_JUDGE_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        tools: [JUDGE_TOOL as unknown as Anthropic.Messages.Tool],
+        tool_choice: { type: 'tool', name: 'judge_brand_voice' },
+        messages: [{ role: 'user', content: scriptForJudge }],
+      },
+      { timeout: 60_000 },
+    );
 
     const toolBlock = response.content.find((c) => c.type === 'tool_use');
     if (!toolBlock || toolBlock.type !== 'tool_use') {

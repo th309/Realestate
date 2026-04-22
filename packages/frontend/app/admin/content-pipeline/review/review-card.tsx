@@ -1,6 +1,11 @@
 "use client";
 import { useRef, useState } from "react";
-import { approveRun, rejectRun } from "../lib/content-pipeline-api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  approveRun,
+  rejectRun,
+  fetchAssetSignedUrl,
+} from "../lib/content-pipeline-api";
 import { useReviewShortcuts } from "./shortcuts";
 import { DiffViewer } from "./diff-viewer";
 import { ScriptEditor } from "./script-editor";
@@ -19,67 +24,119 @@ export function ReviewCard({ run, onNext }: { run: any; onNext: () => void }) {
   const script = run.assets?.find((a: any) => a.kind === "script")?.metadata
     ?.scripts?.[0];
 
+  const handleApprove = async () => {
+    await approveRun(run.run.id);
+    onNext();
+  };
+  const handleReject = async () => {
+    const reason = window.prompt("Why are we rejecting?") ?? "no reason given";
+    await rejectRun(run.run.id, reason);
+    onNext();
+  };
+  const handleEdit = () => setEditing(true);
+  const handleMute = () => {
+    setMuted((m) => !m);
+    if (videoRef.current) videoRef.current.muted = !muted;
+  };
+  const handlePlayPause = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play();
+    } else {
+      videoRef.current.pause();
+    }
+  };
+
   useReviewShortcuts({
-    onApprove: async () => {
-      await approveRun(run.run.id);
-      onNext();
-    },
-    onApproveSchedule: async () => {
-      await approveRun(run.run.id);
-      onNext();
-    },
-    onReject: async () => {
-      const reason =
-        window.prompt("Why are we rejecting?") ?? "no reason given";
-      await rejectRun(run.run.id, reason);
-      onNext();
-    },
+    onApprove: handleApprove,
+    onReject: handleReject,
     onNext: onNext,
-    onEdit: () => setEditing(true),
-    onMute: () => {
-      setMuted((m) => !m);
-      if (videoRef.current) videoRef.current.muted = !muted;
-    },
-    onPlayPause: () => {
-      if (!videoRef.current) return;
-      if (videoRef.current.paused) {
-        videoRef.current.play();
-      } else {
-        videoRef.current.pause();
-      }
-    },
+    onEdit: handleEdit,
+    onMute: handleMute,
+    onPlayPause: handlePlayPause,
   });
 
   const videoAsset = run.assets?.find((a: any) => a.kind === "video_master");
+  const { data: videoUrl } = useQuery({
+    queryKey: ["content-pipeline-asset-url", run.run.id, "video_master"],
+    queryFn: () => fetchAssetSignedUrl(run.run.id, "video_master"),
+    enabled: Boolean(videoAsset),
+    staleTime: 50 * 60 * 1000,
+  });
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="rounded-xl bg-surface-container-low shadow-sm overflow-hidden">
-        <div className="aspect-[9/16] bg-black max-h-[60vh] mx-auto">
-          {videoAsset && (
+    <div className="p-4 max-w-[900px] mx-auto space-y-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-on-surface">
+            {run.run.market_query}
+          </h2>
+          <div className="text-xs text-outline">
+            {run.run.format} · {run.run.status_reason ?? "ready for review"}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleApprove}
+            className="bg-primary text-on-primary rounded-full px-4 py-1.5 font-mono text-xs hover:opacity-90 transition-opacity"
+          >
+            <kbd className="font-bold mr-1">L</kbd> Approve
+          </button>
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="bg-surface-container-high rounded-full px-3 py-1.5 font-mono text-xs hover:bg-surface-container-highest transition-colors"
+          >
+            <kbd className="font-bold mr-1">E</kbd> Edit
+          </button>
+          <button
+            type="button"
+            onClick={handleReject}
+            className="bg-surface-container-high rounded-full px-3 py-1.5 font-mono text-xs hover:bg-surface-container-highest transition-colors"
+          >
+            <kbd className="font-bold mr-1">J</kbd> Reject
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="bg-surface-container-high rounded-full px-3 py-1.5 font-mono text-xs hover:bg-surface-container-highest transition-colors"
+          >
+            <kbd className="font-bold mr-1">K</kbd> Next
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[240px_1fr] gap-4 items-start">
+        <div className="bg-black rounded-xl overflow-hidden aspect-[9/16] w-[240px]">
+          {videoAsset && videoUrl?.url ? (
             <video
               ref={videoRef}
-              src={publicUrl(videoAsset.storage_url)}
+              src={videoUrl.url}
+              controls
               autoPlay
               muted={muted}
               loop
+              playsInline
               className="w-full h-full object-contain"
             />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-on-surface-variant text-xs px-3 text-center">
+              {videoAsset ? "Loading video…" : "No video rendered"}
+            </div>
           )}
         </div>
 
-        <div className="p-6">
-          <div className="mb-2 text-sm text-outline">{run.run.format}</div>
-          <h2 className="text-xl font-semibold mb-4">{run.run.market_query}</h2>
+        <div className="rounded-xl bg-surface-container-low p-4 shadow-sm space-y-3">
           {gateAFail && (
             <DiffViewer violations={gateAFail.details?.violations ?? []} />
           )}
           {gateBFail && (
-            <div className="rounded-xl border border-warning bg-warning/5 p-4 mb-4">
-              <h4 className="font-semibold text-warning mb-2">
+            <div className="rounded-lg border border-warning bg-warning/5 p-3">
+              <h4 className="font-semibold text-warning mb-1 text-xs">
                 Brand voice flagged:
               </h4>
-              <ul className="text-sm">
+              <ul className="text-xs space-y-0.5">
                 {(gateBFail.details?.violations ?? []).map(
                   (v: any, i: number) => (
                     <li key={i}>
@@ -90,29 +147,18 @@ export function ReviewCard({ run, onNext }: { run: any; onNext: () => void }) {
               </ul>
             </div>
           )}
+
           <div>
-            <h4 className="font-semibold mb-2 text-sm">Script</h4>
-            <pre className="bg-surface-container rounded-lg p-4 text-sm whitespace-pre-wrap">
-              {script?.fullText}
-            </pre>
+            <h4 className="font-semibold mb-1 text-xs text-on-surface uppercase tracking-wide">
+              Script
+            </h4>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed text-on-surface">
+              {script?.fullText ?? "(no script)"}
+            </p>
           </div>
         </div>
-
-        <div className="border-t border-outline-variant p-4 flex gap-3 justify-center">
-          <kbd className="bg-primary text-on-primary rounded-full px-4 py-2 font-mono text-sm">
-            L Approve and Publish
-          </kbd>
-          <kbd className="bg-surface-container-high rounded-full px-4 py-2 font-mono text-sm">
-            E Edit
-          </kbd>
-          <kbd className="bg-surface-container-high rounded-full px-4 py-2 font-mono text-sm">
-            J Reject
-          </kbd>
-          <kbd className="bg-surface-container-high rounded-full px-4 py-2 font-mono text-sm">
-            K Next
-          </kbd>
-        </div>
       </div>
+
       {editing && script && (
         <ScriptEditor
           runId={run.run.id}
@@ -127,11 +173,4 @@ export function ReviewCard({ run, onNext }: { run: any; onNext: () => void }) {
       )}
     </div>
   );
-}
-
-function publicUrl(storageUrl: string): string {
-  const match = storageUrl.match(/^supabase:\/\/([^/]+)\/(.+)$/);
-  if (!match) return storageUrl;
-  const [, bucket, path] = match;
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }

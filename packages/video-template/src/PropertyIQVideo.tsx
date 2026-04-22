@@ -11,22 +11,33 @@ import { Outro } from "./scenes/Outro";
 import type { MarketStats, TrendDirection } from "./types";
 
 /**
- * Coerce the loosely-typed dataBundle into the shape that legacy
- * scenes expect. Missing fields fall back to safe defaults so the
- * Remotion Studio preview still renders before real data lands.
+ * Coerce the MCP-shaped dataBundle into the shape the scenes need.
+ * The payload comes from `ContentDataService.getMarketSnapshot` and has
+ * the nested shape: { score, home_value, rent, demographics, economic, geo }.
  */
-function coerceStats(bundle: unknown): MarketStats {
-  const b = (bundle ?? {}) as Record<string, unknown>;
-  const homeValue = (b.home_value ?? {}) as { value?: number };
-  const dom = (b.days_on_market ?? {}) as { value?: number };
-  const demand = (b.demand ?? {}) as { value?: number };
-  const pending = (b.pending_ratio ?? {}) as { value?: number };
-  return {
-    medianPrice: typeof homeValue.value === "number" ? homeValue.value : 385000,
-    daysOnMarket: typeof dom.value === "number" ? dom.value : 28,
-    demandScore: typeof demand.value === "number" ? demand.value : 60,
-    pendingRatio: typeof pending.value === "number" ? pending.value : 0.5,
+function coerceStats(bundle: Record<string, unknown>): MarketStats {
+  const homeValue = (bundle.home_value ?? {}) as {
+    value?: number;
+    yoy_pct?: number;
   };
+  const rent = (bundle.rent ?? {}) as { value?: number };
+  const demo = (bundle.demographics ?? {}) as {
+    population?: number;
+    median_income?: number;
+    homeownership_pct?: number;
+  };
+  return {
+    medianPrice: num(homeValue.value, 0),
+    homeValueYoyPct: num(homeValue.yoy_pct, 0),
+    homeownershipPct: num(demo.homeownership_pct, 0),
+    population: num(demo.population, 0),
+    medianIncome: num(demo.median_income, 0),
+    medianRent: num(rent.value, 0),
+  };
+}
+
+function num(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
@@ -44,21 +55,24 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
 const GradeRevealLayout: React.FC<VideoProps> = (props) => {
   const { dataBundle, resolvedMarket, ctaUrl } = props;
   const bundle = (dataBundle ?? {}) as Record<string, unknown>;
-  const score =
-    typeof bundle.score === "number" ? (bundle.score as number) : 50;
-  const grade =
-    typeof bundle.grade === "string" ? (bundle.grade as string) : "FAIR";
-  const trend: TrendDirection =
-    bundle.trend === "up" ||
-    bundle.trend === "down" ||
-    bundle.trend === "stable"
-      ? (bundle.trend as TrendDirection)
-      : "stable";
-  const trendChange =
-    typeof bundle.trendChange === "number" ? (bundle.trendChange as number) : 0;
+  const scoreObj = (bundle.score ?? {}) as {
+    propertyiq_score?: number;
+    grade?: string;
+  };
+  const homeValueObj = (bundle.home_value ?? {}) as {
+    period_date?: string;
+  };
+
+  const score = num(scoreObj.propertyiq_score, 50);
+  const grade = typeof scoreObj.grade === "string" ? scoreObj.grade : "FAIR";
+  // Trend data isn't in the current MCP snapshot shape — show stable/0 until
+  // the score history fetcher is wired. The script generator doesn't mention
+  // trends either, so leaving these empty is accurate.
+  const trend: TrendDirection = "stable";
+  const trendChange = 0;
   const periodDate =
-    typeof bundle.periodDate === "string"
-      ? (bundle.periodDate as string)
+    typeof homeValueObj.period_date === "string"
+      ? homeValueObj.period_date
       : new Date().toISOString().slice(0, 10);
   const stats = coerceStats(bundle);
 

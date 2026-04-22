@@ -4,7 +4,6 @@ export type ShortcutHandler = () => void | Promise<void>;
 
 export function useReviewShortcuts(handlers: {
   onApprove: ShortcutHandler;
-  onApproveSchedule: ShortcutHandler;
   onReject: ShortcutHandler;
   onNext: ShortcutHandler;
   onEdit: ShortcutHandler;
@@ -18,9 +17,6 @@ export function useReviewShortcuts(handlers: {
       switch (e.key.toLowerCase()) {
         case "l":
           handlers.onApprove();
-          break;
-        case "s":
-          handlers.onApproveSchedule();
           break;
         case "j":
           handlers.onReject();

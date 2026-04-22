@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import {
@@ -11,6 +11,8 @@ import { readFileSync } from 'fs';
 
 @Injectable()
 export class RenderVideoHandler {
+  private readonly logger = new Logger(RenderVideoHandler.name);
+
   constructor(
     private readonly orchestrator: RunOrchestratorService,
     @Inject(VIDEO_RENDERER) private readonly renderer: VideoRenderer,
@@ -18,6 +20,7 @@ export class RenderVideoHandler {
   ) {}
 
   async handle(runId: string): Promise<void> {
+    this.logger.log(`[PIPE] render-video.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
       const { data: run } = await client
@@ -45,6 +48,12 @@ export class RenderVideoHandler {
 
       const audioPath = await this.downloadFromStorage(audio.storage_url);
       const videoPath = join(tmpdir(), `video-${runId}.mp4`);
+      this.logger.log(
+        `[PIPE] render-video run=${runId} audioPath=${audioPath} outputPath=${videoPath} format=${run.format}`,
+      );
+      this.logger.log(
+        `[PIPE] render-video run=${runId} dataBundle.score=${JSON.stringify(payload.metadata?.score)}`,
+      );
 
       const result = await this.renderer.render({
         format: run.format,
@@ -57,8 +66,14 @@ export class RenderVideoHandler {
         outputPath: videoPath,
         audioPath,
       });
+      this.logger.log(
+        `[PIPE] render-video run=${runId} result.videoPath=${result.videoPath} durationMs=${result.durationMs} renderWallMs=${result.renderWallMs}`,
+      );
 
       const storageUrl = await this.uploadToStorage(runId, result.videoPath);
+      this.logger.log(
+        `[PIPE] render-video run=${runId} uploaded=${storageUrl}`,
+      );
       await client.from('content_assets').insert({
         run_id: runId,
         kind: 'video_master',
@@ -69,8 +84,12 @@ export class RenderVideoHandler {
         },
       });
 
+      this.logger.log(`[PIPE] render-video.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);
     } catch (err) {
+      this.logger.error(
+        `[PIPE] render-video FAILED run=${runId}: ${(err as Error).message?.slice(0, 200)}`,
+      );
       await this.orchestrator.handleStepFailure(
         runId,
         `rendering_video: ${(err as Error).message}`,

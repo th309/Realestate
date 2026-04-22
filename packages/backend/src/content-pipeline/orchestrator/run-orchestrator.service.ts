@@ -98,4 +98,12 @@ export class RunOrchestratorService {
   async handleStepFailure(runId: string, reason: string): Promise<void> {
     await this.transitionTo(runId, 'failed', { reason, enqueueNext: false });
   }
+
+  async retryRun(runId: string): Promise<void> {
+    await this.transitionTo(runId, 'queued', {
+      reason: 'manual_retry',
+      enqueueNext: false,
+    });
+    await this.transitionTo(runId, 'fetching_data', { enqueueNext: true });
+  }
 }
