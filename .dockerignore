@@ -38,6 +38,8 @@ redfin_downloads
 PropertyIQ
 
 # Docs and misc
+# NB: `*.md` without `**/` only matches root-level .md files (Docker filepath.Match
+# semantics), so content-pipeline prompt files under src/ continue to ship.
 *.md
 !README.md
 docs
