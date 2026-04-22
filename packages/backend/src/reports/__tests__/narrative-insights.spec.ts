@@ -82,32 +82,36 @@ describe('DTI qualifier text matches threshold ranges', () => {
 // ── Market Phase Classification ──────────────────────────────────────────
 
 describe('classifyMarketPhase returns correct phase label', () => {
+  // priceCutPct is an integer-scale percent per narrative-insights.ts:170
+  // (e.g. 24.11 means 24.11% of listings cut). Tests originally used
+  // decimal fractions (0.25) which only matters for the Early-Contraction
+  // branch that actually reads cuts > 20; the rest passed by coincidence.
   it('returns Peak Expansion for low supply + high growth', () => {
-    expect(classifyMarketPhase(2.0, 0.1, 8.0)).toContain('Peak Expansion');
+    expect(classifyMarketPhase(2.0, 10, 8.0)).toContain('Peak Expansion');
   });
 
   it('returns Late Expansion for moderate supply + positive growth', () => {
-    expect(classifyMarketPhase(3.5, 0.15, 3.0)).toContain('Late Expansion');
+    expect(classifyMarketPhase(3.5, 15, 3.0)).toContain('Late Expansion');
   });
 
   it('returns Balanced for 4-6 months of supply', () => {
-    expect(classifyMarketPhase(5.0, 0.2, 1.0)).toContain('Balanced');
+    expect(classifyMarketPhase(5.0, 20, 1.0)).toContain('Balanced');
   });
 
   it('returns Early Contraction for high supply + high price cuts', () => {
-    expect(classifyMarketPhase(7.0, 0.25, -1.0)).toContain('Early Contraction');
+    expect(classifyMarketPhase(7.0, 25, -1.0)).toContain('Early Contraction');
   });
 
   it("returns Buyer's Market for high supply + low price cuts", () => {
-    expect(classifyMarketPhase(7.0, 0.1, -2.0)).toContain("Buyer's Market");
+    expect(classifyMarketPhase(7.0, 10, -2.0)).toContain("Buyer's Market");
   });
 
   it('returns Transitional for edge cases (e.g. low supply, negative growth)', () => {
-    expect(classifyMarketPhase(3.5, 0.1, -1.0)).toContain('Transitional');
+    expect(classifyMarketPhase(3.5, 10, -1.0)).toContain('Transitional');
   });
 
   it('returns insufficient data when months_of_supply is null', () => {
-    expect(classifyMarketPhase(null, 0.15, 5.0)).toContain('Insufficient data');
+    expect(classifyMarketPhase(null, 15, 5.0)).toContain('Insufficient data');
   });
 });
 
