@@ -1,58 +1,43 @@
 import { Test } from '@nestjs/testing';
 import { ContentDataService } from './content-data.service';
-import { MarketsService } from '../../markets/markets.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import { GeographyService } from '../../geography/geography.service';
+import { MarketSnapshotService } from '../../market-snapshot/market-snapshot.service';
+import { SupabaseService } from '../../supabase/supabase.service';
 
 describe('ContentDataService', () => {
   let service: ContentDataService;
-  let geography: { search: jest.Mock };
-  let markets: {
-    getHomeValue: jest.Mock;
-    getRent: jest.Mock;
-    getDemographics: jest.Mock;
-    getEconomic: jest.Mock;
-    getTopCashflow: jest.Mock;
-  };
-  let scoring: {
-    getScore: jest.Mock;
-    getScoreWithHistory: jest.Mock;
-    getTrendingMarkets: jest.Mock;
-  };
+  let geography: { searchGeographies: jest.Mock };
+  let marketSnapshot: { getSnapshot: jest.Mock };
+  let scoring: { getScore: jest.Mock };
+  let supabase: { getClient: jest.Mock };
 
   beforeEach(async () => {
-    geography = { search: jest.fn() };
-    markets = {
-      getHomeValue: jest.fn(),
-      getRent: jest.fn(),
-      getDemographics: jest.fn(),
-      getEconomic: jest.fn(),
-      getTopCashflow: jest.fn(),
-    };
-    scoring = {
-      getScore: jest.fn(),
-      getScoreWithHistory: jest.fn(),
-      getTrendingMarkets: jest.fn(),
-    };
+    geography = { searchGeographies: jest.fn() };
+    marketSnapshot = { getSnapshot: jest.fn() };
+    scoring = { getScore: jest.fn() };
+    supabase = { getClient: jest.fn().mockReturnValue({}) };
 
     const module = await Test.createTestingModule({
       providers: [
         ContentDataService,
         { provide: GeographyService, useValue: geography },
-        { provide: MarketsService, useValue: markets },
+        { provide: MarketSnapshotService, useValue: marketSnapshot },
         { provide: ScoringService, useValue: scoring },
+        { provide: SupabaseService, useValue: supabase },
       ],
     }).compile();
     service = module.get(ContentDataService);
   });
 
   it('resolveMarket maps geography search results', async () => {
-    geography.search.mockResolvedValue([
+    geography.searchGeographies.mockResolvedValue([
       {
-        geography_level: 'metro',
-        geo_id: '35620',
-        canonical_name: 'New York NY',
-        state: 'NY',
+        geography_type: 'metro',
+        geography_id: 'metro-35620',
+        name: 'New York NY',
+        cbsa_code: '35620',
+        state_code: 'NY',
         population: 19000000,
       },
     ]);
@@ -60,28 +45,93 @@ describe('ContentDataService', () => {
     expect(result).toHaveLength(1);
     expect(result[0].canonical_name).toBe('New York NY');
     expect(result[0].geography).toBe('metro');
+    expect(result[0].id).toBe('35620');
+    expect(result[0].state).toBe('NY');
   });
 
-  it('getMarketSnapshot aggregates null-safely across sources', async () => {
-    markets.getHomeValue.mockResolvedValue({
-      value: 600000,
-      yoy_pct: 3.2,
-      period_date: '2026-03-01',
-    });
-    markets.getRent.mockRejectedValue(new Error('no data'));
-    markets.getDemographics.mockResolvedValue({
-      population: 19000000,
-      median_income: 85000,
-      homeownership_pct: 62,
-    });
-    markets.getEconomic.mockResolvedValue({
-      unemployment_rate: 4.1,
-      job_growth_yoy_pct: 1.8,
+  it('getMarketSnapshot adapts MarketSnapshotResponse into facade shape', async () => {
+    marketSnapshot.getSnapshot.mockResolvedValue({
+      success: true,
+      geography: { id: '35620', name: 'NY', type: 'metro' },
+      scores: {
+        propertyiq: { score: 72, grade: 'B', components: {} },
+      },
+      metrics: {
+        home_value: {
+          value: 600000,
+          date: '2026-03-01',
+          source: 'zillow',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        home_value_yoy: {
+          value: 3.2,
+          date: '2026-03-01',
+          source: 'realtor',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        population: {
+          value: 19000000,
+          date: '2024-01-01',
+          source: 'census',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        median_income: {
+          value: 85000,
+          date: '2024-01-01',
+          source: 'census',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        homeownership_rate: {
+          value: 62,
+          date: '2024-01-01',
+          source: 'census',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        unemployment_rate: {
+          value: 4.1,
+          date: '2026-03-01',
+          source: 'economic',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+        job_growth: {
+          value: 1.8,
+          date: '2026-03-01',
+          source: 'economic',
+          sourceGeoId: '35620',
+          sourceGeoLevel: 'metro',
+          isInherited: false,
+          isFallback: false,
+        },
+      },
+      lastUpdated: '2026-03-01',
     });
     scoring.getScore.mockResolvedValue({
-      propertyiq_score: 72,
-      grade: 'B',
-      confidence: 'A',
+      scores: {
+        propertyiq: {
+          score: 72,
+          grade: 'B',
+          confidence: 86,
+          confidence_level: 'A',
+        },
+      },
     });
 
     const result = await service.getMarketSnapshot({
@@ -90,19 +140,47 @@ describe('ContentDataService', () => {
       canonical_name: 'NY',
     });
     expect(result.home_value?.value).toBe(600000);
+    expect(result.home_value?.yoy_pct).toBe(3.2);
     expect(result.rent).toBeNull();
+    expect(result.demographics?.population).toBe(19000000);
+    expect(result.economic?.unemployment_rate).toBe(4.1);
     expect(result.score?.propertyiq_score).toBe(72);
+    expect(result.score?.confidence).toBe('A');
   });
 
-  it('getPropertyIQScore returns score with 12-month history', async () => {
-    scoring.getScoreWithHistory.mockResolvedValue({
-      geo: { geography: 'metro', id: '35620', canonical_name: 'NY' },
-      score: 72,
-      grade: 'B',
-      label: 'GOOD',
-      confidence_pct: 86,
-      confidence_level: 'A',
-      history: Array(12).fill({ date: '2026-03-01', score: 72 }),
+  it('getMarketSnapshot returns all nulls when underlying service throws', async () => {
+    marketSnapshot.getSnapshot.mockRejectedValue(new Error('boom'));
+
+    const result = await service.getMarketSnapshot({
+      geography: 'metro',
+      id: '35620',
+      canonical_name: 'NY',
+    });
+    expect(result.home_value).toBeNull();
+    expect(result.rent).toBeNull();
+    expect(result.demographics).toBeNull();
+    expect(result.economic).toBeNull();
+    expect(result.score).toBeNull();
+  });
+
+  it('getPropertyIQScore adapts ScoreResult into facade shape with 12-month history', async () => {
+    scoring.getScore.mockResolvedValue({
+      scores: {
+        propertyiq: {
+          score: 72,
+          grade: 'B',
+          confidence: 86,
+          confidence_level: 'A',
+          history: {
+            data: Array(12)
+              .fill(null)
+              .map((_, i) => ({ date: `2025-${i + 1}-01`, score: 70 + i })),
+            months: 12,
+            trend: 'up',
+            change: 2,
+          },
+        },
+      },
     });
     const r = await service.getPropertyIQScore({
       geography: 'metro',
@@ -110,5 +188,32 @@ describe('ContentDataService', () => {
       canonical_name: 'NY',
     });
     expect(r.history).toHaveLength(12);
+    expect(r.score).toBe(72);
+    expect(r.label).toBe('GOOD');
+    expect(r.confidence_level).toBe('A');
+    expect(scoring.getScore).toHaveBeenCalledWith('35620', 'metro', undefined, {
+      historyMonths: 12,
+    });
+  });
+
+  it('getPropertyIQScore returns empty result for state-level geo', async () => {
+    const r = await service.getPropertyIQScore({
+      geography: 'state',
+      id: 'California',
+      canonical_name: 'California',
+    });
+    expect(r.score).toBe(0);
+    expect(r.confidence_level).toBe('F');
+    expect(scoring.getScore).not.toHaveBeenCalled();
+  });
+
+  it('getTrendingMarkets returns [] for state-level geo (not supported by scoring)', async () => {
+    const r = await service.getTrendingMarkets('state', 'up', 10);
+    expect(r).toEqual([]);
+  });
+
+  it('getTopCashflowMarkets returns [] and warns for non-metro geo', async () => {
+    const r = await service.getTopCashflowMarkets('TX', 'county', 10);
+    expect(r).toEqual([]);
   });
 });

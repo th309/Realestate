@@ -6,6 +6,7 @@ import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { GeographyModule } from '../geography/geography.module';
+import { MarketSnapshotModule } from '../market-snapshot/market-snapshot.module';
 
 import { QueueModule } from './orchestrator/queue.module';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
@@ -56,6 +57,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
     MarketsModule,
     ScoringModule,
     GeographyModule,
+    MarketSnapshotModule,
   ],
   controllers: [ContentPipelineController, ShortLinkController],
   providers: [
