@@ -1,16 +1,19 @@
 /**
  * Scoring Service Unit Tests
  *
- * Tests the core calculation logic for PropertyIQ scores:
- * - HomeReady score calculation and component aggregation
- * - InvestorEdge score calculation and component aggregation
- * - Market Health score calculation and component aggregation
- * - Percentile normalization
+ * Post v3→propertyiq-only refactor (commit 00a0d7f6). Covers:
+ * - Percentile normalization (valueToPercentile)
  * - Direction transformation (higher_better, lower_better, moderate_better)
- * - Score aggregation with weights
+ * - Null-metric handling
  * - Confidence level determination
+ * - Score bounds
+ * - Formula weight definitions across metro/county/zip
+ * - Trend classification against SCORING_CONSTANTS.TREND_THRESHOLD
  *
- * Uses hand-calculated fixture data to verify correctness.
+ * The old multi-score component-aggregation tests (HomeReady /
+ * InvestorEdge / MarketHealth component weights, fixture verification,
+ * score-determinism tautologies) were removed when those consts were
+ * deleted from scoring.types; see scoring.types.ts:210-217.
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -21,22 +24,13 @@ import { InheritanceService } from '../../inheritance.service';
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
 import { CalibrationService } from '../../calibration/calibration.service';
 import { GeographyChainService } from '../../../metric-resolution/geography-chain.service';
-import {
-  HOMEREADY_WEIGHTS,
-  INVESTOREDGE_WEIGHTS,
-  MARKET_HEALTH_WEIGHTS,
-  SCORING_CONSTANTS,
-  MetricPercentiles,
-  MetricData,
-  ComponentScore,
-} from '../../scoring.types';
+import { SCORING_CONSTANTS, MetricPercentiles } from '../../scoring.types';
 import {
   FORMULA_WEIGHTS,
   COMPONENT_GROUPS,
   validateFormulaWeights,
 } from '../../formula-weights';
 import type { ScoreType, GeographyLevel } from '../../formula-weights';
-import { ALL_FIXTURES } from '../fixtures/expected-scores';
 
 // Mock Supabase client
 const mockSupabase = {
@@ -198,217 +192,6 @@ describe('ScoringService', () => {
   });
 
   // ===========================================================================
-  // Component Score Aggregation Tests
-  // ===========================================================================
-  describe('Score Aggregation', () => {
-    describe('HomeReady aggregation', () => {
-      it('calculates weighted average of components', () => {
-        // Simulate component scores
-        const components: Record<string, ComponentScore> = {
-          affordability: {
-            score: 80,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          market_timing: {
-            score: 60,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          stability: {
-            score: 70,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          growth_potential: {
-            score: 50,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          livability: {
-            score: 90,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-        };
-
-        // Manual calculation:
-        // 80 * 0.30 = 24.0
-        // 60 * 0.25 = 15.0
-        // 70 * 0.20 = 14.0
-        // 50 * 0.15 = 7.5
-        // 90 * 0.10 = 9.0
-        // Total = 69.5
-
-        const expectedScore =
-          80 * HOMEREADY_WEIGHTS.affordability +
-          60 * HOMEREADY_WEIGHTS.market_timing +
-          70 * HOMEREADY_WEIGHTS.stability +
-          50 * HOMEREADY_WEIGHTS.growth_potential +
-          90 * HOMEREADY_WEIGHTS.livability;
-
-        expect(expectedScore).toBeCloseTo(69.5, 1);
-      });
-
-      it('uses correct weights', () => {
-        expect(HOMEREADY_WEIGHTS.affordability).toBe(0.3);
-        expect(HOMEREADY_WEIGHTS.market_timing).toBe(0.25);
-        expect(HOMEREADY_WEIGHTS.stability).toBe(0.2);
-        expect(HOMEREADY_WEIGHTS.growth_potential).toBe(0.15);
-        expect(HOMEREADY_WEIGHTS.livability).toBe(0.1);
-      });
-    });
-
-    describe('InvestorEdge aggregation', () => {
-      it('calculates weighted average of components', () => {
-        const components: Record<string, ComponentScore> = {
-          cash_flow: {
-            score: 75,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          rent_demand: {
-            score: 65,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          appreciation: {
-            score: 85,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          entry_point: {
-            score: 55,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          risk: {
-            score: 70,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-        };
-
-        // Manual calculation:
-        // 75 * 0.35 = 26.25
-        // 65 * 0.20 = 13.0
-        // 85 * 0.20 = 17.0
-        // 55 * 0.15 = 8.25
-        // 70 * 0.10 = 7.0
-        // Total = 71.5
-
-        const expectedScore =
-          75 * INVESTOREDGE_WEIGHTS.cash_flow +
-          65 * INVESTOREDGE_WEIGHTS.rent_demand +
-          85 * INVESTOREDGE_WEIGHTS.appreciation +
-          55 * INVESTOREDGE_WEIGHTS.entry_point +
-          70 * INVESTOREDGE_WEIGHTS.risk;
-
-        expect(expectedScore).toBeCloseTo(71.5, 1);
-      });
-
-      it('uses correct weights', () => {
-        expect(INVESTOREDGE_WEIGHTS.cash_flow).toBe(0.35);
-        expect(INVESTOREDGE_WEIGHTS.rent_demand).toBe(0.2);
-        expect(INVESTOREDGE_WEIGHTS.appreciation).toBe(0.2);
-        expect(INVESTOREDGE_WEIGHTS.entry_point).toBe(0.15);
-        expect(INVESTOREDGE_WEIGHTS.risk).toBe(0.1);
-      });
-    });
-
-    describe('Market Health aggregation', () => {
-      it('calculates weighted average of components', () => {
-        const components: Record<string, ComponentScore> = {
-          demand_strength: {
-            score: 80,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          supply_balance: {
-            score: 70,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          price_stability: {
-            score: 65,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-          economic_foundation: {
-            score: 75,
-            weight: 0,
-            weightedContribution: 0,
-            metricsUsed: [],
-            helpingFactors: [],
-            hurtingFactors: [],
-          },
-        };
-
-        // Manual calculation:
-        // 80 * 0.35 = 28.0
-        // 70 * 0.25 = 17.5
-        // 65 * 0.25 = 16.25
-        // 75 * 0.15 = 11.25
-        // Total = 73.0
-
-        const expectedScore =
-          80 * MARKET_HEALTH_WEIGHTS.demand_strength +
-          70 * MARKET_HEALTH_WEIGHTS.supply_balance +
-          65 * MARKET_HEALTH_WEIGHTS.price_stability +
-          75 * MARKET_HEALTH_WEIGHTS.economic_foundation;
-
-        expect(expectedScore).toBeCloseTo(73.0, 1);
-      });
-
-      it('uses correct weights', () => {
-        expect(MARKET_HEALTH_WEIGHTS.demand_strength).toBe(0.35);
-        expect(MARKET_HEALTH_WEIGHTS.supply_balance).toBe(0.25);
-        expect(MARKET_HEALTH_WEIGHTS.price_stability).toBe(0.25);
-        expect(MARKET_HEALTH_WEIGHTS.economic_foundation).toBe(0.15);
-      });
-    });
-  });
-
-  // ===========================================================================
   // Null Strategy Handling Tests
   // ===========================================================================
   describe('Missing Data Handling', () => {
@@ -515,18 +298,6 @@ describe('ScoringService', () => {
     it('ensures MAX_SCORE is 100', () => {
       expect(SCORING_CONSTANTS.MAX_SCORE).toBe(100);
     });
-
-    it('all component weights are positive', () => {
-      for (const weight of Object.values(HOMEREADY_WEIGHTS)) {
-        expect(weight).toBeGreaterThan(0);
-      }
-      for (const weight of Object.values(INVESTOREDGE_WEIGHTS)) {
-        expect(weight).toBeGreaterThan(0);
-      }
-      for (const weight of Object.values(MARKET_HEALTH_WEIGHTS)) {
-        expect(weight).toBeGreaterThan(0);
-      }
-    });
   });
 
   // ===========================================================================
@@ -624,236 +395,6 @@ describe('ScoringService', () => {
     });
   });
 
-  // ===========================================================================
-  // Fixture-Based Calculation Verification Tests
-  // ===========================================================================
-  describe('Fixture-Based Verification', () => {
-    // Use the test fixtures to verify calculations match expected values
-
-    describe('HAPPY_HIGH_003 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(
-        (g) => g.geography_id === 'HAPPY_HIGH_003',
-      );
-
-      if (fixture) {
-        it('has expected HomeReady components', () => {
-          expect(fixture.homeready.expected_components).toBeDefined();
-          expect(
-            fixture.homeready.expected_components.affordability,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.homeready.expected_components.market_timing,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.homeready.expected_components.stability,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.homeready.expected_components.growth_potential,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.homeready.expected_components.livability,
-          ).toBeGreaterThan(0);
-        });
-
-        it('has expected InvestorEdge components', () => {
-          expect(fixture.investoredge.expected_components).toBeDefined();
-          expect(
-            fixture.investoredge.expected_components.cash_flow,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.investoredge.expected_components.rent_demand,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.investoredge.expected_components.appreciation,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.investoredge.expected_components.entry_point,
-          ).toBeGreaterThan(0);
-          expect(fixture.investoredge.expected_components.risk).toBeGreaterThan(
-            0,
-          );
-        });
-
-        it('has expected Market Health components', () => {
-          expect(fixture.market_health.expected_components).toBeDefined();
-          expect(
-            fixture.market_health.expected_components.demand_strength,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.market_health.expected_components.supply_balance,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.market_health.expected_components.price_stability,
-          ).toBeGreaterThan(0);
-          expect(
-            fixture.market_health.expected_components.economic_foundation,
-          ).toBeGreaterThan(0);
-        });
-
-        it('HomeReady weighted calculation matches expected', () => {
-          const c = fixture.homeready.expected_components;
-          const calculatedScore =
-            c.affordability * HOMEREADY_WEIGHTS.affordability +
-            c.market_timing * HOMEREADY_WEIGHTS.market_timing +
-            c.stability * HOMEREADY_WEIGHTS.stability +
-            c.growth_potential * HOMEREADY_WEIGHTS.growth_potential +
-            c.livability * HOMEREADY_WEIGHTS.livability;
-
-          // Allow 0.5 tolerance to account for rounding in fixtures
-          expect(calculatedScore).toBeCloseTo(
-            fixture.homeready.expected_result.score!,
-            0,
-          );
-        });
-
-        it('InvestorEdge weighted calculation matches expected', () => {
-          const c = fixture.investoredge.expected_components;
-          const calculatedScore =
-            c.cash_flow * INVESTOREDGE_WEIGHTS.cash_flow +
-            c.rent_demand * INVESTOREDGE_WEIGHTS.rent_demand +
-            c.appreciation * INVESTOREDGE_WEIGHTS.appreciation +
-            c.entry_point * INVESTOREDGE_WEIGHTS.entry_point +
-            c.risk * INVESTOREDGE_WEIGHTS.risk;
-
-          // Allow 0.5 tolerance to account for rounding in fixtures
-          expect(calculatedScore).toBeCloseTo(
-            fixture.investoredge.expected_result.score!,
-            0,
-          );
-        });
-
-        it('Market Health weighted calculation matches expected', () => {
-          const c = fixture.market_health.expected_components;
-          const calculatedScore =
-            c.demand_strength * MARKET_HEALTH_WEIGHTS.demand_strength +
-            c.supply_balance * MARKET_HEALTH_WEIGHTS.supply_balance +
-            c.price_stability * MARKET_HEALTH_WEIGHTS.price_stability +
-            c.economic_foundation * MARKET_HEALTH_WEIGHTS.economic_foundation;
-
-          expect(calculatedScore).toBeCloseTo(
-            fixture.market_health.expected_result.score!,
-            1,
-          );
-        });
-      }
-    });
-
-    describe('BOUNDARY_ALL_MIN_001 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(
-        (g) => g.geography_id === 'BOUNDARY_ALL_MIN_001',
-      );
-
-      if (fixture) {
-        it('produces low scores for all minimum values', () => {
-          expect(fixture.homeready.expected_result.score).toBeLessThan(20);
-          expect(fixture.investoredge.expected_result.score).toBeLessThan(20);
-          expect(fixture.market_health.expected_result.score).toBeLessThan(20);
-        });
-
-        it('all component scores are low', () => {
-          for (const score of Object.values(
-            fixture.homeready.expected_components,
-          )) {
-            expect(score).toBeLessThan(25);
-          }
-        });
-      }
-    });
-
-    describe('BOUNDARY_ALL_MAX_002 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(
-        (g) => g.geography_id === 'BOUNDARY_ALL_MAX_002',
-      );
-
-      if (fixture) {
-        it('produces high scores for all maximum values', () => {
-          expect(fixture.homeready.expected_result.score).toBeGreaterThan(80);
-          expect(fixture.investoredge.expected_result.score).toBeGreaterThan(
-            80,
-          );
-          expect(fixture.market_health.expected_result.score).toBeGreaterThan(
-            80,
-          );
-        });
-
-        it('all component scores are high', () => {
-          for (const score of Object.values(
-            fixture.homeready.expected_components,
-          )) {
-            expect(score).toBeGreaterThan(75);
-          }
-        });
-      }
-    });
-
-    describe('MISSING_MAJORITY_005 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(
-        (g) => g.geography_id === 'MISSING_MAJORITY_005',
-      );
-
-      if (fixture) {
-        it('returns unavailable status when >50% data missing', () => {
-          expect(fixture.homeready.expected_result.status).toBe('unavailable');
-        });
-
-        it('returns null score for unavailable status', () => {
-          expect(fixture.homeready.expected_result.score).toBeNull();
-        });
-
-        it('includes reason for unavailability', () => {
-          expect(fixture.homeready.expected_result.reason).toBeDefined();
-          expect(fixture.homeready.expected_result.reason).toContain(
-            'Insufficient',
-          );
-        });
-      }
-    });
-  });
-
-  // ===========================================================================
-  // Score Determinism Tests
-  // ===========================================================================
-  describe('Score Determinism', () => {
-    it('same inputs produce same weighted sum', () => {
-      const componentScores = {
-        affordability: 75,
-        market_timing: 60,
-        stability: 80,
-        growth_potential: 55,
-        livability: 70,
-      };
-
-      const score1 =
-        componentScores.affordability * HOMEREADY_WEIGHTS.affordability +
-        componentScores.market_timing * HOMEREADY_WEIGHTS.market_timing +
-        componentScores.stability * HOMEREADY_WEIGHTS.stability +
-        componentScores.growth_potential * HOMEREADY_WEIGHTS.growth_potential +
-        componentScores.livability * HOMEREADY_WEIGHTS.livability;
-
-      const score2 =
-        componentScores.affordability * HOMEREADY_WEIGHTS.affordability +
-        componentScores.market_timing * HOMEREADY_WEIGHTS.market_timing +
-        componentScores.stability * HOMEREADY_WEIGHTS.stability +
-        componentScores.growth_potential * HOMEREADY_WEIGHTS.growth_potential +
-        componentScores.livability * HOMEREADY_WEIGHTS.livability;
-
-      expect(score1).toBe(score2);
-    });
-
-    it('order of operations does not affect result', () => {
-      const c = { a: 75, b: 60, c: 80, d: 55, e: 70 };
-      const w = { a: 0.3, b: 0.25, c: 0.2, d: 0.15, e: 0.1 };
-
-      const forward = c.a * w.a + c.b * w.b + c.c * w.c + c.d * w.d + c.e * w.e;
-      const reverse = c.e * w.e + c.d * w.d + c.c * w.c + c.b * w.b + c.a * w.a;
-
-      expect(forward).toBe(reverse);
-    });
-  });
-
-  // ===========================================================================
-  // Trend Calculation Tests
-  // ===========================================================================
   describe('Trend Calculation', () => {
     it('uses TREND_MONTHS constant for lookback period', () => {
       expect(SCORING_CONSTANTS.TREND_MONTHS).toBe(3);
