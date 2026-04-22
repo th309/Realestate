@@ -5,7 +5,6 @@ export interface VideoRenderRequest {
   format: ContentFormat;
   props: unknown;
   outputPath: string;
-  audioPath: string;
   thumbnailOutputPath?: string;
   captionsPath?: string;
 }

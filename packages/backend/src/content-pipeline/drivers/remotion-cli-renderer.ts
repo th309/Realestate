@@ -46,13 +46,19 @@ export class RemotionCLIRenderer implements VideoRenderer {
       '--output',
       req.outputPath,
     ];
-    if (req.audioPath) args.push('--audio', req.audioPath);
 
+    // Remotion looks for its Chrome Headless Shell in `<cwd>/node_modules/
+    // .remotion`. If we inherit the backend's cwd, the cache is empty and
+    // renderMedia throws "No browser found". Spawning from the video-
+    // template package dir makes the lookup hit that package's cache,
+    // which is populated by `build:cli` / ensureBrowser().
+    const cliDir = require('path').dirname(this.cliPath);
+    const pkgRoot = require('path').resolve(cliDir, '..', '..');
     this.logger.log(
-      `spawning render: cli=${this.cliPath} audioPath=${req.audioPath ?? '<none>'} output=${req.outputPath}`,
+      `spawning render: cli=${this.cliPath} cwd=${pkgRoot} output=${req.outputPath}`,
     );
     const stdoutPayload = await new Promise<string>((resolve, reject) => {
-      const proc = spawn('node', args);
+      const proc = spawn('node', args, { cwd: pkgRoot });
       let stdoutBuf = '';
       let stderrBuf = '';
       proc.stdout.on('data', (d) => {

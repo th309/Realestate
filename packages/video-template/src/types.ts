@@ -177,6 +177,10 @@ export const VideoPropsSchema = z.object({
   dataBundle: z.any(),
   ctaUrl: z.string(),
   styleVariant: z.string().optional(),
+  // Voiceover URL. When present, Remotion's <Audio> mounts it inside the
+  // composition and the compositor muxes it into the output — no external
+  // ffmpeg needed. Optional so silent renders (previews, smoke tests) work.
+  audioUrl: z.string().url().optional(),
 });
 
 export type VideoProps = z.infer<typeof VideoPropsSchema>;
