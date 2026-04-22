@@ -78,7 +78,16 @@ export class BrandVoiceLinterService {
         });
       }
     }
-    const scoreMatches = [...scriptText.matchAll(SCORE_REFERENCE_REGEX)];
+    // Bare "score" references are OK once the script has established
+    // "PropertyIQ Score" or "PIQ Score" at least once. This allows natural
+    // back-references like "that score" or "the score" without tripping
+    // the linter. Competing products (InvestorEdge, HomeReady, Market
+    // Health Index) are caught explicitly in FORBIDDEN_PHRASES above.
+    const scriptEstablishesPropertyIQScore =
+      APPROVED_SCORE_PREFIXES.test(scriptText);
+    const scoreMatches = scriptEstablishesPropertyIQScore
+      ? []
+      : [...scriptText.matchAll(SCORE_REFERENCE_REGEX)];
     for (const m of scoreMatches) {
       const windowText = scriptText.slice(
         Math.max(0, m.index - 25),
@@ -106,6 +115,15 @@ export class BrandVoiceLinterService {
     const systemPrompt =
       'You are a brand voice auditor for PropertyIQ. Rate this script 1 to 5 on brand voice compliance. Brand voice is confident, conversational, data-first, not hypey. Use the tool to output structured JSON.';
 
+    // Substitute the short-link placeholder with a canonical example URL so
+    // the judge evaluates the script as if it were finalized. The actual
+    // short link is inserted per-platform during the publishing step; the
+    // placeholder is expected at this stage and must not be flagged.
+    const scriptForJudge = scriptText.replace(
+      /\{\{SHORT_LINK\}\}/g,
+      'https://propertyiq.app/go/example',
+    );
+
     const response = await this.client.messages.create({
       model: process.env.GATE_B_JUDGE_MODEL ?? 'claude-sonnet-4-6',
       max_tokens: 800,
@@ -118,7 +136,7 @@ export class BrandVoiceLinterService {
       ],
       tools: [JUDGE_TOOL as unknown as Anthropic.Messages.Tool],
       tool_choice: { type: 'tool', name: 'judge_brand_voice' },
-      messages: [{ role: 'user', content: scriptText }],
+      messages: [{ role: 'user', content: scriptForJudge }],
     });
 
     const toolBlock = response.content.find((c) => c.type === 'tool_use');

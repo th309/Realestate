@@ -16,10 +16,12 @@ export class RemotionCLIRenderer implements VideoRenderer {
   private readonly timeoutMs: number;
 
   constructor() {
-    this.cliPath = join(
-      process.cwd(),
-      'node_modules/@propertyiq/video-template/dist/cli/render-cli.js',
-    );
+    // Resolve the video-template CLI via Node's module resolver so the path
+    // works regardless of process.cwd(). In an npm workspace the package is
+    // symlinked from the root node_modules; require.resolve walks up until it
+    // finds the hoisted package.
+    this.cliPath =
+      require.resolve('@propertyiq/video-template/dist/cli/render-cli.js');
     this.timeoutMs = parseInt(
       process.env.STEP_TIMEOUT_RENDER_VIDEO_MS ?? '300000',
       10,

@@ -22,7 +22,7 @@ export const RemotionRoot: React.FC = () => {
         return (
           <Composition
             key={key}
-            id={key}
+            id={key.replace(/_/g, "-")}
             component={PropertyIQVideo as React.FC<Record<string, unknown>>}
             durationInFrames={cfg.durationInFrames}
             fps={cfg.fps}

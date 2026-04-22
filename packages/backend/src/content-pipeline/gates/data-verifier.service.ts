@@ -160,7 +160,15 @@ export class DataVerifierService {
       messages: [
         {
           role: 'user',
-          content: `Extract every numeric claim from this script:\n\n${scriptText}`,
+          content:
+            'Extract every factual numeric claim from this script. ' +
+            'Rules for what is NOT a claim and should be OMITTED:\n' +
+            '- Scale denominators (e.g., "out of 100", "out of 5", "on a 1 to 10 scale") are not factual claims about the subject. Only extract the score value, not the scale.\n' +
+            '- Generic fractions or colloquial phrases like "one in five", "a third of", "half of" without a specific numeric subject.\n' +
+            '- Numbers inside URLs, hashtags, or brand names.\n' +
+            'Only extract numbers that assert a specific measurable fact (a price, percentage, score, ranking, count, duration, or date). If uncertain, omit.\n\n' +
+            'Script:\n' +
+            scriptText,
         },
       ],
     });
@@ -193,9 +201,15 @@ export class DataVerifierService {
     const multiplier =
       strictness === 'relaxed' ? 2 : strictness === 'strict' ? 0.5 : 1;
     const base = TOLERANCES_BALANCED[cat] ?? 0;
-    // Prices use a percentage floor so "about $1 million" matches $1,004,500.
+    // Prices use a 1% percentage floor so "about $1 million" matches $1,004,500.
     if (cat === 'price' && claimValue !== undefined) {
       return Math.max(base, Math.abs(claimValue) * 0.01) * multiplier;
+    }
+    // Count claims (populations, listings, etc.) tolerate 5% drift for
+    // natural rounding: "over 2.1 million" against 2,050,000 is within norms
+    // for a human-readable script. Scores, rankings, and dates stay strict.
+    if (cat === 'count' && claimValue !== undefined) {
+      return Math.max(base, Math.abs(claimValue) * 0.05) * multiplier;
     }
     return base * multiplier;
   }

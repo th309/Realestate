@@ -34,13 +34,24 @@ export class SynthesizeAudioHandler {
 
       const script = scriptAsset.metadata.scripts[0];
       const driver = this.ttsFactory.forProvider(run.tts_provider);
+      // Resolve the internal voice id (e.g. 'edge-andrew') to the provider's
+      // canonical voice name (e.g. 'en-US-AndrewMultilingualNeural'). The
+      // TTS driver expects the provider-specific name, not our internal id.
+      const { data: voice } = await client
+        .from('tts_voices')
+        .select('provider_voice_id')
+        .eq('id', run.tts_voice_id)
+        .single();
+      if (!voice)
+        throw new Error(`voice ${run.tts_voice_id} not found in tts_voices`);
+
       const outputPath = join(
         tmpdir(),
         `audio-${runId}-${randomBytes(4).toString('hex')}.mp3`,
       );
       const result = await driver.synthesize({
         text: script.fullText,
-        voiceId: run.tts_voice_id,
+        voiceId: voice.provider_voice_id,
         outputPath,
         format: 'mp3',
       });
