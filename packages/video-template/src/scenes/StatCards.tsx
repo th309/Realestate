@@ -21,38 +21,45 @@ function formatPrice(n: number): string {
   return `$${n.toLocaleString()}`;
 }
 
-function formatRatio(n: number): string {
-  return `${Math.round(n * 100)}%`;
+function formatPopulation(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return n.toLocaleString();
+}
+
+function formatPct(n: number, digits = 1): string {
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(digits)}%`;
 }
 
 const CARD_DEFS = [
   {
     key: "medianPrice" as keyof MarketStats,
-    label: "Median Home Price",
+    label: "Median Home Value",
     icon: "🏠",
     format: (v: number) => formatPrice(v),
     description: "Zillow ZHVI",
   },
   {
-    key: "daysOnMarket" as keyof MarketStats,
-    label: "Days on Market",
-    icon: "📅",
-    format: (v: number) => `${Math.round(v)} days`,
-    description: "Avg. listing duration",
-  },
-  {
-    key: "demandScore" as keyof MarketStats,
-    label: "Demand Score",
+    key: "homeValueYoyPct" as keyof MarketStats,
+    label: "Home Value YoY",
     icon: "📈",
-    format: (v: number) => `${Math.round(v)}/100`,
-    description: "PropertyIQ demand index",
+    format: (v: number) => formatPct(v, 2),
+    description: "Year-over-year change",
   },
   {
-    key: "pendingRatio" as keyof MarketStats,
-    label: "Pending Ratio",
-    icon: "⏳",
-    format: (v: number) => formatRatio(v),
-    description: "Under contract / listed",
+    key: "homeownershipPct" as keyof MarketStats,
+    label: "Homeownership",
+    icon: "🔑",
+    format: (v: number) => `${v.toFixed(1)}%`,
+    description: "Of occupied housing",
+  },
+  {
+    key: "population" as keyof MarketStats,
+    label: "Metro Population",
+    icon: "👥",
+    format: (v: number) => formatPopulation(v),
+    description: "US Census",
   },
 ];
 

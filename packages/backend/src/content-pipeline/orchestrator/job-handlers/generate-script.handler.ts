@@ -24,13 +24,11 @@ export class GenerateScriptHandler {
         .single();
       if (!run) throw new Error('run not found');
 
-      const { data: payload } = await client
-        .from('content_assets')
-        .select('metadata')
-        .eq('run_id', runId)
-        .eq('kind', 'mcp_payload')
-        .single();
-      if (!payload) throw new Error('mcp_payload asset not found');
+      const payload = await readMcpPayloadWithRetry(client, runId);
+      if (!payload)
+        throw new Error(
+          'mcp_payload asset not found after retries (fetch-data did not persist it)',
+        );
 
       const { data: binding } = await client
         .from('format_magnet_bindings')
@@ -73,10 +71,36 @@ export class GenerateScriptHandler {
 
       await this.orchestrator.handleStepSuccess(runId);
     } catch (err) {
+      const e = err as Error;
+      console.error(
+        `[generate-script] run=${runId} error=${e.message}\n${e.stack}`,
+      );
       await this.orchestrator.handleStepFailure(
         runId,
-        `scripting: ${(err as Error).message}`,
+        `scripting: ${e.message}`,
       );
     }
   }
+}
+
+async function readMcpPayloadWithRetry(
+  client: ReturnType<SupabaseService['getClient']>,
+  runId: string,
+): Promise<{ metadata: any } | null> {
+  const delays = [0, 100, 200, 400, 800];
+  for (const delay of delays) {
+    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+    const { data, error } = await client
+      .from('content_assets')
+      .select('metadata')
+      .eq('run_id', runId)
+      .eq('kind', 'mcp_payload')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    console.log(
+      `[readMcpPayloadWithRetry] runId=${runId} delay=${delay}ms data.length=${data?.length ?? 'null'} error=${error?.message ?? 'none'}`,
+    );
+    if (data && data.length > 0) return data[0] as { metadata: any };
+  }
+  return null;
 }

@@ -4,12 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPlatforms } from "../lib/content-pipeline-api";
 import { PlatformRow } from "./platform-row";
 
-/**
- * Admin page: Platform Credentials.
- * Lists every platform publisher registered on the backend and exposes
- * a Connect button per row. In P1 only `youtube_shorts` has a working
- * OAuth handshake; other rows surface "Not connected" with no action.
- */
+const ALL_PLATFORMS = [
+  "youtube_shorts",
+  "tiktok",
+  "instagram_reels",
+  "facebook_reels",
+  "linkedin",
+  "youtube_long",
+] as const;
+
 export default function PlatformsPage() {
   const {
     data = [],
@@ -19,6 +22,8 @@ export default function PlatformsPage() {
     queryKey: ["content-pipeline-platforms"],
     queryFn: fetchPlatforms,
   });
+
+  const byPlatform = new Map(data.map((p) => [p.platform, p]));
 
   return (
     <div className="p-8 max-w-3xl space-y-3">
@@ -32,21 +37,19 @@ export default function PlatformsPage() {
         </div>
       )}
 
-      {!isLoading && data.length === 0 && (
-        <div className="rounded-xl bg-surface-container-low p-6 text-sm text-outline">
-          No publishers registered yet.
-        </div>
-      )}
-
-      {data.map((p) => (
-        <PlatformRow
-          key={p.platform}
-          platform={p.platform}
-          configured={p.configured}
-          lastPublishedAt={p.lastPublishedAt}
-          onChange={() => refetch()}
-        />
-      ))}
+      {ALL_PLATFORMS.map((platform) => {
+        const registered = byPlatform.get(platform);
+        return (
+          <PlatformRow
+            key={platform}
+            platform={platform}
+            configured={registered?.configured ?? false}
+            lastPublishedAt={registered?.lastPublishedAt ?? null}
+            supported={Boolean(registered)}
+            onChange={() => refetch()}
+          />
+        );
+      })}
     </div>
   );
 }

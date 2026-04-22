@@ -120,11 +120,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Inbox,
       },
       {
-        label: "Performance",
-        href: "/admin/content-pipeline/performance",
-        icon: BarChart3,
-      },
-      {
         label: "Platforms",
         href: "/admin/content-pipeline/platforms",
         icon: Share2,

@@ -26,14 +26,18 @@ export interface ScoreHistoryPoint {
 }
 
 export interface MarketStats {
-  /** Zillow ZHVI median home value in USD */
+  /** Median home value in USD (Zillow ZHVI) */
   medianPrice: number;
-  /** Zillow average days on market */
-  daysOnMarket: number;
-  /** PropertyIQ demand component score 0-100 */
-  demandScore: number;
-  /** Pending listings / total listings ratio 0-1 */
-  pendingRatio: number;
+  /** Home value year-over-year change percent (e.g. 0.36 = +0.36%) */
+  homeValueYoyPct: number;
+  /** Homeownership rate 0-100 */
+  homeownershipPct: number;
+  /** Metro-area population */
+  population: number;
+  /** Median household income in USD */
+  medianIncome: number;
+  /** Median rent in USD */
+  medianRent: number;
 }
 
 export interface MarketData {

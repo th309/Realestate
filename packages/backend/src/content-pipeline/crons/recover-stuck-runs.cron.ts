@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { QueueService, QueueName } from '../orchestrator/queue.service';
@@ -38,7 +38,7 @@ const STATE_TO_QUEUE: Partial<Record<PipelineStatus, QueueName>> = {
  * deploys, or transient Postgres issues.
  */
 @Injectable()
-export class RecoverStuckRunsCron {
+export class RecoverStuckRunsCron implements OnModuleInit {
   private readonly logger = new Logger(RecoverStuckRunsCron.name);
 
   constructor(
@@ -46,15 +46,29 @@ export class RecoverStuckRunsCron {
     private readonly queue: QueueService,
   ) {}
 
+  async onModuleInit(): Promise<void> {
+    setTimeout(() => {
+      this.run().catch((err) =>
+        this.logger.error('boot-time recovery scan failed', err),
+      );
+    }, 60_000);
+  }
+
   @Cron('*/5 * * * *')
   async run(): Promise<void> {
     const client = this.supabase.getClient();
     const nonTerminal = Object.keys(STEP_TIMEOUT_MIN) as PipelineStatus[];
-    const { data: runs } = await client
+    const { data: runs, error: selectErr } = await client
       .from('content_runs')
       .select('id, status, updated_at')
       .in('status', nonTerminal);
-    if (!runs) return;
+    if (selectErr) {
+      this.logger.error('stuck-run scan query failed', selectErr);
+      return;
+    }
+    if (!runs || runs.length === 0) return;
+
+    this.logger.log(`scanning ${runs.length} non-terminal runs`);
 
     let recovered = 0;
     for (const run of runs) {
@@ -71,15 +85,26 @@ export class RecoverStuckRunsCron {
 
       if (ageMin > timeoutMin) {
         const queueName = STATE_TO_QUEUE[run.status as PipelineStatus];
-        if (queueName) {
-          await this.queue.send(queueName, {
+        if (!queueName) {
+          this.logger.warn(
+            `no queue mapped for status ${run.status} (run ${run.id})`,
+          );
+          continue;
+        }
+        try {
+          const jobId = await this.queue.send(queueName, {
             runId: run.id,
             status: run.status,
           });
           this.logger.warn(
-            `re-enqueued stuck run ${run.id} in status ${run.status} after ${ageMin.toFixed(1)} min`,
+            `re-enqueued stuck run ${run.id} in status ${run.status} after ${ageMin.toFixed(1)} min (jobId=${jobId})`,
           );
           recovered++;
+        } catch (err) {
+          this.logger.error(
+            `failed to re-enqueue run ${run.id} (${run.status})`,
+            err,
+          );
         }
       }
     }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -12,6 +12,7 @@ import {
 
 @Injectable()
 export class RemotionCLIRenderer implements VideoRenderer {
+  private readonly logger = new Logger(RemotionCLIRenderer.name);
   private readonly cliPath: string;
   private readonly timeoutMs: number;
 
@@ -47,6 +48,9 @@ export class RemotionCLIRenderer implements VideoRenderer {
     ];
     if (req.audioPath) args.push('--audio', req.audioPath);
 
+    this.logger.log(
+      `spawning render: cli=${this.cliPath} audioPath=${req.audioPath ?? '<none>'} output=${req.outputPath}`,
+    );
     const stdoutPayload = await new Promise<string>((resolve, reject) => {
       const proc = spawn('node', args);
       let stdoutBuf = '';
@@ -63,6 +67,14 @@ export class RemotionCLIRenderer implements VideoRenderer {
       }, this.timeoutMs);
       proc.on('close', (code) => {
         clearTimeout(timer);
+        this.logger.log(
+          `render exit=${code} stderr.len=${stderrBuf.length} stdout.len=${stdoutBuf.length}`,
+        );
+        if (stderrBuf.includes('[render]')) {
+          for (const line of stderrBuf.split('\n')) {
+            if (line.includes('[render]')) this.logger.log(line.trim());
+          }
+        }
         if (code === 0) resolve(stdoutBuf);
         else
           reject(

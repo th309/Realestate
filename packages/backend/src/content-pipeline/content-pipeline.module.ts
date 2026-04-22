@@ -28,6 +28,7 @@ import { SCRIPT_GENERATOR } from './drivers/script-generator.interface';
 import { DataVerifierService } from './gates/data-verifier.service';
 import { BrandVoiceLinterService } from './gates/brand-voice-linter.service';
 import { EdgeTTSDriver } from './drivers/edge-tts-driver';
+import { AzureSpeechDriver } from './drivers/azure-speech-driver';
 import { TTSDriverFactory } from './drivers/tts-driver.factory';
 import { CredentialCrypto } from './drivers/credential-crypto';
 import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
@@ -72,6 +73,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
     BrandVoiceLinterService,
 
     EdgeTTSDriver,
+    AzureSpeechDriver,
     TTSDriverFactory,
     CredentialCrypto,
 

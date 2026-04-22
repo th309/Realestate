@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
@@ -50,6 +52,17 @@ export class ContentPipelineController {
     return { success: true, data: await this.service.getRunDetail(id) };
   }
 
+  @Get('runs/:id/asset-url')
+  async getAssetUrl(@Param('id') id: string, @Query('kind') kind: string) {
+    if (kind !== 'video_master' && kind !== 'audio') {
+      throw new BadRequestException('kind must be video_master or audio');
+    }
+    return {
+      success: true,
+      data: await this.service.getAssetSignedUrl(id, kind),
+    };
+  }
+
   @Post('runs/:id/approve')
   async approve(@Param('id') id: string) {
     await this.service.approveRun(id);
@@ -60,6 +73,12 @@ export class ContentPipelineController {
   async reject(@Param('id') id: string, @Body() body: { reason: string }) {
     await this.service.rejectRun(id, body.reason);
     return { success: true, data: { status: 'rejected' } };
+  }
+
+  @Post('runs/:id/retry')
+  async retry(@Param('id') id: string) {
+    await this.service.retryRun(id);
+    return { success: true, data: { status: 'queued' } };
   }
 
   @Post('runs/:id/edit-script')

@@ -1,5 +1,7 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { spawn } from "child_process";
+import { existsSync, renameSync, unlinkSync } from "fs";
 import path from "path";
 import { VideoProps, VideoPropsSchema } from "../types";
 
@@ -13,17 +15,16 @@ export interface RenderOptions {
  * Programmatic render entry used by the backend RemotionCLIRenderer
  * driver and the command-line wrapper. Validates props via zod before
  * bundling so bad input fails fast with a readable message.
+ *
+ * If audioPath is provided, the voiceover is muxed in as a post-render
+ * ffmpeg step — Remotion renders a silent AAC stub on its own, which
+ * the user can't hear.
  */
 export async function renderVideo(
   opts: RenderOptions,
 ): Promise<{ outputPath: string; durationMs: number }> {
   const validated = VideoPropsSchema.parse(opts.props);
 
-  // At runtime this file lives at either:
-  //   src/cli/render.ts   (when running via ts-node in dev)
-  //   dist/cli/render.js  (when running the compiled CLI)
-  // In both cases the Remotion root lives at <package>/src/index.ts.
-  // Walk up two levels from __dirname (cli -> pkg root) then into src/.
   const bundled = await bundle({
     entryPoint: path.resolve(__dirname, "..", "..", "src", "index.ts"),
     webpackOverride: (config) => config,
@@ -37,13 +38,80 @@ export async function renderVideo(
   });
 
   const start = Date.now();
+  const silentPath = opts.audioPath
+    ? opts.outputPath.replace(/\.mp4$/, ".silent.mp4")
+    : opts.outputPath;
+  console.error(
+    `[render] audioPath=${opts.audioPath ?? "<none>"} silentPath=${silentPath} outputPath=${opts.outputPath}`,
+  );
   await renderMedia({
     composition,
     serveUrl: bundled,
     codec: "h264",
-    outputLocation: opts.outputPath,
+    outputLocation: silentPath,
     inputProps: validated as unknown as Record<string, unknown>,
     audioCodec: "aac",
   });
+  console.error(
+    `[render] remotion wrote silentExists=${existsSync(silentPath)} outputExists=${existsSync(opts.outputPath)}`,
+  );
+
+  if (opts.audioPath) {
+    console.error(`[render] starting mux audio=${opts.audioPath}`);
+    await muxAudio(silentPath, opts.audioPath, opts.outputPath);
+    console.error(
+      `[render] after mux outputExists=${existsSync(opts.outputPath)} silentExists=${existsSync(silentPath)}`,
+    );
+    if (existsSync(silentPath)) unlinkSync(silentPath);
+  }
+
   return { outputPath: opts.outputPath, durationMs: Date.now() - start };
+}
+
+async function muxAudio(
+  videoPath: string,
+  audioPath: string,
+  outputPath: string,
+): Promise<void> {
+  const ffmpegBin = process.env.FFMPEG_PATH ?? "ffmpeg";
+  const args = [
+    "-y",
+    "-i",
+    videoPath,
+    "-i",
+    audioPath,
+    "-map",
+    "0:v:0",
+    "-map",
+    "1:a:0",
+    "-c:v",
+    "copy",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-shortest",
+    outputPath,
+  ];
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn(ffmpegBin, args);
+    let stderr = "";
+    proc.stderr.on("data", (d) => {
+      stderr += d.toString();
+    });
+    proc.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`ffmpeg mux exited ${code}: ${stderr.slice(-500)}`));
+      }
+    });
+    proc.on("error", (err) => {
+      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
+    });
+  });
+  // If outputPath equals videoPath (no silent suffix), rename not needed.
+  if (!existsSync(outputPath)) {
+    renameSync(videoPath, outputPath);
+  }
 }

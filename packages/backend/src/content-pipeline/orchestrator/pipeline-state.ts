@@ -14,7 +14,7 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
   published: [],
   published_partial: [],
   rejected: [],
-  failed: [],
+  failed: ['queued'],
 };
 
 export function canTransition(

@@ -1,7 +1,20 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { readFileSync } from "fs";
+import { readFileSync, appendFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { renderVideo } from "./render";
+
+// Unconditional trace so we see every invocation regardless of stdout capture
+const traceLog = join(tmpdir(), "render-cli-trace.log");
+try {
+  appendFileSync(
+    traceLog,
+    `[${new Date().toISOString()}] argv=${JSON.stringify(process.argv)}\n`,
+  );
+} catch {
+  // ignore
+}
 
 const program = new Command();
 program
@@ -12,6 +25,14 @@ program
   .parse();
 
 const opts = program.opts();
+try {
+  appendFileSync(
+    traceLog,
+    `[${new Date().toISOString()}] parsed opts=${JSON.stringify(opts)}\n`,
+  );
+} catch {
+  // ignore
+}
 
 (async () => {
   try {
