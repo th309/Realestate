@@ -34,16 +34,22 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/emails/package.json ./packages/emails/
 COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/video-template/package.json ./packages/video-template/
 # Postinstall script must exist before npm ci
 COPY scripts/postinstall-fix-types.js ./scripts/
 COPY packages/frontend/types/ ./packages/frontend/types/
 
 RUN npm ci
 
-# 3. Copy source and build backend only (Railway runs backend)
+# 3. Copy source and build backend (+ video-template CLI used by RemotionCLIRenderer)
 COPY . .
 
-RUN npm run build -w @propertyiq/emails && npm run build:backend
+# video-template is a workspace dep; RemotionCLIRenderer resolves its compiled
+# CLI at provider-construction time (require.resolve of dist/cli/render-cli.js),
+# so the dist must exist before Nest boots the content-pipeline module.
+RUN npm run build:cli -w @propertyiq/video-template \
+    && npm run build -w @propertyiq/emails \
+    && npm run build:backend
 
 # 4. Start
 CMD ["node", "packages/backend/dist/main.js"]
