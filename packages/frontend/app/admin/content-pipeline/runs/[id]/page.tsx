@@ -2,17 +2,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchRun, retryRun } from "../../lib/content-pipeline-api";
+import { cancelRun, fetchRun, retryRun } from "../../lib/content-pipeline-api";
 import { PipelineVisualization } from "./pipeline-visualization";
 import { EventLog } from "./event-log";
 import { ArtifactsPanel } from "./artifacts-panel";
 
-const TERMINAL = [
+// Stop auto-refetch in these states — polling isn't useful because the run
+// either won't advance without operator input (ready_for_review) or has hit
+// a terminal state.
+const DONE_POLLING = [
   "published",
   "published_partial",
   "failed",
   "rejected",
   "ready_for_review",
+  "cancelled",
+];
+
+// Cancel is allowed from any non-terminal state, including ready_for_review —
+// an operator reviewing a run may decide to abort rather than approve/reject.
+const TRULY_TERMINAL = [
+  "published",
+  "published_partial",
+  "failed",
+  "rejected",
+  "cancelled",
 ];
 
 export default function RunDetailPage() {
@@ -22,11 +36,17 @@ export default function RunDetailPage() {
     queryKey: ["content-pipeline-run", id],
     queryFn: () => fetchRun(id),
     refetchInterval: (q) =>
-      TERMINAL.includes(q.state.data?.run?.status ?? "") ? false : 2000,
+      DONE_POLLING.includes(q.state.data?.run?.status ?? "") ? false : 2000,
   });
 
   const retryMutation = useMutation({
     mutationFn: () => retryRun(id),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["content-pipeline-run", id] }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelRun(id),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["content-pipeline-run", id] }),
   });
@@ -44,6 +64,17 @@ export default function RunDetailPage() {
   }
 
   const isFailed = data.run.status === "failed";
+  const canCancel = !TRULY_TERMINAL.includes(data.run.status);
+
+  function handleCancelClick() {
+    if (
+      window.confirm(
+        "Cancel this run? In-flight steps will finish their current work but nothing new will run. Assets already produced stay in storage. This can't be undone — a cancelled run cannot be resumed.",
+      )
+    ) {
+      cancelMutation.mutate();
+    }
+  }
 
   return (
     <div className="p-8 space-y-6">
@@ -80,6 +111,18 @@ export default function RunDetailPage() {
       <PipelineVisualization
         status={data.run.status}
         eventsByType={eventsByType}
+        trailing={
+          canCancel ? (
+            <button
+              type="button"
+              onClick={handleCancelClick}
+              disabled={cancelMutation.isPending}
+              className="bg-error text-on-error rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60"
+            >
+              {cancelMutation.isPending ? "Cancelling…" : "Cancel run"}
+            </button>
+          ) : null
+        }
       />
 
       <div className="grid grid-cols-[1fr_320px] gap-6">

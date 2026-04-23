@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { PipelineStatus } from "../../lib/content-pipeline-api";
 
 const STAGES: Array<{
@@ -28,9 +29,11 @@ const STAGES: Array<{
 export function PipelineVisualization({
   status,
   eventsByType,
+  trailing,
 }: {
   status: PipelineStatus;
   eventsByType: Map<string, string>;
+  trailing?: ReactNode;
 }) {
   const currentIdx = STAGES.findIndex((st) => st.matchesStatus(status));
   return (
@@ -59,6 +62,7 @@ export function PipelineVisualization({
           </div>
         );
       })}
+      {trailing && <div className="ml-4 shrink-0">{trailing}</div>}
     </div>
   );
 }
