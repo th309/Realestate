@@ -48,6 +48,25 @@ export class PipelineSettingsService {
     return this.getSettings();
   }
 
+  async updateFormatDefault(
+    format: string,
+    patch: { default_approval_mode?: string },
+  ): Promise<FormatDefaultRow> {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('format_templates')
+      .update(patch)
+      .eq('format', format)
+      .select('*')
+      .single();
+    if (error || !data) {
+      throw new Error(
+        error?.message ?? `format_templates row not found for format=${format}`,
+      );
+    }
+    return data as FormatDefaultRow;
+  }
+
   async pause(): Promise<{ paused: boolean }> {
     this.paused = true;
     return { paused: true };
