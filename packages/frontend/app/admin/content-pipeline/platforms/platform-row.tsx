@@ -1,60 +1,80 @@
 "use client";
 
 import { useState } from "react";
-import { connectPlatform } from "../lib/content-pipeline-api";
+import {
+  connectPlatform,
+  disconnectPlatform,
+} from "../lib/content-pipeline-api";
 
 interface PlatformRowProps {
   platform: string;
   configured: boolean;
+  supported: boolean;
+  accountLabel: string | null;
+  connectedAt: string | null;
   lastPublishedAt: string | null;
-  supported?: boolean;
   onChange: () => void;
 }
 
 export function PlatformRow({
   platform,
   configured,
+  supported,
+  accountLabel,
+  connectedAt,
   lastPublishedAt,
-  supported = true,
-  onChange: _onChange,
+  onChange,
 }: PlatformRowProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
+  const [working, setWorking] = useState<"connect" | "disconnect" | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const label = platform.replaceAll("_", " ");
-  const docSlug = platform.split("_")[0];
+
+  // connectedAt accepted for interface stability; used by future enhancements
+  void connectedAt;
 
   async function handleConnect() {
-    setConnectError(null);
+    setError(null);
+    setWorking("connect");
     try {
-      setConnecting(true);
       const result = await connectPlatform(platform);
       if (result?.authUrl) {
-        window.location.href = result.authUrl;
+        window.location.assign(result.authUrl);
         return;
       }
-      setConnectError("Backend returned no auth URL");
+      setError("Backend returned no auth URL");
     } catch (err) {
-      setConnectError(err instanceof Error ? err.message : "Connect failed");
+      setError(err instanceof Error ? err.message : "Connect failed");
     } finally {
-      setConnecting(false);
+      setWorking(null);
+    }
+  }
+
+  async function handleDisconnect() {
+    setError(null);
+    setWorking("disconnect");
+    try {
+      await disconnectPlatform(platform);
+      setConfirmDisconnect(false);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Disconnect failed");
+    } finally {
+      setWorking(null);
     }
   }
 
   const statusLine = !supported
-    ? "Not yet available"
+    ? "Available in a later phase"
     : configured
-      ? lastPublishedAt
-        ? `Last publish ${new Date(lastPublishedAt).toLocaleDateString()}`
-        : "Ready"
+      ? accountLabel
+        ? `Connected · ${accountLabel}`
+        : "Connected"
       : "Not connected";
 
   return (
     <div className="rounded-xl bg-surface-container-low shadow-sm">
-      <div
-        onClick={() => setExpanded(!expanded)}
-        className="p-4 flex items-center justify-between cursor-pointer"
-      >
+      <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div
             className={`w-3 h-3 rounded-full ${
@@ -73,42 +93,74 @@ export function PlatformRow({
               {label}
             </div>
             <div className="text-xs text-outline">{statusLine}</div>
+            {configured && lastPublishedAt && (
+              <div className="text-xs text-outline mt-0.5">
+                Last publish {new Date(lastPublishedAt).toLocaleDateString()}
+              </div>
+            )}
           </div>
         </div>
+
         {supported && !configured && (
           <button
             type="button"
-            disabled={connecting}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleConnect();
-            }}
+            disabled={working === "connect"}
+            onClick={handleConnect}
             className="bg-primary text-on-primary rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60"
           >
-            {connecting ? "Connecting..." : "Connect"}
+            {working === "connect" ? "Opening…" : "Connect"}
           </button>
         )}
+
+        {supported && configured && (
+          <button
+            type="button"
+            disabled={working === "disconnect"}
+            onClick={() => setConfirmDisconnect(true)}
+            className="bg-surface-container-high text-on-surface rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
+          >
+            Disconnect
+          </button>
+        )}
+
         {!supported && (
-          <span className="text-xs text-outline font-semibold">
-            Coming soon
-          </span>
+          <button
+            type="button"
+            disabled
+            title="Available in a later phase"
+            className="rounded-full px-5 py-2 text-sm font-semibold bg-surface-container-high text-outline opacity-60 cursor-not-allowed"
+          >
+            Connect
+          </button>
         )}
       </div>
-      {expanded && (
-        <div className="p-4 border-t border-outline-variant space-y-2">
-          {connectError && <p className="text-sm text-error">{connectError}</p>}
+
+      {error && <div className="px-4 pb-3 text-sm text-error">{error}</div>}
+
+      {confirmDisconnect && (
+        <div className="p-4 border-t border-outline-variant bg-surface-container space-y-3">
           <p className="text-sm">
-            Setup walkthrough:{" "}
-            <code className="bg-surface-container rounded px-1 py-0.5 text-xs">
-              docs/content-pipeline/platform-setup/{docSlug}.md
-            </code>
+            Disconnecting will stop publishing to{" "}
+            <span className="font-semibold">{accountLabel ?? platform}</span>{" "}
+            until you reconnect. Continue?
           </p>
-          {configured && lastPublishedAt && (
-            <p className="text-xs text-outline">
-              Last successful publish:{" "}
-              {new Date(lastPublishedAt).toLocaleString()}
-            </p>
-          )}
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setConfirmDisconnect(false)}
+              className="rounded-full px-4 py-1.5 text-sm bg-surface-container-high"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={working === "disconnect"}
+              onClick={handleDisconnect}
+              className="rounded-full px-4 py-1.5 text-sm bg-error text-on-error font-semibold disabled:opacity-60"
+            >
+              {working === "disconnect" ? "Disconnecting…" : "Disconnect"}
+            </button>
+          </div>
         </div>
       )}
     </div>

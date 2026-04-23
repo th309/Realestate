@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
+import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
 import { ContentPipelineService } from './content-pipeline.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
@@ -49,6 +50,7 @@ import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
 
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
+import { PlatformCredentialsService } from './platform-credentials.service';
 
 @Module({
   imports: [
@@ -60,7 +62,11 @@ import { PipelineSettingsService } from './pipeline-settings.service';
     GeographyModule,
     MarketSnapshotModule,
   ],
-  controllers: [ContentPipelineController, ShortLinkController],
+  controllers: [
+    ContentPipelineController,
+    PlatformOAuthCallbackController,
+    ShortLinkController,
+  ],
   providers: [
     ContentPipelineService,
     RunOrchestratorService,
@@ -111,6 +117,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
 
     PlatformManagerService,
     PipelineSettingsService,
+    PlatformCredentialsService,
   ],
   exports: [
     ContentPipelineService,
@@ -120,6 +127,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
     AttributionService,
     TTSDriverFactory,
     MetricsPullerService,
+    PlatformCredentialsService,
   ],
 })
 export class ContentPipelineModule {}

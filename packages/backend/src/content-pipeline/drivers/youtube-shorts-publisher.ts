@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
 import { createReadStream } from 'fs';
 import {
   PlatformPublisher,
@@ -7,38 +8,41 @@ import {
   PublishResult,
 } from './platform-publisher.interface';
 import { Platform } from '../types';
+import { PlatformCredentialsService } from '../platform-credentials.service';
 
 @Injectable()
 export class YouTubeShortsPublisher implements PlatformPublisher {
   readonly platform: Platform = 'youtube_shorts';
-  private oauth2: any;
+  private cachedAuth: { refreshToken: string; client: OAuth2Client } | null =
+    null;
 
-  isConfigured(): boolean {
-    return !!(
-      process.env.YOUTUBE_OAUTH_CLIENT_ID &&
-      process.env.YOUTUBE_OAUTH_CLIENT_SECRET &&
-      process.env.YOUTUBE_OAUTH_REFRESH_TOKEN
-    );
+  constructor(private readonly creds: PlatformCredentialsService) {}
+
+  async isConfigured(): Promise<boolean> {
+    return (await this.creds.getActive('youtube_shorts')) !== null;
   }
 
-  private getAuth() {
-    if (!this.oauth2) {
-      this.oauth2 = new google.auth.OAuth2(
+  private async getAuth(): Promise<OAuth2Client> {
+    const row = await this.creds.getActive('youtube_shorts');
+    if (!row) {
+      throw new Error(
+        'YouTube not connected. Visit /admin/content-pipeline/platforms and click Connect.',
+      );
+    }
+    if (!this.cachedAuth || this.cachedAuth.refreshToken !== row.refreshToken) {
+      const client = new google.auth.OAuth2(
         process.env.YOUTUBE_OAUTH_CLIENT_ID,
         process.env.YOUTUBE_OAUTH_CLIENT_SECRET,
       );
-      this.oauth2.setCredentials({
-        refresh_token: process.env.YOUTUBE_OAUTH_REFRESH_TOKEN,
-      });
+      client.setCredentials({ refresh_token: row.refreshToken });
+      this.cachedAuth = { refreshToken: row.refreshToken, client };
     }
-    return this.oauth2;
+    return this.cachedAuth.client;
   }
 
   async publish(req: PublishRequest): Promise<PublishResult> {
-    if (!this.isConfigured())
-      throw new Error('YouTubeShortsPublisher not configured');
-
-    const yt = google.youtube({ version: 'v3', auth: this.getAuth() });
+    const auth = await this.getAuth();
+    const yt = google.youtube({ version: 'v3', auth });
     const privacyStatus = req.postMode === 'direct' ? 'public' : 'private';
 
     const descriptionWithHashtag = req.description.includes('#Shorts')
@@ -78,6 +82,7 @@ export class YouTubeShortsPublisher implements PlatformPublisher {
   }
 
   async refreshCredentials(): Promise<void> {
-    await this.getAuth().getAccessToken();
+    const auth = await this.getAuth();
+    await auth.getAccessToken();
   }
 }

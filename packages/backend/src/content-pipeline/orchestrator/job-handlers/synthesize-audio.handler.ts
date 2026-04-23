@@ -49,9 +49,22 @@ export class SynthesizeAudioHandler {
       if (!scriptAsset) throw new Error('script asset not found');
 
       const script = scriptAsset.metadata.scripts[0];
+      // Substitute the {{SHORT_LINK}} template placeholder with the voice-
+      // friendly spelling of the brand domain. The placeholder pattern is
+      // preserved in the stored script (review UI shows the template) and
+      // in brand-voice-linter's LLM judge input — only the audio-bound text
+      // gets the concrete phrase. The spelling "Property IQ dot app" coaxes
+      // Edge TTS to pronounce the mark and TLD as separate, readable tokens
+      // rather than mangling "propertyiq.app" into one slurred syllable.
+      // Visual short-link overlays (with per-run slugs) live on the video-
+      // composition side and use the compact "propertyiq.app" form.
+      const spokenText = script.fullText.replace(
+        /\{\{SHORT_LINK\}\}/g,
+        'Property IQ dot app',
+      );
       const driver = this.ttsFactory.forProvider(run.tts_provider);
       this.logger.log(
-        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} script.len=${script.fullText.length}`,
+        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} script.len=${script.fullText.length} spoken.len=${spokenText.length}`,
       );
       const { data: voice } = await client
         .from('tts_voices')
@@ -66,7 +79,7 @@ export class SynthesizeAudioHandler {
         `audio-${runId}-${randomBytes(4).toString('hex')}.mp3`,
       );
       const result = await this.synthesizeWithRetry(driver, {
-        text: script.fullText,
+        text: spokenText,
         voiceId: voice.provider_voice_id,
         outputPath,
         format: 'mp3',
