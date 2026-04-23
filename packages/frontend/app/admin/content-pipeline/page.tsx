@@ -65,7 +65,7 @@ export default function DashboardPage() {
               No runs yet. Start one with the Create a run button.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="flex flex-wrap gap-3">
               {data.recentRuns.map((run) => (
                 <RunCard key={run.id} run={run} />
               ))}
@@ -109,7 +109,7 @@ function RunCard({ run }: { run: RunSummary }) {
   return (
     <Link
       href={`/admin/content-pipeline/runs/${run.id}`}
-      className="block rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
+      className="block w-[240px] rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
     >
       <div className="aspect-[9/16] rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high mb-2 overflow-hidden flex items-center justify-center">
         {videoData?.url ? (
