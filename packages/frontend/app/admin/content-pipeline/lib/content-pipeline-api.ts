@@ -189,6 +189,20 @@ export async function updateSettings(patch: { strictness?: string }) {
   });
 }
 
+export async function updateFormatDefault(
+  format: string,
+  patch: { default_approval_mode?: "auto" | "review" | "draft" },
+) {
+  return fetchAPIRaw(
+    `/api/admin/content-pipeline/settings/formats/${encodeURIComponent(format)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    },
+  );
+}
+
 export async function pausePipeline() {
   return fetchAPIRaw("/api/admin/content-pipeline/pause", { method: "POST" });
 }

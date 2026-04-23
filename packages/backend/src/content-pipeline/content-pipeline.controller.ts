@@ -15,6 +15,7 @@ import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 
 @UseGuards(AdminGuard)
 @Controller('api/admin/content-pipeline')
@@ -121,6 +122,17 @@ export class ContentPipelineController {
     return {
       success: true,
       data: await this.settingsService.updateSettings(dto),
+    };
+  }
+
+  @Patch('settings/formats/:format')
+  async updateFormatDefault(
+    @Param('format') format: string,
+    @Body() dto: UpdateFormatDefaultDto,
+  ) {
+    return {
+      success: true,
+      data: await this.settingsService.updateFormatDefault(format, dto),
     };
   }
 

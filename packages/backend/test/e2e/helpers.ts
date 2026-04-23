@@ -24,6 +24,11 @@ import { RunOrchestratorService } from '../../src/content-pipeline/orchestrator/
  * session flow stabilizes.
  */
 export async function bootstrapE2EContext(): Promise<E2EContext> {
+  // Prevent HandlersBootstrapService from subscribing pg-boss workers
+  // in this process — the happy-path spec drives handlers synchronously
+  // and would otherwise race its own workers on each handleStepSuccess
+  // enqueue. Set before module init so the flag is observed.
+  process.env.DISABLE_CONTENT_PIPELINE_WORKERS = 'true';
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn'],
   });

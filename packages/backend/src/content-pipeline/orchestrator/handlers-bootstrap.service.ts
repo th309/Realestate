@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { FetchDataHandler } from './job-handlers/fetch-data.handler';
 import { GenerateScriptHandler } from './job-handlers/generate-script.handler';
@@ -15,6 +15,8 @@ import {
 
 @Injectable()
 export class HandlersBootstrapService implements OnModuleInit {
+  private readonly logger = new Logger(HandlersBootstrapService.name);
+
   constructor(
     private readonly queue: QueueService,
     private readonly fetchData: FetchDataHandler,
@@ -29,6 +31,17 @@ export class HandlersBootstrapService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // E2E tests drive handlers directly and need the process to NOT
+    // subscribe workers to the shared pg-boss queue — otherwise each
+    // handler's handleStepSuccess enqueues the next job, which the
+    // test's own in-process worker races it on. Prod/staging leave
+    // this unset.
+    if (process.env.DISABLE_CONTENT_PIPELINE_WORKERS === 'true') {
+      this.logger.warn(
+        'DISABLE_CONTENT_PIPELINE_WORKERS=true — skipping queue subscriptions',
+      );
+      return;
+    }
     await this.queue.work<{ runId: string; status: string }>(
       'orchestrator',
       async (job) => {
