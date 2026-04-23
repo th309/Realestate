@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
+import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
 import { ContentPipelineService } from './content-pipeline.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
@@ -61,7 +62,11 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     GeographyModule,
     MarketSnapshotModule,
   ],
-  controllers: [ContentPipelineController, ShortLinkController],
+  controllers: [
+    ContentPipelineController,
+    PlatformOAuthCallbackController,
+    ShortLinkController,
+  ],
   providers: [
     ContentPipelineService,
     RunOrchestratorService,
