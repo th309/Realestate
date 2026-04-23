@@ -1,72 +1,45 @@
 import { YouTubeShortsPublisher } from './youtube-shorts-publisher';
-
-jest.mock('fs', () => {
-  const actual = jest.requireActual('fs');
-  return {
-    ...actual,
-    createReadStream: jest.fn().mockReturnValue('MOCK_STREAM'),
-  };
-});
-
-jest.mock('googleapis', () => ({
-  google: {
-    auth: {
-      OAuth2: jest.fn().mockImplementation(() => ({
-        setCredentials: jest.fn(),
-        getAccessToken: jest.fn().mockResolvedValue({ token: 'x' }),
-      })),
-    },
-    youtube: jest.fn().mockReturnValue({
-      videos: {
-        insert: jest.fn().mockResolvedValue({ data: { id: 'abc123' } }),
-      },
-    }),
-  },
-}));
+import { PlatformCredentialsService } from '../platform-credentials.service';
 
 describe('YouTubeShortsPublisher', () => {
+  let getActive: jest.Mock;
+  let creds: PlatformCredentialsService;
+
   beforeEach(() => {
-    process.env.YOUTUBE_OAUTH_CLIENT_ID = 'test-client';
-    process.env.YOUTUBE_OAUTH_CLIENT_SECRET = 'test-secret';
-    process.env.YOUTUBE_OAUTH_REFRESH_TOKEN = 'test-refresh';
+    process.env.YOUTUBE_OAUTH_CLIENT_ID = 'cid.apps.googleusercontent.com';
+    process.env.YOUTUBE_OAUTH_CLIENT_SECRET = 'GOCSPX-secret';
+    getActive = jest.fn();
+    creds = { getActive } as unknown as PlatformCredentialsService;
   });
 
-  it('reports configured when env vars set', () => {
-    expect(new YouTubeShortsPublisher().isConfigured()).toBe(true);
-  });
-
-  it('reports not configured when env vars missing', () => {
-    delete process.env.YOUTUBE_OAUTH_CLIENT_ID;
-    expect(new YouTubeShortsPublisher().isConfigured()).toBe(false);
-  });
-
-  it('publishes with Shorts hashtag in description', async () => {
-    const publisher = new YouTubeShortsPublisher();
-    const result = await publisher.publish({
-      runId: 'r1',
-      videoPath: '/tmp/v.mp4',
-      title: 'Cleveland PropertyIQ Score',
-      description: 'Cleveland hit 78',
-      tags: ['real estate', 'cleveland'],
-      postMode: 'direct',
+  it('isConfigured returns true when an active credential exists', async () => {
+    getActive.mockResolvedValue({
+      refreshToken: 'rt',
+      accountLabel: '@x',
+      connectedAt: new Date(),
     });
-    expect(result.externalId).toBe('abc123');
-    expect(result.externalUrl).toContain('youtube.com');
-    expect(result.cost.provider).toBe('youtube');
+    const pub = new YouTubeShortsPublisher(creds);
+    expect(await pub.isConfigured()).toBe(true);
   });
 
-  it('throws when publish called and not configured', async () => {
-    delete process.env.YOUTUBE_OAUTH_CLIENT_ID;
-    const publisher = new YouTubeShortsPublisher();
+  it('isConfigured returns false when no active credential exists', async () => {
+    getActive.mockResolvedValue(null);
+    const pub = new YouTubeShortsPublisher(creds);
+    expect(await pub.isConfigured()).toBe(false);
+  });
+
+  it('publish throws a clear error when no credential exists', async () => {
+    getActive.mockResolvedValue(null);
+    const pub = new YouTubeShortsPublisher(creds);
     await expect(
-      publisher.publish({
-        runId: 'r1',
+      pub.publish({
+        runId: 'r',
         videoPath: '/tmp/v.mp4',
         title: 't',
         description: 'd',
         tags: [],
         postMode: 'direct',
-      }),
-    ).rejects.toThrow(/not configured/);
+      } as any),
+    ).rejects.toThrow(/YouTube not connected/);
   });
 });

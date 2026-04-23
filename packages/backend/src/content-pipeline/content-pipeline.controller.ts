@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -13,6 +14,7 @@ import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { ContentPipelineService } from './content-pipeline.service';
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
+import { PlatformCredentialsService } from './platform-credentials.service';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
@@ -24,6 +26,7 @@ export class ContentPipelineController {
     private readonly service: ContentPipelineService,
     private readonly platformManager: PlatformManagerService,
     private readonly settingsService: PipelineSettingsService,
+    private readonly credentials: PlatformCredentialsService,
   ) {}
 
   @Get('health')
@@ -119,6 +122,12 @@ export class ContentPipelineController {
       success: true,
       data: await this.platformManager.startOAuth(platform),
     };
+  }
+
+  @Delete('platforms/:platform/credentials')
+  async platformDisconnect(@Param('platform') platform: string) {
+    await this.credentials.disconnect(platform);
+    return { success: true, data: { disconnected: platform } };
   }
 
   @Get('settings')

@@ -22,7 +22,7 @@ export interface PublishResult {
 
 export interface PlatformPublisher {
   readonly platform: Platform;
-  isConfigured(): boolean;
+  isConfigured(): Promise<boolean>; // DB-backed credential check is async
   publish(req: PublishRequest): Promise<PublishResult>;
   refreshCredentials?(): Promise<void>;
 }

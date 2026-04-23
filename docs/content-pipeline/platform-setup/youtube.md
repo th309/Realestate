@@ -77,7 +77,7 @@ OAuth Playground is Google's browser tool for getting tokens out of an OAuth app
 
 1. Open https://developers.google.com/oauthplayground/
 2. Click the **gear icon** (top right).
-3. Check the box: **Use your own OAuth credentials**.
+3. Check the box: **Use your own OAuth credentials**. **This is not optional.** If you skip this step, OAuth Playground uses its shared credentials and auto-revokes the refresh token after 24 hours — the pipeline will start 502ing YouTube uploads with `invalid_grant` the next day. With your own credentials entered, the refresh token persists until you revoke it manually.
 4. Paste the Client ID and Client secret from Step 2. Do NOT close the gear panel yet.
 5. Confirm "OAuth flow" is **Server-side** and "Access type" is **Offline** (this is what triggers a refresh token being returned). Then close the panel.
 6. In the **left panel "Step 1 Select & authorize APIs"**:
@@ -137,5 +137,6 @@ YouTube Data API v3 has a default quota of 10,000 units per day. An upload costs
 ## Known issues
 
 - OAuth token refresh: Google rotates refresh tokens when the consent screen is in production mode but not in test mode. We stay in test mode for simplicity.
+- **OAuth Playground 24h revocation (trap):** if you generate the refresh token without entering your own OAuth credentials in the Playground's gear panel, Playground uses _its_ shared client — which auto-revokes refresh tokens 24 hours after issue. The pipeline's first day works; day 2 every publish fails with `{"error":"invalid_grant"}`. Fix: redo Step 4 with your own `client_id` + `client_secret` pasted into the gear panel before clicking Authorize APIs. Tokens generated that way persist indefinitely.
 - Shorts detection: YouTube auto-detects Shorts by aspect ratio plus the `#Shorts` hashtag in title or description. Our publisher appends `#Shorts` automatically to descriptions; ensure videos are rendered at 9x16 (1080x1920).
 - Category ID: we use `22` (People and Blogs) by default; Shorts does not require category to match specific videos.
