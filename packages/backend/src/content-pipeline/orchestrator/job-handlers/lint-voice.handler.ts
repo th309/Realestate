@@ -25,10 +25,15 @@ export class LintVoiceHandler {
       const script = scriptAsset.metadata.scripts[0];
       const result = await this.gate.lint(script.fullText);
 
+      const gateOutcome = result.passed
+        ? result.warned
+          ? 'warned'
+          : 'passed'
+        : 'failed';
       await client.from('content_run_gates').insert({
         run_id: runId,
         gate: 'brand_voice_linter',
-        result: result.passed ? 'passed' : 'failed',
+        result: gateOutcome,
         details: { violations: result.violations },
         llm_judge_response: result.llm_judge_response ?? null,
       });

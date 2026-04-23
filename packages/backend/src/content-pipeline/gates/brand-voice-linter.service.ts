@@ -151,9 +151,16 @@ export class BrandVoiceLinterService {
       violations: Array<{ severity: string; issue: string; quote: string }>;
     };
     const critical = judged.violations.filter((v) => v.severity === 'critical');
+    const passed = judged.score >= minScore && critical.length === 0;
+    // Warning escalation: passing at exactly the floor (score === minScore)
+    // means the judge was marginal. Ship-gate still closes, but the
+    // orchestrator will force this run through human review before it
+    // publishes — cheap insurance against the auto/draft fast path.
+    const warned = passed && judged.score === minScore;
 
     return {
-      passed: judged.score >= minScore && critical.length === 0,
+      passed,
+      warned,
       violations: judged.violations.map((v) => ({
         claim: {
           quote: v.quote,

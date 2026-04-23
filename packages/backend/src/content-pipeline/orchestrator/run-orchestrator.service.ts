@@ -88,11 +88,43 @@ export class RunOrchestratorService {
       .eq('id', runId)
       .single();
     if (!run) return;
-    const next = nextStateOnSuccess(
+
+    const effectiveMode = await this.resolveEffectiveApprovalMode(
+      client,
+      runId,
       run.status as PipelineStatus,
       run.approval_mode as ApprovalMode,
     );
+    const next = nextStateOnSuccess(
+      run.status as PipelineStatus,
+      effectiveMode,
+    );
     if (next) await this.transitionTo(runId, next, { enqueueNext: true });
+  }
+
+  /**
+   * Gate-warned escalator: if we're about to transition out of
+   * rendering_video and any gate for this run emitted `result='warned'`,
+   * force approval_mode='review' so a human eyeballs the run before it
+   * publishes — regardless of the format's default (auto/draft). The
+   * gates themselves still pass; this only changes the post-render
+   * routing decision.
+   */
+  private async resolveEffectiveApprovalMode(
+    client: ReturnType<SupabaseService['getClient']>,
+    runId: string,
+    currentStatus: PipelineStatus,
+    approvalMode: ApprovalMode,
+  ): Promise<ApprovalMode> {
+    if (currentStatus !== 'rendering_video') return approvalMode;
+    if (approvalMode === 'review') return approvalMode;
+    const { data: warnings } = await client
+      .from('content_run_gates')
+      .select('gate')
+      .eq('run_id', runId)
+      .eq('result', 'warned')
+      .limit(1);
+    return warnings && warnings.length > 0 ? 'review' : approvalMode;
   }
 
   async handleStepFailure(runId: string, reason: string): Promise<void> {
