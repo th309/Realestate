@@ -22,6 +22,7 @@ const MIGRATIONS = [
   "20260421000500_content_pipeline_seed_formats.sql",
   "20260421000700_content_pipeline_seed_magnets.sql",
   "20260421010000_pgboss_schema_bootstrap.sql",
+  "20260423000100_content_pipeline_format_pace_columns.sql",
 ];
 
 const CONN =
@@ -80,10 +81,13 @@ async function main() {
   );
 
   const { rows: fmtRows } = await client.query(
-    `SELECT format, enabled FROM format_templates ORDER BY format`,
+    `SELECT format, enabled, natural_wpm, audio_buffer_seconds FROM format_templates ORDER BY format`,
   );
   console.log(`\nformat_templates rows: ${fmtRows.length}`);
-  for (const r of fmtRows) console.log(`  - ${r.format}: enabled=${r.enabled}`);
+  for (const r of fmtRows)
+    console.log(
+      `  - ${r.format}: enabled=${r.enabled} wpm=${r.natural_wpm} buffer=${r.audio_buffer_seconds}s`,
+    );
 
   const { rows: voiceRows } = await client.query(`SELECT id FROM tts_voices`);
   console.log(`\ntts_voices rows: ${voiceRows.length}`);

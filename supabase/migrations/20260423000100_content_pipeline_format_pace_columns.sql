@@ -11,9 +11,9 @@
 --     hard cap enforced post-synthesis.
 
 ALTER TABLE format_templates
-  ADD COLUMN natural_wpm SMALLINT NOT NULL DEFAULT 140
+  ADD COLUMN IF NOT EXISTS natural_wpm SMALLINT NOT NULL DEFAULT 140
     CHECK (natural_wpm BETWEEN 60 AND 250),
-  ADD COLUMN audio_buffer_seconds SMALLINT NOT NULL DEFAULT 2
+  ADD COLUMN IF NOT EXISTS audio_buffer_seconds SMALLINT NOT NULL DEFAULT 2
     CHECK (audio_buffer_seconds >= 0);
 
 COMMENT ON COLUMN format_templates.natural_wpm IS
