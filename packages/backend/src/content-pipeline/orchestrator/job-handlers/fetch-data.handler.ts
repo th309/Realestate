@@ -36,6 +36,14 @@ export class FetchDataHandler {
         .from('content_runs')
         .update({ resolved_geo: resolvedGeo })
         .eq('id', runId);
+      // Idempotent write: a prior run or manual re-enqueue may have left an
+      // mcp_payload row behind. Downstream handlers use .single() which blows
+      // up on 2+ rows, so we clear first.
+      await client
+        .from('content_assets')
+        .delete()
+        .eq('run_id', runId)
+        .eq('kind', 'mcp_payload');
       await client.from('content_assets').insert({
         run_id: runId,
         kind: 'mcp_payload',
