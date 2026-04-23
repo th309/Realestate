@@ -15,14 +15,14 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-semibold mb-6">Pick a format</h1>
-      <div className="grid grid-cols-3 gap-6">
+      <div className="flex flex-wrap gap-6">
         {enabledKeys.map((key) => {
           const meta = FORMAT_META[key];
           return (
             <button
               key={key}
               onClick={() => onPick(key)}
-              className="rounded-xl overflow-hidden bg-surface-container-low shadow-sm text-left hover:shadow-md"
+              className="w-[240px] rounded-xl overflow-hidden bg-surface-container-low shadow-sm text-left hover:shadow-md"
             >
               <FormatPreview
                 formatKey={key}

@@ -64,7 +64,7 @@ function SignedMedia({
     <video
       controls
       src={data.url}
-      className="w-full rounded-xl aspect-[9/16] max-w-md"
+      className="w-[240px] rounded-xl aspect-[9/16]"
     />
   ) : (
     <audio controls src={data.url} className="w-full" />
