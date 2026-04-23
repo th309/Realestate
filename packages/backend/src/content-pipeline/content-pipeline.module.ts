@@ -49,6 +49,7 @@ import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
 
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
+import { PlatformCredentialsService } from './platform-credentials.service';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
 
     PlatformManagerService,
     PipelineSettingsService,
+    PlatformCredentialsService,
   ],
   exports: [
     ContentPipelineService,
@@ -120,6 +122,7 @@ import { PipelineSettingsService } from './pipeline-settings.service';
     AttributionService,
     TTSDriverFactory,
     MetricsPullerService,
+    PlatformCredentialsService,
   ],
 })
 export class ContentPipelineModule {}
