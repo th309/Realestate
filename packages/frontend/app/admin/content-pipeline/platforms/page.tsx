@@ -44,8 +44,10 @@ export default function PlatformsPage() {
             key={platform}
             platform={platform}
             configured={registered?.configured ?? false}
+            supported={registered?.supported ?? false}
+            accountLabel={registered?.accountLabel ?? null}
+            connectedAt={registered?.connectedAt ?? null}
             lastPublishedAt={registered?.lastPublishedAt ?? null}
-            supported={Boolean(registered)}
             onChange={() => refetch()}
           />
         );
