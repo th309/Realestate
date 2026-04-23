@@ -5,8 +5,12 @@ import {
   fetchSettings,
   pausePipeline,
   resumePipeline,
+  updateFormatDefault,
   updateSettings,
 } from "../lib/content-pipeline-api";
+
+type ApprovalMode = "auto" | "review" | "draft";
+const APPROVAL_MODES: ApprovalMode[] = ["auto", "review", "draft"];
 
 type Strictness = "relaxed" | "balanced" | "strict";
 
@@ -48,6 +52,12 @@ export default function SettingsPage() {
   const togglePauseMutation = useMutation({
     mutationFn: (nextPaused: boolean) =>
       nextPaused ? pausePipeline() : resumePipeline(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY }),
+  });
+
+  const approvalModeMutation = useMutation({
+    mutationFn: (args: { format: string; mode: ApprovalMode }) =>
+      updateFormatDefault(args.format, { default_approval_mode: args.mode }),
     onSuccess: () => qc.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY }),
   });
 
@@ -111,7 +121,23 @@ export default function SettingsPage() {
                     {f.display_name ?? f.format}
                   </td>
                   <td className="py-2 text-on-surface">
-                    {f.default_approval_mode ?? "--"}
+                    <select
+                      value={f.default_approval_mode ?? "review"}
+                      disabled={approvalModeMutation.isPending}
+                      onChange={(e) =>
+                        approvalModeMutation.mutate({
+                          format: f.format,
+                          mode: e.target.value as ApprovalMode,
+                        })
+                      }
+                      className="bg-surface-container rounded-md px-2 py-1 text-sm border border-outline-variant"
+                    >
+                      {APPROVAL_MODES.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="py-2 text-on-surface">
                     {f.default_tts_voice_id ?? "(long-form)"}

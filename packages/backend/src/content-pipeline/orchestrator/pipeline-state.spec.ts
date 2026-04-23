@@ -27,8 +27,12 @@ describe('pipeline-state', () => {
     );
   });
 
-  it('terminal states have no transitions', () => {
+  it('published is terminal', () => {
     expect(canTransition('published', 'fetching_data')).toBe(false);
-    expect(canTransition('failed', 'queued')).toBe(false);
+    expect(canTransition('published', 'queued')).toBe(false);
+  });
+
+  it('failed can be retried back to queued', () => {
+    expect(canTransition('failed', 'queued')).toBe(true);
   });
 });

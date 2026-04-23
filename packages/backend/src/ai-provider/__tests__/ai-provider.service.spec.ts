@@ -31,6 +31,9 @@ describe('AiProviderService', () => {
               }),
             }),
           }),
+          // ai-usage-logger.ts fires `.from('ai_usage_log').insert(...)`
+          // fire-and-forget after each completion; keep it thenable.
+          insert: jest.fn().mockResolvedValue({ error: null }),
         }),
       }),
     };
@@ -137,7 +140,13 @@ describe('AiProviderService', () => {
     };
 
     beforeEach(async () => {
-      await buildModule({ data: dbConfig, error: null });
+      // ai-config-resolver.loadFromDb validates that the env-keyed API key
+      // for the DB-selected provider exists; without ANTHROPIC_API_KEY the
+      // resolver returns null and falls through to the env-var chain.
+      await buildModule(
+        { data: dbConfig, error: null },
+        { ANTHROPIC_API_KEY: 'test-anthropic-key' },
+      );
     });
 
     it('uses DB config when available', async () => {
