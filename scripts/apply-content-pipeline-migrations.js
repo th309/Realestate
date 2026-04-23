@@ -23,6 +23,7 @@ const MIGRATIONS = [
   "20260421000700_content_pipeline_seed_magnets.sql",
   "20260421010000_pgboss_schema_bootstrap.sql",
   "20260423000100_content_pipeline_format_pace_columns.sql",
+  "20260423000200_platform_credentials.sql",
 ];
 
 const CONN =
