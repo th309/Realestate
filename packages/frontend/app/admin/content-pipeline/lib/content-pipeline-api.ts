@@ -169,14 +169,19 @@ export async function fetchReviewQueue() {
   return res.data.items;
 }
 
-export async function fetchPlatforms() {
+export interface PlatformStatus {
+  platform: string;
+  configured: boolean;
+  supported: boolean;
+  accountLabel: string | null;
+  connectedAt: string | null;
+  lastPublishedAt: string | null;
+}
+
+export async function fetchPlatforms(): Promise<PlatformStatus[]> {
   const res = await fetchAPI<{
     data: {
-      platforms: Array<{
-        platform: string;
-        configured: boolean;
-        lastPublishedAt: string | null;
-      }>;
+      platforms: PlatformStatus[];
     };
   }>("/api/admin/content-pipeline/platforms");
   return res.data.platforms;
@@ -189,6 +194,21 @@ export async function connectPlatform(platform: string) {
   );
   const json = await res.json();
   return json.data;
+}
+
+export async function disconnectPlatform(
+  platform: string,
+): Promise<{ disconnected: string }> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/platforms/${platform}/credentials`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Disconnect failed (${res.status}): ${body}`);
+  }
+  const parsed = (await res.json()) as { data: { disconnected: string } };
+  return parsed.data;
 }
 
 export async function fetchSettings() {
