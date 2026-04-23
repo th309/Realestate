@@ -21,6 +21,7 @@ export const STATE_LABELS: Record<PipelineStatus, string> = {
   published_partial: "Live (some platforms failed)",
   rejected: "Rejected",
   failed: "Something went wrong",
+  cancelled: "Cancelled",
 };
 
 export const VISIBLE_STAGES = [

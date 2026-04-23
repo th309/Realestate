@@ -41,7 +41,8 @@ export type PipelineStatus =
   | 'published'
   | 'published_partial'
   | 'rejected'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export interface GeoRef {
   geography: 'state' | 'metro' | 'county' | 'zip';

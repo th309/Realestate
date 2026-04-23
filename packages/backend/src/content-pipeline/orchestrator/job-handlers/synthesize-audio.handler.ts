@@ -5,6 +5,7 @@ import { TTSDriverFactory } from '../../drivers/tts-driver.factory';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
+import { spawn } from 'child_process';
 
 @Injectable()
 export class SynthesizeAudioHandler {
@@ -22,10 +23,19 @@ export class SynthesizeAudioHandler {
       const client = this.supabase.getClient();
       const { data: run } = await client
         .from('content_runs')
-        .select('tts_provider, tts_voice_id')
+        .select('format, tts_provider, tts_voice_id')
         .eq('id', runId)
         .single();
       if (!run) throw new Error('run not found');
+
+      const { data: fmt } = await client
+        .from('format_templates')
+        .select('duration_seconds, audio_buffer_seconds')
+        .eq('format', run.format)
+        .single();
+      if (!fmt) throw new Error(`format_template not found for ${run.format}`);
+      const audioBudgetMs =
+        (fmt.duration_seconds - fmt.audio_buffer_seconds) * 1000;
       this.logger.log(
         `[PIPE] synthesize-audio run=${runId} provider=${run.tts_provider} voice=${run.tts_voice_id}`,
       );
@@ -61,20 +71,41 @@ export class SynthesizeAudioHandler {
         outputPath,
         format: 'mp3',
       });
+      // TTSSynthesisResult.durationMs is wall-clock synth time on edge-tts,
+      // not audio length — probe the file directly so we know what'll
+      // actually mix into the video.
+      const audioDurationMs = await probeAudioDurationMs(outputPath);
       this.logger.log(
-        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} wallMs=${result.durationMs} cost=$${result.cost.amount_usd.toFixed(4)}`,
+        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} wallMs=${result.durationMs} audioMs=${audioDurationMs} budgetMs=${audioBudgetMs} cost=$${result.cost.amount_usd.toFixed(4)}`,
       );
+
+      if (audioDurationMs > audioBudgetMs) {
+        const overS = ((audioDurationMs - audioBudgetMs) / 1000).toFixed(1);
+        throw new Error(
+          `voice-over is ${(audioDurationMs / 1000).toFixed(1)}s but ${run.format} video is ${fmt.duration_seconds}s with a ${fmt.audio_buffer_seconds}s buffer (cap ${(audioBudgetMs / 1000).toFixed(1)}s). Over by ${overS}s. Edit the script to be shorter and retry.`,
+        );
+      }
 
       const storageUrl = await this.uploadToStorage(runId, outputPath);
       this.logger.log(
         `[PIPE] synthesize-audio run=${runId} uploaded=${storageUrl}`,
       );
 
+      // Idempotent write: clear any prior audio row so .single() reads stay valid after a retry.
+      await client
+        .from('content_assets')
+        .delete()
+        .eq('run_id', runId)
+        .eq('kind', 'audio');
       await client.from('content_assets').insert({
         run_id: runId,
         kind: 'audio',
         storage_url: storageUrl,
-        metadata: { durationMs: result.durationMs, bitrate: result.bitrate },
+        metadata: {
+          durationMs: audioDurationMs,
+          synthWallMs: result.durationMs,
+          bitrate: result.bitrate,
+        },
       });
 
       this.logger.log(`[PIPE] synthesize-audio.handle SUCCESS run=${runId}`);
@@ -151,4 +182,35 @@ export class SynthesizeAudioHandler {
     if (error) throw error;
     return `supabase://content-pipeline/${path}`;
   }
+}
+
+// Shells out to ffprobe to read the audio file's real duration. ffprobe is
+// on PATH in both dev and the Railway container (Remotion depends on it).
+function probeAudioDurationMs(path: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      path,
+    ]);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (c) => (stdout += c.toString()));
+    proc.stderr.on('data', (c) => (stderr += c.toString()));
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(`ffprobe exited ${code}: ${stderr.trim()}`));
+      }
+      const seconds = parseFloat(stdout.trim());
+      if (!Number.isFinite(seconds)) {
+        return reject(new Error(`ffprobe returned non-numeric: ${stdout}`));
+      }
+      resolve(Math.round(seconds * 1000));
+    });
+  });
 }

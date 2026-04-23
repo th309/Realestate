@@ -18,7 +18,8 @@ export type PipelineStatus =
   | "published"
   | "published_partial"
   | "rejected"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export type ContentFormat =
   | "grade_reveal"
@@ -96,6 +97,22 @@ export async function rejectRun(id: string, reason: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
   });
+}
+
+export async function cancelRun(id: string, reason?: string) {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/runs/${id}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`cancelRun failed: ${res.status} ${body}`);
+  }
+  return (await res.json()) as { success: boolean; data: { status: string } };
 }
 
 export async function retryRun(id: string) {

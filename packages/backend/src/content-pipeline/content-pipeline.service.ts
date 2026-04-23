@@ -192,6 +192,17 @@ export class ContentPipelineService {
     });
   }
 
+  // Abort an in-flight run. If a handler is currently executing, it will
+  // finish its work and then fail to advance because `cancelled` is terminal
+  // — no further steps fire. Assets already written to storage are retained
+  // so operators can inspect what the run produced before cancellation.
+  async cancelRun(runId: string, reason?: string): Promise<void> {
+    await this.orchestrator.transitionTo(runId, 'cancelled', {
+      reason: reason ?? 'user_cancelled',
+      enqueueNext: false,
+    });
+  }
+
   async editScript(
     runId: string,
     variantId: 'A' | 'B',

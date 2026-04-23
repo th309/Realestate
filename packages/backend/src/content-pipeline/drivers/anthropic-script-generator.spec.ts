@@ -69,6 +69,10 @@ describe('AnthropicScriptGenerator', () => {
       dataBundle: { score: 78 },
       variantCount: 1,
       ctaText: 'Get your free Market Snapshot at ',
+      videoDurationSeconds: 30,
+      audioBudgetSeconds: 28,
+      wordBudget: 65,
+      naturalWpm: 140,
     });
     expect(result.scripts).toHaveLength(1);
     expect(result.scripts[0].variantId).toBe('A');

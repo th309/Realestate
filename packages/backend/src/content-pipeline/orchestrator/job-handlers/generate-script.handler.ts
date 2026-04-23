@@ -24,6 +24,18 @@ export class GenerateScriptHandler {
         .single();
       if (!run) throw new Error('run not found');
 
+      const { data: fmt } = await client
+        .from('format_templates')
+        .select('duration_seconds, natural_wpm, audio_buffer_seconds')
+        .eq('format', run.format)
+        .single();
+      if (!fmt) throw new Error(`format_template not found for ${run.format}`);
+      const audioBudgetSeconds =
+        fmt.duration_seconds - fmt.audio_buffer_seconds;
+      const wordBudget = Math.floor(
+        (audioBudgetSeconds * fmt.natural_wpm) / 60,
+      );
+
       const payload = await readMcpPayloadWithRetry(client, runId);
       if (!payload)
         throw new Error(
@@ -44,6 +56,10 @@ export class GenerateScriptHandler {
         dataBundle: payload.metadata,
         variantCount: 1,
         ctaText: binding?.cta_text ?? 'Get your free Market Snapshot at ',
+        videoDurationSeconds: fmt.duration_seconds,
+        audioBudgetSeconds,
+        wordBudget,
+        naturalWpm: fmt.natural_wpm,
       });
 
       await client
@@ -54,6 +70,13 @@ export class GenerateScriptHandler {
         })
         .eq('id', runId);
 
+      // Idempotent write: clear any prior script/script_raw rows first so
+      // downstream .single() reads don't blow up after a retry.
+      await client
+        .from('content_assets')
+        .delete()
+        .eq('run_id', runId)
+        .in('kind', ['script', 'script_raw']);
       await client.from('content_assets').insert([
         {
           run_id: runId,

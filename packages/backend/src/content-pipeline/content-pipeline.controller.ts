@@ -76,6 +76,15 @@ export class ContentPipelineController {
     return { success: true, data: { status: 'rejected' } };
   }
 
+  @Post('runs/:id/cancel')
+  async cancel(
+    @Param('id') id: string,
+    @Body() body: { reason?: string } = {},
+  ) {
+    await this.service.cancelRun(id, body.reason);
+    return { success: true, data: { status: 'cancelled' } };
+  }
+
   @Post('runs/:id/retry')
   async retry(@Param('id') id: string) {
     await this.service.retryRun(id);
