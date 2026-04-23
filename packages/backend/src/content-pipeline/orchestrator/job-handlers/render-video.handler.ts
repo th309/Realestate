@@ -72,6 +72,13 @@ export class RenderVideoHandler {
       this.logger.log(
         `[PIPE] render-video run=${runId} uploaded=${storageUrl}`,
       );
+      // Idempotent write: clear any prior video_master row so a retry doesn't
+      // leave duplicate rows that break downstream .single() reads.
+      await client
+        .from('content_assets')
+        .delete()
+        .eq('run_id', runId)
+        .eq('kind', 'video_master');
       await client.from('content_assets').insert({
         run_id: runId,
         kind: 'video_master',

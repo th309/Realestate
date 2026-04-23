@@ -1,20 +1,30 @@
 import { PipelineStatus } from '../types';
 
+// Every non-terminal state accepts `cancelled` so operators can abort a run
+// at any point before the pipeline reaches a natural terminal. Terminal
+// states (including `cancelled` itself) accept no further transitions —
+// a cancelled run cannot be resumed; the operator creates a fresh run.
 export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
-  queued: ['fetching_data'],
-  fetching_data: ['scripting', 'failed'],
-  scripting: ['verifying_data', 'failed'],
-  verifying_data: ['linting_voice', 'ready_for_review', 'failed'],
-  linting_voice: ['rendering_voice', 'ready_for_review', 'failed'],
-  rendering_voice: ['timing_captions', 'rendering_video', 'failed'],
-  timing_captions: ['rendering_video', 'failed'],
-  rendering_video: ['publishing', 'ready_for_review', 'failed'],
-  ready_for_review: ['publishing', 'linting_voice', 'rejected'],
-  publishing: ['published', 'published_partial', 'failed'],
+  queued: ['fetching_data', 'cancelled'],
+  fetching_data: ['scripting', 'failed', 'cancelled'],
+  scripting: ['verifying_data', 'failed', 'cancelled'],
+  verifying_data: ['linting_voice', 'ready_for_review', 'failed', 'cancelled'],
+  linting_voice: ['rendering_voice', 'ready_for_review', 'failed', 'cancelled'],
+  rendering_voice: [
+    'timing_captions',
+    'rendering_video',
+    'failed',
+    'cancelled',
+  ],
+  timing_captions: ['rendering_video', 'failed', 'cancelled'],
+  rendering_video: ['publishing', 'ready_for_review', 'failed', 'cancelled'],
+  ready_for_review: ['publishing', 'linting_voice', 'rejected', 'cancelled'],
+  publishing: ['published', 'published_partial', 'failed', 'cancelled'],
   published: [],
   published_partial: [],
   rejected: [],
   failed: ['queued'],
+  cancelled: [],
 };
 
 export function canTransition(

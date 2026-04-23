@@ -1,0 +1,40 @@
+{
+  "format": "grade_reveal",
+  "resolvedMarket": {
+    "id": "17410",
+    "geography": "metro",
+    "canonical_name": "Cleveland, OH"
+  },
+  "dataBundle": {
+    "geo": {
+      "id": "17410",
+      "geography": "metro",
+      "canonical_name": "Cleveland, OH"
+    },
+    "rent": {
+      "value": 1381.5813982284508,
+      "yoy_pct": 0,
+      "period_date": "2025-12-31"
+    },
+    "score": {
+      "grade": "B+",
+      "confidence": "A",
+      "propertyiq_score": 88
+    },
+    "economic": {
+      "unemployment_rate": 0,
+      "job_growth_yoy_pct": -1.25
+    },
+    "home_value": {
+      "value": 171202.08847953472,
+      "yoy_pct": 0.36,
+      "period_date": "2026-01-31"
+    },
+    "demographics": {
+      "population": 2171978,
+      "median_income": 68507,
+      "homeownership_pct": 66.11
+    }
+  },
+  "ctaUrl": "https://propertyiq.app/market/cleveland-oh?utm_source=smoke&utm_medium=cli&utm_campaign=p1-acceptance-4"
+}

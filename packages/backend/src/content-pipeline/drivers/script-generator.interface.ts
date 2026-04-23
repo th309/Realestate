@@ -10,6 +10,18 @@ export interface ScriptGenerationRequest {
   dataBundle: unknown;
   variantCount: 1 | 2;
   ctaText: string;
+  // Video length for this format. Drives the audio budget and word target so
+  // scripts finish naturally inside the video.
+  videoDurationSeconds: number;
+  // Audio has to finish before the video ends, with a buffer. This is the
+  // actual cap the voice-over must fit inside.
+  audioBudgetSeconds: number;
+  // Target word count at a natural (not rushed) delivery pace. Sent to the
+  // LLM so it writes to fit rather than getting truncated at render.
+  wordBudget: number;
+  // Narration pace the word budget was computed from. Included so prompts
+  // can reference the pace directly in their guidance text.
+  naturalWpm: number;
   styleReferenceAttributes?: Record<string, unknown>;
   extraDirectives?: string;
 }

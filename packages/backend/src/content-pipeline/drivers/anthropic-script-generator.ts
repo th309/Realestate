@@ -83,7 +83,14 @@ export class AnthropicScriptGenerator implements ScriptGenerator {
       .replaceAll('{{dataBundle}}', JSON.stringify(req.dataBundle, null, 2))
       .replaceAll('{{cta_text}}', req.ctaText)
       .replaceAll('{{shortLinkPlaceholder}}', '{{SHORT_LINK}}')
-      .replaceAll('{{variantCount}}', String(req.variantCount));
+      .replaceAll('{{variantCount}}', String(req.variantCount))
+      .replaceAll(
+        '{{video_duration_seconds}}',
+        String(req.videoDurationSeconds),
+      )
+      .replaceAll('{{audio_budget_seconds}}', String(req.audioBudgetSeconds))
+      .replaceAll('{{word_budget}}', String(req.wordBudget))
+      .replaceAll('{{natural_wpm}}', String(req.naturalWpm));
 
     const response = await this.client.messages.create({
       model: this.model,

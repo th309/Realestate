@@ -35,4 +35,35 @@ describe('pipeline-state', () => {
   it('failed can be retried back to queued', () => {
     expect(canTransition('failed', 'queued')).toBe(true);
   });
+
+  it('any non-terminal state can transition to cancelled', () => {
+    const nonTerminal = [
+      'queued',
+      'fetching_data',
+      'scripting',
+      'verifying_data',
+      'linting_voice',
+      'rendering_voice',
+      'timing_captions',
+      'rendering_video',
+      'ready_for_review',
+      'publishing',
+    ] as const;
+    for (const s of nonTerminal) {
+      expect(canTransition(s, 'cancelled')).toBe(true);
+    }
+  });
+
+  it('cancelled is terminal — no further transitions allowed', () => {
+    expect(canTransition('cancelled', 'queued')).toBe(false);
+    expect(canTransition('cancelled', 'fetching_data')).toBe(false);
+    expect(canTransition('cancelled', 'failed')).toBe(false);
+  });
+
+  it('published cannot be cancelled', () => {
+    expect(canTransition('published', 'cancelled')).toBe(false);
+    expect(canTransition('published_partial', 'cancelled')).toBe(false);
+    expect(canTransition('rejected', 'cancelled')).toBe(false);
+    expect(canTransition('failed', 'cancelled')).toBe(false);
+  });
 });

@@ -25,7 +25,24 @@ const STATE_QUEUE_MAP: Record<PipelineStatus, QueueName | null> = {
   published_partial: null,
   rejected: null,
   failed: null,
+  cancelled: null,
 };
+
+// Realistic upper bounds for each stage's handler. If a handler exceeds its
+// budget, pg-boss reclaims the job so a subsequent retry can run instead of
+// us waiting 15 minutes for the default. Tune only if a stage legitimately
+// grows — don't raise these to mask a hung handler.
+const EXPIRE_SECONDS_BY_STATUS: Partial<Record<PipelineStatus, number>> = {
+  fetching_data: 60,
+  scripting: 120, // Anthropic call
+  verifying_data: 60,
+  linting_voice: 60,
+  rendering_voice: 180, // edge-tts
+  timing_captions: 90,
+  rendering_video: 360, // Remotion — longest stage
+  publishing: 180, // YouTube upload
+};
+const DEFAULT_EXPIRE_SECONDS = 60;
 
 @Injectable()
 export class RunOrchestratorService {
@@ -76,7 +93,16 @@ export class RunOrchestratorService {
 
     if (opts.enqueueNext !== false) {
       const queueName = STATE_QUEUE_MAP[to];
-      if (queueName) await this.queue.send(queueName, { runId, status: to });
+      if (queueName) {
+        await this.queue.send(
+          queueName,
+          { runId, status: to },
+          {
+            expireInSeconds:
+              EXPIRE_SECONDS_BY_STATUS[to] ?? DEFAULT_EXPIRE_SECONDS,
+          },
+        );
+      }
     }
   }
 
