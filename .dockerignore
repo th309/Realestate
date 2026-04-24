@@ -63,3 +63,4 @@ docs
 experiments
 
 # 2026-04-24: touch to force backend rebuild for Dockerfile.backend change (ffmpeg added)
+# 2026-04-24: force backend rebuild to pick up video-template changes (not in watchPatterns)
