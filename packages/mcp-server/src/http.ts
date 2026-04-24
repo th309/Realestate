@@ -41,6 +41,17 @@ const HOST_ALLOWLIST = new Set(
   ].map((h) => h.toLowerCase()),
 );
 
+// Hosts that should be transparently redirected (308) to the canonical host.
+// Used to migrate old aliases (e.g. the Railway-generated *.up.railway.app URL)
+// without breaking existing user configs — MCP SDKs that follow redirects land
+// on the canonical host and OAuth completes cleanly.
+const HOST_REDIRECT = new Set(
+  (process.env.MCP_HOST_REDIRECT || "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean),
+);
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -54,6 +65,28 @@ app.use((_req, res, next) => {
     "Content-Type, Authorization, Mcp-Session-Id",
   );
   res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+  next();
+});
+
+// Host redirect — 308 to canonical for known old aliases. Runs before the
+// allowlist guard so legacy hosts get migrated instead of 421'd. /health and
+// OPTIONS are exempted (platform probes stay local; CORS preflight needs no
+// redirect since Access-Control-Allow-Origin is "*"). 308 preserves method
+// and body, so POST JSON-RPC calls replay cleanly on the canonical host.
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS" || req.path === "/health") {
+    next();
+    return;
+  }
+  const rawHost =
+    (req.headers["x-forwarded-host"] as string | undefined) || req.get("host");
+  const host = rawHost?.split(",")[0]?.trim().toLowerCase();
+  if (host && HOST_REDIRECT.has(host)) {
+    const target = `https://${CANONICAL_HOST}${req.originalUrl}`;
+    console.log(`[MCP] 308 redirect | from=${host} | to=${target}`);
+    res.redirect(308, target);
+    return;
+  }
   next();
 });
 

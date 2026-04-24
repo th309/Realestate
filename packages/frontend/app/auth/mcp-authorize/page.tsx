@@ -5,21 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Building2, Loader2, ShieldCheck, BarChart3, User } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const MCP_PRIMARY_URL = "https://mcp.propertyiq.app";
-const MCP_FALLBACK_URL = "https://mcp-server-production-2632.up.railway.app";
-
-/** Probe primary URL, fall back to Railway if DNS isn't ready */
-async function resolveMcpUrl(): Promise<string> {
-  try {
-    const r = await fetch(`${MCP_PRIMARY_URL}/health`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (r.ok) return MCP_PRIMARY_URL;
-  } catch {
-    /* DNS not ready or timeout — use fallback */
-  }
-  return MCP_FALLBACK_URL;
-}
+const MCP_SERVER_URL = "https://mcp.propertyiq.app";
 
 /* ────────────────────────────────────────────── */
 /*  Inner component (needs useSearchParams)       */
@@ -35,11 +21,9 @@ function McpAuthorizeContent() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [mcpServerUrl, setMcpServerUrl] = useState(MCP_FALLBACK_URL);
 
   const mcpSession = searchParams.get("mcp_session");
 
-  /* ── Auth check + MCP URL resolution ── */
   useEffect(() => {
     if (!mcpSession) {
       setLoading(false);
@@ -48,30 +32,23 @@ function McpAuthorizeContent() {
 
     const init = async () => {
       try {
-        // Resolve MCP server URL (primary custom domain vs Railway fallback)
-        const [url] = await Promise.all([
-          resolveMcpUrl(),
-          (async () => {
-            const supabase = createSupabaseBrowserClient();
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
+        const supabase = createSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-            if (!session) {
-              const returnUrl = `/auth/mcp-authorize?mcp_session=${encodeURIComponent(mcpSession)}`;
-              router.push(
-                `/auth/sign-in?redirect=${encodeURIComponent(returnUrl)}`,
-              );
-              return;
-            }
+        if (!session) {
+          const returnUrl = `/auth/mcp-authorize?mcp_session=${encodeURIComponent(mcpSession)}`;
+          router.push(
+            `/auth/sign-in?redirect=${encodeURIComponent(returnUrl)}`,
+          );
+          return;
+        }
 
-            setUser({
-              email: session.user.email,
-              name: session.user.user_metadata?.full_name || session.user.email,
-            });
-          })(),
-        ]);
-        setMcpServerUrl(url);
+        setUser({
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email,
+        });
       } catch (err) {
         console.error("[MCP Authorize] Init failed:", err);
       } finally {
@@ -95,7 +72,7 @@ function McpAuthorizeContent() {
       return;
     }
 
-    const callbackUrl = new URL("/oauth/callback", mcpServerUrl);
+    const callbackUrl = new URL("/oauth/callback", MCP_SERVER_URL);
     callbackUrl.searchParams.set("mcp_session", mcpSession!);
     callbackUrl.searchParams.set("token", session.access_token);
     window.location.href = callbackUrl.toString();
@@ -103,7 +80,7 @@ function McpAuthorizeContent() {
 
   /* ── Deny handler ── */
   const handleDeny = () => {
-    const callbackUrl = new URL("/oauth/callback", mcpServerUrl);
+    const callbackUrl = new URL("/oauth/callback", MCP_SERVER_URL);
     callbackUrl.searchParams.set("mcp_session", mcpSession!);
     callbackUrl.searchParams.set("error", "access_denied");
     window.location.href = callbackUrl.toString();
