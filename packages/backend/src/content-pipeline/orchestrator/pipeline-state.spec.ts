@@ -27,6 +27,14 @@ describe('pipeline-state', () => {
     );
   });
 
+  it('rendering_video goes to publishing for draft mode (publishers branch on postMode)', () => {
+    expect(nextStateOnSuccess('rendering_video', 'draft')).toBe('publishing');
+  });
+
+  it('ready_for_review transitions to publishing on review approve', () => {
+    expect(nextStateOnSuccess('ready_for_review', 'review')).toBe('publishing');
+  });
+
   it('published is terminal', () => {
     expect(canTransition('published', 'fetching_data')).toBe(false);
     expect(canTransition('published', 'queued')).toBe(false);

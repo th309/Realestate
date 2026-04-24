@@ -9677,6 +9677,15 @@ git commit -m "feat(content-pipeline): install yt-dlp in backend runtime for P2 
 
 **Why this is Task 2.0a:** Tasks 2.10 through 2.13 each implement publishers that respect a `postMode` flag, but the orchestrator never branches on `approval_mode` until Task 2.18. That ordering risks a window where publishers exist but auto/review/draft routing is incomplete. Land the state-machine edge and the render-handler branching first, then layer publishers on top.
 
+**P1 already shipped most of this.** Verified 2026-04-24 against the live `pipeline-state.ts`, `pipeline-state.spec.ts`, `run-orchestrator.service.ts`, and `render-video.handler.ts`:
+
+- `ALLOWED_TRANSITIONS.rendering_video` already includes `ready_for_review`.
+- `nextStateOnSuccess('rendering_video', approvalMode)` already branches `review → ready_for_review`, `auto/draft → publishing`.
+- `RunOrchestratorService.handleStepSuccess()` already reads `approval_mode` from `content_runs` and routes via `nextStateOnSuccess`.
+- Bonus: P1 added a `resolveEffectiveApprovalMode` gate-warned escalator that forces `review` mode if any gate emitted `result='warned'` — better than the original Task 2.0a spec.
+
+The only gap was a missing unit test for `'draft'` mode. Steps 1-4 below collapse to a single test addition; Step 5 commits it. The render-handler branching in original Step 3 is unnecessary — `handleStepSuccess` already does it.
+
 **Files:**
 
 - Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.ts`
