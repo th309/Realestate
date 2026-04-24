@@ -18,6 +18,7 @@ import { authStore } from "./lib/session-context";
 import { extractAuth } from "./lib/auth-http";
 import { mountOAuthRoutes } from "./routes/oauth-routes";
 import { mountApiRoutes } from "./routes/api-routes";
+import { mountInternalRoutes } from "./routes/internal-routes";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
@@ -141,6 +142,7 @@ app.get("/health", (_req, res) => {
 // ---------------------------------------------------------------------------
 mountOAuthRoutes(app);
 mountApiRoutes(app);
+mountInternalRoutes(app);
 
 // ---------------------------------------------------------------------------
 // MCP POST — initialize or tool calls
