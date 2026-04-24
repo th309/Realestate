@@ -109,7 +109,7 @@ export class GenerateLeadMagnetHandler {
       html: `<p>Hi ${job.userName},</p><p>Your ${magnet.display_name} for ${job.resolvedGeo.canonical_name} is attached as a PDF. You can also revisit it anytime in your <a href="https://propertyiq.app/dashboard/magnets">dashboard</a>.</p>`,
       userId: job.userId,
       emailType: 'lead_magnet_delivery',
-      attachments: [{ filename: attachmentFilename, path: outputPath }],
+      attachments: [{ filename: attachmentFilename, content: pdfBuffer }],
       metadata: {
         magnetKind: job.magnetKind,
         marketName: job.resolvedGeo.canonical_name,

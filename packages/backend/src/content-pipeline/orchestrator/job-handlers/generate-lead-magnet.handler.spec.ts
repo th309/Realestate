@@ -141,8 +141,10 @@ describe('GenerateLeadMagnetHandler', () => {
     expect(payload.attachments[0].filename).toMatch(
       /^market_snapshot_pdf-Cleveland_OH\.pdf$/,
     );
-    expect(payload.attachments[0].path).toMatch(/magnet-.*\.pdf$/);
-    expect(existsSync(payload.attachments[0].path)).toBe(true);
+    expect(payload.attachments[0].content).toBeInstanceOf(Buffer);
+    expect((payload.attachments[0].content as Buffer).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it('marks emailType as lead_magnet_delivery and addresses the user', async () => {

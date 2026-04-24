@@ -24,7 +24,15 @@ export interface SendEmailOptions {
   emailType: string;
   metadata?: Record<string, unknown>;
   replyTo?: string;
-  attachments?: Array<{ filename: string; path: string }>;
+  attachments?: Array<{
+    filename: string;
+    // Resend requires one of:
+    //   - `content`: Buffer or base64 string (preferred for locally-rendered files)
+    //   - `path`: an HTTP/HTTPS URL (NOT a local filesystem path — Resend rejects
+    //     local paths with 422 invalid_attachment)
+    content?: Buffer | string;
+    path?: string;
+  }>;
 }
 
 @Injectable()
