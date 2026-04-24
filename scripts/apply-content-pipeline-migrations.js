@@ -12,7 +12,17 @@ const { Client } = require("pg");
 const fs = require("fs");
 const path = require("path");
 
-// Order: voices before formats because format_templates.default_tts_voice_id FKs tts_voices.
+// Apply order invariants:
+//   1. attribution.sql creates lead_magnet_definitions + format_magnet_bindings, so
+//      it must run before any *_seed_magnets.sql.
+//   2. config.sql creates format_templates (with FK to tts_voices), so it must run
+//      after voices seed (otherwise the FK lookup on default_tts_voice_id fails).
+//   3. seed_voices.sql before seed_formats.sql for the same FK reason.
+//   4. P1 seed_magnets.sql before P2 seed_p2_magnets.sql (P2 may reference magnet
+//      kinds, though currently it only adds new ones).
+//   5. seed_p2_magnets.sql before seed_p2_formats_enable.sql is not required by the
+//      schema, but landing the magnets first matches the user-visible order
+//      (a format being "enabled" implies its lead-magnet binding already exists).
 const MIGRATIONS = [
   "20260421000100_content_pipeline_core.sql",
   "20260421000200_content_pipeline_distribution.sql",
@@ -22,6 +32,7 @@ const MIGRATIONS = [
   "20260421000500_content_pipeline_seed_formats.sql",
   "20260421000700_content_pipeline_seed_magnets.sql",
   "20260422000100_content_pipeline_seed_p2_magnets.sql",
+  "20260422000200_content_pipeline_seed_p2_formats_enable.sql",
   "20260421010000_pgboss_schema_bootstrap.sql",
   "20260423000100_content_pipeline_format_pace_columns.sql",
   "20260423000200_platform_credentials.sql",
