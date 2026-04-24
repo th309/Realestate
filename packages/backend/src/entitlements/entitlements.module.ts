@@ -7,7 +7,7 @@ import { UserAnalyticsModule } from '../user-analytics/user-analytics.module';
 import { EntitlementsService } from './entitlements.service';
 import { EnterpriseGraceService } from './enterprise-grace.service';
 import { TrialFeatureUsageEmitterService } from './trial-feature-usage-emitter.service';
-import { McpEntitlementsInvalidator } from './mcp-entitlements-invalidator.service';
+import { McpEntitlementsInvalidatorModule } from './mcp-entitlements-invalidator.module';
 import { TierResolverService } from './tier-resolver.service';
 import { EntitlementsController } from './entitlements.controller';
 
@@ -18,19 +18,15 @@ import { EntitlementsController } from './entitlements.controller';
     FeaturesModule,
     forwardRef(() => OrgBillingModule),
     UserAnalyticsModule,
+    McpEntitlementsInvalidatorModule,
   ],
   providers: [
     EntitlementsService,
     TierResolverService,
     EnterpriseGraceService,
     TrialFeatureUsageEmitterService,
-    McpEntitlementsInvalidator,
   ],
   controllers: [EntitlementsController],
-  exports: [
-    EntitlementsService,
-    EnterpriseGraceService,
-    McpEntitlementsInvalidator,
-  ],
+  exports: [EntitlementsService, EnterpriseGraceService],
 })
 export class EntitlementsModule {}
