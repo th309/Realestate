@@ -5,11 +5,16 @@
  * cancels or downgrades their Stripe subscription:
  *
  * 1. Revoke enterprise features (API, embed) on the org
- * 2. Downgrade all non-owner members to free tier
- * 3. Remove non-owner members from the org
- * 4. Update owner's subscription tier
- * 5. Audit log the downgrade
- * 6. Send notification emails (fire-and-forget)
+ * 2. Clear org association from all non-owner members
+ * 3. Remove non-owner membership rows
+ * 4. Audit log the downgrade
+ * 5. Send notification emails (fire-and-forget)
+ *
+ * NOTE: We do NOT write subscription_tier to user_profiles here.
+ * Under P2-Y read-through, the entitlements resolver computes effective
+ * tier dynamically from (personal, org). Writing subscription_tier here
+ * was a bug: it would destroy a member's personal Pro sub when their org
+ * was cancelled.
  */
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
@@ -30,7 +35,10 @@ export class OrgDowngradeHandlerService {
    * Execute the full enterprise downgrade flow for an organization.
    *
    * @param orgId - The organization UUID
-   * @param newTier - The tier being downgraded to (e.g. 'free', 'pro')
+   * @param newTier - Kept for callsite compatibility; no longer written to
+   *   user_profiles since the entitlements resolver (P2-Y read-through)
+   *   computes effective tier dynamically from (personal, org). See design
+   *   doc section 3.5.
    */
   async handleDowngrade(orgId: string, newTier: string): Promise<void> {
     // 1. Revoke enterprise features on the org
@@ -65,12 +73,11 @@ export class OrgDowngradeHandlerService {
 
     const memberIds = (members ?? []).map((m) => m.user_id);
 
-    // 4. Downgrade all sub-users to free tier + clear org association
+    // 4. Clear org association from non-owner members (personal tier untouched)
     if (memberIds.length > 0) {
       await this.supabase
         .from('user_profiles')
         .update({
-          subscription_tier: 'free',
           organization_id: null,
           organization_role: null,
           updated_at: new Date().toISOString(),
@@ -85,16 +92,7 @@ export class OrgDowngradeHandlerService {
         .neq('user_id', org.owner_id);
     }
 
-    // 6. Update owner tier
-    await this.supabase
-      .from('user_profiles')
-      .update({
-        subscription_tier: newTier,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', org.owner_id);
-
-    // 7. Audit log
+    // 6. Audit log
     await this.auditService.log({
       organizationId: orgId,
       actorId: org.owner_id,
@@ -104,13 +102,13 @@ export class OrgDowngradeHandlerService {
       details: { newTier, membersRemoved: memberIds.length },
     });
 
-    // 8. Queue emails (fire-and-forget — don't block webhook response)
+    // 7. Queue emails (fire-and-forget — don't block webhook response)
     this.sendDowngradeEmails(org.name, memberIds).catch((err) =>
       this.logger.warn(`Failed to send downgrade emails: ${err}`),
     );
 
     this.logger.log(
-      `Downgraded org ${orgId}: revoked features, freed ${memberIds.length} members, owner tier -> ${newTier}`,
+      `Downgraded org ${orgId}: revoked features, freed ${memberIds.length} members`,
     );
   }
 
