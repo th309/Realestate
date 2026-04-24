@@ -2,9 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { YouTubeShortsPublisher } from '../../drivers/youtube-shorts-publisher';
+import { buildYouTubeShortsMeta } from '../youtube-tags';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { writeFileSync } from 'fs';
+
+/**
+ * Substitute the stored script's {{SHORT_LINK}} template placeholder
+ * with the visible URL before sending to YouTube. Viewers reading the
+ * description (hook + body + cta) will see `propertyiq.app`, not the
+ * raw template. Matches the substitution in synthesize-audio.handler
+ * and the frontend review display — same stored script, one source
+ * of truth for what the placeholder resolves to at publish time.
+ */
+function resolveShortLink(text: string): string {
+  return text.replace(/\{\{SHORT_LINK\}\}/g, 'propertyiq.app');
+}
 
 @Injectable()
 export class PublishYouTubeShortsHandler {
@@ -35,13 +48,32 @@ export class PublishYouTubeShortsHandler {
       const videoPath = await this.downloadFromStorage(video.storage_url);
       const script = (run.hook_variants as any[])[0];
 
+      // PropertyIQ score is stored in the mcp_payload asset's metadata;
+      // optional for tag-building — if missing, score-based hashtags
+      // just get skipped and the rest of the tag list still ships.
+      const { data: payload } = await client
+        .from('content_assets')
+        .select('metadata')
+        .eq('run_id', runId)
+        .eq('kind', 'mcp_payload')
+        .single();
+      const score = payload?.metadata?.score?.propertyiq_score as
+        | number
+        | undefined;
+
+      const { hashtags, tags } = buildYouTubeShortsMeta({
+        runId,
+        resolvedMarket: { canonical_name: run.resolved_geo.canonical_name },
+        score,
+      });
+
       const title = `${run.resolved_geo.canonical_name} PropertyIQ Score`;
-      const description = `${script.hook}\n\n${script.body}\n\n${script.cta}\n\n#Shorts #RealEstate #PropertyIQ`;
-      const tags = [
-        'real estate',
-        'property investing',
-        run.resolved_geo.canonical_name,
-      ];
+      const descriptionBody = [
+        resolveShortLink(script.hook),
+        resolveShortLink(script.body),
+        resolveShortLink(script.cta),
+      ].join('\n\n');
+      const description = `${descriptionBody}\n\n${hashtags.join(' ')}`;
 
       const result = await this.publisher.publish({
         runId,
