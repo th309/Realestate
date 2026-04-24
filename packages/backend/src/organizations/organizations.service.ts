@@ -62,6 +62,7 @@ export class OrganizationsService {
         name: dto.name,
         slug: dto.slug,
         owner_id: ownerId,
+        tier: 'enterprise',
         ...(isEnterprise && { api_enabled: true, embed_enabled: true }),
       })
       .select('*')
