@@ -1,8 +1,9 @@
-const CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
+export const POSITIVE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const NEGATIVE_TTL_MS = 30 * 1000; // 30 seconds
 
 interface CacheEntry {
   allowed: boolean;
-  checkedAt: number;
+  expiresAt: number;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -31,7 +32,7 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
 
   const now = Date.now();
   const cached = cache.get(userId);
-  const isCached = !!(cached && now - cached.checkedAt < CACHE_TTL_MS);
+  const isCached = !!(cached && now < cached.expiresAt);
   console.log(
     `[Auth:Entitlements] Checking userId=${userId} | cached=${isCached}`,
   );
@@ -50,8 +51,11 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
       access?: Record<string, { level?: string }>;
     };
     const allowed = body?.access?.[resource]?.level === "full";
-    cache.set(userId, { allowed, checkedAt: now });
-    console.log(`[Auth:Entitlements] Result: allowed=${allowed}`);
+    const ttl = allowed ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS;
+    cache.set(userId, { allowed, expiresAt: now + ttl });
+    console.log(
+      `[Auth:Entitlements] Result: allowed=${allowed} | ttl_ms=${ttl}`,
+    );
     return allowed;
   } catch (err) {
     // On failure, allow access (fail open) but don't cache
@@ -60,4 +64,18 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
     );
     return true;
   }
+}
+
+/** Remove cached entitlement decisions for the given userIds. Returns the number of entries actually removed. */
+export function invalidateMany(userIds: string[]): number {
+  let count = 0;
+  for (const id of userIds) {
+    if (cache.delete(id)) count++;
+  }
+  return count;
+}
+
+/** Test-only: clear the whole cache. Do not call outside vitest. */
+export function __resetCacheForTests(): void {
+  cache.clear();
 }
