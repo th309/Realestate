@@ -50,13 +50,27 @@ export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
       </div>
       <div
         style={{
-          color: "#C5CAE9",
+          color: "#00C853",
           fontFamily: "Roboto Mono",
-          fontSize: 28 * scale,
+          fontSize: 44 * scale,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
         }}
       >
-        {ctaUrl}
+        propertyiq.app
       </div>
+      {ctaUrl && (
+        <div
+          style={{
+            color: "#C5CAE9",
+            fontFamily: "Roboto Mono",
+            fontSize: 20 * scale,
+            opacity: 0.8,
+          }}
+        >
+          {ctaUrl}
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
