@@ -160,17 +160,31 @@ const Top10Layout: React.FC<VideoProps> = (props) => {
               from={i * ROW_FRAMES}
               durationInFrames={ROW_FRAMES}
             >
-              <AbsoluteFill style={{ padding: "40%" }}>
-                <RankingRow
-                  rank={m.rank}
-                  marketName={m.name}
-                  keyStat={
-                    typeof m.rent_to_price_ratio === "number"
-                      ? m.rent_to_price_ratio.toFixed(2)
-                      : "—"
-                  }
-                  keyStatLabel="Rent/Price"
-                />
+              {/*
+                Center the row horizontally with a generous max-width. The plan's
+                literal `padding: '40%'` would have squeezed the 9:16 frame to a
+                216px-wide strip, which can't fit a 56px rank circle + name + stat.
+              */}
+              <AbsoluteFill
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 60px",
+                }}
+              >
+                <div style={{ width: "100%", maxWidth: 960 }}>
+                  <RankingRow
+                    rank={m.rank}
+                    marketName={m.name}
+                    keyStat={
+                      typeof m.rent_to_price_ratio === "number"
+                        ? m.rent_to_price_ratio.toFixed(2)
+                        : "—"
+                    }
+                    keyStatLabel="Rent/Price"
+                  />
+                </div>
               </AbsoluteFill>
             </Sequence>
           ))}
