@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { OrgAuditModule } from '../org-audit/org-audit.module';
 import { EmailModule } from '../email/email.module';
+import { McpEntitlementsInvalidatorModule } from '../entitlements/mcp-entitlements-invalidator.module';
 import { OrganizationsController } from './organizations.controller';
 import { MembersController } from './members.controller';
 import { InvitesController } from './invites.controller';
@@ -16,7 +17,12 @@ import { OrgAdminGuard } from './guards/org-admin.guard';
 import { OrgMemberGuard } from './guards/org-member.guard';
 
 @Module({
-  imports: [OrgAuditModule, EmailModule, ConfigModule],
+  imports: [
+    OrgAuditModule,
+    EmailModule,
+    ConfigModule,
+    McpEntitlementsInvalidatorModule,
+  ],
   controllers: [OrganizationsController, MembersController, InvitesController],
   providers: [
     OrganizationsService,

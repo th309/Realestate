@@ -15,6 +15,7 @@ import {
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
+import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
 
 @Injectable()
 export class InvitesService {
@@ -23,6 +24,7 @@ export class InvitesService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
+    private readonly mcpInvalidator: McpEntitlementsInvalidator,
   ) {}
 
   /**
@@ -150,6 +152,9 @@ export class InvitesService {
         .from('user_profiles')
         .update({ organization_id: invite.organizationId })
         .eq('id', userId);
+
+      // Invalidate MCP cache — user's effective tier just changed
+      await this.mcpInvalidator.invalidate([userId]);
     } catch (err) {
       // Rollback: delete the member row to maintain consistency
       this.logger.error(
