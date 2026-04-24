@@ -31,6 +31,12 @@ describe('pipeline-state', () => {
     expect(nextStateOnSuccess('rendering_video', 'draft')).toBe('publishing');
   });
 
+  it('canTransition pins rendering_video → ready_for_review in the table (independent of nextStateOnSuccess)', () => {
+    // Locks the table-level edge so a regression in ALLOWED_TRANSITIONS is caught
+    // even if no caller exercises handleStepSuccess for this branch.
+    expect(canTransition('rendering_video', 'ready_for_review')).toBe(true);
+  });
+
   it('ready_for_review transitions to publishing on review approve', () => {
     expect(nextStateOnSuccess('ready_for_review', 'review')).toBe('publishing');
   });

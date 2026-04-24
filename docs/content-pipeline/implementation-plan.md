@@ -501,7 +501,7 @@ Move `puppeteer@^24.36.0` from `devDependencies` to `dependencies` because it's 
 | Python 3 plus edge-tts | `apt-get install -y python3 python3-pip && pip3 install --break-system-packages edge-tts==6.1.12` | P1    |
 | Chromium               | `apt-get install -y chromium` (already present for Redfin scraper)                                | P1    |
 | ffmpeg                 | `apt-get install -y ffmpeg`                                                                       | P3    |
-| yt-dlp                 | `pip3 install --break-system-packages yt-dlp==2025.3.26`                                          | P3    |
+| yt-dlp                 | `pip3 install --no-cache-dir --break-system-packages yt-dlp==2026.03.17`                          | P2    |
 
 ---
 
@@ -9648,18 +9648,21 @@ Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Fa
 - [ ] **Step 1: Append yt-dlp install to the existing Python block.**
 
 ```dockerfile
-# Append immediately after the "pip install --no-cache-dir edge-tts" line from P1 Task 1.2:
-RUN pip install --no-cache-dir yt-dlp==2024.10.7
+# Append immediately after the existing "RUN pip3 install --no-cache-dir --break-system-packages edge-tts==6.1.12" line in Dockerfile.backend.
+# Match that line's flag set exactly — Debian bookworm rejects plain `pip install` without `--break-system-packages`.
+RUN pip3 install --no-cache-dir --break-system-packages yt-dlp==2026.03.17
 ENV YT_DLP_BIN=/usr/local/bin/yt-dlp
-# ffmpeg is NOT required for --write-auto-sub (VTT downloads). ffmpeg ships in P3 Task 3.1.
+# ffmpeg is already in Dockerfile.backend (line 19) for ffprobe — no need to add it.
 ```
+
+In `packages/backend/nixpacks.toml`, append `yt-dlp==2026.03.17` to the existing edge-tts pip line. Do NOT add `YT_DLP_BIN` to a `[variables]` block — Nixpacks may install pip console scripts at a different path; let `TranscriptFetcherService` fall back to PATH lookup via `process.env.YT_DLP_BIN || 'yt-dlp'`.
 
 - [ ] **Step 2: Smoke-test the binary inside the built image.**
 
 ```bash
-docker build -t piq-backend:p2-task-2.0 packages/backend
+docker build -t piq-backend:p2-task-2.0 -f Dockerfile.backend .
 docker run --rm piq-backend:p2-task-2.0 yt-dlp --version
-# Expect: a date-formatted version string (e.g., 2024.10.07).
+# Expect: a date-formatted version string matching the pin (2026.03.17).
 ```
 
 - [ ] **Step 3: Verify Railway env propagation.**
@@ -9669,7 +9672,7 @@ Set `YT_DLP_BIN=/usr/local/bin/yt-dlp` on the backend Railway service via the Ra
 - [ ] **Step 4: Commit.**
 
 ```bash
-git add packages/backend/Dockerfile
+git add Dockerfile.backend packages/backend/nixpacks.toml
 git commit -m "feat(content-pipeline): install yt-dlp in backend runtime for P2 archetype transcripts"
 ```
 
@@ -9686,12 +9689,13 @@ git commit -m "feat(content-pipeline): install yt-dlp in backend runtime for P2 
 
 The only gap was a missing unit test for `'draft'` mode. Steps 1-4 below collapse to a single test addition; Step 5 commits it. The render-handler branching in original Step 3 is unnecessary — `handleStepSuccess` already does it.
 
-**Files:**
+**Files (after the P1-already-shipped trim above):**
 
-- Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.ts`
-- Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.spec.ts`
-- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
-- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.spec.ts` (regression locks for `'draft'` mode and the `ready_for_review → publishing` approve edge)
+- ~~`pipeline-state.ts`~~ — already correct in P1 (`ALLOWED_TRANSITIONS.rendering_video` includes `ready_for_review`; `nextStateOnSuccess` branches on approval mode)
+- ~~`render-video.handler.ts` / `.spec.ts`~~ — already correct; the handler delegates to `RunOrchestratorService.handleStepSuccess`, which loads `approval_mode` and routes via `nextStateOnSuccess`. No branching needed in the handler.
+
+The original Steps 1, 3, and 4 below are kept for historical reference but are NO-OPs against the shipped P1 code. Only Step 2 (the test additions) and Step 5 (the commit) actually run.
 
 - [ ] **Step 1: Add the `rendering_video → ready_for_review` edge to the state-machine map.**
 
