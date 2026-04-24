@@ -8,8 +8,11 @@ nixPkgs = ["nodejs_22", "python3", "python3Packages.pip"]
 [phases.install]
 cmds = [
   "npm ci",
-  "pip3 install --break-system-packages edge-tts==6.1.12",
+  "pip3 install --break-system-packages edge-tts==6.1.12 yt-dlp==2024.10.7",
 ]
+
+[variables]
+YT_DLP_BIN = "/usr/local/bin/yt-dlp"
 
 [start]
 cmd = "npm run start:prod"

@@ -26,6 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # into the system site-packages; safe because this is a container.
 RUN pip3 install --no-cache-dir --break-system-packages edge-tts==6.1.12
 
+# yt-dlp powers archetype transcript fetching (Task 2.31). --write-auto-sub
+# downloads VTT directly so no transcoding is needed; ffmpeg (already installed
+# above for ffprobe audio-duration checks) covers the rare case yt-dlp wants it.
+RUN pip3 install --no-cache-dir --break-system-packages yt-dlp==2024.10.7
+ENV YT_DLP_BIN=/usr/local/bin/yt-dlp
+
 # Puppeteer uses the system-installed Chromium above instead of downloading its own.
 # Skipping the in-package download saves ~170MB on image size and build time.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
