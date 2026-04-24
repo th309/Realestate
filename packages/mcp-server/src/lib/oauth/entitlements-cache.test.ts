@@ -26,16 +26,14 @@ describe("entitlements-cache TTL split", () => {
   });
 
   it("a positive result is cached for up to 5 minutes", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            access: { "feature:mcp_access": { level: "full" } },
-          }),
-          { status: 200 },
-        ),
-      );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          access: { "feature:mcp_access": { level: "full" } },
+        }),
+        { status: 200 },
+      ),
+    );
 
     await checkEntitlement("user-pro");
     await checkEntitlement("user-pro"); // should hit cache
@@ -52,16 +50,14 @@ describe("entitlements-cache TTL split", () => {
   });
 
   it("a negative result is cached for only 30 seconds", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            access: { "feature:mcp_access": { level: "none" } },
-          }),
-          { status: 200 },
-        ),
-      );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          access: { "feature:mcp_access": { level: "none" } },
+        }),
+        { status: 200 },
+      ),
+    );
 
     await checkEntitlement("user-free");
     await checkEntitlement("user-free");
@@ -75,5 +71,39 @@ describe("entitlements-cache TTL split", () => {
     await checkEntitlement("user-free");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     fetchSpy.mockRestore();
+  });
+});
+
+describe("invalidateMany", () => {
+  beforeEach(() => {
+    __resetCacheForTests();
+  });
+
+  it("returns 0 when nothing is cached", () => {
+    expect(invalidateMany(["a", "b"])).toBe(0);
+  });
+
+  it("deletes cached entries and returns the delete count", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            access: { "feature:mcp_access": { level: "full" } },
+          }),
+          { status: 200 },
+        ),
+    );
+    await checkEntitlement("user-1");
+    await checkEntitlement("user-2");
+    await checkEntitlement("user-3");
+
+    expect(invalidateMany(["user-1", "user-2", "missing"])).toBe(2);
+
+    // Missing users don't throw, just don't count.
+    expect(invalidateMany(["missing-again"])).toBe(0);
+  });
+
+  it("handles empty input", () => {
+    expect(invalidateMany([])).toBe(0);
   });
 });
