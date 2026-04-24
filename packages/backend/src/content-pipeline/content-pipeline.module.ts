@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
 import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
-import { ContentPipelineService } from './content-pipeline.service';
+import { ContentRunsService } from './content-runs.service';
+import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
+import { RunActionsService } from './run-actions.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
@@ -68,7 +70,9 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     ShortLinkController,
   ],
   providers: [
-    ContentPipelineService,
+    ContentRunsService,
+    ContentPipelineQueriesService,
+    RunActionsService,
     RunOrchestratorService,
 
     ContentDataService,
@@ -120,7 +124,9 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     PlatformCredentialsService,
   ],
   exports: [
-    ContentPipelineService,
+    ContentRunsService,
+    ContentPipelineQueriesService,
+    RunActionsService,
     RunOrchestratorService,
     ContentDataService,
     ShortLinkService,

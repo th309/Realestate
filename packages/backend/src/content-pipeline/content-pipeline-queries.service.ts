@@ -1,0 +1,152 @@
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+import { DashboardResponseDto } from './dto/dashboard-response.dto';
+import {
+  getAssetSignedUrl as getAssetSignedUrlFn,
+  SignedAssetKind,
+} from './asset-signing';
+
+/**
+ * Read-only queries that power the admin UI: dashboard rollups, run
+ * detail (with assets + events + gates + posts), the review queue, and
+ * signed asset URLs for the in-browser video/audio preview.
+ *
+ * Mutating operations live in `content-runs.service.ts` (creates) and
+ * `run-actions.service.ts` (state transitions).
+ */
+@Injectable()
+export class ContentPipelineQueriesService {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async getDashboard(): Promise<DashboardResponseDto> {
+    const client = this.supabase.getClient();
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+
+    const { count: published } = await client
+      .from('content_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .gte('created_at', weekAgo);
+
+    // "In Review" counts only runs with a rendered video — the review queue
+    // is for publish-approve, and pre-render gate failures (gate_a_drift /
+    // gate_b_voice) shouldn't be counted here since they can't be published
+    // until re-scripted.
+    const { data: reviewRuns } = await client
+      .from('content_runs')
+      .select('id')
+      .eq('status', 'ready_for_review');
+    let inReview = 0;
+    if (reviewRuns && reviewRuns.length > 0) {
+      const reviewIds = reviewRuns.map((r) => r.id as string);
+      const { data: reviewVideos } = await client
+        .from('content_assets')
+        .select('run_id')
+        .eq('kind', 'video_master')
+        .in('run_id', reviewIds);
+      inReview = new Set((reviewVideos ?? []).map((v) => v.run_id as string))
+        .size;
+    }
+
+    const { count: signups } = await client
+      .from('signup_attributions')
+      .select('id', { count: 'exact', head: true })
+      .gte('signup_at', weekAgo);
+
+    const { data: recent } = await client
+      .from('content_runs')
+      .select('id, format, status, market_query, created_at, status_reason')
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    const runIds = (recent ?? []).map((r) => r.id);
+    const videoRunIds = new Set<string>();
+    if (runIds.length > 0) {
+      const { data: videos } = await client
+        .from('content_assets')
+        .select('run_id')
+        .eq('kind', 'video_master')
+        .in('run_id', runIds);
+      for (const v of videos ?? []) videoRunIds.add(v.run_id as string);
+    }
+
+    return {
+      thisWeek: {
+        published: published ?? 0,
+        inReview: inReview ?? 0,
+        signups: signups ?? 0,
+        revenueUsd: 0,
+      },
+      recentRuns: (recent ?? []).map((r) => ({
+        ...r,
+        has_video: videoRunIds.has(r.id as string),
+      })),
+      reviewQueueCount: inReview ?? 0,
+    };
+  }
+
+  async getRunDetail(runId: string) {
+    const client = this.supabase.getClient();
+    const [run, assets, events, gates, posts] = await Promise.all([
+      client.from('content_runs').select('*').eq('id', runId).single(),
+      client
+        .from('content_assets')
+        .select('*')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: true }),
+      client
+        .from('content_run_events')
+        .select('*')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: true }),
+      client
+        .from('content_run_gates')
+        .select('*')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: true }),
+      client.from('platform_posts').select('*').eq('run_id', runId),
+    ]);
+    if (run.error || !run.data) throw new Error('run not found');
+    return {
+      run: run.data,
+      assets: assets.data ?? [],
+      events: events.data ?? [],
+      gates: gates.data ?? [],
+      posts: posts.data ?? [],
+    };
+  }
+
+  getAssetSignedUrl(
+    runId: string,
+    kind: SignedAssetKind,
+  ): Promise<{ url: string; kind: string } | null> {
+    return getAssetSignedUrlFn(this.supabase.getClient(), runId, kind);
+  }
+
+  async getReviewQueue() {
+    const client = this.supabase.getClient();
+    const { data: runs } = await client
+      .from('content_runs')
+      .select('*')
+      .eq('status', 'ready_for_review')
+      .order('created_at', { ascending: true })
+      .limit(50);
+
+    const ids = (runs ?? []).map((r) => r.id as string);
+    if (ids.length === 0) return { items: [], cursor: null };
+
+    // Only surface runs that have a rendered video — pre-render gate failures
+    // stay in the failed/failed-reason views; the review queue is for
+    // human-approve-before-publish, which requires a playable artifact.
+    const { data: videos } = await client
+      .from('content_assets')
+      .select('run_id')
+      .eq('kind', 'video_master')
+      .in('run_id', ids);
+    const renderedIds = new Set((videos ?? []).map((v) => v.run_id as string));
+    const filtered = (runs ?? []).filter((r) =>
+      renderedIds.has(r.id as string),
+    );
+    return { items: filtered, cursor: null };
+  }
+}

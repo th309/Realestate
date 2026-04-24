@@ -18,7 +18,7 @@
 
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "../packages/backend/src/app.module";
-import { ContentPipelineService } from "../packages/backend/src/content-pipeline/content-pipeline.service";
+import { ContentRunsService } from "../packages/backend/src/content-pipeline/content-runs.service";
 import { SupabaseService } from "../packages/backend/src/supabase/supabase.service";
 import { v4 as uuid } from "uuid";
 
@@ -36,7 +36,7 @@ async function main() {
     logger: ["error", "warn", "log"],
   });
 
-  const pipelineService = app.get(ContentPipelineService);
+  const pipelineService = app.get(ContentRunsService);
   const supabase = app.get(SupabaseService).getClient();
 
   console.log("[smoke] creating Grade Reveal run for Cleveland, OH...");

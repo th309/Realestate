@@ -12,7 +12,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
-import { ContentPipelineService } from './content-pipeline.service';
+import { ContentRunsService } from './content-runs.service';
+import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
+import { RunActionsService } from './run-actions.service';
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { PlatformCredentialsService } from './platform-credentials.service';
@@ -25,7 +27,9 @@ import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
 @Controller('api/admin/content-pipeline')
 export class ContentPipelineController {
   constructor(
-    private readonly service: ContentPipelineService,
+    private readonly runs: ContentRunsService,
+    private readonly queries: ContentPipelineQueriesService,
+    private readonly actions: RunActionsService,
     private readonly platformManager: PlatformManagerService,
     private readonly settingsService: PipelineSettingsService,
     private readonly credentials: PlatformCredentialsService,
@@ -38,18 +42,18 @@ export class ContentPipelineController {
 
   @Get('dashboard')
   async dashboard() {
-    return { success: true, data: await this.service.getDashboard() };
+    return { success: true, data: await this.queries.getDashboard() };
   }
 
   @Post('runs')
   async createRun(@Body() dto: CreateRunDto) {
-    const result = await this.service.createRun(dto);
+    const result = await this.runs.createRun(dto);
     return { success: true, data: result };
   }
 
   @Post('resolve-market')
   async resolveMarket(@Body() body: { query: string }) {
-    const matches = await this.service.resolveMarket(body.query);
+    const matches = await this.runs.resolveMarket(body.query);
     return { success: true, data: { matches } };
   }
 
@@ -61,13 +65,13 @@ export class ContentPipelineController {
     if (!req.userId) {
       throw new BadRequestException('authenticated admin userId missing');
     }
-    const result = await this.service.triggerTestMagnet(req.userId, dto);
+    const result = await this.runs.triggerTestMagnet(req.userId, dto);
     return { success: true, data: result };
   }
 
   @Get('runs/:id')
   async getRun(@Param('id') id: string) {
-    return { success: true, data: await this.service.getRunDetail(id) };
+    return { success: true, data: await this.queries.getRunDetail(id) };
   }
 
   @Get('runs/:id/asset-url')
@@ -77,19 +81,19 @@ export class ContentPipelineController {
     }
     return {
       success: true,
-      data: await this.service.getAssetSignedUrl(id, kind),
+      data: await this.queries.getAssetSignedUrl(id, kind),
     };
   }
 
   @Post('runs/:id/approve')
   async approve(@Param('id') id: string) {
-    await this.service.approveRun(id);
+    await this.actions.approveRun(id);
     return { success: true, data: { status: 'publishing' } };
   }
 
   @Post('runs/:id/reject')
   async reject(@Param('id') id: string, @Body() body: { reason: string }) {
-    await this.service.rejectRun(id, body.reason);
+    await this.actions.rejectRun(id, body.reason);
     return { success: true, data: { status: 'rejected' } };
   }
 
@@ -98,13 +102,13 @@ export class ContentPipelineController {
     @Param('id') id: string,
     @Body() body: { reason?: string } = {},
   ) {
-    await this.service.cancelRun(id, body.reason);
+    await this.actions.cancelRun(id, body.reason);
     return { success: true, data: { status: 'cancelled' } };
   }
 
   @Post('runs/:id/retry')
   async retry(@Param('id') id: string) {
-    await this.service.retryRun(id);
+    await this.actions.retryRun(id);
     return { success: true, data: { status: 'queued' } };
   }
 
@@ -113,13 +117,13 @@ export class ContentPipelineController {
     @Param('id') id: string,
     @Body() body: { variantId: 'A' | 'B'; newFullText: string },
   ) {
-    await this.service.editScript(id, body.variantId, body.newFullText);
+    await this.actions.editScript(id, body.variantId, body.newFullText);
     return { success: true, data: { status: 'linting_voice' } };
   }
 
   @Get('review/queue')
   async reviewQueue() {
-    return { success: true, data: await this.service.getReviewQueue() };
+    return { success: true, data: await this.queries.getReviewQueue() };
   }
 
   @Get('platforms')

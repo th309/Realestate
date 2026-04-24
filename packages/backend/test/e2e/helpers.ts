@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { INestApplicationContext } from '@nestjs/common';
 import { AppModule } from '../../src/app.module';
 import { SupabaseService } from '../../src/supabase/supabase.service';
-import { ContentPipelineService } from '../../src/content-pipeline/content-pipeline.service';
+import { ContentRunsService } from '../../src/content-pipeline/content-runs.service';
 import { FetchDataHandler } from '../../src/content-pipeline/orchestrator/job-handlers/fetch-data.handler';
 import { GenerateScriptHandler } from '../../src/content-pipeline/orchestrator/job-handlers/generate-script.handler';
 import { VerifyDataHandler } from '../../src/content-pipeline/orchestrator/job-handlers/verify-data.handler';
@@ -35,7 +35,7 @@ export async function bootstrapE2EContext(): Promise<E2EContext> {
   return {
     app,
     supabase: app.get(SupabaseService),
-    pipeline: app.get(ContentPipelineService),
+    pipeline: app.get(ContentRunsService),
     orchestrator: app.get(RunOrchestratorService),
     fetchDataHandler: app.get(FetchDataHandler),
     generateScriptHandler: app.get(GenerateScriptHandler),
@@ -50,7 +50,7 @@ export async function bootstrapE2EContext(): Promise<E2EContext> {
 export interface E2EContext {
   app: INestApplicationContext;
   supabase: SupabaseService;
-  pipeline: ContentPipelineService;
+  pipeline: ContentRunsService;
   orchestrator: RunOrchestratorService;
   fetchDataHandler: FetchDataHandler;
   generateScriptHandler: GenerateScriptHandler;
