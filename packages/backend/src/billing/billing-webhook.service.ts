@@ -3,14 +3,16 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { OrgBillingWebhookService } from '../org-billing/org-billing-webhook.service';
 import { ReferralCreditService } from '../referrals/referral-credit.service';
 import { TrialConversionService } from './trial-conversion.service';
+import { BillingUserSyncService } from './billing-user-sync.service';
+import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
 import Stripe from 'stripe';
 
 /**
- * Handles Stripe webhook events and syncs subscription state to user_profiles.
+ * Routes Stripe webhook events and syncs personal subscription state.
  *
- * Org-specific events (identified by metadata.org_slug) are routed to
- * OrgBillingWebhookService. All other events are handled here for
- * individual user subscriptions.
+ * Org-specific events (identified by metadata.org_slug) are delegated to
+ * OrgBillingWebhookService. All other events are handled here.
+ * DB mutation helpers live in BillingUserSyncService.
  */
 @Injectable()
 export class BillingWebhookService {
@@ -19,6 +21,8 @@ export class BillingWebhookService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly trialConversion: TrialConversionService,
+    private readonly userSync: BillingUserSyncService,
+    private readonly mcpInvalidator: McpEntitlementsInvalidator,
     @Optional()
     @Inject(OrgBillingWebhookService)
     private readonly orgWebhook?: OrgBillingWebhookService,
@@ -86,7 +90,7 @@ export class BillingWebhookService {
       return;
     }
 
-    await this.syncUserTier(userId, tier, subscriptionId);
+    await this.userSync.syncUserTier(userId, tier, subscriptionId);
 
     // Credit any referrer when this user converts to a paid plan
     if (this.referralCredit) {
@@ -96,6 +100,8 @@ export class BillingWebhookService {
           this.logger.warn(`Referral credit processing failed: ${err.message}`),
         );
     }
+
+    await this.mcpInvalidator.invalidate([userId]);
   }
 
   private async handleSubscriptionUpdated(
@@ -107,7 +113,13 @@ export class BillingWebhookService {
         typeof subscription.customer === 'string'
           ? subscription.customer
           : subscription.customer.id;
-      await this.syncFromCustomerId(customerId, subscription);
+      const resolvedUserId = await this.userSync.syncFromCustomerId(
+        customerId,
+        subscription,
+      );
+      if (resolvedUserId) {
+        await this.mcpInvalidator.invalidate([resolvedUserId]);
+      }
       return;
     }
 
@@ -116,19 +128,21 @@ export class BillingWebhookService {
 
     if (status === 'active' || status === 'trialing') {
       const priceId = subscription.items.data[0]?.price.id;
-      const tier = await this.tierFromPriceId(priceId);
+      const tier = await this.userSync.tierFromPriceId(priceId);
       if (!tier) {
         this.logger.error(
           `Unknown price ID ${priceId} for user ${userId} — skipping tier sync to avoid granting unearned access`,
         );
         return;
       }
-      await this.syncUserTier(userId, tier, subscription.id);
+      await this.userSync.syncUserTier(userId, tier, subscription.id);
+      await this.mcpInvalidator.invalidate([userId]);
     } else if (status === 'past_due' || status === 'unpaid') {
       await client
         .from('user_profiles')
         .update({ subscription_status: status })
         .eq('id', userId);
+      await this.mcpInvalidator.invalidate([userId]);
     }
   }
 
@@ -172,6 +186,7 @@ export class BillingWebhookService {
         .eq('id', profile.id);
 
       this.logger.log(`Subscription cancelled for user ${profile.id}`);
+      await this.mcpInvalidator.invalidate([profile.id]);
     }
   }
 
@@ -197,88 +212,7 @@ export class BillingWebhookService {
         .eq('id', profile.id);
 
       this.logger.warn(`Payment failed for user ${profile.id}`);
+      await this.mcpInvalidator.invalidate([profile.id]);
     }
-  }
-
-  private async syncUserTier(
-    userId: string,
-    tier: string,
-    stripeSubscriptionId: string,
-  ): Promise<void> {
-    const client = this.supabase.getClient();
-
-    // Never overwrite admin users' tiers — their tier is managed manually
-    const { data: adminRow } = await client
-      .from('admin_users')
-      .select('id')
-      .eq('id', userId)
-      .single();
-
-    if (adminRow) {
-      this.logger.log(
-        `Skipping tier sync for admin user ${userId} — admin tier is not Stripe-driven`,
-      );
-      return;
-    }
-
-    await client
-      .from('user_profiles')
-      .update({
-        subscription_tier: tier,
-        subscription_status: 'active',
-        stripe_subscription_id: stripeSubscriptionId,
-      })
-      .eq('id', userId);
-
-    this.logger.log(`Synced user ${userId} to tier ${tier}`);
-  }
-
-  private async syncFromCustomerId(
-    customerId: string,
-    subscription: Stripe.Subscription,
-  ): Promise<void> {
-    const client = this.supabase.getClient();
-    const { data: profile } = await client
-      .from('user_profiles')
-      .select('id')
-      .eq('stripe_customer_id', customerId)
-      .single();
-
-    if (profile) {
-      const priceId = subscription.items.data[0]?.price.id;
-      const tier = await this.tierFromPriceId(priceId);
-      const status = subscription.status;
-
-      if (status === 'active' || status === 'trialing') {
-        if (!tier) {
-          this.logger.error(
-            `Unknown price ID ${priceId} for customer ${customerId} — skipping tier sync`,
-          );
-          return;
-        }
-        await this.syncUserTier(profile.id, tier, subscription.id);
-      }
-    }
-  }
-
-  private async tierFromPriceId(priceId: string): Promise<string | null> {
-    const client = this.supabase.getClient();
-
-    // Check monthly price first, then yearly — avoids string interpolation in .or()
-    const { data: monthly } = await client
-      .from('subscription_tiers')
-      .select('slug')
-      .eq('stripe_price_monthly_id', priceId)
-      .single();
-
-    if (monthly?.slug) return monthly.slug;
-
-    const { data: yearly } = await client
-      .from('subscription_tiers')
-      .select('slug')
-      .eq('stripe_price_yearly_id', priceId)
-      .single();
-
-    return yearly?.slug || null;
   }
 }
