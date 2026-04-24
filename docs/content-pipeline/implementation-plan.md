@@ -9642,7 +9642,8 @@ Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Fa
 
 **Files:**
 
-- Modify: `packages/backend/Dockerfile`
+- Modify: `Dockerfile.backend` (repo root)
+- Modify: `packages/backend/nixpacks.toml`
 
 - [ ] **Step 1: Append yt-dlp install to the existing Python block.**
 
