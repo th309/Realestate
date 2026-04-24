@@ -11,6 +11,7 @@
 ## Changelog
 
 - 2026-04-21 v1.0: initial plan. Produced from design spec at `docs/content-pipeline/design.md`.
+- 2026-04-24 v1.1 (P2 review pass): added Task 2.0 (Dockerfile yt-dlp install), Task 2.0a (approval-mode state-machine prep), Task 2.20a (typed-fetcher consolidation). Fixed pricing math in Tasks 2.8/2.15 (Whisper $0.006/min not /req; tts-1-hd $0.030/1k chars not $0.015). Extended TikTok publish polling to 600s with backoff (Task 2.10). Re-spec LinkedIn draft mode to use real `lifecycleState='DRAFT'` (Task 2.13, AC #6). Replaced YouTube discovery hard-cut cascade with weighted rank-sum to avoid eliminating videos with elite engagement but middling velocity (Task 2.30). Phase 2 task count 35 → 38.
 
 ## Authoritative sources
 
@@ -175,6 +176,15 @@ content-pipeline/
     image-downloader.service.ts                  [P2]
     yt-dlp-wrapper.service.ts                    [P3]
     ffmpeg-wrapper.service.ts                    [P3]
+  script-archetypes/
+    niche-queries.config.ts                      [P2]
+    youtube-discovery.service.ts                 [P2]
+    transcript-fetcher.service.ts                [P2]
+    archetype-clustering.service.ts              [P2]
+    script-archetype.service.ts                  [P2]
+    script-archetype.controller.ts               [P2]
+    archetype-router.service.ts                  [P2]
+    style-profile.types.ts                       [P2]
   auto-ideation/
     auto-ideation.service.ts                     [P5]
     auto-ideation.controller.ts                  [P5]
@@ -187,6 +197,7 @@ content-pipeline/
   crons/
     recover-stuck-runs.cron.ts                   [P1]
     pull-24h-metrics.cron.ts                     [P1]
+    refresh-script-archetypes.cron.ts            [P2]
     pull-7d-metrics.cron.ts                      [P4]
     pull-30d-metrics.cron.ts                     [P4]
     credential-health-probe.cron.ts              [P4]
@@ -245,6 +256,11 @@ content-pipeline/
     reference-card.tsx                           [P2]
     upload-dialog.tsx                            [P2]
     attributes-panel.tsx                         [P2]
+  script-archetypes/
+    page.tsx                                     [P2]
+    archetype-card.tsx                           [P2]
+    profile-panel.tsx                            [P2]
+    refresh-button.tsx                           [P2]
   settings/
     page.tsx                                     [P1]
     format-defaults.tsx                          [P1]
@@ -386,27 +402,28 @@ All secrets go in `packages/backend/.env` locally and Railway dashboard for depl
 
 ### P2 required
 
-| Variable                          | Purpose                                |
-| --------------------------------- | -------------------------------------- |
-| `OPENAI_API_KEY`                  | Whisper captions + OpenAI TTS fallback |
-| `TIKTOK_CLIENT_KEY`               | TikTok Content Posting API             |
-| `TIKTOK_CLIENT_SECRET`            |                                        |
-| `TIKTOK_OAUTH_REFRESH_TOKEN`      | Test account                           |
-| `META_GRAPH_APP_ID`               | Meta Graph covers IG + FB              |
-| `META_GRAPH_APP_SECRET`           |                                        |
-| `META_INSTAGRAM_ACCESS_TOKEN`     | Long-lived IG user token               |
-| `META_FACEBOOK_PAGE_ACCESS_TOKEN` | Test Page                              |
-| `LINKEDIN_CLIENT_ID`              |                                        |
-| `LINKEDIN_CLIENT_SECRET`          |                                        |
-| `LINKEDIN_ACCESS_TOKEN`           | Test page                              |
+| Variable                          | Purpose                                                                                                                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | Whisper captions + OpenAI TTS fallback                                                                                                                                      |
+| `TIKTOK_CLIENT_KEY`               | TikTok Content Posting API                                                                                                                                                  |
+| `TIKTOK_CLIENT_SECRET`            |                                                                                                                                                                             |
+| `TIKTOK_OAUTH_REFRESH_TOKEN`      | Test account                                                                                                                                                                |
+| `META_GRAPH_APP_ID`               | Meta Graph covers IG + FB                                                                                                                                                   |
+| `META_GRAPH_APP_SECRET`           |                                                                                                                                                                             |
+| `META_INSTAGRAM_ACCESS_TOKEN`     | Long-lived IG user token                                                                                                                                                    |
+| `META_FACEBOOK_PAGE_ACCESS_TOKEN` | Test Page                                                                                                                                                                   |
+| `LINKEDIN_CLIENT_ID`              |                                                                                                                                                                             |
+| `LINKEDIN_CLIENT_SECRET`          |                                                                                                                                                                             |
+| `LINKEDIN_ACCESS_TOKEN`           | Test page                                                                                                                                                                   |
+| `YOUTUBE_DATA_API_KEY`            | YouTube Data API v3 key used by the script-archetype discovery cascade (90d pool → velocity → engagement → raw views). Free tier quota is sufficient for a monthly refresh. |
+| `YT_DLP_BIN`                      | yt-dlp binary path (default `/usr/local/bin/yt-dlp`). Promoted from P3 because archetype transcript fetch depends on it.                                                    |
 
 ### P3 required
 
-| Variable             | Purpose                                              |
-| -------------------- | ---------------------------------------------------- |
-| `ELEVENLABS_API_KEY` | Long-form TTS                                        |
-| `YT_DLP_BIN`         | yt-dlp binary path (default `/usr/local/bin/yt-dlp`) |
-| `FFMPEG_BIN`         | ffmpeg binary path (default `/usr/bin/ffmpeg`)       |
+| Variable             | Purpose                                        |
+| -------------------- | ---------------------------------------------- |
+| `ELEVENLABS_API_KEY` | Long-form TTS                                  |
+| `FFMPEG_BIN`         | ffmpeg binary path (default `/usr/bin/ffmpeg`) |
 
 ### P4 required
 
@@ -546,6 +563,12 @@ All under `/api/admin/content-pipeline/` and protected by `AdminGuard` unless no
 | DELETE | `/style-references/:id`            | none                     |
 | POST   | `/style-references/:id/re-analyze` | none                     |
 | POST   | `/runs/:id/thumbnail/replace`      | multipart or frame-index |
+| GET    | `/script-archetypes`               | none                     |
+| GET    | `/script-archetypes/:id`           | none                     |
+| POST   | `/script-archetypes/refresh`       | `{ force?: boolean }`    |
+| PATCH  | `/script-archetypes/:id`           | `UpdateArchetypeDto`     |
+| POST   | `/script-archetypes/:id/disable`   | none                     |
+| POST   | `/script-archetypes/:id/enable`    | none                     |
 
 ### P3
 
@@ -9570,11 +9593,11 @@ git commit -m "test(content-pipeline): P1 E2E suite (happy path, gate A fail, ga
 
 # Phase 2: Format and platform breadth
 
-**Duration:** 3 to 4 weeks. **Complexity:** Medium-High. **Tasks:** 29.
+**Duration:** 4 to 5 weeks. **Complexity:** Medium-High. **Tasks:** 38.
 
 ## Phase 2 scope
 
-Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Farm Area Spotlight). Remaining publishers (TikTok, Instagram Reels, Facebook Reels, LinkedIn). Captions (OpenAI Whisper word-level timings, burn-in for short-form, `.srt` output). Thumbnails (Remotion 1280x720, editable in review queue). All 3 approval modes fully wired. Per-format defaults UI. Lead Magnet Library admin page. Thumbnail style references (upload plus URL ingest for images). OpenAI TTS driver with auto-fallback.
+Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Farm Area Spotlight). Remaining publishers (TikTok, Instagram Reels, Facebook Reels, LinkedIn). Captions (OpenAI Whisper word-level timings, burn-in for short-form, `.srt` output). Thumbnails (Remotion 1280x720, editable in review queue). All 3 approval modes fully wired. Per-format defaults UI. Lead Magnet Library admin page. Thumbnail style references (upload plus URL ingest for images). OpenAI TTS driver with auto-fallback. Script style archetypes: 3 to 5 abstracted voice/tone profiles mined monthly from the top-performing YouTube videos in our niche, selectable per run (manual) or resolved from run context by a router (auto).
 
 ## Phase 2 deliverables
 
@@ -9585,16 +9608,21 @@ Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Fa
 - Approval modes auto, review, draft all behave correctly.
 - Lead Magnet Library CRUD + format bindings work.
 - Thumbnail style references analyzed via Claude vision and applied to thumbnail templates.
+- Script Archetype Library populated with 3 to 5 archetypes refreshed monthly; each archetype traceable to its source videos.
+- Create-run wizard supports manual archetype pick and `auto` mode that defers to `ArchetypeRouter`; per-format defaults UI exposes a default archetype per format.
 
 ## Phase 2 acceptance criteria
 
 1. All P2 migrations apply cleanly.
-2. `npm run test` passes all P2 unit tests (approximately 80 new tests).
+2. `npm run test` passes all P2 unit tests (approximately 95 new tests).
 3. `npm run test:e2e` passes P2 E2E suite.
 4. Running each of 4 new formats end-to-end publishes successfully to all 5 platforms in staging.
 5. A run with `approval_mode=auto` reaches `published` without any human interaction.
-6. A run with `approval_mode=draft` publishes to each platform in draft mode (YouTube private, TikTok draft, IG container, FB unpublished, LinkedIn DRAFT).
+6. A run with `approval_mode=draft` publishes to each platform in draft mode (YouTube private, TikTok MEDIA_UPLOAD/SELF_ONLY, IG container un-published, FB `video_state=DRAFT`, LinkedIn `lifecycleState=DRAFT`). LinkedIn requires the real `DRAFT` lifecycle state, not visibility tweaks — see Task 2.13.
 7. Admin can bind a thumbnail style reference to a format, and rendered thumbnails match the reference's palette and text position attributes within tolerance.
+8. `refresh-script-archetypes` cron (and its admin-trigger endpoint) populates `content_script_archetypes` with 3 to 5 enabled rows, each with a non-empty `style_profile` and a non-empty `source_video_ids` array whose ids all resolve in `content_script_archetype_source_videos`.
+9. A run created with `scriptArchetypeMode='manual'` + `scriptArchetypeId=<id>` persists both fields on the row, and the generated script's structured output reflects the archetype's `words_per_second` within ±15% and uses at least one `hook_pattern` from the profile.
+10. A run created with `scriptArchetypeMode='auto'` and no explicit id ends up with `script_archetype_id` populated (or `null` with a non-null `script_archetype_auto_reason` explaining why the router abstained), and Gate A still passes on that run (archetype styling does not introduce ungrounded numbers).
 
 ## Phase 2 prerequisites
 
@@ -9603,8 +9631,137 @@ Remaining four short-form formats (Top 10 Ranking, Score Mover, Head-to-Head, Fa
 - Meta Graph app approved for `instagram_content_publish` and `pages_manage_posts` scopes.
 - TikTok Content Posting API access approved.
 - LinkedIn app approved for `w_member_social` scope.
+- Google Cloud project with YouTube Data API v3 enabled and an API key in `YOUTUBE_DATA_API_KEY`. Default quota (10k units/day) covers a monthly refresh comfortably.
+- `yt-dlp` installed in the backend runtime (`YT_DLP_BIN`); used for auto-sub transcript extraction because the public captions API only returns captions owned by the authenticated user.
 
 ---
+
+## Task 2.0: Dockerfile install yt-dlp in backend runtime
+
+**Why this is Task 2.0:** P1 Task 1.2 only installed Python + edge-tts. P2 Tasks 2.31/2.32 invoke `yt-dlp` from `TranscriptFetcherService`. Without this step, the `refresh-script-archetypes` cron and any admin-trigger refresh ENOENTs on staging the moment they run. ffmpeg is NOT required for `--write-auto-sub` (VTT downloads need no transcoding); ffmpeg ships with P3 Task 3.1.
+
+**Files:**
+
+- Modify: `packages/backend/Dockerfile`
+
+- [ ] **Step 1: Append yt-dlp install to the existing Python block.**
+
+```dockerfile
+# Append immediately after the "pip install --no-cache-dir edge-tts" line from P1 Task 1.2:
+RUN pip install --no-cache-dir yt-dlp==2024.10.7
+ENV YT_DLP_BIN=/usr/local/bin/yt-dlp
+# ffmpeg is NOT required for --write-auto-sub (VTT downloads). ffmpeg ships in P3 Task 3.1.
+```
+
+- [ ] **Step 2: Smoke-test the binary inside the built image.**
+
+```bash
+docker build -t piq-backend:p2-task-2.0 packages/backend
+docker run --rm piq-backend:p2-task-2.0 yt-dlp --version
+# Expect: a date-formatted version string (e.g., 2024.10.07).
+```
+
+- [ ] **Step 3: Verify Railway env propagation.**
+
+Set `YT_DLP_BIN=/usr/local/bin/yt-dlp` on the backend Railway service via the Railway dashboard (NOT `.env` — see project memory: "Railway variable propagation quirk"). Confirm with `railway variables` after the redeploy that the var actually lands inside the container.
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/Dockerfile
+git commit -m "feat(content-pipeline): install yt-dlp in backend runtime for P2 archetype transcripts"
+```
+
+## Task 2.0a: Approval-mode foundations (state machine + render branching)
+
+**Why this is Task 2.0a:** Tasks 2.10 through 2.13 each implement publishers that respect a `postMode` flag, but the orchestrator never branches on `approval_mode` until Task 2.18. That ordering risks a window where publishers exist but auto/review/draft routing is incomplete. Land the state-machine edge and the render-handler branching first, then layer publishers on top.
+
+**Files:**
+
+- Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/pipeline-state.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.spec.ts`
+
+- [ ] **Step 1: Add the `rendering_video → ready_for_review` edge to the state-machine map.**
+
+In `pipeline-state.ts` (created in P1 Task 1.26), find the transition table and confirm/extend:
+
+```typescript
+// pipeline-state.ts (excerpt — extend the transition map established in P1)
+export const TRANSITIONS: Record<RunStatus, RunStatus[]> = {
+  // ... existing P1 transitions ...
+  rendering_video: ["publishing", "ready_for_review", "failed"],
+  ready_for_review: ["publishing", "rejected", "failed"], // 'publishing' set by review-queue approve action; already in P1
+  // ... existing P1 transitions ...
+};
+```
+
+If `ready_for_review` is already a successor in the P1-shipped map (it should be — P1 Task 1.37 builds the review queue), this step is a no-op. Verify and move on.
+
+- [ ] **Step 2: Add a unit test that locks the new edge.**
+
+```typescript
+// pipeline-state.spec.ts (append)
+import { TRANSITIONS } from "./pipeline-state";
+
+describe("approval-mode transitions", () => {
+  it("rendering_video can transition to ready_for_review", () => {
+    expect(TRANSITIONS.rendering_video).toContain("ready_for_review");
+  });
+  it("rendering_video can transition to publishing", () => {
+    expect(TRANSITIONS.rendering_video).toContain("publishing");
+  });
+});
+```
+
+- [ ] **Step 3: Branch in `render-video.handler.ts` after the video asset is persisted.**
+
+```typescript
+// render-video.handler.ts (inside handle(), after content_assets insert for the video_master)
+const { data: runRow } = await client
+  .from("content_runs")
+  .select("approval_mode")
+  .eq("id", runId)
+  .single();
+
+if (runRow?.approval_mode === "review") {
+  await this.orchestrator.transitionTo(runId, "ready_for_review", {
+    enqueueNext: false,
+  });
+} else {
+  // 'auto' and 'draft' both go to publishing; publishers branch on postMode.
+  await this.orchestrator.transitionTo(runId, "publishing", {
+    enqueueNext: true,
+  });
+}
+```
+
+- [ ] **Step 4: Unit-test the branch with a mocked orchestrator.**
+
+```typescript
+// render-video.handler.spec.ts (add cases)
+it("approval_mode=review parks the run at ready_for_review", async () => {
+  // arrange: supabase mock returns approval_mode='review'; act: handler.handle(runId)
+  // expect: orchestrator.transitionTo called with ('ready_for_review', { enqueueNext: false })
+});
+it("approval_mode=auto enqueues publishing", async () => {
+  // expect: orchestrator.transitionTo called with ('publishing', { enqueueNext: true })
+});
+it("approval_mode=draft also enqueues publishing (publishers branch on postMode)", async () => {
+  // expect: orchestrator.transitionTo called with ('publishing', { enqueueNext: true })
+});
+```
+
+- [ ] **Step 5: Run tests, commit.**
+
+```bash
+cd packages/backend && npm run test -- pipeline-state.spec render-video.handler.spec
+git add packages/backend/src/content-pipeline/orchestrator/pipeline-state.ts packages/backend/src/content-pipeline/orchestrator/pipeline-state.spec.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.spec.ts
+git commit -m "feat(content-pipeline): approval-mode foundation — state edge + render-handler branching"
+```
+
+Task 2.18 keeps the cross-publisher verification step and the integration tests but no longer redoes the render-handler change.
 
 ## Task 2.1: P2 migration seed magnets
 
@@ -10205,15 +10362,23 @@ export class OpenAIWhisperTimer implements CaptionTimer {
       })) ?? [];
     const srt = this.toSrt(segments);
 
+    // Whisper pricing is $0.006 per minute of audio (rounded up to the next minute),
+    // NOT a flat $0.006 per request. Derive minutes from the last segment's end time.
+    const audioDurationMs = segments.length
+      ? Math.max(...segments.map((s: { endMs: number }) => s.endMs))
+      : 0;
+    const billedMinutes = Math.max(1, Math.ceil(audioDurationMs / 60_000));
+    const WHISPER_USD_PER_MINUTE = 0.006;
+
     return {
       segments,
       words,
       srt,
       cost: {
         provider: "openai-whisper",
-        amount_usd: 0.006,
-        units: 1,
-        unit_type: "requests",
+        amount_usd: billedMinutes * WHISPER_USD_PER_MINUTE,
+        units: billedMinutes,
+        unit_type: "minutes",
       },
     };
   }
@@ -10587,8 +10752,20 @@ export class TikTokPublisher implements PlatformPublisher {
       maxContentLength: fileSize,
     });
 
-    for (let attempt = 0; attempt < 30; attempt++) {
-      await new Promise((r) => setTimeout(r, 5000));
+    // Poll up to ~600s with bounded exponential backoff (5s, 7s, 10s, 14s, … capped at 30s).
+    // Real TikTok ingestion of >50MB videos routinely runs 3-5 min; the original 150s budget
+    // killed legit publishes. On exhaustion we throw a typed error so the publish handler can
+    // record a `tiktok_publish_timeout` event for the P4 alerting system.
+    const POLL_BUDGET_MS = 600_000;
+    const POLL_MIN_MS = 5_000;
+    const POLL_MAX_MS = 30_000;
+    const start = Date.now();
+    let waitMs = POLL_MIN_MS;
+
+    while (Date.now() - start < POLL_BUDGET_MS) {
+      await new Promise((r) => setTimeout(r, waitMs));
+      waitMs = Math.min(POLL_MAX_MS, Math.round(waitMs * 1.4));
+
       const statusResponse = await axios.get(
         `${TIKTOK_API}/v2/post/publish/status/fetch/`,
         {
@@ -10618,7 +10795,12 @@ export class TikTokPublisher implements PlatformPublisher {
           `TikTok publish failed: ${JSON.stringify(statusResponse.data)}`,
         );
     }
-    throw new Error("TikTok publish status timeout after 150 seconds");
+    const err = new Error(
+      `TikTok publish status timeout after ${Math.round(POLL_BUDGET_MS / 1000)}s (publish_id=${publishId})`,
+    );
+    (err as any).code = "tiktok_publish_timeout";
+    (err as any).publishId = publishId;
+    throw err;
   }
 
   async refreshCredentials(): Promise<void> {
@@ -11258,7 +11440,7 @@ describe("LinkedInPublisher", () => {
     expect(result.externalId).toBe("urn:li:share:123");
   });
 
-  it("draft mode requests visibility=DRAFT", async () => {
+  it("draft mode sets lifecycleState=DRAFT (not a visibility tweak)", async () => {
     let capturedBody: any;
     mockedAxios.post.mockImplementation(async (url: string, body: any) => {
       if (url.includes("/ugcPosts")) {
@@ -11290,9 +11472,11 @@ describe("LinkedInPublisher", () => {
       tags: [],
       postMode: "draft",
     });
+    expect(capturedBody?.lifecycleState).toBe("DRAFT");
+    // Visibility stays PUBLIC for both modes — gating is lifecycle-based.
     expect(
       capturedBody?.visibility?.["com.linkedin.ugc.MemberNetworkVisibility"],
-    ).toBe("CONNECTIONS");
+    ).toBe("PUBLIC");
   });
 });
 ```
@@ -11366,12 +11550,15 @@ export class LinkedInPublisher implements PlatformPublisher {
       maxContentLength: Number.MAX_SAFE_INTEGER,
     });
 
-    const visibility = req.postMode === "draft" ? "CONNECTIONS" : "PUBLIC";
+    // LinkedIn draft is the real `lifecycleState=DRAFT`, NOT a visibility tweak.
+    // `DRAFT` keeps the post in the user's draft list and does not surface in feeds.
+    // Visibility stays PUBLIC for both modes; gating is purely lifecycle-based.
+    const lifecycleState = req.postMode === "draft" ? "DRAFT" : "PUBLISHED";
     const shareResponse = await axios.post(
       `${LI}/ugcPosts`,
       {
         author: ownerUrn,
-        lifecycleState: "PUBLISHED",
+        lifecycleState,
         specificContent: {
           "com.linkedin.ugc.ShareContent": {
             shareCommentary: {
@@ -11391,7 +11578,7 @@ export class LinkedInPublisher implements PlatformPublisher {
             ],
           },
         },
-        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": visibility },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
       },
       { headers },
     );
@@ -11586,7 +11773,11 @@ import {
   TTSSynthesisResult,
 } from "./tts-driver.interface";
 
-const OPENAI_TTS_USD_PER_1K_CHARS = 0.015; // tts-1-hd pricing as of 2026-04
+// OpenAI TTS pricing per 1K characters (verified 2026-04):
+//   tts-1     → $0.015 / 1K chars
+//   tts-1-hd  → $0.030 / 1K chars  ← we use tts-1-hd, so this is the right constant
+// If you swap to `model: 'tts-1'` below, also drop this constant to 0.015.
+const OPENAI_TTS_USD_PER_1K_CHARS = 0.03;
 
 @Injectable()
 export class OpenAITTSDriver implements TTSDriver {
@@ -12058,41 +12249,27 @@ git add packages/frontend/app/admin/content-pipeline/review/ packages/backend/sr
 git commit -m "feat(content-pipeline): thumbnail editor in review queue (regenerate or upload)"
 ```
 
-## Task 2.18: Approval modes fully wired
+## Task 2.18: Approval modes fully wired (verification + integration tests)
+
+**Note:** the state-machine edge and the render-handler branch were landed earlier in Task 2.0a so each P2 publisher could be built against a real `postMode` contract. This task is the cross-publisher verification pass and the staging integration suite — not the orchestrator change itself.
 
 **Files:**
 
-- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/render-video.handler.ts`
-- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish.handler.ts`
-- Modify: all 5 publisher handlers to pass `postMode` correctly
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/publish-youtube.handler.ts` (verify only)
+- Modify: all 4 P2 publisher handlers (verify only — landed in Tasks 2.10-2.13)
 - Create: `packages/backend/test/integration/approval-modes.integration.spec.ts`
 
-- [ ] **Step 1: Update render-video handler to branch on approval_mode.**
+- [ ] **Step 1: Verify every publisher handler forwards `approval_mode === 'draft' ? 'draft' : 'direct'` into `postMode`.**
+
+Walk all 5 handlers (`publish-youtube`, `publish-tiktok`, `publish-instagram`, `publish-facebook`, `publish-linkedin`) and confirm the same one-liner exists where the publisher is invoked:
 
 ```typescript
-// inside render-video.handler.ts handle() after video asset is saved:
-const { data: runRow } = await client
-  .from("content_runs")
-  .select("approval_mode")
-  .eq("id", runId)
-  .single();
-if (runRow.approval_mode === "review") {
-  await this.orchestrator.transitionTo(runId, "ready_for_review", {
-    enqueueNext: false,
-  });
-} else {
-  // auto or draft both go to publishing; publishers check postMode
-  await this.orchestrator.transitionTo(runId, "publishing", {
-    enqueueNext: true,
-  });
-}
+postMode: run.approval_mode === "draft" ? "draft" : "direct",
 ```
 
-- [ ] **Step 2: Verify each publisher handler forwards `approval_mode === 'draft' ? 'draft' : 'direct'` into `postMode`.**
+The 4 P2 publisher handlers got this in Tasks 2.10-2.13. Task 1.25's YouTubeShorts handler (P1) needs an audit; if it predates approval-mode wiring, add the line now and lock with a unit test.
 
-Already done in tasks 2.10 through 2.13 for the new publishers; verify Task 1.25 YouTubeShorts handler also respects the flag.
-
-- [ ] **Step 3: Write integration tests.**
+- [ ] **Step 2: Write the integration suite.**
 
 ```typescript
 // packages/backend/test/integration/approval-modes.integration.spec.ts
@@ -12181,12 +12358,14 @@ describe("approval modes integration", () => {
 });
 ```
 
-- [ ] **Step 4: Run integration tests, commit.**
+- [ ] **Step 3: Run integration tests against staging, commit.**
+
+The suite needs real provider credentials and an admin JWT. Gate it under `E2E_ADMIN_JWT` so CI without provider creds skips cleanly rather than hanging for 12 minutes.
 
 ```bash
 cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- approval-modes
 git add packages/backend/src/content-pipeline/orchestrator/ packages/backend/test/integration/
-git commit -m "feat(content-pipeline): approval modes auto/review/draft fully wired with integration tests"
+git commit -m "test(content-pipeline): approval-modes integration suite (auto/review/draft)"
 ```
 
 ## Task 2.19: Per-format defaults UI in Settings
@@ -12919,6 +13098,302 @@ Register `MagnetLibraryController` and `MagnetLibraryService` in ContentPipeline
 cd packages/backend && npm run test -- magnet-library.service.spec
 git add packages/backend/src/content-pipeline/magnets/ packages/backend/src/content-pipeline/dto/ packages/frontend/app/admin/content-pipeline/lead-magnets/
 git commit -m "feat(content-pipeline): Lead Magnet Library admin page with CRUD and bindings"
+```
+
+## Task 2.20a: Typed-fetcher consolidation for new admin endpoints
+
+**Why this task exists:** CLAUDE.md §5 requires every frontend → backend call to go through a typed fetcher in `lib/data/fetchers/`. Tasks 2.17, 2.19, 2.20, 2.22, and 2.27 introduce admin pages that call `fetchAPIRaw` directly with inline shapes. That works but bypasses the typed-fetcher pattern, ships untyped JSON to components, and trips `data-layer-reviewer` on every PR. This task consolidates those calls into proper fetchers before the next batch of admin work (Style Library + Script Archetypes) repeats the mistake.
+
+**Files:**
+
+- Create: `packages/frontend/lib/data/fetchers/lead-magnets.ts`
+- Create: `packages/frontend/lib/data/fetchers/format-defaults.ts`
+- Create: `packages/frontend/lib/data/fetchers/style-references.ts`
+- Create: `packages/frontend/lib/data/fetchers/platforms.ts`
+- Create: `packages/frontend/lib/data/fetchers/thumbnails.ts`
+- Modify: `packages/frontend/lib/data/index.ts` (export the 5 new fetchers + their types)
+- Modify: every component touched by Tasks 2.17, 2.19, 2.20, 2.22, 2.27 to import from `@/lib/data` instead of calling `fetchAPIRaw` directly
+
+- [ ] **Step 1: Lead-magnets fetcher.**
+
+```typescript
+// packages/frontend/lib/data/fetchers/lead-magnets.ts
+import { fetchAPI, fetchAPIRaw } from "./base";
+
+export interface LeadMagnetBinding {
+  format: string;
+  magnet_kind: string;
+  cta_text: string;
+  weight: number;
+  enabled: boolean;
+}
+
+export interface LeadMagnet {
+  kind: string;
+  display_name: string;
+  description: string;
+  audience: "investor" | "agent" | "broker" | "mixed";
+  cover_image_url: string | null;
+  enabled: boolean;
+  bindings: LeadMagnetBinding[];
+}
+
+export async function fetchMagnets(): Promise<LeadMagnet[]> {
+  const res = await fetchAPI<{ magnets: LeadMagnet[] }>(
+    "/api/admin/content-pipeline/magnets",
+  );
+  return res.magnets;
+}
+
+export async function updateMagnet(
+  kind: string,
+  patch: Partial<LeadMagnet>,
+): Promise<void> {
+  await fetchAPIRaw(`/api/admin/content-pipeline/magnets/${kind}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function archiveMagnet(kind: string): Promise<void> {
+  await fetchAPIRaw(`/api/admin/content-pipeline/magnets/${kind}/archive`, {
+    method: "POST",
+  });
+}
+
+export async function cloneMagnet(kind: string): Promise<{ newKind: string }> {
+  return fetchAPI<{ newKind: string }>(
+    `/api/admin/content-pipeline/magnets/${kind}/clone`,
+    { method: "POST" },
+  );
+}
+
+export async function bindMagnet(input: {
+  format: string;
+  magnet_kind: string;
+  cta_text: string;
+  weight?: number;
+  enabled?: boolean;
+}): Promise<void> {
+  await fetchAPIRaw("/api/admin/content-pipeline/magnets/bindings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteBinding(bindingId: string): Promise<void> {
+  await fetchAPIRaw(
+    `/api/admin/content-pipeline/magnets/bindings/${bindingId}`,
+    { method: "DELETE" },
+  );
+}
+```
+
+- [ ] **Step 2: Format-defaults fetcher.**
+
+```typescript
+// packages/frontend/lib/data/fetchers/format-defaults.ts
+import { fetchAPIRaw } from "./base";
+
+export interface FormatDefaultsPatch {
+  enabled?: boolean;
+  default_approval_mode?: "auto" | "review" | "draft";
+  default_tts_voice_id?: string;
+  default_platforms?: string[];
+  default_script_archetype_id?: string | null;
+  default_script_archetype_mode?: "none" | "manual" | "auto";
+}
+
+export async function updateFormat(
+  format: string,
+  patch: FormatDefaultsPatch,
+): Promise<void> {
+  await fetchAPIRaw(`/api/admin/content-pipeline/formats/${format}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+```
+
+- [ ] **Step 3: Style-references fetcher.**
+
+```typescript
+// packages/frontend/lib/data/fetchers/style-references.ts
+import { fetchAPI, fetchAPIRaw } from "./base";
+
+export interface StyleReference {
+  id: string;
+  kind: "thumbnail" | "video";
+  label: string;
+  source_url: string | null;
+  preview_strip_url: string;
+  extracted_attributes: unknown;
+  created_at: string;
+}
+
+export async function fetchStyleReferences(): Promise<StyleReference[]> {
+  const res = await fetchAPI<{ references: StyleReference[] }>(
+    "/api/admin/content-pipeline/style-references",
+  );
+  return res.references;
+}
+
+export async function ingestStyleUrl(input: {
+  url: string;
+  label: string;
+}): Promise<StyleReference> {
+  return fetchAPI<StyleReference>(
+    "/api/admin/content-pipeline/style-references/ingest-url",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function uploadStyleReference(
+  file: File,
+  label: string,
+): Promise<StyleReference> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("label", label);
+  return fetchAPI<StyleReference>(
+    "/api/admin/content-pipeline/style-references/upload",
+    { method: "POST", body: fd },
+  );
+}
+
+export async function archiveStyleReference(id: string): Promise<void> {
+  await fetchAPIRaw(`/api/admin/content-pipeline/style-references/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function reanalyzeStyleReference(id: string): Promise<void> {
+  await fetchAPIRaw(
+    `/api/admin/content-pipeline/style-references/${id}/re-analyze`,
+    { method: "POST" },
+  );
+}
+```
+
+- [ ] **Step 4: Platforms fetcher (OAuth start + callback).**
+
+```typescript
+// packages/frontend/lib/data/fetchers/platforms.ts
+import { fetchAPI } from "./base";
+
+export type PlatformKey =
+  | "youtube_shorts"
+  | "tiktok"
+  | "instagram_reels"
+  | "facebook_reels"
+  | "linkedin";
+
+export interface PlatformStatus {
+  platform: PlatformKey;
+  connected: boolean;
+  connected_at: string | null;
+  last_error: string | null;
+}
+
+export async function fetchPlatformStatuses(): Promise<PlatformStatus[]> {
+  return fetchAPI<PlatformStatus[]>("/api/admin/content-pipeline/platforms");
+}
+
+export async function startOAuth(
+  platform: PlatformKey,
+): Promise<{ authUrl: string }> {
+  return fetchAPI<{ authUrl: string }>(
+    `/api/admin/content-pipeline/platforms/${platform}/oauth-start`,
+    { method: "POST" },
+  );
+}
+
+export async function completeOAuth(
+  platform: PlatformKey,
+  code: string,
+): Promise<{ connected: boolean }> {
+  return fetchAPI<{ connected: boolean }>(
+    `/api/admin/content-pipeline/platforms/${platform}/oauth-callback`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    },
+  );
+}
+```
+
+- [ ] **Step 5: Thumbnails fetcher.**
+
+```typescript
+// packages/frontend/lib/data/fetchers/thumbnails.ts
+import { fetchAPI, fetchAPIRaw } from "./base";
+
+export async function regenerateThumbnail(
+  runId: string,
+  frame: number,
+): Promise<{ queued: true }> {
+  return fetchAPI<{ queued: true }>(
+    `/api/admin/content-pipeline/runs/${runId}/thumbnail/regenerate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frame }),
+    },
+  );
+}
+
+export async function replaceThumbnail(
+  runId: string,
+  file: File,
+): Promise<{ storage_url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  return fetchAPI<{ storage_url: string }>(
+    `/api/admin/content-pipeline/runs/${runId}/thumbnail/replace`,
+    { method: "POST", body: fd },
+  );
+}
+```
+
+- [ ] **Step 6: Re-export from `lib/data/index.ts`.**
+
+```typescript
+// packages/frontend/lib/data/index.ts (additions)
+export * from "./fetchers/lead-magnets";
+export * from "./fetchers/format-defaults";
+export * from "./fetchers/style-references";
+export * from "./fetchers/platforms";
+export * from "./fetchers/thumbnails";
+```
+
+- [ ] **Step 7: Migrate every component touched by Tasks 2.17, 2.19, 2.20, 2.22, 2.27 to import from `@/lib/data`.**
+
+Replace each `fetchAPIRaw('/api/admin/content-pipeline/...')` call in:
+
+- `lead-magnets/magnet-card.tsx` → `archiveMagnet`, `cloneMagnet`
+- `lead-magnets/edit-dialog.tsx` → `fetchMagnets`, `updateMagnet`
+- `lead-magnets/bind-dialog.tsx` → `bindMagnet`
+- `settings/format-defaults.tsx` → `updateFormat`
+- `review/thumbnail-editor.tsx` → `regenerateThumbnail`, `replaceThumbnail`
+- `style-library/upload-dialog.tsx` → `uploadStyleReference`, `ingestStyleUrl`
+- `style-library/reference-card.tsx` (if it calls archive/re-analyze) → `archiveStyleReference`, `reanalyzeStyleReference`
+- `platforms/page.tsx` → `fetchPlatformStatuses`, `startOAuth`
+
+After this task no admin component should import `fetchAPIRaw` for content-pipeline endpoints. Run `data-layer-reviewer` (or `Grep "fetchAPIRaw.*content-pipeline" packages/frontend/app/admin`) to confirm zero hits.
+
+- [ ] **Step 8: Commit.**
+
+```bash
+git add packages/frontend/lib/data/fetchers/ packages/frontend/lib/data/index.ts packages/frontend/app/admin/content-pipeline/
+git commit -m "refactor(content-pipeline): typed fetchers for magnets/formats/style-refs/platforms/thumbnails"
 ```
 
 ## Task 2.21: P2 lead magnet HTML/EJS templates
@@ -14068,13 +14543,1024 @@ git add packages/video-template/src/presets/ packages/video-template/src/Propert
 git commit -m "feat(video-template): three thumbnail style variants with selector"
 ```
 
-## Task 2.29: Phase 2 E2E suite
+## Task 2.29: P2 migration script archetypes schema
+
+**Files:**
+
+- Create: `supabase/migrations/20260423000100_content_pipeline_script_archetypes.sql`
+
+- [ ] **Step 1: Write migration.**
+
+```sql
+-- Archetypes library (3 to 5 rows once refresh runs)
+CREATE TABLE content_script_archetypes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  description text NOT NULL,
+  style_profile jsonb NOT NULL,
+  source_video_ids text[] NOT NULL DEFAULT '{}',
+  enabled boolean NOT NULL DEFAULT true,
+  refreshed_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX content_script_archetypes_enabled_idx
+  ON content_script_archetypes (enabled) WHERE enabled;
+
+-- Raw YouTube videos harvested by the cascade; kept for traceability and re-clustering
+CREATE TABLE content_script_archetype_source_videos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  youtube_video_id text NOT NULL UNIQUE,
+  title text NOT NULL,
+  channel_title text NOT NULL,
+  published_at timestamptz NOT NULL,
+  view_count bigint NOT NULL,
+  like_count bigint NOT NULL,
+  comment_count bigint NOT NULL,
+  duration_seconds int NOT NULL,
+  velocity numeric NOT NULL,           -- views per day since publish
+  engagement_rate numeric NOT NULL,    -- (likes + comments) / views
+  transcript text,
+  discovered_at timestamptz NOT NULL DEFAULT now(),
+  assigned_archetype_id uuid REFERENCES content_script_archetypes(id) ON DELETE SET NULL
+);
+CREATE INDEX content_script_archetype_source_videos_archetype_idx
+  ON content_script_archetype_source_videos (assigned_archetype_id);
+
+-- Per-run selection
+ALTER TABLE content_runs
+  ADD COLUMN script_archetype_id uuid REFERENCES content_script_archetypes(id) ON DELETE SET NULL,
+  ADD COLUMN script_archetype_mode text NOT NULL DEFAULT 'none'
+    CHECK (script_archetype_mode IN ('none','manual','auto')),
+  ADD COLUMN script_archetype_auto_reason text;
+
+-- Supabase GRANTs (see MEMORY: sb_secret_ bypasses RLS but still needs table GRANTs)
+GRANT ALL ON content_script_archetypes TO service_role;
+GRANT ALL ON content_script_archetypes TO authenticated;
+GRANT ALL ON content_script_archetype_source_videos TO service_role;
+GRANT ALL ON content_script_archetype_source_videos TO authenticated;
+```
+
+- [ ] **Step 2: Apply via direct pooler (per project memory, not Supabase CLI).**
+
+```bash
+node scripts/apply-content-pipeline-migrations.js
+git add supabase/migrations/20260423000100_content_pipeline_script_archetypes.sql
+git commit -m "feat(content-pipeline): schema for script style archetypes and source videos"
+```
+
+## Task 2.30: YouTubeDiscoveryService with filter cascade
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/script-archetypes/niche-queries.config.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/style-profile.types.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/youtube-discovery.service.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/youtube-discovery.service.spec.ts`
+
+- [ ] **Step 1: Niche queries and profile types.**
+
+```typescript
+// niche-queries.config.ts
+// Topical only - no creator names, no brand taglines. Tune to tighten/loosen the pool.
+export const NICHE_QUERIES = [
+  "housing market forecast",
+  "real estate investing market analysis",
+  "zillow home prices trends",
+  "best cities to buy rental property",
+  "housing market crash analysis",
+  "where home prices are rising",
+  "real estate market data explained",
+];
+```
+
+```typescript
+// style-profile.types.ts
+export interface StyleProfile {
+  hook_patterns: string[]; // abstracted patterns, not verbatim hooks
+  words_per_second: number;
+  sentence_length_dist: {
+    short_pct: number;
+    medium_pct: number;
+    long_pct: number;
+  };
+  cta_patterns: string[];
+  emotional_register:
+    | "alarmist"
+    | "analytical"
+    | "optimistic"
+    | "contrarian"
+    | "educational";
+  vocab_markers: string[]; // distinctive-but-generic tokens, not copyrighted phrasings
+}
+
+export interface DiscoveredVideo {
+  youtubeVideoId: string;
+  title: string;
+  channelTitle: string;
+  publishedAt: Date;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  durationSeconds: number;
+  velocity: number;
+  engagementRate: number;
+}
+```
+
+- [ ] **Step 2: Discovery service implementing the cascade (90d pool → velocity top 200 → engagement top 50 → raw views top 20).**
+
+```typescript
+// youtube-discovery.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { google, youtube_v3 } from "googleapis";
+import { NICHE_QUERIES } from "./niche-queries.config";
+import type { DiscoveredVideo } from "./style-profile.types";
+
+export interface DiscoveryOptions {
+  poolDays?: number;
+  minViews?: number;
+  finalTopN?: number;
+  // Weighted rank-sum coefficients. Lower rank = better (rank 1 is the top video
+  // in that dimension). Higher coefficient = stronger penalty for being low-ranked,
+  // which encodes priority. Defaults express user priority: velocity > engagement > views.
+  rankWeights?: { velocity: number; engagement: number; views: number };
+}
+
+// Kept as a type alias for any external caller still importing the old name.
+// Remove once no callers reference it.
+export type CascadeOptions = DiscoveryOptions;
+
+@Injectable()
+export class YouTubeDiscoveryService {
+  private readonly logger = new Logger(YouTubeDiscoveryService.name);
+  private readonly youtube: youtube_v3.Youtube;
+
+  constructor() {
+    const apiKey = process.env.YOUTUBE_DATA_API_KEY;
+    if (!apiKey) throw new Error("YOUTUBE_DATA_API_KEY is required");
+    this.youtube = google.youtube({ version: "v3", auth: apiKey });
+  }
+
+  async discoverTopVideos(
+    opts: DiscoveryOptions = {},
+  ): Promise<DiscoveredVideo[]> {
+    const {
+      poolDays = 90,
+      minViews = 10_000,
+      finalTopN = 20,
+      rankWeights = { velocity: 1.5, engagement: 1.0, views: 0.5 },
+    } = opts;
+    const publishedAfter = new Date(
+      Date.now() - poolDays * 86_400_000,
+    ).toISOString();
+    const ids = new Set<string>();
+    for (const q of NICHE_QUERIES) {
+      const res = await this.youtube.search.list({
+        q,
+        part: ["snippet"],
+        type: ["video"],
+        maxResults: 50,
+        order: "viewCount",
+        publishedAfter,
+      });
+      for (const item of res.data.items ?? []) {
+        if (item.id?.videoId) ids.add(item.id.videoId);
+      }
+    }
+
+    const pool: DiscoveredVideo[] = [];
+    const idList = Array.from(ids);
+    for (let i = 0; i < idList.length; i += 50) {
+      const chunk = idList.slice(i, i + 50);
+      const res = await this.youtube.videos.list({
+        id: chunk,
+        part: ["snippet", "statistics", "contentDetails"],
+      });
+      for (const v of res.data.items ?? []) {
+        if (!v.id || !v.snippet || !v.statistics) continue;
+        const viewCount = Number(v.statistics.viewCount ?? 0);
+        if (viewCount < minViews) continue;
+        const likeCount = Number(v.statistics.likeCount ?? 0);
+        const commentCount = Number(v.statistics.commentCount ?? 0);
+        const publishedAt = new Date(v.snippet.publishedAt!);
+        const ageDays = Math.max(
+          1,
+          (Date.now() - publishedAt.getTime()) / 86_400_000,
+        );
+        pool.push({
+          youtubeVideoId: v.id,
+          title: v.snippet.title ?? "",
+          channelTitle: v.snippet.channelTitle ?? "",
+          publishedAt,
+          viewCount,
+          likeCount,
+          commentCount,
+          durationSeconds: parseISODurationToSeconds(
+            v.contentDetails?.duration ?? "PT0S",
+          ),
+          velocity: viewCount / ageDays,
+          engagementRate:
+            viewCount > 0 ? (likeCount + commentCount) / viewCount : 0,
+        });
+      }
+    }
+
+    // Weighted rank-sum across velocity / engagement / views.
+    //
+    // Why not a hard cascade? With ~7 niche queries × 50 results, the pool is small
+    // enough that a hard velocity cut at stage 1 can drop a video with elite engagement
+    // and merely-good velocity. Rank-sum keeps the priority order (velocity > engagement
+    // > views) but applies it as a soft penalty so no single-dimension underperformer
+    // gets eliminated outright.
+    //
+    // Each video gets a 1-based rank in each dimension (1 = best). Total score is the
+    // weighted sum of ranks; lower total = better. The 10K-view floor still pre-filters
+    // the pool above so we don't rank trivial videos.
+    const ranked = scoreByRankSum(pool, rankWeights).slice(0, finalTopN);
+
+    this.logger.log(
+      `pool=${pool.length} ranked=${ranked.length} weights=v${rankWeights.velocity}/e${rankWeights.engagement}/V${rankWeights.views}`,
+    );
+    return ranked;
+  }
+}
+
+function scoreByRankSum(
+  pool: DiscoveredVideo[],
+  w: { velocity: number; engagement: number; views: number },
+): DiscoveredVideo[] {
+  if (pool.length === 0) return [];
+  const rankBy = (
+    key: "velocity" | "engagementRate" | "viewCount",
+  ): Map<string, number> => {
+    const sorted = [...pool].sort(
+      (a, b) => (b[key] as number) - (a[key] as number),
+    );
+    return new Map(sorted.map((v, i) => [v.youtubeVideoId, i + 1]));
+  };
+  const rv = rankBy("velocity");
+  const re = rankBy("engagementRate");
+  const rs = rankBy("viewCount");
+  const scored = pool.map((v) => ({
+    v,
+    score:
+      w.velocity * rv.get(v.youtubeVideoId)! +
+      w.engagement * re.get(v.youtubeVideoId)! +
+      w.views * rs.get(v.youtubeVideoId)!,
+  }));
+  scored.sort((a, b) => a.score - b.score);
+  return scored.map((s) => s.v);
+}
+
+function parseISODurationToSeconds(iso: string): number {
+  const m = iso.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!m) return 0;
+  const [, h, mi, s] = m;
+  return Number(h || 0) * 3600 + Number(mi || 0) * 60 + Number(s || 0);
+}
+```
+
+- [ ] **Step 3: Unit tests with mocked googleapis. Cover: (a) the 10K-view minimum floor pre-filters the pool; (b) `scoreByRankSum` with the default weights ranks a high-velocity video above a high-views video when engagement is equal; (c) a video with elite engagement and middling velocity still makes the final cut (the regression case that motivated dropping the cascade); (d) custom `rankWeights` flow through and reorder results predictably.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/script-archetypes/
+git commit -m "feat(content-pipeline): YouTube discovery service with velocity/engagement/views cascade"
+```
+
+## Task 2.31: TranscriptFetcherService + ArchetypeClusteringService
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/script-archetypes/transcript-fetcher.service.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/archetype-clustering.service.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/archetype-clustering.service.spec.ts`
+
+- [ ] **Step 1: Transcript fetcher via yt-dlp auto-subs (captions API is scoped to the authenticated user's own videos, so we need the auto-sub fallback).**
+
+```typescript
+// transcript-fetcher.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { spawn } from "child_process";
+import { mkdtempSync, readFileSync, rmSync, existsSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+
+@Injectable()
+export class TranscriptFetcherService {
+  private readonly logger = new Logger(TranscriptFetcherService.name);
+
+  async fetch(videoId: string): Promise<string | null> {
+    const bin = process.env.YT_DLP_BIN || "yt-dlp";
+    const dir = mkdtempSync(join(tmpdir(), "yt-transcript-"));
+    try {
+      const code = await new Promise<number>((resolve, reject) => {
+        const proc = spawn(bin, [
+          "--skip-download",
+          "--write-auto-sub",
+          "--sub-lang",
+          "en",
+          "--sub-format",
+          "vtt",
+          "-o",
+          join(dir, "%(id)s.%(ext)s"),
+          `https://www.youtube.com/watch?v=${videoId}`,
+        ]);
+        proc.on("error", reject);
+        proc.on("close", (c) => resolve(c ?? 1));
+      });
+      if (code !== 0) return null;
+      const vttPath = join(dir, `${videoId}.en.vtt`);
+      if (!existsSync(vttPath)) return null;
+      return vttToPlainText(readFileSync(vttPath, "utf-8"));
+    } catch (err) {
+      this.logger.warn(
+        `transcript fetch failed for ${videoId}: ${(err as Error).message}`,
+      );
+      return null;
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+}
+
+function vttToPlainText(vtt: string): string {
+  return vtt
+    .split("\n")
+    .filter(
+      (l) =>
+        l &&
+        !l.startsWith("WEBVTT") &&
+        !l.match(/^\d+:\d+/) &&
+        !l.includes("-->"),
+    )
+    .join(" ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+```
+
+- [ ] **Step 2: Archetype clustering via Claude tool-use. Prompt enforces abstraction (no creator names, no copyrighted phrasings) and returns 3 to 5 archetypes covering all input videos.**
+
+```typescript
+// archetype-clustering.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import Anthropic from "@anthropic-ai/sdk";
+import type { StyleProfile } from "./style-profile.types";
+
+export interface ArchetypeCluster {
+  name: string;
+  description: string;
+  style_profile: StyleProfile;
+  source_video_ids: string[];
+}
+
+interface ClusterInput {
+  youtubeVideoId: string;
+  title: string;
+  transcript: string;
+  durationSeconds: number;
+}
+
+@Injectable()
+export class ArchetypeClusteringService {
+  private readonly logger = new Logger(ArchetypeClusteringService.name);
+  private readonly client: Anthropic;
+
+  constructor() {
+    if (!process.env.ANTHROPIC_API_KEY)
+      throw new Error("ANTHROPIC_API_KEY required");
+    this.client = new Anthropic();
+  }
+
+  async cluster(videos: ClusterInput[]): Promise<ArchetypeCluster[]> {
+    if (videos.length < 3) {
+      throw new Error(
+        `need at least 3 videos with transcripts to cluster, got ${videos.length}`,
+      );
+    }
+    const response = await this.client.messages.create({
+      model: "claude-opus-4-7",
+      max_tokens: 8000,
+      tools: [
+        {
+          name: "emit_archetypes",
+          description:
+            "Emit 3 to 5 ABSTRACTED style archetypes derived from the input videos. Never include creator names, channel names, brand names, or copyrighted taglines.",
+          input_schema: {
+            type: "object",
+            properties: {
+              archetypes: {
+                type: "array",
+                minItems: 3,
+                maxItems: 5,
+                items: {
+                  type: "object",
+                  properties: {
+                    name: {
+                      type: "string",
+                      pattern: "^[a-z][a-z0-9_]{2,}$",
+                      description:
+                        "snake_case, 2-3 words, abstracted (e.g. doom_alarmist, data_analyst, optimistic_educator, contrarian_skeptic). Never a creator name.",
+                    },
+                    description: { type: "string" },
+                    style_profile: {
+                      type: "object",
+                      properties: {
+                        hook_patterns: {
+                          type: "array",
+                          items: { type: "string" },
+                          minItems: 2,
+                          maxItems: 6,
+                        },
+                        words_per_second: { type: "number" },
+                        sentence_length_dist: {
+                          type: "object",
+                          properties: {
+                            short_pct: { type: "number" },
+                            medium_pct: { type: "number" },
+                            long_pct: { type: "number" },
+                          },
+                          required: ["short_pct", "medium_pct", "long_pct"],
+                        },
+                        cta_patterns: {
+                          type: "array",
+                          items: { type: "string" },
+                        },
+                        emotional_register: {
+                          type: "string",
+                          enum: [
+                            "alarmist",
+                            "analytical",
+                            "optimistic",
+                            "contrarian",
+                            "educational",
+                          ],
+                        },
+                        vocab_markers: {
+                          type: "array",
+                          items: { type: "string" },
+                          minItems: 5,
+                          maxItems: 12,
+                        },
+                      },
+                      required: [
+                        "hook_patterns",
+                        "words_per_second",
+                        "sentence_length_dist",
+                        "cta_patterns",
+                        "emotional_register",
+                        "vocab_markers",
+                      ],
+                    },
+                    source_video_ids: {
+                      type: "array",
+                      items: { type: "string" },
+                      minItems: 1,
+                    },
+                  },
+                  required: [
+                    "name",
+                    "description",
+                    "style_profile",
+                    "source_video_ids",
+                  ],
+                },
+              },
+            },
+            required: ["archetypes"],
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: "emit_archetypes" },
+      messages: [{ role: "user", content: buildPrompt(videos) }],
+    });
+    const block = response.content.find((c: any) => c.type === "tool_use");
+    if (!block || block.type !== "tool_use") {
+      throw new Error("clustering response contained no tool_use block");
+    }
+    const clusters = (block.input as { archetypes: ArchetypeCluster[] })
+      .archetypes;
+    this.validate(clusters, videos);
+    return clusters;
+  }
+
+  private validate(clusters: ArchetypeCluster[], videos: ClusterInput[]) {
+    const inputIds = new Set(videos.map((v) => v.youtubeVideoId));
+    const assignedIds = new Set(clusters.flatMap((c) => c.source_video_ids));
+    for (const id of assignedIds) {
+      if (!inputIds.has(id)) {
+        throw new Error(`clustering emitted unknown video id: ${id}`);
+      }
+    }
+    // Warn (don't fail) on unassigned videos - Claude may choose to drop outliers.
+    const dropped = [...inputIds].filter((id) => !assignedIds.has(id));
+    if (dropped.length) {
+      this.logger.warn(`clustering dropped ${dropped.length} outlier videos`);
+    }
+  }
+}
+
+function buildPrompt(videos: ClusterInput[]): string {
+  const corpus = videos
+    .map(
+      (v) =>
+        `\n---\nid: ${v.youtubeVideoId}\ntitle: ${v.title}\nduration_s: ${v.durationSeconds}\ntranscript: ${v.transcript.slice(0, 6000)}`,
+    )
+    .join("\n");
+  return `You are analyzing the top ${videos.length} performing YouTube videos in the US housing-market and real-estate-investing niche.
+
+Cluster them into 3 to 5 ABSTRACTED archetypes that PropertyIQ will use as reusable voice/tone profiles for data-driven faceless content.
+
+HARD rules:
+- Archetype names and descriptions must be creator-agnostic. No creator names, channel names, brand names, or copyrighted taglines anywhere.
+- hook_patterns, cta_patterns, and vocab_markers should be PATTERNS (e.g. "open with a contrarian claim about the consensus forecast"), not verbatim scripts.
+- emotional_register is one of: alarmist, analytical, optimistic, contrarian, educational.
+- Each archetype must cover at least one input video via source_video_ids.
+
+Videos:${corpus}`;
+}
+```
+
+- [ ] **Step 3: Tests with mocked Anthropic SDK - cover the too-few-videos guard, the unknown-id validator, and the happy path producing 3 to 5 clusters.**
+
+- [ ] **Step 4: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/script-archetypes/
+git commit -m "feat(content-pipeline): transcript fetcher + Claude archetype clustering"
+```
+
+## Task 2.32: ScriptArchetypeService, refresh cron, admin controller
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/script-archetypes/script-archetype.service.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/script-archetype.service.spec.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/script-archetype.controller.ts`
+- Create: `packages/backend/src/content-pipeline/crons/refresh-script-archetypes.cron.ts`
+- Modify: `packages/backend/src/content-pipeline/content-pipeline.module.ts`
+
+- [ ] **Step 1: Service orchestrates discovery → transcript → clustering → upsert.**
+
+```typescript
+// script-archetype.service.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+import { YouTubeDiscoveryService } from "./youtube-discovery.service";
+import { TranscriptFetcherService } from "./transcript-fetcher.service";
+import { ArchetypeClusteringService } from "./archetype-clustering.service";
+
+@Injectable()
+export class ScriptArchetypeService {
+  private readonly logger = new Logger(ScriptArchetypeService.name);
+
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly discovery: YouTubeDiscoveryService,
+    private readonly transcripts: TranscriptFetcherService,
+    private readonly clusterer: ArchetypeClusteringService,
+  ) {}
+
+  async refresh(): Promise<{
+    archetypes: number;
+    videosSeen: number;
+    videosWithTranscript: number;
+  }> {
+    const start = Date.now();
+    const videos = await this.discovery.discoverTopVideos();
+    const client = this.supabase.getClient();
+
+    const withTranscript: Array<
+      (typeof videos)[number] & { transcript: string }
+    > = [];
+    for (const v of videos) {
+      const transcript = await this.transcripts.fetch(v.youtubeVideoId);
+      await client.from("content_script_archetype_source_videos").upsert(
+        {
+          youtube_video_id: v.youtubeVideoId,
+          title: v.title,
+          channel_title: v.channelTitle,
+          published_at: v.publishedAt.toISOString(),
+          view_count: v.viewCount,
+          like_count: v.likeCount,
+          comment_count: v.commentCount,
+          duration_seconds: v.durationSeconds,
+          velocity: v.velocity,
+          engagement_rate: v.engagementRate,
+          transcript,
+        },
+        { onConflict: "youtube_video_id" },
+      );
+      if (transcript) withTranscript.push({ ...v, transcript });
+    }
+
+    if (withTranscript.length < 3) {
+      this.logger.warn(
+        `refresh aborting: only ${withTranscript.length} videos had usable transcripts`,
+      );
+      return {
+        archetypes: 0,
+        videosSeen: videos.length,
+        videosWithTranscript: withTranscript.length,
+      };
+    }
+
+    const clusters = await this.clusterer.cluster(withTranscript);
+    for (const c of clusters) {
+      const { data: archetype } = await client
+        .from("content_script_archetypes")
+        .upsert(
+          {
+            name: c.name,
+            description: c.description,
+            style_profile: c.style_profile,
+            source_video_ids: c.source_video_ids,
+            enabled: true,
+            refreshed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "name" },
+        )
+        .select("id")
+        .single();
+      if (archetype?.id) {
+        await client
+          .from("content_script_archetype_source_videos")
+          .update({ assigned_archetype_id: archetype.id })
+          .in("youtube_video_id", c.source_video_ids);
+      }
+    }
+
+    this.logger.log(
+      `refresh done: ${clusters.length} archetypes in ${Date.now() - start}ms`,
+    );
+    return {
+      archetypes: clusters.length,
+      videosSeen: videos.length,
+      videosWithTranscript: withTranscript.length,
+    };
+  }
+}
+```
+
+- [ ] **Step 2: Monthly cron.**
+
+```typescript
+// crons/refresh-script-archetypes.cron.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { ScriptArchetypeService } from "../script-archetypes/script-archetype.service";
+
+@Injectable()
+export class RefreshScriptArchetypesCron {
+  private readonly logger = new Logger(RefreshScriptArchetypesCron.name);
+  constructor(private readonly svc: ScriptArchetypeService) {}
+
+  // 1st of each month at 03:30 UTC - off-peak for YouTube API, separate from metrics pulls.
+  @Cron("30 3 1 * *", { timeZone: "UTC" })
+  async handle() {
+    try {
+      const result = await this.svc.refresh();
+      this.logger.log(`refresh result: ${JSON.stringify(result)}`);
+    } catch (err) {
+      this.logger.error(
+        `refresh failed: ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+    }
+  }
+}
+```
+
+- [ ] **Step 3: Admin controller endpoints.**
+
+```typescript
+// script-archetype.controller.ts
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+} from "@nestjs/common";
+import { AdminGuard } from "../../auth/guards/admin.guard";
+import { ScriptArchetypeService } from "./script-archetype.service";
+
+@Controller("api/admin/content-pipeline/script-archetypes")
+@UseGuards(AdminGuard)
+export class ScriptArchetypeController {
+  constructor(private readonly svc: ScriptArchetypeService) {}
+
+  @Get()
+  async list() {
+    /* return enabled + disabled, newest refresh first */
+  }
+
+  @Get(":id")
+  async get(@Param("id") id: string) {
+    /* include source_video join */
+  }
+
+  @Post("refresh")
+  async refresh(@Body() body: { force?: boolean }) {
+    return { data: await this.svc.refresh() };
+  }
+
+  @Patch(":id")
+  async patch(@Param("id") id: string, @Body() dto: UpdateArchetypeDto) {
+    /* description + enabled only; style_profile is managed by the cron */
+  }
+
+  @Post(":id/disable")
+  async disable(@Param("id") id: string) {
+    /* set enabled=false */
+  }
+
+  @Post(":id/enable")
+  async enable(@Param("id") id: string) {
+    /* set enabled=true */
+  }
+}
+
+class UpdateArchetypeDto {
+  description?: string;
+  enabled?: boolean;
+}
+```
+
+- [ ] **Step 4: Register providers in `content-pipeline.module.ts`; commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/script-archetypes/ packages/backend/src/content-pipeline/crons/refresh-script-archetypes.cron.ts packages/backend/src/content-pipeline/content-pipeline.module.ts
+git commit -m "feat(content-pipeline): script archetype refresh service + cron + admin endpoints"
+```
+
+## Task 2.33: ArchetypeRouter + AnthropicScriptGenerator integration
+
+**Files:**
+
+- Create: `packages/backend/src/content-pipeline/script-archetypes/archetype-router.service.ts`
+- Create: `packages/backend/src/content-pipeline/script-archetypes/archetype-router.service.spec.ts`
+- Modify: `packages/backend/src/content-pipeline/drivers/anthropic-script-generator.ts`
+- Modify: `packages/backend/src/content-pipeline/orchestrator/job-handlers/generate-script.handler.ts`
+- Modify: `packages/backend/src/content-pipeline/dto/create-run.dto.ts`
+
+- [ ] **Step 1: ArchetypeRouter — USER-SUPPLIED EDITORIAL LOGIC in `pickArchetypeName`.**
+
+> **Implementation note for Troy:** the body of `pickArchetypeName` is the one place in this feature where your editorial judgment outperforms anything I can guess. Write the routing rules you want. The scaffolding resolves the name to an id and handles the "no match" case; you only write the `(ctx) → name | null` decision. Keep it short (10 to 15 lines is plenty); you can iterate after watching runs for a week.
+
+```typescript
+// archetype-router.service.ts
+import { Injectable } from "@nestjs/common";
+import { SupabaseService } from "../../supabase/supabase.service";
+
+export interface RouteContext {
+  format: string;
+  primaryPlatform?: string;
+  metricDirection?: "up" | "down" | "flat";
+  state?: string;
+  scoreBand?:
+    | "poor"
+    | "below_avg"
+    | "average"
+    | "fair"
+    | "good"
+    | "great"
+    | "excellent";
+}
+
+@Injectable()
+export class ArchetypeRouter {
+  constructor(private readonly supabase: SupabaseService) {}
+
+  /**
+   * USER-SUPPLIED EDITORIAL RULES.
+   *
+   * Return an archetype name (must match a row in content_script_archetypes.name)
+   * or null to skip archetype styling and fall back to the generic brand voice.
+   *
+   * Also return a short reason string; it lands in content_runs.script_archetype_auto_reason
+   * so post-hoc analysis can see why the router picked what it picked.
+   *
+   * Suggested starting heuristics (replace with your real editorial judgment):
+   *   - head_to_head                            → 'contrarian_skeptic'
+   *   - score_mover with metricDirection='down' → 'doom_alarmist'   (TikTok/IG)
+   *   - score_mover with metricDirection='up'   → 'optimistic_educator' (LinkedIn/YT)
+   *   - top_10_ranking                          → 'data_analyst'
+   *   - farm_area_spotlight                     → 'educational' / null
+   *   - grade_reveal                            → null (use generic brand voice)
+   */
+  async pickArchetypeName(
+    ctx: RouteContext,
+  ): Promise<{ name: string | null; reason: string }> {
+    // TODO Troy: write rules here. Default = abstain so the router never ships
+    // a half-baked choice before you've tuned it.
+    return { name: null, reason: "router_not_configured" };
+  }
+
+  async resolve(
+    ctx: RouteContext,
+  ): Promise<{ archetypeId: string | null; reason: string }> {
+    const { name, reason } = await this.pickArchetypeName(ctx);
+    if (!name) return { archetypeId: null, reason };
+    const { data } = await this.supabase
+      .getClient()
+      .from("content_script_archetypes")
+      .select("id, enabled")
+      .eq("name", name)
+      .maybeSingle();
+    if (!data || !data.enabled) {
+      return {
+        archetypeId: null,
+        reason: `${reason}; archetype_unavailable:${name}`,
+      };
+    }
+    return { archetypeId: data.id, reason };
+  }
+}
+```
+
+- [ ] **Step 2: script handler resolves archetype before calling generator and persists the decision.**
+
+```typescript
+// in generate-script.handler.ts handle()
+const run = await fetchRun(runId);
+let archetypeId = run.script_archetype_id;
+let autoReason = run.script_archetype_auto_reason;
+
+if (run.script_archetype_mode === "auto" && !archetypeId) {
+  const { archetypeId: routed, reason } = await this.archetypeRouter.resolve({
+    format: run.format,
+    primaryPlatform: run.selected_platforms?.[0],
+    metricDirection: deriveMetricDirection(dataBundle),
+    state: run.state,
+    scoreBand: deriveScoreBand(dataBundle),
+  });
+  archetypeId = routed;
+  autoReason = reason;
+  await client
+    .from("content_runs")
+    .update({
+      script_archetype_id: archetypeId,
+      script_archetype_auto_reason: autoReason,
+    })
+    .eq("id", runId);
+}
+
+const styleProfile = archetypeId
+  ? await loadStyleProfile(client, archetypeId)
+  : null;
+const script = await this.scriptGenerator.generate({
+  format: run.format,
+  dataBundle,
+  styleProfile,
+  shortLink: run.short_link,
+});
+```
+
+- [ ] **Step 3: Generator injects the profile as a SECOND system block, AFTER `_system.md`, so brand-voice hard rules still win on conflict.**
+
+```typescript
+// anthropic-script-generator.ts (inside generate())
+const systemBlocks: Array<{ type: "text"; text: string }> = [
+  { type: "text", text: this.systemPrompt },
+];
+if (input.styleProfile) {
+  systemBlocks.push({
+    type: "text",
+    text: renderStyleProfileBlock(input.styleProfile),
+  });
+}
+
+function renderStyleProfileBlock(p: StyleProfile): string {
+  return `Apply this voice style profile to the script you produce. It overrides default cadence and phrasing. It does NOT override the hard rules above (no em dashes, only PropertyIQ Score, no hype words, only numbers from the data bundle, hook in first 2 seconds). If this profile conflicts with any hard rule, the hard rule wins.
+
+Target speech rate: ${p.words_per_second.toFixed(1)} words/sec.
+Sentence mix: ${p.sentence_length_dist.short_pct}% short (<8 words), ${p.sentence_length_dist.medium_pct}% medium (8-16), ${p.sentence_length_dist.long_pct}% long (>16).
+Emotional register: ${p.emotional_register}.
+Hook archetype patterns (pick one that fits the data you have):
+- ${p.hook_patterns.join("\n- ")}
+CTA patterns:
+- ${p.cta_patterns.join("\n- ")}
+Distinctive vocabulary markers (use sparingly, 1-3 per script): ${p.vocab_markers.join(", ")}.`;
+}
+```
+
+- [ ] **Step 4: Extend `CreateRunDto`.**
+
+```typescript
+// dto/create-run.dto.ts (additions)
+@IsOptional() @IsIn(['none','manual','auto']) scriptArchetypeMode?: 'none' | 'manual' | 'auto';
+@IsOptional() @IsUUID('4') scriptArchetypeId?: string;
+```
+
+Validation rule (enforce in service): `scriptArchetypeMode === 'manual'` requires `scriptArchetypeId`; `scriptArchetypeMode === 'auto'` forbids it.
+
+- [ ] **Step 5: Unit tests.**
+
+- Router: given a configured rule set (inject a test subclass overriding `pickArchetypeName`), resolves to correct id; unknown name → null with informative reason.
+- Generator: with `styleProfile` present, the system prompt contains the profile block AFTER the base system prompt; with `styleProfile=null`, no profile block appears.
+- Handler: `auto` mode + null router result leaves `script_archetype_id` null but populates `script_archetype_auto_reason`; `manual` mode never calls the router.
+
+- [ ] **Step 6: Commit.**
+
+```bash
+git add packages/backend/src/content-pipeline/
+git commit -m "feat(content-pipeline): archetype router + script generator style-profile injection"
+```
+
+## Task 2.34: Script Archetype Library admin UI + create-run wizard selector
+
+**Files:**
+
+- Create: `packages/frontend/app/admin/content-pipeline/script-archetypes/page.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/script-archetypes/archetype-card.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/script-archetypes/profile-panel.tsx`
+- Create: `packages/frontend/app/admin/content-pipeline/script-archetypes/refresh-button.tsx`
+- Create: `packages/frontend/lib/data/fetchers/script-archetypes.ts`
+- Modify: `packages/frontend/lib/data/index.ts` (export new fetcher)
+- Modify: `packages/frontend/app/admin/content-pipeline/new/page.tsx` (wizard)
+- Modify: `packages/frontend/app/admin/content-pipeline/settings/format-defaults.tsx`
+
+- [ ] **Step 1: Data-layer fetcher (per CLAUDE.md 5: all data fetching goes through `@/lib/data`).**
+
+```typescript
+// lib/data/fetchers/script-archetypes.ts
+import { fetchAPI } from "./base";
+
+export interface ScriptArchetype {
+  id: string;
+  name: string;
+  description: string;
+  style_profile: unknown;
+  source_video_ids: string[];
+  enabled: boolean;
+  refreshed_at: string;
+}
+
+export async function fetchScriptArchetypes(): Promise<ScriptArchetype[]> {
+  const res = await fetchAPI<ScriptArchetype[]>(
+    "/api/admin/content-pipeline/script-archetypes",
+  );
+  return res;
+}
+
+export async function triggerArchetypeRefresh() {
+  return fetchAPI("/api/admin/content-pipeline/script-archetypes/refresh", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+```
+
+- [ ] **Step 2: Admin library page — list cards, refresh button, drilldown shows profile JSON + source videos.**
+
+- [ ] **Step 3: Create-run wizard — add a Style step AFTER format-step.**
+
+```tsx
+// new/style-pick-archetype.tsx  (new subcomponent in the wizard)
+// Options:
+//   1. "Auto" → scriptArchetypeMode='auto'
+//   2. one of the enabled archetypes → mode='manual', id=<uuid>
+//   3. "None (generic brand voice)" → mode='none'
+// Default: per-format default (see Task 2.19) if one is configured; otherwise 'none'.
+```
+
+- [ ] **Step 4: Per-format defaults (Task 2.19 extension) — each format row gains an optional `default_script_archetype_id` column on `format_templates`. Add a dropdown in `format-defaults.tsx`.**
+
+Requires a small migration:
+
+```sql
+-- supabase/migrations/20260423000110_content_pipeline_format_default_archetype.sql
+ALTER TABLE format_templates
+  ADD COLUMN default_script_archetype_id uuid REFERENCES content_script_archetypes(id) ON DELETE SET NULL,
+  ADD COLUMN default_script_archetype_mode text NOT NULL DEFAULT 'none'
+    CHECK (default_script_archetype_mode IN ('none','manual','auto'));
+```
+
+When the wizard opens without a user selection, `format-step` → `style-pick-archetype` prefills from the format default. User can always override per run.
+
+- [ ] **Step 5: Commit.**
+
+```bash
+git add packages/frontend/app/admin/content-pipeline/script-archetypes/ packages/frontend/app/admin/content-pipeline/new/ packages/frontend/app/admin/content-pipeline/settings/format-defaults.tsx packages/frontend/lib/data/fetchers/script-archetypes.ts supabase/migrations/20260423000110_content_pipeline_format_default_archetype.sql
+git commit -m "feat(content-pipeline): script archetype admin library + wizard selector + per-format default"
+```
+
+## Task 2.35: Phase 2 E2E suite
 
 **Files:**
 
 - Create: `packages/backend/test/e2e/content-pipeline-p2-format-coverage.e2e.spec.ts`
 - Create: `packages/backend/test/e2e/content-pipeline-p2-style-reference.e2e.spec.ts`
 - Create: `packages/backend/test/e2e/content-pipeline-p2-approval-modes.e2e.spec.ts`
+- Create: `packages/backend/test/e2e/content-pipeline-p2-script-archetypes.e2e.spec.ts`
 
 **Per project memory: E2E must hit real staging DB, not mocks.**
 
@@ -14180,12 +15666,50 @@ Full implementation analyzes the rendered thumbnail PNG via Sharp or equivalent 
 
 - [ ] **Step 3: Write approval-modes E2E (same pattern as Task 2.18 integration test, but run against staging real publishers).**
 
-- [ ] **Step 4: Run E2E, commit.**
+- [ ] **Step 4: Write script-archetypes E2E.**
+
+```typescript
+// packages/backend/test/e2e/content-pipeline-p2-script-archetypes.e2e.spec.ts
+describe("E2E: script archetype modes against real staging DB", () => {
+  // Precondition: at least one enabled archetype exists (either from a recent cron run
+  // or by calling POST /script-archetypes/refresh in beforeAll). Skip the suite with a
+  // clear message if the refresh returns zero archetypes so CI doesn't report a spurious fail.
+
+  it("manual mode: explicit archetype id is applied and reflected in script cadence", async () => {
+    // 1. GET /script-archetypes, pick the first enabled one
+    // 2. POST /runs with scriptArchetypeMode='manual' + scriptArchetypeId=<id>, approvalMode='review'
+    // 3. Poll until ready_for_review
+    // 4. GET /runs/:id and assert:
+    //    - run.script_archetype_id === picked id
+    //    - run.script_archetype_mode === 'manual'
+    //    - script.words_per_second is within ±15% of profile.words_per_second
+    //    - script.hook uses at least one pattern from profile.hook_patterns (fuzzy match)
+  });
+
+  it("auto mode: router picks or abstains, run records the reason", async () => {
+    // 1. POST /runs with scriptArchetypeMode='auto', format='score_mover', approvalMode='review'
+    // 2. Poll until ready_for_review
+    // 3. GET /runs/:id and assert:
+    //    - run.script_archetype_mode === 'auto'
+    //    - run.script_archetype_auto_reason is non-null
+    //    - If router picked, script_archetype_id matches a row in content_script_archetypes
+    //    - Gate A verification still passed (data-verifier event in event log has status='passed')
+  });
+
+  it("none mode: no archetype fields set, generic brand voice used", async () => {
+    // 1. POST /runs with no archetype fields (defaults to 'none')
+    // 2. Poll until ready_for_review
+    // 3. Assert run.script_archetype_id is null, script still passes Gate A and Gate B
+  });
+});
+```
+
+- [ ] **Step 5: Run E2E, commit.**
 
 ```bash
 cd packages/backend && E2E_ADMIN_JWT=<jwt> npm run test:e2e -- content-pipeline-p2
 git add packages/backend/test/e2e/
-git commit -m "test(content-pipeline): P2 E2E suite (format coverage, style reference, approval modes)"
+git commit -m "test(content-pipeline): P2 E2E suite (format coverage, style reference, approval modes, script archetypes)"
 ```
 
 ---
