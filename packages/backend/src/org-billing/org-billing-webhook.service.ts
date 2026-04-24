@@ -13,6 +13,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
 import { OrgDowngradeHandlerService } from './org-downgrade-handler.service';
+import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
 import Stripe from 'stripe';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class OrgBillingWebhookService {
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
     private readonly downgradeHandler: OrgDowngradeHandlerService,
+    private readonly mcpInvalidator: McpEntitlementsInvalidator,
   ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -100,6 +102,8 @@ export class OrgBillingWebhookService {
 
     this.logger.log(`Org "${orgSlug}" billing activated`);
 
+    await this.mcpInvalidator.invalidateOrgMembers(org.id);
+
     await this.auditService.log({
       organizationId: org.id,
       actorId: ownerId,
@@ -122,6 +126,8 @@ export class OrgBillingWebhookService {
       })
       .eq('id', org.id);
 
+    await this.mcpInvalidator.invalidateOrgMembers(org.id);
+
     this.logger.log(`Invoice paid for org ${org.id}`);
   }
 
@@ -136,6 +142,8 @@ export class OrgBillingWebhookService {
         updated_at: new Date().toISOString(),
       })
       .eq('id', org.id);
+
+    await this.mcpInvalidator.invalidateOrgMembers(org.id);
 
     this.logger.warn(`Payment failed for org ${org.id}`);
 
@@ -164,6 +172,8 @@ export class OrgBillingWebhookService {
       this.logger.log(
         `Subscription ${subscription.id} status is ${subscription.status} — triggering downgrade for org ${org.id}`,
       );
+      // Invalidate BEFORE downgrade removes membership rows
+      await this.mcpInvalidator.invalidateOrgMembers(org.id);
       await this.downgradeHandler.handleDowngrade(org.id, newTier);
       return;
     }
@@ -178,6 +188,8 @@ export class OrgBillingWebhookService {
         `Subscription updated for org ${org.id}, seat quantity: ${seatItem.quantity}`,
       );
     }
+
+    await this.mcpInvalidator.invalidateOrgMembers(org.id);
   }
 
   private async handleSubscriptionDeleted(
@@ -194,6 +206,9 @@ export class OrgBillingWebhookService {
         updated_at: new Date().toISOString(),
       })
       .eq('id', org.id);
+
+    // Invalidate BEFORE downgrade removes membership rows
+    await this.mcpInvalidator.invalidateOrgMembers(org.id);
 
     // Full downgrade: revoke features, free members, update tiers
     await this.downgradeHandler.handleDowngrade(org.id, 'free');
