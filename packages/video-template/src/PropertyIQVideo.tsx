@@ -48,7 +48,19 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
-      {props.audioUrl && <Audio src={props.audioUrl} />}
+      {/*
+        Delay voice-over until after the 2-second BrandBumper (60 frames
+        @ 30fps) so the brand sting plays clean, without the narrator
+        talking over the intro logo. Audio plays from its start through
+        to its natural end (ffprobe cap in synthesize-audio.handler
+        ensures audio_length <= duration - audio_buffer_seconds, so even
+        the longest legal audio still ends before the video does).
+      */}
+      {props.audioUrl && (
+        <Sequence from={60}>
+          <Audio src={props.audioUrl} />
+        </Sequence>
+      )}
     </VideoLayout>
   );
 };
