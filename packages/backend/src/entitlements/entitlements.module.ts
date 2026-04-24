@@ -8,6 +8,7 @@ import { EntitlementsService } from './entitlements.service';
 import { EnterpriseGraceService } from './enterprise-grace.service';
 import { TrialFeatureUsageEmitterService } from './trial-feature-usage-emitter.service';
 import { McpEntitlementsInvalidator } from './mcp-entitlements-invalidator.service';
+import { TierResolverService } from './tier-resolver.service';
 import { EntitlementsController } from './entitlements.controller';
 
 @Module({
@@ -20,6 +21,7 @@ import { EntitlementsController } from './entitlements.controller';
   ],
   providers: [
     EntitlementsService,
+    TierResolverService,
     EnterpriseGraceService,
     TrialFeatureUsageEmitterService,
     McpEntitlementsInvalidator,

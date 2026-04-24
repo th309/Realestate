@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UserFeaturesService } from '../admin/features/user-features.service';
 import { RedisService } from '../redis/redis.service';
 import { TrialFeatureUsageEmitterService } from './trial-feature-usage-emitter.service';
+import { TierResolverService } from './tier-resolver.service';
 
 export interface AccessCheck {
   level: 'full' | 'preview' | 'none';
@@ -29,6 +30,7 @@ export class EntitlementsService {
     private readonly userFeatures: UserFeaturesService,
     private readonly redis: RedisService,
     private readonly trialUsageEmitter: TrialFeatureUsageEmitterService,
+    private readonly tierResolver: TierResolverService,
   ) {}
 
   async checkAccess(
@@ -36,92 +38,8 @@ export class EntitlementsService {
     tierOverride: string | null,
     resources: string[],
   ): Promise<EntitlementsResponse> {
-    // Determine effective tier
-    let tier = tierOverride || 'free';
-    let trial: EntitlementsResponse['trial'] = null;
-    let needsPerUserQuery = false;
-    // Baseline tier = what tier the user would be on WITHOUT their active trial.
-    // Used to decide whether to emit trial.pro_feature_used (we only emit when
-    // the trial genuinely granted access the user wouldn't otherwise have).
-    let baselineTierWithoutTrial: string | null = null;
-
-    if (userId && !tierOverride) {
-      // Check for active trial (per-user, cannot be cached by tier)
-      const trialInfo = await this.getActiveTrial(userId);
-      if (trialInfo) {
-        tier = trialInfo.tier;
-        trial = {
-          active: true,
-          daysRemaining: trialInfo.daysRemaining,
-          tier: trialInfo.tier,
-        };
-        needsPerUserQuery = true;
-
-        // Check subscription tier to determine if trial is actually granting
-        // access. If user is already Pro/Enterprise, the trial is redundant.
-        const { data: profile } = await this.supabase
-          .getClient()
-          .from('user_profiles')
-          .select('subscription_tier, subscription_status')
-          .eq('id', userId)
-          .single();
-
-        const paidTier =
-          profile?.subscription_tier &&
-          profile.subscription_tier !== 'free' &&
-          (profile.subscription_tier === 'admin' ||
-            profile.subscription_status === 'active' ||
-            !profile.subscription_status)
-            ? profile.subscription_tier
-            : 'free';
-        baselineTierWithoutTrial = paidTier;
-      } else {
-        // Check subscription tier from Stripe sync
-        const { data: profile } = await this.supabase
-          .getClient()
-          .from('user_profiles')
-          .select('subscription_tier, subscription_status')
-          .eq('id', userId)
-          .single();
-
-        if (
-          profile?.subscription_tier &&
-          profile.subscription_tier !== 'free'
-        ) {
-          // Admin is a manually-set role, not a Stripe subscription —
-          // skip subscription_status check so it always resolves.
-          const isAdmin = profile.subscription_tier === 'admin';
-          if (
-            isAdmin ||
-            profile.subscription_status === 'active' ||
-            !profile.subscription_status
-          ) {
-            tier = profile.subscription_tier;
-          }
-        }
-
-        // If tier is still 'free', check admin_users table —
-        // admin/super_admin users get full access regardless of subscription tier.
-        if (tier === 'free') {
-          const { data: adminRow } = await this.supabase
-            .getClient()
-            .from('admin_users')
-            .select('role')
-            .eq('id', userId)
-            .single();
-
-          if (
-            adminRow &&
-            (adminRow.role === 'admin' || adminRow.role === 'super_admin')
-          ) {
-            tier = 'admin';
-            this.logger.debug(
-              `[Entitlements] User ${userId.substring(0, 8)}... is ${adminRow.role} — granting admin tier`,
-            );
-          }
-        }
-      }
-    }
+    const { tier, trial, baselineTierWithoutTrial, needsPerUserQuery } =
+      await this.tierResolver.resolve(userId, tierOverride);
 
     // Try tier-based cache for non-trial users (most users on the same tier get identical access)
     const resourceKey = resources.slice().sort().join(',');
@@ -131,7 +49,6 @@ export class EntitlementsService {
       const cached = await this.redis.getByKey(cacheKey);
       if (cached) {
         this.logger.debug(`[Entitlements] Cache HIT for tier=${tier}`);
-        // Return cached access with trial=null (no trial for cached responses)
         return { ...cached, trial };
       }
     }
@@ -160,7 +77,6 @@ export class EntitlementsService {
       } else if (typeof hasAccess === 'number' && hasAccess > 0) {
         access[resource] = { level: 'preview', limit: hasAccess };
       } else {
-        // Find which tier has this feature
         const tierRequired = await this.findTierWithFeature(effectiveSlug);
         access[resource] = { level: 'none', tierRequired };
       }
@@ -217,31 +133,6 @@ export class EntitlementsService {
       event_type: data.eventType,
       metadata: data.metadata || {},
     });
-  }
-
-  private async getActiveTrial(userId: string): Promise<{
-    tier: string;
-    daysRemaining: number;
-  } | null> {
-    const client = this.supabase.getClient();
-
-    const { data } = await client
-      .from('user_trials')
-      .select('tier, expires_at')
-      .eq('user_id', userId)
-      .is('converted_at', null)
-      .is('cancelled_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-
-    if (!data) return null;
-
-    const daysRemaining = Math.ceil(
-      (new Date(data.expires_at).getTime() - Date.now()) /
-        (1000 * 60 * 60 * 24),
-    );
-
-    return { tier: data.tier, daysRemaining };
   }
 
   private async findTierWithFeature(featureSlug: string): Promise<string> {
