@@ -61,3 +61,5 @@ docs
 
 # Experiments (not deployed)
 experiments
+
+# 2026-04-24: touch to force backend rebuild for Dockerfile.backend change (ffmpeg added)
