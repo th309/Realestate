@@ -1,6 +1,9 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAssetSignedUrl } from "../../lib/content-pipeline-api";
+import {
+  fetchAssetSignedUrl,
+  displayScriptText,
+} from "../../lib/content-pipeline-api";
 
 export function ArtifactsPanel({
   runId,
@@ -19,7 +22,10 @@ export function ArtifactsPanel({
         <section>
           <h3 className="font-semibold mb-2">Script</h3>
           <pre className="bg-surface-container-low rounded-xl p-4 text-sm whitespace-pre-wrap">
-            {script.metadata?.scripts?.[0]?.fullText ?? "pending..."}
+            {displayScriptText(
+              script.metadata?.scripts?.[0]?.fullText,
+              "pending...",
+            )}
           </pre>
         </section>
       )}

@@ -5,6 +5,7 @@ import {
   approveRun,
   rejectRun,
   fetchAssetSignedUrl,
+  displayScriptText,
 } from "../lib/content-pipeline-api";
 import { useReviewShortcuts } from "./shortcuts";
 import { DiffViewer } from "./diff-viewer";
@@ -153,7 +154,7 @@ export function ReviewCard({ run, onNext }: { run: any; onNext: () => void }) {
               Script
             </h4>
             <p className="text-sm whitespace-pre-wrap leading-relaxed text-on-surface">
-              {script?.fullText ?? "(no script)"}
+              {displayScriptText(script?.fullText)}
             </p>
           </div>
         </div>

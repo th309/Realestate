@@ -247,3 +247,19 @@ export async function pausePipeline() {
 export async function resumePipeline() {
   return fetchAPIRaw("/api/admin/content-pipeline/resume", { method: "POST" });
 }
+
+/**
+ * Render a stored script for display. Scripts are stored with the
+ * `{{SHORT_LINK}}` template placeholder (swapped to the spoken phrase
+ * "Property IQ dot app" at TTS synthesis time, and to the visible URL
+ * "propertyiq.app" in the video composition). For operator-facing
+ * display, swap to the URL form so the review UI matches what viewers
+ * see on screen. The stored template is untouched.
+ */
+export function displayScriptText(
+  text: string | null | undefined,
+  fallback = "(no script)",
+): string {
+  if (!text) return fallback;
+  return text.replace(/\{\{SHORT_LINK\}\}/g, "propertyiq.app");
+}
