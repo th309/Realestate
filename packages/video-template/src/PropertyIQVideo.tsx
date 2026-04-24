@@ -8,6 +8,7 @@ import { Intro } from "./scenes/Intro";
 import { ScoreReveal } from "./scenes/ScoreReveal";
 import { StatCards } from "./scenes/StatCards";
 import { Outro } from "./scenes/Outro";
+import { RankingRow } from "./primitives/RankingRow";
 import type { MarketStats, TrendDirection } from "./types";
 
 /**
@@ -46,6 +47,7 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
     <VideoLayout config={cfg}>
       <AbsoluteFill style={{ backgroundColor: "#1A1A2E" }}>
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
+        {props.format === "top_10_ranking" && <Top10Layout {...props} />}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
       {/*
@@ -115,6 +117,69 @@ const GradeRevealLayout: React.FC<VideoProps> = (props) => {
       </Sequence>
       <Sequence from={810} durationInFrames={90}>
         <BrandOutroCard ctaUrl={ctaUrl} score={score} />
+      </Sequence>
+    </>
+  );
+};
+
+function pickState(props: VideoProps): string {
+  const fromBundle = (props.dataBundle as any)?.state;
+  if (typeof fromBundle === "string" && fromBundle.length > 0)
+    return fromBundle;
+  const cn = props.resolvedMarket?.canonical_name ?? "";
+  const parts = cn.split(",").map((s: string) => s.trim());
+  return parts.length > 1 ? parts[parts.length - 1] : cn;
+}
+
+const Top10Layout: React.FC<VideoProps> = (props) => {
+  const rankings = ((props.dataBundle as any)?.top_cashflow_markets ??
+    []) as Array<{
+    rank: number;
+    name: string;
+    rent_to_price_ratio: number;
+  }>;
+  const state = pickState(props);
+  const ROW_FRAMES = 132; // 4.4s @ 30fps
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      <Sequence from={60} durationInFrames={90}>
+        <Intro
+          marketName={state ? `Top 10 Cashflow: ${state}` : "Top 10 Cashflow"}
+        />
+      </Sequence>
+      <Sequence from={150} durationInFrames={ROW_FRAMES * 10}>
+        {rankings
+          .slice(0, 10)
+          .reverse()
+          .map((m, i) => (
+            <Sequence
+              key={m.rank}
+              from={i * ROW_FRAMES}
+              durationInFrames={ROW_FRAMES}
+            >
+              <AbsoluteFill style={{ padding: "40%" }}>
+                <RankingRow
+                  rank={m.rank}
+                  marketName={m.name}
+                  keyStat={
+                    typeof m.rent_to_price_ratio === "number"
+                      ? m.rent_to_price_ratio.toFixed(2)
+                      : "—"
+                  }
+                  keyStatLabel="Rent/Price"
+                />
+              </AbsoluteFill>
+            </Sequence>
+          ))}
+      </Sequence>
+      <Sequence from={1470} durationInFrames={210}>
+        <Outro ctaUrl={props.ctaUrl} />
+      </Sequence>
+      <Sequence from={1680} durationInFrames={120}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} />
       </Sequence>
     </>
   );
