@@ -1,9 +1,9 @@
 /**
  * Organization Members Service
  *
- * Handles member lifecycle: listing, inviting, removing, and role changes.
+ * Handles member lifecycle: listing, removing, role changes, and seat counting.
+ * Invite creation is delegated to MemberInviteService.
  * Uses the `invite_org_member` Postgres RPC for atomic seat enforcement.
- * Delegates email delivery to InviteEmailService.
  */
 
 import {
@@ -13,10 +13,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import * as crypto from 'crypto';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
-import { InviteEmailService } from './invite-email.service';
+import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
+import { MemberInviteService } from './member-invite.service';
 
 @Injectable()
 export class MembersService {
@@ -25,7 +25,8 @@ export class MembersService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
-    private readonly inviteEmailService: InviteEmailService,
+    private readonly memberInviteService: MemberInviteService,
+    private readonly mcpInvalidator: McpEntitlementsInvalidator,
   ) {}
 
   /**
@@ -82,83 +83,17 @@ export class MembersService {
   }
 
   /**
-   * Invite a new member via the `invite_org_member` Postgres RPC.
-   * The RPC atomically checks seat limits before inserting.
+   * Invite a new member. Delegated to MemberInviteService.
    */
-  async inviteMember(
-    orgId: string,
-    email: string,
-    role: string,
-    invitedBy: string,
-  ) {
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(
-      Date.now() + 7 * 24 * 60 * 60 * 1000,
-    ).toISOString();
-
-    const { data, error } = await this.supabase.rpc('invite_org_member', {
-      p_org_id: orgId,
-      p_email: email,
-      p_role: role,
-      p_token: token,
-      p_invited_by: invitedBy,
-      p_expires_at: expiresAt,
-    });
-
-    if (error) {
-      this.logger.error(`invite_org_member RPC failed: ${error.message}`);
-
-      if (error.message?.includes('seat_limit')) {
-        throw new BadRequestException({
-          code: 'SEAT_LIMIT_REACHED',
-          message:
-            'Organization has reached its seat limit. Upgrade your plan or remove members.',
-        });
-      }
-      if (error.message?.includes('already')) {
-        throw new BadRequestException({
-          code: 'ALREADY_INVITED',
-          message: 'This email has already been invited to this organization.',
-        });
-      }
-
-      throw new Error('Failed to create invite');
-    }
-
-    // Fetch org name for the invite email
-    const { data: org } = await this.supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', orgId)
-      .single();
-
-    const orgName = org?.name ?? 'your organization';
-
-    let emailSent = true;
-    try {
-      await this.inviteEmailService.sendInviteEmail(email, orgName, token);
-    } catch (err) {
-      this.logger.error(
-        `Failed to send invite email to ${email}: ${(err as Error).message}`,
-      );
-      emailSent = false;
-    }
-
-    await this.auditService.log({
-      organizationId: orgId,
-      actorId: invitedBy,
-      action: 'member_invited',
-      targetType: 'invite',
-      targetId: data,
-      details: { email, role },
-    });
-
-    return { id: data, email, role, expiresAt, emailSent };
+  inviteMember(orgId: string, email: string, role: string, invitedBy: string) {
+    return this.memberInviteService.inviteMember(orgId, email, role, invitedBy);
   }
 
   /**
    * Remove a member from the organization.
    * Prevents removing the last admin to avoid orphaned orgs.
+   * Fires MCP cache invalidation after success — the user's effective tier
+   * may drop (enterprise → free) once they're no longer on the org.
    */
   async removeMember(orgId: string, userId: string, actorId: string) {
     // Check if the target is an admin and if they're the last one
@@ -197,6 +132,9 @@ export class MembersService {
       .from('user_profiles')
       .update({ organization_id: null })
       .eq('id', userId);
+
+    // Invalidate MCP cache — user's effective tier just changed
+    await this.mcpInvalidator.invalidate([userId]);
 
     await this.auditService.log({
       organizationId: orgId,

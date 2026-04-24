@@ -10,6 +10,7 @@ import { OrganizationsService } from './organizations.service';
 import { OrgSlugService } from './org-slug.service';
 import { OrgReportStatsService } from './org-report-stats.service';
 import { MembersService } from './members.service';
+import { MemberInviteService } from './member-invite.service';
 import { InvitesService } from './invites.service';
 import { InviteEmailService } from './invite-email.service';
 import { OrgContextGuard } from './guards/org-context.guard';
@@ -29,6 +30,7 @@ import { OrgMemberGuard } from './guards/org-member.guard';
     OrgSlugService,
     OrgReportStatsService,
     MembersService,
+    MemberInviteService,
     InvitesService,
     InviteEmailService,
     OrgContextGuard,
