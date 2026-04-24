@@ -9,6 +9,7 @@ import {
   getAssetSignedUrl as getAssetSignedUrlFn,
   SignedAssetKind,
 } from './asset-signing';
+import { LeadMagnetKind } from './drivers/lead-magnet-renderer.interface';
 
 @Injectable()
 export class ContentPipelineService {
@@ -79,6 +80,69 @@ export class ContentPipelineService {
 
   async resolveMarket(query: string) {
     return this.contentData.resolveMarket(query);
+  }
+
+  /**
+   * Admin-only: enqueue a `render-pdf` job to smoke-test lead-magnet
+   * delivery (render + storage + email attachment) without requiring a
+   * public signup. Recipient defaults to the calling admin's own inbox
+   * so we never accidentally email a real customer while verifying the
+   * pipeline.
+   */
+  async triggerTestMagnet(
+    adminUserId: string,
+    dto: {
+      marketQuery: string;
+      magnetKind?: LeadMagnetKind;
+      recipientEmailOverride?: string;
+    },
+  ): Promise<{
+    jobId: string | null;
+    match: { geography: string; id: string; canonical_name: string };
+    recipientEmail: string;
+  }> {
+    const client = this.supabase.getClient();
+
+    const { data: userRes, error: userErr } =
+      await client.auth.admin.getUserById(adminUserId);
+    if (userErr || !userRes?.user) {
+      throw new Error(`admin user ${adminUserId} not found in auth.users`);
+    }
+    const authUser = userRes.user;
+    const recipientEmail =
+      dto.recipientEmailOverride ?? authUser.email ?? undefined;
+    if (!recipientEmail) {
+      throw new Error('no recipient email — admin user has no email on file');
+    }
+    const recipientName =
+      (authUser.user_metadata?.full_name as string | undefined) ??
+      (authUser.user_metadata?.name as string | undefined) ??
+      recipientEmail.split('@')[0];
+
+    const matches = await this.contentData.resolveMarket(dto.marketQuery);
+    if (matches.length === 0) {
+      throw new Error(`no geography match for "${dto.marketQuery}"`);
+    }
+    const match = matches[0];
+
+    const job = {
+      userId: adminUserId,
+      userEmail: recipientEmail,
+      userName: recipientName,
+      magnetKind: dto.magnetKind ?? 'market_snapshot_pdf',
+      resolvedGeo: {
+        geography: match.geography,
+        id: match.id,
+        canonical_name: match.canonical_name,
+      },
+    };
+
+    const jobId = await this.queueService.send('render-pdf', job);
+    return {
+      jobId,
+      match: job.resolvedGeo,
+      recipientEmail,
+    };
   }
 
   async getDashboard(): Promise<DashboardResponseDto> {

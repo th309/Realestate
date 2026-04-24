@@ -102,24 +102,25 @@ export class GenerateLeadMagnetHandler {
       pdf_asset_id: assetRow.id,
     });
 
-    // EmailService.sendEmail signature in this codebase requires `emailType`
-    // and does not currently accept `attachments`. The lead-magnet delivery
-    // template (`LeadMagnetDelivery`) is created by a parallel task. Until
-    // both land, we send a minimal HTML body and log the attachment path so
-    // the PDF can be linked from the dashboard.
-    await this.email.sendEmail({
+    const attachmentFilename = `${job.magnetKind}-${job.resolvedGeo.canonical_name.replace(/[^\w-]+/g, '_')}.pdf`;
+    const sent = await this.email.sendEmail({
       to: job.userEmail,
       subject: `Your ${magnet.display_name} for ${job.resolvedGeo.canonical_name}`,
-      html: `<p>Hi ${job.userName},</p><p>Your ${magnet.display_name} for ${job.resolvedGeo.canonical_name} is ready. View it in your dashboard: <a href="https://propertyiq.app/dashboard/magnets">https://propertyiq.app/dashboard/magnets</a>.</p>`,
+      html: `<p>Hi ${job.userName},</p><p>Your ${magnet.display_name} for ${job.resolvedGeo.canonical_name} is attached as a PDF. You can also revisit it anytime in your <a href="https://propertyiq.app/dashboard/magnets">dashboard</a>.</p>`,
       userId: job.userId,
       emailType: 'lead_magnet_delivery',
+      attachments: [{ filename: attachmentFilename, path: outputPath }],
       metadata: {
         magnetKind: job.magnetKind,
         marketName: job.resolvedGeo.canonical_name,
-        pdfLocalPath: outputPath,
         pdfStorageUrl: storageUrl,
       },
-    } as Parameters<EmailService['sendEmail']>[0]);
+    });
+    if (!sent) {
+      throw new Error(
+        `lead-magnet email delivery failed for user ${job.userId}`,
+      );
+    }
 
     await client
       .from('lead_magnet_deliveries')

@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
@@ -18,6 +19,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
+import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
 
 @UseGuards(AdminGuard)
 @Controller('api/admin/content-pipeline')
@@ -49,6 +51,18 @@ export class ContentPipelineController {
   async resolveMarket(@Body() body: { query: string }) {
     const matches = await this.service.resolveMarket(body.query);
     return { success: true, data: { matches } };
+  }
+
+  @Post('trigger-test-magnet')
+  async triggerTestMagnet(
+    @Req() req: { userId?: string },
+    @Body() dto: TriggerTestMagnetDto,
+  ) {
+    if (!req.userId) {
+      throw new BadRequestException('authenticated admin userId missing');
+    }
+    const result = await this.service.triggerTestMagnet(req.userId, dto);
+    return { success: true, data: result };
   }
 
   @Get('runs/:id')
