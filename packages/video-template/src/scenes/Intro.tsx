@@ -1,5 +1,12 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, Easing } from "remotion";
+import {
+  Img,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  Easing,
+} from "remotion";
 import { COLORS, FPS } from "../constants";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
@@ -24,8 +31,8 @@ export const Intro: React.FC<IntroProps> = ({ marketName }) => {
     extrapolateRight: "clamp",
   });
 
-  const logoSize = isVertical ? 56 : 40;
-  const titleSize = isVertical ? 52 : 36;
+  const shortmarkSize = isVertical ? 160 : 120;
+  const wordmarkWidth = isVertical ? 380 : 280;
   const subSize = isVertical ? 32 : 22;
 
   return (
@@ -38,49 +45,31 @@ export const Intro: React.FC<IntroProps> = ({ marketName }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        gap: 24,
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         opacity,
         transform: `translateY(${slideUp}px)`,
       }}
     >
-      {/* Logo mark */}
-      <div
+      {/* PIQ shortmark image — same asset as BrandBumper for continuity */}
+      <Img
+        src={staticFile("brand/piq-shortmark-192px-normal.png")}
         style={{
-          width: logoSize * 2,
-          height: logoSize * 2,
-          borderRadius: "50%",
-          background: `linear-gradient(135deg, ${COLORS.accent}, #6366f1)`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 32,
-          boxShadow: `0 0 60px ${COLORS.accentGlow}`,
+          width: shortmarkSize,
+          height: shortmarkSize,
+          objectFit: "contain",
         }}
-      >
-        <span
-          style={{
-            color: COLORS.text,
-            fontWeight: 800,
-            fontSize: logoSize * 0.9,
-            letterSpacing: "-2px",
-          }}
-        >
-          IQ
-        </span>
-      </div>
+      />
 
-      {/* PropertyIQ wordmark */}
-      <div
+      {/* PropertyIQ wordmark lockup (light/reversed for dark bg) */}
+      <Img
+        src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
         style={{
-          fontSize: titleSize,
-          fontWeight: 800,
-          color: COLORS.text,
-          letterSpacing: "-1px",
-          marginBottom: 12,
+          width: wordmarkWidth,
+          height: "auto",
+          objectFit: "contain",
         }}
-      >
-        Property<span style={{ color: COLORS.accent }}>IQ</span>
-      </div>
+      />
 
       {/* Market name */}
       <div
@@ -90,6 +79,7 @@ export const Intro: React.FC<IntroProps> = ({ marketName }) => {
           color: COLORS.textMuted,
           letterSpacing: "0.1em",
           textTransform: "uppercase",
+          marginTop: 8,
         }}
       >
         {marketName}

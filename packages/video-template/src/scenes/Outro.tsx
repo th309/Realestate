@@ -1,5 +1,7 @@
 import React from "react";
 import {
+  Img,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
   interpolate,
@@ -65,9 +67,8 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
     extrapolateRight: "clamp",
   });
 
-  const logoSize = isVertical ? 80 : 60;
-  const brandSize = isVertical ? 72 : 52;
-  const taglineSize = isVertical ? 36 : 26;
+  const shortmarkSize = isVertical ? 180 : 140;
+  const wordmarkWidth = isVertical ? 480 : 360;
   const ctaSize = isVertical ? 32 : 24;
   const urlSize = isVertical ? 36 : 28;
   const subscribeSize = isVertical ? 28 : 20;
@@ -84,65 +85,34 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
         justifyContent: "center",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         opacity: sceneOpacity * finalFade,
-        gap: isVertical ? 40 : 32,
+        gap: isVertical ? 32 : 24,
         padding: isVertical ? "0 80px" : "0 160px",
         boxSizing: "border-box",
         textAlign: "center",
       }}
     >
-      {/* Logo */}
-      <div
+      {/* PIQ shortmark — same asset as BrandBumper for brand continuity */}
+      <Img
+        src={staticFile("brand/piq-shortmark-192px-normal.png")}
         style={{
-          width: logoSize * 2,
-          height: logoSize * 2,
-          borderRadius: "50%",
-          background: `linear-gradient(135deg, ${COLORS.accent}, #6366f1)`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: `0 0 80px ${COLORS.accentGlow}`,
+          width: shortmarkSize,
+          height: shortmarkSize,
+          objectFit: "contain",
           transform: `scale(${logoScale})`,
         }}
-      >
-        <span
-          style={{
-            color: COLORS.text,
-            fontWeight: 800,
-            fontSize: logoSize * 0.9,
-            letterSpacing: "-2px",
-          }}
-        >
-          IQ
-        </span>
-      </div>
+      />
 
-      {/* Brand name */}
-      <div style={{ opacity: line1Opacity }}>
-        <span
-          style={{
-            fontSize: brandSize,
-            fontWeight: 800,
-            color: COLORS.text,
-            letterSpacing: "-1px",
-          }}
-        >
-          Property<span style={{ color: COLORS.accent }}>IQ</span>
-        </span>
-      </div>
-
-      {/* Tagline */}
-      <div style={{ opacity: line2Opacity }}>
-        <span
-          style={{
-            fontSize: taglineSize,
-            fontWeight: 400,
-            color: COLORS.textMuted,
-            letterSpacing: "0.02em",
-          }}
-        >
-          Score real estate markets. Stop guessing. Start deciding.
-        </span>
-      </div>
+      {/* PropertyIQ wordmark lockup (includes the real tagline
+          "The IQ Behind Every Market"; no separate text tagline needed) */}
+      <Img
+        src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
+        style={{
+          width: wordmarkWidth,
+          height: "auto",
+          objectFit: "contain",
+          opacity: line1Opacity,
+        }}
+      />
 
       {/* Divider */}
       <div
@@ -186,15 +156,6 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
           }}
         >
           propertyiq.app
-        </div>
-        <div
-          style={{
-            fontSize: isVertical ? 20 : 14,
-            color: COLORS.textDim,
-            wordBreak: "break-all",
-          }}
-        >
-          {ctaUrl}
         </div>
       </div>
 
