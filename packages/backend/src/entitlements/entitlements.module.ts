@@ -7,6 +7,7 @@ import { UserAnalyticsModule } from '../user-analytics/user-analytics.module';
 import { EntitlementsService } from './entitlements.service';
 import { EnterpriseGraceService } from './enterprise-grace.service';
 import { TrialFeatureUsageEmitterService } from './trial-feature-usage-emitter.service';
+import { McpEntitlementsInvalidator } from './mcp-entitlements-invalidator.service';
 import { EntitlementsController } from './entitlements.controller';
 
 @Module({
@@ -21,8 +22,13 @@ import { EntitlementsController } from './entitlements.controller';
     EntitlementsService,
     EnterpriseGraceService,
     TrialFeatureUsageEmitterService,
+    McpEntitlementsInvalidator,
   ],
   controllers: [EntitlementsController],
-  exports: [EntitlementsService, EnterpriseGraceService],
+  exports: [
+    EntitlementsService,
+    EnterpriseGraceService,
+    McpEntitlementsInvalidator,
+  ],
 })
 export class EntitlementsModule {}
