@@ -2,68 +2,45 @@
 /**
  * Destination-gate validation for the batch wizard.
  *
- * 1. Playwright logs in via the admin UI (this proves the wizard route loads)
- * 2. Extracts Supabase JWT from localStorage
- * 3. Uses JWT to call backend APIs directly (faster + more reliable than
- *    clicking through 3 wizard runs):
+ * 1. Sign in to Supabase directly to get a JWT (the frontend uses
+ *    @supabase/ssr which stores the session in cookies — easier to skip
+ *    the browser and call the auth API directly)
+ * 2. Use JWT to call backend APIs:
  *      - POST /runs        (single-mode equivalent — Austin metro)
  *      - POST /runs/batch  (batch with 2 zips: 78704, 90210)
- * 4. Polls /runs/:id until published or timeout
- * 5. Verifies each run has a YouTube public URL
+ * 3. Poll /runs/:id until published or timeout
+ * 4. Verify each run has a YouTube public URL
  *
  * Run: node scripts/validate-batch-wizard.mjs
  */
-import { chromium } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
 const FRONTEND = "http://localhost:3000";
 const BACKEND = "http://localhost:3001";
+const SUPABASE_URL = "https://pysflbhpnqwoczyuaaif.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_61DKKthHAcJj0Db81Nj9XA_x25bcXqZ";
 const EMAIL = "troy@propertyiq.app";
 const PASSWORD = "Youknowwhy$$12";
 
 const PER_RUN_TIMEOUT_MS = 25 * 60 * 1000; // 25 min/run
 const POLL_INTERVAL_MS = 15_000;
+void FRONTEND;
 
-async function login(page) {
-  console.log("== Logging in ==");
-  await page.goto(
-    `${FRONTEND}/auth/sign-in?redirect=${encodeURIComponent("/admin/content-pipeline")}`,
-  );
-  await page.waitForLoadState("networkidle");
-  await page.fill("#email", EMAIL);
-  await page.fill("#password", PASSWORD);
-  await page.click('button[type="submit"]');
-  // The page does window.location.href = redirectTo on success.
-  // Wait for the redirect target, not just any URL change.
-  await page.waitForURL(/\/admin\/content-pipeline/, { timeout: 30_000 });
-  console.log(`  logged in, landed at ${page.url()}`);
-}
-
-async function extractJwt(page) {
-  // Visit a page in the same origin so localStorage is accessible
-  await page.goto(`${FRONTEND}/admin/content-pipeline`);
-  await page.waitForLoadState("domcontentloaded");
-  const jwt = await page.evaluate(() => {
-    // Supabase v2 storage key format: sb-<project-ref>-auth-token
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        try {
-          const parsed = JSON.parse(raw);
-          return parsed.access_token ?? parsed?.currentSession?.access_token;
-        } catch {
-          // sometimes stored as plain string in newer SDK versions
-          return raw;
-        }
-      }
-    }
-    return null;
+async function getJwt() {
+  console.log("== Signing in to Supabase ==");
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
   });
-  if (!jwt) throw new Error("could not extract Supabase JWT from localStorage");
-  console.log(`  extracted JWT (${jwt.length} chars)`);
-  return jwt;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: EMAIL,
+    password: PASSWORD,
+  });
+  if (error) throw new Error(`signInWithPassword: ${error.message}`);
+  if (!data?.session?.access_token)
+    throw new Error("signin returned no access_token");
+  console.log(`  got JWT (${data.session.access_token.length} chars)`);
+  return data.session.access_token;
 }
 
 async function createSingleRun(jwt) {
@@ -166,13 +143,7 @@ function sleep(ms) {
 }
 
 async function main() {
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
-  await login(page);
-  const jwt = await extractJwt(page);
-  await browser.close();
+  const jwt = await getJwt();
 
   const singleRunId = await createSingleRun(jwt);
   const { batchId, runIds: batchRunIds } = await createBatchRun(jwt);
