@@ -244,3 +244,11 @@ export function displayScriptText(
   if (!text) return fallback;
   return text.replace(/\{\{SHORT_LINK\}\}/g, "propertyiq.app");
 }
+
+// Ranking fetchers live in `ranking-api.ts` (extracted to keep this file under 300-line hard limit).
+export {
+  type ResolveRankingArgs,
+  type RankingEntry,
+  type ResolveRankingResponse,
+  resolveRanking,
+} from "./ranking-api";
