@@ -7,6 +7,7 @@ export interface DriverCost {
     | 'tokens_output'
     | 'chars'
     | 'seconds'
+    | 'minutes'
     | 'frames'
     | 'requests';
 }
