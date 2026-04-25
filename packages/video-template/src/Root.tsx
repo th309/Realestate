@@ -1,7 +1,12 @@
 import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { FORMAT_CONFIGS, FormatKey, VideoProps } from "./types";
-import { PropertyIQVideo } from "./PropertyIQVideo";
+import { PropertyIQVideo, calculateRankingMetadata } from "./PropertyIQVideo";
+
+const RANKING_FORMATS = new Set<FormatKey>([
+  "top_10_ranking",
+  "bottom_10_ranking",
+]);
 
 export const RemotionRoot: React.FC = () => {
   const keys = Object.keys(FORMAT_CONFIGS) as FormatKey[];
@@ -19,6 +24,7 @@ export const RemotionRoot: React.FC = () => {
           dataBundle: {},
           ctaUrl: "",
         };
+        const isRanking = RANKING_FORMATS.has(key);
         return (
           <Composition
             key={key}
@@ -29,6 +35,18 @@ export const RemotionRoot: React.FC = () => {
             width={cfg.width}
             height={cfg.height}
             defaultProps={defaultProps as unknown as Record<string, unknown>}
+            {...(isRanking && {
+              // calculateRankingMetadata is sync; Remotion accepts sync fns too.
+              // Double-cast through unknown to bridge VideoProps ↔ Record<string,unknown>.
+              calculateMetadata: calculateRankingMetadata as unknown as (arg: {
+                props: Record<string, unknown>;
+              }) => Promise<{
+                durationInFrames: number;
+                fps: number;
+                width: number;
+                height: number;
+              }>,
+            })}
           />
         );
       })}

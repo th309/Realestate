@@ -1,6 +1,23 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence } from "remotion";
 import { VideoProps, FORMAT_CONFIGS } from "./types";
+
+// ---------------------------------------------------------------------------
+// Variable-duration metadata for ranking compositions
+// ---------------------------------------------------------------------------
+const INTRO_FRAMES = 90; // 3.0s @ 30fps
+const ROW_FRAMES = 150; // 5.0s per row
+const OUTRO_FRAMES = 135; // 4.5s
+
+export const calculateRankingMetadata = ({ props }: { props: VideoProps }) => {
+  const n = props.params?.resolved_markets?.length ?? 10;
+  return {
+    durationInFrames: INTRO_FRAMES + n * ROW_FRAMES + OUTRO_FRAMES,
+    fps: 30,
+    width: 1080,
+    height: 1920,
+  };
+};
 import { VideoLayout } from "./layout/VideoLayout";
 import { GradeRevealLayout } from "./layouts/GradeRevealLayout";
 import { Top10Layout } from "./layouts/Top10Layout";
