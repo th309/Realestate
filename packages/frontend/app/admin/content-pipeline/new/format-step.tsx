@@ -1,15 +1,36 @@
 "use client";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FORMAT_META, FORMAT_PREVIEWS } from "../lib/format-previews";
+import { fetchSettings } from "../lib/settings-api";
 
-const ENABLED_FORMATS = new Set(["grade_reveal"]);
+interface FormatDefault {
+  format: string;
+  enabled?: boolean;
+}
 
 export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
-  const enabledKeys = Object.keys(FORMAT_META).filter((k) =>
-    ENABLED_FORMATS.has(k),
-  );
+  // Drive enabled formats from format_templates.enabled in the DB so the
+  // Settings page's per-format switches are the single source of truth.
+  // Falls back to grade_reveal-only when the settings fetch is in flight
+  // or fails — better than rendering an empty picker.
+  const { data: settings } = useQuery({
+    queryKey: ["content-pipeline-settings"],
+    queryFn: fetchSettings,
+  });
+
+  const enabledSet = new Set<string>();
+  if (settings?.formatDefaults?.length) {
+    for (const f of settings.formatDefaults as FormatDefault[]) {
+      if (f.enabled) enabledSet.add(f.format);
+    }
+  } else {
+    enabledSet.add("grade_reveal"); // fallback during initial load
+  }
+
+  const enabledKeys = Object.keys(FORMAT_META).filter((k) => enabledSet.has(k));
   const upcomingKeys = Object.keys(FORMAT_META).filter(
-    (k) => !ENABLED_FORMATS.has(k),
+    (k) => !enabledSet.has(k),
   );
 
   return (
@@ -45,7 +66,14 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
       {upcomingKeys.length > 0 && (
         <section className="mt-10">
           <h2 className="text-sm font-semibold text-outline mb-3">
-            Coming in later phase
+            Disabled —{" "}
+            <a
+              href="/admin/content-pipeline/settings"
+              className="underline text-primary"
+            >
+              toggle on in Settings
+            </a>{" "}
+            to use here
           </h2>
           <ul className="text-sm text-outline grid grid-cols-2 gap-x-8 gap-y-1">
             {upcomingKeys.map((key) => (
