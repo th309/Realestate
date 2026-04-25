@@ -1,6 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
+import type { PipelineStatus } from './types';
+
+const IN_FLIGHT_STATES: ReadonlySet<PipelineStatus> = new Set([
+  'queued',
+  'fetching_data',
+  'scripting',
+  'verifying_data',
+  'linting_voice',
+  'rendering_voice',
+  'timing_captions',
+  'rendering_video',
+  'publishing',
+] as const);
+
+export type DeleteRunResult =
+  | { action: 'cancelled'; previousStatus: PipelineStatus }
+  | {
+      action: 'deleted';
+      cascade: { storageObjects: number; platformsLive: string[] };
+    };
 
 /**
  * Operator-driven mutations on existing runs: approve, reject, cancel,
@@ -10,6 +30,8 @@ import { RunOrchestratorService } from './orchestrator/run-orchestrator.service'
  */
 @Injectable()
 export class RunActionsService {
+  private readonly logger = new Logger(RunActionsService.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly orchestrator: RunOrchestratorService,
@@ -80,5 +102,103 @@ export class RunActionsService {
 
   async retryRun(runId: string): Promise<void> {
     await this.orchestrator.retryRun(runId);
+  }
+
+  /**
+   * State-aware destructive operation:
+   *   - in-flight runs (queued..publishing) → cancel via orchestrator
+   *   - terminal runs (published, rejected, failed, cancelled, etc.) →
+   *     hard delete; FK ON DELETE CASCADE removes content_assets,
+   *     content_run_events, content_run_steps, platform_posts. Storage
+   *     objects are removed best-effort; partial failures are logged but
+   *     don't block the response (orphaned files get swept by future cron).
+   *
+   * Does NOT take down already-published posts on social platforms — the
+   * `platform_posts.status='posted'` rows are deleted from PropertyIQ but
+   * the actual TikTok/IG/FB/LinkedIn/YouTube posts remain live.
+   */
+  async deleteRun(runId: string): Promise<DeleteRunResult> {
+    const client = this.supabase.getClient();
+    const { data: run, error: runErr } = await client
+      .from('content_runs')
+      .select('id, status')
+      .eq('id', runId)
+      .maybeSingle();
+    if (runErr) throw runErr;
+    if (!run) throw new NotFoundException(`run ${runId} not found`);
+
+    const status = run.status as PipelineStatus;
+    if (IN_FLIGHT_STATES.has(status)) {
+      await this.cancelRun(runId, 'user_deleted_in_flight');
+      this.logger.log(
+        `[ACTION] delete-run run=${runId} action=cancelled previousStatus=${status}`,
+      );
+      return { action: 'cancelled', previousStatus: status };
+    }
+
+    // Look up still-live platform posts before delete so we can echo back
+    // what remains on social platforms — useful for the operator's audit.
+    const { data: postedPosts } = await client
+      .from('platform_posts')
+      .select('platform')
+      .eq('run_id', runId)
+      .eq('status', 'posted');
+    const platformsLive = (postedPosts ?? []).map((p) => p.platform as string);
+
+    // Enumerate storage paths for the run before DB delete so we know what
+    // to clean up afterward (the rows vanish on cascade).
+    const { data: assets } = await client
+      .from('content_assets')
+      .select('storage_url')
+      .eq('run_id', runId);
+    const storagePaths = (assets ?? [])
+      .map((a) => {
+        const url = a.storage_url as string | null;
+        if (!url) return null;
+        const m = url.match(/^supabase:\/\/[^/]+\/(.+)$/);
+        return m ? m[1] : null;
+      })
+      .filter((p): p is string => p !== null);
+
+    // Audit trail before the cascade obliterates content_run_events.
+    await client.from('content_run_events').insert({
+      run_id: runId,
+      event_type: 'run_deleted',
+      payload: {
+        previousStatus: status,
+        platformsLive,
+        storageObjectCount: storagePaths.length,
+      },
+    });
+
+    // FK cascade handles all child rows.
+    const { error: delErr } = await client
+      .from('content_runs')
+      .delete()
+      .eq('id', runId);
+    if (delErr) throw delErr;
+
+    // Storage cleanup — best effort. Supabase remove() takes an array.
+    let cleanedStorage = 0;
+    if (storagePaths.length > 0) {
+      const { data: removed, error: removeErr } = await client.storage
+        .from('content-pipeline')
+        .remove(storagePaths);
+      if (removeErr) {
+        this.logger.warn(
+          `[ACTION] delete-run storage cleanup partial: ${removeErr.message}`,
+        );
+      } else {
+        cleanedStorage = removed?.length ?? 0;
+      }
+    }
+
+    this.logger.log(
+      `[ACTION] delete-run run=${runId} action=deleted storage=${cleanedStorage}/${storagePaths.length} platformsLive=${platformsLive.join(',') || 'none'}`,
+    );
+    return {
+      action: 'deleted',
+      cascade: { storageObjects: cleanedStorage, platformsLive },
+    };
   }
 }

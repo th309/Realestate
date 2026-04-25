@@ -9,6 +9,7 @@ import {
 } from "./lib/content-pipeline-api";
 import { STATE_LABELS } from "./lib/state-labels";
 import type { PipelineStatus } from "./lib/content-pipeline-api";
+import { RunCardOverlay } from "./components/run-card-overlay";
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -107,48 +108,55 @@ function RunCard({ run }: { run: RunSummary }) {
   });
 
   return (
-    <Link
-      href={`/admin/content-pipeline/runs/${run.id}`}
-      className="block w-[240px] rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
-    >
-      <div className="aspect-[9/16] rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high mb-2 overflow-hidden flex items-center justify-center">
-        {videoData?.url ? (
-          <video
-            src={videoData.url}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onMouseEnter={(e) => {
-              const v = e.currentTarget;
-              v.play().catch(() => {});
-            }}
-            onMouseLeave={(e) => {
-              const v = e.currentTarget;
-              v.pause();
-              v.currentTime = 0;
-            }}
-            className="w-full h-full object-cover"
+    <div className="group relative w-[240px]">
+      <Link
+        href={`/admin/content-pipeline/runs/${run.id}`}
+        className="block rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
+      >
+        <div className="relative aspect-[9/16] rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high mb-2 overflow-hidden flex items-center justify-center">
+          {videoData?.url ? (
+            <video
+              src={videoData.url}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onMouseEnter={(e) => {
+                const v = e.currentTarget;
+                v.play().catch(() => {});
+              }}
+              onMouseLeave={(e) => {
+                const v = e.currentTarget;
+                v.pause();
+                v.currentTime = 0;
+              }}
+              className="w-full h-full object-cover"
+            />
+          ) : run.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={run.thumbnail_url}
+              alt={run.market_query}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-on-primary-container text-xs font-semibold text-center px-2">
+              {run.market_query.split(",")[0]}
+            </div>
+          )}
+          <RunCardOverlay
+            runId={run.id}
+            status={run.status as PipelineStatus}
+            marketQuery={run.market_query}
           />
-        ) : run.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={run.thumbnail_url}
-            alt={run.market_query}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="text-on-primary-container text-xs font-semibold text-center px-2">
-            {run.market_query.split(",")[0]}
-          </div>
-        )}
-      </div>
-      <div className="text-xs font-medium truncate text-on-surface">
-        {run.market_query}
-      </div>
-      <div className="text-xs text-on-surface-variant truncate">
-        {STATE_LABELS[run.status as PipelineStatus] ?? run.status}
-      </div>
-    </Link>
+        </div>
+        <div className="text-xs font-medium truncate text-on-surface">
+          {run.market_query}
+        </div>
+        <div className="text-xs text-on-surface-variant truncate">
+          {STATE_LABELS[run.status as PipelineStatus] ?? run.status}
+        </div>
+      </Link>
+    </div>
   );
 }

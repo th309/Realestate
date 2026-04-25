@@ -152,7 +152,7 @@ export async function resolveMarket(query: string) {
 
 export async function fetchAssetSignedUrl(
   runId: string,
-  kind: "video_master" | "audio",
+  kind: "video_master" | "audio" | "thumbnail",
 ): Promise<{ url: string; kind: string } | null> {
   const res = await fetchAPI<{
     data: { url: string; kind: string } | null;

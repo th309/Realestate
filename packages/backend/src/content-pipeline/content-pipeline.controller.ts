@@ -4,17 +4,22 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
+import { RunThumbnailService } from './run-thumbnail.service';
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { PlatformCredentialsService } from './platform-credentials.service';
@@ -23,6 +28,8 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
 
+const THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
 @UseGuards(AdminGuard)
 @Controller('api/admin/content-pipeline')
 export class ContentPipelineController {
@@ -30,6 +37,7 @@ export class ContentPipelineController {
     private readonly runs: ContentRunsService,
     private readonly queries: ContentPipelineQueriesService,
     private readonly actions: RunActionsService,
+    private readonly thumbnails: RunThumbnailService,
     private readonly platformManager: PlatformManagerService,
     private readonly settingsService: PipelineSettingsService,
     private readonly credentials: PlatformCredentialsService,
@@ -119,6 +127,50 @@ export class ContentPipelineController {
   ) {
     await this.actions.editScript(id, body.variantId, body.newFullText);
     return { success: true, data: { status: 'linting_voice' } };
+  }
+
+  @Post('runs/:id/thumbnail/regenerate')
+  @HttpCode(202)
+  async regenerateThumbnail(
+    @Param('id') id: string,
+    @Body() body: { frame: number },
+  ) {
+    if (body == null || typeof body.frame !== 'number') {
+      throw new BadRequestException('frame is required');
+    }
+    await this.thumbnails.regenerateThumbnail(id, body.frame);
+    return {
+      success: true,
+      data: { queued: true, runId: id, frame: body.frame },
+    };
+  }
+
+  @Post('runs/:id/thumbnail/replace')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: THUMBNAIL_MAX_BYTES } }),
+  )
+  async replaceThumbnail(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'file is required (multipart/form-data field "file")',
+      );
+    }
+    const result = await this.thumbnails.replaceThumbnail(id, {
+      buffer: file.buffer,
+      mimetype: file.mimetype,
+      originalname: file.originalname,
+      size: file.size,
+    });
+    return { success: true, data: result };
+  }
+
+  @Delete('runs/:id')
+  async deleteRun(@Param('id') id: string) {
+    const result = await this.actions.deleteRun(id);
+    return { success: true, data: result };
   }
 
   @Get('review/queue')
