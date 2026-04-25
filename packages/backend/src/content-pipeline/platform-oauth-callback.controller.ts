@@ -2,6 +2,7 @@ import { Controller, Get, Logger, Param, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { verifyState } from './oauth-state';
 import { PlatformCredentialsService } from './platform-credentials.service';
+import { PlatformAppCredentialsService } from './platform-app-credentials.service';
 import { exchangeForPlatform } from './oauth/oauth-handlers';
 
 const SUPPORTED_PLATFORMS = new Set([
@@ -16,7 +17,10 @@ const SUPPORTED_PLATFORMS = new Set([
 export class PlatformOAuthCallbackController {
   private readonly logger = new Logger(PlatformOAuthCallbackController.name);
 
-  constructor(private readonly creds: PlatformCredentialsService) {}
+  constructor(
+    private readonly creds: PlatformCredentialsService,
+    private readonly appCreds: PlatformAppCredentialsService,
+  ) {}
 
   @Get(':platform/oauth-callback')
   async callback(
@@ -55,6 +59,7 @@ export class PlatformOAuthCallbackController {
       const { accountLabel, refreshToken } = await exchangeForPlatform(
         platform,
         code,
+        this.appCreds,
       );
       await this.creds.upsertActive(platform, accountLabel, refreshToken);
       this.logger.log(

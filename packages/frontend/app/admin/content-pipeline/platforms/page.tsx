@@ -45,6 +45,17 @@ export default function PlatformsPage() {
     message: string;
   } | null>(null);
 
+  // The Configure dialog renders a "register this redirect URI" hint that
+  // operators copy-paste into each platform's developer console. The
+  // backend computes the same URI server-side from APP_BASE_URL; we
+  // mirror it here from NEXT_PUBLIC_API_BASE_URL so the displayed value
+  // matches what the backend will use.
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    (typeof window !== "undefined"
+      ? window.location.origin.replace(/^https?:\/\//, "https://")
+      : "");
+
   const {
     data = [],
     isLoading,
@@ -103,6 +114,16 @@ export default function PlatformsPage() {
             accountLabel={row?.accountLabel ?? null}
             connectedAt={row?.connectedAt ?? null}
             lastPublishedAt={row?.lastPublishedAt ?? null}
+            appCredentials={
+              row?.appCredentials ?? {
+                configured: false,
+                source: null,
+                lastFour: null,
+                updatedAt: null,
+                notes: null,
+              }
+            }
+            apiBaseUrl={apiBaseUrl}
             onChange={() => refetch()}
           />
         );

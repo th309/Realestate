@@ -1,5 +1,9 @@
 import { google } from 'googleapis';
 import { platformRedirectUri } from './oauth-urls';
+import type {
+  AppCredentialPair,
+  PlatformAppCredentialsService,
+} from '../platform-app-credentials.service';
 
 export interface ExchangedCredential {
   /** Stored in `accountLabel` — the per-account ID we need at publish time. */
@@ -9,8 +13,8 @@ export interface ExchangedCredential {
 }
 
 /**
- * Per-platform code-exchange functions. Each takes the OAuth `code`
- * returned by the platform's authorize redirect and returns the
+ * Per-platform code-exchange functions. Each takes the OAuth `code` and
+ * the resolved AppCredentialPair (already DB-or-env). Returns the
  * (accountLabel, refreshToken) pair to persist via
  * PlatformCredentialsService.upsertActive.
  *
@@ -24,15 +28,11 @@ export interface ExchangedCredential {
 
 export async function exchangeYouTube(
   code: string,
+  app: AppCredentialPair,
 ): Promise<ExchangedCredential> {
-  const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
-  if (!clientId || !clientSecret)
-    throw new Error('YOUTUBE_OAUTH_* env vars missing');
-
   const oauth2 = new google.auth.OAuth2(
-    clientId,
-    clientSecret,
+    app.clientId,
+    app.clientSecret,
     platformRedirectUri('youtube_shorts'),
   );
   const { tokens } = await oauth2.getToken(code);
@@ -50,18 +50,14 @@ export async function exchangeYouTube(
 
 export async function exchangeTikTok(
   code: string,
+  app: AppCredentialPair,
 ): Promise<ExchangedCredential> {
-  const clientKey = process.env.TIKTOK_OAUTH_CLIENT_KEY;
-  const clientSecret = process.env.TIKTOK_OAUTH_CLIENT_SECRET;
-  if (!clientKey || !clientSecret)
-    throw new Error('TIKTOK_OAUTH_* env vars missing');
-
   const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_key: clientKey,
-      client_secret: clientSecret,
+      client_key: app.clientId,
+      client_secret: app.clientSecret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: platformRedirectUri('tiktok'),
@@ -75,14 +71,11 @@ export async function exchangeTikTok(
     refresh_token: string;
     open_id: string;
   };
-  // Best-effort fetch of @username; fall back to open_id if user.info denied.
   let label = tokenJson.open_id;
   try {
     const infoRes = await fetch(
       'https://open.tiktokapis.com/v2/user/info/?fields=username',
-      {
-        headers: { Authorization: `Bearer ${tokenJson.access_token}` },
-      },
+      { headers: { Authorization: `Bearer ${tokenJson.access_token}` } },
     );
     if (infoRes.ok) {
       const info = (await infoRes.json()) as {
@@ -103,18 +96,14 @@ interface MetaTokenResponse {
 
 async function exchangeMetaCode(
   code: string,
+  app: AppCredentialPair,
   platform: 'instagram_reels' | 'facebook_reels',
 ): Promise<string> {
-  const appId = process.env.META_GRAPH_APP_ID;
-  const appSecret = process.env.META_GRAPH_APP_SECRET;
-  if (!appId || !appSecret) throw new Error('META_GRAPH_* env vars missing');
-
-  // 1. short-lived user token
   const shortRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token` +
-      `?client_id=${appId}` +
+      `?client_id=${app.clientId}` +
       `&redirect_uri=${encodeURIComponent(platformRedirectUri(platform))}` +
-      `&client_secret=${appSecret}` +
+      `&client_secret=${app.clientSecret}` +
       `&code=${encodeURIComponent(code)}`,
   );
   if (!shortRes.ok)
@@ -123,12 +112,11 @@ async function exchangeMetaCode(
     );
   const shortJson = (await shortRes.json()) as MetaTokenResponse;
 
-  // 2. exchange for long-lived (60 day) user token
   const longRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token` +
       `?grant_type=fb_exchange_token` +
-      `&client_id=${appId}` +
-      `&client_secret=${appSecret}` +
+      `&client_id=${app.clientId}` +
+      `&client_secret=${app.clientSecret}` +
       `&fb_exchange_token=${shortJson.access_token}`,
   );
   if (!longRes.ok)
@@ -139,9 +127,9 @@ async function exchangeMetaCode(
 
 export async function exchangeInstagram(
   code: string,
+  app: AppCredentialPair,
 ): Promise<ExchangedCredential> {
-  const userToken = await exchangeMetaCode(code, 'instagram_reels');
-  // Find the user's pages, then the IG business account linked to one.
+  const userToken = await exchangeMetaCode(code, app, 'instagram_reels');
   const pagesRes = await fetch(
     `https://graph.facebook.com/v21.0/me/accounts?access_token=${userToken}`,
   );
@@ -161,7 +149,6 @@ export async function exchangeInstagram(
     if (igJson.instagram_business_account?.id) {
       return {
         accountLabel: igJson.instagram_business_account.id,
-        // IG publishing uses the linked Page's access token, not the user token.
         refreshToken: page.access_token,
       };
     }
@@ -173,10 +160,9 @@ export async function exchangeInstagram(
 
 export async function exchangeFacebook(
   code: string,
+  app: AppCredentialPair,
 ): Promise<ExchangedCredential> {
-  const userToken = await exchangeMetaCode(code, 'facebook_reels');
-  // Pick the first Page the user manages. If multiple, the operator will
-  // need to manually re-authorize after picking the right page in the UI.
+  const userToken = await exchangeMetaCode(code, app, 'facebook_reels');
   const pagesRes = await fetch(
     `https://graph.facebook.com/v21.0/me/accounts?access_token=${userToken}`,
   );
@@ -192,12 +178,8 @@ export async function exchangeFacebook(
 
 export async function exchangeLinkedIn(
   code: string,
+  app: AppCredentialPair,
 ): Promise<ExchangedCredential> {
-  const clientId = process.env.LINKEDIN_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.LINKEDIN_OAUTH_CLIENT_SECRET;
-  if (!clientId || !clientSecret)
-    throw new Error('LINKEDIN_OAUTH_* env vars missing');
-
   const tokenRes = await fetch(
     'https://www.linkedin.com/oauth/v2/accessToken',
     {
@@ -206,8 +188,8 @@ export async function exchangeLinkedIn(
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        client_id: clientId,
-        client_secret: clientSecret,
+        client_id: app.clientId,
+        client_secret: app.clientSecret,
         redirect_uri: platformRedirectUri('linkedin'),
       }).toString(),
     },
@@ -216,7 +198,6 @@ export async function exchangeLinkedIn(
     throw new Error(`linkedin token exchange failed: ${await tokenRes.text()}`);
   const tokenJson = (await tokenRes.json()) as { access_token: string };
 
-  // Discover the first organization the user can administer.
   const orgsRes = await fetch(
     'https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization))',
     {
@@ -244,18 +225,25 @@ export async function exchangeLinkedIn(
 export async function exchangeForPlatform(
   platform: string,
   code: string,
+  appCreds: PlatformAppCredentialsService,
 ): Promise<ExchangedCredential> {
+  const app = await appCreds.resolve(platform);
+  if (!app) {
+    throw new Error(
+      `app credentials not configured for ${platform} — open the Configure dialog`,
+    );
+  }
   switch (platform) {
     case 'youtube_shorts':
-      return exchangeYouTube(code);
+      return exchangeYouTube(code, app);
     case 'tiktok':
-      return exchangeTikTok(code);
+      return exchangeTikTok(code, app);
     case 'instagram_reels':
-      return exchangeInstagram(code);
+      return exchangeInstagram(code, app);
     case 'facebook_reels':
-      return exchangeFacebook(code);
+      return exchangeFacebook(code, app);
     case 'linkedin':
-      return exchangeLinkedIn(code);
+      return exchangeLinkedIn(code, app);
     default:
       throw new Error(`OAuth exchange not implemented for ${platform}`);
   }

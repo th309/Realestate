@@ -4,6 +4,10 @@ import {
   PlatformPublisher,
 } from './drivers/platform-publisher.interface';
 import { PlatformCredentialsService } from './platform-credentials.service';
+import {
+  PlatformAppCredentialsService,
+  type AppCredentialStatus,
+} from './platform-app-credentials.service';
 import { buildOAuthUrl } from './oauth/oauth-urls';
 
 export interface PlatformStatus {
@@ -13,6 +17,8 @@ export interface PlatformStatus {
   accountLabel: string | null;
   connectedAt: string | null;
   lastPublishedAt: string | null;
+  /** App-credential status — drives the Configure dialog in the admin UI. */
+  appCredentials: AppCredentialStatus;
 }
 
 const ALL_PLATFORMS = [
@@ -30,6 +36,7 @@ export class PlatformManagerService {
     @Inject(PLATFORM_PUBLISHERS)
     private readonly publishers: PlatformPublisher[],
     private readonly creds: PlatformCredentialsService,
+    private readonly appCreds: PlatformAppCredentialsService,
   ) {}
 
   async getPlatformStatuses(): Promise<PlatformStatus[]> {
@@ -38,6 +45,7 @@ export class PlatformManagerService {
       ALL_PLATFORMS.map(async (platform): Promise<PlatformStatus> => {
         const pub = registered.get(platform);
         const cred = await this.creds.getActive(platform);
+        const appStatus = await this.appCreds.status(platform);
         return {
           platform,
           supported: Boolean(pub),
@@ -45,6 +53,7 @@ export class PlatformManagerService {
           accountLabel: cred?.accountLabel ?? null,
           connectedAt: cred?.connectedAt.toISOString() ?? null,
           lastPublishedAt: null,
+          appCredentials: appStatus,
         };
       }),
     );
@@ -52,6 +61,6 @@ export class PlatformManagerService {
   }
 
   async startOAuth(platform: string): Promise<{ authUrl: string }> {
-    return { authUrl: buildOAuthUrl(platform) };
+    return { authUrl: await buildOAuthUrl(platform, this.appCreds) };
   }
 }

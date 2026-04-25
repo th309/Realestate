@@ -4,7 +4,9 @@ import { useState } from "react";
 import {
   connectPlatform,
   disconnectPlatform,
+  type AppCredentialStatus,
 } from "../lib/content-pipeline-api";
+import { ConfigureAppDialog } from "./configure-app-dialog";
 
 interface PlatformRowProps {
   platform: string;
@@ -13,6 +15,8 @@ interface PlatformRowProps {
   accountLabel: string | null;
   connectedAt: string | null;
   lastPublishedAt: string | null;
+  appCredentials: AppCredentialStatus;
+  apiBaseUrl: string;
   onChange: () => void;
 }
 
@@ -23,18 +27,24 @@ export function PlatformRow({
   accountLabel,
   connectedAt,
   lastPublishedAt,
+  appCredentials,
+  apiBaseUrl,
   onChange,
 }: PlatformRowProps) {
   const [working, setWorking] = useState<"connect" | "disconnect" | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [configureOpen, setConfigureOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const label = platform.replaceAll("_", " ");
 
-  // connectedAt accepted for interface stability; used by future enhancements
   void connectedAt;
 
   async function handleConnect() {
     setError(null);
+    if (!appCredentials.configured) {
+      setConfigureOpen(true);
+      return;
+    }
     setWorking("connect");
     try {
       const result = await connectPlatform(platform);
@@ -42,9 +52,19 @@ export function PlatformRow({
         window.location.assign(result.authUrl);
         return;
       }
-      setError("Backend returned no auth URL");
+      setError("Backend did not return an auth URL — check the server logs.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connect failed");
+      const msg = err instanceof Error ? err.message : "Connect failed";
+      // Backend throws "app credentials not configured for X — open the
+      // Configure dialog" when neither DB nor env vars have the keys.
+      // Surface that explicitly with a Configure prompt.
+      if (/app credentials not configured/i.test(msg)) {
+        setError(
+          "App credentials not set. Click Configure to enter them — no Railway trip needed.",
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setWorking(null);
     }
@@ -70,7 +90,9 @@ export function PlatformRow({
       ? accountLabel
         ? `Connected · ${accountLabel}`
         : "Connected"
-      : "Not connected";
+      : appCredentials.configured
+        ? "App ready · click Connect to authorize an account"
+        : "App credentials not configured";
 
   return (
     <div className="rounded-xl bg-surface-container-low shadow-sm">
@@ -79,9 +101,11 @@ export function PlatformRow({
           <div
             className={`w-3 h-3 rounded-full ${
               configured
-                ? "bg-accent"
+                ? "bg-tertiary"
                 : supported
-                  ? "bg-outline"
+                  ? appCredentials.configured
+                    ? "bg-primary"
+                    : "bg-outline"
                   : "bg-surface-container-high"
             }`}
             aria-label={configured ? "Connected" : "Not connected"}
@@ -98,41 +122,58 @@ export function PlatformRow({
                 Last publish {new Date(lastPublishedAt).toLocaleDateString()}
               </div>
             )}
+            {supported && appCredentials.configured && !configured && (
+              <div className="text-[11px] text-on-surface-variant mt-0.5">
+                App credentials via {appCredentials.source}
+                {appCredentials.lastFour
+                  ? ` · ends ${appCredentials.lastFour}`
+                  : ""}
+              </div>
+            )}
           </div>
         </div>
 
-        {supported && !configured && (
-          <button
-            type="button"
-            disabled={working === "connect"}
-            onClick={handleConnect}
-            className="bg-primary text-on-primary rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60"
-          >
-            {working === "connect" ? "Opening…" : "Connect"}
-          </button>
-        )}
-
-        {supported && configured && (
-          <button
-            type="button"
-            disabled={working === "disconnect"}
-            onClick={() => setConfirmDisconnect(true)}
-            className="bg-surface-container-high text-on-surface rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
-          >
-            Disconnect
-          </button>
-        )}
-
-        {!supported && (
-          <button
-            type="button"
-            disabled
-            title="Available in a later phase"
-            className="rounded-full px-5 py-2 text-sm font-semibold bg-surface-container-high text-outline opacity-60 cursor-not-allowed"
-          >
-            Connect
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {supported && (
+            <button
+              type="button"
+              onClick={() => setConfigureOpen(true)}
+              className="text-xs font-medium text-primary hover:bg-primary/8 rounded-full px-3 py-1.5 transition-colors duration-200"
+            >
+              Configure
+            </button>
+          )}
+          {supported && !configured && (
+            <button
+              type="button"
+              disabled={working === "connect"}
+              onClick={handleConnect}
+              className="bg-primary text-on-primary rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60"
+            >
+              {working === "connect" ? "Opening…" : "Connect"}
+            </button>
+          )}
+          {supported && configured && (
+            <button
+              type="button"
+              disabled={working === "disconnect"}
+              onClick={() => setConfirmDisconnect(true)}
+              className="bg-surface-container-high text-on-surface rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
+            >
+              Disconnect
+            </button>
+          )}
+          {!supported && (
+            <button
+              type="button"
+              disabled
+              title="Available in a later phase"
+              className="rounded-full px-5 py-2 text-sm font-semibold bg-surface-container-high text-outline opacity-60 cursor-not-allowed"
+            >
+              Connect
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="px-4 pb-3 text-sm text-error">{error}</div>}
@@ -163,6 +204,18 @@ export function PlatformRow({
           </div>
         </div>
       )}
+
+      <ConfigureAppDialog
+        open={configureOpen}
+        platform={platform}
+        status={appCredentials}
+        apiBaseUrl={apiBaseUrl}
+        onClose={() => setConfigureOpen(false)}
+        onSaved={() => {
+          setConfigureOpen(false);
+          onChange();
+        }}
+      />
     </div>
   );
 }

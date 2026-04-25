@@ -169,6 +169,14 @@ export async function fetchReviewQueue() {
   return res.data.items;
 }
 
+export interface AppCredentialStatus {
+  configured: boolean;
+  source: "database" | "env" | null;
+  lastFour: string | null;
+  updatedAt: string | null;
+  notes: string | null;
+}
+
 export interface PlatformStatus {
   platform: string;
   configured: boolean;
@@ -176,6 +184,7 @@ export interface PlatformStatus {
   accountLabel: string | null;
   connectedAt: string | null;
   lastPublishedAt: string | null;
+  appCredentials: AppCredentialStatus;
 }
 
 export async function fetchPlatforms(): Promise<PlatformStatus[]> {

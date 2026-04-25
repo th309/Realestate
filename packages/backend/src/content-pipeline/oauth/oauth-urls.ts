@@ -1,4 +1,5 @@
 import { signState } from '../oauth-state';
+import type { PlatformAppCredentialsService } from '../platform-app-credentials.service';
 
 const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
@@ -7,8 +8,6 @@ const YOUTUBE_SCOPES = [
 
 const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload'];
 
-// Instagram publishing requires Facebook Login + the Instagram Graph API
-// scopes — IG itself doesn't issue tokens directly for business accounts.
 const INSTAGRAM_SCOPES = [
   'instagram_basic',
   'instagram_content_publish',
@@ -41,77 +40,70 @@ function redirectUri(platform: string): string {
 }
 
 /**
- * Per-platform "start OAuth" URL builders. Each builder requires its
- * respective env var(s) to be set; they throw a descriptive error
- * otherwise so the operator sees which env var is missing.
- *
- * All callbacks land on the same controller route — see
- * `oauth-handlers.ts` for the per-platform code-exchange dispatch.
+ * Per-platform "start OAuth" URL builders. Resolves app credentials via
+ * PlatformAppCredentialsService (DB-first then env). Throws a descriptive
+ * "App credentials not configured" error when neither path has been set
+ * up — the frontend uses that to prompt the operator to enter credentials
+ * via the Configure dialog.
  */
-export function buildOAuthUrl(platform: string): string {
+export async function buildOAuthUrl(
+  platform: string,
+  appCreds: PlatformAppCredentialsService,
+): Promise<string> {
   const state = encodeURIComponent(signState(platform));
+  const creds = await appCreds.resolve(platform);
+  if (!creds) {
+    throw new Error(
+      `app credentials not configured for ${platform} — open the Configure dialog`,
+    );
+  }
   switch (platform) {
-    case 'youtube_shorts': {
-      const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
-      if (!clientId) throw new Error('YOUTUBE_OAUTH_CLIENT_ID not configured');
+    case 'youtube_shorts':
       return (
         `https://accounts.google.com/o/oauth2/v2/auth` +
-        `?client_id=${clientId}` +
+        `?client_id=${creds.clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(YOUTUBE_SCOPES.join(' '))}` +
         `&access_type=offline&prompt=consent` +
         `&state=${state}`
       );
-    }
-    case 'tiktok': {
-      const clientKey = process.env.TIKTOK_OAUTH_CLIENT_KEY;
-      if (!clientKey) throw new Error('TIKTOK_OAUTH_CLIENT_KEY not configured');
+    case 'tiktok':
       return (
         `https://www.tiktok.com/v2/auth/authorize/` +
-        `?client_key=${clientKey}` +
+        `?client_key=${creds.clientId}` +
         `&scope=${encodeURIComponent(TIKTOK_SCOPES.join(','))}` +
         `&response_type=code` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
         `&state=${state}`
       );
-    }
-    case 'instagram_reels': {
-      const appId = process.env.META_GRAPH_APP_ID;
-      if (!appId) throw new Error('META_GRAPH_APP_ID not configured');
+    case 'instagram_reels':
       return (
         `https://www.facebook.com/v21.0/dialog/oauth` +
-        `?client_id=${appId}` +
+        `?client_id=${creds.clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(INSTAGRAM_SCOPES.join(','))}` +
         `&state=${state}`
       );
-    }
-    case 'facebook_reels': {
-      const appId = process.env.META_GRAPH_APP_ID;
-      if (!appId) throw new Error('META_GRAPH_APP_ID not configured');
+    case 'facebook_reels':
       return (
         `https://www.facebook.com/v21.0/dialog/oauth` +
-        `?client_id=${appId}` +
+        `?client_id=${creds.clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(FACEBOOK_SCOPES.join(','))}` +
         `&state=${state}`
       );
-    }
-    case 'linkedin': {
-      const clientId = process.env.LINKEDIN_OAUTH_CLIENT_ID;
-      if (!clientId) throw new Error('LINKEDIN_OAUTH_CLIENT_ID not configured');
+    case 'linkedin':
       return (
         `https://www.linkedin.com/oauth/v2/authorization` +
         `?response_type=code` +
-        `&client_id=${clientId}` +
+        `&client_id=${creds.clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
         `&scope=${encodeURIComponent(LINKEDIN_SCOPES.join(' '))}` +
         `&state=${state}`
       );
-    }
     default:
       throw new Error(`OAuth start URL not implemented for ${platform}`);
   }
