@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-25
 **Status:** Design — pending user review
-**Branch (target):** `feat/content-pipeline-p2` (or successor)
+**Branch (target):** `feat/content-pipeline-p3-ranking`
 **Related specs:**
 
 - `2026-04-25-content-pipeline-batch-wizard-design.md` (existing batch flow we extend)
