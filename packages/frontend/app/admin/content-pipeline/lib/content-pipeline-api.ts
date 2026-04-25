@@ -54,10 +54,13 @@ export interface DashboardData {
   reviewQueueCount: number;
 }
 
-export async function fetchDashboard(): Promise<DashboardData> {
-  const res = await fetchAPI<{ data: DashboardData }>(
-    "/api/admin/content-pipeline/dashboard",
-  );
+export async function fetchDashboard(
+  opts: { batchId?: string } = {},
+): Promise<DashboardData> {
+  const path = opts.batchId
+    ? `/api/admin/content-pipeline/dashboard?batchId=${encodeURIComponent(opts.batchId)}`
+    : "/api/admin/content-pipeline/dashboard";
+  const res = await fetchAPI<{ data: DashboardData }>(path);
   return res.data;
 }
 

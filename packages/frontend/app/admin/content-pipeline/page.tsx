@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   fetchDashboard,
   fetchAssetSignedUrl,
@@ -12,9 +13,12 @@ import type { PipelineStatus } from "./lib/content-pipeline-api";
 import { RunCardOverlay } from "./components/run-card-overlay";
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
+  const batchId = searchParams.get("batch") ?? undefined;
+
   const { data, isLoading } = useQuery({
-    queryKey: ["content-pipeline-dashboard"],
-    queryFn: fetchDashboard,
+    queryKey: ["content-pipeline-dashboard", batchId ?? "all"],
+    queryFn: () => fetchDashboard({ batchId }),
     refetchInterval: 60_000,
   });
 
@@ -61,6 +65,22 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold mb-4 text-on-surface">
             Last 7 days
           </h2>
+          {batchId && (
+            <div className="rounded-xl bg-secondary-container/40 px-4 py-3 mb-4 text-sm flex items-center gap-3">
+              <span>
+                Showing batch{" "}
+                <span className="font-mono text-xs">{batchId}</span>
+                {" — "}
+                <strong>{data.recentRuns.length}</strong> runs
+              </span>
+              <a
+                href="/admin/content-pipeline"
+                className="ml-auto text-primary text-xs hover:underline"
+              >
+                Show all
+              </a>
+            </div>
+          )}
           {data.recentRuns.length === 0 ? (
             <div className="rounded-xl bg-surface-container-low p-6 text-sm text-on-surface-variant">
               No runs yet. Start one with the Create a run button.
