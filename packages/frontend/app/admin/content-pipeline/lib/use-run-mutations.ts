@@ -103,13 +103,13 @@ export function useDeleteRun() {
     mutationFn: (id: string) => deleteRun(id),
     onSuccess: (data, id) => {
       invalidateRunListsAndDetail(qc, id);
-      if (data.action === "cancelled") {
-        toast.success("Run cancelled");
-      } else if (data.cascade.platformsLive.length > 0) {
+      if (data.cascade.platformsLive.length > 0) {
         const platforms = data.cascade.platformsLive
           .map((p) => p.replace("_", " "))
           .join(", ");
         toast.info(`Deleted from PropertyIQ. Still live on ${platforms}.`);
+      } else if (data.wasInFlight) {
+        toast.success("Run cancelled and deleted");
       } else {
         toast.success("Run deleted");
       }

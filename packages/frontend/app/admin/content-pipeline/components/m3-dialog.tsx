@@ -72,6 +72,11 @@ export function M3Dialog({
       aria-label={ariaLabel}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm animate-[m3-scrim-in_200ms_ease-out]"
       onClick={(e) => {
+        // Block clicks from bubbling to ancestor handlers (e.g. a wrapping
+        // <Link> on a dashboard card). Visually-fixed positioning doesn't
+        // change React's event tree, so without this a confirm click
+        // navigates the parent route.
+        e.stopPropagation();
         if (closeOnScrim && e.target === e.currentTarget) onClose();
       }}
     >

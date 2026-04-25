@@ -15,12 +15,12 @@ const IN_FLIGHT_STATES: ReadonlySet<PipelineStatus> = new Set([
   'publishing',
 ] as const);
 
-export type DeleteRunResult =
-  | { action: 'cancelled'; previousStatus: PipelineStatus }
-  | {
-      action: 'deleted';
-      cascade: { storageObjects: number; platformsLive: string[] };
-    };
+export type DeleteRunResult = {
+  action: 'deleted';
+  previousStatus: PipelineStatus;
+  wasInFlight: boolean;
+  cascade: { storageObjects: number; platformsLive: string[] };
+};
 
 /**
  * Operator-driven mutations on existing runs: approve, reject, cancel,
@@ -105,13 +105,17 @@ export class RunActionsService {
   }
 
   /**
-   * State-aware destructive operation:
-   *   - in-flight runs (queued..publishing) → cancel via orchestrator
-   *   - terminal runs (published, rejected, failed, cancelled, etc.) →
-   *     hard delete; FK ON DELETE CASCADE removes content_assets,
-   *     content_run_events, content_run_steps, platform_posts. Storage
-   *     objects are removed best-effort; partial failures are logged but
-   *     don't block the response (orphaned files get swept by future cron).
+   * Unconditional hard delete. For in-flight runs (queued..publishing) we
+   * best-effort transition to `cancelled` first so any active worker sees
+   * the cancellation signal and exits cleanly; if that transition fails
+   * (e.g. row already terminal, queue unavailable) we proceed with the
+   * delete anyway. Workers that finish a step after the row is gone will
+   * fail to update and log a harmless warning.
+   *
+   * FK ON DELETE CASCADE removes content_assets, content_run_events,
+   * content_run_steps, platform_posts. Storage objects are removed
+   * best-effort; partial failures are logged but don't block the response
+   * (orphaned files get swept by future cron).
    *
    * Does NOT take down already-published posts on social platforms — the
    * `platform_posts.status='posted'` rows are deleted from PropertyIQ but
@@ -128,12 +132,16 @@ export class RunActionsService {
     if (!run) throw new NotFoundException(`run ${runId} not found`);
 
     const status = run.status as PipelineStatus;
-    if (IN_FLIGHT_STATES.has(status)) {
-      await this.cancelRun(runId, 'user_deleted_in_flight');
-      this.logger.log(
-        `[ACTION] delete-run run=${runId} action=cancelled previousStatus=${status}`,
-      );
-      return { action: 'cancelled', previousStatus: status };
+    const wasInFlight = IN_FLIGHT_STATES.has(status);
+
+    if (wasInFlight) {
+      try {
+        await this.cancelRun(runId, 'user_deleted_in_flight');
+      } catch (e) {
+        this.logger.warn(
+          `[ACTION] delete-run cancel-step failed run=${runId}: ${(e as Error).message} — proceeding with hard delete`,
+        );
+      }
     }
 
     // Look up still-live platform posts before delete so we can echo back
@@ -194,10 +202,12 @@ export class RunActionsService {
     }
 
     this.logger.log(
-      `[ACTION] delete-run run=${runId} action=deleted storage=${cleanedStorage}/${storagePaths.length} platformsLive=${platformsLive.join(',') || 'none'}`,
+      `[ACTION] delete-run run=${runId} action=deleted previousStatus=${status} wasInFlight=${wasInFlight} storage=${cleanedStorage}/${storagePaths.length} platformsLive=${platformsLive.join(',') || 'none'}`,
     );
     return {
       action: 'deleted',
+      previousStatus: status,
+      wasInFlight,
       cascade: { storageObjects: cleanedStorage, platformsLive },
     };
   }

@@ -48,12 +48,12 @@ export async function replaceThumbnail(runId: string, file: File) {
   };
 }
 
-export type DeleteRunResult =
-  | { action: "cancelled"; previousStatus: PipelineStatus }
-  | {
-      action: "deleted";
-      cascade: { storageObjects: number; platformsLive: string[] };
-    };
+export type DeleteRunResult = {
+  action: "deleted";
+  previousStatus: PipelineStatus;
+  wasInFlight: boolean;
+  cascade: { storageObjects: number; platformsLive: string[] };
+};
 
 export async function deleteRun(id: string): Promise<DeleteRunResult> {
   const res = await fetchAPIRaw(`/api/admin/content-pipeline/runs/${id}`, {
