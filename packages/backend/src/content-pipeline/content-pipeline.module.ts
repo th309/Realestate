@@ -7,6 +7,9 @@ import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
 import { MagnetLibraryService } from './magnets/magnet-library.service';
 import { MagnetLibraryController } from './magnets/magnet-library.controller';
+import { VisionExtractorService } from './style-refs/vision-extractor.service';
+import { StyleReferenceService } from './style-refs/style-reference.service';
+import { StyleReferenceController } from './style-refs/style-reference.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
@@ -86,6 +89,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     PlatformOAuthCallbackController,
     ShortLinkController,
     MagnetLibraryController,
+    StyleReferenceController,
   ],
   providers: [
     ContentRunsService,
@@ -93,6 +97,8 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     RunActionsService,
     RunThumbnailService,
     MagnetLibraryService,
+    VisionExtractorService,
+    StyleReferenceService,
     RunOrchestratorService,
 
     ContentDataService,
