@@ -11,6 +11,7 @@ export type QueueName =
   | 'render-audio'
   | 'render-captions'
   | 'render-video'
+  | 'render-thumbnail'
   | 'render-pdf'
   | 'publish-youtube'
   | 'publish-tiktok'
@@ -35,6 +36,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     'render-audio',
     'render-captions',
     'render-video',
+    'render-thumbnail',
     'render-pdf',
     'publish-youtube',
     'publish-tiktok',

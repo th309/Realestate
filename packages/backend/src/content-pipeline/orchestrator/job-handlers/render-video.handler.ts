@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
+import { QueueService } from '../queue.service';
 import {
   VIDEO_RENDERER,
   VideoRenderer,
@@ -18,6 +19,7 @@ export class RenderVideoHandler {
     private readonly orchestrator: RunOrchestratorService,
     @Inject(VIDEO_RENDERER) private readonly renderer: VideoRenderer,
     private readonly supabase: SupabaseService,
+    private readonly queue: QueueService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -105,6 +107,20 @@ export class RenderVideoHandler {
 
       this.logger.log(`[PIPE] render-video.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);
+
+      // Fire-and-forget thumbnail render. The thumbnail is a side-channel
+      // asset (used by the review UI and future YouTube custom-thumbnail
+      // uploads); failures here MUST NOT fail the run, so we catch enqueue
+      // errors and let RenderThumbnailHandler write its own
+      // thumbnail_render_failed content_run_event if the spawn itself fails.
+      try {
+        await this.queue.send('render-thumbnail', { runId });
+        this.logger.log(`[PIPE] render-video run=${runId} enqueued thumbnail`);
+      } catch (enqueueErr) {
+        this.logger.warn(
+          `[PIPE] render-video run=${runId} thumbnail enqueue failed (non-fatal): ${(enqueueErr as Error).message?.slice(0, 200)}`,
+        );
+      }
     } catch (err) {
       this.logger.error(
         `[PIPE] render-video FAILED run=${runId}: ${(err as Error).message?.slice(0, 200)}`,

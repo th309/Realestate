@@ -4,7 +4,8 @@
   "description": "Remotion video template for PropertyIQ YouTube channel",
   "private": true,
   "bin": {
-    "render-video": "./dist/cli/render-cli.js"
+    "render-video": "./dist/cli/render-cli.js",
+    "render-thumbnail": "./dist/cli/render-thumbnail-cli.js"
   },
   "scripts": {
     "start": "npx remotion studio",

@@ -6,6 +6,7 @@ import { VerifyDataHandler } from './job-handlers/verify-data.handler';
 import { LintVoiceHandler } from './job-handlers/lint-voice.handler';
 import { SynthesizeAudioHandler } from './job-handlers/synthesize-audio.handler';
 import { RenderVideoHandler } from './job-handlers/render-video.handler';
+import { RenderThumbnailHandler } from './job-handlers/render-thumbnail.handler';
 import { TimeCaptionsHandler } from './job-handlers/time-captions.handler';
 import { PublishHandler } from './job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './job-handlers/publish-youtube-shorts.handler';
@@ -30,6 +31,7 @@ export class HandlersBootstrapService implements OnModuleInit {
     private readonly lint: LintVoiceHandler,
     private readonly synthesize: SynthesizeAudioHandler,
     private readonly renderVideo: RenderVideoHandler,
+    private readonly renderThumbnail: RenderThumbnailHandler,
     private readonly timeCaptions: TimeCaptionsHandler,
     private readonly publish: PublishHandler,
     private readonly publishYT: PublishYouTubeShortsHandler,
@@ -75,6 +77,11 @@ export class HandlersBootstrapService implements OnModuleInit {
     );
     await this.queue.work<{ runId: string }>('render-video', async (job) =>
       this.renderVideo.handle(job.data.runId),
+    );
+    await this.queue.work<{ runId: string; frame?: number }>(
+      'render-thumbnail',
+      async (job) =>
+        this.renderThumbnail.handle(job.data.runId, job.data.frame),
     );
     await this.queue.work<{ runId: string }>('render-captions', async (job) =>
       this.timeCaptions.handle(job.data.runId),

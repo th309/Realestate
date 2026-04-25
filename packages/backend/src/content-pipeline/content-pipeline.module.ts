@@ -20,6 +20,7 @@ import { VerifyDataHandler } from './orchestrator/job-handlers/verify-data.handl
 import { LintVoiceHandler } from './orchestrator/job-handlers/lint-voice.handler';
 import { SynthesizeAudioHandler } from './orchestrator/job-handlers/synthesize-audio.handler';
 import { RenderVideoHandler } from './orchestrator/job-handlers/render-video.handler';
+import { RenderThumbnailHandler } from './orchestrator/job-handlers/render-thumbnail.handler';
 import { PublishHandler } from './orchestrator/job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish-youtube-shorts.handler';
 import { PublishTikTokHandler } from './orchestrator/job-handlers/publish-tiktok.handler';
@@ -148,6 +149,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     LintVoiceHandler,
     SynthesizeAudioHandler,
     RenderVideoHandler,
+    RenderThumbnailHandler,
     TimeCaptionsHandler,
     PublishHandler,
     PublishYouTubeShortsHandler,
