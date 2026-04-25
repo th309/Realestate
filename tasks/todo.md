@@ -87,7 +87,7 @@ Root causes investigated. Implementing fixes now.
 ## Priority 7: LOW — Nice to Have / Feature Requests
 
 - [x] **7a.** ML Workflow unmount — Added isMountedRef guard to all async state updates
-- [ ] **7b.** Stripe billing portal lacks plan switching (Stripe dashboard config — not a code fix)
+- [x] **7b.** Stripe billing portal lacks plan switching — Added portal configuration API with plan switching, cancellation, payment methods, invoice history + security hardening
 - [x] **7c.** Pricing loading — Added skeleton cards while plans load
 - [x] **7d.** System health status is mocked — Wired real /api/health + /api/health/data-sources via useSystemHealth hook
 - [x] **7e.** Real-time tier push — Added Supabase Realtime subscription on user_profiles with auto-refetch + toast
@@ -102,8 +102,7 @@ Root causes investigated. Implementing fixes now.
 
 ## Deferred / Won't Fix
 
-- Google OAuth provider not enabled — Supabase dashboard configuration, not a code fix
-- Stripe portal plan switching — Stripe dashboard configuration
+- ~~Google OAuth provider not enabled~~ — Enabled in Supabase dashboard
 
 ---
 

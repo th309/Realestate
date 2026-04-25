@@ -84,6 +84,7 @@ export interface LegacyVideoProps {
 export type FormatKey =
   | "grade_reveal"
   | "top_10_ranking"
+  | "bottom_10_ranking"
   | "score_mover"
   | "head_to_head"
   | "long_form_deep_dive"
@@ -109,6 +110,13 @@ export const FORMAT_CONFIGS: Record<FormatKey, FormatConfig> = {
   },
   top_10_ranking: {
     key: "top_10_ranking",
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    durationInFrames: 1800,
+  },
+  bottom_10_ranking: {
+    key: "bottom_10_ranking",
     width: 1080,
     height: 1920,
     fps: 30,
@@ -162,6 +170,7 @@ export const VideoPropsSchema = z.object({
   format: z.enum([
     "grade_reveal",
     "top_10_ranking",
+    "bottom_10_ranking",
     "score_mover",
     "head_to_head",
     "long_form_deep_dive",

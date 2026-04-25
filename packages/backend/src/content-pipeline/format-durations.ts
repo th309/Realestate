@@ -12,6 +12,7 @@ import type { ContentFormat } from './types';
 export const FORMAT_DURATIONS_IN_FRAMES: Record<ContentFormat, number> = {
   grade_reveal: 900,
   top_10_ranking: 1800,
+  bottom_10_ranking: 1800,
   score_mover: 900,
   head_to_head: 1800,
   long_form_deep_dive: 18000,

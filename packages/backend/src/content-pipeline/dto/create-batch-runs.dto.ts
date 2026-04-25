@@ -22,6 +22,7 @@ export class CreateBatchRunsDto {
   @IsIn([
     'grade_reveal',
     'top_10_ranking',
+    'bottom_10_ranking',
     'score_mover',
     'head_to_head',
     'long_form_deep_dive',

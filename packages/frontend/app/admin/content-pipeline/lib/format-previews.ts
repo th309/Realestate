@@ -6,6 +6,7 @@
 export const FORMAT_PREVIEWS: Record<string, string> = {
   grade_reveal: "/format-previews/grade-reveal.mp4",
   top_10_ranking: "/format-previews/top-10-ranking.mp4",
+  bottom_10_ranking: "/format-previews/bottom-10-ranking.mp4",
   score_mover: "/format-previews/score-mover.mp4",
   head_to_head: "/format-previews/head-to-head.mp4",
   long_form_deep_dive: "/format-previews/long-form-deep-dive.mp4",
@@ -36,6 +37,13 @@ export const FORMAT_META: Record<string, FormatMeta> = {
     duration: 60,
     aspect: "9:16",
     purpose: "Countdown of the top 10 markets for a metric.",
+  },
+  bottom_10_ranking: {
+    displayName: "Bottom 10 Ranking",
+    audience: "Investor",
+    duration: 60,
+    aspect: "9:16",
+    purpose: "Countdown of the bottom 10 markets for a metric.",
   },
   score_mover: {
     displayName: "Score Mover",
