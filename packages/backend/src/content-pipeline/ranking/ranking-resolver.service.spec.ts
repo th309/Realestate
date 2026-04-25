@@ -266,3 +266,37 @@ describe('RankingResolverService.resolve — B3 staleness + excluded_count', () 
     expect(result.excluded_count).toBe(7);
   });
 });
+
+// ---------------------------------------------------------------------------
+// B4: Sort direction + insufficient_data threshold
+// ---------------------------------------------------------------------------
+
+describe('RankingResolverService.resolve — B4 sort direction + insufficient_data', () => {
+  it('top_10_ranking uses ascending: false', async () => {
+    const { service, orderSpy } = buildHarness({});
+    await service.resolve(nationalMetroInput);
+    expect(orderSpy).toHaveBeenCalledWith('value', { ascending: false });
+  });
+
+  it('bottom_10_ranking uses ascending: true', async () => {
+    const { service, orderSpy } = buildHarness({});
+    await service.resolve({
+      ...nationalMetroInput,
+      format: 'bottom_10_ranking',
+    });
+    expect(orderSpy).toHaveBeenCalledWith('value', { ascending: true });
+  });
+
+  it(`returns insufficient_data: true and empty rankings when fewer than ${MIN_RANKINGS} rows returned`, async () => {
+    const { service } = buildHarness({ supabaseRows: makeMetroRows(3) });
+    const result = await service.resolve(nationalMetroInput);
+    expect(result.insufficient_data).toBe(true);
+    expect(result.rankings).toHaveLength(0);
+  });
+
+  it('returns insufficient_data: false when rows meet threshold', async () => {
+    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
+    const result = await service.resolve(nationalMetroInput);
+    expect(result.insufficient_data).toBe(false);
+  });
+});
