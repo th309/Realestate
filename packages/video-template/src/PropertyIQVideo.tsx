@@ -339,7 +339,14 @@ const HeadToHeadLayout: React.FC<VideoProps> = (props) => {
         <BrandBumper />
       </Sequence>
       <Sequence from={60} durationInFrames={90}>
-        <Intro marketName={`${primary.market} vs ${secondary.market}`} />
+        {/*
+          Strip the state suffix from each market name for the intro so the
+          comma-split inside `Intro` doesn't render "Cleveland / OH vs Austin, TX".
+          Full names still appear inside the Comparison scene below.
+        */}
+        <Intro
+          marketName={`${primary.market.split(",")[0].trim()} vs ${secondary.market.split(",")[0].trim()}`}
+        />
       </Sequence>
       <Sequence from={150} durationInFrames={1500}>
         <Comparison primary={primary} others={[secondary]} />
