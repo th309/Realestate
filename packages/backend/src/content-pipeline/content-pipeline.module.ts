@@ -5,6 +5,8 @@ import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
+import { MagnetLibraryService } from './magnets/magnet-library.service';
+import { MagnetLibraryController } from './magnets/magnet-library.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
@@ -83,12 +85,14 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     ContentPipelineController,
     PlatformOAuthCallbackController,
     ShortLinkController,
+    MagnetLibraryController,
   ],
   providers: [
     ContentRunsService,
     ContentPipelineQueriesService,
     RunActionsService,
     RunThumbnailService,
+    MagnetLibraryService,
     RunOrchestratorService,
 
     ContentDataService,
