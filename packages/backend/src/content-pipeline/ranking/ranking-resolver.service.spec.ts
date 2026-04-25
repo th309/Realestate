@@ -198,3 +198,46 @@ describe('RankingResolverService.resolve — B1 happy path', () => {
     expect(result.scope.label).toBe('National');
   });
 });
+
+// ---------------------------------------------------------------------------
+// B2: Scope filtering — national / state / metro
+// ---------------------------------------------------------------------------
+
+describe('RankingResolverService.resolve — B2 scope filtering', () => {
+  it('national scope: does NOT query geography_crosswalk', async () => {
+    const { service, fromSpy } = buildHarness({});
+    await service.resolve(nationalMetroInput);
+    const crosswalkCalls = fromSpy.mock.calls.filter(
+      ([t]) => t === 'geography_crosswalk',
+    );
+    expect(crosswalkCalls).toHaveLength(0);
+  });
+
+  it('state scope: queries geography_crosswalk with state_abbrev eq filter', async () => {
+    const crosswalkRows = [{ cbsa_code: '35620' }, { cbsa_code: '12060' }];
+    const { service, fromSpy, eqSpy } = buildHarness({ crosswalkRows });
+
+    await service.resolve({
+      ...nationalMetroInput,
+      scope_type: 'state',
+      scope_id: 'CA',
+    });
+
+    expect(fromSpy).toHaveBeenCalledWith('geography_crosswalk');
+    expect(eqSpy).toHaveBeenCalledWith('state_abbrev', 'CA');
+  });
+
+  it('metro scope: queries geography_crosswalk with cbsa_code eq filter', async () => {
+    const crosswalkRows = [{ zip_code: '90210' }];
+    const { service, fromSpy, eqSpy } = buildHarness({ crosswalkRows });
+
+    await service.resolve({
+      ...nationalMetroInput,
+      scope_type: 'metro',
+      scope_id: '31080',
+    });
+
+    expect(fromSpy).toHaveBeenCalledWith('geography_crosswalk');
+    expect(eqSpy).toHaveBeenCalledWith('cbsa_code', '31080');
+  });
+});

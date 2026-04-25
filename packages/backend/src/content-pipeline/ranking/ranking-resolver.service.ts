@@ -88,10 +88,17 @@ export class RankingResolverService {
     const limit = input.limit ?? DEFAULT_LIMIT;
     const tableConfig = this.resolveTableConfig(metric, input.geo_level);
 
+    const scopeRegionIds = await this.resolveScopeRegionIds(
+      input.scope_type,
+      input.scope_id,
+      input.geo_level,
+    );
+
     const rows = await this.fetchRankedRows(
       tableConfig,
       direction,
       limit * MAX_FETCH_MULTIPLIER,
+      scopeRegionIds,
     );
 
     const sliced = rows.slice(0, limit);
@@ -156,10 +163,51 @@ export class RankingResolverService {
     return { ...metric, sourceTable: table, idColumn: idCol };
   }
 
+  /**
+   * Return region IDs in scope, or null for national (no filter).
+   * geography_crosswalk columns: zip_code, county_fips, cbsa_code, state_abbrev.
+   */
+  async resolveScopeRegionIds(
+    scopeType: ScopeType,
+    scopeId: string | null,
+    geoLevel: GeoLevel,
+  ): Promise<string[] | null> {
+    if (scopeType === 'national') return null;
+
+    const selectCol = this.crosswalkColForGeo(geoLevel);
+    const filterCol = scopeType === 'state' ? 'state_abbrev' : 'cbsa_code';
+
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('geography_crosswalk')
+      .select(selectCol)
+      .eq(filterCol, scopeId ?? '')
+      .not(selectCol, 'is', null);
+
+    if (error) {
+      this.logger.warn(`Scope crosswalk lookup failed: ${error.message}`);
+      return null;
+    }
+
+    const ids = new Set<string>();
+    for (const row of data ?? []) {
+      const val = (row as Record<string, unknown>)[selectCol];
+      if (val) ids.add(String(val));
+    }
+    return Array.from(ids);
+  }
+
+  private crosswalkColForGeo(geoLevel: GeoLevel): string {
+    if (geoLevel === 'county') return 'county_fips';
+    if (geoLevel === 'zip') return 'zip_code';
+    return 'cbsa_code';
+  }
+
   private async fetchRankedRows(
     tc: RankingMetricConfig,
     direction: RankingDirection,
     fetchLimit: number,
+    scopeRegionIds: string[] | null = null,
   ): Promise<Record<string, unknown>[]> {
     const selectCols = [
       tc.idColumn,
@@ -181,6 +229,7 @@ export class RankingResolverService {
 
     if (tc.metricNameFilter)
       query = query.eq('metric_name', tc.metricNameFilter);
+    if (scopeRegionIds !== null) query = query.in(tc.idColumn, scopeRegionIds);
 
     const { data, error } = await query;
     if (error) throw new Error(`Ranking query failed: ${error.message}`);
