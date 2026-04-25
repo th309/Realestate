@@ -5,12 +5,11 @@
  * and scope (national, state, or metro). Used by the content pipeline's
  * top_10_ranking and bottom_10_ranking video formats.
  *
- * Queries source tables directly for bulk ranking — individual
- * MetricResolutionService calls would be N round-trips; ranking needs one
- * ordered query. Metric metadata lives in RANKING_METRIC_CATALOG.
+ * Query helpers (crosswalk, countExcluded, fetchRankedRows) live in
+ * ranking-queries.ts to keep this file under the 300-line hard limit.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { formatRankingValue, MetricFormat } from './format-value';
@@ -18,6 +17,11 @@ import {
   RankingMetricConfig,
   RANKING_METRIC_CATALOG,
 } from './ranking-metric-catalog';
+import {
+  resolveScopeRegionIds,
+  countExcluded,
+  fetchRankedRows,
+} from './ranking-queries';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -72,8 +76,6 @@ const MAX_FETCH_MULTIPLIER = 3;
 
 @Injectable()
 export class RankingResolverService {
-  private readonly logger = new Logger(RankingResolverService.name);
-
   constructor(
     // Injected for NestJS DI wiring; ranking queries bypass per-metric
     // resolution and go directly to source tables for bulk performance.
@@ -87,21 +89,42 @@ export class RankingResolverService {
       input.format === 'bottom_10_ranking' ? 'bottom' : 'top';
     const limit = input.limit ?? DEFAULT_LIMIT;
     const tableConfig = this.resolveTableConfig(metric, input.geo_level);
+    const cutoffDate = this.buildCutoffDate(metric.stalenessDays);
+    const client = this.supabase.getClient();
 
-    const scopeRegionIds = await this.resolveScopeRegionIds(
+    const scopeRegionIds = await resolveScopeRegionIds(
+      client,
       input.scope_type,
       input.scope_id,
       input.geo_level,
     );
 
-    const rows = await this.fetchRankedRows(
-      tableConfig,
-      direction,
-      limit * MAX_FETCH_MULTIPLIER,
-      scopeRegionIds,
-    );
+    const [excludedCount, rows] = await Promise.all([
+      countExcluded(client, tableConfig, cutoffDate, scopeRegionIds),
+      fetchRankedRows(
+        client,
+        tableConfig,
+        cutoffDate,
+        scopeRegionIds,
+        direction,
+        limit * MAX_FETCH_MULTIPLIER,
+      ),
+    ]);
 
     const sliced = rows.slice(0, limit);
+
+    if (sliced.length < MIN_RANKINGS) {
+      return this.buildResult(
+        input,
+        metric,
+        direction,
+        [],
+        rows.length,
+        excludedCount,
+        null,
+        true,
+      );
+    }
 
     const rankings: RankingEntry[] = sliced.map((row, idx) => ({
       rank: idx + 1,
@@ -116,26 +139,16 @@ export class RankingResolverService {
       value_formatted: formatRankingValue(row.value as number, metric.format),
     }));
 
-    return {
-      metric: {
-        id: input.metric_id,
-        label: metric.label,
-        unit: metric.unit,
-        format: metric.format,
-      },
-      scope: {
-        type: input.scope_type,
-        id: input.scope_id,
-        label: input.scope_id ?? 'National',
-      },
-      geo_level: input.geo_level,
+    return this.buildResult(
+      input,
+      metric,
       direction,
-      as_of: rows[0]?.period_date ?? null,
-      eligible_count: rows.length,
-      excluded_count: 0,
       rankings,
-      insufficient_data: false,
-    };
+      rows.length,
+      excludedCount,
+      (rows[0]?.period_date as string) ?? null,
+      false,
+    );
   }
 
   // --------------------------------------------------------------------------
@@ -163,76 +176,41 @@ export class RankingResolverService {
     return { ...metric, sourceTable: table, idColumn: idCol };
   }
 
-  /**
-   * Return region IDs in scope, or null for national (no filter).
-   * geography_crosswalk columns: zip_code, county_fips, cbsa_code, state_abbrev.
-   */
-  async resolveScopeRegionIds(
-    scopeType: ScopeType,
-    scopeId: string | null,
-    geoLevel: GeoLevel,
-  ): Promise<string[] | null> {
-    if (scopeType === 'national') return null;
-
-    const selectCol = this.crosswalkColForGeo(geoLevel);
-    const filterCol = scopeType === 'state' ? 'state_abbrev' : 'cbsa_code';
-
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('geography_crosswalk')
-      .select(selectCol)
-      .eq(filterCol, scopeId ?? '')
-      .not(selectCol, 'is', null);
-
-    if (error) {
-      this.logger.warn(`Scope crosswalk lookup failed: ${error.message}`);
-      return null;
-    }
-
-    const ids = new Set<string>();
-    for (const row of data ?? []) {
-      const val = (row as Record<string, unknown>)[selectCol];
-      if (val) ids.add(String(val));
-    }
-    return Array.from(ids);
+  private buildCutoffDate(stalenessDays: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - stalenessDays);
+    return d.toISOString().slice(0, 10);
   }
 
-  private crosswalkColForGeo(geoLevel: GeoLevel): string {
-    if (geoLevel === 'county') return 'county_fips';
-    if (geoLevel === 'zip') return 'zip_code';
-    return 'cbsa_code';
-  }
-
-  private async fetchRankedRows(
-    tc: RankingMetricConfig,
+  private buildResult(
+    input: ResolveRankingInput,
+    metric: RankingMetricConfig,
     direction: RankingDirection,
-    fetchLimit: number,
-    scopeRegionIds: string[] | null = null,
-  ): Promise<Record<string, unknown>[]> {
-    const selectCols = [
-      tc.idColumn,
-      tc.nameColumn,
-      tc.stateColumn,
-      tc.valueColumn,
-      tc.dateColumn,
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    let query = this.supabase
-      .getClient()
-      .from(tc.sourceTable)
-      .select(selectCols)
-      .not(tc.valueColumn, 'is', null)
-      .order(tc.valueColumn, { ascending: direction === 'bottom' })
-      .limit(fetchLimit);
-
-    if (tc.metricNameFilter)
-      query = query.eq('metric_name', tc.metricNameFilter);
-    if (scopeRegionIds !== null) query = query.in(tc.idColumn, scopeRegionIds);
-
-    const { data, error } = await query;
-    if (error) throw new Error(`Ranking query failed: ${error.message}`);
-    return (data ?? []) as Record<string, unknown>[];
+    rankings: RankingEntry[],
+    eligibleCount: number,
+    excludedCount: number,
+    asOf: string | null,
+    insufficientData: boolean,
+  ): ResolveRankingResult {
+    return {
+      metric: {
+        id: input.metric_id,
+        label: metric.label,
+        unit: metric.unit,
+        format: metric.format,
+      },
+      scope: {
+        type: input.scope_type,
+        id: input.scope_id,
+        label: input.scope_id ?? 'National',
+      },
+      geo_level: input.geo_level,
+      direction,
+      as_of: asOf,
+      eligible_count: eligibleCount,
+      excluded_count: excludedCount,
+      rankings,
+      insufficient_data: insufficientData,
+    };
   }
 }

@@ -58,12 +58,13 @@ function buildHarness(opts: {
   //
   // We implement this by tracking `from()` call index: each `from()` call
   // returns a fresh builder that resolves to the next queued value when awaited.
-  // B1: only fetchRankedRows; no countExcluded yet.
+  // Two source-table calls per resolve():
+  //   1. countExcluded  → { count, error }
+  //   2. fetchRankedRows → { data, error }
   const resolveQueue = [
-    { data: fetchRows, error: null }, // fetchRankedRows
+    { count: excludedCount, error: null },
+    { data: fetchRows, error: null },
   ];
-  // Suppress unused-variable lint — excludedCount wired in B3.
-  void excludedCount;
   let queueIdx = 0;
 
   function makeBuilder(resolveValue: unknown) {
@@ -239,5 +240,29 @@ describe('RankingResolverService.resolve — B2 scope filtering', () => {
 
     expect(fromSpy).toHaveBeenCalledWith('geography_crosswalk');
     expect(eqSpy).toHaveBeenCalledWith('cbsa_code', '31080');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// B3: Staleness filter + excluded_count
+// ---------------------------------------------------------------------------
+
+describe('RankingResolverService.resolve — B3 staleness + excluded_count', () => {
+  it('applies .gte(dateColumn, cutoffDate) with date ~60 days ago for home_value', async () => {
+    const { service, gteSpy } = buildHarness({});
+    await service.resolve(nationalMetroInput);
+
+    expect(gteSpy).toHaveBeenCalledWith('period_date', expect.any(String));
+    const cutoff = gteSpy.mock.calls[0][1] as string;
+    const cutoffMs = new Date(cutoff).getTime();
+    const expectedMs = Date.now() - 60 * 24 * 60 * 60 * 1000;
+    // Within 1 day tolerance
+    expect(Math.abs(cutoffMs - expectedMs)).toBeLessThan(24 * 60 * 60 * 1000);
+  });
+
+  it('exposes excluded_count from the count query result', async () => {
+    const { service } = buildHarness({ excludedCount: 7 });
+    const result = await service.resolve(nationalMetroInput);
+    expect(result.excluded_count).toBe(7);
   });
 });
