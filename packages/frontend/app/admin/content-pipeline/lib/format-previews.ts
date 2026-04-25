@@ -32,18 +32,19 @@ export const FORMAT_META: Record<string, FormatMeta> = {
     purpose: "Open with the PropertyIQ Score and grade letter, close with CTA.",
   },
   top_10_ranking: {
-    displayName: "Top 10 Ranking",
-    audience: "Investor",
+    displayName: "Top 10 Markets",
+    audience: "Investors, agents prospecting",
     duration: 60,
     aspect: "9:16",
-    purpose: "Countdown of the top 10 markets for a metric.",
+    purpose:
+      "Celebrate the leaders by any metric. National, state, or metro scope.",
   },
   bottom_10_ranking: {
-    displayName: "Bottom 10 Ranking",
-    audience: "Investor",
+    displayName: "Bottom 10 — Markets to Avoid",
+    audience: "Investors, agents protecting clients",
     duration: 60,
     aspect: "9:16",
-    purpose: "Countdown of the bottom 10 markets for a metric.",
+    purpose: "Spot the landmines on any metric you care about.",
   },
   score_mover: {
     displayName: "Score Mover",
