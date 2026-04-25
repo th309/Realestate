@@ -32,21 +32,21 @@ We need the wizard to support both modes — keep the existing one-off flow inta
 
 ## 3. Decisions and Why
 
-| #   | Decision                                                                                                                          | Why                                                                                                                                                                                        |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Path A (wizard UX only)                                                                                                           | Single-market formats already work end-to-end; multi-market data layer work is independent and can land later without wizard rework.                                                       |
-| 2   | Hybrid model: scope picker → checklist of resolved markets → one run per checked market                                           | Operator can prune the auto-resolved list before submit, but doesn't have to build it from scratch. Combines the speed of a rule-based picker with the safety of an explicit confirmation. |
-| 3   | Apply to single-market formats only (`grade_reveal`, `farm_area_spotlight`, `long_form_deep_dive`)                                | These can be batched safely — each run resolves to one geo, FetchDataHandler is happy. Multi-market formats produce broken videos until Path B lands.                                      |
-| 4   | Five scope types: `metros_in_state`, `zips_in_state`, `zips_in_metro`, `single`, `custom`                                         | Covers operator-stated examples ("metros in x state", "zipcodes", "all zips in x metro") plus the long-tail escape hatch (custom paste). Top-N and saved scopes deferred.                  |
-| 5   | Tiered batch caps: 1–49 just submits, 50–249 confirm dialog, 250–500 confirm + explicit ack checkbox, >500 blocked at Market step | Catches fat-finger mistakes without nagging on small batches. Extra ack at 250+ acknowledges real cost magnitude. Hard cap at 500 reflects pg-boss queue depth realities.                  |
-| 6   | All settings batch-level (one approval_mode + one platform list per batch)                                                        | Per-row controls would dominate visual weight of the checklist and turn it into a spreadsheet. Operators wanting per-market settings split into multiple batches.                          |
-| 7   | Batch toggle inside Market step (Approach 3), not a separate step or tab system                                                   | Preserves dominant single-market case unchanged. Batch is opt-in, visually distinct, never tripped into accidentally.                                                                      |
+| #   | Decision                                                                                                                                                                     | Why                                                                                                                                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Path A (wizard UX only)                                                                                                                                                      | Single-market formats already work end-to-end; multi-market data layer work is independent and can land later without wizard rework.                                                       |
+| 2   | Hybrid model: scope picker → checklist of resolved markets → one run per checked market                                                                                      | Operator can prune the auto-resolved list before submit, but doesn't have to build it from scratch. Combines the speed of a rule-based picker with the safety of an explicit confirmation. |
+| 3   | Apply to single-market formats only (`grade_reveal`, `farm_area_spotlight`, `long_form_deep_dive`)                                                                           | These can be batched safely — each run resolves to one geo, FetchDataHandler is happy. Multi-market formats produce broken videos until Path B lands.                                      |
+| 4   | Four batch-mode scope types in the picker: `metros_in_state`, `zips_in_state`, `zips_in_metro`, `custom`. Single-market mode is the wizard-level toggle, not a picker entry. | Covers operator-stated examples ("metros in x state", "zipcodes", "all zips in x metro") plus the long-tail escape hatch (custom paste). Top-N and saved scopes deferred.                  |
+| 5   | Tiered batch caps: 1–49 just submits, 50–249 confirm dialog, 250–500 confirm + explicit ack checkbox, >500 blocked at Market step                                            | Catches fat-finger mistakes without nagging on small batches. Extra ack at 250+ acknowledges real cost magnitude. Hard cap at 500 reflects pg-boss queue depth realities.                  |
+| 6   | All settings batch-level (one approval_mode + one platform list per batch)                                                                                                   | Per-row controls would dominate visual weight of the checklist and turn it into a spreadsheet. Operators wanting per-market settings split into multiple batches.                          |
+| 7   | Batch toggle inside Market step (Approach 3), not a separate step or tab system                                                                                              | Preserves dominant single-market case unchanged. Batch is opt-in, visually distinct, never tripped into accidentally.                                                                      |
 
 ## 4. UX Design
 
 ### 4.1 Wizard step structure
 
-Stays at 4 steps: `Format → Market → Style/Voice → Confirm`. All changes live inside the Market and Confirm steps.
+Stays at 3 steps: `Format → Market → Confirm`. All changes live inside the Market and Confirm steps. (Voice is hardcoded to PropertyIQ Edge TTS today; approval mode lives on the Confirm step. There is no separate Style/Voice step.)
 
 ### 4.2 Market step
 
@@ -94,7 +94,7 @@ Stays at 4 steps: `Format → Market → Style/Voice → Confirm`. All changes l
 
 - Up to 500 rows: render fully, virtualized.
 - 500–2,500: render fully + banner: `Large scope — 2,743 markets. Tip: use search to narrow before bulk-unchecking.`
-- No cap on display; the cap on submit is the 250/500 ack flow.
+- Backend caps the resolve response at 2,500 rows (returns `truncated: true`). When truncated, render the full 2,500 + a sticky banner above the list: `Showing 2,500 of N+ markets. Narrow your scope (e.g. pick a single state) to see all results.` Submit cap (Section 4.4) still applies — the ack-flow uses the count of CHECKED rows, not the resolved count.
 
 **Edge states:**
 
@@ -108,11 +108,7 @@ Stays at 4 steps: `Format → Market → Style/Voice → Confirm`. All changes l
 - Resolve failed: inline `Couldn't resolve scope. Retry.` button.
 - Custom list zero valid: `No valid codes found. Check the format.`
 
-### 4.4 Style/Voice step
-
-Unchanged from today.
-
-### 4.5 Confirm step
+### 4.4 Confirm step
 
 **Single mode:** unchanged.
 
@@ -130,7 +126,7 @@ Unchanged from today.
   - 2–49: `Submit 42 runs`
   - 50–249: `Review batch (42 runs)` → opens M3Dialog with summary + cost + Cancel/Submit
   - 250–500: same dialog + checkbox `[ ] I understand this will create 312 runs and cost ≈ $31.20.` Submit disabled until checked.
-  - > 500: blocked at Market step (Next disabled, helper `Batch cap is 500. Use a narrower scope or pick fewer markets.`).
+  - \>500: blocked at Market step (Next disabled, helper `Batch cap is 500. Use a narrower scope or pick fewer markets.`).
 
 **Submit flow:**
 
@@ -256,14 +252,13 @@ Path: `packages/frontend/app/admin/content-pipeline/new/`
 
 ### 6.2 Modified components
 
-| File                                                                            | Change                                                                                                                                                                                                                                                    |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `market-step.tsx` (existing ~150 lines)                                         | Add mode toggle at top; conditionally render single body or `<MarketStepBatch />`. +40 lines, well under cap.                                                                                                                                             |
-| `confirm-step.tsx` (existing ~280 lines, near cap)                              | Branch on `mode === 'batch'`; render `<BatchConfirmBanner />` instead of single summary; swap Submit button label; open `<BatchSubmitDialog />` for ≥50. Extract single-market summary (see above) at same time. Net change ≈ +10 lines, stays under cap. |
-| `wizard-state.ts` (or wherever wizard state lives — confirm during exploration) | Add fields: `mode: 'single' \| 'batch'`, `batchScope?`, `resolvedMarkets?`, `checkedMarketIds: Set<string>`.                                                                                                                                              |
-| `page.tsx` (wizard shell)                                                       | Pass `mode` to confirm step and submit handler; branch handler on `createRun` (today) vs `createBatchRuns` (new).                                                                                                                                         |
-| `format-step.tsx`                                                               | No change — existing `enabled` filter from earlier work already gates which formats appear; batch mode honors the same filter.                                                                                                                            |
-| Runs-list page (main pipeline page)                                             | Read `?batch=<id>` from URL, filter `runs` array client-side, render banner if filter active. ~15 lines.                                                                                                                                                  |
+| File                                                                                    | Change                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `market-step.tsx` (existing ~150 lines)                                                 | Add mode toggle at top; conditionally render single body or `<MarketStepBatch />`. +40 lines, well under cap.                                                                                                                                                                   |
+| `confirm-step.tsx` (existing ~280 lines, near cap)                                      | Branch on `mode === 'batch'`; render `<BatchConfirmBanner />` instead of single summary; swap Submit button label; open `<BatchSubmitDialog />` for ≥50. Extract single-market summary (see above) at same time. Net change ≈ +10 lines, stays under cap.                       |
+| `page.tsx` (wizard shell, currently ~43 lines, holds wizard state inline as `useState`) | Add state fields: `mode: 'single' \| 'batch'`, `batchScope?`, `resolvedMarkets?`, `checkedMarketIds: Set<string>`. Pass `mode` to Market and Confirm steps. Branch submit handler on `createRun` (today) vs `createBatchRuns` (new). Estimated +30 lines, stays well under cap. |
+| `format-step.tsx`                                                                       | No change — existing `enabled` filter from earlier work already gates which formats appear; batch mode honors the same filter.                                                                                                                                                  |
+| Runs-list page (main pipeline page)                                                     | Read `?batch=<id>` from URL, filter `runs` array client-side, render banner if filter active. ~15 lines.                                                                                                                                                                        |
 
 ### 6.3 New API client functions
 
