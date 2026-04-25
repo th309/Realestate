@@ -3,6 +3,7 @@ import { useState } from "react";
 import { resolveMarket } from "../lib/content-pipeline-api";
 import type { BatchMarket } from "../lib/batch-runs-api";
 import type { WizardMode } from "./page";
+import { MarketStepBatch } from "./market-step-batch";
 
 interface MarketMatch {
   id: string;
@@ -36,7 +37,7 @@ export function MarketStep({
       {mode === "single" ? (
         <SingleMarketBody onPick={onPickSingle} />
       ) : (
-        <BatchPlaceholder onPick={onPickBatch} />
+        <MarketStepBatch onPick={onPickBatch} />
       )}
     </div>
   );
@@ -116,19 +117,5 @@ function SingleMarketBody({ onPick }: { onPick: (market: string) => void }) {
         ))}
       </div>
     </>
-  );
-}
-
-function BatchPlaceholder({
-  onPick,
-}: {
-  onPick: (markets: BatchMarket[]) => void;
-}) {
-  void onPick;
-  return (
-    <div className="rounded-xl bg-surface-container-low p-6 text-sm text-on-surface-variant">
-      Batch mode is being wired up in the next implementation step. Switch back
-      to <strong>Single market</strong> for now.
-    </div>
   );
 }
