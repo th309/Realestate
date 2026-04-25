@@ -25,6 +25,7 @@ import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish
 import { PublishTikTokHandler } from './orchestrator/job-handlers/publish-tiktok.handler';
 import { PublishInstagramHandler } from './orchestrator/job-handlers/publish-instagram.handler';
 import { PublishFacebookHandler } from './orchestrator/job-handlers/publish-facebook.handler';
+import { PublishLinkedInHandler } from './orchestrator/job-handlers/publish-linkedin.handler';
 import { GenerateLeadMagnetHandler } from './orchestrator/job-handlers/generate-lead-magnet.handler';
 import { TimeCaptionsHandler } from './orchestrator/job-handlers/time-captions.handler';
 
@@ -42,6 +43,7 @@ import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
 import { TikTokPublisher } from './drivers/tiktok-publisher';
 import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
 import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
+import { LinkedInPublisher } from './drivers/linkedin-publisher';
 import { PLATFORM_PUBLISHERS } from './drivers/platform-publisher.interface';
 import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
 import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
@@ -103,6 +105,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     TikTokPublisher,
     InstagramReelsPublisher,
     FacebookReelsPublisher,
+    LinkedInPublisher,
     {
       provide: PLATFORM_PUBLISHERS,
       useFactory: (
@@ -110,12 +113,14 @@ import { PlatformCredentialsService } from './platform-credentials.service';
         tt: TikTokPublisher,
         ig: InstagramReelsPublisher,
         fb: FacebookReelsPublisher,
-      ) => [yt, tt, ig, fb],
+        li: LinkedInPublisher,
+      ) => [yt, tt, ig, fb, li],
       inject: [
         YouTubeShortsPublisher,
         TikTokPublisher,
         InstagramReelsPublisher,
         FacebookReelsPublisher,
+        LinkedInPublisher,
       ],
     },
 
@@ -145,6 +150,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     PublishTikTokHandler,
     PublishInstagramHandler,
     PublishFacebookHandler,
+    PublishLinkedInHandler,
     GenerateLeadMagnetHandler,
     HandlersBootstrapService,
 
