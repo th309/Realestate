@@ -7,6 +7,7 @@ import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
 import { MagnetLibraryService } from './magnets/magnet-library.service';
 import { MagnetLibraryController } from './magnets/magnet-library.controller';
+import { FormatsController } from './formats/formats.controller';
 import { VisionExtractorService } from './style-refs/vision-extractor.service';
 import { StyleReferenceService } from './style-refs/style-reference.service';
 import { StyleReferenceController } from './style-refs/style-reference.controller';
@@ -99,6 +100,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     MagnetLibraryController,
     StyleReferenceController,
     ArchetypeLibraryController,
+    FormatsController,
   ],
   providers: [
     ContentRunsService,

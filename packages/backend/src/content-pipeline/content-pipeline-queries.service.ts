@@ -18,6 +18,70 @@ import {
 export class ContentPipelineQueriesService {
   constructor(private readonly supabase: SupabaseService) {}
 
+  /**
+   * For each format, return a signed URL to the most recent successful
+   * run's video_master so the /new wizard's format picker can show what
+   * the format ACTUALLY produces today (instead of the static MP4
+   * baked into /public/format-previews/ at P1 time).
+   *
+   * Picks the newest run in published / published_partial /
+   * ready_for_review state per format. Returns null for any format that
+   * hasn't produced a video yet — caller falls back to the static MP4.
+   *
+   * Caps at 200 most-recent runs scanned to avoid hammering the DB once
+   * the run table grows.
+   */
+  async getFormatSampleVideos(): Promise<
+    Record<
+      string,
+      { runId: string; marketName: string; videoUrl: string | null }
+    >
+  > {
+    const client = this.supabase.getClient();
+    const { data: runs } = await client
+      .from('content_runs')
+      .select('id, format, market_query, status, created_at')
+      .in('status', ['published', 'published_partial', 'ready_for_review'])
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (!runs || runs.length === 0) return {};
+
+    const byFormat = new Map<
+      string,
+      { id: string; format: string; market_query: string }
+    >();
+    for (const r of runs) {
+      const fmt = r.format as string;
+      if (!byFormat.has(fmt)) {
+        byFormat.set(fmt, {
+          id: r.id as string,
+          format: fmt,
+          market_query: (r.market_query as string) ?? 'Unknown',
+        });
+      }
+    }
+
+    const result: Record<
+      string,
+      { runId: string; marketName: string; videoUrl: string | null }
+    > = {};
+    await Promise.all(
+      Array.from(byFormat.entries()).map(async ([format, run]) => {
+        const signed = await getAssetSignedUrlFn(
+          client,
+          run.id,
+          'video_master',
+        );
+        result[format] = {
+          runId: run.id,
+          marketName: run.market_query,
+          videoUrl: signed?.url ?? null,
+        };
+      }),
+    );
+    return result;
+  }
+
   async getDashboard(): Promise<DashboardResponseDto> {
     const client = this.supabase.getClient();
     const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
