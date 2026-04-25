@@ -10,6 +10,7 @@ import { MagnetLibraryController } from './magnets/magnet-library.controller';
 import { FormatsController } from './formats/formats.controller';
 import { ScopeController } from './scope/scope.controller';
 import { ScopeService } from './scope/scope.service';
+import { BatchRunsController } from './batch-runs.controller';
 import { VisionExtractorService } from './style-refs/vision-extractor.service';
 import { StyleReferenceService } from './style-refs/style-reference.service';
 import { StyleReferenceController } from './style-refs/style-reference.controller';
@@ -104,6 +105,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     ArchetypeLibraryController,
     FormatsController,
     ScopeController,
+    BatchRunsController,
   ],
   providers: [
     ContentRunsService,
