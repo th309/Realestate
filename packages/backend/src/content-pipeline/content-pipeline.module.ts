@@ -24,6 +24,7 @@ import { PublishHandler } from './orchestrator/job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish-youtube-shorts.handler';
 import { PublishTikTokHandler } from './orchestrator/job-handlers/publish-tiktok.handler';
 import { PublishInstagramHandler } from './orchestrator/job-handlers/publish-instagram.handler';
+import { PublishFacebookHandler } from './orchestrator/job-handlers/publish-facebook.handler';
 import { GenerateLeadMagnetHandler } from './orchestrator/job-handlers/generate-lead-magnet.handler';
 import { TimeCaptionsHandler } from './orchestrator/job-handlers/time-captions.handler';
 
@@ -40,6 +41,7 @@ import { CredentialCrypto } from './drivers/credential-crypto';
 import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
 import { TikTokPublisher } from './drivers/tiktok-publisher';
 import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
+import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
 import { PLATFORM_PUBLISHERS } from './drivers/platform-publisher.interface';
 import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
 import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
@@ -100,17 +102,20 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     YouTubeShortsPublisher,
     TikTokPublisher,
     InstagramReelsPublisher,
+    FacebookReelsPublisher,
     {
       provide: PLATFORM_PUBLISHERS,
       useFactory: (
         yt: YouTubeShortsPublisher,
         tt: TikTokPublisher,
         ig: InstagramReelsPublisher,
-      ) => [yt, tt, ig],
+        fb: FacebookReelsPublisher,
+      ) => [yt, tt, ig, fb],
       inject: [
         YouTubeShortsPublisher,
         TikTokPublisher,
         InstagramReelsPublisher,
+        FacebookReelsPublisher,
       ],
     },
 
@@ -139,6 +144,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     PublishYouTubeShortsHandler,
     PublishTikTokHandler,
     PublishInstagramHandler,
+    PublishFacebookHandler,
     GenerateLeadMagnetHandler,
     HandlersBootstrapService,
 
