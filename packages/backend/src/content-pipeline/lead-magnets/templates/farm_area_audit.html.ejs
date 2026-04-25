@@ -1,0 +1,70 @@
+<!-- packages/backend/src/content-pipeline/lead-magnets/templates/farm_area_audit.html.ejs -->
+<h1>Farm Area Audit — <%= dataBundle.metro?.canonical_name ?? dataBundle.geo?.canonical_name ?? 'Your Metro' %></h1>
+<p style="font-size: 11pt; color: #5C6BC0;">
+  Prepared for <%= userContext.userName %> on <%= today %>
+</p>
+
+<p style="font-size: 11pt; line-height: 1.5; margin: 16px 0 24px;">
+  The 20 strongest farm areas in this metro, ranked by an opportunity score
+  that blends turnover (how often homes change hands), absentee ownership
+  (more rentals = more agent opportunity), and median price (your fee scales
+  with it). Use this list to pick where to door-knock, mail, and post listings.
+</p>
+
+<h2>Top 20 Farm Areas</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+  <thead>
+    <tr style="background: #E8EAF6; color: #1A237E;">
+      <th style="text-align: left; padding: 8px 6px;">#</th>
+      <th style="text-align: left; padding: 8px 6px;">ZIP / Neighborhood</th>
+      <th style="text-align: right; padding: 8px 6px;">Households</th>
+      <th style="text-align: right; padding: 8px 6px;">Turnover %</th>
+      <th style="text-align: right; padding: 8px 6px;">Absentee %</th>
+      <th style="text-align: right; padding: 8px 6px;">Median Value</th>
+      <th style="text-align: right; padding: 8px 6px;">Opportunity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (dataBundle.farm_areas ?? []).slice(0, 20).forEach(function(a, i) { %>
+    <tr style="border-bottom: 1px solid #E8EAF6;">
+      <td style="padding: 6px; color: #5C6BC0; font-family: monospace;"><%= i + 1 %></td>
+      <td style="padding: 6px;">
+        <strong><%= a.label ?? a.postal_code %></strong>
+        <% if (a.label && a.postal_code) { %>
+          <span style="color: #5C6BC0; font-family: monospace;"> · <%= a.postal_code %></span>
+        <% } %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= (a.households ?? 0).toLocaleString() %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= (a.turnover_pct ?? 0).toFixed(1) %>%
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= (a.absentee_pct ?? 0).toFixed(0) %>%
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        $<%= Math.round((a.median_value ?? 0) / 1000).toLocaleString() %>K
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace; font-weight: 600; color: #00C853;">
+        <%= (a.opportunity_score ?? 0).toFixed(0) %>
+      </td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2 style="margin-top: 24px;">How to use this</h2>
+<p style="font-size: 11pt; line-height: 1.5;">
+  Sort your farm by opportunity score. Areas at the top combine:
+</p>
+<ul style="font-size: 11pt; line-height: 1.6; padding-left: 20px;">
+  <li><strong>High turnover</strong> — listings are moving, so your prospecting effort recycles into deals fast.</li>
+  <li><strong>Moderate-to-high absentee %</strong> — rental owners refresh property managers and listing agents, opening the door for capture.</li>
+  <li><strong>Mid-to-high median value</strong> — you'd rather work a $400K market than a $120K one for the same hour invested.</li>
+</ul>
+
+<p style="font-size: 11pt; line-height: 1.5; margin-top: 16px;">
+  Pick 3-5 from the top 10 and commit to monthly mailers. The areas at #11-20
+  are second-tier candidates — useful when your top picks get crowded.
+</p>

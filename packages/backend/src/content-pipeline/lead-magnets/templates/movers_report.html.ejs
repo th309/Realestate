@@ -1,0 +1,68 @@
+<!-- packages/backend/src/content-pipeline/lead-magnets/templates/movers_report.html.ejs -->
+<h1>Movers and Shakers — <%= dataBundle.period_label ?? 'This Month' %></h1>
+<p style="font-size: 11pt; color: #5C6BC0;">
+  Prepared for <%= userContext.userName %> on <%= today %>
+</p>
+
+<p style="font-size: 11pt; line-height: 1.5; margin: 16px 0 24px;">
+  Markets here moved 5+ PropertyIQ Score points in the last 30 days. Big
+  positive jumps mean demand is heating up; big negative drops mean
+  inventory is stacking and sellers are losing leverage. Either is a
+  signal worth knowing about before the rest of the market catches on.
+</p>
+
+<h2 style="color: #00C853;">Top movers up</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 24px;">
+  <thead>
+    <tr style="background: #E8EAF6; color: #1A237E;">
+      <th style="text-align: left; padding: 8px 6px;">Market</th>
+      <th style="text-align: right; padding: 8px 6px;">PIQ Score</th>
+      <th style="text-align: right; padding: 8px 6px;">Δ 30d</th>
+      <th style="text-align: right; padding: 8px 6px;">DOM</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (dataBundle.movers_up ?? []).slice(0, 15).forEach(function(m) { %>
+    <tr style="border-bottom: 1px solid #E8EAF6;">
+      <td style="padding: 6px;"><strong><%= m.name %></strong></td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= m.piq_score %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace; color: #00C853;">
+        +<%= m.delta_30d.toFixed(1) %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= m.median_dom ?? '—' %>
+      </td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2 style="color: #B3261E;">Top movers down</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+  <thead>
+    <tr style="background: #E8EAF6; color: #1A237E;">
+      <th style="text-align: left; padding: 8px 6px;">Market</th>
+      <th style="text-align: right; padding: 8px 6px;">PIQ Score</th>
+      <th style="text-align: right; padding: 8px 6px;">Δ 30d</th>
+      <th style="text-align: right; padding: 8px 6px;">DOM</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (dataBundle.movers_down ?? []).slice(0, 15).forEach(function(m) { %>
+    <tr style="border-bottom: 1px solid #E8EAF6;">
+      <td style="padding: 6px;"><strong><%= m.name %></strong></td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= m.piq_score %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace; color: #B3261E;">
+        <%= m.delta_30d.toFixed(1) %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= m.median_dom ?? '—' %>
+      </td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>

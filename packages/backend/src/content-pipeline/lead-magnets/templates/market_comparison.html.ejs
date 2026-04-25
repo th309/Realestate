@@ -1,0 +1,61 @@
+<!-- packages/backend/src/content-pipeline/lead-magnets/templates/market_comparison.html.ejs -->
+<h1>5-Market Deep Comparison</h1>
+<p style="font-size: 11pt; color: #5C6BC0;">
+  Prepared for <%= userContext.userName %> on <%= today %>
+</p>
+
+<p style="font-size: 11pt; line-height: 1.5; margin: 16px 0 24px;">
+  Side-by-side numbers for the markets you asked us to compare. Sorted by
+  PropertyIQ Score so the strongest demand signal is up top.
+</p>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+  <thead>
+    <tr style="background: #1A237E; color: white;">
+      <th style="text-align: left; padding: 10px 8px;">Metric</th>
+      <% (dataBundle.markets ?? []).forEach(function(m) { %>
+        <th style="text-align: right; padding: 10px 8px;"><%= m.name %></th>
+      <% }); %>
+    </tr>
+  </thead>
+  <tbody>
+    <% var rows = [
+      { label: 'PropertyIQ Score', key: 'piq_score', fmt: 'num' },
+      { label: 'Grade', key: 'grade', fmt: 'str' },
+      { label: 'Confidence', key: 'confidence', fmt: 'str' },
+      { label: 'Median Home Value', key: 'median_price', fmt: 'usd' },
+      { label: 'YoY Price Change', key: 'price_yoy_pct', fmt: 'pct' },
+      { label: 'Median Rent', key: 'median_rent', fmt: 'usd' },
+      { label: 'Rent YoY Change', key: 'rent_yoy_pct', fmt: 'pct' },
+      { label: 'Months of Supply', key: 'months_of_supply', fmt: 'num1' },
+      { label: 'Median DOM', key: 'median_dom', fmt: 'num' },
+      { label: '% Sold Above List', key: 'sold_above_list_pct', fmt: 'pct' },
+      { label: 'Population', key: 'population', fmt: 'num' },
+      { label: 'Median Income', key: 'median_income', fmt: 'usd' },
+      { label: 'Unemployment %', key: 'unemployment_rate', fmt: 'pct' }
+    ]; %>
+    <% rows.forEach(function(r, i) { %>
+    <tr style="background: <%= i % 2 ? '#FAFBFF' : 'white' %>; border-bottom: 1px solid #E8EAF6;">
+      <td style="padding: 6px 8px; color: #1A237E; font-weight: 500;"><%= r.label %></td>
+      <% (dataBundle.markets ?? []).forEach(function(m) { %>
+        <td style="padding: 6px 8px; text-align: right; font-family: monospace;">
+          <% var v = m[r.key]; %>
+          <% if (v == null) { %>—<%
+             } else if (r.fmt === 'usd') { %>$<%= Math.round(v).toLocaleString() %><%
+             } else if (r.fmt === 'pct') { %><%= v.toFixed(1) %>%<%
+             } else if (r.fmt === 'num1') { %><%= Number(v).toFixed(1) %><%
+             } else { %><%= v %><% } %>
+        </td>
+      <% }); %>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2 style="margin-top: 32px;">Reading the numbers</h2>
+<p style="font-size: 11pt; line-height: 1.5;">
+  PIQ Score is the headline. Above 70 is genuinely strong demand; 40-60 is
+  balanced; below 40 means buyers have leverage. Look for markets where the
+  score is high AND months-of-supply is below 4 — those are the markets
+  where bidding is competitive enough to support price growth.
+</p>

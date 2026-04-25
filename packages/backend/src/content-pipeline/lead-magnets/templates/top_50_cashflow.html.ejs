@@ -1,0 +1,51 @@
+<!-- packages/backend/src/content-pipeline/lead-magnets/templates/top_50_cashflow.html.ejs -->
+<h1>Top 50 Cashflow Markets — <%= dataBundle.state ?? dataBundle.geo?.canonical_name ?? 'Nationwide' %></h1>
+<p style="font-size: 11pt; color: #5C6BC0;">
+  Prepared for <%= userContext.userName %> on <%= today %>
+</p>
+
+<p style="font-size: 11pt; line-height: 1.5; margin: 16px 0 24px;">
+  Cashflow rank blends median rent vs. median home price, vacancy, and the
+  PropertyIQ Score. Higher rank means more rent-per-dollar of acquisition
+  cost, in markets that aren't bleeding tenants.
+</p>
+
+<h2>The Top 50</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+  <thead>
+    <tr style="background: #E8EAF6; color: #1A237E;">
+      <th style="text-align: left; padding: 8px 6px;">#</th>
+      <th style="text-align: left; padding: 8px 6px;">Market</th>
+      <th style="text-align: right; padding: 8px 6px;">PIQ Score</th>
+      <th style="text-align: right; padding: 8px 6px;">Median Price</th>
+      <th style="text-align: right; padding: 8px 6px;">Median Rent</th>
+      <th style="text-align: right; padding: 8px 6px;">Rent/Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (dataBundle.markets ?? []).slice(0, 50).forEach(function(m, i) { %>
+    <tr style="border-bottom: 1px solid #E8EAF6;">
+      <td style="padding: 6px; color: #5C6BC0; font-family: monospace;"><%= i + 1 %></td>
+      <td style="padding: 6px;"><strong><%= m.name %></strong></td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;"><%= m.piq_score ?? '—' %></td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        $<%= Math.round((m.median_price ?? 0) / 1000).toLocaleString() %>K
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        $<%= (m.median_rent ?? 0).toLocaleString() %>
+      </td>
+      <td style="padding: 6px; text-align: right; font-family: monospace;">
+        <%= ((m.median_rent ?? 0) / (m.median_price ?? 1) * 100).toFixed(2) %>%
+      </td>
+    </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<h2>How to read this</h2>
+<p style="font-size: 11pt; line-height: 1.5;">
+  Markets at the top combine a strong PIQ Score (broad market health) with a
+  high rent-to-price ratio (cashflow potential). Look for the cluster where
+  both numbers are above the median — those are markets where you're buying
+  into both stability and yield, not gambling on one or the other.
+</p>
