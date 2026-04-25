@@ -27,6 +27,7 @@ import { MarketsModule } from '../markets/markets.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { GeographyModule } from '../geography/geography.module';
 import { MarketSnapshotModule } from '../market-snapshot/market-snapshot.module';
+import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 
 import { QueueModule } from './orchestrator/queue.module';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
@@ -98,6 +99,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     ScoringModule,
     GeographyModule,
     MarketSnapshotModule,
+    MetricResolutionModule,
   ],
   controllers: [
     ContentPipelineController,

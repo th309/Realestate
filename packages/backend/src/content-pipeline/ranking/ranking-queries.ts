@@ -55,7 +55,7 @@ export async function resolveScopeRegionIds(
 
   const ids = new Set<string>();
   for (const row of data ?? []) {
-    const val = (row as Record<string, unknown>)[selectCol];
+    const val = (row as unknown as Record<string, unknown>)[selectCol];
     if (val) ids.add(String(val));
   }
   return Array.from(ids);
@@ -128,5 +128,5 @@ export async function fetchRankedRows(
 
   const { data, error } = await query;
   if (error) throw new Error(`Ranking query failed: ${error.message}`);
-  return (data ?? []) as Record<string, unknown>[];
+  return (data ?? []) as unknown as Record<string, unknown>[];
 }

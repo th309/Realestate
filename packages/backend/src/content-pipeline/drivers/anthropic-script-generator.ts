@@ -134,7 +134,7 @@ async function generateRankingScript(
 
     const schemaResult = RankingScriptSchema.safeParse(parsed);
     if (!schemaResult.success) {
-      lastError = `Schema errors: ${JSON.stringify(schemaResult.error.errors)}`;
+      lastError = `Schema errors: ${JSON.stringify(schemaResult.error.issues)}`;
       continue;
     }
 
