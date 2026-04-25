@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   PLATFORM_PUBLISHERS,
   PlatformPublisher,
@@ -9,6 +9,7 @@ import {
   type AppCredentialStatus,
 } from './platform-app-credentials.service';
 import { buildOAuthUrl } from './oauth/oauth-urls';
+import { platformRedirectUri } from './oauth/oauth-urls';
 
 export interface PlatformStatus {
   platform: string;
@@ -32,6 +33,8 @@ const ALL_PLATFORMS = [
 
 @Injectable()
 export class PlatformManagerService {
+  private readonly logger = new Logger(PlatformManagerService.name);
+
   constructor(
     @Inject(PLATFORM_PUBLISHERS)
     private readonly publishers: PlatformPublisher[],
@@ -61,6 +64,16 @@ export class PlatformManagerService {
   }
 
   async startOAuth(platform: string): Promise<{ authUrl: string }> {
-    return { authUrl: await buildOAuthUrl(platform, this.appCreds) };
+    const authUrl = await buildOAuthUrl(platform, this.appCreds);
+    // Log the EXACT redirect_uri we're sending so the operator can diff
+    // it byte-for-byte against what's registered on the platform side
+    // when an error like "redirect_uri does not match registered value"
+    // shows up. LinkedIn / Meta / TikTok all do strict matching.
+    const redirectUri = platformRedirectUri(platform);
+    this.logger.log(
+      `[OAUTH-START] platform=${platform} redirect_uri=${redirectUri}`,
+    );
+    this.logger.log(`[OAUTH-START] platform=${platform} authUrl=${authUrl}`);
+    return { authUrl };
   }
 }

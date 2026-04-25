@@ -36,7 +36,11 @@ const LINKEDIN_SCOPES = [
 function redirectUri(platform: string): string {
   const base = process.env.APP_BASE_URL;
   if (!base) throw new Error('APP_BASE_URL not configured');
-  return `${base}/api/admin/content-pipeline/platforms/${platform}/oauth-callback`;
+  // Trim trailing slash so APP_BASE_URL=http://localhost:3001/ and
+  // APP_BASE_URL=http://localhost:3001 produce the same redirect URI.
+  // LinkedIn (and most providers) compare the registered value
+  // byte-for-byte; a stray // would fail the match.
+  return `${base.replace(/\/$/, '')}/api/admin/content-pipeline/platforms/${platform}/oauth-callback`;
 }
 
 /**
