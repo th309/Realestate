@@ -44,6 +44,7 @@ import { TikTokPublisher } from './drivers/tiktok-publisher';
 import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
 import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
 import { LinkedInPublisher } from './drivers/linkedin-publisher';
+import { PlatformPublisherRegistry } from './drivers/platform-publisher.registry';
 import { PLATFORM_PUBLISHERS } from './drivers/platform-publisher.interface';
 import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
 import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
@@ -123,6 +124,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
         LinkedInPublisher,
       ],
     },
+    PlatformPublisherRegistry,
 
     RemotionCLIRenderer,
     { provide: VIDEO_RENDERER, useExisting: RemotionCLIRenderer },
@@ -169,6 +171,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     TTSDriverFactory,
     MetricsPullerService,
     PlatformCredentialsService,
+    PlatformPublisherRegistry,
   ],
 })
 export class ContentPipelineModule {}
