@@ -1,8 +1,16 @@
 import { Controller, Get, Logger, Param, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { google } from 'googleapis';
 import { verifyState } from './oauth-state';
 import { PlatformCredentialsService } from './platform-credentials.service';
+import { exchangeForPlatform } from './oauth/oauth-handlers';
+
+const SUPPORTED_PLATFORMS = new Set([
+  'youtube_shorts',
+  'tiktok',
+  'instagram_reels',
+  'facebook_reels',
+  'linkedin',
+]);
 
 @Controller('api/admin/content-pipeline/platforms')
 export class PlatformOAuthCallbackController {
@@ -31,67 +39,38 @@ export class PlatformOAuthCallbackController {
     if (!code || !state) {
       return redirectTo('error=missing_code_or_state');
     }
-
     try {
       verifyState(decodeURIComponent(state), platform);
     } catch (err) {
       this.logger.warn(
         `oauth-callback state_invalid platform=${platform} err=${(err as Error).message}`,
       );
-      return redirectTo(`error=state_invalid`);
+      return redirectTo('error=state_invalid');
     }
-
-    if (platform !== 'youtube_shorts') {
-      return redirectTo(`error=platform_not_supported`);
+    if (!SUPPORTED_PLATFORMS.has(platform)) {
+      return redirectTo('error=platform_not_supported');
     }
 
     try {
-      const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
-      const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
-      const appBaseUrl = process.env.APP_BASE_URL;
-      if (!clientId || !clientSecret || !appBaseUrl)
-        throw new Error('YOUTUBE_OAUTH_* env vars missing');
-
-      const redirectUri = `${appBaseUrl}/api/admin/content-pipeline/platforms/${platform}/oauth-callback`;
-      const oauth2 = new google.auth.OAuth2(
-        clientId,
-        clientSecret,
-        redirectUri,
+      const { accountLabel, refreshToken } = await exchangeForPlatform(
+        platform,
+        code,
       );
-      const { tokens } = await oauth2.getToken(code);
-      if (!tokens.refresh_token) {
-        return redirectTo(`error=no_refresh_token_returned`);
-      }
-      oauth2.setCredentials(tokens);
-
-      const yt = google.youtube({ version: 'v3', auth: oauth2 });
-      const channelsRes = await yt.channels.list({
-        mine: true,
-        part: ['snippet'],
-      });
-      const items = channelsRes.data.items ?? [];
-      if (items.length > 1) {
-        this.logger.warn(
-          `oauth-callback multiple_channels platform=${platform} count=${items.length} — using first`,
-        );
-      }
-      const handle =
-        items[0]?.snippet?.customUrl ?? items[0]?.snippet?.title ?? 'unknown';
-
-      await this.creds.upsertActive(platform, handle, tokens.refresh_token);
-
+      await this.creds.upsertActive(platform, accountLabel, refreshToken);
       this.logger.log(
-        `oauth-callback success platform=${platform} label=${handle}`,
+        `oauth-callback success platform=${platform} label=${accountLabel}`,
       );
       return redirectTo(
-        `connected=${encodeURIComponent(platform)}&label=${encodeURIComponent(handle)}`,
+        `connected=${encodeURIComponent(platform)}&label=${encodeURIComponent(accountLabel)}`,
       );
     } catch (err) {
       const msg = (err as Error).message;
       this.logger.error(
-        `oauth-callback code_exchange_failed platform=${platform} err=${msg}`,
+        `oauth-callback exchange_failed platform=${platform} err=${msg}`,
       );
-      return redirectTo(`error=${encodeURIComponent('code_exchange_failed')}`);
+      return redirectTo(
+        `error=${encodeURIComponent(`exchange_failed:${msg.slice(0, 80)}`)}`,
+      );
     }
   }
 }

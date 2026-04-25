@@ -16,23 +16,22 @@ const ALL_PLATFORMS = [
 ] as const;
 
 function errorMessage(code: string): string {
+  // exchange_failed:<reason> — emitted by the per-platform handlers when
+  // the code-for-token exchange fails. We pass the underlying error along.
+  if (code.startsWith("exchange_failed:")) {
+    return `Connect failed during token exchange — ${code.slice("exchange_failed:".length)}`;
+  }
   switch (code) {
     case "state_invalid":
       return "Connect session expired. Click Connect and finish within 10 minutes.";
     case "state_expired":
       return "Connect session expired. Try again.";
-    case "code_exchange_failed":
-      return "Google rejected the authorization code. Try again.";
-    case "channel_lookup_failed":
-      return "Could not read the connected channel. Try again.";
     case "access_denied":
-      return "You declined Google's consent screen. Connect again to retry.";
-    case "no_refresh_token_returned":
-      return "Google did not return a refresh token. Check consent screen settings.";
+      return "You declined the platform's consent screen. Connect again to retry.";
     case "missing_code_or_state":
       return "Callback was missing required parameters. Connect again.";
     case "platform_not_supported":
-      return "That platform's OAuth flow is not yet wired in this phase.";
+      return "That platform's OAuth flow is not wired up.";
     default:
       return `Connect failed (${code}). Try again.`;
   }
