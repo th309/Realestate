@@ -4,9 +4,29 @@ import {
   IsOptional,
   IsArray,
   IsUUID,
+  IsObject,
   MinLength,
 } from 'class-validator';
 import { ContentFormat, Platform, ApprovalMode } from '../types';
+
+/**
+ * Snapshot of ranking resolution params submitted by the operator at
+ * review time. Used for the submit-time drift check in ContentRunsService.
+ */
+export interface RankingRunParams {
+  format: 'top_10_ranking' | 'bottom_10_ranking';
+  metric: { id: string };
+  geo_level: 'metro' | 'county' | 'zip';
+  scope: { type: 'national' | 'state' | 'metro'; id: string | null };
+  resolved_markets: Array<{
+    rank: number;
+    region_id: string;
+    region_name: string;
+    state: string | null;
+    value: number;
+    value_formatted: string;
+  }>;
+}
 
 export class CreateRunDto {
   @IsIn([
@@ -44,4 +64,13 @@ export class CreateRunDto {
   @IsOptional()
   @IsUUID('4')
   batchId?: string;
+
+  /**
+   * Required when format is top_10_ranking or bottom_10_ranking.
+   * Contains the ranking snapshot the operator reviewed before submitting.
+   * The service re-resolves and compares to detect data drift.
+   */
+  @IsOptional()
+  @IsObject()
+  rankingParams?: RankingRunParams;
 }

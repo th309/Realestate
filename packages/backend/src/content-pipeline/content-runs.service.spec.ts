@@ -1,8 +1,10 @@
+import { ConflictException } from '@nestjs/common';
 import { ContentRunsService } from './content-runs.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
 import { QueueService } from './orchestrator/queue.service';
 import { ContentDataService } from './data/content-data.service';
+import { RankingResolverService } from './ranking/ranking-resolver.service';
 
 describe('ContentRunsService.triggerTestMagnet', () => {
   function buildHarness(overrides?: {
@@ -63,11 +65,16 @@ describe('ContentRunsService.triggerTestMagnet', () => {
     );
     const contentData = { resolveMarket } as unknown as ContentDataService;
 
+    const rankingResolver = {
+      resolve: jest.fn(),
+    } as unknown as RankingResolverService;
+
     const service = new ContentRunsService(
       supabase,
       orchestrator,
       queueService,
       contentData,
+      rankingResolver,
     );
 
     return {
@@ -76,6 +83,7 @@ describe('ContentRunsService.triggerTestMagnet', () => {
       queueSend,
       resolveMarket,
       getUserById,
+      rankingResolver,
     };
   }
 
@@ -258,5 +266,143 @@ describe('ContentRunsService.triggerTestMagnet', () => {
 
     expect(result.match.id).toBe('11111');
     expect(queueSend.mock.calls[0][1].resolvedGeo.id).toBe('11111');
+  });
+});
+
+describe('ContentRunsService.createRun — ranking drift check', () => {
+  const SUBMITTED_MARKET = {
+    rank: 1,
+    region_id: '12345',
+    region_name: 'Austin, TX',
+    state: 'TX',
+    value: 100,
+    value_formatted: '100',
+  };
+
+  const RANKING_PARAMS = {
+    format: 'top_10_ranking' as const,
+    metric: { id: 'piq_score' },
+    scope: { type: 'national' as const, id: null },
+    geo_level: 'metro' as const,
+    resolved_markets: [SUBMITTED_MARKET],
+  };
+
+  function buildDriftHarness() {
+    const rankingResolver = {
+      resolve: jest.fn(),
+    } as unknown as RankingResolverService;
+
+    // Supabase client that returns "no existing run" on idempotency check.
+    // Remaining calls (format_templates, content_runs insert) are not reached
+    // in drift-throw tests, so we only stub what we need.
+    const supabaseClient = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    };
+
+    const supabase = {
+      getClient: () => supabaseClient,
+    } as unknown as SupabaseService;
+
+    const orchestrator = {} as unknown as RunOrchestratorService;
+    const queueService = { send: jest.fn() } as unknown as QueueService;
+    const contentData = {
+      resolveMarket: jest.fn(),
+    } as unknown as ContentDataService;
+
+    const service = new ContentRunsService(
+      supabase,
+      orchestrator,
+      queueService,
+      contentData,
+      rankingResolver,
+    );
+
+    return { service, rankingResolver };
+  }
+
+  it('throws ConflictException when resolved_markets do not match fresh resolve', async () => {
+    const { service, rankingResolver } = buildDriftHarness();
+
+    (rankingResolver.resolve as jest.Mock).mockResolvedValue({
+      rankings: [
+        {
+          rank: 1,
+          region_id: '99999',
+          region_name: 'Different City, NY',
+          state: 'NY',
+          value: 100,
+          value_formatted: '100',
+        },
+      ],
+      insufficient_data: false,
+    });
+
+    await expect(
+      service.createRun({
+        format: 'top_10_ranking',
+        marketQuery: 'Top 10 metros by PIQ Score',
+        idempotencyKey: '00000000-0000-0000-0000-000000000001',
+        rankingParams: RANKING_PARAMS,
+      } as any),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('drift ConflictException carries data_drift error code', async () => {
+    const { service, rankingResolver } = buildDriftHarness();
+
+    (rankingResolver.resolve as jest.Mock).mockResolvedValue({
+      rankings: [
+        {
+          rank: 1,
+          region_id: '99999',
+          region_name: 'Different City, NY',
+          state: 'NY',
+          value: 100,
+          value_formatted: '100',
+        },
+      ],
+      insufficient_data: false,
+    });
+
+    let caught: ConflictException | undefined;
+    try {
+      await service.createRun({
+        format: 'top_10_ranking',
+        marketQuery: 'Top 10 metros by PIQ Score',
+        idempotencyKey: '00000000-0000-0000-0000-000000000002',
+        rankingParams: RANKING_PARAMS,
+      } as any);
+    } catch (e) {
+      caught = e as ConflictException;
+    }
+
+    expect(caught).toBeInstanceOf(ConflictException);
+    expect((caught!.getResponse() as any).error).toBe('data_drift');
+  });
+
+  it('skips drift check when rankingParams is absent on a ranking format', async () => {
+    const { service, rankingResolver } = buildDriftHarness();
+
+    // rankingParams omitted — resolver must NOT be called
+    // createRun will then fail on format_templates lookup (no mock), but that's
+    // beyond our test boundary; we only care that resolve was never invoked.
+    (rankingResolver.resolve as jest.Mock).mockResolvedValue({ rankings: [] });
+
+    try {
+      await service.createRun({
+        format: 'top_10_ranking',
+        marketQuery: 'Top 10 metros by PIQ Score',
+        idempotencyKey: '00000000-0000-0000-0000-000000000003',
+        // no rankingParams
+      } as any);
+    } catch {
+      // expected — no format_templates mock
+    }
+
+    expect(rankingResolver.resolve).not.toHaveBeenCalled();
   });
 });

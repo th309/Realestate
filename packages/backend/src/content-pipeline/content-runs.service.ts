@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateRunDto } from './dto/create-run.dto';
+import { CreateRunDto, RankingRunParams } from './dto/create-run.dto';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
 import { QueueService } from './orchestrator/queue.service';
 import { ContentDataService } from './data/content-data.service';
 import { LeadMagnetKind } from './drivers/lead-magnet-renderer.interface';
+import { RankingResolverService } from './ranking/ranking-resolver.service';
 
 /**
  * Operations that *create* content-pipeline work: spawn a new run from
@@ -21,6 +22,7 @@ export class ContentRunsService {
     private readonly orchestrator: RunOrchestratorService,
     private readonly queueService: QueueService,
     private readonly contentData: ContentDataService,
+    private readonly rankingResolver: RankingResolverService,
   ) {}
 
   async createRun(
@@ -38,6 +40,13 @@ export class ContentRunsService {
         idempotencyKey: dto.idempotencyKey,
         status: existing.data.status,
       };
+    }
+
+    if (
+      (dto.format === 'top_10_ranking' || dto.format === 'bottom_10_ranking') &&
+      dto.rankingParams
+    ) {
+      await this.checkRankingDrift(dto.rankingParams);
     }
 
     const { data: template } = await client
@@ -80,6 +89,31 @@ export class ContentRunsService {
       idempotencyKey: dto.idempotencyKey,
       status: inserted.status,
     };
+  }
+
+  private async checkRankingDrift(params: RankingRunParams): Promise<void> {
+    const fresh = await this.rankingResolver.resolve({
+      format: params.format,
+      metric_id: params.metric.id,
+      geo_level: params.geo_level,
+      scope_type: params.scope.type,
+      scope_id: params.scope.id,
+    });
+
+    const submittedKey = (params.resolved_markets ?? [])
+      .map((m) => `${m.rank}:${m.region_id}`)
+      .join('|');
+    const freshKey = fresh.rankings
+      .map((m) => `${m.rank}:${m.region_id}`)
+      .join('|');
+
+    if (submittedKey !== freshKey) {
+      throw new ConflictException({
+        error: 'data_drift',
+        message:
+          'Data shifted while you were reviewing — please re-run preview.',
+      });
+    }
   }
 
   async resolveMarket(query: string) {
