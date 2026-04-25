@@ -10,6 +10,13 @@ import { MagnetLibraryController } from './magnets/magnet-library.controller';
 import { VisionExtractorService } from './style-refs/vision-extractor.service';
 import { StyleReferenceService } from './style-refs/style-reference.service';
 import { StyleReferenceController } from './style-refs/style-reference.controller';
+import { YouTubeDiscoveryService } from './archetypes/youtube-discovery.service';
+import { TranscriptFetcherService } from './archetypes/transcript-fetcher.service';
+import { ArchetypeClusteringService } from './archetypes/archetype-clustering.service';
+import { ScriptArchetypeService } from './archetypes/script-archetype.service';
+import { ArchetypeRouter } from './archetypes/archetype-router.service';
+import { ArchetypeLibraryController } from './archetypes/archetype-library.controller';
+import { RefreshArchetypesCron } from './crons/refresh-archetypes.cron';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
@@ -90,6 +97,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     ShortLinkController,
     MagnetLibraryController,
     StyleReferenceController,
+    ArchetypeLibraryController,
   ],
   providers: [
     ContentRunsService,
@@ -99,6 +107,12 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     MagnetLibraryService,
     VisionExtractorService,
     StyleReferenceService,
+    YouTubeDiscoveryService,
+    TranscriptFetcherService,
+    ArchetypeClusteringService,
+    ScriptArchetypeService,
+    ArchetypeRouter,
+    RefreshArchetypesCron,
     RunOrchestratorService,
 
     ContentDataService,
