@@ -166,6 +166,57 @@ export const FORMAT_CONFIGS: Record<FormatKey, FormatConfig> = {
   },
 };
 
+export interface ResolvedMarket {
+  rank: number;
+  region_id: string;
+  region_name: string;
+  state: string;
+  value: number;
+  value_formatted: string;
+}
+
+export interface RankingParams {
+  format: "top_10_ranking" | "bottom_10_ranking";
+  direction: "top" | "bottom";
+  metric: { id: string; label: string; unit: string; format: string };
+  scope: {
+    type: "national" | "state" | "metro";
+    id: string | null;
+    label: string;
+  };
+  geo_level: "metro" | "county" | "zip";
+  as_of: string;
+  resolved_markets: ResolvedMarket[];
+}
+
+const ResolvedMarketSchema = z.object({
+  rank: z.number(),
+  region_id: z.string(),
+  region_name: z.string(),
+  state: z.string(),
+  value: z.number(),
+  value_formatted: z.string(),
+});
+
+const RankingParamsSchema = z.object({
+  format: z.enum(["top_10_ranking", "bottom_10_ranking"]),
+  direction: z.enum(["top", "bottom"]),
+  metric: z.object({
+    id: z.string(),
+    label: z.string(),
+    unit: z.string(),
+    format: z.string(),
+  }),
+  scope: z.object({
+    type: z.enum(["national", "state", "metro"]),
+    id: z.string().nullable(),
+    label: z.string(),
+  }),
+  geo_level: z.enum(["metro", "county", "zip"]),
+  as_of: z.string(),
+  resolved_markets: z.array(ResolvedMarketSchema),
+});
+
 export const VideoPropsSchema = z.object({
   format: z.enum([
     "grade_reveal",
@@ -199,6 +250,8 @@ export const VideoPropsSchema = z.object({
       }),
     )
     .optional(),
+  // Ranking-specific params. Present only for top_10_ranking / bottom_10_ranking.
+  params: RankingParamsSchema.optional(),
 });
 
 export type VideoProps = z.infer<typeof VideoPropsSchema>;
