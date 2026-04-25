@@ -39,4 +39,8 @@ export class CreateRunDto {
   @IsOptional()
   @IsString()
   extraDirectives?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  batchId?: string;
 }

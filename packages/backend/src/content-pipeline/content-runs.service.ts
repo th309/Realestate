@@ -59,6 +59,7 @@ export class ContentRunsService {
         tts_voice_id: template.default_tts_voice_id,
         selected_platforms: dto.selectedPlatforms ?? template.default_platforms,
         idempotency_key: dto.idempotencyKey,
+        batch_id: dto.batchId ?? null,
         status: 'queued',
         triggered_by: 'manual',
       })
