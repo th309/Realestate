@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 
 export interface FormatDefaultRow {
   format: string;
@@ -8,6 +9,18 @@ export interface FormatDefaultRow {
   default_approval_mode?: string;
   default_tts_voice_id?: string | null;
   default_platforms?: string[];
+  enabled?: boolean;
+}
+
+export interface TtsVoiceRow {
+  id: string;
+  provider: string;
+  provider_voice_id: string;
+  display_name: string;
+  audience_tag: string;
+  sample_url: string | null;
+  cost_per_1k_chars: number;
+  enabled: boolean;
 }
 
 export interface ContentPipelineSettings {
@@ -50,7 +63,7 @@ export class PipelineSettingsService {
 
   async updateFormatDefault(
     format: string,
-    patch: { default_approval_mode?: string },
+    patch: UpdateFormatDefaultDto,
   ): Promise<FormatDefaultRow> {
     const client = this.supabase.getClient();
     const { data, error } = await client
@@ -65,6 +78,25 @@ export class PipelineSettingsService {
       );
     }
     return data as FormatDefaultRow;
+  }
+
+  /**
+   * Lists all enabled TTS voices for the format-defaults voice picker.
+   * Ordered by audience_tag then display_name so the frontend can group
+   * short_form / long_form sections without re-sorting.
+   */
+  async getVoices(): Promise<TtsVoiceRow[]> {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('tts_voices')
+      .select(
+        'id, provider, provider_voice_id, display_name, audience_tag, sample_url, cost_per_1k_chars, enabled',
+      )
+      .eq('enabled', true)
+      .order('audience_tag')
+      .order('display_name');
+    if (error) throw error;
+    return (data ?? []) as TtsVoiceRow[];
   }
 
   async pause(): Promise<{ paused: boolean }> {

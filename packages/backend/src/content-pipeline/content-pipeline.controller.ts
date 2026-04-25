@@ -213,6 +213,14 @@ export class ContentPipelineController {
     };
   }
 
+  @Get('settings/voices')
+  async voices() {
+    return {
+      success: true,
+      data: { voices: await this.settingsService.getVoices() },
+    };
+  }
+
   @Patch('settings/formats/:format')
   async updateFormatDefault(
     @Param('format') format: string,

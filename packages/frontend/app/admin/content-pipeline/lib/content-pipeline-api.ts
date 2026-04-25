@@ -226,11 +226,18 @@ export async function updateSettings(patch: { strictness?: string }) {
   });
 }
 
+export interface FormatDefaultPatch {
+  default_approval_mode?: "auto" | "review" | "draft";
+  default_tts_voice_id?: string;
+  default_platforms?: string[];
+  enabled?: boolean;
+}
+
 export async function updateFormatDefault(
   format: string,
-  patch: { default_approval_mode?: "auto" | "review" | "draft" },
+  patch: FormatDefaultPatch,
 ) {
-  return fetchAPIRaw(
+  const res = await fetchAPIRaw(
     `/api/admin/content-pipeline/settings/formats/${encodeURIComponent(format)}`,
     {
       method: "PATCH",
@@ -238,6 +245,29 @@ export async function updateFormatDefault(
       body: JSON.stringify(patch),
     },
   );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`updateFormatDefault failed: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
+export interface TtsVoice {
+  id: string;
+  provider: string;
+  provider_voice_id: string;
+  display_name: string;
+  audience_tag: string;
+  sample_url: string | null;
+  cost_per_1k_chars: number;
+  enabled: boolean;
+}
+
+export async function fetchVoices(): Promise<TtsVoice[]> {
+  const res = await fetchAPI<{ data: { voices: TtsVoice[] } }>(
+    "/api/admin/content-pipeline/settings/voices",
+  );
+  return res.data.voices;
 }
 
 export async function pausePipeline() {

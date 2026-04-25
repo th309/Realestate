@@ -5,41 +5,33 @@ import {
   fetchSettings,
   pausePipeline,
   resumePipeline,
-  updateFormatDefault,
   updateSettings,
 } from "../lib/content-pipeline-api";
-
-type ApprovalMode = "auto" | "review" | "draft";
-const APPROVAL_MODES: ApprovalMode[] = ["auto", "review", "draft"];
+import { FormatDefaults } from "./format-defaults";
+import type { FormatRowData } from "./format-row";
 
 type Strictness = "relaxed" | "balanced" | "strict";
-
-interface FormatDefault {
-  format: string;
-  display_name?: string;
-  default_approval_mode?: string;
-  default_tts_voice_id?: string | null;
-  default_platforms?: string[];
-}
 
 interface SettingsPayload {
   strictness: Strictness;
   paused: boolean;
-  formatDefaults: FormatDefault[];
+  formatDefaults: FormatRowData[];
 }
 
 const SETTINGS_QUERY_KEY = ["content-pipeline-settings"] as const;
 const STRICTNESS_OPTIONS: Strictness[] = ["relaxed", "balanced", "strict"];
 
 /**
- * Admin page: Content-Pipeline Settings.
- * Exposes gate strictness, per-format defaults (read-only in P1), and
- * a pause/resume toggle that short-circuits new runs in the orchestrator.
+ * Admin: Content-Pipeline Settings.
+ *   - Gate strictness (relaxed/balanced/strict)
+ *   - Per-format defaults: enabled, approval mode, voice, platforms
+ *     (delegated to <FormatDefaults>)
+ *   - Pause/resume the whole pipeline
  */
 export default function SettingsPage() {
   const qc = useQueryClient();
 
-  const { data } = useQuery<SettingsPayload>({
+  const { data, isLoading, error } = useQuery<SettingsPayload>({
     queryKey: SETTINGS_QUERY_KEY,
     queryFn: fetchSettings,
   });
@@ -55,23 +47,35 @@ export default function SettingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY }),
   });
 
-  const approvalModeMutation = useMutation({
-    mutationFn: (args: { format: string; mode: ApprovalMode }) =>
-      updateFormatDefault(args.format, { default_approval_mode: args.mode }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY }),
-  });
-
-  if (!data) {
-    return <div className="p-8 text-outline">Loading...</div>;
+  if (isLoading) {
+    return <SettingsSkeleton />;
+  }
+  if (error || !data) {
+    return (
+      <div className="p-8">
+        <div className="rounded-xl bg-error-container text-on-error-container px-4 py-3 text-sm">
+          Couldn&apos;t load settings.{" "}
+          <button
+            type="button"
+            onClick={() =>
+              qc.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY })
+            }
+            className="underline font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-8 max-w-3xl space-y-8">
+    <div className="p-8 max-w-4xl space-y-8">
       <h1 className="text-2xl font-semibold text-on-surface">Settings</h1>
 
       <section className="rounded-xl bg-surface-container-low p-6 shadow-sm">
         <h2 className="font-semibold mb-2 text-on-surface">Gate Strictness</h2>
-        <p className="text-xs text-outline mb-4">
+        <p className="text-xs text-on-surface-variant mb-4">
           Controls how harshly Gate A (data accuracy) and Gate B (brand voice)
           reject content. Relaxed lets more runs through for operator review;
           strict auto-rejects borderline cases.
@@ -98,65 +102,22 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl bg-surface-container-low p-6 shadow-sm">
-        <h2 className="font-semibold mb-4 text-on-surface">Format Defaults</h2>
-        {data.formatDefaults.length === 0 ? (
-          <p className="text-sm text-outline">
-            No format templates configured yet.
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-outline">
-                <th className="py-2 font-medium">Format</th>
-                <th className="py-2 font-medium">Approval mode</th>
-                <th className="py-2 font-medium">Voice</th>
-                <th className="py-2 font-medium">Platforms</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.formatDefaults.map((f) => (
-                <tr key={f.format} className="border-t border-outline-variant">
-                  <td className="py-2 text-on-surface">
-                    {f.display_name ?? f.format}
-                  </td>
-                  <td className="py-2 text-on-surface">
-                    <select
-                      value={f.default_approval_mode ?? "review"}
-                      disabled={approvalModeMutation.isPending}
-                      onChange={(e) =>
-                        approvalModeMutation.mutate({
-                          format: f.format,
-                          mode: e.target.value as ApprovalMode,
-                        })
-                      }
-                      className="bg-surface-container rounded-md px-2 py-1 text-sm border border-outline-variant"
-                    >
-                      {APPROVAL_MODES.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-2 text-on-surface">
-                    {f.default_tts_voice_id ?? "(long-form)"}
-                  </td>
-                  <td className="py-2 text-on-surface">
-                    {f.default_platforms?.join(", ") ?? "--"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <section>
+        <h2 className="font-semibold mb-3 text-on-surface px-1">
+          Format Defaults
+        </h2>
+        <p className="text-xs text-on-surface-variant mb-4 px-1">
+          Click any format to expand its voice and platforms. Toggle the switch
+          to enable / disable. Edits save automatically.
+        </p>
+        <FormatDefaults formats={data.formatDefaults} />
       </section>
 
       <section className="rounded-xl border border-error bg-error/5 p-6">
         <h2 className="font-semibold mb-3 text-on-surface">
           Pause all automation
         </h2>
-        <p className="text-sm text-outline mb-4">
+        <p className="text-sm text-on-surface-variant mb-4">
           New runs will be rejected. Ongoing runs complete gracefully.
         </p>
         <button
@@ -168,6 +129,24 @@ export default function SettingsPage() {
           {data.paused ? "Resume" : "Pause"}
         </button>
       </section>
+    </div>
+  );
+}
+
+function SettingsSkeleton() {
+  return (
+    <div className="p-8 max-w-4xl space-y-6">
+      <div className="h-8 bg-surface-container-low rounded animate-pulse w-32" />
+      <div className="h-32 bg-surface-container-low rounded-xl animate-pulse" />
+      <div className="space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-12 bg-surface-container-low rounded-xl animate-pulse"
+            style={{ animationDelay: `${i * 50}ms` }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
