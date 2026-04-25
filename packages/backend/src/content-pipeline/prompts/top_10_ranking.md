@@ -1,23 +1,84 @@
-<!-- packages/backend/src/content-pipeline/prompts/top_10_ranking.md -->
+You are writing a 60-second voiceover script for a PropertyIQ "Top 10 Ranking" video.
 
-Write a {{video_duration_seconds}}-second Top 10 Ranking script for {{canonical_name}}.
+# Inputs you will receive
 
-**Timing constraint (hard):** the voice-over must finish in {{audio_budget_seconds}} seconds or less at a natural, unhurried pace (~{{natural_wpm}} words per minute). Target approximately {{word_budget}} words total. Do not exceed this — a script that's too long will get cut off mid-sentence by the video edit. Slightly under is fine; over is not.
+- `metric.label` — what's being ranked (e.g. "Cashflow Yield", "PropertyIQ Score")
+- `metric.unit` — display unit ("%", "$", etc. — empty for indices)
+- `scope.label` — geographic scope ("United States", "California", "Tampa-St. Petersburg, FL")
+- `geo_level` — "metro" | "county" | "zip"
+- `direction` — always "top" for this template
+- `resolved_markets` — array of N (5–10) entries: `{ rank, region_name, state, value, value_formatted }`, sorted #1 best → #N worst-of-the-best
 
-Data bundle (authoritative, do not use any other numbers):
-{{dataBundle}}
+# Brand voice
 
-Structure: open with the headline ranking, count down from #10 to #1, citing the rent-to-price ratio AND PropertyIQ Score for each market on the list. Spend roughly 3 to 4 seconds per market. Close with this CTA verbatim: {{cta_text}}{{shortLinkPlaceholder}}
+- Apple keynote: declarative, confident, sparse
+- 110–120 wpm target → ~25 syllables per row line max
+- No filler words ("amazing", "incredible", "you'll love this")
+- No causal claims — only what the data says
+- Honor the punchline cadence: #1 reveal gets a beat of silence before VO
 
-Hook options: produce {{variantCount}} alternative hooks. Hook A leads with the #1 market by name, pulled from the data bundle (e.g. "The number one cashflow market this month is [market from bundle]"). Hook B (if variantCount=2) leads with a surprising omission, naming a major metro from the bundle's excluded or absent list (e.g. "[Major metro from bundle] didn't make the top 10 this month — here's who did."). Use only names that appear in the data bundle. Do not invent markets.
+# Number formatting
 
-Scene hints — allocate durations so the sum equals {{video_duration_seconds}}s, with the voice-over ending by {{audio_budget_seconds}}s:
+When converting a `value_formatted` to the spoken form, follow these rules:
 
-- Intro / hook (3s)
-- Ten ranking rows, ~4s each, counting down from #10 to #1 (40s total)
-- Outro / takeaway (10s)
-- CTA card (7s)
+| Display   | Spoken                          |
+| --------- | ------------------------------- |
+| `12.4%`   | "twelve point four percent"     |
+| `$1.2M`   | "one point two million dollars" |
+| `28 days` | "twenty-eight days"             |
+| `87`      | "eighty-seven"                  |
 
-Count your words before emitting. If your script is over {{word_budget}} words, cut until it fits — trim adjectives, combine short sentences, drop a supporting stat from one of the lower-ranked markets if needed. Don't pad with filler to hit the number either; concise and natural beats padded.
+# Reveal cadence
 
-Output a tool_use call matching the schema.
+Always count down from #N → #1, regardless of N. Save #1 as the punchline.
+
+# Output
+
+Return ONLY a JSON object matching this schema (no commentary, no markdown fences):
+
+```json
+{
+  "hooks": [
+    { "id": "data-led",     "intro_vo": "...", "subhead_text": "..." },
+    { "id": "surprise-led", "intro_vo": "...", "subhead_text": "..." }
+  ],
+  "rows": [
+    { "rank": <N>, "vo": "Number <N>. <region_name>, <state>. <spoken value>.", "emphasis": "name" | "value" },
+    ...
+    { "rank": 1, "vo": "...", "emphasis": "name" }
+  ],
+  "outro_vo": "PropertyIQ. Now you know.",
+  "outro_cta": "Learn more at propertyiq.app."
+}
+```
+
+# Hook variants (always produce both)
+
+- `data-led`: state the ranking premise straight ("Ten counties in California by cashflow yield. Top to bottom.")
+- `surprise-led`: tease the contents ("Two of these you've probably never heard of.")
+
+# Rules
+
+- `rows` length MUST equal `resolved_markets` length
+- Each row's `rank` MUST equal the corresponding `resolved_markets` rank
+- `region_name` and `state` MUST appear verbatim in the VO (do not paraphrase, abbreviate, or substitute)
+- Do NOT mention any market that is not in `resolved_markets`
+- Do NOT mention `excluded_count` or describe missing data
+- `outro_cta` MUST be exactly: "Learn more at propertyiq.app." (Plan B will replace with magnet copy)
+
+# Example (for shape only — your input will differ)
+
+Input:
+
+```
+metric: { label: "Cashflow Yield", unit: "%", format: "percent" }
+scope:  { label: "California" }
+geo_level: "county"
+resolved_markets: [
+  { rank: 1, region_name: "Lassen County",   state: "CA", value: 0.124, value_formatted: "12.4%" },
+  ...
+]
+```
+
+Output: a JSON object as above with each row VO formatted like:
+"Number ten. Modoc County, California. Eleven point eight percent."
