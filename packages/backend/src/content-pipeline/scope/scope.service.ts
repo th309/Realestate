@@ -39,7 +39,7 @@ export class ScopeService {
     const { data, error } = await client
       .from('geography_crosswalk')
       .select('cbsa_code, cbsa_name, cbsa_population')
-      .eq('state_code', stateCode)
+      .eq('state_abbrev', stateCode)
       .not('cbsa_code', 'is', null)
       .limit(MAX_RESOLVED_MARKETS);
     if (error) throw new Error(`crosswalk lookup failed: ${error.message}`);
@@ -72,7 +72,7 @@ export class ScopeService {
     const { data, error } = await client
       .from('geography_crosswalk')
       .select('zip_code')
-      .eq('state_code', stateCode)
+      .eq('state_abbrev', stateCode)
       .not('zip_code', 'is', null)
       .limit(MAX_RESOLVED_MARKETS);
     if (error) throw new Error(`crosswalk lookup failed: ${error.message}`);
@@ -129,7 +129,7 @@ export class ScopeService {
     const [{ data: zipRows }, { data: cbsaRows }] = await Promise.all([
       client
         .from('geography_crosswalk')
-        .select('zip_code, cbsa_name, state_code')
+        .select('zip_code, cbsa_name, state_abbrev')
         .in('zip_code', dedupe),
       client
         .from('geography_crosswalk')
@@ -145,7 +145,7 @@ export class ScopeService {
       const r = row as {
         zip_code: string;
         cbsa_name: string | null;
-        state_code: string | null;
+        state_abbrev: string | null;
       };
       if (!r.zip_code || matchedIds.has(`zip:${r.zip_code}`)) continue;
       matchedIds.add(`zip:${r.zip_code}`);
@@ -205,7 +205,7 @@ export class ScopeService {
           .select('geo_id, score')
           .eq('geo_level', 'metro')
           .eq('score_type', 'propertyiq')
-          .in('geo_id', byLevel.metro),
+          .in('geo_id', byLevel.metro) as unknown as Promise<any>,
       );
     }
     if (byLevel.zip.length > 0) {
@@ -215,7 +215,7 @@ export class ScopeService {
           .select('geo_id, score')
           .eq('geo_level', 'zip')
           .eq('score_type', 'propertyiq')
-          .in('geo_id', byLevel.zip),
+          .in('geo_id', byLevel.zip) as unknown as Promise<any>,
       );
     }
     if (lookups.length === 0) return;
