@@ -81,6 +81,9 @@ import { MetricsPullerService } from './analytics/metrics-puller.service';
 import { Pull24hMetricsCron } from './crons/pull-24h-metrics.cron';
 import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
 
+import { RankingResolverController } from './ranking/ranking-resolver.controller';
+import { RankingResolverService } from './ranking/ranking-resolver.service';
+
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { PlatformCredentialsService } from './platform-credentials.service';
@@ -106,6 +109,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     FormatsController,
     ScopeController,
     BatchRunsController,
+    RankingResolverController,
   ],
   providers: [
     ContentRunsService,
@@ -199,6 +203,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     PlatformCredentialsService,
     PlatformAppCredentialsService,
     ScopeService,
+    RankingResolverService,
   ],
   exports: [
     ContentRunsService,
@@ -212,6 +217,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     MetricsPullerService,
     PlatformCredentialsService,
     PlatformPublisherRegistry,
+    RankingResolverService,
   ],
 })
 export class ContentPipelineModule {}
