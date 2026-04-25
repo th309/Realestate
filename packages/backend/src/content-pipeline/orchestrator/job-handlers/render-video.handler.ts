@@ -45,6 +45,19 @@ export class RenderVideoHandler {
       const audioSigned = await getAssetSignedUrl(client, runId, 'audio');
       if (!audioSigned) throw new Error('audio asset not found');
 
+      // captions_timings is optional — only present when CAPTIONS_ENABLED=true
+      // and the timing_captions step ran. maybeSingle() returns { data: null }
+      // (no error) when no row exists, so this gracefully no-ops otherwise.
+      const { data: captionsAsset } = await client
+        .from('content_assets')
+        .select('metadata')
+        .eq('run_id', runId)
+        .eq('kind', 'captions_timings')
+        .maybeSingle();
+      const captionWords = captionsAsset?.metadata?.words as
+        | Array<{ startMs: number; endMs: number; word: string }>
+        | undefined;
+
       const videoPath = join(tmpdir(), `video-${runId}.mp4`);
       this.logger.log(
         `[PIPE] render-video run=${runId} audioUrl=<signed> outputPath=${videoPath} format=${run.format}`,
@@ -61,6 +74,7 @@ export class RenderVideoHandler {
           dataBundle: payload.metadata,
           ctaUrl: '',
           audioUrl: audioSigned.url,
+          ...(captionWords && captionWords.length > 0 ? { captionWords } : {}),
         },
         outputPath: videoPath,
       });

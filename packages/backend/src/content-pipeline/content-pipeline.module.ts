@@ -23,6 +23,7 @@ import { RenderVideoHandler } from './orchestrator/job-handlers/render-video.han
 import { PublishHandler } from './orchestrator/job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish-youtube-shorts.handler';
 import { GenerateLeadMagnetHandler } from './orchestrator/job-handlers/generate-lead-magnet.handler';
+import { TimeCaptionsHandler } from './orchestrator/job-handlers/time-captions.handler';
 
 import { ContentDataService } from './data/content-data.service';
 
@@ -40,6 +41,8 @@ import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
 import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
 import { PuppeteerLeadMagnetRenderer } from './drivers/puppeteer-lead-magnet-renderer';
 import { LEAD_MAGNET_RENDERER } from './drivers/lead-magnet-renderer.interface';
+import { OpenAIWhisperTimer } from './drivers/openai-whisper-timer';
+import { CAPTION_TIMER } from './drivers/caption-timer.interface';
 
 import { ShortLinkService } from './short-links/short-link.service';
 import { ShortLinkController } from './short-links/short-link.controller';
@@ -87,6 +90,9 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     TTSDriverFactory,
     CredentialCrypto,
 
+    OpenAIWhisperTimer,
+    { provide: CAPTION_TIMER, useExisting: OpenAIWhisperTimer },
+
     YouTubeShortsPublisher,
     {
       provide: PLATFORM_PUBLISHERS,
@@ -114,6 +120,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     LintVoiceHandler,
     SynthesizeAudioHandler,
     RenderVideoHandler,
+    TimeCaptionsHandler,
     PublishHandler,
     PublishYouTubeShortsHandler,
     GenerateLeadMagnetHandler,
