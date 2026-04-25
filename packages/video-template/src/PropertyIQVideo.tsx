@@ -6,6 +6,7 @@ import { GradeRevealLayout } from "./layouts/GradeRevealLayout";
 import { Top10Layout } from "./layouts/Top10Layout";
 import { ScoreMoverLayout } from "./layouts/ScoreMoverLayout";
 import { HeadToHeadLayout } from "./layouts/HeadToHeadLayout";
+import { FarmAreaSpotlightLayout } from "./layouts/FarmAreaSpotlightLayout";
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
   const cfg = FORMAT_CONFIGS[props.format];
@@ -16,6 +17,9 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
         {props.format === "score_mover" && <ScoreMoverLayout {...props} />}
         {props.format === "head_to_head" && <HeadToHeadLayout {...props} />}
+        {props.format === "farm_area_spotlight" && (
+          <FarmAreaSpotlightLayout {...props} />
+        )}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
       {/*
