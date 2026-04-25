@@ -24,6 +24,9 @@ export interface ScriptGenerationRequest {
   naturalWpm: number;
   styleReferenceAttributes?: Record<string, unknown>;
   extraDirectives?: string;
+  // Optional window label for score_mover. When present, gets substituted
+  // into the prompt's {{window_label}} token. Other formats ignore it.
+  windowLabel?: string;
 }
 
 export interface ScriptVariant {

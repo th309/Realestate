@@ -196,7 +196,8 @@ export class AnthropicScriptGenerator implements ScriptGenerator {
       )
       .replaceAll('{{audio_budget_seconds}}', String(req.audioBudgetSeconds))
       .replaceAll('{{word_budget}}', String(req.wordBudget))
-      .replaceAll('{{natural_wpm}}', String(req.naturalWpm));
+      .replaceAll('{{natural_wpm}}', String(req.naturalWpm))
+      .replaceAll('{{window_label}}', req.windowLabel ?? 'this quarter');
 
     const response = await this.client.messages.create({
       model: this.model,
