@@ -44,6 +44,15 @@
 
 **Rule:** At the start of EVERY session (including continuations from compacted context), read `tasks/lessons.md` and re-familiarize with CLAUDE.md critical sections before writing any code. The compacted summary does not substitute for reading the actual rules.
 
+## Barrel index.ts Files Are Exempt From the Line-Count Hard Limit
+
+**Date:** 2026-02-26
+**Context:** The PostToolUse lint hook flagged `lib/data/index.ts` at 343 lines as exceeding the 300-line hard limit for logic files. The file contains zero logic — every line is a re-export statement.
+
+**Rule:** The CLAUDE.md Section 1.3 size limits apply to **logic files** (hooks, utils, helpers, services, types). A pure barrel `index.ts` whose entire content is `export { ... } from '...'` statements is exempt. Splitting it into sub-barrels adds indirection with no benefit. Do not act on the lint warning for pure barrel files.
+
+**How to identify a pure barrel:** If deleting all the export lines would leave only comments and whitespace, it is a pure barrel.
+
 ## Dispatch Background Validation Agents After Implementing Features
 
 **Date:** 2026-02-26
