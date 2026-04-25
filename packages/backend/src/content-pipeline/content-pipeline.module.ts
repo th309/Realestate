@@ -37,6 +37,7 @@ import { DataVerifierService } from './gates/data-verifier.service';
 import { BrandVoiceLinterService } from './gates/brand-voice-linter.service';
 import { EdgeTTSDriver } from './drivers/edge-tts-driver';
 import { AzureSpeechDriver } from './drivers/azure-speech-driver';
+import { OpenAITTSDriver } from './drivers/openai-tts-driver';
 import { TTSDriverFactory } from './drivers/tts-driver.factory';
 import { CredentialCrypto } from './drivers/credential-crypto';
 import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
@@ -96,6 +97,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
 
     EdgeTTSDriver,
     AzureSpeechDriver,
+    OpenAITTSDriver,
     TTSDriverFactory,
     CredentialCrypto,
 

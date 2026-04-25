@@ -2,10 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { TTSDriverFactory } from '../../drivers/tts-driver.factory';
+import {
+  TTSDriver,
+  TTSSynthesisRequest,
+  TTSSynthesisResult,
+} from '../../drivers/tts-driver.interface';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
-import { spawn } from 'child_process';
+import { probeAudioDurationMs } from './audio-duration-probe';
+
+// When falling through to OpenAI from an Azure/Edge primary, the user's
+// stored voiceId is from a different catalog (en-US-JennyNeural, etc.) so we
+// override to OpenAI's default voice. Future work could store an OpenAI voice
+// mapping per row in tts_voices; out of P2 scope.
+const OPENAI_FALLBACK_VOICE = 'alloy';
 
 @Injectable()
 export class SynthesizeAudioHandler {
@@ -62,10 +73,18 @@ export class SynthesizeAudioHandler {
         /\{\{SHORT_LINK\}\}/g,
         'Property IQ dot app',
       );
-      const driver = this.ttsFactory.forProvider(run.tts_provider);
+      const chain = this.ttsFactory
+        .driverChain(run.tts_provider)
+        .filter((d) => d.isConfigured());
+      if (chain.length === 0) {
+        throw new Error(
+          `No TTS driver configured for provider='${run.tts_provider}'`,
+        );
+      }
       this.logger.log(
-        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} script.len=${script.fullText.length} spoken.len=${spokenText.length}`,
+        `[PIPE] synthesize-audio run=${runId} chain=[${chain.map((d) => d.constructor.name).join(',')}] script.len=${script.fullText.length} spoken.len=${spokenText.length}`,
       );
+
       const { data: voice } = await client
         .from('tts_voices')
         .select('provider_voice_id')
@@ -78,12 +97,13 @@ export class SynthesizeAudioHandler {
         tmpdir(),
         `audio-${runId}-${randomBytes(4).toString('hex')}.mp3`,
       );
-      const result = await this.synthesizeWithRetry(driver, {
-        text: spokenText,
-        voiceId: voice.provider_voice_id,
+      const { driver, result } = await this.synthesizeWithFallback(
+        runId,
+        chain,
+        voice.provider_voice_id as string,
+        spokenText,
         outputPath,
-        format: 'mp3',
-      });
+      );
       // TTSSynthesisResult.durationMs is wall-clock synth time on edge-tts,
       // not audio length — probe the file directly so we know what'll
       // actually mix into the video.
@@ -132,6 +152,63 @@ export class SynthesizeAudioHandler {
         `rendering_voice: ${(err as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Walk the priority-ordered driver chain. The first driver is the primary;
+   * synthesizeWithRetry handles transient errors against it. On terminal
+   * failure (after retries exhausted), advance to the next configured
+   * driver, log a tts_fallback content_run_event, and try again. The
+   * voiceId is overridden when falling through to OpenAI since its voice
+   * catalog is incompatible with Azure/Edge.
+   */
+  private async synthesizeWithFallback(
+    runId: string,
+    chain: TTSDriver[],
+    primaryVoiceId: string,
+    text: string,
+    outputPath: string,
+  ): Promise<{ driver: TTSDriver; result: TTSSynthesisResult }> {
+    const client = this.supabase.getClient();
+    let lastErr: Error | null = null;
+    for (let i = 0; i < chain.length; i++) {
+      const driver = chain[i];
+      const voiceId =
+        driver.provider === 'openai' && chain[0].provider !== 'openai'
+          ? OPENAI_FALLBACK_VOICE
+          : primaryVoiceId;
+      const req: TTSSynthesisRequest = {
+        text,
+        voiceId,
+        outputPath,
+        format: 'mp3',
+      };
+      try {
+        const result = await this.synthesizeWithRetry(driver, req);
+        if (i > 0) {
+          await client.from('content_run_events').insert({
+            run_id: runId,
+            event_type: 'tts_fallback',
+            payload: {
+              from: chain[0].provider,
+              to: driver.provider,
+              reason: lastErr?.message?.slice(0, 500) ?? null,
+            },
+          });
+          this.logger.warn(
+            `[PIPE] synthesize-audio run=${runId} fell back ${chain[0].provider}→${driver.provider}`,
+          );
+        }
+        return { driver, result };
+      } catch (err) {
+        lastErr = err as Error;
+        if (i === chain.length - 1) throw lastErr;
+        this.logger.warn(
+          `[PIPE] synthesize-audio run=${runId} ${driver.provider} failed terminally, advancing chain: ${lastErr.message?.slice(0, 200)}`,
+        );
+      }
+    }
+    throw lastErr ?? new Error('synthesizeWithFallback: empty chain');
   }
 
   /**
@@ -195,35 +272,4 @@ export class SynthesizeAudioHandler {
     if (error) throw error;
     return `supabase://content-pipeline/${path}`;
   }
-}
-
-// Shells out to ffprobe to read the audio file's real duration. ffprobe is
-// on PATH in both dev and the Railway container (Remotion depends on it).
-function probeAudioDurationMs(path: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('ffprobe', [
-      '-v',
-      'error',
-      '-show_entries',
-      'format=duration',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
-      path,
-    ]);
-    let stdout = '';
-    let stderr = '';
-    proc.stdout.on('data', (c) => (stdout += c.toString()));
-    proc.stderr.on('data', (c) => (stderr += c.toString()));
-    proc.on('error', reject);
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        return reject(new Error(`ffprobe exited ${code}: ${stderr.trim()}`));
-      }
-      const seconds = parseFloat(stdout.trim());
-      if (!Number.isFinite(seconds)) {
-        return reject(new Error(`ffprobe returned non-numeric: ${stdout}`));
-      }
-      resolve(Math.round(seconds * 1000));
-    });
-  });
 }
