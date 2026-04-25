@@ -129,9 +129,22 @@ export function ReviewCard({ run }: { run: any }) {
 
   return (
     <div className="flex flex-col" style={{ minHeight: "calc(100vh - 8rem)" }}>
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(360px,40vw)_1fr] gap-6 p-6 pb-24">
+      <div className="flex-1 flex flex-col lg:flex-row items-start gap-6 p-6">
+        {/* Vertical action bar */}
+        <ActionBar
+          approving={approveMut.isPending}
+          onApprove={handleApprove}
+          onEdit={() => setEditingScript(true)}
+          onThumbnail={() => setEditingThumbnail(true)}
+          onReject={() => setRejecting(true)}
+          onSkip={nav.skip}
+          onDelete={() => setDeleting(true)}
+          onCheatsheet={() => setCheatsheetOpen(true)}
+          deleteLabel={inFlight ? "Cancel" : "Delete"}
+          vertical
+        />
         {/* Video pane */}
-        <div className="bg-on-surface rounded-2xl overflow-hidden aspect-[9/16] max-h-[78vh] mx-auto w-full">
+        <div className="bg-on-surface rounded-xl overflow-hidden aspect-[9/16] w-[240px] shrink-0">
           {videoAsset && videoUrl?.url ? (
             <video
               ref={videoRef}
@@ -152,7 +165,7 @@ export function ReviewCard({ run }: { run: any }) {
         </div>
 
         {/* Right pane */}
-        <div className="rounded-2xl bg-surface-container-low shadow-sm flex flex-col min-h-[60vh]">
+        <div className="rounded-2xl bg-surface-container-low shadow-sm flex flex-col h-[40vh] w-full lg:w-[400px] shrink-0">
           <ReviewTabs
             tab={tab}
             onChange={setTab}
@@ -205,19 +218,6 @@ export function ReviewCard({ run }: { run: any }) {
           </div>
         </div>
       </div>
-
-      {/* Sticky action bar */}
-      <ActionBar
-        approving={approveMut.isPending}
-        onApprove={handleApprove}
-        onEdit={() => setEditingScript(true)}
-        onThumbnail={() => setEditingThumbnail(true)}
-        onReject={() => setRejecting(true)}
-        onSkip={nav.skip}
-        onDelete={() => setDeleting(true)}
-        onCheatsheet={() => setCheatsheetOpen(true)}
-        deleteLabel={inFlight ? "Cancel" : "Delete"}
-      />
 
       {/* Modals */}
       {editingScript && script && (

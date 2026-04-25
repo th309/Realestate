@@ -20,6 +20,7 @@ export function ActionBar({
   onSkip,
   onDelete,
   onCheatsheet,
+  vertical = false,
 }: {
   approving: boolean;
   deleteLabel: string;
@@ -30,55 +31,79 @@ export function ActionBar({
   onSkip: () => void;
   onDelete: () => void;
   onCheatsheet: () => void;
+  vertical?: boolean;
 }) {
+  const buttons = (
+    <>
+      <ActionButton
+        primary
+        kbd={KEYBINDINGS.approve.display}
+        label="Approve"
+        onClick={onApprove}
+        busy={approving}
+        fullWidth={vertical}
+      />
+      <ActionButton
+        kbd={KEYBINDINGS.edit.display}
+        label="Edit script"
+        onClick={onEdit}
+        fullWidth={vertical}
+      />
+      <ActionButton
+        kbd={KEYBINDINGS.thumbnail.display}
+        label="Thumbnail"
+        onClick={onThumbnail}
+        fullWidth={vertical}
+      />
+      <ActionButton
+        kbd={KEYBINDINGS.reject.display}
+        label="Reject"
+        onClick={onReject}
+        tone="error"
+        fullWidth={vertical}
+      />
+      <ActionButton
+        kbd={KEYBINDINGS.skip.display}
+        label="Skip"
+        onClick={onSkip}
+        fullWidth={vertical}
+      />
+      <ActionButton
+        kbd={KEYBINDINGS.delete.display}
+        label={deleteLabel}
+        onClick={onDelete}
+        tone="error"
+        fullWidth={vertical}
+      />
+    </>
+  );
+
+  const cheatsheetButton = (
+    <button
+      type="button"
+      onClick={onCheatsheet}
+      aria-label="Show keyboard shortcuts"
+      title="Keyboard shortcuts (?)"
+      className={`${vertical ? "w-full" : "w-10"} h-10 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors duration-200 inline-flex items-center justify-center text-lg font-mono`}
+    >
+      ?
+    </button>
+  );
+
+  if (vertical) {
+    return (
+      <div className="self-start flex flex-col gap-2 w-36">
+        {buttons}
+        <div className="mt-2">{cheatsheetButton}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed bottom-0 inset-x-0 z-10 border-t border-outline-variant bg-surface-container-low backdrop-blur-md">
       <div className="px-6 h-16 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <ActionButton
-            primary
-            kbd={KEYBINDINGS.approve.display}
-            label="Approve"
-            onClick={onApprove}
-            busy={approving}
-          />
-          <ActionButton
-            kbd={KEYBINDINGS.edit.display}
-            label="Edit script"
-            onClick={onEdit}
-          />
-          <ActionButton
-            kbd={KEYBINDINGS.thumbnail.display}
-            label="Thumbnail"
-            onClick={onThumbnail}
-          />
-          <ActionButton
-            kbd={KEYBINDINGS.reject.display}
-            label="Reject"
-            onClick={onReject}
-            tone="error"
-          />
-          <ActionButton
-            kbd={KEYBINDINGS.skip.display}
-            label="Skip"
-            onClick={onSkip}
-          />
-          <ActionButton
-            kbd={KEYBINDINGS.delete.display}
-            label={deleteLabel}
-            onClick={onDelete}
-            tone="error"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={onCheatsheet}
-          aria-label="Show keyboard shortcuts"
-          title="Keyboard shortcuts (?)"
-          className="w-10 h-10 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors duration-200 inline-flex items-center justify-center text-lg font-mono"
-        >
-          ?
-        </button>
+        <div className="flex items-center gap-2">{buttons}</div>
+        {cheatsheetButton}
       </div>
     </div>
   );
@@ -91,6 +116,7 @@ function ActionButton({
   primary,
   tone,
   busy,
+  fullWidth,
 }: {
   kbd: string;
   label: string;
@@ -98,6 +124,7 @@ function ActionButton({
   primary?: boolean;
   tone?: "error";
   busy?: boolean;
+  fullWidth?: boolean;
 }) {
   const palette = primary
     ? "bg-primary text-on-primary hover:bg-primary/90"
@@ -109,7 +136,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={busy}
-      className={`${palette} rounded-full px-4 py-2 text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50 transition-colors duration-200`}
+      className={`${palette} rounded-full px-4 py-2 text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50 transition-colors duration-200 ${fullWidth ? "w-full justify-start" : ""}`}
     >
       <kbd className="font-mono text-[10px] font-bold opacity-80">{kbd}</kbd>
       <span>{label}</span>
