@@ -41,6 +41,9 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
       <AbsoluteFill style={{ backgroundColor: "#1A1A2E" }}>
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
+        {props.format === "bottom_10_ranking" && (
+          <Top10Layout {...props} theme="bottom" />
+        )}
         {props.format === "score_mover" && <ScoreMoverLayout {...props} />}
         {props.format === "head_to_head" && <HeadToHeadLayout {...props} />}
         {props.format === "farm_area_spotlight" && (
