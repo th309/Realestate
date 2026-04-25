@@ -8,27 +8,34 @@ import type { VideoConfig } from "remotion";
 const INPUT_PROPS = {
   format: "top_10_ranking",
   resolvedMarket: {
-    canonical_name: "Texas",
+    canonical_name: "California",
     geography: "state",
-    id: "TX",
+    id: "CA",
   },
-  dataBundle: {
-    state: "Texas",
-    top_cashflow_markets: [
-      { rank: 1, name: "Houston, TX", rent_to_price_ratio: 0.78 },
-      { rank: 2, name: "Dallas, TX", rent_to_price_ratio: 0.74 },
-      { rank: 3, name: "San Antonio, TX", rent_to_price_ratio: 0.72 },
-      { rank: 4, name: "Austin, TX", rent_to_price_ratio: 0.69 },
-      { rank: 5, name: "El Paso, TX", rent_to_price_ratio: 0.66 },
-      { rank: 6, name: "Fort Worth, TX", rent_to_price_ratio: 0.63 },
-      { rank: 7, name: "Lubbock, TX", rent_to_price_ratio: 0.61 },
-      { rank: 8, name: "Corpus Christi, TX", rent_to_price_ratio: 0.59 },
-      { rank: 9, name: "Amarillo, TX", rent_to_price_ratio: 0.57 },
-      { rank: 10, name: "Killeen, TX", rent_to_price_ratio: 0.55 },
-    ],
+  dataBundle: {},
+  ctaUrl: "https://piq.sh/top10ca",
+  params: {
+    format: "top_10_ranking",
+    direction: "top",
+    metric: {
+      id: "cashflow_yield",
+      label: "Cashflow Yield",
+      unit: "%",
+      format: "percent",
+    },
+    scope: { type: "state", id: "CA", label: "California" },
+    geo_level: "county",
+    as_of: "2026-04-01",
+    resolved_markets: Array.from({ length: 10 }, (_, i) => ({
+      rank: i + 1,
+      region_id: `0600${i}`,
+      region_name: `County ${i + 1}`,
+      state: "CA",
+      value: 0.124 - i * 0.005,
+      value_formatted: `${((0.124 - i * 0.005) * 100).toFixed(1)}%`,
+    })),
   },
-  ctaUrl: "https://piq.sh/top10tx",
-};
+} as const;
 
 describe("Top 10 Ranking snapshots", () => {
   let serveUrl: string;

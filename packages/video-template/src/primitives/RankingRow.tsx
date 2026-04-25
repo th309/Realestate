@@ -2,12 +2,17 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
+import { MetricValue } from "../components/MetricValue";
 
 export interface RankingRowProps {
   rank: number;
   marketName: string;
   keyStat: string;
   keyStatLabel: string;
+  /** Accent color for the rank circle. Defaults to PropertyIQ indigo. */
+  accent?: string;
+  /** Metric format string passed through to MetricValue for font sizing. */
+  format?: string;
 }
 
 /**
@@ -26,6 +31,8 @@ export const RankingRow: React.FC<RankingRowProps> = ({
   marketName,
   keyStat,
   keyStatLabel,
+  accent = "#3949AB",
+  format = "number",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -62,7 +69,7 @@ export const RankingRow: React.FC<RankingRowProps> = ({
           width: 96 * scale,
           height: 96 * scale,
           borderRadius: "50%",
-          backgroundColor: "#3949AB",
+          backgroundColor: accent,
           color: "#FFFFFF",
           display: "flex",
           alignItems: "center",
@@ -118,17 +125,7 @@ export const RankingRow: React.FC<RankingRowProps> = ({
           gap: 4 * scale,
         }}
       >
-        <div
-          style={{
-            color: "#1A237E",
-            fontFamily: "Roboto Mono",
-            fontWeight: 700,
-            fontSize: 48 * scale,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {keyStat}
-        </div>
+        <MetricValue value_formatted={keyStat} format={format} />
         <div
           style={{
             color: "#5C6BC0",

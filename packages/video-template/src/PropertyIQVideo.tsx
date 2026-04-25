@@ -4,15 +4,23 @@ import { VideoProps, FORMAT_CONFIGS } from "./types";
 
 // ---------------------------------------------------------------------------
 // Variable-duration metadata for ranking compositions
+// Must stay in sync with frame constants in Top10Layout.tsx.
 // ---------------------------------------------------------------------------
-const INTRO_FRAMES = 90; // 3.0s @ 30fps
+const BUMPER_FRAMES = 60; // 2.0s brand sting
+const INTRO_FRAMES = 90; // 3.0s
 const ROW_FRAMES = 150; // 5.0s per row
 const OUTRO_FRAMES = 135; // 4.5s
+const BRAND_OUTRO_FRAMES = 120; // 4.0s
 
 export const calculateRankingMetadata = ({ props }: { props: VideoProps }) => {
   const n = props.params?.resolved_markets?.length ?? 10;
   return {
-    durationInFrames: INTRO_FRAMES + n * ROW_FRAMES + OUTRO_FRAMES,
+    durationInFrames:
+      BUMPER_FRAMES +
+      INTRO_FRAMES +
+      n * ROW_FRAMES +
+      OUTRO_FRAMES +
+      BRAND_OUTRO_FRAMES,
     fps: 30,
     width: 1080,
     height: 1920,
