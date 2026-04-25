@@ -51,8 +51,11 @@ export class ContentPipelineController {
   }
 
   @Get('dashboard')
-  async dashboard() {
-    return { success: true, data: await this.queries.getDashboard() };
+  async dashboard(@Query('batchId') batchId?: string) {
+    return {
+      success: true,
+      data: await this.queries.getDashboard({ batchId }),
+    };
   }
 
   @Post('runs')

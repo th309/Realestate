@@ -82,8 +82,42 @@ export class ContentPipelineQueriesService {
     return result;
   }
 
-  async getDashboard(): Promise<DashboardResponseDto> {
+  async getDashboard(
+    opts: { batchId?: string } = {},
+  ): Promise<DashboardResponseDto> {
     const client = this.supabase.getClient();
+
+    // When filtering by batchId, return ALL runs in the batch (no recency
+    // cap) and skip the global rollup counts which are meaningless for a
+    // single batch view.
+    if (opts.batchId) {
+      const { data: batchRuns } = await client
+        .from('content_runs')
+        .select('id, format, status, market_query, created_at, status_reason')
+        .eq('batch_id', opts.batchId)
+        .order('created_at', { ascending: false });
+
+      const runIds = (batchRuns ?? []).map((r) => r.id as string);
+      const videoRunIds = new Set<string>();
+      if (runIds.length > 0) {
+        const { data: videos } = await client
+          .from('content_assets')
+          .select('run_id')
+          .eq('kind', 'video_master')
+          .in('run_id', runIds);
+        for (const v of videos ?? []) videoRunIds.add(v.run_id as string);
+      }
+
+      return {
+        thisWeek: { published: 0, inReview: 0, signups: 0, revenueUsd: 0 },
+        recentRuns: (batchRuns ?? []).map((r) => ({
+          ...r,
+          has_video: videoRunIds.has(r.id as string),
+        })),
+        reviewQueueCount: 0,
+      };
+    }
+
     const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
     const { count: published } = await client
