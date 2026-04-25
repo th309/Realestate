@@ -72,12 +72,28 @@ export async function fetchRun(id: string) {
   return res.data;
 }
 
+export interface RankingRunParams {
+  format: "top_10_ranking" | "bottom_10_ranking";
+  metric: { id: string };
+  geo_level: "metro" | "county" | "zip";
+  scope: { type: "national" | "state" | "metro"; id: string | null };
+  resolved_markets: Array<{
+    rank: number;
+    region_id: string;
+    region_name: string;
+    state: string | null;
+    value: number;
+    value_formatted: string;
+  }>;
+}
+
 export async function createRun(payload: {
   format: string;
   marketQuery: string;
   idempotencyKey: string;
   approvalMode?: "auto" | "review" | "draft";
   selectedPlatforms?: string[];
+  rankingParams?: RankingRunParams;
 }) {
   const res = await fetchAPIRaw("/api/admin/content-pipeline/runs", {
     method: "POST",
