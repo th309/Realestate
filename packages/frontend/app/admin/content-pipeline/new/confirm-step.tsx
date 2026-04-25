@@ -7,7 +7,11 @@ import {
   type PlatformStatus,
 } from "../lib/content-pipeline-api";
 import { fetchSettings } from "../lib/settings-api";
-import { FORMAT_META } from "../lib/format-previews";
+import { useCreateBatchRuns, type BatchMarket } from "../lib/batch-runs-api";
+import { SingleMarketSummary } from "./single-market-summary";
+import { BatchConfirmBanner } from "./batch-confirm-banner";
+import { BatchSubmitDialog } from "./batch-submit-dialog";
+import type { WizardMode } from "./page";
 
 type ApprovalMode = "auto" | "review" | "draft";
 
@@ -28,8 +32,6 @@ const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 
-// Platforms the wizard offers per format. Mirror the Platform type
-// order; greyed/disabled when not connected.
 const ALL_PLATFORMS = [
   "youtube_shorts",
   "tiktok",
@@ -38,18 +40,25 @@ const ALL_PLATFORMS = [
   "linkedin",
 ] as const;
 
+const BATCH_DIALOG_THRESHOLD = 50;
+
 export function ConfirmStep({
   format,
+  mode,
   market,
+  batchMarkets,
   onBack,
-  onCreated,
+  onCreatedSingle,
+  onCreatedBatch,
 }: {
   format: string;
+  mode: WizardMode;
   market: string;
+  batchMarkets: BatchMarket[];
   onBack: () => void;
-  onCreated: (runId: string) => void;
+  onCreatedSingle: (runId: string) => void;
+  onCreatedBatch: (batchId: string) => void;
 }) {
-  const meta = FORMAT_META[format];
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
 
   const { data: settings } = useQuery({
@@ -78,9 +87,6 @@ export function ConfirmStep({
     useState<string[]>(defaultPlatforms);
   const [operatorPickedPlatforms, setOperatorPickedPlatforms] = useState(false);
 
-  // Once settings load, snap state to the true defaults if the operator
-  // hasn't overridden yet. Without this we'd pin to the initial-render
-  // values forever.
   useEffect(() => {
     if (!operatorPickedMode && formatDefault) setApprovalMode(defaultMode);
     if (!operatorPickedPlatforms && formatDefault)
@@ -89,11 +95,14 @@ export function ConfirmStep({
   }, [formatDefault?.format, defaultMode, defaultPlatforms.join("|")]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const platformByKey = new Map<string, PlatformStatus>(
     platforms.map((p) => [p.platform, p]),
   );
+
+  const batchCount = batchMarkets.length;
 
   function togglePlatform(p: string) {
     setOperatorPickedPlatforms(true);
@@ -102,7 +111,9 @@ export function ConfirmStep({
     );
   }
 
-  async function submit() {
+  const batchMutation = useCreateBatchRuns();
+
+  async function submitSingle() {
     setSubmitting(true);
     setError(null);
     try {
@@ -113,11 +124,38 @@ export function ConfirmStep({
         approvalMode,
         selectedPlatforms,
       });
-      onCreated(result.id);
+      onCreatedSingle(result.id);
     } catch (e) {
       setError((e as Error).message);
       setSubmitting(false);
     }
+  }
+
+  async function submitBatch() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await batchMutation.mutateAsync({
+        format,
+        markets: batchMarkets,
+        approvalMode,
+        platforms: selectedPlatforms,
+      });
+      onCreatedBatch(result.batchId);
+    } catch (e) {
+      setError((e as Error).message);
+      setSubmitting(false);
+      setShowBatchDialog(false);
+    }
+  }
+
+  function handleSubmitClick() {
+    if (mode === "batch" && batchCount >= BATCH_DIALOG_THRESHOLD) {
+      setShowBatchDialog(true);
+      return;
+    }
+    if (mode === "batch") void submitBatch();
+    else void submitSingle();
   }
 
   const outcomeLine =
@@ -132,28 +170,38 @@ export function ConfirmStep({
       ? "Render only (no platforms selected — useful for previewing)"
       : `Post to ${selectedPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")}`;
 
+  const submitLabel =
+    mode === "batch"
+      ? batchCount >= BATCH_DIALOG_THRESHOLD
+        ? `Review batch (${batchCount} runs)`
+        : `Submit ${batchCount} run${batchCount === 1 ? "" : "s"}`
+      : submitting
+        ? "Creating..."
+        : "Start Run";
+
   return (
     <div className="p-8 max-w-2xl">
       <button onClick={onBack} className="text-sm text-primary mb-4">
         Back
       </button>
       <div className="rounded-xl bg-surface-container-low p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold mb-4">
-          {meta.displayName} for {market}
-        </h1>
-        <p className="mb-3">We will:</p>
-        <ul className="list-disc pl-5 space-y-1 text-sm">
-          <li>
-            Write a {meta.duration}-second script ({meta.aspect}) with 1 hook
-            variant
-          </li>
-          <li>Use the PropertyIQ voice (Edge TTS, free)</li>
-          <li>{publishLine}</li>
-          <li>{outcomeLine}</li>
-        </ul>
+        {mode === "batch" ? (
+          <BatchConfirmBanner
+            format={format}
+            markets={batchMarkets}
+            onChangeScope={onBack}
+          />
+        ) : (
+          <SingleMarketSummary
+            format={format}
+            market={market}
+            publishLine={publishLine}
+            outcomeLine={outcomeLine}
+          />
+        )}
 
         <PlatformChips
-          format={format}
+          batchSize={mode === "batch" ? batchCount : 1}
           selected={selectedPlatforms}
           defaultPlatforms={defaultPlatforms}
           operatorPicked={operatorPickedPlatforms}
@@ -164,18 +212,19 @@ export function ConfirmStep({
         <fieldset className="mt-6">
           <legend className="text-xs text-outline mb-2 uppercase tracking-wide">
             Approval mode
+            {mode === "batch" && ` for all ${batchCount} runs`}
           </legend>
           <div className="flex gap-2" role="radiogroup">
-            {(["auto", "review", "draft"] as ApprovalMode[]).map((mode) => {
-              const active = approvalMode === mode;
+            {(["auto", "review", "draft"] as ApprovalMode[]).map((m) => {
+              const active = approvalMode === m;
               return (
                 <button
-                  key={mode}
+                  key={m}
                   type="button"
                   role="radio"
                   aria-checked={active}
                   onClick={() => {
-                    setApprovalMode(mode);
+                    setApprovalMode(m);
                     setOperatorPickedMode(true);
                   }}
                   className={`px-4 py-2 rounded-full text-sm font-semibold capitalize transition-colors duration-200 ${
@@ -184,8 +233,8 @@ export function ConfirmStep({
                       : "bg-surface-container text-on-surface hover:bg-surface-container-high"
                   }`}
                 >
-                  {mode}
-                  {mode === defaultMode && !operatorPickedMode && (
+                  {m}
+                  {m === defaultMode && !operatorPickedMode && (
                     <span className="ml-1 text-[10px] opacity-70">default</span>
                   )}
                 </button>
@@ -199,43 +248,47 @@ export function ConfirmStep({
 
         {error && <div className="mt-4 text-error">{error}</div>}
         <button
-          onClick={submit}
+          onClick={handleSubmitClick}
           disabled={submitting}
           className="mt-6 bg-primary text-on-primary rounded-full px-8 py-3 font-semibold disabled:opacity-50"
         >
-          {submitting ? "Creating..." : "Start Run"}
+          {submitLabel}
         </button>
       </div>
+
+      <BatchSubmitDialog
+        open={showBatchDialog}
+        count={batchCount}
+        onCancel={() => setShowBatchDialog(false)}
+        onConfirm={submitBatch}
+        submitting={submitting}
+      />
     </div>
   );
 }
 
 function PlatformChips({
-  format,
+  batchSize,
   selected,
   defaultPlatforms,
   operatorPicked,
   platformByKey,
   onToggle,
 }: {
-  format: string;
+  batchSize: number;
   selected: string[];
   defaultPlatforms: string[];
   operatorPicked: boolean;
   platformByKey: Map<string, PlatformStatus>;
   onToggle: (p: string) => void;
 }) {
-  // Identify disconnected platforms in the desired set so we can hint at
-  // the gap below the chip row instead of letting the operator pick a
-  // platform that'll fail at publish time.
   const disconnectedSelected = selected.filter(
     (p) => !platformByKey.get(p)?.configured,
   );
-  void format;
   return (
     <fieldset className="mt-6">
       <legend className="text-xs text-outline mb-2 uppercase tracking-wide">
-        Publish to
+        Publish {batchSize > 1 ? `all ${batchSize} runs` : ""} to
         {!operatorPicked && (
           <span className="ml-2 normal-case text-[10px] opacity-70">
             (using format defaults — click to override)
@@ -293,12 +346,6 @@ function PlatformChips({
             Platforms
           </a>{" "}
           or remove them from this run.
-        </p>
-      )}
-      {selected.length === 0 && (
-        <p className="text-[11px] text-on-surface-variant mt-2">
-          No platforms selected — the run will render the video but skip
-          publishing. Useful for preview / approval-mode draft testing.
         </p>
       )}
     </fieldset>
