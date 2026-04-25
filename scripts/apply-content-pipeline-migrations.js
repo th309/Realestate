@@ -40,6 +40,7 @@ const MIGRATIONS = [
   "20260425000200_platform_app_credentials.sql",
   "20260425000300_platform_app_credentials_config.sql",
   "20260425000400_content_runs_batch_id.sql",
+  "20260425000500_content_runs_format_options.sql",
   "20260426000001_content_pipeline_top_bottom_10.sql",
 ];
 
