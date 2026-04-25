@@ -9,6 +9,7 @@ import { ScoreReveal } from "./scenes/ScoreReveal";
 import { StatCards } from "./scenes/StatCards";
 import { Outro } from "./scenes/Outro";
 import { RankingRow } from "./primitives/RankingRow";
+import { DeltaDisplay } from "./primitives/DeltaDisplay";
 import type { MarketStats, TrendDirection } from "./types";
 
 /**
@@ -48,6 +49,7 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
       <AbsoluteFill style={{ backgroundColor: "#1A1A2E" }}>
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
+        {props.format === "score_mover" && <ScoreMoverLayout {...props} />}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
       {/*
@@ -194,6 +196,72 @@ const Top10Layout: React.FC<VideoProps> = (props) => {
       </Sequence>
       <Sequence from={1680} durationInFrames={120}>
         <BrandOutroCard ctaUrl={props.ctaUrl} />
+      </Sequence>
+    </>
+  );
+};
+
+const ScoreMoverLayout: React.FC<VideoProps> = (props) => {
+  const bundle = (props.dataBundle ?? {}) as Record<string, unknown>;
+  const scoreObj = (bundle.score ?? {}) as {
+    propertyiq_score?: number;
+    score_delta?: number;
+  };
+  const score = num(scoreObj.propertyiq_score, 50);
+  const delta = num(scoreObj.score_delta, 0);
+  const stats = coerceStats(bundle);
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      <Sequence from={60} durationInFrames={90}>
+        <Intro marketName={props.resolvedMarket.canonical_name} />
+      </Sequence>
+      <Sequence from={150} durationInFrames={300}>
+        <AbsoluteFill
+          style={{
+            backgroundColor: "#1A1A2E",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 32,
+          }}
+        >
+          <div
+            style={{
+              color: "#C5CAE9",
+              fontFamily: "Roboto",
+              fontSize: 36,
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            PropertyIQ Score moved
+          </div>
+          <DeltaDisplay delta={delta} />
+          <div
+            style={{
+              color: "#FFFFFF",
+              fontFamily: "Roboto Mono",
+              fontSize: 28,
+              opacity: 0.7,
+            }}
+          >
+            now {score}
+          </div>
+        </AbsoluteFill>
+      </Sequence>
+      <Sequence from={450} durationInFrames={270}>
+        <StatCards market={props.resolvedMarket.canonical_name} stats={stats} />
+      </Sequence>
+      <Sequence from={720} durationInFrames={90}>
+        <Outro ctaUrl={props.ctaUrl} />
+      </Sequence>
+      <Sequence from={810} durationInFrames={90}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} score={score} />
       </Sequence>
     </>
   );
