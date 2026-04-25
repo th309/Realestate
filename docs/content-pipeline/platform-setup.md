@@ -95,21 +95,27 @@ Same Meta app as Instagram (the App ID + Secret are shared). Different scopes.
 
 ## LinkedIn
 
-LinkedIn publishing requires a **Company Page** the operator administers — personal-profile posts use a different (more limited) API surface.
+Two posting modes — pick based on what LinkedIn approves your app for:
+
+**Member mode (default, no LinkedIn review)** — posts go to the authenticated operator's personal LinkedIn profile. Works the moment you create a fresh LinkedIn app. Set up:
 
 1. Go to [LinkedIn Developers](https://www.linkedin.com/developers/) → **Create app**.
-2. Associate the app with your LinkedIn **Company Page** (e.g. "PropertyIQ").
-3. Under **Products**, request access to:
+2. Associate the app with a Company Page you administer (LinkedIn requires this even for member-mode apps).
+3. Under **Products** add (both auto-approved, no review):
    - **Sign In with LinkedIn using OpenID Connect**
-   - **Marketing Developer Platform** (for `w_organization_social`) ← may require approval; LinkedIn reviews within ~5 business days.
-   - **Share on LinkedIn** if available
-4. Under **Auth**, set redirect URL = the canonical callback for `linkedin`.
-5. Note the **Client ID** and **Client Secret**:
-   ```
-   LINKEDIN_OAUTH_CLIENT_ID=...
-   LINKEDIN_OAUTH_CLIENT_SECRET=...
-   ```
-6. Click **Connect** → handler exchanges the code, queries `/v2/organizationAcls?role=ADMINISTRATOR` to find your Company Page's URN, stores `urn:li:organization:NNN` in `accountLabel` + access token in the credential row.
+   - **Share on LinkedIn**
+4. Under **Auth** → **Authorized redirect URLs**, add the exact URI shown in the Configure dialog (something like `http://localhost:3001/api/admin/content-pipeline/platforms/linkedin/oauth-callback` for dev, or the prod equivalent).
+5. Copy **Client ID** and **Client Secret** from the **Auth** tab.
+6. In PropertyIQ admin → `/admin/content-pipeline/platforms` → click **Configure** on the LinkedIn row → paste both → Save → click **Connect** → authorize → done.
+
+The handler exchanges the code, calls `/v2/userinfo` for the OpenID `sub`, and stores `urn:li:person:{sub}` in `accountLabel`. Posts go to the operator's personal profile via `w_member_social`.
+
+**Organization mode (opt-in, multi-day approval)** — posts go to a Company Page the operator administers. Same setup as above plus:
+
+7. Under **Products**, also add **Community Management API** (LinkedIn's renamed Marketing Developer Platform) → click **Request access** → fill out the use-case form. Multi-day manual review.
+8. Once approved, set on the backend: `LINKEDIN_AUTHOR_MODE=organization`, restart, click **Configure** → re-Connect.
+
+The handler then queries `/v2/organizationAcls?role=ADMINISTRATOR` for a Page URN and stores `urn:li:organization:NNN` in `accountLabel` instead.
 
 **Common gotchas:**
 

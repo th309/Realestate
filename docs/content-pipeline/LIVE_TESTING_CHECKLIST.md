@@ -47,7 +47,7 @@ Walk through `docs/content-pipeline/platform-setup.md` for each platform you wan
 - [ ] **TikTok** — Create app at developers.tiktok.com, request `video.publish` scope, set callback. ~30 min, ~1 week for app review before posts go public (sandbox testing works immediately).
 - [ ] **Instagram** (via Meta) — Create Meta Business app, request `instagram_content_publish` scope, ensure your IG account is **Business** and linked to a FB Page.
 - [ ] **Facebook** (same Meta app as IG) — Request `publish_video` scope.
-- [ ] **LinkedIn** — Create app at linkedin.com/developers, associate with a Company Page, request Marketing Developer Platform access (~5 day review).
+- [ ] **LinkedIn** — Create app at linkedin.com/developers, associate with a Company Page. For default **member-mode** posting (to your personal profile), add the **Sign In with LinkedIn using OpenID Connect** + **Share on LinkedIn** products (both auto-approved). For **organization-mode** posting (to the Company Page), additionally request access to **Community Management API** (LinkedIn's renamed Marketing Developer Platform — multi-day review) and set `LINKEDIN_AUTHOR_MODE=organization`.
 
 For each: copy client ID + secret to Railway env, then click **Connect** in `/admin/content-pipeline/platforms`.
 
@@ -95,7 +95,7 @@ Failure modes to watch:
 - "X not connected" → re-run Connect flow
 - TikTok "post_mode mismatch" → app not yet approved for `video.publish` scope; sandbox-only until approval
 - IG "video_url not reachable" → check the Supabase signed URL TTL is long enough (we use 1h; should be fine)
-- LinkedIn "scope insufficient" → confirm Marketing Developer Platform was granted
+- LinkedIn `unauthorized_scope_error` → either you're in member-mode and missing one of Sign In with LinkedIn / Share on LinkedIn (auto-approved products you just need to add), or you have `LINKEDIN_AUTHOR_MODE=organization` set without Community Management API approved
 
 ---
 

@@ -27,11 +27,14 @@ const FACEBOOK_SCOPES = [
 
 const LINKEDIN_SCOPES = ['openid', 'profile', 'email', 'w_member_social'];
 
-// Org-posting tier (opt-in via LINKEDIN_AUTHOR_MODE=organization). These
-// scopes require the LinkedIn "Marketing Developer Platform" product
-// approval — a multi-day review LinkedIn runs manually. Default mode
-// posts to the authenticated user's personal profile, which works
-// out-of-the-box with no LinkedIn approval.
+// Org-posting tier (opt-in via LINKEDIN_AUTHOR_MODE=organization).
+// These scopes require LinkedIn's "Community Management API" product
+// (the modern replacement for Marketing Developer Platform). Request
+// access via the dev console Products tab → Community Management API
+// → Request access. Multi-day manual review.
+//
+// Default mode posts to the authenticated user's personal profile,
+// which works out-of-the-box with no LinkedIn approval.
 const LINKEDIN_ORG_SCOPES = [
   'openid',
   'profile',

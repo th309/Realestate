@@ -199,8 +199,9 @@ export async function exchangeLinkedIn(
   const tokenJson = (await tokenRes.json()) as { access_token: string };
 
   // Org-mode (opt-in via LINKEDIN_AUTHOR_MODE=organization, requires
-  // Marketing Developer Platform approval): post to a Company Page the
-  // user administers; lookup happens via /v2/organizationAcls.
+  // LinkedIn's Community Management API product approval): post to a
+  // Company Page the user administers; lookup happens via
+  // /v2/organizationAcls.
   if (process.env.LINKEDIN_AUTHOR_MODE === 'organization') {
     const orgsRes = await fetch(
       'https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization))',
