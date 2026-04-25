@@ -74,9 +74,11 @@ export function M3Dialog({
       onClick={(e) => {
         // Block clicks from bubbling to ancestor handlers (e.g. a wrapping
         // <Link> on a dashboard card). Visually-fixed positioning doesn't
-        // change React's event tree, so without this a confirm click
-        // navigates the parent route.
+        // change React's event tree. preventDefault is also required —
+        // React's stopPropagation only blocks React handlers; the native
+        // browser still navigates on an <a> ancestor click without it.
         e.stopPropagation();
+        e.preventDefault();
         if (closeOnScrim && e.target === e.currentTarget) onClose();
       }}
     >
