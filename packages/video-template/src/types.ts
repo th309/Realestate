@@ -181,6 +181,15 @@ export const VideoPropsSchema = z.object({
   // composition and the compositor muxes it into the output — no external
   // ffmpeg needed. Optional so silent renders (previews, smoke tests) work.
   audioUrl: z.string().url().optional(),
+  captionWords: z
+    .array(
+      z.object({
+        startMs: z.number(),
+        endMs: z.number(),
+        word: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export type VideoProps = z.infer<typeof VideoPropsSchema>;

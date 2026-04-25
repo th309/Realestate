@@ -7,6 +7,7 @@ import { Top10Layout } from "./layouts/Top10Layout";
 import { ScoreMoverLayout } from "./layouts/ScoreMoverLayout";
 import { HeadToHeadLayout } from "./layouts/HeadToHeadLayout";
 import { FarmAreaSpotlightLayout } from "./layouts/FarmAreaSpotlightLayout";
+import { CaptionOverlay } from "./primitives/CaptionOverlay";
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
   const cfg = FORMAT_CONFIGS[props.format];
@@ -21,6 +22,9 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
           <FarmAreaSpotlightLayout {...props} />
         )}
         {/* Other formats rendered in later phases */}
+        {props.captionWords && props.captionWords.length > 0 && (
+          <CaptionOverlay words={props.captionWords} />
+        )}
       </AbsoluteFill>
       {/*
         Delay voice-over until after the 2-second BrandBumper (60 frames
