@@ -1,0 +1,7 @@
+# Per-run test render artifacts (baselines live in tests/__snapshots__/)
+tests/*.png
+
+# The repo-root .gitignore has a broad `*.png` rule for loose QA artifacts;
+# explicitly un-ignore committed test baselines under __snapshots__/.
+!tests/__snapshots__/
+!tests/__snapshots__/**/*.png

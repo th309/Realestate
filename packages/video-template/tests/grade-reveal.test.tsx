@@ -1,17 +1,35 @@
 import { bundle } from "@remotion/bundler";
-import { renderStill } from "@remotion/renderer";
+import { renderStill, selectComposition } from "@remotion/renderer";
 import path from "path";
 import fs from "fs";
 import { PNG } from "pngjs";
+import type { VideoConfig } from "remotion";
+
+const INPUT_PROPS = {
+  format: "grade_reveal",
+  resolvedMarket: {
+    canonical_name: "Cleveland, OH",
+    geography: "metro",
+    id: "17140",
+  },
+  dataBundle: { score: 78, home_value: { value: 385000 } },
+  ctaUrl: "https://piq.sh/abc123",
+};
 
 describe("Grade Reveal snapshots", () => {
   let serveUrl: string;
+  let composition: VideoConfig;
 
   beforeAll(async () => {
     serveUrl = await bundle({
       entryPoint: path.resolve(__dirname, "..", "src", "index.ts"),
     });
-  }, 120_000);
+    composition = await selectComposition({
+      serveUrl,
+      id: "grade-reveal",
+      inputProps: INPUT_PROPS,
+    });
+  }, 180_000);
 
   it.each([0, 90, 180, 300, 500, 700, 850])(
     "renders frame %s within tolerance",
@@ -19,28 +37,10 @@ describe("Grade Reveal snapshots", () => {
       const outPath = path.resolve(__dirname, `grade-reveal-${frame}.png`);
       await renderStill({
         serveUrl,
-        composition: {
-          id: "grade_reveal",
-          width: 1080,
-          height: 1920,
-          fps: 30,
-          durationInFrames: 900,
-          // renderStill accepts a looser composition shape than the
-          // registered Composition; cast to any to avoid leaking the
-          // full VideoMetadata type into the test surface.
-        } as any,
+        composition,
         frame,
         output: outPath,
-        inputProps: {
-          format: "grade_reveal",
-          resolvedMarket: {
-            canonical_name: "Cleveland, OH",
-            geography: "metro",
-            id: "17140",
-          },
-          dataBundle: { score: 78, home_value: { value: 385000 } },
-          ctaUrl: "https://piq.sh/abc123",
-        },
+        inputProps: INPUT_PROPS,
       });
       const baselinePath = path.resolve(
         __dirname,
