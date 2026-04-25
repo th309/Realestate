@@ -22,6 +22,7 @@ import { SynthesizeAudioHandler } from './orchestrator/job-handlers/synthesize-a
 import { RenderVideoHandler } from './orchestrator/job-handlers/render-video.handler';
 import { PublishHandler } from './orchestrator/job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish-youtube-shorts.handler';
+import { PublishTikTokHandler } from './orchestrator/job-handlers/publish-tiktok.handler';
 import { GenerateLeadMagnetHandler } from './orchestrator/job-handlers/generate-lead-magnet.handler';
 import { TimeCaptionsHandler } from './orchestrator/job-handlers/time-captions.handler';
 
@@ -36,6 +37,7 @@ import { AzureSpeechDriver } from './drivers/azure-speech-driver';
 import { TTSDriverFactory } from './drivers/tts-driver.factory';
 import { CredentialCrypto } from './drivers/credential-crypto';
 import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
+import { TikTokPublisher } from './drivers/tiktok-publisher';
 import { PLATFORM_PUBLISHERS } from './drivers/platform-publisher.interface';
 import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
 import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
@@ -94,10 +96,11 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     { provide: CAPTION_TIMER, useExisting: OpenAIWhisperTimer },
 
     YouTubeShortsPublisher,
+    TikTokPublisher,
     {
       provide: PLATFORM_PUBLISHERS,
-      useFactory: (yt: YouTubeShortsPublisher) => [yt],
-      inject: [YouTubeShortsPublisher],
+      useFactory: (yt: YouTubeShortsPublisher, tt: TikTokPublisher) => [yt, tt],
+      inject: [YouTubeShortsPublisher, TikTokPublisher],
     },
 
     RemotionCLIRenderer,
@@ -123,6 +126,7 @@ import { PlatformCredentialsService } from './platform-credentials.service';
     TimeCaptionsHandler,
     PublishHandler,
     PublishYouTubeShortsHandler,
+    PublishTikTokHandler,
     GenerateLeadMagnetHandler,
     HandlersBootstrapService,
 
