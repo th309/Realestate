@@ -26,26 +26,16 @@ const POLL_INTERVAL_MS = 15_000;
 
 async function login(page) {
   console.log("== Logging in ==");
-  await page.goto(`${FRONTEND}/login`);
+  await page.goto(
+    `${FRONTEND}/auth/sign-in?redirect=${encodeURIComponent("/admin/content-pipeline")}`,
+  );
   await page.waitForLoadState("networkidle");
-  // Try common selectors; adapt if the form differs
-  const emailInput =
-    (await page.$('input[type="email"]')) ||
-    (await page.$('input[name="email"]'));
-  const passwordInput =
-    (await page.$('input[type="password"]')) ||
-    (await page.$('input[name="password"]'));
-  if (!emailInput || !passwordInput) {
-    throw new Error("login form selectors not found");
-  }
-  await emailInput.fill(EMAIL);
-  await passwordInput.fill(PASSWORD);
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.includes("login"), {
-      timeout: 30_000,
-    }),
-    page.click('button[type="submit"]'),
-  ]);
+  await page.fill("#email", EMAIL);
+  await page.fill("#password", PASSWORD);
+  await page.click('button[type="submit"]');
+  // The page does window.location.href = redirectTo on success.
+  // Wait for the redirect target, not just any URL change.
+  await page.waitForURL(/\/admin\/content-pipeline/, { timeout: 30_000 });
   console.log(`  logged in, landed at ${page.url()}`);
 }
 
