@@ -300,3 +300,37 @@ describe('RankingResolverService.resolve — B4 sort direction + insufficient_da
     expect(result.insufficient_data).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// B5: Limit param + format-aware value strings
+// ---------------------------------------------------------------------------
+
+describe('RankingResolverService.resolve — B5 limit + value formatting', () => {
+  it('limit: 5 slices to 5 rankings from 10 available rows', async () => {
+    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
+    const result = await service.resolve({ ...nationalMetroInput, limit: 5 });
+    expect(result.rankings).toHaveLength(5);
+  });
+
+  it('limit: 50 returns 50 rankings when 60 rows available', async () => {
+    const { service } = buildHarness({ supabaseRows: makeMetroRows(60) });
+    const result = await service.resolve({ ...nationalMetroInput, limit: 50 });
+    expect(result.rankings).toHaveLength(50);
+  });
+
+  it('value_formatted is $1.2M for a $1,200,000 home_value row', async () => {
+    const rows = [
+      {
+        cbsa_code: '35620',
+        region_name: 'New York',
+        state_name: 'NY',
+        value: 1_200_000,
+        period_date: '2026-03-01',
+      },
+      ...makeMetroRows(9, 900_000),
+    ];
+    const { service } = buildHarness({ supabaseRows: rows });
+    const result = await service.resolve(nationalMetroInput);
+    expect(result.rankings[0].value_formatted).toBe('$1.2M');
+  });
+});
