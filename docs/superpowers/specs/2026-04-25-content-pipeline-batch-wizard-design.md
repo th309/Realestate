@@ -276,7 +276,7 @@ Path: `packages/frontend/app/admin/content-pipeline/lib/`
 
 ## 7. Acceptance Criteria
 
-A reviewer verifies the design is implemented correctly when:
+ALL criteria are gates, not advisory. Implementation is not complete until every bullet is proven. The destination-landing check (criterion 11) is the final gate — internal state (DB rows, API 200s, UI renders) is necessary but not sufficient evidence of done.
 
 1. **Single mode unchanged:** picking a single market via autocomplete and submitting still creates exactly one run, identical to today's flow. No regression in visual layout, step count, or API contract.
 2. **Batch toggle works:** switching to Batch mode swaps the Market step body; switching back discards batch state.
@@ -288,6 +288,14 @@ A reviewer verifies the design is implemented correctly when:
 8. **Cost/time estimate:** matches `count × per-format cost` and `count × 20s ÷ concurrency` math; updates live as checkboxes change.
 9. **Partial-success handling:** if backend reports `failed > 0`, toast surfaces count and the redirect-target banner lists failed market names.
 10. **No orchestrator changes:** existing single-market runs created via the (unchanged) Single mode complete end-to-end identically to before.
+11. **DESTINATION GATE — Live videos posted to YouTube.** Drive the admin UI via Playwright to produce the **minimum** demonstration set:
+    - 1 run via Single mode (proves no regression in the existing path)
+    - 1 batch of 2 markets via Custom-list scope (proves fan-out with the smallest meaningful batch)
+    - Total: 3 videos, 1 batch.
+
+    Each video MUST be verified live in YouTube Studio (not just queued, not just `published` in DB — actually viewable on the channel). Verification can be visual via Playwright + Claude in Chrome, or programmatic via the YouTube Data API. If any video fails at any pipeline stage (script gen, render, captions, upload, publish), apply systematic-debugging discipline: identify root cause, fix the underlying issue, re-run that specific run. Repeat until all 3 videos are live. Document any fixes made during validation in a follow-up commit.
+
+    No claim of "implementation complete" until all 3 are live on the YouTube channel.
 
 ## 8. Open Questions
 
