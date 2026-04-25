@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchVoices, type TtsVoice } from "../lib/content-pipeline-api";
+import { fetchVoices, type TtsVoice } from "../lib/settings-api";
 import { useUpdateFormatDefault } from "../lib/use-format-mutations";
 import { M3Popover } from "../components/m3-popover";
 

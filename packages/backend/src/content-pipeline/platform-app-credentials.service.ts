@@ -13,6 +13,20 @@ export interface AppCredentialStatus {
   lastFour: string | null; // last 4 chars of client_id (UI confirmation only)
   updatedAt: string | null;
   notes: string | null;
+  /**
+   * The exact redirect URI THIS backend will receive OAuth callbacks at,
+   * computed from APP_BASE_URL. Operators copy this into the platform's
+   * developer console. Returned by the backend (NOT guessed by the
+   * frontend) because in deployed envs the frontend host
+   * (propertyiq.up.railway.app) and backend host
+   * (backend-production-ee4d.up.railway.app) are different domains, and
+   * locally the backend runs on :3001 while the frontend runs on :3000.
+   *
+   * Null when APP_BASE_URL is unset on the backend — the Configure
+   * dialog surfaces that as an actionable error instead of silently
+   * rendering a wrong URI.
+   */
+  redirectUri: string | null;
 }
 
 /**
@@ -49,6 +63,7 @@ export class PlatformAppCredentialsService {
 
   /** Status describing where credentials live — for the admin UI. */
   async status(platform: string): Promise<AppCredentialStatus> {
+    const redirectUri = this.computeRedirectUri(platform);
     const client = this.supabase.getClient();
     const { data } = await client
       .from('platform_app_credentials')
@@ -62,6 +77,7 @@ export class PlatformAppCredentialsService {
         lastFour: (data.client_id_last4 as string | null) ?? null,
         updatedAt: data.updated_at as string,
         notes: (data.notes as string | null) ?? null,
+        redirectUri,
       };
     }
     const env = this.readEnv(platform);
@@ -72,6 +88,7 @@ export class PlatformAppCredentialsService {
         lastFour: env.clientId.slice(-4),
         updatedAt: null,
         notes: null,
+        redirectUri,
       };
     }
     return {
@@ -80,7 +97,21 @@ export class PlatformAppCredentialsService {
       lastFour: null,
       updatedAt: null,
       notes: null,
+      redirectUri,
     };
+  }
+
+  /**
+   * Single source of truth for the OAuth callback URI: the backend's own
+   * APP_BASE_URL. In local dev this is "http://localhost:3001"; in
+   * production it's the Railway backend host. Returned to the frontend
+   * via `status()` so the Configure dialog renders the correct URI for
+   * whichever environment served the request.
+   */
+  private computeRedirectUri(platform: string): string | null {
+    const base = process.env.APP_BASE_URL;
+    if (!base) return null;
+    return `${base.replace(/\/$/, '')}/api/admin/content-pipeline/platforms/${platform}/oauth-callback`;
   }
 
   async upsert(args: {

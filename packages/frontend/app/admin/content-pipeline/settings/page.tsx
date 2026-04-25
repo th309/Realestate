@@ -6,7 +6,7 @@ import {
   pausePipeline,
   resumePipeline,
   updateSettings,
-} from "../lib/content-pipeline-api";
+} from "../lib/settings-api";
 import { FormatDefaults } from "./format-defaults";
 import type { FormatRowData } from "./format-row";
 

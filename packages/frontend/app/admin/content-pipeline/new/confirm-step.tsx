@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createRun, fetchSettings } from "../lib/content-pipeline-api";
+import { createRun } from "../lib/content-pipeline-api";
+import { fetchSettings } from "../lib/settings-api";
 import { FORMAT_META } from "../lib/format-previews";
 
 type ApprovalMode = "auto" | "review" | "draft";

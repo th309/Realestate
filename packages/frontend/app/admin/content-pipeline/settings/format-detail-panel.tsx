@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchVoices, type TtsVoice } from "../lib/content-pipeline-api";
+import { fetchVoices, type TtsVoice } from "../lib/settings-api";
 import { PlatformChips } from "./platform-chips";
 import { VoicePickerPopover } from "./voice-picker-popover";
 

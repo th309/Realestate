@@ -1,9 +1,6 @@
 "use client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  updateFormatDefault,
-  type FormatDefaultPatch,
-} from "./content-pipeline-api";
+import { updateFormatDefault, type FormatDefaultPatch } from "./settings-api";
 import { useToast } from "./toast";
 
 const SETTINGS_KEY = ["content-pipeline-settings"] as const;

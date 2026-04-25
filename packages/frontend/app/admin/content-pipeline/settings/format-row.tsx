@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { fetchVoices } from "../lib/content-pipeline-api";
+import { fetchVoices } from "../lib/settings-api";
 import { useUpdateFormatDefault } from "../lib/use-format-mutations";
 import { M3Switch } from "../components/m3-switch";
 import { FormatDetailPanel } from "./format-detail-panel";
