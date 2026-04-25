@@ -8,9 +8,15 @@ import { Intro } from "./scenes/Intro";
 import { ScoreReveal } from "./scenes/ScoreReveal";
 import { StatCards } from "./scenes/StatCards";
 import { Outro } from "./scenes/Outro";
+import { Comparison } from "./scenes/Comparison";
 import { RankingRow } from "./primitives/RankingRow";
 import { DeltaDisplay } from "./primitives/DeltaDisplay";
-import type { MarketStats, TrendDirection } from "./types";
+import type {
+  MarketStats,
+  TrendDirection,
+  MarketData,
+  ComparisonMarket,
+} from "./types";
 
 /**
  * Coerce the MCP-shaped dataBundle into the shape the scenes need.
@@ -50,6 +56,7 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
         {props.format === "score_mover" && <ScoreMoverLayout {...props} />}
+        {props.format === "head_to_head" && <HeadToHeadLayout {...props} />}
         {/* Other formats rendered in later phases */}
       </AbsoluteFill>
       {/*
@@ -123,6 +130,57 @@ const GradeRevealLayout: React.FC<VideoProps> = (props) => {
     </>
   );
 };
+
+function coerceMarketData(raw: any, fallbackName: string): MarketData {
+  const scoreObj = raw?.score ?? {};
+  const score = num(scoreObj.propertyiq_score ?? raw?.propertyiq_score, 50);
+  const grade =
+    typeof scoreObj.grade === "string"
+      ? scoreObj.grade
+      : typeof raw?.grade === "string"
+        ? raw.grade
+        : "FAIR";
+  const market =
+    typeof raw?.canonical_name === "string"
+      ? raw.canonical_name
+      : typeof raw?.name === "string"
+        ? raw.name
+        : typeof raw?.market === "string"
+          ? raw.market
+          : fallbackName;
+  // Trend isn't in the snapshot shape — same as GradeRevealLayout's stable/0 fallback.
+  const trend: TrendDirection = "stable";
+  const trendChange = 0;
+  const periodDate =
+    typeof raw?.home_value?.period_date === "string"
+      ? raw.home_value.period_date
+      : new Date().toISOString().slice(0, 10);
+  const stats = coerceStats(raw ?? {});
+  return {
+    market,
+    score,
+    grade,
+    trend,
+    trendChange,
+    stats,
+    history: [],
+    periodDate,
+  };
+}
+
+function coerceComparisonMarket(
+  raw: any,
+  fallbackName: string,
+): ComparisonMarket {
+  const m = coerceMarketData(raw, fallbackName);
+  return {
+    market: m.market,
+    score: m.score,
+    grade: m.grade,
+    trend: m.trend,
+    trendChange: m.trendChange,
+  };
+}
 
 function pickState(props: VideoProps): string {
   const fromBundle = (props.dataBundle as any)?.state;
@@ -262,6 +320,35 @@ const ScoreMoverLayout: React.FC<VideoProps> = (props) => {
       </Sequence>
       <Sequence from={810} durationInFrames={90}>
         <BrandOutroCard ctaUrl={props.ctaUrl} score={score} />
+      </Sequence>
+    </>
+  );
+};
+
+const HeadToHeadLayout: React.FC<VideoProps> = (props) => {
+  const bundle = (props.dataBundle ?? {}) as Record<string, any>;
+  // Accept both shape A (markets array) and shape B (primary/secondary).
+  const arr: any[] = Array.isArray(bundle.markets) ? bundle.markets : [];
+  const a = arr[0] ?? bundle.primary ?? null;
+  const b = arr[1] ?? bundle.secondary ?? null;
+  const primary = coerceMarketData(a, "Market A");
+  const secondary = coerceComparisonMarket(b, "Market B");
+  return (
+    <>
+      <Sequence from={0} durationInFrames={60}>
+        <BrandBumper />
+      </Sequence>
+      <Sequence from={60} durationInFrames={90}>
+        <Intro marketName={`${primary.market} vs ${secondary.market}`} />
+      </Sequence>
+      <Sequence from={150} durationInFrames={1500}>
+        <Comparison primary={primary} others={[secondary]} />
+      </Sequence>
+      <Sequence from={1650} durationInFrames={90}>
+        <Outro ctaUrl={props.ctaUrl} />
+      </Sequence>
+      <Sequence from={1740} durationInFrames={60}>
+        <BrandOutroCard ctaUrl={props.ctaUrl} score={primary.score} />
       </Sequence>
     </>
   );
