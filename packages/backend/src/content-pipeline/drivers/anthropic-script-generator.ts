@@ -9,6 +9,11 @@ import {
   ScriptGenerationResult,
   ScriptVariant,
 } from './script-generator.interface';
+import {
+  RankingScript,
+  RankingScriptSchema,
+  validateScriptAgainstMarkets,
+} from '../ranking/ranking-script.schema';
 
 const SCRIPT_TOOL_SCHEMA = {
   name: 'emit_script',
@@ -56,6 +61,100 @@ const SCRIPT_TOOL_SCHEMA = {
   },
 } as const;
 
+const RANKING_MAX_RETRIES = 2;
+
+async function generateRankingScript(
+  req: ScriptGenerationRequest,
+  client: Anthropic,
+): Promise<RankingScript> {
+  const promptFile =
+    req.format === 'top_10_ranking'
+      ? 'top_10_ranking.md'
+      : 'bottom_10_ranking.md';
+  const promptTemplate = readFileSync(
+    join(__dirname, '..', 'prompts', promptFile),
+    'utf-8',
+  );
+
+  const params = req.dataBundle as any;
+  const inputBlock = JSON.stringify(
+    {
+      metric: params.metric,
+      scope: params.scope,
+      geo_level: params.geo_level,
+      direction: params.direction,
+      resolved_markets: (params.resolved_markets as any[]).map(
+        ({ rank, region_name, state, value, value_formatted }) => ({
+          rank,
+          region_name,
+          state,
+          value,
+          value_formatted,
+        }),
+      ),
+    },
+    null,
+    2,
+  );
+
+  let lastError = '';
+  for (let attempt = 0; attempt <= RANKING_MAX_RETRIES; attempt++) {
+    const messages: Anthropic.Messages.MessageParam[] = [
+      {
+        role: 'user',
+        content: `${promptTemplate}\n\n# Input\n\n\`\`\`json\n${inputBlock}\n\`\`\``,
+      },
+    ];
+    if (lastError) {
+      messages.push({
+        role: 'user',
+        content: `Previous attempt failed validation:\n${lastError}\n\nReturn corrected JSON.`,
+      });
+    }
+
+    const response = await client.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 4096,
+      messages,
+    });
+
+    const textBlock = response.content[0];
+    if (!textBlock || textBlock.type !== 'text') {
+      lastError = 'Response did not contain a text block';
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(textBlock.text);
+    } catch (e) {
+      lastError = `Could not parse JSON: ${(e as Error).message}`;
+      continue;
+    }
+
+    const schemaResult = RankingScriptSchema.safeParse(parsed);
+    if (!schemaResult.success) {
+      lastError = `Schema errors: ${JSON.stringify(schemaResult.error.errors)}`;
+      continue;
+    }
+
+    const contextErrors = validateScriptAgainstMarkets(
+      schemaResult.data,
+      params.resolved_markets,
+    );
+    if (contextErrors.length > 0) {
+      lastError = `Context errors: ${contextErrors.join('; ')}`;
+      continue;
+    }
+
+    return schemaResult.data;
+  }
+
+  throw new Error(
+    `Ranking script generation failed after ${RANKING_MAX_RETRIES + 1} attempts: ${lastError}`,
+  );
+}
+
 @Injectable()
 export class AnthropicScriptGenerator implements ScriptGenerator {
   private readonly client: Anthropic;
@@ -76,6 +175,13 @@ export class AnthropicScriptGenerator implements ScriptGenerator {
   async generate(
     req: ScriptGenerationRequest,
   ): Promise<ScriptGenerationResult> {
+    if (req.format === 'top_10_ranking' || req.format === 'bottom_10_ranking') {
+      return generateRankingScript(
+        req,
+        this.client,
+      ) as unknown as Promise<ScriptGenerationResult>;
+    }
+
     const promptPath = join(__dirname, '..', 'prompts', `${req.format}.md`);
     const template = readFileSync(promptPath, 'utf8');
     const userPrompt = template
