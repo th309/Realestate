@@ -10,6 +10,7 @@ import { TimeCaptionsHandler } from './job-handlers/time-captions.handler';
 import { PublishHandler } from './job-handlers/publish.handler';
 import { PublishYouTubeShortsHandler } from './job-handlers/publish-youtube-shorts.handler';
 import { PublishTikTokHandler } from './job-handlers/publish-tiktok.handler';
+import { PublishInstagramHandler } from './job-handlers/publish-instagram.handler';
 import {
   GenerateLeadMagnetHandler,
   GenerateLeadMagnetJob,
@@ -31,6 +32,7 @@ export class HandlersBootstrapService implements OnModuleInit {
     private readonly publish: PublishHandler,
     private readonly publishYT: PublishYouTubeShortsHandler,
     private readonly publishTT: PublishTikTokHandler,
+    private readonly publishIG: PublishInstagramHandler,
     private readonly leadMagnet: GenerateLeadMagnetHandler,
   ) {}
 
@@ -85,6 +87,13 @@ export class HandlersBootstrapService implements OnModuleInit {
       async (job) => {
         if (job.data.platform === 'tiktok')
           await this.publishTT.handle(job.data.runId);
+      },
+    );
+    await this.queue.work<{ runId: string; platform: string }>(
+      'publish-instagram',
+      async (job) => {
+        if (job.data.platform === 'instagram_reels')
+          await this.publishIG.handle(job.data.runId);
       },
     );
     await this.queue.work<GenerateLeadMagnetJob>('render-pdf', async (job) =>
