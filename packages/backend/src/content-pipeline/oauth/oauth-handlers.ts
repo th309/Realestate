@@ -198,28 +198,52 @@ export async function exchangeLinkedIn(
     throw new Error(`linkedin token exchange failed: ${await tokenRes.text()}`);
   const tokenJson = (await tokenRes.json()) as { access_token: string };
 
-  const orgsRes = await fetch(
-    'https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization))',
-    {
-      headers: {
-        Authorization: `Bearer ${tokenJson.access_token}`,
-        'X-Restli-Protocol-Version': '2.0.0',
+  // Org-mode (opt-in via LINKEDIN_AUTHOR_MODE=organization, requires
+  // Marketing Developer Platform approval): post to a Company Page the
+  // user administers; lookup happens via /v2/organizationAcls.
+  if (process.env.LINKEDIN_AUTHOR_MODE === 'organization') {
+    const orgsRes = await fetch(
+      'https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization))',
+      {
+        headers: {
+          Authorization: `Bearer ${tokenJson.access_token}`,
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
       },
-    },
-  );
-  if (!orgsRes.ok) {
-    throw new Error(`linkedin orgs lookup failed: ${await orgsRes.text()}`);
-  }
-  const orgsJson = (await orgsRes.json()) as {
-    elements?: Array<{ organization: string }>;
-  };
-  const orgUrn = orgsJson.elements?.[0]?.organization;
-  if (!orgUrn) {
-    throw new Error(
-      'no LinkedIn organization with ADMINISTRATOR role found for this user',
     );
+    if (!orgsRes.ok) {
+      throw new Error(`linkedin orgs lookup failed: ${await orgsRes.text()}`);
+    }
+    const orgsJson = (await orgsRes.json()) as {
+      elements?: Array<{ organization: string }>;
+    };
+    const orgUrn = orgsJson.elements?.[0]?.organization;
+    if (!orgUrn) {
+      throw new Error(
+        'no LinkedIn organization with ADMINISTRATOR role found for this user',
+      );
+    }
+    return { accountLabel: orgUrn, refreshToken: tokenJson.access_token };
   }
-  return { accountLabel: orgUrn, refreshToken: tokenJson.access_token };
+
+  // Member-mode (default, no LinkedIn approval needed): post to the
+  // authenticated user's personal profile. /v2/userinfo is the OpenID
+  // Connect endpoint that returns the user's `sub` (= numeric ID); we
+  // wrap it as urn:li:person:{sub} which the publisher uses as `author`.
+  const meRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+    headers: { Authorization: `Bearer ${tokenJson.access_token}` },
+  });
+  if (!meRes.ok) {
+    throw new Error(`linkedin userinfo lookup failed: ${await meRes.text()}`);
+  }
+  const meJson = (await meRes.json()) as { sub: string; name?: string };
+  if (!meJson.sub) {
+    throw new Error('linkedin /v2/userinfo returned no sub (member id)');
+  }
+  return {
+    accountLabel: `urn:li:person:${meJson.sub}`,
+    refreshToken: tokenJson.access_token,
+  };
 }
 
 export async function exchangeForPlatform(

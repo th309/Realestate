@@ -25,13 +25,28 @@ const FACEBOOK_SCOPES = [
   'business_management',
 ];
 
-const LINKEDIN_SCOPES = [
-  'r_liteprofile',
+const LINKEDIN_SCOPES = ['openid', 'profile', 'email', 'w_member_social'];
+
+// Org-posting tier (opt-in via LINKEDIN_AUTHOR_MODE=organization). These
+// scopes require the LinkedIn "Marketing Developer Platform" product
+// approval — a multi-day review LinkedIn runs manually. Default mode
+// posts to the authenticated user's personal profile, which works
+// out-of-the-box with no LinkedIn approval.
+const LINKEDIN_ORG_SCOPES = [
+  'openid',
+  'profile',
+  'email',
+  'w_member_social',
   'r_organization_social',
   'rw_organization_admin',
-  'w_member_social',
   'w_organization_social',
 ];
+
+function linkedInScopes(): string[] {
+  return process.env.LINKEDIN_AUTHOR_MODE === 'organization'
+    ? LINKEDIN_ORG_SCOPES
+    : LINKEDIN_SCOPES;
+}
 
 function redirectUri(platform: string): string {
   const base = process.env.APP_BASE_URL;
@@ -105,7 +120,7 @@ export async function buildOAuthUrl(
         `?response_type=code` +
         `&client_id=${creds.clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri(platform))}` +
-        `&scope=${encodeURIComponent(LINKEDIN_SCOPES.join(' '))}` +
+        `&scope=${encodeURIComponent(linkedInScopes().join(' '))}` +
         `&state=${state}`
       );
     default:
