@@ -72,18 +72,30 @@ export function M3Dialog({
       aria-label={ariaLabel}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm animate-[m3-scrim-in_200ms_ease-out]"
       onClick={(e) => {
-        // Block clicks from bubbling to ancestor handlers (e.g. a wrapping
-        // <Link> on a dashboard card). Visually-fixed positioning doesn't
-        // change React's event tree. preventDefault is also required —
-        // React's stopPropagation only blocks React handlers; the native
-        // browser still navigates on an <a> ancestor click without it.
+        // Only handle SCRIM clicks here (target === currentTarget means the
+        // click hit the backdrop, not an inner element). For inner clicks
+        // we MUST NOT call preventDefault — that would cancel form submits,
+        // button defaults, anchor navigation, etc. inside the dialog.
+        //
+        // The scrim case stops propagation + preventDefault to keep
+        // ancestor handlers (e.g. a wrapping <Link> on a dashboard card)
+        // from also firing on this click. Inner elements take care of
+        // their own propagation (the dialog content div below intercepts
+        // bubbling separately).
+        if (e.target !== e.currentTarget) return;
         e.stopPropagation();
         e.preventDefault();
-        if (closeOnScrim && e.target === e.currentTarget) onClose();
+        if (closeOnScrim) onClose();
       }}
     >
       <div
         ref={dialogRef}
+        // Stop bubbling (NOT preventDefault) so dialog-internal clicks
+        // don't reach an ancestor <Link> on a dashboard card while still
+        // letting form submits, button defaults, and anchor navigation
+        // inside the dialog work normally.
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         className={`relative w-full ${maxWidth} bg-surface-container-high text-on-surface rounded-[28px] shadow-2xl animate-[m3-dialog-in_200ms_cubic-bezier(0.2,0,0,1)]`}
       >
         {children}

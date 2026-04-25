@@ -16,7 +16,6 @@ interface PlatformRowProps {
   connectedAt: string | null;
   lastPublishedAt: string | null;
   appCredentials: AppCredentialStatus;
-  apiBaseUrl: string;
   onChange: () => void;
 }
 
@@ -28,7 +27,6 @@ export function PlatformRow({
   connectedAt,
   lastPublishedAt,
   appCredentials,
-  apiBaseUrl,
   onChange,
 }: PlatformRowProps) {
   const [working, setWorking] = useState<"connect" | "disconnect" | null>(null);
@@ -209,7 +207,6 @@ export function PlatformRow({
         open={configureOpen}
         platform={platform}
         status={appCredentials}
-        apiBaseUrl={apiBaseUrl}
         onClose={() => setConfigureOpen(false)}
         onSaved={() => {
           setConfigureOpen(false);

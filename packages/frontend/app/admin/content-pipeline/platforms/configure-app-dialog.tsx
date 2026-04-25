@@ -6,6 +6,7 @@ import {
   clearAppCredentials,
 } from "../lib/app-credentials-api";
 import type { AppCredentialStatus } from "../lib/content-pipeline-api";
+import { useToast } from "../lib/toast";
 
 interface PlatformGuide {
   label: string;
@@ -68,16 +69,14 @@ export function ConfigureAppDialog({
   status,
   onClose,
   onSaved,
-  apiBaseUrl,
 }: {
   open: boolean;
   platform: string;
   status: AppCredentialStatus;
   onClose: () => void;
   onSaved: (next: AppCredentialStatus) => void;
-  /** APP_BASE_URL — used to render the redirect URI to copy. */
-  apiBaseUrl: string;
 }) {
+  const toast = useToast();
   const guide = GUIDES[platform] ?? {
     label: platform,
     clientIdLabel: "Client ID",
@@ -85,7 +84,10 @@ export function ConfigureAppDialog({
     hint: "Refer to the platform's developer documentation.",
     consoleUrl: "",
   };
-  const redirectUri = `${apiBaseUrl}/api/admin/content-pipeline/platforms/${platform}/oauth-callback`;
+  // The redirect URI is computed by the backend from APP_BASE_URL and
+  // returned in `status.redirectUri`. Falls back to a clear placeholder
+  // if APP_BASE_URL isn't set on the backend.
+  const redirectUri = status.redirectUri;
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -114,9 +116,14 @@ export function ConfigureAppDialog({
         notes: notes.trim() || undefined,
       });
       onSaved(next);
+      toast.success(
+        `${guide.label} credentials saved · click Connect to authorize an account`,
+      );
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setError(msg);
+      toast.error(`Save failed: ${msg.slice(0, 100)}`);
     } finally {
       setBusy(null);
     }
@@ -129,9 +136,12 @@ export function ConfigureAppDialog({
     try {
       const next = await clearAppCredentials(platform);
       onSaved(next);
+      toast.success(`${guide.label} credentials cleared`);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Clear failed");
+      const msg = err instanceof Error ? err.message : "Clear failed";
+      setError(msg);
+      toast.error(`Clear failed: ${msg.slice(0, 100)}`);
     } finally {
       setBusy(null);
     }
@@ -174,9 +184,16 @@ export function ConfigureAppDialog({
               <p className="text-on-surface-variant mb-1">
                 Register this redirect URI on the platform&apos;s app:
               </p>
-              <code className="block bg-surface-container-high text-on-surface px-2 py-1.5 rounded font-mono text-[11px] break-all select-all">
-                {redirectUri}
-              </code>
+              {redirectUri ? (
+                <code className="block bg-surface-container-high text-on-surface px-2 py-1.5 rounded font-mono text-[11px] break-all select-all">
+                  {redirectUri}
+                </code>
+              ) : (
+                <p className="text-error font-medium">
+                  APP_BASE_URL is not set on the backend — set it before saving
+                  credentials, otherwise the OAuth callback will not resolve.
+                </p>
+              )}
             </div>
           </div>
 
