@@ -20,11 +20,10 @@ import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
-import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
-import { PlatformCredentialsService } from './platform-credentials.service';
-import { PlatformAppCredentialsService } from './platform-app-credentials.service';
+import { ContentDataService } from './data/content-data.service';
 import { CreateRunDto } from './dto/create-run.dto';
+import { MoversResolveQueryDto } from './dto/movers-resolve.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
@@ -39,10 +38,8 @@ export class ContentPipelineController {
     private readonly queries: ContentPipelineQueriesService,
     private readonly actions: RunActionsService,
     private readonly thumbnails: RunThumbnailService,
-    private readonly platformManager: PlatformManagerService,
     private readonly settingsService: PipelineSettingsService,
-    private readonly credentials: PlatformCredentialsService,
-    private readonly appCredentials: PlatformAppCredentialsService,
+    private readonly contentData: ContentDataService,
   ) {}
 
   @Get('health')
@@ -56,6 +53,12 @@ export class ContentPipelineController {
       success: true,
       data: await this.queries.getDashboard({ batchId }),
     };
+  }
+
+  @Get('movers/resolve')
+  async resolveMovers(@Query() q: MoversResolveQueryDto) {
+    const result = await this.contentData.getTopMovers(q.geo, q.windowDays, 25);
+    return { success: true, data: result };
   }
 
   @Post('runs')
@@ -181,69 +184,6 @@ export class ContentPipelineController {
   @Get('review/queue')
   async reviewQueue() {
     return { success: true, data: await this.queries.getReviewQueue() };
-  }
-
-  @Get('platforms')
-  async platforms() {
-    return {
-      success: true,
-      data: { platforms: await this.platformManager.getPlatformStatuses() },
-    };
-  }
-
-  @Post('platforms/:platform/connect')
-  async platformConnect(@Param('platform') platform: string) {
-    return {
-      success: true,
-      data: await this.platformManager.startOAuth(platform),
-    };
-  }
-
-  @Delete('platforms/:platform/credentials')
-  async platformDisconnect(@Param('platform') platform: string) {
-    await this.credentials.disconnect(platform);
-    return { success: true, data: { disconnected: platform } };
-  }
-
-  // ── App credentials (per-platform OAuth client_id + secret) ────────────
-  // Lets admins enter the developer-app credentials in the UI without
-  // Railway env-var trips. Resolution is DB-first then env, so the
-  // existing YouTube env-var setup keeps working unchanged.
-
-  @Get('platforms/:platform/app-credentials')
-  async getAppCredentials(@Param('platform') platform: string) {
-    return { success: true, data: await this.appCredentials.status(platform) };
-  }
-
-  @Patch('platforms/:platform/app-credentials')
-  async setAppCredentials(
-    @Param('platform') platform: string,
-    @Body() body: { clientId: string; clientSecret: string; notes?: string },
-    @Req() req: Request & { user?: { id: string } },
-  ) {
-    if (!body?.clientId || !body?.clientSecret) {
-      throw new BadRequestException('clientId and clientSecret are required');
-    }
-    await this.appCredentials.upsert({
-      platform,
-      clientId: body.clientId.trim(),
-      clientSecret: body.clientSecret.trim(),
-      notes: body.notes?.trim(),
-      updatedBy: req.user?.id,
-    });
-    return {
-      success: true,
-      data: await this.appCredentials.status(platform),
-    };
-  }
-
-  @Delete('platforms/:platform/app-credentials')
-  async clearAppCredentials(@Param('platform') platform: string) {
-    await this.appCredentials.clear(platform);
-    return {
-      success: true,
-      data: await this.appCredentials.status(platform),
-    };
   }
 
   @Get('settings')
