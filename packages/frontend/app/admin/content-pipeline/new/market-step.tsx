@@ -2,8 +2,11 @@
 import { useState } from "react";
 import { resolveMarket } from "../lib/content-pipeline-api";
 import type { BatchMarket } from "../lib/batch-runs-api";
-import type { WizardMode } from "./page";
+import type { ScoreMoverGeo, ScoreMoverWindowDays } from "../lib/movers-api";
+import type { WizardFormatOptions, WizardMode } from "./page";
 import { MarketStepBatch } from "./market-step-batch";
+import { MarketStepTopMovers } from "./market-step-top-movers";
+import { WindowChipPicker } from "./window-chip-picker";
 
 interface MarketMatch {
   id: string;
@@ -13,18 +16,36 @@ interface MarketMatch {
 }
 
 export function MarketStep({
+  format,
   mode,
   onModeChange,
+  formatOptions,
+  onFormatOptionsChange,
+  topMoversGeo,
+  onTopMoversGeoChange,
   onPickSingle,
   onPickBatch,
+  onPickTopMovers,
   onBack,
 }: {
+  format: string;
   mode: WizardMode;
   onModeChange: (mode: WizardMode) => void;
+  formatOptions: WizardFormatOptions;
+  onFormatOptionsChange: (opts: WizardFormatOptions) => void;
+  topMoversGeo: ScoreMoverGeo;
+  onTopMoversGeoChange: (g: ScoreMoverGeo) => void;
   onPickSingle: (market: string) => void;
   onPickBatch: (markets: BatchMarket[]) => void;
+  onPickTopMovers: (
+    markets: BatchMarket[],
+    windowDays: ScoreMoverWindowDays,
+  ) => void;
   onBack: () => void;
 }) {
+  const isScoreMover = format === "score_mover";
+  const windowDays = formatOptions.windowDays ?? 90;
+
   return (
     <div className="p-8 max-w-3xl">
       <button onClick={onBack} className="text-sm text-primary mb-4">
@@ -32,12 +53,38 @@ export function MarketStep({
       </button>
       <h1 className="text-2xl font-semibold mb-6">Pick a market</h1>
 
-      <ModeToggle mode={mode} onChange={onModeChange} />
+      <ModeToggle
+        mode={mode}
+        onChange={onModeChange}
+        showTopMovers={isScoreMover}
+      />
 
-      {mode === "single" ? (
-        <SingleMarketBody onPick={onPickSingle} />
-      ) : (
-        <MarketStepBatch onPick={onPickBatch} />
+      {isScoreMover && mode === "single" && (
+        <div className="mb-6 flex items-center gap-3">
+          <span className="text-xs uppercase tracking-wide text-on-surface-variant">
+            Window
+          </span>
+          <WindowChipPicker
+            value={windowDays}
+            onChange={(w) =>
+              onFormatOptionsChange({ ...formatOptions, windowDays: w })
+            }
+          />
+        </div>
+      )}
+
+      {mode === "single" && <SingleMarketBody onPick={onPickSingle} />}
+      {mode === "batch" && <MarketStepBatch onPick={onPickBatch} />}
+      {mode === "top_movers" && (
+        <MarketStepTopMovers
+          windowDays={windowDays}
+          geo={topMoversGeo}
+          onWindowChange={(w) =>
+            onFormatOptionsChange({ ...formatOptions, windowDays: w })
+          }
+          onGeoChange={onTopMoversGeoChange}
+          onPick={onPickTopMovers}
+        />
       )}
     </div>
   );
@@ -46,16 +93,26 @@ export function MarketStep({
 function ModeToggle({
   mode,
   onChange,
+  showTopMovers,
 }: {
   mode: WizardMode;
   onChange: (m: WizardMode) => void;
+  showTopMovers: boolean;
 }) {
+  const modes: WizardMode[] = showTopMovers
+    ? ["single", "batch", "top_movers"]
+    : ["single", "batch"];
+  const labels: Record<WizardMode, string> = {
+    single: "Single market",
+    batch: "Batch",
+    top_movers: "Top movers",
+  };
   return (
     <div
       className="inline-flex rounded-full bg-surface-container-low p-1 mb-6"
       role="radiogroup"
     >
-      {(["single", "batch"] as WizardMode[]).map((m) => {
+      {modes.map((m) => {
         const active = mode === m;
         return (
           <button
@@ -64,13 +121,13 @@ function ModeToggle({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(m)}
-            className={`px-5 py-2 rounded-full text-sm font-semibold capitalize transition-colors duration-200 ${
+            className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${
               active
                 ? "bg-primary text-on-primary"
                 : "text-on-surface hover:bg-surface-container"
             }`}
           >
-            {m === "single" ? "Single market" : "Batch"}
+            {labels[m]}
           </button>
         );
       })}

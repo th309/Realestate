@@ -13,8 +13,13 @@ import {
   type ResolveRankingResponse,
 } from "../lib/content-pipeline-api";
 import type { GeoLevel, ScopeType } from "./helpers/ranking-validity";
+import type { ScoreMoverGeo, ScoreMoverWindowDays } from "../lib/movers-api";
 
-export type WizardMode = "single" | "batch";
+export type WizardMode = "single" | "batch" | "top_movers";
+
+export interface WizardFormatOptions {
+  windowDays?: ScoreMoverWindowDays;
+}
 
 type RankingArgs = {
   metric_id: string;
@@ -33,6 +38,8 @@ export default function NewRunPage() {
   const [mode, setMode] = useState<WizardMode>("single");
   const [market, setMarket] = useState<string>("");
   const [batchMarkets, setBatchMarkets] = useState<BatchMarket[]>([]);
+  const [formatOptions, setFormatOptions] = useState<WizardFormatOptions>({});
+  const [topMoversGeo, setTopMoversGeo] = useState<ScoreMoverGeo>("metro");
 
   // Ranking-specific state
   const [rankingArgs, setRankingArgs] = useState<RankingArgs | undefined>(
@@ -48,6 +55,12 @@ export default function NewRunPage() {
 
   function handleFormatPick(f: string) {
     setFormat(f);
+    // top_movers mode is score_mover-only — fall back to single when leaving
+    if (f !== "score_mover" && mode === "top_movers") setMode("single");
+    if (f !== "score_mover") {
+      setBatchMarkets([]);
+      setFormatOptions({});
+    }
     if (RANKING_FORMATS.has(f)) {
       setStep("ranking-params");
     } else {
@@ -113,8 +126,13 @@ export default function NewRunPage() {
 
       {step === "market" && (
         <MarketStep
+          format={format}
           mode={mode}
           onModeChange={setMode}
+          formatOptions={formatOptions}
+          onFormatOptionsChange={setFormatOptions}
+          topMoversGeo={topMoversGeo}
+          onTopMoversGeoChange={setTopMoversGeo}
           onBack={() => setStep("format")}
           onPickSingle={(m) => {
             setMarket(m);
@@ -122,6 +140,11 @@ export default function NewRunPage() {
           }}
           onPickBatch={(markets) => {
             setBatchMarkets(markets);
+            setStep("confirm");
+          }}
+          onPickTopMovers={(markets, windowDays) => {
+            setBatchMarkets(markets);
+            setFormatOptions({ windowDays });
             setStep("confirm");
           }}
         />
@@ -133,6 +156,7 @@ export default function NewRunPage() {
           mode={mode}
           market={market}
           batchMarkets={batchMarkets}
+          formatOptions={formatOptions}
           onBack={() => setStep("market")}
           onCreatedSingle={(id) =>
             router.push(`/admin/content-pipeline/runs/${id}`)
@@ -167,7 +191,6 @@ export default function NewRunPage() {
                   type="button"
                   onClick={() => {
                     setDriftError(null);
-                    // Re-mount preview by stepping back then forward
                     setStep("ranking-params");
                     setTimeout(() => setStep("ranking-preview"), 0);
                   }}

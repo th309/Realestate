@@ -94,6 +94,7 @@ export async function createRun(payload: {
   approvalMode?: "auto" | "review" | "draft";
   selectedPlatforms?: string[];
   rankingParams?: RankingRunParams;
+  formatOptions?: { windowDays?: 30 | 90 | 180 | 365 };
 }) {
   const res = await fetchAPIRaw("/api/admin/content-pipeline/runs", {
     method: "POST",

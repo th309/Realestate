@@ -11,9 +11,16 @@ import { useCreateBatchRuns, type BatchMarket } from "../lib/batch-runs-api";
 import { SingleMarketSummary } from "./single-market-summary";
 import { BatchConfirmBanner } from "./batch-confirm-banner";
 import { BatchSubmitDialog } from "./batch-submit-dialog";
-import type { WizardMode } from "./page";
+import type { WizardFormatOptions, WizardMode } from "./page";
 
 type ApprovalMode = "auto" | "review" | "draft";
+
+const WINDOW_LABELS: Record<30 | 90 | 180 | 365, string> = {
+  30: "1 month",
+  90: "90 days",
+  180: "6 months",
+  365: "12 months",
+};
 
 const MODE_DESCRIPTIONS: Record<ApprovalMode, string> = {
   auto: "Publish immediately after render. No human check.",
@@ -47,6 +54,7 @@ export function ConfirmStep({
   mode,
   market,
   batchMarkets,
+  formatOptions,
   onBack,
   onCreatedSingle,
   onCreatedBatch,
@@ -55,6 +63,7 @@ export function ConfirmStep({
   mode: WizardMode;
   market: string;
   batchMarkets: BatchMarket[];
+  formatOptions: WizardFormatOptions;
   onBack: () => void;
   onCreatedSingle: (runId: string) => void;
   onCreatedBatch: (batchId: string) => void;
@@ -123,6 +132,9 @@ export function ConfirmStep({
         idempotencyKey,
         approvalMode,
         selectedPlatforms,
+        formatOptions: formatOptions.windowDays
+          ? { windowDays: formatOptions.windowDays }
+          : undefined,
       });
       onCreatedSingle(result.id);
     } catch (e) {
@@ -140,6 +152,9 @@ export function ConfirmStep({
         markets: batchMarkets,
         approvalMode,
         platforms: selectedPlatforms,
+        formatOptions: formatOptions.windowDays
+          ? { windowDays: formatOptions.windowDays }
+          : undefined,
       });
       onCreatedBatch(result.batchId);
     } catch (e) {
@@ -170,6 +185,11 @@ export function ConfirmStep({
       ? "Render only (no platforms selected — useful for previewing)"
       : `Post to ${selectedPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")}`;
 
+  const windowLine =
+    format === "score_mover" && formatOptions.windowDays
+      ? `Window: ${WINDOW_LABELS[formatOptions.windowDays]}`
+      : null;
+
   const submitLabel =
     mode === "batch"
       ? batchCount >= BATCH_DIALOG_THRESHOLD
@@ -198,6 +218,10 @@ export function ConfirmStep({
             publishLine={publishLine}
             outcomeLine={outcomeLine}
           />
+        )}
+
+        {windowLine && (
+          <p className="text-xs text-outline mt-2">{windowLine}</p>
         )}
 
         <PlatformChips
