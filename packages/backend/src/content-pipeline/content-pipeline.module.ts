@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
+import { ContentPipelinePlatformsController } from './content-pipeline-platforms.controller';
 import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
 import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
@@ -103,6 +104,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
   ],
   controllers: [
     ContentPipelineController,
+    ContentPipelinePlatformsController,
     PlatformOAuthCallbackController,
     ShortLinkController,
     MagnetLibraryController,
