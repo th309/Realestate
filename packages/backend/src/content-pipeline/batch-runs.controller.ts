@@ -41,6 +41,7 @@ export class BatchRunsController {
           approvalMode: dto.approvalMode,
           selectedPlatforms: dto.platforms,
           batchId,
+          formatOptions: dto.formatOptions,
         });
         runIds.push(result.id);
       } catch (err) {

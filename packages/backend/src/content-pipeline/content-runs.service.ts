@@ -69,6 +69,7 @@ export class ContentRunsService {
         selected_platforms: dto.selectedPlatforms ?? template.default_platforms,
         idempotency_key: dto.idempotencyKey,
         batch_id: dto.batchId ?? null,
+        format_options: dto.formatOptions ?? {},
         status: 'queued',
         triggered_by: 'manual',
       })
