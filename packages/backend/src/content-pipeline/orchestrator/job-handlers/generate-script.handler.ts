@@ -19,7 +19,7 @@ export class GenerateScriptHandler {
       const client = this.supabase.getClient();
       const { data: run } = await client
         .from('content_runs')
-        .select('format, audience, resolved_geo')
+        .select('format, audience, resolved_geo, format_options')
         .eq('id', runId)
         .single();
       if (!run) throw new Error('run not found');
@@ -49,6 +49,12 @@ export class GenerateScriptHandler {
         .eq('enabled', true)
         .single();
 
+      const formatOptions = (run.format_options ?? {}) as {
+        windowDays?: number;
+        windowLabel?: string;
+        priorDate?: string;
+      };
+
       const result = await this.scriptGen.generate({
         format: run.format,
         audience: run.audience,
@@ -60,6 +66,7 @@ export class GenerateScriptHandler {
         audioBudgetSeconds,
         wordBudget,
         naturalWpm: fmt.natural_wpm,
+        windowLabel: formatOptions.windowLabel,
       });
 
       await client
