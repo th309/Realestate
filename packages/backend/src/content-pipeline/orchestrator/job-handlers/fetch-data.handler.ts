@@ -16,7 +16,7 @@ export class FetchDataHandler {
       const client = this.supabase.getClient();
       const { data: run } = await client
         .from('content_runs')
-        .select('market_query, format')
+        .select('market_query, format, format_options')
         .eq('id', runId)
         .single();
       if (!run) throw new Error('run not found');
@@ -32,10 +32,73 @@ export class FetchDataHandler {
 
       const snapshot = await this.data.getMarketSnapshot(resolvedGeo);
 
-      await client
-        .from('content_runs')
-        .update({ resolved_geo: resolvedGeo })
-        .eq('id', runId);
+      const formatOptions = (run.format_options ?? {}) as {
+        windowDays?: 30 | 90 | 180 | 365;
+        priorDate?: string;
+        windowLabel?: string;
+      };
+
+      let augmentedSnapshot: Record<string, unknown> =
+        snapshot as unknown as Record<string, unknown>;
+      let formatOptionsToPersist: typeof formatOptions | null = null;
+
+      if (run.format === 'score_mover') {
+        const windowDays = formatOptions.windowDays ?? 90;
+        const geo = resolvedGeo.geography as 'metro' | 'county' | 'zip';
+        if (!['metro', 'county', 'zip'].includes(geo)) {
+          throw new Error(
+            `score_mover does not support geography=${geo}; resolved market is ${resolvedGeo.canonical_name}`,
+          );
+        }
+
+        const ctx = await this.data.getScoreMoverContext(
+          resolvedGeo.id,
+          geo,
+          windowDays,
+        );
+        if (!ctx) {
+          throw new Error(
+            `no_prior_score_for_window: no propertyiq score within ~${windowDays}d at ${geo} level for ${resolvedGeo.canonical_name}`,
+          );
+        }
+
+        const existingScore = (augmentedSnapshot.score ?? {}) as Record<
+          string,
+          unknown
+        >;
+        augmentedSnapshot = {
+          ...augmentedSnapshot,
+          score: {
+            ...existingScore,
+            score_delta: ctx.delta,
+            previous_score: ctx.prior.score,
+            previous_score_date: ctx.prior.scoreDate,
+            window_days: ctx.windowDays,
+            window_label: ctx.windowLabel,
+            window_caption: ctx.windowCaption,
+          },
+        };
+
+        // Idempotent snapshot: only write priorDate/windowLabel if not already
+        // present, so re-renders against a refreshed score table do not shift
+        // the delta the operator approved.
+        if (!formatOptions.priorDate || !formatOptions.windowLabel) {
+          formatOptionsToPersist = {
+            windowDays,
+            priorDate: ctx.prior.scoreDate,
+            windowLabel: ctx.windowLabel,
+          };
+        }
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        resolved_geo: resolvedGeo,
+      };
+      if (formatOptionsToPersist) {
+        updatePayload.format_options = formatOptionsToPersist;
+      }
+      await client.from('content_runs').update(updatePayload).eq('id', runId);
+
       // Idempotent write: a prior run or manual re-enqueue may have left an
       // mcp_payload row behind. Downstream handlers use .single() which blows
       // up on 2+ rows, so we clear first.
@@ -48,7 +111,7 @@ export class FetchDataHandler {
         run_id: runId,
         kind: 'mcp_payload',
         storage_url: 'inline',
-        metadata: snapshot,
+        metadata: augmentedSnapshot,
       });
 
       await this.orchestrator.handleStepSuccess(runId);
