@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApprovalMode, ContentFormat, Platform } from '../types';
+import { FormatOptionsDto } from './format-options.dto';
 
 export class BatchMarketDto {
   @IsString()
@@ -46,4 +47,9 @@ export class CreateBatchRunsDto {
   @IsOptional()
   @IsArray()
   platforms?: Platform[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FormatOptionsDto)
+  formatOptions?: FormatOptionsDto;
 }

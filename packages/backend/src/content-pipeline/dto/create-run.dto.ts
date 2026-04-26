@@ -6,8 +6,11 @@ import {
   IsUUID,
   IsObject,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ContentFormat, Platform, ApprovalMode } from '../types';
+import { FormatOptionsDto } from './format-options.dto';
 
 /**
  * Snapshot of ranking resolution params submitted by the operator at
@@ -73,4 +76,9 @@ export class CreateRunDto {
   @IsOptional()
   @IsObject()
   rankingParams?: RankingRunParams;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FormatOptionsDto)
+  formatOptions?: FormatOptionsDto;
 }
