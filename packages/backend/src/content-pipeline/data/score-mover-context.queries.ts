@@ -106,15 +106,21 @@ async function fetchPopulationsByLocation(
   const BATCH = 500;
   for (let i = 0; i < locationIds.length; i += BATCH) {
     const batch = locationIds.slice(i, i + BATCH);
+    // The `geographies` table does NOT have a `location_id` column.
+    // Its universal join key is `geography_id` (which equals cbsa_code
+    // for metros, fips_code for counties, ZIP for zips). The IDs in
+    // propertyiq_scores.location_id are the same values, just under a
+    // different column name on this side. CLAUDE.md memory: "Geography
+    // ID Formats — metro=cbsa_code, county=county_fips, zip=postal_code".
     const { data } = await client
       .from('geographies')
-      .select('location_id, population')
+      .select('geography_id, population')
       .eq('geography_type', geo)
-      .in('location_id', batch);
+      .in('geography_id', batch);
     for (const row of (data as
-      | { location_id: string; population: number | null }[]
+      | { geography_id: string; population: number | null }[]
       | null) ?? []) {
-      out.set(row.location_id, row.population);
+      out.set(row.geography_id, row.population);
     }
   }
   return out;

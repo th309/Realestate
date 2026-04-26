@@ -58,10 +58,10 @@ describe('fetchTopMovers', () => {
       { data: [], error: null },
       {
         data: [
-          { location_id: 'a', population: 1_600_000 },
-          { location_id: 'b', population: 320_000 },
-          { location_id: 'c', population: 1_100_000 },
-          { location_id: 'd', population: 500 },
+          { geography_id: 'a', population: 1_600_000 },
+          { geography_id: 'b', population: 320_000 },
+          { geography_id: 'c', population: 1_100_000 },
+          { geography_id: 'd', population: 500 },
         ],
         error: null,
       },
@@ -118,9 +118,9 @@ describe('fetchTopMovers', () => {
       { data: [], error: null },
       {
         data: [
-          { location_id: 'a', population: 100_000 },
-          { location_id: 'b', population: 1_000_000 },
-          { location_id: 'c', population: 100_000 },
+          { geography_id: 'a', population: 100_000 },
+          { geography_id: 'b', population: 1_000_000 },
+          { geography_id: 'c', population: 100_000 },
         ],
         error: null,
       },
