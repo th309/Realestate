@@ -67,7 +67,11 @@ export function MarketStepTopMovers({
     const all = [...data.up, ...data.down];
     const picked: BatchMarket[] = all
       .filter((m) => checkedIds.has(m.id))
-      .map((m) => ({ id: m.id, geography: m.geography as "metro" | "zip" }));
+      .map((m) => ({
+        id: m.id,
+        geography: m.geography as "metro" | "zip",
+        canonical_name: m.canonical_name,
+      }));
     onPick(picked, windowDays);
   }
 

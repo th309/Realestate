@@ -4,6 +4,8 @@ import { fetchAPIRaw } from "@/lib/data/fetchers/base";
 export interface BatchMarket {
   id: string;
   geography: "metro" | "zip";
+  /** When present, backend uses this instead of `id` for resolveMarket. */
+  canonical_name?: string;
 }
 
 export interface CreateBatchRunsRequest {

@@ -17,6 +17,16 @@ export class BatchMarketDto {
 
   @IsIn(['metro', 'zip'])
   geography!: 'metro' | 'zip';
+
+  /**
+   * Optional canonical_name. When present, batch-runs.controller uses it
+   * as `marketQuery` instead of `id`. Required for cases where the bare
+   * id text-matches a different geography (e.g. CBSA "39020" matches a
+   * real ZIP "39020"), causing fetch-data to resolve the wrong market.
+   */
+  @IsOptional()
+  @IsString()
+  canonical_name?: string;
 }
 
 export class CreateBatchRunsDto {

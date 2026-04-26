@@ -1,7 +1,6 @@
 <!-- packages/backend/src/content-pipeline/prompts/score_mover.md -->
 
-Write a {{video_duration_seconds}}-second Score Mover script for {{canonical_name}}.
-The score change you are reporting is the move {{window_label}} (e.g. "this month", "year over year"). Reference that window naturally in the hook and body.
+Write a {{video_duration_seconds}}-second Score Mover script for {{canonical_name}}. The reported change is the move {{window_label}} — fit the time-window phrase into the hook only; do NOT add it again in the body.
 
 **Timing constraint (hard):** the voice-over must finish in {{audio_budget_seconds}} seconds or less at a natural, unhurried pace (~{{natural_wpm}} words per minute). Target approximately {{word_budget}} words total. Do not exceed this — a script that's too long will get cut off mid-sentence by the video edit. Slightly under is fine; over is not.
 

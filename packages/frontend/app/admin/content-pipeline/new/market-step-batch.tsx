@@ -66,7 +66,11 @@ export function MarketStepBatch({
     if (!data?.markets) return;
     const picked: BatchMarket[] = data.markets
       .filter((m) => checkedIds.has(m.id))
-      .map((m) => ({ id: m.id, geography: m.geography }));
+      .map((m) => ({
+        id: m.id,
+        geography: m.geography,
+        canonical_name: m.canonical_name,
+      }));
     onPick(picked);
   }
 

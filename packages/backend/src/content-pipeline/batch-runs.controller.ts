@@ -36,7 +36,10 @@ export class BatchRunsController {
       try {
         const result = await this.runs.createRun({
           format: dto.format,
-          marketQuery: market.id,
+          // canonical_name is unambiguous; market.id can collide across
+          // geo types (e.g. CBSA 39020 also a valid ZIP). Fall back to id
+          // for legacy/scope-picker batches that don't pass canonical_name.
+          marketQuery: market.canonical_name ?? market.id,
           idempotencyKey: randomUUID(),
           approvalMode: dto.approvalMode,
           selectedPlatforms: dto.platforms,
