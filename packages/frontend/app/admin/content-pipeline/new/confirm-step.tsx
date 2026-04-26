@@ -164,12 +164,17 @@ export function ConfirmStep({
     }
   }
 
+  // Top movers produces N markets → N videos, same submit pipeline as batch.
+  // The picker just changes how the markets list is built; downstream they're
+  // identical. Treat top_movers as batch everywhere in this step.
+  const isBatchLike = mode === "batch" || mode === "top_movers";
+
   function handleSubmitClick() {
-    if (mode === "batch" && batchCount >= BATCH_DIALOG_THRESHOLD) {
+    if (isBatchLike && batchCount >= BATCH_DIALOG_THRESHOLD) {
       setShowBatchDialog(true);
       return;
     }
-    if (mode === "batch") void submitBatch();
+    if (isBatchLike) void submitBatch();
     else void submitSingle();
   }
 
@@ -190,14 +195,13 @@ export function ConfirmStep({
       ? `Window: ${WINDOW_LABELS[formatOptions.windowDays]}`
       : null;
 
-  const submitLabel =
-    mode === "batch"
-      ? batchCount >= BATCH_DIALOG_THRESHOLD
-        ? `Review batch (${batchCount} runs)`
-        : `Submit ${batchCount} run${batchCount === 1 ? "" : "s"}`
-      : submitting
-        ? "Creating..."
-        : "Start Run";
+  const submitLabel = isBatchLike
+    ? batchCount >= BATCH_DIALOG_THRESHOLD
+      ? `Review batch (${batchCount} runs)`
+      : `Submit ${batchCount} run${batchCount === 1 ? "" : "s"}`
+    : submitting
+      ? "Creating..."
+      : "Start Run";
 
   return (
     <div className="p-8 max-w-2xl">
@@ -205,7 +209,7 @@ export function ConfirmStep({
         Back
       </button>
       <div className="rounded-xl bg-surface-container-low p-8 shadow-sm">
-        {mode === "batch" ? (
+        {isBatchLike ? (
           <BatchConfirmBanner
             format={format}
             markets={batchMarkets}
@@ -225,7 +229,7 @@ export function ConfirmStep({
         )}
 
         <PlatformChips
-          batchSize={mode === "batch" ? batchCount : 1}
+          batchSize={isBatchLike ? batchCount : 1}
           selected={selectedPlatforms}
           defaultPlatforms={defaultPlatforms}
           operatorPicked={operatorPickedPlatforms}
@@ -236,7 +240,7 @@ export function ConfirmStep({
         <fieldset className="mt-6">
           <legend className="text-xs text-outline mb-2 uppercase tracking-wide">
             Approval mode
-            {mode === "batch" && ` for all ${batchCount} runs`}
+            {isBatchLike && ` for all ${batchCount} runs`}
           </legend>
           <div className="flex gap-2" role="radiogroup">
             {(["auto", "review", "draft"] as ApprovalMode[]).map((m) => {
