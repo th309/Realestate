@@ -96,31 +96,51 @@ async function resolvePriorDate(
   return prior;
 }
 
-async function fetchPopulationsByLocation(
+interface GeoMeta {
+  population: number | null;
+  name: string | null;
+}
+
+/**
+ * Joins `geographies` for both population (used by floor filter) AND
+ * canonical name. We deliberately use geographies.name over
+ * propertyiq_scores.location_name because the scores table has
+ * inconsistent suffixes (e.g. "Portsmouth, OH metro area" on some rows
+ * and "Portsmouth, OH" on others), and downstream `resolveMarket`
+ * searches `geographies.name` — names that don't appear there fail to
+ * resolve. Using the geographies form guarantees round-trip.
+ *
+ * Join key: geography_id (= cbsa_code for metro, fips_code for county,
+ * postal_code for zip). The `geographies` table has NO `location_id`
+ * column. CLAUDE.md memory: "Geography ID Formats — metro=cbsa_code,
+ * county=county_fips, zip=postal_code".
+ */
+async function fetchGeoMetadataByLocation(
   client: SupabaseClient,
   geo: ScoreMoverGeo,
   locationIds: string[],
-): Promise<Map<string, number | null>> {
-  const out = new Map<string, number | null>();
+): Promise<Map<string, GeoMeta>> {
+  const out = new Map<string, GeoMeta>();
   if (locationIds.length === 0) return out;
   const BATCH = 500;
   for (let i = 0; i < locationIds.length; i += BATCH) {
     const batch = locationIds.slice(i, i + BATCH);
-    // The `geographies` table does NOT have a `location_id` column.
-    // Its universal join key is `geography_id` (which equals cbsa_code
-    // for metros, fips_code for counties, ZIP for zips). The IDs in
-    // propertyiq_scores.location_id are the same values, just under a
-    // different column name on this side. CLAUDE.md memory: "Geography
-    // ID Formats — metro=cbsa_code, county=county_fips, zip=postal_code".
     const { data } = await client
       .from('geographies')
-      .select('geography_id, population')
+      .select('geography_id, population, name')
       .eq('geography_type', geo)
       .in('geography_id', batch);
     for (const row of (data as
-      | { geography_id: string; population: number | null }[]
+      | {
+          geography_id: string;
+          population: number | null;
+          name: string | null;
+        }[]
       | null) ?? []) {
-      out.set(row.geography_id, row.population);
+      out.set(row.geography_id, {
+        population: row.population,
+        name: row.name,
+      });
     }
   }
   return out;
@@ -154,7 +174,7 @@ export async function fetchTopMovers(
   const prior = await fetchAllScoresForDate(client, geo, priorDate);
   const priorById = new Map(prior.map((r) => [r.location_id, r]));
 
-  const popById = await fetchPopulationsByLocation(
+  const metaById = await fetchGeoMetadataByLocation(
     client,
     geo,
     latest.map((r) => r.location_id),
@@ -166,11 +186,16 @@ export async function fetchTopMovers(
   for (const row of latest) {
     const p = priorById.get(row.location_id);
     if (!p) continue;
-    const pop = popById.get(row.location_id) ?? null;
+    const meta = metaById.get(row.location_id);
+    const pop = meta?.population ?? null;
     if (pop == null || pop < floor) continue;
     items.push({
       id: row.location_id,
-      canonical_name: row.location_name,
+      // Prefer geographies.name (round-trips through resolveMarket cleanly);
+      // fall back to propertyiq_scores.location_name only if the geography
+      // row is missing for this id (shouldn't happen for in-scope IDs since
+      // we just filtered by population from the same table).
+      canonical_name: meta?.name ?? row.location_name,
       geography: geo,
       current_score: row.score,
       previous_score: p.score,
