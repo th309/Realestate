@@ -207,11 +207,6 @@ describe('ContentDataService', () => {
     expect(scoring.getScore).not.toHaveBeenCalled();
   });
 
-  it('getTrendingMarkets returns [] for state-level geo (not supported by scoring)', async () => {
-    const r = await service.getTrendingMarkets('state', 'up', 10);
-    expect(r).toEqual([]);
-  });
-
   it('getTopCashflowMarkets returns [] and warns for non-metro geo', async () => {
     const r = await service.getTopCashflowMarkets('TX', 'county', 10);
     expect(r).toEqual([]);

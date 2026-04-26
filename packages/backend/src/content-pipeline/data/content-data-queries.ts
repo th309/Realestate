@@ -1,132 +1,21 @@
 /**
- * Direct Supabase queries used by ContentDataService for trending-markets
- * and top-cashflow-markets lookups. These live outside the service class
- * to keep the facade small and to make the queries independently testable.
+ * Direct Supabase queries used by ContentDataService for top-cashflow-markets
+ * lookups. These live outside the service class to keep the facade small and
+ * to make the queries independently testable.
  *
- * Scoring level and score-type are fixed to 'propertyiq' since the
- * content pipeline only consumes the unified v4 score.
+ * Score-mover queries (top movers, per-market context) now live in
+ * score-mover-context.queries.ts.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { GeoRef } from '../types';
-import { TrendingMarketItem, CashflowMarketItem } from './content-data.types';
+import { CashflowMarketItem } from './content-data.types';
 
 export type ScoringGeo = 'metro' | 'county' | 'zip';
-
-interface LatestScoreRow {
-  location_id: string;
-  location_name: string;
-  score: number;
-}
 
 interface ZillowMetroRow {
   cbsa_code: string;
   region_name: string;
   value: number;
   period_date: string;
-}
-
-/**
- * Fetch every propertyiq score for a single date, paging through to get
- * the full set. Used by the trending-markets delta computation.
- */
-export async function fetchAllScoresForDate(
-  client: SupabaseClient,
-  scoringGeo: ScoringGeo,
-  scoreDate: string,
-): Promise<LatestScoreRow[]> {
-  const pageSize = 1000;
-  let from = 0;
-  const acc: LatestScoreRow[] = [];
-  while (true) {
-    const { data } = await client
-      .from('propertyiq_scores')
-      .select('location_id, location_name, score')
-      .eq('geography', scoringGeo)
-      .eq('score_type', 'propertyiq')
-      .eq('score_date', scoreDate)
-      .range(from, from + pageSize - 1);
-    if (!data || data.length === 0) break;
-    acc.push(...(data as LatestScoreRow[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return acc;
-}
-
-/**
- * Compute the top N PropertyIQ score movers (up or down) for a geography
- * level between the latest score_date and the score_date closest
- * on-or-before 90 days earlier.
- *
- * Assumptions:
- * - "Trending" = largest signed delta over ~90 days.
- * - Uses score_type = 'propertyiq'.
- * - Returns [] when no prior reference date can be found.
- */
-export async function fetchTrendingMarkets(
-  client: SupabaseClient,
-  geography: GeoRef['geography'],
-  scoringGeo: ScoringGeo,
-  direction: 'up' | 'down',
-  limit: number,
-): Promise<TrendingMarketItem[]> {
-  // 1. Find the latest score_date.
-  const { data: latestRow } = await client
-    .from('propertyiq_scores')
-    .select('score_date')
-    .eq('geography', scoringGeo)
-    .eq('score_type', 'propertyiq')
-    .order('score_date', { ascending: false })
-    .limit(1);
-  const latestDate: string | undefined = latestRow?.[0]?.score_date;
-  if (!latestDate) return [];
-
-  // 2. Target ~90 days earlier, then pick closest on-or-before actual date.
-  const priorTarget = new Date(latestDate);
-  priorTarget.setDate(priorTarget.getDate() - 90);
-  const priorTargetIso = priorTarget.toISOString().slice(0, 10);
-
-  const { data: priorRow } = await client
-    .from('propertyiq_scores')
-    .select('score_date')
-    .eq('geography', scoringGeo)
-    .eq('score_type', 'propertyiq')
-    .lte('score_date', priorTargetIso)
-    .order('score_date', { ascending: false })
-    .limit(1);
-  const priorDate: string | undefined = priorRow?.[0]?.score_date;
-  if (!priorDate || priorDate === latestDate) return [];
-
-  // 3. Fetch both date sets and compute deltas in memory.
-  const [latest, prior] = await Promise.all([
-    fetchAllScoresForDate(client, scoringGeo, latestDate),
-    fetchAllScoresForDate(client, scoringGeo, priorDate),
-  ]);
-  const priorById = new Map(prior.map((r) => [r.location_id, r]));
-
-  const items: TrendingMarketItem[] = [];
-  for (const row of latest) {
-    const p = priorById.get(row.location_id);
-    if (!p) continue;
-    const delta = row.score - p.score;
-    if (direction === 'up' && delta <= 0) continue;
-    if (direction === 'down' && delta >= 0) continue;
-    items.push({
-      geo: {
-        geography,
-        id: row.location_id,
-        canonical_name: row.location_name,
-      },
-      current_score: row.score,
-      previous_score: p.score,
-      delta,
-    });
-  }
-
-  items.sort((a, b) =>
-    direction === 'up' ? b.delta - a.delta : a.delta - b.delta,
-  );
-  return items.slice(0, limit);
 }
 
 /**
