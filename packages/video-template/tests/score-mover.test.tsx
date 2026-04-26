@@ -13,7 +13,11 @@ const INPUT_PROPS = {
     id: "17140",
   },
   dataBundle: {
-    score: { propertyiq_score: 78, score_delta: 8 },
+    score: {
+      propertyiq_score: 78,
+      score_delta: 8,
+      window_caption: "Last 90 days",
+    },
     home_value: { value: 385000, yoy_pct: 4.2 },
     rent: { value: 1450 },
     demographics: {

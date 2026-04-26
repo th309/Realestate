@@ -14,9 +14,11 @@ export const ScoreMoverLayout: React.FC<VideoProps> = (props) => {
   const scoreObj = (bundle.score ?? {}) as {
     propertyiq_score?: number;
     score_delta?: number;
+    window_caption?: string;
   };
   const score = num(scoreObj.propertyiq_score, 50);
   const delta = num(scoreObj.score_delta, 0);
+  const windowCaption = scoreObj.window_caption ?? "";
   const stats = coerceStats(bundle);
   return (
     <>
@@ -49,6 +51,20 @@ export const ScoreMoverLayout: React.FC<VideoProps> = (props) => {
           >
             PropertyIQ Score moved
           </div>
+          {windowCaption ? (
+            <div
+              style={{
+                color: "#C5CAE9",
+                fontFamily: "Roboto Mono",
+                fontSize: 22,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                opacity: 0.85,
+              }}
+            >
+              {windowCaption}
+            </div>
+          ) : null}
           <DeltaDisplay delta={delta} />
           <div
             style={{
