@@ -8,7 +8,6 @@ import {
   MarketSnapshot,
   PropertyIQScoreResult,
   ResolvedMarket,
-  TrendingMarketItem,
   CashflowMarketItem,
 } from './content-data.types';
 import {
@@ -17,11 +16,14 @@ import {
   adaptResolvedMarket,
   emptyPropertyIQScoreResult,
 } from './content-data-adapters';
+import { fetchTopCashflowMarkets, ScoringGeo } from './content-data-queries';
 import {
-  fetchTopCashflowMarkets,
-  fetchTrendingMarkets,
-  ScoringGeo,
-} from './content-data-queries';
+  fetchTopMovers,
+  fetchScoreMoverContext,
+  type TopMoversResult,
+  type ScoreMoverContext,
+} from './score-mover-context.queries';
+import type { ScoreMoverGeo, ScoreMoverWindowDays } from './score-mover-config';
 
 /**
  * Facade that aggregates the internal data services the content pipeline
@@ -95,22 +97,35 @@ export class ContentDataService {
   }
 
   /**
-   * Return the top N markets whose PropertyIQ score moved the most
-   * (up or down) compared to ~3 months earlier.
+   * Return the top N PropertyIQ score gainers AND losers for a geography
+   * level over the chosen window. Drops null/below-floor populations.
+   * Returns `{ window: null, ... }` when no prior score date exists in the
+   * window — callers should render the sparse-state UI rather than treating
+   * empty arrays as "no movers".
    */
-  async getTrendingMarkets(
-    geography: GeoRef['geography'],
-    direction: 'up' | 'down',
-    limit: number,
-  ): Promise<TrendingMarketItem[]> {
-    const scoringGeo = this.toScoringGeo(geography);
-    if (!scoringGeo) return [];
-    return fetchTrendingMarkets(
+  async getTopMovers(
+    geo: ScoreMoverGeo,
+    windowDays: ScoreMoverWindowDays,
+    limit = 25,
+  ): Promise<TopMoversResult> {
+    return fetchTopMovers(this.supabase.getClient(), geo, windowDays, limit);
+  }
+
+  /**
+   * Per-market window-aware delta + window labels. Used by the orchestrator
+   * data-fetch step when format = score_mover so the rendered video and
+   * script reflect the exact window the operator chose.
+   */
+  async getScoreMoverContext(
+    geoId: string,
+    geo: ScoreMoverGeo,
+    windowDays: ScoreMoverWindowDays,
+  ): Promise<ScoreMoverContext | null> {
+    return fetchScoreMoverContext(
       this.supabase.getClient(),
-      geography,
-      scoringGeo,
-      direction,
-      limit,
+      geoId,
+      geo,
+      windowDays,
     );
   }
 
