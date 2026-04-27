@@ -34,7 +34,17 @@ function humanize(e: { event_type: string; payload: any }): string {
       typeof w === "number" && w > 0
         ? ` (${w} general-context claim(s) waived)`
         : "";
-    return `Verify data: ${e.payload?.passed ? "passed" : "failed"} — ${e.payload?.violations_count ?? "?"} violation(s)${waivedNote}`;
+    const prev = e.payload?.violations_preview;
+    const first =
+      Array.isArray(prev) && prev[0]?.claim?.quote
+        ? ` — e.g. "${String(prev[0].claim.quote).slice(0, 120)}${String(prev[0].claim.quote).length > 120 ? "…" : ""}"`
+        : "";
+    const conf = e.payload?.confidence_violations_count ?? 0;
+    const confNote =
+      typeof conf === "number" && conf > 0
+        ? `; ${conf} confidence wording issue(s)`
+        : "";
+    return `Verify data: ${e.payload?.passed ? "passed" : "failed"} — ${e.payload?.violations_count ?? "?"} violation(s)${waivedNote}${confNote}${first}`;
   }
   if (e.event_type === "generate_script_done") {
     const d = e.payload?.llm_diagnostics;
@@ -43,6 +53,20 @@ function humanize(e: { event_type: string; payload: any }): string {
         ? ` path=${d.generationPath ?? "?"} stop=${d.stopReason ?? "?"} max_out=${d.maxOutputTokensRequested ?? "?"} out_tok=${d.usage?.output_tokens ?? "?"}${d.successfulAttempt != null ? ` attempt=${d.successfulAttempt}` : ""}`
         : "";
     return `Script generated: ${e.payload?.full_text_words ?? "?"} words, ${e.payload?.scripts_count ?? "?"} variant(s)${diag}`;
+  }
+  if (e.event_type === "render_video_progress") {
+    const prog = e.payload?.progress;
+    const pct =
+      typeof prog === "number" ? `${Math.round(prog * 100)}%` : "…";
+    const rf = e.payload?.rendered_frames ?? "?";
+    const tf = e.payload?.duration_in_frames ?? "?";
+    const wall = e.payload?.wall_ms;
+    const wallS =
+      typeof wall === "number" ? `${Math.round(wall / 1000)}s elapsed` : "";
+    const stage = e.payload?.stitch_stage
+      ? ` stage=${e.payload.stitch_stage}`
+      : "";
+    return `Rendering video: ${pct} — frames ${rf}/${tf}${wallS ? ` — ${wallS}` : ""}${stage}`;
   }
   return `${e.event_type}: ${JSON.stringify(e.payload).slice(0, 360)}`;
 }

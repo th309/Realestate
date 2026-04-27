@@ -181,10 +181,42 @@ export class RenderVideoHandler {
         },
       });
 
+      let lastProgressEventAt = 0;
+      const PROGRESS_EVENT_MIN_MS = 15_000;
+
       const result = await this.renderer.render({
         format: run.format,
         props: formatProps,
         outputPath: videoPath,
+        onRenderProgress: async (p) => {
+          const now = Date.now();
+          if (
+            now - lastProgressEventAt < PROGRESS_EVENT_MIN_MS &&
+            p.renderedFrames > 0 &&
+            p.renderedFrames < p.durationInFrames
+          ) {
+            return;
+          }
+          lastProgressEventAt = now;
+          try {
+            await client.from('content_run_events').insert({
+              run_id: runId,
+              event_type: 'render_video_progress',
+              payload: {
+                progress: p.progress ?? null,
+                rendered_frames: p.renderedFrames,
+                encoded_frames: p.encodedFrames,
+                duration_in_frames: p.durationInFrames,
+                stitch_stage: p.stitchStage ?? null,
+                wall_ms: p.wallMs,
+              },
+            });
+          } catch (progressErr) {
+            this.logger.warn(
+              `[PIPE] render-video progress event insert failed run=${runId}: ${(progressErr as Error).message?.slice(0, 120)}`,
+            );
+          }
+        },
       });
       this.logger.log(
         `[PIPE] render-video run=${runId} result.videoPath=${result.videoPath} durationMs=${result.durationMs} renderWallMs=${result.renderWallMs}`,

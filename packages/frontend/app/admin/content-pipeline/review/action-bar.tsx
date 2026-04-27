@@ -12,8 +12,12 @@ import { KEYBINDINGS } from "./keybindings";
  */
 export function ActionBar({
   approving,
+  continuing,
+  approveDisabled,
+  approveTitle,
   deleteLabel,
   onApprove,
+  onContinuePipeline,
   onEdit,
   onThumbnail,
   onReject,
@@ -23,8 +27,14 @@ export function ActionBar({
   vertical = false,
 }: {
   approving: boolean;
+  continuing?: boolean;
+  /** When false, Approve is shown but not clickable (e.g. pre-render review). */
+  approveDisabled?: boolean;
+  approveTitle?: string;
   deleteLabel: string;
   onApprove: () => void;
+  /** When set with `approveDisabled`, primary action becomes “Continue pipeline” (same L shortcut). */
+  onContinuePipeline?: () => void;
   onEdit: () => void;
   onThumbnail: () => void;
   onReject: () => void;
@@ -33,16 +43,34 @@ export function ActionBar({
   onCheatsheet: () => void;
   vertical?: boolean;
 }) {
+  const showContinueInsteadOfApprove = Boolean(
+    approveDisabled && onContinuePipeline,
+  );
+
   const buttons = (
     <>
-      <ActionButton
-        primary
-        kbd={KEYBINDINGS.approve.display}
-        label="Approve"
-        onClick={onApprove}
-        busy={approving}
-        fullWidth={vertical}
-      />
+      {showContinueInsteadOfApprove ? (
+        <ActionButton
+          primary
+          kbd={KEYBINDINGS.approve.display}
+          label="Continue pipeline"
+          onClick={onContinuePipeline!}
+          busy={continuing}
+          title="Re-run fact-check if the latest data gate failed; otherwise voice lint. Does not change the script."
+          fullWidth={vertical}
+        />
+      ) : (
+        <ActionButton
+          primary
+          kbd={KEYBINDINGS.approve.display}
+          label="Approve"
+          onClick={onApprove}
+          busy={approving}
+          disabled={approveDisabled}
+          title={approveTitle}
+          fullWidth={vertical}
+        />
+      )}
       <ActionButton
         kbd={KEYBINDINGS.edit.display}
         label="Edit script"
@@ -116,6 +144,8 @@ function ActionButton({
   primary,
   tone,
   busy,
+  disabled,
+  title,
   fullWidth,
 }: {
   kbd: string;
@@ -124,6 +154,8 @@ function ActionButton({
   primary?: boolean;
   tone?: "error";
   busy?: boolean;
+  disabled?: boolean;
+  title?: string;
   fullWidth?: boolean;
 }) {
   const palette = primary
@@ -135,7 +167,8 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || disabled}
+      title={title}
       className={`${palette} rounded-full px-4 py-2 text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50 transition-colors duration-200 ${fullWidth ? "w-full justify-start" : ""}`}
     >
       <kbd className="font-mono text-[10px] font-bold opacity-80">{kbd}</kbd>

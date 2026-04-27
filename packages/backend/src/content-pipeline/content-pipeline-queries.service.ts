@@ -126,25 +126,13 @@ export class ContentPipelineQueriesService {
       .eq('status', 'published')
       .gte('created_at', weekAgo);
 
-    // "In Review" counts only runs with a rendered video — the review queue
-    // is for publish-approve, and pre-render gate failures (gate_a_drift /
-    // gate_b_voice) shouldn't be counted here since they can't be published
-    // until re-scripted.
-    const { data: reviewRuns } = await client
+    // Matches getReviewQueue(): every run in ready_for_review (any format,
+    // with or without video_master) needs operator attention.
+    const { count: inReviewCount } = await client
       .from('content_runs')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('status', 'ready_for_review');
-    let inReview = 0;
-    if (reviewRuns && reviewRuns.length > 0) {
-      const reviewIds = reviewRuns.map((r) => r.id as string);
-      const { data: reviewVideos } = await client
-        .from('content_assets')
-        .select('run_id')
-        .eq('kind', 'video_master')
-        .in('run_id', reviewIds);
-      inReview = new Set((reviewVideos ?? []).map((v) => v.run_id as string))
-        .size;
-    }
+    const inReview = inReviewCount ?? 0;
 
     const { count: signups } = await client
       .from('signup_attributions')
@@ -230,21 +218,12 @@ export class ContentPipelineQueriesService {
       .order('created_at', { ascending: true })
       .limit(50);
 
-    const ids = (runs ?? []).map((r) => r.id as string);
-    if (ids.length === 0) return { items: [], cursor: null };
+    if ((runs ?? []).length === 0) return { items: [], cursor: null };
 
-    // Only surface runs that have a rendered video — pre-render gate failures
-    // stay in the failed/failed-reason views; the review queue is for
-    // human-approve-before-publish, which requires a playable artifact.
-    const { data: videos } = await client
-      .from('content_assets')
-      .select('run_id')
-      .eq('kind', 'video_master')
-      .in('run_id', ids);
-    const renderedIds = new Set((videos ?? []).map((v) => v.run_id as string));
-    const filtered = (runs ?? []).filter((r) =>
-      renderedIds.has(r.id as string),
-    );
-    return { items: filtered, cursor: null };
+    // Include all ready_for_review runs: post-render (has video) and
+    // pre-render (e.g. gate_a_drift after verify_data) so operators can fix
+    // script and re-verify from the same queue UI. ReviewCard already handles
+    // a missing video_master.
+    return { items: runs ?? [], cursor: null };
   }
 }

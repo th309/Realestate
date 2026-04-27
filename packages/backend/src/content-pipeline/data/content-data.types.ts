@@ -26,6 +26,11 @@ export interface MarketSnapshot {
     history?: Array<{ date: string; score: number }>;
     trend?: 'up' | 'down' | 'stable';
     trend_change?: number;
+    /** Score-mover window: anchor rows in `propertyiq_scores` (fact-check month spans). */
+    previous_score?: number;
+    previous_score_date?: string;
+    current_score_date?: string;
+    score_delta?: number;
   } | null;
 }
 

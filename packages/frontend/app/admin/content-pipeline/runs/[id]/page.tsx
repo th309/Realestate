@@ -6,6 +6,7 @@ import { cancelRun, fetchRun, retryRun } from "../../lib/content-pipeline-api";
 import { PipelineVisualization } from "./pipeline-visualization";
 import { EventLog } from "./event-log";
 import { ArtifactsPanel } from "./artifacts-panel";
+import { GateReviewCallout } from "./gate-review-callout";
 
 // Stop auto-refetch in these states — polling isn't useful because the run
 // either won't advance without operator input (ready_for_review) or has hit
@@ -107,6 +108,13 @@ export default function RunDetailPage() {
           </button>
         )}
       </div>
+
+      <GateReviewCallout
+        runId={id}
+        status={data.run.status}
+        statusReason={data.run.status_reason}
+        gates={data.gates}
+      />
 
       <PipelineVisualization
         status={data.run.status}

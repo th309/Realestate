@@ -20,8 +20,12 @@ export function ScriptEditor({
 
   async function save() {
     setSaving(true);
-    await editScript(runId, variantId, text);
-    onSaved();
+    try {
+      await editScript(runId, variantId, text);
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

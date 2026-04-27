@@ -106,18 +106,42 @@ export async function createRun(payload: {
   return json.data;
 }
 
-export async function approveRun(id: string) {
-  return fetchAPIRaw(`/api/admin/content-pipeline/runs/${id}/approve`, {
-    method: "POST",
-  });
+export async function approveRun(id: string): Promise<void> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/runs/${id}/approve`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`approveRun failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    error?: string;
+  };
+  if (json.success === false)
+    throw new Error(json.error ?? "approveRun failed");
 }
 
-export async function rejectRun(id: string, reason: string) {
-  return fetchAPIRaw(`/api/admin/content-pipeline/runs/${id}/reject`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ reason }),
-  });
+export async function rejectRun(id: string, reason: string): Promise<void> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/runs/${id}/reject`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`rejectRun failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    error?: string;
+  };
+  if (json.success === false)
+    throw new Error(json.error ?? "rejectRun failed");
 }
 
 export async function cancelRun(id: string, reason?: string) {
@@ -146,18 +170,6 @@ export async function retryRun(id: string) {
     throw new Error(`retryRun failed: ${res.status} ${body}`);
   }
   return (await res.json()) as { success: boolean; data: { status: string } };
-}
-
-export async function editScript(
-  id: string,
-  variantId: "A" | "B",
-  newFullText: string,
-) {
-  return fetchAPIRaw(`/api/admin/content-pipeline/runs/${id}/edit-script`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ variantId, newFullText }),
-  });
 }
 
 export async function resolveMarket(query: string) {
@@ -271,3 +283,8 @@ export {
   type ResolveRankingResponse,
   resolveRanking,
 } from "./ranking-api";
+
+export {
+  editScript,
+  continuePipelineFromReview,
+} from "./script-edit-and-resume-api";

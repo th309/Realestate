@@ -10,6 +10,7 @@ import {
   useRejectRun,
   useDeleteRun,
   useCancelRun,
+  useResumePipelineFromReview,
 } from "../lib/use-run-mutations";
 import { useQueueNavigator } from "../lib/queue-navigator";
 import { useReviewShortcuts } from "./shortcuts";
@@ -48,25 +49,28 @@ export function ReviewCard({ run }: { run: any }) {
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
 
   const approveMut = useApproveRun();
+  const resumeMut = useResumePipelineFromReview();
   const rejectMut = useRejectRun();
   const deleteMut = useDeleteRun();
   const cancelMut = useCancelRun();
 
-  // Reset tab when switching to a different run.
-  useEffect(() => setTab("script"), [run.run.id]);
-
   const status = run.run.status as PipelineStatus;
   const inFlight = IN_FLIGHT.has(status);
 
-  const gateAFail = run.gates?.find(
-    (g: any) => g.gate === "data_verifier" && g.result === "failed",
-  );
-  const gateBFail = run.gates?.find(
-    (g: any) => g.gate === "brand_voice_linter" && g.result === "failed",
-  );
+  const gates = (run.gates ?? []) as any[];
+  const gateAFail = [...gates]
+    .reverse()
+    .find((g) => g.gate === "data_verifier" && g.result === "failed");
+  const gateBFail = [...gates]
+    .reverse()
+    .find((g) => g.gate === "brand_voice_linter" && g.result === "failed");
   const hasGateFails = !!(gateAFail || gateBFail);
   const script = run.assets?.find((a: any) => a.kind === "script")?.metadata
     ?.scripts?.[0];
+
+  useEffect(() => {
+    setTab(hasGateFails ? "gates" : "script");
+  }, [run.run.id, hasGateFails]);
 
   const videoAsset = run.assets?.find((a: any) => a.kind === "video_master");
   const { data: videoUrl } = useQuery({
@@ -85,15 +89,24 @@ export function ReviewCard({ run }: { run: any }) {
 
   // ── action handlers ───────────────────────────────────────────────────
   const handleApprove = () => {
-    nav.removeCurrent();
-    approveMut.mutate(run.run.id);
+    approveMut.mutate(run.run.id, {
+      onSuccess: () => nav.removeCurrent(),
+    });
+  };
+  const handleContinuePipeline = () => {
+    resumeMut.mutate(run.run.id, {
+      onSuccess: () => nav.removeCurrent(),
+    });
+  };
+  const handlePrimaryShortcut = () => {
+    if (videoAsset) handleApprove();
+    else handleContinuePipeline();
   };
   const handleRejectConfirm = async (reason: string) => {
-    nav.removeCurrent();
     await rejectMut.mutateAsync({ id: run.run.id, reason });
+    nav.removeCurrent();
   };
   const handleDeleteConfirm = async () => {
-    nav.removeCurrent();
     if (inFlight) {
       await cancelMut.mutateAsync({
         id: run.run.id,
@@ -102,6 +115,7 @@ export function ReviewCard({ run }: { run: any }) {
     } else {
       await deleteMut.mutateAsync(run.run.id);
     }
+    nav.removeCurrent();
   };
   const handleMute = () => {
     setMuted((m) => !m);
@@ -114,7 +128,7 @@ export function ReviewCard({ run }: { run: any }) {
   };
 
   useReviewShortcuts({
-    onApprove: handleApprove,
+    onApprove: handlePrimaryShortcut,
     onReject: () => setRejecting(true),
     onEdit: () => setEditingScript(true),
     onThumbnail: () => setEditingThumbnail(true),
@@ -133,7 +147,17 @@ export function ReviewCard({ run }: { run: any }) {
         {/* Vertical action bar */}
         <ActionBar
           approving={approveMut.isPending}
+          continuing={resumeMut.isPending}
+          approveDisabled={!videoAsset}
+          approveTitle={
+            videoAsset
+              ? undefined
+              : "Publishing is available after a video is rendered. Use Continue pipeline to re-run checks without edits."
+          }
           onApprove={handleApprove}
+          onContinuePipeline={
+            !videoAsset ? handleContinuePipeline : undefined
+          }
           onEdit={() => setEditingScript(true)}
           onThumbnail={() => setEditingThumbnail(true)}
           onReject={() => setRejecting(true)}
@@ -189,6 +213,10 @@ export function ReviewCard({ run }: { run: any }) {
                 {gateAFail && (
                   <DiffViewer
                     violations={gateAFail.details?.violations ?? []}
+                    confidenceViolations={
+                      gateAFail.details?.confidence_violations
+                    }
+                    waivedViolations={gateAFail.details?.waived_violations}
                   />
                 )}
                 {gateBFail && (

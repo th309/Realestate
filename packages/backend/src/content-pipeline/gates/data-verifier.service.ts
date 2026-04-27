@@ -6,6 +6,7 @@ import { resolveDefaultScriptLlmModel } from '../drivers/content-pipeline-llm-cl
 import { NumericClaim, GateResult, GateViolation } from './gate.types';
 import type { DataVerifierVerifyOptions } from './fact-verification-policies';
 import {
+  augmentCandidatesWithDerivedDeltas,
   augmentCandidatesWithPopulationScales,
   waiveUnmatchedLongFormGeneralKnowledge,
 } from './fact-verification-policies';
@@ -68,15 +69,18 @@ export class DataVerifierService {
   ): Promise<GateResult> {
     const claims = (await this.extractClaims(scriptText)) ?? [];
     const violations: GateViolation[] = [];
-    const candidates = this.extractNumericValues(
-      mcpPayload,
-      options?.contentFormat,
-    );
+    const candidates = this.extractNumericValues(mcpPayload);
     this.logger.log(
       `[V2] verify: ${claims.length} claims vs ${candidates.length} candidates sample=${JSON.stringify(candidates.slice(0, 10))}`,
     );
     for (const claim of claims) {
-      const tolerance = this.toleranceFor(claim.category, claim.value);
+      let tolerance = this.toleranceFor(claim.category, claim.value);
+      if (
+        claim.category === 'duration' &&
+        DataVerifierService.isHedgedDurationQuote(claim.quote)
+      ) {
+        tolerance += 1;
+      }
       this.logger.log(
         `[V2]   claim val=${claim.value} cat=${claim.category} tol=${tolerance}`,
       );
@@ -90,7 +94,8 @@ export class DataVerifierService {
         if (
           claim.category === 'count' ||
           claim.category === 'duration' ||
-          claim.category === 'percentage'
+          claim.category === 'percentage' ||
+          claim.category === 'score'
         ) {
           if (Math.abs(Math.abs(n) - Math.abs(claim.value)) <= tolerance) {
             return true;
@@ -135,37 +140,25 @@ export class DataVerifierService {
       mcpPayload,
     );
 
-    const format = options?.contentFormat;
-    if (format === 'long_form_deep_dive') {
-      const waived: GateViolation[] = [];
-      const kept: GateViolation[] = [];
-      for (const v of violations) {
-        if (waiveUnmatchedLongFormGeneralKnowledge(v)) waived.push(v);
-        else kept.push(v);
-      }
-      if (waived.length > 0) {
-        this.logger.log(
-          `[V2] verify long_form: waived ${waived.length} general-context claim(s); ${kept.length} remaining`,
-        );
-      }
-      const passed =
-        kept.length === 0 && confidenceViolations.length === 0;
-      return {
-        passed,
-        violations: kept,
-        confidenceViolations:
-          confidenceViolations.length > 0 ? confidenceViolations : undefined,
-        waivedViolations: waived.length > 0 ? waived : undefined,
-      };
+    const waived: GateViolation[] = [];
+    const kept: GateViolation[] = [];
+    for (const v of violations) {
+      if (waiveUnmatchedLongFormGeneralKnowledge(v)) waived.push(v);
+      else kept.push(v);
     }
-
+    if (waived.length > 0) {
+      this.logger.log(
+        `[V2] verify: waived ${waived.length} off-bundle context claim(s) (${options?.contentFormat ?? 'any'}); ${kept.length} remaining`,
+      );
+    }
     const passed =
-      violations.length === 0 && confidenceViolations.length === 0;
+      kept.length === 0 && confidenceViolations.length === 0;
     return {
       passed,
-      violations,
+      violations: kept,
       confidenceViolations:
         confidenceViolations.length > 0 ? confidenceViolations : undefined,
+      waivedViolations: waived.length > 0 ? waived : undefined,
     };
   }
 
@@ -292,6 +285,8 @@ export class DataVerifierService {
                 '- Scale denominators (e.g., "out of 100", "out of 5", "on a 1 to 10 scale") are not factual claims about the subject. Only extract the score value, not the scale.\n' +
                 '- Generic fractions or colloquial phrases like "one in five", "a third of", "half of" without a specific numeric subject.\n' +
                 '- Numbers inside URLs, hashtags, or brand names.\n' +
+                '- Vague relative time with no computable anchor from the data (e.g. "years ago" with no period in the bundle) — omit. If the script states a whole-month span that is clearly implied by two dated points in the narrative tied to the market data window, you may extract that integer as category "duration".\n' +
+                '- For PropertyIQ score *point* moves, use category "score" (not "count") so values like a 15-point swing can align with deltas in the data.\n' +
                 'Only extract numbers that assert a specific measurable fact (a price, percentage, score, ranking, count, duration, or date). If uncertain, omit.\n\n' +
                 'Script:\n' +
                 scriptText,
@@ -312,10 +307,7 @@ export class DataVerifierService {
     return input.claims;
   }
 
-  private extractNumericValues(
-    obj: unknown,
-    contentFormat?: string,
-  ): number[] {
+  private extractNumericValues(obj: unknown): number[] {
     const out: number[] = [];
     const visit = (v: unknown) => {
       if (typeof v === 'number') out.push(v);
@@ -327,10 +319,16 @@ export class DataVerifierService {
       else if (v && typeof v === 'object') Object.values(v).forEach(visit);
     };
     visit(obj);
-    if (contentFormat === 'long_form_deep_dive') {
-      return augmentCandidatesWithPopulationScales(out);
-    }
-    return out;
+    const withDerived = augmentCandidatesWithDerivedDeltas(obj, out);
+    return augmentCandidatesWithPopulationScales(withDerived);
+  }
+
+  /** VO hedges ("roughly fifteen months") — allow one extra month vs bundle math. */
+  private static isHedgedDurationQuote(quote: string | undefined): boolean {
+    if (!quote || typeof quote !== 'string') return false;
+    return /\b(roughly|about|around|approximately|nearly|~|almost)\b/i.test(
+      quote,
+    );
   }
 
   private toleranceFor(
@@ -351,6 +349,16 @@ export class DataVerifierService {
     // for a human-readable script. Scores, rankings, and dates stay strict.
     if (cat === 'count' && claimValue !== undefined) {
       return Math.max(base, Math.abs(claimValue) * 0.05) * multiplier;
+    }
+    // Month-span narration vs calendar-derived candidates: ±1 month slack when
+    // the claim is a multi-month whole number (not DOM-style decimals).
+    if (
+      cat === 'duration' &&
+      claimValue !== undefined &&
+      claimValue >= 4 &&
+      Number.isInteger(claimValue)
+    ) {
+      return Math.max(base, 1) * multiplier;
     }
     return base * multiplier;
   }

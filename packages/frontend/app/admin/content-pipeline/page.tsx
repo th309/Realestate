@@ -91,7 +91,7 @@ function DashboardContent() {
         {data.reviewQueueCount > 0 && (
           <div className="bg-primary-container text-on-primary-container rounded-xl p-6 flex items-center justify-between">
             <div className="font-medium">
-              {data.reviewQueueCount} video
+              {data.reviewQueueCount} run
               {data.reviewQueueCount === 1 ? "" : "s"} waiting on you
             </div>
             <Link

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
 import type { PipelineStatus } from './types';
@@ -61,12 +66,62 @@ export class RunActionsService {
     });
   }
 
+  /**
+   * After human review (`ready_for_review`), whether the next automated step
+   * should re-run Gate A or proceed to voice lint — keyed off the latest
+   * data_verifier outcome (not `status_reason`, which changes on later edits).
+   */
+  private async nextPipelineStepAfterReview(
+    runId: string,
+  ): Promise<'verifying_data' | 'linting_voice'> {
+    const client = this.supabase.getClient();
+    const { data: lastVerifier } = await client
+      .from('content_run_gates')
+      .select('result')
+      .eq('run_id', runId)
+      .eq('gate', 'data_verifier')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return lastVerifier?.result === 'failed' ? 'verifying_data' : 'linting_voice';
+  }
+
+  /**
+   * Operator explicitly continues the pipeline from review without mutating
+   * the script (re-run verify when Gate A last failed, else voice lint).
+   */
+  async resumePipelineFromReview(
+    runId: string,
+  ): Promise<{ nextStatus: PipelineStatus }> {
+    const client = this.supabase.getClient();
+    const { data: run, error } = await client
+      .from('content_runs')
+      .select('status')
+      .eq('id', runId)
+      .maybeSingle();
+    if (error || !run) throw new NotFoundException(`run ${runId} not found`);
+    if (run.status !== 'ready_for_review') {
+      throw new BadRequestException(
+        `resume_pipeline_invalid_state: status is ${run.status}, expected ready_for_review`,
+      );
+    }
+    const next = await this.nextPipelineStepAfterReview(runId);
+    await this.orchestrator.transitionTo(runId, next, {
+      reason: 'operator_resume',
+      enqueueNext: true,
+    });
+    this.logger.log(`[ACTION] resume-pipeline run=${runId} next=${next}`);
+    return { nextStatus: next };
+  }
+
   async editScript(
     runId: string,
     variantId: 'A' | 'B',
     newFullText: string,
-  ): Promise<void> {
+  ): Promise<{ nextStatus: PipelineStatus }> {
     const client = this.supabase.getClient();
+    const nextStatus = await this.nextPipelineStepAfterReview(runId);
+
     const { data: scriptAsset, error } = await client
       .from('content_assets')
       .select('metadata')
@@ -94,10 +149,11 @@ export class RunActionsService {
       .eq('run_id', runId)
       .eq('kind', 'script');
 
-    await this.orchestrator.transitionTo(runId, 'linting_voice', {
+    await this.orchestrator.transitionTo(runId, nextStatus, {
       reason: 'operator_edit',
       enqueueNext: true,
     });
+    return { nextStatus };
   }
 
   async retryRun(runId: string): Promise<void> {

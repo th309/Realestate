@@ -83,7 +83,9 @@ export function RunCardOverlay({
             className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
             onClick={(e) => {
               stop(e);
-              router.push(`/admin/content-pipeline/review`);
+              router.push(
+                `/admin/content-pipeline/review?run=${encodeURIComponent(runId)}`,
+              );
             }}
           >
             <PlayIcon />

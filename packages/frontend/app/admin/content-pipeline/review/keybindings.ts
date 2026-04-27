@@ -14,7 +14,11 @@ export interface KeybindingDef {
 }
 
 export const KEYBINDINGS = {
-  approve: { key: "l", display: "L", label: "Approve" },
+  approve: {
+    key: "l",
+    display: "L",
+    label: "Approve or continue pipeline",
+  },
   reject: { key: "j", display: "J", label: "Reject" },
   edit: { key: "e", display: "E", label: "Edit script" },
   thumbnail: { key: "t", display: "T", label: "Edit thumbnail" },

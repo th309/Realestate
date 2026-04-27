@@ -8,6 +8,7 @@ import {
   VideoRenderer,
   VideoRenderRequest,
   VideoRenderResult,
+  type RenderVideoProgressPayload,
 } from './video-renderer.interface';
 
 @Injectable()
@@ -69,11 +70,38 @@ export class RemotionCLIRenderer implements VideoRenderer {
       const proc = spawn('node', args, { cwd: pkgRoot });
       let stdoutBuf = '';
       let stderrBuf = '';
+      let stderrLineBuf = '';
+      const progressPrefix = 'REMOTION_PROGRESS ';
+      const emitProgress = (jsonStr: string) => {
+        try {
+          const payload = JSON.parse(jsonStr) as RenderVideoProgressPayload;
+          const pct =
+            typeof payload.progress === 'number'
+              ? `${Math.round(payload.progress * 100)}%`
+              : '?';
+          this.logger.log(
+            `[render-progress] frames=${payload.renderedFrames}/${payload.durationInFrames} encoded=${payload.encodedFrames} progress=${pct} stitch=${payload.stitchStage ?? '—'} wallMs=${payload.wallMs}`,
+          );
+          void Promise.resolve(req.onRenderProgress?.(payload));
+        } catch {
+          this.logger.warn(
+            `render progress JSON parse failed: ${jsonStr.slice(0, 120)}`,
+          );
+        }
+      };
       proc.stdout.on('data', (d) => {
         stdoutBuf += d.toString();
       });
       proc.stderr.on('data', (d) => {
-        stderrBuf += d.toString();
+        const chunk = d.toString();
+        stderrBuf += chunk;
+        stderrLineBuf += chunk;
+        const lines = stderrLineBuf.split(/\r?\n/);
+        stderrLineBuf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith(progressPrefix)) continue;
+          emitProgress(line.slice(progressPrefix.length).trim());
+        }
       });
       const timer = setTimeout(() => {
         proc.kill('SIGKILL');
@@ -81,6 +109,9 @@ export class RemotionCLIRenderer implements VideoRenderer {
       }, this.timeoutMs);
       proc.on('close', (code) => {
         clearTimeout(timer);
+        if (stderrLineBuf.startsWith(progressPrefix)) {
+          emitProgress(stderrLineBuf.slice(progressPrefix.length).trim());
+        }
         this.logger.log(
           `render exit=${code} stderr.len=${stderrBuf.length} stdout.len=${stdoutBuf.length}`,
         );

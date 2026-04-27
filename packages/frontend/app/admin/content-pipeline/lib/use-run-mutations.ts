@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   approveRun,
   cancelRun,
+  continuePipelineFromReview,
   rejectRun,
   retryRun,
 } from "./content-pipeline-api";
@@ -41,6 +42,13 @@ function invalidateRunListsAndDetail(
   qc.removeQueries({ queryKey: KEYS.reviewRun(id) });
 }
 
+function invalidateRunDetailPage(
+  qc: ReturnType<typeof useQueryClient>,
+  id: string,
+) {
+  qc.invalidateQueries({ queryKey: ["content-pipeline-run", id] });
+}
+
 /** Dedupe delete/cancel toasts when duplicate completions land for the same run. */
 const deleteSuccessToastAtMs = new Map<string, number>();
 const deleteErrorToastAtMs = new Map<string, number>();
@@ -69,9 +77,29 @@ export function useApproveRun() {
     mutationFn: (id: string) => approveRun(id),
     onSuccess: (_data, id) => {
       invalidateRunListsAndDetail(qc, id);
+      invalidateRunDetailPage(qc, id);
       toast.success("Approved — moved to publishing");
     },
     onError: (err: Error) => toast.error(`Approve failed: ${err.message}`),
+  });
+}
+
+export function useResumePipelineFromReview() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (id: string) => continuePipelineFromReview(id),
+    onSuccess: (data, id) => {
+      invalidateRunListsAndDetail(qc, id);
+      invalidateRunDetailPage(qc, id);
+      toast.success(
+        data.nextStatus === "verifying_data"
+          ? "Pipeline resumed — fact-check queued"
+          : "Pipeline resumed — voice lint queued",
+      );
+    },
+    onError: (err: Error) =>
+      toast.error(`Continue pipeline failed: ${err.message}`),
   });
 }
 

@@ -89,6 +89,8 @@ export class FetchDataHandler {
             score_delta: ctx.delta,
             previous_score: ctx.prior.score,
             previous_score_date: ctx.prior.scoreDate,
+            /** Latest score row date — Gate A uses with `previous_score_date` for month-span narration (wider than chart history alone). */
+            current_score_date: ctx.current.scoreDate,
             window_days: ctx.windowDays,
             window_label: ctx.windowLabel,
             window_caption: ctx.windowCaption,

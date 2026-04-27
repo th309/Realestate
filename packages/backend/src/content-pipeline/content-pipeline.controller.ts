@@ -133,8 +133,18 @@ export class ContentPipelineController {
     @Param('id') id: string,
     @Body() body: { variantId: 'A' | 'B'; newFullText: string },
   ) {
-    await this.actions.editScript(id, body.variantId, body.newFullText);
-    return { success: true, data: { status: 'linting_voice' } };
+    const data = await this.actions.editScript(
+      id,
+      body.variantId,
+      body.newFullText,
+    );
+    return { success: true, data };
+  }
+
+  @Post('runs/:id/continue-pipeline')
+  async continuePipeline(@Param('id') id: string) {
+    const data = await this.actions.resumePipelineFromReview(id);
+    return { success: true, data };
   }
 
   @Post('runs/:id/thumbnail/regenerate')

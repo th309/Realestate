@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReviewQueue, fetchRun } from "../lib/content-pipeline-api";
 import {
@@ -28,7 +30,9 @@ export default function ReviewQueuePage() {
   return (
     <KeybindingScopeProvider>
       <QueueNavigatorProvider items={queue}>
-        <ReviewShell />
+        <Suspense fallback={<ReviewSkeleton />}>
+          <ReviewShell />
+        </Suspense>
       </QueueNavigatorProvider>
     </KeybindingScopeProvider>
   );
@@ -36,10 +40,22 @@ export default function ReviewQueuePage() {
 
 function ReviewShell() {
   const nav = useQueueNavigator();
+  const { items, currentId, jumpTo, prev, next, currentIndex, totalCount } =
+    nav;
+  const searchParams = useSearchParams();
+  const deepLinkRunId = searchParams.get("run");
+
+  useEffect(() => {
+    if (!deepLinkRunId) return;
+    if (!items.some((i) => i.id === deepLinkRunId)) return;
+    if (currentId === deepLinkRunId) return;
+    jumpTo(deepLinkRunId);
+  }, [deepLinkRunId, items, currentId, jumpTo]);
+
   const { data: detail } = useQuery({
-    queryKey: ["review-run", nav.currentId],
-    queryFn: () => (nav.currentId ? fetchRun(nav.currentId) : null),
-    enabled: !!nav.currentId,
+    queryKey: ["review-run", currentId],
+    queryFn: () => (currentId ? fetchRun(currentId) : null),
+    enabled: !!currentId,
   });
 
   return (
@@ -67,21 +83,21 @@ function ReviewShell() {
           <div className="text-xs font-mono text-on-surface-variant">
             <button
               type="button"
-              onClick={nav.prev}
+              onClick={prev}
               className="px-2 py-1 rounded hover:bg-on-surface/8 transition-colors duration-200 disabled:opacity-30"
-              disabled={nav.currentIndex <= 0}
+              disabled={currentIndex <= 0}
               aria-label="Previous run"
             >
               ‹
             </button>
             <span className="mx-2">
-              {nav.currentIndex + 1} of {nav.totalCount}
+              {currentIndex + 1} of {totalCount}
             </span>
             <button
               type="button"
-              onClick={nav.next}
+              onClick={next}
               className="px-2 py-1 rounded hover:bg-on-surface/8 transition-colors duration-200 disabled:opacity-30"
-              disabled={nav.currentIndex >= nav.totalCount - 1}
+              disabled={currentIndex >= totalCount - 1}
               aria-label="Next run"
             >
               ›
@@ -133,8 +149,9 @@ function CaughtUpEmptyState() {
           All caught up
         </h1>
         <p className="text-sm text-on-surface-variant mb-6">
-          No runs are waiting for review right now. New ones will appear here as
-          they finish rendering.
+          No runs are waiting for review right now. They appear here whenever a
+          run reaches review (including gate pauses before video is rendered),
+          for every content format.
         </p>
         <Link
           href="/admin/content-pipeline"

@@ -17,6 +17,10 @@ describe('pipeline-state', () => {
     expect(canTransition('ready_for_review', 'linting_voice')).toBe(true);
   });
 
+  it('allows ready_for_review back to verifying_data after Gate A failure edit', () => {
+    expect(canTransition('ready_for_review', 'verifying_data')).toBe(true);
+  });
+
   it('rendering_video goes to publishing for auto mode', () => {
     expect(nextStateOnSuccess('rendering_video', 'auto')).toBe('publishing');
   });

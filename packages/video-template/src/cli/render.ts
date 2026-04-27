@@ -51,6 +51,12 @@ export async function renderVideo(
   });
 
   const start = Date.now();
+  const totalFrames = composition.durationInFrames ?? 0;
+  /** Backend RemotionCLIRenderer parses stderr lines prefixed with this token. */
+  const PROGRESS_PREFIX = "REMOTION_PROGRESS ";
+  let lastProgressEmit = 0;
+  const PROGRESS_EMIT_MS = 10_000;
+
   await renderMedia({
     composition,
     serveUrl: bundled,
@@ -58,6 +64,32 @@ export async function renderVideo(
     outputLocation: opts.outputPath,
     inputProps: validated as unknown as Record<string, unknown>,
     audioCodec: "aac",
+    onProgress: ({
+      progress,
+      renderedFrames,
+      encodedFrames,
+      stitchStage,
+    }) => {
+      const now = Date.now();
+      if (
+        now - lastProgressEmit < PROGRESS_EMIT_MS &&
+        renderedFrames > 0 &&
+        renderedFrames < totalFrames
+      ) {
+        return;
+      }
+      lastProgressEmit = now;
+      console.error(
+        `${PROGRESS_PREFIX}${JSON.stringify({
+          progress,
+          renderedFrames,
+          encodedFrames,
+          stitchStage,
+          durationInFrames: totalFrames,
+          wallMs: Date.now() - start,
+        })}`,
+      );
+    },
   });
 
   return { outputPath: opts.outputPath, durationMs: Date.now() - start };
