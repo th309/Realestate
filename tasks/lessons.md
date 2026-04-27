@@ -144,3 +144,11 @@
 2. **Query `information_schema.columns` to verify column names and nullability.** A NOT NULL column that receives null will cause silent insert failures.
 3. **Cross-reference with working services.** If a health check endpoint already works (e.g., `DataSourcesHealthService`), its table names are proven correct -- use those, not guessed names.
 4. **When a cron job produces 0 output, check the data source first.** The service was silently returning `[]` because the initial query failed -- the rest of the logic was irrelevant.
+
+## One Data-Layer Path Per Admin API Surface (Hermeneutic Whole)
+
+**Date:** 2026-04-27
+
+**Context:** Fixing content-pipeline delete used `fetchAPIRaw` → same-origin Next proxy only. Dashboard still used `fetchAPI` → cross-origin Nest. Split behavior is invisible in isolation but breaks sibling features (CORS/env) and violates CLAUDE §1.0 re-evaluate-the-whole.
+
+**Rule:** When introducing a proxy or alternate base URL for an API prefix (`/api/admin/content-pipeline/*`), update **every** fetch helper that serves that prefix (`fetchAPI`, `fetchAPIWithParams`, `fetchAPIRaw`) to share **one** URL resolver. Then grep consumers and smoke-test adjacent pages (dashboard + review + settings) in one pass.

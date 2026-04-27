@@ -1,0 +1,15 @@
+<!-- Minimal P3 template -->
+<h1>Agent recruitment kit — <%= dataBundle.geo.canonical_name %></h1>
+<p style="font-size: 11pt; color: #5c6bc0;">Prepared on <%= today %></p>
+<% if (dataBundle.score) { %>
+<p style="font-size: 12pt;">
+  <strong>PropertyIQ Score:</strong> <%= dataBundle.score.propertyiq_score %>
+  (<%= dataBundle.score.grade %>)
+</p>
+<% } %>
+<h2>Talking points</h2>
+<ul style="font-size: 10pt;">
+  <li>Lead with verified metrics from this bundle only.</li>
+  <li>Pair score trends with inventory and price signals when present.</li>
+  <li>Keep claims specific; avoid invented rankings.</li>
+</ul>

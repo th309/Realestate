@@ -15,6 +15,27 @@ export function num(v: unknown, fallback: number): number {
  * The payload comes from `ContentDataService.getMarketSnapshot` and has
  * the nested shape: { score, home_value, rent, demographics, economic, geo }.
  */
+/**
+ * Economic metrics for the long-form EconomicPulse scene (when trend history is sparse).
+ */
+export function coerceEconomic(bundle: Record<string, unknown>): {
+  unemployment_rate: number;
+  job_growth_yoy_pct: number;
+} | null {
+  const economic = (bundle.economic ?? {}) as {
+    unemployment_rate?: number;
+    job_growth_yoy_pct?: number;
+  };
+  const hasAny =
+    typeof economic.unemployment_rate === "number" ||
+    typeof economic.job_growth_yoy_pct === "number";
+  if (!hasAny) return null;
+  return {
+    unemployment_rate: num(economic.unemployment_rate, 0),
+    job_growth_yoy_pct: num(economic.job_growth_yoy_pct, 0),
+  };
+}
+
 export function coerceStats(bundle: Record<string, unknown>): MarketStats {
   const homeValue = (bundle.home_value ?? {}) as {
     value?: number;

@@ -62,6 +62,7 @@ import { OpenAITTSDriver } from './drivers/openai-tts-driver';
 import { TTSDriverFactory } from './drivers/tts-driver.factory';
 import { CredentialCrypto } from './drivers/credential-crypto';
 import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
+import { YouTubeLongFormPublisher } from './drivers/youtube-longform-publisher';
 import { TikTokPublisher } from './drivers/tiktok-publisher';
 import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
 import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
@@ -150,6 +151,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     { provide: CAPTION_TIMER, useExisting: OpenAIWhisperTimer },
 
     YouTubeShortsPublisher,
+    YouTubeLongFormPublisher,
     TikTokPublisher,
     InstagramReelsPublisher,
     FacebookReelsPublisher,
@@ -158,13 +160,15 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
       provide: PLATFORM_PUBLISHERS,
       useFactory: (
         yt: YouTubeShortsPublisher,
+        ytLong: YouTubeLongFormPublisher,
         tt: TikTokPublisher,
         ig: InstagramReelsPublisher,
         fb: FacebookReelsPublisher,
         li: LinkedInPublisher,
-      ) => [yt, tt, ig, fb, li],
+      ) => [yt, ytLong, tt, ig, fb, li],
       inject: [
         YouTubeShortsPublisher,
+        YouTubeLongFormPublisher,
         TikTokPublisher,
         InstagramReelsPublisher,
         FacebookReelsPublisher,

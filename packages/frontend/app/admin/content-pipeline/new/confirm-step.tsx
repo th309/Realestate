@@ -32,20 +32,43 @@ const MODE_DESCRIPTIONS: Record<ApprovalMode, string> = {
 
 const PLATFORM_LABELS: Record<string, string> = {
   youtube_shorts: "YouTube Shorts",
-  youtube_long: "YouTube",
+  youtube_long: "YouTube (regular)",
   tiktok: "TikTok",
   instagram_reels: "Instagram",
   facebook_reels: "Facebook",
   linkedin: "LinkedIn",
 };
 
-const ALL_PLATFORMS = [
+/** Short-form destinations (9x16, etc.). */
+const SHORT_FORM_PLATFORMS = [
   "youtube_shorts",
   "tiktok",
   "instagram_reels",
   "facebook_reels",
   "linkedin",
 ] as const;
+
+/** Long-form Deep Dive: 16x9 → standard YouTube upload + optional LinkedIn. */
+const LONG_FORM_PLATFORMS = ["youtube_long", "linkedin"] as const;
+
+/**
+ * Ensures long-form runs target regular YouTube (not Shorts) and allowed
+ * platforms only. Migrates mistaken Shorts defaults away.
+ */
+function sanitizeSelectedForFormat(format: string, platforms: string[]): string[] {
+  if (format !== "long_form_deep_dive") return platforms;
+  const allowed = new Set<string>(LONG_FORM_PLATFORMS);
+  let next = platforms.filter((p) => allowed.has(p));
+  if (!next.includes("youtube_long")) {
+    next = ["youtube_long", ...next];
+  }
+  return Array.from(new Set(next));
+}
+
+function platformsForConfirmFormat(format: string): readonly string[] {
+  if (format === "long_form_deep_dive") return LONG_FORM_PLATFORMS;
+  return SHORT_FORM_PLATFORMS;
+}
 
 const BATCH_DIALOG_THRESHOLD = 50;
 
@@ -88,7 +111,8 @@ export function ConfirmStep({
   );
   const defaultMode = (formatDefault?.default_approval_mode ??
     "review") as ApprovalMode;
-  const defaultPlatforms = formatDefault?.default_platforms ?? [];
+  const rawDefaultPlatforms = formatDefault?.default_platforms ?? [];
+  const defaultPlatforms = sanitizeSelectedForFormat(format, rawDefaultPlatforms);
 
   const [approvalMode, setApprovalMode] = useState<ApprovalMode>(defaultMode);
   const [operatorPickedMode, setOperatorPickedMode] = useState(false);
@@ -98,10 +122,12 @@ export function ConfirmStep({
 
   useEffect(() => {
     if (!operatorPickedMode && formatDefault) setApprovalMode(defaultMode);
-    if (!operatorPickedPlatforms && formatDefault)
-      setSelectedPlatforms(defaultPlatforms);
+    if (!operatorPickedPlatforms && formatDefault) {
+      const raw = formatDefault.default_platforms ?? [];
+      setSelectedPlatforms(sanitizeSelectedForFormat(format, raw));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formatDefault?.format, defaultMode, defaultPlatforms.join("|")]);
+  }, [formatDefault?.format, defaultMode, rawDefaultPlatforms.join("|"), format]);
 
   const [submitting, setSubmitting] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -229,6 +255,7 @@ export function ConfirmStep({
         )}
 
         <PlatformChips
+          format={format}
           batchSize={isBatchLike ? batchCount : 1}
           selected={selectedPlatforms}
           defaultPlatforms={defaultPlatforms}
@@ -296,6 +323,7 @@ export function ConfirmStep({
 }
 
 function PlatformChips({
+  format,
   batchSize,
   selected,
   defaultPlatforms,
@@ -303,6 +331,7 @@ function PlatformChips({
   platformByKey,
   onToggle,
 }: {
+  format: string;
   batchSize: number;
   selected: string[];
   defaultPlatforms: string[];
@@ -310,6 +339,7 @@ function PlatformChips({
   platformByKey: Map<string, PlatformStatus>;
   onToggle: (p: string) => void;
 }) {
+  const platformsShown = platformsForConfirmFormat(format);
   const disconnectedSelected = selected.filter(
     (p) => !platformByKey.get(p)?.configured,
   );
@@ -323,8 +353,14 @@ function PlatformChips({
           </span>
         )}
       </legend>
+      {format === "long_form_deep_dive" && (
+        <p className="text-[11px] text-on-surface-variant mb-2">
+          Long-form uploads use standard YouTube videos (same Google connection as
+          Shorts under Platforms).
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
-        {ALL_PLATFORMS.map((p) => {
+        {platformsShown.map((p) => {
           const status = platformByKey.get(p);
           const connected = !!status?.configured;
           const active = selected.includes(p);

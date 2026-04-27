@@ -41,11 +41,25 @@ const CARD_DEFS = [
     description: "Zillow ZHVI",
   },
   {
+    key: "medianRent" as keyof MarketStats,
+    label: "Median Rent",
+    icon: "🏢",
+    format: (v: number) => formatPrice(v),
+    description: "Rent index",
+  },
+  {
     key: "homeValueYoyPct" as keyof MarketStats,
     label: "Home Value YoY",
     icon: "📈",
     format: (v: number) => formatPct(v, 2),
     description: "Year-over-year change",
+  },
+  {
+    key: "medianIncome" as keyof MarketStats,
+    label: "Median Household Income",
+    icon: "💵",
+    format: (v: number) => formatPrice(v),
+    description: "US Census",
   },
   {
     key: "homeownershipPct" as keyof MarketStats,
@@ -204,12 +218,12 @@ export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
         </span>
       </div>
 
-      {/* Cards grid */}
+      {/* Cards grid: 3×2 on 16:9, column on 9:16 */}
       <div
         style={{
-          display: "flex",
-          flexDirection: isVertical ? "column" : "row",
-          gap: isVertical ? 24 : 24,
+          display: "grid",
+          gridTemplateColumns: isVertical ? "1fr" : "repeat(3, minmax(0, 1fr))",
+          gap: isVertical ? 20 : 20,
           width: "100%",
         }}
       >

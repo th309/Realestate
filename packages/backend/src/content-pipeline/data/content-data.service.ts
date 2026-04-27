@@ -74,12 +74,58 @@ export class ContentDataService {
       );
     }
 
-    const confidence =
-      raw?.scores.propertyiq != null
-        ? await this.fetchConfidenceLetter(geo)
-        : 'F';
+    let confidenceLetter = 'F';
+    let scoreExtras:
+      | {
+          history: Array<{ date: string; score: number }>;
+          trend: 'up' | 'down' | 'stable';
+          trend_change: number;
+        }
+      | undefined;
 
-    return adaptMarketSnapshot(geo, raw, confidence);
+    if (raw?.scores.propertyiq != null) {
+      const scoringGeo = this.toScoringGeo(geo.geography);
+      if (scoringGeo) {
+        try {
+          const r = await this.scoring.getScore(geo.id, scoringGeo, undefined, {
+            historyMonths: 12,
+          });
+          const piq = r?.scores.propertyiq;
+          if (piq) {
+            confidenceLetter = piq.confidence_level ?? 'F';
+            const history = (piq.history?.data ?? [])
+              .filter((p) => p.score != null)
+              .map((p) => ({ date: p.date, score: p.score as number }));
+            scoreExtras = {
+              history,
+              trend: piq.history?.trend ?? 'stable',
+              trend_change:
+                typeof piq.trend_change === 'number'
+                  ? piq.trend_change
+                  : typeof piq.history?.change === 'number'
+                    ? piq.history.change
+                    : 0,
+            };
+          } else {
+            confidenceLetter = await this.fetchConfidenceLetter(geo);
+          }
+        } catch (err) {
+          this.logger.warn(
+            `getScore(history) failed for ${geo.geography}/${geo.id}: ${(err as Error).message}`,
+          );
+          confidenceLetter = await this.fetchConfidenceLetter(geo);
+        }
+      }
+    }
+
+    let snapshot = adaptMarketSnapshot(geo, raw, confidenceLetter);
+    if (snapshot.score && scoreExtras) {
+      snapshot = {
+        ...snapshot,
+        score: { ...snapshot.score, ...scoreExtras },
+      };
+    }
+    return snapshot;
   }
 
   /**

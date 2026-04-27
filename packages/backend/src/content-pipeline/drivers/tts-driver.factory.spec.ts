@@ -31,7 +31,7 @@ describe('TTSDriverFactory', () => {
     );
   });
 
-  it("driverChain('edge') returns [azure, edge, openai] — paid OpenAI is last resort", () => {
+  it("driverChain('edge') returns [azure, edge, openai]; paid OpenAI is last resort", () => {
     const chain = factory.driverChain('edge');
     expect(chain.map((d) => d.provider)).toEqual(['azure', 'edge', 'openai']);
   });
@@ -42,13 +42,23 @@ describe('TTSDriverFactory', () => {
     expect(chain.map((d) => d.provider)).toEqual(['edge', 'openai']);
   });
 
-  it("driverChain('openai') returns [openai] only — explicit paid choice has no fallback", () => {
+  it("driverChain('openai') returns [openai] only; explicit paid choice has no fallback", () => {
     const chain = factory.driverChain('openai');
     expect(chain.map((d) => d.provider)).toEqual(['openai']);
   });
 
-  it("driverChain('elevenlabs') throws — driver ships in P3", () => {
-    expect(() => factory.driverChain('elevenlabs')).toThrow(/P3/);
+  it("driverChain('elevenlabs') matches edge (ElevenLabs not deployed)", () => {
+    expect(factory.driverChain('elevenlabs').map((d) => d.provider)).toEqual(
+      factory.driverChain('edge').map((d) => d.provider),
+    );
+  });
+
+  it("driverChain('elevenlabs') respects TTS_PREFER=edge like edge does", () => {
+    process.env.TTS_PREFER = 'edge';
+    expect(factory.driverChain('elevenlabs').map((d) => d.provider)).toEqual([
+      'edge',
+      'openai',
+    ]);
   });
 
   it("forProvider('edge') returns Azure when configured (top of chain)", () => {

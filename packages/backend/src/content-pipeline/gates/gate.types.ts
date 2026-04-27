@@ -20,9 +20,26 @@ export interface GateViolation {
   reason: 'unmatched' | 'out_of_tolerance' | 'missing';
 }
 
+/** Script stated a data-confidence letter (A–F) that must match bundle.score.confidence. */
+export interface ConfidenceLetterViolation {
+  quote: string;
+  statedLetter: string;
+  expectedLetter: string | null;
+  reason: 'confidence_mismatch' | 'confidence_stated_without_bundle';
+}
+
 export interface GateResult {
   passed: boolean;
   violations: GateViolation[];
+  /**
+   * Data-quality confidence letters (A–F) mentioned in prose vs bundle.score.confidence.
+   */
+  confidenceViolations?: ConfidenceLetterViolation[];
+  /**
+   * Claims that failed strict MCP-only matching but were allowed by an
+   * explicit policy (e.g. long-form national metro rank). Logged for audit.
+   */
+  waivedViolations?: GateViolation[];
   llm_judge_response?: unknown;
   // Passed, but the gate wants a human to eyeball the run before it goes
   // public — e.g. Gate B judge gave exactly the minimum score, or a

@@ -17,6 +17,12 @@ export class VerifyDataHandler {
     this.logger.log(`[PIPE] verify-data.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
+      const { data: runRow } = await client
+        .from('content_runs')
+        .select('format')
+        .eq('id', runId)
+        .maybeSingle();
+      const contentFormat = runRow?.format as string | undefined;
       // Use order-by-created + limit(1) instead of .single() because retries
       // insert fresh script/payload rows alongside the originals — .single()
       // throws on multi-row even when the data is valid.
@@ -40,23 +46,36 @@ export class VerifyDataHandler {
       const payloadAsset = payloadRows?.[0];
       if (!payloadAsset) throw new Error('mcp_payload asset not found');
 
-      const script = scriptAsset.metadata.scripts[0];
+      const scriptsRaw = scriptAsset.metadata?.scripts;
+      const script = Array.isArray(scriptsRaw) ? scriptsRaw[0] : undefined;
+      if (!script?.fullText || typeof script.fullText !== 'string') {
+        throw new Error(
+          'script asset missing scripts[0].fullText — regenerate script or check content_assets.script metadata',
+        );
+      }
       this.logger.log(
         `[PIPE] verify-data calling gate.verify script.len=${script.fullText.length}`,
       );
-      const result = await this.gate.verify(
-        script.fullText,
-        payloadAsset.metadata,
-      );
+      const result = await this.gate.verify(script.fullText, payloadAsset.metadata, {
+        contentFormat,
+      });
       this.logger.log(
-        `[PIPE] verify-data gate result passed=${result.passed} violations=${result.violations.length}`,
+        `[PIPE] verify-data gate result passed=${result.passed} violations=${result.violations.length} confidenceViolations=${result.confidenceViolations?.length ?? 0}`,
       );
 
       await client.from('content_run_gates').insert({
         run_id: runId,
         gate: 'data_verifier',
         result: result.passed ? 'passed' : 'failed',
-        details: { violations: result.violations },
+        details: {
+          violations: result.violations,
+          ...(result.confidenceViolations?.length
+            ? { confidence_violations: result.confidenceViolations }
+            : {}),
+          ...(result.waivedViolations?.length
+            ? { waived_violations: result.waivedViolations }
+            : {}),
+        },
       });
 
       await client.from('content_run_events').insert({
@@ -66,7 +85,15 @@ export class VerifyDataHandler {
           passed: result.passed,
           violations_count: result.violations.length,
           violations_preview: result.violations.slice(0, 5),
+          waived_count: result.waivedViolations?.length ?? 0,
+          waived_preview: result.waivedViolations?.slice(0, 5),
+          confidence_violations_count: result.confidenceViolations?.length ?? 0,
+          confidence_violations_preview: result.confidenceViolations?.slice(
+            0,
+            5,
+          ),
           script_chars: script.fullText.length,
+          content_format: contentFormat ?? null,
         },
       });
 

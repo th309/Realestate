@@ -15,6 +15,8 @@ interface PlatformRowProps {
   accountLabel: string | null;
   connectedAt: string | null;
   lastPublishedAt: string | null;
+  /** When set, OAuth is managed on the mirrored platform row only. */
+  mirrorsPlatform: string | null;
   appCredentials: AppCredentialStatus;
   onChange: () => void;
 }
@@ -26,6 +28,7 @@ export function PlatformRow({
   accountLabel,
   connectedAt,
   lastPublishedAt,
+  mirrorsPlatform,
   appCredentials,
   onChange,
 }: PlatformRowProps) {
@@ -82,15 +85,21 @@ export function PlatformRow({
     }
   }
 
+  const mirrorLabel = mirrorsPlatform?.replaceAll("_", " ");
+
   const statusLine = !supported
     ? "Available in a later phase"
-    : configured
-      ? accountLabel
-        ? `Connected · ${accountLabel}`
-        : "Connected"
-      : appCredentials.configured
-        ? "App ready · click Connect to authorize an account"
-        : "App credentials not configured";
+    : mirrorsPlatform && configured && mirrorLabel
+      ? `Connected · ${accountLabel ?? "channel"} (same OAuth as ${mirrorLabel})`
+      : mirrorsPlatform && !configured && mirrorLabel
+        ? `Uses the same Google connection as ${mirrorLabel} — connect there first`
+      : configured
+        ? accountLabel
+          ? `Connected · ${accountLabel}`
+          : "Connected"
+        : appCredentials.configured
+          ? "App ready · click Connect to authorize an account"
+          : "App credentials not configured";
 
   return (
     <div className="rounded-xl bg-surface-container-low shadow-sm">
@@ -132,7 +141,7 @@ export function PlatformRow({
         </div>
 
         <div className="flex items-center gap-2">
-          {supported && (
+          {supported && !mirrorsPlatform && (
             <button
               type="button"
               onClick={() => setConfigureOpen(true)}
@@ -141,7 +150,7 @@ export function PlatformRow({
               Configure
             </button>
           )}
-          {supported && !configured && (
+          {supported && !configured && !mirrorsPlatform && (
             <button
               type="button"
               disabled={working === "connect"}
@@ -151,7 +160,7 @@ export function PlatformRow({
               {working === "connect" ? "Opening…" : "Connect"}
             </button>
           )}
-          {supported && configured && (
+          {supported && configured && !mirrorsPlatform && (
             <button
               type="button"
               disabled={working === "disconnect"}

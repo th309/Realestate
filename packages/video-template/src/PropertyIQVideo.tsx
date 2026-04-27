@@ -1,6 +1,11 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence } from "remotion";
-import { VideoProps, RankingVideoProps, FORMAT_CONFIGS } from "./types";
+import {
+  VideoProps,
+  RankingVideoProps,
+  SingleMarketVideoProps,
+  FORMAT_CONFIGS,
+} from "./types";
 import {
   BRAND_OUTRO_FRAMES,
   computeRankingTiming,
@@ -27,12 +32,50 @@ export const calculateRankingMetadata = ({
     height: 1920,
   };
 };
+
+/** Long-form duration: prefer server-built plan; else caption end + tail; else catalog default. */
+export const calculateLongFormMetadata = ({
+  props,
+}: {
+  props: SingleMarketVideoProps;
+}) => {
+  const plan = props.longFormRenderPlan;
+  if (plan?.durationInFrames && plan.durationInFrames > 0) {
+    return {
+      durationInFrames: plan.durationInFrames,
+      fps: 30,
+      width: 1920,
+      height: 1080,
+    };
+  }
+  const cw = props.captionWords;
+  if (cw && cw.length > 0) {
+    const lastMs = cw[cw.length - 1].endMs;
+    const tail = 120;
+    const d = 60 + Math.ceil((lastMs / 1000) * 30) + tail;
+    return {
+      durationInFrames: Math.max(600, d),
+      fps: 30,
+      width: 1920,
+      height: 1080,
+    };
+  }
+  return {
+    durationInFrames: FORMAT_CONFIGS.long_form_deep_dive.durationInFrames,
+    fps: 30,
+    width: 1920,
+    height: 1080,
+  };
+};
 import { VideoLayout } from "./layout/VideoLayout";
 import { GradeRevealLayout } from "./layouts/GradeRevealLayout";
 import { Top10Layout } from "./layouts/Top10Layout";
 import { ScoreMoverLayout } from "./layouts/ScoreMoverLayout";
 import { HeadToHeadLayout } from "./layouts/HeadToHeadLayout";
 import { FarmAreaSpotlightLayout } from "./layouts/FarmAreaSpotlightLayout";
+import { LongFormDeepDiveLayout } from "./layouts/LongFormDeepDiveLayout";
+import { BrokerageMarketShareLayout } from "./layouts/BrokerageMarketShareLayout";
+import { RecruitmentAngleLayout } from "./layouts/RecruitmentAngleLayout";
 import { CaptionOverlay } from "./primitives/CaptionOverlay";
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
@@ -49,6 +92,15 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "head_to_head" && <HeadToHeadLayout {...props} />}
         {props.format === "farm_area_spotlight" && (
           <FarmAreaSpotlightLayout {...props} />
+        )}
+        {props.format === "long_form_deep_dive" && (
+          <LongFormDeepDiveLayout {...props} />
+        )}
+        {props.format === "brokerage_market_share" && (
+          <BrokerageMarketShareLayout {...props} />
+        )}
+        {props.format === "recruitment_angle" && (
+          <RecruitmentAngleLayout {...props} />
         )}
         {/* Other formats rendered in later phases.
             CaptionOverlay is suppressed for ranking layouts — they have

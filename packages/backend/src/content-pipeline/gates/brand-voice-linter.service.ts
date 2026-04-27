@@ -1,6 +1,8 @@
 // packages/backend/src/content-pipeline/gates/brand-voice-linter.service.ts
 import { Injectable } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
+import { anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback } from '../drivers/anthropic-messages-retry';
+import { resolveGateBVoiceJudgeModel } from '../drivers/content-pipeline-llm-client';
 import {
   FORBIDDEN_PHRASES,
   EM_DASH_CHARS,
@@ -36,12 +38,6 @@ const JUDGE_TOOL = {
 
 @Injectable()
 export class BrandVoiceLinterService {
-  private readonly client: Anthropic;
-
-  constructor() {
-    this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-
   async lint(scriptText: string): Promise<GateResult> {
     const deterministic = this.deterministicPass(scriptText);
     if (!deterministic.passed) return deterministic;
@@ -133,23 +129,24 @@ export class BrandVoiceLinterService {
       'https://propertyiq.app/go/example',
     );
 
-    const response = await this.client.messages.create(
-      {
-        model: process.env.GATE_B_JUDGE_MODEL ?? 'claude-sonnet-4-6',
-        max_tokens: 800,
-        system: [
-          {
-            type: 'text',
-            text: systemPrompt,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        tools: [JUDGE_TOOL as unknown as Anthropic.Messages.Tool],
-        tool_choice: { type: 'tool', name: 'judge_brand_voice' },
-        messages: [{ role: 'user', content: scriptForJudge }],
-      },
-      { timeout: 60_000 },
-    );
+    const { message: response } =
+      await anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback(
+        {
+          model: resolveGateBVoiceJudgeModel(),
+          max_tokens: 800,
+          system: [
+            {
+              type: 'text',
+              text: systemPrompt,
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+          tools: [JUDGE_TOOL as unknown as Anthropic.Messages.Tool],
+          tool_choice: { type: 'tool', name: 'judge_brand_voice' },
+          messages: [{ role: 'user', content: scriptForJudge }],
+        },
+        { timeout: 60_000 },
+      );
 
     const toolBlock = response.content.find((c) => c.type === 'tool_use');
     if (!toolBlock || toolBlock.type !== 'tool_use') {

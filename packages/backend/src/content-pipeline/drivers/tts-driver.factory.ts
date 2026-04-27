@@ -12,19 +12,24 @@ export type TTSProviderKey = 'edge' | 'elevenlabs' | 'openai';
  *
  * For provider='edge' (the DB default for new runs) the chain is:
  *
- *   1. AzureSpeechDriver  — free during Azure's preview/free tier; same voice
- *                           catalog as Edge with auth + no IP rate-limiting.
- *   2. EdgeTTSDriver      — free reverse-engineered Microsoft endpoint;
- *                           rate-limited at the IP level, occasional WS-403s.
- *   3. OpenAITTSDriver    — paid ($0.030/1K chars on tts-1-hd). Last resort.
+ *   1. AzureSpeechDriver - official Speech SDK / REST; same voice catalog
+ *                           family as Edge with auth + steadier than Edge WS.
+ *   2. EdgeTTSDriver - Python edge-tts (Microsoft neural voices); can hit
+ *                           IP / WS rate limits.
+ *   3. OpenAITTSDriver - paid ($0.030/1K chars on tts-1-hd). Last resort.
  *                           Different voice catalog; the handler swaps to
  *                           voiceId='alloy' when falling through to it.
  *
- * `TTS_PREFER=edge` skips Azure (useful for offline dev to avoid Azure
- * billing once it leaves free tier). `provider='openai'` is an explicit
- * paid choice with no fallback.
+ * `TTS_PREFER=edge` skips Azure (e.g. offline dev). `provider='openai'` is
+ * an explicit paid choice with no fallback.
  *
- * The factory does NOT filter for isConfigured() — the handler does that
+ * ElevenLabs (`provider='elevenlabs'`) is not wired in this deployment.
+ * Rows or templates may still store `elevenlabs` from older seeds; those runs
+ * use the same neural chain as `edge` (Azure → Edge → OpenAI). Migration
+ * 20260427000100_* updates format defaults to `edge`; this mapping prevents
+ * hard failures if the DB row was never migrated.
+ *
+ * The factory does NOT filter for isConfigured(); the handler does that
  * so unconfigured-driver behavior is observable in logs.
  */
 @Injectable()
@@ -42,6 +47,18 @@ export class TTSDriverFactory {
   }
 
   /**
+   * Azure → Edge → OpenAI (or Edge → OpenAI when TTS_PREFER=edge).
+   * Shared by `provider='edge'` and legacy `provider='elevenlabs'` rows.
+   */
+  private neuralMicrosoftTtsDriverChain(): TTSDriver[] {
+    const forceEdge = process.env.TTS_PREFER === 'edge';
+    if (forceEdge) {
+      return [this.edge, this.openai];
+    }
+    return [this.azure, this.edge, this.openai];
+  }
+
+  /**
    * Returns the priority-ordered list of TTS drivers to try for a given
    * provider key. The handler iterates this list, using the first
    * configured driver as the primary and falling through on synthesis
@@ -49,19 +66,16 @@ export class TTSDriverFactory {
    */
   driverChain(provider: TTSProviderKey): TTSDriver[] {
     if (provider === 'elevenlabs') {
-      throw new Error('ElevenLabs driver ships in P3');
+      this.logger.warn(
+        "TTS provider key 'elevenlabs' has no ElevenLabs deployment here — using neural Microsoft chain (same as 'edge')",
+      );
+      return this.neuralMicrosoftTtsDriverChain();
     }
     if (provider === 'openai') {
-      // Explicit paid choice — no automatic fallback (caller asked for paid).
+      // Explicit paid choice: no automatic fallback (caller asked for paid).
       return [this.openai];
     }
-    // 'edge' is the DB default and the legacy selection — Azure-then-Edge,
-    // with OpenAI as a last-resort paid fallback.
-    const forceEdge = process.env.TTS_PREFER === 'edge';
-    if (forceEdge) {
-      return [this.edge, this.openai];
-    }
-    return [this.azure, this.edge, this.openai];
+    return this.neuralMicrosoftTtsDriverChain();
   }
 
   /**

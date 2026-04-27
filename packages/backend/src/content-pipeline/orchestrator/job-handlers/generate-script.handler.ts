@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import {
@@ -8,6 +8,8 @@ import {
 
 @Injectable()
 export class GenerateScriptHandler {
+  private readonly logger = new Logger(GenerateScriptHandler.name);
+
   constructor(
     private readonly orchestrator: RunOrchestratorService,
     @Inject(SCRIPT_GENERATOR) private readonly scriptGen: ScriptGenerator,
@@ -16,6 +18,7 @@ export class GenerateScriptHandler {
 
   async handle(runId: string): Promise<void> {
     try {
+      this.logger.log(`[PIPE] generate-script.handle START run=${runId}`);
       const client = this.supabase.getClient();
       const { data: run } = await client
         .from('content_runs')
@@ -36,11 +39,28 @@ export class GenerateScriptHandler {
         (audioBudgetSeconds * fmt.natural_wpm) / 60,
       );
 
+      this.logger.log(
+        `[PIPE] generate-script budgets run=${runId} format=${run.format} duration_sec=${fmt.duration_seconds} audio_budget_sec=${audioBudgetSeconds} buffer_sec=${fmt.audio_buffer_seconds} natural_wpm=${fmt.natural_wpm} word_budget=${wordBudget}`,
+      );
+
       const payload = await readMcpPayloadWithRetry(client, runId);
       if (!payload)
         throw new Error(
           'mcp_payload asset not found after retries (fetch-data did not persist it)',
         );
+
+      const metaKeys =
+        payload.metadata && typeof payload.metadata === 'object'
+          ? Object.keys(payload.metadata as object)
+          : [];
+      this.logger.log(
+        `[PIPE] generate-script mcp_payload run=${runId} metadataKeys=${metaKeys.join(',')}`,
+      );
+
+      const geo = run.resolved_geo as { canonical_name?: string } | null;
+      this.logger.log(
+        `[PIPE] generate-script resolved_geo run=${runId} has_geo=${Boolean(geo)} canonical_name=${geo?.canonical_name ?? 'MISSING'}`,
+      );
 
       const { data: binding } = await client
         .from('format_magnet_bindings')
@@ -92,6 +112,19 @@ export class GenerateScriptHandler {
         priorFeedback: priorFeedback.length > 0 ? priorFeedback : undefined,
       });
 
+      if (!result.scripts?.length) {
+        this.logger.error(
+          `[PIPE] generate-script EMPTY_RESULT run=${runId} diagnostics=${JSON.stringify(result.diagnostics ?? {})}`,
+        );
+        throw new Error(
+          'Script generator returned no scripts (see backend logs / generate_script_error event)',
+        );
+      }
+
+      this.logger.log(
+        `[PIPE] generate-script LLM_OK run=${runId} scripts_count=${result.scripts.length} diagnostics=${JSON.stringify(result.diagnostics ?? {})}`,
+      );
+
       await client
         .from('content_runs')
         .update({
@@ -131,7 +164,7 @@ export class GenerateScriptHandler {
       // Diagnostic: capture the budget given to the generator + what was
       // actually produced, so audio-overflow vs word-budget calibration can
       // be audited from the DB without tailing backend stdout.
-      const firstScript = result.scripts[0];
+      const firstScript = result.scripts[0]!;
       const fullTextLen = firstScript?.fullText?.length ?? 0;
       const fullTextWords = firstScript?.fullText
         ? firstScript.fullText.split(/\s+/).filter(Boolean).length
@@ -151,15 +184,55 @@ export class GenerateScriptHandler {
           prior_feedback_count: priorFeedback.length,
           repaired_from_gates: priorFeedback.map((f) => f.gate),
           fullText_preview: firstScript?.fullText?.slice(0, 600) ?? '',
+          llm_diagnostics: result.diagnostics ?? null,
         },
       });
 
+      this.logger.log(
+        `[PIPE] generate-script.handle DONE run=${runId} words=${fullTextWords}`,
+      );
       await this.orchestrator.handleStepSuccess(runId);
     } catch (err) {
       const e = err as Error;
-      console.error(
-        `[generate-script] run=${runId} error=${e.message}\n${e.stack}`,
+      const stackPreview = e.stack?.split('\n').slice(0, 8).join('\n') ?? '';
+      this.logger.error(
+        `[PIPE] generate-script.handle FAIL run=${runId} msg=${e.message}\n${stackPreview}`,
       );
+
+      let formatHint: string | undefined;
+      let approvalHint: string | undefined;
+      try {
+        const ex = this.supabase.getClient();
+        const { data: runRow } = await ex
+          .from('content_runs')
+          .select('format, approval_mode')
+          .eq('id', runId)
+          .maybeSingle();
+        formatHint = runRow?.format as string | undefined;
+        approvalHint = runRow?.approval_mode as string | undefined;
+      } catch {
+        /* ignore */
+      }
+
+      try {
+        const client = this.supabase.getClient();
+        await client.from('content_run_events').insert({
+          run_id: runId,
+          event_type: 'generate_script_error',
+          payload: {
+            message: e.message,
+            name: e.name,
+            stack_preview: stackPreview.slice(0, 2000),
+            format: formatHint ?? null,
+            approval_mode: approvalHint ?? null,
+          },
+        });
+      } catch (logErr) {
+        this.logger.warn(
+          `[PIPE] generate-script could not persist generate_script_error run=${runId} err=${(logErr as Error).message}`,
+        );
+      }
+
       await this.orchestrator.handleStepFailure(
         runId,
         `scripting: ${e.message}`,
@@ -167,6 +240,8 @@ export class GenerateScriptHandler {
     }
   }
 }
+
+const mcpPayloadLogger = new Logger('readMcpPayloadWithRetry');
 
 async function readMcpPayloadWithRetry(
   client: ReturnType<SupabaseService['getClient']>,
@@ -182,10 +257,13 @@ async function readMcpPayloadWithRetry(
       .eq('kind', 'mcp_payload')
       .order('created_at', { ascending: false })
       .limit(1);
-    console.log(
-      `[readMcpPayloadWithRetry] runId=${runId} delay=${delay}ms data.length=${data?.length ?? 'null'} error=${error?.message ?? 'none'}`,
+    mcpPayloadLogger.log(
+      `[PIPE] mcp_payload retry runId=${runId} delayMs=${delay} rows=${data?.length ?? 'null'} err=${error?.message ?? 'none'}`,
     );
     if (data && data.length > 0) return data[0] as { metadata: any };
   }
+  mcpPayloadLogger.warn(
+    `[PIPE] mcp_payload MISS runId=${runId} after ${delays.length} attempts`,
+  );
   return null;
 }

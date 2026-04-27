@@ -17,8 +17,9 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 // All publishable platforms in the order they appear in chip rows.
-// Mirrors the QueueName + Platform type order in the backend.
+// Includes regular YouTube (horizontal) plus Shorts — pick per format defaults.
 const ALL_PLATFORMS = [
+  "youtube_long",
   "youtube_shorts",
   "tiktok",
   "instagram_reels",

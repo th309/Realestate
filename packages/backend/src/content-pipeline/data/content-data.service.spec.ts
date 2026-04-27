@@ -130,6 +130,16 @@ describe('ContentDataService', () => {
           grade: 'B',
           confidence: 86,
           confidence_level: 'A',
+          trend_change: 1.5,
+          history: {
+            data: [
+              { date: '2025-01-01', score: 70 },
+              { date: '2025-06-01', score: 72 },
+            ],
+            months: 12,
+            trend: 'up',
+            change: 1.5,
+          },
         },
       },
     });
@@ -146,6 +156,12 @@ describe('ContentDataService', () => {
     expect(result.economic?.unemployment_rate).toBe(4.1);
     expect(result.score?.propertyiq_score).toBe(72);
     expect(result.score?.confidence).toBe('A');
+    expect(result.score?.history).toHaveLength(2);
+    expect(result.score?.trend).toBe('up');
+    expect(result.score?.trend_change).toBe(1.5);
+    expect(scoring.getScore).toHaveBeenCalledWith('35620', 'metro', undefined, {
+      historyMonths: 12,
+    });
   });
 
   it('getMarketSnapshot returns all nulls when underlying service throws', async () => {

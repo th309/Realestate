@@ -83,6 +83,8 @@ jest.mock('@anthropic-ai/sdk', () =>
 
 describe('DataVerifierService against 20-case corpus', () => {
   beforeAll(() => {
+    delete process.env.DEEPSEEK_API_KEY;
+    process.env.CONTENT_PIPELINE_LLM_PROVIDER = 'anthropic';
     process.env.ANTHROPIC_API_KEY = 'test';
   });
 

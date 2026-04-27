@@ -1,0 +1,18 @@
+<!-- Minimal P3 template: uses same data bundle shape as market snapshot. -->
+<h1>Brokerage coverage — <%= dataBundle.geo.canonical_name %></h1>
+<p style="font-size: 11pt; color: #5c6bc0;">Prepared on <%= today %></p>
+<p style="font-size: 11pt;">
+  Use this snapshot with your broker leadership team. Metrics reflect PropertyIQ
+  data availability for the selected market.
+</p>
+<% if (dataBundle.score) { %>
+<div style="margin: 24px 0;">
+  <strong>PropertyIQ Score:</strong> <%= dataBundle.score.propertyiq_score %>
+  (<%= dataBundle.score.grade %>)
+</div>
+<% } %>
+<h2>Market fundamentals</h2>
+<p style="font-size: 10pt;">
+  Home value, rent, and inventory signals in the bundle support brokerage
+  positioning conversations. Expand with your local MLS context where needed.
+</p>

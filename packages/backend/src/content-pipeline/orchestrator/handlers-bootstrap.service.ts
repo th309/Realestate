@@ -18,6 +18,7 @@ import {
   GenerateLeadMagnetHandler,
   GenerateLeadMagnetJob,
 } from './job-handlers/generate-lead-magnet.handler';
+import type { Platform } from '../types';
 
 @Injectable()
 export class HandlersBootstrapService implements OnModuleInit {
@@ -89,8 +90,13 @@ export class HandlersBootstrapService implements OnModuleInit {
     await this.queue.work<{ runId: string; platform: string }>(
       'publish-youtube',
       async (job) => {
-        if (job.data.platform === 'youtube_shorts')
-          await this.publishYT.handle(job.data.runId);
+        const p = job.data.platform;
+        if (p === 'youtube_shorts' || p === 'youtube_long') {
+          await this.publishYT.handle(
+            job.data.runId,
+            job.data.platform as Platform,
+          );
+        }
       },
     );
     await this.queue.work<{ runId: string; platform: string }>(

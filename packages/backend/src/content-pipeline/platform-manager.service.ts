@@ -20,6 +20,11 @@ export interface PlatformStatus {
   lastPublishedAt: string | null;
   /** App-credential status — drives the Configure dialog in the admin UI. */
   appCredentials: AppCredentialStatus;
+  /**
+   * When set, this row shares OAuth + app credentials with another platform.
+   * Example: `youtube_long` mirrors `youtube_shorts` (one Google channel).
+   */
+  mirrorsPlatform: string | null;
 }
 
 const ALL_PLATFORMS = [
@@ -47,8 +52,10 @@ export class PlatformManagerService {
     const rows = await Promise.all(
       ALL_PLATFORMS.map(async (platform): Promise<PlatformStatus> => {
         const pub = registered.get(platform);
-        const cred = await this.creds.getActive(platform);
-        const appStatus = await this.appCreds.status(platform);
+        const mirrorsShorts = platform === 'youtube_long';
+        const credSource = mirrorsShorts ? 'youtube_shorts' : platform;
+        const cred = await this.creds.getActive(credSource);
+        const appStatus = await this.appCreds.status(credSource);
         return {
           platform,
           supported: Boolean(pub),
@@ -57,6 +64,7 @@ export class PlatformManagerService {
           connectedAt: cred?.connectedAt.toISOString() ?? null,
           lastPublishedAt: null,
           appCredentials: appStatus,
+          mirrorsPlatform: mirrorsShorts ? 'youtube_shorts' : null,
         };
       }),
     );

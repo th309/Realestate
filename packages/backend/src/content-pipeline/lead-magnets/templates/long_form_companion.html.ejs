@@ -1,0 +1,12 @@
+<!-- Minimal P3 companion PDF -->
+<h1>Market narrative companion — <%= dataBundle.geo.canonical_name %></h1>
+<p style="font-size: 11pt; color: #5c6bc0;">Prepared on <%= today %></p>
+<p style="font-size: 11pt;">
+  This companion summarizes the same data sources referenced in the long-form
+  video. It is not financial advice.
+</p>
+<% if (dataBundle.score) { %>
+<p>
+  <strong>PropertyIQ Score:</strong> <%= dataBundle.score.propertyiq_score %>
+</p>
+<% } %>

@@ -17,6 +17,8 @@ interface ScoreRevealProps {
   trend: TrendDirection;
   trendChange: number;
   periodDate: string;
+  /** Data-quality confidence letter (A–F), same as bundle.score.confidence */
+  confidenceLetter?: string;
 }
 
 export const ScoreReveal: React.FC<ScoreRevealProps> = ({
@@ -26,6 +28,7 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
   trend,
   trendChange,
   periodDate,
+  confidenceLetter,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -203,6 +206,23 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
       >
         {grade}
       </div>
+
+      {confidenceLetter && /^[A-F]$/i.test(confidenceLetter) && (
+        <div
+          style={{
+            opacity: gradeOpacity,
+            fontSize: isVertical ? 26 : 20,
+            fontWeight: 600,
+            color: COLORS.textMuted,
+            letterSpacing: "0.08em",
+          }}
+        >
+          Data confidence{" "}
+          <span style={{ color: COLORS.text, fontWeight: 800 }}>
+            {confidenceLetter.toUpperCase()}
+          </span>
+        </div>
+      )}
 
       {/* Trend indicator */}
       <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPlatforms } from "../lib/content-pipeline-api";
@@ -37,7 +37,7 @@ function errorMessage(code: string): string {
   }
 }
 
-export default function PlatformsPage() {
+function PlatformsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [toast, setToast] = useState<{
@@ -103,6 +103,7 @@ export default function PlatformsPage() {
             accountLabel={row?.accountLabel ?? null}
             connectedAt={row?.connectedAt ?? null}
             lastPublishedAt={row?.lastPublishedAt ?? null}
+            mirrorsPlatform={row?.mirrorsPlatform ?? null}
             appCredentials={
               row?.appCredentials ?? {
                 configured: false,
@@ -131,5 +132,17 @@ export default function PlatformsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PlatformsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 max-w-3xl text-sm text-outline">Loading...</div>
+      }
+    >
+      <PlatformsPageInner />
+    </Suspense>
   );
 }

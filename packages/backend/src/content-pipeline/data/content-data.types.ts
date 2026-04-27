@@ -18,7 +18,15 @@ export interface MarketSnapshot {
     homeownership_pct: number;
   } | null;
   economic: { unemployment_rate: number; job_growth_yoy_pct: number } | null;
-  score: { propertyiq_score: number; grade: string; confidence: string } | null;
+  score: {
+    propertyiq_score: number;
+    grade: string;
+    confidence: string;
+    /** Present when scoring API returned history (feeds Remotion TrendChart). */
+    history?: Array<{ date: string; score: number }>;
+    trend?: 'up' | 'down' | 'stable';
+    trend_change?: number;
+  } | null;
 }
 
 export interface PropertyIQScoreResult {

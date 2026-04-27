@@ -208,6 +208,8 @@ export interface PlatformStatus {
   connectedAt: string | null;
   lastPublishedAt: string | null;
   appCredentials: AppCredentialStatus;
+  /** Shares OAuth with this platform (e.g. long-form uses Shorts token). */
+  mirrorsPlatform?: string | null;
 }
 
 export async function fetchPlatforms(): Promise<PlatformStatus[]> {

@@ -12,11 +12,11 @@ Before touching any file, understand the whole system first. Then examine the sp
 
 ### 1.1 The "Don'ts" (Strict Constraints)
 
-- **NEVER** duplicate metric names/formats. `config/metrics.ts` is the **ONLY** source of truth.
+- **NEVER** duplicate metric names/formats. `packages/frontend/app/map/config/metrics.ts` is the **ONLY** source of truth.
 - **NEVER** hardcode color scale breakpoints; use dynamic min/max calculations.
 - **NEVER** create separate API methods for each metric; always use the unified `fetchMetricData`.
 - **NEVER** format values manually; use `formatValue()` or `formatTooltipValue()` from utils.
-- **NEVER** hardcode zoom levels; use `GEO_ZOOM_LEVELS` from `config/metrics.ts`.
+- **NEVER** hardcode zoom levels; use `GEO_ZOOM_LEVELS` from `packages/frontend/app/map/config/metrics.ts`.
 - **NEVER** write ad-hoc metric fallback logic in backend services. All metric source fallbacks and geography inheritance MUST go through `MetricResolutionService`. See **Section 5.1**.
 
 ### 1.2 Security & Data Protection (Strict)

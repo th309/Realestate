@@ -7,7 +7,11 @@ import {
   RankingVideoProps,
   SingleMarketVideoProps,
 } from "./types";
-import { PropertyIQVideo, calculateRankingMetadata } from "./PropertyIQVideo";
+import {
+  PropertyIQVideo,
+  calculateRankingMetadata,
+  calculateLongFormMetadata,
+} from "./PropertyIQVideo";
 
 const RANKING_FORMATS = new Set<FormatKey>([
   "top_10_ranking",
@@ -58,6 +62,7 @@ export const RemotionRoot: React.FC = () => {
         const cfg = FORMAT_CONFIGS[key];
         const defaultProps = buildDefaultProps(key);
         const isRanking = RANKING_FORMATS.has(key);
+        const isLongForm = key === "long_form_deep_dive";
         return (
           <Composition
             key={key}
@@ -72,6 +77,16 @@ export const RemotionRoot: React.FC = () => {
               // calculateRankingMetadata is sync; Remotion accepts sync fns too.
               // Double-cast through unknown to bridge VideoProps ↔ Record<string,unknown>.
               calculateMetadata: calculateRankingMetadata as unknown as (arg: {
+                props: Record<string, unknown>;
+              }) => Promise<{
+                durationInFrames: number;
+                fps: number;
+                width: number;
+                height: number;
+              }>,
+            })}
+            {...(isLongForm && {
+              calculateMetadata: calculateLongFormMetadata as unknown as (arg: {
                 props: Record<string, unknown>;
               }) => Promise<{
                 durationInFrames: number;

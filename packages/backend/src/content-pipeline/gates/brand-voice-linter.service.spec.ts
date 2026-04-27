@@ -20,10 +20,14 @@ jest.mock('@anthropic-ai/sdk', () =>
 );
 
 describe('BrandVoiceLinterService deterministic pass', () => {
+  let svc: BrandVoiceLinterService;
+
   beforeAll(() => {
+    delete process.env.DEEPSEEK_API_KEY;
+    process.env.CONTENT_PIPELINE_LLM_PROVIDER = 'anthropic';
     process.env.ANTHROPIC_API_KEY = 'test';
+    svc = new BrandVoiceLinterService();
   });
-  const svc = new BrandVoiceLinterService();
 
   for (const c of corpus.deterministic_fails) {
     it(`fails on ${c.name}`, async () => {

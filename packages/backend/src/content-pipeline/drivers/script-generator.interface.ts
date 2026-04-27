@@ -65,10 +65,40 @@ export interface ScriptVariant {
   }>;
 }
 
+/** LLM request/response introspection for operators (logs + content_run_events). */
+export interface ScriptGenerationDiagnostics {
+  /** Runtime LLM vendor (Anthropic Cloud vs DeepSeek Anthropic-compatible API). */
+  provider: 'anthropic' | 'deepseek';
+  model: string;
+  /** max_tokens passed to Messages API for this request. */
+  maxOutputTokensRequested: number;
+  /** Single-market `emit_script` tool vs top/bottom ranking JSON-in-text. */
+  generationPath?: 'emit_script' | 'ranking_json';
+  /** Ranking path only: 1-based attempt index that produced a valid script. */
+  successfulAttempt?: number;
+  /** Ranking path only: configured max retry rounds (attempts = this + 1). */
+  maxRankingRetries?: number;
+  stopReason?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+  /** e.g. `tool_use,text` — shows whether the model returned structured tool output. */
+  contentBlockTypes?: string[];
+  /** Summary of parsed tool_use input before validation (never full script text). */
+  toolInputSummary?: Record<string, unknown>;
+}
+
 export interface ScriptGenerationResult {
   scripts: ScriptVariant[];
   cost: DriverCost;
   rawLLMResponse: unknown;
+  /**
+   * Optional Anthropic telemetry for debugging truncation, wrong shape, etc.
+   */
+  diagnostics?: ScriptGenerationDiagnostics;
   /**
    * For ranking formats only — the structured RankingScript (hooks/rows/outro)
    * the LLM produced. Downstream ranking-aware handlers (render-video,

@@ -44,6 +44,9 @@ const MIGRATIONS = [
   "20260425000500_content_runs_format_options.sql",
   "20260426000001_content_pipeline_top_bottom_10.sql",
   "20260426000002_enable_bottom_10.sql",
+  "20260427000100_long_form_default_tts_edge.sql",
+  "20260428000100_content_pipeline_p3_seeds.sql",
+  "20260429000100_content_pipeline_normalize_default_tts_edge.sql",
 ];
 
 const CONN = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;

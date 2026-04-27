@@ -10,6 +10,7 @@ import { getAssetSignedUrl } from '../../asset-signing';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { readFileSync } from 'fs';
+import { buildLongFormRenderPlan } from '../../render/long-form-render-plan';
 
 @Injectable()
 export class RenderVideoHandler {
@@ -68,6 +69,42 @@ export class RenderVideoHandler {
         | Array<{ startMs: number; endMs: number; word: string }>
         | undefined;
 
+      let longFormRenderPlan: ReturnType<
+        typeof buildLongFormRenderPlan
+      > | null = null;
+      if (
+        run.format === 'long_form_deep_dive' &&
+        captionWords &&
+        captionWords.length > 0
+      ) {
+        const { data: scriptRows } = await client
+          .from('content_assets')
+          .select('metadata')
+          .eq('run_id', runId)
+          .eq('kind', 'script')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        const scriptsRaw = scriptRows?.[0]?.metadata?.scripts;
+        const script = Array.isArray(scriptsRaw) ? scriptsRaw[0] : undefined;
+        const fullText =
+          script && typeof script.fullText === 'string' ? script.fullText : '';
+        const sceneBreakdown = script?.sceneBreakdown;
+        if (
+          fullText.length > 0 &&
+          Array.isArray(sceneBreakdown) &&
+          sceneBreakdown.length >= 5
+        ) {
+          longFormRenderPlan = buildLongFormRenderPlan({
+            fullText,
+            sceneBreakdown: sceneBreakdown as Array<{
+              sceneKey: string;
+              text: string;
+            }>,
+            captionWords,
+          });
+        }
+      }
+
       const videoPath = join(tmpdir(), `video-${runId}.mp4`);
       this.logger.log(
         `[PIPE] render-video run=${runId} audioUrl=<signed> outputPath=${videoPath} format=${run.format}`,
@@ -106,6 +143,9 @@ export class RenderVideoHandler {
             audioUrl: audioSigned.url,
             ...(captionWords && captionWords.length > 0
               ? { captionWords }
+              : {}),
+            ...(longFormRenderPlan
+              ? { longFormRenderPlan }
               : {}),
           };
       this.logger.log(

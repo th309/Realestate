@@ -8,17 +8,52 @@
 import { getAuthHeaders } from "./auth-headers";
 
 /**
- * API base URL - uses environment variable or falls back to localhost for development
+ * Default API origin when NEXT_PUBLIC_API_URL was not set at build time.
+ * Production builds must still set NEXT_PUBLIC_API_URL explicitly when the API host changes.
+ *
+ * Without this, the client bundle falls back to localhost — which breaks deployed sites
+ * (browser tries each user's own machine, producing "Failed to fetch").
  */
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const DEFAULT_PRODUCTION_API_URL =
+  "https://backend-production-ee4d.up.railway.app";
+
+function resolveApiUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") {
+    return DEFAULT_PRODUCTION_API_URL;
+  }
+  return "http://localhost:3001";
+}
+
+/**
+ * API base URL — uses NEXT_PUBLIC_API_URL, then production default, then localhost (dev).
+ */
+export const API_URL = resolveApiUrl();
+
+/**
+ * Content-pipeline admin calls must share one routing strategy (CLAUDE §1.0): either
+ * all go through the Next.js `/api/admin/content-pipeline/*` proxy (browser, same-origin)
+ * or all go straight to Nest (SSR / server). Mixing only `fetchAPIRaw` broke other
+ * callers still using `fetchAPI` cross-origin.
+ */
+function resolveContentPipelineAdminFetchUrl(endpoint: string): string {
+  const pipelineAdmin = endpoint.startsWith("/api/admin/content-pipeline");
+  if (
+    typeof window !== "undefined" &&
+    pipelineAdmin
+  ) {
+    return new URL(endpoint, window.location.origin).toString();
+  }
+  return `${API_URL}${endpoint}`;
+}
 
 /**
  * Generic fetch wrapper with error handling and retry for transient failures.
  * Retries once on 5xx or network errors with a 500ms delay.
  */
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
+  const url = resolveContentPipelineAdminFetchUrl(endpoint);
   const maxRetries = 1;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -69,7 +104,7 @@ export async function fetchAPIWithParams<T>(
   endpoint: string,
   params?: Record<string, string | number | undefined>,
 ): Promise<T> {
-  const url = new URL(`${API_URL}${endpoint}`);
+  const url = new URL(resolveContentPipelineAdminFetchUrl(endpoint));
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -183,7 +218,7 @@ export async function fetchAPIRaw(
   endpoint: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const url = `${API_URL}${endpoint}`;
+  const url = resolveContentPipelineAdminFetchUrl(endpoint);
   const authHeaders = await getAuthHeaders();
   return fetch(url, {
     credentials: "include",

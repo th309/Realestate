@@ -241,6 +241,21 @@ const sharedShape = {
       }),
     )
     .optional(),
+  /** Built at render time from script.sceneBreakdown + captions (long-form only). */
+  longFormRenderPlan: z
+    .object({
+      durationInFrames: z.number().int().positive(),
+      segments: z.array(
+        z.object({
+          kind: z.string(),
+          fromFrame: z.number(),
+          durationInFrames: z.number(),
+          sceneKey: z.string().optional(),
+          excerpt: z.string().optional(),
+        }),
+      ),
+    })
+    .optional(),
 } as const;
 
 const SINGLE_MARKET_FORMATS = [
