@@ -9,7 +9,11 @@ export class RankingResolverController {
   constructor(private readonly resolver: RankingResolverService) {}
 
   @Post('resolve')
-  resolve(@Body() dto: ResolveRankingDto) {
-    return this.resolver.resolve(dto);
+  async resolve(@Body() dto: ResolveRankingDto) {
+    const result = await this.resolver.resolve(dto);
+    // Match the content-pipeline package convention: every controller wraps
+    // responses as { success, data } (see content-pipeline.controller.ts).
+    // The admin frontend's resolveRanking() unwraps json.data.
+    return { success: true, data: result };
   }
 }

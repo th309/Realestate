@@ -105,6 +105,12 @@ for port in $FRONTEND_PORT $BACKEND_PORT; do
 done
 
 echo ""
+echo "Wiping backend dist + tsbuildinfo (forces clean compile so restart picks up new code)..."
+rm -rf "$ROOT_DIR/packages/backend/dist"
+rm -f "$ROOT_DIR/packages/backend/tsconfig.build.tsbuildinfo"
+rm -f "$ROOT_DIR/packages/backend/.tsbuildinfo"
+
+echo ""
 if [ "$REDIS_AVAILABLE" = true ]; then
   echo "Starting servers (redis :$REDIS_PORT, backend :$BACKEND_PORT, frontend :$FRONTEND_PORT)"
 else
@@ -116,15 +122,22 @@ echo ""
 
 cd "$ROOT_DIR"
 
+# video-template builds to dist/ which the backend's RemotionCLIRenderer
+# loads at render time. Without a watcher, source edits to packages/video-
+# template/src/ silently no-op until someone re-runs `npm run build:cli`.
+# Adding tsc --watch keeps dist/ aligned with src/ for the whole dev session.
+VIDEO_TEMPLATE_WATCH="npm run build:cli:watch -w @propertyiq/video-template"
+
 if [ "$REDIS_AVAILABLE" = true ]; then
   REDIS_URL="redis://localhost:${REDIS_PORT}" npx concurrently \
     --restart-tries 5 \
     --restart-after 3000 \
     --kill-others-on-fail \
-    --names "redis,backend,frontend" \
+    --names "redis,video-tmpl,backend,frontend" \
     --prefix "[{name}]" \
-    --prefix-colors "red.bold,yellow.bold,cyan.bold" \
+    --prefix-colors "red.bold,magenta.bold,yellow.bold,cyan.bold" \
     "docker logs -f $REDIS_CONTAINER" \
+    "$VIDEO_TEMPLATE_WATCH" \
     "REDIS_URL=redis://localhost:${REDIS_PORT} npm run start:dev -w backend" \
     "npm run dev -w web"
 else
@@ -132,9 +145,10 @@ else
     --restart-tries 5 \
     --restart-after 3000 \
     --kill-others-on-fail \
-    --names "backend,frontend" \
+    --names "video-tmpl,backend,frontend" \
     --prefix "[{name}]" \
-    --prefix-colors "yellow.bold,cyan.bold" \
+    --prefix-colors "magenta.bold,yellow.bold,cyan.bold" \
+    "$VIDEO_TEMPLATE_WATCH" \
     "npm run start:dev -w backend" \
     "npm run dev -w web"
 fi

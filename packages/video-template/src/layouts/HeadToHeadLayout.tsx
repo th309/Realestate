@@ -5,10 +5,10 @@ import { BrandOutroCard } from "../primitives/BrandOutroCard";
 import { Comparison } from "../scenes/Comparison";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
-import type { VideoProps } from "../types";
+import type { SingleMarketVideoProps } from "../types";
 import { coerceMarketData, coerceComparisonMarket } from "./helpers";
 
-export const HeadToHeadLayout: React.FC<VideoProps> = (props) => {
+export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, any>;
   // Accept both shape A (markets array) and shape B (primary/secondary).
   const arr: any[] = Array.isArray(bundle.markets) ? bundle.markets : [];

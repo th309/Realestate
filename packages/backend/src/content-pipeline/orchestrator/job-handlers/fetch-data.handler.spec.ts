@@ -238,4 +238,107 @@ describe('FetchDataHandler', () => {
       canonical_name: 'Austin, TX',
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Ranking format branch
+  // -------------------------------------------------------------------------
+
+  describe('ranking format (top_10_ranking / bottom_10_ranking)', () => {
+    const sampleResolvedMarkets = [
+      {
+        rank: 1,
+        region_id: '35620',
+        region_name: 'New York',
+        state: 'NY',
+        value: 87,
+        value_formatted: '87',
+      },
+      {
+        rank: 2,
+        region_id: '31080',
+        region_name: 'Los Angeles',
+        state: 'CA',
+        value: 82,
+        value_formatted: '82',
+      },
+    ];
+
+    const rankingFormatOptions = {
+      ranking: {
+        metric: { id: 'propertyiq_score' },
+        geo_level: 'metro',
+        scope: { type: 'national', id: null },
+        resolved_markets: sampleResolvedMarkets,
+      },
+    };
+
+    it('builds dataBundle from format_options.ranking and skips resolveMarket', async () => {
+      const { handler, assetsInsert, resolveMarket, getMarketSnapshot } =
+        buildHarness({
+          runRow: {
+            market_query: 'Top 10 metros by PropertyIQ Score — National',
+            format: 'top_10_ranking',
+            format_options: rankingFormatOptions,
+          },
+        });
+
+      await handler.handle('run-rank-1');
+
+      expect(resolveMarket).not.toHaveBeenCalled();
+      expect(getMarketSnapshot).not.toHaveBeenCalled();
+
+      expect(assetsInsert).toHaveBeenCalledTimes(1);
+      const inserted = assetsInsert.mock.calls[0][0];
+      expect(inserted.run_id).toBe('run-rank-1');
+      expect(inserted.kind).toBe('mcp_payload');
+      const bundle = inserted.metadata as Record<string, unknown>;
+      expect(bundle.format).toBe('top_10_ranking');
+      expect(bundle.direction).toBe('top');
+      expect(bundle.geo_level).toBe('metro');
+      expect((bundle.metric as { id: string }).id).toBe('propertyiq_score');
+      expect((bundle.metric as { label: string }).label).toBe(
+        'PropertyIQ Score',
+      );
+      expect((bundle.scope as { label: string }).label).toBe('National');
+      expect(bundle.resolved_markets).toEqual(sampleResolvedMarkets);
+    });
+
+    it('sets direction=bottom for bottom_10_ranking', async () => {
+      const { handler, assetsInsert } = buildHarness({
+        runRow: {
+          market_query: 'Bottom 10 metros by PropertyIQ Score — National',
+          format: 'bottom_10_ranking',
+          format_options: rankingFormatOptions,
+        },
+      });
+
+      await handler.handle('run-rank-2');
+
+      const bundle = assetsInsert.mock.calls[0][0].metadata as Record<
+        string,
+        unknown
+      >;
+      expect(bundle.direction).toBe('bottom');
+    });
+
+    it('routes through handleStepFailure when format_options.ranking is missing', async () => {
+      const { handler, handleStepFailure, handleStepSuccess, assetsInsert } =
+        buildHarness({
+          runRow: {
+            market_query: 'Top 10 metros by PropertyIQ Score — National',
+            format: 'top_10_ranking',
+            format_options: {},
+          },
+        });
+
+      await handler.handle('run-rank-missing');
+
+      expect(handleStepFailure).toHaveBeenCalledWith(
+        'run-rank-missing',
+        expect.stringContaining('ranking_params_missing'),
+      );
+      expect(handleStepSuccess).not.toHaveBeenCalled();
+      expect(assetsInsert).not.toHaveBeenCalled();
+    });
+  });
 });

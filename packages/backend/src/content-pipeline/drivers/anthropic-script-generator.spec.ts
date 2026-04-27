@@ -84,6 +84,7 @@ const RANKING_REQUEST = {
 
 function buildValidRankingResponse() {
   return {
+    usage: { input_tokens: 100, output_tokens: 50 },
     content: [
       {
         type: 'text',
@@ -149,11 +150,31 @@ describe('AnthropicScriptGenerator — grade_reveal', () => {
 });
 
 describe('AnthropicScriptGenerator — ranking', () => {
-  it('returns parsed script on first valid attempt', async () => {
+  it('returns flattened envelope + structured ranking on first valid attempt', async () => {
     mockCreate.mockResolvedValueOnce(buildValidRankingResponse());
     const gen = new AnthropicScriptGenerator();
     const result = await gen.generate(RANKING_REQUEST as any);
-    expect((result as any).rows).toHaveLength(5);
+
+    // Generic envelope (consumed by verify-data, lint-voice, synthesize-audio)
+    expect(result.scripts).toHaveLength(1);
+    const variant = result.scripts[0];
+    expect(variant.variantId).toBe('A');
+    expect(variant.hook).toContain('PIQ Score'); // from data-led intro_vo
+    expect(variant.cta).toBe('Learn more at propertyiq.app.');
+    expect(variant.fullText).toContain('PIQ Score');
+    expect(variant.fullText).toContain('Learn more at propertyiq.app.');
+    // hook + 5 rows + outro = 7 scenes
+    expect(variant.sceneBreakdown.length).toBe(7);
+
+    // Structured ranking preserved for ranking-aware handlers
+    expect(result.ranking).toBeDefined();
+    expect(result.ranking?.rows).toHaveLength(5);
+    expect(result.ranking?.hooks).toHaveLength(2);
+
+    // Cost computed from response.usage
+    expect(result.cost.amount_usd).toBeGreaterThan(0);
+    expect(result.cost.units).toBe(150);
+
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 

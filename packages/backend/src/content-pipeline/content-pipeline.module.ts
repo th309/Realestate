@@ -32,6 +32,7 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 
 import { QueueModule } from './orchestrator/queue.module';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
+import { ScriptRepairService } from './orchestrator/script-repair.service';
 import { HandlersBootstrapService } from './orchestrator/handlers-bootstrap.service';
 import { FetchDataHandler } from './orchestrator/job-handlers/fetch-data.handler';
 import { GenerateScriptHandler } from './orchestrator/job-handlers/generate-script.handler';
@@ -130,6 +131,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     ArchetypeRouter,
     RefreshArchetypesCron,
     RunOrchestratorService,
+    ScriptRepairService,
 
     ContentDataService,
 

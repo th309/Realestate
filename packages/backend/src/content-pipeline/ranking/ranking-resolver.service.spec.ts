@@ -1,149 +1,79 @@
+import { BadRequestException } from '@nestjs/common';
 import {
   RankingResolverService,
   ResolveRankingInput,
   MIN_RANKINGS,
 } from './ranking-resolver.service';
-import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
+import { SourceFetcherBulkService } from '../../metric-resolution/source-fetcher-bulk.service';
 import { SupabaseService } from '../../supabase/supabase.service';
+
+// Mock the query helpers so tests don't need a live Supabase chain mock.
+jest.mock('./ranking-queries', () => {
+  const actual = jest.requireActual('./ranking-queries');
+  return {
+    ...actual,
+    resolveScopeRegionIds: jest.fn(),
+    fetchPiqRankings: jest.fn(),
+  };
+});
+import {
+  resolveScopeRegionIds,
+  fetchPiqRankings,
+  parseLocationName,
+} from './ranking-queries';
+
+const mockedResolveScope = resolveScopeRegionIds as jest.MockedFunction<
+  typeof resolveScopeRegionIds
+>;
+const mockedFetchPiq = fetchPiqRankings as jest.MockedFunction<
+  typeof fetchPiqRankings
+>;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMetroRows(count: number, valueBase = 500_000) {
+function makeService(opts?: {
+  bulkRowsBySource?: Record<string, Array<unknown>>;
+}): {
+  service: RankingResolverService;
+  bulkSpy: jest.Mock;
+} {
+  const bulkRowsBySource = opts?.bulkRowsBySource ?? {};
+  const bulkSpy = jest
+    .fn()
+    .mockImplementation((source: string) => bulkRowsBySource[source] ?? []);
+  const sourceFetcherBulk = {
+    fetchLatestForAllRegions: bulkSpy,
+  } as unknown as SourceFetcherBulkService;
+
+  const supabase = {
+    getClient: jest.fn().mockReturnValue({}),
+  } as unknown as SupabaseService;
+
+  const service = new RankingResolverService(sourceFetcherBulk, supabase);
+  return { service, bulkSpy };
+}
+
+function makeBulkRows(count: number, valueBase = 500_000) {
   return Array.from({ length: count }, (_, i) => ({
-    cbsa_code: String(10000 + i),
-    region_name: `Metro ${i}`,
-    state_name: 'CA',
+    regionId: String(35000 + i),
+    regionName: `Metro ${i}, CA`,
     value: valueBase - i * 1000,
-    period_date: '2026-03-01',
+    date: '2026-03-01',
   }));
 }
 
-type Row = Record<string, unknown>;
-
-/**
- * Build a fully-chainable Supabase query builder mock.
- *
- * Strategy: every builder method returns `this` (the same object).
- * Terminal awaits resolve from a queue: first await → count result,
- * second await → ranked rows result.
- *
- * We expose named spies for the methods tests need to assert on.
- */
-function buildHarness(opts: {
-  supabaseRows?: Row[];
-  crosswalkRows?: Row[];
-  excludedCount?: number;
-}) {
-  const fetchRows: Row[] = opts.supabaseRows ?? makeMetroRows(10);
-  const crosswalkRows: Row[] = opts.crosswalkRows ?? [];
-  const excludedCount = opts.excludedCount ?? 2;
-
-  // Spies tests assert on
-  const inSpy = jest.fn();
-  const gteSpy = jest.fn();
-  const orderSpy = jest.fn();
-  const notSpy = jest.fn();
-  const eqSpy = jest.fn();
-  const orSpy = jest.fn();
-  const limitSpy = jest.fn();
-
-  // We need three distinct terminal resolutions (in call order):
-  //   1. geography_crosswalk lookup  → { data: crosswalkRows, error: null }
-  //   2. countExcluded query         → { count: excludedCount, error: null }
-  //   3. fetchRankedRows query        → { data: fetchRows, error: null }
-  // Promise.all fires 2 & 3 in parallel after 1. The crosswalk only fires
-  // for non-national scope. For national scope only 2 & 3 fire.
-  //
-  // We implement this by tracking `from()` call index: each `from()` call
-  // returns a fresh builder that resolves to the next queued value when awaited.
-  // Two source-table calls per resolve():
-  //   1. countExcluded  → { count, error }
-  //   2. fetchRankedRows → { data, error }
-  const resolveQueue = [
-    { count: excludedCount, error: null },
-    { data: fetchRows, error: null },
-  ];
-  let queueIdx = 0;
-
-  function makeBuilder(resolveValue: unknown) {
-    const builder: Record<string, jest.Mock> = {};
-    // Make the builder itself thenable so `await builder` works.
-    // Assign .then directly so Jest's await can resolve it.
-    (builder as unknown as PromiseLike<unknown>).then = (
-      onFulfilled?: ((value: unknown) => unknown) | null,
-    ) => Promise.resolve(resolveValue).then(onFulfilled);
-
-    const chainFn = jest.fn().mockReturnValue(builder);
-
-    builder.select = chainFn;
-    builder.from = chainFn;
-    builder.not = jest.fn().mockImplementation((...a) => {
-      notSpy(...a);
-      return builder;
-    });
-    builder.gte = jest.fn().mockImplementation((...a) => {
-      gteSpy(...a);
-      return builder;
-    });
-    builder.order = jest.fn().mockImplementation((...a) => {
-      orderSpy(...a);
-      return builder;
-    });
-    builder.limit = jest.fn().mockImplementation((...a) => {
-      limitSpy(...a);
-      return builder;
-    });
-    builder.eq = jest.fn().mockImplementation((...a) => {
-      eqSpy(...a);
-      return builder;
-    });
-    builder.in = jest.fn().mockImplementation((...a) => {
-      inSpy(...a);
-      return builder;
-    });
-    builder.or = jest.fn().mockImplementation((...a) => {
-      orSpy(...a);
-      return builder;
-    });
-
-    return builder;
-  }
-
-  // crosswalkBuilder is reused for geography_crosswalk table (select/eq/not chain)
-  const crosswalkBuilder = makeBuilder({ data: crosswalkRows, error: null });
-
-  const fromSpy = jest.fn().mockImplementation((table: string) => {
-    if (table === 'geography_crosswalk') return crosswalkBuilder;
-    // Source table: return next queued resolve
-    const val = resolveQueue[queueIdx % resolveQueue.length];
-    queueIdx++;
-    return makeBuilder(val);
-  });
-
-  const supabase = {
-    getClient: jest.fn().mockReturnValue({ from: fromSpy }),
-  } as unknown as SupabaseService;
-
-  const metricResolution = {} as unknown as MetricResolutionService;
-  const service = new RankingResolverService(metricResolution, supabase);
-
-  return {
-    service,
-    fromSpy,
-    inSpy,
-    gteSpy,
-    orderSpy,
-    notSpy,
-    eqSpy,
-    orSpy,
-    limitSpy,
-  };
+function makePiqRows(count: number, scoreBase = 90) {
+  return Array.from({ length: count }, (_, i) => ({
+    location_id: String(35000 + i),
+    location_name: `Metro ${i}, CA`,
+    score: scoreBase - i,
+    score_date: '2026-03-01',
+  }));
 }
 
-// Base happy-path input
-const nationalMetroInput: ResolveRankingInput = {
+const baseInput: ResolveRankingInput = {
   format: 'top_10_ranking',
   metric_id: 'home_value',
   geo_level: 'metro',
@@ -151,186 +81,265 @@ const nationalMetroInput: ResolveRankingInput = {
   scope_id: null,
 };
 
-// ---------------------------------------------------------------------------
-// B1: Happy-path — top_10_ranking, national metros, 10 valid rows
-// ---------------------------------------------------------------------------
-
-describe('RankingResolverService.resolve — B1 happy path', () => {
-  it('returns 10 ranked entries with correct shape', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve(nationalMetroInput);
-
-    expect(result.insufficient_data).toBe(false);
-    expect(result.rankings).toHaveLength(10);
-    expect(result.direction).toBe('top');
-    expect(result.geo_level).toBe('metro');
-    expect(result.metric.id).toBe('home_value');
-    expect(result.metric.format).toBe('currency');
-  });
-
-  it('assigns sequential rank numbers starting at 1', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve(nationalMetroInput);
-
-    expect(result.rankings[0].rank).toBe(1);
-    expect(result.rankings[9].rank).toBe(10);
-  });
-
-  it('populates region_id, region_name, state from source row columns', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve(nationalMetroInput);
-    const first = result.rankings[0];
-
-    expect(first.region_id).toBe('10000');
-    expect(first.region_name).toBe('Metro 0');
-    expect(first.state).toBe('CA');
-  });
-
-  it('formats value_formatted as currency string', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve(nationalMetroInput);
-
-    expect(result.rankings[0].value_formatted).toMatch(/^\$/);
-  });
-
-  it('sets scope label to National when scope_id is null', async () => {
-    const { service } = buildHarness({});
-    const result = await service.resolve(nationalMetroInput);
-    expect(result.scope.label).toBe('National');
-  });
+beforeEach(() => {
+  mockedResolveScope.mockReset();
+  mockedFetchPiq.mockReset();
+  mockedResolveScope.mockResolvedValue(null); // national by default
 });
 
 // ---------------------------------------------------------------------------
-// B2: Scope filtering — national / state / metro
+// PIQ path
 // ---------------------------------------------------------------------------
 
-describe('RankingResolverService.resolve — B2 scope filtering', () => {
-  it('national scope: does NOT query geography_crosswalk', async () => {
-    const { service, fromSpy } = buildHarness({});
-    await service.resolve(nationalMetroInput);
-    const crosswalkCalls = fromSpy.mock.calls.filter(
-      ([t]) => t === 'geography_crosswalk',
-    );
-    expect(crosswalkCalls).toHaveLength(0);
+describe('resolve(propertyiq_score) — PIQ path', () => {
+  it('returns 10 ranked entries, parsing state from location_name', async () => {
+    mockedFetchPiq.mockResolvedValue(makePiqRows(10));
+    const { service } = makeService();
+
+    const result = await service.resolve({
+      ...baseInput,
+      metric_id: 'propertyiq_score',
+    });
+
+    expect(result.insufficient_data).toBe(false);
+    expect(result.rankings).toHaveLength(10);
+    expect(result.metric.id).toBe('propertyiq_score');
+    expect(result.metric.label).toBe('PropertyIQ Score');
+    expect(result.metric.format).toBe('index');
+    expect(result.rankings[0].rank).toBe(1);
+    expect(result.rankings[0].region_name).toBe('Metro 0');
+    expect(result.rankings[0].state).toBe('CA');
+    expect(result.as_of).toBe('2026-03-01');
   });
 
-  it('state scope: queries geography_crosswalk with state_abbrev eq filter', async () => {
-    const crosswalkRows = [{ cbsa_code: '35620' }, { cbsa_code: '12060' }];
-    const { service, fromSpy, eqSpy } = buildHarness({ crosswalkRows });
+  it('passes ascending=true and limit through to fetchPiqRankings for bottom_10', async () => {
+    mockedFetchPiq.mockResolvedValue(makePiqRows(10, 30));
+    const { service } = makeService();
 
     await service.resolve({
-      ...nationalMetroInput,
+      ...baseInput,
+      format: 'bottom_10_ranking',
+      metric_id: 'propertyiq_score',
+      limit: 5,
+    });
+
+    expect(mockedFetchPiq).toHaveBeenCalledWith(
+      expect.anything(),
+      'metro',
+      null,
+      true, // ascending
+      5,
+    );
+  });
+
+  it('passes scope region IDs to fetchPiqRankings for state scope', async () => {
+    mockedResolveScope.mockResolvedValue(['35620', '12060']);
+    mockedFetchPiq.mockResolvedValue(makePiqRows(10));
+    const { service } = makeService();
+
+    await service.resolve({
+      ...baseInput,
+      metric_id: 'propertyiq_score',
       scope_type: 'state',
       scope_id: 'CA',
     });
 
-    expect(fromSpy).toHaveBeenCalledWith('geography_crosswalk');
-    expect(eqSpy).toHaveBeenCalledWith('state_abbrev', 'CA');
+    expect(mockedFetchPiq).toHaveBeenCalledWith(
+      expect.anything(),
+      'metro',
+      ['35620', '12060'],
+      false,
+      10,
+    );
   });
 
-  it('metro scope: queries geography_crosswalk with cbsa_code eq filter', async () => {
-    const crosswalkRows = [{ zip_code: '90210' }];
-    const { service, fromSpy, eqSpy } = buildHarness({ crosswalkRows });
+  it('returns insufficient_data when fewer than MIN_RANKINGS rows', async () => {
+    mockedFetchPiq.mockResolvedValue(makePiqRows(3));
+    const { service } = makeService();
 
-    await service.resolve({
-      ...nationalMetroInput,
-      scope_type: 'metro',
-      scope_id: '31080',
+    const result = await service.resolve({
+      ...baseInput,
+      metric_id: 'propertyiq_score',
     });
 
-    expect(fromSpy).toHaveBeenCalledWith('geography_crosswalk');
-    expect(eqSpy).toHaveBeenCalledWith('cbsa_code', '31080');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// B3: Staleness filter + excluded_count
-// ---------------------------------------------------------------------------
-
-describe('RankingResolverService.resolve — B3 staleness + excluded_count', () => {
-  it('applies .gte(dateColumn, cutoffDate) with date ~60 days ago for home_value', async () => {
-    const { service, gteSpy } = buildHarness({});
-    await service.resolve(nationalMetroInput);
-
-    expect(gteSpy).toHaveBeenCalledWith('period_date', expect.any(String));
-    const cutoff = gteSpy.mock.calls[0][1] as string;
-    const cutoffMs = new Date(cutoff).getTime();
-    const expectedMs = Date.now() - 60 * 24 * 60 * 60 * 1000;
-    // Within 1 day tolerance
-    expect(Math.abs(cutoffMs - expectedMs)).toBeLessThan(24 * 60 * 60 * 1000);
-  });
-
-  it('exposes excluded_count from the count query result', async () => {
-    const { service } = buildHarness({ excludedCount: 7 });
-    const result = await service.resolve(nationalMetroInput);
-    expect(result.excluded_count).toBe(7);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// B4: Sort direction + insufficient_data threshold
-// ---------------------------------------------------------------------------
-
-describe('RankingResolverService.resolve — B4 sort direction + insufficient_data', () => {
-  it('top_10_ranking uses ascending: false', async () => {
-    const { service, orderSpy } = buildHarness({});
-    await service.resolve(nationalMetroInput);
-    expect(orderSpy).toHaveBeenCalledWith('value', { ascending: false });
-  });
-
-  it('bottom_10_ranking uses ascending: true', async () => {
-    const { service, orderSpy } = buildHarness({});
-    await service.resolve({
-      ...nationalMetroInput,
-      format: 'bottom_10_ranking',
-    });
-    expect(orderSpy).toHaveBeenCalledWith('value', { ascending: true });
-  });
-
-  it(`returns insufficient_data: true and empty rankings when fewer than ${MIN_RANKINGS} rows returned`, async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(3) });
-    const result = await service.resolve(nationalMetroInput);
     expect(result.insufficient_data).toBe(true);
     expect(result.rankings).toHaveLength(0);
-  });
-
-  it('returns insufficient_data: false when rows meet threshold', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve(nationalMetroInput);
-    expect(result.insufficient_data).toBe(false);
+    expect(result.eligible_count).toBe(3);
   });
 });
 
 // ---------------------------------------------------------------------------
-// B5: Limit param + format-aware value strings
+// Raw metric path
 // ---------------------------------------------------------------------------
 
-describe('RankingResolverService.resolve — B5 limit + value formatting', () => {
-  it('limit: 5 slices to 5 rankings from 10 available rows', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(10) });
-    const result = await service.resolve({ ...nationalMetroInput, limit: 5 });
-    expect(result.rankings).toHaveLength(5);
+describe('resolve(home_value) — raw-metric happy path', () => {
+  it('returns 10 ranked entries from the canonical bulk fetcher', async () => {
+    const { service, bulkSpy } = makeService({
+      bulkRowsBySource: { zillow: makeBulkRows(10) },
+    });
+
+    const result = await service.resolve(baseInput);
+
+    expect(result.insufficient_data).toBe(false);
+    expect(result.rankings).toHaveLength(10);
+    expect(result.metric.id).toBe('home_value');
+    expect(result.metric.format).toBe('currency');
+    expect(result.rankings[0].rank).toBe(1);
+    expect(result.rankings[0].region_name).toBe('Metro 0');
+    expect(result.rankings[0].state).toBe('CA');
+    expect(result.rankings[0].value_formatted).toMatch(/^\$/);
+    // Used the canonical bulk fetcher with the FALLBACK_REGISTRY primary source
+    expect(bulkSpy).toHaveBeenCalledWith('zillow', 'zhvi', 'metro');
   });
 
-  it('limit: 50 returns 50 rankings when 60 rows available', async () => {
-    const { service } = buildHarness({ supabaseRows: makeMetroRows(60) });
-    const result = await service.resolve({ ...nationalMetroInput, limit: 50 });
-    expect(result.rankings).toHaveLength(50);
+  it('sorts ascending for bottom_10_ranking', async () => {
+    const { service } = makeService({
+      bulkRowsBySource: { zillow: makeBulkRows(10) },
+    });
+
+    const result = await service.resolve({
+      ...baseInput,
+      format: 'bottom_10_ranking',
+    });
+
+    // Bulk fetcher returns desc; service must re-sort asc for bottom_10.
+    expect(result.direction).toBe('bottom');
+    const values = result.rankings.map((r) => r.value);
+    const sortedAsc = [...values].sort((a, b) => a - b);
+    expect(values).toEqual(sortedAsc);
   });
 
-  it('value_formatted is $1.2M for a $1,200,000 home_value row', async () => {
-    const rows = [
-      {
-        cbsa_code: '35620',
-        region_name: 'New York',
-        state_name: 'NY',
-        value: 1_200_000,
-        period_date: '2026-03-01',
+  it('falls back to second source if first returns empty', async () => {
+    const { service, bulkSpy } = makeService({
+      bulkRowsBySource: {
+        zillow: [],
+        redfin: makeBulkRows(10, 600_000),
       },
-      ...makeMetroRows(9, 900_000),
+    });
+
+    const result = await service.resolve(baseInput);
+
+    expect(result.rankings).toHaveLength(10);
+    expect(bulkSpy).toHaveBeenNthCalledWith(1, 'zillow', 'zhvi', 'metro');
+    expect(bulkSpy).toHaveBeenNthCalledWith(
+      2,
+      'redfin',
+      'median_sale_price',
+      'metro',
+    );
+  });
+});
+
+describe('resolve(home_value_yoy) — applies fallback chain transform', () => {
+  it('multiplies decimal value by 100 (toPercent) before sorting', async () => {
+    // home_value_yoy chain: realtor.median_listing_price_yy with toPercent transform
+    const decimalRows = [
+      {
+        regionId: '35620',
+        regionName: 'NYC, NY',
+        value: 0.05,
+        date: '2026-03-01',
+      },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        regionId: String(10000 + i),
+        regionName: `Metro ${i}, CA`,
+        value: 0.01 + i * 0.005,
+        date: '2026-03-01',
+      })),
     ];
-    const { service } = buildHarness({ supabaseRows: rows });
-    const result = await service.resolve(nationalMetroInput);
-    expect(result.rankings[0].value_formatted).toBe('$1.2M');
+    const { service } = makeService({
+      bulkRowsBySource: { realtor: decimalRows },
+    });
+
+    const result = await service.resolve({
+      ...baseInput,
+      metric_id: 'home_value_yoy',
+    });
+
+    expect(result.rankings).toHaveLength(10);
+    // 0.05 * 100 = 5
+    expect(result.rankings[0].value).toBe(5);
+    expect(result.metric.format).toBe('percent');
+  });
+});
+
+describe('resolve filters by scope when scope_type !== national', () => {
+  it('keeps only rows whose regionId is in the crosswalk-resolved scope set', async () => {
+    mockedResolveScope.mockResolvedValue(['35001', '35003']);
+    const { service } = makeService({
+      bulkRowsBySource: { zillow: makeBulkRows(10) },
+    });
+
+    const result = await service.resolve({
+      ...baseInput,
+      scope_type: 'state',
+      scope_id: 'CA',
+    });
+
+    // makeBulkRows uses regionId 35000..35009 — only 35001, 35003 in scope.
+    // Falls below MIN_RANKINGS so insufficient_data trips.
+    expect(result.eligible_count).toBe(2);
+    expect(result.insufficient_data).toBe(true);
+  });
+});
+
+describe('resolve(unknown_metric) — error handling', () => {
+  it('throws BadRequestException when metric not in FALLBACK_REGISTRY', async () => {
+    const { service } = makeService();
+    await expect(
+      service.resolve({ ...baseInput, metric_id: 'totally_made_up_metric' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseLocationName (used by both paths)
+// ---------------------------------------------------------------------------
+
+describe('parseLocationName', () => {
+  it('splits "Austin, TX" into name + state', () => {
+    expect(parseLocationName('Austin, TX')).toEqual({
+      name: 'Austin',
+      state: 'TX',
+    });
+  });
+
+  it('splits hyphenated metro names', () => {
+    expect(parseLocationName('Houston-The Woodlands-Sugar Land, TX')).toEqual({
+      name: 'Houston-The Woodlands-Sugar Land',
+      state: 'TX',
+    });
+  });
+
+  it('strips " metro area" suffix used by 922/935 propertyiq_scores rows', () => {
+    expect(parseLocationName('San Jose, CA metro area')).toEqual({
+      name: 'San Jose',
+      state: 'CA',
+    });
+    expect(parseLocationName('North Platte, NE metro area')).toEqual({
+      name: 'North Platte',
+      state: 'NE',
+    });
+  });
+
+  it('strips " statistical area" suffix', () => {
+    expect(parseLocationName('Foo, NY statistical area')).toEqual({
+      name: 'Foo',
+      state: 'NY',
+    });
+  });
+
+  it('strips trailing parenthetical clause', () => {
+    expect(parseLocationName('Honolulu, HI (Urban Honolulu)')).toEqual({
+      name: 'Honolulu',
+      state: 'HI',
+    });
+  });
+
+  it('returns null state when name has no comma+state suffix', () => {
+    expect(parseLocationName('90210')).toEqual({
+      name: '90210',
+      state: null,
+    });
   });
 });

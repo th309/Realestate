@@ -22,19 +22,19 @@ describe('RankingResolverController', () => {
     resolver = moduleRef.get(RankingResolverService);
   });
 
-  it('forwards resolved result from service', async () => {
+  it('wraps resolved result in { success, data } per content-pipeline convention', async () => {
     const stub = { rankings: [], insufficient_data: true } as any;
     resolver.resolve.mockResolvedValue(stub);
 
     const result = await controller.resolve({
       format: 'top_10_ranking',
-      metric_id: 'piq_score',
+      metric_id: 'propertyiq_score',
       geo_level: 'metro',
       scope_type: 'national',
       scope_id: null,
     } as any);
 
-    expect(result).toBe(stub);
+    expect(result).toEqual({ success: true, data: stub });
     expect(resolver.resolve).toHaveBeenCalled();
   });
 });

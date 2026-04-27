@@ -110,7 +110,7 @@ export class RunOrchestratorService {
     const client = this.supabase.getClient();
     const { data: run } = await client
       .from('content_runs')
-      .select('status, approval_mode')
+      .select('status, approval_mode, format')
       .eq('id', runId)
       .single();
     if (!run) return;
@@ -124,6 +124,7 @@ export class RunOrchestratorService {
     const next = nextStateOnSuccess(
       run.status as PipelineStatus,
       effectiveMode,
+      run.format as string,
     );
     if (next) await this.transitionTo(runId, next, { enqueueNext: true });
   }

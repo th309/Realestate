@@ -1,26 +1,27 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence } from "remotion";
-import { VideoProps, FORMAT_CONFIGS } from "./types";
+import { VideoProps, RankingVideoProps, FORMAT_CONFIGS } from "./types";
+import {
+  BRAND_OUTRO_FRAMES,
+  computeRankingTiming,
+} from "./layouts/top10-timing";
 
-// ---------------------------------------------------------------------------
-// Variable-duration metadata for ranking compositions
-// Must stay in sync with frame constants in Top10Layout.tsx.
-// ---------------------------------------------------------------------------
-const BUMPER_FRAMES = 60; // 2.0s brand sting
-const INTRO_FRAMES = 90; // 3.0s
-const ROW_FRAMES = 150; // 5.0s per row
-const OUTRO_FRAMES = 135; // 4.5s
-const BRAND_OUTRO_FRAMES = 120; // 4.0s
-
-export const calculateRankingMetadata = ({ props }: { props: VideoProps }) => {
-  const n = props.params?.resolved_markets?.length ?? 10;
+/**
+ * Variable-duration metadata for ranking compositions. Duration is derived
+ * from the actual VO word timings (captionWords) so the composition runs
+ * exactly as long as the audio + brand outro, no longer or shorter. When
+ * called against defaultProps (Remotion preview, before Zod) we fall through
+ * the timing helper's even-spacing fallback.
+ */
+export const calculateRankingMetadata = ({
+  props,
+}: {
+  props: RankingVideoProps;
+}) => {
+  const n = props.params?.resolved_markets?.length || 10;
+  const timing = computeRankingTiming(n, props.captionWords);
   return {
-    durationInFrames:
-      BUMPER_FRAMES +
-      INTRO_FRAMES +
-      n * ROW_FRAMES +
-      OUTRO_FRAMES +
-      BRAND_OUTRO_FRAMES,
+    durationInFrames: timing.totalFrames + BRAND_OUTRO_FRAMES,
     fps: 30,
     width: 1080,
     height: 1920,
@@ -49,10 +50,17 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "farm_area_spotlight" && (
           <FarmAreaSpotlightLayout {...props} />
         )}
-        {/* Other formats rendered in later phases */}
-        {props.captionWords && props.captionWords.length > 0 && (
-          <CaptionOverlay words={props.captionWords} />
-        )}
+        {/* Other formats rendered in later phases.
+            CaptionOverlay is suppressed for ranking layouts — they have
+            their own editorial typography (HeroRow's city/value) that
+            would compete visually with burned-in captions. Other formats
+            opt-in when captionWords present. */}
+        {props.format !== "top_10_ranking" &&
+          props.format !== "bottom_10_ranking" &&
+          props.captionWords &&
+          props.captionWords.length > 0 && (
+            <CaptionOverlay words={props.captionWords} />
+          )}
       </AbsoluteFill>
       {/*
         Delay voice-over until after the 2-second BrandBumper (60 frames

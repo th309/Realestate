@@ -9,10 +9,26 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
   fetching_data: ['scripting', 'failed', 'cancelled'],
   scripting: ['verifying_data', 'failed', 'cancelled'],
   verifying_data: ['linting_voice', 'ready_for_review', 'failed', 'cancelled'],
-  linting_voice: ['rendering_voice', 'ready_for_review', 'failed', 'cancelled'],
+  // `scripting` is reachable from `linting_voice` via the script-repair loop:
+  // when the brand-voice gate fails and the run still has retry budget,
+  // ScriptRepairService transitions back to scripting with the violations
+  // as feedback so the LLM can produce a corrected script.
+  linting_voice: [
+    'rendering_voice',
+    'ready_for_review',
+    'scripting',
+    'failed',
+    'cancelled',
+  ],
+  // `scripting` is reachable from `rendering_voice` via the script-repair
+  // loop too: when the synthesized audio exceeds the format's audio budget
+  // (script-too-long), ScriptRepairService transitions back to scripting
+  // with the duration overflow as feedback. Same mechanism as voice-gate
+  // repair; different trigger.
   rendering_voice: [
     'timing_captions',
     'rendering_video',
+    'scripting',
     'failed',
     'cancelled',
   ],
@@ -37,6 +53,7 @@ export function canTransition(
 export function nextStateOnSuccess(
   current: PipelineStatus,
   approvalMode: 'auto' | 'review' | 'draft',
+  format?: string,
 ): PipelineStatus | null {
   switch (current) {
     case 'queued':
@@ -49,13 +66,16 @@ export function nextStateOnSuccess(
       return 'linting_voice';
     case 'linting_voice':
       return 'rendering_voice';
-    case 'rendering_voice':
-      // Captions feature is P2. Until CAPTIONS_ENABLED=true is set and a
-      // time-captions handler is wired to the render-captions queue, skip
-      // directly to rendering_video so P1 runs complete without stalling.
-      return process.env.CAPTIONS_ENABLED === 'true'
+    case 'rendering_voice': {
+      // Ranking layouts ALIGN row reveals to the actual VO word timings, so
+      // they unconditionally need the captions step to run regardless of the
+      // CAPTIONS_ENABLED env flag. Other formats remain gated until P2.
+      const isRanking =
+        format === 'top_10_ranking' || format === 'bottom_10_ranking';
+      return isRanking || process.env.CAPTIONS_ENABLED === 'true'
         ? 'timing_captions'
         : 'rendering_video';
+    }
     case 'timing_captions':
       return 'rendering_video';
     case 'rendering_video':

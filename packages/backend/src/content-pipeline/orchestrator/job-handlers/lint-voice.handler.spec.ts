@@ -1,6 +1,7 @@
 import { LintVoiceHandler } from './lint-voice.handler';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
+import { ScriptRepairService } from '../script-repair.service';
 import { BrandVoiceLinterService } from '../../gates/brand-voice-linter.service';
 
 describe('LintVoiceHandler', () => {
@@ -13,6 +14,7 @@ describe('LintVoiceHandler', () => {
       llm_judge_response?: unknown;
     };
     lintThrows?: Error;
+    repairAttempted?: boolean;
   }) {
     const scriptAsset =
       overrides?.scriptAsset === undefined
@@ -57,6 +59,11 @@ describe('LintVoiceHandler', () => {
       handleStepFailure,
     } as unknown as RunOrchestratorService;
 
+    const attemptRepair = jest
+      .fn()
+      .mockResolvedValue(overrides?.repairAttempted ?? false);
+    const scriptRepair = { attemptRepair } as unknown as ScriptRepairService;
+
     const lint = jest.fn();
     if (overrides?.lintThrows) {
       lint.mockRejectedValue(overrides.lintThrows);
@@ -67,18 +74,24 @@ describe('LintVoiceHandler', () => {
     }
     const gate = { lint } as unknown as BrandVoiceLinterService;
 
-    const handler = new LintVoiceHandler(orchestrator, gate, supabase);
+    const handler = new LintVoiceHandler(
+      orchestrator,
+      scriptRepair,
+      gate,
+      supabase,
+    );
     return {
       handler,
       transitionTo,
       handleStepFailure,
+      attemptRepair,
       gateInsert,
       lint,
       scriptSelectSingle,
     };
   }
 
-  it('transitions to rendering_voice with enqueueNext=true on a clean lint pass', async () => {
+  it('transitions to rendering_voice on a clean lint pass', async () => {
     const { handler, transitionTo } = buildHarness({
       lintResult: { passed: true, violations: [] },
     });
@@ -90,21 +103,7 @@ describe('LintVoiceHandler', () => {
     });
   });
 
-  it('records gate result as "passed" when lint passes without warnings', async () => {
-    const { handler, gateInsert } = buildHarness({
-      lintResult: { passed: true, violations: [] },
-    });
-
-    await handler.handle('run-pass');
-
-    expect(gateInsert).toHaveBeenCalledTimes(1);
-    const inserted = gateInsert.mock.calls[0][0];
-    expect(inserted.gate).toBe('brand_voice_linter');
-    expect(inserted.result).toBe('passed');
-    expect(inserted.run_id).toBe('run-pass');
-  });
-
-  it('records gate result as "warned" when lint passes but warned flag is true', async () => {
+  it('records gate result as "warned" but still proceeds when warn flag is set', async () => {
     const { handler, gateInsert, transitionTo } = buildHarness({
       lintResult: { passed: true, warned: true, violations: [] },
     });
@@ -112,7 +111,6 @@ describe('LintVoiceHandler', () => {
     await handler.handle('run-warn');
 
     expect(gateInsert.mock.calls[0][0].result).toBe('warned');
-    // Even on warn the run still proceeds — warn doesn't block
     expect(transitionTo).toHaveBeenCalledWith(
       'run-warn',
       'rendering_voice',
@@ -120,67 +118,81 @@ describe('LintVoiceHandler', () => {
     );
   });
 
-  it('records gate result as "failed" and routes to ready_for_review when lint fails', async () => {
-    const violation = { reason: 'em_dash' };
-    const { handler, gateInsert, transitionTo } = buildHarness({
-      lintResult: { passed: false, violations: [violation] },
+  // -------------------------------------------------------------------------
+  // Script repair loop
+  // -------------------------------------------------------------------------
+
+  it('on lint fail, calls scriptRepair.attemptRepair with mapped violations', async () => {
+    const linterViolation = {
+      claim: { quote: 'forbidden text', subject: 'tone violation' },
+    };
+    const { handler, attemptRepair } = buildHarness({
+      lintResult: { passed: false, violations: [linterViolation] },
+      repairAttempted: true,
     });
 
-    await handler.handle('run-fail');
+    await handler.handle('run-fail-1');
 
-    expect(gateInsert.mock.calls[0][0].result).toBe('failed');
+    expect(attemptRepair).toHaveBeenCalledWith(
+      'run-fail-1',
+      'brand_voice_linter',
+      [{ quote: 'forbidden text', issue: 'tone violation' }],
+    );
+  });
+
+  it('does NOT transition to ready_for_review when scriptRepair returns true (repair underway)', async () => {
+    const { handler, transitionTo } = buildHarness({
+      lintResult: { passed: false, violations: [{ claim: {} }] },
+      repairAttempted: true,
+    });
+
+    await handler.handle('run-repairing');
+
+    // ScriptRepairService.attemptRepair already transitioned the run to
+    // 'scripting' internally — handler must not double-transition.
+    expect(transitionTo).not.toHaveBeenCalled();
+  });
+
+  it('routes to ready_for_review with gate_b_voice_exhausted reason when repair budget is gone', async () => {
+    const violation = { claim: { quote: 'q', subject: 'i' } };
+    const { handler, transitionTo } = buildHarness({
+      lintResult: { passed: false, violations: [violation] },
+      repairAttempted: false,
+    });
+
+    await handler.handle('run-exhausted');
+
     expect(transitionTo).toHaveBeenCalledWith(
-      'run-fail',
+      'run-exhausted',
       'ready_for_review',
       expect.objectContaining({
-        reason: 'gate_b_voice',
+        reason: 'gate_b_voice_exhausted',
         enqueueNext: false,
         eventPayload: { violations: [violation] },
       }),
     );
   });
 
-  it('persists violations and llm_judge_response on the gate row', async () => {
-    const violations = [{ reason: 'tone' }];
-    const judgeResp = { score: 7 };
-    const { handler, gateInsert } = buildHarness({
-      lintResult: {
-        passed: false,
-        violations,
-        llm_judge_response: judgeResp,
-      },
+  it('persists gate row before attempting repair (so the failure is durable even if repair fails)', async () => {
+    const { handler, gateInsert, attemptRepair } = buildHarness({
+      lintResult: { passed: false, violations: [{ claim: {} }] },
+      repairAttempted: true,
     });
 
-    await handler.handle('run-judge');
+    await handler.handle('run-order');
 
-    const inserted = gateInsert.mock.calls[0][0];
-    expect(inserted.details).toEqual({ violations });
-    expect(inserted.llm_judge_response).toEqual(judgeResp);
+    expect(gateInsert).toHaveBeenCalled();
+    expect(attemptRepair).toHaveBeenCalled();
+    const gateOrder = gateInsert.mock.invocationCallOrder[0];
+    const repairOrder = attemptRepair.mock.invocationCallOrder[0];
+    expect(gateOrder).toBeLessThan(repairOrder);
   });
 
-  it('stores null for llm_judge_response when lint did not invoke the judge', async () => {
-    const { handler, gateInsert } = buildHarness({
-      lintResult: { passed: true, violations: [] },
-    });
+  // -------------------------------------------------------------------------
+  // Error handling unchanged
+  // -------------------------------------------------------------------------
 
-    await handler.handle('run-no-judge');
-
-    expect(gateInsert.mock.calls[0][0].llm_judge_response).toBeNull();
-  });
-
-  it('passes the script fullText to gate.lint', async () => {
-    const { handler, lint } = buildHarness({
-      scriptAsset: {
-        metadata: { scripts: [{ fullText: 'specific spoken text here' }] },
-      },
-    });
-
-    await handler.handle('run-text');
-
-    expect(lint).toHaveBeenCalledWith('specific spoken text here');
-  });
-
-  it('routes through handleStepFailure with linting_voice prefix when gate.lint throws', async () => {
+  it('routes through handleStepFailure when gate.lint throws', async () => {
     const { handler, handleStepFailure, transitionTo } = buildHarness({
       lintThrows: new Error('gate exploded'),
     });

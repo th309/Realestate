@@ -13,6 +13,7 @@
     "render:shorts": "npx remotion render grade_reveal out-shorts.mp4",
     "build": "npx remotion bundle",
     "build:cli": "tsc --project tsconfig.json",
+    "build:cli:watch": "tsc --project tsconfig.json --watch --preserveWatchOutput",
     "test": "jest"
   },
   "dependencies": {

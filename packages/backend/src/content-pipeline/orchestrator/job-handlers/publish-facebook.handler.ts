@@ -110,6 +110,17 @@ export class PublishFacebookHandler {
       this.logger.log(
         `[PIPE] publish-facebook.handle SUCCESS run=${runId} externalId=${result.externalId}`,
       );
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'publish_done',
+        payload: {
+          platform: 'facebook_reels',
+          external_id: result.externalId,
+          external_url: result.externalUrl,
+          short_link_id: shortLinkId,
+          format: run.format,
+        },
+      });
       await this.orchestrator.transitionTo(runId, 'published', {
         enqueueNext: false,
       });

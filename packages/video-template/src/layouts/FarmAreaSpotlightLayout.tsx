@@ -6,7 +6,7 @@ import { BrandOutroCard } from "../primitives/BrandOutroCard";
 import { FarmAreaGrid } from "../primitives/FarmAreaGrid";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
-import type { VideoProps } from "../types";
+import type { SingleMarketVideoProps } from "../types";
 
 interface FarmAreaRaw {
   zip?: string | number;
@@ -45,7 +45,9 @@ function coerceAreas(bundle: Record<string, unknown>): FarmAreaGridArea[] {
   }));
 }
 
-export const FarmAreaSpotlightLayout: React.FC<VideoProps> = (props) => {
+export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
+  props,
+) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, unknown>;
   const areas = coerceAreas(bundle);
   return (

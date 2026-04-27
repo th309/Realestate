@@ -53,7 +53,29 @@ export class GenerateScriptHandler {
         windowDays?: number;
         windowLabel?: string;
         priorDate?: string;
+        script_repair?: {
+          history?: Array<{
+            gate: string;
+            at?: string;
+            violations?: Array<{ quote?: string; issue?: string }>;
+          }>;
+        };
       };
+
+      // Pass repair-loop feedback through to the script generator. When a
+      // prior attempt's gate failed (brand voice today), the orchestrator
+      // routed back to scripting with violations persisted on the run; the
+      // generator must address them in the new script.
+      const priorFeedback = (formatOptions.script_repair?.history ?? []).map(
+        (entry) => ({
+          gate: entry.gate,
+          at: entry.at,
+          violations: (entry.violations ?? []).map((v) => ({
+            quote: v.quote ?? '',
+            issue: v.issue ?? '',
+          })),
+        }),
+      );
 
       const result = await this.scriptGen.generate({
         format: run.format,
@@ -67,6 +89,7 @@ export class GenerateScriptHandler {
         wordBudget,
         naturalWpm: fmt.natural_wpm,
         windowLabel: formatOptions.windowLabel,
+        priorFeedback: priorFeedback.length > 0 ? priorFeedback : undefined,
       });
 
       await client
@@ -89,7 +112,13 @@ export class GenerateScriptHandler {
           run_id: runId,
           kind: 'script',
           storage_url: 'inline',
-          metadata: { scripts: result.scripts },
+          // For ranking formats, also persist the structured RankingScript
+          // alongside the flattened envelope so render-video and per-platform
+          // publishers can compose against the per-row hooks/rows directly.
+          metadata: {
+            scripts: result.scripts,
+            ...(result.ranking ? { ranking: result.ranking } : {}),
+          },
         },
         {
           run_id: runId,
@@ -98,6 +127,32 @@ export class GenerateScriptHandler {
           metadata: { raw: result.rawLLMResponse },
         },
       ]);
+
+      // Diagnostic: capture the budget given to the generator + what was
+      // actually produced, so audio-overflow vs word-budget calibration can
+      // be audited from the DB without tailing backend stdout.
+      const firstScript = result.scripts[0];
+      const fullTextLen = firstScript?.fullText?.length ?? 0;
+      const fullTextWords = firstScript?.fullText
+        ? firstScript.fullText.split(/\s+/).filter(Boolean).length
+        : 0;
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'generate_script_done',
+        payload: {
+          format: run.format,
+          audio_budget_seconds: audioBudgetSeconds,
+          word_budget: wordBudget,
+          natural_wpm: fmt.natural_wpm,
+          full_text_chars: fullTextLen,
+          full_text_words: fullTextWords,
+          words_over_budget: fullTextWords - wordBudget,
+          scripts_count: result.scripts.length,
+          prior_feedback_count: priorFeedback.length,
+          repaired_from_gates: priorFeedback.map((f) => f.gate),
+          fullText_preview: firstScript?.fullText?.slice(0, 600) ?? '',
+        },
+      });
 
       await this.orchestrator.handleStepSuccess(runId);
     } catch (err) {

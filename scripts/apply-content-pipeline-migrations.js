@@ -25,6 +25,7 @@ const path = require("path");
 //      (a format being "enabled" implies its lead-magnet binding already exists).
 const MIGRATIONS = [
   "20260421000100_content_pipeline_core.sql",
+  "20260424210000_content_assets_run_id_nullable.sql",
   "20260421000200_content_pipeline_distribution.sql",
   "20260421000300_content_pipeline_attribution.sql",
   "20260421000400_content_pipeline_config.sql",
@@ -45,10 +46,15 @@ const MIGRATIONS = [
   "20260426000002_enable_bottom_10.sql",
 ];
 
-const CONN =
-  "postgresql://postgres.pysflbhpnqwoczyuaaif:IHatedoingpt12@aws-1-us-east-1.pooler.supabase.com:6543/postgres";
+const CONN = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
 
 async function main() {
+  if (!CONN || typeof CONN !== "string") {
+    console.error(
+      "FATAL: Set SUPABASE_DB_URL or DATABASE_URL (pooler connection string).",
+    );
+    process.exit(1);
+  }
   const client = new Client({
     connectionString: CONN,
     ssl: { rejectUnauthorized: false },

@@ -24,6 +24,41 @@ export class TimeCaptionsHandler {
     this.logger.log(`[PIPE] time-captions.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
+
+      // Idempotency / native-captions short-circuit: if synthesize-audio
+      // already wrote captions_timings (Edge native or Azure-via-Edge-shadow),
+      // we skip the Whisper transcription pass entirely. Whisper API is only
+      // billed for OpenAI-fallback runs that didn't get native timings.
+      const { data: existing } = await client
+        .from('content_assets')
+        .select('metadata')
+        .eq('run_id', runId)
+        .eq('kind', 'captions_timings')
+        .maybeSingle();
+      if (existing?.metadata) {
+        const wordCount = Array.isArray(
+          (existing.metadata as { words?: unknown[] })?.words,
+        )
+          ? (existing.metadata as { words: unknown[] }).words.length
+          : 0;
+        const source =
+          (existing.metadata as { source?: string })?.source ?? 'unknown';
+        this.logger.log(
+          `[PIPE] time-captions.handle SKIP run=${runId} — captions_timings already populated by ${source} (${wordCount} words)`,
+        );
+        await client.from('content_run_events').insert({
+          run_id: runId,
+          event_type: 'time_captions_done',
+          payload: {
+            source,
+            word_count: wordCount,
+            whisper_called: false,
+          },
+        });
+        await this.orchestrator.handleStepSuccess(runId);
+        return;
+      }
+
       const { data: audio } = await client
         .from('content_assets')
         .select('storage_url')
@@ -50,7 +85,11 @@ export class TimeCaptionsHandler {
           run_id: runId,
           kind: 'captions_timings',
           storage_url: 'inline',
-          metadata: { words: result.words, segments: result.segments },
+          metadata: {
+            words: result.words,
+            segments: result.segments,
+            source: 'whisper',
+          },
         },
         {
           run_id: runId,
@@ -59,6 +98,17 @@ export class TimeCaptionsHandler {
           metadata: { srt: result.srt },
         },
       ]);
+
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'time_captions_done',
+        payload: {
+          source: 'whisper',
+          word_count: result.words.length,
+          whisper_called: true,
+          cost_usd: Number(result.cost.amount_usd.toFixed(6)),
+        },
+      });
 
       this.logger.log(`[PIPE] time-captions.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);

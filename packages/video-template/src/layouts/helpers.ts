@@ -1,5 +1,5 @@
 import type {
-  VideoProps,
+  SingleMarketVideoProps,
   MarketStats,
   TrendDirection,
   MarketData,
@@ -36,11 +36,11 @@ export function coerceStats(bundle: Record<string, unknown>): MarketStats {
   };
 }
 
-export function pickState(props: VideoProps): string {
+export function pickState(props: SingleMarketVideoProps): string {
   const fromBundle = (props.dataBundle as any)?.state;
   if (typeof fromBundle === "string" && fromBundle.length > 0)
     return fromBundle;
-  const cn = props.resolvedMarket?.canonical_name ?? "";
+  const cn = props.resolvedMarket.canonical_name;
   const parts = cn.split(",").map((s: string) => s.trim());
   return parts.length > 1 ? parts[parts.length - 1] : cn;
 }

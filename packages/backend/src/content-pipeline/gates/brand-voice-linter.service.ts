@@ -6,6 +6,7 @@ import {
   EM_DASH_CHARS,
   SCORE_REFERENCE_REGEX,
   APPROVED_SCORE_PREFIXES,
+  APPROVED_TAGLINES,
 } from './voice-rules';
 import { GateResult } from './gate.types';
 
@@ -112,8 +113,16 @@ export class BrandVoiceLinterService {
 
   private async llmJudgePass(scriptText: string): Promise<GateResult> {
     const minScore = parseInt(process.env.GATE_B_MIN_SCORE ?? '4', 10);
-    const systemPrompt =
-      'You are a brand voice auditor for PropertyIQ. Rate this script 1 to 5 on brand voice compliance. Brand voice is confident, conversational, data-first, not hypey. Use the tool to output structured JSON.';
+    const taglineList = APPROVED_TAGLINES.map((t) => `- "${t}"`).join('\n');
+    const systemPrompt = [
+      'You are a brand voice auditor for PropertyIQ. Rate this script 1 to 5 on brand voice compliance.',
+      'Brand voice is confident, conversational, data-first, not hypey.',
+      '',
+      'APPROVED brand taglines and signature phrases — NEVER flag these as marketing-heavy, tagline-style, or hypey:',
+      taglineList,
+      '',
+      'Use the tool to output structured JSON.',
+    ].join('\n');
 
     // Substitute the short-link placeholder with a canonical example URL so
     // the judge evaluates the script as if it were finalized. The actual

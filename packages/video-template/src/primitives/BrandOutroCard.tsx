@@ -31,30 +31,40 @@ export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
         backgroundColor: "#1A1A2E",
         justifyContent: "center",
         alignItems: "center",
-        gap: 24 * scale,
+        gap: 36 * scale,
         opacity,
       }}
     >
       {typeof score === "number" && (
-        <ScoreRing score={score} size={180 * scale} />
+        <ScoreRing score={score} size={220 * scale} />
       )}
       <div
         style={{
           color: "#FFFFFF",
           fontFamily: "Roboto",
-          fontSize: 40 * scale,
-          fontWeight: 600,
+          fontSize: 144 * scale,
+          fontWeight: 800,
+          letterSpacing: "-0.04em",
+          lineHeight: 1,
         }}
       >
         PropertyIQ
       </div>
       <div
         style={{
+          height: 3,
+          width: 320 * scale,
+          backgroundColor: "#5C6BC0",
+        }}
+      />
+      <div
+        style={{
           color: "#00C853",
           fontFamily: "Roboto Mono",
-          fontSize: 44 * scale,
+          fontSize: 112 * scale,
           fontWeight: 700,
-          letterSpacing: "0.02em",
+          letterSpacing: "-0.01em",
+          lineHeight: 1,
         }}
       >
         propertyiq.app
@@ -64,8 +74,9 @@ export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
           style={{
             color: "#C5CAE9",
             fontFamily: "Roboto Mono",
-            fontSize: 20 * scale,
-            opacity: 0.8,
+            fontSize: 32 * scale,
+            opacity: 0.75,
+            letterSpacing: "0.02em",
           }}
         >
           {ctaUrl}

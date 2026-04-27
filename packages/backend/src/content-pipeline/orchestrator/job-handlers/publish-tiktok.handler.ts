@@ -112,6 +112,17 @@ export class PublishTikTokHandler {
       this.logger.log(
         `[PIPE] publish-tiktok.handle SUCCESS run=${runId} externalId=${result.externalId}`,
       );
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'publish_done',
+        payload: {
+          platform: 'tiktok',
+          external_id: result.externalId,
+          external_url: result.externalUrl,
+          short_link_id: shortLinkId,
+          format: run.format,
+        },
+      });
       await this.orchestrator.transitionTo(runId, 'published', {
         enqueueNext: false,
       });

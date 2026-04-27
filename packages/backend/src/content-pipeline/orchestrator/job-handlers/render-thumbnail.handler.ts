@@ -99,6 +99,16 @@ export class RenderThumbnailHandler {
         },
       });
 
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'render_thumbnail_done',
+        payload: {
+          format: run.format,
+          frame: frame ?? 210,
+          storage_url: storageUrl,
+        },
+      });
+
       this.logger.log(
         `[PIPE] render-thumbnail.handle SUCCESS run=${runId} url=${storageUrl}`,
       );

@@ -1,4 +1,18 @@
 // packages/backend/src/content-pipeline/gates/voice-rules.ts
+
+/**
+ * Approved brand taglines and signature phrases. The LLM judge MUST NOT
+ * flag these as marketing-heavy or hypey, since they ARE the brand voice
+ * (per CLAUDE.md §8.0). Edit alongside the brand spec, not in isolation.
+ */
+export const APPROVED_TAGLINES = [
+  'The IQ Behind Every Market',
+  'The IQ behind every market',
+  'PropertyIQ. Now you know.',
+  'PropertyIQ. The IQ behind every market.',
+  'Now you know.',
+];
+
 export const FORBIDDEN_PHRASES = [
   'game-changer',
   'game changer',

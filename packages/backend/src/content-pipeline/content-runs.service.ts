@@ -57,6 +57,14 @@ export class ContentRunsService {
     if (!template) throw new Error(`format ${dto.format} not configured`);
     if (!template.enabled) throw new Error(`format ${dto.format} is disabled`);
 
+    // Persist the operator-approved ranking snapshot under format_options.ranking
+    // so fetch-data has the markets to render against (skipping the
+    // single-market resolveMarket lookup that fits other formats).
+    const formatOptions: Record<string, unknown> = {
+      ...(dto.formatOptions ?? {}),
+      ...(dto.rankingParams ? { ranking: dto.rankingParams } : {}),
+    };
+
     const { data: inserted, error } = await client
       .from('content_runs')
       .insert({
@@ -69,7 +77,7 @@ export class ContentRunsService {
         selected_platforms: dto.selectedPlatforms ?? template.default_platforms,
         idempotency_key: dto.idempotencyKey,
         batch_id: dto.batchId ?? null,
-        format_options: dto.formatOptions ?? {},
+        format_options: formatOptions,
         status: 'queued',
         triggered_by: 'manual',
       })

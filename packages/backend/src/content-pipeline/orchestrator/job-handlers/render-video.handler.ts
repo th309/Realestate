@@ -23,7 +23,12 @@ export class RenderVideoHandler {
   ) {}
 
   async handle(runId: string): Promise<void> {
-    this.logger.log(`[PIPE] render-video.handle START run=${runId}`);
+    // Distinct fingerprint so we can prove the discriminated-union-aware
+    // build is the one actually executing. If runs ever stop showing
+    // BUILD=ranking-aware-v3 in logs, the watch/reload pipeline broke.
+    this.logger.log(
+      `[PIPE] render-video.handle START run=${runId} BUILD=ranking-aware-v3`,
+    );
     try {
       const client = this.supabase.getClient();
       const { data: run } = await client
@@ -32,6 +37,9 @@ export class RenderVideoHandler {
         .eq('id', runId)
         .single();
       if (!run) throw new Error('run not found');
+      this.logger.log(
+        `[PIPE] render-video run=${runId} db: format=${run.format} resolved_geo=${JSON.stringify(run.resolved_geo)}`,
+      );
 
       const { data: payload } = await client
         .from('content_assets')
@@ -68,16 +76,74 @@ export class RenderVideoHandler {
         `[PIPE] render-video run=${runId} dataBundle.score=${JSON.stringify(payload.metadata?.score)}`,
       );
 
+      // Ranking formats (top_10_ranking / bottom_10_ranking) have no single
+      // resolved market — they carry the N-market list on `params`, which
+      // Top10Layout reads. Non-ranking formats keep the existing
+      // `resolvedMarket` + `dataBundle` shape that GradeReveal/ScoreMover/etc.
+      // expect. fetch-data.handler already wrote the ranking bundle into
+      // mcp_payload.metadata, so for ranking we forward it as `params`.
+      const isRanking =
+        run.format === 'top_10_ranking' || run.format === 'bottom_10_ranking';
+      this.logger.log(
+        `[PIPE] render-video run=${runId} branch: isRanking=${isRanking} format=${run.format}`,
+      );
+      const formatProps = isRanking
+        ? {
+            format: run.format,
+            params: payload.metadata,
+            dataBundle: payload.metadata,
+            ctaUrl: '',
+            audioUrl: audioSigned.url,
+            ...(captionWords && captionWords.length > 0
+              ? { captionWords }
+              : {}),
+          }
+        : {
+            format: run.format,
+            resolvedMarket: run.resolved_geo,
+            dataBundle: payload.metadata,
+            ctaUrl: '',
+            audioUrl: audioSigned.url,
+            ...(captionWords && captionWords.length > 0
+              ? { captionWords }
+              : {}),
+          };
+      this.logger.log(
+        `[PIPE] render-video run=${runId} props.keys=[${Object.keys(formatProps).join(',')}] hasResolvedMarket=${'resolvedMarket' in formatProps} hasParams=${'params' in formatProps}`,
+      );
+      // Full props serialization log — first 600 chars so we can compare to
+      // what the subprocess actually validates against. If the renderer says
+      // it received resolvedMarket but this log shows none, the wire path
+      // (interface → driver → spawn) is mutating the payload.
+      const propsJson = JSON.stringify(formatProps);
+      const propsPreview = propsJson.slice(0, 600);
+      this.logger.log(
+        `[PIPE] render-video run=${runId} props.preview=${propsPreview}`,
+      );
+
+      // Persist the diagnostic shape to content_run_events so the operator
+      // (and future me, reading via Supabase MCP) can audit exactly what
+      // shape the renderer subprocess received. Keeps us from depending on
+      // backend-stdout tailing to debug schema mismatches.
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'render_video_debug',
+        payload: {
+          build: 'ranking-aware-v3',
+          format: run.format,
+          resolved_geo: run.resolved_geo,
+          isRanking,
+          has_resolvedMarket: 'resolvedMarket' in formatProps,
+          has_params: 'params' in formatProps,
+          props_keys: Object.keys(formatProps),
+          props_preview: propsPreview,
+          props_total_bytes: propsJson.length,
+        },
+      });
+
       const result = await this.renderer.render({
         format: run.format,
-        props: {
-          format: run.format,
-          resolvedMarket: run.resolved_geo,
-          dataBundle: payload.metadata,
-          ctaUrl: '',
-          audioUrl: audioSigned.url,
-          ...(captionWords && captionWords.length > 0 ? { captionWords } : {}),
-        },
+        props: formatProps,
         outputPath: videoPath,
       });
       this.logger.log(
@@ -102,6 +168,22 @@ export class RenderVideoHandler {
         metadata: {
           durationMs: result.durationMs,
           renderWallMs: result.renderWallMs,
+        },
+      });
+
+      // Diagnostic: capture render output stats so I can audit success-path
+      // duration / wall-time without tailing stdout. The render_video_debug
+      // event already captured props going INTO the renderer; this captures
+      // what came OUT.
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'render_video_done',
+        payload: {
+          format: run.format,
+          duration_ms: result.durationMs,
+          render_wall_ms: result.renderWallMs,
+          storage_url: storageUrl,
+          cost_usd: result.cost?.amount_usd ?? 0,
         },
       });
 

@@ -59,6 +59,17 @@ export class VerifyDataHandler {
         details: { violations: result.violations },
       });
 
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'verify_data_done',
+        payload: {
+          passed: result.passed,
+          violations_count: result.violations.length,
+          violations_preview: result.violations.slice(0, 5),
+          script_chars: script.fullText.length,
+        },
+      });
+
       if (result.passed) {
         this.logger.log(`[PIPE] verify-data PASS → linting_voice run=${runId}`);
         await this.orchestrator.transitionTo(runId, 'linting_voice', {

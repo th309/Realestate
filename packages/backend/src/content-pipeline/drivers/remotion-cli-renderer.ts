@@ -35,7 +35,15 @@ export class RemotionCLIRenderer implements VideoRenderer {
       tmpdir(),
       `props-${randomBytes(8).toString('hex')}.json`,
     );
-    writeFileSync(propsFile, JSON.stringify(req.props));
+    const propsJson = JSON.stringify(req.props);
+    // Log what we're about to write so we can compare it to whatever Zod
+    // sees on the subprocess side. If this log shows ranking-shaped props
+    // but the subprocess reports resolvedMarket null, the mutation is
+    // happening in the spawned CLI, not in the driver.
+    this.logger.log(
+      `render driver: format=${req.format} propsFile=${propsFile} keys=[${Object.keys(req.props as Record<string, unknown>).join(',')}] preview=${propsJson.slice(0, 500)}`,
+    );
+    writeFileSync(propsFile, propsJson);
 
     const args = [
       this.cliPath,

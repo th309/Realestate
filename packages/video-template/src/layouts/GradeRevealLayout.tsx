@@ -6,10 +6,10 @@ import { Intro } from "../scenes/Intro";
 import { ScoreReveal } from "../scenes/ScoreReveal";
 import { StatCards } from "../scenes/StatCards";
 import { Outro } from "../scenes/Outro";
-import type { VideoProps, TrendDirection } from "../types";
+import type { SingleMarketVideoProps, TrendDirection } from "../types";
 import { num, coerceStats } from "./helpers";
 
-export const GradeRevealLayout: React.FC<VideoProps> = (props) => {
+export const GradeRevealLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const { dataBundle, resolvedMarket, ctaUrl } = props;
   const bundle = (dataBundle ?? {}) as Record<string, unknown>;
   const scoreObj = (bundle.score ?? {}) as {

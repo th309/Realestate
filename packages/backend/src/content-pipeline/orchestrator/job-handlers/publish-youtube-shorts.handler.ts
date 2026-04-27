@@ -110,6 +110,19 @@ export class PublishYouTubeShortsHandler {
         .update({ short_link_id: shortLinkId })
         .eq('id', postRow.id);
 
+      await client.from('content_run_events').insert({
+        run_id: runId,
+        event_type: 'publish_done',
+        payload: {
+          platform: 'youtube_shorts',
+          external_id: result.externalId,
+          external_url: result.externalUrl,
+          post_mode: run.approval_mode === 'draft' ? 'draft' : 'direct',
+          short_link_id: shortLinkId,
+          format: run.format,
+        },
+      });
+
       await this.orchestrator.transitionTo(runId, 'published', {
         enqueueNext: false,
       });

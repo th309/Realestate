@@ -65,19 +65,6 @@ export interface ComparisonMarket {
   trendChange: number;
 }
 
-/** Legacy single-market props (kept for back-compat with existing data files). */
-export interface LegacyVideoProps {
-  mode: VideoMode;
-  /** Primary (or only) market */
-  primary: MarketData;
-  /** Additional markets for comparison mode (1-2 more) */
-  comparison?: ComparisonMarket[];
-  /** Full UTM-tagged URL for the outro CTA */
-  ctaUrl: string;
-  /** Optional short text shown under the CTA URL */
-  ctaLabel?: string;
-}
-
 // Format configuration for the expanded content pipeline
 // ---------------------------------------------------------------------------
 
@@ -185,7 +172,11 @@ export interface RankingParams {
     label: string;
   };
   geo_level: "metro" | "county" | "zip";
-  as_of: string;
+  // Optional: the wizard captures `format_options.ranking` without as_of, and
+  // no current layout reads it. Threading it end-to-end (resolver → wizard →
+  // fetch-data → schema) is left for when somebody actually consumes the
+  // data-freshness timestamp.
+  as_of?: string;
   resolved_markets: ResolvedMarket[];
 }
 
@@ -213,33 +204,33 @@ const RankingParamsSchema = z.object({
     label: z.string(),
   }),
   geo_level: z.enum(["metro", "county", "zip"]),
-  as_of: z.string(),
+  as_of: z.string().optional(),
   resolved_markets: z.array(ResolvedMarketSchema),
 });
 
-export const VideoPropsSchema = z.object({
-  format: z.enum([
-    "grade_reveal",
-    "top_10_ranking",
-    "bottom_10_ranking",
-    "score_mover",
-    "head_to_head",
-    "long_form_deep_dive",
-    "farm_area_spotlight",
-    "brokerage_market_share",
-    "recruitment_angle",
-  ]),
-  resolvedMarket: z.object({
-    canonical_name: z.string(),
-    geography: z.enum(["state", "metro", "county", "zip"]),
-    id: z.string(),
-  }),
-  dataBundle: z.any(),
+// VideoProps is a discriminated union by `format`:
+//   - SingleMarketVideoProps: the legacy single-market shape with
+//     `resolvedMarket`, used by Grade/ScoreMover/HeadToHead/FarmArea/etc.
+//   - RankingVideoProps: ranking shape with `params: RankingParams` carrying
+//     the N-market list, used by Top10Layout for top_10 / bottom_10.
+//
+// `.strict()` on each branch rejects fields that don't belong to that variant
+// (e.g. a ranking object that accidentally carries `resolvedMarket`, or a
+// score_mover object that accidentally carries `params`). `z.union` then
+// picks whichever branch fully validates — TS narrows on `format` for free.
+
+const ResolvedMarketShape = z.object({
+  canonical_name: z.string(),
+  geography: z.enum(["state", "metro", "county", "zip"]),
+  id: z.string(),
+});
+
+// Voiceover URL. When present, Remotion's <Audio> mounts it inside the
+// composition and the compositor muxes it into the output — no external
+// ffmpeg needed. Optional so silent renders (previews, smoke tests) work.
+const sharedShape = {
   ctaUrl: z.string(),
   styleVariant: z.string().optional(),
-  // Voiceover URL. When present, Remotion's <Audio> mounts it inside the
-  // composition and the compositor muxes it into the output — no external
-  // ffmpeg needed. Optional so silent renders (previews, smoke tests) work.
   audioUrl: z.string().url().optional(),
   captionWords: z
     .array(
@@ -250,8 +241,48 @@ export const VideoPropsSchema = z.object({
       }),
     )
     .optional(),
-  // Ranking-specific params. Present only for top_10_ranking / bottom_10_ranking.
-  params: RankingParamsSchema.optional(),
-});
+} as const;
 
-export type VideoProps = z.infer<typeof VideoPropsSchema>;
+const SINGLE_MARKET_FORMATS = [
+  "grade_reveal",
+  "score_mover",
+  "head_to_head",
+  "long_form_deep_dive",
+  "farm_area_spotlight",
+  "brokerage_market_share",
+  "recruitment_angle",
+] as const;
+
+const RANKING_FORMATS = ["top_10_ranking", "bottom_10_ranking"] as const;
+
+export const SingleMarketVideoPropsSchema = z
+  .object({
+    format: z.enum(SINGLE_MARKET_FORMATS),
+    resolvedMarket: ResolvedMarketShape,
+    dataBundle: z.any(),
+    ...sharedShape,
+  })
+  .strict();
+
+export const RankingVideoPropsSchema = z
+  .object({
+    format: z.enum(RANKING_FORMATS),
+    params: RankingParamsSchema,
+    // Mirror of `params` for back-compat with the few handlers that read
+    // `dataBundle` blindly (render-thumbnail, future ranking gates). Optional
+    // because the layout itself reads `params`.
+    dataBundle: z.any().optional(),
+    ...sharedShape,
+  })
+  .strict();
+
+export const VideoPropsSchema = z.union([
+  SingleMarketVideoPropsSchema,
+  RankingVideoPropsSchema,
+]);
+
+export type SingleMarketVideoProps = z.infer<
+  typeof SingleMarketVideoPropsSchema
+>;
+export type RankingVideoProps = z.infer<typeof RankingVideoPropsSchema>;
+export type VideoProps = SingleMarketVideoProps | RankingVideoProps;

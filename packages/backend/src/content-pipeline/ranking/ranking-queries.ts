@@ -1,24 +1,24 @@
 /**
- * Ranking Queries
+ * Ranking Queries — query helpers for RankingResolverService.
  *
- * Supabase query helpers for RankingResolverService — extracted to keep the
- * service file under the 300-line hard limit and separate query construction
- * from orchestration logic.
+ * Two responsibilities:
+ *   1. Translate user scope (state / metro) into the set of region IDs eligible
+ *      for the ranking (via geography_crosswalk).
+ *   2. Pull PIQ score rows from propertyiq_scores (the canonical PIQ ranking
+ *      pattern, already used by RankingsV1Controller and score-mover queries).
+ *
+ * Raw market metrics go through the canonical metric-resolution layer
+ * (SourceFetcherBulkService) — no duplicate query logic needed here.
  */
 
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { RankingMetricConfig } from './ranking-metric-catalog';
-import {
-  GeoLevel,
-  RankingDirection,
-  ScopeType,
-} from './ranking-resolver.service';
+import { GeoLevel, ScopeType } from './ranking-resolver.service';
 
 const logger = new Logger('RankingQueries');
 
 // ---------------------------------------------------------------------------
-// Scope resolution
+// Scope filtering — map (scope_type, scope_id) → set of region IDs
 // ---------------------------------------------------------------------------
 
 function crosswalkColForGeo(geoLevel: GeoLevel): string {
@@ -28,8 +28,8 @@ function crosswalkColForGeo(geoLevel: GeoLevel): string {
 }
 
 /**
- * Return region IDs in scope, or null for national (no filter).
- * geography_crosswalk columns: zip_code, county_fips, cbsa_code, state_abbrev.
+ * Returns region IDs in scope, or null for national (no filter).
+ * Returns [] if the scope is set but has no matching IDs (caller filters all out).
  */
 export async function resolveScopeRegionIds(
   client: SupabaseClient,
@@ -50,7 +50,7 @@ export async function resolveScopeRegionIds(
 
   if (error) {
     logger.warn(`Scope crosswalk lookup failed: ${error.message}`);
-    return null;
+    return [];
   }
 
   const ids = new Set<string>();
@@ -62,71 +62,101 @@ export async function resolveScopeRegionIds(
 }
 
 // ---------------------------------------------------------------------------
-// Staleness / excluded count
+// PIQ score helpers — query propertyiq_scores directly
 // ---------------------------------------------------------------------------
 
-/**
- * Count rows that are excluded from ranking: NULL value OR date before cutoff.
- */
-export async function countExcluded(
+export interface PiqRankingRow {
+  location_id: string;
+  location_name: string;
+  score: number;
+  score_date: string;
+}
+
+export async function fetchPiqRankings(
   client: SupabaseClient,
-  tc: RankingMetricConfig,
-  cutoffDate: string,
+  geoLevel: GeoLevel,
   scopeRegionIds: string[] | null,
-): Promise<number> {
+  ascending: boolean,
+  limit: number,
+): Promise<PiqRankingRow[]> {
+  const { data: dateRow } = await client
+    .from('propertyiq_scores')
+    .select('score_date')
+    .eq('geography', geoLevel)
+    .eq('score_type', 'propertyiq')
+    .order('score_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const latestDate = (dateRow as { score_date?: string } | null)?.score_date;
+  if (!latestDate) return [];
+
+  // Over-fetch so we have headroom to drop display-name duplicates.
+  // propertyiq_scores carries both MSA and metro-division CBSAs (e.g. SF-Oakland
+  // 41860 and SF-MD 41884), both of which display as "San Francisco, CA". Two
+  // identical names in a top-10 reads as a credibility error to viewers.
+  const fetchLimit = limit * 3;
+
   let query = client
-    .from(tc.sourceTable)
-    .select('*', { count: 'exact', head: true })
-    .or(`${tc.valueColumn}.is.null,${tc.dateColumn}.lt.${cutoffDate}`);
+    .from('propertyiq_scores')
+    .select('location_id, location_name, score, score_date')
+    .eq('geography', geoLevel)
+    .eq('score_type', 'propertyiq')
+    .eq('score_date', latestDate)
+    .not('score', 'is', null)
+    .order('score', { ascending })
+    .limit(fetchLimit);
 
-  if (tc.metricNameFilter) query = query.eq('metric_name', tc.metricNameFilter);
-  if (scopeRegionIds !== null) query = query.in(tc.idColumn, scopeRegionIds);
-
-  const { count, error } = await query;
-  if (error) {
-    logger.warn(`Excluded count query failed: ${error.message}`);
-    return 0;
+  if (scopeRegionIds !== null) {
+    if (scopeRegionIds.length === 0) return [];
+    query = query.in('location_id', scopeRegionIds);
   }
-  return count ?? 0;
+
+  const { data, error } = await query;
+  if (error) throw new Error(`PIQ ranking query failed: ${error.message}`);
+
+  // Dedupe by parsed (name, state) — keep first occurrence (highest score
+  // because rows are already sorted by score). Backfills the slot from
+  // the over-fetched tail. See parseLocationName for suffix handling.
+  const rows = (data ?? []) as PiqRankingRow[];
+  const seen = new Set<string>();
+  const deduped: PiqRankingRow[] = [];
+  for (const row of rows) {
+    const parsed = parseLocationName(row.location_name);
+    const key = `${parsed.name}|${parsed.state ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+    if (deduped.length === limit) break;
+  }
+  return deduped;
 }
 
 // ---------------------------------------------------------------------------
-// Ranked row fetch
+// parseLocationName — split "Austin–Round Rock, TX" into (name, state)
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch ranked rows from the source table, ordered by value.
+ * Strip suffixes that some sources append to the canonical "City, ST" form.
+ * propertyiq_scores.location_name uses "Foo, ST metro area" for 922 / 935 metro
+ * rows; without stripping, state extraction fails and downstream script
+ * validation rejects the run.
  */
-export async function fetchRankedRows(
-  client: SupabaseClient,
-  tc: RankingMetricConfig,
-  cutoffDate: string,
-  scopeRegionIds: string[] | null,
-  direction: RankingDirection,
-  fetchLimit: number,
-): Promise<Record<string, unknown>[]> {
-  const selectCols = [
-    tc.idColumn,
-    tc.nameColumn,
-    tc.stateColumn,
-    tc.valueColumn,
-    tc.dateColumn,
-  ]
-    .filter(Boolean)
-    .join(', ');
+const NAME_SUFFIXES_TO_STRIP = [
+  /\s+metro\s+area$/i,
+  /\s+statistical\s+area$/i,
+  /\s+\(.*\)$/, // trailing parens, e.g. "Honolulu, HI (Urban Honolulu)"
+];
 
-  let query = client
-    .from(tc.sourceTable)
-    .select(selectCols)
-    .not(tc.valueColumn, 'is', null)
-    .gte(tc.dateColumn, cutoffDate)
-    .order(tc.valueColumn, { ascending: direction === 'bottom' })
-    .limit(fetchLimit);
-
-  if (tc.metricNameFilter) query = query.eq('metric_name', tc.metricNameFilter);
-  if (scopeRegionIds !== null) query = query.in(tc.idColumn, scopeRegionIds);
-
-  const { data, error } = await query;
-  if (error) throw new Error(`Ranking query failed: ${error.message}`);
-  return (data ?? []) as unknown as Record<string, unknown>[];
+export function parseLocationName(locationName: string): {
+  name: string;
+  state: string | null;
+} {
+  let stripped = locationName.trim();
+  for (const re of NAME_SUFFIXES_TO_STRIP) {
+    stripped = stripped.replace(re, '').trim();
+  }
+  const m = stripped.match(/^(.+),\s*([A-Z]{2})$/);
+  if (m) return { name: m[1], state: m[2] };
+  return { name: stripped, state: null };
 }
