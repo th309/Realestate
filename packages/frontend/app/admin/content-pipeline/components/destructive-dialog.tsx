@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { M3Dialog } from "./m3-dialog";
 
 /**
@@ -29,15 +29,35 @@ export function DestructiveDialog({
   cancelLabel?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  /** Prevents double-submit: busy was cleared in `finally` before the dialog closed, so a second click could fire a second DELETE → 404. */
+  const confirmOnceRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      confirmOnceRef.current = false;
+      setBusy(false);
+    }
+  }, [open]);
 
   async function handleConfirm() {
+    if (confirmOnceRef.current) return;
+    confirmOnceRef.current = true;
     setBusy(true);
     try {
       await onConfirm();
-      onClose();
-    } finally {
+    } catch {
+      confirmOnceRef.current = false;
       setBusy(false);
+      return;
     }
+    // Success: stay busy until `open` becomes false — avoids a second confirm while rAF closes the dialog.
+    // Defer unmount until after the confirming click finishes bubbling, so the
+    // underlying dashboard <Link> cannot receive a ghost click at the same coords.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onClose();
+      });
+    });
   }
 
   return (

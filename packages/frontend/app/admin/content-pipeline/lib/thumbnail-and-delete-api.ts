@@ -59,6 +59,15 @@ export async function deleteRun(id: string): Promise<DeleteRunResult> {
   const res = await fetchAPIRaw(`/api/admin/content-pipeline/runs/${id}`, {
     method: "DELETE",
   });
+  // Idempotent: parallel or duplicate client calls after a successful delete should not surface as errors.
+  if (res.status === 404) {
+    return {
+      action: "deleted",
+      previousStatus: "cancelled",
+      wasInFlight: false,
+      cascade: { storageObjects: 0, platformsLive: [] },
+    };
+  }
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`deleteRun failed: ${res.status} ${body}`);

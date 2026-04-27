@@ -41,6 +41,27 @@ function invalidateRunListsAndDetail(
   qc.removeQueries({ queryKey: KEYS.reviewRun(id) });
 }
 
+/** Dedupe delete/cancel toasts when duplicate completions land for the same run. */
+const deleteSuccessToastAtMs = new Map<string, number>();
+const deleteErrorToastAtMs = new Map<string, number>();
+const DELETE_TOAST_DEDUPE_MS = 2500;
+
+function shouldShowDeleteSuccessToast(runId: string): boolean {
+  const now = Date.now();
+  const last = deleteSuccessToastAtMs.get(runId) ?? 0;
+  if (now - last < DELETE_TOAST_DEDUPE_MS) return false;
+  deleteSuccessToastAtMs.set(runId, now);
+  return true;
+}
+
+function shouldShowDeleteErrorToast(runId: string): boolean {
+  const now = Date.now();
+  const last = deleteErrorToastAtMs.get(runId) ?? 0;
+  if (now - last < DELETE_TOAST_DEDUPE_MS) return false;
+  deleteErrorToastAtMs.set(runId, now);
+  return true;
+}
+
 export function useApproveRun() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -103,6 +124,7 @@ export function useDeleteRun() {
     mutationFn: (id: string) => deleteRun(id),
     onSuccess: (data, id) => {
       invalidateRunListsAndDetail(qc, id);
+      if (!shouldShowDeleteSuccessToast(id)) return;
       if (data.cascade.platformsLive.length > 0) {
         const platforms = data.cascade.platformsLive
           .map((p) => p.replace("_", " "))
@@ -114,7 +136,10 @@ export function useDeleteRun() {
         toast.success("Run deleted");
       }
     },
-    onError: (err: Error) => toast.error(`Delete failed: ${err.message}`),
+    onError: (err: Error, id) => {
+      if (!shouldShowDeleteErrorToast(id)) return;
+      toast.error(`Delete failed: ${err.message}`);
+    },
   });
 }
 

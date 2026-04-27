@@ -1,11 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useDeleteRun,
-  useRetryRun,
-  useCancelRun,
-} from "../lib/use-run-mutations";
+import { useRetryRun } from "../lib/use-run-mutations";
 import { DestructiveDialog } from "./destructive-dialog";
 import type { PipelineStatus } from "../lib/content-pipeline-api";
 
@@ -40,16 +36,19 @@ export function RunCardOverlay({
   runId,
   status,
   marketQuery,
+  executeDelete,
+  executeCancel,
 }: {
   runId: string;
   status: PipelineStatus;
   marketQuery: string;
+  /** Parent-owned useDeleteRun().mutateAsync — single mutation observer for dashboard grid. */
+  executeDelete: () => Promise<unknown>;
+  executeCancel: () => Promise<unknown>;
 }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const deleteMut = useDeleteRun();
-  const cancelMut = useCancelRun();
   const retryMut = useRetryRun();
 
   const inFlight = IN_FLIGHT.has(status);
@@ -64,21 +63,24 @@ export function RunCardOverlay({
 
   async function handleConfirmDestroy() {
     if (inFlight) {
-      await cancelMut.mutateAsync({ id: runId, reason: "user_cancelled" });
+      await executeCancel();
     } else {
-      await deleteMut.mutateAsync(runId);
+      await executeDelete();
     }
   }
 
   return (
     <>
+      {/* Visual scrim only — never captures clicks (avoids blocking thumbnail link + invalid <a><button>) */}
       <div
-        className="absolute inset-0 rounded-lg bg-on-surface/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto"
+        className="pointer-events-none absolute inset-0 rounded-lg bg-on-surface/40 backdrop-blur-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100"
         aria-hidden
-      >
+      />
+      <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center gap-2">
         {showReview && (
           <IconButton
             label="Review"
+            className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
             onClick={(e) => {
               stop(e);
               router.push(`/admin/content-pipeline/review`);
@@ -90,6 +92,7 @@ export function RunCardOverlay({
         {showRetry && (
           <IconButton
             label="Retry"
+            className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
             onClick={(e) => {
               stop(e);
               retryMut.mutate(runId);
@@ -101,6 +104,7 @@ export function RunCardOverlay({
         <IconButton
           label={inFlight ? "Cancel" : "Delete"}
           variant="destructive"
+          className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
           onClick={(e) => {
             stop(e);
             setConfirmOpen(true);
@@ -153,11 +157,13 @@ function IconButton({
   label,
   onClick,
   variant = "default",
+  className = "",
   children,
 }: {
   label: string;
   onClick: (e: React.MouseEvent) => void;
   variant?: "default" | "destructive";
+  className?: string;
   children: React.ReactNode;
 }) {
   const base =
@@ -172,7 +178,7 @@ function IconButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`${base} ${palette}`}
+      className={`${base} ${palette} ${className}`.trim()}
     >
       {children}
     </button>
