@@ -58,7 +58,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (searchParams?.get("resetTour") !== "1") return;
     resetTour();
     setStepIndex(0);
-    router.replace("/get-started");
+    router.replace("/tour?resume=fresh");
   }, [searchParams, resetTour, router]);
 
   // Detect ?onboarding=true (set by /get-started after market selection)
@@ -226,7 +226,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const restartTourHandler = useCallback(() => {
     resetTour();
     setStepIndex(0);
-    router.push("/get-started");
+    router.push("/tour?resume=fresh");
   }, [resetTour, router]);
 
   const currentStep = phase === "guided" ? ONBOARDING_STEPS[stepIndex] : null;
