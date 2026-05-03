@@ -51,7 +51,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   home_value_yoy: {
     metricId: 'home_value_yoy',
     sources: [
-      { source: 'realtor', column: 'median_listing_price_yy', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'median_listing_price_yy',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
@@ -59,24 +63,24 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   home_value_mom: {
     metricId: 'home_value_mom',
     sources: [
-      { source: 'realtor', column: 'median_listing_price_mm', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'median_listing_price_mm',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
 
   home_price_forecast: {
     metricId: 'home_price_forecast',
-    sources: [
-      { source: 'zillow', column: 'zhvf_12m' },
-    ],
+    sources: [{ source: 'zillow', column: 'zhvf_12m' }],
     supportsGeoInheritance: false,
   },
 
   home_value_5yr: {
     metricId: 'home_value_5yr',
-    sources: [
-      { source: 'calculated', column: 'home_value_5yr_cagr' },
-    ],
+    sources: [{ source: 'calculated', column: 'home_value_5yr_cagr' }],
     supportsGeoInheritance: false,
   },
 
@@ -104,9 +108,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
 
   rent_for_houses: {
     metricId: 'rent_for_houses',
-    sources: [
-      { source: 'zillow', column: 'zordi_sfr' },
-    ],
+    sources: [{ source: 'zillow', column: 'zordi_sfr' }],
     supportsGeoInheritance: false,
   },
 
@@ -126,7 +128,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   home_sales_yoy: {
     metricId: 'home_sales_yoy',
     sources: [
-      { source: 'realtor', column: 'pending_listing_count_yy', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'pending_listing_count_yy',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
@@ -145,33 +151,25 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   market_heat: {
     metricId: 'market_heat',
-    sources: [
-      { source: 'zillow', column: 'market_heat_index' },
-    ],
+    sources: [{ source: 'zillow', column: 'market_heat_index' }],
     supportsGeoInheritance: false,
   },
 
   hotness_score: {
     metricId: 'hotness_score',
-    sources: [
-      { source: 'realtor', column: 'hotness_score' },
-    ],
+    sources: [{ source: 'realtor', column: 'hotness_score' }],
     supportsGeoInheritance: true,
   },
 
   demand_score: {
     metricId: 'demand_score',
-    sources: [
-      { source: 'realtor', column: 'demand_score' },
-    ],
+    sources: [{ source: 'realtor', column: 'demand_score' }],
     supportsGeoInheritance: true,
   },
 
   supply_score: {
     metricId: 'supply_score',
-    sources: [
-      { source: 'realtor', column: 'supply_score' },
-    ],
+    sources: [{ source: 'realtor', column: 'supply_score' }],
     supportsGeoInheritance: false,
   },
 
@@ -190,7 +188,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   inventory_yoy: {
     metricId: 'inventory_yoy',
     sources: [
-      { source: 'realtor', column: 'active_listing_count_yy', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'active_listing_count_yy',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
@@ -216,7 +218,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   new_listings_yoy: {
     metricId: 'new_listings_yoy',
     sources: [
-      { source: 'realtor', column: 'new_listing_count_yy', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'new_listing_count_yy',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
@@ -232,16 +238,18 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
 
   pending_ratio: {
     metricId: 'pending_ratio',
-    sources: [
-      { source: 'realtor', column: 'pending_ratio' },
-    ],
+    sources: [{ source: 'realtor', column: 'pending_ratio' }],
     supportsGeoInheritance: false,
   },
 
   price_cut_pct: {
     metricId: 'price_cut_pct',
     sources: [
-      { source: 'realtor', column: 'price_reduced_share', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'price_reduced_share',
+        transform: toPercent,
+      },
       { source: 'redfin', column: 'price_drops' },
     ],
     supportsGeoInheritance: false,
@@ -250,7 +258,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   price_increase_pct: {
     metricId: 'price_increase_pct',
     sources: [
-      { source: 'realtor', column: 'price_increased_share', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'price_increased_share',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
@@ -260,25 +272,19 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   new_construction_sales: {
     metricId: 'new_construction_sales',
-    sources: [
-      { source: 'zillow', column: 'new_con_sales' },
-    ],
+    sources: [{ source: 'zillow', column: 'new_con_sales' }],
     supportsGeoInheritance: false,
   },
 
   new_construction_price: {
     metricId: 'new_construction_price',
-    sources: [
-      { source: 'zillow', column: 'new_con_median_price' },
-    ],
+    sources: [{ source: 'zillow', column: 'new_con_median_price' }],
     supportsGeoInheritance: false,
   },
 
   new_construction_ppsf: {
     metricId: 'new_construction_ppsf',
-    sources: [
-      { source: 'zillow', column: 'new_con_median_price_per_sqft' },
-    ],
+    sources: [{ source: 'zillow', column: 'new_con_median_price_per_sqft' }],
     supportsGeoInheritance: false,
   },
 
@@ -307,49 +313,37 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   population: {
     metricId: 'population',
-    sources: [
-      { source: 'census', column: 'total_population' },
-    ],
+    sources: [{ source: 'census', column: 'total_population' }],
     supportsGeoInheritance: false,
   },
 
   median_income: {
     metricId: 'median_income',
-    sources: [
-      { source: 'census', column: 'median_household_income' },
-    ],
+    sources: [{ source: 'census', column: 'median_household_income' }],
     supportsGeoInheritance: false,
   },
 
   median_age: {
     metricId: 'median_age',
-    sources: [
-      { source: 'census', column: 'median_age' },
-    ],
+    sources: [{ source: 'census', column: 'median_age' }],
     supportsGeoInheritance: false,
   },
 
   homeownership_rate: {
     metricId: 'homeownership_rate',
-    sources: [
-      { source: 'census', column: 'homeownership_rate' },
-    ],
+    sources: [{ source: 'census', column: 'homeownership_rate' }],
     supportsGeoInheritance: false,
   },
 
   population_growth: {
     metricId: 'population_growth',
-    sources: [
-      { source: 'census', column: 'population_yoy' },
-    ],
+    sources: [{ source: 'census', column: 'population_yoy' }],
     supportsGeoInheritance: true,
   },
 
   income_growth: {
     metricId: 'income_growth',
-    sources: [
-      { source: 'census', column: 'income_yoy' },
-    ],
+    sources: [{ source: 'census', column: 'income_yoy' }],
     supportsGeoInheritance: false,
   },
 
@@ -358,33 +352,25 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   unemployment_rate: {
     metricId: 'unemployment_rate',
-    sources: [
-      { source: 'economic', column: 'unemployment_rate' },
-    ],
+    sources: [{ source: 'economic', column: 'unemployment_rate' }],
     supportsGeoInheritance: true,
   },
 
   job_growth: {
     metricId: 'job_growth',
-    sources: [
-      { source: 'economic', column: 'employment_yoy' },
-    ],
+    sources: [{ source: 'economic', column: 'employment_yoy' }],
     supportsGeoInheritance: true,
   },
 
   gdp_growth: {
     metricId: 'gdp_growth',
-    sources: [
-      { source: 'economic', column: 'gdp_yoy' },
-    ],
+    sources: [{ source: 'economic', column: 'gdp_yoy' }],
     supportsGeoInheritance: true,
   },
 
   cost_of_living: {
     metricId: 'cost_of_living',
-    sources: [
-      { source: 'economic', column: 'rpp_all_items' },
-    ],
+    sources: [{ source: 'economic', column: 'rpp_all_items' }],
     supportsGeoInheritance: true,
   },
 
@@ -393,65 +379,55 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   cap_rate: {
     metricId: 'cap_rate',
-    sources: [
-      { source: 'calculated', column: 'cap_rate' },
-    ],
+    sources: [{ source: 'calculated', column: 'cap_rate' }],
     supportsGeoInheritance: false,
   },
 
   gross_yield: {
     metricId: 'gross_yield',
-    sources: [
-      { source: 'calculated', column: 'gross_yield' },
-    ],
+    sources: [{ source: 'calculated', column: 'gross_yield' }],
     supportsGeoInheritance: false,
   },
 
   rent_to_price_ratio: {
     metricId: 'rent_to_price_ratio',
     sources: [
-      { source: 'calculated', column: 'rent_to_price_ratio', transform: toPercent },
+      {
+        source: 'calculated',
+        column: 'rent_to_price_ratio',
+        transform: toPercent,
+      },
     ],
     supportsGeoInheritance: false,
   },
 
   grm: {
     metricId: 'grm',
-    sources: [
-      { source: 'calculated', column: 'grm' },
-    ],
+    sources: [{ source: 'calculated', column: 'grm' }],
     supportsGeoInheritance: false,
   },
 
   overvalued_pct: {
     metricId: 'overvalued_pct',
-    sources: [
-      { source: 'calculated', column: 'overvalued_pct' },
-    ],
+    sources: [{ source: 'calculated', column: 'overvalued_pct' }],
     supportsGeoInheritance: false,
   },
 
   inventory_surplus: {
     metricId: 'inventory_surplus',
-    sources: [
-      { source: 'calculated', column: 'inventory_surplus_pct' },
-    ],
+    sources: [{ source: 'calculated', column: 'inventory_surplus_pct' }],
     supportsGeoInheritance: false,
   },
 
   income_to_buy: {
     metricId: 'income_to_buy',
-    sources: [
-      { source: 'calculated', column: 'income_to_buy' },
-    ],
+    sources: [{ source: 'calculated', column: 'income_to_buy' }],
     supportsGeoInheritance: false,
   },
 
   affordable_home_price: {
     metricId: 'affordable_home_price',
-    sources: [
-      { source: 'calculated', column: 'affordable_home_price' },
-    ],
+    sources: [{ source: 'calculated', column: 'affordable_home_price' }],
     supportsGeoInheritance: false,
   },
 
@@ -460,9 +436,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   sf_permits: {
     metricId: 'sf_permits',
-    sources: [
-      { source: 'permits', column: 'sf_units', geoLevels: ['county'] },
-    ],
+    sources: [{ source: 'permits', column: 'sf_units', geoLevels: ['county'] }],
     supportsGeoInheritance: false,
   },
 
@@ -488,6 +462,186 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
       { source: 'permits', column: 'total_units_yoy', geoLevels: ['county'] },
     ],
     supportsGeoInheritance: true,
+  },
+
+  // --------------------------------------------------------------------------
+  // Employment by sector — CES (metro/state) → QCEW (county/metro fallback)
+  // --------------------------------------------------------------------------
+  employment_natural_resources_mining: {
+    metricId: 'employment_natural_resources_mining',
+    sources: [
+      { source: 'ces', column: 'ces_employment_natural_resources_mining' },
+      { source: 'qcew', column: 'employment_natural_resources_mining' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_construction: {
+    metricId: 'employment_construction',
+    sources: [
+      { source: 'ces', column: 'ces_employment_construction' },
+      { source: 'qcew', column: 'employment_construction' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_manufacturing: {
+    metricId: 'employment_manufacturing',
+    sources: [
+      { source: 'ces', column: 'ces_employment_manufacturing' },
+      { source: 'qcew', column: 'employment_manufacturing' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_trade_transport_utilities: {
+    metricId: 'employment_trade_transport_utilities',
+    sources: [
+      { source: 'ces', column: 'ces_employment_trade_transport_utilities' },
+      { source: 'qcew', column: 'employment_trade_transport_utilities' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_information: {
+    metricId: 'employment_information',
+    sources: [
+      { source: 'ces', column: 'ces_employment_information' },
+      { source: 'qcew', column: 'employment_information' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_financial_activities: {
+    metricId: 'employment_financial_activities',
+    sources: [
+      { source: 'ces', column: 'ces_employment_financial_activities' },
+      { source: 'qcew', column: 'employment_financial_activities' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_professional_business_services: {
+    metricId: 'employment_professional_business_services',
+    sources: [
+      {
+        source: 'ces',
+        column: 'ces_employment_professional_business_services',
+      },
+      { source: 'qcew', column: 'employment_professional_business_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_education_health_services: {
+    metricId: 'employment_education_health_services',
+    sources: [
+      { source: 'ces', column: 'ces_employment_education_health_services' },
+      { source: 'qcew', column: 'employment_education_health_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_leisure_hospitality: {
+    metricId: 'employment_leisure_hospitality',
+    sources: [
+      { source: 'ces', column: 'ces_employment_leisure_hospitality' },
+      { source: 'qcew', column: 'employment_leisure_hospitality' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_other_services: {
+    metricId: 'employment_other_services',
+    sources: [
+      { source: 'ces', column: 'ces_employment_other_services' },
+      { source: 'qcew', column: 'employment_other_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_public_administration: {
+    metricId: 'employment_public_administration',
+    sources: [
+      { source: 'ces', column: 'ces_employment_public_administration' },
+      { source: 'qcew', column: 'employment_public_administration' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  // --------------------------------------------------------------------------
+  // QCEW-only wage and establishment metrics
+  // --------------------------------------------------------------------------
+  qcew_avg_weekly_wage: {
+    metricId: 'qcew_avg_weekly_wage',
+    sources: [{ source: 'qcew', column: 'qcew_avg_weekly_wage' }],
+    supportsGeoInheritance: true,
+  },
+
+  qcew_total_establishments: {
+    metricId: 'qcew_total_establishments',
+    sources: [{ source: 'qcew', column: 'qcew_total_establishments' }],
+    supportsGeoInheritance: true,
+  },
+
+  // --------------------------------------------------------------------------
+  // IRS migration aggregates (county only, single source)
+  // --------------------------------------------------------------------------
+  irs_migration_in_returns: {
+    metricId: 'irs_migration_in_returns',
+    sources: [{ source: 'irs', column: 'in_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_returns: {
+    metricId: 'irs_migration_out_returns',
+    sources: [{ source: 'irs', column: 'out_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_net_returns: {
+    metricId: 'irs_migration_net_returns',
+    sources: [{ source: 'irs', column: 'net_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_in_avg_agi: {
+    metricId: 'irs_migration_in_avg_agi',
+    sources: [{ source: 'irs', column: 'in_avg_agi' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_avg_agi: {
+    metricId: 'irs_migration_out_avg_agi',
+    sources: [{ source: 'irs', column: 'out_avg_agi' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_in_exemptions: {
+    metricId: 'irs_migration_in_exemptions',
+    sources: [{ source: 'irs', column: 'in_exemptions' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_exemptions: {
+    metricId: 'irs_migration_out_exemptions',
+    sources: [{ source: 'irs', column: 'out_exemptions' }],
+    supportsGeoInheritance: false,
+  },
+
+  // --------------------------------------------------------------------------
+  // Redfin migration metrics (metro level, single source)
+  // --------------------------------------------------------------------------
+  redfin_migration_net_inflow: {
+    metricId: 'redfin_migration_net_inflow',
+    sources: [{ source: 'redfin_migration', column: 'net_inflow' }],
+    supportsGeoInheritance: false,
+  },
+
+  redfin_migration_inflow_share: {
+    metricId: 'redfin_migration_inflow_share',
+    sources: [{ source: 'redfin_migration', column: 'inflow_share_pct' }],
+    supportsGeoInheritance: false,
   },
 };
 
