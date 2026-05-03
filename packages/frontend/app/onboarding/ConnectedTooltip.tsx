@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useId } from "react";
 import type { OnboardingStep } from "./onboarding-steps";
 
 interface ConnectedTooltipProps {
@@ -8,6 +8,7 @@ interface ConnectedTooltipProps {
   currentIndex: number;
   totalSteps: number;
   onDismiss: () => void;
+  onContinue?: () => void;
 }
 
 interface Position {
@@ -25,11 +26,17 @@ export function ConnectedTooltip({
   currentIndex,
   totalSteps,
   onDismiss,
+  onContinue,
 }: ConnectedTooltipProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const [show, setShow] = useState(false);
   const [showDismiss, setShowDismiss] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const bodyId = useId();
   const isCentered = step.placement === "center" || !step.targetSelector;
+  const showContinue = !!onContinue && step.allowManualAdvance;
 
   const calculatePosition = useCallback(() => {
     if (isCentered || !step.targetSelector) {
@@ -109,6 +116,23 @@ export function ConnectedTooltip({
     };
   }, [calculatePosition, isCentered, step.targetSelector]);
 
+  // Focus management: focus the tooltip card on mount so screen readers
+  // announce it and so Esc / Tab work as expected. Restore the previously
+  // focused element on unmount (when the step changes or tour ends).
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const focusTimer = setTimeout(() => {
+      cardRef.current?.focus();
+    }, 100);
+    return () => {
+      clearTimeout(focusTimer);
+      const prev = previousFocusRef.current;
+      if (prev && document.contains(prev)) {
+        prev.focus({ preventScroll: true });
+      }
+    };
+  }, [step.id]);
+
   const arrowClasses: Record<string, string> = {
     top: "left-1/2 -translate-x-1/2 -top-2 border-b-surface-container-high border-l-transparent border-r-transparent border-t-transparent",
     bottom:
@@ -124,15 +148,18 @@ export function ConnectedTooltip({
 
   const content = (
     <div className="relative">
-      <h3 className="text-lg font-medium text-on-surface mb-1.5">
+      <h3 id={titleId} className="text-lg font-medium text-on-surface mb-1.5">
         {step.title}
       </h3>
-      <p className="text-sm text-on-surface-variant leading-relaxed mb-4">
+      <p
+        id={bodyId}
+        className="text-sm text-on-surface-variant leading-relaxed mb-4"
+      >
         {step.body}
       </p>
 
-      <div className="flex items-center justify-between">
-        <div className="flex-1 mr-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1">
           <div className="h-[3px] bg-outline-variant/30 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-400 ease-out"
@@ -143,23 +170,47 @@ export function ConnectedTooltip({
             />
           </div>
         </div>
-        {showDismiss && (
-          <button
-            onClick={onDismiss}
-            className="text-xs text-on-surface-variant/60 hover:text-on-surface-variant transition-colors duration-200"
-          >
-            Do this later
-          </button>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {showDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="text-xs text-on-surface-variant/60 hover:text-on-surface-variant transition-colors duration-200"
+            >
+              Do this later
+            </button>
+          )}
+          {showContinue && (
+            <button
+              type="button"
+              onClick={onContinue}
+              className="text-xs font-medium text-on-primary bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-full transition-colors duration-200"
+              autoFocus
+            >
+              Continue
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
+
+  // Common ARIA + focus props applied to the visible card wrapper.
+  const dialogProps = {
+    role: "dialog" as const,
+    "aria-modal": true,
+    "aria-labelledby": titleId,
+    "aria-describedby": bodyId,
+    tabIndex: -1,
+  };
 
   if (isCentered) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
         <div
-          className="max-w-sm w-full mx-4 pointer-events-auto bg-surface-container-high rounded-[28px] shadow-lg p-8"
+          ref={cardRef}
+          {...dialogProps}
+          className="max-w-sm w-full mx-4 pointer-events-auto bg-surface-container-high rounded-[28px] shadow-lg p-8 outline-none focus:ring-2 focus:ring-primary/40"
           style={{
             transform: springTransform,
             opacity: show ? 1 : 0,
@@ -177,7 +228,9 @@ export function ConnectedTooltip({
 
   return (
     <div
-      className="fixed z-[9999] pointer-events-auto bg-surface-container-high rounded-2xl shadow-lg p-5"
+      ref={cardRef}
+      {...dialogProps}
+      className="fixed z-[9999] pointer-events-auto bg-surface-container-high rounded-2xl shadow-lg p-5 outline-none focus:ring-2 focus:ring-primary/40"
       style={{
         top: position.top,
         left: position.left,
@@ -189,6 +242,7 @@ export function ConnectedTooltip({
       }}
     >
       <div
+        aria-hidden="true"
         className={`absolute w-0 h-0 border-[8px] ${arrowClasses[position.arrowSide]}`}
       />
       {content}
