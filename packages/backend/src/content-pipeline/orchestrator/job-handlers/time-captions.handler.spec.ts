@@ -35,6 +35,9 @@ describe('TimeCaptionsHandler', () => {
           eq: jest.fn().mockReturnThis(),
           in: jest.fn().mockResolvedValue({ data: null, error: null }),
           delete: jest.fn().mockReturnThis(),
+          // Native-captions short-circuit: return null so handler proceeds to
+          // download audio + run Whisper.
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
           single: jest.fn().mockResolvedValue({
             data: {
               storage_url: 'supabase://content-pipeline/runs/r1/audio.mp3',
@@ -45,6 +48,11 @@ describe('TimeCaptionsHandler', () => {
             inserts.push(rows);
             return Promise.resolve({ data: null, error: null });
           }),
+        };
+      }
+      if (table === 'content_run_events') {
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
         };
       }
       throw new Error(`unexpected table ${table}`);

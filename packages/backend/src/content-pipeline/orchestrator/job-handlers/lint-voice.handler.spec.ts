@@ -29,6 +29,7 @@ describe('LintVoiceHandler', () => {
       .fn()
       .mockResolvedValue({ data: scriptAsset });
     const gateInsert = jest.fn().mockResolvedValue({ error: null });
+    const eventInsert = jest.fn().mockResolvedValue({ error: null });
 
     const supabaseClient = {
       from: jest.fn((table: string) => {
@@ -43,6 +44,9 @@ describe('LintVoiceHandler', () => {
         }
         if (table === 'content_run_gates') {
           return { insert: gateInsert };
+        }
+        if (table === 'content_run_events') {
+          return { insert: eventInsert };
         }
         return {};
       }),
