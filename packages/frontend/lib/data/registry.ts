@@ -54,6 +54,9 @@ export const DATA_DATES: Record<DataSource, string> = {
   calculated: "2025-12-01",
   fred: "2025-09-01",
   propertyiq: "2025-12-01",
+  bls: "2025-12-01",
+  irs: "2023",
+  redfin_migration: "2025-12-01",
 };
 
 // ============================================================================
@@ -72,6 +75,9 @@ export const DATA_SOURCE_ANCHORS: Record<DataSource, string> = {
   calculated: "propertyiq",
   fred: "fred",
   propertyiq: "propertyiq",
+  bls: "bls",
+  irs: "irs",
+  redfin_migration: "redfin",
 };
 
 // ============================================================================
