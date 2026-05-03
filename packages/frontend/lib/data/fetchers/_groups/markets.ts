@@ -5,8 +5,14 @@
  * recommendations, social proof, shares.
  */
 
-// Market data (stats, lists)
-export { fetchMarketStats, type MarketStats } from "../markets";
+// Market data (stats, lists, peer markets)
+export {
+  fetchMarketStats,
+  fetchPeers,
+  type MarketStats,
+  type PeerCandidate,
+  type PeersResponse,
+} from "../markets";
 
 // Market AI analysis
 export {
