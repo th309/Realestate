@@ -66,6 +66,7 @@ import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.
 import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
 import { MigrationModule } from './migration/migration.module';
 import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
+import { AnonymousModule } from './anonymous/anonymous.module';
 
 @Module({
   imports: [
@@ -148,6 +149,7 @@ import { EmploymentSectorsModule } from './employment-sectors/employment-sectors
     ContentPipelineModule,
     MigrationModule,
     EmploymentSectorsModule,
+    AnonymousModule,
   ],
   controllers: [AppController],
   providers: [
