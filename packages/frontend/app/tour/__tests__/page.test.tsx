@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 const setPersona = vi.fn();
 const setMarket = vi.fn();
@@ -95,6 +95,25 @@ describe("TourPage", () => {
     expect(fetchers.saveOnboardingPreferences).toHaveBeenCalledWith({
       user_type: "agent",
     });
+  });
+
+  it("re-fires persona side-effect when persona changes between non-null values", async () => {
+    mockSession.persona = "agent";
+    const { rerender } = render(<TourPage />);
+    await waitFor(() =>
+      expect(fetchers.saveOnboardingPreferences).toHaveBeenCalledWith({
+        user_type: "agent",
+      }),
+    );
+
+    mockSession.persona = "investor";
+    rerender(<TourPage />);
+    await waitFor(() =>
+      expect(fetchers.saveOnboardingPreferences).toHaveBeenCalledWith({
+        user_type: "investor",
+      }),
+    );
+    expect(fetchers.saveOnboardingPreferences).toHaveBeenCalledTimes(2);
   });
 
   it("fires all 4 market-select side-effects when market transitions from null to value", async () => {

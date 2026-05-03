@@ -33,6 +33,10 @@ function TourPhaseSwitch() {
   const { session } = useTour();
   useTourSideEffects(session.persona, session.market);
 
+  // TODO(phase-03/04): consume `searchParams.get('next')` to drive the
+  // post-tour redirect after celebrate. The legacy /get-started page used
+  // `next` as the final router.push destination; here it currently rides
+  // along on the URL but is not yet honored past the market step.
   switch (session.phase) {
     case "persona":
       return <PersonaCards />;
@@ -74,14 +78,16 @@ function TourPhaseSwitch() {
 /**
  * Replicates the side-effects the old /get-started/page.tsx fired on
  * persona + market selection. Lives here so TourStateProvider stays pure
- * context-management, not domain logic. Each effect runs exactly once per
- * transition from null → value (or geoId change) by tracking the previous
- * value in a ref.
+ * context-management, not domain logic. Each effect tracks the previous
+ * value in a ref to skip re-firing on identical re-renders.
  */
 function useTourSideEffects(persona: Persona | null, market: MarketRef | null) {
   const lastPersona = useRef<Persona | null>(null);
   const lastMarket = useRef<MarketRef | null>(null);
 
+  // Persona effect: fires whenever the selected persona changes (including
+  // switches between non-null values, matching legacy /get-started semantics).
+  // Skips re-firing on identical re-renders.
   useEffect(() => {
     if (persona && lastPersona.current !== persona) {
       saveOnboardingPreferences({ user_type: persona }).catch((err) => {
