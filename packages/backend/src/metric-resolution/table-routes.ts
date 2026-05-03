@@ -252,7 +252,7 @@ export function getCesRoute(geoLevel: GeoLevel): TableRoute | null {
     case 'state':
       return {
         table: 'economic_state',
-        idColumn: 'state_code',
+        idColumn: 'state_fips',
         dateColumn: 'ces_period_date',
       };
     default:
