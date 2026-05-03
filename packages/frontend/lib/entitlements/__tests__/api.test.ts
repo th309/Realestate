@@ -1,43 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchEntitlements, trackPaywallEvent } from '../api';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fetchEntitlements, trackPaywallEvent } from "../api";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('fetchEntitlements', () => {
+describe("fetchEntitlements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('sends resources as comma-separated query param', async () => {
+  it("sends resources as comma-separated query param", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ tier: 'free', access: {}, trial: null }),
+      json: () => Promise.resolve({ tier: "free", access: {}, trial: null }),
     });
 
-    await fetchEntitlements(['metric:home_value', 'feature:scores']);
+    await fetchEntitlements(["metric:home_value", "feature:scores"]);
 
     const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain('resources=metric%3Ahome_value%2Cfeature%3Ascores');
+    expect(calledUrl).toContain(
+      "resources=metric%3Ahome_value%2Cfeature%3Ascores",
+    );
   });
 
-  it('includes tier override in query params', async () => {
+  it("includes tier override in query params", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ tier: 'pro', access: {}, trial: null }),
+      json: () => Promise.resolve({ tier: "pro", access: {}, trial: null }),
     });
 
-    await fetchEntitlements(['metric:home_value'], 'pro');
+    await fetchEntitlements(["metric:home_value"], "pro");
 
     const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain('tier=pro');
+    expect(calledUrl).toContain("tier=pro");
   });
 
-  it('returns parsed entitlements state', async () => {
+  it("returns parsed entitlements state", async () => {
     const apiResponse = {
-      tier: 'pro',
-      access: { 'metric:home_value': { level: 'full' } },
-      trial: { active: true, daysRemaining: 7, tier: 'pro' },
+      tier: "pro",
+      access: { "metric:home_value": { level: "full" } },
+      trial: { active: true, daysRemaining: 7, tier: "pro" },
     };
 
     mockFetch.mockResolvedValueOnce({
@@ -45,69 +47,73 @@ describe('fetchEntitlements', () => {
       json: () => Promise.resolve(apiResponse),
     });
 
-    const result = await fetchEntitlements(['metric:home_value']);
+    const result = await fetchEntitlements(["metric:home_value"]);
 
-    expect(result.tier).toBe('pro');
-    expect(result.access).toEqual({ 'metric:home_value': { level: 'full' } });
-    expect(result.trial).toEqual({ active: true, daysRemaining: 7, tier: 'pro' });
+    expect(result.tier).toBe("pro");
+    expect(result.access).toEqual({ "metric:home_value": { level: "full" } });
+    expect(result.trial).toEqual({
+      active: true,
+      daysRemaining: 7,
+      tier: "pro",
+    });
     expect(result.loading).toBe(false);
     expect(result.error).toBeNull();
   });
 
-  it('throws on non-ok response', async () => {
+  it("throws on non-ok response", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
     });
 
-    await expect(fetchEntitlements(['metric:home_value'])).rejects.toThrow(
-      'Failed to fetch entitlements'
+    await expect(fetchEntitlements(["metric:home_value"])).rejects.toThrow(
+      "Entitlements API returned 500",
     );
   });
 
-  it('omits resources param when empty array', async () => {
+  it("omits resources param when empty array", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ tier: 'free', access: {}, trial: null }),
+      json: () => Promise.resolve({ tier: "free", access: {}, trial: null }),
     });
 
     await fetchEntitlements([]);
 
     const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).not.toContain('resources=');
+    expect(calledUrl).not.toContain("resources=");
   });
 });
 
-describe('trackPaywallEvent', () => {
+describe("trackPaywallEvent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('sends event via POST', async () => {
+  it("sends event via POST", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true });
 
-    await trackPaywallEvent('feature', 'scores', 'view', '/pricing');
+    await trackPaywallEvent("feature", "scores", "view", "/pricing");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/entitlements/events'),
+      expect.stringContaining("/api/entitlements/events"),
       expect.objectContaining({
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          resourceType: 'feature',
-          resourceId: 'scores',
-          eventType: 'view',
-          pagePath: '/pricing',
+          resourceType: "feature",
+          resourceId: "scores",
+          eventType: "view",
+          pagePath: "/pricing",
         }),
-      })
+      }),
     );
   });
 
-  it('does not throw on network error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  it("does not throw on network error", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
     // Should not throw
     await expect(
-      trackPaywallEvent('feature', 'scores', 'click_upgrade', '/map')
+      trackPaywallEvent("feature", "scores", "click_upgrade", "/map"),
     ).resolves.toBeUndefined();
   });
 });

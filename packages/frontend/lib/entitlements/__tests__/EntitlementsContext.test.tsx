@@ -14,6 +14,16 @@ vi.mock("../useRealtimeTierSync", () => ({
   useRealtimeTierSync: () => ({ toastMessage: null, dismissToast: vi.fn() }),
 }));
 
+// Mock useAuth — EntitlementsProvider depends on it but tests don't need a real
+// AuthProvider tree. Default to an unauthenticated, finished-loading state.
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    user: null,
+    session: null,
+    loading: false,
+  }),
+}));
+
 // Mock getAllMetricIds to avoid pulling in the entire registry
 vi.mock("@/lib/data", () => ({
   getAllMetricIds: () => ["home_value", "rent_index", "cap_rate"],
