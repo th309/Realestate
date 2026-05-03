@@ -15,7 +15,6 @@ import { ArrowRight, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { usePreferences, fetchOnboardingState } from "@/lib/data";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useTour } from "@/app/onboarding";
 import { ProfileSummary } from "./components/ProfileSummary";
 import { TopMarketsList } from "./components/TopMarketsList";
 import { MarketsToWatch } from "./components/MarketsToWatch";
@@ -74,7 +73,6 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const { preferences, isLoading: prefsLoading } = usePreferences();
-  const { restartTour } = useTour();
   const { data: onboardingState } = useQuery({
     queryKey: ["onboarding-state"],
     queryFn: fetchOnboardingState,
@@ -98,13 +96,13 @@ export default function DashboardPage() {
             ? `Welcome back, ${user.user_metadata.display_name}`
             : "Your Dashboard"}
         </h1>
-        <button
-          onClick={restartTour}
+        <a
+          href="/tour?resume=fresh"
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Take the tour
-        </button>
+        </a>
       </div>
 
       {/* Trial expiration banner (visible 4 days before trial ends) */}
