@@ -68,6 +68,9 @@ vi.mock("../components/PersonaCards", () => ({
 vi.mock("../components/MarketPickerStep", () => ({
   MarketPickerStep: () => <div data-testid="market-picker" />,
 }));
+vi.mock("../components/Step4Aha", () => ({
+  Step4Aha: () => <div data-testid="step4-aha" />,
+}));
 
 import TourPage from "../page";
 
@@ -157,6 +160,19 @@ describe("TourPage", () => {
     expect(calledWith).toContain("persona=agent");
     expect(calledWith).toContain("market=metro-39580");
     expect(calledWith).toContain("sessionId=abc");
+  });
+
+  it("renders Step4Aha when session.phase is step4", () => {
+    mockSession = {
+      sessionId: "abc",
+      persona: "agent",
+      market: { geoLevel: "metro", geoId: "39580", name: "Charlotte" },
+      phase: "step4",
+      reportId: null,
+      startedAt: 0,
+    };
+    render(<TourPage />);
+    expect(screen.getByTestId("step4-aha")).toBeInTheDocument();
   });
 
   it("renders Loading… placeholder and skips router.replace when market is null on step1", () => {

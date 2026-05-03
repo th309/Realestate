@@ -12,7 +12,9 @@ import {
 import { TourStateProvider, useTour } from "./TourStateProvider";
 import { PersonaCards } from "./components/PersonaCards";
 import { MarketPickerStep } from "./components/MarketPickerStep";
+import { Step4Aha } from "./components/Step4Aha";
 import type { MarketRef, Persona } from "./types";
+import "./print.css";
 
 export default function TourPage() {
   return (
@@ -47,11 +49,13 @@ function TourPhaseSwitch() {
       // The tour body renders on /map. Redirect there with the tour params
       // attached. The spotlight on /map reads ?tour=step1 to render itself.
       return <RedirectToStep step="step1" route="/map" />;
+    case "step4":
+      return <Step4Aha />;
     case "step2":
     case "step3":
-    case "step4":
-      // Phase 04 placeholder. Verifies routing + state plumbing
-      // work end-to-end ahead of the spotlight steps landing.
+      // step2/step3 spotlights mount on /map and /market pages, not /tour.
+      // This placeholder is unreachable in normal navigation; kept as a
+      // visible safety net if the user lands here directly via a stale URL.
       return (
         <div className="mx-auto max-w-xl px-4 py-12 text-center">
           <p className="text-sm uppercase tracking-wide text-on-surface-variant">

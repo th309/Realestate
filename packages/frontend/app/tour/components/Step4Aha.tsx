@@ -78,7 +78,7 @@ export function Step4Aha() {
           showWatermark={true}
         />
         {/* Phase 05 mounts the inline signup form here, anchored at #signup-cta */}
-        <div id="signup-cta" />
+        <div id="signup-cta" data-print-hide="true" />
       </div>
     );
   }

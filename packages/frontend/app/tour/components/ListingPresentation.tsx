@@ -77,7 +77,10 @@ export function ListingPresentation({
       />
 
       {showWatermark && (
-        <div className="flex items-center justify-between border-b border-warning/30 bg-warning-container px-12 py-2.5 text-[12px] text-on-warning-container">
+        <div
+          data-print-hide="true"
+          className="flex items-center justify-between border-b border-warning/30 bg-warning-container px-12 py-2.5 text-[12px] text-on-warning-container"
+        >
           <span>
             <strong>Demo report</strong> — sign up free below to save, share,
             brand it with your photo, and remove this banner.

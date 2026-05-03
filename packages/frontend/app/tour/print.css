@@ -1,0 +1,43 @@
+/**
+ * Print-friendly styles for the /tour route.
+ *
+ * Goal: when a user prints the Step 4 listing-presentation page, hide all
+ * chrome (demo banner, signup CTA, app shell) and let the report `<article>`
+ * fill the page.
+ *
+ * Design notes:
+ * - We hide the demo banner + signup CTA via `data-print-hide="true"` rather
+ *   than class-attribute selectors, because those classes are semantic
+ *   tokens (e.g. `bg-warning-container`) that may change without the
+ *   intent-to-hide-on-print changing.
+ * - `visibility: hidden` (rather than `display: none`) on the wrapper keeps
+ *   layout stable while we surface the article via `position: absolute`.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  article,
+  article * {
+    visibility: visible;
+  }
+  article {
+    position: absolute;
+    inset: 0;
+    box-shadow: none !important;
+  }
+
+  [data-print-hide="true"] {
+    display: none !important;
+  }
+
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
