@@ -154,12 +154,12 @@ function CallbackHandler() {
             console.error("OAuth signup event tracking failed", err);
           }
 
-          // Anyone without an onboarding_market goes through /get-started so
+          // Anyone without an onboarding_market goes through /tour so
           // the persona+market picker → spotlight tour fires.
           const destination = needsOnboarding
             ? explicitNext
-              ? `/get-started?next=${encodeURIComponent(explicitNext)}`
-              : "/get-started"
+              ? `/tour?next=${encodeURIComponent(explicitNext)}`
+              : "/tour"
             : next;
           debugLog("3_redirect", { to: destination, needsOnboarding });
           router.replace(destination);
