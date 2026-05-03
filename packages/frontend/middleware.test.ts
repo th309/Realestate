@@ -25,7 +25,7 @@ vi.mock("@supabase/ssr", () => ({
 }));
 
 // Import AFTER mocks are registered.
-import { middleware } from "../middleware";
+import { middleware } from "./middleware";
 
 function makeRequest(path: string, method = "GET"): NextRequest {
   const url = new URL(`http://localhost:3000${path}`);
