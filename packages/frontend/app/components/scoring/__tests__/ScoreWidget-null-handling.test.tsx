@@ -113,9 +113,7 @@ describe("ScoreWidget — null score handling", () => {
   it("shows score value when score is valid", () => {
     mockUseScoreData.mockReturnValue({
       data: {
-        homeready: { score: 72, confidence: { level: "b" } },
-        investoredge: { score: 55, confidence: { level: "c" } },
-        marketHealth: { score: 68, confidence: { level: "a" } },
+        propertyiq: { score: 72, confidence: { level: "b" } },
       },
       loading: false,
       error: null,
@@ -135,12 +133,10 @@ describe("ScoreWidget — null score handling", () => {
     expect(screen.queryByText("\u2014")).not.toBeInTheDocument();
   });
 
-  it("shows correct score for market_health type", () => {
+  it("shows correct score when propertyiq score is present", () => {
     mockUseScoreData.mockReturnValue({
       data: {
-        homeready: { score: 72, confidence: { level: "b" } },
-        investoredge: { score: 55, confidence: { level: "c" } },
-        marketHealth: { score: 68, confidence: { level: "a" } },
+        propertyiq: { score: 68, confidence: { level: "a" } },
       },
       loading: false,
       error: null,
@@ -162,9 +158,7 @@ describe("ScoreWidget — null score handling", () => {
 
     mockUseScoreData.mockReturnValue({
       data: {
-        homeready: null,
-        investoredge: null,
-        marketHealth: null,
+        propertyiq: null,
       },
       loading: false,
       error: null,
