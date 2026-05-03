@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeStateToCode } from '../common/geo';
+import { GEOGRAPHIES_WITH_SCORES_VIEW } from './constants';
 
 @Injectable()
 export class MarketsService {
@@ -10,24 +11,25 @@ export class MarketsService {
   ) {}
 
   /**
-   * Look up the source market's core attributes used for peer matching:
-   * score, parent metro CBSA, household count, and display name.
+   * Look up the core summary fields for one market: score, parent metro CBSA,
+   * household count, name. Returns null if the geography is unknown.
    *
-   * TODO(phase-01-task-13): reconcile against canonical `geographies_with_scores`
-   * source/view once Phase 01 Task 13 finalizes the ingest schema. Until then
-   * this queries the same view PeersService relies on so peers + source come
-   * from a consistent surface; if the view is missing we degrade to a stub
-   * so the endpoint stays usable.
+   * Used by the peers endpoint to seed `PeersService.findPeers`. Score may be
+   * null for markets that haven't been scored yet (newly ingested geographies);
+   * callers must handle the null case before passing to peer ranking.
+   *
+   * TODO(phase-01-task-13): see GEOGRAPHIES_WITH_SCORES_VIEW comment for the
+   * view-shape reconciliation.
    */
   async getMarketCore(input: { geoLevel: string; geoId: string }): Promise<{
-    score: number;
+    score: number | null;
     parentMetroCbsa: string | null;
     householdCount: number;
     name: string;
   } | null> {
     try {
       const { data, error } = await this.supabase
-        .from('geographies_with_scores')
+        .from(GEOGRAPHIES_WITH_SCORES_VIEW)
         .select('geo_id, name, score, household_count, parent_metro_cbsa')
         .eq('geo_level', input.geoLevel)
         .eq('geo_id', input.geoId)
@@ -45,7 +47,7 @@ export class MarketsService {
       if (!data) return null;
 
       return {
-        score: data.score,
+        score: data.score ?? null,
         parentMetroCbsa: data.parent_metro_cbsa ?? null,
         householdCount: data.household_count ?? 0,
         name: data.name,

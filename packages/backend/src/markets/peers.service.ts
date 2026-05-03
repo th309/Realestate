@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  GEOGRAPHIES_WITH_SCORES_VIEW,
+  SIZE_DISTANCE_WEIGHT,
+} from './constants';
 
 export interface PeerCandidate {
   geoLevel: string;
@@ -22,9 +26,12 @@ export class PeersService {
   constructor(private supabase: SupabaseService) {}
 
   async findPeers(input: FindPeersInput, limit = 3): Promise<PeerCandidate[]> {
-    // TODO(phase-01-task-13): reconcile against actual table name once ingest lands
+    // TODO(phase-01-task-13): verify this view exists with these exact columns.
+    // Specifically: confirm 'score' maps to PropertyIQ score (vs other score_type),
+    // confirm 'parent_metro_cbsa' is populated for ZIP/county/city rows, and confirm
+    // 'household_count' field name matches schema.
     const candidates = await this.supabase
-      .from('geographies_with_scores')
+      .from(GEOGRAPHIES_WITH_SCORES_VIEW)
       .select(
         'geo_id, name, score, household_count, parent_metro_cbsa, geo_level',
       )
@@ -49,7 +56,9 @@ export class PeersService {
       }))
       .sort(
         (a, b) =>
-          a.scoreDist + a.sizeDist * 10 - (b.scoreDist + b.sizeDist * 10),
+          a.scoreDist +
+          a.sizeDist * SIZE_DISTANCE_WEIGHT -
+          (b.scoreDist + b.sizeDist * SIZE_DISTANCE_WEIGHT),
       )
       .slice(0, limit);
 

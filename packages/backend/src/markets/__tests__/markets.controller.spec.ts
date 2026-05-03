@@ -73,4 +73,18 @@ describe('MarketsController GET /peers', () => {
     );
     expect(peers.findPeers).not.toHaveBeenCalled();
   });
+
+  it('returns empty peers when source has null score (unscored market)', async () => {
+    marketsService.getMarketCore.mockResolvedValue({
+      score: null,
+      parentMetroCbsa: null,
+      householdCount: 0,
+      name: 'Test Market',
+    });
+
+    const result = await controller.getPeers('city', 'unscored-market');
+
+    expect(result.peers).toEqual([]);
+    expect(peers.findPeers).not.toHaveBeenCalled();
+  });
 });

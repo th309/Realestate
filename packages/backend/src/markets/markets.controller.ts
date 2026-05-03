@@ -32,6 +32,10 @@ export class MarketsController {
     if (!source) {
       throw new BadRequestException(`Unknown market ${geoLevel}/${geoId}`);
     }
+    if (source.score == null) {
+      // Market exists but isn't scored yet — peers can't be ranked meaningfully.
+      return { source, peers: [] };
+    }
     const peers = await this.peersService.findPeers({
       geoLevel,
       geoId,
