@@ -65,6 +65,7 @@ import { SchedulingModule } from './scheduling/scheduling.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
 import { MigrationModule } from './migration/migration.module';
+import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
 
 @Module({
   imports: [
@@ -146,6 +147,7 @@ import { MigrationModule } from './migration/migration.module';
     SchedulingModule,
     ContentPipelineModule,
     MigrationModule,
+    EmploymentSectorsModule,
   ],
   controllers: [AppController],
   providers: [
