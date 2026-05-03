@@ -33,10 +33,30 @@ describe("ScoreRing", () => {
     expect(ring.getAttribute("aria-label")).toMatch(/42 of 100/);
   });
 
-  it("uses semantic CSS variables — no hardcoded hex", () => {
+  it("uses semantic CSS variables for the empty track", () => {
+    // The unfilled portion of the ring uses a CSS variable. The filled portion
+    // uses getScoreColor() from the standardized scoring utility (CLAUDE.md §9),
+    // which returns an hsl() string — that is an accepted exception to the
+    // "no inline color" rule because the value comes from a central utility,
+    // not from this component.
     const { container } = render(<ScoreRing score={50} />);
     const html = container.innerHTML;
-    expect(html).not.toMatch(/#[0-9A-Fa-f]{6}/);
     expect(html).toMatch(/var\(--md-/);
+    // Filled portion should be hsl(...) from getScoreColor, not a hardcoded hex.
+    expect(html).not.toMatch(/#[0-9A-Fa-f]{6}/);
+    expect(html).toMatch(/hsl\(/);
+  });
+
+  it("uses different gradient colors for different score buckets", () => {
+    const { container: lowContainer } = render(<ScoreRing score={10} />);
+    const { container: highContainer } = render(<ScoreRing score={90} />);
+    const lowStyle = (lowContainer.firstChild as HTMLElement).style.background;
+    const highStyle = (highContainer.firstChild as HTMLElement).style
+      .background;
+    // Different scores should produce different gradients (different fill colors).
+    expect(lowStyle).not.toEqual(highStyle);
+    // Both should be conic-gradients.
+    expect(lowStyle).toMatch(/conic-gradient/);
+    expect(highStyle).toMatch(/conic-gradient/);
   });
 });

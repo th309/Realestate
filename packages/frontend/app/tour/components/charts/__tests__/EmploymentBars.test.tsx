@@ -36,4 +36,11 @@ describe("EmploymentBars", () => {
     const { getByText } = render(<EmploymentBars rows={rows} />);
     expect(getByText("50k")).toBeInTheDocument();
   });
+
+  it("handles max=0 gracefully (no NaN width)", () => {
+    const rows = [{ label: "X", value: 5, max: 0 }];
+    const { container } = render(<EmploymentBars rows={rows} />);
+    const bar = container.querySelector('[style*="width"]') as HTMLElement;
+    expect(bar.style.width).toBe("0%");
+  });
 });

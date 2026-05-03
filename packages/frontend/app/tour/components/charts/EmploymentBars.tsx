@@ -22,7 +22,8 @@ export function EmploymentBars({ rows }: Props) {
   return (
     <div className="space-y-1.5">
       {rows.map((r) => {
-        const pct = Math.max(0, Math.min(100, (r.value / r.max) * 100));
+        const pct =
+          r.max > 0 ? Math.max(0, Math.min(100, (r.value / r.max) * 100)) : 0;
         return (
           <div key={r.label} className="flex items-center gap-2.5 text-xs">
             <span className="w-24 truncate text-on-surface-variant">

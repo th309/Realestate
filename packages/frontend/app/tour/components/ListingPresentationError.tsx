@@ -31,7 +31,7 @@ export function ListingPresentationError({
         <button
           type="button"
           onClick={onSignupRedirect}
-          className="mt-6 rounded-full bg-primary-dark px-6 py-3 text-sm font-medium text-white"
+          className="mt-6 rounded-full bg-primary px-6 py-3 text-sm font-medium text-on-primary"
         >
           Sign up free →
         </button>

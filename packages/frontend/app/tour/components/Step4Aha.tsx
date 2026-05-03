@@ -62,6 +62,8 @@ export function Step4Aha() {
           })
         }
         onSignupRedirect={() => {
+          // Full-page nav (not router.push) so React Query cache and tour
+          // session cookies clear cleanly before the signup flow.
           window.location.href = "/auth/sign-up?from=tour-rate-limit";
         }}
       />
