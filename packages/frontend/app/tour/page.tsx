@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   saveOnboardingPreferences,
   saveOnboardingMarketSelection,
@@ -43,15 +44,18 @@ function TourPhaseSwitch() {
     case "market":
       return <MarketPickerStep />;
     case "step1":
+      // The tour body renders on /map. Redirect there with the tour params
+      // attached. The spotlight on /map reads ?tour=step1 to render itself.
+      return <RedirectToStep step="step1" route="/map" />;
     case "step2":
     case "step3":
     case "step4":
-      // Phase 03 / Phase 04 placeholder. Verifies routing + state plumbing
+      // Phase 04 placeholder. Verifies routing + state plumbing
       // work end-to-end ahead of the spotlight steps landing.
       return (
         <div className="mx-auto max-w-xl px-4 py-12 text-center">
           <p className="text-sm uppercase tracking-wide text-on-surface-variant">
-            Phase 03/04 placeholder
+            Phase 04 placeholder
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-on-surface">
             Step &quot;{session.phase}&quot; lands here.
@@ -73,6 +77,32 @@ function TourPhaseSwitch() {
     default:
       return <PersonaCards />;
   }
+}
+
+/**
+ * Redirects from /tour to the in-app surface that renders a given tour step
+ * (currently /map for step1). The /tour page is the entry point for the
+ * onboarding flow; once we've collected persona + market we hand control
+ * back to /map with the tour params attached so the spotlight can mount
+ * over the real product surface.
+ */
+function RedirectToStep({ step, route }: { step: "step1"; route: string }) {
+  const router = useRouter();
+  const { session } = useTour();
+  useEffect(() => {
+    if (!session.market || !session.persona) return;
+    const params = new URLSearchParams();
+    params.set("tour", step);
+    params.set("persona", session.persona);
+    params.set("market", `${session.market.geoLevel}-${session.market.geoId}`);
+    params.set("sessionId", session.sessionId);
+    router.replace(`${route}?${params}`);
+  }, [router, step, route, session]);
+  return (
+    <div className="flex min-h-screen items-center justify-center text-on-surface-variant">
+      Loading your market…
+    </div>
+  );
 }
 
 /**

@@ -4,6 +4,13 @@ import { render, screen, waitFor } from "@testing-library/react";
 
 const setPersona = vi.fn();
 const setMarket = vi.fn();
+const replaceSpy = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceSpy }),
+  useSearchParams: () => new URLSearchParams(""),
+  usePathname: () => "/tour",
+}));
 
 type MockSession = {
   sessionId: string;
@@ -67,6 +74,7 @@ import TourPage from "../page";
 describe("TourPage", () => {
   beforeEach(() => {
     Object.values(fetchers).forEach((m) => m.mockClear());
+    replaceSpy.mockClear();
     mockSession = {
       sessionId: "s1",
       persona: null,
@@ -128,5 +136,40 @@ describe("TourPage", () => {
     expect(fetchers.startOnboardingTrial).toHaveBeenCalledTimes(1);
     expect(fetchers.updateChecklistTask).toHaveBeenCalledWith("search_market");
     expect(fetchers.incrementUsageStat).toHaveBeenCalledWith("markets_viewed");
+  });
+
+  it("redirects to /map?tour=step1 when session.phase is step1 and market+persona are set", async () => {
+    mockSession = {
+      sessionId: "abc",
+      persona: "agent",
+      market: { geoLevel: "metro", geoId: "39580", name: "Charlotte" },
+      phase: "step1",
+      reportId: null,
+      startedAt: 0,
+    };
+    render(<TourPage />);
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/map\?.*tour=step1/),
+      ),
+    );
+    const calledWith = replaceSpy.mock.calls[0][0] as string;
+    expect(calledWith).toContain("persona=agent");
+    expect(calledWith).toContain("market=metro-39580");
+    expect(calledWith).toContain("sessionId=abc");
+  });
+
+  it("renders Loading… placeholder and skips router.replace when market is null on step1", () => {
+    mockSession = {
+      sessionId: "abc",
+      persona: "agent",
+      market: null,
+      phase: "step1",
+      reportId: null,
+      startedAt: 0,
+    };
+    render(<TourPage />);
+    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    expect(replaceSpy).not.toHaveBeenCalled();
   });
 });
