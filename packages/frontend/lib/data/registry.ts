@@ -901,6 +901,282 @@ export const METRICS: Record<string, MetricConfig> = {
     hasTimeSeries: true,
     favorableDirection: "higher",
   },
+
+  // ============================================================================
+  // EMPLOYMENT BY SECTOR (BLS)
+  // ============================================================================
+  employment_natural_resources_mining: {
+    id: "employment_natural_resources_mining",
+    title: "Natural Resources & Mining Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_natural_resources_mining/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_construction: {
+    id: "employment_construction",
+    title: "Construction Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_construction/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_manufacturing: {
+    id: "employment_manufacturing",
+    title: "Manufacturing Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_manufacturing/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_trade_transport_utilities: {
+    id: "employment_trade_transport_utilities",
+    title: "Trade, Transportation & Utilities Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_trade_transport_utilities/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_information: {
+    id: "employment_information",
+    title: "Information Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_information/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_financial_activities: {
+    id: "employment_financial_activities",
+    title: "Financial Activities Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_financial_activities/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_professional_business_services: {
+    id: "employment_professional_business_services",
+    title: "Professional & Business Services Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_professional_business_services/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_education_health_services: {
+    id: "employment_education_health_services",
+    title: "Education & Health Services Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_education_health_services/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_leisure_hospitality: {
+    id: "employment_leisure_hospitality",
+    title: "Leisure & Hospitality Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_leisure_hospitality/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_other_services: {
+    id: "employment_other_services",
+    title: "Other Services Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_other_services/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  employment_public_administration: {
+    id: "employment_public_administration",
+    title: "Public Administration Employment",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/employment_public_administration/{geo}",
+    keyField: "auto",
+    supportedGeos: ["state", "metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  // ============================================================================
+  // QCEW (BLS Quarterly Census of Employment & Wages)
+  // ============================================================================
+  qcew_avg_weekly_wage: {
+    id: "qcew_avg_weekly_wage",
+    title: "Average Weekly Wage",
+    format: "currency",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/qcew_avg_weekly_wage/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  qcew_total_establishments: {
+    id: "qcew_total_establishments",
+    title: "Total Establishments",
+    format: "number",
+    dataSource: "bls",
+    apiEndpoint: "/api/metrics/qcew_total_establishments/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  // ============================================================================
+  // IRS COUNTY-TO-COUNTY MIGRATION
+  // ============================================================================
+  irs_migration_in_returns: {
+    id: "irs_migration_in_returns",
+    title: "IRS Migration In (Returns)",
+    format: "number",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_in_returns/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  irs_migration_out_returns: {
+    id: "irs_migration_out_returns",
+    title: "IRS Migration Out (Returns)",
+    format: "number",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_out_returns/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "lower",
+  },
+
+  irs_migration_net_returns: {
+    id: "irs_migration_net_returns",
+    title: "IRS Net Migration (Returns)",
+    format: "number",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_net_returns/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  irs_migration_in_avg_agi: {
+    id: "irs_migration_in_avg_agi",
+    title: "IRS Inbound Migration Avg AGI",
+    format: "currency",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_in_avg_agi/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  irs_migration_out_avg_agi: {
+    id: "irs_migration_out_avg_agi",
+    title: "IRS Outbound Migration Avg AGI",
+    format: "currency",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_out_avg_agi/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "neutral",
+  },
+
+  irs_migration_in_exemptions: {
+    id: "irs_migration_in_exemptions",
+    title: "IRS Migration In (Exemptions)",
+    format: "number",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_in_exemptions/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  irs_migration_out_exemptions: {
+    id: "irs_migration_out_exemptions",
+    title: "IRS Migration Out (Exemptions)",
+    format: "number",
+    dataSource: "irs",
+    apiEndpoint: "/api/metrics/irs_migration_out_exemptions/{geo}",
+    keyField: "auto",
+    supportedGeos: ["county"],
+    rangeType: "dynamic",
+    favorableDirection: "lower",
+  },
+
+  // ============================================================================
+  // REDFIN MIGRATION
+  // ============================================================================
+  redfin_migration_net_inflow: {
+    id: "redfin_migration_net_inflow",
+    title: "Redfin Net Inflow",
+    format: "number",
+    dataSource: "redfin_migration",
+    apiEndpoint: "/api/metrics/redfin_migration_net_inflow/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro"],
+    rangeType: "dynamic",
+    favorableDirection: "higher",
+  },
+
+  redfin_migration_inflow_share: {
+    id: "redfin_migration_inflow_share",
+    title: "Redfin Inflow Share",
+    format: "percent",
+    dataSource: "redfin_migration",
+    apiEndpoint: "/api/metrics/redfin_migration_inflow_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro"],
+    rangeType: "full",
+    favorableDirection: "higher",
+  },
 };
 
 /**
