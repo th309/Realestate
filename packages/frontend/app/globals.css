@@ -31,6 +31,12 @@
   --md-error-container: #f9dedc;
   --md-on-error-container: #410e0b;
 
+  /* PropertyIQ Warning — Amber (brand spec §3.2) */
+  --md-warning: #ff8f00;
+  --md-on-warning: #ffffff;
+  --md-warning-container: #fff3e0;
+  --md-on-warning-container: #663800;
+
   /* PropertyIQ Surfaces — Light Mode (indigo-tinted, visible on all screens) */
   --md-surface: #f3f4fc;
   --md-surface-dim: #e0e3f0;
@@ -84,6 +90,12 @@
     --md-error-container: #8c1d18;
     --md-on-error-container: #f9dedc;
 
+    /* Warning — lightened amber for dark surfaces */
+    --md-warning: #ffb74d;
+    --md-on-warning: #663800;
+    --md-warning-container: #663800;
+    --md-on-warning-container: #fff3e0;
+
     /* Surfaces — deep navy (brand spec §3.4) */
     --md-surface: #1a1a2e;
     --md-surface-dim: #1a1a2e;
@@ -133,6 +145,11 @@
   --color-on-error: var(--md-on-error);
   --color-error-container: var(--md-error-container);
   --color-on-error-container: var(--md-on-error-container);
+
+  --color-warning: var(--md-warning);
+  --color-on-warning: var(--md-on-warning);
+  --color-warning-container: var(--md-warning-container);
+  --color-on-warning-container: var(--md-on-warning-container);
 
   --color-surface: var(--md-surface);
   --color-surface-dim: var(--md-surface-dim);
