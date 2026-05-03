@@ -436,6 +436,16 @@ export {
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
 
+// Anonymous listing presentation (activation tour)
+export {
+  generateAnonymousListingPresentation,
+  TourRateLimitError,
+  type Persona,
+  type MarketRef,
+  type ReportSection,
+  type AnonReportResponse,
+} from "./fetchers/anonymous-listing-presentation";
+
 // ============================================================================
 // VALIDATION CLAIMS (PropertyIQ v4 validation stats)
 // ============================================================================
