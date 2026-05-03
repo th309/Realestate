@@ -1,6 +1,9 @@
 import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { GeneratePresentationDto } from './dto/generate-presentation.dto';
-import { ListingPresentationService } from './listing-presentation.service';
+import {
+  ListingPresentationService,
+  GeoLevel,
+} from './listing-presentation.service';
 import { RedisTourCacheService } from './redis-tour-cache.service';
 import { AnonRateLimitGuard } from './anon-rate-limit.guard';
 
@@ -21,10 +24,16 @@ export class AnonymousController {
   @Post('listing-presentation')
   @UseGuards(AnonRateLimitGuard)
   async generate(@Body() dto: GeneratePresentationDto) {
+    // DTO validates geoLevel via @IsIn(['metro','county','city','zip']),
+    // so the narrow at this boundary is safe.
     const result = await this.listing.generate({
       sessionId: dto.sessionId,
       persona: dto.persona,
-      market: dto.market,
+      market: {
+        geoLevel: dto.market.geoLevel as GeoLevel,
+        geoId: dto.market.geoId,
+        name: dto.market.name,
+      },
     });
 
     // Best-effort cache write. If Redis is down or rejects, the user still

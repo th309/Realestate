@@ -3,14 +3,25 @@ import { ListingPresentationService } from '../listing-presentation.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { PeersService } from '../../markets/peers.service';
+import { MarketsService } from '../../markets/markets.service';
 import { MigrationService } from '../../migration/migration.service';
 import { EmploymentSectorsService } from '../../employment-sectors/employment-sectors.service';
 import { ListingPresentationNarrativeService } from '../listing-presentation-narrative.service';
 
 describe('ListingPresentationService', () => {
   let service: ListingPresentationService;
+  let findPeersMock: jest.Mock;
+  let getMarketCoreMock: jest.Mock;
 
   beforeEach(async () => {
+    findPeersMock = jest.fn().mockResolvedValue([]);
+    getMarketCoreMock = jest.fn().mockResolvedValue({
+      score: 87,
+      parentMetroCbsa: '39580',
+      householdCount: 62000,
+      name: 'Wake County, NC',
+    });
+
     const module = await Test.createTestingModule({
       providers: [
         ListingPresentationService,
@@ -33,7 +44,11 @@ describe('ListingPresentationService', () => {
         },
         {
           provide: PeersService,
-          useValue: { findPeers: jest.fn().mockResolvedValue([]) },
+          useValue: { findPeers: findPeersMock },
+        },
+        {
+          provide: MarketsService,
+          useValue: { getMarketCore: getMarketCoreMock },
         },
         {
           provide: MigrationService,
@@ -84,5 +99,38 @@ describe('ListingPresentationService', () => {
       (s) => s.id === 'migration',
     );
     expect(migrationSection?.limitedData).toBe(true);
+  });
+
+  it('back-fills source.score and parentMetro into findPeers (no garbage zeros)', async () => {
+    await service.generate({
+      sessionId: 'sess-3',
+      persona: 'agent',
+      market: {
+        geoLevel: 'county',
+        geoId: '37183',
+        name: 'Wake County, NC',
+      },
+    });
+    expect(findPeersMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        score: 87,
+        parentMetro: '39580',
+        householdCount: 62000,
+      }),
+    );
+  });
+
+  it('marks migration + employment sections limited when geoLevel is not county', async () => {
+    const result = await service.generate({
+      sessionId: 'sess-4',
+      persona: 'agent',
+      market: { geoLevel: 'metro', geoId: '39580', name: 'Raleigh metro' },
+    });
+    expect(
+      result.report.sections.find((s) => s.id === 'migration')?.limitedData,
+    ).toBe(true);
+    expect(
+      result.report.sections.find((s) => s.id === 'employment')?.limitedData,
+    ).toBe(true);
   });
 });
