@@ -51,4 +51,19 @@ describe('ListingPresentationNarrativeService', () => {
     });
     expect(result.fallbackUsed).toBe(true);
   });
+
+  it('falls back deterministically when Claude API rejects (network error)', async () => {
+    anthropic.messages.mockRejectedValueOnce(
+      new Error('connect ETIMEDOUT api.anthropic.com:443'),
+    );
+    const result = await service.generate({
+      market: { geoLevel: 'city', geoId: 'cary-nc', name: 'Cary, NC' },
+      persona: 'agent',
+      structuredFacts: { score: 87 },
+    });
+    expect(result.fallbackUsed).toBe(true);
+    expect(result.thesis).toContain('Cary');
+    expect(result.actions).toHaveLength(3);
+    expect(result.strategy).toBeTruthy();
+  });
 });

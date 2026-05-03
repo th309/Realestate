@@ -53,7 +53,13 @@ export async function generateAnonymousListingPresentation(input: {
     );
   }
   if (!res.ok) {
-    throw new Error(`Anon listing presentation failed: ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    const detail = body?.error ? ` (${body.error})` : "";
+    const err = new Error(
+      `Anon listing presentation failed: ${res.status}${detail}`,
+    );
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   return res.json();
 }
