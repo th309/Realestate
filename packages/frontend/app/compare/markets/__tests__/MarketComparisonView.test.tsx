@@ -21,7 +21,21 @@ vi.mock("@/lib/data", () => ({
     ],
   })),
   useScoreData: () => ({
-    data: { score: 65, label: "FAIR", geoName: "Charlotte" },
+    data: {
+      location_id: "39580",
+      location_name: "Charlotte",
+      geography: "metro",
+      median_price: 400000,
+      score_date: "2026-04-01",
+      scores: {
+        propertyiq: {
+          score: 65,
+          grade: "B",
+          confidence: 0.8,
+          confidence_level: "high",
+        },
+      },
+    },
     propertyiq: null,
     isLoading: false,
   }),
@@ -52,6 +66,13 @@ describe("MarketComparisonView", () => {
     );
     expect(screen.getByText(/how your market stacks up/i)).toBeInTheDocument();
     expect(screen.getByText("VS")).toBeInTheDocument();
+    // Verify we render the real ScoreResponse path (location_name, score, label)
+    // rather than silently falling back to "metro/16740" + "—".
+    expect(screen.getAllByText("Charlotte").length).toBeGreaterThan(0);
+    // getScoreLabel(65) === "FAIR" per CLAUDE.md §9; rendered as "PropertyIQ 65 · FAIR".
+    expect(screen.getAllByText(/PropertyIQ 65 · FAIR/i).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("renders 'one-of-a-kind' when no peers", async () => {

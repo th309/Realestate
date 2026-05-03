@@ -89,15 +89,16 @@ function TourPhaseSwitch() {
 function RedirectToStep({ step, route }: { step: "step1"; route: string }) {
   const router = useRouter();
   const { session } = useTour();
+  const { market, persona, sessionId } = session;
   useEffect(() => {
-    if (!session.market || !session.persona) return;
+    if (!market || !persona) return;
     const params = new URLSearchParams();
     params.set("tour", step);
-    params.set("persona", session.persona);
-    params.set("market", `${session.market.geoLevel}-${session.market.geoId}`);
-    params.set("sessionId", session.sessionId);
+    params.set("persona", persona);
+    params.set("market", `${market.geoLevel}-${market.geoId}`);
+    params.set("sessionId", sessionId);
     router.replace(`${route}?${params}`);
-  }, [router, step, route, session]);
+  }, [router, step, route, market, persona, sessionId]);
   return (
     <div className="flex min-h-screen items-center justify-center text-on-surface-variant">
       Loading your market…
