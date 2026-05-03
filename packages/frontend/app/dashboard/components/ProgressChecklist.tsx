@@ -8,7 +8,7 @@ const CHECKLIST_ITEMS = [
   {
     id: "search_market",
     label: "Search your first market",
-    href: "/get-started",
+    href: "/tour",
   },
   { id: "view_score", label: "View a PropertyIQ Score", href: "/market" },
   { id: "compare_markets", label: "Compare two markets", href: "/market" },

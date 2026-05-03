@@ -46,13 +46,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
 
   const [phase, setPhase] = useState<TourPhase>("idle");
-  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /get-started
+  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /tour
   const [navigating, setNavigating] = useState(false);
   const actionListenerRef = useRef<(() => void) | null>(null);
   const stepMountedAtRef = useRef<number>(0);
 
   // Detect ?resetTour=1 — clears onboarding_completed_at and routes to
-  // /get-started so the full tour re-runs. Works on any URL the provider
+  // /tour?resume=fresh so the full tour re-runs. Works on any URL the provider
   // is mounted on. `resetTour` is a no-op when not authenticated.
   useEffect(() => {
     if (searchParams?.get("resetTour") !== "1") return;
@@ -61,7 +61,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     router.replace("/tour?resume=fresh");
   }, [searchParams, resetTour, router]);
 
-  // Detect ?onboarding=true (set by /get-started after market selection)
+  // Detect ?onboarding=true (set after market selection in legacy flow)
   useEffect(() => {
     if (searchParams?.get("onboarding") === "true" && phase === "idle") {
       setPhase("guided");

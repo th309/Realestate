@@ -17,7 +17,7 @@ export interface OnboardingStep {
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "persona-search",
-    route: "/get-started",
+    route: "/tour",
     targetSelector: null,
     title: "Let's find your first market",
     body: "Search for a city, metro, or ZIP you're interested in.",

@@ -73,12 +73,12 @@ function SignUpContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // New signups flow through /get-started by default. If the user arrived with an explicit
-  // ?redirect=..., preserve it via /get-started?next=... so onboarding can forward them on.
+  // New signups flow through /tour by default. If the user arrived with an explicit
+  // ?redirect=..., preserve it via /tour?next=... so onboarding can forward them on.
   const explicitRedirect = searchParams.get("redirect");
   const redirectTo = explicitRedirect
-    ? `/get-started?next=${encodeURIComponent(explicitRedirect)}`
-    : "/get-started";
+    ? `/tour?next=${encodeURIComponent(explicitRedirect)}`
+    : "/tour";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
