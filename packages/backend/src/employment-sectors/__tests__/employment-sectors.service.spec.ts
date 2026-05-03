@@ -31,7 +31,9 @@ describe('EmploymentSectorsService', () => {
       error: null,
     });
     const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const eqMock = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
+    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
     const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
     const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
     supabase.from.mockReturnValue({ select: selectMock } as any);
@@ -42,7 +44,29 @@ describe('EmploymentSectorsService', () => {
     });
 
     expect(result.sectors).toHaveLength(3);
-    expect(result.sectors[0].percentShare).toBeCloseTo(45.16, 1); // 28000 / 62000
+    expect(result.sectors[0].percentShareOfTopN).toBeCloseTo(45.16, 1); // 28000 / 62000
     expect(result.totalEmployment).toBe(62000);
+  });
+
+  it('returns empty result when no data exists for the county', async () => {
+    const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
+    const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
+    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
+    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
+    const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
+    supabase.from.mockReturnValue({ select: selectMock } as any);
+
+    const result = await service.getTopSectors({
+      countyFips: '99999',
+      topN: 5,
+      year: 2024,
+    });
+
+    expect(result.sectors).toEqual([]);
+    expect(result.totalEmployment).toBe(0);
+    expect(notMock1).toHaveBeenCalledWith('naics_code', 'is', null);
+    expect(notMock2).toHaveBeenCalledWith('naics_label', 'is', null);
   });
 });

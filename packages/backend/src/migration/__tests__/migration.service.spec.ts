@@ -34,7 +34,9 @@ describe('MigrationService', () => {
       error: null,
     });
     const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const eqMock = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
+    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
     const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
     const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
     supabase.from.mockReturnValue({ select: selectMock } as any);
@@ -53,7 +55,9 @@ describe('MigrationService', () => {
   it('returns empty array when no migration data exists for the county', async () => {
     const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
     const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const eqMock = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
+    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
     const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
     supabase.from.mockReturnValue({
       select: jest.fn().mockReturnValue({ eq: eq2Mock }),
@@ -65,5 +69,25 @@ describe('MigrationService', () => {
       year: 2024,
     });
     expect(result).toEqual([]);
+  });
+
+  it('filters out IRS-suppressed rows with null county FIPS at query time', async () => {
+    const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
+    const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
+    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
+    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
+    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
+    const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
+    supabase.from.mockReturnValue({ select: selectMock } as any);
+
+    await service.getTopInflows({
+      countyFips: '37183',
+      limit: 5,
+      year: 2024,
+    });
+
+    expect(notMock1).toHaveBeenCalledWith('from_county_fips', 'is', null);
+    expect(notMock2).toHaveBeenCalledWith('from_name', 'is', null);
   });
 });
