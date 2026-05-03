@@ -116,3 +116,9 @@ export {
   type UseValidationTimeSeriesOptions,
   type UseValidationGeographyOptions,
 } from "./useValidationData";
+
+// Anonymous listing presentation (activation tour)
+export {
+  useAnonymousListingPresentation,
+  type UseAnonymousListingPresentationVariables,
+} from "./useAnonymousListingPresentation";
