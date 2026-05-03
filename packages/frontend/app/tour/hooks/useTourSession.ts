@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { MarketRef, Persona, TourPhase, TourSession } from "../types";
+import { parseMarket as parseMarketParam } from "../lib/parseMarket";
 
 const COOKIE_NAME = "piq_tour_session";
 const STORAGE_KEY = "piq_tour";
@@ -33,31 +34,6 @@ function deleteCookie(name: string) {
   if (typeof document === "undefined") return;
   const secure = isSecureContext() ? "; secure" : "";
   document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax${secure}`;
-}
-
-const GEO_LEVEL_ALIAS: Record<string, MarketRef["geoLevel"]> = {
-  cbsa: "metro", // CBSA codes are metros at the data layer
-};
-const VALID_GEO_LEVELS = new Set<MarketRef["geoLevel"]>([
-  "metro",
-  "county",
-  "city",
-  "zip",
-]);
-
-function parseMarketParam(raw: string | null): MarketRef | null {
-  if (!raw) return null;
-  // Format: "<geoLevel>-<geoId>" e.g. "metro-39580" or "cbsa-39580" (aliased to metro).
-  const m = raw.match(/^([a-z]+)-(.+)$/);
-  if (!m) return null;
-  const rawLevel = m[1];
-  const normalized = (GEO_LEVEL_ALIAS[rawLevel] ?? rawLevel) as string;
-  if (!VALID_GEO_LEVELS.has(normalized as MarketRef["geoLevel"])) return null;
-  return {
-    geoLevel: normalized as MarketRef["geoLevel"],
-    geoId: m[2],
-    name: "",
-  };
 }
 
 function loadFromStorage(): Partial<TourSession> {
