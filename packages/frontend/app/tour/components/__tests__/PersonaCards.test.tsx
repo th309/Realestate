@@ -38,4 +38,25 @@ describe("PersonaCards", () => {
     fireEvent.click(screen.getByRole("button", { name: /homebuyer/i }));
     expect(setPersona).toHaveBeenCalledWith("homebuyer");
   });
+
+  it("priority badge uses semantic tertiary tokens, not hardcoded hex", () => {
+    const { container } = render(<PersonaCards />);
+    const badge = container.querySelector("span.absolute.right-3.top-3");
+    expect(badge).not.toBeNull();
+    const cls = badge!.className;
+    expect(cls).toContain("bg-tertiary");
+    expect(cls).toContain("text-on-tertiary");
+    // Guard against regression to hardcoded hex.
+    expect(cls).not.toContain("#00C853");
+    expect(cls).not.toContain("bg-[#");
+  });
+
+  it("persona bullet items are positioned (relative) so before:absolute anchors correctly", () => {
+    const { container } = render(<PersonaCards />);
+    const bulletItems = container.querySelectorAll("li.before\\:absolute");
+    expect(bulletItems.length).toBeGreaterThan(0);
+    bulletItems.forEach((li) => {
+      expect(li.className).toContain("relative");
+    });
+  });
 });

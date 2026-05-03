@@ -35,7 +35,7 @@ export function PersonaCard({
       aria-label={`Continue tour as ${title}`}
     >
       {priority && (
-        <span className="absolute right-3 top-3 rounded-md bg-[#00C853] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+        <span className="absolute right-3 top-3 rounded-md bg-tertiary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-on-tertiary">
           For you
         </span>
       )}
@@ -48,7 +48,7 @@ export function PersonaCard({
         {bullets.map((b) => (
           <li
             key={b}
-            className="pl-4 before:absolute before:ml-[-12px] before:text-primary before:content-['→']"
+            className="relative pl-4 before:absolute before:ml-[-12px] before:text-primary before:content-['→']"
           >
             {b}
           </li>

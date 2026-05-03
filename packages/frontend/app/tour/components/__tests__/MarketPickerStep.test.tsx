@@ -88,4 +88,32 @@ describe("MarketPickerStep", () => {
       }),
     );
   });
+
+  it("filters out state-typed results from the listbox (MarketRef has no 'state' geoLevel)", () => {
+    useUniversalSearchMock.mockReturnValue(
+      defaultSearchState({
+        searchResults: [
+          {
+            id: "06",
+            name: "California",
+            type: "state",
+            subtitle: "State",
+          },
+          {
+            id: "39580",
+            name: "Raleigh-Cary, NC",
+            type: "metro",
+            subtitle: "Metropolitan Statistical Area",
+          },
+        ],
+        showSearchResults: true,
+      }),
+    );
+    render(<MarketPickerStep />);
+    // Only the metro result should render — state must be filtered out.
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(1);
+    expect(screen.queryByText("California")).not.toBeInTheDocument();
+    expect(screen.getByText("Raleigh-Cary, NC")).toBeInTheDocument();
+  });
 });

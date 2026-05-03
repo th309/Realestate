@@ -4,7 +4,14 @@ import { useMemo } from "react";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
 import { useScoreData } from "@/lib/data";
 import type { GeoLevel, MarketRef } from "@/lib/data";
+import {
+  getScoreColor,
+  getScoreLabel,
+} from "@/app/components/scoring/ScoreDisplay";
 import { useTour } from "../TourStateProvider";
+
+const VALID_TOUR_GEOS = ["metro", "county", "city", "zip"] as const;
+type TourGeoLevel = (typeof VALID_TOUR_GEOS)[number];
 
 const FALLBACK_MARKETS: MarketRef[] = [
   {
@@ -32,8 +39,13 @@ export function MarketPickerStep() {
   const { searchQuery, searchResults, searchLoading, handleSearch } =
     useUniversalSearch({});
 
-  const visible = useMemo(
-    () => (searchResults as SuggestionResult[]).slice(0, 6),
+  const visible = useMemo<Array<SuggestionResult & { type: TourGeoLevel }>>(
+    () =>
+      (searchResults as SuggestionResult[])
+        .filter((r): r is SuggestionResult & { type: TourGeoLevel } =>
+          (VALID_TOUR_GEOS as readonly string[]).includes(r.type),
+        )
+        .slice(0, 6),
     [searchResults],
   );
 
@@ -70,7 +82,7 @@ export function MarketPickerStep() {
               result={r}
               onSelect={() =>
                 setMarket({
-                  geoLevel: r.type as MarketRef["geoLevel"],
+                  geoLevel: r.type,
                   geoId: r.id,
                   name: r.name,
                 })
@@ -118,14 +130,18 @@ function SuggestionRow({
 }) {
   const { propertyiq } = useScoreData(result.type as GeoLevel, result.id);
   const score = propertyiq?.score;
-  const chip =
-    typeof score === "number"
-      ? scoreChip(score)
-      : {
-          bg: "bg-outline-variant/30",
-          text: "text-on-surface-variant",
-          label: "—",
-        };
+  const hasScore = typeof score === "number";
+
+  // Use standardized scoring utilities (CLAUDE.md §9). getScoreColor returns
+  // an hsl() string keyed off the score, so render via inline style instead
+  // of hardcoded hex Tailwind tokens.
+  const chipStyle = hasScore
+    ? { backgroundColor: getScoreColor(score), color: "#ffffff" }
+    : undefined;
+  const chipLabel = hasScore ? `${score} · ${getScoreLabel(score)}` : "—";
+  const chipClassName = hasScore
+    ? "shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-semibold"
+    : "shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-semibold bg-outline-variant/30 text-on-surface-variant";
 
   return (
     <li role="option" aria-selected="false">
@@ -142,24 +158,10 @@ function SuggestionRow({
             {result.subtitle ?? result.type}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-semibold ${chip.bg} ${chip.text}`}
-        >
-          {chip.label}
+        <span className={chipClassName} style={chipStyle}>
+          {chipLabel}
         </span>
       </button>
     </li>
   );
-}
-
-function scoreChip(score: number) {
-  if (score >= 80)
-    return {
-      bg: "bg-[#00C853]",
-      text: "text-white",
-      label: `${score} · GREAT`,
-    };
-  if (score >= 50)
-    return { bg: "bg-[#FF8F00]", text: "text-white", label: `${score} · FAIR` };
-  return { bg: "bg-[#B3261E]", text: "text-white", label: `${score} · POOR` };
 }
