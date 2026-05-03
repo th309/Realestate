@@ -1,11 +1,46 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { MarketsService } from './markets.service';
+import { PeersService } from './peers.service';
 
 @ApiTags('markets')
 @Controller('api/markets')
 export class MarketsController {
-  constructor(private readonly marketsService: MarketsService) {}
+  constructor(
+    private readonly marketsService: MarketsService,
+    private readonly peersService: PeersService,
+  ) {}
+
+  @Get('peers/:geoLevel/:geoId')
+  @ApiOperation({ summary: 'Get top peer markets for a given geography' })
+  @ApiParam({ name: 'geoLevel', description: 'Geography level (e.g. city)' })
+  @ApiParam({ name: 'geoId', description: 'Geography identifier' })
+  async getPeers(
+    @Param('geoLevel') geoLevel: string,
+    @Param('geoId') geoId: string,
+  ) {
+    const source = await this.marketsService.getMarketCore({
+      geoLevel,
+      geoId,
+    });
+    if (!source) {
+      throw new BadRequestException(`Unknown market ${geoLevel}/${geoId}`);
+    }
+    const peers = await this.peersService.findPeers({
+      geoLevel,
+      geoId,
+      score: source.score,
+      parentMetro: source.parentMetroCbsa,
+      householdCount: source.householdCount,
+    });
+    return { source, peers };
+  }
 
   @Get('stats')
   @ApiOperation({ summary: 'Get market statistics' })

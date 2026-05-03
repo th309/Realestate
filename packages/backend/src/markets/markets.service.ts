@@ -9,6 +9,53 @@ export class MarketsService {
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
 
+  /**
+   * Look up the source market's core attributes used for peer matching:
+   * score, parent metro CBSA, household count, and display name.
+   *
+   * TODO(phase-01-task-13): reconcile against canonical `geographies_with_scores`
+   * source/view once Phase 01 Task 13 finalizes the ingest schema. Until then
+   * this queries the same view PeersService relies on so peers + source come
+   * from a consistent surface; if the view is missing we degrade to a stub
+   * so the endpoint stays usable.
+   */
+  async getMarketCore(input: { geoLevel: string; geoId: string }): Promise<{
+    score: number;
+    parentMetroCbsa: string | null;
+    householdCount: number;
+    name: string;
+  } | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('geographies_with_scores')
+        .select('geo_id, name, score, household_count, parent_metro_cbsa')
+        .eq('geo_level', input.geoLevel)
+        .eq('geo_id', input.geoId)
+        .maybeSingle();
+
+      if (error) {
+        // Likely missing view/table — degrade gracefully (Phase 01 Task 13).
+        console.warn(
+          'getMarketCore: geographies_with_scores lookup failed',
+          error.message,
+        );
+        return null;
+      }
+
+      if (!data) return null;
+
+      return {
+        score: data.score,
+        parentMetroCbsa: data.parent_metro_cbsa ?? null,
+        householdCount: data.household_count ?? 0,
+        name: data.name,
+      };
+    } catch (err) {
+      console.warn('getMarketCore: unexpected error', err);
+      return null;
+    }
+  }
+
   async getMarkets(limit = 100, offset = 0) {
     const { data, error, count } = await this.supabase
       .from('markets')
@@ -428,15 +475,29 @@ export class MarketsService {
 
       // Dedupe by county_fips
       for (const row of data) {
-        if (row.county_name && row.county_fips && !countyMap.has(row.county_fips)) {
+        if (
+          row.county_name &&
+          row.county_fips &&
+          !countyMap.has(row.county_fips)
+        ) {
           // Extract state from county_name (e.g., "vance, nc" -> "NC")
           const parts = row.county_name.split(',');
-          const state = parts.length > 1 ? parts[parts.length - 1].trim().toUpperCase() : '';
-          const name = parts.length > 1 ? parts.slice(0, -1).join(',').trim() : row.county_name;
+          const state =
+            parts.length > 1
+              ? parts[parts.length - 1].trim().toUpperCase()
+              : '';
+          const name =
+            parts.length > 1
+              ? parts.slice(0, -1).join(',').trim()
+              : row.county_name;
           // Capitalize county name properly
-          const capitalizedName = name.split(' ').map((word: string) =>
-            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          ).join(' ');
+          const capitalizedName = name
+            .split(' ')
+            .map(
+              (word: string) =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+            )
+            .join(' ');
 
           countyMap.set(row.county_fips, {
             fips: row.county_fips,
