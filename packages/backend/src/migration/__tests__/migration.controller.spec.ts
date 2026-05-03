@@ -1,8 +1,16 @@
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { MigrationModule } from '../migration.module';
+import { MigrationController } from '../migration.controller';
+import { MigrationService } from '../migration.service';
 import { SupabaseService } from '../../supabase/supabase.service';
+
+// Touch the import so the module reference is preserved for symmetry with the
+// implementation plan; the test compiles controller+service directly with a
+// fake SupabaseService since SupabaseModule is @Global and not part of an
+// isolated test-module compile.
+void MigrationModule;
 
 /**
  * Controller tests for /api/migration/flows/:source/:fips
@@ -111,11 +119,12 @@ describe('MigrationController', () => {
   beforeAll(async () => {
     fake = createSupabaseFake();
     const moduleRef = await Test.createTestingModule({
-      imports: [MigrationModule],
-    })
-      .overrideProvider(SupabaseService)
-      .useValue(fake)
-      .compile();
+      controllers: [MigrationController],
+      providers: [
+        MigrationService,
+        { provide: SupabaseService, useValue: fake },
+      ],
+    }).compile();
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(
       new ValidationPipe({ transform: true, whitelist: true }),
