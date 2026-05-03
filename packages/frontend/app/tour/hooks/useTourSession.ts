@@ -14,20 +14,50 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function isSecureContext(): boolean {
+  return (
+    typeof window !== "undefined" && window.location?.protocol === "https:"
+  );
+}
+
 function writeCookie(name: string, value: string) {
   if (typeof document === "undefined") return;
   const expires = new Date(
     Date.now() + COOKIE_TTL_DAYS * 86400_000,
   ).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}; samesite=lax`;
+  const secure = isSecureContext() ? "; secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}; samesite=lax${secure}`;
 }
+
+function deleteCookie(name: string) {
+  if (typeof document === "undefined") return;
+  const secure = isSecureContext() ? "; secure" : "";
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax${secure}`;
+}
+
+const GEO_LEVEL_ALIAS: Record<string, MarketRef["geoLevel"]> = {
+  cbsa: "metro", // CBSA codes are metros at the data layer
+};
+const VALID_GEO_LEVELS = new Set<MarketRef["geoLevel"]>([
+  "metro",
+  "county",
+  "city",
+  "zip",
+]);
 
 function parseMarketParam(raw: string | null): MarketRef | null {
   if (!raw) return null;
-  // Format: "<geoLevel>-<geoId>" e.g. "metro-39580" or "cbsa-39580" (resolved later).
+  // Format: "<geoLevel>-<geoId>" e.g. "metro-39580" or "cbsa-39580" (aliased to metro).
   const m = raw.match(/^([a-z]+)-(.+)$/);
   if (!m) return null;
-  return { geoLevel: m[1] as MarketRef["geoLevel"], geoId: m[2], name: "" };
+  const rawLevel = m[1];
+  const normalized = (GEO_LEVEL_ALIAS[rawLevel] ?? rawLevel) as string;
+  if (!VALID_GEO_LEVELS.has(normalized as MarketRef["geoLevel"])) return null;
+  return {
+    geoLevel: normalized as MarketRef["geoLevel"],
+    geoId: m[2],
+    name: "",
+  };
 }
 
 function loadFromStorage(): Partial<TourSession> {
@@ -65,9 +95,7 @@ export function useTourSession() {
     if (resumeMode === "fresh" && typeof window !== "undefined") {
       if (typeof localStorage !== "undefined")
         localStorage.removeItem(STORAGE_KEY);
-      if (typeof document !== "undefined") {
-        document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      }
+      deleteCookie(COOKIE_NAME);
     }
 
     const stored = resumeMode === "fresh" ? {} : loadFromStorage();
@@ -156,9 +184,7 @@ export function useTourSession() {
   const reset = useCallback(() => {
     if (typeof localStorage !== "undefined")
       localStorage.removeItem(STORAGE_KEY);
-    if (typeof document !== "undefined") {
-      document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    }
+    deleteCookie(COOKIE_NAME);
     setSession({
       sessionId: mintSessionId(),
       persona: null,

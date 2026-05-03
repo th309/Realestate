@@ -42,6 +42,94 @@ describe("useTourSession", () => {
     const { result } = renderHook(() => useTourSession());
     expect(result.current.session.persona).toBe("agent");
     expect(result.current.session.market?.geoId).toBe("39580");
+    // cbsa alias normalizes to metro at the data layer
+    expect(result.current.session.market?.geoLevel).toBe("metro");
+  });
+
+  it("returns null market when URL geoLevel is unrecognized", () => {
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=agent&market=invalid-12345";
+    const { result } = renderHook(() => useTourSession());
+    expect(result.current.session.persona).toBe("agent");
+    expect(result.current.session.market).toBeNull();
+  });
+
+  it("sets secure flag on cookie write when location is https", () => {
+    const cookieWrites: string[] = [];
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      Document.prototype,
+      "cookie",
+    );
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      set(value: string) {
+        cookieWrites.push(value);
+      },
+      get() {
+        return cookieWrites.join("; ");
+      },
+    });
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { protocol: "https:", href: "https://example.com/tour" },
+    });
+
+    try {
+      renderHook(() => useTourSession());
+      const sessionWrite = cookieWrites.find((c) =>
+        c.startsWith("piq_tour_session="),
+      );
+      expect(sessionWrite).toBeDefined();
+      expect(sessionWrite).toContain("secure");
+    } finally {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      });
+      if (originalDescriptor) {
+        Object.defineProperty(document, "cookie", originalDescriptor);
+      }
+    }
+  });
+
+  it("omits secure flag on cookie write when location is http", () => {
+    const cookieWrites: string[] = [];
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      Document.prototype,
+      "cookie",
+    );
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      set(value: string) {
+        cookieWrites.push(value);
+      },
+      get() {
+        return cookieWrites.join("; ");
+      },
+    });
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { protocol: "http:", href: "http://localhost:3000/tour" },
+    });
+
+    try {
+      renderHook(() => useTourSession());
+      const sessionWrite = cookieWrites.find((c) =>
+        c.startsWith("piq_tour_session="),
+      );
+      expect(sessionWrite).toBeDefined();
+      expect(sessionWrite).not.toContain("secure");
+    } finally {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      });
+      if (originalDescriptor) {
+        Object.defineProperty(document, "cookie", originalDescriptor);
+      }
+    }
   });
 
   it("updates the URL on phase transition", () => {
