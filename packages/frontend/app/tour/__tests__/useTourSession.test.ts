@@ -51,4 +51,35 @@ describe("useTourSession", () => {
       expect.stringContaining("phase=market"),
     );
   });
+
+  it("clears localStorage + cookie on ?resume=fresh and strips the param from URL", () => {
+    // Pre-seed state as if a tour was in progress
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "old-uuid",
+        persona: "agent",
+        market: { geoLevel: "metro", geoId: "39580", name: "Raleigh" },
+        phase: "step3",
+        reportId: "old-report",
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=old-uuid; path=/";
+
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "resume=fresh";
+    const { result } = renderHook(() => useTourSession());
+
+    // New session minted (different UUID than the seeded one)
+    expect(result.current.session.sessionId).not.toBe("old-uuid");
+    // localStorage was cleared (then re-saved with the new session)
+    expect(
+      JSON.parse(localStorage.getItem("piq_tour") ?? "{}").sessionId,
+    ).not.toBe("old-uuid");
+    // URL strip happened — replace called without resume=fresh
+    expect(setSearchParams).toHaveBeenCalledWith(
+      expect.not.stringContaining("resume=fresh"),
+    );
+  });
 });

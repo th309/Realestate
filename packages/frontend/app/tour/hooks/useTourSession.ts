@@ -61,8 +61,17 @@ export function useTourSession() {
   const searchParams = useSearchParams();
 
   const [session, setSession] = useState<TourSession>(() => {
-    const stored = loadFromStorage();
-    const cookieId = readCookie(COOKIE_NAME);
+    const resumeMode = searchParams?.get("resume");
+    if (resumeMode === "fresh" && typeof window !== "undefined") {
+      if (typeof localStorage !== "undefined")
+        localStorage.removeItem(STORAGE_KEY);
+      if (typeof document !== "undefined") {
+        document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+    }
+
+    const stored = resumeMode === "fresh" ? {} : loadFromStorage();
+    const cookieId = resumeMode === "fresh" ? null : readCookie(COOKIE_NAME);
     const sessionId = cookieId ?? stored.sessionId ?? mintSessionId();
     if (!cookieId) writeCookie(COOKIE_NAME, sessionId);
 
@@ -88,6 +97,19 @@ export function useTourSession() {
   useEffect(() => {
     saveToStorage(session);
   }, [session]);
+
+  // Strip ?resume=fresh once state has been reset, so a refresh doesn't re-trigger.
+  useEffect(() => {
+    if (searchParams?.get("resume") === "fresh") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("resume");
+      const queryStr = params.toString();
+      router.replace(queryStr ? `${pathname}?${queryStr}` : pathname);
+    }
+    // Run only once on mount — by the time this fires, the lazy initializer above
+    // has already cleared cookie/localStorage. We just need to clean up the URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setPersona = useCallback(
     (persona: Persona) => {
