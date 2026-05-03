@@ -216,6 +216,10 @@ export {
   type UseValidationScatterOptions,
   type UseValidationTimeSeriesOptions,
   type UseValidationGeographyOptions,
+
+  // Anonymous listing presentation (activation tour)
+  useAnonymousListingPresentation,
+  type UseAnonymousListingPresentationVariables,
 } from "./hooks";
 
 // ============================================================================
