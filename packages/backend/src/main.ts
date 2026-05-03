@@ -11,6 +11,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  // Trust the Railway edge proxy so Express resolves `req.ip` from the
+  // RIGHTMOST x-forwarded-for entry (the trusted edge) rather than letting
+  // the leftmost (attacker-controlled) value through. Required for safe
+  // per-IP rate limiting in AnonRateLimitGuard.
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Only attach Sentry exception filter when DSN is configured (production).

@@ -20,6 +20,7 @@ describe('AnonRateLimitGuard', () => {
           headers: { 'user-agent': ua, 'x-forwarded-for': ip },
           socket: { remoteAddress: '127.0.0.1' },
         }),
+        getResponse: () => ({ setHeader: jest.fn() }),
       }),
     } as ExecutionContext;
   }
@@ -30,9 +31,23 @@ describe('AnonRateLimitGuard', () => {
     expect(redis.expire).toHaveBeenCalledWith('anon_rpt:1.2.3.4', 24 * 60 * 60);
   });
 
-  it('blocks the second call from the same IP within 24h', async () => {
+  it('blocks the second call from the same IP within 24h and sets Retry-After', async () => {
     redis.incr.mockResolvedValue(2);
-    await expect(guard.canActivate(ctx())).rejects.toThrow(HttpException);
+    const setHeader = jest.fn();
+    const blockedCtx = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: {
+            'user-agent': 'Mozilla/5.0',
+            'x-forwarded-for': '1.2.3.4',
+          },
+          socket: { remoteAddress: '127.0.0.1' },
+        }),
+        getResponse: () => ({ setHeader }),
+      }),
+    } as ExecutionContext;
+    await expect(guard.canActivate(blockedCtx)).rejects.toThrow(HttpException);
+    expect(setHeader).toHaveBeenCalledWith('Retry-After', String(24 * 60 * 60));
   });
 
   it('rejects obvious bot user-agents', async () => {
@@ -40,5 +55,20 @@ describe('AnonRateLimitGuard', () => {
     await expect(
       guard.canActivate(ctx('1.2.3.4', 'curl/7.85.0')),
     ).rejects.toThrow(HttpException);
+  });
+
+  it('falls back to socket.remoteAddress when x-forwarded-for is missing', async () => {
+    redis.incr.mockResolvedValue(1);
+    const noXffCtx = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: { 'user-agent': 'Mozilla/5.0' },
+          socket: { remoteAddress: '5.6.7.8' },
+        }),
+        getResponse: () => ({ setHeader: jest.fn() }),
+      }),
+    } as ExecutionContext;
+    expect(await guard.canActivate(noXffCtx)).toBe(true);
+    expect(redis.expire).toHaveBeenCalledWith('anon_rpt:5.6.7.8', 24 * 60 * 60);
   });
 });
