@@ -40,4 +40,17 @@ describe("Section", () => {
     );
     expect(container.innerHTML).not.toMatch(/#[0-9A-Fa-f]{6}/);
   });
+
+  it("uses mobile-first responsive padding", () => {
+    const { container } = render(
+      <Section num="05" title="Title">
+        <span />
+      </Section>,
+    );
+    const section = container.querySelector("section");
+    expect(section?.className).toMatch(/px-5/);
+    expect(section?.className).toMatch(/md:px-12/);
+    expect(section?.className).toMatch(/py-8/);
+    expect(section?.className).toMatch(/md:py-10/);
+  });
 });

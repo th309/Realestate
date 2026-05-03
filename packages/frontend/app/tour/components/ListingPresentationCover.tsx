@@ -15,7 +15,7 @@ export function ListingPresentationCover({
 }: Props) {
   const generatedDate = new Date(generatedAt);
   return (
-    <header className="relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-on-primary-container via-primary to-secondary px-12 pt-14 pb-12 text-white">
+    <header className="relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-on-primary-container via-primary to-secondary px-6 md:px-12 pt-10 md:pt-14 pb-10 md:pb-12 text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full opacity-40"
@@ -27,7 +27,7 @@ export function ListingPresentationCover({
       <p className="text-[11px] font-medium uppercase tracking-[0.18em] opacity-80">
         PropertyIQ Market Intelligence
       </p>
-      <h1 className="mt-3 text-[38px] font-semibold leading-[1.15] tracking-tight">
+      <h1 className="mt-3 text-[28px] md:text-[38px] font-semibold leading-[1.15] tracking-tight">
         {marketName}
         <br />
         Listing Presentation
@@ -39,7 +39,7 @@ export function ListingPresentationCover({
           year: "numeric",
         })}
       </p>
-      <dl className="mt-8 flex gap-8 border-t border-white/20 pt-5 text-xs">
+      <dl className="mt-8 flex flex-wrap gap-4 md:gap-8 border-t border-white/20 pt-5 text-xs">
         <Meta label="Geography" value={geographyDescription} />
         <Meta
           label="Households"

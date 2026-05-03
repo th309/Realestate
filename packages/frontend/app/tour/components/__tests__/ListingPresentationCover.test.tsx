@@ -44,4 +44,20 @@ describe("ListingPresentationCover", () => {
     const { container } = render(<ListingPresentationCover {...baseProps} />);
     expect(container.innerHTML).not.toMatch(/#[0-9A-Fa-f]{6}/);
   });
+
+  it("uses mobile-first responsive classes for header padding and H1", () => {
+    const { container } = render(<ListingPresentationCover {...baseProps} />);
+    const header = container.querySelector("header");
+    expect(header?.className).toMatch(/px-6/);
+    expect(header?.className).toMatch(/md:px-12/);
+    expect(header?.className).toMatch(/pt-10/);
+    expect(header?.className).toMatch(/md:pt-14/);
+    const h1 = container.querySelector("h1");
+    expect(h1?.className).toMatch(/text-\[28px\]/);
+    expect(h1?.className).toMatch(/md:text-\[38px\]/);
+    const dl = container.querySelector("dl");
+    expect(dl?.className).toMatch(/flex-wrap/);
+    expect(dl?.className).toMatch(/gap-4/);
+    expect(dl?.className).toMatch(/md:gap-8/);
+  });
 });

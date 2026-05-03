@@ -11,7 +11,7 @@ interface Props {
 
 export function Section({ num, title, subtitle, children }: Props) {
   return (
-    <section className="border-b border-outline-variant/40 px-12 py-10 last:border-b-0">
+    <section className="border-b border-outline-variant/40 px-5 py-8 md:px-12 md:py-10 last:border-b-0">
       <header className="mb-4">
         <span className="mr-2.5 inline-grid h-7 w-7 place-items-center rounded-lg bg-primary-container font-mono text-[13px] font-semibold text-on-primary-container align-middle">
           {num}
