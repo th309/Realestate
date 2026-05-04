@@ -56,9 +56,15 @@ export interface QcewParsedRow {
  * into a flat list of (geo, sector) rows. Filters to private-sector ownership
  * for supersectors and all-owners summary for industry 10 (total nonfarm).
  *
- * Aggregation levels kept:
- *  - 70/71/72/73: state/MSA/county/township by industry
- *  - 30/32/33/34: MSA-level totals
+ * Aggregation levels kept (BLS QCEW agglvl_code):
+ *  - 70 = county total all industries (industry 10)
+ *  - 73 = county by NAICS supersector (industries 1011-1028)
+ *  - 40 = MSA total all industries (industry 10)
+ *  - 43 = MSA by NAICS supersector (industries 1011-1028)
+ *
+ * Excluded on purpose: 30/31/32/33/34 are CSA (Combined Statistical Area)
+ * roll-ups whose area_fips are CS-prefixed (e.g. CS104) and don't map to
+ * a CBSA, and 50/51/53 are statewide micro/non-MSA roll-ups.
  */
 export function parseQcewSectorRows(
   csv: string,
@@ -77,6 +83,9 @@ export function parseQcewSectorRows(
   }
 
   const ownAllowed = isTotal ? new Set(["0"]) : new Set(["5"]);
+  // Industry 10 uses agglvl 70 (county) + 40 (MSA). Supersectors use
+  // agglvl 73 (county-by-supersector) + 43 (MSA-by-supersector).
+  const aggAllowed = isTotal ? new Set(["70", "40"]) : new Set(["73", "43"]);
 
   const rows: QcewParsedRow[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -85,9 +94,7 @@ export function parseQcewSectorRows(
     if (!ownAllowed.has(ownCode)) continue;
 
     const aggLvl = cols[idx("agglvl_code")];
-    // 70 = state-by-industry, 71/72/73 = county-by-industry totals; 30s = metro
-    if (!["70", "71", "72", "73", "30", "32", "33", "34"].includes(aggLvl))
-      continue;
+    if (!aggAllowed.has(aggLvl)) continue;
 
     const areaFips = cols[idx("area_fips")];
     const month3 = parseInt(cols[idx("month3_emplvl")] || "0", 10);
@@ -337,15 +344,259 @@ function saveResults(
   }
 }
 
-async function main() {
+/**
+ * Convert (year, qtr) to the last day of the quarter as an ISO date string.
+ * 2023q4 -> '2023-12-31', 2024q1 -> '2024-03-31', q2 -> '*-06-30'.
+ */
+export function quarterEndDate(year: number, qtr: number): string {
+  const month = qtr * 3; // q1=3, q2=6, q3=9, q4=12
+  const lastDay = month === 6 ? 30 : month === 9 ? 30 : 31;
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+}
+
+/**
+ * Fetch a QCEW industry-slice CSV (raw text) for a single (year, qtr, industry).
+ * Returns null on 404 / "No Data" responses.
+ */
+export async function downloadQcewIndustry(
+  year: number,
+  qtr: number,
+  industryCode: string,
+): Promise<string | null> {
+  const url = `${QCEW_BASE_URL}/${year}/${qtr}/industry/${industryCode}.csv`;
+  console.log(`  Fetching ${year}Q${qtr} sector ${industryCode}...`);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn(`  No data for ${year}Q${qtr} sector ${industryCode}`);
+        return null;
+      }
+      console.warn(
+        `  HTTP ${response.status} for ${year}Q${qtr} sector ${industryCode}`,
+      );
+      return null;
+    }
+    const csvText = await response.text();
+    if (!csvText.trim() || csvText.includes("No Data")) {
+      return null;
+    }
+    return csvText;
+  } catch (error) {
+    console.warn(
+      `  Error fetching ${year}Q${qtr} sector ${industryCode}: ${error}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * Classify a QCEW area_fips into a county / metro target row, or null
+ * if it's a state/national/other roll-up that doesn't belong in
+ * economic_county or economic_metro.
+ */
+function classifyAreaFips(
+  fips: string,
+): { areaType: "county" | "metro"; areaCode: string } | null {
+  // Skip BLS Combined Statistical Area codes (CS-prefix). CSAs aren't
+  // valid CBSA codes and would otherwise produce garbage `cbsa_code`
+  // values like 'S1040' if we naively stripped the leading 'C'.
+  if (fips.startsWith("CS")) return null;
+  if (fips.startsWith("C") && fips.length === 5) {
+    // CXXXX → CBSA 5-digit (append trailing 0): C1018 -> 10180
+    return { areaType: "metro", areaCode: fips.slice(1) + "0" };
+  }
+  if (fips.length === 5 && !fips.startsWith("C")) {
+    if (fips.endsWith("000")) return null; // state-level roll-up
+    return { areaType: "county", areaCode: fips };
+  }
+  return null;
+}
+
+interface CliArgs {
+  year: number;
+  qtr: number;
+  counties: boolean;
+  metros: boolean;
+  dryRun: boolean;
+}
+
+function parseCliArgs(argv: string[]): CliArgs {
+  const get = (flag: string): string | undefined => {
+    const idx = argv.indexOf(flag);
+    if (idx === -1) return undefined;
+    return argv[idx + 1];
+  };
+  const has = (flag: string) => argv.includes(flag);
+
+  const yearStr = get("--year");
+  const qtrStr = get("--qtr");
+  if (!yearStr || !qtrStr) {
+    throw new Error(
+      "Usage: download-qcew-employment.ts --year <yyyy> --qtr <1-4> [--counties] [--metros] [--dry-run]",
+    );
+  }
+  const year = parseInt(yearStr, 10);
+  const qtr = parseInt(qtrStr, 10);
+  if (isNaN(year) || isNaN(qtr) || qtr < 1 || qtr > 4) {
+    throw new Error(`Invalid --year/--qtr: ${yearStr} ${qtrStr}`);
+  }
+
+  // If neither --counties nor --metros given, default to both (back-compat)
+  let counties = has("--counties");
+  let metros = has("--metros");
+  if (!counties && !metros) {
+    counties = true;
+    metros = true;
+  }
+
+  return { year, qtr, counties, metros, dryRun: has("--dry-run") };
+}
+
+/**
+ * Fetch all sectors (total + 11 supersectors) for one quarter and produce
+ * upsert-ready rows for economic_county and economic_metro.
+ *
+ * Each row carries one period_date + area key + the sector employment
+ * columns + qcew_avg_weekly_wage + qcew_total_establishments. All rows
+ * are merged in-memory by (period_date, fips_code|cbsa_code) so a single
+ * upsert per table covers the full sector matrix.
+ */
+export async function buildQcewSectorRows(
+  year: number,
+  qtr: number,
+): Promise<{
+  countyRows: Record<string, unknown>[];
+  metroRows: Record<string, unknown>[];
+}> {
+  const sectorCodes = ["10", ...Object.keys(NAICS_SUPERSECTORS)]; // total + 11
+  const periodDate = quarterEndDate(year, qtr);
+
+  // key: areaCode -> partial row
+  const countyByCode = new Map<string, Record<string, unknown>>();
+  const metroByCode = new Map<string, Record<string, unknown>>();
+
+  for (const code of sectorCodes) {
+    const csv = await downloadQcewIndustry(year, qtr, code);
+    if (!csv) {
+      await sleep(DELAY_MS);
+      continue;
+    }
+    const rows = parseQcewSectorRows(csv, code);
+
+    for (const r of rows) {
+      const classified = classifyAreaFips(r.areaFips);
+      if (!classified) continue;
+
+      const target =
+        classified.areaType === "county" ? countyByCode : metroByCode;
+      const keyCol =
+        classified.areaType === "county" ? "fips_code" : "cbsa_code";
+
+      let row = target.get(classified.areaCode);
+      if (!row) {
+        row = { period_date: periodDate, [keyCol]: classified.areaCode };
+        target.set(classified.areaCode, row);
+      }
+
+      const colName =
+        r.sectorKey === "total_nonfarm_employment"
+          ? "total_nonfarm_employment"
+          : `employment_${r.sectorKey}`;
+      row[colName] = r.month3Emplvl;
+
+      // Wage + establishments are sector-specific in QCEW; we keep the
+      // total-nonfarm pass as the canonical economy-wide value.
+      if (r.sectorKey === "total_nonfarm_employment") {
+        row.qcew_avg_weekly_wage = r.avgWeeklyWage;
+        row.qcew_total_establishments = r.qtrlyEstabs;
+      }
+    }
+    await sleep(DELAY_MS);
+  }
+
+  return {
+    countyRows: Array.from(countyByCode.values()),
+    metroRows: Array.from(metroByCode.values()),
+  };
+}
+
+async function runSectorIngest(args: CliArgs): Promise<void> {
   console.log("=".repeat(60));
-  console.log("BLS QCEW Employment Data Download (Efficient Bulk Method)");
+  console.log(
+    `BLS QCEW Sector Ingest — ${args.year}Q${args.qtr}` +
+      (args.dryRun ? " (DRY RUN)" : ""),
+  );
+  console.log("=".repeat(60));
+
+  const { countyRows, metroRows } = await buildQcewSectorRows(
+    args.year,
+    args.qtr,
+  );
+
+  console.log(
+    `\nBuilt ${countyRows.length} county rows and ${metroRows.length} metro rows`,
+  );
+
+  if (args.dryRun) {
+    console.log(
+      `\n[dry-run] would upsert ${
+        args.counties ? countyRows.length : 0
+      } county rows`,
+    );
+    console.log(
+      `[dry-run] would upsert ${args.metros ? metroRows.length : 0} metro rows`,
+    );
+    if (countyRows.length > 0) {
+      console.log("[dry-run] sample county row:", countyRows[0]);
+    }
+    if (metroRows.length > 0) {
+      console.log("[dry-run] sample metro row:", metroRows[0]);
+    }
+    return;
+  }
+
+  // Lazy import so --dry-run can run without Supabase env vars.
+  const { upsertWithLogging } =
+    await import("./sources/census-economic/census-economic-upsert");
+
+  if (args.counties && countyRows.length > 0) {
+    await upsertWithLogging({
+      source: "bls",
+      tableName: "economic_county",
+      conflictKeys: ["period_date", "fips_code"],
+      datasetId: `qcew-county-${args.year}q${args.qtr}`,
+      records: countyRows,
+    });
+  }
+
+  if (args.metros && metroRows.length > 0) {
+    await upsertWithLogging({
+      source: "bls",
+      tableName: "economic_metro",
+      conflictKeys: ["period_date", "cbsa_code"],
+      datasetId: `qcew-metro-${args.year}q${args.qtr}`,
+      records: metroRows,
+    });
+  }
+
+  console.log("\n" + "=".repeat(60));
+  console.log("QCEW sector ingest complete");
+  console.log("=".repeat(60));
+}
+
+/**
+ * Legacy CSV-export path (kept for existing combine-economic-data.ts users).
+ * Triggered when no --year/--qtr CLI args are passed.
+ */
+async function runLegacyCsvDump(): Promise<void> {
+  console.log("=".repeat(60));
+  console.log("BLS QCEW Employment Data Download (Legacy CSV Dump)");
   console.log("=".repeat(60));
 
   const currentYear = new Date().getFullYear();
   const currentQtr = Math.ceil((new Date().getMonth() + 1) / 3);
 
-  // Download last 10 years for historical data
   const startYear = currentYear - 10;
   const endYear = currentYear;
 
@@ -353,13 +604,10 @@ async function main() {
   console.log("Note: QCEW data is released ~6 months after quarter end");
   console.log("Using industry slice method (all areas per file)\n");
 
-  // Build list of quarters to fetch
   const quarters: Array<{ year: number; qtr: number }> = [];
   for (let year = startYear; year <= endYear; year++) {
     for (let qtr = 1; qtr <= 4; qtr++) {
-      // Skip future quarters
       if (year === currentYear && qtr >= currentQtr) continue;
-      // Skip quarters less than 6 months old (data not yet available)
       const monthsAgo = (currentYear - year) * 12 + (currentQtr * 3 - qtr * 3);
       if (monthsAgo < 6) continue;
       quarters.push({ year, qtr });
@@ -371,43 +619,52 @@ async function main() {
   const allCountyRecords: EmploymentRecord[] = [];
   const allMetroRecords: EmploymentRecord[] = [];
 
-  try {
-    // Fetch industry 10 (Total, all industries) for each quarter
-    for (const { year, qtr } of quarters) {
-      const records = await fetchQCEWIndustrySlice(year, qtr, "10");
-      if (records) {
-        const employment = extractPrivateEmployment(records);
-
-        // Separate county and metro records
-        for (const record of employment) {
-          if (record.area_type === "county") {
-            allCountyRecords.push(record);
-          } else if (record.area_type === "metro") {
-            allMetroRecords.push(record);
-          }
+  for (const { year, qtr } of quarters) {
+    const records = await fetchQCEWIndustrySlice(year, qtr, "10");
+    if (records) {
+      const employment = extractPrivateEmployment(records);
+      for (const record of employment) {
+        if (record.area_type === "county") {
+          allCountyRecords.push(record);
+        } else if (record.area_type === "metro") {
+          allMetroRecords.push(record);
         }
       }
-      await sleep(DELAY_MS);
     }
+    await sleep(DELAY_MS);
+  }
 
-    console.log(`\nTotal county records: ${allCountyRecords.length}`);
-    console.log(`Total metro records: ${allMetroRecords.length}`);
+  console.log(`\nTotal county records: ${allCountyRecords.length}`);
+  console.log(`Total metro records: ${allMetroRecords.length}`);
 
-    // Calculate YoY growth
-    const countyWithYoY = calculateEmploymentYoY(allCountyRecords);
-    const metroWithYoY = calculateEmploymentYoY(allMetroRecords);
+  const countyWithYoY = calculateEmploymentYoY(allCountyRecords);
+  const metroWithYoY = calculateEmploymentYoY(allMetroRecords);
 
-    // Save results
-    saveResults(countyWithYoY, metroWithYoY);
+  saveResults(countyWithYoY, metroWithYoY);
 
-    console.log("\n" + "=".repeat(60));
-    console.log("Download complete!");
-    console.log("Run combine-economic-data.ts to merge into economic tables");
-    console.log("=".repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("Download complete!");
+  console.log("Run combine-economic-data.ts to merge into economic tables");
+  console.log("=".repeat(60));
+}
+
+async function main(): Promise<void> {
+  try {
+    const argv = process.argv.slice(2);
+    if (argv.includes("--year") && argv.includes("--qtr")) {
+      const args = parseCliArgs(argv);
+      await runSectorIngest(args);
+    } else {
+      await runLegacyCsvDump();
+    }
   } catch (error) {
     console.error("Error:", error);
     process.exit(1);
   }
 }
 
-main();
+// Only run main() when this file is invoked directly, not when imported
+// from tests. require.main === module is the canonical CommonJS guard.
+if (require.main === module) {
+  main();
+}
