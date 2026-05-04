@@ -82,6 +82,7 @@ export function BreathingSpotlight({
   if (!spotlight) {
     return (
       <div
+        aria-hidden="true"
         className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm transition-opacity duration-400"
         onClick={onClick}
       />
@@ -93,6 +94,8 @@ export function BreathingSpotlight({
       {/* SVG mask: transparent cutout over blurred backdrop */}
       <svg
         ref={svgRef}
+        aria-hidden="true"
+        role="presentation"
         className="fixed inset-0 z-[9998] w-full h-full pointer-events-none"
         style={{ backdropFilter: "blur(3px)" }}
       >
@@ -120,6 +123,7 @@ export function BreathingSpotlight({
 
       {/* Pulsing glow ring */}
       <div
+        aria-hidden="true"
         className="fixed z-[9998] pointer-events-none animate-[breathe_2s_ease-in-out_infinite]"
         style={{
           top: spotlight.top - 4,
@@ -137,6 +141,7 @@ export function BreathingSpotlight({
           For action-gated steps (onClick is undefined), clicks must pass through
           to the spotlighted element so the action listener can fire. */}
       <div
+        aria-hidden="true"
         className="fixed inset-0 z-[9998]"
         onClick={onClick}
         style={{ pointerEvents: onClick ? "auto" : "none" }}

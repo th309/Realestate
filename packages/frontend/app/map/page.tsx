@@ -40,6 +40,7 @@ import {
 } from "./components";
 import { Breadcrumbs } from "@/components/navigation";
 import { EntitlementGate } from "@/components/entitlements";
+import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from "./hooks";
@@ -905,6 +906,9 @@ function MapPageInner() {
           }
         />
       </div>
+
+      {/* Sandbox tour spotlight — renders null unless URL has ?tour=step1 */}
+      <TourSpotlight stepId="step1" />
     </div>
   );
 }

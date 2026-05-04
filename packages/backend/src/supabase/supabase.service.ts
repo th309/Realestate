@@ -12,4 +12,13 @@ export class SupabaseService {
   getClient(): SupabaseClient {
     return this.supabaseClient;
   }
+
+  /**
+   * Convenience passthrough to `supabaseClient.from(table)`. Lets services
+   * call `this.supabase.from('mytable').select(...)` without going through
+   * `getClient()` first. Forwards to the same client; identical semantics.
+   */
+  from(table: string): ReturnType<SupabaseClient['from']> {
+    return this.supabaseClient.from(table);
+  }
 }

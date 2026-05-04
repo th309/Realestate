@@ -124,24 +124,67 @@ function CallbackHandler() {
             return;
           }
 
-          // Detect new OAuth signup: profile created within last 60 seconds.
-          // Supabase's OAuth callback doesn't expose an is_new_user flag, so we use this
-          // heuristic — safe because returning sign-ins have profiles created long ago.
-          let isNewSignup = false;
+          // Reuse a tour session if the user signed up via the inline form
+          // before confirming their email. The piq_tour_session cookie
+          // carries the sessionId. Best-effort — failure logs but does not
+          // break the callback.
+          let claimedReportId: string | null = null;
+          let claimedTourSessionId: string | null = null;
+          const tourSessionId = getCookie("piq_tour_session");
+          if (tourSessionId) {
+            try {
+              const claimRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/anonymous/claim`,
+                {
+                  method: "POST",
+                  headers: {
+                    "content-type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({ tourSessionId }),
+                },
+              );
+              if (claimRes.ok) {
+                const body = (await claimRes.json()) as {
+                  claimed?: boolean;
+                  reportId?: string | null;
+                };
+                if (body.claimed && body.reportId) {
+                  claimedReportId = body.reportId;
+                  claimedTourSessionId = tourSessionId;
+                  debugLog("tour_claim", {
+                    tourSessionId,
+                    reportId: claimedReportId,
+                  });
+                }
+              }
+            } catch (err) {
+              debugLog("tour_claim_failed", { error: String(err) });
+            }
+          }
+
+          // Decide where to send the user. Two independent signals:
+          //  - needsOnboarding: deterministic — has the user picked an
+          //    onboarding_market yet? Robust to email-confirmation delays
+          //    that the old "profile age < 60s" window failed.
+          //  - isFreshSignup: only used to fire the conversion analytics
+          //    event once, near profile creation.
+          let needsOnboarding = false;
           try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const profileResult: any = await withTimeout(
               supabase
                 .from("user_profiles")
-                .select("created_at")
+                .select("created_at, onboarding_market")
                 .eq("id", session.user.id)
                 .maybeSingle(),
             );
             const profile = profileResult?.data;
-            isNewSignup =
+            needsOnboarding = !!profile && profile.onboarding_market === null;
+            const isFreshSignup =
               !!profile &&
               Date.now() - new Date(profile.created_at).getTime() < 60_000;
-            if (isNewSignup) {
+            if (isFreshSignup) {
               trackEvent("conversion.signup_complete", { method: "oauth" });
               flush();
             }
@@ -150,13 +193,19 @@ function CallbackHandler() {
             console.error("OAuth signup event tracking failed", err);
           }
 
-          // New signups → onboarding; returning users → requested page
-          const destination = isNewSignup
-            ? explicitNext
-              ? `/get-started?next=${encodeURIComponent(explicitNext)}`
-              : "/get-started"
-            : next;
-          debugLog("3_redirect", { to: destination, isNewSignup });
+          // Tour claim takes priority over the generic onboarding redirect:
+          // a successful claim means the user just generated a report and
+          // should land on the celebrate screen with their saved report.
+          // Anyone else without an onboarding_market goes through /tour so
+          // the persona+market picker → spotlight tour fires.
+          const destination = claimedTourSessionId
+            ? `/tour?phase=celebrate&sessionId=${encodeURIComponent(claimedTourSessionId)}`
+            : needsOnboarding
+              ? explicitNext
+                ? `/tour?next=${encodeURIComponent(explicitNext)}`
+                : "/tour"
+              : next;
+          debugLog("3_redirect", { to: destination, needsOnboarding });
           router.replace(destination);
         } catch (err) {
           debugLog("post_signup_error", { error: String(err) });

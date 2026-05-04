@@ -18,7 +18,6 @@ const PROTECTED_PREFIXES = [
   "/reports",
   "/admin",
   "/upgrade",
-  "/get-started",
 ];
 const PUBLIC_PATHS = ["/reports/sample", "/reports/shared"];
 const AUTH_ROUTES = ["/auth/sign-in", "/auth/sign-up", "/auth/forgot-password"];
@@ -125,6 +124,13 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  // Permanent redirect: /get-started → /tour, preserving query params.
+  if (pathname === "/get-started" || pathname.startsWith("/get-started/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/tour";
+    return NextResponse.redirect(url, 308);
+  }
 
   // Block /_dev routes in production
   if (pathname.startsWith("/_dev")) {

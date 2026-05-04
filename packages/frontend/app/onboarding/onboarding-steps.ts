@@ -7,13 +7,17 @@ export interface OnboardingStep {
   placement: "top" | "bottom" | "left" | "right" | "center";
   actionSelector?: string;
   actionEvent?: string;
+  // When true (and there is no actionSelector), the tooltip renders a
+  // "Continue" button so the user can advance manually. Used for purely
+  // informational steps where there's no natural element to click.
+  allowManualAdvance?: boolean;
   personaBody?: Record<string, string>;
 }
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "persona-search",
-    route: "/get-started",
+    route: "/tour",
     targetSelector: null,
     title: "Let's find your first market",
     body: "Search for a city, metro, or ZIP you're interested in.",
@@ -36,6 +40,15 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       agent:
         "Use this score to identify hot markets and advise your clients on timing.",
     },
+  },
+  {
+    id: "view-score-breakdown",
+    route: null,
+    targetSelector: '[data-tour="score-breakdown"]',
+    title: "Confidence and trend",
+    body: "Each score comes with a confidence rating (data quality) and a 12-month trend so you can see where the market is heading.",
+    placement: "bottom",
+    allowManualAdvance: true,
   },
   {
     id: "generate-report",

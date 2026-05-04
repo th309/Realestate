@@ -64,6 +64,9 @@ import { SocialProofModule } from './social-proof/social-proof.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
+import { MigrationModule } from './migration/migration.module';
+import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
+import { AnonymousModule } from './anonymous/anonymous.module';
 
 @Module({
   imports: [
@@ -144,6 +147,9 @@ import { ContentPipelineModule } from './content-pipeline/content-pipeline.modul
     SocialProofModule,
     SchedulingModule,
     ContentPipelineModule,
+    MigrationModule,
+    EmploymentSectorsModule,
+    AnonymousModule,
   ],
   controllers: [AppController],
   providers: [

@@ -276,7 +276,10 @@ export const ScoreCard = memo(function ScoreCard({
         </div>
 
         {/* History, confidence, and View History button row */}
-        <div className="flex items-center justify-between mt-3 gap-4">
+        <div
+          data-tour="score-breakdown"
+          className="flex items-center justify-between mt-3 gap-4"
+        >
           <div className="flex items-center gap-3">
             {history && history.length > 0 && (
               <HistorySparkline data={history} />

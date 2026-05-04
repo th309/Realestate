@@ -46,12 +46,22 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
 
   const [phase, setPhase] = useState<TourPhase>("idle");
-  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /get-started
+  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /tour
   const [navigating, setNavigating] = useState(false);
   const actionListenerRef = useRef<(() => void) | null>(null);
   const stepMountedAtRef = useRef<number>(0);
 
-  // Detect ?onboarding=true (set by /get-started after market selection)
+  // Detect ?resetTour=1 — clears onboarding_completed_at and routes to
+  // /tour?resume=fresh so the full tour re-runs. Works on any URL the provider
+  // is mounted on. `resetTour` is a no-op when not authenticated.
+  useEffect(() => {
+    if (searchParams?.get("resetTour") !== "1") return;
+    resetTour();
+    setStepIndex(0);
+    router.replace("/tour?resume=fresh");
+  }, [searchParams, resetTour, router]);
+
+  // Detect ?onboarding=true (set after market selection in legacy flow)
   useEffect(() => {
     if (searchParams?.get("onboarding") === "true" && phase === "idle") {
       setPhase("guided");
@@ -172,10 +182,51 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setPhase("idle");
   }, [markComplete, stepIndex]);
 
+  // Advance to the next step manually (used by the "Continue" button on
+  // informational steps that have no natural element to click).
+  const handleManualAdvance = useCallback(() => {
+    const step = ONBOARDING_STEPS[stepIndex];
+    if (!step) return;
+    trackEvent("onboarding.spotlight_step_completed", {
+      step_name: step.id,
+      step_index: stepIndex,
+      duration_ms: Date.now() - stepMountedAtRef.current,
+    });
+    if (stepIndex >= ONBOARDING_STEPS.length - 1) {
+      markComplete();
+      setPhase("idle");
+      return;
+    }
+    const nextStep = ONBOARDING_STEPS[stepIndex + 1];
+    if (nextStep.route && pathname !== nextStep.route) {
+      setNavigating(true);
+      router.push(nextStep.route);
+      setTimeout(() => {
+        setNavigating(false);
+        setStepIndex(stepIndex + 1);
+      }, 1000);
+    } else {
+      setStepIndex(stepIndex + 1);
+    }
+  }, [stepIndex, pathname, router, markComplete]);
+
+  // Esc closes the tour at any time. WCAG 2.1 keyboard requirement.
+  useEffect(() => {
+    if (phase !== "guided") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleDismiss();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, handleDismiss]);
+
   const restartTourHandler = useCallback(() => {
     resetTour();
     setStepIndex(0);
-    router.push("/get-started");
+    router.push("/tour?resume=fresh");
   }, [resetTour, router]);
 
   const currentStep = phase === "guided" ? ONBOARDING_STEPS[stepIndex] : null;
@@ -218,6 +269,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             currentIndex={stepIndex}
             totalSteps={ONBOARDING_STEPS.length}
             onDismiss={handleDismiss}
+            onContinue={handleManualAdvance}
           />
         </>
       )}
