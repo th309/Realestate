@@ -13,6 +13,7 @@ import { TourStateProvider, useTour } from "./TourStateProvider";
 import { PersonaCards } from "./components/PersonaCards";
 import { MarketPickerStep } from "./components/MarketPickerStep";
 import { Step4Aha } from "./components/Step4Aha";
+import { PostSignupCelebrate } from "./components/PostSignupCelebrate";
 import type { MarketRef, Persona } from "./types";
 import "./print.css";
 
@@ -71,13 +72,7 @@ function TourPhaseSwitch() {
         </div>
       );
     case "celebrate":
-      return (
-        <div className="mx-auto max-w-xl px-4 py-12 text-center">
-          <p className="text-2xl font-semibold text-on-surface">
-            Phase 05 placeholder — celebrate screen lands here.
-          </p>
-        </div>
-      );
+      return <PostSignupCelebrate />;
     default:
       return <PersonaCards />;
   }
