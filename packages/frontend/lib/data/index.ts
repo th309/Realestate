@@ -220,6 +220,9 @@ export {
   // Anonymous listing presentation (activation tour)
   useAnonymousListingPresentation,
   type UseAnonymousListingPresentationVariables,
+
+  // Tour signup mutation (anonymous → claimed user conversion)
+  useTourSignup,
 } from "./hooks";
 
 // ============================================================================
