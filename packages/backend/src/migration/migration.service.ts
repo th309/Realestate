@@ -29,6 +29,9 @@ export class MigrationService {
           `tax_year, num_returns, num_exemptions, agi_thousands, ${partnerCol}`,
         )
         .eq(dirCol, fips)
+        // IRS publishes a "non-migrants/stayers" row per county where
+        // origin_fips === destination_fips. Exclude it from migration views.
+        .neq(partnerCol, fips)
         .order('num_returns', { ascending: false })
         .limit(limit + 5); // pad for filtering reserved partners
 
@@ -86,6 +89,8 @@ export class MigrationService {
       .from('redfin_migration_flows_metro')
       .select(`period_date, share_pct, net_searches, ${partnerCol}`)
       .eq(dirCol, fips)
+      // Exclude same-metro stayer rows analogous to IRS non-migrants.
+      .neq(partnerCol, fips)
       .order('share_pct', { ascending: false })
       .limit(limit);
 

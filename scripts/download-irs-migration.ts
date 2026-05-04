@@ -21,9 +21,6 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@supabase/supabase-js";
-import * as dotenv from "dotenv";
-import { join } from "path";
 import {
   parseIrsXlsx,
   deriveCountyAggregates,
@@ -32,6 +29,7 @@ import {
   IrsCountyAggregate,
 } from "./sources/irs-migration/parser";
 import { findLatestIrsRelease } from "./sources/irs-migration/release-finder";
+import { getSupabaseClient } from "./lib/db-client";
 
 // Re-export pure functions/types for test consumers and downstream callers
 export {
@@ -136,18 +134,7 @@ export async function pollAndIngestIrsMigration(
 // CLI entrypoint
 // ---------------------------------------------------------------------------
 if (require.main === module) {
-  dotenv.config({ path: join(process.cwd(), "packages/backend/.env") });
-
-  const url = process.env.SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    console.error(
-      "Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in packages/backend/.env",
-    );
-    process.exit(1);
-  }
-  const supabase = createClient(url, key);
+  const supabase = getSupabaseClient();
 
   pollAndIngestIrsMigration(supabase)
     .then((res) => {

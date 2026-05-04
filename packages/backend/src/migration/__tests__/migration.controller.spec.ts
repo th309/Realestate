@@ -28,6 +28,15 @@ function createSupabaseFake() {
   //   .from('geographies').select(...).in(...) -> { data, error }
   const tables: Record<string, any[]> = {
     irs_county_migration_flows: [
+      // Same-county "non-migrants/stayers" row — must be filtered out.
+      {
+        tax_year: 2023,
+        num_returns: 437996,
+        num_exemptions: 800000,
+        agi_thousands: 50000000,
+        origin_fips: '37183',
+        destination_fips: '37183',
+      },
       {
         tax_year: 2023,
         num_returns: 1234,
@@ -44,6 +53,7 @@ function createSupabaseFake() {
         origin_fips: '36061',
         destination_fips: '37183',
       },
+      // Reserved bucket (still filtered post-fetch in service).
       {
         tax_year: 2023,
         num_returns: 500,
@@ -72,6 +82,10 @@ function createSupabaseFake() {
       select: (_cols: string) => q,
       eq: (col: string, val: any) => {
         filters.push((r) => r[col] === val);
+        return q;
+      },
+      neq: (col: string, val: any) => {
+        filters.push((r) => r[col] !== val);
         return q;
       },
       in: (col: string, vals: any[]) => {
@@ -157,5 +171,11 @@ describe('MigrationController', () => {
     expect(res.body).toHaveProperty('flows');
     expect(Array.isArray(res.body.flows)).toBe(true);
     expect(res.body.flows.length).toBeLessThanOrEqual(3);
+    // Must filter out same-county "non-migrants" row and reserved buckets.
+    for (const f of res.body.flows) {
+      expect(f.origin_fips).not.toBe('37183');
+      expect(f.origin_fips).not.toBe('00000');
+      expect(f.origin_fips).not.toBe('99999');
+    }
   });
 });
