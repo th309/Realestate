@@ -4,6 +4,7 @@ import { join } from "path";
 import {
   parseQcewSectorRows,
   NAICS_SUPERSECTORS,
+  defaultQcewPeriod,
 } from "../download-qcew-employment";
 
 describe("parseQcewSectorRows", () => {
@@ -74,4 +75,53 @@ describe("parseQcewSectorRows", () => {
     expect(wake).toBeDefined();
     expect(wake!.month3Emplvl).toBe(3350 + 24914 + 15607);
   });
+});
+
+describe("defaultQcewPeriod", () => {
+  // BLS publishes QCEW with a ~6-month lag. The function maps a calendar
+  // month to the most-recently-published (year, qtr). Mirrors the bash
+  // logic in `.github/workflows/economic-monthly-import.yml`.
+  const cases: Array<{
+    label: string;
+    iso: string;
+    expected: { year: number; qtr: number };
+  }> = [
+    {
+      label: "Feb mid-month → prev-year Q3",
+      iso: "2026-02-15T00:00:00Z",
+      expected: { year: 2025, qtr: 3 },
+    },
+    {
+      label: "May mid-month → prev-year Q4",
+      iso: "2026-05-10T00:00:00Z",
+      expected: { year: 2025, qtr: 4 },
+    },
+    {
+      label: "Aug start-of-month → current-year Q1",
+      iso: "2026-08-01T00:00:00Z",
+      expected: { year: 2026, qtr: 1 },
+    },
+    {
+      label: "Nov end-of-month → current-year Q2",
+      iso: "2026-11-30T00:00:00Z",
+      expected: { year: 2026, qtr: 2 },
+    },
+    // Boundary cases — first day of the quarter-shift month.
+    {
+      label: "Apr 1 boundary → prev-year Q4",
+      iso: "2026-04-01T00:00:00Z",
+      expected: { year: 2025, qtr: 4 },
+    },
+    {
+      label: "Jul 1 boundary → current-year Q1",
+      iso: "2026-07-01T00:00:00Z",
+      expected: { year: 2026, qtr: 1 },
+    },
+  ];
+
+  for (const c of cases) {
+    it(c.label, () => {
+      expect(defaultQcewPeriod(new Date(c.iso))).toEqual(c.expected);
+    });
+  }
 });

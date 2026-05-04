@@ -469,6 +469,31 @@ interface CliArgs {
   dryRun: boolean;
 }
 
+/**
+ * Compute the most-recently-published QCEW quarter for a given date.
+ *
+ * BLS QCEW publishes ~6 months after quarter end:
+ *   Q1 → ~July, Q2 → ~October, Q3 → ~January, Q4 → ~April.
+ *
+ * Mirrors the bash logic in `.github/workflows/economic-monthly-import.yml`
+ * (`steps.qcew_period`) so the GitHub Action and this script stay in lockstep.
+ *   Jan-Mar → previous-year Q3
+ *   Apr-Jun → previous-year Q4
+ *   Jul-Sep → current-year  Q1
+ *   Oct-Dec → current-year  Q2
+ */
+export function defaultQcewPeriod(now: Date = new Date()): {
+  year: number;
+  qtr: number;
+} {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1; // 1..12
+  if (month <= 3) return { year: year - 1, qtr: 3 };
+  if (month <= 6) return { year: year - 1, qtr: 4 };
+  if (month <= 9) return { year, qtr: 1 };
+  return { year, qtr: 2 };
+}
+
 function parseCliArgs(argv: string[]): CliArgs {
   const get = (flag: string): string | undefined => {
     const idx = argv.indexOf(flag);
@@ -479,15 +504,32 @@ function parseCliArgs(argv: string[]): CliArgs {
 
   const yearStr = get("--year");
   const qtrStr = get("--qtr");
-  if (!yearStr || !qtrStr) {
+
+  let year: number;
+  let qtr: number;
+
+  if (!yearStr && !qtrStr) {
+    // Neither flag given: default to most-recently-published QCEW quarter.
+    // This keeps the legacy `npx tsx download-qcew-employment.ts` (no flags)
+    // invocation in `.github/workflows/economic-monthly-import.yml` working
+    // after Phase 1.4 made the sector-ingest path the default.
+    const def = defaultQcewPeriod();
+    year = def.year;
+    qtr = def.qtr;
+    console.log(
+      `Defaulting to most-recently-published quarter: ${year}Q${qtr}`,
+    );
+  } else if (!yearStr || !qtrStr) {
+    // Partial args: surface a clear usage error instead of silently defaulting.
     throw new Error(
       "Usage: download-qcew-employment.ts --year <yyyy> --qtr <1-4> [--counties] [--metros] [--dry-run]",
     );
-  }
-  const year = parseInt(yearStr, 10);
-  const qtr = parseInt(qtrStr, 10);
-  if (isNaN(year) || isNaN(qtr) || qtr < 1 || qtr > 4) {
-    throw new Error(`Invalid --year/--qtr: ${yearStr} ${qtrStr}`);
+  } else {
+    year = parseInt(yearStr, 10);
+    qtr = parseInt(qtrStr, 10);
+    if (isNaN(year) || isNaN(qtr) || qtr < 1 || qtr > 4) {
+      throw new Error(`Invalid --year/--qtr: ${yearStr} ${qtrStr}`);
+    }
   }
 
   // If neither --counties nor --metros given, default to both (back-compat)
@@ -699,11 +741,14 @@ async function runLegacyCsvDump(): Promise<void> {
 async function main(): Promise<void> {
   try {
     const argv = process.argv.slice(2);
-    if (argv.includes("--year") && argv.includes("--qtr")) {
+    // Explicit opt-in to the legacy multi-quarter CSV dump path. Default
+    // behaviour is the sector ingest, which self-defaults --year/--qtr to
+    // the most-recently-published quarter when both are omitted.
+    if (argv.includes("--legacy-csv-dump")) {
+      await runLegacyCsvDump();
+    } else {
       const args = parseCliArgs(argv);
       await runSectorIngest(args);
-    } else {
-      await runLegacyCsvDump();
     }
   } catch (error) {
     console.error("Error:", error);
