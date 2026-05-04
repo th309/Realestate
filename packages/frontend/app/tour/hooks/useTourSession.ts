@@ -115,44 +115,43 @@ export function useTourSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // NOTE: router.replace must be called OUTSIDE the setSession updater function.
+  // React 19 may invoke updater functions during render, and calling router methods
+  // (which trigger Router setState) during render throws "Cannot update a component
+  // while rendering a different component". State + URL sync is split into:
+  //   1. Pure state update via setSession((prev) => next)
+  //   2. router.replace as a normal side-effect after setSession returns
+  // These callbacks run from event handlers, so reading session.market via closure
+  // is safe (the post-render value is current at click time).
   const setPersona = useCallback(
     (persona: Persona) => {
-      setSession((prev) => {
-        const nextPhase: TourPhase = prev.market ? "step1" : "market";
-        const next: TourSession = { ...prev, persona, phase: nextPhase };
-        const params = new URLSearchParams(searchParams?.toString() ?? "");
-        params.set("persona", persona);
-        params.set("phase", nextPhase);
-        router.replace(`${pathname}?${params}`);
-        return next;
-      });
+      const nextPhase: TourPhase = session.market ? "step1" : "market";
+      setSession((prev) => ({ ...prev, persona, phase: nextPhase }));
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      params.set("persona", persona);
+      params.set("phase", nextPhase);
+      router.replace(`${pathname}?${params}`);
     },
-    [router, pathname, searchParams],
+    [router, pathname, searchParams, session.market],
   );
 
   const setMarket = useCallback(
     (market: MarketRef) => {
-      setSession((prev) => {
-        const next: TourSession = { ...prev, market, phase: "step1" };
-        const params = new URLSearchParams(searchParams?.toString() ?? "");
-        params.set("market", `${market.geoLevel}-${market.geoId}`);
-        params.set("phase", "step1");
-        router.replace(`${pathname}?${params}`);
-        return next;
-      });
+      setSession((prev) => ({ ...prev, market, phase: "step1" }));
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      params.set("market", `${market.geoLevel}-${market.geoId}`);
+      params.set("phase", "step1");
+      router.replace(`${pathname}?${params}`);
     },
     [router, pathname, searchParams],
   );
 
   const advanceTo = useCallback(
     (phase: TourPhase) => {
-      setSession((prev) => {
-        const next: TourSession = { ...prev, phase };
-        const params = new URLSearchParams(searchParams?.toString() ?? "");
-        params.set("phase", phase);
-        router.replace(`${pathname}?${params}`);
-        return next;
-      });
+      setSession((prev) => ({ ...prev, phase }));
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      params.set("phase", phase);
+      router.replace(`${pathname}?${params}`);
     },
     [router, pathname, searchParams],
   );
