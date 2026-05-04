@@ -122,3 +122,6 @@ export {
   useAnonymousListingPresentation,
   type UseAnonymousListingPresentationVariables,
 } from "./useAnonymousListingPresentation";
+
+// Tour signup (anonymous → claimed user conversion)
+export { useTourSignup } from "./useTourSignup";

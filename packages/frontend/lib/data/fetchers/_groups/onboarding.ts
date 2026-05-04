@@ -75,3 +75,10 @@ export {
   type ReportSection,
   type AnonReportResponse,
 } from "../anonymous-listing-presentation";
+
+// Tour signup (anonymous → claimed user conversion)
+export {
+  signUpWithTour,
+  type SignUpWithTourInput,
+  type SignUpWithTourResult,
+} from "../tour-signup";
