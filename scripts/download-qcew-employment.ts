@@ -53,14 +53,28 @@ export interface QcewParsedRow {
 
 /**
  * Parse a QCEW industry-slice CSV (per-area rows for one industry/quarter)
- * into a flat list of (geo, sector) rows. Filters to private-sector ownership
- * for supersectors and all-owners summary for industry 10 (total nonfarm).
+ * into a flat list of (geo, sector) rows.
+ *
+ * Ownership filter (own_code) per industry:
+ *  - '10'   (total nonfarm) → own_code = '0' (all-owners summary)
+ *  - '1028' (public administration) → own_code in {'1','2','3'}
+ *           (federal/state/local government — there is no private public-admin)
+ *  - other supersectors (1011-1027) → own_code = '5' (private)
+ *
+ * For sector 1028 we sum month3_emplvl across the three government own_codes
+ * for each (area_fips, year, qtr) so the parser still emits one row per geo.
+ * Wage and establishment columns are NOT attached to the 1028 rollup — those
+ * are sector-specific and a sum-across-owners would be misleading; the
+ * canonical economy-wide wage/establishment values come from industry 10.
  *
  * Aggregation levels kept (BLS QCEW agglvl_code):
  *  - 70 = county total all industries (industry 10)
  *  - 73 = county by NAICS supersector (industries 1011-1028)
  *  - 40 = MSA total all industries (industry 10)
- *  - 43 = MSA by NAICS supersector (industries 1011-1028)
+ *  - 43 = MSA by NAICS supersector (industries 1011-1027 — note: BLS does
+ *        not publish agglvl 43 for industry 1028; metro public_administration
+ *        is not available from this slice and must be rolled up downstream
+ *        from constituent counties)
  *
  * Excluded on purpose: 30/31/32/33/34 are CSA (Combined Statistical Area)
  * roll-ups whose area_fips are CS-prefixed (e.g. CS104) and don't map to
@@ -75,6 +89,7 @@ export function parseQcewSectorRows(
   const idx = (col: string) => header.indexOf(col);
 
   const isTotal = industryCode === "10";
+  const isPublicAdmin = industryCode === "1028";
   const sectorKey = isTotal
     ? "total_nonfarm_employment"
     : NAICS_SUPERSECTORS[industryCode];
@@ -82,10 +97,18 @@ export function parseQcewSectorRows(
     throw new Error(`Unknown QCEW industry code: ${industryCode}`);
   }
 
-  const ownAllowed = isTotal ? new Set(["0"]) : new Set(["5"]);
+  const ownAllowed = isTotal
+    ? new Set(["0"])
+    : isPublicAdmin
+      ? new Set(["1", "2", "3"]) // federal + state + local government
+      : new Set(["5"]); // private
   // Industry 10 uses agglvl 70 (county) + 40 (MSA). Supersectors use
   // agglvl 73 (county-by-supersector) + 43 (MSA-by-supersector).
   const aggAllowed = isTotal ? new Set(["70", "40"]) : new Set(["73", "43"]);
+
+  // For sector 1028 we accumulate fed/state/local rows per (area, year, qtr).
+  // Key: `${areaFips}|${year}|${qtr}`
+  const govSums = isPublicAdmin ? new Map<string, QcewParsedRow>() : null;
 
   const rows: QcewParsedRow[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -104,6 +127,27 @@ export function parseQcewSectorRows(
     const year = parseInt(cols[idx("year")], 10);
     const qtr = parseInt(cols[idx("qtr")], 10);
 
+    if (govSums) {
+      // Sum month3_emplvl across federal/state/local owners. Wage and
+      // establishment columns are intentionally NOT carried for 1028.
+      const key = `${areaFips}|${year}|${qtr}`;
+      const existing = govSums.get(key);
+      if (existing) {
+        existing.month3Emplvl += month3;
+      } else {
+        govSums.set(key, {
+          areaFips,
+          sectorKey,
+          month3Emplvl: month3,
+          avgWeeklyWage: null,
+          qtrlyEstabs: null,
+          year,
+          qtr,
+        });
+      }
+      continue;
+    }
+
     rows.push({
       areaFips,
       sectorKey,
@@ -113,6 +157,10 @@ export function parseQcewSectorRows(
       year,
       qtr,
     });
+  }
+
+  if (govSums) {
+    for (const r of govSums.values()) rows.push(r);
   }
   return rows;
 }
