@@ -82,7 +82,7 @@ export const employmentTools = [
           "Geography ID: state code (e.g. 'CA'), CBSA (e.g. '31080'), or 5-digit county FIPS",
         ),
     },
-    handler: async (args: GetEmploymentBySectorArgs) =>
-      handleGetEmploymentBySector(args),
+    handler: async (args: any) =>
+      handleGetEmploymentBySector(args as GetEmploymentBySectorArgs),
   },
 ];

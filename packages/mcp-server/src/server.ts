@@ -7,6 +7,7 @@ import { investorTools } from "./tools/investors";
 import { brokerageTools } from "./tools/brokerage";
 import { propertyManagerTools } from "./tools/property-managers";
 import { employmentTools } from "./tools/employment";
+import { migrationTools } from "./tools/migration";
 
 /** All tool arrays, flattened into one list */
 export const ALL_TOOLS = [
@@ -17,6 +18,7 @@ export const ALL_TOOLS = [
   ...brokerageTools,
   ...propertyManagerTools,
   ...employmentTools,
+  ...migrationTools,
 ];
 
 export function createServer(): McpServer {
