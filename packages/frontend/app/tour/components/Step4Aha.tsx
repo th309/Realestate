@@ -6,6 +6,7 @@ import { useTour } from "../TourStateProvider";
 import { ListingPresentation } from "./ListingPresentation";
 import { ListingPresentationLoading } from "./ListingPresentationLoading";
 import { ListingPresentationError } from "./ListingPresentationError";
+import { InlineSignupForm } from "./InlineSignupForm";
 
 /**
  * Step4Aha — drives the anonymous listing-presentation lifecycle.
@@ -79,8 +80,9 @@ export function Step4Aha() {
           geographyDescription={session.market.name}
           showWatermark={true}
         />
-        {/* Phase 05 mounts the inline signup form here, anchored at #signup-cta */}
-        <div id="signup-cta" data-print-hide="true" />
+        <div data-print-hide="true">
+          <InlineSignupForm />
+        </div>
       </div>
     );
   }

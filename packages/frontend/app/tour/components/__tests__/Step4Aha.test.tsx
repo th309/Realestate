@@ -41,6 +41,9 @@ vi.mock("../ListingPresentationError", () => ({
     </div>
   ),
 }));
+vi.mock("../InlineSignupForm", () => ({
+  InlineSignupForm: () => <form id="signup-cta" data-testid="inline-signup" />,
+}));
 
 describe("Step4Aha", () => {
   beforeEach(() => {
