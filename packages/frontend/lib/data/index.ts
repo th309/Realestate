@@ -432,6 +432,14 @@ export {
   type SocialProofStats,
 } from "./fetchers/social-proof";
 
+// Migration flows (IRS county-to-county, Redfin metro home-search)
+export {
+  fetchMigrationFlows,
+  useMigrationFlows,
+  type MigrationFlow,
+  type MigrationFlowsResult,
+} from "./fetchers/migration-flows";
+
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
 export * from "./fetchers/admin-analytics";
 export type * from "./fetchers/admin-analytics.types";
