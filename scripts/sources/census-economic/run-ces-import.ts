@@ -5,6 +5,9 @@
  *   npx tsx scripts/sources/census-economic/run-ces-import.ts \
  *     --states NC --metros 39580 [--start 2023] [--end 2023]
  *
+ *   # National rollout (all 50 states + DC):
+ *   npx tsx scripts/sources/census-economic/run-ces-import.ts --all-states
+ *
  * Builds the seriesId list for the requested states and metros (state
  * total + 11 supersectors per geography) and calls importCes.
  */
@@ -42,6 +45,11 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (flag === "--end" && next) {
       args.endYear = parseInt(next, 10);
       i++;
+    } else if (flag === "--all-states") {
+      // Expand to all 50 states + DC (excludes territories like PR by default).
+      args.states = Object.keys(STATE_ABBREV_TO_FIPS).filter(
+        (abbrev) => abbrev !== "PR",
+      );
     }
   }
   return args;
