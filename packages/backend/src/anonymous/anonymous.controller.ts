@@ -1,11 +1,23 @@
-import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Logger,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { GeneratePresentationDto } from './dto/generate-presentation.dto';
+import { SignUpWithTourDto, ClaimDto } from './dto/sign-up-with-tour.dto';
 import {
   ListingPresentationService,
   GeoLevel,
 } from './listing-presentation.service';
 import { RedisTourCacheService } from './redis-tour-cache.service';
+import { ListingPresentationClaimService } from './listing-presentation-claim.service';
 import { AnonRateLimitGuard } from './anon-rate-limit.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Controller('api/anonymous')
 export class AnonymousController {
@@ -14,6 +26,8 @@ export class AnonymousController {
   constructor(
     private listing: ListingPresentationService,
     private cache: RedisTourCacheService,
+    private claimService: ListingPresentationClaimService,
+    private supabaseService: SupabaseService,
   ) {}
 
   // NOTE: A parallel agent is editing listing-presentation.service.ts (T9
@@ -58,5 +72,79 @@ export class AnonymousController {
     }
 
     return result;
+  }
+
+  /**
+   * Atomically creates a Supabase auth user and claims the anonymous tour
+   * session into a permanent reports row. In dev (`NODE_ENV !== 'production'`)
+   * the user is auto-confirmed and a magic link is returned for the frontend
+   * to install a session immediately. In prod the email-confirm flow runs
+   * and the actual claim happens later in the auth callback.
+   */
+  @Post('sign-up-with-tour')
+  async signUpWithTour(@Body() dto: SignUpWithTourDto) {
+    const admin = this.supabaseService.getClient();
+
+    const isProd = process.env.NODE_ENV === 'production';
+
+    const { data: created, error: signUpErr } =
+      await admin.auth.admin.createUser({
+        email: dto.email,
+        password: dto.password,
+        email_confirm: !isProd,
+      });
+    if (signUpErr || !created?.user) {
+      throw new UnauthorizedException(signUpErr?.message ?? 'Sign-up failed');
+    }
+
+    const userId = created.user.id;
+
+    let reportId: string | null = null;
+    try {
+      const claim = await this.claimService.claim({
+        sessionId: dto.tourSessionId,
+        userId,
+      });
+      reportId = claim?.reportId ?? null;
+    } catch (err) {
+      // Don't fail the signup if the claim fails — the user account is
+      // created; they can re-claim from the dashboard. Log and continue.
+      this.logger.warn(
+        `Claim failed for user ${userId} session ${dto.tourSessionId}: ${String(err)}`,
+      );
+    }
+
+    let magicLink: string | null = null;
+    if (!isProd) {
+      const { data: linkData } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: dto.email,
+      });
+      magicLink = linkData?.properties?.action_link ?? null;
+    }
+
+    return {
+      userId,
+      reportId,
+      needsEmailConfirmation: isProd,
+      magicLink,
+    };
+  }
+
+  /**
+   * Standalone claim endpoint — used by the auth-callback page after an
+   * email-confirm flow lands the user. Requires a valid Bearer JWT;
+   * `JwtAuthGuard` sets `request.userId`.
+   */
+  @Post('claim')
+  @UseGuards(JwtAuthGuard)
+  async claim(@Body() dto: ClaimDto, @Req() req: { userId?: string }) {
+    const userId = req.userId;
+    if (!userId) throw new UnauthorizedException('Authentication required');
+    const result = await this.claimService.claim({
+      sessionId: dto.tourSessionId,
+      userId,
+    });
+    return { claimed: !!result, reportId: result?.reportId ?? null };
   }
 }
