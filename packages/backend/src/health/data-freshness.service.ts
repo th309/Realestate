@@ -15,7 +15,14 @@ type EconomicMetricKey =
   | 'rpp_all_items';
 
 interface TableProbeConfig {
+  /** Key used in the response `tableDates` map. */
   tableName: string;
+  /**
+   * Actual Postgres table to query. Defaults to `tableName` when omitted.
+   * Use this when two probes target different columns of the same physical table
+   * (e.g. CES `ces_period_date` vs LAUS `period_date` on `economic_metro`).
+   */
+  actualTableName?: string;
   dateColumn: string;
   filters?: Array<{
     column: string;
@@ -114,6 +121,26 @@ export class DataFreshnessService {
       { tableName: 'economic_state', dateColumn: 'period_date' },
       { tableName: 'economic_metro', dateColumn: 'period_date' },
       { tableName: 'economic_county', dateColumn: 'period_date' },
+      // CES (employment) writes to ces_period_date on economic_metro/state — probe separately
+      // and surface under aliased keys so they don't collide with the LAUS period_date probes above.
+      {
+        tableName: 'economic_metro_ces',
+        actualTableName: 'economic_metro',
+        dateColumn: 'ces_period_date',
+        filters: [{ column: 'ces_period_date', op: 'notNull' }],
+      },
+      {
+        tableName: 'economic_state_ces',
+        actualTableName: 'economic_state',
+        dateColumn: 'ces_period_date',
+        filters: [{ column: 'ces_period_date', op: 'notNull' }],
+      },
+      // IRS county-to-county migration (tax_year is INT — surfaced as 4-digit year string)
+      { tableName: 'irs_migration_county_aggregates', dateColumn: 'tax_year' },
+      { tableName: 'irs_county_migration_flows', dateColumn: 'tax_year' },
+      // Redfin migration (metro-level)
+      { tableName: 'redfin_migration_metro', dateColumn: 'period_date' },
+      { tableName: 'redfin_migration_flows_metro', dateColumn: 'period_date' },
     ];
 
     const tableEntries = await Promise.all(
@@ -193,6 +220,25 @@ export class DataFreshnessService {
       economic_cost_of_living: this.pickMostRecent(
         Object.values(economicMetricDates.rpp_all_items),
       ),
+      // BLS — covers LAUS unemployment (period_date) and CES employment (ces_period_date)
+      // across both economic_metro and economic_county/state.
+      bls: this.pickMostRecent([
+        tableDates.economic_metro,
+        tableDates.economic_metro_ces,
+        tableDates.economic_county,
+        tableDates.economic_state,
+        tableDates.economic_state_ces,
+      ]),
+      // IRS county-to-county migration (annual, keyed on tax_year INT)
+      irs: this.pickMostRecent([
+        tableDates.irs_migration_county_aggregates,
+        tableDates.irs_county_migration_flows,
+      ]),
+      // Redfin metro migration (period_date)
+      redfin_migration: this.pickMostRecent([
+        tableDates.redfin_migration_metro,
+        tableDates.redfin_migration_flows_metro,
+      ]),
     };
 
     this.cachedResponse = {
@@ -284,9 +330,10 @@ export class DataFreshnessService {
     config: TableProbeConfig,
   ): Promise<string | null> {
     const client = this.supabase.getClient();
+    const physicalTable = config.actualTableName ?? config.tableName;
     try {
       let query = client
-        .from(config.tableName)
+        .from(physicalTable)
         .select(config.dateColumn)
         .order(config.dateColumn, { ascending: false })
         .limit(1);
@@ -306,7 +353,7 @@ export class DataFreshnessService {
       const { data, error } = await query;
       if (error) {
         this.logger.warn(
-          `Freshness probe failed for ${config.tableName}: ${error.message}`,
+          `Freshness probe failed for ${config.tableName} (${physicalTable}.${config.dateColumn}): ${error.message}`,
         );
         return null;
       }
@@ -315,7 +362,7 @@ export class DataFreshnessService {
       return this.normalizeDateValue(rawValue);
     } catch (error) {
       this.logger.warn(
-        `Freshness probe exception for ${config.tableName}: ${String(error)}`,
+        `Freshness probe exception for ${config.tableName} (${physicalTable}.${config.dateColumn}): ${String(error)}`,
       );
       return null;
     }
