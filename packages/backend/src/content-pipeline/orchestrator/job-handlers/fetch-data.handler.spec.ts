@@ -24,6 +24,7 @@ describe('FetchDataHandler', () => {
     const assetsDeleteEq2 = jest.fn().mockResolvedValue({ error: null });
     const assetsDeleteEq1 = jest.fn().mockReturnValue({ eq: assetsDeleteEq2 });
     const assetsInsert = jest.fn().mockResolvedValue({ error: null });
+    const eventsInsert = jest.fn().mockResolvedValue({ error: null });
 
     const supabaseClient = {
       from: jest.fn((table: string) => {
@@ -39,6 +40,11 @@ describe('FetchDataHandler', () => {
           return {
             delete: () => ({ eq: assetsDeleteEq1 }),
             insert: assetsInsert,
+          };
+        }
+        if (table === 'content_run_events') {
+          return {
+            insert: eventsInsert,
           };
         }
         return {};

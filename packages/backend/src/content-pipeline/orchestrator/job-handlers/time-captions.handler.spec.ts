@@ -33,6 +33,7 @@ describe('TimeCaptionsHandler', () => {
         return {
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
           in: jest.fn().mockResolvedValue({ data: null, error: null }),
           delete: jest.fn().mockReturnThis(),
           single: jest.fn().mockResolvedValue({
@@ -46,6 +47,9 @@ describe('TimeCaptionsHandler', () => {
             return Promise.resolve({ data: null, error: null });
           }),
         };
+      }
+      if (table === 'content_run_events') {
+        return { insert: jest.fn().mockResolvedValue({ data: null, error: null }) };
       }
       throw new Error(`unexpected table ${table}`);
     });
