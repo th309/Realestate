@@ -244,7 +244,18 @@ Read: .claude/beta-test/change-log.md
 
 Populated by sync skill. **Prioritize testing recently changed areas listed here.**
 
-### 0.7 Generate Test Plan Summary
+### 0.7 Pre-Flight Smoke Probes
+
+Quick HTTP checks before walking the UI. Failures here usually indicate environment / branch issues, not code bugs.
+
+- [ ] `curl -i http://localhost:3000/tour` → 200 (NOT 404 — 404 means the local repo is on a branch without the tour code; common after `git checkout` shuffles)
+- [ ] `curl -X POST http://localhost:3001/api/anonymous/listing-presentation -H 'content-type: application/json' -d '{}'` → 403 (rate-limit guard active; not 500 / Failed to fetch)
+- [ ] `curl http://localhost:3001/api/markets/peers/metro/16740` → 200 with JSON `{source, peers: [...]}`
+- [ ] After visiting `/tour`, browser DevTools shows cookie `piq_tour_session` with `HttpOnly`, `samesite=Lax`, `Secure` ONLY on https
+- [ ] Browser DevTools console has no `Cannot update a component while rendering` errors (React 19 violation regression check)
+- [ ] If extensions block requests with `ERR_BLOCKED_BY_CLIENT`, retest in incognito — adblockers commonly kill `/api/analytics/events` and gtag, sometimes anonymous endpoints too
+
+### 0.8 Generate Test Plan Summary
 
 Output discovered surfaces + priorities + gaps before proceeding.
 
@@ -366,6 +377,116 @@ Test on blog posts and metro pages:
 - Valid email → "Thanks! You're subscribed."
 - Invalid email → client-side rejection
 - Duplicate email → upserts without error
+
+---
+
+## Phase 3.5: Activation Tour (NEW — replaces /get-started)
+
+**The canonical anonymous activation entry.** Anonymous-friendly through step 4; signup happens inline at the end. Spec: `docs/superpowers/specs/2026-05-03-activation-tour-redesign-design.md`. State machine spans 5 tiers (URL params + cookie + localStorage + Redis + reports DB).
+
+### 3.5.1 Persona Selection (`/tour`)
+
+- Navigate to `/tour` (no params, no auth)
+- 3 persona cards render: "I'm an agent / broker" (with green "For you" badge), "I'm an investor", "I'm a homebuyer"
+- Each card: title, 3 bullet points, "Continue as <persona> →" button
+- Click any persona → URL updates to `/tour?persona=<x>&phase=market`, market picker renders
+- Verify cookie `piq_tour_session=<uuid>` is set (HttpOnly, samesite=Lax; Secure ONLY when on https)
+- Verify `localStorage.piq_tour` is populated
+
+### 3.5.2 Market Picker
+
+- Search input has autofocus, placeholder "Type a city, ZIP, or metro…"
+- Typeahead uses `useUniversalSearch` — search "Cary" returns results within ~300ms
+- Each result row shows a colored PIQ Score chip (green ≥80, amber 50-79, red <50) — uses standardized `getScoreColor()`
+- 3 fallback chips visible below: Charlotte, NC / Phoenix, AZ / Tampa, FL
+- Picking a result advances to step1 — URL: `/map?tour=step1&persona=<x>&market=<level>-<id>&sessionId=<uuid>`
+- **State filter:** if user types a state name, state-typed results must NOT appear in the listbox (filtered out — only metro/county/city/zip pass through)
+
+### 3.5.3 Spotlight Tour (Steps 1-3)
+
+| Step | Lands on | Spotlight target | Continue advances to |
+|---|---|---|---|
+| 1 | `/map?tour=step1&...` | `[data-tour="search-bar"]` | `/market/<geoId>?tour=step2&...` |
+| 2 | `/market/[id]?tour=step2&...` | `[data-tour="propertyiq-score"]` | `/compare/markets?tour=step3&...` |
+| 3 | `/compare/markets?tour=step3&a=...` | `[data-tour="compare-grid"]` | `/tour?phase=step4&...` |
+
+For each step:
+- `BreathingSpotlight` overlay with cutout on the target element
+- `ConnectedTooltip` with persona-specific copy (agent/investor/homebuyer)
+- Click target OR Continue button advances; ✕ dismisses tour to `/`
+- Mobile (≤768px): renders `TourBottomSheet` instead of floating tooltip
+
+### 3.5.4 Listing Presentation (Step 4 — the "aha")
+
+`/tour?phase=step4&...` triggers `useAnonymousListingPresentation` mutation.
+
+- `ListingPresentationLoading` shows spinner + rotating message every 2.8s through 4 messages
+- After 15s, "stuck banner" appears: "Still working on it. Larger markets take a bit longer."
+- On success (~5-10s), 10-section listing presentation renders:
+  1. **Executive summary** with `ScoreRing` + confidence badge (A/B/C/F) + 3-paragraph thesis + recommendation pull-quote
+  2. **The market right now** — 8-stat grid (median price, DOM, % sold above list, months supply, rent, sale-to-list, $/sqft, est. listings)
+  3. **12-month trajectory** — `TrajectoryChart` with 3 series (target / parent metro / state)
+  4. **Forward forecast** — `ForecastChart` with 80% CI shading + NOW marker + 3 forecast cards
+  5. **Comparable peers** — peer comparison grid (top-3 from `/api/markets/peers`)
+  6. **Migration & demographics** — top in-migration sources (IRS) + buyer affordability (Census ACS)
+  7. **Affordability** — 2 `Gauge` components (affordability index + rent-vs-buy break-even)
+  8. **Economic drivers** — `EmploymentBars` (BLS QCEW) + labor signals
+  9. **Validated track record** — score validation accuracy + 3Y excess return
+  10. **AI strategy** — Source Serif 4 narrative + 3 numbered action cards
+- **Cover** above section 1: indigo gradient with marketName + "Listing Presentation" + geography meta + generated date
+- **Demo banner** below cover (subtle amber `bg-warning-container`): "Demo report — sign up free to save…"
+- **Sources footer** cites: Zillow ZHVI, Redfin Market Tracker, U.S. Census ACS, FRED/BEA, BLS QCEW, IRS migration, PropertyIQ Score v4
+- All charts are hand-rolled SVG (no chart library)
+- All colors use M3 semantic tokens — no hex literals (regex-asserted in tour tests)
+
+### 3.5.5 Limited-Data Resilience
+
+For each section, simulate `limitedData=true` (or fetch a tiny ZIP that has no data):
+- Each section's `Section` wrapper still renders title + numbered chip
+- Body shows graceful "Limited data available for this market" message
+- No layout break, no React error
+- AiStrategy uses `fallbackUsed` instead of `limitedData` — verify both
+
+### 3.5.6 Inline Signup + Claim
+
+- `InlineSignupForm` renders below the report (NOT a modal — keeps report visible above)
+- Headline: "Save <market>. Make another. Share with your client."
+- Email + password inputs + "Save my report →" submit button
+- ✕ collapses form to a "Sign up to save" sticky pill at top-right
+- Submit fires `POST /api/anonymous/sign-up-with-tour` with `{email, password, tourSessionId}`
+- **Dev (`NODE_ENV !== 'production'`):** auto-confirm + magic link returned; redirect to `/tour?phase=celebrate&sessionId=<uuid>`
+- **Prod (real email-confirm):** "check your email" inline message; user clicks email link → `/auth/callback` → `POST /api/anonymous/claim` → `/tour?phase=celebrate&sessionId=<uuid>`
+- After claim: `reports` table has new row with `user_id`, `report_type='listing_presentation'`, `source='tour_anonymous_claim'`, `anon_session_id`, `payload` JSON
+- Redis row marked `claimedBy: <userId>` (audit trail)
+- `user_profiles.onboarding_market` upserted
+
+### 3.5.7 Celebrate Screen (`?phase=celebrate`)
+
+- `PostSignupCelebrate` renders: indigo gradient + green tertiary check badge + "Your <market> report is saved"
+- Saved-report card preview with market name + Listing Presentation label
+- 3 CTAs: Open my report (`/dashboard?openReport=latest`) / Try another market (`/tour?resume=fresh`, calls `reset()`) / Go to dashboard (`/dashboard`)
+
+### 3.5.8 Edge Cases
+
+- `/tour?resume=fresh` → wipes localStorage + cookie in lazy useState initializer; strips `resume=fresh` from URL via `router.replace`; mints new sessionId
+- Rate limit (1 generation per IP per 24h): second `POST /api/anonymous/listing-presentation` returns `TourRateLimitError` (with `Retry-After` header). `ListingPresentationError` shows rate-limit branch with "Sign up free →" CTA.
+- 308 redirect: `/get-started?next=/reports` MUST land on `/tour?next=/reports` (middleware preserves query params). NOTE: `?next=` is currently inert past the market step — Phase 03/04 TODO.
+- `cbsa-39580` URL alias: `parseMarket('cbsa-39580')` normalizes to `geoLevel: 'metro'` via `GEO_LEVEL_ALIAS`. Invalid prefix (`bogus-39580`) → null market, falls back to picker.
+- Print: `Ctrl+P` from listing presentation hides demo banner + signup-cta via `[data-print-hide="true"]`; only `<article>` prints; clean section breaks (`break-inside: avoid`).
+- Mobile (≤768px): TourBottomSheet replaces tooltip; cover H1 shrinks to `text-[28px]`; Section padding `px-5 py-8 md:px-12 md:py-10`.
+
+### 3.5.9 Re-Tour for Existing Users
+
+- Click "Take the tour" anchor in `/dashboard` — opens `/tour?resume=fresh`
+- Old `app/onboarding/TourProvider.tsx` `restartTour` also routes to `/tour?resume=fresh`
+
+### Failure Modes — Submit as P1
+
+- 404 on `/tour` (likely dev server reading wrong branch — common after a checkout)
+- "Cannot update component while rendering" React error (router call inside setState updater — see Known Issues)
+- Persona cards render but click does nothing (state machine breakage)
+- Step 4 `Failed to fetch` (backend /api/anonymous/listing-presentation down OR ad blocker — verify in DevTools Network tab)
+- Listing presentation renders but a section is missing (data layer issue or `pickSection` returned null)
 
 ---
 
@@ -678,6 +799,38 @@ State → Metro → County → ZIP: data, legend, colors update correctly.
 - `gtag('config', 'G-...')` fires on page load
 - Page view events tracked on navigation
 
+### 11.7 Programmatic SEO Pages (43,700+ pages — sample-based)
+
+Full coverage is impractical. Sample-based smoke covering each route type:
+
+| Slug type | Sample URL | Verify |
+|---|---|---|
+| Metro | `/markets/[slug]` (e.g. `/markets/charlotte-nc`) | SSG renders, ScoreWidget loads, JSON-LD Place valid |
+| County | `/markets/county/[slug]` (e.g. `/markets/county/mecklenburg-nc`) | SSG renders, county-level scores, canonical present |
+| ZIP | `/markets/zip/[slug]` (e.g. `/markets/zip/28202`) | SSG renders, ZIP-level data or graceful fallback |
+| State | `/markets/state/[state]` (e.g. `/markets/state/north-carolina`) | SSG renders, list of metros in that state |
+| State index | `/markets/state` | SSG renders, links to all 50 state pages |
+
+For each sample:
+- Page renders without React error / 500
+- `<title>` and `<meta name="description">` populated and unique
+- JSON-LD schema validates (use `https://search.google.com/test/rich-results` or `<script type="application/ld+json">` regex check)
+- No `metro-slug-data.ts` bundle bloat — page weight should be reasonable (<1MB JS)
+- Internal links to other markets / national reports work
+
+**Spot-check NEW programmatic SEO additions** (post-sync) by reading recent commits to `app/markets/`.
+
+### 11.8 Newsletter & Lead-Magnet Pages
+
+| Route | Verify |
+|---|---|
+| `/newsletter` | Signup form, double opt-in flow (currently missing — P2) |
+| `/grade-reveal-signup` | Signup-gated reveal screen renders, CTA works |
+| `/farm-area-audit` | Form renders, submit returns success state |
+| `/movers-report` | Form renders, MCP `monthly_market_update_email` integration |
+| `/top-cashflow-report` | Form renders, list rendering |
+| `/dashboard/magnets` (auth-gated) | Lead-magnet library loads, downloads work |
+
 ---
 
 ## Phase 12: Enterprise Features & Data Export
@@ -888,6 +1041,51 @@ Verify these features are ONLY available at the correct tiers:
 
 *Report CSV disabled in V1 — `reportData` not yet wired. Verify button renders but does nothing.
 
+### 12.8 MCP Server + Personal API Keys (Pro tier — NEW since 2026-04)
+
+Personal API keys are distinct from org-level keys (12.3). They live on the user account at `/account/api-keys` and gate access to `/api/v1/*` plus the MCP server.
+
+**Personal API key CRUD (`/account/api-keys`):**
+- Free tier: PaywallCard with "Upgrade to Pro" CTA
+- Pro/Enterprise: full key management
+- Create key: dialog appears with scope checkboxes; on submit, key shown ONCE in plaintext (one-time reveal), masked after dismiss
+- Key prefix `piq_live_` is human-recognizable
+- Revoke key: confirmation dialog → DELETE → key disabled within 30s (Redis-cached tier checks)
+- List page: shows last-4 of each key + last-used timestamp + scopes
+
+**Two-table validation:**
+- `user_api_keys` table for personal Pro keys
+- `org_api_keys` table for org Enterprise keys
+- Both validated against same `/api/v1/*` endpoints; tier check via Redis cache (30s TTL)
+- Submit P0 if a Free user can call `/api/v1/*` with any key
+
+**MCP device-code OAuth flow:**
+- User runs MCP client (Claude Desktop, Codex, etc.) → client requests device code
+- `POST /api/auth/device-code/start` returns `device_code` + `user_code` + verification URL
+- User visits `/activate` (UI for entering `user_code`) OR `/auth/mcp-authorize` (consent screen)
+- After consent, MCP client polls `/api/auth/device-code/poll` with device_code → returns Bearer token once approved
+- Verify: token grants MCP server access; revoking from `/account/api-keys` invalidates within 30s
+- Verify: device-code expiry — unused codes expire (default 10 min); poll after expiry returns 410
+
+**MCP server smoke (separate process):**
+- `packages/mcp-server` runs as standalone process with HTTP transport (Railway-deployed)
+- 12+ tools registered (search_markets, get_propertyiq_score, deal_analyzer, etc.)
+- Free tier: most tools return `tier_required: pro` error
+- Pro/Enterprise tier: all tools functional
+- Verify: response schema matches MCP spec; tool descriptions accurate
+
+**Routes for this section:**
+- `/account/api-keys` (Pro auth-gated)
+- `/activate` (user enters MCP `user_code`)
+- `/auth/mcp-authorize` (consent screen)
+- `/docs/mcp` (public setup docs)
+
+**API endpoints:**
+- `POST /api/auth/device-code/start` — anon
+- `POST /api/auth/device-code/poll` — anon (rate-limited)
+- `POST /api/auth/device-code/approve` — auth-gated (consent)
+- `GET/POST/DELETE /api/user/api-keys` — Pro auth-gated
+
 ---
 
 ## Known Code-Level Issues
@@ -952,6 +1150,20 @@ All admin controllers now have `@UseGuards(AdminGuard)`. No outstanding P0 secur
 | No WebSocket push for admin tier changes        | Stale user sessions   |
 | System health status is mocked (always healthy) | `/admin` banner       |
 | GA measurement ID hardcoded as fallback         | `GoogleAnalytics.tsx` |
+
+### Activation Tour (P1-P3) — Discovered 2026-05-04
+
+| Severity | Issue | Where |
+|---|---|---|
+| P1 | `primary-dark` Tailwind class undefined; `bg-primary-dark` / `text-primary-dark` silently render no color | `app/globals.css` (missing token) — referenced in CLAUDE.md §8.2 brand spec and many components |
+| P1 | New hooks must be re-exported in BOTH `lib/data/hooks/index.ts` AND top-level `lib/data/index.ts` | `lib/data/index.ts` — caught `useTourSignup` miss in this sync (commit `24477f56`) |
+| P1 | Calling `router.*` from inside a `setState` updater throws React 19 "Cannot update component while rendering" — pattern to forbid | Audit pattern: `setSession((prev) => { router.replace(...); ... })` is a defect — fixed in `ee20ae4e` |
+| P2 | `SeoTourCta` shipped with full test coverage but NOT integrated into blog `/blog/[slug]` MDX layout | `components/tour/SeoTourCta.tsx` + `app/blog/[slug]/BlogPostContent.tsx` — frontmatter schema needs `geoId/geoLevel/marketName` |
+| P2 | `ReportSection.data` is `unknown`-typed; `ListingPresentation` uses `as React.ComponentProps<typeof X>` casts to compile | `lib/data/fetchers/anonymous-listing-presentation.ts` (root) + `app/tour/components/ListingPresentation.tsx` (workaround) |
+| P2 | `?next=` query param is preserved through persona/market steps but NOT consumed past `step1` | `app/tour/page.tsx` — Phase 03/04 TODO comment in code |
+| P3 | Tour migrations applied via direct `psql` against pooler with hardcoded credentials in `scripts/run-backtest-*.sh` | Convention works but credentials are committed; not using Supabase CLI / dashboard |
+| P3 | `lib/data/index.ts` is 242 lines (target 200, hard 300) | Needs split before adding more hooks |
+| P3 | Step4Aha uses `window.location.href` (not `router.push`) for rate-limit signup redirect — intentional (clears RQ cache + cookies) but undocumented for casual readers | `app/tour/components/Step4Aha.tsx:65` |
 
 ---
 
