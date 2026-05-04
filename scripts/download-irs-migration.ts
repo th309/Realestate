@@ -27,6 +27,7 @@ import { join } from "path";
 import {
   parseIrsXlsx,
   deriveCountyAggregates,
+  dedupIrsFlows,
   IrsFlowRow,
   IrsCountyAggregate,
 } from "./sources/irs-migration/parser";
@@ -37,6 +38,7 @@ export {
   normalizeIrsFips,
   parseIrsXlsx,
   deriveCountyAggregates,
+  dedupIrsFlows,
 } from "./sources/irs-migration/parser";
 export type {
   IrsFlowRow,
@@ -115,7 +117,10 @@ export async function pollAndIngestIrsMigration(
 
   const inflowRows = parseIrsXlsx(inflowBuf, "in", taxYear);
   const outflowRows = parseIrsXlsx(outflowBuf, "out", taxYear);
-  const allFlows = [...inflowRows, ...outflowRows];
+  // IRS publishes each county-to-county flow in BOTH inflow and outflow files.
+  // Concatenating without dedup causes Postgres `ON CONFLICT DO UPDATE` rejects
+  // (same row twice in one chunk) and ~2x double-counting in aggregates.
+  const allFlows = dedupIrsFlows(inflowRows, outflowRows);
 
   await upsertFlows(supabase, allFlows);
   const aggregates = deriveCountyAggregates(allFlows);

@@ -132,6 +132,39 @@ export function parseIrsXlsx(
 }
 
 /**
+ * Merge inflow and outflow rows into a single deduplicated list keyed by
+ * `(origin_fips, destination_fips, tax_year)`.
+ *
+ * IRS publishes each county-to-county flow in BOTH the inflow and outflow
+ * files (the destination county's inflow file and the origin county's outflow
+ * file report the same numeric tuple). Concatenating without dedup causes:
+ *   1. Postgres `ON CONFLICT DO UPDATE command cannot affect row a second time`
+ *      errors during chunked upsert.
+ *   2. ~2x double-counting in `deriveCountyAggregates`.
+ *
+ * Empirically ~87% of outflow rows are duplicates of inflow rows; the
+ * remaining ~13% are flows whose destination is a reserved-bucket FIPS
+ * (`00000` non-migrants, `99999` foreign) which only appear in the outflow
+ * file and MUST be preserved.
+ *
+ * Last-write-wins is safe — IRS reports identical numeric values for the
+ * same `(origin, destination, year)` tuple in both files by design.
+ */
+export function dedupIrsFlows(
+  inflowRows: IrsFlowRow[],
+  outflowRows: IrsFlowRow[],
+): IrsFlowRow[] {
+  return Array.from(
+    new Map(
+      [...inflowRows, ...outflowRows].map((f) => [
+        `${f.origin_fips}|${f.destination_fips}|${f.tax_year}`,
+        f,
+      ]),
+    ).values(),
+  );
+}
+
+/**
  * Roll county-level inflow/outflow flows up into per-(county, tax_year)
  * aggregates. Reserved buckets (00000/99999) are excluded as aggregate rows
  * but their flows still contribute to real counties on the other end.

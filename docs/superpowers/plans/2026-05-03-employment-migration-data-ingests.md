@@ -1808,7 +1808,12 @@ export async function pollAndIngestIrsMigration(
 
   const inflowRows = parseIrsXlsx(inflowBuf, "in", taxYear);
   const outflowRows = parseIrsXlsx(outflowBuf, "out", taxYear);
-  const allFlows = [...inflowRows, ...outflowRows];
+  // IRS publishes each county-to-county flow in BOTH inflow and outflow files
+  // (~87% overlap). Concatenating without dedup causes Postgres `ON CONFLICT
+  // DO UPDATE` rejects (same row twice in one chunk) and ~2x double-counting
+  // in deriveCountyAggregates. dedupIrsFlows keys by
+  // (origin_fips, destination_fips, tax_year) and is last-write-wins.
+  const allFlows = dedupIrsFlows(inflowRows, outflowRows);
 
   for (const f of allFlows) {
     await supabase.from("irs_county_migration_flows").upsert(f, {
