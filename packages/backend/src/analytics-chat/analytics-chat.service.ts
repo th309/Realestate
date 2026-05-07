@@ -50,8 +50,6 @@ export class AnalyticsChatService {
   private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
   private conversations: Map<string, ConversationState> = new Map();
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-  private readonly CONVERSATION_TTL_MS = 30 * 60 * 1000;
-  private readonly MAX_CONVERSATIONS = 1000;
   private cleanupIntervalId: NodeJS.Timeout | null = null;
   private dataDigest = '';
 
@@ -211,7 +209,7 @@ export class AnalyticsChatService {
     process.on('beforeExit', () => this.stopConversationCleanup());
 
     this.logger.log(
-      `[Quinn Cleanup] Started conversation cleanup (TTL: ${this.CONVERSATION_TTL_MS / 1000}s, Interval: ${this.CLEANUP_INTERVAL_MS / 1000}s)`,
+      `[Quinn Cleanup] Started conversation cleanup (Interval: ${this.CLEANUP_INTERVAL_MS / 1000}s; TTL/max read from appConfig per cycle)`,
     );
   }
 
@@ -240,7 +238,7 @@ export class AnalyticsChatService {
     }
 
     // If still over max, remove oldest conversations
-    if (this.conversations.size > this.MAX_CONVERSATIONS) {
+    if (this.conversations.size > maxConversations) {
       const sorted = Array.from(this.conversations.entries()).sort(
         (a, b) =>
           new Date(a[1].lastMessageAt).getTime() -
@@ -249,7 +247,7 @@ export class AnalyticsChatService {
 
       const toRemove = sorted.slice(
         0,
-        this.conversations.size - this.MAX_CONVERSATIONS,
+        this.conversations.size - maxConversations,
       );
       for (const [id] of toRemove) {
         this.conversations.delete(id);
