@@ -33,16 +33,30 @@ export class AdminGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Step 1: Validate the JWT and set request.userId
+    const request = context.switchToHttp().getRequest();
+
+    // Development bypass: when ALLOW_DEV_AUTH=true in development, skip admin_users check
+    const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
+    const allowDevAuth = this.configService.get<string>('ALLOW_DEV_AUTH') === 'true';
+
+    // Step 1: Validate the JWT (or x-user-id fallback) and set request.userId
     await this.jwtAuthGuard.canActivate(context);
 
-    const request = context.switchToHttp().getRequest();
     const userId: string | undefined = request.userId;
 
     if (!userId) {
       throw new ForbiddenException(
         'Admin access denied: no authenticated user',
       );
+    }
+
+    // In dev mode with ALLOW_DEV_AUTH, skip admin_users table lookup
+    if (isDevelopment && allowDevAuth) {
+      this.logger.warn(
+        `[AdminGuard] Dev auth bypass — granting admin access to user ${userId.substring(0, 8)}...`,
+      );
+      request.adminRole = 'admin';
+      return true;
     }
 
     // Step 2: Check the admin_users table for this user

@@ -1,0 +1,259 @@
+/**
+ * SystemHealthPanel
+ *
+ * Displays market intelligence system health metrics in an M3 card:
+ * briefing coverage, news volume, rankings freshness, and Quinn status.
+ * Includes "Run Now" buttons for manually triggering each pipeline.
+ */
+
+'use client';
+
+import React, { useState, useCallback } from 'react';
+import { Activity, AlertCircle, Loader2, Play } from 'lucide-react';
+import { fetchAPIRaw } from '@/lib/data';
+import type { IntelligenceStats } from '../hooks/useIntelligenceStats';
+
+type PipelineId = 'briefings' | 'news' | 'rankings';
+type RunState = 'idle' | 'running' | 'done' | 'error';
+
+interface SystemHealthPanelProps {
+  stats: IntelligenceStats | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export function SystemHealthPanel({ stats, loading, error }: SystemHealthPanelProps) {
+  const [runStates, setRunStates] = useState<Record<PipelineId, RunState>>({
+    briefings: 'idle',
+    news: 'idle',
+    rankings: 'idle',
+  });
+
+  const triggerPipeline = useCallback(async (pipeline: PipelineId) => {
+    setRunStates((prev) => ({ ...prev, [pipeline]: 'running' }));
+
+    let result: RunState = 'done';
+    try {
+      const res = await fetchAPIRaw(`/api/admin/intelligence/trigger/${pipeline}`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      result = 'error';
+    }
+
+    setRunStates((prev) => ({ ...prev, [pipeline]: result }));
+    setTimeout(() => {
+      setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
+    }, 3000);
+  }, []);
+  return (
+    <div className="bg-surface-container-low border border-outline-variant rounded-xl">
+      {/* Heading */}
+      <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+        <Activity className="w-4 h-4 text-on-surface-variant" />
+        <h3 className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+          System Health
+        </h3>
+      </div>
+
+      {/* Content */}
+      <div className="px-5 pb-5">
+        {loading ? (
+          <div className="flex items-center gap-2 py-4">
+            <Loader2 className="w-4 h-4 animate-spin text-on-surface-variant" />
+            <span className="text-sm text-on-surface-variant">Loading stats...</span>
+          </div>
+        ) : error ? (
+          <div className="flex items-center gap-2 py-3 text-xs text-error">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : stats ? (
+          <div className="space-y-3 pt-2">
+            <HealthRow
+              label="Briefings"
+              value={formatBriefingsSummary(stats)}
+              status={getBriefingStatus(stats)}
+              action={<TriggerButton pipeline="briefings" state={runStates.briefings} onTrigger={triggerPipeline} />}
+            />
+            <HealthRow
+              label="Coverage"
+              value={formatCoverageSummary(stats)}
+              status="neutral"
+            />
+            <HealthRow
+              label="News"
+              value={`${stats.news_articles_last_7d.toLocaleString()} articles (last 7 days)`}
+              status={stats.news_articles_last_7d > 0 ? 'good' : 'warning'}
+              action={<TriggerButton pipeline="news" state={runStates.news} onTrigger={triggerPipeline} />}
+            />
+            <HealthRow
+              label="Rankings"
+              value={formatRankingsRefresh(stats.rankings_last_refresh)}
+              status={getRankingsStatus(stats.rankings_last_refresh)}
+              action={<TriggerButton pipeline="rankings" state={runStates.rankings} onTrigger={triggerPipeline} />}
+            />
+            <HealthRow
+              label="Quinn"
+              value={stats.quinn_available ? 'Available' : 'Disabled'}
+              status={stats.quinn_available ? 'good' : 'warning'}
+              showIndicator
+            />
+          </div>
+        ) : (
+          <p className="py-3 text-xs text-on-surface-variant">
+            Unable to load system health data.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+type HealthStatus = 'good' | 'warning' | 'error' | 'neutral';
+
+function HealthRow({
+  label,
+  value,
+  status,
+  showIndicator,
+  action,
+}: {
+  label: string;
+  value: string;
+  status: HealthStatus;
+  showIndicator?: boolean;
+  action?: React.ReactNode;
+}) {
+  const statusColors: Record<HealthStatus, string> = {
+    good: 'text-green-600',
+    warning: 'text-amber-600',
+    error: 'text-red-600',
+    neutral: 'text-on-surface-variant',
+  };
+
+  const dotColors: Record<HealthStatus, string> = {
+    good: 'bg-green-500',
+    warning: 'bg-amber-500',
+    error: 'bg-red-500',
+    neutral: 'bg-gray-400',
+  };
+
+  return (
+    <div className="flex items-center justify-between py-1">
+      <span className="text-sm font-medium text-on-surface">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className={`text-sm ${statusColors[status]}`}>{value}</span>
+        {showIndicator && (
+          <span className={`w-2 h-2 rounded-full ${dotColors[status]}`} />
+        )}
+        {action}
+      </div>
+    </div>
+  );
+}
+
+const TRIGGER_BUTTON_STYLES: Record<RunState, string> = {
+  idle: 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer',
+  running: 'bg-surface-container-high text-on-surface-variant cursor-wait',
+  done: 'bg-green-100 text-green-700',
+  error: 'bg-red-100 text-red-700',
+};
+
+function TriggerButton({
+  pipeline,
+  state,
+  onTrigger,
+}: {
+  pipeline: PipelineId;
+  state: RunState;
+  onTrigger: (pipeline: PipelineId) => void;
+}) {
+  return (
+    <button
+      onClick={() => onTrigger(pipeline)}
+      disabled={state === 'running'}
+      className={`ml-2 px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors ${TRIGGER_BUTTON_STYLES[state]}`}
+      title={`Manually trigger ${pipeline} pipeline`}
+    >
+      <TriggerButtonContent state={state} />
+    </button>
+  );
+}
+
+function TriggerButtonContent({ state }: { state: RunState }) {
+  switch (state) {
+    case 'done':
+      return <>Started</>;
+    case 'error':
+      return <>Failed</>;
+    case 'running':
+      return (
+        <span className="flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Running
+        </span>
+      );
+    default:
+      return (
+        <span className="flex items-center gap-1">
+          <Play className="w-3 h-3" />
+          Run
+        </span>
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------------------
+
+function formatBriefingsSummary(stats: IntelligenceStats): string {
+  const age =
+    stats.oldest_briefing_days !== null
+      ? ` (${stats.oldest_briefing_days}d oldest)`
+      : '';
+  return `${stats.total_briefings.toLocaleString()} total${age}`;
+}
+
+function formatCoverageSummary(stats: IntelligenceStats): string {
+  const parts: string[] = [];
+  if (stats.metros_covered > 0) {
+    parts.push(`${stats.metros_covered.toLocaleString()} metros`);
+  }
+  if (stats.counties_covered > 0) {
+    parts.push(`${stats.counties_covered.toLocaleString()} counties`);
+  }
+  return parts.length > 0 ? parts.join(', ') : 'No coverage data';
+}
+
+function formatRankingsRefresh(dateStr: string | null): string {
+  if (!dateStr) return 'Never refreshed';
+  const daysAgo = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 86_400_000,
+  );
+  if (daysAgo === 0) return 'Refreshed today';
+  if (daysAgo === 1) return 'Refreshed 1 day ago';
+  return `Refreshed ${daysAgo} days ago`;
+}
+
+function getBriefingStatus(stats: IntelligenceStats): HealthStatus {
+  if (stats.total_briefings === 0) return 'error';
+  if (stats.oldest_briefing_days !== null && stats.oldest_briefing_days > 14)
+    return 'warning';
+  return 'good';
+}
+
+function getRankingsStatus(dateStr: string | null): HealthStatus {
+  if (!dateStr) return 'error';
+  const daysAgo = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 86_400_000,
+  );
+  if (daysAgo > 7) return 'warning';
+  return 'good';
+}

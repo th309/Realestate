@@ -11,6 +11,8 @@ import { AnalyticsChatController } from './analytics-chat.controller';
 import { AnalyticsChatService } from './analytics-chat.service';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { AppConfigModule } from '../config/app-config.module';
+import { MarketIntelligenceModule } from '../market-intelligence/market-intelligence.module';
 import {
   ChatAuthGuard,
   ConversationOwnershipGuard,
@@ -18,7 +20,7 @@ import {
 } from './analytics-chat.guard';
 
 @Module({
-  imports: [SupabaseModule, ConfigModule],
+  imports: [SupabaseModule, ConfigModule, AppConfigModule, MarketIntelligenceModule],
   controllers: [AnalyticsChatController],
   providers: [
     AnalyticsChatService,

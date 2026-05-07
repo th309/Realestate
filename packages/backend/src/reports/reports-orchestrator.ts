@@ -388,6 +388,28 @@ export async function generateReportAsync(
       (populatedData as any).recommendations = {};
     }
 
+    // ── 8b. Optional market briefing for narrative consistency ─────────
+    // If a briefing exists for this geography, inject its stance/risk context
+    // into narrative prompts so AI-generated text aligns with intelligence.
+    // Missing briefing is NOT an error — reports always work without one.
+    let briefingContext: any = null;
+    try {
+      const { data: briefing } = await supabase
+        .from('market_briefings')
+        .select('market_stance, stance_signals, risk_flags, narrative_summary, news_snapshot')
+        .eq('geography_id', dto.primary_geography.id)
+        .eq('is_latest', true)
+        .single();
+
+      if (briefing) {
+        briefingContext = briefing;
+        logger.log(`Using market briefing for ${dto.primary_geography.name} (stance: ${briefing.market_stance})`);
+      }
+    } catch {
+      // No briefing available — generate report with original narrative flow.
+      // This is completely normal and expected when intelligence is off.
+    }
+
     // ── 9. AI narratives ───────────────────────────────────────────────
     await updateGenerationStage(
       supabase,

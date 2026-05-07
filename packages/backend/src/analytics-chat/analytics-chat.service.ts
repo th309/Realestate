@@ -1,10 +1,4 @@
-/**
- * Analytics Chat Service - v1.0.2
- *
- * Orchestrates natural language analytics queries using Claude tool-use.
- * Handles conversation state and tool execution loop.
- */
-
+/** Analytics Chat Service - Orchestrates NL analytics via Claude tool-use. */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
@@ -12,120 +6,43 @@ import OpenAI from 'openai';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RedisService } from '../redis/redis.service';
-import { QUINN_BASE_SYSTEM_PROMPT } from './quinn-system-prompt';
 import { AIProvider } from './interfaces/ai-provider.interface';
 import { OpenAIProvider } from './providers/openai.provider';
 import { AnthropicProvider } from './providers/anthropic.provider';
-
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-interface ConversationState {
-  id: string;
-  messages: ChatMessage[];
-  context?: Record<string, any>;
-  createdAt: string;
-  lastMessageAt: string;
-}
-
-/** Structured data for visual rendering in frontend */
-export interface StructuredData {
-  chart?: ChartConfig;
-  table?: TableConfig;
-  comparison?: ComparisonConfig;
-  rankings?: RankingsData;
-  /** When the analytics service returns an error in the body (e.g. no data for filter) */
-  errorMessage?: string;
-}
-
-interface ChartConfig {
-  type: 'bar' | 'line' | 'scatter' | 'distribution';
-  title?: string;
-  xLabel?: string;
-  yLabel?: string;
-  data: Array<{ name: string; value: number; label?: string }>;
-  colorScale?: 'score' | 'appreciation' | 'neutral';
-  referenceLine?: number;
-  referenceLabel?: string;
-}
-
-interface TableConfig {
-  title?: string;
-  columns: Array<{
-    key: string;
-    label: string;
-    type?: 'text' | 'number' | 'score' | 'percent' | 'rank';
-  }>;
-  rows: Array<Record<string, string | number | null>>;
-  maxRows?: number;
-  highlightTop?: number;
-  highlightBottom?: number;
-}
-
-interface ComparisonConfig {
-  title?: string;
-  filteredLabel: string;
-  benchmarkLabel: string;
-  metrics: Array<{
-    label: string;
-    filtered: number | null;
-    benchmark: number | null;
-    unit?: 'score' | 'percent' | 'number';
-    higherIsBetter?: boolean;
-  }>;
-}
-
-interface RankingsData {
-  title?: string;
-  direction: 'top' | 'bottom';
-  items: Array<{
-    rank: number;
-    name: string;
-    score?: number;
-    appreciation?: number;
-    state?: string;
-  }>;
-}
+import { AppConfigService } from '../config/app-config.service';
+import { RankingsCacheService } from '../market-intelligence/rankings-cache.service';
+import { BriefingGeneratorService } from '../market-intelligence/briefing-generator.service';
+import { MarketBriefing } from '../market-intelligence/market-intelligence.types';
+export type { ChatMessage, StructuredData } from './analytics-chat.types';
+import { ConversationState, StructuredData } from './analytics-chat.types';
+import { getQueryIntent, getMaxIterations, getRelevantTools } from './analytics-chat-query-router';
+import { buildUserProfilePrompt, buildDynamicContext } from './analytics-chat-prompt-builders';
+import { buildDataDigest, warmCache } from './analytics-chat-cache';
+import { extractStructuredData, buildFallbackResponseFromStructuredData } from './analytics-chat-structured-data';
+import { lookupBriefingContext, lookupRankingsCache, formatBriefingForPrompt } from './analytics-chat-intelligence.helpers';
 
 @Injectable()
 export class AnalyticsChatService {
   private readonly logger = new Logger(AnalyticsChatService.name);
-
-  // Clients
   private anthropicClient: Anthropic | null = null;
   private openaiClient: OpenAI | null = null;
-
-  // Configuration
   private provider: 'anthropic' | 'openai' = 'anthropic';
-  private modelName: string = '';
+  private modelName = '';
   private providers: Map<string, AIProvider> = new Map();
-
-  // Model tiers for dynamic escalation (Anthropic)
-  private readonly MODEL_FAST = 'claude-3-haiku-20240307';
   private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
-  private readonly MODEL_POWERFUL = 'claude-3-opus-20240229';
-
-  // In-memory conversation store with TTL-based cleanup
   private conversations: Map<string, ConversationState> = new Map();
-
-  // Conversation TTL: 30 minutes of inactivity
-  private readonly CONVERSATION_TTL_MS = 30 * 60 * 1000;
-  // Cleanup interval: run every 5 minutes
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-  // Max conversations to prevent memory exhaustion
-  private readonly MAX_CONVERSATIONS = 1000;
   private cleanupIntervalId: NodeJS.Timeout | null = null;
-
-  // Compact text digest of warm cache data — injected into LLM prompt for direct answers
-  private dataDigest: string = '';
+  private dataDigest = '';
 
   constructor(
     private readonly configService: ConfigService,
     private readonly toolsService: AnalyticsToolsService,
     private readonly supabase: SupabaseService,
     private readonly redisService: RedisService,
+    private readonly appConfig: AppConfigService,
+    private readonly rankingsCache: RankingsCacheService,
+    private readonly briefingGenerator: BriefingGeneratorService,
   ) {
     // Determine Provider
     const rawProvider = this.configService
@@ -185,9 +102,9 @@ export class AnalyticsChatService {
         );
       }
     }
-
-    // Initialize Anthropic Client & Provider
     if (anthropicKey) {
+      if (anthropicKey.includes(' ') || anthropicKey.length < 10)
+        this.logger.error('[Quinn Init] Invalid Anthropic API Key format');
       try {
         const client = new Anthropic({ apiKey: anthropicKey });
         this.anthropicClient = client;
@@ -235,15 +152,23 @@ export class AnalyticsChatService {
     this.startConversationCleanup();
   }
 
-  /**
-   * Start periodic cleanup of stale conversations
-   */
-  private startConversationCleanup(): void {
-    this.cleanupIntervalId = setInterval(() => {
-      this.cleanupStaleConversations();
-    }, this.CLEANUP_INTERVAL_MS);
+  private initializeCacheWarmup(): void {
+    const shouldWarm = this.configService.get<string>('QUINN_CACHE_WARM_ON_STARTUP', 'true') === 'true';
+    if (!this.isAvailable() || !shouldWarm) return;
+    warmCache(this.redisService, this.toolsService, this.configService)
+      .then(() => buildDataDigest(this.redisService))
+      .then((digest) => { this.dataDigest = digest; })
+      .catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+  }
 
-    // Cleanup on process termination
+  isAvailable(): boolean { return !!this.anthropicClient || !!this.openaiClient; }
+  private providerOrder(): string[] { return this.provider === 'anthropic' ? ['anthropic', 'openai'] : ['openai', 'anthropic']; }
+  private modelForProvider(id: string): string {
+    return id !== this.provider ? (id === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat') : this.modelName;
+  }
+
+  private startConversationCleanup(): void {
+    this.cleanupIntervalId = setInterval(() => this.cleanupStaleConversations(), this.CLEANUP_INTERVAL_MS);
     process.on('beforeExit', () => this.stopConversationCleanup());
 
     this.logger.log(
@@ -251,29 +176,17 @@ export class AnalyticsChatService {
     );
   }
 
-  /**
-   * Stop the cleanup interval
-   */
   private stopConversationCleanup(): void {
-    if (this.cleanupIntervalId) {
-      clearInterval(this.cleanupIntervalId);
-      this.cleanupIntervalId = null;
-    }
+    if (this.cleanupIntervalId) { clearInterval(this.cleanupIntervalId); this.cleanupIntervalId = null; }
   }
 
-  /**
-   * Remove conversations that have been inactive beyond TTL
-   */
-  private cleanupStaleConversations(): void {
+  private async cleanupStaleConversations(): Promise<void> {
+    const ttlMs = (await this.appConfig.getNumber('QUINN_CONVERSATION_TTL_MINUTES', 30)) * 60_000;
+    const maxConversations = await this.appConfig.getNumber('QUINN_MAX_CONVERSATIONS', 1000);
     const now = Date.now();
     let cleaned = 0;
-
-    for (const [id, conversation] of this.conversations.entries()) {
-      const lastActivity = new Date(conversation.lastMessageAt).getTime();
-      if (now - lastActivity > this.CONVERSATION_TTL_MS) {
-        this.conversations.delete(id);
-        cleaned++;
-      }
+    for (const [id, conv] of this.conversations.entries()) {
+      if (now - new Date(conv.lastMessageAt).getTime() > ttlMs) { this.conversations.delete(id); cleaned++; }
     }
 
     // If still over max, remove oldest conversations
@@ -301,11 +214,38 @@ export class AnalyticsChatService {
     }
   }
 
-  /**
-   * Check if the service is available
-   */
-  isAvailable(): boolean {
-    return !!this.anthropicClient || !!this.openaiClient;
+  getConversation(id: string): ConversationState | undefined { return this.conversations.get(id); }
+  clearConversation(id: string): boolean {
+    const existed = this.conversations.has(id);
+    this.conversations.delete(id);
+    if (existed) this.logger.log(`Cleared conversation: ${id}`);
+    return existed;
+  }
+  listConversations(): string[] { return [...this.conversations.keys()]; }
+
+  private async enrichSystemPrompt(
+    queryIntent: string, conversation: ConversationState, userMessage: string,
+  ): Promise<string> {
+    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
+    const profilePrompt = buildUserProfilePrompt(userMode, conversation.context as any);
+    const digestIntents = ['conversational', 'ranking', 'filtering', 'comparison', 'analysis'];
+    let prompt = this.dataDigest && digestIntents.includes(queryIntent)
+      ? `${profilePrompt}\n${this.dataDigest}` : profilePrompt;
+
+    const [briefingResult, rankingsContext] = await Promise.all([
+      lookupBriefingContext(this.supabase.getClient(), this.briefingGenerator, userMessage, conversation.context),
+      lookupRankingsCache(this.appConfig, this.rankingsCache, userMessage),
+    ]);
+
+    if (briefingResult) {
+      prompt += formatBriefingForPrompt(briefingResult.briefing, briefingResult.freshNews);
+      this.logger.log(`[Quinn Intelligence] Injected briefing for ${briefingResult.briefing.geography_name}`);
+    }
+    if (rankingsContext) {
+      prompt += `\n\n${rankingsContext}`;
+      this.logger.log(`[Quinn Intelligence] Injected cached rankings context`);
+    }
+    return prompt;
   }
 
   /**
@@ -1284,11 +1224,8 @@ USER QUERY:`;
     let conversation = this.conversations.get(conversationId);
     if (!conversation) {
       conversation = {
-        id: conversationId,
-        messages: [],
-        context,
-        createdAt: new Date().toISOString(),
-        lastMessageAt: new Date().toISOString(),
+        id: conversationId, messages: [], context,
+        createdAt: new Date().toISOString(), lastMessageAt: new Date().toISOString(),
       };
       this.conversations.set(conversationId, conversation);
     }
@@ -1324,8 +1261,15 @@ USER QUERY:`;
         ? `${userProfilePrompt}\n${this.dataDigest}`
         : userProfilePrompt;
 
+  private async prepareConversation(conversationId: string, userMessage: string, context?: Record<string, any>) {
+    const conversation = this.getOrCreateConversation(conversationId, context);
+    const intent = getQueryIntent(userMessage);
+    const tools = getRelevantTools(userMessage, this.toolsService.getToolDefinitions());
+    const systemPrompt = await this.enrichSystemPrompt(intent, conversation, userMessage);
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
+    return { conversation, intent, tools, systemPrompt, maxIterations: getMaxIterations(intent) };
+  }
 
     const initialModel = this.selectInitialModel(userMessage);
     const providerOrder =
@@ -1333,7 +1277,18 @@ USER QUERY:`;
         ? ['anthropic', 'openai']
         : ['openai', 'anthropic'];
 
-    let successful = false;
+  async * chatStream(
+    conversationId: string, userMessage: string, context?: Record<string, any>,
+  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
+    if (!await this.ensureIntelligenceEnabled()) {
+      yield { type: 'text', content: 'Quinn is currently offline. Market intelligence features are being configured.' };
+      yield { type: 'done', content: null };
+      return;
+    }
+    if (!this.providers.size) throw new Error('AI Provider not initialized - check API Keys');
+
+    const { conversation, tools, systemPrompt, maxIterations } =
+      await this.prepareConversation(conversationId, userMessage, context);
     let lastError: Error | null = null;
     let accumulatedText = '';
 
@@ -1360,7 +1315,6 @@ USER QUERY:`;
           model: loopModel,
           maxIterations,
         });
-
         for await (const chunk of stream) {
           if (chunk.type === 'text') accumulatedText += chunk.content;
           yield chunk;
@@ -1375,10 +1329,7 @@ USER QUERY:`;
         lastError = e;
       }
     }
-
-    if (!successful) throw lastError || new Error('No AI provider available');
-
-    conversation.messages.push({ role: 'assistant', content: accumulatedText });
+    throw lastError || new Error('No AI provider available');
   }
 
   /**
@@ -1389,9 +1340,7 @@ USER QUERY:`;
    * Using configured AI Providers with fallback support.
    */
   async chat(
-    conversationId: string,
-    userMessage: string,
-    context?: Record<string, any>,
+    conversationId: string, userMessage: string, context?: Record<string, any>,
   ): Promise<{
     response: string;
     toolsUsed: string[];
@@ -1483,6 +1432,10 @@ USER QUERY:`;
           providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
       }
 
+    for (const providerId of this.providerOrder()) {
+      const prov = this.providers.get(providerId);
+      if (!prov) continue;
+      const model = this.modelForProvider(providerId);
       try {
         this.logger.log(
           `[Quinn Chat] Processing via ${providerId} (${loopModel})`,
@@ -1511,9 +1464,7 @@ USER QUERY:`;
           content: result.content,
         });
         finalResult = result;
-        usedModel = loopModel;
-        accumulatedToolsUsed = result.toolsUsed;
-        successful = true;
+        usedModel = model;
         break;
       } catch (e) {
         this.logger.warn(
@@ -1522,6 +1473,7 @@ USER QUERY:`;
         lastError = e;
       }
     }
+    if (!finalResult) throw lastError || new Error('No AI provider available');
 
     if (!successful) throw lastError || new Error('No AI provider available');
 

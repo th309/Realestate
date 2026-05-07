@@ -24,6 +24,11 @@ import { getValidationTemplateVars } from './validation-credibility';
  * Build the full template-variable map that Claude uses for AI narrative
  * generation.  This is a flat key→value object whose keys match
  * `{{placeholders}}` in narrative prompt templates.
+ *
+ * @param briefingContext - Optional market briefing from the intelligence layer.
+ *   When present, adds stance/risk/news context so AI narratives align with
+ *   the intelligence assessment. When absent, narratives generate exactly as
+ *   before — no degradation.
  */
 export function buildNarrativeTemplateVars(
   dto: GenerateReportDto,
@@ -292,4 +297,78 @@ export function buildComponentVars(
     }
   }
   return ctx;
+}
+
+// ============================================================================
+// Market Intelligence Briefing Helpers
+// ============================================================================
+
+/**
+ * Convert a market stance enum value into a human-readable description
+ * suitable for inclusion in AI narrative prompts.
+ */
+function formatStanceForNarrative(stance: string): string {
+  const stanceDescriptions: Record<string, string> = {
+    strong_bullish: 'strongly bullish — the data overwhelmingly favors this market',
+    weak_bullish: 'cautiously bullish — more positive signals than negative',
+    neutral: 'neutral — mixed signals with no clear directional trend',
+    weak_bearish: 'cautiously bearish — more warning signs than positive signals',
+    strong_bearish: 'strongly bearish — significant risk factors present',
+  };
+  return stanceDescriptions[stance] || 'neutral';
+}
+
+/**
+ * Build template variables from an optional market briefing.
+ *
+ * When `briefingContext` is null/undefined (intelligence off or no briefing
+ * exists), all keys are set to null so conditional prompt blocks are skipped
+ * and the narrative generates exactly as it did before intelligence existed.
+ */
+function buildBriefingTemplateVars(briefingContext?: any): Record<string, any> {
+  if (!briefingContext) {
+    return {
+      market_stance: null,
+      stance_description: null,
+      risk_flags_text: null,
+      briefing_narrative: null,
+      briefing_news: null,
+      briefing_intelligence_block: null,
+    };
+  }
+
+  const stanceDescription = formatStanceForNarrative(briefingContext.market_stance);
+
+  const riskFlagsText = (briefingContext.risk_flags || [])
+    .map((f: any) => f.detail || f.description || f.flag)
+    .filter(Boolean)
+    .join('; ');
+
+  const briefingNews = (briefingContext.news_snapshot || [])
+    .map((n: any) => `${n.headline} (${n.source_name})`)
+    .filter(Boolean)
+    .join('; ');
+
+  // Pre-built intelligence block that prompt templates can include via
+  // {{#if market_stance}}...{{/if}} or {{briefing_intelligence_block}}
+  const intelligenceBlock = [
+    'MARKET INTELLIGENCE CONTEXT:',
+    `Market Stance: ${stanceDescription}`,
+    `Key Risks: ${riskFlagsText || 'None identified'}`,
+    `Market Summary: ${briefingContext.narrative_summary || 'N/A'}`,
+    briefingNews ? `Recent News: ${briefingNews}` : null,
+    '',
+    'Your analysis MUST be consistent with this market assessment. Personalization and depth remain unchanged.',
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+
+  return {
+    market_stance: briefingContext.market_stance,
+    stance_description: stanceDescription,
+    risk_flags_text: riskFlagsText || null,
+    briefing_narrative: briefingContext.narrative_summary || null,
+    briefing_news: briefingNews || null,
+    briefing_intelligence_block: intelligenceBlock,
+  };
 }

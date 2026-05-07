@@ -44,12 +44,21 @@ export async function POST(
     const targetUrl = `${BACKEND_URL}/analytics/chat/${conversationId}`;
     console.log(`[Quinn POST ${requestId}] Fetching:`, targetUrl);
 
+    // Forward auth headers from the client request
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) headers['Authorization'] = authHeader;
+    const apiKey = request.headers.get('x-api-key');
+    if (apiKey) headers['x-api-key'] = apiKey;
+    const userId = request.headers.get('x-user-id');
+    if (userId) headers['x-user-id'] = userId;
+
     const fetchStartTime = Date.now();
     const response = await fetch(targetUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
     const fetchDuration = Date.now() - fetchStartTime;
