@@ -14,12 +14,30 @@ import { RankingsCacheService } from '../market-intelligence/rankings-cache.serv
 import { BriefingGeneratorService } from '../market-intelligence/briefing-generator.service';
 import { MarketBriefing } from '../market-intelligence/market-intelligence.types';
 export type { ChatMessage, StructuredData } from './analytics-chat.types';
-import { ConversationState, StructuredData } from './analytics-chat.types';
-import { getQueryIntent, getMaxIterations, getRelevantTools } from './analytics-chat-query-router';
-import { buildUserProfilePrompt, buildDynamicContext } from './analytics-chat-prompt-builders';
+import {
+  ChatMessage,
+  ConversationState,
+  StructuredData,
+} from './analytics-chat.types';
+import {
+  getQueryIntent,
+  getMaxIterations,
+  getRelevantTools,
+} from './analytics-chat-query-router';
+import {
+  buildUserProfilePrompt,
+  buildDynamicContext,
+} from './analytics-chat-prompt-builders';
 import { buildDataDigest, warmCache } from './analytics-chat-cache';
-import { extractStructuredData, buildFallbackResponseFromStructuredData } from './analytics-chat-structured-data';
-import { lookupBriefingContext, lookupRankingsCache, formatBriefingForPrompt } from './analytics-chat-intelligence.helpers';
+import {
+  extractStructuredData,
+  buildFallbackResponseFromStructuredData,
+} from './analytics-chat-structured-data';
+import {
+  lookupBriefingContext,
+  lookupRankingsCache,
+  formatBriefingForPrompt,
+} from './analytics-chat-intelligence.helpers';
 
 @Injectable()
 export class AnalyticsChatService {
@@ -32,6 +50,8 @@ export class AnalyticsChatService {
   private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
   private conversations: Map<string, ConversationState> = new Map();
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+  private readonly CONVERSATION_TTL_MS = 30 * 60 * 1000;
+  private readonly MAX_CONVERSATIONS = 1000;
   private cleanupIntervalId: NodeJS.Timeout | null = null;
   private dataDigest = '';
 
@@ -153,22 +173,41 @@ export class AnalyticsChatService {
   }
 
   private initializeCacheWarmup(): void {
-    const shouldWarm = this.configService.get<string>('QUINN_CACHE_WARM_ON_STARTUP', 'true') === 'true';
+    const shouldWarm =
+      this.configService.get<string>('QUINN_CACHE_WARM_ON_STARTUP', 'true') ===
+      'true';
     if (!this.isAvailable() || !shouldWarm) return;
     warmCache(this.redisService, this.toolsService, this.configService)
       .then(() => buildDataDigest(this.redisService))
-      .then((digest) => { this.dataDigest = digest; })
-      .catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+      .then((digest) => {
+        this.dataDigest = digest;
+      })
+      .catch((err) =>
+        this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`),
+      );
   }
 
-  isAvailable(): boolean { return !!this.anthropicClient || !!this.openaiClient; }
-  private providerOrder(): string[] { return this.provider === 'anthropic' ? ['anthropic', 'openai'] : ['openai', 'anthropic']; }
+  isAvailable(): boolean {
+    return !!this.anthropicClient || !!this.openaiClient;
+  }
+  private providerOrder(): string[] {
+    return this.provider === 'anthropic'
+      ? ['anthropic', 'openai']
+      : ['openai', 'anthropic'];
+  }
   private modelForProvider(id: string): string {
-    return id !== this.provider ? (id === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat') : this.modelName;
+    return id !== this.provider
+      ? id === 'anthropic'
+        ? this.MODEL_BALANCED
+        : 'deepseek-chat'
+      : this.modelName;
   }
 
   private startConversationCleanup(): void {
-    this.cleanupIntervalId = setInterval(() => this.cleanupStaleConversations(), this.CLEANUP_INTERVAL_MS);
+    this.cleanupIntervalId = setInterval(
+      () => this.cleanupStaleConversations(),
+      this.CLEANUP_INTERVAL_MS,
+    );
     process.on('beforeExit', () => this.stopConversationCleanup());
 
     this.logger.log(
@@ -177,16 +216,27 @@ export class AnalyticsChatService {
   }
 
   private stopConversationCleanup(): void {
-    if (this.cleanupIntervalId) { clearInterval(this.cleanupIntervalId); this.cleanupIntervalId = null; }
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = null;
+    }
   }
 
   private async cleanupStaleConversations(): Promise<void> {
-    const ttlMs = (await this.appConfig.getNumber('QUINN_CONVERSATION_TTL_MINUTES', 30)) * 60_000;
-    const maxConversations = await this.appConfig.getNumber('QUINN_MAX_CONVERSATIONS', 1000);
+    const ttlMs =
+      (await this.appConfig.getNumber('QUINN_CONVERSATION_TTL_MINUTES', 30)) *
+      60_000;
+    const maxConversations = await this.appConfig.getNumber(
+      'QUINN_MAX_CONVERSATIONS',
+      1000,
+    );
     const now = Date.now();
     let cleaned = 0;
     for (const [id, conv] of this.conversations.entries()) {
-      if (now - new Date(conv.lastMessageAt).getTime() > ttlMs) { this.conversations.delete(id); cleaned++; }
+      if (now - new Date(conv.lastMessageAt).getTime() > ttlMs) {
+        this.conversations.delete(id);
+        cleaned++;
+      }
     }
 
     // If still over max, remove oldest conversations
@@ -214,32 +264,48 @@ export class AnalyticsChatService {
     }
   }
 
-  getConversation(id: string): ConversationState | undefined { return this.conversations.get(id); }
-  clearConversation(id: string): boolean {
-    const existed = this.conversations.has(id);
-    this.conversations.delete(id);
-    if (existed) this.logger.log(`Cleared conversation: ${id}`);
-    return existed;
-  }
-  listConversations(): string[] { return [...this.conversations.keys()]; }
-
   private async enrichSystemPrompt(
-    queryIntent: string, conversation: ConversationState, userMessage: string,
+    queryIntent: string,
+    conversation: ConversationState,
+    userMessage: string,
   ): Promise<string> {
-    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
-    const profilePrompt = buildUserProfilePrompt(userMode, conversation.context as any);
-    const digestIntents = ['conversational', 'ranking', 'filtering', 'comparison', 'analysis'];
-    let prompt = this.dataDigest && digestIntents.includes(queryIntent)
-      ? `${profilePrompt}\n${this.dataDigest}` : profilePrompt;
+    const userMode =
+      (conversation.context?.userMode as 'homebuyer' | 'investor') ||
+      'homebuyer';
+    const profilePrompt = buildUserProfilePrompt(
+      userMode,
+      conversation.context as any,
+    );
+    const digestIntents = [
+      'conversational',
+      'ranking',
+      'filtering',
+      'comparison',
+      'analysis',
+    ];
+    let prompt =
+      this.dataDigest && digestIntents.includes(queryIntent)
+        ? `${profilePrompt}\n${this.dataDigest}`
+        : profilePrompt;
 
     const [briefingResult, rankingsContext] = await Promise.all([
-      lookupBriefingContext(this.supabase.getClient(), this.briefingGenerator, userMessage, conversation.context),
+      lookupBriefingContext(
+        this.supabase.getClient(),
+        this.briefingGenerator,
+        userMessage,
+        conversation.context,
+      ),
       lookupRankingsCache(this.appConfig, this.rankingsCache, userMessage),
     ]);
 
     if (briefingResult) {
-      prompt += formatBriefingForPrompt(briefingResult.briefing, briefingResult.freshNews);
-      this.logger.log(`[Quinn Intelligence] Injected briefing for ${briefingResult.briefing.geography_name}`);
+      prompt += formatBriefingForPrompt(
+        briefingResult.briefing,
+        briefingResult.freshNews,
+      );
+      this.logger.log(
+        `[Quinn Intelligence] Injected briefing for ${briefingResult.briefing.geography_name}`,
+      );
     }
     if (rankingsContext) {
       prompt += `\n\n${rankingsContext}`;
@@ -1224,8 +1290,11 @@ USER QUERY:`;
     let conversation = this.conversations.get(conversationId);
     if (!conversation) {
       conversation = {
-        id: conversationId, messages: [], context,
-        createdAt: new Date().toISOString(), lastMessageAt: new Date().toISOString(),
+        id: conversationId,
+        messages: [],
+        context,
+        createdAt: new Date().toISOString(),
+        lastMessageAt: new Date().toISOString(),
       };
       this.conversations.set(conversationId, conversation);
     }
@@ -1261,34 +1330,11 @@ USER QUERY:`;
         ? `${userProfilePrompt}\n${this.dataDigest}`
         : userProfilePrompt;
 
-  private async prepareConversation(conversationId: string, userMessage: string, context?: Record<string, any>) {
-    const conversation = this.getOrCreateConversation(conversationId, context);
-    const intent = getQueryIntent(userMessage);
-    const tools = getRelevantTools(userMessage, this.toolsService.getToolDefinitions());
-    const systemPrompt = await this.enrichSystemPrompt(intent, conversation, userMessage);
-    conversation.messages.push({ role: 'user', content: userMessage });
-    conversation.lastMessageAt = new Date().toISOString();
-    return { conversation, intent, tools, systemPrompt, maxIterations: getMaxIterations(intent) };
-  }
-
     const initialModel = this.selectInitialModel(userMessage);
     const providerOrder =
       this.provider === 'anthropic'
         ? ['anthropic', 'openai']
         : ['openai', 'anthropic'];
-
-  async * chatStream(
-    conversationId: string, userMessage: string, context?: Record<string, any>,
-  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
-    if (!await this.ensureIntelligenceEnabled()) {
-      yield { type: 'text', content: 'Quinn is currently offline. Market intelligence features are being configured.' };
-      yield { type: 'done', content: null };
-      return;
-    }
-    if (!this.providers.size) throw new Error('AI Provider not initialized - check API Keys');
-
-    const { conversation, tools, systemPrompt, maxIterations } =
-      await this.prepareConversation(conversationId, userMessage, context);
     let lastError: Error | null = null;
     let accumulatedText = '';
 
@@ -1320,7 +1366,6 @@ USER QUERY:`;
           yield chunk;
         }
 
-        successful = true;
         break;
       } catch (e) {
         this.logger.warn(
@@ -1340,7 +1385,9 @@ USER QUERY:`;
    * Using configured AI Providers with fallback support.
    */
   async chat(
-    conversationId: string, userMessage: string, context?: Record<string, any>,
+    conversationId: string,
+    userMessage: string,
+    context?: Record<string, any>,
   ): Promise<{
     response: string;
     toolsUsed: string[];
@@ -1408,38 +1455,18 @@ USER QUERY:`;
         : userProfilePrompt;
     const dynamicContext = this.buildDynamicContext(conversation.messages);
 
-    // Initial Model Selection
-    const initialModel = this.selectInitialModel(userMessage);
-    const providerOrder =
-      this.provider === 'anthropic'
-        ? ['anthropic', 'openai']
-        : ['openai', 'anthropic'];
-
-    let successful = false;
     let lastError: Error | null = null;
     let finalResult: any = null;
     let usedModel = '';
     const chatStartTime = Date.now();
-    let accumulatedToolsUsed: string[] = [];
-
-    for (const providerId of providerOrder) {
-      const provider = this.providers.get(providerId);
-      if (!provider) continue;
-
-      let loopModel = initialModel;
-      if (providerId !== this.provider) {
-        loopModel =
-          providerId === 'anthropic' ? this.MODEL_BALANCED : 'deepseek-chat';
-      }
+    const accumulatedToolsUsed: string[] = [];
 
     for (const providerId of this.providerOrder()) {
       const prov = this.providers.get(providerId);
       if (!prov) continue;
       const model = this.modelForProvider(providerId);
       try {
-        this.logger.log(
-          `[Quinn Chat] Processing via ${providerId} (${loopModel})`,
-        );
+        this.logger.log(`[Quinn Chat] Processing via ${providerId} (${model})`);
 
         // Inject dynamic context into the last message for the provider call
         // We clone messages to avoid mutating conversation persistence permanently with verbose context
@@ -1450,12 +1477,12 @@ USER QUERY:`;
           return m;
         });
 
-        const result = await provider.chat({
+        const result = await prov.chat({
           conversationId,
           messages: messagesForProvider,
           tools: rawTools,
           systemPrompt,
-          model: loopModel,
+          model,
           maxIterations,
         });
 
@@ -1474,8 +1501,6 @@ USER QUERY:`;
       }
     }
     if (!finalResult) throw lastError || new Error('No AI provider available');
-
-    if (!successful) throw lastError || new Error('No AI provider available');
 
     // Extract structured data fallback logic
     this.logger.debug(

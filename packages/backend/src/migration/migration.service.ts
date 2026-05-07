@@ -26,6 +26,15 @@ const DEFAULT_MIGRATION_LAG_YEARS = 2;
 export class MigrationService {
   constructor(private supabase: SupabaseService) {}
 
+  async getFlows(
+    _source: 'irs' | 'redfin',
+    _fips: string,
+    _direction: 'in' | 'out',
+    _limit: number,
+  ): Promise<MigrationFlow[]> {
+    return [];
+  }
+
   async getTopInflows(input: TopInflowsInput): Promise<MigrationFlow[]> {
     const limit = input.limit ?? 5;
     const year =
