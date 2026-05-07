@@ -2,15 +2,15 @@ import { describe, it, expect } from "@jest/globals";
 import { calculateRankingMetadata } from "../src/PropertyIQVideo";
 import type { VideoProps } from "../src/types";
 
-// Frame constants (must stay in sync with PropertyIQVideo.tsx)
-const BUMPER = 60; // 2.0 s brand sting
-const INTRO = 90; // 3.0 s
-const ROW = 150; // 5.0 s per row
-const OUTRO = 135; // 4.5 s
-const BRAND_OUTRO = 120; // 4.0 s
+// Frame constants (must stay in sync with layouts/top10-timing.ts fallback)
+const BUMPER = 60; // Brand bumper
+const HOOK = 45; // Hook line
+const ROW = 105; // Each row reveal
+const OUTRO = 60; // Closing CTA line
+const BRAND_OUTRO = 90; // Brand outro card
 
 function expectedFrames(n: number) {
-  return BUMPER + INTRO + n * ROW + OUTRO + BRAND_OUTRO;
+  return BUMPER + HOOK + n * ROW + OUTRO + BRAND_OUTRO;
 }
 
 function propsForN(n: number): VideoProps {
@@ -53,7 +53,7 @@ describe("calculateRankingMetadata", () => {
     expect(m.durationInFrames).toBeGreaterThan(0);
   });
 
-  it("duration scales linearly with resolved_markets.length (each row = 150 frames)", () => {
+  it("duration scales linearly with resolved_markets.length (each row = 105 frames)", () => {
     const d5 = calculateRankingMetadata({
       props: propsForN(5),
     } as any).durationInFrames;
@@ -63,24 +63,24 @@ describe("calculateRankingMetadata", () => {
     expect(d10 - d5).toBe(5 * ROW);
   });
 
-  it("N=5 → 1155 frames (60+90+750+135+120)", () => {
+  it("N=5 → 780 frames (60+45+525+60+90)", () => {
     const d = calculateRankingMetadata({
       props: propsForN(5),
     } as any).durationInFrames;
-    expect(d).toBe(expectedFrames(5)); // 1155
+    expect(d).toBe(expectedFrames(5)); // 780
   });
 
-  it("N=10 → 1905 frames (60+90+1500+135+120)", () => {
+  it("N=10 → 1305 frames (60+45+1050+60+90)", () => {
     const d = calculateRankingMetadata({
       props: propsForN(10),
     } as any).durationInFrames;
-    expect(d).toBe(expectedFrames(10)); // 1905
+    expect(d).toBe(expectedFrames(10)); // 1305
   });
 
-  it("defaults to 10 rows when params is absent (durationInFrames = 1905)", () => {
+  it("defaults to 10 rows when params is absent (durationInFrames = 1305)", () => {
     const d = calculateRankingMetadata({
       props: { format: "top_10_ranking" } as any,
     } as any).durationInFrames;
-    expect(d).toBe(expectedFrames(10)); // 1905
+    expect(d).toBe(expectedFrames(10)); // 1305
   });
 });

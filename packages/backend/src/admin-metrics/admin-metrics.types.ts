@@ -90,7 +90,12 @@ export interface ApiTimingEntry {
 
 export interface HeroStats {
   system_health: { uptime_pct: number; sparkline: number[] };
-  active_alerts: { count: number; critical: number; warning: number; sparkline: number[] };
+  active_alerts: {
+    count: number;
+    critical: number;
+    warning: number;
+    sparkline: number[];
+  };
   data_freshness: { fresh: number; total: number; sparkline: number[] };
   total_users: { count: number; new_this_week: number; sparkline: number[] };
   score_health: { hit_rate_1y: number; sparkline: number[] };

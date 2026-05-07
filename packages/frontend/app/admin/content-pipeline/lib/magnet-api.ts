@@ -13,6 +13,8 @@ export interface MagnetDefinition {
   enabled: boolean;
   version: number;
   updated_at: string;
+  delivered_count?: number;
+  converted_to_paid_pct?: number;
 }
 
 export interface FormatBinding {

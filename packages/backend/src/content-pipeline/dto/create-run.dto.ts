@@ -81,4 +81,21 @@ export class CreateRunDto {
   @ValidateNested()
   @Type(() => FormatOptionsDto)
   formatOptions?: FormatOptionsDto;
+
+  /**
+   * Internal-only usage: auto-ideation cron can enqueue runs without human action.
+   * Admin HTTP createRun always defaults to 'manual'.
+   */
+  @IsOptional()
+  @IsIn(['manual', 'auto_ideation'])
+  triggeredBy?: 'manual' | 'auto_ideation';
+
+  /** Optional metadata used for UI audit/badges (stored in events). */
+  @IsOptional()
+  @IsString()
+  autoIdeationRuleName?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  autoIdeationRuleId?: string;
 }

@@ -42,7 +42,7 @@ export class ExportService {
 
     // Determine columns
     const columns = options.columns || Object.keys(data[0]);
-    
+
     // Build CSV
     const rows: string[] = [];
 
@@ -75,7 +75,7 @@ export class ExportService {
     options: ExportOptions = { format: 'json' },
   ): ExportResult {
     const columns = options.columns;
-    
+
     // Filter columns if specified
     const exportData = columns
       ? data.map((row) => {
@@ -150,13 +150,13 @@ export class ExportService {
     options: ExportOptions,
   ): ExportResult {
     const metrics = Object.keys(geographies[0]?.metrics || {});
-    
+
     // Transform to flat rows
     const rows: Record<string, unknown>[] = geographies.map((geo) => ({
       Geography: geo.name,
       Type: geo.type,
       ...Object.fromEntries(
-        metrics.map((m) => [metricLabels[m] || m, geo.metrics[m]])
+        metrics.map((m) => [metricLabels[m] || m, geo.metrics[m]]),
       ),
     }));
 
@@ -190,7 +190,7 @@ export class ExportService {
     }
 
     const rows = Array.from(dateMap.values()).sort((a, b) =>
-      String(a.Date).localeCompare(String(b.Date))
+      String(a.Date).localeCompare(String(b.Date)),
     );
 
     if (options.format === 'json') {

@@ -89,7 +89,12 @@ export class EconomicService {
     if (error) throw error;
 
     // If specific date was requested but had no data, fall back to latest available
-    if (date && (!data || data.length === 0 || toNumberOrNull((data[0] as EconomicRow)[metric]) === null)) {
+    if (
+      date &&
+      (!data ||
+        data.length === 0 ||
+        toNumberOrNull((data[0] as EconomicRow)[metric]) === null)
+    ) {
       const { data: fallbackData, error: fallbackError } = await this.supabase
         .from('economic_national')
         .select('*')
@@ -99,12 +104,14 @@ export class EconomicService {
 
       if (!fallbackError && fallbackData && fallbackData.length > 0) {
         const row = fallbackData[0] as EconomicRow;
-        return [{
-          region_id: 'US',
-          region_name: 'United States',
-          value: toNumberOrNull(row[metric]),
-          date: row.period_date as string,
-        }];
+        return [
+          {
+            region_id: 'US',
+            region_name: 'United States',
+            value: toNumberOrNull(row[metric]),
+            date: row.period_date as string,
+          },
+        ];
       }
     }
 
@@ -116,18 +123,27 @@ export class EconomicService {
     }));
 
     // economic_national is not populated with gdp_yoy by the combine script; derive from state aggregate
-    if ((mapped.length === 0 || (mapped.length === 1 && (mapped[0].value === null || mapped[0].value === 0))) && metric === 'gdp_yoy') {
+    if (
+      (mapped.length === 0 ||
+        (mapped.length === 1 &&
+          (mapped[0].value === null || mapped[0].value === 0))) &&
+      metric === 'gdp_yoy'
+    ) {
       const statePoints = await this.getStateData('gdp_yoy', date);
-      const values = statePoints.map((p) => p.value).filter((v): v is number => v != null && !Number.isNaN(v) && v !== 0);
+      const values = statePoints
+        .map((p) => p.value)
+        .filter((v): v is number => v != null && !Number.isNaN(v) && v !== 0);
       if (values.length > 0) {
         const avg = values.reduce((a, b) => a + b, 0) / values.length;
         const latestDate = statePoints[0]?.date;
-        return [{
-          region_id: 'US',
-          region_name: 'United States',
-          value: Math.round(avg * 100) / 100,
-          date: latestDate ?? new Date().toISOString().split('T')[0],
-        }];
+        return [
+          {
+            region_id: 'US',
+            region_name: 'United States',
+            value: Math.round(avg * 100) / 100,
+            date: latestDate ?? new Date().toISOString().split('T')[0],
+          },
+        ];
       }
     }
 
@@ -151,9 +167,12 @@ export class EconomicService {
     }
 
     // Use optimized database function to get only latest data per state
-    const { data, error } = await this.supabase.rpc('get_latest_economic_state', {
-      p_metric: metric,
-    });
+    const { data, error } = await this.supabase.rpc(
+      'get_latest_economic_state',
+      {
+        p_metric: metric,
+      },
+    );
 
     if (error) throw error;
 
@@ -241,11 +260,14 @@ export class EconomicService {
     let offset = 0;
 
     while (true) {
-      const { data, error } = await this.supabase.rpc('get_latest_economic_county', {
-        p_metric: metric,
-        p_limit: batchSize,
-        p_offset: offset,
-      });
+      const { data, error } = await this.supabase.rpc(
+        'get_latest_economic_county',
+        {
+          p_metric: metric,
+          p_limit: batchSize,
+          p_offset: offset,
+        },
+      );
 
       if (error) throw error;
       if (!data || data.length === 0) break;

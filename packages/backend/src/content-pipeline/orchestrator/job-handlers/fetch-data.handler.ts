@@ -40,11 +40,8 @@ export class FetchDataHandler {
       const candidates = await this.data.resolveMarket(run.market_query);
       if (candidates.length === 0)
         throw new Error(`no market match for "${run.market_query}"`);
-      const resolvedGeo = {
-        geography: candidates[0].geography,
-        id: candidates[0].id,
-        canonical_name: candidates[0].canonical_name,
-      };
+      /** Persist full `ResolvedMarket` (includes lat/lng from `geographies` for video/map parity). */
+      const resolvedGeo = candidates[0];
 
       const snapshot = await this.data.getMarketSnapshot(resolvedGeo);
 

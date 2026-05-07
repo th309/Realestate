@@ -57,12 +57,14 @@ export class TrialService {
   /**
    * Update trial configuration
    */
-  async updateConfig(updates: Partial<{
-    is_enabled: boolean;
-    duration_days: number;
-    trial_tier: string;
-    show_banner: boolean;
-  }>): Promise<TrialConfig> {
+  async updateConfig(
+    updates: Partial<{
+      is_enabled: boolean;
+      duration_days: number;
+      trial_tier: string;
+      show_banner: boolean;
+    }>,
+  ): Promise<TrialConfig> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client
@@ -115,9 +117,7 @@ export class TrialService {
   }): Promise<{ trials: UserTrial[]; total: number }> {
     const client = this.supabase.getClient();
 
-    let query = client
-      .from('user_trials')
-      .select('*', { count: 'exact' });
+    let query = client.from('user_trials').select('*', { count: 'exact' });
 
     // Filter by status
     if (options?.status === 'active') {
@@ -141,7 +141,10 @@ export class TrialService {
       query = query.limit(options.limit);
     }
     if (options?.offset) {
-      query = query.range(options.offset, options.offset + (options.limit || 20) - 1);
+      query = query.range(
+        options.offset,
+        options.offset + (options.limit || 20) - 1,
+      );
     }
 
     query = query.order('created_at', { ascending: false });
@@ -170,28 +173,29 @@ export class TrialService {
     const now = new Date().toISOString();
 
     // Get counts for each status
-    const [activeResult, expiredResult, convertedResult, cancelledResult] = await Promise.all([
-      client
-        .from('user_trials')
-        .select('*', { count: 'exact', head: true })
-        .is('converted_at', null)
-        .is('cancelled_at', null)
-        .gt('expires_at', now),
-      client
-        .from('user_trials')
-        .select('*', { count: 'exact', head: true })
-        .is('converted_at', null)
-        .is('cancelled_at', null)
-        .lt('expires_at', now),
-      client
-        .from('user_trials')
-        .select('*', { count: 'exact', head: true })
-        .not('converted_at', 'is', null),
-      client
-        .from('user_trials')
-        .select('*', { count: 'exact', head: true })
-        .not('cancelled_at', 'is', null),
-    ]);
+    const [activeResult, expiredResult, convertedResult, cancelledResult] =
+      await Promise.all([
+        client
+          .from('user_trials')
+          .select('*', { count: 'exact', head: true })
+          .is('converted_at', null)
+          .is('cancelled_at', null)
+          .gt('expires_at', now),
+        client
+          .from('user_trials')
+          .select('*', { count: 'exact', head: true })
+          .is('converted_at', null)
+          .is('cancelled_at', null)
+          .lt('expires_at', now),
+        client
+          .from('user_trials')
+          .select('*', { count: 'exact', head: true })
+          .not('converted_at', 'is', null),
+        client
+          .from('user_trials')
+          .select('*', { count: 'exact', head: true })
+          .not('cancelled_at', 'is', null),
+      ]);
 
     const active = activeResult.count || 0;
     const expired = expiredResult.count || 0;
@@ -199,7 +203,8 @@ export class TrialService {
     const cancelled = cancelledResult.count || 0;
 
     const totalCompleted = expired + converted + cancelled;
-    const conversionRate = totalCompleted > 0 ? (converted / totalCompleted) * 100 : 0;
+    const conversionRate =
+      totalCompleted > 0 ? (converted / totalCompleted) * 100 : 0;
 
     return { active, expired, converted, cancelled, conversionRate };
   }
@@ -238,7 +243,10 @@ export class TrialService {
   /**
    * Extend a user's trial
    */
-  async extendTrial(userId: string, additionalDays: number): Promise<UserTrial> {
+  async extendTrial(
+    userId: string,
+    additionalDays: number,
+  ): Promise<UserTrial> {
     const client = this.supabase.getClient();
 
     const { data: existing, error: fetchError } = await client
@@ -265,7 +273,9 @@ export class TrialService {
       throw new Error(error.message);
     }
 
-    this.logger.log(`Extended trial for user ${userId} by ${additionalDays} days`);
+    this.logger.log(
+      `Extended trial for user ${userId} by ${additionalDays} days`,
+    );
     return data;
   }
 

@@ -81,6 +81,34 @@ export const DEFAULT_VARIANT: StyleVariant = {
 
 const REGISTRY: Record<string, StyleVariant> = {
   [DEFAULT_VARIANT.id]: DEFAULT_VARIANT,
+  pattern_interrupt_hook: {
+    ...DEFAULT_VARIANT,
+    id: "pattern_interrupt_hook",
+    displayName: "Pattern Interrupt Hook",
+    colors: {
+      ...DEFAULT_VARIANT.colors,
+      // Slightly hotter accent to read as higher energy.
+      accentWarning: "#FF3D00",
+    },
+  },
+  countdown_hook: {
+    ...DEFAULT_VARIANT,
+    id: "countdown_hook",
+    displayName: "Countdown Hook",
+    colors: {
+      ...DEFAULT_VARIANT.colors,
+      accentPositive: "#00BFA5",
+    },
+  },
+  question_hook: {
+    ...DEFAULT_VARIANT,
+    id: "question_hook",
+    displayName: "Question Hook",
+    colors: {
+      ...DEFAULT_VARIANT.colors,
+      surfaceContainer: "#E3F2FD",
+    },
+  },
 };
 
 /**

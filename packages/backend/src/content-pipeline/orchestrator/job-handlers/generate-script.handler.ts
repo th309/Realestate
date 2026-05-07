@@ -164,7 +164,7 @@ export class GenerateScriptHandler {
       // Diagnostic: capture the budget given to the generator + what was
       // actually produced, so audio-overflow vs word-budget calibration can
       // be audited from the DB without tailing backend stdout.
-      const firstScript = result.scripts[0]!;
+      const firstScript = result.scripts[0];
       const fullTextLen = firstScript?.fullText?.length ?? 0;
       const fullTextWords = firstScript?.fullText
         ? firstScript.fullText.split(/\s+/).filter(Boolean).length

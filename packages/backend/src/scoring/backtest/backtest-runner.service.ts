@@ -71,7 +71,9 @@ export class BacktestRunnerService {
   async runBacktest(params: BacktestParams): Promise<BacktestResult> {
     const runId = randomUUID();
 
-    this.logger.log(`Starting backtest ${runId} for ${params.scoreType} ${params.geographyType}`);
+    this.logger.log(
+      `Starting backtest ${runId} for ${params.scoreType} ${params.geographyType}`,
+    );
 
     // Get score-outcome pairs
     const pairs = await this.getScoreOutcomePairs(params);
@@ -120,7 +122,9 @@ export class BacktestRunnerService {
           });
           results.push(result);
         } catch (error) {
-          this.logger.error(`Error in backtest ${geoType}/${horizon}: ${error}`);
+          this.logger.error(
+            `Error in backtest ${geoType}/${horizon}: ${error}`,
+          );
         }
       }
     }
@@ -132,7 +136,9 @@ export class BacktestRunnerService {
   // Private Methods
   // ========================================================================
 
-  private async getScoreOutcomePairs(params: BacktestParams): Promise<ScoreOutcomePair[]> {
+  private async getScoreOutcomePairs(
+    params: BacktestParams,
+  ): Promise<ScoreOutcomePair[]> {
     const client = this.supabase.getClient();
 
     const outcomeColumn = this.getOutcomeColumn(params.outcomeHorizon);
@@ -148,7 +154,9 @@ export class BacktestRunnerService {
       .not(outcomeColumn, 'is', null);
 
     if (error || !data) {
-      this.logger.error(`Error fetching score-outcome pairs: ${error?.message}`);
+      this.logger.error(
+        `Error fetching score-outcome pairs: ${error?.message}`,
+      );
       return [];
     }
 
@@ -192,8 +200,16 @@ export class BacktestRunnerService {
     const outcomeStdDev = this.stdDev(outcomes, outcomeMean);
 
     // Correlation
-    const pearsonCorrelation = this.pearsonCorrelation(scores, outcomes, scoreMean, outcomeMean);
-    const rSquared = pearsonCorrelation !== null ? pearsonCorrelation * pearsonCorrelation : null;
+    const pearsonCorrelation = this.pearsonCorrelation(
+      scores,
+      outcomes,
+      scoreMean,
+      outcomeMean,
+    );
+    const rSquared =
+      pearsonCorrelation !== null
+        ? pearsonCorrelation * pearsonCorrelation
+        : null;
     const spearmanCorrelation = this.spearmanCorrelation(scores, outcomes);
 
     // Error metrics
@@ -236,7 +252,10 @@ export class BacktestRunnerService {
     };
   }
 
-  private createEmptyResult(runId: string, params: BacktestParams): BacktestResult {
+  private createEmptyResult(
+    runId: string,
+    params: BacktestParams,
+  ): BacktestResult {
     return {
       runId,
       scoreType: params.scoreType,
@@ -308,7 +327,9 @@ export class BacktestRunnerService {
   private stdDev(values: number[], mean: number): number {
     if (values.length < 2) return 0;
     const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
-    return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1));
+    return Math.sqrt(
+      squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1),
+    );
   }
 
   private pearsonCorrelation(
@@ -363,22 +384,34 @@ export class BacktestRunnerService {
     return ranks;
   }
 
-  private meanAbsoluteError(predicted: number[], actual: number[]): number | null {
-    if (predicted.length !== actual.length || predicted.length === 0) return null;
+  private meanAbsoluteError(
+    predicted: number[],
+    actual: number[],
+  ): number | null {
+    if (predicted.length !== actual.length || predicted.length === 0)
+      return null;
 
     const errors = predicted.map((p, i) => Math.abs(p - actual[i]));
     return this.mean(errors);
   }
 
-  private rootMeanSquaredError(predicted: number[], actual: number[]): number | null {
-    if (predicted.length !== actual.length || predicted.length === 0) return null;
+  private rootMeanSquaredError(
+    predicted: number[],
+    actual: number[],
+  ): number | null {
+    if (predicted.length !== actual.length || predicted.length === 0)
+      return null;
 
     const squaredErrors = predicted.map((p, i) => Math.pow(p - actual[i], 2));
     return Math.sqrt(this.mean(squaredErrors));
   }
 
-  private meanAbsolutePercentageError(predicted: number[], actual: number[]): number | null {
-    if (predicted.length !== actual.length || predicted.length === 0) return null;
+  private meanAbsolutePercentageError(
+    predicted: number[],
+    actual: number[],
+  ): number | null {
+    if (predicted.length !== actual.length || predicted.length === 0)
+      return null;
 
     const validPairs = predicted
       .map((p, i) => ({ p, a: actual[i] }))
@@ -386,7 +419,9 @@ export class BacktestRunnerService {
 
     if (validPairs.length === 0) return null;
 
-    const percentageErrors = validPairs.map((pair) => Math.abs((pair.p - pair.a) / pair.a));
+    const percentageErrors = validPairs.map((pair) =>
+      Math.abs((pair.p - pair.a) / pair.a),
+    );
     return this.mean(percentageErrors) * 100;
   }
 

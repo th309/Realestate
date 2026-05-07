@@ -69,16 +69,40 @@ export async function getComputedInvestmentTimeSeries(
   limit?: number,
   lastPoints?: number,
 ): Promise<TimeSeriesDataPoint[]> {
-  const prices = await getRawSeries(supabase, 'zillow', 'zhvi', geoLevel, regionId, startDate, endDate);
+  const prices = await getRawSeries(
+    supabase,
+    'zillow',
+    'zhvi',
+    geoLevel,
+    regionId,
+    startDate,
+    endDate,
+  );
 
-  let rents = await getRawSeries(supabase, 'zillow', 'zori', geoLevel, regionId, startDate, endDate);
+  let rents = await getRawSeries(
+    supabase,
+    'zillow',
+    'zori',
+    geoLevel,
+    regionId,
+    startDate,
+    endDate,
+  );
   if (rents.length === 0 && geoLevel === 'zip') {
-    rents = await getRawSeries(supabase, 'zillow', 'zordi_sfr', geoLevel, regionId, startDate, endDate);
+    rents = await getRawSeries(
+      supabase,
+      'zillow',
+      'zordi_sfr',
+      geoLevel,
+      regionId,
+      startDate,
+      endDate,
+    );
   }
 
   if (prices.length === 0 || rents.length === 0) return [];
 
-  const priceMap = new Map(prices.map(p => [p.date, p.value]));
+  const priceMap = new Map(prices.map((p) => [p.date, p.value]));
   const result: TimeSeriesDataPoint[] = [];
 
   for (const rent of rents) {
@@ -118,7 +142,15 @@ export async function getComputedOvervaluedTimeSeries(
   limit?: number,
   lastPoints?: number,
 ): Promise<TimeSeriesDataPoint[]> {
-  const prices = await getRawSeries(supabase, 'zillow', 'zhvi', geoLevel, regionId, startDate, endDate);
+  const prices = await getRawSeries(
+    supabase,
+    'zillow',
+    'zhvi',
+    geoLevel,
+    regionId,
+    startDate,
+    endDate,
+  );
   if (prices.length === 0) return [];
 
   const incomeTable = getTableName('census', geoLevel);
@@ -140,7 +172,9 @@ export async function getComputedOvervaluedTimeSeries(
       incomeMap[row.year] = row.median_household_income;
     }
   });
-  const years = Object.keys(incomeMap).map(Number).sort((a, b) => a - b);
+  const years = Object.keys(incomeMap)
+    .map(Number)
+    .sort((a, b) => a - b);
 
   const result: TimeSeriesDataPoint[] = [];
   const NATIONAL_MEDIAN_INCOME = 75000;
@@ -150,7 +184,7 @@ export async function getComputedOvervaluedTimeSeries(
     const y = parseInt(p.date.substring(0, 4));
     let inc = incomeMap[y];
     if (!inc) {
-      const closeY = years.reverse().find(yr => yr <= y);
+      const closeY = years.reverse().find((yr) => yr <= y);
       inc = closeY ? incomeMap[closeY] : incomeMap[years[0]];
       years.reverse();
     }
@@ -186,7 +220,9 @@ export async function getComputedPermitsTimeSeries(
 
   let query = supabase
     .from(table)
-    .select(`${dateField}, total_units, sf_units, large_multi_units, total_value`)
+    .select(
+      `${dateField}, total_units, sf_units, large_multi_units, total_value`,
+    )
     .order(dateField, { ascending: true });
 
   query = addRegionFilter(query, geoLevel, regionId, 'permits');
@@ -198,10 +234,11 @@ export async function getComputedPermitsTimeSeries(
   if (error || !data || data.length === 0) return [];
 
   const sorted = (data as any[]).sort(
-    (a, b) => new Date(a[dateField]).getTime() - new Date(b[dateField]).getTime(),
+    (a, b) =>
+      new Date(a[dateField]).getTime() - new Date(b[dateField]).getTime(),
   );
 
-  let result: TimeSeriesDataPoint[] = [];
+  const result: TimeSeriesDataPoint[] = [];
 
   if (metricId === 'permits_yoy') {
     for (let i = 12; i < sorted.length; i++) {
@@ -210,7 +247,8 @@ export async function getComputedPermitsTimeSeries(
       if (current != null && prior != null && prior !== 0) {
         result.push({
           date: sorted[i][dateField],
-          value: Math.round(((current - prior) / Math.abs(prior)) * 10000) / 100,
+          value:
+            Math.round(((current - prior) / Math.abs(prior)) * 10000) / 100,
         });
       }
     }

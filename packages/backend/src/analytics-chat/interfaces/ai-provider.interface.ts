@@ -1,29 +1,28 @@
-
 export interface ChatOptions {
-    conversationId: string;
-    messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
-    tools: any[];
-    systemPrompt: string;
-    model: string;
-    maxIterations?: number;
+  conversationId: string;
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  tools: any[];
+  systemPrompt: string;
+  model: string;
+  maxIterations?: number;
 }
 
 export interface ChatStreamChunk {
-    type: 'text' | 'tool' | 'done';
-    content: any;
+  type: 'text' | 'tool' | 'done';
+  content: any;
 }
 
 export interface ChatResponse {
-    content: string;
-    toolsUsed: string[];
-    toolResults: any[];
-    metadata?: any;
+  content: string;
+  toolsUsed: string[];
+  toolResults: any[];
+  metadata?: any;
 }
 
 export interface AIProvider {
-    id: string; // 'openai' | 'anthropic'
+  id: string; // 'openai' | 'anthropic'
 
-    chatStream(options: ChatOptions): AsyncGenerator<ChatStreamChunk>;
+  chatStream(options: ChatOptions): AsyncGenerator<ChatStreamChunk>;
 
-    chat(options: ChatOptions): Promise<ChatResponse>;
+  chat(options: ChatOptions): Promise<ChatResponse>;
 }

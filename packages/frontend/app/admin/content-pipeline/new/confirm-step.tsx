@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   createRun,
   fetchPlatforms,
+  type CreateRunFormatOptions,
   type PlatformStatus,
 } from "../lib/content-pipeline-api";
 import { fetchSettings } from "../lib/settings-api";
@@ -12,6 +13,7 @@ import { SingleMarketSummary } from "./single-market-summary";
 import { BatchConfirmBanner } from "./batch-confirm-banner";
 import { BatchSubmitDialog } from "./batch-submit-dialog";
 import type { WizardFormatOptions, WizardMode } from "./page";
+import { fetchStyleReferences, type StyleReference } from "../lib/style-refs-api";
 
 type ApprovalMode = "auto" | "review" | "draft";
 
@@ -72,12 +74,35 @@ function platformsForConfirmFormat(format: string): readonly string[] {
 
 const BATCH_DIALOG_THRESHOLD = 50;
 
+function buildCreateFormatOptions(
+  format: string,
+  mode: WizardMode,
+  formatOptions: WizardFormatOptions,
+): CreateRunFormatOptions | undefined {
+  const out: CreateRunFormatOptions = {};
+  if (formatOptions.windowDays != null) {
+    out.windowDays = formatOptions.windowDays;
+  }
+  if (formatOptions.styleReferenceId?.trim()) {
+    out.styleReferenceId = formatOptions.styleReferenceId.trim();
+  }
+  if (
+    format === "long_form_deep_dive" &&
+    mode === "single" &&
+    formatOptions.heroImageOptionId?.trim()
+  ) {
+    out.heroImageOptionId = formatOptions.heroImageOptionId.trim();
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function ConfirmStep({
   format,
   mode,
   market,
   batchMarkets,
   formatOptions,
+  onFormatOptionsChange,
   onBack,
   onCreatedSingle,
   onCreatedBatch,
@@ -87,6 +112,7 @@ export function ConfirmStep({
   market: string;
   batchMarkets: BatchMarket[];
   formatOptions: WizardFormatOptions;
+  onFormatOptionsChange: (opts: WizardFormatOptions) => void;
   onBack: () => void;
   onCreatedSingle: (runId: string) => void;
   onCreatedBatch: (batchId: string) => void;
@@ -101,6 +127,14 @@ export function ConfirmStep({
     queryKey: ["content-pipeline-platforms"],
     queryFn: fetchPlatforms,
   });
+  const { data: styleRefs = [] } = useQuery({
+    queryKey: ["content-pipeline-style-references"],
+    queryFn: fetchStyleReferences,
+  });
+
+  const videoRefs = (styleRefs as StyleReference[]).filter(
+    (r) => r.kind === "video",
+  );
 
   const formatDefault = (settings?.formatDefaults ?? []).find(
     (f: {
@@ -158,9 +192,7 @@ export function ConfirmStep({
         idempotencyKey,
         approvalMode,
         selectedPlatforms,
-        formatOptions: formatOptions.windowDays
-          ? { windowDays: formatOptions.windowDays }
-          : undefined,
+        formatOptions: buildCreateFormatOptions(format, mode, formatOptions),
       });
       onCreatedSingle(result.id);
     } catch (e) {
@@ -178,9 +210,7 @@ export function ConfirmStep({
         markets: batchMarkets,
         approvalMode,
         platforms: selectedPlatforms,
-        formatOptions: formatOptions.windowDays
-          ? { windowDays: formatOptions.windowDays }
-          : undefined,
+        formatOptions: buildCreateFormatOptions(format, mode, formatOptions),
       });
       onCreatedBatch(result.batchId);
     } catch (e) {
@@ -263,6 +293,43 @@ export function ConfirmStep({
           platformByKey={platformByKey}
           onToggle={togglePlatform}
         />
+
+        <fieldset className="mt-6">
+          <legend className="text-xs text-outline mb-2 uppercase tracking-wide">
+            Video style reference
+          </legend>
+          <p className="text-[11px] text-on-surface-variant mb-2">
+            Optional. Uses Style Library (kind=video) to pick a render{" "}
+            <span className="font-mono">styleVariant</span>.
+          </p>
+          <select
+            value={formatOptions.styleReferenceId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value || undefined;
+              onFormatOptionsChange({ ...formatOptions, styleReferenceId: v });
+            }}
+            className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm"
+          >
+            <option value="">None (default)</option>
+            {videoRefs.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          {videoRefs.length === 0 && (
+            <p className="text-[11px] text-on-surface-variant mt-2">
+              No video references yet. Add one on{" "}
+              <a
+                href="/admin/content-pipeline/style-references"
+                className="text-primary underline"
+              >
+                Style Library
+              </a>
+              .
+            </p>
+          )}
+        </fieldset>
 
         <fieldset className="mt-6">
           <legend className="text-xs text-outline mb-2 uppercase tracking-wide">

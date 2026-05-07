@@ -1,20 +1,24 @@
-Write a long-form narrative deep-dive script for {{canonical_name}}. Target total duration: 8 minutes at natural pace, roughly 1100 to 1300 words.
+Write a long-form narrative deep-dive script for {{canonical_name}}.
+
+**Hard limits (non-negotiable)**  
+- Final video length is **{{video_duration_seconds}}** seconds.  
+- Recorded voice-over must **finish within {{audio_budget_seconds}} seconds** of spoken audio (about **{{word_budget}}** words at ~**{{natural_wpm}}** words per minute).  
+- Do **not** exceed that word budget — longer scripts fail at synthesis.  
+- Reserve the last few seconds of the timeline for on-screen outro and brand; the spoken narration itself must stay within **{{audio_budget_seconds}}** seconds total.
 
 Data bundle:
 
 {{dataBundle}}
 
-Structure as 5 chapters. Each chapter gets 60 to 120 seconds of narration.
+Structure as **5 chapters** in **sceneBreakdown** (chapter_1 … chapter_5). Allocate time **across** chapters so the **total** narration fits **{{audio_budget_seconds}}** seconds — chapter 3 (fundamentals) may be the longest segment; keep chapter 1 tight.
 
-Chapter 1, Opening hook: lead with the most unexpected finding from the data. One minute.
+Suggested balance (adjust as needed to hit the word budget):
 
-Chapter 2, Market context: lead with **bundle-backed** numbers from `demographics`, `economic`, and related keys. You may add one or two sentences of **broad U.S. geographic context** (for example that a market is among the largest U.S. metros) that are not in the JSON, for audience orientation. For any number that comes from the Data bundle, use phrasing that matches the same scale the JSON uses (integers vs millions) so automated checking can align the script to the file. Two minutes.
-
-Chapter 3, Real estate fundamentals: home values, rents, inventory, PropertyIQ Score with history. Three minutes.
-
-Chapter 4, Who this market is for: investor profile, agent opportunity, broker positioning. One minute.
-
-Chapter 5, Close plus CTA: {{cta_text}}{{shortLinkPlaceholder}}. One minute.
+1. **Chapter 1 — Hook:** Lead with the strongest data-backed surprise. ~45–55 seconds spoken.  
+2. **Chapter 2 — Market context:** Bundle-backed demographics, economic, and related metrics. You may add one or two sentences of broad U.S. geographic context not in the JSON. ~55–70 seconds.  
+3. **Chapter 3 — Real estate fundamentals:** Home values, rents, inventory, PropertyIQ Score and history. This chapter may run longest if space allows. ~85–100 seconds.  
+4. **Chapter 4 — Who this market is for:** Investor profile, agent/broker angle. ~40–50 seconds.  
+5. **Chapter 5 — Close + CTA:** {{cta_text}}{{shortLinkPlaceholder}}. ~35–45 seconds.
 
 Hook options: produce {{variantCount}} hook variants for chapter 1 only.
 
@@ -25,3 +29,5 @@ Voice: informed but approachable. No filler; every sentence earns its place. Do 
 **Data grounding:** All **market-specific metrics** (scores, prices, rents, inventory, PIQ trends, etc.) must come from the Data bundle. Broad geographic framing without contradicting the bundle is acceptable; optional layers (Census-style population totals, national metro stature) may be used where the narrative needs context—Gate A separately checks bundle-backed figures and records waived context claims for audit.
 
 **Data confidence:** The bundle includes `score.confidence` as a single letter A through F (data quality for the PropertyIQ Score). If you mention confidence in the narration, that letter must match `score.confidence` exactly. Do not invent a different letter.
+
+For any number that comes from the Data bundle, use phrasing that matches the same scale the JSON uses (integers vs millions) so automated checking can align the script to the file.

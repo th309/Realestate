@@ -18,8 +18,16 @@ export const BASE_URL = "https://www.propertyiq.app";
 // Split ZIP sitemap into chunks of 10K URLs each.
 // Smaller sitemaps help Google distribute crawl budget across the ~39K ZIPs.
 export const ZIPS_PER_SITEMAP = 10000;
+
+// Filter to real 5-digit US ZIPs. The raw slug data can include
+// non-ZIP rows (e.g. CT council-of-governments / planning-region codes
+// stored as 7-digit strings) which we must not emit to search engines.
+const VALID_ZIP_DATA = ZIP_SLUG_DATA.filter((entry) =>
+  /^\d{5}$/.test(entry.zip),
+);
+
 export const ZIP_SITEMAP_COUNT = Math.ceil(
-  ZIP_SLUG_DATA.length / ZIPS_PER_SITEMAP,
+  VALID_ZIP_DATA.length / ZIPS_PER_SITEMAP,
 );
 
 export interface SitemapUrl {
@@ -219,7 +227,7 @@ export function buildZipChunkUrls(chunkIndex: number): SitemapUrl[] {
   const now = new Date().toISOString();
   const start = chunkIndex * ZIPS_PER_SITEMAP;
   const end = start + ZIPS_PER_SITEMAP;
-  return ZIP_SLUG_DATA.slice(start, end).map((zip) => ({
+  return VALID_ZIP_DATA.slice(start, end).map((zip) => ({
     loc: `${BASE_URL}/markets/zip/${zip.slug}`,
     lastmod: now,
     changefreq: "monthly" as const,

@@ -5,7 +5,11 @@
  */
 
 export { FormulaVersionService } from './formula-version.service';
-export type { FormulaConfig, FormulaVersion, CreateVersionInput } from './formula-version.service';
+export type {
+  FormulaConfig,
+  FormulaVersion,
+  CreateVersionInput,
+} from './formula-version.service';
 
 export { ABTestService } from './ab-test.service';
 export type {

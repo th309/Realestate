@@ -36,9 +36,10 @@ export class TiersController {
     this.logger.log('GET /admin/tiers');
 
     try {
-      const tiers = active === 'true'
-        ? await this.tiersService.getActive()
-        : await this.tiersService.getAll();
+      const tiers =
+        active === 'true'
+          ? await this.tiersService.getActive()
+          : await this.tiersService.getAll();
 
       return {
         success: true,

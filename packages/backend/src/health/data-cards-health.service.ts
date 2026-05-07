@@ -40,8 +40,8 @@ export interface DataCardsHealthResponse {
 }
 
 interface TableHealthInfo {
-  latestDate: string | null;       // Formatted for display (e.g., "Dec 2025")
-  latestDateRaw: string | null;    // Raw for calculations (e.g., "2025-12-15")
+  latestDate: string | null; // Formatted for display (e.g., "Dec 2025")
+  latestDateRaw: string | null; // Raw for calculations (e.g., "2025-12-15")
   recordCount: number;
   coverage: number;
 }
@@ -124,15 +124,24 @@ export class DataCardsHealthService {
 
       if (error) {
         this.logger.warn(`Table ${tableName} query error: ${error.message}`);
-        return { latestDate: null, latestDateRaw: null, recordCount: 0, coverage: 0 };
+        return {
+          latestDate: null,
+          latestDateRaw: null,
+          recordCount: 0,
+          coverage: 0,
+        };
       }
 
-      const latestDateRaw = dateColumn && data?.[0] ? data[0][dateColumn] : null;
+      const latestDateRaw =
+        dateColumn && data?.[0] ? data[0][dateColumn] : null;
       const recordCount = count || 0;
 
       // Calculate coverage (simplified - just check record count vs expected)
       const expectedRecords = this.getExpectedRecords(tableName);
-      const coverage = expectedRecords > 0 ? Math.min(100, (recordCount / expectedRecords) * 100) : 100;
+      const coverage =
+        expectedRecords > 0
+          ? Math.min(100, (recordCount / expectedRecords) * 100)
+          : 100;
 
       return {
         latestDate: this.formatDate(latestDateRaw),
@@ -142,12 +151,17 @@ export class DataCardsHealthService {
       };
     } catch (error) {
       this.logger.error(`Error checking table ${tableName}:`, error);
-      return { latestDate: null, latestDateRaw: null, recordCount: 0, coverage: 0 };
+      return {
+        latestDate: null,
+        latestDateRaw: null,
+        recordCount: 0,
+        coverage: 0,
+      };
     }
   }
 
   private evaluateMetricHealth(
-    metric: typeof METRIC_DEFINITIONS[0],
+    metric: (typeof METRIC_DEFINITIONS)[0],
     tableHealth: TableHealthInfo | undefined,
   ): MetricHealthCheck {
     if (!tableHealth) {
@@ -177,7 +191,10 @@ export class DataCardsHealthService {
 
     // Check for stale data using raw date for accurate comparison
     const daysSinceUpdate = this.daysSinceDate(latestDateRaw);
-    if (daysSinceUpdate !== null && daysSinceUpdate > metric.freshnessThresholdDays) {
+    if (
+      daysSinceUpdate !== null &&
+      daysSinceUpdate > metric.freshnessThresholdDays
+    ) {
       return {
         ...this.metricToCheck(metric),
         status: 'stale',
@@ -197,7 +214,12 @@ export class DataCardsHealthService {
     };
   }
 
-  private metricToCheck(metric: typeof METRIC_DEFINITIONS[0]): Omit<MetricHealthCheck, 'status' | 'latestDate' | 'recordCount' | 'coverage' | 'message'> {
+  private metricToCheck(
+    metric: (typeof METRIC_DEFINITIONS)[0],
+  ): Omit<
+    MetricHealthCheck,
+    'status' | 'latestDate' | 'recordCount' | 'coverage' | 'message'
+  > {
     return {
       metricId: metric.metricId,
       metricName: metric.metricName,

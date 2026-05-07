@@ -73,6 +73,20 @@ export function pickResolvedId(row: {
  * Adapt a geographies-table row (as returned by
  * GeographyService.searchGeographies) into a ResolvedMarket.
  */
+function pickLatLng(row: {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+}): Pick<ResolvedMarket, 'latitude' | 'longitude'> {
+  const lat =
+    row.latitude != null ? Number(row.latitude) : Number.NaN;
+  const lng =
+    row.longitude != null ? Number(row.longitude) : Number.NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return {};
+  }
+  return { latitude: lat, longitude: lng };
+}
+
 export function adaptResolvedMarket(row: {
   geography_type: string;
   geography_id: string;
@@ -81,6 +95,8 @@ export function adaptResolvedMarket(row: {
   fips_code?: string | null;
   state_code?: string | null;
   population?: number | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
 }): ResolvedMarket {
   return {
     geography: row.geography_type as GeoRef['geography'],
@@ -88,6 +104,7 @@ export function adaptResolvedMarket(row: {
     canonical_name: row.name,
     state: row.state_code ?? undefined,
     population: row.population ?? undefined,
+    ...pickLatLng(row),
   };
 }
 

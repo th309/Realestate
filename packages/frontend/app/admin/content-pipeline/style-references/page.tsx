@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchStyleReferences,
   createStyleReference,
+  ingestVideoUrl,
+  uploadVideoReference,
   reExtractStyleReference,
   deleteStyleReference,
   type StyleReference,
@@ -40,6 +42,28 @@ export default function StyleReferencesPage() {
     },
     onError: (err: Error) =>
       toast.error(`Add failed: ${err.message.slice(0, 100)}`),
+  });
+
+  const ingestVideoUrlMut = useMutation({
+    mutationFn: ingestVideoUrl,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      toast.success("Video reference added — analysis running");
+      setAddOpen(false);
+    },
+    onError: (err: Error) =>
+      toast.error(`Video ingest failed: ${err.message.slice(0, 120)}`),
+  });
+
+  const uploadVideoMut = useMutation({
+    mutationFn: uploadVideoReference,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      toast.success("Video uploaded — analysis running");
+      setAddOpen(false);
+    },
+    onError: (err: Error) =>
+      toast.error(`Upload failed: ${err.message.slice(0, 120)}`),
   });
 
   const reExtractMut = useMutation({
@@ -116,7 +140,9 @@ export default function StyleReferencesPage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onSubmit={(body) => createMut.mutateAsync(body)}
-        busy={createMut.isPending}
+        onIngestVideoUrl={(body) => ingestVideoUrlMut.mutateAsync(body)}
+        onUploadVideo={(body) => uploadVideoMut.mutateAsync(body)}
+        busy={createMut.isPending || ingestVideoUrlMut.isPending || uploadVideoMut.isPending}
       />
       <DestructiveDialog
         open={!!deleting}
@@ -246,6 +272,8 @@ function AddReferenceDialog({
   open,
   onClose,
   onSubmit,
+  onIngestVideoUrl,
+  onUploadVideo,
   busy,
 }: {
   open: boolean;
@@ -255,11 +283,15 @@ function AddReferenceDialog({
     kind: "thumbnail" | "video" | "pdf" | "general";
     source_url: string;
   }) => Promise<unknown>;
+  onIngestVideoUrl: (body: { label: string; url: string }) => Promise<unknown>;
+  onUploadVideo: (body: { label: string; file: File }) => Promise<unknown>;
   busy: boolean;
 }) {
   const [label, setLabel] = useState("");
   const [kind, setKind] = useState<(typeof KIND_OPTIONS)[number]>("thumbnail");
+  const [tab, setTab] = useState<"url" | "upload">("url");
   const [url, setUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
 
   return (
     <M3Dialog
@@ -271,10 +303,24 @@ function AddReferenceDialog({
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          if (!label.trim() || !url.trim()) return;
-          await onSubmit({ label: label.trim(), kind, source_url: url.trim() });
+          if (!label.trim()) return;
+
+          // Phase 3: "video" kind uses dedicated ingest endpoints.
+          if (kind === "video") {
+            if (tab === "url") {
+              if (!url.trim()) return;
+              await onIngestVideoUrl({ label: label.trim(), url: url.trim() });
+            } else {
+              if (!file) return;
+              await onUploadVideo({ label: label.trim(), file });
+            }
+          } else {
+            if (!url.trim()) return;
+            await onSubmit({ label: label.trim(), kind, source_url: url.trim() });
+          }
           setLabel("");
           setUrl("");
+          setFile(null);
         }}
       >
         <div className="p-6 space-y-4">
@@ -309,19 +355,71 @@ function AddReferenceDialog({
               ))}
             </div>
           </Field>
-          <Field label="Image URL">
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://… (PNG/JPG)"
-              required
-              className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
-            />
-          </Field>
+          {kind === "video" ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTab("url")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
+                    tab === "url"
+                      ? "bg-secondary-container text-on-secondary-container border-transparent"
+                      : "bg-surface text-on-surface border-outline hover:bg-surface-container-low"
+                  }`}
+                >
+                  Video URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("upload")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
+                    tab === "upload"
+                      ? "bg-secondary-container text-on-secondary-container border-transparent"
+                      : "bg-surface text-on-surface border-outline hover:bg-surface-container-low"
+                  }`}
+                >
+                  Upload file
+                </button>
+              </div>
+              {tab === "url" ? (
+                <Field label="Video URL">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://… (YouTube/TikTok/IG/FB/X)"
+                    required
+                    className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </Field>
+              ) : (
+                <Field label="Video file">
+                  <input
+                    type="file"
+                    accept="video/mp4,video/quicktime"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    required
+                    className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </Field>
+              )}
+            </div>
+          ) : (
+            <Field label="Image URL">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://… (PNG/JPG)"
+                required
+                className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
+              />
+            </Field>
+          )}
           <p className="text-[11px] text-on-surface-variant">
-            Vision extraction runs synchronously on submit (~1 second). The
-            extracted palette appears on the card right after.
+            {kind === "video"
+              ? "Video ingest downloads/samples frames and runs Vision analysis. This can take a bit longer than image references."
+              : "Vision extraction runs synchronously on submit (~1 second). The extracted palette appears on the card right after."}
           </p>
         </div>
         <div className="flex justify-end gap-2 px-6 pb-6">
@@ -335,7 +433,15 @@ function AddReferenceDialog({
           </button>
           <button
             type="submit"
-            disabled={busy || !label.trim() || !url.trim()}
+            disabled={
+              busy ||
+              !label.trim() ||
+              (kind === "video"
+                ? tab === "url"
+                  ? !url.trim()
+                  : !file
+                : !url.trim())
+            }
             className="px-5 py-2.5 rounded-full text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-2 transition-colors duration-200"
           >
             {busy && (

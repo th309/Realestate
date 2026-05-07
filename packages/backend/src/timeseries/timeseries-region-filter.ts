@@ -52,22 +52,62 @@ export function addRegionFilter(
   // Normalize IDs so frontend can send FIPS, code, or name interchangeably
   const regionKey = level === 'zip' ? normalizeZipKey(regionId) : regionId;
   const stateNorm = level === 'state' ? normalizeStateRegionId(regionId) : null;
-  const stateKey = stateNorm ? { code: stateNorm.stateCode, fips: stateNorm.stateFips, name: stateNorm.stateName } : null;
-  const countyKey = level === 'county' && isNumericId(regionId) ? normalizeCountyFips(regionId) : regionId;
-  const metroKey = level === 'metro' && isNumericId(regionId) ? normalizeCbsaCode(regionId) : regionId;
+  const stateKey = stateNorm
+    ? {
+        code: stateNorm.stateCode,
+        fips: stateNorm.stateFips,
+        name: stateNorm.stateName,
+      }
+    : null;
+  const countyKey =
+    level === 'county' && isNumericId(regionId)
+      ? normalizeCountyFips(regionId)
+      : regionId;
+  const metroKey =
+    level === 'metro' && isNumericId(regionId)
+      ? normalizeCbsaCode(regionId)
+      : regionId;
 
   // Handle calculated_metrics table (uses geography_id and geography_type)
   if (source === 'calculated') {
-    return addCalculatedFilter(query, level, regionId, regionKey, stateKey, countyKey, metroKey, isNumericId);
+    return addCalculatedFilter(
+      query,
+      level,
+      regionId,
+      regionKey,
+      stateKey,
+      countyKey,
+      metroKey,
+      isNumericId,
+    );
   }
 
   // Handle propertyiq_scores table (uses location_id, location_name, geography, score_type)
   if (source === 'propertyiq') {
-    return addPropertyIQFilter(query, level, regionId, regionKey, stateKey, countyKey, metroKey, isNumericId);
+    return addPropertyIQFilter(
+      query,
+      level,
+      regionId,
+      regionKey,
+      stateKey,
+      countyKey,
+      metroKey,
+      isNumericId,
+    );
   }
 
   // Standard sources (realtor, zillow, census, economic, permits)
-  return addStandardFilter(query, level, regionId, regionKey, stateKey, countyKey, metroKey, source, isNumericId);
+  return addStandardFilter(
+    query,
+    level,
+    regionId,
+    regionKey,
+    stateKey,
+    countyKey,
+    metroKey,
+    source,
+    isNumericId,
+  );
 }
 
 function addCalculatedFilter(
@@ -86,15 +126,21 @@ function addCalculatedFilter(
   switch (level) {
     case 'national':
       if (regionId === 'United States' || regionId === 'US') {
-        return query.or('geography_id.eq.US,geography_name.ilike.United States');
+        return query.or(
+          'geography_id.eq.US,geography_name.ilike.United States',
+        );
       }
       return query.eq('geography_id', regionId);
 
     case 'state':
       if (stateKey) {
-        return query.or(`geography_id.eq.${stateKey.code},geography_id.eq.${stateKey.fips}`);
+        return query.or(
+          `geography_id.eq.${stateKey.code},geography_id.eq.${stateKey.fips}`,
+        );
       }
-      return query.or(`geography_id.ilike.${regionId},geography_name.ilike.${regionId}`);
+      return query.or(
+        `geography_id.ilike.${regionId},geography_name.ilike.${regionId}`,
+      );
 
     case 'metro':
       if (isNumericId(regionId)) {
@@ -106,14 +152,14 @@ function addCalculatedFilter(
       if (isNumericId(regionId)) {
         return query.eq('geography_id', countyKey);
       }
-      const countyParts = regionId.split(',').map(s => s.trim());
+      const countyParts = regionId.split(',').map((s) => s.trim());
       return query.ilike('geography_name', `${countyParts[0]}%`);
 
     case 'zip':
       return query.eq('geography_id', regionKey);
 
     case 'city':
-      const cityParts = regionId.split(',').map(s => s.trim());
+      const cityParts = regionId.split(',').map((s) => s.trim());
       return query.ilike('geography_name', `${cityParts[0]}%`);
 
     case 'tract':
@@ -166,14 +212,14 @@ function addPropertyIQFilter(
       if (isNumericId(regionId)) {
         return query.eq('location_id', countyKey);
       }
-      const countyParts = regionId.split(',').map(s => s.trim());
+      const countyParts = regionId.split(',').map((s) => s.trim());
       return query.ilike('location_name', `${countyParts[0]}%`);
 
     case 'zip':
       return query.eq('location_id', regionKey);
 
     case 'city':
-      const cityParts = regionId.split(',').map(s => s.trim());
+      const cityParts = regionId.split(',').map((s) => s.trim());
       return query.ilike('location_name', `${cityParts[0]}%`);
 
     case 'tract':
@@ -227,7 +273,8 @@ function addStandardFilter(
     case 'metro':
       if (isNumericId(regionId)) return query.eq('cbsa_code', metroKey);
       if (source === 'zillow') return query.eq('region_name', regionId);
-      if (source === 'realtor') return query.ilike('cbsa_title', `${regionId}%`);
+      if (source === 'realtor')
+        return query.ilike('cbsa_title', `${regionId}%`);
       return query.ilike('cbsa_title', `${regionId}%`);
 
     case 'county':
@@ -235,7 +282,7 @@ function addStandardFilter(
         if (source === 'realtor') return query.eq('county_fips', countyKey);
         return query.eq('fips_code', countyKey);
       }
-      const countyParts = regionId.split(',').map(s => s.trim());
+      const countyParts = regionId.split(',').map((s) => s.trim());
       const countyName = countyParts[0];
       const countyState = countyParts[1];
       if (source === 'realtor') {
@@ -253,11 +300,12 @@ function addStandardFilter(
       return query.eq('postal_code', regionKey);
 
     case 'city':
-      const cityParts = regionId.split(',').map(s => s.trim());
+      const cityParts = regionId.split(',').map((s) => s.trim());
       const cityName = cityParts[0];
       const stateCode = cityParts[1];
       if (source === 'zillow') {
-        if (stateCode) return query.eq('region_name', cityName).eq('state_code', stateCode);
+        if (stateCode)
+          return query.eq('region_name', cityName).eq('state_code', stateCode);
         return query.eq('region_name', cityName);
       }
       return query.ilike('place_name', `${cityName}%`);

@@ -34,9 +34,13 @@ describe('buildLongFormRenderPlan', () => {
     expect(plan!.segments[0].kind).toBe('intro');
     expect(plan!.segments[1].kind).toBe('stats');
     expect(plan!.segments[5].kind).toBe('outro');
-    const sorted = [...plan!.segments].sort((a, b) => a.fromFrame - b.fromFrame);
+    const sorted = [...plan!.segments].sort(
+      (a, b) => a.fromFrame - b.fromFrame,
+    );
     for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i].fromFrame).toBeGreaterThanOrEqual(sorted[i - 1].fromFrame);
+      expect(sorted[i].fromFrame).toBeGreaterThanOrEqual(
+        sorted[i - 1].fromFrame,
+      );
     }
   });
 

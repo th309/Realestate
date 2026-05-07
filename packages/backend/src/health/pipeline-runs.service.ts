@@ -58,7 +58,9 @@ export class PipelineRunsService {
     const client = this.supabase.getClient();
 
     try {
-      const cutoffDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+      const cutoffDate = new Date(
+        Date.now() - hours * 60 * 60 * 1000,
+      ).toISOString();
 
       const { data, error } = await client
         .from('data_ingestion_log')
@@ -163,7 +165,9 @@ export class PipelineRunsService {
    * Requires GITHUB_TOKEN and GITHUB_REPO (owner/repo format) env vars.
    * Returns an error message if env vars are not configured (does not crash).
    */
-  async triggerPipeline(pipelineName: string): Promise<{ success: boolean; message: string }> {
+  async triggerPipeline(
+    pipelineName: string,
+  ): Promise<{ success: boolean; message: string }> {
     const githubToken = process.env.GITHUB_TOKEN;
     const githubRepo = process.env.GITHUB_REPO;
 
@@ -173,7 +177,8 @@ export class PipelineRunsService {
       );
       return {
         success: false,
-        message: 'GitHub token or repo not configured — cannot dispatch workflow',
+        message:
+          'GitHub token or repo not configured — cannot dispatch workflow',
       };
     }
 
@@ -202,7 +207,9 @@ export class PipelineRunsService {
       });
 
       if (response.ok || response.status === 204) {
-        this.logger.log(`Pipeline ${pipelineName} triggered via GitHub Actions`);
+        this.logger.log(
+          `Pipeline ${pipelineName} triggered via GitHub Actions`,
+        );
         return { success: true, message: `Pipeline ${pipelineName} triggered` };
       }
 
@@ -212,7 +219,10 @@ export class PipelineRunsService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Pipeline trigger error: ${message}`);
-      return { success: false, message: `GitHub API request failed: ${message}` };
+      return {
+        success: false,
+        message: `GitHub API request failed: ${message}`,
+      };
     }
   }
 

@@ -11,6 +11,7 @@ import {
   synthesizeWithFallback,
   captureNativeCaptions,
 } from './synthesize-audio-chain';
+import { AlertDispatcherService } from '../../observability/alert-dispatcher.service';
 
 @Injectable()
 export class SynthesizeAudioHandler {
@@ -21,6 +22,7 @@ export class SynthesizeAudioHandler {
     private readonly scriptRepair: ScriptRepairService,
     private readonly ttsFactory: TTSDriverFactory,
     private readonly supabase: SupabaseService,
+    private readonly alerts: AlertDispatcherService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -153,6 +155,30 @@ export class SynthesizeAudioHandler {
       this.logger.log(
         `[PIPE] synthesize-audio run=${runId} uploaded=${storageUrl}`,
       );
+
+      // Phase 4.13: audio/script duration mismatch warning (estimate at 150 wpm).
+      const expectedDurationMs =
+        (spokenText.split(/\s+/).filter(Boolean).length / 150) * 60_000;
+      const actualDurationMs = audioDurationMs;
+      const deltaPct =
+        expectedDurationMs > 0
+          ? Math.abs(actualDurationMs - expectedDurationMs) / expectedDurationMs
+          : 0;
+      if (deltaPct > 0.2) {
+        await client.from('content_run_events').insert({
+          run_id: runId,
+          event_type: 'audio_length_mismatch',
+          payload: { expectedDurationMs, actualDurationMs, deltaPct },
+        });
+        await this.alerts.sendAlert(
+          'warn',
+          'audio_length_mismatch',
+          `Run ${runId} audio duration differs from script estimate by ${(
+            deltaPct * 100
+          ).toFixed(0)}%.`,
+          { runId, deltaPct, expectedDurationMs, actualDurationMs },
+        );
+      }
 
       // Idempotent write: clear any prior audio row so .single() reads stay valid after a retry.
       await client

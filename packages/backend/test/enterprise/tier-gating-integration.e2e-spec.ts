@@ -66,9 +66,12 @@ describe('Tier Gating Integration', () => {
       // Key has scores:read and metrics:read, try an endpoint that needs rankings:read
       // This depends on whether any endpoint strictly requires rankings:read scope
       // For now just verify the key works on its allowed scopes
-      const res = await fetch(`${BASE_URL}/api/v1/metrics/home_value/metro/35620`, {
-        headers: { Authorization: `Bearer ${personalKey}` },
-      });
+      const res = await fetch(
+        `${BASE_URL}/api/v1/metrics/home_value/metro/35620`,
+        {
+          headers: { Authorization: `Bearer ${personalKey}` },
+        },
+      );
       // Should work — metrics:read scope is granted
       expect([200, 404]).toContain(res.status); // 404 if metric data doesn't exist in test env
     });
@@ -108,19 +111,26 @@ describe('Tier Gating Integration', () => {
       expect(user_code).toMatch(/^[A-Z]{4}-\d{4}$/);
 
       // 2. Poll — should be pending
-      const poll1 = await fetch(`${BASE_URL}/api/auth/device-code/${device_code}`);
+      const poll1 = await fetch(
+        `${BASE_URL}/api/auth/device-code/${device_code}`,
+      );
       expect((await poll1.json()).status).toBe('pending');
 
       // 3. Verify with admin JWT
-      const verifyRes = await adminFetch(`${BASE_URL}/api/auth/device-code/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_code }),
-      });
+      const verifyRes = await adminFetch(
+        `${BASE_URL}/api/auth/device-code/verify`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_code }),
+        },
+      );
       expect(verifyRes.status).toBe(200);
 
       // 4. Poll — should be complete with API key
-      const poll2 = await fetch(`${BASE_URL}/api/auth/device-code/${device_code}`);
+      const poll2 = await fetch(
+        `${BASE_URL}/api/auth/device-code/${device_code}`,
+      );
       const pollData = await poll2.json();
       expect(pollData.status).toBe('complete');
       expect(pollData.api_key).toMatch(/^piq_live_/);
@@ -153,9 +163,12 @@ describe('Tier Gating Integration', () => {
       expect(res1.status).toBe(200);
 
       // Revoke
-      const revokeRes = await adminFetch(`${BASE_URL}/api/user/api-keys/${id}`, {
-        method: 'DELETE',
-      });
+      const revokeRes = await adminFetch(
+        `${BASE_URL}/api/user/api-keys/${id}`,
+        {
+          method: 'DELETE',
+        },
+      );
       expect(revokeRes.status).toBe(200);
 
       // Verify it fails

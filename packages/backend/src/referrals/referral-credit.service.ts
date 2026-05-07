@@ -46,11 +46,16 @@ export class ReferralCreditService {
     // Mark converted immediately to prevent duplicate credits
     const { error: updateErr } = await client
       .from('referral_events')
-      .update({ state: 'converted', credit_applied_at: new Date().toISOString() })
+      .update({
+        state: 'converted',
+        credit_applied_at: new Date().toISOString(),
+      })
       .eq('id', event.id);
 
     if (updateErr) {
-      this.logger.error(`Failed to mark referral converted: ${updateErr.message}`);
+      this.logger.error(
+        `Failed to mark referral converted: ${updateErr.message}`,
+      );
       return;
     }
 
@@ -62,7 +67,9 @@ export class ReferralCreditService {
 
     const { data: profile } = await client
       .from('user_profiles')
-      .select('email, subscription_tier, subscription_status, stripe_customer_id')
+      .select(
+        'email, subscription_tier, subscription_status, stripe_customer_id',
+      )
       .eq('id', referrerId)
       .maybeSingle();
 
@@ -72,23 +79,38 @@ export class ReferralCreditService {
     }
 
     const isPaidActive =
-      (profile.subscription_tier === 'pro' || profile.subscription_tier === 'enterprise') &&
-      (profile.subscription_status === 'active' || profile.subscription_status === 'trialing');
+      (profile.subscription_tier === 'pro' ||
+        profile.subscription_tier === 'enterprise') &&
+      (profile.subscription_status === 'active' ||
+        profile.subscription_status === 'trialing');
 
     if (isPaidActive && profile.stripe_customer_id) {
       try {
-        await this.stripe.extendSubscriptionByDays(profile.stripe_customer_id, 30);
-        this.logger.log(`Extended subscription 30 days for referrer ${referrerId}`);
+        await this.stripe.extendSubscriptionByDays(
+          profile.stripe_customer_id,
+          30,
+        );
+        this.logger.log(
+          `Extended subscription 30 days for referrer ${referrerId}`,
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Stripe extension failed for ${referrerId}: ${msg}. Storing credit instead.`);
-        await client.rpc('increment_referral_credit', { target_user_id: referrerId });
+        this.logger.error(
+          `Stripe extension failed for ${referrerId}: ${msg}. Storing credit instead.`,
+        );
+        await client.rpc('increment_referral_credit', {
+          target_user_id: referrerId,
+        });
       }
     } else {
       // Free user: store credit to be applied at subscribe time
-      const { error } = await client.rpc('increment_referral_credit', { target_user_id: referrerId });
+      const { error } = await client.rpc('increment_referral_credit', {
+        target_user_id: referrerId,
+      });
       if (error) {
-        this.logger.error(`Failed to increment referral credit for ${referrerId}: ${error.message}`);
+        this.logger.error(
+          `Failed to increment referral credit for ${referrerId}: ${error.message}`,
+        );
       }
     }
 
@@ -107,7 +129,9 @@ export class ReferralCreditService {
           userId: referrerId,
         })
         .catch((err: Error) =>
-          this.logger.warn(`Credit email failed for ${referrerId}: ${err.message}`),
+          this.logger.warn(
+            `Credit email failed for ${referrerId}: ${err.message}`,
+          ),
         );
     }
   }

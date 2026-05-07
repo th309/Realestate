@@ -316,7 +316,7 @@ export class StripeService {
       expand: ['data.items'],
     });
 
-    let sub = subscriptions.data.find(
+    const sub = subscriptions.data.find(
       (s) => s.status === 'active' || s.status === 'trialing',
     );
     if (!sub) return;

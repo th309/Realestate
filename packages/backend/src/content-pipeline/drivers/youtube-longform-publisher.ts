@@ -69,7 +69,8 @@ export class YouTubeLongFormPublisher implements PlatformPublisher {
     });
 
     const videoId = (response.data as { id?: string }).id;
-    if (!videoId) throw new Error('YouTube long-form upload returned no video id');
+    if (!videoId)
+      throw new Error('YouTube long-form upload returned no video id');
 
     if (req.captionsSrtPath) {
       await yt.captions.insert({

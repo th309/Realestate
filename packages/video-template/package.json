@@ -5,13 +5,15 @@
   "private": true,
   "bin": {
     "render-video": "./dist/cli/render-cli.js",
-    "render-thumbnail": "./dist/cli/render-thumbnail-cli.js"
+    "render-thumbnail": "./dist/cli/render-thumbnail-cli.js",
+    "render-preflight": "./dist/cli/preflight-cli.js"
   },
   "scripts": {
     "start": "npx remotion studio",
     "render": "npx remotion render grade_reveal out.mp4",
     "render:shorts": "npx remotion render grade_reveal out-shorts.mp4",
     "build": "npx remotion bundle",
+    "gen:metro-top-200": "node scripts/gen-top-200-metro-cbsa.mjs",
     "build:cli": "tsc --project tsconfig.json",
     "build:cli:watch": "tsc --project tsconfig.json --watch --preserveWatchOutput",
     "test": "jest"
@@ -20,6 +22,7 @@
     "@remotion/bundler": "^4.0.253",
     "@remotion/renderer": "^4.0.253",
     "commander": "^13.1.0",
+    "mapbox-gl": "^3.22.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zod": "^3.24.0"
@@ -27,9 +30,11 @@
   "devDependencies": {
     "@remotion/cli": "^4.0.253",
     "@types/jest": "^30.0.0",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "dotenv": "^9.0.2",
     "jest": "^30.0.0",
     "pngjs": "^7.0.0",
     "remotion": "^4.0.253",

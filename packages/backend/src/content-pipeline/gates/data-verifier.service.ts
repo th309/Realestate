@@ -151,8 +151,7 @@ export class DataVerifierService {
         `[V2] verify: waived ${waived.length} off-bundle context claim(s) (${options?.contentFormat ?? 'any'}); ${kept.length} remaining`,
       );
     }
-    const passed =
-      kept.length === 0 && confidenceViolations.length === 0;
+    const passed = kept.length === 0 && confidenceViolations.length === 0;
     return {
       passed,
       violations: kept,
@@ -176,7 +175,9 @@ export class DataVerifierService {
     const bundle = mcpPayload as Record<string, unknown> | null;
     const score = bundle?.score as { confidence?: string } | undefined;
     const raw =
-      typeof score?.confidence === 'string' ? score.confidence.trim().toUpperCase() : '';
+      typeof score?.confidence === 'string'
+        ? score.confidence.trim().toUpperCase()
+        : '';
     const expected = /^[A-F]$/.test(raw) ? raw : null;
 
     const violations: ConfidenceLetterViolation[] = [];

@@ -52,7 +52,7 @@ describe("Top 10 Ranking snapshots", () => {
     });
   }, 180_000);
 
-  it.each([0, 90, 180, 600, 1200, 1500, 1750])(
+  it.each([0, 90, 180, 600, 1200, 1300])(
     "renders frame %s within tolerance",
     async (frame) => {
       const outPath = path.resolve(__dirname, `top-10-ranking-${frame}.png`);
@@ -210,7 +210,7 @@ describe("Top 10 — N=5 edge case (variable duration)", () => {
     });
   }, 180_000);
 
-  it.each([0, 90, 600, 870, 950])(
+  it.each([0, 90, 600, 760])(
     "renders frame %s (N=5)",
     async (frame) => {
       const outPath = path.resolve(__dirname, `top-10-n5-${frame}.png`);

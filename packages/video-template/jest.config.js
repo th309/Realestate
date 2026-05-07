@@ -16,4 +16,7 @@ module.exports = {
       { tsconfig: "<rootDir>/tsconfig.test.json" },
     ],
   },
+  moduleNameMapper: {
+    "\\.css$": "<rootDir>/tests/css-mock.js",
+  },
 };

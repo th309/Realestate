@@ -50,7 +50,8 @@ export class TrialController {
    */
   @Put('config')
   async updateConfig(
-    @Body() body: {
+    @Body()
+    body: {
       is_enabled?: boolean;
       duration_days?: number;
       trial_tier?: string;
@@ -142,7 +143,10 @@ export class TrialController {
     this.logger.log(`PUT /admin/trial/users/${userId}/extend`);
 
     if (!body.days || body.days <= 0) {
-      throw new HttpException('days must be a positive number', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'days must be a positive number',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {

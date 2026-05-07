@@ -59,7 +59,11 @@ export class HealthMonitorCron {
       });
 
       if (result.success && severity === 'critical') {
-        await this.sendCriticalAlertEmail({ title, message, sourceName: source.displayName });
+        await this.sendCriticalAlertEmail({
+          title,
+          message,
+          sourceName: source.displayName,
+        });
       }
     }
   }
@@ -91,7 +95,9 @@ export class HealthMonitorCron {
       const title = `Pipeline failed: ${run.displayName}`;
       const message =
         `Pipeline "${run.pipelineName}" failed at ${run.startedAt}. ` +
-        (run.errorMessage ? `Error: ${run.errorMessage}` : 'No error details available.');
+        (run.errorMessage
+          ? `Error: ${run.errorMessage}`
+          : 'No error details available.');
 
       const result = await this.dataAlerts.createAlert({
         alertType: 'pipeline_failed',
@@ -102,7 +108,11 @@ export class HealthMonitorCron {
       });
 
       if (result.success) {
-        await this.sendCriticalAlertEmail({ title, message, sourceName: run.displayName });
+        await this.sendCriticalAlertEmail({
+          title,
+          message,
+          sourceName: run.displayName,
+        });
       }
     }
   }
@@ -120,7 +130,8 @@ export class HealthMonitorCron {
       return;
     }
 
-    const detectedAt = new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + ' UTC';
+    const detectedAt =
+      new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + ' UTC';
 
     await this.emailService.sendEmail({
       to: adminEmail,

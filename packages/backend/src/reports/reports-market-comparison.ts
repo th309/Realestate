@@ -174,7 +174,11 @@ export function calculatePriorityWeightedWinner(
   priorities: string[],
   _userType: 'homebuyer' | 'investor',
 ): PriorityWeightedResult | null {
-  if (!priorities || priorities.length === 0 || comparisonMarkets.length === 0) {
+  if (
+    !priorities ||
+    priorities.length === 0 ||
+    comparisonMarkets.length === 0
+  ) {
     return null;
   }
 
@@ -217,9 +221,7 @@ export function calculatePriorityWeightedWinner(
         const value = market.metrics[metric as keyof MarketMetrics];
         if (value != null && typeof value === 'number') {
           // Normalize: lower is better metrics get inverted
-          const normalizedValue = LOWER_IS_BETTER.has(metric)
-            ? -value
-            : value;
+          const normalizedValue = LOWER_IS_BETTER.has(metric) ? -value : value;
           priorityScore += normalizedValue;
           validMetrics++;
         }
@@ -236,7 +238,7 @@ export function calculatePriorityWeightedWinner(
           const v = market.metrics[m as keyof MarketMetrics];
           if (v != null) {
             keyMetric = m;
-            bestValue = v as number;
+            bestValue = v;
             break;
           }
         }
@@ -253,7 +255,7 @@ export function calculatePriorityWeightedWinner(
       if (market.geography.id !== bestMarket.geography.id) {
         const v = market.metrics[keyMetric as keyof MarketMetrics];
         if (v != null) {
-          loserValue = v as number;
+          loserValue = v;
           break;
         }
       }
@@ -374,12 +376,10 @@ export function generatePriorityReason(
     metric.includes('cagr')
   ) {
     formattedWinner = `${winnerValue.toFixed(1)}%`;
-    formattedLoser =
-      loserValue != null ? `${loserValue.toFixed(1)}%` : 'N/A';
+    formattedLoser = loserValue != null ? `${loserValue.toFixed(1)}%` : 'N/A';
   } else if (metric.includes('price') || metric.includes('income')) {
     formattedWinner = formatCurrency(winnerValue);
-    formattedLoser =
-      loserValue != null ? formatCurrency(loserValue) : 'N/A';
+    formattedLoser = loserValue != null ? formatCurrency(loserValue) : 'N/A';
   } else if (metric === 'days_on_market' || metric === 'months_of_supply') {
     formattedWinner = `${Math.round(winnerValue)} days`;
     formattedLoser =

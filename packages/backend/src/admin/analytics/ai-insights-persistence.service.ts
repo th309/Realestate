@@ -176,7 +176,7 @@ export class AiInsightsPersistenceService {
     const insight = await this.getById(userId, insightId);
     if (!insight) return null;
 
-    const recs = insight.recommendations as SavedRecommendation[];
+    const recs = insight.recommendations;
     const recIndex = recs.findIndex((r) => r.id === recId);
     if (recIndex === -1) return null;
 

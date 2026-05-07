@@ -16,17 +16,14 @@ export class RequestIdMiddleware implements NestMiddleware {
   private readonly logger = new Logger('HTTP');
 
   use(req: Request, res: Response, next: NextFunction): void {
-    const requestId =
-      (req.headers['x-request-id'] as string) || randomUUID();
+    const requestId = (req.headers['x-request-id'] as string) || randomUUID();
     const startTime = Date.now();
 
     // Forward the ID on both the request (for downstream services) and response
     req.headers['x-request-id'] = requestId;
     res.setHeader('x-request-id', requestId);
 
-    this.logger.log(
-      `→ ${req.method} ${req.path} requestId=${requestId}`,
-    );
+    this.logger.log(`→ ${req.method} ${req.path} requestId=${requestId}`);
 
     res.on('finish', () => {
       const duration = Date.now() - startTime;

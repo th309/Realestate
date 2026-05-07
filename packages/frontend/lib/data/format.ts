@@ -5,7 +5,7 @@
  * Designed to work with the MetricFormat types from the registry.
  */
 
-import type { MetricFormat } from './types';
+import type { MetricFormat } from "./types";
 
 const CURRENCY_SCALES = {
   MILLION: 1_000_000,
@@ -24,48 +24,55 @@ export function formatMetricValue(
   value: number | null | undefined,
   format: MetricFormat,
   options: {
-    position?: 'min' | 'max';
+    position?: "min" | "max";
     isPropertyIQ?: boolean;
-  } = {}
+  } = {},
 ): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—';
+    return "—";
   }
 
   const { position, isPropertyIQ = false } = options;
-  const isPropertyIQMax = position === 'max' && isPropertyIQ;
-  const suffix = position === 'max' && !isPropertyIQMax ? '+' : '';
+  const isPropertyIQMax = position === "max" && isPropertyIQ;
+  const suffix = position === "max" && !isPropertyIQMax ? "+" : "";
 
   switch (format) {
-    case 'percent': {
-      const sign = value > 0 ? '+' : '';
-      return sign + value.toFixed(1) + '%';
+    case "percent": {
+      const fixed = value.toFixed(1);
+      // Avoid "-0.0" for values that round to zero (e.g. -0.04 -> "-0.0")
+      const normalized = parseFloat(fixed) === 0 ? "0.0" : fixed;
+      const sign = parseFloat(fixed) > 0 ? "+" : "";
+      return sign + normalized + "%";
     }
 
-    case 'percent_abs':
+    case "percent_abs":
       // Absolute percent (0-100%) - no +/- sign
-      return value.toFixed(1) + '%';
+      return value.toFixed(1) + "%";
 
-    case 'number':
-      return value.toLocaleString('en-US') + suffix;
+    case "number":
+      return value.toLocaleString("en-US") + suffix;
 
-    case 'days':
-      return value.toLocaleString('en-US') + ' days';
+    case "days":
+      return value.toLocaleString("en-US") + " days";
 
-    case 'index':
+    case "index":
       return value.toFixed(0) + suffix;
 
-    case 'index_1dec':
+    case "index_1dec":
       return value.toFixed(1) + suffix;
 
-    case 'currency':
+    case "currency":
     default:
       if (value >= CURRENCY_SCALES.MILLION) {
-        return '$' + (value / CURRENCY_SCALES.MILLION).toFixed(1) + 'M' + suffix;
+        return (
+          "$" + (value / CURRENCY_SCALES.MILLION).toFixed(1) + "M" + suffix
+        );
       } else if (value >= CURRENCY_SCALES.THOUSAND) {
-        return '$' + Math.round(value / CURRENCY_SCALES.THOUSAND) + 'K' + suffix;
+        return (
+          "$" + Math.round(value / CURRENCY_SCALES.THOUSAND) + "K" + suffix
+        );
       }
-      return '$' + value.toLocaleString('en-US') + suffix;
+      return "$" + value.toLocaleString("en-US") + suffix;
   }
 }
 
@@ -78,14 +85,17 @@ export function formatMetricValue(
  */
 export function formatPercentChange(
   change: number | null | undefined,
-  precision: number = 1
+  precision: number = 1,
 ): string {
   if (change === null || change === undefined || Number.isNaN(change)) {
-    return '—';
+    return "—";
   }
 
-  const sign = change > 0 ? '+' : '';
-  return `${sign}${change.toFixed(precision)}%`;
+  const fixed = change.toFixed(precision);
+  // Avoid "-0.0" / "-0.00" for values that round to zero
+  const normalized = parseFloat(fixed) === 0 ? (0).toFixed(precision) : fixed;
+  const sign = parseFloat(fixed) > 0 ? "+" : "";
+  return `${sign}${normalized}%`;
 }
 
 /**
@@ -95,12 +105,12 @@ export function formatPercentChange(
  * @returns Direction string
  */
 export function getTrendDirection(
-  change: number | null | undefined
-): 'up' | 'down' | 'flat' {
+  change: number | null | undefined,
+): "up" | "down" | "flat" {
   if (change === null || change === undefined || Number.isNaN(change)) {
-    return 'flat';
+    return "flat";
   }
-  if (change > 0.01) return 'up';
-  if (change < -0.01) return 'down';
-  return 'flat';
+  if (change > 0.01) return "up";
+  if (change < -0.01) return "down";
+  return "flat";
 }

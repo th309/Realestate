@@ -82,16 +82,53 @@ import { AttributionService } from './short-links/attribution.service';
 
 import { YouTubeMetricsService } from './analytics/youtube-metrics.service';
 import { MetricsPullerService } from './analytics/metrics-puller.service';
+import { TikTokMetricsService } from './analytics/tiktok-metrics.service';
+import { InstagramMetricsService } from './analytics/instagram-metrics.service';
+import { FacebookMetricsService } from './analytics/facebook-metrics.service';
+import { LinkedInMetricsService } from './analytics/linkedin-metrics.service';
+import { HookABService } from './analytics/hook-ab.service';
+import { HookPromoterService } from './analytics/hook-promoter.service';
+import { RevenueAttributionService } from './analytics/revenue-attribution.service';
+import { PerformanceService } from './analytics/performance.service';
+import { SuggestedRunsService } from './analytics/suggested-runs.service';
 import { Pull24hMetricsCron } from './crons/pull-24h-metrics.cron';
 import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
+import { CleanupTransientRefsCron } from './crons/cleanup-transient-refs.cron';
+import { Pull7dMetricsCron } from './crons/pull-7d-metrics.cron';
+import { Pull30dMetricsCron } from './crons/pull-30d-metrics.cron';
+import { HookPromotionCron } from './crons/hook-promotion.cron';
+import { CredentialHealthProbeCron } from './crons/credential-health-probe.cron';
+import { QueueMonitorCron } from './crons/queue-monitor.cron';
+import { SuccessRateCheckCron } from './crons/success-rate-check.cron';
+import { MagnetPromotionCron } from './crons/magnet-promotion.cron';
 
 import { RankingResolverController } from './ranking/ranking-resolver.controller';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
+import { MetroHeroImageService } from './metro-hero-image.service';
 
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { PlatformCredentialsService } from './platform-credentials.service';
 import { PlatformAppCredentialsService } from './platform-app-credentials.service';
+
+import { DashboardMagnetsService } from './magnets/dashboard-magnets.service';
+import { DashboardMagnetsController } from './magnets/dashboard-magnets.controller';
+import { LeadMagnetBindingService } from './magnets/lead-magnet-binding.service';
+import { MagnetABPromoterService } from './magnets/magnet-ab-promoter.service';
+import { FFmpegWrapperService } from './style-refs/ffmpeg-wrapper.service';
+import { YtDlpWrapperService } from './style-refs/yt-dlp-wrapper.service';
+import { AlertDispatcherService } from './observability/alert-dispatcher.service';
+import { StallDetectorService } from './observability/stall-detector.service';
+import { QueueMonitorService } from './observability/queue-monitor.service';
+import { SuccessRateService } from './analytics/success-rate.service';
+import { StyleABService } from './style-references/style-ab.service';
+import { CostCapService } from './auto-ideation/cost-cap.service';
+import { TriggerRuleEvaluatorService } from './auto-ideation/trigger-rule-evaluator.service';
+import { AutoIdeationService } from './auto-ideation/auto-ideation.service';
+import { AutoIdeationController } from './auto-ideation/auto-ideation.controller';
+import { AutoIdeationScoreScanCron } from './crons/auto-ideation-score-scan.cron';
+import { AutoIdeationRankScanCron } from './crons/auto-ideation-rank-scan.cron';
+import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-scan.cron';
 
 @Module({
   imports: [
@@ -110,12 +147,14 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     PlatformOAuthCallbackController,
     ShortLinkController,
     MagnetLibraryController,
+    DashboardMagnetsController,
     StyleReferenceController,
     ArchetypeLibraryController,
     FormatsController,
     ScopeController,
     BatchRunsController,
     RankingResolverController,
+    AutoIdeationController,
   ],
   providers: [
     ContentRunsService,
@@ -123,8 +162,14 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     RunActionsService,
     RunThumbnailService,
     MagnetLibraryService,
+    DashboardMagnetsService,
+    LeadMagnetBindingService,
+    MagnetABPromoterService,
     VisionExtractorService,
     StyleReferenceService,
+    StyleABService,
+    FFmpegWrapperService,
+    YtDlpWrapperService,
     YouTubeDiscoveryService,
     TranscriptFetcherService,
     ArchetypeClusteringService,
@@ -187,9 +232,36 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     AttributionService,
 
     YouTubeMetricsService,
+    TikTokMetricsService,
+    InstagramMetricsService,
+    FacebookMetricsService,
+    LinkedInMetricsService,
     MetricsPullerService,
+    HookABService,
+    HookPromoterService,
+    RevenueAttributionService,
+    PerformanceService,
+    SuggestedRunsService,
+    AlertDispatcherService,
+    StallDetectorService,
+    QueueMonitorService,
+    SuccessRateService,
+    CostCapService,
+    TriggerRuleEvaluatorService,
+    AutoIdeationService,
     Pull24hMetricsCron,
+    Pull7dMetricsCron,
+    Pull30dMetricsCron,
+    HookPromotionCron,
+    CredentialHealthProbeCron,
+    QueueMonitorCron,
+    SuccessRateCheckCron,
+    MagnetPromotionCron,
+    AutoIdeationScoreScanCron,
+    AutoIdeationRankScanCron,
+    AutoIdeationThresholdScanCron,
     RecoverStuckRunsCron,
+    CleanupTransientRefsCron,
 
     FetchDataHandler,
     GenerateScriptHandler,
@@ -214,6 +286,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     PlatformAppCredentialsService,
     ScopeService,
     RankingResolverService,
+    MetroHeroImageService,
   ],
   exports: [
     ContentRunsService,
@@ -228,6 +301,7 @@ import { PlatformAppCredentialsService } from './platform-app-credentials.servic
     PlatformCredentialsService,
     PlatformPublisherRegistry,
     RankingResolverService,
+    MetroHeroImageService,
   ],
 })
 export class ContentPipelineModule {}

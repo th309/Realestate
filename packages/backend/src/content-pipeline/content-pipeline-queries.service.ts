@@ -5,6 +5,8 @@ import {
   getAssetSignedUrl as getAssetSignedUrlFn,
   SignedAssetKind,
 } from './asset-signing';
+import { AutoIdeationService } from './auto-ideation/auto-ideation.service';
+import { CostCapService } from './auto-ideation/cost-cap.service';
 
 /**
  * Read-only queries that power the admin UI: dashboard rollups, run
@@ -16,7 +18,14 @@ import {
  */
 @Injectable()
 export class ContentPipelineQueriesService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly autoIdeation: AutoIdeationService,
+    // Keep injected so the module can enforce availability, even though
+    // this class reads the underlying table directly for dashboard status.
+    // (Also useful for future spend recording from handlers.)
+    private readonly costCap: CostCapService,
+  ) {}
 
   /**
    * For each format, return a signed URL to the most recent successful
@@ -168,7 +177,31 @@ export class ContentPipelineQueriesService {
         has_video: videoRunIds.has(r.id as string),
       })),
       reviewQueueCount: inReview ?? 0,
+      upcomingAutoRuns: await this.autoIdeation.previewUpcoming(),
+      costCapStatus: await this.getCostCapStatus(),
     };
+  }
+
+  private async getCostCapStatus(): Promise<{
+    breached: boolean;
+    usdSpent: number;
+    usdCap: number;
+  }> {
+    const client = this.supabase.getClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const envCap = Number(process.env.CONTENT_PIPELINE_DAILY_USD_MAX);
+    const fallbackCap = Number.isFinite(envCap) ? envCap : 50;
+
+    const { data, error } = await client
+      .from('cost_cap_daily')
+      .select('*')
+      .eq('date', today)
+      .maybeSingle();
+    if (error) throw error;
+
+    const usdCap = Number(data?.usd_cap ?? fallbackCap);
+    const usdSpent = Number(data?.usd_spent ?? 0);
+    return { breached: usdSpent >= usdCap, usdSpent, usdCap };
   }
 
   async getRunDetail(runId: string) {

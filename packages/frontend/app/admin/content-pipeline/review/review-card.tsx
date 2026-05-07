@@ -58,6 +58,9 @@ export function ReviewCard({ run }: { run: any }) {
   const inFlight = IN_FLIGHT.has(status);
 
   const gates = (run.gates ?? []) as any[];
+  const autoIdeationEvent = (run.events ?? []).find(
+    (e: any) => e.event_type === "auto_ideation_enqueued",
+  );
   const gateAFail = [...gates]
     .reverse()
     .find((g) => g.gate === "data_verifier" && g.result === "failed");
@@ -196,6 +199,17 @@ export function ReviewCard({ run }: { run: any }) {
             badges={{ gates: hasGateFails ? "!" : undefined }}
           />
           <div className="flex-1 p-5 overflow-y-auto">
+            {run.run.triggered_by === "auto_ideation" && (
+              <div className="bg-tertiary-container/30 text-on-surface rounded-full px-3 py-1 inline-flex items-center gap-2 mb-3 text-xs">
+                <span className="font-medium">Auto-queued</span>
+                <span className="text-on-surface-variant">
+                  rule:{" "}
+                  <span className="font-mono">
+                    {autoIdeationEvent?.payload?.rule_name ?? "unknown"}
+                  </span>
+                </span>
+              </div>
+            )}
             {tab === "script" && (
               <div className="space-y-3">
                 <p className="text-base whitespace-pre-wrap leading-relaxed text-on-surface font-serif">

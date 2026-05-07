@@ -36,7 +36,9 @@ describe('AlertService', () => {
   // Helper Functions
   // ============================================================================
 
-  function createConfidenceScore(overrides: Partial<ConfidenceScore> = {}): ConfidenceScore {
+  function createConfidenceScore(
+    overrides: Partial<ConfidenceScore> = {},
+  ): ConfidenceScore {
     return {
       scoreType: 'homeready',
       geographyType: 'metro',
@@ -61,19 +63,32 @@ describe('AlertService', () => {
     // Create a chainable mock that returns itself for any method
     const createChainableMock = (resolveValue: any = { error: null }) => {
       const mock: any = {};
-      const chainMethods = ['eq', 'select', 'order', 'limit', 'single', 'insert', 'update'];
+      const chainMethods = [
+        'eq',
+        'select',
+        'order',
+        'limit',
+        'single',
+        'insert',
+        'update',
+      ];
       chainMethods.forEach((method) => {
         mock[method] = jest.fn().mockReturnValue(mock);
       });
       // Final resolution
-      mock.then = jest.fn().mockImplementation((cb) => Promise.resolve(cb(resolveValue)));
+      mock.then = jest
+        .fn()
+        .mockImplementation((cb) => Promise.resolve(cb(resolveValue)));
       return mock;
     };
 
     const mockClient = {
       from: jest.fn().mockImplementation((table: string) => {
         if (table === 'propertyiq_confidence_alerts') {
-          const chainable = createChainableMock({ data: config?.openAlerts || [], error: null });
+          const chainable = createChainableMock({
+            data: config?.openAlerts || [],
+            error: null,
+          });
           chainable.insert = jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({
@@ -106,7 +121,9 @@ describe('AlertService', () => {
               eq: jest.fn().mockReturnThis(),
             }),
           });
-          chainable.update = jest.fn().mockReturnValue(createChainableMock({ error: null }));
+          chainable.update = jest
+            .fn()
+            .mockReturnValue(createChainableMock({ error: null }));
           return chainable;
         }
         return createChainableMock();
@@ -136,7 +153,10 @@ describe('AlertService', () => {
         confidenceLevel: 'medium',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('threshold');
@@ -175,7 +195,10 @@ describe('AlertService', () => {
         confidenceLevel: 'low',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('threshold');
@@ -196,7 +219,10 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).toBeNull();
     });
@@ -215,7 +241,10 @@ describe('AlertService', () => {
         status: 'review',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).toBeNull();
     });
@@ -255,7 +284,10 @@ describe('AlertService', () => {
         status: 'healthy',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('degradation');
@@ -291,7 +323,10 @@ describe('AlertService', () => {
         status: 'healthy',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('degradation');
@@ -311,7 +346,10 @@ describe('AlertService', () => {
         status: 'healthy',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).toBeNull();
     });
@@ -353,7 +391,12 @@ describe('AlertService', () => {
           current_confidence: 60,
           threshold_crossed: 0,
           diagnostic_signals: [
-            { name: 'Low Correlation', description: 'Score has very weak correlation', value: 0.08, severity: 'critical' },
+            {
+              name: 'Low Correlation',
+              description: 'Score has very weak correlation',
+              value: 0.08,
+              severity: 'critical',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -372,11 +415,16 @@ describe('AlertService', () => {
         confidenceScore: 60,
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('anomaly');
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'Low Correlation')).toBe(true);
+      expect(
+        alert?.diagnosticSignals.some((s) => s.name === 'Low Correlation'),
+      ).toBe(true);
     });
 
     it('creates anomaly alert for insufficient samples', async () => {
@@ -393,7 +441,12 @@ describe('AlertService', () => {
           current_confidence: 60,
           threshold_crossed: 0,
           diagnostic_signals: [
-            { name: 'Insufficient Samples', description: 'Not enough data points', value: 5, severity: 'warning' },
+            {
+              name: 'Insufficient Samples',
+              description: 'Not enough data points',
+              value: 5,
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -412,11 +465,16 @@ describe('AlertService', () => {
         confidenceScore: 60,
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.alertType).toBe('anomaly');
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'Insufficient Samples')).toBe(true);
+      expect(
+        alert?.diagnosticSignals.some((s) => s.name === 'Insufficient Samples'),
+      ).toBe(true);
     });
 
     it('creates critical anomaly for both low R² and low samples', async () => {
@@ -433,8 +491,18 @@ describe('AlertService', () => {
           current_confidence: 40,
           threshold_crossed: 0,
           diagnostic_signals: [
-            { name: 'Low Correlation', description: 'Weak correlation', value: 0.05, severity: 'critical' },
-            { name: 'Insufficient Samples', description: 'Not enough data', value: 8, severity: 'warning' },
+            {
+              name: 'Low Correlation',
+              description: 'Weak correlation',
+              value: 0.05,
+              severity: 'critical',
+            },
+            {
+              name: 'Insufficient Samples',
+              description: 'Not enough data',
+              value: 8,
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -452,7 +520,10 @@ describe('AlertService', () => {
         confidenceScore: 40,
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       expect(alert).not.toBeNull();
       expect(alert?.severity).toBe('critical');
@@ -556,7 +627,12 @@ describe('AlertService', () => {
           current_confidence: 52,
           threshold_crossed: 55,
           diagnostic_signals: [
-            { name: 'Correlation Drop', description: 'Below expected', value: '40.0%', severity: 'warning' },
+            {
+              name: 'Correlation Drop',
+              description: 'Below expected',
+              value: '40.0%',
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -574,9 +650,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'Correlation Drop')).toBe(true);
+      expect(
+        alert?.diagnosticSignals.some((s) => s.name === 'Correlation Drop'),
+      ).toBe(true);
     });
 
     it('includes sample size signal when sample score below 50', async () => {
@@ -593,7 +674,12 @@ describe('AlertService', () => {
           current_confidence: 50,
           threshold_crossed: 55,
           diagnostic_signals: [
-            { name: 'Sample Size', description: 'Insufficient sample', value: 50, severity: 'warning' },
+            {
+              name: 'Sample Size',
+              description: 'Insufficient sample',
+              value: 50,
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -612,9 +698,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'Sample Size')).toBe(true);
+      expect(
+        alert?.diagnosticSignals.some((s) => s.name === 'Sample Size'),
+      ).toBe(true);
     });
 
     it('includes data staleness signal when recency below 50', async () => {
@@ -631,7 +722,12 @@ describe('AlertService', () => {
           current_confidence: 50,
           threshold_crossed: 55,
           diagnostic_signals: [
-            { name: 'Data Staleness', description: 'Data is outdated', value: '35.0%', severity: 'warning' },
+            {
+              name: 'Data Staleness',
+              description: 'Data is outdated',
+              value: '35.0%',
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -649,9 +745,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'Data Staleness')).toBe(true);
+      expect(
+        alert?.diagnosticSignals.some((s) => s.name === 'Data Staleness'),
+      ).toBe(true);
     });
 
     it('includes R² signal for weak predictive power', async () => {
@@ -668,7 +769,12 @@ describe('AlertService', () => {
           current_confidence: 52,
           threshold_crossed: 55,
           diagnostic_signals: [
-            { name: 'R² Value', description: 'Weak predictive power', value: '0.1500', severity: 'warning' },
+            {
+              name: 'R² Value',
+              description: 'Weak predictive power',
+              value: '0.1500',
+              severity: 'warning',
+            },
           ],
           recommended_actions: [],
           status: 'open',
@@ -686,9 +792,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.diagnosticSignals.some((s) => s.name === 'R² Value')).toBe(true);
+      expect(alert?.diagnosticSignals.some((s) => s.name === 'R² Value')).toBe(
+        true,
+      );
     });
   });
 
@@ -730,9 +841,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.recommendedActions).toContain('Review recent formula changes');
+      expect(alert?.recommendedActions).toContain(
+        'Review recent formula changes',
+      );
     });
 
     it('includes data quality check recommendation', async () => {
@@ -766,9 +882,14 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
-      expect(alert?.recommendedActions.some((r) => r.includes('data quality'))).toBe(true);
+      expect(
+        alert?.recommendedActions.some((r) => r.includes('data quality')),
+      ).toBe(true);
     });
 
     it('deduplicates recommendations', async () => {
@@ -785,7 +906,12 @@ describe('AlertService', () => {
           current_confidence: 50,
           threshold_crossed: 55,
           diagnostic_signals: [
-            { name: 'Correlation Drop', description: 'Low', value: '40%', severity: 'warning' },
+            {
+              name: 'Correlation Drop',
+              description: 'Low',
+              value: '40%',
+              severity: 'warning',
+            },
           ],
           recommended_actions: [
             'Review recent formula changes',
@@ -809,7 +935,10 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       // Check no duplicates
       const uniqueActions = new Set(alert?.recommendedActions);
@@ -862,9 +991,11 @@ describe('AlertService', () => {
           }),
           order: jest.fn().mockImplementation(() => chainable),
           // Make it thenable so await works
-          then: jest.fn().mockImplementation((resolve: any) =>
-            Promise.resolve({ data: [], error: null }).then(resolve)
-          ),
+          then: jest
+            .fn()
+            .mockImplementation((resolve: any) =>
+              Promise.resolve({ data: [], error: null }).then(resolve),
+            ),
         };
         return chainable;
       };
@@ -880,7 +1011,10 @@ describe('AlertService', () => {
 
       // Verify that eq was called with score_type filter
       expect(eqCalls).toContainEqual({ field: 'status', value: 'open' });
-      expect(eqCalls).toContainEqual({ field: 'score_type', value: 'investoredge' });
+      expect(eqCalls).toContainEqual({
+        field: 'score_type',
+        value: 'investoredge',
+      });
     });
   });
 
@@ -1014,7 +1148,10 @@ describe('AlertService', () => {
         status: 'monitor',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       // Not below threshold, so no alert
       expect(alert).toBeNull();
@@ -1050,7 +1187,10 @@ describe('AlertService', () => {
         status: 'review',
       });
 
-      const alert = await service.checkAndCreateAlerts(newConfidence, previousConfidence);
+      const alert = await service.checkAndCreateAlerts(
+        newConfidence,
+        previousConfidence,
+      );
 
       // Should create threshold alert, not degradation
       expect(alert?.alertType).toBe('threshold');

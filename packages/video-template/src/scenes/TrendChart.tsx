@@ -1,8 +1,10 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig, interpolate, Easing } from "remotion";
 import { COLORS, scoreTierColor } from "../constants";
+import { LONG_FORM_VISUAL_RHYTHM_FRAMES } from "../constants/long-form-rhythm";
 import type { ScoreHistoryPoint } from "../types";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
+import { MeshBackground } from "../primitives/MeshBackground";
 
 interface TrendChartProps {
   market: string;
@@ -56,6 +58,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   const labelSize = isVertical ? 22 : 16;
   const valueSize = isVertical ? 26 : 18;
 
+  const spotlightIdx =
+    Math.floor(frame / (LONG_FORM_VISUAL_RHYTHM_FRAMES / 3)) % barCount;
+
   return (
     <div
       style={{
@@ -69,8 +74,26 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         opacity: sceneOpacity,
         gap: isVertical ? 40 : 32,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      <div style={{ position: "absolute", inset: 0, zIndex: 0, opacity: 0.55 }}>
+        <MeshBackground />
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isVertical ? 40 : 32,
+          width: "100%",
+        }}
+      >
       {/* Title */}
       <div
         style={{
@@ -103,6 +126,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           alignItems: "flex-end",
           gap: barGap,
           position: "relative",
+          transform: `translateX(${Math.sin(frame / 280) * 10}px)`,
         }}
       >
         {/* Baseline */}
@@ -146,10 +170,12 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           );
           const bh = barHeight(point.score) * barProgress;
           const isLast = i === validPoints.length - 1;
+          const isSpotlight = i === spotlightIdx;
           const barColor = isLast ? scoreTierColor(point.score) : COLORS.bgCard;
           const borderColor = isLast
             ? scoreTierColor(point.score)
             : COLORS.textDim;
+          const bob = Math.sin(frame / 17 + i * 0.65) * 2.2;
 
           return (
             <div
@@ -161,6 +187,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 gap: 6,
                 flex: 1,
                 alignSelf: "flex-end",
+                transform: `translateY(${bob}px)`,
               }}
             >
               {/* Score label on top of bar */}
@@ -192,8 +219,16 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                     ? `linear-gradient(to top, ${barColor}40, ${barColor})`
                     : `${barColor}`,
                   borderRadius: "4px 4px 0 0",
-                  border: isLast ? `2px solid ${borderColor}` : undefined,
-                  boxShadow: isLast ? `0 0 20px ${barColor}40` : undefined,
+                  border: isSpotlight
+                    ? `2px solid rgba(57,73,171,0.95)`
+                    : isLast
+                      ? `2px solid ${borderColor}`
+                      : undefined,
+                  boxShadow: isSpotlight
+                    ? `0 0 28px rgba(57,73,171,0.55)`
+                    : isLast
+                      ? `0 0 20px ${barColor}40`
+                      : undefined,
                   minHeight: 2,
                 }}
               />
@@ -226,6 +261,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         }}
       >
         50 = state average baseline
+      </div>
       </div>
     </div>
   );

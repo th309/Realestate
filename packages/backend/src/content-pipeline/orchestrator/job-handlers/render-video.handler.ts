@@ -144,9 +144,7 @@ export class RenderVideoHandler {
             ...(captionWords && captionWords.length > 0
               ? { captionWords }
               : {}),
-            ...(longFormRenderPlan
-              ? { longFormRenderPlan }
-              : {}),
+            ...(longFormRenderPlan ? { longFormRenderPlan } : {}),
           };
       this.logger.log(
         `[PIPE] render-video run=${runId} props.keys=[${Object.keys(formatProps).join(',')}] hasResolvedMarket=${'resolvedMarket' in formatProps} hasParams=${'params' in formatProps}`,

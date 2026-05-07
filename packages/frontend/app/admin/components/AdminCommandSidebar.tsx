@@ -115,6 +115,11 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Plus,
       },
       {
+        label: "Auto-ideation",
+        href: "/admin/content-pipeline/auto-ideation",
+        icon: Zap,
+      },
+      {
         label: "Review Queue",
         href: "/admin/content-pipeline/review",
         icon: Inbox,

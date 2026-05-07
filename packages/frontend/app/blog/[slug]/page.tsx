@@ -77,7 +77,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         datePublished: frontmatter.date,
         dateModified: frontmatter.date,
         author: {
-          "@type": "Organization",
+          "@type": "Person",
           name: frontmatter.author,
           url: "https://www.propertyiq.app/about",
         },

@@ -4,13 +4,7 @@
  * Admin endpoints for paywall analytics.
  */
 
-import {
-  Controller,
-  Get,
-  Query,
-  Logger,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, Logger, UseGuards } from '@nestjs/common';
 import { PaywallAnalyticsService } from './paywall-analytics.service';
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
 

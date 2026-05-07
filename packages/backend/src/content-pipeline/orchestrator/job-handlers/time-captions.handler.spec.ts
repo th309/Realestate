@@ -49,7 +49,9 @@ describe('TimeCaptionsHandler', () => {
         };
       }
       if (table === 'content_run_events') {
-        return { insert: jest.fn().mockResolvedValue({ data: null, error: null }) };
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        };
       }
       throw new Error(`unexpected table ${table}`);
     });

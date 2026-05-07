@@ -6,6 +6,14 @@ export interface ResolvedMarket {
   canonical_name: string;
   state?: string;
   population?: number;
+  /**
+   * WGS84 point from `geographies` — same coordinates the product map uses
+   * to frame metros/counties/zips. Threaded into video props for Remotion.
+   */
+  latitude?: number;
+  longitude?: number;
+  /** Editorial skyline URL for long-form metro hero (optional). */
+  hero_image_url?: string;
 }
 
 export interface MarketSnapshot {

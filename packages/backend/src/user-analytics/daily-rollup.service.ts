@@ -36,7 +36,9 @@ export class DailyRollupService {
       // Compute metrics for yesterday
       const { data: sessions } = await client
         .from('user_sessions')
-        .select('visitor_id, duration_seconds, is_bounce, page_count, converted, user_tier')
+        .select(
+          'visitor_id, duration_seconds, is_bounce, page_count, converted, user_tier',
+        )
         .gte('started_at', dayStart)
         .lte('started_at', dayEnd);
 
@@ -45,7 +47,10 @@ export class DailyRollupService {
         return;
       }
 
-      const tiers = ['all', ...new Set(sessions.map((s) => s.user_tier || 'anonymous'))];
+      const tiers = [
+        'all',
+        ...new Set(sessions.map((s) => s.user_tier || 'anonymous')),
+      ];
       const rows: {
         date: string;
         metric_name: string;
@@ -56,17 +61,23 @@ export class DailyRollupService {
 
       for (const tier of tiers) {
         const filtered =
-          tier === 'all' ? sessions : sessions.filter((s) => (s.user_tier || 'anonymous') === tier);
+          tier === 'all'
+            ? sessions
+            : sessions.filter((s) => (s.user_tier || 'anonymous') === tier);
         if (filtered.length === 0) continue;
 
         const uniqueVisitors = new Set(filtered.map((s) => s.visitor_id)).size;
         const totalSessions = filtered.length;
-        const bounceRate = filtered.filter((s) => s.is_bounce).length / totalSessions;
+        const bounceRate =
+          filtered.filter((s) => s.is_bounce).length / totalSessions;
         const avgDuration =
-          filtered.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / totalSessions;
+          filtered.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) /
+          totalSessions;
         const avgPages =
-          filtered.reduce((sum, s) => sum + (s.page_count || 0), 0) / totalSessions;
-        const conversionRate = filtered.filter((s) => s.converted).length / totalSessions;
+          filtered.reduce((sum, s) => sum + (s.page_count || 0), 0) /
+          totalSessions;
+        const conversionRate =
+          filtered.filter((s) => s.converted).length / totalSessions;
 
         rows.push(
           {
@@ -121,7 +132,9 @@ export class DailyRollupService {
       if (error) {
         this.logger.error(`Rollup upsert failed: ${error.message}`);
       } else {
-        this.logger.log(`Daily rollup for ${dateStr}: ${rows.length} metrics computed`);
+        this.logger.log(
+          `Daily rollup for ${dateStr}: ${rows.length} metrics computed`,
+        );
       }
 
       // Purge events older than 90 days

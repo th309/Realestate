@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchAPIRaw } from "@/lib/data/fetchers/base";
+import type { CreateRunFormatOptions } from "./content-pipeline-api";
 
 export interface BatchMarket {
   id: string;
@@ -13,7 +14,7 @@ export interface CreateBatchRunsRequest {
   markets: BatchMarket[];
   approvalMode?: "auto" | "review" | "draft";
   platforms?: string[];
-  formatOptions?: { windowDays?: 30 | 90 | 180 | 365 };
+  formatOptions?: CreateRunFormatOptions;
 }
 
 export interface CreateBatchRunsResponse {

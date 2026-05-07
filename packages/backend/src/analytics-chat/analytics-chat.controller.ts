@@ -84,7 +84,9 @@ export class AnalyticsChatController {
 
     this.logger.log(`[Quinn ${requestId}] === STREAM REQUEST START ===`);
     this.logger.log(`[Quinn ${requestId}] ConversationId: ${conversationId}`);
-    this.logger.log(`[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`);
+    this.logger.log(
+      `[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`,
+    );
 
     if (!body.message?.trim()) {
       res.status(HttpStatus.BAD_REQUEST).json({ error: 'Message is required' });
@@ -92,7 +94,9 @@ export class AnalyticsChatController {
     }
 
     if (!this.chatService.isAvailable()) {
-      res.status(HttpStatus.SERVICE_UNAVAILABLE).json({ error: 'Chat service not available' });
+      res
+        .status(HttpStatus.SERVICE_UNAVAILABLE)
+        .json({ error: 'Chat service not available' });
       return;
     }
 
@@ -114,7 +118,9 @@ export class AnalyticsChatController {
       res.end();
     } catch (error) {
       this.logger.error(`[Quinn ${requestId}] Stream error: ${error.message}`);
-      res.write(`data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`,
+      );
       res.end();
     }
   }
@@ -131,12 +137,18 @@ export class AnalyticsChatController {
   ): Promise<ChatResponse> {
     const requestId = `be_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const startTime = Date.now();
-    
+
     this.logger.log(`[Quinn ${requestId}] === POST REQUEST START ===`);
     this.logger.log(`[Quinn ${requestId}] ConversationId: ${conversationId}`);
-    this.logger.log(`[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`);
-    this.logger.log(`[Quinn ${requestId}] Context: ${JSON.stringify(body.context || {})}`);
-    this.logger.log(`[Quinn ${requestId}] Service available: ${this.chatService.isAvailable()}`);
+    this.logger.log(
+      `[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`,
+    );
+    this.logger.log(
+      `[Quinn ${requestId}] Context: ${JSON.stringify(body.context || {})}`,
+    );
+    this.logger.log(
+      `[Quinn ${requestId}] Service available: ${this.chatService.isAvailable()}`,
+    );
 
     if (!body.message?.trim()) {
       this.logger.warn(`[Quinn ${requestId}] Empty message rejected`);
@@ -144,7 +156,9 @@ export class AnalyticsChatController {
     }
 
     if (!this.chatService.isAvailable()) {
-      this.logger.error(`[Quinn ${requestId}] Service unavailable - ANTHROPIC_API_KEY not configured`);
+      this.logger.error(
+        `[Quinn ${requestId}] Service unavailable - ANTHROPIC_API_KEY not configured`,
+      );
       throw new HttpException(
         'Chat service not available - API key not configured',
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -153,7 +167,7 @@ export class AnalyticsChatController {
 
     try {
       this.logger.log(`[Quinn ${requestId}] Calling chat service...`);
-      
+
       const result = await this.chatService.chat(
         conversationId,
         body.message.trim(),
@@ -161,14 +175,25 @@ export class AnalyticsChatController {
       );
 
       const duration = Date.now() - startTime;
-      this.logger.log(`[Quinn ${requestId}] === SUCCESS === Duration: ${duration}ms`);
-      this.logger.log(`[Quinn ${requestId}] Model used: ${result.modelUsed || 'unknown'}`);
-      this.logger.log(`[Quinn ${requestId}] Response length: ${result.response?.length || 0}`);
-      this.logger.log(`[Quinn ${requestId}] Tools used: ${result.toolsUsed?.join(', ') || 'none'}`);
+      this.logger.log(
+        `[Quinn ${requestId}] === SUCCESS === Duration: ${duration}ms`,
+      );
+      this.logger.log(
+        `[Quinn ${requestId}] Model used: ${result.modelUsed || 'unknown'}`,
+      );
+      this.logger.log(
+        `[Quinn ${requestId}] Response length: ${result.response?.length || 0}`,
+      );
+      this.logger.log(
+        `[Quinn ${requestId}] Tools used: ${result.toolsUsed?.join(', ') || 'none'}`,
+      );
 
       return {
         success: true,
-        response: typeof result.response === 'string' ? result.response : (result.response ?? ''),
+        response:
+          typeof result.response === 'string'
+            ? result.response
+            : (result.response ?? ''),
         toolsUsed: result.toolsUsed,
         structuredData: result.structuredData,
         modelUsed: result.modelUsed,
@@ -176,8 +201,12 @@ export class AnalyticsChatController {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error(`[Quinn ${requestId}] === FAILED === Duration: ${duration}ms`);
-      this.logger.error(`[Quinn ${requestId}] Error type: ${error.constructor?.name}`);
+      this.logger.error(
+        `[Quinn ${requestId}] === FAILED === Duration: ${duration}ms`,
+      );
+      this.logger.error(
+        `[Quinn ${requestId}] Error type: ${error.constructor?.name}`,
+      );
       this.logger.error(`[Quinn ${requestId}] Error message: ${error.message}`);
       this.logger.error(`[Quinn ${requestId}] Error stack: ${error.stack}`);
 
@@ -277,9 +306,15 @@ export class AnalyticsChatController {
     const requestId = `explain_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
     this.logger.log(`[Quinn Explain ${requestId}] === REQUEST START ===`);
-    this.logger.log(`[Quinn Explain ${requestId}] ConversationId: ${conversationId}`);
-    this.logger.log(`[Quinn Explain ${requestId}] User query: "${body.userQuery?.slice(0, 100)}..."`);
-    this.logger.log(`[Quinn Explain ${requestId}] Context length: ${body.resultContext?.length || 0} chars`);
+    this.logger.log(
+      `[Quinn Explain ${requestId}] ConversationId: ${conversationId}`,
+    );
+    this.logger.log(
+      `[Quinn Explain ${requestId}] User query: "${body.userQuery?.slice(0, 100)}..."`,
+    );
+    this.logger.log(
+      `[Quinn Explain ${requestId}] Context length: ${body.resultContext?.length || 0} chars`,
+    );
 
     if (!body.resultContext || !body.userQuery) {
       throw new HttpException(
@@ -319,7 +354,9 @@ Be thorough but conversational. Focus on actionable insights.`;
       );
 
       const duration = Date.now() - startTime;
-      this.logger.log(`[Quinn Explain ${requestId}] === SUCCESS === Duration: ${duration}ms`);
+      this.logger.log(
+        `[Quinn Explain ${requestId}] === SUCCESS === Duration: ${duration}ms`,
+      );
 
       return {
         success: true,

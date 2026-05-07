@@ -60,20 +60,26 @@ export class GeographyChainService {
 
     switch (geoLevel) {
       case 'zip':
-        if (crosswalk.county_fips) chain.push({ id: crosswalk.county_fips, level: 'county' });
-        if (crosswalk.cbsa_code) chain.push({ id: crosswalk.cbsa_code, level: 'metro' });
-        if (crosswalk.state_fips) chain.push({ id: crosswalk.state_fips, level: 'state' });
+        if (crosswalk.county_fips)
+          chain.push({ id: crosswalk.county_fips, level: 'county' });
+        if (crosswalk.cbsa_code)
+          chain.push({ id: crosswalk.cbsa_code, level: 'metro' });
+        if (crosswalk.state_fips)
+          chain.push({ id: crosswalk.state_fips, level: 'state' });
         chain.push({ id: 'national', level: 'national' });
         break;
 
       case 'county':
-        if (crosswalk.cbsa_code) chain.push({ id: crosswalk.cbsa_code, level: 'metro' });
-        if (crosswalk.state_fips) chain.push({ id: crosswalk.state_fips, level: 'state' });
+        if (crosswalk.cbsa_code)
+          chain.push({ id: crosswalk.cbsa_code, level: 'metro' });
+        if (crosswalk.state_fips)
+          chain.push({ id: crosswalk.state_fips, level: 'state' });
         chain.push({ id: 'national', level: 'national' });
         break;
 
       case 'metro':
-        if (crosswalk.state_fips) chain.push({ id: crosswalk.state_fips, level: 'state' });
+        if (crosswalk.state_fips)
+          chain.push({ id: crosswalk.state_fips, level: 'state' });
         chain.push({ id: 'national', level: 'national' });
         break;
 
@@ -159,7 +165,9 @@ export class GeographyChainService {
       .limit(50);
 
     if (error || !data) return [];
-    return [...new Set(data.map(r => r.county_fips).filter(Boolean))] as string[];
+    return [
+      ...new Set(data.map((r) => r.county_fips).filter(Boolean)),
+    ] as string[];
   }
 
   // ==========================================================================
@@ -178,11 +186,20 @@ export class GeographyChainService {
 
     let filterCol: string;
     switch (geoLevel) {
-      case 'zip': filterCol = 'zip_code'; break;
-      case 'county': filterCol = 'county_fips'; break;
-      case 'metro': filterCol = 'cbsa_code'; break;
-      case 'state': filterCol = 'state_fips'; break;
-      default: return null;
+      case 'zip':
+        filterCol = 'zip_code';
+        break;
+      case 'county':
+        filterCol = 'county_fips';
+        break;
+      case 'metro':
+        filterCol = 'cbsa_code';
+        break;
+      case 'state':
+        filterCol = 'state_fips';
+        break;
+      default:
+        return null;
     }
 
     const { data, error } = await this.supabase

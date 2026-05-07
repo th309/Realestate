@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
+import { readFileSync } from 'fs';
 
 export interface ExtractedStyleAttributes {
   /** Hex palette swatches the Vision model identified, ordered by salience. */
@@ -89,6 +90,78 @@ export class VisionExtractorService {
       `[VISION] extract ${imageUrl.slice(0, 60)}… palette=${parsed.palette.length} ms=${Date.now() - start}`,
     );
     return { ...parsed, cost_usd: APPROX_COST_PER_EXTRACTION_USD };
+  }
+
+  /**
+   * Phase 3: Extract video style attributes from sampled frames.
+   * Frames are local JPEG paths (sampled ~1s apart). We pass them as data URLs
+   * to Vision and request a strict JSON object suitable for selecting
+   * Remotion style variants.
+   */
+  async extractFromFrames(framePaths: string[]): Promise<{
+    attributes: Record<string, unknown>;
+    cost_usd: number;
+  }> {
+    const start = Date.now();
+    const frames = framePaths.slice(0, 12);
+    if (frames.length === 0) {
+      throw new Error('extractFromFrames requires at least 1 frame');
+    }
+
+    const prompt = `You are analyzing sampled frames from a short-form video.
+Return ONLY valid JSON with this exact shape:
+{
+  "cuts_per_10_sec": number,
+  "hook_archetype": "question" | "statistic" | "bold-claim" | "callout" | "countdown" | "pattern-interrupt",
+  "caption_style": "none" | "single-line-burn-in" | "kinetic-multi-line" | "traditional-subtitle",
+  "aspect": "9x16" | "16x9" | "1x1" | "other",
+  "energy_tag": "calm" | "medium" | "high",
+  "dominant_palette": ["#RRGGBB", "..."]
+}
+Rules:
+- Do NOT copy any visible text verbatim from the frames.
+- dominant_palette must be 3-6 hex colors (#RRGGBB).
+- Estimate cuts_per_10_sec from visual changes across frames.`;
+
+    const content: Array<
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' } }
+    > = [{ type: 'text', text: prompt }];
+
+    for (const p of frames) {
+      const b64 = readFileSync(p).toString('base64');
+      content.push({
+        type: 'image_url',
+        image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'low' },
+      });
+    }
+
+    const response = await this.getClient().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content }],
+      max_tokens: 700,
+      temperature: 0.2,
+    });
+
+    const raw = response.choices[0]?.message?.content?.trim() ?? '';
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    let attributes: Record<string, unknown> = {};
+    try {
+      attributes = JSON.parse(cleaned) as Record<string, unknown>;
+    } catch {
+      // Keep the raw response for operator debugging.
+      attributes = { summary: raw.slice(0, 600) };
+    }
+
+    const ms = Date.now() - start;
+    this.logger.log(
+      `[VISION] extractFromFrames frames=${frames.length} ms=${ms}`,
+    );
+    return { attributes, cost_usd: APPROX_COST_PER_EXTRACTION_USD };
   }
 
   private parseResponse(

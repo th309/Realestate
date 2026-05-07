@@ -55,13 +55,19 @@ export class PageClassifierService {
       return;
     }
     const client = this.supabase.getClient();
-    const { data, error } = await client.from('page_classifications').select('*');
+    const { data, error } = await client
+      .from('page_classifications')
+      .select('*');
     if (error) {
-      this.logger.error(`Failed to load page classifications: ${error.message}`);
+      this.logger.error(
+        `Failed to load page classifications: ${error.message}`,
+      );
       return;
     }
     this.classifications = (data || []) as PageClassification[];
     this.lastRefresh = Date.now();
-    this.logger.log(`Loaded ${this.classifications.length} page classifications`);
+    this.logger.log(
+      `Loaded ${this.classifications.length} page classifications`,
+    );
   }
 }

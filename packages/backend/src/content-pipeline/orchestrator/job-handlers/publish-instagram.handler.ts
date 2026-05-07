@@ -4,6 +4,7 @@ import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { InstagramReelsPublisher } from '../../drivers/instagram-reels-publisher';
 import { getAssetSignedUrl } from '../../asset-signing';
+import { LeadMagnetBindingService } from '../../magnets/lead-magnet-binding.service';
 
 /**
  * Substitute the stored script's {{SHORT_LINK}} template placeholder
@@ -23,6 +24,7 @@ export class PublishInstagramHandler {
     private readonly supabase: SupabaseService,
     private readonly orchestrator: RunOrchestratorService,
     private readonly publisher: InstagramReelsPublisher,
+    private readonly magnetBindings: LeadMagnetBindingService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -153,12 +155,20 @@ export class PublishInstagramHandler {
   ): Promise<string> {
     const client = this.supabase.getClient();
     const slug = randomBytes(5).toString('base64url').slice(0, 8);
-    const { data: binding } = await client
-      .from('format_magnet_bindings')
-      .select('magnet_kind')
-      .eq('format', format)
-      .eq('enabled', true)
-      .single();
+    const bindingId =
+      await this.magnetBindings.getOrPickSelectedBindingIdForRun(runId, format);
+    const { data: binding } = bindingId
+      ? await client
+          .from('format_magnet_bindings')
+          .select('magnet_kind')
+          .eq('id', bindingId)
+          .maybeSingle()
+      : await client
+          .from('format_magnet_bindings')
+          .select('magnet_kind')
+          .eq('format', format)
+          .eq('enabled', true)
+          .maybeSingle();
     const { data: magnet } = await client
       .from('lead_magnet_definitions')
       .select('landing_page_path')

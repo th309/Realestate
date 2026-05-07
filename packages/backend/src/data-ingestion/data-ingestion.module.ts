@@ -11,27 +11,27 @@ import { RedfinPuppeteerService } from './sources/redfin-puppeteer.service';
 import { RealtorService } from './sources/realtor.service';
 
 @Module({
-    imports: [SupabaseModule],
-    controllers: [DataIngestionController],
-    providers: [
-        CensusService,
-        FredService,
-        ZillowService,
-        RedfinService,
-        RedfinPuppeteerService,
-        RealtorService,
-        GeoMappingService,
-        DataQualityService
-    ],
-    exports: [
-        CensusService,
-        FredService,
-        ZillowService,
-        RedfinService,
-        RedfinPuppeteerService,
-        RealtorService,
-        GeoMappingService,
-        DataQualityService
-    ]
+  imports: [SupabaseModule],
+  controllers: [DataIngestionController],
+  providers: [
+    CensusService,
+    FredService,
+    ZillowService,
+    RedfinService,
+    RedfinPuppeteerService,
+    RealtorService,
+    GeoMappingService,
+    DataQualityService,
+  ],
+  exports: [
+    CensusService,
+    FredService,
+    ZillowService,
+    RedfinService,
+    RedfinPuppeteerService,
+    RealtorService,
+    GeoMappingService,
+    DataQualityService,
+  ],
 })
-export class DataIngestionModule { }
+export class DataIngestionModule {}

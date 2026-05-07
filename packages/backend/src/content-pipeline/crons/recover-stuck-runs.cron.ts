@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { QueueService, QueueName } from '../orchestrator/queue.service';
 import { PipelineStatus } from '../types';
+import { StallDetectorService } from '../observability/stall-detector.service';
 
 /**
  * Per-step timeouts in minutes. A run in one of these statuses with no
@@ -44,6 +45,7 @@ export class RecoverStuckRunsCron implements OnModuleInit {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly queue: QueueService,
+    private readonly stalls: StallDetectorService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -92,6 +94,7 @@ export class RecoverStuckRunsCron implements OnModuleInit {
           continue;
         }
         try {
+          await this.stalls.reportStall(run.id, run.status, ageMin);
           const jobId = await this.queue.send(queueName, {
             runId: run.id,
             status: run.status,

@@ -94,10 +94,12 @@ export class PermitsService {
     rows: PermitsRow[],
     table: 'permits_state' | 'permits_county',
     currentPeriod: string,
-    idField: 'state_fips' | 'fips_code'
+    idField: 'state_fips' | 'fips_code',
   ): Promise<void> {
     // Check if any rows need YoY calculation
-    const needsYoY = rows.some(row => toMetricValue(row.total_units_yoy) === null);
+    const needsYoY = rows.some(
+      (row) => toMetricValue(row.total_units_yoy) === null,
+    );
     if (!needsYoY) {
       return; // All rows already have YoY
     }
@@ -110,8 +112,8 @@ export class PermitsService {
 
     // Get IDs that need YoY calculation
     const idsNeedingYoY = rows
-      .filter(row => toMetricValue(row.total_units_yoy) === null)
-      .map(row => String(row[idField]));
+      .filter((row) => toMetricValue(row.total_units_yoy) === null)
+      .map((row) => String(row[idField]));
 
     if (idsNeedingYoY.length === 0) {
       return;
@@ -123,16 +125,24 @@ export class PermitsService {
     let offset = 0;
 
     while (true) {
-      let query = this.supabase
+      const query = this.supabase
         .from(table)
-        .select(`${idField}, sf_units, duplex_units, small_multi_units, large_multi_units, total_units`)
+        .select(
+          `${idField}, sf_units, duplex_units, small_multi_units, large_multi_units, total_units`,
+        )
         .eq('period_date', prevPeriod)
         .in(idField, idsNeedingYoY);
 
-      const { data: prevData, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+      const { data: prevData, error } = await query.range(
+        offset,
+        offset + this.PAGE_SIZE - 1,
+      );
 
       if (error) {
-        console.error(`Error fetching previous year data for YoY calculation:`, error);
+        console.error(
+          `Error fetching previous year data for YoY calculation:`,
+          error,
+        );
         break; // Continue without YoY enrichment rather than failing
       }
 
@@ -184,7 +194,8 @@ export class PermitsService {
       }
 
       // Calculate YoY percentage
-      row.total_units_yoy = Math.round(((currentTotal - prevTotal) / prevTotal) * 100 * 100) / 100;
+      row.total_units_yoy =
+        Math.round(((currentTotal - prevTotal) / prevTotal) * 100 * 100) / 100;
     });
   }
 
@@ -233,7 +244,9 @@ export class PermitsService {
 
     const { data: prevData } = await this.supabase
       .from('permits_state')
-      .select('total_units, sf_units, duplex_units, small_multi_units, large_multi_units')
+      .select(
+        'total_units, sf_units, duplex_units, small_multi_units, large_multi_units',
+      )
       .eq('period_date', prevPeriod);
 
     let prevTotalUnits = 0;
@@ -241,22 +254,25 @@ export class PermitsService {
       prevTotalUnits += calculateTotalUnits(row) || 0;
     });
 
-    const totalUnitsYoy = prevTotalUnits > 0
-      ? ((totalUnits - prevTotalUnits) / prevTotalUnits) * 100
-      : null;
+    const totalUnitsYoy =
+      prevTotalUnits > 0
+        ? ((totalUnits - prevTotalUnits) / prevTotalUnits) * 100
+        : null;
 
-    const result = [{
-      region_id: 'US',
-      region_name: 'United States',
-      period_date: latestPeriod,
-      sf_units: sfUnits,
-      large_multi_units: largeMultiUnits,
-      total_units: totalUnits,
-      total_units_yoy: totalUnitsYoy,
-      sf_buildings: sfBuildings,
-      total_buildings: totalBuildings,
-      total_value: totalValue,
-    }];
+    const result = [
+      {
+        region_id: 'US',
+        region_name: 'United States',
+        period_date: latestPeriod,
+        sf_units: sfUnits,
+        large_multi_units: largeMultiUnits,
+        total_units: totalUnits,
+        total_units_yoy: totalUnitsYoy,
+        sf_buildings: sfBuildings,
+        total_buildings: totalBuildings,
+        total_value: totalValue,
+      },
+    ];
 
     return { success: true, count: 1, data: result };
   }
@@ -271,23 +287,23 @@ export class PermitsService {
 
     const sfUnits = national.sf_units ?? 0; // Treat null as 0 (all MF)
     const totalUnits = national.total_units ?? 0;
-    
+
     // Calculate SF ratio: if totalUnits > 0, calculate ratio
     // If sfUnits is null/0, ratio will be 0% (meaning 0% SF, 100% MF)
-    const sfRatio = totalUnits > 0
-      ? (sfUnits / totalUnits) * 100
-      : null;
+    const sfRatio = totalUnits > 0 ? (sfUnits / totalUnits) * 100 : null;
 
     return {
       success: true,
       count: 1,
-      data: [{
-        region_id: 'US',
-        region_name: 'United States',
-        value: sfRatio,
-        period_date: national.period_date,
-        sf_ratio: sfRatio,
-      }],
+      data: [
+        {
+          region_id: 'US',
+          region_name: 'United States',
+          value: sfRatio,
+          period_date: national.period_date,
+          sf_ratio: sfRatio,
+        },
+      ],
     };
   }
 
@@ -299,20 +315,23 @@ export class PermitsService {
     const { data: permitsData } = await this.getNationalPermits();
     const national = permitsData[0];
 
-    const valuePerUnit = national.total_value && national.total_units && national.total_units > 0
-      ? Math.round(national.total_value / national.total_units)
-      : null;
+    const valuePerUnit =
+      national.total_value && national.total_units && national.total_units > 0
+        ? Math.round(national.total_value / national.total_units)
+        : null;
 
     return {
       success: true,
       count: 1,
-      data: [{
-        region_id: 'US',
-        region_name: 'United States',
-        value: valuePerUnit,
-        period_date: national.period_date,
-        value_per_unit: valuePerUnit,
-      }],
+      data: [
+        {
+          region_id: 'US',
+          region_name: 'United States',
+          value: valuePerUnit,
+          period_date: national.period_date,
+          value_per_unit: valuePerUnit,
+        },
+      ],
     };
   }
 
@@ -327,18 +346,24 @@ export class PermitsService {
   }> {
     const cacheKey = `permits_state:all`;
     const cached = this.getCached(cacheKey);
-    
+
     const latestPeriod = await this.getLatestPeriod('permits_state');
-    
+
     if (cached) {
       // Still enrich YoY for cached data if needed (in case YoY wasn't backfilled)
       if (latestPeriod) {
-        await this.enrichYoYData(cached, 'permits_state', latestPeriod, 'state_fips');
+        await this.enrichYoYData(
+          cached,
+          'permits_state',
+          latestPeriod,
+          'state_fips',
+        );
       }
-      
+
       const result = cached.map((row) => ({
         region_id: String(row.state_fips || ''),
-        region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
+        region_name:
+          STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
         period_date: String(row.period_date || ''),
         state_fips: String(row.state_fips || ''),
         // Include all metric fields for valueField extraction
@@ -361,17 +386,23 @@ export class PermitsService {
     if (error) throw error;
 
     const rows = (data || []) as PermitsRow[];
-    
+
     // Enrich YoY data for rows where it's NULL
     if (latestPeriod) {
-      await this.enrichYoYData(rows, 'permits_state', latestPeriod, 'state_fips');
+      await this.enrichYoYData(
+        rows,
+        'permits_state',
+        latestPeriod,
+        'state_fips',
+      );
     }
-    
+
     this.setCache(cacheKey, rows);
 
     const result = rows.map((row) => ({
       region_id: String(row.state_fips || ''),
-      region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
+      region_name:
+        STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
       period_date: String(row.period_date || ''),
       state_fips: String(row.state_fips || ''),
       // Include all metric fields for valueField extraction
@@ -398,15 +429,20 @@ export class PermitsService {
   }> {
     const cacheKey = `permits_county:${state || 'all'}`;
     const cached = this.getCached(cacheKey);
-    
+
     const latestPeriod = await this.getLatestPeriod('permits_county');
-    
+
     if (cached) {
       // Still enrich YoY for cached data if needed (in case YoY wasn't backfilled)
       if (latestPeriod) {
-        await this.enrichYoYData(cached, 'permits_county', latestPeriod, 'fips_code');
+        await this.enrichYoYData(
+          cached,
+          'permits_county',
+          latestPeriod,
+          'fips_code',
+        );
       }
-      
+
       const result = cached.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
@@ -441,7 +477,10 @@ export class PermitsService {
         query = query.eq('state_fips', stateFips);
       }
 
-      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+      const { data, error } = await query.range(
+        offset,
+        offset + this.PAGE_SIZE - 1,
+      );
 
       if (error) throw error;
 
@@ -454,9 +493,14 @@ export class PermitsService {
 
     // Enrich YoY data for rows where it's NULL
     if (latestPeriod) {
-      await this.enrichYoYData(allRows, 'permits_county', latestPeriod, 'fips_code');
+      await this.enrichYoYData(
+        allRows,
+        'permits_county',
+        latestPeriod,
+        'fips_code',
+      );
     }
-    
+
     this.setCache(cacheKey, allRows);
 
     const result = allRows.map((row) => ({
@@ -492,31 +536,34 @@ export class PermitsService {
 
     const { data, error } = await this.supabase
       .from('permits_state')
-      .select('state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
+      .select(
+        'state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units',
+      )
       .eq('period_date', latestPeriod);
 
     if (error) throw error;
 
-    const result = ((data || []) as PermitsRow[])
-      .map((row) => {
-        const sfUnits = toMetricValue(row.sf_units) ?? 0; // Treat null as 0 (all MF)
-        const totalUnits = calculateTotalUnits(row);
-        
-        // Calculate SF ratio: if totalUnits exists and > 0, calculate ratio
-        // If sfUnits is null, treat as 0 (meaning 0% SF, 100% MF)
-        const sfRatio = totalUnits !== null && totalUnits > 0
+    const result = ((data || []) as PermitsRow[]).map((row) => {
+      const sfUnits = toMetricValue(row.sf_units) ?? 0; // Treat null as 0 (all MF)
+      const totalUnits = calculateTotalUnits(row);
+
+      // Calculate SF ratio: if totalUnits exists and > 0, calculate ratio
+      // If sfUnits is null, treat as 0 (meaning 0% SF, 100% MF)
+      const sfRatio =
+        totalUnits !== null && totalUnits > 0
           ? (sfUnits / totalUnits) * 100
           : null;
 
-        return {
-          region_id: String(row.state_fips || ''),
-          region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
-          value: sfRatio,
-          period_date: String(row.period_date || ''),
-          state_fips: String(row.state_fips || ''),
-          sf_ratio: sfRatio,
-        };
-      });
+      return {
+        region_id: String(row.state_fips || ''),
+        region_name:
+          STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
+        value: sfRatio,
+        period_date: String(row.period_date || ''),
+        state_fips: String(row.state_fips || ''),
+        sf_ratio: sfRatio,
+      };
+    });
 
     return { success: true, count: result.length, data: result };
   }
@@ -535,7 +582,9 @@ export class PermitsService {
     while (true) {
       let query = this.supabase
         .from('permits_county')
-        .select('fips_code, county_name, state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
+        .select(
+          'fips_code, county_name, state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units',
+        )
         .eq('period_date', latestPeriod);
 
       if (state) {
@@ -543,7 +592,10 @@ export class PermitsService {
         query = query.eq('state_fips', stateFips);
       }
 
-      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+      const { data, error } = await query.range(
+        offset,
+        offset + this.PAGE_SIZE - 1,
+      );
 
       if (error) throw error;
 
@@ -557,12 +609,13 @@ export class PermitsService {
     const result = allRows.map((row) => {
       const sfUnits = toMetricValue(row.sf_units) ?? 0; // Treat null as 0 (all MF)
       const totalUnits = calculateTotalUnits(row);
-      
+
       // Calculate SF ratio: if totalUnits exists and > 0, calculate ratio
       // If sfUnits is null, treat as 0 (meaning 0% SF, 100% MF)
-      const sfRatio = totalUnits !== null && totalUnits > 0
-        ? (sfUnits / totalUnits) * 100
-        : null;
+      const sfRatio =
+        totalUnits !== null && totalUnits > 0
+          ? (sfUnits / totalUnits) * 100
+          : null;
 
       return {
         region_id: String(row.fips_code || ''),
@@ -588,28 +641,31 @@ export class PermitsService {
 
     const { data, error } = await this.supabase
       .from('permits_state')
-      .select('state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
+      .select(
+        'state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units',
+      )
       .eq('period_date', latestPeriod);
 
     if (error) throw error;
 
-    const result = ((data || []) as PermitsRow[])
-      .map((row) => {
-        const totalValue = toMetricValue(row.total_value);
-        const totalUnits = calculateTotalUnits(row);
-        const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
+    const result = ((data || []) as PermitsRow[]).map((row) => {
+      const totalValue = toMetricValue(row.total_value);
+      const totalUnits = calculateTotalUnits(row);
+      const valuePerUnit =
+        totalValue !== null && totalUnits !== null && totalUnits > 0
           ? Math.round(totalValue / totalUnits)
           : null;
 
-        return {
-          region_id: String(row.state_fips || ''),
-          region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
-          value: valuePerUnit,
-          period_date: String(row.period_date || ''),
-          state_fips: String(row.state_fips || ''),
-          value_per_unit: valuePerUnit,
-        };
-      });
+      return {
+        region_id: String(row.state_fips || ''),
+        region_name:
+          STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
+        value: valuePerUnit,
+        period_date: String(row.period_date || ''),
+        state_fips: String(row.state_fips || ''),
+        value_per_unit: valuePerUnit,
+      };
+    });
 
     return { success: true, count: result.length, data: result };
   }
@@ -628,7 +684,9 @@ export class PermitsService {
     while (true) {
       let query = this.supabase
         .from('permits_county')
-        .select('fips_code, county_name, state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
+        .select(
+          'fips_code, county_name, state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units',
+        )
         .eq('period_date', latestPeriod);
 
       if (state) {
@@ -636,7 +694,10 @@ export class PermitsService {
         query = query.eq('state_fips', stateFips);
       }
 
-      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+      const { data, error } = await query.range(
+        offset,
+        offset + this.PAGE_SIZE - 1,
+      );
 
       if (error) throw error;
 
@@ -650,9 +711,10 @@ export class PermitsService {
     const result = allRows.map((row) => {
       const totalValue = toMetricValue(row.total_value);
       const totalUnits = calculateTotalUnits(row);
-      const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
-        ? Math.round(totalValue / totalUnits)
-        : null;
+      const valuePerUnit =
+        totalValue !== null && totalUnits !== null && totalUnits > 0
+          ? Math.round(totalValue / totalUnits)
+          : null;
 
       return {
         region_id: String(row.fips_code || ''),

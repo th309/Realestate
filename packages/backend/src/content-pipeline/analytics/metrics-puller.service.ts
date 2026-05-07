@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { YouTubeMetricsService } from './youtube-metrics.service';
+import { TikTokMetricsService } from './tiktok-metrics.service';
+import { InstagramMetricsService } from './instagram-metrics.service';
+import { FacebookMetricsService } from './facebook-metrics.service';
+import { LinkedInMetricsService } from './linkedin-metrics.service';
 
 /**
  * Pulls post-publish metrics for platform posts within a given window and
@@ -15,6 +19,10 @@ export class MetricsPullerService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly youtube: YouTubeMetricsService,
+    private readonly tiktok: TikTokMetricsService,
+    private readonly instagram: InstagramMetricsService,
+    private readonly facebook: FacebookMetricsService,
+    private readonly linkedin: LinkedInMetricsService,
   ) {}
 
   async pullWindow(window: '24h' | '7d' | '30d'): Promise<number> {
@@ -41,15 +49,32 @@ export class MetricsPullerService {
         .maybeSingle();
       if (existing.data) continue;
 
-      if (
-        post.platform === 'youtube_shorts' ||
-        post.platform === 'youtube_long'
-      ) {
-        try {
-          const metrics = await this.youtube.fetchMetrics(
-            post.external_id,
-            window,
-          );
+      try {
+        let metrics:
+          | Awaited<ReturnType<YouTubeMetricsService['fetchMetrics']>>
+          | null = null;
+        switch (post.platform) {
+          case 'youtube_shorts':
+          case 'youtube_long':
+            metrics = await this.youtube.fetchMetrics(post.external_id, window);
+            break;
+          case 'tiktok':
+            metrics = await this.tiktok.fetchMetrics(post.external_id, window);
+            break;
+          case 'instagram_reels':
+            metrics = await this.instagram.fetchMetrics(post.external_id, window);
+            break;
+          case 'facebook_reels':
+            metrics = await this.facebook.fetchMetrics(post.external_id, window);
+            break;
+          case 'linkedin':
+            metrics = await this.linkedin.fetchMetrics(post.external_id, window);
+            break;
+          default:
+            metrics = null;
+        }
+
+        if (metrics) {
           const clickCount = post.short_link_id
             ? ((
                 await client
@@ -66,11 +91,11 @@ export class MetricsPullerService {
             short_link_clicks: clickCount,
           });
           count++;
-        } catch (err) {
-          this.logger.warn(
-            `failed to pull metrics for post ${post.id}: ${(err as Error).message}`,
-          );
         }
+      } catch (err) {
+        this.logger.warn(
+          `failed to pull metrics for post ${post.id}: ${(err as Error).message}`,
+        );
       }
     }
     return count;

@@ -40,7 +40,9 @@ export class AdminGuard implements CanActivate {
     const userId: string | undefined = request.userId;
 
     if (!userId) {
-      throw new ForbiddenException('Admin access denied: no authenticated user');
+      throw new ForbiddenException(
+        'Admin access denied: no authenticated user',
+      );
     }
 
     // Step 2: Check the admin_users table for this user
@@ -62,7 +64,9 @@ export class AdminGuard implements CanActivate {
       this.logger.warn(
         `[AdminGuard] Access denied for user ${userId.substring(0, 8)}... — role "${adminRow.role}" is not permitted`,
       );
-      throw new ForbiddenException('Admin access denied: insufficient admin role');
+      throw new ForbiddenException(
+        'Admin access denied: insufficient admin role',
+      );
     }
 
     // Step 3: Attach admin role to request for downstream use

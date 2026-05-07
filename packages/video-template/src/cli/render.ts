@@ -6,6 +6,7 @@ import {
   selectComposition,
 } from "@remotion/renderer";
 import path from "path";
+import { injectMapboxTokenWebpack } from "../webpack/inject-mapbox-token";
 import { VideoProps, VideoPropsSchema, FormatKey } from "../types";
 
 export interface RenderOptions {
@@ -40,7 +41,7 @@ export async function renderVideo(
 
   const bundled = await bundle({
     entryPoint: path.resolve(__dirname, "..", "..", "src", "index.ts"),
-    webpackOverride: (config) => config,
+    webpackOverride: (config) => injectMapboxTokenWebpack(config),
   });
 
   const compositionId = validated.format.replace(/_/g, "-");
@@ -113,7 +114,7 @@ export async function renderThumbnail(
 
   const bundled = await bundle({
     entryPoint: path.resolve(__dirname, "..", "..", "src", "index.ts"),
-    webpackOverride: (config) => config,
+    webpackOverride: (config) => injectMapboxTokenWebpack(config),
   });
 
   const compositionId = opts.format.replace(/_/g, "-");

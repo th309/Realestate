@@ -297,7 +297,9 @@ export class BenchmarksService {
   /**
    * Metro -> State (primary state via state_fips).
    */
-  private async resolveMetroParent(cbsaCode: string): Promise<ParentGeo | null> {
+  private async resolveMetroParent(
+    cbsaCode: string,
+  ): Promise<ParentGeo | null> {
     const { data, error } = await this.supabase
       .from('geographies')
       .select('state_fips')

@@ -89,10 +89,12 @@ export class GrandfatheringService {
 
     const { data, error } = await client
       .from('user_grandfathering')
-      .select(`
+      .select(
+        `
         *,
         feature:feature_definitions(slug, name)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .eq('is_active', true)
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
@@ -116,10 +118,12 @@ export class GrandfatheringService {
 
     const { data, error } = await client
       .from('user_grandfathering')
-      .select(`
+      .select(
+        `
         *,
         feature:feature_definitions(slug, name)
-      `)
+      `,
+      )
       .eq('is_active', true)
       .order('grandfathered_at', { ascending: false })
       .limit(500);
@@ -137,7 +141,9 @@ export class GrandfatheringService {
   /**
    * Create a grandfathered record
    */
-  async createGrandfathering(dto: CreateGrandfatherDto): Promise<GrandfatheredRecord> {
+  async createGrandfathering(
+    dto: CreateGrandfatherDto,
+  ): Promise<GrandfatheredRecord> {
     const client = this.supabase.getClient();
 
     // If feature_slug provided, resolve to feature_id
@@ -177,7 +183,9 @@ export class GrandfatheringService {
       throw new Error(error.message);
     }
 
-    this.logger.log(`Created grandfathering for user ${dto.user_id}: ${dto.grandfathered_type}`);
+    this.logger.log(
+      `Created grandfathering for user ${dto.user_id}: ${dto.grandfathered_type}`,
+    );
 
     // Log to audit
     await this.logAudit('create_grandfather', dto.user_id, data.id, insertData);
@@ -218,7 +226,10 @@ export class GrandfatheringService {
   /**
    * Extend grandfathering expiration
    */
-  async extendGrandfathering(grandfatherId: string, newExpiresAt: string): Promise<void> {
+  async extendGrandfathering(
+    grandfatherId: string,
+    newExpiresAt: string,
+  ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { error } = await client
@@ -233,7 +244,9 @@ export class GrandfatheringService {
       throw new Error(error.message);
     }
 
-    this.logger.log(`Extended grandfathering ${grandfatherId} to ${newExpiresAt}`);
+    this.logger.log(
+      `Extended grandfathering ${grandfatherId} to ${newExpiresAt}`,
+    );
   }
 
   // ========================================================================
@@ -289,7 +302,9 @@ export class GrandfatheringService {
     });
 
     if (applicablePolicies.length === 0) {
-      this.logger.log(`No applicable policies for tier change ${fromTier} -> ${toTier}`);
+      this.logger.log(
+        `No applicable policies for tier change ${fromTier} -> ${toTier}`,
+      );
       return [];
     }
 
@@ -302,10 +317,12 @@ export class GrandfatheringService {
 
     const { data: fromTierFeatures } = await client
       .from('tier_features')
-      .select(`
+      .select(
+        `
         value,
         feature:feature_definitions(slug, name, value_type)
-      `)
+      `,
+      )
       .eq('tier_id', fromTierData?.id);
 
     const tierSnapshot: Record<string, unknown> = {
@@ -316,7 +333,8 @@ export class GrandfatheringService {
     for (const tf of fromTierFeatures || []) {
       const feature = (tf as any).feature;
       if (feature?.slug) {
-        (tierSnapshot.features as Record<string, unknown>)[feature.slug] = tf.value;
+        (tierSnapshot.features as Record<string, unknown>)[feature.slug] =
+          tf.value;
       }
     }
 
@@ -324,7 +342,10 @@ export class GrandfatheringService {
     for (const policy of applicablePolicies) {
       const expiresAt = this.calculateExpiration(policy);
 
-      if (policy.grandfather_type === 'tier' || policy.grandfather_config?.preserve_tier_snapshot) {
+      if (
+        policy.grandfather_type === 'tier' ||
+        policy.grandfather_config?.preserve_tier_snapshot
+      ) {
         // Grandfather entire tier
         const record = await this.createGrandfathering({
           user_id: userId,
@@ -342,7 +363,10 @@ export class GrandfatheringService {
         created.push(record);
       }
 
-      if (policy.grandfather_type === 'pricing' || policy.grandfather_config?.preserve_pricing) {
+      if (
+        policy.grandfather_type === 'pricing' ||
+        policy.grandfather_config?.preserve_pricing
+      ) {
         // Grandfather pricing only
         const record = await this.createGrandfathering({
           user_id: userId,
@@ -359,10 +383,15 @@ export class GrandfatheringService {
         created.push(record);
       }
 
-      if (policy.grandfather_type === 'feature' && policy.grandfather_config?.preserve_features) {
+      if (
+        policy.grandfather_type === 'feature' &&
+        policy.grandfather_config?.preserve_features
+      ) {
         // Grandfather specific features
         for (const featureSlug of policy.grandfather_config.preserve_features) {
-          const featureValue = (tierSnapshot.features as Record<string, unknown>)[featureSlug];
+          const featureValue = (
+            tierSnapshot.features as Record<string, unknown>
+          )[featureSlug];
           if (featureValue !== undefined) {
             const record = await this.createGrandfathering({
               user_id: userId,
@@ -382,7 +411,9 @@ export class GrandfatheringService {
       }
     }
 
-    this.logger.log(`Applied ${created.length} grandfathering records for user ${userId}`);
+    this.logger.log(
+      `Applied ${created.length} grandfathering records for user ${userId}`,
+    );
     return created;
   }
 
@@ -436,14 +467,18 @@ export class GrandfatheringService {
       }
     }
 
-    this.logger.log(`Grandfathered pricing for ${count} users on tier ${tierSlug}`);
+    this.logger.log(
+      `Grandfathered pricing for ${count} users on tier ${tierSlug}`,
+    );
     return count;
   }
 
   /**
    * Create a new policy
    */
-  async createPolicy(policy: Omit<GrandfatherPolicy, 'id'>): Promise<GrandfatherPolicy> {
+  async createPolicy(
+    policy: Omit<GrandfatherPolicy, 'id'>,
+  ): Promise<GrandfatherPolicy> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client

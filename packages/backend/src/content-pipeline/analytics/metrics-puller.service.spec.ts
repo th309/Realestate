@@ -2,6 +2,10 @@ import { Test } from '@nestjs/testing';
 import { MetricsPullerService } from './metrics-puller.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { YouTubeMetricsService } from './youtube-metrics.service';
+import { TikTokMetricsService } from './tiktok-metrics.service';
+import { InstagramMetricsService } from './instagram-metrics.service';
+import { FacebookMetricsService } from './facebook-metrics.service';
+import { LinkedInMetricsService } from './linkedin-metrics.service';
 
 describe('MetricsPullerService', () => {
   let svc: MetricsPullerService;
@@ -66,6 +70,13 @@ describe('MetricsPullerService', () => {
         MetricsPullerService,
         { provide: SupabaseService, useValue: supabase },
         { provide: YouTubeMetricsService, useValue: youtube },
+        { provide: TikTokMetricsService, useValue: { fetchMetrics: jest.fn() } },
+        {
+          provide: InstagramMetricsService,
+          useValue: { fetchMetrics: jest.fn() },
+        },
+        { provide: FacebookMetricsService, useValue: { fetchMetrics: jest.fn() } },
+        { provide: LinkedInMetricsService, useValue: { fetchMetrics: jest.fn() } },
       ],
     }).compile();
     svc = module.get(MetricsPullerService);

@@ -11,7 +11,7 @@ import { InventorySurplusService } from './inventory-surplus.service';
 export class InventorySurplusController {
   constructor(
     private readonly inventorySurplusService: InventorySurplusService,
-  ) { }
+  ) {}
 
   // ============================================================================
   // DATA RETRIEVAL ENDPOINTS

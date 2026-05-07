@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Query, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { MarketSnapshotService } from './market-snapshot.service';
 
@@ -10,10 +17,19 @@ export class MarketSnapshotController {
   constructor(private readonly marketSnapshotService: MarketSnapshotService) {}
 
   @Get(':geoType/:geoId')
-  @ApiOperation({ summary: 'Get all metric values + scores for a single region' })
+  @ApiOperation({
+    summary: 'Get all metric values + scores for a single region',
+  })
   @ApiParam({ name: 'geoType', enum: VALID_GEO_TYPES })
-  @ApiParam({ name: 'geoId', description: 'Region identifier (CBSA code, FIPS, ZIP, etc.)' })
-  @ApiQuery({ name: 'state', required: false, description: 'State filter (for county/zip)' })
+  @ApiParam({
+    name: 'geoId',
+    description: 'Region identifier (CBSA code, FIPS, ZIP, etc.)',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'State filter (for county/zip)',
+  })
   async getSnapshot(
     @Param('geoType') geoType: string,
     @Param('geoId') geoId: string,

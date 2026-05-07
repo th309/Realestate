@@ -78,6 +78,25 @@ function DashboardContent() {
       <div className="p-8 space-y-8">
         <h1 className="text-3xl font-semibold text-on-surface">This Week</h1>
 
+        {data.costCapStatus?.breached && (
+          <div className="rounded-xl bg-warning/10 border border-warning px-5 py-4 text-sm text-on-surface flex items-start justify-between gap-4">
+            <div>
+              <div className="font-semibold text-warning">Daily budget cap hit</div>
+              <div className="text-on-surface-variant mt-1">
+                Auto-ideation is paused until tomorrow. Spent $
+                {data.costCapStatus.usdSpent.toFixed(2)} of $
+                {data.costCapStatus.usdCap.toFixed(2)}.
+              </div>
+            </div>
+            <Link
+              href="/admin/content-pipeline/auto-ideation"
+              className="bg-warning text-on-primary rounded-full px-4 py-2 font-semibold hover:opacity-90 transition-opacity duration-200"
+            >
+              View rules
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat label="Published" value={data.thisWeek.published} />
           <Stat label="In Review" value={data.thisWeek.inReview} />
@@ -87,6 +106,47 @@ function DashboardContent() {
             value={`$${data.thisWeek.revenueUsd.toFixed(0)}`}
           />
         </div>
+
+        {data.upcomingAutoRuns && data.upcomingAutoRuns.length > 0 && (
+          <div className="rounded-xl bg-tertiary-container/30 border border-outline-variant p-6">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-on-surface">
+                  Auto-ideation upcoming
+                </h2>
+                <p className="text-sm text-on-surface-variant mt-1">
+                  Preview of what enabled rules would enqueue on their next scan.
+                </p>
+              </div>
+              <Link
+                href="/admin/content-pipeline/auto-ideation"
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                Manage rules →
+              </Link>
+            </div>
+            <ul className="mt-4 space-y-2 text-sm">
+              {data.upcomingAutoRuns.map((u) => (
+                <li
+                  key={u.rule_name}
+                  className="rounded-lg bg-surface px-4 py-3 border border-outline-variant flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium text-on-surface truncate">
+                      {u.rule_name}
+                    </div>
+                    <div className="text-on-surface-variant text-xs mt-0.5">
+                      target: <span className="font-mono">{u.format}</span>
+                    </div>
+                  </div>
+                  <div className="font-mono text-xs text-on-surface-variant">
+                    matches: {u.matches?.length ?? 0}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {data.reviewQueueCount > 0 && (
           <div className="bg-primary-container text-on-primary-container rounded-xl p-6 flex items-center justify-between">

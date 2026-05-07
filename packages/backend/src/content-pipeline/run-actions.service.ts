@@ -83,7 +83,9 @@ export class RunActionsService {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    return lastVerifier?.result === 'failed' ? 'verifying_data' : 'linting_voice';
+    return lastVerifier?.result === 'failed'
+      ? 'verifying_data'
+      : 'linting_voice';
   }
 
   /**

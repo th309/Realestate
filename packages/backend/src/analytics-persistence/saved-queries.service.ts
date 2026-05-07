@@ -189,7 +189,9 @@ export class SavedQueriesService {
         .eq('id', queryId);
 
       if (updateError) {
-        this.logger.warn(`Failed to increment run count: ${updateError.message}`);
+        this.logger.warn(
+          `Failed to increment run count: ${updateError.message}`,
+        );
       }
     }
   }

@@ -18,7 +18,7 @@ export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly calculatedMetricsService: CalculatedMetricsService,
-  ) { }
+  ) {}
 
   /**
    * Get overvalued percentage for metros
@@ -241,14 +241,15 @@ export class MetricsController {
 
       if (cbsasWithZhviOnly.length > 0) {
         const cbsaCodes = cbsasWithZhviOnly.map((r) => r.cbsa_code!);
-        const targetYear = parseInt(targetDate!.substring(0, 4));
+        const targetYear = parseInt(targetDate.substring(0, 4));
 
         // Map CBSA → ZHVI price & name
         const priceByCode: Record<string, number> = {};
         const nameByCode: Record<string, string> = {};
         for (const row of cbsasWithZhviOnly) {
           priceByCode[row.cbsa_code!] = row.value;
-          nameByCode[row.cbsa_code!] = row.region_name || `Metro ${row.cbsa_code}`;
+          nameByCode[row.cbsa_code!] =
+            row.region_name || `Metro ${row.cbsa_code}`;
         }
 
         // Get component counties
@@ -261,7 +262,10 @@ export class MetricsController {
 
         if (countyRows && countyRows.length > 0) {
           // Group counties by CBSA
-          const countiesByCbsa: Record<string, Array<{ fips: string; population: number | null }>> = {};
+          const countiesByCbsa: Record<
+            string,
+            Array<{ fips: string; population: number | null }>
+          > = {};
           for (const c of countyRows) {
             if (!c.cbsa_code || !c.fips_code) continue;
             if (!countiesByCbsa[c.cbsa_code]) countiesByCbsa[c.cbsa_code] = [];
@@ -273,7 +277,11 @@ export class MetricsController {
 
           // Fetch HUD FMR
           const allFips = countyRows
-            .map((c) => c.fips_code ? String(parseInt(c.fips_code, 10)).padStart(5, '0') : null)
+            .map((c) =>
+              c.fips_code
+                ? String(parseInt(c.fips_code, 10)).padStart(5, '0')
+                : null,
+            )
             .filter(Boolean) as string[];
 
           const { data: fmrRows } = await this.supabase
@@ -286,9 +294,10 @@ export class MetricsController {
           if (fmrRows && fmrRows.length > 0) {
             const fmrByFips: Record<string, number> = {};
             for (const r of fmrRows) {
-              const fips = r.fips_code && /^\d+$/.test(r.fips_code)
-                ? String(parseInt(r.fips_code, 10)).padStart(5, '0')
-                : r.fips_code;
+              const fips =
+                r.fips_code && /^\d+$/.test(r.fips_code)
+                  ? String(parseInt(r.fips_code, 10)).padStart(5, '0')
+                  : r.fips_code;
               if (fips && r.fmr_2br != null) fmrByFips[fips] = r.fmr_2br;
             }
 
@@ -498,22 +507,51 @@ export class MetricsController {
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyGrossYield() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield', 'county');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'gross_yield',
+        'county',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'County', metric: 'gross_yield', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'County',
+        metric: 'gross_yield',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No Gross Yield data available for counties. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error:
+        'No Gross Yield data available for counties. Run batch calculation.',
+      data: [],
+    };
   }
 
   @Get('gross-yield/zips')
   @Header('Cache-Control', 'public, max-age=21600')
   async getZipGrossYield() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield', 'zip');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'gross_yield',
+        'zip',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'Zip', metric: 'gross_yield', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Zip',
+        metric: 'gross_yield',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No Gross Yield data available for ZIPs. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error: 'No Gross Yield data available for ZIPs. Run batch calculation.',
+      data: [],
+    };
   }
 
   /**
@@ -546,22 +584,50 @@ export class MetricsController {
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyGRM() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('grm', 'county');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'grm',
+        'county',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'County', metric: 'grm', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'County',
+        metric: 'grm',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No GRM data available for counties. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error: 'No GRM data available for counties. Run batch calculation.',
+      data: [],
+    };
   }
 
   @Get('grm/zips')
   @Header('Cache-Control', 'public, max-age=21600')
   async getZipGRM() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('grm', 'zip');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'grm',
+        'zip',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'Zip', metric: 'grm', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Zip',
+        metric: 'grm',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No GRM data available for ZIPs. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error: 'No GRM data available for ZIPs. Run batch calculation.',
+      data: [],
+    };
   }
 
   /**
@@ -571,33 +637,75 @@ export class MetricsController {
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRentToPrice() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'rent_to_price_ratio',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'Metro', metric: 'rent_to_price_ratio', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'rent_to_price_ratio',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No Rent-to-Price data available. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error: 'No Rent-to-Price data available. Run batch calculation.',
+      data: [],
+    };
   }
 
   @Get('rent-to-price/counties')
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyRentToPrice() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio', 'county');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'rent_to_price_ratio',
+        'county',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'County', metric: 'rent_to_price_ratio', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'County',
+        metric: 'rent_to_price_ratio',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No Rent-to-Price data available for counties. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error:
+        'No Rent-to-Price data available for counties. Run batch calculation.',
+      data: [],
+    };
   }
 
   @Get('rent-to-price/zips')
   @Header('Cache-Control', 'public, max-age=21600')
   async getZipRentToPrice() {
     const preCalculated =
-      await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio', 'zip');
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'rent_to_price_ratio',
+        'zip',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
-      return { success: true, count: preCalculated.data.length, geography: 'Zip', metric: 'rent_to_price_ratio', source: 'pre-calculated', data: preCalculated.data };
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Zip',
+        metric: 'rent_to_price_ratio',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
     }
-    return { success: false, error: 'No Rent-to-Price data available for ZIPs. Run batch calculation.', data: [] };
+    return {
+      success: false,
+      error: 'No Rent-to-Price data available for ZIPs. Run batch calculation.',
+      data: [],
+    };
   }
 
   /**
@@ -757,12 +865,14 @@ export class MetricsController {
   @Get('home-value-5yr/metros')
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
-    const result = await this.calculatedMetricsService.get5YrGrowthForMap('metro');
+    const result =
+      await this.calculatedMetricsService.get5YrGrowthForMap('metro');
 
     if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: 'No pre-calculated CAGR data available for metros. Run the calculated metrics pipeline to generate data.',
+        error:
+          'No pre-calculated CAGR data available for metros. Run the calculated metrics pipeline to generate data.',
         geography: 'Metro',
         metric: 'home_value_5yr_cagr',
         data: [],
@@ -787,12 +897,14 @@ export class MetricsController {
   @Get('home-value-5yr/national')
   @Header('Cache-Control', 'public, max-age=21600')
   async getNationalHomeValue5YrGrowth(@Query('date') date?: string) {
-    const result = await this.calculatedMetricsService.get5YrGrowthForMap('national');
+    const result =
+      await this.calculatedMetricsService.get5YrGrowthForMap('national');
 
     if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: 'No pre-calculated CAGR data available for national. Run the calculated metrics pipeline to generate data.',
+        error:
+          'No pre-calculated CAGR data available for national. Run the calculated metrics pipeline to generate data.',
         geography: 'National',
         metric: 'home_value_5yr_cagr',
         data: [],
@@ -817,12 +929,14 @@ export class MetricsController {
   @Get('home-value-5yr/states')
   @Header('Cache-Control', 'public, max-age=21600')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
-    const result = await this.calculatedMetricsService.get5YrGrowthForMap('state');
+    const result =
+      await this.calculatedMetricsService.get5YrGrowthForMap('state');
 
     if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: 'No pre-calculated CAGR data available for states. Run the calculated metrics pipeline to generate data.',
+        error:
+          'No pre-calculated CAGR data available for states. Run the calculated metrics pipeline to generate data.',
         geography: 'State',
         metric: 'home_value_5yr_cagr',
         data: [],
@@ -847,12 +961,14 @@ export class MetricsController {
   @Get('home-value-5yr/counties')
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
-    const result = await this.calculatedMetricsService.get5YrGrowthForMap('county');
+    const result =
+      await this.calculatedMetricsService.get5YrGrowthForMap('county');
 
     if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: 'No pre-calculated CAGR data available for counties. Run the calculated metrics pipeline to generate data.',
+        error:
+          'No pre-calculated CAGR data available for counties. Run the calculated metrics pipeline to generate data.',
         geography: 'County',
         metric: 'home_value_5yr_cagr',
         data: [],
@@ -881,12 +997,14 @@ export class MetricsController {
     @Query('state') state?: string,
     @Query('date') date?: string,
   ) {
-    const result = await this.calculatedMetricsService.get5YrGrowthForMap('zip');
+    const result =
+      await this.calculatedMetricsService.get5YrGrowthForMap('zip');
 
     if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: 'No pre-calculated CAGR data available for ZIP codes. Run the calculated metrics pipeline to generate data.',
+        error:
+          'No pre-calculated CAGR data available for ZIP codes. Run the calculated metrics pipeline to generate data.',
         geography: 'ZIP',
         metric: 'home_value_5yr_cagr',
         data: [],
@@ -899,7 +1017,7 @@ export class MetricsController {
       const normalizedState = normalizeStateToCode(state);
       const statePattern = `, ${normalizedState.toUpperCase()}`;
       filteredData = result.data.filter((item: any) =>
-        item.region_name?.toUpperCase().endsWith(statePattern)
+        item.region_name?.toUpperCase().endsWith(statePattern),
       );
     }
 
@@ -924,7 +1042,11 @@ export class MetricsController {
   @Get('rent-yoy/metros')
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRentYoy() {
-    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_yoy' as any, 'metro');
+    const result =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'zori_yoy' as any,
+        'metro',
+      );
     return {
       success: result.success,
       count: result.data.length,
@@ -941,7 +1063,11 @@ export class MetricsController {
   @Get('rent-5yr/metros')
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRent5yr() {
-    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_5y_cagr' as any, 'metro');
+    const result =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'zori_5y_cagr' as any,
+        'metro',
+      );
     return {
       success: result.success,
       count: result.data.length,
@@ -962,7 +1088,11 @@ export class MetricsController {
   @Get('home-value-3yr/metros')
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroHomeValue3YrGrowth() {
-    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zhvi_3y_cagr' as any, 'metro');
+    const result =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'zhvi_3y_cagr' as any,
+        'metro',
+      );
     return {
       success: result.success,
       count: result.data.length,
@@ -1053,7 +1183,7 @@ export class MetricsController {
     const targetDate = latestRow.period_date;
 
     // Build query
-    let query = this.supabase
+    const query = this.supabase
       .from('calculated_metrics')
       .select('geography_id, geography_name, income_to_buy, period_date')
       .eq('geography_type', geoType)
@@ -1200,7 +1330,7 @@ export class MetricsController {
     const targetDate = latestRow.period_date;
 
     // Build query
-    let query = this.supabase
+    const query = this.supabase
       .from('calculated_metrics')
       .select(
         'geography_id, geography_name, affordable_home_price, period_date',
@@ -1346,7 +1476,7 @@ export class MetricsController {
     const targetDate = latestRow.period_date;
 
     // Build query
-    let query = this.supabase
+    const query = this.supabase
       .from('calculated_metrics')
       .select('geography_id, geography_name, years_to_save, period_date')
       .eq('geography_type', geoType)

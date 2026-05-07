@@ -55,13 +55,19 @@ export class AlertService {
     previousConfidence: ConfidenceScore | null,
   ): Promise<Alert | null> {
     // Check for threshold crossing
-    const thresholdAlertData = this.checkThresholdCrossing(newConfidence, previousConfidence);
+    const thresholdAlertData = this.checkThresholdCrossing(
+      newConfidence,
+      previousConfidence,
+    );
     if (thresholdAlertData) {
       return await this.createAlert(thresholdAlertData);
     }
 
     // Check for significant degradation
-    const degradationAlertData = this.checkDegradation(newConfidence, previousConfidence);
+    const degradationAlertData = this.checkDegradation(
+      newConfidence,
+      previousConfidence,
+    );
     if (degradationAlertData) {
       return await this.createAlert(degradationAlertData);
     }
@@ -104,7 +110,10 @@ export class AlertService {
   /**
    * Acknowledge an alert
    */
-  async acknowledgeAlert(alertId: string, acknowledgedBy: string): Promise<void> {
+  async acknowledgeAlert(
+    alertId: string,
+    acknowledgedBy: string,
+  ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { error } = await client
@@ -117,7 +126,9 @@ export class AlertService {
       .eq('id', alertId);
 
     if (error) {
-      this.logger.error(`Error acknowledging alert ${alertId}: ${error.message}`);
+      this.logger.error(
+        `Error acknowledging alert ${alertId}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -125,7 +136,11 @@ export class AlertService {
   /**
    * Resolve an alert
    */
-  async resolveAlert(alertId: string, resolvedBy: string, notes?: string): Promise<void> {
+  async resolveAlert(
+    alertId: string,
+    resolvedBy: string,
+    notes?: string,
+  ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { error } = await client
@@ -147,7 +162,11 @@ export class AlertService {
   /**
    * Dismiss an alert (false positive)
    */
-  async dismissAlert(alertId: string, resolvedBy: string, notes?: string): Promise<void> {
+  async dismissAlert(
+    alertId: string,
+    resolvedBy: string,
+    notes?: string,
+  ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { error } = await client
@@ -178,7 +197,10 @@ export class AlertService {
     const newScore = newConfidence.confidenceScore;
 
     // Check critical threshold
-    if (newScore < ALERT_THRESHOLDS.CRITICAL && prevScore >= ALERT_THRESHOLDS.CRITICAL) {
+    if (
+      newScore < ALERT_THRESHOLDS.CRITICAL &&
+      prevScore >= ALERT_THRESHOLDS.CRITICAL
+    ) {
       return this.buildAlert(
         newConfidence,
         previousConfidence,
@@ -189,7 +211,10 @@ export class AlertService {
     }
 
     // Check warning threshold
-    if (newScore < ALERT_THRESHOLDS.WARNING && prevScore >= ALERT_THRESHOLDS.WARNING) {
+    if (
+      newScore < ALERT_THRESHOLDS.WARNING &&
+      prevScore >= ALERT_THRESHOLDS.WARNING
+    ) {
       return this.buildAlert(
         newConfidence,
         previousConfidence,
@@ -208,7 +233,8 @@ export class AlertService {
   ): Omit<Alert, 'id' | 'createdAt'> | null {
     if (!previousConfidence) return null;
 
-    const drop = previousConfidence.confidenceScore - newConfidence.confidenceScore;
+    const drop =
+      previousConfidence.confidenceScore - newConfidence.confidenceScore;
 
     if (drop >= ALERT_THRESHOLDS.DEGRADATION_THRESHOLD) {
       const severity = drop >= 20 ? 'critical' : 'warning';
@@ -217,7 +243,8 @@ export class AlertService {
         previousConfidence,
         'degradation',
         severity,
-        previousConfidence.confidenceScore - ALERT_THRESHOLDS.DEGRADATION_THRESHOLD,
+        previousConfidence.confidenceScore -
+          ALERT_THRESHOLDS.DEGRADATION_THRESHOLD,
       );
     }
 
@@ -250,7 +277,9 @@ export class AlertService {
     }
 
     if (anomalies.length > 0) {
-      const severity = anomalies.some((a) => a.severity === 'critical') ? 'critical' : 'warning';
+      const severity = anomalies.some((a) => a.severity === 'critical')
+        ? 'critical'
+        : 'warning';
 
       return {
         confidenceId: null,
@@ -282,7 +311,8 @@ export class AlertService {
           status: 'resolved',
           resolved_by: 'system',
           resolved_at: new Date().toISOString(),
-          resolution_notes: 'Auto-resolved: confidence recovered to healthy level',
+          resolution_notes:
+            'Auto-resolved: confidence recovered to healthy level',
         })
         .eq('score_type', newConfidence.scoreType)
         .eq('geography_type', newConfidence.geographyType)
@@ -301,8 +331,14 @@ export class AlertService {
     severity: 'warning' | 'critical',
     threshold: number,
   ): Omit<Alert, 'id' | 'createdAt'> {
-    const diagnostics = this.generateDiagnostics(newConfidence, previousConfidence);
-    const recommendations = this.generateRecommendations(alertType, diagnostics);
+    const diagnostics = this.generateDiagnostics(
+      newConfidence,
+      previousConfidence,
+    );
+    const recommendations = this.generateRecommendations(
+      alertType,
+      diagnostics,
+    );
 
     return {
       confidenceId: null,
@@ -408,7 +444,9 @@ export class AlertService {
     return [...new Set(recommendations)];
   }
 
-  private async createAlert(alert: Omit<Alert, 'id' | 'createdAt'>): Promise<Alert> {
+  private async createAlert(
+    alert: Omit<Alert, 'id' | 'createdAt'>,
+  ): Promise<Alert> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client

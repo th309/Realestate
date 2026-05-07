@@ -41,16 +41,30 @@ function buildDefaultProps(key: FormatKey): VideoProps {
     };
     return ranking;
   }
-  const single: SingleMarketVideoProps = {
-    format: key as Exclude<FormatKey, "top_10_ranking" | "bottom_10_ranking">,
-    resolvedMarket: {
-      canonical_name: "Preview",
-      geography: "metro",
-      id: "preview",
-    },
-    dataBundle: {},
-    ctaUrl: "",
-  };
+  const single: SingleMarketVideoProps =
+    key === "long_form_deep_dive"
+      ? {
+          format: "long_form_deep_dive",
+          resolvedMarket: {
+            canonical_name: "Austin, TX",
+            geography: "metro",
+            id: "12420",
+            latitude: 30.2672,
+            longitude: -97.7431,
+          },
+          dataBundle: {},
+          ctaUrl: "",
+        }
+      : {
+          format: key as Exclude<FormatKey, "top_10_ranking" | "bottom_10_ranking">,
+          resolvedMarket: {
+            canonical_name: "Preview",
+            geography: "metro",
+            id: "preview",
+          },
+          dataBundle: {},
+          ctaUrl: "",
+        };
   return single;
 }
 

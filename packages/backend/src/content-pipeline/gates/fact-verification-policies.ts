@@ -24,7 +24,9 @@ export interface DataVerifierVerifyOptions {
  * Derived numbers so script phrases like "9.3 million people" match bundle
  * integers such as 9300000 without loosening tolerance heuristics globally.
  */
-export function augmentCandidatesWithPopulationScales(nums: number[]): number[] {
+export function augmentCandidatesWithPopulationScales(
+  nums: number[],
+): number[] {
   const extra: number[] = [];
   for (const n of nums) {
     if (typeof n === 'number' && Number.isFinite(n)) {
@@ -75,7 +77,10 @@ function pushFinite(out: number[], n: unknown) {
   }
 }
 
-function mergeUnique(nums: readonly number[], extra: readonly number[]): number[] {
+function mergeUnique(
+  nums: readonly number[],
+  extra: readonly number[],
+): number[] {
   const seen = new Set<number>();
   const out: number[] = [];
   for (const n of [...nums, ...extra]) {

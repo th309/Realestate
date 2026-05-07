@@ -2,7 +2,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeZipKey } from '../common/zip';
-import { normalizeStateToCode, normalizeCountyFips, normalizeCbsaCode } from '../common/geo';
+import {
+  normalizeStateToCode,
+  normalizeCountyFips,
+  normalizeCbsaCode,
+} from '../common/geo';
 
 export interface RealtorDataPoint {
   region_id: string;
@@ -44,7 +48,7 @@ export class RealtorService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Get cached data or fetch fresh
@@ -190,7 +194,12 @@ export class RealtorService {
       const pagePromises: Promise<RealtorRow[]>[] = [];
       for (let i = 0; i < this.PARALLEL_PAGES; i++) {
         pagePromises.push(
-          this.fetchPage(table, periodDate, offset + i * this.PAGE_SIZE, columns),
+          this.fetchPage(
+            table,
+            periodDate,
+            offset + i * this.PAGE_SIZE,
+            columns,
+          ),
         );
       }
 
@@ -513,7 +522,9 @@ export class RealtorService {
         );
       }
     } else if (geoLevel === 'metro') {
-      const cbsaKey = /^\d+$/.test(regionId.trim()) ? normalizeCbsaCode(regionId) : regionId;
+      const cbsaKey = /^\d+$/.test(regionId.trim())
+        ? normalizeCbsaCode(regionId)
+        : regionId;
       const { data } = await this.supabase
         .from('realtor_metro')
         .select([...columns, 'cbsa_title'].join(','))
@@ -529,7 +540,9 @@ export class RealtorService {
         }
       }
     } else if (geoLevel === 'county') {
-      const fipsKey = /^\d+$/.test(regionId.trim()) ? normalizeCountyFips(regionId) : regionId;
+      const fipsKey = /^\d+$/.test(regionId.trim())
+        ? normalizeCountyFips(regionId)
+        : regionId;
       const { data } = await this.supabase
         .from('realtor_county')
         .select([...columns, 'county_name'].join(','))
@@ -716,7 +729,11 @@ export class RealtorService {
       data = await this.fetchZipsByState(latestDate as string, state, columns);
     } else {
       // No state filter - fetch all ZIPs (uses pagination + caching)
-      data = await this.fetchAllRows('realtor_zip', latestDate as string, columns);
+      data = await this.fetchAllRows(
+        'realtor_zip',
+        latestDate as string,
+        columns,
+      );
     }
 
     // Check if this is a growth/percent metric that needs data quality filtering

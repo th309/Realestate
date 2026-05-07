@@ -27,7 +27,7 @@ const TIMESERIES_PAGE_SIZE = 1000;
 export class TimeSeriesService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Get time series data for a specific metric/geography/region.
@@ -58,13 +58,39 @@ export class TimeSeriesService {
 
     // Delegate computed metrics to specialized functions
     if (mapping.source === 'computed_investment') {
-      return getComputedInvestmentTimeSeries(this.supabase, metricId, geoLevel, regionId, startDate, endDate, limit, lastPoints);
+      return getComputedInvestmentTimeSeries(
+        this.supabase,
+        metricId,
+        geoLevel,
+        regionId,
+        startDate,
+        endDate,
+        limit,
+        lastPoints,
+      );
     }
     if (mapping.source === 'computed_overvalued') {
-      return getComputedOvervaluedTimeSeries(this.supabase, geoLevel, regionId, startDate, endDate, limit, lastPoints);
+      return getComputedOvervaluedTimeSeries(
+        this.supabase,
+        geoLevel,
+        regionId,
+        startDate,
+        endDate,
+        limit,
+        lastPoints,
+      );
     }
     if (mapping.source === 'computed_permits') {
-      return getComputedPermitsTimeSeries(this.supabase, metricId, geoLevel, regionId, startDate, endDate, limit, lastPoints);
+      return getComputedPermitsTimeSeries(
+        this.supabase,
+        metricId,
+        geoLevel,
+        regionId,
+        startDate,
+        endDate,
+        limit,
+        lastPoints,
+      );
     }
 
     console.log('[TimeSeriesService] Mapping:', {
@@ -86,14 +112,16 @@ export class TimeSeriesService {
     try {
       // Census tables use 'year' field, others use 'period_date'
       // PropertyIQ scores use 'score_date'
-      const dateField = mapping.source === 'census'
-        ? 'year'
-        : mapping.source === 'propertyiq'
-          ? 'score_date'
-          : 'period_date';
+      const dateField =
+        mapping.source === 'census'
+          ? 'year'
+          : mapping.source === 'propertyiq'
+            ? 'score_date'
+            : 'period_date';
 
       // When lastPoints is set we need most recent points: order desc, limit, then reverse
-      const useLastPoints = lastPoints != null && lastPoints > 0 && !startDate && !endDate;
+      const useLastPoints =
+        lastPoints != null && lastPoints > 0 && !startDate && !endDate;
       let query = this.supabase
         .from(table)
         .select(`${dateField}, ${mapping.columnName}`)
@@ -138,7 +166,7 @@ export class TimeSeriesService {
 
       // Add limit
       if (useLastPoints) {
-        query = query.limit(lastPoints!);
+        query = query.limit(lastPoints);
       } else if (limit) {
         query = query.limit(limit);
       }
@@ -225,9 +253,14 @@ export class TimeSeriesService {
     }
 
     let tableSource = mapping.source;
-    let metricNameFilter = mapping.usesMetricName ? mapping.metricNameValue : undefined;
+    let metricNameFilter = mapping.usesMetricName
+      ? mapping.metricNameValue
+      : undefined;
 
-    if (tableSource === 'computed_investment' || tableSource === 'computed_overvalued') {
+    if (
+      tableSource === 'computed_investment' ||
+      tableSource === 'computed_overvalued'
+    ) {
       tableSource = 'zillow';
       metricNameFilter = 'zhvi';
     }

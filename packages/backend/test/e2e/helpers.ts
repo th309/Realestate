@@ -8,9 +8,12 @@ import { GenerateScriptHandler } from '../../src/content-pipeline/orchestrator/j
 import { VerifyDataHandler } from '../../src/content-pipeline/orchestrator/job-handlers/verify-data.handler';
 import { LintVoiceHandler } from '../../src/content-pipeline/orchestrator/job-handlers/lint-voice.handler';
 import { SynthesizeAudioHandler } from '../../src/content-pipeline/orchestrator/job-handlers/synthesize-audio.handler';
+import { TimeCaptionsHandler } from '../../src/content-pipeline/orchestrator/job-handlers/time-captions.handler';
 import { RenderVideoHandler } from '../../src/content-pipeline/orchestrator/job-handlers/render-video.handler';
 import { PublishHandler } from '../../src/content-pipeline/orchestrator/job-handlers/publish.handler';
 import { RunOrchestratorService } from '../../src/content-pipeline/orchestrator/run-orchestrator.service';
+import { StyleReferenceService } from '../../src/content-pipeline/style-refs/style-reference.service';
+import { DashboardMagnetsService } from '../../src/content-pipeline/magnets/dashboard-magnets.service';
 
 /**
  * Bootstrap the full backend DI graph in standalone mode. We use
@@ -42,8 +45,11 @@ export async function bootstrapE2EContext(): Promise<E2EContext> {
     verifyDataHandler: app.get(VerifyDataHandler),
     lintVoiceHandler: app.get(LintVoiceHandler),
     synthesizeAudioHandler: app.get(SynthesizeAudioHandler),
+    timeCaptionsHandler: app.get(TimeCaptionsHandler),
     renderVideoHandler: app.get(RenderVideoHandler),
     publishHandler: app.get(PublishHandler),
+    styleReferences: app.get(StyleReferenceService),
+    dashboardMagnets: app.get(DashboardMagnetsService),
   };
 }
 
@@ -57,8 +63,11 @@ export interface E2EContext {
   verifyDataHandler: VerifyDataHandler;
   lintVoiceHandler: LintVoiceHandler;
   synthesizeAudioHandler: SynthesizeAudioHandler;
+  timeCaptionsHandler: TimeCaptionsHandler;
   renderVideoHandler: RenderVideoHandler;
   publishHandler: PublishHandler;
+  styleReferences: StyleReferenceService;
+  dashboardMagnets: DashboardMagnetsService;
 }
 
 /**

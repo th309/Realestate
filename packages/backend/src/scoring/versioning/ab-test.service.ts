@@ -107,12 +107,14 @@ export class ABTestService {
         score_type: input.scoreType,
         control_version: input.controlVersion,
         treatment_version: input.treatmentVersion,
-        traffic_split: (input.trafficPercentage || this.DEFAULT_TRAFFIC_PERCENTAGE) / 100,
+        traffic_split:
+          (input.trafficPercentage || this.DEFAULT_TRAFFIC_PERCENTAGE) / 100,
         status: 'draft',
         created_by: input.createdBy,
         hypothesis: input.hypothesis,
         min_sample_size: input.minSampleSize || this.DEFAULT_MIN_SAMPLE_SIZE,
-        min_duration_days: input.minDurationDays || this.DEFAULT_MIN_DURATION_DAYS,
+        min_duration_days:
+          input.minDurationDays || this.DEFAULT_MIN_DURATION_DAYS,
       })
       .select()
       .single();
@@ -215,11 +217,16 @@ export class ABTestService {
     }
 
     if (adoptTreatment) {
-      await this.formulaVersionService.activateVersion(test.treatmentVersion, test.scoreType);
+      await this.formulaVersionService.activateVersion(
+        test.treatmentVersion,
+        test.scoreType,
+      );
       this.logger.log(`Adopted treatment version ${test.treatmentVersion}`);
     }
 
-    this.logger.log(`Completed A/B test ${testId}, adoptTreatment=${adoptTreatment}`);
+    this.logger.log(
+      `Completed A/B test ${testId}, adoptTreatment=${adoptTreatment}`,
+    );
   }
 
   /**
@@ -246,7 +253,10 @@ export class ABTestService {
       throw error;
     }
 
-    await this.formulaVersionService.activateVersion(test.controlVersion, test.scoreType);
+    await this.formulaVersionService.activateVersion(
+      test.controlVersion,
+      test.scoreType,
+    );
 
     this.logger.log(`Rolled back A/B test ${testId} to control version`);
   }
@@ -313,7 +323,8 @@ export class ABTestService {
     const activeTest = await this.getActiveTest(scoreType);
 
     if (!activeTest) {
-      const activeVersion = await this.formulaVersionService.getActiveVersion(scoreType);
+      const activeVersion =
+        await this.formulaVersionService.getActiveVersion(scoreType);
       return {
         version: activeVersion?.version || '1.0.0',
         isControl: true,
@@ -327,7 +338,9 @@ export class ABTestService {
     const isControl = bucket >= activeTest.trafficPercentage;
 
     return {
-      version: isControl ? activeTest.controlVersion : activeTest.treatmentVersion,
+      version: isControl
+        ? activeTest.controlVersion
+        : activeTest.treatmentVersion,
       isControl,
       testId: activeTest.id,
     };
@@ -391,7 +404,8 @@ export class ABTestService {
     const treatmentStdDev = this.stdDev(treatmentScores, treatmentMean);
 
     const difference = treatmentMean - controlMean;
-    const percentChange = controlMean !== 0 ? (difference / controlMean) * 100 : 0;
+    const percentChange =
+      controlMean !== 0 ? (difference / controlMean) * 100 : 0;
 
     // Two-sample t-test
     const { tStatistic, pValue } = this.twoSampleTTest(
@@ -407,8 +421,8 @@ export class ABTestService {
 
     // 95% confidence interval for difference
     const se = Math.sqrt(
-      (controlStdDev ** 2) / controlScores.length +
-        (treatmentStdDev ** 2) / treatmentScores.length,
+      controlStdDev ** 2 / controlScores.length +
+        treatmentStdDev ** 2 / treatmentScores.length,
     );
     const criticalValue = 1.96; // 95% CI
     const confidenceInterval = {
@@ -455,7 +469,9 @@ export class ABTestService {
 
       // Auto-rollback if treatment is significantly worse
       if (analysis.isSignificant && analysis.difference < -5) {
-        this.logger.warn(`Auto-rolling back test ${testId}: treatment significantly worse`);
+        this.logger.warn(
+          `Auto-rolling back test ${testId}: treatment significantly worse`,
+        );
         await this.rollbackTest(testId);
         return true;
       }
@@ -506,7 +522,9 @@ export class ABTestService {
   private stdDev(values: number[], mean: number): number {
     if (values.length < 2) return 0;
     const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
-    return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1));
+    return Math.sqrt(
+      squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1),
+    );
   }
 
   private twoSampleTTest(
@@ -524,7 +542,7 @@ export class ABTestService {
       return { tStatistic: 0, pValue: 1 };
     }
 
-    const se = Math.sqrt((std1 ** 2) / n1 + (std2 ** 2) / n2);
+    const se = Math.sqrt(std1 ** 2 / n1 + std2 ** 2 / n2);
 
     if (se === 0) {
       return { tStatistic: 0, pValue: 1 };
@@ -534,8 +552,9 @@ export class ABTestService {
 
     // Welch's degrees of freedom
     const df =
-      Math.pow((std1 ** 2) / n1 + (std2 ** 2) / n2, 2) /
-      (Math.pow((std1 ** 2) / n1, 2) / (n1 - 1) + Math.pow((std2 ** 2) / n2, 2) / (n2 - 1));
+      Math.pow(std1 ** 2 / n1 + std2 ** 2 / n2, 2) /
+      (Math.pow(std1 ** 2 / n1, 2) / (n1 - 1) +
+        Math.pow(std2 ** 2 / n2, 2) / (n2 - 1));
 
     // Approximate p-value using normal distribution for large samples
     const pValue = 2 * (1 - this.normalCDF(Math.abs(tStatistic)));
@@ -556,7 +575,9 @@ export class ABTestService {
     x = Math.abs(x) / Math.sqrt(2);
 
     const t = 1.0 / (1.0 + p * x);
-    const y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    const y =
+      1.0 -
+      ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
 
     return 0.5 * (1.0 + sign * y);
   }
@@ -566,7 +587,8 @@ export class ABTestService {
 
     if (test.startedAt) {
       const startDate = new Date(test.startedAt);
-      const daysSinceStart = (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+      const daysSinceStart =
+        (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceStart < test.minDurationDays) return false;
     }
 

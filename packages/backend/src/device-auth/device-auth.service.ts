@@ -73,10 +73,14 @@ export class DeviceAuthService {
       DEVICE_CODE_TTL_SECONDS,
     );
 
+    const baseUrl =
+      process.env.PUBLIC_APP_URL ??
+      process.env.FRONTEND_URL ??
+      'https://propertyiq.up.railway.app';
     return {
       device_code: deviceCode,
       user_code: userCode,
-      verification_url: 'https://propertyiq.up.railway.app/activate',
+      verification_url: `${baseUrl}/activate`,
       expires_in: DEVICE_CODE_TTL_SECONDS,
     };
   }
@@ -87,9 +91,9 @@ export class DeviceAuthService {
     user_email?: string;
   }> {
     // RedisService.getByKey calls JSON.parse internally — returns the object directly
-    const entry = await this.redisService.getByKey(
+    const entry = (await this.redisService.getByKey(
       `${REDIS_PREFIX}${deviceCode}`,
-    ) as DeviceCodeEntry | null;
+    )) as DeviceCodeEntry | null;
 
     if (!entry) {
       return { status: 'expired' };
@@ -97,11 +101,7 @@ export class DeviceAuthService {
 
     if (entry.status === 'complete') {
       // Clean up after successful retrieval (expire in 1 second)
-      await this.redisService.setByKey(
-        `${REDIS_PREFIX}${deviceCode}`,
-        '',
-        1,
-      );
+      await this.redisService.setByKey(`${REDIS_PREFIX}${deviceCode}`, '', 1);
       return {
         status: 'complete',
         api_key: entry.apiKey,
@@ -132,17 +132,17 @@ export class DeviceAuthService {
     }
 
     // Look up device_code from user_code (stored as a plain string, JSON.parse returns it as-is)
-    const deviceCode = await this.redisService.getByKey(
+    const deviceCode = (await this.redisService.getByKey(
       `${REDIS_PREFIX}code:${userCode}`,
-    ) as string | null;
+    )) as string | null;
 
     if (!deviceCode) {
       throw new BadRequestException('Invalid or expired activation code');
     }
 
-    const entry = await this.redisService.getByKey(
+    const entry = (await this.redisService.getByKey(
       `${REDIS_PREFIX}${deviceCode}`,
-    ) as DeviceCodeEntry | null;
+    )) as DeviceCodeEntry | null;
 
     if (!entry) {
       throw new BadRequestException('Invalid or expired activation code');

@@ -153,27 +153,47 @@ describe('NormalizationService', () => {
 
     describe('percentile mapping', () => {
       it('returns approximately 50 for median value', () => {
-        const result = service.normalizePercentile(400000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          400000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(50);
       });
 
       it('returns approximately 5 for p5 value', () => {
-        const result = service.normalizePercentile(200000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          200000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(5);
       });
 
       it('returns approximately 25 for p25 value', () => {
-        const result = service.normalizePercentile(300000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          300000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(25);
       });
 
       it('returns approximately 75 for p75 value', () => {
-        const result = service.normalizePercentile(550000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          550000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(75);
       });
 
       it('returns approximately 95 for p95 value', () => {
-        const result = service.normalizePercentile(800000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          800000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(95);
       });
     });
@@ -181,7 +201,11 @@ describe('NormalizationService', () => {
     describe('interpolation', () => {
       it('interpolates between p25 and p50', () => {
         // Midpoint between 300k and 400k is 350k
-        const result = service.normalizePercentile(350000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          350000,
+          testPercentiles,
+          false,
+        );
         // Should be ~37.5 (midpoint between 25 and 50)
         expect(result).toBeCloseTo(37.5, 0);
       });
@@ -189,19 +213,31 @@ describe('NormalizationService', () => {
       it('interpolates between p50 and p75', () => {
         // 450k in range 400k-550k
         // (450000 - 400000) / (550000 - 400000) * 25 + 50 = 50000/150000 * 25 + 50 = 8.33 + 50 = 58.33
-        const result = service.normalizePercentile(450000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          450000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBeCloseTo(58.33, 0);
       });
     });
 
     describe('extreme values', () => {
       it('returns 5 for values below p5', () => {
-        const result = service.normalizePercentile(100000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          100000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(5);
       });
 
       it('returns 95 for values above p95', () => {
-        const result = service.normalizePercentile(1000000, testPercentiles, false);
+        const result = service.normalizePercentile(
+          1000000,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(95);
       });
     });
@@ -209,23 +245,39 @@ describe('NormalizationService', () => {
     describe('inversion', () => {
       it('inverts the percentile correctly', () => {
         // p50 = 400k normally gives 50, inverted gives 50
-        const result = service.normalizePercentile(400000, testPercentiles, true);
+        const result = service.normalizePercentile(
+          400000,
+          testPercentiles,
+          true,
+        );
         expect(result).toBe(50);
 
         // p25 = 300k normally gives 25, inverted gives 75
-        const invertedP25 = service.normalizePercentile(300000, testPercentiles, true);
+        const invertedP25 = service.normalizePercentile(
+          300000,
+          testPercentiles,
+          true,
+        );
         expect(invertedP25).toBe(75);
       });
     });
 
     describe('null/undefined handling', () => {
       it('returns 50 for null', () => {
-        const result = service.normalizePercentile(null, testPercentiles, false);
+        const result = service.normalizePercentile(
+          null,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(50);
       });
 
       it('returns 50 for undefined', () => {
-        const result = service.normalizePercentile(undefined, testPercentiles, false);
+        const result = service.normalizePercentile(
+          undefined,
+          testPercentiles,
+          false,
+        );
         expect(result).toBe(50);
       });
     });
@@ -291,15 +343,19 @@ describe('NormalizationService', () => {
     describe('real-world examples', () => {
       it('handles ZHVI YoY correctly (optimal 2-6%)', () => {
         // Healthy growth of 4%
-        expect(service.normalizeOptimal(0.04, 0.02, 0.06, -0.10, 0.20)).toBe(100);
+        expect(service.normalizeOptimal(0.04, 0.02, 0.06, -0.1, 0.2)).toBe(100);
 
         // Declining market -5%
         // (-0.05 - (-0.10)) / (0.02 - (-0.10)) * 100 = 0.05 / 0.12 * 100 = 41.67
-        expect(service.normalizeOptimal(-0.05, 0.02, 0.06, -0.10, 0.20)).toBeCloseTo(41.67, 0);
+        expect(
+          service.normalizeOptimal(-0.05, 0.02, 0.06, -0.1, 0.2),
+        ).toBeCloseTo(41.67, 0);
 
         // Overheating 15%
         // 100 - (0.15 - 0.06) / (0.20 - 0.06) * 100 = 100 - 0.09/0.14 * 100 = 35.71
-        expect(service.normalizeOptimal(0.15, 0.02, 0.06, -0.10, 0.20)).toBeCloseTo(35.71, 0);
+        expect(
+          service.normalizeOptimal(0.15, 0.02, 0.06, -0.1, 0.2),
+        ).toBeCloseTo(35.71, 0);
       });
 
       it('handles price-to-income ratio correctly (optimal 2.5-4.0)', () => {
@@ -395,7 +451,12 @@ describe('NormalizationService', () => {
 
       const configs = {
         cap_rate: { method: 'min_max' as const, min: 0.02, max: 0.12 },
-        unemployment: { method: 'min_max' as const, min: 2, max: 12, invert: true },
+        unemployment: {
+          method: 'min_max' as const,
+          min: 2,
+          max: 12,
+          invert: true,
+        },
         months_supply: {
           method: 'optimal' as const,
           optimalMin: 4,
@@ -420,7 +481,12 @@ describe('NormalizationService', () => {
 
       const configs = {
         cap_rate: { method: 'min_max' as const, min: 0.02, max: 0.12 },
-        unemployment: { method: 'min_max' as const, min: 2, max: 12, invert: true },
+        unemployment: {
+          method: 'min_max' as const,
+          min: 2,
+          max: 12,
+          invert: true,
+        },
       };
 
       const results = service.normalizeMetrics(metrics, configs);
@@ -442,7 +508,9 @@ describe('NormalizationService', () => {
     });
 
     it('always returns values between 0 and 100 for percentile', () => {
-      const percentiles: [number, number, number, number, number] = [10, 30, 50, 70, 90];
+      const percentiles: [number, number, number, number, number] = [
+        10, 30, 50, 70, 90,
+      ];
       const testValues = [-1000, 0, 50, 100, 1000];
 
       for (const value of testValues) {

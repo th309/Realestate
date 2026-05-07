@@ -14,7 +14,7 @@ const FORMAT_FRAMES: Record<string, { fps: number; total: number }> = {
   top_10_ranking: { fps: 30, total: 1800 },
   score_mover: { fps: 30, total: 900 },
   head_to_head: { fps: 30, total: 1800 },
-  long_form_deep_dive: { fps: 30, total: 18000 },
+  long_form_deep_dive: { fps: 30, total: 9000 },
   farm_area_spotlight: { fps: 30, total: 1800 },
   brokerage_market_share: { fps: 30, total: 2250 },
   recruitment_angle: { fps: 30, total: 2700 },

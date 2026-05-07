@@ -38,13 +38,13 @@ export class ReferralsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('apply-code')
-  async applyCode(
-    @AuthUserId() userId: string,
-    @Body() body: ApplyCodeDto,
-  ) {
+  async applyCode(@AuthUserId() userId: string, @Body() body: ApplyCodeDto) {
     if (!body.code || typeof body.code !== 'string' || body.code.length > 20) {
       throw new BadRequestException('Invalid code');
     }
-    return this.referrals.applyReferralCode(userId, body.code.toLowerCase().trim());
+    return this.referrals.applyReferralCode(
+      userId,
+      body.code.toLowerCase().trim(),
+    );
   }
 }

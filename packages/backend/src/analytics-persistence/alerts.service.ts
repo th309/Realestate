@@ -155,7 +155,11 @@ export class AlertsService {
   /**
    * Update an alert
    */
-  async update(userId: string, alertId: string, dto: UpdateAlertDto): Promise<Alert> {
+  async update(
+    userId: string,
+    alertId: string,
+    dto: UpdateAlertDto,
+  ): Promise<Alert> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client

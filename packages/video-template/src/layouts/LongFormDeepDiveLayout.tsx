@@ -1,5 +1,5 @@
 import React from "react";
-import { Sequence, useVideoConfig } from "remotion";
+import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
 import { Intro } from "../scenes/Intro";
@@ -9,11 +9,24 @@ import { TrendChart } from "../scenes/TrendChart";
 import { Outro } from "../scenes/Outro";
 import { EconomicPulse } from "../scenes/EconomicPulse";
 import { NarrativeBeat } from "../scenes/NarrativeBeat";
+import { MapboxUsToPrincipalZoom } from "../scenes/MapboxUsToPrincipalZoom";
+import { MetroHeroStill } from "../scenes/MetroHeroStill";
 import type {
   ScoreHistoryPoint,
   SingleMarketVideoProps,
   TrendDirection,
 } from "../types";
+import {
+  COLORS,
+  LONG_FORM_FALLBACK_BODY_WEIGHTS,
+  LONG_FORM_MAP_INTRO_SECONDS,
+  LONG_FORM_METRO_HERO_SECONDS,
+} from "../constants";
+import {
+  computeLongFormIntroTimeline,
+  resolveMetroHeroImageUrlForMarket,
+} from "../lib/long-form-intro-timeline";
+import { isMetroPopulationTop200 } from "../lib/metro-hero-eligibility";
 import { num, coerceStats, coerceEconomic } from "./helpers";
 
 type PlanSeg = {
@@ -38,7 +51,7 @@ function humanizeChapterTitle(sceneKey?: string): string {
 export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
   props,
 ) => {
-  const { durationInFrames } = useVideoConfig();
+  const { durationInFrames, fps, width, height } = useVideoConfig();
   const { dataBundle, resolvedMarket, ctaUrl, longFormRenderPlan } = props;
   const bundle = (dataBundle ?? {}) as Record<string, unknown>;
   const scoreObj = (bundle.score ?? {}) as {
@@ -79,6 +92,49 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
 
   const marketName = resolvedMarket.canonical_name;
 
+  const renderIntroForDuration = (introFrames: number) => {
+    const lat = resolvedMarket.latitude;
+    const lng = resolvedMarket.longitude;
+    if (typeof lat === "number" && typeof lng === "number") {
+      const timeline = computeLongFormIntroTimeline(
+        introFrames,
+        fps,
+        resolvedMarket,
+      );
+      const heroUrl = resolveMetroHeroImageUrlForMarket(resolvedMarket);
+      const showHero = timeline.heroFrames > 0 && Boolean(heroUrl);
+      return (
+        <>
+          <Sequence from={0} durationInFrames={timeline.mapFrames}>
+            <MapboxUsToPrincipalZoom
+              durationInFrames={timeline.mapFrames}
+              targetLatitude={lat}
+              targetLongitude={lng}
+              marketLabel={marketName}
+            />
+          </Sequence>
+          {showHero && heroUrl ? (
+            <Sequence
+              from={timeline.mapFrames}
+              durationInFrames={timeline.heroFrames}
+            >
+              <MetroHeroStill imageUrl={heroUrl} marketLabel={marketName} />
+            </Sequence>
+          ) : null}
+          {timeline.padFrames > 0 ? (
+            <Sequence
+              from={timeline.mapFrames + (showHero ? timeline.heroFrames : 0)}
+              durationInFrames={timeline.padFrames}
+            >
+              <AbsoluteFill style={{ backgroundColor: COLORS.bg }} />
+            </Sequence>
+          ) : null}
+        </>
+      );
+    }
+    return <Intro marketName={marketName} />;
+  };
+
   const trendScene =
     history.length > 0 ? (
       <TrendChart
@@ -99,7 +155,7 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
   const renderSegment = (seg: PlanSeg) => {
     switch (seg.kind) {
       case "intro":
-        return <Intro marketName={marketName} />;
+        return renderIntroForDuration(seg.durationInFrames);
       case "stats":
         return <StatCards market={marketName} stats={stats} />;
       case "score":
@@ -155,16 +211,35 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
   }
 
   const rest = Math.max(0, durationInFrames - 60);
-  const seg = (pct: number) => Math.max(45, Math.floor(rest * pct));
-  const intro = seg(0.08);
-  const statsF = seg(0.22);
-  const scoreF = seg(0.22);
-  const trendF = seg(0.28);
-  const outroF = seg(0.12);
-  const brandF = Math.max(
-    60,
-    rest - intro - statsF - scoreF - trendF - outroF,
+  /** Reserve frames so stats/score/trend/outro/brand can still breathe on short comps. */
+  const minBodyFrames = 180;
+  const mapIntroTarget = Math.round(fps * LONG_FORM_MAP_INTRO_SECONDS);
+  const heroCapFrames = Math.round(fps * LONG_FORM_METRO_HERO_SECONDS);
+  const canMetroHero =
+    resolvedMarket.geography === "metro" &&
+    isMetroPopulationTop200(resolvedMarket.id) &&
+    Boolean(resolveMetroHeroImageUrlForMarket(resolvedMarket));
+  const introBudgetMax =
+    mapIntroTarget + (canMetroHero ? heroCapFrames : 0);
+  const intro = Math.min(
+    introBudgetMax,
+    Math.max(1, rest - minBodyFrames),
   );
+  const bodySplit = Math.max(0, rest - intro);
+  const minBrandFrames = 60;
+  const pool = Math.max(0, bodySplit - minBrandFrames);
+  const bw = LONG_FORM_FALLBACK_BODY_WEIGHTS;
+  const bwSum = bw.stats + bw.score + bw.trend + bw.outro;
+  let statsF = Math.max(45, Math.floor((pool * bw.stats) / bwSum));
+  let scoreF = Math.max(36, Math.floor((pool * bw.score) / bwSum));
+  let trendF = Math.max(45, Math.floor((pool * bw.trend) / bwSum));
+  let outroF = Math.max(45, Math.floor((pool * bw.outro) / bwSum));
+  let brandF = bodySplit - statsF - scoreF - trendF - outroF;
+  if (brandF < minBrandFrames) {
+    const deficit = minBrandFrames - brandF;
+    trendF = Math.max(45, trendF - deficit);
+    brandF = bodySplit - statsF - scoreF - trendF - outroF;
+  }
 
   let cursor = 60;
 
@@ -186,7 +261,7 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
         <BrandBumper />
       </Sequence>
       <Sequence from={sIntro} durationInFrames={intro}>
-        <Intro marketName={marketName} />
+        {renderIntroForDuration(intro)}
       </Sequence>
       <Sequence from={sStats} durationInFrames={statsF}>
         <StatCards market={marketName} stats={stats} />

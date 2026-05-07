@@ -7,6 +7,7 @@ import {
   Easing,
 } from "remotion";
 import { COLORS } from "../constants";
+import { LONG_FORM_VISUAL_RHYTHM_FRAMES } from "../constants/long-form-rhythm";
 import type { MarketStats } from "../types";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
@@ -84,6 +85,7 @@ interface CardProps {
   description: string;
   delay: number;
   isVertical: boolean;
+  spotlight: boolean;
 }
 
 const StatCard: React.FC<CardProps> = ({
@@ -93,6 +95,7 @@ const StatCard: React.FC<CardProps> = ({
   description,
   delay,
   isVertical,
+  spotlight,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -128,11 +131,17 @@ const StatCard: React.FC<CardProps> = ({
         display: "flex",
         flexDirection: "column",
         gap: 10,
-        border: `1px solid ${COLORS.bgCardAlt}`,
+        border: spotlight
+          ? `2px solid rgba(57,73,171,0.85)`
+          : `1px solid ${COLORS.bgCardAlt}`,
         opacity,
-        transform: `translateY(${translateY}px)`,
+        transform: `translateY(${translateY}px) scale(${spotlight ? 1.03 : 1})`,
         flex: 1,
         minWidth: 0,
+        boxShadow: spotlight
+          ? "0 12px 40px rgba(57,73,171,0.35)"
+          : undefined,
+        transition: "box-shadow 0.3s ease",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -169,6 +178,9 @@ export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
+
+  const focusIdx =
+    Math.floor(frame / LONG_FORM_VISUAL_RHYTHM_FRAMES) % CARD_DEFS.length;
 
   const sceneOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
@@ -236,6 +248,7 @@ export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
             description={def.description}
             delay={i * 18}
             isVertical={!!isVertical}
+            spotlight={i === focusIdx}
           />
         ))}
       </div>

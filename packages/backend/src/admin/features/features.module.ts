@@ -19,8 +19,24 @@ import { TierPricingController } from './tier-pricing.controller';
 
 @Module({
   imports: [SupabaseModule, BillingModule],
-  providers: [FeaturesService, TiersService, UserFeaturesService, GrandfatheringService],
-  controllers: [FeaturesController, TiersController, UserFeaturesController, GrandfatheringController, TierPricingController],
-  exports: [FeaturesService, TiersService, UserFeaturesService, GrandfatheringService],
+  providers: [
+    FeaturesService,
+    TiersService,
+    UserFeaturesService,
+    GrandfatheringService,
+  ],
+  controllers: [
+    FeaturesController,
+    TiersController,
+    UserFeaturesController,
+    GrandfatheringController,
+    TierPricingController,
+  ],
+  exports: [
+    FeaturesService,
+    TiersService,
+    UserFeaturesService,
+    GrandfatheringService,
+  ],
 })
 export class FeaturesModule {}

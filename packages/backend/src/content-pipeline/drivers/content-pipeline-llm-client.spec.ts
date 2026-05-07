@@ -22,7 +22,9 @@ describe('content-pipeline-llm-client', () => {
   });
 
   afterEach(() => {
-    for (const k of Object.keys(envSnapshot) as Array<keyof typeof envSnapshot>) {
+    for (const k of Object.keys(envSnapshot) as Array<
+      keyof typeof envSnapshot
+    >) {
       const v = envSnapshot[k];
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;

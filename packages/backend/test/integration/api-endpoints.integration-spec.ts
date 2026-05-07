@@ -48,7 +48,7 @@ function isNonEmptyResponse(data: unknown): boolean {
     return true; // Empty arrays are valid responses
   }
   if (typeof data === 'object') {
-    return Object.keys(data as object).length > 0;
+    return Object.keys(data).length > 0;
   }
   return true;
 }
@@ -59,10 +59,22 @@ function isNonEmptyResponse(data: unknown): boolean {
 
 const healthEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/health', description: 'Main health check' },
-  { method: 'GET', path: '/api/health/data-cards', description: 'Data cards health' },
-  { method: 'GET', path: '/api/health/database', description: 'Database health' },
+  {
+    method: 'GET',
+    path: '/api/health/data-cards',
+    description: 'Data cards health',
+  },
+  {
+    method: 'GET',
+    path: '/api/health/database',
+    description: 'Database health',
+  },
   { method: 'GET', path: '/api/health/cache', description: 'Cache health' },
-  { method: 'GET', path: '/api/health/external', description: 'External services health' },
+  {
+    method: 'GET',
+    path: '/api/health/external',
+    description: 'External services health',
+  },
   { method: 'GET', path: '/api/health/ready', description: 'Readiness check' },
   { method: 'GET', path: '/api/health/live', description: 'Liveness check' },
 ];
@@ -73,15 +85,43 @@ const healthEndpoints: TestEndpoint[] = [
 
 const metricsEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/metrics', description: 'Main metrics' },
-  { method: 'GET', path: '/api/metrics/overview', description: 'Metrics overview' },
-  { method: 'GET', path: '/api/metrics/performance', description: 'Performance metrics' },
+  {
+    method: 'GET',
+    path: '/api/metrics/overview',
+    description: 'Metrics overview',
+  },
+  {
+    method: 'GET',
+    path: '/api/metrics/performance',
+    description: 'Performance metrics',
+  },
   { method: 'GET', path: '/api/metrics/cache', description: 'Cache metrics' },
-  { method: 'GET', path: '/api/metrics/database', description: 'Database metrics' },
-  { method: 'GET', path: '/api/metrics/requests', description: 'Request metrics' },
+  {
+    method: 'GET',
+    path: '/api/metrics/database',
+    description: 'Database metrics',
+  },
+  {
+    method: 'GET',
+    path: '/api/metrics/requests',
+    description: 'Request metrics',
+  },
   { method: 'GET', path: '/api/metrics/errors', description: 'Error metrics' },
-  { method: 'GET', path: '/api/metrics/latency', description: 'Latency metrics' },
-  { method: 'GET', path: '/api/metrics/throughput', description: 'Throughput metrics' },
-  { method: 'GET', path: '/api/metrics/resources', description: 'Resource metrics' },
+  {
+    method: 'GET',
+    path: '/api/metrics/latency',
+    description: 'Latency metrics',
+  },
+  {
+    method: 'GET',
+    path: '/api/metrics/throughput',
+    description: 'Throughput metrics',
+  },
+  {
+    method: 'GET',
+    path: '/api/metrics/resources',
+    description: 'Resource metrics',
+  },
 ];
 
 // =============================================================================
@@ -91,22 +131,54 @@ const metricsEndpoints: TestEndpoint[] = [
 const scoresEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/scores', description: 'Main scores' },
   { method: 'GET', path: '/api/scores/overall', description: 'Overall score' },
-  { method: 'GET', path: '/api/scores/location', description: 'Location score' },
+  {
+    method: 'GET',
+    path: '/api/scores/location',
+    description: 'Location score',
+  },
   { method: 'GET', path: '/api/scores/market', description: 'Market score' },
-  { method: 'GET', path: '/api/scores/property', description: 'Property score' },
-  { method: 'GET', path: '/api/scores/investment', description: 'Investment score' },
+  {
+    method: 'GET',
+    path: '/api/scores/property',
+    description: 'Property score',
+  },
+  {
+    method: 'GET',
+    path: '/api/scores/investment',
+    description: 'Investment score',
+  },
   { method: 'GET', path: '/api/scores/risk', description: 'Risk score' },
   { method: 'GET', path: '/api/scores/growth', description: 'Growth score' },
   { method: 'GET', path: '/api/scores/rental', description: 'Rental score' },
-  { method: 'GET', path: '/api/scores/appreciation', description: 'Appreciation score' },
-  { method: 'GET', path: '/api/scores/cashflow', description: 'Cashflow score' },
-  { method: 'GET', path: '/api/scores/affordability', description: 'Affordability score' },
+  {
+    method: 'GET',
+    path: '/api/scores/appreciation',
+    description: 'Appreciation score',
+  },
+  {
+    method: 'GET',
+    path: '/api/scores/cashflow',
+    description: 'Cashflow score',
+  },
+  {
+    method: 'GET',
+    path: '/api/scores/affordability',
+    description: 'Affordability score',
+  },
   { method: 'GET', path: '/api/scores/demand', description: 'Demand score' },
   { method: 'GET', path: '/api/scores/supply', description: 'Supply score' },
-  { method: 'GET', path: '/api/scores/neighborhood', description: 'Neighborhood score' },
+  {
+    method: 'GET',
+    path: '/api/scores/neighborhood',
+    description: 'Neighborhood score',
+  },
   { method: 'GET', path: '/api/scores/school', description: 'School score' },
   { method: 'GET', path: '/api/scores/crime', description: 'Crime score' },
-  { method: 'GET', path: '/api/scores/walkability', description: 'Walkability score' },
+  {
+    method: 'GET',
+    path: '/api/scores/walkability',
+    description: 'Walkability score',
+  },
 ];
 
 // =============================================================================
@@ -116,14 +188,42 @@ const scoresEndpoints: TestEndpoint[] = [
 const geographyEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/geography', description: 'Main geography' },
   { method: 'GET', path: '/api/geography/states', description: 'States list' },
-  { method: 'GET', path: '/api/geography/counties', description: 'Counties list' },
+  {
+    method: 'GET',
+    path: '/api/geography/counties',
+    description: 'Counties list',
+  },
   { method: 'GET', path: '/api/geography/cities', description: 'Cities list' },
-  { method: 'GET', path: '/api/geography/zip-codes', description: 'Zip codes list' },
-  { method: 'GET', path: '/api/geography/neighborhoods', description: 'Neighborhoods list' },
-  { method: 'GET', path: '/api/geography/regions', description: 'Regions list' },
-  { method: 'GET', path: '/api/geography/metros', description: 'Metro areas list' },
-  { method: 'GET', path: '/api/geography/boundaries', description: 'Boundaries data' },
-  { method: 'GET', path: '/api/geography/geocode', description: 'Geocoding service' },
+  {
+    method: 'GET',
+    path: '/api/geography/zip-codes',
+    description: 'Zip codes list',
+  },
+  {
+    method: 'GET',
+    path: '/api/geography/neighborhoods',
+    description: 'Neighborhoods list',
+  },
+  {
+    method: 'GET',
+    path: '/api/geography/regions',
+    description: 'Regions list',
+  },
+  {
+    method: 'GET',
+    path: '/api/geography/metros',
+    description: 'Metro areas list',
+  },
+  {
+    method: 'GET',
+    path: '/api/geography/boundaries',
+    description: 'Boundaries data',
+  },
+  {
+    method: 'GET',
+    path: '/api/geography/geocode',
+    description: 'Geocoding service',
+  },
 ];
 
 // =============================================================================
@@ -132,11 +232,23 @@ const geographyEndpoints: TestEndpoint[] = [
 
 const censusEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/census', description: 'Main census data' },
-  { method: 'GET', path: '/api/census/population', description: 'Population data' },
-  { method: 'GET', path: '/api/census/demographics', description: 'Demographics data' },
+  {
+    method: 'GET',
+    path: '/api/census/population',
+    description: 'Population data',
+  },
+  {
+    method: 'GET',
+    path: '/api/census/demographics',
+    description: 'Demographics data',
+  },
   { method: 'GET', path: '/api/census/housing', description: 'Housing data' },
   { method: 'GET', path: '/api/census/income', description: 'Income data' },
-  { method: 'GET', path: '/api/census/education', description: 'Education data' },
+  {
+    method: 'GET',
+    path: '/api/census/education',
+    description: 'Education data',
+  },
 ];
 
 // =============================================================================
@@ -145,11 +257,27 @@ const censusEndpoints: TestEndpoint[] = [
 
 const economicEndpoints: TestEndpoint[] = [
   { method: 'GET', path: '/api/economic', description: 'Main economic data' },
-  { method: 'GET', path: '/api/economic/employment', description: 'Employment data' },
-  { method: 'GET', path: '/api/economic/unemployment', description: 'Unemployment data' },
+  {
+    method: 'GET',
+    path: '/api/economic/employment',
+    description: 'Employment data',
+  },
+  {
+    method: 'GET',
+    path: '/api/economic/unemployment',
+    description: 'Unemployment data',
+  },
   { method: 'GET', path: '/api/economic/gdp', description: 'GDP data' },
-  { method: 'GET', path: '/api/economic/inflation', description: 'Inflation data' },
-  { method: 'GET', path: '/api/economic/interest-rates', description: 'Interest rates data' },
+  {
+    method: 'GET',
+    path: '/api/economic/inflation',
+    description: 'Inflation data',
+  },
+  {
+    method: 'GET',
+    path: '/api/economic/interest-rates',
+    description: 'Interest rates data',
+  },
 ];
 
 // =============================================================================
@@ -168,7 +296,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(healthEndpoints)(
@@ -178,7 +306,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(healthEndpoints)(
@@ -187,7 +315,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(healthEndpoints)(
@@ -196,7 +324,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 
@@ -211,7 +339,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(metricsEndpoints)(
@@ -221,7 +349,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(metricsEndpoints)(
@@ -230,7 +358,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(metricsEndpoints)(
@@ -239,7 +367,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 
@@ -254,7 +382,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(scoresEndpoints)(
@@ -264,7 +392,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(scoresEndpoints)(
@@ -273,7 +401,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(scoresEndpoints)(
@@ -282,7 +410,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 
@@ -297,7 +425,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(geographyEndpoints)(
@@ -307,7 +435,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(geographyEndpoints)(
@@ -316,7 +444,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(geographyEndpoints)(
@@ -325,7 +453,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 
@@ -340,7 +468,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(censusEndpoints)(
@@ -350,7 +478,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(censusEndpoints)(
@@ -359,7 +487,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(censusEndpoints)(
@@ -368,7 +496,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 
@@ -383,7 +511,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.status).toBe(200);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(economicEndpoints)(
@@ -393,7 +521,7 @@ describe('API Endpoints', () => {
         expect(result.data).toBeDefined();
         expect(typeof result.data).toBe('object');
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(economicEndpoints)(
@@ -402,7 +530,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(isNonEmptyResponse(result.data)).toBe(true);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
 
     it.each(economicEndpoints)(
@@ -411,7 +539,7 @@ describe('API Endpoints', () => {
         const result = await testEndpoint(endpoint);
         expect(result.responseTime).toBeLessThan(MAX_RESPONSE_TIME_MS);
       },
-      TIMEOUT_MS
+      TIMEOUT_MS,
     );
   });
 });

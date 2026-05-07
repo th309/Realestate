@@ -37,7 +37,7 @@ export class ApiKeyAuthGuard implements CanActivate {
 
     if (!authHeader?.startsWith('Bearer piq_live_')) {
       throw new UnauthorizedException(
-        'Invalid API key. Expected: Authorization: Bearer piq_live_...',
+        "Invalid API key. Provide a valid key via 'Authorization: Bearer piq_live_<key>' header.",
       );
     }
 

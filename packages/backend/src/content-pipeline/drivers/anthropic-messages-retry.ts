@@ -63,7 +63,9 @@ export async function anthropicMessagesCreateWithRetry(
     8,
     Math.max(1, Number(process.env.ANTHROPIC_MESSAGES_MAX_ATTEMPTS ?? '4')),
   );
-  const baseDelayMs = Number(process.env.ANTHROPIC_RETRY_BASE_DELAY_MS ?? '1500');
+  const baseDelayMs = Number(
+    process.env.ANTHROPIC_RETRY_BASE_DELAY_MS ?? '1500',
+  );
 
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -107,7 +109,8 @@ export async function anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback(
     process.env.CONTENT_PIPELINE_LLM_PROVIDER?.trim().toLowerCase() ===
     'anthropic';
   const disableAnthropicFallback =
-    process.env.CONTENT_PIPELINE_DISABLE_ANTHROPIC_FALLBACK?.trim() === 'true' ||
+    process.env.CONTENT_PIPELINE_DISABLE_ANTHROPIC_FALLBACK?.trim() ===
+      'true' ||
     process.env.CONTENT_PIPELINE_DISABLE_ANTHROPIC_FALLBACK?.trim() === '1';
 
   const tryAnthropicCloud = (): Promise<Anthropic.Messages.Message> =>
@@ -138,10 +141,7 @@ export async function anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback(
       modelUsed: String(params.model),
     };
   } catch (firstErr) {
-    if (
-      disableAnthropicFallback ||
-      !process.env.ANTHROPIC_API_KEY?.trim()
-    ) {
+    if (disableAnthropicFallback || !process.env.ANTHROPIC_API_KEY?.trim()) {
       throw firstErr;
     }
     logger.warn(

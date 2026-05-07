@@ -276,6 +276,11 @@ function MagnetCard({
   onEdit: () => void;
   onToggle: (enabled: boolean) => void;
 }) {
+  const delivered = magnet.delivered_count ?? null;
+  const paidPct =
+    magnet.converted_to_paid_pct == null
+      ? null
+      : Math.round(magnet.converted_to_paid_pct * 1000) / 10;
   return (
     <div
       className={`rounded-xl bg-surface-container-low p-4 shadow-sm flex gap-4 transition-opacity duration-200 ${
@@ -313,6 +318,14 @@ function MagnetCard({
         <p className="text-xs text-on-surface-variant line-clamp-2 mb-3">
           {magnet.description ?? "(no description)"}
         </p>
+        <div className="flex items-center gap-3 text-[11px] text-on-surface-variant mb-3">
+          <span className="font-mono">
+            delivered: {delivered == null ? "—" : delivered.toLocaleString()}
+          </span>
+          <span className="font-mono">
+            paid conv: {paidPct == null ? "—" : `${paidPct.toFixed(1)}%`}
+          </span>
+        </div>
         <div className="flex items-center justify-between text-[11px] text-on-surface-variant">
           <span>v{magnet.version}</span>
           <button

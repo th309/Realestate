@@ -56,9 +56,13 @@ export class VerifyDataHandler {
       this.logger.log(
         `[PIPE] verify-data calling gate.verify script.len=${script.fullText.length}`,
       );
-      const result = await this.gate.verify(script.fullText, payloadAsset.metadata, {
-        contentFormat,
-      });
+      const result = await this.gate.verify(
+        script.fullText,
+        payloadAsset.metadata,
+        {
+          contentFormat,
+        },
+      );
       this.logger.log(
         `[PIPE] verify-data gate result passed=${result.passed} violations=${result.violations.length} confidenceViolations=${result.confidenceViolations?.length ?? 0}`,
       );

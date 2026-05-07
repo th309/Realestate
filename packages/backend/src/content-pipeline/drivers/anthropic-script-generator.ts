@@ -90,9 +90,7 @@ function summarizeToolUseInput(raw: unknown): Record<string, unknown> {
     firstVariantKeys:
       firstObj !== undefined ? Object.keys(firstObj).slice(0, 12) : null,
     fullTextChars:
-      typeof firstObj?.fullText === 'string'
-        ? (firstObj.fullText as string).length
-        : null,
+      typeof firstObj?.fullText === 'string' ? firstObj.fullText.length : null,
     sceneBreakdownLen: Array.isArray(firstObj?.sceneBreakdown)
       ? (firstObj.sceneBreakdown as unknown[]).length
       : null,
@@ -167,9 +165,7 @@ export class AnthropicScriptGenerator implements ScriptGenerator {
 
     const stopReason =
       'stop_reason' in response ? String(response.stop_reason) : undefined;
-    const blockTypes = (response.content ?? [])
-      .map((c) => c.type)
-      .join(',');
+    const blockTypes = (response.content ?? []).map((c) => c.type).join(',');
     const u = response.usage;
     this.logger.log(
       `[PIPE] anthropic-script.generate POST stop_reason=${stopReason ?? 'n/a'} blocks=${blockTypes} out_tokens=${u?.output_tokens ?? 'n/a'} in_tokens=${u?.input_tokens ?? 'n/a'}`,

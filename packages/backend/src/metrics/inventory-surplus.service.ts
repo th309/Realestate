@@ -30,7 +30,7 @@ export class InventorySurplusService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   // ============================================================================
   // CACHE HELPERS
@@ -241,7 +241,9 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for national level
    */
-  async calculateForNational(year?: number): Promise<{ processed: number; stored: number }> {
+  async calculateForNational(
+    year?: number,
+  ): Promise<{ processed: number; stored: number }> {
     // Get ALL unique dates (descending)
     const { data: allDates } = await this.supabase
       .from('realtor_national')
@@ -326,7 +328,9 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all states
    */
-  async calculateForStates(year?: number): Promise<{ processed: number; stored: number }> {
+  async calculateForStates(
+    year?: number,
+  ): Promise<{ processed: number; stored: number }> {
     // Get ALL unique dates (descending)
     const { data: allDates } = await this.supabase
       .from('realtor_state')
@@ -393,10 +397,11 @@ export class InventorySurplusService {
       }
 
       if (recordsToUpsert.length > 0) {
-        const { error } = await this.supabase.from('calculated_metrics').upsert(
-          recordsToUpsert,
-          { onConflict: 'geography_id,geography_type,period_date' },
-        );
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (!error) totalStored += recordsToUpsert.length;
       }
 
@@ -412,7 +417,9 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all counties (paginated)
    */
-  async calculateForCounties(year?: number): Promise<{ processed: number; stored: number }> {
+  async calculateForCounties(
+    year?: number,
+  ): Promise<{ processed: number; stored: number }> {
     const { data: latestDateRow } = await this.supabase
       .from('realtor_county')
       .select('period_date')
@@ -507,7 +514,9 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all zip codes (paginated)
    */
-  async calculateForZips(year?: number): Promise<{ processed: number; stored: number }> {
+  async calculateForZips(
+    year?: number,
+  ): Promise<{ processed: number; stored: number }> {
     const { data: latestDateRow } = await this.supabase
       .from('realtor_zip')
       .select('period_date')

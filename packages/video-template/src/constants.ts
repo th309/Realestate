@@ -5,6 +5,26 @@
 
 export const FPS = 30;
 
+/** Long-form deep-dive MP4 length ceiling (5 minutes @ 30fps). */
+export const LONG_FORM_MAX_DURATION_FRAMES = 5 * 60 * FPS;
+
+/** US → market Mapbox fly in long-form: wall-clock length (frames = seconds × fps). */
+export const LONG_FORM_MAP_INTRO_SECONDS = 30;
+
+/** Optional hero still (curated photo or satellite) after the map for top metros. */
+export const LONG_FORM_METRO_HERO_SECONDS = 15;
+
+/**
+ * Proportional fallback (no caption plan): relative time for stats / score / trend / outro.
+ * Score is weighted lower than stats so the ScoreReveal beat stays tighter on screen.
+ */
+export const LONG_FORM_FALLBACK_BODY_WEIGHTS = {
+  stats: 22,
+  score: 14,
+  trend: 32,
+  outro: 12,
+} as const;
+
 // ── Brand colors ────────────────────────────────────────────────────────────
 export const COLORS = {
   bg: "#0f172a",

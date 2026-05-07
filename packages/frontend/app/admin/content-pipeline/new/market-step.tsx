@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
-import { resolveMarket } from "../lib/content-pipeline-api";
+import {
+  fetchMetroHeroOptions,
+  resolveMarket,
+  type MetroHeroOption,
+} from "../lib/content-pipeline-api";
 import type { BatchMarket } from "../lib/batch-runs-api";
 import type { ScoreMoverGeo, ScoreMoverWindowDays } from "../lib/movers-api";
 import type { WizardFormatOptions, WizardMode } from "./page";
@@ -13,6 +17,10 @@ interface MarketMatch {
   canonical_name: string;
   geography: string;
   state?: string;
+}
+
+function isFiveDigitCbsa(id: string): boolean {
+  return /^\d{5}$/.test(String(id).trim());
 }
 
 export function MarketStep({
@@ -35,7 +43,10 @@ export function MarketStep({
   onFormatOptionsChange: (opts: WizardFormatOptions) => void;
   topMoversGeo: ScoreMoverGeo;
   onTopMoversGeoChange: (g: ScoreMoverGeo) => void;
-  onPickSingle: (market: string) => void;
+  onPickSingle: (
+    market: string,
+    opts?: { heroImageOptionId?: string },
+  ) => void;
   onPickBatch: (markets: BatchMarket[]) => void;
   onPickTopMovers: (
     markets: BatchMarket[],
@@ -73,7 +84,9 @@ export function MarketStep({
         </div>
       )}
 
-      {mode === "single" && <SingleMarketBody onPick={onPickSingle} />}
+      {mode === "single" && (
+        <SingleMarketBody format={format} onPick={onPickSingle} />
+      )}
       {mode === "batch" && <MarketStepBatch onPick={onPickBatch} />}
       {mode === "top_movers" && (
         <MarketStepTopMovers
@@ -135,18 +148,64 @@ function ModeToggle({
   );
 }
 
-function SingleMarketBody({ onPick }: { onPick: (market: string) => void }) {
+function SingleMarketBody({
+  format,
+  onPick,
+}: {
+  format: string;
+  onPick: (market: string, opts?: { heroImageOptionId?: string }) => void;
+}) {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<MarketMatch[]>([]);
+  const [heroUi, setHeroUi] = useState<
+    | null
+    | { phase: "loading"; match: MarketMatch }
+    | { phase: "pick"; match: MarketMatch; options: MetroHeroOption[] }
+  >(null);
+
+  const isLongForm = format === "long_form_deep_dive";
 
   async function handleChange(v: string) {
     setQuery(v);
+    setHeroUi(null);
     if (v.length < 2) {
       setMatches([]);
       return;
     }
     const m = await resolveMarket(v);
     setMatches(m as MarketMatch[]);
+  }
+
+  async function handleMarketClick(match: MarketMatch) {
+    if (
+      !isLongForm ||
+      match.geography !== "metro" ||
+      !isFiveDigitCbsa(match.id)
+    ) {
+      onPick(match.canonical_name);
+      return;
+    }
+
+    setHeroUi({ phase: "loading", match });
+    try {
+      const options = await fetchMetroHeroOptions(match.id);
+      if (options.length === 0) {
+        setHeroUi(null);
+        onPick(match.canonical_name);
+        return;
+      }
+      if (options.length === 1) {
+        setHeroUi(null);
+        onPick(match.canonical_name, {
+          heroImageOptionId: options[0].id,
+        });
+        return;
+      }
+      setHeroUi({ phase: "pick", match, options });
+    } catch {
+      setHeroUi(null);
+      onPick(match.canonical_name);
+    }
   }
 
   return (
@@ -159,12 +218,80 @@ function SingleMarketBody({ onPick }: { onPick: (market: string) => void }) {
         className="w-full rounded-full border border-outline-variant px-6 py-4 text-lg"
         autoFocus
       />
+
+      {isLongForm && heroUi?.phase === "loading" && (
+        <p className="mt-4 text-sm text-on-surface-variant">
+          Loading skyline options…
+        </p>
+      )}
+
+      {isLongForm && heroUi?.phase === "pick" && (
+        <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container-low p-4">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <p className="text-sm font-semibold text-on-surface">
+                Choose a skyline shot
+              </p>
+              <p className="text-xs text-on-surface-variant mt-1">
+                {heroUi.match.canonical_name} — editorial hero still (curated
+                sources).
+              </p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-xs font-semibold text-primary"
+              onClick={() => setHeroUi(null)}
+            >
+              Back
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {heroUi.options.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  setHeroUi(null);
+                  onPick(heroUi.match.canonical_name, {
+                    heroImageOptionId: opt.id,
+                  });
+                }}
+                className="text-left rounded-lg border border-outline-variant overflow-hidden hover:bg-surface-container transition-colors"
+              >
+                <div className="aspect-video bg-surface-container relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={opt.preview_url}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-3">
+                  <div className="text-sm font-medium text-on-surface">
+                    {opt.label}
+                  </div>
+                  {opt.license_note && (
+                    <div className="text-[10px] text-on-surface-variant mt-1">
+                      {opt.license_note}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 space-y-2">
         {matches.map((m) => (
           <button
             key={m.id}
-            onClick={() => onPick(m.canonical_name)}
-            className="block w-full text-left p-4 rounded-lg hover:bg-surface-container-low"
+            type="button"
+            disabled={
+              heroUi?.phase === "loading" && heroUi.match.id === m.id
+            }
+            onClick={() => handleMarketClick(m)}
+            className="block w-full text-left p-4 rounded-lg hover:bg-surface-container-low disabled:opacity-60"
           >
             <div className="font-medium">{m.canonical_name}</div>
             <div className="text-xs text-outline">

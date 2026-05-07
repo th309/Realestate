@@ -22,8 +22,15 @@ import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
 import { ContentDataService } from './data/content-data.service';
+import { MetroHeroImageService } from './metro-hero-image.service';
+import { PerformanceService } from './analytics/performance.service';
+import { SuggestedRunsService } from './analytics/suggested-runs.service';
 import { CreateRunDto } from './dto/create-run.dto';
 import { MoversResolveQueryDto } from './dto/movers-resolve.dto';
+import {
+  PerformanceOverviewQueryDto,
+  PerformanceRunsQueryDto,
+} from './dto/performance-query.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
@@ -40,6 +47,9 @@ export class ContentPipelineController {
     private readonly thumbnails: RunThumbnailService,
     private readonly settingsService: PipelineSettingsService,
     private readonly contentData: ContentDataService,
+    private readonly metroHeroImages: MetroHeroImageService,
+    private readonly performance: PerformanceService,
+    private readonly suggestions: SuggestedRunsService,
   ) {}
 
   @Get('health')
@@ -61,6 +71,38 @@ export class ContentPipelineController {
     return { success: true, data: result };
   }
 
+  @Get('performance/overview')
+  async performanceOverview(@Query() q: PerformanceOverviewQueryDto) {
+    const sinceDays = q.sinceDays ?? 30;
+    const [hero, conversion, hookPatterns, suggestedRuns] = await Promise.all([
+      this.performance.getHeroCard(sinceDays),
+      this.performance.getFormatConversion(sinceDays),
+      this.performance.getHookPatterns(),
+      this.suggestions.getSuggestions(),
+    ]);
+    return {
+      success: true,
+      data: {
+        hero,
+        formatConversion: conversion,
+        hookPatterns,
+        suggestedRuns,
+      },
+    };
+  }
+
+  @Get('performance/runs')
+  async performanceRuns(@Query() q: PerformanceRunsQueryDto) {
+    const rows = await this.performance.getRunsTable({
+      sinceDays: q.sinceDays ?? 30,
+      format: q.format,
+      sort: q.sort,
+      dir: q.dir,
+      limit: q.limit,
+    });
+    return { success: true, data: { rows } };
+  }
+
   @Post('runs')
   async createRun(@Body() dto: CreateRunDto) {
     const result = await this.runs.createRun(dto);
@@ -71,6 +113,19 @@ export class ContentPipelineController {
   async resolveMarket(@Body() body: { query: string }) {
     const matches = await this.runs.resolveMarket(body.query);
     return { success: true, data: { matches } };
+  }
+
+  /**
+   * Long-form metro hero shots the operator can choose before submit (preview URLs only).
+   */
+  @Get('metro-hero-options/:cbsaCode')
+  async metroHeroOptions(@Param('cbsaCode') cbsaCode: string) {
+    const code = String(cbsaCode ?? '').trim();
+    if (!/^\d{5}$/.test(code)) {
+      throw new BadRequestException('cbsaCode must be a 5-digit CBSA code');
+    }
+    const options = this.metroHeroImages.listPublicOptionsForCbsa(code);
+    return { success: true, data: { options } };
   }
 
   @Post('trigger-test-magnet')

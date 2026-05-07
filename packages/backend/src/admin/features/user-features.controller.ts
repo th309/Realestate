@@ -39,7 +39,10 @@ export class UserFeaturesController {
     this.logger.log(`GET /features/user/${userId}`);
 
     try {
-      const resolved = await this.userFeaturesService.getUserFeatures(userId, tier);
+      const resolved = await this.userFeaturesService.getUserFeatures(
+        userId,
+        tier,
+      );
       return {
         success: true,
         data: resolved,
@@ -65,7 +68,11 @@ export class UserFeaturesController {
     this.logger.log(`GET /features/user/${userId}/check/${featureSlug}`);
 
     try {
-      const hasAccess = await this.userFeaturesService.hasFeature(userId, featureSlug, tier);
+      const hasAccess = await this.userFeaturesService.hasFeature(
+        userId,
+        featureSlug,
+        tier,
+      );
       return {
         success: true,
         feature: featureSlug,
@@ -92,7 +99,11 @@ export class UserFeaturesController {
     this.logger.log(`GET /features/user/${userId}/limit/${featureSlug}`);
 
     try {
-      const limit = await this.userFeaturesService.getFeatureLimit(userId, featureSlug, tier);
+      const limit = await this.userFeaturesService.getFeatureLimit(
+        userId,
+        featureSlug,
+        tier,
+      );
       return {
         success: true,
         feature: featureSlug,
@@ -137,7 +148,8 @@ export class UserFeaturesController {
   @Post('user/:userId/override')
   async createOverride(
     @Param('userId') userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       featureSlug: string;
       value: unknown;
       reason?: string;

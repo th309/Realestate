@@ -35,24 +35,24 @@ interface PercentileStats {
 // Some metrics keep original Realtor names, others use scoring service internal names
 const REALTOR_TO_INTERNAL_METRIC: Record<string, string> = {
   // These metrics keep their Realtor names (used directly in component definitions)
-  'median_listing_price': 'median_listing_price',
-  'median_listing_price_yy': 'median_listing_price_yy',
-  'median_listing_price_mm': 'median_listing_price_mm',
-  'median_listing_price_per_square_foot': 'median_listing_price_per_square_foot',
-  'active_listing_count': 'inventory',  // Component uses 'inventory'
-  'active_listing_count_yy': 'active_listing_count_yy',  // Component uses this exact name
-  'median_days_on_market': 'median_days_on_market',  // Component uses this exact name
-  'new_listing_count': 'new_listings',  // Component uses 'new_listings'
-  'new_listing_count_yy': 'new_listing_count_yy',  // Component uses this exact name
-  'pending_listing_count': 'pending_sales',  // Component uses 'pending_sales'
-  'pending_listing_count_yy': 'pending_listing_count_yy',  // Component uses this exact name
-  'pending_ratio': 'pending_ratio',
-  'price_reduced_share': 'price_reduced_share',
-  'price_increased_share': 'price_increased_share',
-  'hotness_score': 'hotness_score',
-  'hotness_rank': 'hotness_rank',
-  'supply_score': 'supply_score',
-  'demand_score': 'demand_score',
+  median_listing_price: 'median_listing_price',
+  median_listing_price_yy: 'median_listing_price_yy',
+  median_listing_price_mm: 'median_listing_price_mm',
+  median_listing_price_per_square_foot: 'median_listing_price_per_square_foot',
+  active_listing_count: 'inventory', // Component uses 'inventory'
+  active_listing_count_yy: 'active_listing_count_yy', // Component uses this exact name
+  median_days_on_market: 'median_days_on_market', // Component uses this exact name
+  new_listing_count: 'new_listings', // Component uses 'new_listings'
+  new_listing_count_yy: 'new_listing_count_yy', // Component uses this exact name
+  pending_listing_count: 'pending_sales', // Component uses 'pending_sales'
+  pending_listing_count_yy: 'pending_listing_count_yy', // Component uses this exact name
+  pending_ratio: 'pending_ratio',
+  price_reduced_share: 'price_reduced_share',
+  price_increased_share: 'price_increased_share',
+  hotness_score: 'hotness_score',
+  hotness_rank: 'hotness_rank',
+  supply_score: 'supply_score',
+  demand_score: 'demand_score',
 };
 
 // Metrics available at ALL geography levels (state, metro, county, zip)
@@ -114,7 +114,9 @@ export class PercentileService {
     periodDate: string,
   ): Promise<{ calculated: number; errors: number; errorDetails?: string[] }> {
     const table = this.getTableForGeography(geographyType);
-    console.log(`Calculating percentiles for ${geographyType} on ${periodDate} from table ${table}`);
+    console.log(
+      `Calculating percentiles for ${geographyType} on ${periodDate} from table ${table}`,
+    );
 
     // Fetch all rows for this date - wide format means each row has all metrics as columns
     const { data: rows, error: fetchError } = await this.supabase
@@ -123,7 +125,11 @@ export class PercentileService {
       .eq('period_date', periodDate);
 
     if (fetchError) {
-      console.error(`Error fetching data from ${table}:`, fetchError.message, fetchError.details);
+      console.error(
+        `Error fetching data from ${table}:`,
+        fetchError.message,
+        fetchError.details,
+      );
       return { calculated: 0, errors: 1 };
     }
 
@@ -132,7 +138,9 @@ export class PercentileService {
       return { calculated: 0, errors: 0 };
     }
 
-    console.log(`Found ${rows.length} rows for ${geographyType} on ${periodDate}`);
+    console.log(
+      `Found ${rows.length} rows for ${geographyType} on ${periodDate}`,
+    );
 
     // Debug: Log first row columns to understand data structure
     if (rows.length > 0) {
@@ -149,7 +157,9 @@ export class PercentileService {
 
     // Get metrics appropriate for this geography level
     const metricsToCalculate = getMetricsForGeography(geographyType);
-    console.log(`Calculating percentiles for ${metricsToCalculate.length} metrics`);
+    console.log(
+      `Calculating percentiles for ${metricsToCalculate.length} metrics`,
+    );
 
     // Calculate percentiles for each metric column
     const errorDetails: string[] = [];
@@ -167,7 +177,10 @@ export class PercentileService {
         }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        console.error(`Error calculating percentiles for ${metricName}:`, errMsg);
+        console.error(
+          `Error calculating percentiles for ${metricName}:`,
+          errMsg,
+        );
         errorDetails.push(`${metricName}: ${errMsg}`);
         errors++;
       }
@@ -175,10 +188,17 @@ export class PercentileService {
 
     // Log error details if any
     if (errorDetails.length > 0) {
-      console.error(`Error details for ${geographyType}/${periodDate}:`, errorDetails.slice(0, 3));
+      console.error(
+        `Error details for ${geographyType}/${periodDate}:`,
+        errorDetails.slice(0, 3),
+      );
     }
 
-    return { calculated, errors, errorDetails: errorDetails.length > 0 ? errorDetails : undefined };
+    return {
+      calculated,
+      errors,
+      errorDetails: errorDetails.length > 0 ? errorDetails : undefined,
+    };
   }
 
   /**
@@ -214,7 +234,11 @@ export class PercentileService {
       totalErrors += errors;
     }
 
-    return { calculated: totalCalculated, errors: totalErrors, dates: uniqueDates.length };
+    return {
+      calculated: totalCalculated,
+      errors: totalErrors,
+      dates: uniqueDates.length,
+    };
   }
 
   /**
@@ -272,7 +296,9 @@ export class PercentileService {
 
     if (values.length < 5) {
       // Need at least 5 values for meaningful percentiles (reduced from 10 for states)
-      console.log(`Skipping ${metricName}: only ${values.length} non-null values`);
+      console.log(
+        `Skipping ${metricName}: only ${values.length} non-null values`,
+      );
       return null;
     }
 
@@ -322,7 +348,7 @@ export class PercentileService {
 
     const { error } = await this.supabase.from('metric_percentiles').upsert(
       {
-        metric_name: internalMetricName,  // Use internal scoring metric names
+        metric_name: internalMetricName, // Use internal scoring metric names
         geography_type: stats.geographyType,
         period_date: stats.periodDate,
         p10: stats.p10,
@@ -379,7 +405,9 @@ export class PercentileService {
     const zoriTable = 'zillow_zori';
     const idColumn = this.getZillowIdColumn(geographyType);
 
-    console.log(`Calculating Zillow percentiles for ${geographyType} on ${periodDate}`);
+    console.log(
+      `Calculating Zillow percentiles for ${geographyType} on ${periodDate}`,
+    );
 
     let calculated = 0;
     let errors = 0;
@@ -392,21 +420,35 @@ export class PercentileService {
 
     if (zhviRows && zhviRows.length > 0) {
       // Calculate zhvi percentiles
-      const zhviStats = this.calculateMetricPercentilesFromRows(zhviRows, 'zhvi', geographyType, periodDate);
+      const zhviStats = this.calculateMetricPercentilesFromRows(
+        zhviRows,
+        'zhvi',
+        geographyType,
+        periodDate,
+      );
       if (zhviStats) {
         try {
           await this.savePercentiles(zhviStats);
           calculated++;
-        } catch { errors++; }
+        } catch {
+          errors++;
+        }
       }
 
       // Calculate zhvi_yoy percentiles
-      const zhviYoyStats = this.calculateMetricPercentilesFromRows(zhviRows, 'zhvi_yoy', geographyType, periodDate);
+      const zhviYoyStats = this.calculateMetricPercentilesFromRows(
+        zhviRows,
+        'zhvi_yoy',
+        geographyType,
+        periodDate,
+      );
       if (zhviYoyStats) {
         try {
           await this.savePercentiles(zhviYoyStats);
           calculated++;
-        } catch { errors++; }
+        } catch {
+          errors++;
+        }
       }
     }
 
@@ -420,34 +462,55 @@ export class PercentileService {
       // Filter by geography type
       const filteredRows = zoriRows.filter((row: Record<string, unknown>) => {
         switch (geographyType) {
-          case 'state': return row.state_abbrev != null;
-          case 'metro': return row.cbsa_code != null;
-          case 'county': return row.county_fips != null;
-          case 'zip': return row.zip_code != null;
-          default: return true;
+          case 'state':
+            return row.state_abbrev != null;
+          case 'metro':
+            return row.cbsa_code != null;
+          case 'county':
+            return row.county_fips != null;
+          case 'zip':
+            return row.zip_code != null;
+          default:
+            return true;
         }
       });
 
       // Calculate zori percentiles
-      const zoriStats = this.calculateMetricPercentilesFromRows(filteredRows, 'zori', geographyType, periodDate);
+      const zoriStats = this.calculateMetricPercentilesFromRows(
+        filteredRows,
+        'zori',
+        geographyType,
+        periodDate,
+      );
       if (zoriStats) {
         try {
           await this.savePercentiles(zoriStats);
           calculated++;
-        } catch { errors++; }
+        } catch {
+          errors++;
+        }
       }
 
       // Calculate zori_yoy percentiles
-      const zoriYoyStats = this.calculateMetricPercentilesFromRows(filteredRows, 'zori_yoy', geographyType, periodDate);
+      const zoriYoyStats = this.calculateMetricPercentilesFromRows(
+        filteredRows,
+        'zori_yoy',
+        geographyType,
+        periodDate,
+      );
       if (zoriYoyStats) {
         try {
           await this.savePercentiles(zoriYoyStats);
           calculated++;
-        } catch { errors++; }
+        } catch {
+          errors++;
+        }
       }
     }
 
-    console.log(`Zillow percentiles: calculated ${calculated}, errors ${errors}`);
+    console.log(
+      `Zillow percentiles: calculated ${calculated}, errors ${errors}`,
+    );
     return { calculated, errors };
   }
 
@@ -458,7 +521,9 @@ export class PercentileService {
     geographyType: GeographyType,
     periodDate: string,
   ): Promise<{ calculated: number; errors: number }> {
-    console.log(`Calculating derived metric percentiles for ${geographyType} on ${periodDate}`);
+    console.log(
+      `Calculating derived metric percentiles for ${geographyType} on ${periodDate}`,
+    );
 
     // Fetch calculated_metrics data
     const { data: rows } = await this.supabase
@@ -468,7 +533,9 @@ export class PercentileService {
       .eq('period_date', periodDate);
 
     if (!rows || rows.length === 0) {
-      console.log(`No calculated_metrics found for ${geographyType} on ${periodDate}`);
+      console.log(
+        `No calculated_metrics found for ${geographyType} on ${periodDate}`,
+      );
       return { calculated: 0, errors: 0 };
     }
 
@@ -480,8 +547,8 @@ export class PercentileService {
     // Metrics to calculate from calculated_metrics table
     const derivedMetrics = [
       'grm',
-      'cap_rate_proxy',  // Will be saved as 'cap_rate'
-      'annual_rent_price_ratio',  // Will be saved as 'gross_yield'
+      'cap_rate_proxy', // Will be saved as 'cap_rate'
+      'annual_rent_price_ratio', // Will be saved as 'gross_yield'
       'months_of_supply',
       'zhvi_yoy_change',
       'zori_yoy_change',
@@ -489,25 +556,34 @@ export class PercentileService {
 
     // Metric name mapping for derived metrics
     const derivedMetricMapping: Record<string, string> = {
-      'cap_rate_proxy': 'cap_rate',
-      'annual_rent_price_ratio': 'gross_yield',
-      'zhvi_yoy_change': 'zhvi_yoy',
-      'zori_yoy_change': 'zori_yoy',
+      cap_rate_proxy: 'cap_rate',
+      annual_rent_price_ratio: 'gross_yield',
+      zhvi_yoy_change: 'zhvi_yoy',
+      zori_yoy_change: 'zori_yoy',
     };
 
     for (const metric of derivedMetrics) {
-      const stats = this.calculateMetricPercentilesFromRows(rows, metric, geographyType, periodDate);
+      const stats = this.calculateMetricPercentilesFromRows(
+        rows,
+        metric,
+        geographyType,
+        periodDate,
+      );
       if (stats) {
         // Map to internal metric name if needed
         stats.metricName = derivedMetricMapping[metric] || metric;
         try {
           await this.savePercentiles(stats);
           calculated++;
-        } catch { errors++; }
+        } catch {
+          errors++;
+        }
       }
     }
 
-    console.log(`Derived percentiles: calculated ${calculated}, errors ${errors}`);
+    console.log(
+      `Derived percentiles: calculated ${calculated}, errors ${errors}`,
+    );
     return { calculated, errors };
   }
 
@@ -522,41 +598,62 @@ export class PercentileService {
     let totalErrors = 0;
 
     // 1. Realtor metrics
-    const realtor = await this.calculatePercentilesForDate(geographyType, periodDate);
+    const realtor = await this.calculatePercentilesForDate(
+      geographyType,
+      periodDate,
+    );
     totalCalculated += realtor.calculated;
     totalErrors += realtor.errors;
 
     // 2. Zillow metrics
-    const zillow = await this.calculateZillowPercentilesForDate(geographyType, periodDate);
+    const zillow = await this.calculateZillowPercentilesForDate(
+      geographyType,
+      periodDate,
+    );
     totalCalculated += zillow.calculated;
     totalErrors += zillow.errors;
 
     // 3. Derived/Calculated metrics
-    const derived = await this.calculateDerivedPercentilesForDate(geographyType, periodDate);
+    const derived = await this.calculateDerivedPercentilesForDate(
+      geographyType,
+      periodDate,
+    );
     totalCalculated += derived.calculated;
     totalErrors += derived.errors;
 
-    console.log(`Total percentiles for ${geographyType}/${periodDate}: ${totalCalculated} calculated, ${totalErrors} errors`);
+    console.log(
+      `Total percentiles for ${geographyType}/${periodDate}: ${totalCalculated} calculated, ${totalErrors} errors`,
+    );
     return { calculated: totalCalculated, errors: totalErrors };
   }
 
   private getZillowTableForGeography(geographyType: GeographyType): string {
     switch (geographyType) {
-      case 'state': return 'zillow_state';
-      case 'metro': return 'zillow_metro';
-      case 'county': return 'zillow_county';
-      case 'zip': return 'zillow_zip';
-      default: return 'zillow_metro';
+      case 'state':
+        return 'zillow_state';
+      case 'metro':
+        return 'zillow_metro';
+      case 'county':
+        return 'zillow_county';
+      case 'zip':
+        return 'zillow_zip';
+      default:
+        return 'zillow_metro';
     }
   }
 
   private getZillowIdColumn(geographyType: GeographyType): string {
     switch (geographyType) {
-      case 'state': return 'state_abbrev';
-      case 'metro': return 'cbsa_code';
-      case 'county': return 'county_fips';
-      case 'zip': return 'zip_code';
-      default: return 'cbsa_code';
+      case 'state':
+        return 'state_abbrev';
+      case 'metro':
+        return 'cbsa_code';
+      case 'county':
+        return 'county_fips';
+      case 'zip':
+        return 'zip_code';
+      default:
+        return 'cbsa_code';
     }
   }
 
@@ -564,9 +661,11 @@ export class PercentileService {
    * Debug endpoint to test saving a single percentile record
    * Returns the exact error message if upsert fails
    */
-  async debugTestSave(geographyType: GeographyType): Promise<Record<string, unknown>> {
+  async debugTestSave(
+    geographyType: GeographyType,
+  ): Promise<Record<string, unknown>> {
     const testData = {
-      metric_name: 'test_metric',  // Column is metric_name per migration 030
+      metric_name: 'test_metric', // Column is metric_name per migration 030
       geography_type: geographyType,
       period_date: '2024-01-01',
       p10: 10,
@@ -588,7 +687,9 @@ export class PercentileService {
 
     const { data, error } = await this.supabase
       .from('metric_percentiles')
-      .upsert(testData, { onConflict: 'metric_name,geography_type,period_date' })
+      .upsert(testData, {
+        onConflict: 'metric_name,geography_type,period_date',
+      })
       .select();
 
     if (error) {
@@ -622,7 +723,9 @@ export class PercentileService {
   /**
    * Debug endpoint to inspect raw data structure
    */
-  async debugInspectData(geographyType: GeographyType): Promise<Record<string, unknown>> {
+  async debugInspectData(
+    geographyType: GeographyType,
+  ): Promise<Record<string, unknown>> {
     const table = this.getTableForGeography(geographyType);
     const metricsToCalculate = getMetricsForGeography(geographyType);
 
@@ -676,7 +779,8 @@ export class PercentileService {
       for (const row of rows) {
         const val = row[metric];
         if (val !== null && val !== undefined) {
-          const numVal = typeof val === 'number' ? val : parseFloat(String(val));
+          const numVal =
+            typeof val === 'number' ? val : parseFloat(String(val));
           if (!isNaN(numVal) && isFinite(numVal)) {
             count++;
           }

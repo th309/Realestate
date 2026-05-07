@@ -135,7 +135,11 @@ export class NotesService {
   /**
    * Update a note
    */
-  async update(userId: string, noteId: string, dto: UpdateNoteDto): Promise<Note> {
+  async update(
+    userId: string,
+    noteId: string,
+    dto: UpdateNoteDto,
+  ): Promise<Note> {
     const client = this.supabase.getClient();
 
     const updateData: Record<string, unknown> = {

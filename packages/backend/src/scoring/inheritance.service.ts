@@ -201,7 +201,8 @@ export class InheritanceService {
         inheritedCount,
         directCount,
         missingCount,
-        completeness: total > 0 ? ((directCount + inheritedCount) / total) * 100 : 0,
+        completeness:
+          total > 0 ? ((directCount + inheritedCount) / total) * 100 : 0,
       };
     }
 
@@ -255,7 +256,8 @@ export class InheritanceService {
       inheritedCount,
       directCount,
       missingCount,
-      completeness: total > 0 ? ((directCount + inheritedCount) / total) * 100 : 0,
+      completeness:
+        total > 0 ? ((directCount + inheritedCount) / total) * 100 : 0,
     };
   }
 
@@ -342,10 +344,20 @@ export class InheritanceService {
             query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
+            query = query.eq(
+              'cbsa_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCbsaCode(geographyId)
+                : geographyId,
+            );
             break;
           case 'county':
-            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
+            query = query.eq(
+              'fips_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCountyFips(geographyId)
+                : geographyId,
+            );
             break;
           case 'national':
             // National table might use 'US' or have a single row
@@ -357,9 +369,12 @@ export class InheritanceService {
       } else if (tableName.startsWith('calculated_metrics')) {
         let id = geographyId;
         if (geographyType === 'zip') id = normalizeZipKey(geographyId);
-        else if (geographyType === 'state') id = normalizeStateToCode(geographyId);
-        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim())) id = normalizeCountyFips(geographyId);
-        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim())) id = normalizeCbsaCode(geographyId);
+        else if (geographyType === 'state')
+          id = normalizeStateToCode(geographyId);
+        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim()))
+          id = normalizeCountyFips(geographyId);
+        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim()))
+          id = normalizeCbsaCode(geographyId);
         query = query.eq('geography_id', id);
       } else if (tableName.startsWith('permits_')) {
         switch (geographyType) {
@@ -367,10 +382,20 @@ export class InheritanceService {
             query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
+            query = query.eq(
+              'cbsa_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCbsaCode(geographyId)
+                : geographyId,
+            );
             break;
           case 'county':
-            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
+            query = query.eq(
+              'fips_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCountyFips(geographyId)
+                : geographyId,
+            );
             break;
           default:
             return null;
@@ -381,10 +406,20 @@ export class InheritanceService {
             query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
+            query = query.eq(
+              'cbsa_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCbsaCode(geographyId)
+                : geographyId,
+            );
             break;
           case 'county':
-            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
+            query = query.eq(
+              'fips_code',
+              /^\d+$/.test(geographyId.trim())
+                ? normalizeCountyFips(geographyId)
+                : geographyId,
+            );
             break;
           case 'zip':
             query = query.eq('zcta', normalizeZipKey(geographyId));
@@ -398,9 +433,12 @@ export class InheritanceService {
       } else {
         let id = geographyId;
         if (geographyType === 'zip') id = normalizeZipKey(geographyId);
-        else if (geographyType === 'state') id = normalizeStateToCode(geographyId);
-        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim())) id = normalizeCountyFips(geographyId);
-        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim())) id = normalizeCbsaCode(geographyId);
+        else if (geographyType === 'state')
+          id = normalizeStateToCode(geographyId);
+        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim()))
+          id = normalizeCountyFips(geographyId);
+        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim()))
+          id = normalizeCbsaCode(geographyId);
         query = query.eq('geography_id', id);
       }
 

@@ -53,6 +53,8 @@ export interface DashboardData {
   };
   recentRuns: RunSummary[];
   reviewQueueCount: number;
+  upcomingAutoRuns?: Array<{ rule_name: string; format: string; matches: any[] }>;
+  costCapStatus?: { breached: boolean; usdSpent: number; usdCap: number };
 }
 
 export async function fetchDashboard(
@@ -87,6 +89,14 @@ export interface RankingRunParams {
   }>;
 }
 
+export interface CreateRunFormatOptions {
+  windowDays?: 30 | 90 | 180 | 365;
+  /** Long-form metro hero: id from bundled `metro-hero-options.json`. */
+  heroImageOptionId?: string;
+  /** Phase 3: video style reference id (Style Library). */
+  styleReferenceId?: string;
+}
+
 export async function createRun(payload: {
   format: string;
   marketQuery: string;
@@ -94,7 +104,7 @@ export async function createRun(payload: {
   approvalMode?: "auto" | "review" | "draft";
   selectedPlatforms?: string[];
   rankingParams?: RankingRunParams;
-  formatOptions?: { windowDays?: 30 | 90 | 180 | 365 };
+  formatOptions?: CreateRunFormatOptions;
 }) {
   const res = await fetchAPIRaw("/api/admin/content-pipeline/runs", {
     method: "POST",
@@ -181,6 +191,26 @@ export async function resolveMarket(query: string) {
   if (!res.ok) throw new Error(`resolveMarket failed: ${res.status}`);
   const json = (await res.json()) as { data: { matches: any[] } };
   return json.data.matches;
+}
+
+/** Curated skyline shots for long-form metro hero — `preview_url` is safe for `<img>`. */
+export interface MetroHeroOption {
+  id: string;
+  label: string;
+  license_note?: string;
+  preview_url: string;
+}
+
+export async function fetchMetroHeroOptions(
+  cbsaCode: string,
+): Promise<MetroHeroOption[]> {
+  const res = await fetchAPI<{
+    success?: boolean;
+    data: { options: MetroHeroOption[] };
+  }>(
+    `/api/admin/content-pipeline/metro-hero-options/${encodeURIComponent(cbsaCode)}`,
+  );
+  return res.data.options ?? [];
 }
 
 export async function fetchAssetSignedUrl(

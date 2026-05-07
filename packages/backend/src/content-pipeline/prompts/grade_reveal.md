@@ -7,7 +7,9 @@ Write a {{video_duration_seconds}}-second Grade Reveal script for {{canonical_na
 Data bundle (authoritative, do not use any other numbers):
 {{dataBundle}}
 
-Structure: open with the PropertyIQ Score and grade letter, explain what the score represents in one line, cite two supporting stats from the data bundle, close with this CTA verbatim: {{cta_text}}{{shortLinkPlaceholder}}
+Structure: open with the PropertyIQ Score and the **data-confidence letter** (A–F) from the data bundle. Explain what the score represents in one line, cite two supporting stats from the data bundle, close with this CTA verbatim: {{cta_text}}{{shortLinkPlaceholder}}
+
+Important: if you mention a confidence letter (A–F) at all, it MUST match the bundle. Do NOT mention a second/conflicting letter (e.g. "Grade B" near "confidence ... A") — that will fail Gate A.
 
 Hook options: produce {{variantCount}} alternative hooks. Hook A leads with the score number ("Cleveland's PropertyIQ Score just hit 78"). Hook B (if variantCount=2) leads with a contrast ("Most investors miss this: Cleveland outscores Austin by 9 points on PIQ").
 

@@ -147,3 +147,4 @@ scripts/analysis/data/
 
 # Windows artifacts
 NUL
+.claude/worktrees/

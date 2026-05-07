@@ -60,7 +60,9 @@ export class AlertsService {
   /**
    * List all alerts for a user, each enriched with its latest 3 history entries.
    */
-  async listAlerts(userId: string): Promise<(UserAlert & { recent_history: AlertHistoryEntry[] })[]> {
+  async listAlerts(
+    userId: string,
+  ): Promise<(UserAlert & { recent_history: AlertHistoryEntry[] })[]> {
     const client = this.supabase.getClient();
 
     const { data: alerts, error } = await client
@@ -144,7 +146,11 @@ export class AlertsService {
   /**
    * Update an alert's threshold, condition, or active status. Verifies ownership.
    */
-  async updateAlert(userId: string, alertId: string, dto: UpdateAlertDto): Promise<UserAlert> {
+  async updateAlert(
+    userId: string,
+    alertId: string,
+    dto: UpdateAlertDto,
+  ): Promise<UserAlert> {
     const client = this.supabase.getClient();
 
     const updateData: Record<string, unknown> = {
@@ -310,11 +316,13 @@ export class AlertsService {
     const access = entitlementsResult.access['feature:alerts_limit'];
 
     // 'full' access means unlimited (e.g. admin tier where value is -1)
-    if (access?.level === 'full') return { allowed: true, current: currentCount, limit: -1 };
+    if (access?.level === 'full')
+      return { allowed: true, current: currentCount, limit: -1 };
 
     // Numeric limit from 'preview' level
     const limit = access?.limit ?? 0;
-    if (limit === -1) return { allowed: true, current: currentCount, limit: -1 };
+    if (limit === -1)
+      return { allowed: true, current: currentCount, limit: -1 };
 
     return { allowed: currentCount < limit, current: currentCount, limit };
   }

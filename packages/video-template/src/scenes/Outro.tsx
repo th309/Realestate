@@ -17,7 +17,7 @@ interface OutroProps {
   marketName?: string;
 }
 
-export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
+export const Outro: React.FC<OutroProps> = ({ ctaUrl: _ctaUrl, ctaLabel }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
@@ -41,11 +41,6 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl, ctaLabel }) => {
 
   // Text stagger
   const line1Opacity = interpolate(frame, [20, 45], [0, 1], {
-    easing: Easing.ease,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const line2Opacity = interpolate(frame, [40, 65], [0, 1], {
     easing: Easing.ease,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

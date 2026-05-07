@@ -8,7 +8,10 @@ export class SessionManagerService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  async upsertSession(sessionId: string, events: IngestableEvent[]): Promise<void> {
+  async upsertSession(
+    sessionId: string,
+    events: IngestableEvent[],
+  ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { data: existing, error: selectError } = await client
@@ -18,15 +21,22 @@ export class SessionManagerService {
       .maybeSingle();
 
     if (selectError) {
-      this.logger.error(`Failed to query session ${sessionId}: ${selectError.message}`);
+      this.logger.error(
+        `Failed to query session ${sessionId}: ${selectError.message}`,
+      );
       return;
     }
 
-    const pageviewEvents = events.filter((e) => e.event_category === 'pageview');
+    const pageviewEvents = events.filter(
+      (e) => e.event_category === 'pageview',
+    );
     const pageviewCount = pageviewEvents.length;
     const firstEvent = events[0];
     const lastEvent = events[events.length - 1];
-    const props = (firstEvent?.properties ?? {}) as Record<string, string | undefined>;
+    const props = (firstEvent?.properties ?? {}) as Record<
+      string,
+      string | undefined
+    >;
 
     const landingPage =
       pageviewEvents[0]?.page_path ?? firstEvent?.page_path ?? null;
@@ -45,7 +55,9 @@ export class SessionManagerService {
         page_count: pageviewCount,
         is_bounce: pageviewCount <= 1,
         device_type: props['device_type'] ?? null,
-        screen_width: props['screen_width'] ? Number(props['screen_width']) : null,
+        screen_width: props['screen_width']
+          ? Number(props['screen_width'])
+          : null,
         browser: props['browser'] ?? null,
         os: props['os'] ?? null,
         referrer: props['referrer'] ?? null,
@@ -57,15 +69,21 @@ export class SessionManagerService {
       });
 
       if (insertError) {
-        this.logger.error(`Failed to insert session ${sessionId}: ${insertError.message}`);
+        this.logger.error(
+          `Failed to insert session ${sessionId}: ${insertError.message}`,
+        );
       }
       return;
     }
 
     const previousPageCount = existing.page_count ?? 0;
     const previousFeatureCount = existing.feature_events_count ?? 0;
-    const newFeatureCount = events.filter((e) => e.event_category === 'feature').length;
-    const hasFrustration = events.some((e) => e.event_category === 'frustration');
+    const newFeatureCount = events.filter(
+      (e) => e.event_category === 'feature',
+    ).length;
+    const hasFrustration = events.some(
+      (e) => e.event_category === 'frustration',
+    );
     const totalPageCount = previousPageCount + pageviewCount;
 
     const updatePayload: Record<string, unknown> = {
@@ -91,7 +109,9 @@ export class SessionManagerService {
       .eq('session_id', sessionId);
 
     if (updateError) {
-      this.logger.error(`Failed to update session ${sessionId}: ${updateError.message}`);
+      this.logger.error(
+        `Failed to update session ${sessionId}: ${updateError.message}`,
+      );
     }
   }
 
@@ -104,7 +124,9 @@ export class SessionManagerService {
       .eq('session_id', sessionId);
 
     if (error) {
-      this.logger.error(`Heartbeat update failed for session ${sessionId}: ${error.message}`);
+      this.logger.error(
+        `Heartbeat update failed for session ${sessionId}: ${error.message}`,
+      );
     }
   }
 
@@ -120,7 +142,9 @@ export class SessionManagerService {
       .limit(500);
 
     if (selectError) {
-      this.logger.error(`Failed to query stale sessions: ${selectError.message}`);
+      this.logger.error(
+        `Failed to query stale sessions: ${selectError.message}`,
+      );
       return;
     }
 

@@ -52,7 +52,7 @@ describe("Bottom 10 Ranking snapshots", () => {
     });
   }, 180_000);
 
-  it.each([0, 90, 180, 600, 1200, 1500, 1750])(
+  it.each([0, 90, 180, 600, 1200, 1300])(
     "renders frame %s within tolerance",
     async (frame) => {
       const outPath = path.resolve(__dirname, `bottom-10-ranking-${frame}.png`);

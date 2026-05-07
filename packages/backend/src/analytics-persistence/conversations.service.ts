@@ -44,7 +44,10 @@ export class ConversationsService {
   /**
    * Get all conversations for a user
    */
-  async getAll(userId: string, includeArchived = false): Promise<Conversation[]> {
+  async getAll(
+    userId: string,
+    includeArchived = false,
+  ): Promise<Conversation[]> {
     const client = this.supabase.getClient();
 
     let query = client
@@ -99,7 +102,10 @@ export class ConversationsService {
     const client = this.supabase.getClient();
 
     // Check if conversation exists
-    const existing = await this.getByConversationId(userId, dto.conversation_id);
+    const existing = await this.getByConversationId(
+      userId,
+      dto.conversation_id,
+    );
 
     const title = dto.title || this.generateTitle(dto.messages);
     const now = new Date().toISOString();
@@ -148,7 +154,9 @@ export class ConversationsService {
         throw new Error(error.message);
       }
 
-      this.logger.log(`Created conversation: ${dto.conversation_id} for user ${userId}`);
+      this.logger.log(
+        `Created conversation: ${dto.conversation_id} for user ${userId}`,
+      );
       return data;
     }
   }

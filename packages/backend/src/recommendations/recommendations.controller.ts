@@ -29,15 +29,15 @@ export class RecommendationsController {
    */
   @Get('markets-to-watch')
   async getMarketsToWatch(@AuthUserId() userId: string) {
-    this.logger.log(`GET /api/recommendations/markets-to-watch for user ${userId}`);
+    this.logger.log(
+      `GET /api/recommendations/markets-to-watch for user ${userId}`,
+    );
 
     try {
       const data = await this.service.getMarketsToWatch(userId);
       return { data };
     } catch (error) {
-      this.logger.error(
-        `Failed to get markets-to-watch: ${error.message}`,
-      );
+      this.logger.error(`Failed to get markets-to-watch: ${error.message}`);
       throw new HttpException(
         'Failed to generate recommendations',
         HttpStatus.INTERNAL_SERVER_ERROR,

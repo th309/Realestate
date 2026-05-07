@@ -45,9 +45,9 @@ describe('BacktestRunnerService', () => {
       lte: jest.fn().mockReturnThis(),
       not: jest.fn().mockReturnThis(),
       insert: jest.fn().mockResolvedValue({ error: null }),
-      then: jest.fn().mockImplementation((cb) =>
-        Promise.resolve(cb({ data, error })),
-      ),
+      then: jest
+        .fn()
+        .mockImplementation((cb) => Promise.resolve(cb({ data, error }))),
     };
   }
 
@@ -61,9 +61,11 @@ describe('BacktestRunnerService', () => {
             gte: jest.fn().mockReturnThis(),
             lte: jest.fn().mockReturnThis(),
             not: jest.fn().mockReturnThis(),
-            then: jest.fn().mockImplementation((cb) =>
-              Promise.resolve(cb({ data: scoreOutcomePairs, error: null })),
-            ),
+            then: jest
+              .fn()
+              .mockImplementation((cb) =>
+                Promise.resolve(cb({ data: scoreOutcomePairs, error: null })),
+              ),
           };
         }
         if (table === 'propertyiq_backtest_results') {
@@ -321,7 +323,8 @@ describe('BacktestRunnerService', () => {
         });
 
         if (result.pearsonCorrelation !== null && result.rSquared !== null) {
-          const expectedR2 = result.pearsonCorrelation * result.pearsonCorrelation;
+          const expectedR2 =
+            result.pearsonCorrelation * result.pearsonCorrelation;
           expect(result.rSquared).toBeCloseTo(expectedR2, 6);
         }
       });
@@ -475,8 +478,13 @@ describe('BacktestRunnerService', () => {
           outcomeHorizon: '1y',
         });
 
-        if (result.meanAbsoluteError !== null && result.rootMeanSquaredError !== null) {
-          expect(result.meanAbsoluteError).toBeLessThanOrEqual(result.rootMeanSquaredError);
+        if (
+          result.meanAbsoluteError !== null &&
+          result.rootMeanSquaredError !== null
+        ) {
+          expect(result.meanAbsoluteError).toBeLessThanOrEqual(
+            result.rootMeanSquaredError,
+          );
         }
       });
     });
@@ -699,9 +707,13 @@ describe('BacktestRunnerService', () => {
               lte: jest.fn().mockReturnThis(),
               not: jest.fn().mockReturnThis(),
               // Return a proper thenable that resolves to an error response
-              then: jest.fn().mockImplementation((cb: any) =>
-                Promise.resolve(cb({ data: null, error: { message: 'DB Error' } }))
-              ),
+              then: jest
+                .fn()
+                .mockImplementation((cb: any) =>
+                  Promise.resolve(
+                    cb({ data: null, error: { message: 'DB Error' } }),
+                  ),
+                ),
             };
           }
           if (table === 'propertyiq_backtest_results') {
@@ -779,9 +791,11 @@ describe('BacktestRunnerService', () => {
                   gte: jest.fn().mockReturnThis(),
                   lte: jest.fn().mockReturnThis(),
                   not: jest.fn().mockReturnThis(),
-                  then: jest.fn().mockImplementation((cb) =>
-                    Promise.resolve(cb({ data: pairs, error: null })),
-                  ),
+                  then: jest
+                    .fn()
+                    .mockImplementation((cb) =>
+                      Promise.resolve(cb({ data: pairs, error: null })),
+                    ),
                 };
               }),
             };
@@ -821,9 +835,11 @@ describe('BacktestRunnerService', () => {
                   gte: jest.fn().mockReturnThis(),
                   lte: jest.fn().mockReturnThis(),
                   not: jest.fn().mockReturnThis(),
-                  then: jest.fn().mockImplementation((cb) =>
-                    Promise.resolve(cb({ data: pairs, error: null })),
-                  ),
+                  then: jest
+                    .fn()
+                    .mockImplementation((cb) =>
+                      Promise.resolve(cb({ data: pairs, error: null })),
+                    ),
                 };
               }),
             };

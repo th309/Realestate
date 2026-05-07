@@ -39,10 +39,7 @@ export class WatchlistController {
    * GET /api/analytics/watchlist?folder=xxx
    */
   @Get()
-  async getAll(
-    @AuthUserId() userId: string,
-    @Query('folder') folder?: string,
-  ) {
+  async getAll(@AuthUserId() userId: string, @Query('folder') folder?: string) {
     this.logger.log(`GET /analytics/watchlist for user ${userId}`);
 
     try {
@@ -173,10 +170,7 @@ export class WatchlistController {
    * POST /api/analytics/watchlist
    */
   @Post()
-  async add(
-    @AuthUserId() userId: string,
-    @Body() dto: AddToWatchlistDto,
-  ) {
+  async add(@AuthUserId() userId: string, @Body() dto: AddToWatchlistDto) {
     this.logger.log(`POST /analytics/watchlist`);
 
     if (!dto.geography_type || !dto.geography_id) {

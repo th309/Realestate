@@ -18,9 +18,7 @@ export const DEEPSEEK_ANTHROPIC_BASE_URL_DEFAULT =
 export const DEFAULT_DEEPSEEK_SCRIPT_MODEL = 'deepseek-v4-flash';
 
 /** DeepSeek models that reject forced tool_use / tool_choice on the Anthropic-compatible API. */
-const DEEPSEEK_MODELS_WITHOUT_ANTHROPIC_TOOLS = new Set([
-  'deepseek-reasoner',
-]);
+const DEEPSEEK_MODELS_WITHOUT_ANTHROPIC_TOOLS = new Set(['deepseek-reasoner']);
 
 export type ContentPipelineLlmBackend = 'deepseek' | 'anthropic';
 
@@ -31,7 +29,8 @@ let bootLogged = false;
  * Else nominal `deepseek` so deploys without keys get one clear error (add DEEPSEEK_API_KEY).
  */
 export function resolveContentPipelineLlmBackend(): ContentPipelineLlmBackend {
-  const explicit = process.env.CONTENT_PIPELINE_LLM_PROVIDER?.trim().toLowerCase();
+  const explicit =
+    process.env.CONTENT_PIPELINE_LLM_PROVIDER?.trim().toLowerCase();
   if (explicit === 'anthropic') return 'anthropic';
   if (explicit === 'deepseek') return 'deepseek';
 
@@ -51,7 +50,9 @@ function rawScriptModelFromEnv(): string {
 /**
  * Content pipeline always uses Anthropic-style tool_choice. Map incompatible DeepSeek models.
  */
-export function coerceDeepSeekModelForAnthropicTools(requestedModel: string): string {
+export function coerceDeepSeekModelForAnthropicTools(
+  requestedModel: string,
+): string {
   if (resolveContentPipelineLlmBackend() !== 'deepseek') {
     return requestedModel;
   }
@@ -79,8 +80,7 @@ export function resolveRankingScriptLlmModel(): string {
 }
 
 export function resolveGateBVoiceJudgeModel(): string {
-  const raw =
-    process.env.GATE_B_JUDGE_MODEL?.trim() ?? rawScriptModelFromEnv();
+  const raw = process.env.GATE_B_JUDGE_MODEL?.trim() ?? rawScriptModelFromEnv();
   return coerceDeepSeekModelForAnthropicTools(raw);
 }
 

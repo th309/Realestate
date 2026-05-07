@@ -18,7 +18,9 @@ export class ReferralsService {
   ) {}
 
   /** Get or lazy-create a unique referral code for this user. */
-  async getOrCreateCode(userId: string): Promise<{ code: string; url: string }> {
+  async getOrCreateCode(
+    userId: string,
+  ): Promise<{ code: string; url: string }> {
     const client = this.supabase.getClient();
 
     const { data: existing } = await client
@@ -35,7 +37,8 @@ export class ReferralsService {
     let code: string;
     let attempts = 0;
     while (true) {
-      if (attempts++ > 5) throw new Error('Failed to generate unique referral code');
+      if (attempts++ > 5)
+        throw new Error('Failed to generate unique referral code');
       code = randomBytes(6).toString('base64url').slice(0, 8).toLowerCase();
 
       const { error } = await client
@@ -118,7 +121,10 @@ export class ReferralsService {
     });
 
     if (error) {
-      if (error.message.includes('unique') || error.message.includes('conflict')) {
+      if (
+        error.message.includes('unique') ||
+        error.message.includes('conflict')
+      ) {
         return { applied: false };
       }
       throw error;

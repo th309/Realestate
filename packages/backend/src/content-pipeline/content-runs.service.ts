@@ -6,6 +6,7 @@ import { QueueService } from './orchestrator/queue.service';
 import { ContentDataService } from './data/content-data.service';
 import { LeadMagnetKind } from './drivers/lead-magnet-renderer.interface';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
+import { CostCapService } from './auto-ideation/cost-cap.service';
 
 /**
  * Operations that *create* content-pipeline work: spawn a new run from
@@ -17,12 +18,25 @@ import { RankingResolverService } from './ranking/ranking-resolver.service';
  */
 @Injectable()
 export class ContentRunsService {
+  private readonly FORMAT_COST_ESTIMATES: Record<string, number> = {
+    grade_reveal: 0.05,
+    top_10_ranking: 0.08,
+    bottom_10_ranking: 0.08,
+    score_mover: 0.05,
+    head_to_head: 0.08,
+    farm_area_spotlight: 0.09,
+    brokerage_market_share: 0.09,
+    recruitment_angle: 0.1,
+    long_form_deep_dive: 2.2,
+  };
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly orchestrator: RunOrchestratorService,
     private readonly queueService: QueueService,
     private readonly contentData: ContentDataService,
     private readonly rankingResolver: RankingResolverService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async createRun(
@@ -57,6 +71,43 @@ export class ContentRunsService {
     if (!template) throw new Error(`format ${dto.format} not configured`);
     if (!template.enabled) throw new Error(`format ${dto.format} is disabled`);
 
+    // Auto-ideation caps are enforced at enqueue time only.
+    if (dto.triggeredBy === 'auto_ideation') {
+      const estimate = this.estimateCostUsd(dto.format);
+      const costCheck = await this.costCap.canEnqueue(estimate);
+      if (!costCheck.allowed) {
+        await client.from('auto_ideation_capped_events').insert({
+          rule_id: dto.autoIdeationRuleId ?? null,
+          format: dto.format,
+          reason: 'daily_cost_cap',
+          metadata: {
+            rule_name: dto.autoIdeationRuleName ?? null,
+            remainingUsd: costCheck.remainingUsd,
+            estimateUsd: estimate,
+            usdSpent: costCheck.usdSpent,
+            usdCap: costCheck.usdCap,
+          },
+        });
+        return { id: '', idempotencyKey: dto.idempotencyKey, status: 'capped' };
+      }
+
+      const formatCheck = await this.costCap.canEnqueueFormat(dto.format);
+      if (!formatCheck.allowed) {
+        await client.from('auto_ideation_capped_events').insert({
+          rule_id: dto.autoIdeationRuleId ?? null,
+          format: dto.format,
+          reason: 'format_daily_cap',
+          metadata: {
+            rule_name: dto.autoIdeationRuleName ?? null,
+            count: formatCheck.count,
+            cap: formatCheck.cap,
+          },
+        });
+        return { id: '', idempotencyKey: dto.idempotencyKey, status: 'capped' };
+      }
+      await this.costCap.incrementFormatCount(dto.format);
+    }
+
     // Persist the operator-approved ranking snapshot under format_options.ranking
     // so fetch-data has the markets to render against (skipping the
     // single-market resolveMarket lookup that fits other formats).
@@ -79,11 +130,22 @@ export class ContentRunsService {
         batch_id: dto.batchId ?? null,
         format_options: formatOptions,
         status: 'queued',
-        triggered_by: 'manual',
+        triggered_by: dto.triggeredBy ?? 'manual',
       })
       .select('id, status')
       .single();
     if (error) throw error;
+
+    if (dto.triggeredBy === 'auto_ideation') {
+      await client.from('content_run_events').insert({
+        run_id: inserted.id,
+        event_type: 'auto_ideation_enqueued',
+        payload: {
+          rule_id: dto.autoIdeationRuleId ?? null,
+          rule_name: dto.autoIdeationRuleName ?? null,
+        },
+      });
+    }
 
     await this.queueService.send('orchestrator', {
       runId: inserted.id,
@@ -98,6 +160,10 @@ export class ContentRunsService {
       idempotencyKey: dto.idempotencyKey,
       status: inserted.status,
     };
+  }
+
+  private estimateCostUsd(format: string): number {
+    return this.FORMAT_COST_ESTIMATES[format] ?? 0.1;
   }
 
   private async checkRankingDrift(params: RankingRunParams): Promise<void> {

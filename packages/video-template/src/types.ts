@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
+
 export type ScoreTier =
   | "excellent"
   | "great"
@@ -128,7 +130,7 @@ export const FORMAT_CONFIGS: Record<FormatKey, FormatConfig> = {
     width: 1920,
     height: 1080,
     fps: 30,
-    durationInFrames: 18000,
+    durationInFrames: LONG_FORM_MAX_DURATION_FRAMES,
   },
   farm_area_spotlight: {
     key: "farm_area_spotlight",
@@ -223,6 +225,11 @@ const ResolvedMarketShape = z.object({
   canonical_name: z.string(),
   geography: z.enum(["state", "metro", "county", "zip"]),
   id: z.string(),
+  /** Same `geographies` row as site map fly-to (ingested in fetch-data). */
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  /** Optional editorial skyline/hero URL for long-form (top metros). */
+  hero_image_url: z.string().optional(),
 });
 
 // Voiceover URL. When present, Remotion's <Audio> mounts it inside the

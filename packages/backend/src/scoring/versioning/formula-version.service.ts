@@ -220,7 +220,9 @@ export class FormulaVersionService {
       .eq('geography', geography);
 
     if (error) {
-      this.logger.error(`Error activating version ${version}: ${error.message}`);
+      this.logger.error(
+        `Error activating version ${version}: ${error.message}`,
+      );
       throw error;
     }
 
@@ -255,7 +257,9 @@ export class FormulaVersionService {
       .eq('geography', geography);
 
     if (error) {
-      this.logger.error(`Error setting default version ${version}: ${error.message}`);
+      this.logger.error(
+        `Error setting default version ${version}: ${error.message}`,
+      );
       throw error;
     }
 
@@ -275,12 +279,16 @@ export class FormulaVersionService {
     const targetVersion = await this.getVersion(version, scoreType, geography);
 
     if (!targetVersion) {
-      throw new Error(`Version ${version} not found for ${scoreType}/${geography}`);
+      throw new Error(
+        `Version ${version} not found for ${scoreType}/${geography}`,
+      );
     }
 
     await this.activateVersion(version, scoreType, geography);
 
-    this.logger.log(`Rolled back ${scoreType}/${geography} to version ${version}`);
+    this.logger.log(
+      `Rolled back ${scoreType}/${geography} to version ${version}`,
+    );
   }
 
   /**
@@ -301,10 +309,18 @@ export class FormulaVersionService {
     addedFeatures: string[];
     removedFeatures: string[];
     // Legacy support
-    weightChanges: Array<{ component: string; oldWeight: number; newWeight: number }>;
+    weightChanges: Array<{
+      component: string;
+      oldWeight: number;
+      newWeight: number;
+    }>;
     addedComponents: string[];
     removedComponents: string[];
-    metricChanges: Array<{ component: string; added: string[]; removed: string[] }>;
+    metricChanges: Array<{
+      component: string;
+      added: string[];
+      removed: string[];
+    }>;
   } {
     const result = {
       featureChanges: [] as Array<{
@@ -316,10 +332,18 @@ export class FormulaVersionService {
       }>,
       addedFeatures: [] as string[],
       removedFeatures: [] as string[],
-      weightChanges: [] as Array<{ component: string; oldWeight: number; newWeight: number }>,
+      weightChanges: [] as Array<{
+        component: string;
+        oldWeight: number;
+        newWeight: number;
+      }>,
       addedComponents: [] as string[],
       removedComponents: [] as string[],
-      metricChanges: [] as Array<{ component: string; added: string[]; removed: string[] }>,
+      metricChanges: [] as Array<{
+        component: string;
+        added: string[];
+        removed: string[];
+      }>,
     };
 
     // Compare features (new format)
@@ -329,8 +353,12 @@ export class FormulaVersionService {
     const featureNames1 = features1.map((f) => f.name);
     const featureNames2 = features2.map((f) => f.name);
 
-    result.addedFeatures = featureNames2.filter((n) => !featureNames1.includes(n));
-    result.removedFeatures = featureNames1.filter((n) => !featureNames2.includes(n));
+    result.addedFeatures = featureNames2.filter(
+      (n) => !featureNames1.includes(n),
+    );
+    result.removedFeatures = featureNames1.filter(
+      (n) => !featureNames2.includes(n),
+    );
 
     // Compare shared features
     for (const f1 of features1) {
@@ -353,10 +381,16 @@ export class FormulaVersionService {
     const componentNames1 = Object.keys(components1);
     const componentNames2 = Object.keys(components2);
 
-    result.addedComponents = componentNames2.filter((c) => !componentNames1.includes(c));
-    result.removedComponents = componentNames1.filter((c) => !componentNames2.includes(c));
+    result.addedComponents = componentNames2.filter(
+      (c) => !componentNames1.includes(c),
+    );
+    result.removedComponents = componentNames1.filter(
+      (c) => !componentNames2.includes(c),
+    );
 
-    const sharedComponents = componentNames1.filter((c) => componentNames2.includes(c));
+    const sharedComponents = componentNames1.filter((c) =>
+      componentNames2.includes(c),
+    );
 
     for (const component of sharedComponents) {
       const config1 = components1[component];

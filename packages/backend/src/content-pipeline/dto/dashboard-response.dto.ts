@@ -22,4 +22,6 @@ export interface DashboardResponseDto {
     signups?: number;
   }>;
   reviewQueueCount: number;
+  upcomingAutoRuns?: Array<{ rule_name: string; format: string; matches: any[] }>;
+  costCapStatus?: { breached: boolean; usdSpent: number; usdCap: number };
 }

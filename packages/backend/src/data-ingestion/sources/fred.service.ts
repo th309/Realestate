@@ -3,257 +3,311 @@ import axios from 'axios';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { TimeSeriesRecord } from '../types';
 
-const PIPELINE_API_URL = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+const PIPELINE_API_URL =
+  process.env.INTERNAL_API_URL || 'http://localhost:3001';
 
 async function reportPipelineStatus(
-    source: string,
-    status: 'success' | 'partial' | 'failed',
-    totalInserted: number,
-    totalFailed: number,
-    durationMs: number,
-    geographies: Array<{ id: string; table: string; status: 'success' | 'partial' | 'failed' | 'skipped'; inserted: number; failed: number }>
+  source: string,
+  status: 'success' | 'partial' | 'failed',
+  totalInserted: number,
+  totalFailed: number,
+  durationMs: number,
+  geographies: Array<{
+    id: string;
+    table: string;
+    status: 'success' | 'partial' | 'failed' | 'skipped';
+    inserted: number;
+    failed: number;
+  }>,
 ): Promise<void> {
-    const apiKey = process.env.PIPELINE_API_KEY;
-    if (!apiKey) return;
-    try {
-        await fetch(`${PIPELINE_API_URL}/api/health/pipeline-status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-            body: JSON.stringify({ source, status, totalInserted, totalFailed, durationMs, geographies, timestamp: new Date().toISOString() })
-        });
-    } catch { /* fire-and-forget: never block import on reporting failure */ }
+  const apiKey = process.env.PIPELINE_API_KEY;
+  if (!apiKey) return;
+  try {
+    await fetch(`${PIPELINE_API_URL}/api/health/pipeline-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        source,
+        status,
+        totalInserted,
+        totalFailed,
+        durationMs,
+        geographies,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    /* fire-and-forget: never block import on reporting failure */
+  }
 }
 
 const FRED_API_BASE = 'https://api.stlouisfed.org/fred/series/observations';
 const UNITED_STATES_REGION_ID = '102001';
 
 interface FREDResponse {
-    observations: {
-        date: string;
-        value: string;
-    }[];
-    realtime_start: string;
-    realtime_end: string;
+  observations: {
+    date: string;
+    value: string;
+  }[];
+  realtime_start: string;
+  realtime_end: string;
 }
 
 const FRED_VALID_RANGES: Record<string, [number, number]> = {
-    mortgage_rate_30yr: [1, 25],
-    mortgage_rate_15yr: [1, 25],
-    unemployment_rate: [0, 30],
+  mortgage_rate_30yr: [1, 25],
+  mortgage_rate_15yr: [1, 25],
+  unemployment_rate: [0, 30],
 };
 
 const FRED_SERIES = {
-    mortgage_rate_30yr: {
-        series_id: 'MORTGAGE30US',
-        metric_name: 'mortgage_rate_30yr',
-        description: '30-Year Fixed Rate Mortgage Average'
-    },
-    mortgage_rate_15yr: {
-        series_id: 'MORTGAGE15US',
-        metric_name: 'mortgage_rate_15yr',
-        description: '15-Year Fixed Rate Mortgage Average'
-    },
-    unemployment_rate: {
-        series_id: 'UNRATE',
-        metric_name: 'unemployment_rate',
-        description: 'Unemployment Rate'
-    }
+  mortgage_rate_30yr: {
+    series_id: 'MORTGAGE30US',
+    metric_name: 'mortgage_rate_30yr',
+    description: '30-Year Fixed Rate Mortgage Average',
+  },
+  mortgage_rate_15yr: {
+    series_id: 'MORTGAGE15US',
+    metric_name: 'mortgage_rate_15yr',
+    description: '15-Year Fixed Rate Mortgage Average',
+  },
+  unemployment_rate: {
+    series_id: 'UNRATE',
+    metric_name: 'unemployment_rate',
+    description: 'Unemployment Rate',
+  },
 };
 
 @Injectable()
 export class FredService {
-    private readonly logger = new Logger(FredService.name);
+  private readonly logger = new Logger(FredService.name);
 
-    constructor(private readonly supabaseService: SupabaseService) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
-    async importFREDData(
-        seriesKeys: string[] = ['mortgage_rate_30yr'],
-        apiKey?: string
-    ): Promise<any> {
-        const supabase = this.supabaseService.getClient();
-        const fredApiKey = apiKey || process.env.FRED_API_KEY;
+  async importFREDData(
+    seriesKeys: string[] = ['mortgage_rate_30yr'],
+    apiKey?: string,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const fredApiKey = apiKey || process.env.FRED_API_KEY;
 
-        if (!fredApiKey) {
-            throw new Error('FRED API key is required. Set FRED_API_KEY environment variable or pass as parameter.');
-        }
+    if (!fredApiKey) {
+      throw new Error(
+        'FRED API key is required. Set FRED_API_KEY environment variable or pass as parameter.',
+      );
+    }
 
-        this.logger.log(`Starting FRED import for: ${seriesKeys.join(', ')}`);
+    this.logger.log(`Starting FRED import for: ${seriesKeys.join(', ')}`);
 
-        const startedAt = Date.now();
+    const startedAt = Date.now();
 
-        // Ensure United States region exists
-        const { error: marketError } = await supabase
-            .from('markets')
-            .upsert({
-                region_id: UNITED_STATES_REGION_ID,
-                region_name: 'United States',
-                region_type: 'country'
-            }, {
-                onConflict: 'region_id',
-                ignoreDuplicates: false
-            });
+    // Ensure United States region exists
+    const { error: marketError } = await supabase.from('markets').upsert(
+      {
+        region_id: UNITED_STATES_REGION_ID,
+        region_name: 'United States',
+        region_type: 'country',
+      },
+      {
+        onConflict: 'region_id',
+        ignoreDuplicates: false,
+      },
+    );
 
-        if (marketError) {
-            this.logger.warn(`Could not ensure United States region exists: ${marketError.message}`);
-        } else {
-            this.logger.log('United States region verified');
-        }
+    if (marketError) {
+      this.logger.warn(
+        `Could not ensure United States region exists: ${marketError.message}`,
+      );
+    } else {
+      this.logger.log('United States region verified');
+    }
 
-        let totalRecordsInserted = 0;
-        let totalValidationErrors = 0;
-        const errors: any[] = [];
+    let totalRecordsInserted = 0;
+    let totalValidationErrors = 0;
+    const errors: any[] = [];
 
-        for (const seriesKey of seriesKeys) {
-            const series = FRED_SERIES[seriesKey as keyof typeof FRED_SERIES];
+    for (const seriesKey of seriesKeys) {
+      const series = FRED_SERIES[seriesKey as keyof typeof FRED_SERIES];
 
-            if (!series) {
-                this.logger.warn(`Unknown series: ${seriesKey}`);
-                continue;
+      if (!series) {
+        this.logger.warn(`Unknown series: ${seriesKey}`);
+        continue;
+      }
+
+      try {
+        this.logger.log(
+          `Fetching ${series.description} (${series.series_id})...`,
+        );
+
+        const url = `${FRED_API_BASE}?series_id=${series.series_id}&api_key=${fredApiKey}&file_type=json&observation_start=2000-01-01`;
+
+        const response = await axios.get<FREDResponse>(url, {
+          timeout: 30000,
+        });
+
+        const observations = response.data.observations || [];
+        this.logger.log(`Fetched ${observations.length} observations`);
+
+        const timeSeriesData: TimeSeriesRecord[] = [];
+        let seriesValidationErrors = 0;
+
+        for (const obs of observations) {
+          const value = parseFloat(obs.value);
+
+          if (!isNaN(value) && obs.value !== '.') {
+            const range = FRED_VALID_RANGES[series.metric_name];
+            if (range && (value < range[0] || value > range[1])) {
+              this.logger.warn(
+                `Out-of-range FRED value for ${series.metric_name} [${obs.date}]: ${value}`,
+              );
+              seriesValidationErrors++;
+              continue;
             }
+            timeSeriesData.push({
+              region_id: UNITED_STATES_REGION_ID,
+              date: obs.date,
+              metric_name: series.metric_name,
+              metric_value: value,
+              data_source: 'fred',
+              attributes: {
+                series_id: series.series_id,
+              },
+            });
+          }
+        }
+        totalValidationErrors += seriesValidationErrors;
+
+        this.logger.log(
+          `Prepared ${timeSeriesData.length} records for insertion`,
+        );
+
+        if (timeSeriesData.length > 0) {
+          const batchSize = 1000; // Increased batch size
+          let inserted = 0;
+
+          // Convert to wide format for economic_national table
+          // Since FRED fetches one series at a time, we upsert rows with just that column.
+          // Table: economic_national (region_id, period_date, metric_column...)
+
+          const tableName = 'economic_national';
+          const columnName = series.metric_name;
+
+          // Map timeSeriesData (metrics) to table records
+          const recordsToUpsert = timeSeriesData.map((ts) => ({
+            region_id: ts.region_id,
+            period_date: ts.date,
+            [columnName]: ts.metric_value,
+          }));
+
+          for (let i = 0; i < recordsToUpsert.length; i += batchSize) {
+            const batch = recordsToUpsert.slice(i, i + batchSize);
 
             try {
-                this.logger.log(`Fetching ${series.description} (${series.series_id})...`);
+              const { error } = await supabase.from(tableName).upsert(batch, {
+                onConflict: 'region_id,period_date',
+                ignoreDuplicates: false, // Should update the column if row exists
+              });
 
-                const url = `${FRED_API_BASE}?series_id=${series.series_id}&api_key=${fredApiKey}&file_type=json&observation_start=2000-01-01`;
-
-                const response = await axios.get<FREDResponse>(url, {
-                    timeout: 30000
-                });
-
-                const observations = response.data.observations || [];
-                this.logger.log(`Fetched ${observations.length} observations`);
-
-                const timeSeriesData: TimeSeriesRecord[] = [];
-                let seriesValidationErrors = 0;
-
-                for (const obs of observations) {
-                    const value = parseFloat(obs.value);
-
-                    if (!isNaN(value) && obs.value !== '.') {
-                        const range = FRED_VALID_RANGES[series.metric_name];
-                        if (range && (value < range[0] || value > range[1])) {
-                            this.logger.warn(`Out-of-range FRED value for ${series.metric_name} [${obs.date}]: ${value}`);
-                            seriesValidationErrors++;
-                            continue;
-                        }
-                        timeSeriesData.push({
-                            region_id: UNITED_STATES_REGION_ID,
-                            date: obs.date,
-                            metric_name: series.metric_name,
-                            metric_value: value,
-                            data_source: 'fred',
-                            attributes: {
-                                series_id: series.series_id
-                            }
-                        });
-                    }
-                }
-                totalValidationErrors += seriesValidationErrors;
-
-                this.logger.log(`Prepared ${timeSeriesData.length} records for insertion`);
-
-                if (timeSeriesData.length > 0) {
-                    const batchSize = 1000; // Increased batch size
-                    let inserted = 0;
-
-                    // Convert to wide format for economic_national table
-                    // Since FRED fetches one series at a time, we upsert rows with just that column.
-                    // Table: economic_national (region_id, period_date, metric_column...)
-
-                    const tableName = 'economic_national';
-                    const columnName = series.metric_name;
-
-                    // Map timeSeriesData (metrics) to table records
-                    const recordsToUpsert = timeSeriesData.map(ts => ({
-                        region_id: ts.region_id,
-                        period_date: ts.date,
-                        [columnName]: ts.metric_value
-                    }));
-
-                    for (let i = 0; i < recordsToUpsert.length; i += batchSize) {
-                        const batch = recordsToUpsert.slice(i, i + batchSize);
-
-                        try {
-                            const { error } = await supabase
-                                .from(tableName)
-                                .upsert(batch, {
-                                    onConflict: 'region_id,period_date',
-                                    ignoreDuplicates: false // Should update the column if row exists
-                                });
-
-                            if (error) {
-                                this.logger.error(`Error upserting batch to ${tableName}: ${error.message}`);
-                                errors.push({
-                                    series: seriesKey,
-                                    error: error.message,
-                                    code: error.code
-                                });
-                            } else {
-                                inserted += batch.length;
-                            }
-                        } catch (err: any) {
-                            this.logger.error(`Exception during upsert to ${tableName}: ${err.message}`);
-                            errors.push({
-                                series: seriesKey,
-                                error: err.message
-                            });
-                        }
-                    }
-
-                    totalRecordsInserted += inserted;
-                    this.logger.log(`Successfully imported ${inserted} records for ${series.description}`);
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-            } catch (error: any) {
-                this.logger.error(`Error fetching ${series.description}: ${error.message}`);
+              if (error) {
+                this.logger.error(
+                  `Error upserting batch to ${tableName}: ${error.message}`,
+                );
                 errors.push({
-                    series: seriesKey,
-                    error: error.message
+                  series: seriesKey,
+                  error: error.message,
+                  code: error.code,
                 });
+              } else {
+                inserted += batch.length;
+              }
+            } catch (err: any) {
+              this.logger.error(
+                `Exception during upsert to ${tableName}: ${err.message}`,
+              );
+              errors.push({
+                series: seriesKey,
+                error: err.message,
+              });
             }
+          }
+
+          totalRecordsInserted += inserted;
+          this.logger.log(
+            `Successfully imported ${inserted} records for ${series.description}`,
+          );
         }
 
-        this.logger.log(`FRED Import Summary: Total records inserted: ${totalRecordsInserted}, Validation errors: ${totalValidationErrors}`);
-        if (errors.length > 0) {
-            this.logger.error(`Errors: ${errors.length}`);
-        }
-
-        const totalAttempted = totalRecordsInserted + totalValidationErrors;
-        const validationErrorRate = totalAttempted > 0 ? totalValidationErrors / totalAttempted : 0;
-        const hasHighValidationErrorRate = validationErrorRate > 0.05;
-
-        let overallStatus: 'success' | 'partial' | 'failed';
-        if (errors.length === 0 && totalValidationErrors === 0) {
-            overallStatus = 'success';
-        } else if (totalRecordsInserted > 0) {
-            overallStatus = 'partial';
-        } else {
-            overallStatus = 'failed';
-        }
-
-        const errorSummary = [
-            errors.length > 0 ? `${errors.length} DB errors` : null,
-            hasHighValidationErrorRate
-                ? `${totalValidationErrors} validation errors (${(validationErrorRate * 100).toFixed(1)}% of records out of range)`
-                : totalValidationErrors > 0
-                ? `${totalValidationErrors} validation errors`
-                : null,
-        ].filter(Boolean).join('; ');
-
-        await reportPipelineStatus('fred', overallStatus, totalRecordsInserted, errors.length + totalValidationErrors, Date.now() - startedAt, [
-            { id: 'economic_national', table: 'economic_national', status: overallStatus, inserted: totalRecordsInserted, failed: errors.length + totalValidationErrors }
-        ]);
-
-        return {
-            success: overallStatus === 'success',
-            recordsInserted: totalRecordsInserted,
-            validationErrors: totalValidationErrors,
-            errors,
-            message: errorSummary
-                ? `Imported FRED data: ${totalRecordsInserted} records. ${errorSummary}`
-                : `Imported FRED data: ${totalRecordsInserted} records`
-        };
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error: any) {
+        this.logger.error(
+          `Error fetching ${series.description}: ${error.message}`,
+        );
+        errors.push({
+          series: seriesKey,
+          error: error.message,
+        });
+      }
     }
+
+    this.logger.log(
+      `FRED Import Summary: Total records inserted: ${totalRecordsInserted}, Validation errors: ${totalValidationErrors}`,
+    );
+    if (errors.length > 0) {
+      this.logger.error(`Errors: ${errors.length}`);
+    }
+
+    const totalAttempted = totalRecordsInserted + totalValidationErrors;
+    const validationErrorRate =
+      totalAttempted > 0 ? totalValidationErrors / totalAttempted : 0;
+    const hasHighValidationErrorRate = validationErrorRate > 0.05;
+
+    let overallStatus: 'success' | 'partial' | 'failed';
+    if (errors.length === 0 && totalValidationErrors === 0) {
+      overallStatus = 'success';
+    } else if (totalRecordsInserted > 0) {
+      overallStatus = 'partial';
+    } else {
+      overallStatus = 'failed';
+    }
+
+    const errorSummary = [
+      errors.length > 0 ? `${errors.length} DB errors` : null,
+      hasHighValidationErrorRate
+        ? `${totalValidationErrors} validation errors (${(validationErrorRate * 100).toFixed(1)}% of records out of range)`
+        : totalValidationErrors > 0
+          ? `${totalValidationErrors} validation errors`
+          : null,
+    ]
+      .filter(Boolean)
+      .join('; ');
+
+    await reportPipelineStatus(
+      'fred',
+      overallStatus,
+      totalRecordsInserted,
+      errors.length + totalValidationErrors,
+      Date.now() - startedAt,
+      [
+        {
+          id: 'economic_national',
+          table: 'economic_national',
+          status: overallStatus,
+          inserted: totalRecordsInserted,
+          failed: errors.length + totalValidationErrors,
+        },
+      ],
+    );
+
+    return {
+      success: overallStatus === 'success',
+      recordsInserted: totalRecordsInserted,
+      validationErrors: totalValidationErrors,
+      errors,
+      message: errorSummary
+        ? `Imported FRED data: ${totalRecordsInserted} records. ${errorSummary}`
+        : `Imported FRED data: ${totalRecordsInserted} records`,
+    };
+  }
 }

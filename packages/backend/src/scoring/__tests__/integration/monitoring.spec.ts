@@ -332,7 +332,9 @@ describe('Confidence Monitoring', () => {
 
       await monitoringService.checkConfidenceDrop();
 
-      expect(alertService.wasCalledWith({ type: 'CONFIDENCE_DROP' })).toBe(true);
+      expect(alertService.wasCalledWith({ type: 'CONFIDENCE_DROP' })).toBe(
+        true,
+      );
 
       const alerts = alertService.getAlerts();
       const dropAlert = alerts.find((a) => a.type === 'CONFIDENCE_DROP');
@@ -360,11 +362,16 @@ describe('Confidence Monitoring', () => {
       await monitoringService.checkConfidenceDrop();
 
       expect(
-        alertService.wasCalledWith({ type: 'CONFIDENCE_CRITICAL', severity: 'critical' }),
+        alertService.wasCalledWith({
+          type: 'CONFIDENCE_CRITICAL',
+          severity: 'critical',
+        }),
       ).toBe(true);
 
       const alerts = alertService.getAlerts();
-      const criticalAlert = alerts.find((a) => a.type === 'CONFIDENCE_CRITICAL');
+      const criticalAlert = alerts.find(
+        (a) => a.type === 'CONFIDENCE_CRITICAL',
+      );
       expect(criticalAlert?.details.status).toBe('broken');
     });
 
@@ -388,7 +395,9 @@ describe('Confidence Monitoring', () => {
 
       await monitoringService.checkConfidenceDrop();
 
-      expect(alertService.wasCalledWith({ type: 'CONFIDENCE_DROP' })).toBe(false);
+      expect(alertService.wasCalledWith({ type: 'CONFIDENCE_DROP' })).toBe(
+        false,
+      );
     });
   });
 });
@@ -439,7 +448,9 @@ describe('Score Anomaly Detection', () => {
     it('fires alert when score differs >15 points from neighboring ZIPs', async () => {
       await anomalyService.checkSpatialAnomalies('90210', 45, [68, 72, 71, 69]);
 
-      expect(alertService.wasCalledWith({ type: 'SPATIAL_ANOMALY' })).toBe(true);
+      expect(alertService.wasCalledWith({ type: 'SPATIAL_ANOMALY' })).toBe(
+        true,
+      );
 
       const alerts = alertService.getAlerts();
       const spatialAlert = alerts.find((a) => a.type === 'SPATIAL_ANOMALY');
@@ -449,33 +460,48 @@ describe('Score Anomaly Detection', () => {
     it('does not fire spatial anomaly for normal variance', async () => {
       await anomalyService.checkSpatialAnomalies('90210', 70, [68, 72, 71, 69]);
 
-      expect(alertService.wasCalledWith({ type: 'SPATIAL_ANOMALY' })).toBe(false);
+      expect(alertService.wasCalledWith({ type: 'SPATIAL_ANOMALY' })).toBe(
+        false,
+      );
     });
   });
 
   describe('Mass Score Changes', () => {
     it('fires critical alert when >10% of scores change >15 points', async () => {
       const batchResults = [
-        ...Array(85).fill(0).map((_, i) => ({ geographyId: `geo-${i}`, change: 5 })),
-        ...Array(15).fill(0).map((_, i) => ({ geographyId: `geo-${85 + i}`, change: 20 })),
+        ...Array(85)
+          .fill(0)
+          .map((_, i) => ({ geographyId: `geo-${i}`, change: 5 })),
+        ...Array(15)
+          .fill(0)
+          .map((_, i) => ({ geographyId: `geo-${85 + i}`, change: 20 })),
       ];
 
       await anomalyService.checkMassScoreChanges(batchResults);
 
       expect(
-        alertService.wasCalledWith({ type: 'MASS_SCORE_CHANGE', severity: 'critical' }),
+        alertService.wasCalledWith({
+          type: 'MASS_SCORE_CHANGE',
+          severity: 'critical',
+        }),
       ).toBe(true);
     });
 
     it('does not fire alert when <10% of scores change significantly', async () => {
       const batchResults = [
-        ...Array(95).fill(0).map((_, i) => ({ geographyId: `geo-${i}`, change: 5 })),
-        ...Array(5).fill(0).map((_, i) => ({ geographyId: `geo-${95 + i}`, change: 20 })),
+        ...Array(95)
+          .fill(0)
+          .map((_, i) => ({ geographyId: `geo-${i}`, change: 5 })),
+        ...Array(5)
+          .fill(0)
+          .map((_, i) => ({ geographyId: `geo-${95 + i}`, change: 20 })),
       ];
 
       await anomalyService.checkMassScoreChanges(batchResults);
 
-      expect(alertService.wasCalledWith({ type: 'MASS_SCORE_CHANGE' })).toBe(false);
+      expect(alertService.wasCalledWith({ type: 'MASS_SCORE_CHANGE' })).toBe(
+        false,
+      );
     });
   });
 });
@@ -502,9 +528,12 @@ describe('Data Pipeline Monitoring', () => {
 
       await freshnessService.checkDataFreshness();
 
-      expect(alertService.wasCalledWith({ type: 'STALE_DATA_SOURCE', severity: 'warning' })).toBe(
-        true,
-      );
+      expect(
+        alertService.wasCalledWith({
+          type: 'STALE_DATA_SOURCE',
+          severity: 'warning',
+        }),
+      ).toBe(true);
     });
 
     it('fires critical alert when any data source is >30 days stale', async () => {
@@ -516,7 +545,10 @@ describe('Data Pipeline Monitoring', () => {
       await freshnessService.checkDataFreshness();
 
       expect(
-        alertService.wasCalledWith({ type: 'STALE_DATA_SOURCE', severity: 'critical' }),
+        alertService.wasCalledWith({
+          type: 'STALE_DATA_SOURCE',
+          severity: 'critical',
+        }),
       ).toBe(true);
     });
 
@@ -601,7 +633,7 @@ describe('Alert Thresholds', () => {
     DEGRADATION_THRESHOLD: 10,
     SCORE_CHANGE_THRESHOLD: 20,
     SPATIAL_DEVIATION_THRESHOLD: 15,
-    MASS_CHANGE_PERCENTAGE: 0.10,
+    MASS_CHANGE_PERCENTAGE: 0.1,
     STALE_DATA_DAYS_WARNING: 7,
     STALE_DATA_DAYS_CRITICAL: 30,
   };
@@ -627,7 +659,7 @@ describe('Alert Thresholds', () => {
   });
 
   it('mass change percentage is 10%', () => {
-    expect(ALERT_THRESHOLDS.MASS_CHANGE_PERCENTAGE).toBe(0.10);
+    expect(ALERT_THRESHOLDS.MASS_CHANGE_PERCENTAGE).toBe(0.1);
   });
 
   it('stale data warning is 7 days', () => {

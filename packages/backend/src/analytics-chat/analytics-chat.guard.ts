@@ -101,7 +101,9 @@ export class ChatAuthGuard implements CanActivate {
     return { valid: false, error: 'No valid authentication provided' };
   }
 
-  private async validateSupabaseJwt(token: string): Promise<JwtValidationResult> {
+  private async validateSupabaseJwt(
+    token: string,
+  ): Promise<JwtValidationResult> {
     try {
       const supabase = this.supabaseService.getClient();
 
@@ -158,7 +160,9 @@ export class ChatAuthGuard implements CanActivate {
   }
 
   private isValidUserId(userId: string): boolean {
-    return typeof userId === 'string' && userId.length > 0 && userId.length < 256;
+    return (
+      typeof userId === 'string' && userId.length > 0 && userId.length < 256
+    );
   }
 }
 
@@ -182,7 +186,8 @@ export class ConversationOwnershipGuard implements CanActivate {
       return true; // Let other guards handle missing data
     }
 
-    const owner = ConversationOwnershipGuard.conversationOwners.get(conversationId);
+    const owner =
+      ConversationOwnershipGuard.conversationOwners.get(conversationId);
 
     // If no owner yet, this is a new conversation - claim it
     if (!owner) {
@@ -195,7 +200,9 @@ export class ConversationOwnershipGuard implements CanActivate {
       this.logger.warn(
         `[ChatAuth] User ${userId} attempted to access conversation owned by ${owner}`,
       );
-      throw new UnauthorizedException('You do not have access to this conversation');
+      throw new UnauthorizedException(
+        'You do not have access to this conversation',
+      );
     }
 
     return true;
@@ -241,15 +248,19 @@ export class ChatRateLimitGuard implements CanActivate {
   private readonly WINDOW_MS = 60 * 1000; // 1 minute
 
   // Track requests per user
-  private requestCounts: Map<string, { count: number; windowStart: number }> = new Map();
+  private requestCounts: Map<string, { count: number; windowStart: number }> =
+    new Map();
 
   // Cleanup old entries every 5 minutes
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupOldEntries();
-    }, 5 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanupOldEntries();
+      },
+      5 * 60 * 1000,
+    );
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -268,7 +279,9 @@ export class ChatRateLimitGuard implements CanActivate {
     this.requestCounts.set(identifier, entry);
 
     if (entry.count > this.RATE_LIMIT) {
-      const retryAfter = Math.ceil((entry.windowStart + this.WINDOW_MS - now) / 1000);
+      const retryAfter = Math.ceil(
+        (entry.windowStart + this.WINDOW_MS - now) / 1000,
+      );
       this.logger.warn(
         `[RateLimit] User ${identifier} exceeded rate limit (${entry.count}/${this.RATE_LIMIT})`,
       );
@@ -277,7 +290,10 @@ export class ChatRateLimitGuard implements CanActivate {
       response.setHeader('Retry-After', retryAfter);
       response.setHeader('X-RateLimit-Limit', this.RATE_LIMIT);
       response.setHeader('X-RateLimit-Remaining', 0);
-      response.setHeader('X-RateLimit-Reset', entry.windowStart + this.WINDOW_MS);
+      response.setHeader(
+        'X-RateLimit-Reset',
+        entry.windowStart + this.WINDOW_MS,
+      );
 
       throw new UnauthorizedException(
         `Rate limit exceeded. Try again in ${retryAfter} seconds.`,
@@ -287,7 +303,10 @@ export class ChatRateLimitGuard implements CanActivate {
     // Add rate limit headers
     const response = context.switchToHttp().getResponse();
     response.setHeader('X-RateLimit-Limit', this.RATE_LIMIT);
-    response.setHeader('X-RateLimit-Remaining', Math.max(0, this.RATE_LIMIT - entry.count));
+    response.setHeader(
+      'X-RateLimit-Remaining',
+      Math.max(0, this.RATE_LIMIT - entry.count),
+    );
     response.setHeader('X-RateLimit-Reset', entry.windowStart + this.WINDOW_MS);
 
     return true;

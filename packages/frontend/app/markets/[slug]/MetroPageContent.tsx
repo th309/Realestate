@@ -32,7 +32,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
   ).slice(0, 5);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 overflow-x-hidden min-w-0">
       {/* Breadcrumb */}
       <nav
         className="text-sm text-on-surface-variant mb-6"
@@ -50,7 +50,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       </nav>
 
       {/* H1 */}
-      <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3">
+      <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3 break-words">
         {metro.shortName} Housing Market
       </h1>
       <p className="text-on-surface-variant mb-8 max-w-2xl">
@@ -58,7 +58,10 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       </p>
 
       {/* Scores */}
-      <section className="mb-10" onMouseEnter={() => void recordMilestone("first_score_explored")}>
+      <section
+        className="mb-10"
+        onMouseEnter={() => void recordMilestone("first_score_explored")}
+      >
         <h2 className="text-xl font-semibold text-on-surface mb-4">
           PropertyIQ Scores
         </h2>

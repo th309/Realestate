@@ -45,7 +45,8 @@ export class GrandfatheringController {
     this.logger.log(`GET /admin/grandfathering/user/${userId}`);
 
     try {
-      const records = await this.grandfatheringService.getUserGrandfathering(userId);
+      const records =
+        await this.grandfatheringService.getUserGrandfathering(userId);
       return {
         success: true,
         data: records,
@@ -68,7 +69,8 @@ export class GrandfatheringController {
     this.logger.log('GET /admin/grandfathering');
 
     try {
-      const records = await this.grandfatheringService.getAllActiveGrandfathering();
+      const records =
+        await this.grandfatheringService.getAllActiveGrandfathering();
       return {
         success: true,
         data: records,
@@ -98,7 +100,8 @@ export class GrandfatheringController {
     }
 
     try {
-      const record = await this.grandfatheringService.createGrandfathering(body);
+      const record =
+        await this.grandfatheringService.createGrandfathering(body);
       return {
         success: true,
         data: record,
@@ -145,10 +148,7 @@ export class GrandfatheringController {
    * PUT /api/admin/grandfathering/:id/extend
    */
   @Put(':id/extend')
-  async extend(
-    @Param('id') id: string,
-    @Body() body: { expiresAt: string },
-  ) {
+  async extend(@Param('id') id: string, @Body() body: { expiresAt: string }) {
     this.logger.log(`PUT /admin/grandfathering/${id}/extend`);
 
     if (!body.expiresAt) {
@@ -176,7 +176,8 @@ export class GrandfatheringController {
    */
   @Post('apply-tier-change')
   async applyTierChange(
-    @Body() body: {
+    @Body()
+    body: {
       userId: string;
       fromTier: string;
       toTier: string;
@@ -193,12 +194,13 @@ export class GrandfatheringController {
     }
 
     try {
-      const records = await this.grandfatheringService.applyPoliciesOnTierChange(
-        body.userId,
-        body.fromTier,
-        body.toTier,
-        body.grantedBy,
-      );
+      const records =
+        await this.grandfatheringService.applyPoliciesOnTierChange(
+          body.userId,
+          body.fromTier,
+          body.toTier,
+          body.grantedBy,
+        );
       return {
         success: true,
         data: records,
@@ -225,9 +227,10 @@ export class GrandfatheringController {
     this.logger.log('GET /admin/grandfathering/policies');
 
     try {
-      const policies = active === 'true'
-        ? await this.grandfatheringService.getActivePolicies()
-        : await this.grandfatheringService.getPolicies();
+      const policies =
+        active === 'true'
+          ? await this.grandfatheringService.getActivePolicies()
+          : await this.grandfatheringService.getPolicies();
       return {
         success: true,
         data: policies,
@@ -249,7 +252,12 @@ export class GrandfatheringController {
   async createPolicy(@Body() body: Omit<GrandfatherPolicy, 'id'>) {
     this.logger.log('POST /admin/grandfathering/policies');
 
-    if (!body.name || !body.trigger_type || !body.grandfather_type || !body.duration_type) {
+    if (
+      !body.name ||
+      !body.trigger_type ||
+      !body.grandfather_type ||
+      !body.duration_type
+    ) {
       throw new HttpException(
         'name, trigger_type, grandfather_type, and duration_type are required',
         HttpStatus.BAD_REQUEST,

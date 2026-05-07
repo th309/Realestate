@@ -18,8 +18,7 @@ export class BenchmarksController {
 
   @Get(':geoLevel/:geoId')
   @ApiOperation({
-    summary:
-      'Compare a geography\'s metric values against its parent geography',
+    summary: "Compare a geography's metric values against its parent geography",
   })
   @ApiParam({ name: 'geoLevel', enum: VALID_GEO_LEVELS })
   @ApiParam({

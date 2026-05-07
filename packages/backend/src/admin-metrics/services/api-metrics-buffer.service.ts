@@ -66,9 +66,7 @@ export class ApiMetricsBufferService {
     const rows: Record<string, unknown>[] = [];
 
     for (const [endpoint, group] of grouped.entries()) {
-      const durations = group
-        .map((e) => e.duration_ms)
-        .sort((a, b) => a - b);
+      const durations = group.map((e) => e.duration_ms).sort((a, b) => a - b);
 
       const errorCount = group.filter((e) => e.status_code >= 400).length;
 

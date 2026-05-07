@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { RecoverStuckRunsCron } from './recover-stuck-runs.cron';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { QueueService } from '../orchestrator/queue.service';
+import { StallDetectorService } from '../observability/stall-detector.service';
 
 describe('RecoverStuckRunsCron', () => {
   let cron: RecoverStuckRunsCron;
@@ -9,6 +10,7 @@ describe('RecoverStuckRunsCron', () => {
 
   beforeEach(async () => {
     sendSpy = jest.fn().mockResolvedValue('job-id');
+    const stallSpy = jest.fn().mockResolvedValue(undefined);
     const oldEventTime = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const newEventTime = new Date(Date.now() - 1 * 60 * 1000).toISOString();
 
@@ -59,12 +61,14 @@ describe('RecoverStuckRunsCron', () => {
       }),
     };
     const queue = { send: sendSpy };
+    const stalls = { reportStall: stallSpy };
 
     const module = await Test.createTestingModule({
       providers: [
         RecoverStuckRunsCron,
         { provide: SupabaseService, useValue: supabase },
         { provide: QueueService, useValue: queue },
+        { provide: StallDetectorService, useValue: stalls },
       ],
     }).compile();
     cron = module.get(RecoverStuckRunsCron);

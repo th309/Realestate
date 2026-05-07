@@ -38,7 +38,10 @@ function audioFrameAtMs(ms: number): number {
   return AUDIO_START_FRAME + Math.max(0, Math.round((ms / 1000) * FPS));
 }
 
-function charOffsetToWordIndex(normalizedScript: string, charOffset: number): number {
+function charOffsetToWordIndex(
+  normalizedScript: string,
+  charOffset: number,
+): number {
   const prefix = normalizedScript.slice(0, charOffset);
   if (!prefix.trim()) return 0;
   return prefix.trim().split(/\s+/).length;

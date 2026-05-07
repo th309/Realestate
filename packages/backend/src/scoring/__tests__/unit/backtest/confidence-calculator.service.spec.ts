@@ -43,14 +43,18 @@ describe('ConfidenceCalculatorService', () => {
       ],
     }).compile();
 
-    service = module.get<ConfidenceCalculatorService>(ConfidenceCalculatorService);
+    service = module.get<ConfidenceCalculatorService>(
+      ConfidenceCalculatorService,
+    );
   });
 
   // ============================================================================
   // Helper Functions
   // ============================================================================
 
-  function createBacktestResult(overrides: Partial<BacktestResult> = {}): BacktestResult {
+  function createBacktestResult(
+    overrides: Partial<BacktestResult> = {},
+  ): BacktestResult {
     return {
       runId: 'test-run-id',
       scoreType: 'homeready',
@@ -135,7 +139,8 @@ describe('ConfidenceCalculatorService', () => {
         );
 
         // The difference should be approximately 25 points (50% correlation difference × 0.5 weight)
-        const difference = highR2Confidence.confidenceScore - lowR2Confidence.confidenceScore;
+        const difference =
+          highR2Confidence.confidenceScore - lowR2Confidence.confidenceScore;
         expect(difference).toBeGreaterThan(20);
         expect(difference).toBeLessThan(30);
       });
@@ -209,7 +214,9 @@ describe('ConfidenceCalculatorService', () => {
           oldConfidence.confidenceScore,
         );
         // But difference should be at most ~20 points (full recency weight)
-        expect(recentConfidence.confidenceScore - oldConfidence.confidenceScore).toBeLessThan(25);
+        expect(
+          recentConfidence.confidenceScore - oldConfidence.confidenceScore,
+        ).toBeLessThan(25);
       });
     });
 
@@ -248,7 +255,10 @@ describe('ConfidenceCalculatorService', () => {
         );
 
         // Verify it falls in monitor range
-        if (confidence.confidenceScore >= 55 && confidence.confidenceScore < 70) {
+        if (
+          confidence.confidenceScore >= 55 &&
+          confidence.confidenceScore < 70
+        ) {
           expect(confidence.status).toBe('monitor');
           expect(confidence.confidenceLevel).toBe('medium');
         }
@@ -269,7 +279,10 @@ describe('ConfidenceCalculatorService', () => {
         );
 
         // Verify it falls in review range
-        if (confidence.confidenceScore >= 40 && confidence.confidenceScore < 55) {
+        if (
+          confidence.confidenceScore >= 40 &&
+          confidence.confidenceScore < 55
+        ) {
           expect(confidence.status).toBe('review');
           expect(confidence.confidenceLevel).toBe('low');
         }
@@ -605,7 +618,8 @@ describe('ConfidenceCalculatorService', () => {
       );
 
       // Double the sample shouldn't double the score
-      const improvement = doubleTargetConf.sampleSizeScore - atTargetConf.sampleSizeScore;
+      const improvement =
+        doubleTargetConf.sampleSizeScore - atTargetConf.sampleSizeScore;
       expect(improvement).toBeLessThan(20); // Diminishing returns
     });
   });
@@ -743,10 +757,14 @@ describe('ConfidenceCalculatorService', () => {
       );
 
       // Check decimal precision
-      const decimals = (confidence.confidenceScore.toString().split('.')[1] || '').length;
+      const decimals = (
+        confidence.confidenceScore.toString().split('.')[1] || ''
+      ).length;
       expect(decimals).toBeLessThanOrEqual(2);
 
-      const corrDecimals = (confidence.correlationScore.toString().split('.')[1] || '').length;
+      const corrDecimals = (
+        confidence.correlationScore.toString().split('.')[1] || ''
+      ).length;
       expect(corrDecimals).toBeLessThanOrEqual(2);
     });
   });

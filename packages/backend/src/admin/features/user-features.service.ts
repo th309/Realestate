@@ -47,7 +47,10 @@ export class UserFeaturesService {
   /**
    * Get all features for a user with resolution
    */
-  async getUserFeatures(userId: string, tierSlug?: string): Promise<ResolvedFeatures> {
+  async getUserFeatures(
+    userId: string,
+    tierSlug?: string,
+  ): Promise<ResolvedFeatures> {
     const client = this.supabase.getClient();
 
     // Get user's tier (default to 'free' if not set)
@@ -63,13 +66,16 @@ export class UserFeaturesService {
     const { data: tierFeatures } = await client
       .from('tier_features')
       .select('feature_id, value')
-      .eq('tier_id', (
-        await client
-          .from('subscription_tiers')
-          .select('id')
-          .eq('slug', effectiveTier)
-          .single()
-      ).data?.id);
+      .eq(
+        'tier_id',
+        (
+          await client
+            .from('subscription_tiers')
+            .select('id')
+            .eq('slug', effectiveTier)
+            .single()
+        ).data?.id,
+      );
 
     // Get user overrides
     const { data: overrides } = await client
@@ -81,7 +87,9 @@ export class UserFeaturesService {
     // Get grandfathered features
     const { data: grandfathered } = await client
       .from('user_grandfathering')
-      .select('feature_id, original_feature_value, grandfathered_type, original_tier_snapshot, expires_at')
+      .select(
+        'feature_id, original_feature_value, grandfathered_type, original_tier_snapshot, expires_at',
+      )
       .eq('user_id', userId)
       .eq('is_active', true)
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
@@ -92,12 +100,21 @@ export class UserFeaturesService {
       tierFeatureMap.set(tf.feature_id, tf.value);
     }
 
-    const overrideMap = new Map<string, { value: unknown; expires_at?: string }>();
+    const overrideMap = new Map<
+      string,
+      { value: unknown; expires_at?: string }
+    >();
     for (const o of overrides || []) {
-      overrideMap.set(o.feature_id, { value: o.value, expires_at: o.expires_at });
+      overrideMap.set(o.feature_id, {
+        value: o.value,
+        expires_at: o.expires_at,
+      });
     }
 
-    const grandfatherMap = new Map<string, { value: unknown; expires_at?: string }>();
+    const grandfatherMap = new Map<
+      string,
+      { value: unknown; expires_at?: string }
+    >();
     for (const g of grandfathered || []) {
       if (g.grandfathered_type === 'feature' && g.feature_id) {
         grandfatherMap.set(g.feature_id, {
@@ -166,7 +183,11 @@ export class UserFeaturesService {
   /**
    * Check if a user has access to a specific feature
    */
-  async hasFeature(userId: string, featureSlug: string, tierSlug?: string): Promise<boolean> {
+  async hasFeature(
+    userId: string,
+    featureSlug: string,
+    tierSlug?: string,
+  ): Promise<boolean> {
     const resolved = await this.getUserFeatures(userId, tierSlug);
     const value = resolved.features[featureSlug];
 
@@ -182,7 +203,11 @@ export class UserFeaturesService {
   /**
    * Get a feature limit for a user
    */
-  async getFeatureLimit(userId: string, featureSlug: string, tierSlug?: string): Promise<number> {
+  async getFeatureLimit(
+    userId: string,
+    featureSlug: string,
+    tierSlug?: string,
+  ): Promise<number> {
     const resolved = await this.getUserFeatures(userId, tierSlug);
     return resolved.limits[featureSlug] ?? 0;
   }
@@ -213,22 +238,27 @@ export class UserFeaturesService {
       throw new Error(`Feature not found: ${featureSlug}`);
     }
 
-    const { error } = await client.from('user_feature_overrides').upsert({
-      user_id: userId,
-      feature_id: feature.id,
-      value,
-      reason: options?.reason,
-      granted_by: options?.grantedBy,
-      expires_at: options?.expiresAt,
-    }, {
-      onConflict: 'user_id,feature_id',
-    });
+    const { error } = await client.from('user_feature_overrides').upsert(
+      {
+        user_id: userId,
+        feature_id: feature.id,
+        value,
+        reason: options?.reason,
+        granted_by: options?.grantedBy,
+        expires_at: options?.expiresAt,
+      },
+      {
+        onConflict: 'user_id,feature_id',
+      },
+    );
 
     if (error) {
       throw new Error(error.message);
     }
 
-    this.logger.log(`Created override for user ${userId}: ${featureSlug} = ${JSON.stringify(value)}`);
+    this.logger.log(
+      `Created override for user ${userId}: ${featureSlug} = ${JSON.stringify(value)}`,
+    );
   }
 
   /**
@@ -262,7 +292,8 @@ export class UserFeaturesService {
 
     const { data, error } = await client
       .from('user_feature_overrides')
-      .select(`
+      .select(
+        `
         id,
         user_id,
         value,
@@ -271,7 +302,8 @@ export class UserFeaturesService {
         expires_at,
         created_at,
         feature:feature_definitions(slug, name)
-      `)
+      `,
+      )
       .eq('user_id', userId);
 
     if (error) {

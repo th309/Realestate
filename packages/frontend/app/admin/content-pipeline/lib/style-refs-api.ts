@@ -45,6 +45,48 @@ export async function createStyleReference(body: {
   return json.data;
 }
 
+export async function ingestVideoUrl(body: {
+  url: string;
+  label: string;
+}): Promise<StyleReference> {
+  const res = await fetchAPIRaw(
+    "/api/admin/content-pipeline/style-references/ingest-video-url",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`ingestVideoUrl failed: ${res.status} ${t}`);
+  }
+  const json = (await res.json()) as { data: StyleReference };
+  return json.data;
+}
+
+export async function uploadVideoReference(body: {
+  label: string;
+  file: File;
+}): Promise<StyleReference> {
+  const form = new FormData();
+  form.append("label", body.label);
+  form.append("file", body.file);
+  const res = await fetchAPIRaw(
+    "/api/admin/content-pipeline/style-references/upload-video",
+    {
+      method: "POST",
+      body: form,
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`uploadVideo failed: ${res.status} ${t}`);
+  }
+  const json = (await res.json()) as { data: StyleReference };
+  return json.data;
+}
+
 export async function reExtractStyleReference(
   id: string,
 ): Promise<StyleReference> {

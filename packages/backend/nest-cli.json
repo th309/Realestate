@@ -8,6 +8,10 @@
       {
         "include": "content-pipeline/prompts/**/*.md",
         "outDir": "dist"
+      },
+      {
+        "include": "content-pipeline/data/**/*.json",
+        "outDir": "dist"
       }
     ],
     "watchAssets": true

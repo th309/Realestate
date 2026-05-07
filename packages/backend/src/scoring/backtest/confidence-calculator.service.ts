@@ -72,20 +72,29 @@ export class ConfidenceCalculatorService {
     );
 
     if (relevantResults.length === 0) {
-      return this.createEmptyConfidence(scoreType, geographyType, formulaVersion);
+      return this.createEmptyConfidence(
+        scoreType,
+        geographyType,
+        formulaVersion,
+      );
     }
 
     // Use the most recent result (typically 1-year horizon as primary)
     const primaryResult =
-      relevantResults.find((r) => r.outcomeHorizon === '1y') || relevantResults[0];
+      relevantResults.find((r) => r.outcomeHorizon === '1y') ||
+      relevantResults[0];
 
     // Calculate component scores
-    const correlationScore = this.calculateCorrelationScore(primaryResult.rSquared);
+    const correlationScore = this.calculateCorrelationScore(
+      primaryResult.rSquared,
+    );
     const sampleSizeScore = this.calculateSampleSizeScore(
       primaryResult.sampleCount,
       geographyType,
     );
-    const recencyScore = this.calculateRecencyScore(primaryResult.backtestEndDate);
+    const recencyScore = this.calculateRecencyScore(
+      primaryResult.backtestEndDate,
+    );
 
     // Weighted combination
     const confidenceScore =
@@ -168,7 +177,11 @@ export class ConfidenceCalculatorService {
       geographyType: data.geography_type as GeographyType,
       formulaVersion: data.formula_version,
       confidenceScore: data.confidence_score,
-      confidenceLevel: data.confidence_level as 'high' | 'medium' | 'low' | 'broken',
+      confidenceLevel: data.confidence_level as
+        | 'high'
+        | 'medium'
+        | 'low'
+        | 'broken',
       status: data.status as 'healthy' | 'monitor' | 'review' | 'broken',
       correlationScore: data.correlation_score,
       sampleSizeScore: data.sample_size_score,
@@ -198,7 +211,11 @@ export class ConfidenceCalculatorService {
       geographyType: d.geography_type as GeographyType,
       formulaVersion: d.formula_version,
       confidenceScore: d.confidence_score,
-      confidenceLevel: d.confidence_level as 'high' | 'medium' | 'low' | 'broken',
+      confidenceLevel: d.confidence_level as
+        | 'high'
+        | 'medium'
+        | 'low'
+        | 'broken',
       status: d.status as 'healthy' | 'monitor' | 'review' | 'broken',
       correlationScore: d.correlation_score,
       sampleSizeScore: d.sample_size_score,
@@ -222,7 +239,10 @@ export class ConfidenceCalculatorService {
     return Math.min(100, (rSquared / 0.5) * 100);
   }
 
-  private calculateSampleSizeScore(sampleCount: number, geographyType: GeographyType): number {
+  private calculateSampleSizeScore(
+    sampleCount: number,
+    geographyType: GeographyType,
+  ): number {
     const target = SAMPLE_SIZE_TARGETS[geographyType] || 100;
 
     // Logarithmic scaling to prevent over-weighting large samples
@@ -241,7 +261,8 @@ export class ConfidenceCalculatorService {
   private calculateRecencyScore(backtestEndDate: string): number {
     const endDate = new Date(backtestEndDate);
     const now = new Date();
-    const daysSince = (now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
+    const daysSince =
+      (now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
 
     // Full score if within 30 days
     // 50% score at 90 days

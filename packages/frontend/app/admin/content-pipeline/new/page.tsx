@@ -19,6 +19,10 @@ export type WizardMode = "single" | "batch" | "top_movers";
 
 export interface WizardFormatOptions {
   windowDays?: ScoreMoverWindowDays;
+  /** Long-form metro only — passed to render as format_options.heroImageOptionId */
+  heroImageOptionId?: string;
+  /** Phase 3: Style Library video reference id → render styleVariant selection */
+  styleReferenceId?: string;
 }
 
 type RankingArgs = {
@@ -134,8 +138,22 @@ export default function NewRunPage() {
           topMoversGeo={topMoversGeo}
           onTopMoversGeoChange={setTopMoversGeo}
           onBack={() => setStep("format")}
-          onPickSingle={(m) => {
+          onPickSingle={(m, opts) => {
             setMarket(m);
+            if (format === "long_form_deep_dive") {
+              if (opts?.heroImageOptionId) {
+                setFormatOptions((cur) => ({
+                  ...cur,
+                  heroImageOptionId: opts.heroImageOptionId,
+                }));
+              } else {
+                setFormatOptions((cur) => {
+                  const next = { ...cur };
+                  delete next.heroImageOptionId;
+                  return next;
+                });
+              }
+            }
             setStep("confirm");
           }}
           onPickBatch={(markets) => {
@@ -157,6 +175,7 @@ export default function NewRunPage() {
           market={market}
           batchMarkets={batchMarkets}
           formatOptions={formatOptions}
+          onFormatOptionsChange={setFormatOptions}
           onBack={() => setStep("market")}
           onCreatedSingle={(id) =>
             router.push(`/admin/content-pipeline/runs/${id}`)

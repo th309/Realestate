@@ -54,7 +54,9 @@ export class PaywallAnalyticsService {
   }): Promise<PaywallStats> {
     const client = this.supabase.getClient();
     const endDate = options?.endDate || new Date().toISOString();
-    const startDate = options?.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const startDate =
+      options?.startDate ||
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     // Get total views and clicks
     const { data: viewsData } = await client
@@ -80,7 +82,8 @@ export class PaywallAnalyticsService {
 
     const paywallViews = viewsCount || 0;
     const upgradeClicks = clicksCount || 0;
-    const conversionRate = paywallViews > 0 ? (upgradeClicks / paywallViews) * 100 : 0;
+    const conversionRate =
+      paywallViews > 0 ? (upgradeClicks / paywallViews) * 100 : 0;
 
     // Get top blocked resources
     const { data: resourceData } = await client
@@ -187,9 +190,7 @@ export class PaywallAnalyticsService {
   }): Promise<{ events: PaywallEvent[]; total: number }> {
     const client = this.supabase.getClient();
 
-    let query = client
-      .from('paywall_events')
-      .select('*', { count: 'exact' });
+    let query = client.from('paywall_events').select('*', { count: 'exact' });
 
     if (options?.eventType) {
       query = query.eq('event_type', options.eventType);
@@ -203,7 +204,10 @@ export class PaywallAnalyticsService {
       .limit(options?.limit || 50);
 
     if (options?.offset) {
-      query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+      query = query.range(
+        options.offset,
+        options.offset + (options.limit || 50) - 1,
+      );
     }
 
     const { data, error, count } = await query;
@@ -231,7 +235,9 @@ export class PaywallAnalyticsService {
   }> {
     const client = this.supabase.getClient();
     const endDate = options?.endDate || new Date().toISOString();
-    const startDate = options?.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const startDate =
+      options?.startDate ||
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const { count: views } = await client
       .from('paywall_events')
@@ -263,7 +269,8 @@ export class PaywallAnalyticsService {
       clicks: clickCount,
       conversions: conversionCount,
       viewToClickRate: viewCount > 0 ? (clickCount / viewCount) * 100 : 0,
-      clickToConvertRate: clickCount > 0 ? (conversionCount / clickCount) * 100 : 0,
+      clickToConvertRate:
+        clickCount > 0 ? (conversionCount / clickCount) * 100 : 0,
       overallRate: viewCount > 0 ? (conversionCount / viewCount) * 100 : 0,
     };
   }

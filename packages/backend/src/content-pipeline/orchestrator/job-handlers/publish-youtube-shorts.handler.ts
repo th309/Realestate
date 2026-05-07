@@ -22,7 +22,10 @@ export class PublishYouTubeShortsHandler {
     private readonly longFormPublisher: YouTubeLongFormPublisher,
   ) {}
 
-  async handle(runId: string, platform: Platform = 'youtube_shorts'): Promise<void> {
+  async handle(
+    runId: string,
+    platform: Platform = 'youtube_shorts',
+  ): Promise<void> {
     if (platform === 'youtube_long') {
       await this.handleYouTubeLong(runId);
       return;

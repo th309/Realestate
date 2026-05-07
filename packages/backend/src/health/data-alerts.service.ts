@@ -9,7 +9,12 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 export interface DataAlert {
   id: string;
-  alertType: 'source_unavailable' | 'source_stale' | 'pipeline_failed' | 'schema_change' | 'coverage_drop';
+  alertType:
+    | 'source_unavailable'
+    | 'source_stale'
+    | 'pipeline_failed'
+    | 'schema_change'
+    | 'coverage_drop';
   severity: 'critical' | 'warning' | 'info';
   sourceName?: string;
   pipelineName?: string;
@@ -104,7 +109,10 @@ export class DataAlertsService {
     }
   }
 
-  async acknowledgeAlert(alertId: string, userId?: string): Promise<{ success: boolean }> {
+  async acknowledgeAlert(
+    alertId: string,
+    userId?: string,
+  ): Promise<{ success: boolean }> {
     const client = this.supabase.getClient();
 
     try {
@@ -129,7 +137,11 @@ export class DataAlertsService {
     }
   }
 
-  async resolveAlert(alertId: string, userId?: string, notes?: string): Promise<{ success: boolean }> {
+  async resolveAlert(
+    alertId: string,
+    userId?: string,
+    notes?: string,
+  ): Promise<{ success: boolean }> {
     const client = this.supabase.getClient();
 
     try {
@@ -155,7 +167,9 @@ export class DataAlertsService {
     }
   }
 
-  async createAlert(alert: Omit<DataAlert, 'id' | 'status' | 'createdAt'>): Promise<{ success: boolean; id?: string }> {
+  async createAlert(
+    alert: Omit<DataAlert, 'id' | 'status' | 'createdAt'>,
+  ): Promise<{ success: boolean; id?: string }> {
     const client = this.supabase.getClient();
 
     try {
@@ -228,5 +242,4 @@ export class DataAlertsService {
       warning: alerts.filter((a) => a.severity === 'warning').length,
     };
   }
-
 }

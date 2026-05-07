@@ -259,7 +259,9 @@ export class AdminController {
         geography as GeographyLevel,
       );
 
-      this.logger.log(`Activated formula version ${version} for ${scoreType}/${geography}`);
+      this.logger.log(
+        `Activated formula version ${version} for ${scoreType}/${geography}`,
+      );
 
       return {
         success: true,
@@ -345,7 +347,9 @@ export class AdminController {
         geography as GeographyLevel,
       );
 
-      this.logger.log(`Rolled back to formula version ${version} for ${scoreType}/${geography}`);
+      this.logger.log(
+        `Rolled back to formula version ${version} for ${scoreType}/${geography}`,
+      );
 
       return {
         success: true,
@@ -440,11 +444,17 @@ export class AdminController {
    */
   @Post('ab-tests')
   async createABTest(@Body() dto: CreateABTestDto) {
-    if (!dto.name || !dto.scoreType || !dto.controlVersion || !dto.treatmentVersion) {
+    if (
+      !dto.name ||
+      !dto.scoreType ||
+      !dto.controlVersion ||
+      !dto.treatmentVersion
+    ) {
       throw new HttpException(
         {
           success: false,
-          error: 'name, scoreType, controlVersion, and treatmentVersion are required',
+          error:
+            'name, scoreType, controlVersion, and treatmentVersion are required',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -568,10 +578,7 @@ export class AdminController {
    * Complete an A/B test.
    */
   @Post('ab-tests/:id/complete')
-  async completeABTest(
-    @Param('id') id: string,
-    @Body() dto: CompleteTestDto,
-  ) {
+  async completeABTest(@Param('id') id: string, @Body() dto: CompleteTestDto) {
     try {
       await this.abTestService.completeTest(id, dto.adoptTreatment ?? false);
 

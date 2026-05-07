@@ -39,6 +39,8 @@ describe('ContentDataService', () => {
         cbsa_code: '35620',
         state_code: 'NY',
         population: 19000000,
+        latitude: 40.7128,
+        longitude: -74.006,
       },
     ]);
     const result = await service.resolveMarket('new york');
@@ -47,6 +49,8 @@ describe('ContentDataService', () => {
     expect(result[0].geography).toBe('metro');
     expect(result[0].id).toBe('35620');
     expect(result[0].state).toBe('NY');
+    expect(result[0].latitude).toBe(40.7128);
+    expect(result[0].longitude).toBe(-74.006);
   });
 
   it('getMarketSnapshot adapts MarketSnapshotResponse into facade shape', async () => {

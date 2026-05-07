@@ -22,6 +22,8 @@ export interface MagnetDefinition {
   enabled: boolean;
   version: number;
   updated_at: string;
+  delivered_count?: number;
+  converted_to_paid_pct?: number;
 }
 
 export interface FormatBinding {
@@ -57,7 +59,52 @@ export class MagnetLibraryService {
       .select('*')
       .order('display_name');
     if (error) throw error;
-    return (data ?? []) as MagnetDefinition[];
+    const magnets = (data ?? []) as MagnetDefinition[];
+
+    // Conversion panel (P4.24): lightweight all-time delivered + paid-converted rate.
+    // Uses existing attribution rows (no new schema).
+    const [deliveries, attributions] = await Promise.all([
+      client
+        .from('lead_magnet_deliveries')
+        .select('magnet_kind, user_id')
+        .limit(5000),
+      client
+        .from('signup_attributions')
+        .select('user_id, tier_at_signup')
+        .limit(5000),
+    ]);
+
+    const paidUsers = new Set<string>();
+    for (const row of attributions.data ?? []) {
+      const tier = String((row as any).tier_at_signup ?? '');
+      if (!tier) continue;
+      if (tier === 'free' || tier === 'trial') continue;
+      paidUsers.add(String((row as any).user_id));
+    }
+
+    const deliveredByKind = new Map<string, Set<string>>();
+    const paidByKind = new Map<string, Set<string>>();
+    for (const row of deliveries.data ?? []) {
+      const kind = String((row as any).magnet_kind ?? '');
+      const userId = String((row as any).user_id ?? '');
+      if (!kind || !userId) continue;
+      if (!deliveredByKind.has(kind)) deliveredByKind.set(kind, new Set());
+      deliveredByKind.get(kind)!.add(userId);
+      if (paidUsers.has(userId)) {
+        if (!paidByKind.has(kind)) paidByKind.set(kind, new Set());
+        paidByKind.get(kind)!.add(userId);
+      }
+    }
+
+    return magnets.map((m) => {
+      const delivered = deliveredByKind.get(m.kind)?.size ?? 0;
+      const paid = paidByKind.get(m.kind)?.size ?? 0;
+      return {
+        ...m,
+        delivered_count: delivered,
+        converted_to_paid_pct: delivered > 0 ? paid / delivered : 0,
+      };
+    });
   }
 
   async listBindings(): Promise<FormatBinding[]> {

@@ -6,6 +6,7 @@ import {
   SingleMarketVideoProps,
   FORMAT_CONFIGS,
 } from "./types";
+import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
 import {
   BRAND_OUTRO_FRAMES,
   computeRankingTiming,
@@ -33,7 +34,14 @@ export const calculateRankingMetadata = ({
   };
 };
 
-/** Long-form duration: prefer server-built plan; else caption end + tail; else catalog default. */
+function clampLongFormDuration(frames: number): number {
+  return Math.min(
+    LONG_FORM_MAX_DURATION_FRAMES,
+    Math.max(600, Math.round(frames)),
+  );
+}
+
+/** Long-form duration: prefer server-built plan; else caption end + tail; else catalog default. Capped at 5 minutes. */
 export const calculateLongFormMetadata = ({
   props,
 }: {
@@ -42,7 +50,7 @@ export const calculateLongFormMetadata = ({
   const plan = props.longFormRenderPlan;
   if (plan?.durationInFrames && plan.durationInFrames > 0) {
     return {
-      durationInFrames: plan.durationInFrames,
+      durationInFrames: clampLongFormDuration(plan.durationInFrames),
       fps: 30,
       width: 1920,
       height: 1080,
@@ -54,7 +62,7 @@ export const calculateLongFormMetadata = ({
     const tail = 120;
     const d = 60 + Math.ceil((lastMs / 1000) * 30) + tail;
     return {
-      durationInFrames: Math.max(600, d),
+      durationInFrames: clampLongFormDuration(d),
       fps: 30,
       width: 1920,
       height: 1080,

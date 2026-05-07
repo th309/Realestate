@@ -61,7 +61,9 @@ export function verifyNpsToken(
 
   let data: NpsTokenPayload;
   try {
-    data = JSON.parse(Buffer.from(payload, 'base64url').toString()) as NpsTokenPayload;
+    data = JSON.parse(
+      Buffer.from(payload, 'base64url').toString(),
+    ) as NpsTokenPayload;
   } catch {
     return null;
   }

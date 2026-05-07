@@ -1,6 +1,9 @@
 import { Controller, Get, Query, Param } from '@nestjs/common';
 import { TimeSeriesService, TimeSeriesDataPoint } from './timeseries.service';
-import { HISTORY_MONTHS_MAX, parseHistoryMonths } from '../common/history.constants';
+import {
+  HISTORY_MONTHS_MAX,
+  parseHistoryMonths,
+} from '../common/history.constants';
 
 @Controller('api/timeseries')
 export class TimeSeriesController {
@@ -23,19 +26,24 @@ export class TimeSeriesController {
     @Query('historyMonths') historyMonths?: string,
   ) {
     const historyMonthsNum = parseHistoryMonths(historyMonths || '6');
-    const metricIds = metricsParam ? metricsParam.split(',').filter(Boolean) : [];
+    const metricIds = metricsParam
+      ? metricsParam.split(',').filter(Boolean)
+      : [];
 
     if (metricIds.length === 0) {
       return { success: true, trends: {} };
     }
 
     const lastPoints = (historyMonthsNum + 1) * 4;
-    const trends: Record<string, {
-      current: number | null;
-      prior: number | null;
-      percentChange: number | null;
-      direction: 'up' | 'down' | 'stable';
-    }> = {};
+    const trends: Record<
+      string,
+      {
+        current: number | null;
+        prior: number | null;
+        percentChange: number | null;
+        direction: 'up' | 'down' | 'stable';
+      }
+    > = {};
 
     await Promise.all(
       metricIds.map(async (metricId) => {
@@ -67,17 +75,28 @@ export class TimeSeriesController {
 
           let percentChange: number | null = null;
           if (current != null && prior != null && prior !== 0) {
-            percentChange = Number((((current - prior) / Math.abs(prior)) * 100).toFixed(1));
+            percentChange = Number(
+              (((current - prior) / Math.abs(prior)) * 100).toFixed(1),
+            );
           }
 
           const direction: 'up' | 'down' | 'stable' =
-            percentChange == null ? 'stable' :
-            percentChange > 0.5 ? 'up' :
-            percentChange < -0.5 ? 'down' : 'stable';
+            percentChange == null
+              ? 'stable'
+              : percentChange > 0.5
+                ? 'up'
+                : percentChange < -0.5
+                  ? 'down'
+                  : 'stable';
 
           trends[metricId] = { current, prior, percentChange, direction };
         } catch {
-          trends[metricId] = { current: null, prior: null, percentChange: null, direction: 'stable' };
+          trends[metricId] = {
+            current: null,
+            prior: null,
+            percentChange: null,
+            direction: 'stable',
+          };
         }
       }),
     );
@@ -137,7 +156,7 @@ export class TimeSeriesController {
     const useHistory = historyMonthsNum > 0;
     const lastPoints = useHistory ? (historyMonthsNum + 1) * 4 : undefined;
 
-    let data = await this.timeSeriesService.getTimeSeries(
+    const data = await this.timeSeriesService.getTimeSeries(
       metric,
       geoLevel,
       regionId,
@@ -158,7 +177,12 @@ export class TimeSeriesController {
       current?: number | null;
       prior?: number | null;
       trend_change?: number;
-      history?: { data: TimeSeriesDataPoint[]; months: number; trend: 'up' | 'down' | 'stable'; change: number };
+      history?: {
+        data: TimeSeriesDataPoint[];
+        months: number;
+        trend: 'up' | 'down' | 'stable';
+        change: number;
+      };
     } = {
       success: true,
       metric,
@@ -173,8 +197,12 @@ export class TimeSeriesController {
       const slice = data.slice(-take);
       const current = slice[slice.length - 1]?.value ?? null;
       const prior = slice[slice.length - 2]?.value ?? null;
-      const change = current != null && prior != null ? Number((current - prior).toFixed(4)) : 0;
-      const trend = change > 0.0001 ? 'up' : change < -0.0001 ? 'down' : 'stable';
+      const change =
+        current != null && prior != null
+          ? Number((current - prior).toFixed(4))
+          : 0;
+      const trend =
+        change > 0.0001 ? 'up' : change < -0.0001 ? 'down' : 'stable';
 
       body.historyMonths = historyMonthsNum;
       body.current = current;

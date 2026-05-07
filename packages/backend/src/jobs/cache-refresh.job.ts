@@ -18,11 +18,14 @@ export class CacheRefreshJob {
     private readonly configService: ConfigService,
     private readonly chatService: AnalyticsChatService,
   ) {
-    this.enabled = this.configService.get<string>('QUINN_CACHE_ENABLED', 'true') === 'true';
+    this.enabled =
+      this.configService.get<string>('QUINN_CACHE_ENABLED', 'true') === 'true';
     if (this.enabled) {
       this.logger.log('[Cache Refresh] Job enabled - will run every 6 hours');
     } else {
-      this.logger.warn('[Cache Refresh] Job disabled via QUINN_CACHE_ENABLED=false');
+      this.logger.warn(
+        '[Cache Refresh] Job disabled via QUINN_CACHE_ENABLED=false',
+      );
     }
   }
 

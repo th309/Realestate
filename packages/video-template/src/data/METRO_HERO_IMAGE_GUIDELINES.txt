@@ -1,0 +1,33 @@
+Metro hero images (long-form CBSA lookups)
+============================================
+
+Goal
+----
+Use views that viewers who know the metro will recognize immediately—the
+“postcard” angle locals and tourists associate with that city—not a generic
+stock aerial or obscure angle.
+
+Selection checklist
+-------------------
+1. Landmark-forward — Iconic vantage (waterfront, famous park, named viewpoint)
+   where signature towers, bridges, or geography read clearly at a glance.
+2. Rights — Prefer Wikimedia Commons (or your own licensed asset). Note author
+   and license; include in video credits when the license requires it.
+3. Timelessness — Clear daylight or classic skyline shots; avoid dated promo
+   imagery unless that is the intent.
+4. Technical — Wide panoramas work well full-bleed in 16:9; keep file sizes
+   reasonable (Commons thumbnails are fine).
+
+Adding a new metro
+------------------
+1. Choose one definitive shot per CBSA (same city people mean when they say
+   the market name).
+2. Add the CBSA code and HTTPS image URL to:
+   - packages/video-template/src/data/metro-hero-curated-urls.json
+   - packages/backend/src/content-pipeline/data/metro-hero-source-urls.json
+   (keep both files in sync so Studio and production renders match.)
+
+Example (Austin TX, CBSA 12420)
+-------------------------------
+Lou Neff Point view across Lady Bird Lake toward downtown—the skyline angle
+most often used in national media for “Austin.”

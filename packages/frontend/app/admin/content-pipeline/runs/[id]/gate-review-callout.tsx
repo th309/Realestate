@@ -67,9 +67,10 @@ export function GateReviewCallout({
             </p>
           ) : null}
           <p className="text-sm text-on-surface mt-2 max-w-2xl">
-            Open the review queue to edit lines that failed automated checks, or
-            continue without edits to re-queue fact-check (if the latest data
-            gate failed) or voice lint on the current script.
+            Open the review queue to fix the script, then continue — that
+            re-runs fact-check. If you continue without changing the script after
+            a Gate&nbsp;A failure, the pipeline skips another fact-check and goes
+            to voice lint (your acceptance of the current wording).
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
