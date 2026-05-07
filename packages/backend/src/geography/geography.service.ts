@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { ParentMetroResult } from './dto/parent-metro.dto';
 
 export interface GeoJSONFeatureCollection {
   type: 'FeatureCollection';
@@ -320,6 +321,38 @@ export class GeographyService implements OnModuleInit {
 
     // Strip internal field and return limited results
     return scored.slice(0, limit).map(({ _relevance, ...row }) => row);
+  }
+
+  /**
+   * Look up a county's parent metro (CBSA) via the geography_crosswalk table.
+   * Returns nulls for cbsa_code/cbsa_name when the county is not part of any CBSA
+   * (e.g., rural Alaska boroughs).
+   *
+   * Used by the MCP `get_migration_summary` tool to overlay metro-level Redfin
+   * migration data on top of county-level IRS aggregates.
+   */
+  async getParentMetroForCounty(
+    countyFips: string,
+  ): Promise<ParentMetroResult> {
+    const { data, error } = await this.supabase
+      .from('geography_crosswalk')
+      .select('cbsa_code, cbsa_name')
+      .eq('county_fips', countyFips)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error looking up parent metro for county ${countyFips}: ${error.message}`,
+      );
+      throw error;
+    }
+
+    return {
+      county_fips: countyFips,
+      cbsa_code: data?.cbsa_code ?? null,
+      cbsa_name: data?.cbsa_name ?? null,
+    };
   }
 
   /**

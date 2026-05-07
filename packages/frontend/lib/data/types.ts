@@ -48,7 +48,10 @@ export type DataSource =
   | "calculated"
   | "census"
   | "fred"
-  | "propertyiq";
+  | "propertyiq"
+  | "bls"
+  | "irs"
+  | "redfin_migration";
 
 /**
  * Metric configuration interface - defines how to fetch and display a metric

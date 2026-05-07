@@ -463,6 +463,186 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     ],
     supportsGeoInheritance: true,
   },
+
+  // --------------------------------------------------------------------------
+  // Employment by sector — CES (metro/state) → QCEW (county/metro fallback)
+  // --------------------------------------------------------------------------
+  employment_natural_resources_mining: {
+    metricId: 'employment_natural_resources_mining',
+    sources: [
+      { source: 'ces', column: 'ces_employment_natural_resources_mining' },
+      { source: 'qcew', column: 'employment_natural_resources_mining' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_construction: {
+    metricId: 'employment_construction',
+    sources: [
+      { source: 'ces', column: 'ces_employment_construction' },
+      { source: 'qcew', column: 'employment_construction' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_manufacturing: {
+    metricId: 'employment_manufacturing',
+    sources: [
+      { source: 'ces', column: 'ces_employment_manufacturing' },
+      { source: 'qcew', column: 'employment_manufacturing' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_trade_transport_utilities: {
+    metricId: 'employment_trade_transport_utilities',
+    sources: [
+      { source: 'ces', column: 'ces_employment_trade_transport_utilities' },
+      { source: 'qcew', column: 'employment_trade_transport_utilities' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_information: {
+    metricId: 'employment_information',
+    sources: [
+      { source: 'ces', column: 'ces_employment_information' },
+      { source: 'qcew', column: 'employment_information' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_financial_activities: {
+    metricId: 'employment_financial_activities',
+    sources: [
+      { source: 'ces', column: 'ces_employment_financial_activities' },
+      { source: 'qcew', column: 'employment_financial_activities' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_professional_business_services: {
+    metricId: 'employment_professional_business_services',
+    sources: [
+      {
+        source: 'ces',
+        column: 'ces_employment_professional_business_services',
+      },
+      { source: 'qcew', column: 'employment_professional_business_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_education_health_services: {
+    metricId: 'employment_education_health_services',
+    sources: [
+      { source: 'ces', column: 'ces_employment_education_health_services' },
+      { source: 'qcew', column: 'employment_education_health_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_leisure_hospitality: {
+    metricId: 'employment_leisure_hospitality',
+    sources: [
+      { source: 'ces', column: 'ces_employment_leisure_hospitality' },
+      { source: 'qcew', column: 'employment_leisure_hospitality' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_other_services: {
+    metricId: 'employment_other_services',
+    sources: [
+      { source: 'ces', column: 'ces_employment_other_services' },
+      { source: 'qcew', column: 'employment_other_services' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  employment_public_administration: {
+    metricId: 'employment_public_administration',
+    sources: [
+      { source: 'ces', column: 'ces_employment_public_administration' },
+      { source: 'qcew', column: 'employment_public_administration' },
+    ],
+    supportsGeoInheritance: true,
+  },
+
+  // --------------------------------------------------------------------------
+  // QCEW-only wage and establishment metrics
+  // --------------------------------------------------------------------------
+  qcew_avg_weekly_wage: {
+    metricId: 'qcew_avg_weekly_wage',
+    sources: [{ source: 'qcew', column: 'qcew_avg_weekly_wage' }],
+    supportsGeoInheritance: true,
+  },
+
+  qcew_total_establishments: {
+    metricId: 'qcew_total_establishments',
+    sources: [{ source: 'qcew', column: 'qcew_total_establishments' }],
+    supportsGeoInheritance: true,
+  },
+
+  // --------------------------------------------------------------------------
+  // IRS migration aggregates (county only, single source)
+  // --------------------------------------------------------------------------
+  irs_migration_in_returns: {
+    metricId: 'irs_migration_in_returns',
+    sources: [{ source: 'irs', column: 'in_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_returns: {
+    metricId: 'irs_migration_out_returns',
+    sources: [{ source: 'irs', column: 'out_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_net_returns: {
+    metricId: 'irs_migration_net_returns',
+    sources: [{ source: 'irs', column: 'net_returns' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_in_avg_agi: {
+    metricId: 'irs_migration_in_avg_agi',
+    sources: [{ source: 'irs', column: 'in_avg_agi' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_avg_agi: {
+    metricId: 'irs_migration_out_avg_agi',
+    sources: [{ source: 'irs', column: 'out_avg_agi' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_in_exemptions: {
+    metricId: 'irs_migration_in_exemptions',
+    sources: [{ source: 'irs', column: 'in_exemptions' }],
+    supportsGeoInheritance: false,
+  },
+
+  irs_migration_out_exemptions: {
+    metricId: 'irs_migration_out_exemptions',
+    sources: [{ source: 'irs', column: 'out_exemptions' }],
+    supportsGeoInheritance: false,
+  },
+
+  // --------------------------------------------------------------------------
+  // Redfin migration metrics (metro level, single source)
+  // --------------------------------------------------------------------------
+  redfin_migration_net_inflow: {
+    metricId: 'redfin_migration_net_inflow',
+    sources: [{ source: 'redfin_migration', column: 'net_inflow' }],
+    supportsGeoInheritance: false,
+  },
+
+  redfin_migration_inflow_share: {
+    metricId: 'redfin_migration_inflow_share',
+    sources: [{ source: 'redfin_migration', column: 'inflow_share_pct' }],
+    supportsGeoInheritance: false,
+  },
 };
 
 /**

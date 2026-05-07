@@ -8,15 +8,24 @@ on:
   # - FRED: Monthly (unemployment, employment)
   # - BLS QCEW: Quarterly (~6 months lag)
   schedule:
-    - cron: '0 6 20 * *'
+    # Existing: monthly bundle (Census/BEA/FRED + legacy QCEW)
+    - cron: "0 6 20 * *"
+    # CES sectoral employment — BLS releases ~22nd of month
+    - cron: "0 6 23 * *"
+    # QCEW extended (counties + metros) — quarterly, ~6 month lag
+    - cron: "0 6 5 1,4,7,10 *"
+    # Redfin Migration metro flows — monthly
+    - cron: "0 6 5 * *"
+    # IRS SOI county migration poll — monthly idempotent (annual release)
+    - cron: "0 6 1 * *"
 
   # Allow manual trigger
   workflow_dispatch:
     inputs:
       dataset:
-        description: 'Which dataset to import'
+        description: "Which dataset to import"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -24,11 +33,16 @@ on:
           - bea-only
           - fred-only
           - qcew-only
+          - ces-only
+          - qcew-extended-only
+          - redfin-migration-only
+          - irs-migration-only
 
 jobs:
   import-economic-data:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 6 20 * *'
     runs-on: ubuntu-latest
-    timeout-minutes: 240  # 4 hours for comprehensive download
+    timeout-minutes: 240 # 4 hours for comprehensive download
 
     steps:
       - name: Checkout repository
@@ -37,8 +51,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -78,10 +92,10 @@ jobs:
       - name: Import Census Data
         id: import_census
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
-          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
         run: |
           echo ""
           echo ">>> Importing Census data to database..."
@@ -90,10 +104,10 @@ jobs:
       - name: Import Economic Data
         id: import_economic
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
-          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           echo ""
@@ -244,3 +258,165 @@ jobs:
           echo "  - economic_* (national, state, metro, county)"
           echo ""
           echo "Check Supabase dashboard to verify."
+
+  # ---------------------------------------------------------------------------
+  # CES sectoral employment — runs on the 23rd of each month (BLS releases ~22nd)
+  # ---------------------------------------------------------------------------
+  import-ces:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.dataset == 'ces-only' || github.event.schedule == '0 6 23 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import CES sectoral employment (all states)
+        env:
+          BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          echo "=============================================="
+          echo "CES Import - $(date)"
+          echo "=============================================="
+          npx tsx scripts/sources/census-economic/run-ces-import.ts --all-states
+
+  # ---------------------------------------------------------------------------
+  # QCEW extended (counties + metros, sectoral) — quarterly (~6 month lag)
+  # Runs on the 5th of Jan/Apr/Jul/Oct.
+  # ---------------------------------------------------------------------------
+  import-qcew:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.dataset == 'qcew-extended-only' || github.event.schedule == '0 6 5 1,4,7,10 *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compute most-recent published QCEW quarter
+        id: qcew_period
+        run: |
+          # QCEW publishes ~6 months after quarter end. From the current month,
+          # the safest "most recently published" quarter is the one ~2 quarters back.
+          YEAR=$(date -u +%Y)
+          MONTH=$(date -u +%-m)
+          # Map calendar month -> safe target (year, qtr).
+          # Jan-Mar -> prev year Q3, Apr-Jun -> prev year Q4,
+          # Jul-Sep -> current year Q1, Oct-Dec -> current year Q2.
+          if [ "$MONTH" -le 3 ]; then
+            TARGET_YEAR=$((YEAR - 1)); TARGET_QTR=3
+          elif [ "$MONTH" -le 6 ]; then
+            TARGET_YEAR=$((YEAR - 1)); TARGET_QTR=4
+          elif [ "$MONTH" -le 9 ]; then
+            TARGET_YEAR=$YEAR; TARGET_QTR=1
+          else
+            TARGET_YEAR=$YEAR; TARGET_QTR=2
+          fi
+          echo "year=$TARGET_YEAR" >> "$GITHUB_OUTPUT"
+          echo "qtr=$TARGET_QTR" >> "$GITHUB_OUTPUT"
+          echo "Targeting QCEW $TARGET_YEAR Q$TARGET_QTR"
+
+      - name: Import QCEW (counties + metros, sectoral)
+        env:
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          echo "=============================================="
+          echo "QCEW Extended Import - $(date)"
+          echo "=============================================="
+          npx tsx scripts/download-qcew-employment.ts \
+            --year ${{ steps.qcew_period.outputs.year }} \
+            --qtr ${{ steps.qcew_period.outputs.qtr }} \
+            --counties --metros
+
+  # ---------------------------------------------------------------------------
+  # Redfin Migration metro flows — monthly on the 5th
+  # ---------------------------------------------------------------------------
+  import-redfin-migration:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.dataset == 'redfin-migration-only' || github.event.schedule == '0 6 5 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import Redfin Migration metro flows
+        env:
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          REDFIN_MIGRATION_S3_URL: ${{ secrets.REDFIN_MIGRATION_S3_URL }}
+        run: |
+          echo "=============================================="
+          echo "Redfin Migration Import - $(date)"
+          echo "=============================================="
+          npx tsx scripts/sources/redfin/run-redfin-migration-import.ts
+
+  # ---------------------------------------------------------------------------
+  # IRS SOI county-to-county migration — monthly idempotent poll
+  # IRS publishes annually; the script is a no-op when no new tax year exists.
+  # ---------------------------------------------------------------------------
+  poll-irs-migration:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.dataset == 'irs-migration-only' || github.event.schedule == '0 6 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Poll + import IRS SOI migration data
+        env:
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          echo "=============================================="
+          echo "IRS Migration Poll - $(date)"
+          echo "=============================================="
+          npx tsx scripts/download-irs-migration.ts

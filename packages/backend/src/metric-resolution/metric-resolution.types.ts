@@ -18,7 +18,11 @@ export type DataSource =
   | 'economic'
   | 'calculated'
   | 'permits'
-  | 'hud_fmr';
+  | 'hud_fmr'
+  | 'ces'
+  | 'qcew'
+  | 'irs'
+  | 'redfin_migration';
 
 /**
  * A single data source entry in a metric's fallback chain.

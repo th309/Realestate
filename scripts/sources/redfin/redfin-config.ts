@@ -29,6 +29,22 @@ export const REDFIN_S3_URLS: Record<string, string> = {
   neighborhood: `${S3_BASE}/redfin_market_tracker/neighborhood_market_tracker.tsv000.gz`,
 };
 
+/**
+ * Redfin Migration metro-level dataset URL.
+ *
+ * NOTE: Redfin does not publish the migration TSV at a documented public S3
+ * path. Both candidates from the data center pattern return 403:
+ *   - {S3_BASE}/redfin_market_tracker/migration/migration_metro.tsv000.gz
+ *   - {S3_BASE}/redfin_market_tracker/migration_metro.tsv000.gz
+ * The dashboard at https://www.redfin.com/news/migration/ is backed by Tableau
+ * with no public flat-file export. The default below documents the assumed
+ * canonical path; override via REDFIN_MIGRATION_S3_URL once Redfin exposes the
+ * file (e.g., via econdata@redfin.com) or once a confirmed mirror is found.
+ */
+export const REDFIN_MIGRATION_METRO_URL =
+  process.env.REDFIN_MIGRATION_S3_URL ??
+  `${S3_BASE}/redfin_market_tracker/migration/migration_metro.tsv000.gz`;
+
 // ---------------------------------------------------------------------------
 // Database table configuration (per-geography tables)
 // ---------------------------------------------------------------------------

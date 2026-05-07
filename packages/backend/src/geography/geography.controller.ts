@@ -7,6 +7,8 @@ import {
   HttpStatus,
   Logger,
   Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { normalizeStateToCode } from '../common/geo';
@@ -14,6 +16,10 @@ import {
   GeographyService,
   GeoJSONFeatureCollection,
 } from './geography.service';
+import {
+  GetParentMetroParamsDto,
+  ParentMetroResult,
+} from './dto/parent-metro.dto';
 
 @ApiTags('geography')
 @Controller('api/geography')
@@ -193,6 +199,34 @@ export class GeographyController {
       this.logger.error(`Error fetching zip display names for ${state}`, error);
       throw new HttpException(
         'Failed to fetch zip display names',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('parent-metro/:fips')
+  @ApiOperation({
+    summary:
+      "Look up a county's parent metro (CBSA) by 5-digit county FIPS code",
+  })
+  @ApiParam({
+    name: 'fips',
+    description: '5-digit county FIPS code (e.g., "37183" for Wake County, NC)',
+  })
+  @Header('Cache-Control', 'public, max-age=86400')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async getParentMetro(
+    @Param() params: GetParentMetroParamsDto,
+  ): Promise<ParentMetroResult> {
+    try {
+      return await this.geographyService.getParentMetroForCounty(params.fips);
+    } catch (error: any) {
+      this.logger.error(
+        `Error looking up parent metro for ${params.fips}`,
+        error,
+      );
+      throw new HttpException(
+        'Failed to look up parent metro',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
