@@ -143,7 +143,7 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const initialUserId = cookieStore.get("piq-uid")?.value ?? null;
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://api.mapbox.com" />
         <link
