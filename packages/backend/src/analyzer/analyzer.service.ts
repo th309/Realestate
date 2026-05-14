@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import Anthropic from '@anthropic-ai/sdk';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import type { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import { ScoringService } from '../scoring/scoring.service';
@@ -9,6 +10,7 @@ import type {
   MarketContextQueryDto,
   MetricValueDto,
 } from './dto/market-context.dto';
+import type { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 
 /** Metric IDs requested for analyzer market context. */
 const MARKET_CONTEXT_METRICS = [
@@ -129,5 +131,68 @@ export class AnalyzerService {
       net_migration: toMetricValueDto(metrics.net_migration),
       piq_score: piq,
     };
+  }
+
+  /**
+   * Build the user-message prompt for the AI verdict call.
+   *
+   * Pure / side-effect-free so unit tests can validate prompt structure
+   * without wiring the rest of the service.
+   */
+  buildVerdictPrompt(payload: {
+    input: unknown;
+    result: unknown;
+    marketContext?: unknown;
+  }): string {
+    return [
+      'You are an experienced real-estate investor evaluating a single deal.',
+      'Return ONLY a JSON object with this shape: {"verdict":"buy"|"negotiate"|"pass","target_price":number|null,"strengths":string[],"risks":string[],"reasoning":string}.',
+      '',
+      'Deal input:',
+      JSON.stringify(payload.input),
+      '',
+      'Computed metrics:',
+      JSON.stringify(payload.result),
+      payload.marketContext
+        ? `\nMarket context:\n${JSON.stringify(payload.marketContext)}`
+        : '',
+      '',
+      'Consider: cap rate vs market, DSCR (must be > 1.0), cashflow margin, PropertyIQ score, rent trend.',
+      'Be specific. Cite numbers. Output ONLY the JSON object.',
+    ].join('\n');
+  }
+
+  /**
+   * Stream an AI verdict as text deltas.
+   *
+   * Hard-crashes if ANTHROPIC_API_KEY is missing (CLAUDE.md §1.2 — no
+   * default fallbacks for secrets). The content-pipeline and analytics-chat
+   * modules wrap the SDK in their own services for streaming/tool-use needs;
+   * we instantiate directly here for the same reason — `AnthropicService`
+   * only exposes the non-streaming `messages.create` path.
+   */
+  async *streamAiVerdict(payload: AiVerdictRequestDto): AsyncGenerator<string> {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY is not set');
+    }
+    const client = new Anthropic({ apiKey });
+
+    const stream = client.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 800,
+      system:
+        'You are a precise, numerate real-estate analyst. Output ONLY valid JSON.',
+      messages: [{ role: 'user', content: this.buildVerdictPrompt(payload) }],
+    });
+
+    for await (const event of stream) {
+      if (
+        event.type === 'content_block_delta' &&
+        event.delta.type === 'text_delta'
+      ) {
+        yield event.delta.text;
+      }
+    }
   }
 }

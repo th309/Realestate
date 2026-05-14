@@ -9,9 +9,10 @@ import { AnalyzerService } from './analyzer.service';
 import { FreePreviewMiddleware } from './free-preview.middleware';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringModule } from '../scoring/scoring.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [MetricResolutionModule, ScoringModule],
+  imports: [MetricResolutionModule, ScoringModule, SupabaseModule],
   controllers: [AnalyzerController],
   providers: [AnalyzerService, FreePreviewMiddleware],
   exports: [AnalyzerService],
