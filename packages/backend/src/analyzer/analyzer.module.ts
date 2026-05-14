@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AnalyzerController } from './analyzer.controller';
 import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { FreePreviewMiddleware } from './free-preview.middleware';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringModule } from '../scoring/scoring.module';
@@ -20,8 +21,12 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
     EntitlementsModule,
   ],
   controllers: [AnalyzerController],
-  providers: [AnalyzerService, FreePreviewMiddleware],
-  exports: [AnalyzerService],
+  providers: [
+    AnalyzerService,
+    AnalyzerPersistenceService,
+    FreePreviewMiddleware,
+  ],
+  exports: [AnalyzerService, AnalyzerPersistenceService],
 })
 export class AnalyzerModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

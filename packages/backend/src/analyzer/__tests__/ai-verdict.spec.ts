@@ -2,7 +2,7 @@ import { AnalyzerService } from '../analyzer.service';
 
 describe('AnalyzerService.buildVerdictPrompt', () => {
   it('includes input, result, market context, and required output schema', () => {
-    const svc = new AnalyzerService(null as any, null as any, null as any);
+    const svc = new AnalyzerService(null as any, null as any);
     const prompt = svc.buildVerdictPrompt({
       input: {
         price: 425_000,

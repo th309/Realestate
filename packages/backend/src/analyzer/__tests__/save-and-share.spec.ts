@@ -1,15 +1,14 @@
-import { AnalyzerService } from '../analyzer.service';
+import { AnalyzerPersistenceService } from '../analyzer.persistence.service';
 
 /**
- * Unit tests for the save/share path of AnalyzerService.
+ * Unit tests for the save/share path of AnalyzerPersistenceService.
  *
  * Each test builds a fresh in-memory supabase mock that returns whatever
  * the test wants from `.single()` / `.rpc()`; the service is constructed
- * directly with `null` for the unused metric/scoring deps (only the
- * supabase path is exercised here — getMarketContext has its own suite).
+ * directly with the mocked supabase client (it's the only dep).
  */
-describe('AnalyzerService save & share', () => {
-  let svc: AnalyzerService;
+describe('AnalyzerPersistenceService save & share', () => {
+  let svc: AnalyzerPersistenceService;
   let supabase: any;
 
   beforeEach(() => {
@@ -26,7 +25,7 @@ describe('AnalyzerService save & share', () => {
         error: null,
       }),
     };
-    svc = new AnalyzerService(null as any, null as any, supabase);
+    svc = new AnalyzerPersistenceService(supabase);
   });
 
   it('save returns id + share_token from supabase insert', async () => {

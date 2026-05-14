@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
@@ -47,6 +48,7 @@ export class AnalyzerController {
 
   constructor(
     private readonly service: AnalyzerService,
+    private readonly persistence: AnalyzerPersistenceService,
     private readonly entitlements: EntitlementsService,
   ) {}
 
@@ -115,7 +117,7 @@ export class AnalyzerController {
     @Body() body: AnalysisSnapshotDto,
   ) {
     await this.requireProTier(userId);
-    return this.service.save(userId, body);
+    return this.persistence.save(userId, body);
   }
 
   /**
@@ -128,7 +130,7 @@ export class AnalyzerController {
   @Get('saved')
   @UseGuards(JwtAuthGuard)
   async listSaved(@AuthUserId() userId: string, @Query() q: ListSavedQueryDto) {
-    return this.service.list(userId, {
+    return this.persistence.list(userId, {
       limit: q.limit ?? 20,
       cursor: q.cursor,
     });
@@ -147,7 +149,7 @@ export class AnalyzerController {
     @AuthUserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    const row = await this.service.getOne(userId, id);
+    const row = await this.persistence.getOne(userId, id);
     if (!row) {
       throw new NotFoundException('analysis not found');
     }
@@ -165,7 +167,7 @@ export class AnalyzerController {
     @AuthUserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    await this.service.remove(userId, id);
+    await this.persistence.remove(userId, id);
     return { ok: true };
   }
 
@@ -181,7 +183,7 @@ export class AnalyzerController {
     if (!SHARE_TOKEN_REGEX.test(token)) {
       throw new BadRequestException('invalid token format');
     }
-    const row = await this.service.getShared(token);
+    const row = await this.persistence.getShared(token);
     if (!row) {
       throw new NotFoundException('shared analysis not found');
     }
