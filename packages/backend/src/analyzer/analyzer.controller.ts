@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Inject,
+  NotFoundException,
+  Param,
   Post,
   Query,
   Res,
@@ -19,6 +22,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { AnalyzerService } from './analyzer.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
+import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
 
 /**
  * Tiers allowed to invoke the AI verdict endpoint. Mirrors the in-controller
@@ -86,6 +90,89 @@ export class AnalyzerController {
     } finally {
       res.end();
     }
+  }
+
+  /**
+   * POST /api/analyzer/save
+   *
+   * Persist an analyzer run for the authenticated user. Pro-gated — saved
+   * analyses are part of the paid feature surface (see spec §9 tier matrix).
+   */
+  @Post('save')
+  @UseGuards(JwtAuthGuard)
+  async saveAnalysis(
+    @AuthUserId() userId: string,
+    @Body() body: AnalysisSnapshotDto,
+  ) {
+    await this.requireProTier(userId);
+    return this.service.save(userId, body);
+  }
+
+  /**
+   * GET /api/analyzer/saved?limit=20&cursor=<iso>
+   *
+   * List the caller's saved analyses, newest first. Auth-required but NOT
+   * Pro-gated — free users may still view what they previously saved
+   * during a Pro trial. Limit is clamped to 50.
+   */
+  @Get('saved')
+  @UseGuards(JwtAuthGuard)
+  async listSaved(
+    @AuthUserId() userId: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const parsed = parseInt(limit ?? '20', 10);
+    const effective = Number.isFinite(parsed) ? parsed : 20;
+    return this.service.list(userId, {
+      limit: Math.min(Math.max(effective, 1), 50),
+      cursor,
+    });
+  }
+
+  /**
+   * GET /api/analyzer/saved/:id
+   *
+   * Fetch a single saved analysis owned by the caller. 404 if not found
+   * or owned by someone else (RLS-equivalent enforcement happens in the
+   * service via `eq('owner_id', userId)`).
+   */
+  @Get('saved/:id')
+  @UseGuards(JwtAuthGuard)
+  async getSaved(@AuthUserId() userId: string, @Param('id') id: string) {
+    const row = await this.service.getOne(userId, id);
+    if (!row) {
+      throw new NotFoundException('analysis not found');
+    }
+    return row;
+  }
+
+  /**
+   * DELETE /api/analyzer/saved/:id
+   *
+   * Delete a saved analysis owned by the caller. Idempotent.
+   */
+  @Delete('saved/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteSaved(@AuthUserId() userId: string, @Param('id') id: string) {
+    await this.service.remove(userId, id);
+    return { ok: true };
+  }
+
+  /**
+   * GET /api/analyzer/share/:token
+   *
+   * Public read of a shared analysis via SECURITY DEFINER RPC. No auth —
+   * possession of the token is the entitlement. Returns 404 for unknown
+   * or revoked tokens.
+   */
+  @Get('share/:token')
+  async getShared(@Param('token') token: string) {
+    const row = await this.service.getShared(token);
+    if (!row) {
+      throw new NotFoundException('shared analysis not found');
+    }
+    return row;
   }
 
   /**

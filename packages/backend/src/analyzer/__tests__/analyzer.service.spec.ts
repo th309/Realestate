@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AnalyzerService } from '../analyzer.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { ScoringService } from '../../scoring/scoring.service';
+import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import type { ResolvedMetric } from '../../metric-resolution/metric-resolution.types';
 
 /**
@@ -37,6 +38,7 @@ describe('AnalyzerService.getMarketContext', () => {
         AnalyzerService,
         { provide: MetricResolutionService, useValue: metricResolution },
         { provide: ScoringService, useValue: scoringService },
+        { provide: SUPABASE_CLIENT, useValue: {} },
       ],
     }).compile();
     service = mod.get(AnalyzerService);
