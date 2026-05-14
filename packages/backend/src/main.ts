@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 // Build trigger: 2026-01-28
@@ -19,6 +20,9 @@ async function bootstrap() {
   expressApp.set('trust proxy', 1);
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Parse cookies for free-preview middleware (anonymous quota tracking).
+  app.use(cookieParser());
 
   // Only attach Sentry exception filter when DSN is configured (production).
   // Without a DSN, SentryGlobalFilter crashes on 'isHeadersSent' in local dev.

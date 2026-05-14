@@ -1,0 +1,77 @@
+import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
+import * as crypto from 'node:crypto';
+import type { Request, Response, NextFunction } from 'express';
+
+const COOKIE = 'piq_analyzer_uses';
+const LIFETIME_CAP = 3;
+const MAX_AGE_MS = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years — "lifetime"
+
+@Injectable()
+export class FreePreviewMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(FreePreviewMiddleware.name);
+  private readonly secret: string;
+
+  constructor() {
+    const s = process.env.ANALYZER_PREVIEW_SECRET;
+    if (!s) throw new Error('ANALYZER_PREVIEW_SECRET is required'); // per CLAUDE.md §1.2
+    this.secret = s;
+  }
+
+  sign(count: number): string {
+    const payload = String(count);
+    const mac = crypto
+      .createHmac('sha256', this.secret)
+      .update(payload)
+      .digest('hex')
+      .slice(0, 32);
+    return `${payload}.${mac}`;
+  }
+
+  verify(cookie: string | undefined): number | null {
+    if (!cookie) return null;
+    const [payload, mac] = cookie.split('.');
+    if (!payload || !mac) return null;
+    const expectedMac = crypto
+      .createHmac('sha256', this.secret)
+      .update(payload)
+      .digest('hex')
+      .slice(0, 32);
+    const macBuf = Buffer.from(mac);
+    const expectedBuf = Buffer.from(expectedMac);
+    if (macBuf.length !== expectedBuf.length) return null;
+    if (!crypto.timingSafeEqual(macBuf, expectedBuf)) return null;
+    const n = parseInt(payload, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  use(
+    req: Request & { user?: { id: string } },
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (req.user?.id) {
+      // Authenticated — entitlements layer handles gating downstream.
+      return next();
+    }
+
+    const current = this.verify(req.cookies?.[COOKIE]) ?? 0;
+    if (current >= LIFETIME_CAP) {
+      res.status(402).json({
+        error: 'free_quota_exceeded',
+        message: 'Sign up for free to continue analyzing.',
+        used: current,
+        cap: LIFETIME_CAP,
+      });
+      return;
+    }
+    const nextCount = current + 1;
+    res.cookie(COOKIE, this.sign(nextCount), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: MAX_AGE_MS,
+      path: '/',
+    });
+    next();
+  }
+}
