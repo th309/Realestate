@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,6 +8,7 @@ import {
   Logger,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Res,
@@ -22,6 +24,14 @@ import { AnalyzerService } from './analyzer.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
+import { ListSavedQueryDto } from './dto/list-saved.dto';
+
+/**
+ * Share tokens are produced by `crypto.randomBytes(N).toString('base64url')`.
+ * 16-byte tokens → 22 chars, 24-byte → 32 chars; allow up to 64 for future
+ * widening. base64url charset only.
+ */
+const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{16,64}$/;
 
 /**
  * Tiers allowed to invoke the AI verdict endpoint. Tier resolution itself
@@ -117,16 +127,10 @@ export class AnalyzerController {
    */
   @Get('saved')
   @UseGuards(JwtAuthGuard)
-  async listSaved(
-    @AuthUserId() userId: string,
-    @Query('limit') limit?: string,
-    @Query('cursor') cursor?: string,
-  ) {
-    const parsed = parseInt(limit ?? '20', 10);
-    const effective = Number.isFinite(parsed) ? parsed : 20;
+  async listSaved(@AuthUserId() userId: string, @Query() q: ListSavedQueryDto) {
     return this.service.list(userId, {
-      limit: Math.min(Math.max(effective, 1), 50),
-      cursor,
+      limit: q.limit ?? 20,
+      cursor: q.cursor,
     });
   }
 
@@ -139,7 +143,10 @@ export class AnalyzerController {
    */
   @Get('saved/:id')
   @UseGuards(JwtAuthGuard)
-  async getSaved(@AuthUserId() userId: string, @Param('id') id: string) {
+  async getSaved(
+    @AuthUserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const row = await this.service.getOne(userId, id);
     if (!row) {
       throw new NotFoundException('analysis not found');
@@ -154,7 +161,10 @@ export class AnalyzerController {
    */
   @Delete('saved/:id')
   @UseGuards(JwtAuthGuard)
-  async deleteSaved(@AuthUserId() userId: string, @Param('id') id: string) {
+  async deleteSaved(
+    @AuthUserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.service.remove(userId, id);
     return { ok: true };
   }
@@ -168,6 +178,9 @@ export class AnalyzerController {
    */
   @Get('share/:token')
   async getShared(@Param('token') token: string) {
+    if (!SHARE_TOKEN_REGEX.test(token)) {
+      throw new BadRequestException('invalid token format');
+    }
     const row = await this.service.getShared(token);
     if (!row) {
       throw new NotFoundException('shared analysis not found');
