@@ -60,7 +60,7 @@ describe("computeRentalMetrics", () => {
       financing: { ...baseFinancing, downPaymentPct: 1 },
     });
     expect(r.monthlyDebtService).toBe(0);
-    expect(r.dscr).toBe(Infinity);
+    expect(r.dscr).toBeNull();
     expect(r.cashflowMonthly!).toBeGreaterThan(0);
   });
 

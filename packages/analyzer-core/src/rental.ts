@@ -72,7 +72,7 @@ export function computeRentalMetrics(input: DealInput): RentalResult {
 
   const capRatePct = price > 0 ? (noiAnnual / price) * 100 : null;
   const annualDebtService = monthlyDebtService * 12;
-  const dscr = annualDebtService > 0 ? noiAnnual / annualDebtService : Infinity;
+  const dscr = annualDebtService > 0 ? noiAnnual / annualDebtService : null;
   const cashflowMonthly = noiAnnual / 12 - monthlyDebtService;
   const cashOnCashPct =
     totalCashInvested > 0
