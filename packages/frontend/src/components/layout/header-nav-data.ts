@@ -11,6 +11,7 @@ import {
   IntegrationIcon,
   InfoIcon,
   MarketsIcon,
+  ChartIcon,
 } from "@/src/components/common/Icons";
 
 /* ─── Types ─── */
@@ -45,6 +46,7 @@ export const NAV: NavEntry[] = [
     ],
   },
   { name: "Reports", href: "/reports", icon: ArticleIcon },
+  { name: "Analyzer", href: "/analyzer", icon: ChartIcon },
   { name: "Scores", href: "/scores", icon: ScoreIcon },
   { name: "Pricing", href: "/pricing", icon: MoneyIcon },
   {
