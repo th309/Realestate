@@ -95,7 +95,23 @@ export default function AnalyzerClient({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[38%_1fr] gap-6">
-            <aside className="rounded-2xl bg-surface-container-low p-5">
+            <details
+              className="md:hidden rounded-2xl bg-surface-container-low p-4"
+              open
+            >
+              <summary className="cursor-pointer font-medium text-on-surface">
+                Inputs
+              </summary>
+              <div className="mt-3">
+                <InputForm
+                  input={analyzer.input}
+                  fieldStatus={fieldStatus}
+                  setField={analyzer.setField}
+                  setFinancing={analyzer.setFinancing}
+                />
+              </div>
+            </details>
+            <aside className="hidden md:block rounded-2xl bg-surface-container-low p-5">
               <InputForm
                 input={analyzer.input}
                 fieldStatus={fieldStatus}
