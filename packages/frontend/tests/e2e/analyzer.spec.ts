@@ -23,12 +23,9 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
 
-// Skip on non-desktop projects — analyzer is desktop-targeted; mobile coverage
-// would need a dedicated spec aware of the responsive accordion.
-test.skip(
-  ({}, testInfo) => testInfo.project.name !== "chromium",
-  "Analyzer e2e is desktop-only",
-);
+// Note: run only against the chromium project — analyzer is desktop-targeted;
+// mobile-chrome's open <details> accordion intercepts pointer events on
+// action buttons. Invoke with: `npx playwright test analyzer --project=chromium`.
 
 // Use the existing enterprise user storage state created by auth.setup.ts.
 // Enterprise tier satisfies the analyzer's Pro gate (allowed: pro, enterprise, admin).
