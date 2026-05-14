@@ -70,6 +70,14 @@ export async function fetchMarketContext(
 // AI VERDICT (SSE STREAM)
 // ============================================================================
 
+/**
+ * Sentinel error thrown when the backend signals an error frame
+ * (e.g. `data: {"error":"…"}`). Distinguishes backend-signaled failures
+ * from incidental JSON.parse failures on partial SSE frames so the latter
+ * can be safely swallowed while the former propagate to the caller.
+ */
+class StreamError extends Error {}
+
 export interface AiVerdictResult {
   verdict: "buy" | "negotiate" | "pass";
   target_price: number | null;
@@ -115,9 +123,9 @@ export async function* streamAiVerdict(payload: {
       try {
         const parsed = JSON.parse(data);
         if (parsed.chunk) yield parsed.chunk as string;
-        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.error) throw new StreamError(parsed.error);
       } catch (e) {
-        if ((e as Error).message?.startsWith("error")) throw e;
+        if (e instanceof StreamError) throw e;
         // Malformed JSON frame — skip and continue reading.
       }
     }
