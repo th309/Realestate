@@ -49,9 +49,11 @@ test.describe("/analyzer (Pro-gated paths)", () => {
       .first()
       .click();
 
-    await expect(page.getByText("Cap rate")).toBeVisible();
-    await expect(page.getByText("Cash-on-cash")).toBeVisible();
-    await expect(page.getByText("Cashflow / mo")).toBeVisible();
+    await expect(page.getByText("Cap rate", { exact: true })).toBeVisible();
+    await expect(page.getByText("Cash-on-cash", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Cashflow / mo", { exact: true }),
+    ).toBeVisible();
 
     // FLIP tab requires ARV + rehab inputs to compute metrics; otherwise the
     // panel shows an empty-state prompt. This test only fills the address bar,
