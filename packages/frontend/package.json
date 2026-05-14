@@ -35,6 +35,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@mapbox/polylabel": "^1.0.2",
+    "@propertyiq/analyzer-core": "*",
     "@propertyiq/emails": "*",
     "@sentry/nextjs": "^10.47.0",
     "@supabase/ssr": "^0.7.0",

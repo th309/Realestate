@@ -1,0 +1,181 @@
+/**
+ * ANALYZER FETCHERS
+ *
+ * Data layer for the Deal Analyzer feature.
+ * - Market context (geo-aware metric summary for an address)
+ * - AI verdict (SSE stream of model output)
+ * - Save / list / share user-saved analyses
+ *
+ * Uses the shared `API_URL` resolver from `./base` so production builds
+ * route to the correct backend host (see base.ts).
+ */
+
+import { API_URL } from "./base";
+import { getAuthHeaders } from "./auth-headers";
+
+// ============================================================================
+// MARKET CONTEXT
+// ============================================================================
+
+export interface MarketContextMetric {
+  value: number | null;
+  source: string | null;
+}
+
+export interface MarketContext {
+  geo_level: "zip" | "county" | "metro" | "state" | null;
+  geo_id: string | null;
+  home_value: MarketContextMetric | null;
+  rent_index: MarketContextMetric | null;
+  market_heat: MarketContextMetric | null;
+  net_migration: MarketContextMetric | null;
+  piq_score: { value: number; label: string } | null;
+}
+
+export interface MarketContextParams {
+  zip?: string;
+  county_fips?: string;
+  state?: string;
+}
+
+export type MarketContextResult =
+  | MarketContext
+  | { quotaExceeded: true }
+  | null;
+
+/**
+ * Fetch market context for an address.
+ * Returns `{ quotaExceeded: true }` on HTTP 402 so callers can surface a
+ * paywall without conflating it with a generic error.
+ */
+export async function fetchMarketContext(
+  params: MarketContextParams,
+): Promise<MarketContextResult> {
+  const qs = new URLSearchParams();
+  if (params.zip) qs.set("zip", params.zip);
+  if (params.county_fips) qs.set("county_fips", params.county_fips);
+  if (params.state) qs.set("state", params.state);
+
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/market-context?${qs}`, {
+    credentials: "include",
+    headers: { ...authHeaders },
+  });
+  if (res.status === 402) return { quotaExceeded: true };
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// ============================================================================
+// AI VERDICT (SSE STREAM)
+// ============================================================================
+
+export interface AiVerdictResult {
+  verdict: "buy" | "negotiate" | "pass";
+  target_price: number | null;
+  strengths: string[];
+  risks: string[];
+  reasoning: string;
+}
+
+/**
+ * Stream AI verdict chunks. Yields raw text chunks as they arrive.
+ * Caller is responsible for parsing the final accumulated text into
+ * `AiVerdictResult` (typically by the backend emitting a structured JSON
+ * chunk at the end).
+ */
+export async function* streamAiVerdict(payload: {
+  input: unknown;
+  result: unknown;
+  marketContext?: unknown;
+}): AsyncGenerator<string> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/ai-verdict`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...authHeaders },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`ai-verdict failed: ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6);
+      if (data === "[DONE]") return;
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.chunk) yield parsed.chunk as string;
+        if (parsed.error) throw new Error(parsed.error);
+      } catch (e) {
+        if ((e as Error).message?.startsWith("error")) throw e;
+        // Malformed JSON frame — skip and continue reading.
+      }
+    }
+  }
+}
+
+// ============================================================================
+// SAVED ANALYSES
+// ============================================================================
+
+export interface SavedAnalysis {
+  id: string;
+  share_token: string;
+  label: string | null;
+  address_city: string;
+  address_state: string;
+  address_zip: string | null;
+  input_snapshot: Record<string, unknown>;
+  result_snapshot: Record<string, unknown>;
+  market_context: Record<string, unknown> | null;
+  ai_verdict: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export type SaveAnalysisPayload = Omit<
+  SavedAnalysis,
+  "id" | "share_token" | "created_at"
+>;
+
+export async function saveAnalysis(
+  payload: SaveAnalysisPayload,
+): Promise<{ id: string; share_token: string }> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/save`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...authHeaders },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`save failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchSavedAnalyses(): Promise<SavedAnalysis[]> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/saved`, {
+    credentials: "include",
+    headers: { ...authHeaders },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchSharedAnalysis(
+  token: string,
+): Promise<SavedAnalysis | null> {
+  // Public endpoint — no auth headers needed; share token is the capability.
+  const res = await fetch(`${API_URL}/api/analyzer/share/${token}`);
+  if (!res.ok) return null;
+  return res.json();
+}
