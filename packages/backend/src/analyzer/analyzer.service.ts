@@ -177,6 +177,15 @@ export class AnalyzerService {
    * only exposes the non-streaming `messages.create` path.
    */
   async *streamAiVerdict(payload: AiVerdictRequestDto): AsyncGenerator<string> {
+    // Cap combined serialized input+result at 4KB to prevent cost amplification
+    // via giant payloads. Real analyzer inputs are well under 1KB.
+    const totalSize =
+      JSON.stringify(payload.input).length +
+      JSON.stringify(payload.result).length;
+    if (totalSize > 4096) {
+      throw new Error('payload too large');
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY is not set');
