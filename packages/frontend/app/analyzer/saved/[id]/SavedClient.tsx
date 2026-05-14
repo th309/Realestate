@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchSavedAnalysis, type SavedAnalysis } from "@/lib/data";
+import { useSavedAnalysis } from "@/lib/analyzer/useSavedAnalysis";
 import HeroMetrics from "../../components/HeroMetrics";
 import StrategyTabs from "../../components/StrategyTabs";
 import MarketContextTile from "../../components/MarketContextTile";
 
 export default function SavedClient({ id }: { id: string }) {
-  const [row, setRow] = useState<SavedAnalysis | null | "loading">("loading");
+  const { data: row, isLoading } = useSavedAnalysis(id);
 
-  useEffect(() => {
-    fetchSavedAnalysis(id).then(setRow);
-  }, [id]);
-
-  if (row === "loading") {
+  if (isLoading) {
     return (
       <div className="p-12 text-center text-on-surface-variant">Loading…</div>
     );
