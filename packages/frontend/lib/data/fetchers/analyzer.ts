@@ -182,3 +182,15 @@ export async function fetchSharedAnalysis(
   if (!res.ok) return null;
   return res.json();
 }
+
+export async function fetchSavedAnalysis(
+  id: string,
+): Promise<SavedAnalysis | null> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/saved/${id}`, {
+    credentials: "include",
+    headers: { ...authHeaders },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
