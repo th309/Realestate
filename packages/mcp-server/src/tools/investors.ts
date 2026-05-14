@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { monthlyMortgagePayment } from "@propertyiq/analyzer-core";
 import { fetchApi } from "../lib/api-client";
 
 async function getMarketData(geography: string, geoId: string) {
@@ -33,11 +34,7 @@ export const investorTools = [
       const downPct = (args.down_pct || 20) / 100;
       const downPayment = price * downPct;
       const loanAmount = price - downPayment;
-      const monthlyRate = 0.07 / 12; // ~7% rate estimate
-      const months = 360;
-      const monthlyMortgage =
-        (loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, months))) /
-        (Math.pow(1 + monthlyRate, months) - 1);
+      const monthlyMortgage = monthlyMortgagePayment(loanAmount, 7.0, 30);
       const estimatedTaxInsurance = (price * 0.015) / 12; // ~1.5% annually
       const estimatedMaintenance = (price * 0.01) / 12; // ~1% annually
       const totalMonthlyExpenses =
