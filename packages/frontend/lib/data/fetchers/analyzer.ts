@@ -132,9 +132,12 @@ export interface SavedAnalysis {
   id: string;
   share_token: string;
   label: string | null;
+  address_full: string | null;
   address_city: string;
   address_state: string;
   address_zip: string | null;
+  lat: number | null;
+  lon: number | null;
   input_snapshot: Record<string, unknown>;
   result_snapshot: Record<string, unknown>;
   market_context: Record<string, unknown> | null;

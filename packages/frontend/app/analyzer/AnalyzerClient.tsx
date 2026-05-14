@@ -6,6 +6,8 @@ import InputForm from "./components/InputForm";
 import HeroMetrics from "./components/HeroMetrics";
 import StrategyTabs from "./components/StrategyTabs";
 import MarketContextTile from "./components/MarketContextTile";
+import AIVerdictModal from "./components/AIVerdictModal";
+import ActionsRow from "./components/ActionsRow";
 import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
 import {
   useMarketContext,
@@ -36,6 +38,8 @@ export default function AnalyzerClient({
   const quotaExceeded = isQuotaExceeded(market.data);
 
   const [fieldStatus, setFieldStatus] = useState<any>({});
+  const [verdictOpen, setVerdictOpen] = useState(false);
+  const [savedToast, setSavedToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (!market.data || isQuotaExceeded(market.data)) return;
@@ -120,11 +124,61 @@ export default function AnalyzerClient({
                   }
                   locked={!isPro}
                 />
+                <ActionsRow
+                  isPro={isPro}
+                  payload={() => ({
+                    label: address?.full ?? null,
+                    address_full: address?.full ?? null,
+                    address_city: address?.city ?? "",
+                    address_state: address?.state ?? "",
+                    address_zip: address?.postalCode ?? null,
+                    lat: address?.lat ?? null,
+                    lon: address?.lon ?? null,
+                    input_snapshot: analyzer.input as any,
+                    result_snapshot: {
+                      rental: analyzer.rental,
+                      flip: analyzer.flip,
+                      brrrr: analyzer.brrrr,
+                    } as any,
+                    market_context:
+                      market.data && !isQuotaExceeded(market.data)
+                        ? (market.data as any)
+                        : null,
+                    ai_verdict: null,
+                  })}
+                  onVerdictClick={() => setVerdictOpen(true)}
+                  onSaved={(r) =>
+                    setSavedToast(
+                      `Saved — share at /shared/analysis/${r.share_token}`,
+                    )
+                  }
+                />
               </div>
             </section>
           </div>
         )}
       </div>
+      {verdictOpen && (
+        <AIVerdictModal
+          input={analyzer.input}
+          result={{
+            rental: analyzer.rental,
+            flip: analyzer.flip,
+            brrrr: analyzer.brrrr,
+          }}
+          marketContext={
+            market.data && !isQuotaExceeded(market.data)
+              ? market.data
+              : undefined
+          }
+          onClose={() => setVerdictOpen(false)}
+        />
+      )}
+      {savedToast && (
+        <div className="fixed bottom-6 right-6 bg-primary text-on-primary px-5 py-3 rounded-2xl shadow-lg">
+          {savedToast}
+        </div>
+      )}
     </main>
   );
 }
