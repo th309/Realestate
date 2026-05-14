@@ -27,11 +27,56 @@ export default function AnalyzerClient({
 }) {
   const sp = use(searchParamsPromise);
   const [address, setAddress] = useState<AddressSuggestion | null>(null);
+  // Optional county FIPS sourced from a `?piq_market=county:<fips>` deep-link.
+  // Kept separate from AddressSuggestion since the autocomplete shape doesn't carry county_fips.
+  const [piqCountyFips, setPiqCountyFips] = useState<string | undefined>(
+    undefined,
+  );
   const analyzer = useAnalyzer();
   const market = useMarketContext({
     zip: address?.postalCode ?? sp.zip,
+    county_fips: piqCountyFips,
     state: address?.state,
   });
+
+  // Parse `?piq_market=<level>:<id>` and pre-fill enough state to trigger market-context lookup.
+  // Supported: zip, state, county. Metro is a known limitation — useMarketContext takes no metro/cbsa param.
+  useEffect(() => {
+    if (!sp.piq_market) return;
+    const idx = sp.piq_market.indexOf(":");
+    if (idx <= 0) return;
+    const level = sp.piq_market.slice(0, idx);
+    const id = sp.piq_market.slice(idx + 1);
+    if (!level || !id) return;
+
+    if (level === "zip") {
+      setAddress({
+        id: "piq-zip-" + id,
+        full: `ZIP ${id}`,
+        street: "",
+        city: "",
+        state: "",
+        postalCode: id,
+        lat: 0,
+        lon: 0,
+      });
+    } else if (level === "state") {
+      setAddress({
+        id: "piq-state-" + id,
+        full: `State ${id}`,
+        street: "",
+        city: "",
+        state: id,
+        postalCode: null,
+        lat: 0,
+        lon: 0,
+      });
+    } else if (level === "county") {
+      setPiqCountyFips(id);
+    }
+    // level === "metro": no direct useMarketContext param — user must refine via the address bar.
+  }, [sp.piq_market]);
+
   const { tier } = useEntitlements();
   const isPro = ["pro", "enterprise", "admin"].includes(tier);
 
