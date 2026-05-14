@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import AddressBar from "./components/AddressBar";
+import InputForm from "./components/InputForm";
 import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
 import {
   useMarketContext,
@@ -20,7 +21,6 @@ export default function AnalyzerClient({
 }) {
   const sp = use(searchParamsPromise);
   const [address, setAddress] = useState<AddressSuggestion | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const analyzer = useAnalyzer();
   const market = useMarketContext({
     zip: address?.postalCode ?? sp.zip,
@@ -28,6 +28,27 @@ export default function AnalyzerClient({
   });
 
   const quotaExceeded = isQuotaExceeded(market.data);
+
+  const [fieldStatus, setFieldStatus] = useState<any>({});
+
+  useEffect(() => {
+    if (!market.data || isQuotaExceeded(market.data)) return;
+    const ctx = market.data;
+    const newStatus: any = {};
+    if (ctx.rent_index?.value != null) {
+      analyzer.setField("rentMonthly", ctx.rent_index.value);
+      newStatus.rentMonthly = { autoFilled: true };
+    } else {
+      newStatus.rentMonthly = { unavailable: true };
+    }
+    if (ctx.home_value?.value != null && !analyzer.input.price) {
+      analyzer.setField("price", ctx.home_value.value);
+      newStatus.price = { autoFilled: true };
+    }
+    newStatus.insuranceAnnual = { unavailable: true };
+    setFieldStatus(newStatus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [market.data]);
 
   return (
     <main className="min-h-screen bg-surface">
@@ -65,8 +86,12 @@ export default function AnalyzerClient({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[38%_1fr] gap-6">
             <aside className="rounded-2xl bg-surface-container-low p-5">
-              {/* InputForm — Task 17 */}
-              <p className="text-on-surface-variant">Input form goes here…</p>
+              <InputForm
+                input={analyzer.input}
+                fieldStatus={fieldStatus}
+                setField={analyzer.setField}
+                setFinancing={analyzer.setFinancing}
+              />
             </aside>
             <section className="rounded-2xl bg-surface-container-low p-5">
               {/* Results — Task 18 */}
