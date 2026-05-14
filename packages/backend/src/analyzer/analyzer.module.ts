@@ -10,9 +10,15 @@ import { FreePreviewMiddleware } from './free-preview.middleware';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 @Module({
-  imports: [MetricResolutionModule, ScoringModule, SupabaseModule],
+  imports: [
+    MetricResolutionModule,
+    ScoringModule,
+    SupabaseModule,
+    EntitlementsModule,
+  ],
   controllers: [AnalyzerController],
   providers: [AnalyzerService, FreePreviewMiddleware],
   exports: [AnalyzerService],

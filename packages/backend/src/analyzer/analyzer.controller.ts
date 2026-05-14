@@ -4,7 +4,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  Inject,
+  Logger,
   NotFoundException,
   Param,
   Post,
@@ -15,29 +15,29 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
-import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 import { AnalyzerService } from './analyzer.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
 
 /**
- * Tiers allowed to invoke the AI verdict endpoint. Mirrors the in-controller
- * `requireTier` pattern used by `UserApiKeysController` — the codebase does
- * not yet have a shared Pro-tier guard, so we replicate that pattern rather
- * than invent one.
+ * Tiers allowed to invoke the AI verdict endpoint. Tier resolution itself
+ * goes through `EntitlementsService.getUserTier` so trial / org-tier /
+ * admin-fallback rules stay consistent with the rest of the backend.
  */
 const VERDICT_ALLOWED_TIERS = ['pro', 'enterprise', 'admin'];
 
 @Controller('api/analyzer')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class AnalyzerController {
+  private readonly logger = new Logger(AnalyzerController.name);
+
   constructor(
     private readonly service: AnalyzerService,
-    @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   /**
@@ -176,17 +176,24 @@ export class AnalyzerController {
   }
 
   /**
-   * Resolve the user's subscription tier from `user_profiles` and 403 if
-   * they aren't Pro-or-better. Mirrors `UserApiKeysController.requireTier`.
+   * Resolve the user's effective tier via the cached `EntitlementsService`
+   * (which delegates to `TierResolverService` for trial / org-tier /
+   * admin-fallback resolution) and 403 if they aren't Pro-or-better.
+   *
+   * A `null` return from `getUserTier` means we have a userId but no
+   * resolvable tier — typically a missing `user_profiles` row. Surface that
+   * as a warning so we can spot orphaned auth users in production logs.
    */
   private async requireProTier(userId: string): Promise<void> {
-    const { data } = await this.supabase
-      .from('user_profiles')
-      .select('subscription_tier')
-      .eq('id', userId)
-      .single();
+    const resolved = await this.entitlements.getUserTier(userId);
 
-    const tier = data?.subscription_tier ?? 'free';
+    if (resolved == null) {
+      this.logger.warn(
+        `[Analyzer] requireProTier: no tier resolved for userId=${userId.substring(0, 8)}… — missing user_profiles row?`,
+      );
+    }
+
+    const tier = resolved ?? 'free';
     if (!VERDICT_ALLOWED_TIERS.includes(tier)) {
       throw new ForbiddenException(
         `AI verdict requires a Pro or Enterprise subscription. Current tier: ${tier}`,
