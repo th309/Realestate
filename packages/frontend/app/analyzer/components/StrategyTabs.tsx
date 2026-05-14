@@ -48,11 +48,7 @@ export default function StrategyTabs({ rental, flip, brrrr }: Props) {
         <>
           <Row
             k="1% rule"
-            v={
-              rental.onePctRulePct == null
-                ? "—"
-                : `${rental.onePctRulePct.toFixed(2)}%`
-            }
+            v={formatMetricValue(rental.onePctRulePct, "percent_abs")}
           />
           <Row
             k="NOI / yr"
@@ -87,7 +83,10 @@ export default function StrategyTabs({ rental, flip, brrrr }: Props) {
               k="Projected profit"
               v={formatMetricValue(flip.projectedProfit, "currency")}
             />
-            <Row k="ROI" v={`${flip.projectedRoiPct.toFixed(1)}%`} />
+            <Row
+              k="ROI"
+              v={formatMetricValue(flip.projectedRoiPct, "percent")}
+            />
           </>
         ) : (
           <p className="text-sm text-on-surface-variant">

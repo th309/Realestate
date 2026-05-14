@@ -1,6 +1,7 @@
 "use client";
 
 import type { MarketContext } from "@/lib/data";
+import { formatMetricValue } from "@/lib/data";
 
 interface Props {
   context: MarketContext | null;
@@ -61,13 +62,13 @@ export default function MarketContextTile({ context, locked }: Props) {
         {context.market_heat?.value != null && (
           <Stat
             label="Heat"
-            value={`${context.market_heat.value >= 0 ? "+" : ""}${context.market_heat.value.toFixed(1)}%`}
+            value={formatMetricValue(context.market_heat.value, "percent")}
           />
         )}
         {context.rent_index?.value != null && (
           <Stat
             label="Rent"
-            value={`$${Math.round(context.rent_index.value)}/mo`}
+            value={`${formatMetricValue(context.rent_index.value, "currency")}/mo`}
           />
         )}
         {context.net_migration?.value != null && (
