@@ -19,14 +19,17 @@
  */
 
 import { test, expect } from "@playwright/test";
+import path from "path";
 
-const HAS_PRO_STORAGE_STATE = Boolean(process.env.PRO_USER_STORAGE_STATE);
+// Use the existing enterprise user storage state created by auth.setup.ts.
+// Enterprise tier satisfies the analyzer's Pro gate (allowed: pro, enterprise, admin).
+const enterpriseUserAuthFile = path.join(
+  __dirname,
+  "../fixtures/.auth/enterprise-user.json",
+);
 
-test.describe("/analyzer", () => {
-  test.skip(
-    !HAS_PRO_STORAGE_STATE,
-    "requires PRO_USER_STORAGE_STATE env or storageState fixture",
-  );
+test.describe("/analyzer (Pro-gated paths)", () => {
+  test.use({ storageState: enterpriseUserAuthFile });
 
   test("happy path — autocomplete → results render → market tile visible to Pro", async ({
     page,
