@@ -3,11 +3,15 @@
 import { use, useEffect, useState } from "react";
 import AddressBar from "./components/AddressBar";
 import InputForm from "./components/InputForm";
+import HeroMetrics from "./components/HeroMetrics";
+import StrategyTabs from "./components/StrategyTabs";
+import MarketContextTile from "./components/MarketContextTile";
 import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
 import {
   useMarketContext,
   isQuotaExceeded,
 } from "@/lib/analyzer/useMarketContext";
+import { useEntitlements } from "@/lib/entitlements";
 import type { AddressSuggestion } from "@/lib/analyzer/types";
 
 export default function AnalyzerClient({
@@ -26,6 +30,8 @@ export default function AnalyzerClient({
     zip: address?.postalCode ?? sp.zip,
     state: address?.state,
   });
+  const { tier } = useEntitlements();
+  const isPro = ["pro", "enterprise", "admin"].includes(tier);
 
   const quotaExceeded = isQuotaExceeded(market.data);
 
@@ -94,10 +100,27 @@ export default function AnalyzerClient({
               />
             </aside>
             <section className="rounded-2xl bg-surface-container-low p-5">
-              {/* Results — Task 18 */}
-              <p className="text-on-surface-variant">
-                Results panel goes here…
-              </p>
+              <div className="space-y-3">
+                <HeroMetrics
+                  capRatePct={analyzer.rental.capRatePct}
+                  cocPct={analyzer.rental.cashOnCashPct}
+                  cashflowMonthly={analyzer.rental.cashflowMonthly}
+                  dscr={analyzer.rental.dscr}
+                />
+                <StrategyTabs
+                  rental={analyzer.rental}
+                  flip={analyzer.flip}
+                  brrrr={analyzer.brrrr}
+                />
+                <MarketContextTile
+                  context={
+                    market.data && !isQuotaExceeded(market.data)
+                      ? market.data
+                      : null
+                  }
+                  locked={!isPro}
+                />
+              </div>
             </section>
           </div>
         )}
