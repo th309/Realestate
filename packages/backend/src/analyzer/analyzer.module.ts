@@ -25,11 +25,14 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
 })
 export class AnalyzerModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(FreePreviewMiddleware)
-      .forRoutes(
-        { path: 'api/analyzer/market-context', method: RequestMethod.GET },
-        { path: 'api/analyzer/ai-verdict', method: RequestMethod.POST },
-      );
+    // FreePreviewMiddleware is only useful for routes that allow anonymous
+    // access with a quota cap. `ai-verdict` is JWT-guarded + Pro-gated, so
+    // the middleware would never engage there (it skips authenticated users
+    // and the guard rejects anonymous ones first). Apply it only to the
+    // genuinely-anonymous-permitted `market-context` route.
+    consumer.apply(FreePreviewMiddleware).forRoutes({
+      path: 'api/analyzer/market-context',
+      method: RequestMethod.GET,
+    });
   }
 }

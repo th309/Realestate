@@ -217,7 +217,8 @@ export class AnalyzerService {
    * only piece a caller needs to build a `/share/:token` link.
    */
   async save(ownerId: string, dto: AnalysisSnapshotDto) {
-    const shareToken = crypto.randomBytes(16).toString('base64url');
+    // 24 bytes → 32 base64url chars → 192 bits of entropy.
+    const shareToken = crypto.randomBytes(24).toString('base64url');
     const { data, error } = await this.supabase
       .from('deal_analyses')
       .insert({ owner_id: ownerId, share_token: shareToken, ...dto })

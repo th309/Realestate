@@ -2,7 +2,7 @@
 
 import type { AnalyzerInputState } from "@/lib/analyzer/useAnalyzer";
 
-interface FieldStatus {
+export interface FieldStatus {
   autoFilled?: boolean;
   unavailable?: boolean;
 }

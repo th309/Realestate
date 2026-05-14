@@ -8,13 +8,17 @@ import StrategyTabs from "./components/StrategyTabs";
 import MarketContextTile from "./components/MarketContextTile";
 import AIVerdictModal from "./components/AIVerdictModal";
 import ActionsRow from "./components/ActionsRow";
-import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
+import {
+  useAnalyzer,
+  type AnalyzerInputState,
+} from "@/lib/analyzer/useAnalyzer";
 import {
   useMarketContext,
   isQuotaExceeded,
 } from "@/lib/analyzer/useMarketContext";
 import { useEntitlements } from "@/lib/entitlements";
 import type { AddressSuggestion } from "@/lib/analyzer/types";
+import type { FieldStatus } from "./components/InputForm";
 
 export default function AnalyzerClient({
   searchParamsPromise,
@@ -82,14 +86,17 @@ export default function AnalyzerClient({
 
   const quotaExceeded = isQuotaExceeded(market.data);
 
-  const [fieldStatus, setFieldStatus] = useState<any>({});
+  const [fieldStatus, setFieldStatus] = useState<
+    Partial<Record<keyof AnalyzerInputState, FieldStatus>>
+  >({});
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [savedToast, setSavedToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (!market.data || isQuotaExceeded(market.data)) return;
     const ctx = market.data;
-    const newStatus: any = {};
+    const newStatus: Partial<Record<keyof AnalyzerInputState, FieldStatus>> =
+      {};
     if (ctx.rent_index?.value != null) {
       analyzer.setField("rentMonthly", ctx.rent_index.value);
       newStatus.rentMonthly = { autoFilled: true };
@@ -195,15 +202,21 @@ export default function AnalyzerClient({
                     address_zip: address?.postalCode ?? null,
                     lat: address?.lat ?? null,
                     lon: address?.lon ?? null,
-                    input_snapshot: analyzer.input as any,
+                    // The analyzer-core domain types (DealInput, RentalMetrics,
+                    // etc.) are richer than `Record<string, unknown>`, so we go
+                    // via `unknown` to widen them for the persistence payload.
+                    input_snapshot: analyzer.input as unknown as Record<
+                      string,
+                      unknown
+                    >,
                     result_snapshot: {
                       rental: analyzer.rental,
                       flip: analyzer.flip,
                       brrrr: analyzer.brrrr,
-                    } as any,
+                    } as unknown as Record<string, unknown>,
                     market_context:
                       market.data && !isQuotaExceeded(market.data)
-                        ? (market.data as any)
+                        ? (market.data as unknown as Record<string, unknown>)
                         : null,
                     ai_verdict: null,
                   })}

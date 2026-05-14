@@ -36,9 +36,13 @@ export class FreePreviewMiddleware implements NestMiddleware {
       .update(payload)
       .digest('hex')
       .slice(0, 32);
-    const macBuf = Buffer.from(mac);
-    const expectedBuf = Buffer.from(expectedMac);
-    if (macBuf.length !== expectedBuf.length) return null;
+    // Both sides are hex digests (sliced to 32 chars). Decode explicitly so
+    // the constant-time compare runs on the raw bytes, not the hex strings,
+    // and reject up front if either side fails to decode.
+    const macBuf = Buffer.from(mac, 'hex');
+    const expectedBuf = Buffer.from(expectedMac, 'hex');
+    if (macBuf.length !== expectedBuf.length || macBuf.length === 0)
+      return null;
     if (!crypto.timingSafeEqual(macBuf, expectedBuf)) return null;
     const n = parseInt(payload, 10);
     return Number.isFinite(n) ? n : null;

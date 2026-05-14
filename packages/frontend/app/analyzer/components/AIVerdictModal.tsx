@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { streamAiVerdict, type AiVerdictResult } from "@/lib/data";
 
 interface Props {
@@ -22,16 +22,20 @@ export default function AIVerdictModal({
   const [parsed, setParsed] = useState<AiVerdictResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // The verdict stream is a one-shot side-effect tied to modal mount: we
+  // freeze the props on first render and run the stream exactly once. The
+  // parent component unmounts/remounts this modal to re-run with new inputs,
+  // so re-running on prop change here would be a duplicate request.
+  const payloadRef = useRef({ input, result, marketContext });
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         let acc = "";
-        for await (const chunk of streamAiVerdict({
-          input,
-          result,
-          marketContext,
-        })) {
+        for await (const chunk of streamAiVerdict(payloadRef.current)) {
           if (cancelled) return;
           acc += chunk;
           setText(acc);
@@ -39,7 +43,7 @@ export default function AIVerdictModal({
         const v: AiVerdictResult = JSON.parse(acc);
         if (!cancelled) {
           setParsed(v);
-          onComplete?.(v);
+          onCompleteRef.current?.(v);
         }
       } catch (e) {
         if (!cancelled) setErr((e as Error).message);
@@ -48,7 +52,6 @@ export default function AIVerdictModal({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
