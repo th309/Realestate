@@ -130,7 +130,7 @@ test.describe("/analyzer (no auth required)", () => {
     );
     await insField.fill("1500");
 
-    await expect(page.getByText("Cap rate")).toBeVisible();
+    await expect(page.getByText("Cap rate", { exact: true })).toBeVisible();
   });
 
   test("anonymous quota wall after 3 analyses", async ({ browser }) => {
