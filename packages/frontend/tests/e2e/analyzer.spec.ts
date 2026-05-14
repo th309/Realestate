@@ -53,8 +53,11 @@ test.describe("/analyzer (Pro-gated paths)", () => {
     await expect(page.getByText("Cash-on-cash")).toBeVisible();
     await expect(page.getByText("Cashflow / mo")).toBeVisible();
 
+    // FLIP tab requires ARV + rehab inputs to compute metrics; otherwise the
+    // panel shows an empty-state prompt. This test only fills the address bar,
+    // so assert the empty-state copy after switching tabs.
     await page.getByRole("button", { name: "FLIP" }).click();
-    await expect(page.getByText(/70% rule MAO/)).toBeVisible();
+    await expect(page.getByText(/Enter ARV \+ rehab budget/i)).toBeVisible();
 
     // MarketContextTile renders the heading in both the locked overlay and the
     // underlying tile, so pin to the first match.
@@ -114,14 +117,15 @@ test.describe("/analyzer (no auth required)", () => {
     // Insurance comes from a third-party metric that may be unavailable for
     // some markets — verify the "unavailable" badge renders rather than
     // silently falling back to a fake value. The badge appears in both the
-    // mobile <details> and desktop <aside> InputForm copies, so pin to first.
-    await expect(page.getByText(/unavailable/i).first()).toBeVisible();
+    // mobile <details> (hidden on desktop) and desktop <aside>; scope to the
+    // <aside> which is the desktop-visible copy.
+    await expect(page.locator("aside").getByText(/unavailable/i)).toBeVisible();
 
     // User can still override insurance manually and the rest of the
     // analysis surface keeps working.
-    const insField = page
-      .locator('label:has-text("Insurance / year") input')
-      .first();
+    const insField = page.locator(
+      'aside label:has-text("Insurance / year") input',
+    );
     await insField.fill("1500");
 
     await expect(page.getByText("Cap rate")).toBeVisible();
