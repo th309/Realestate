@@ -85,7 +85,7 @@ describe('Analyzer (e2e)', () => {
       cap: 3,
     });
     expect(typeof res.body.used).toBe('number');
-  });
+  }, 240_000); // Cold Supabase boots can take 30-40s per call; allow 4 calls + cushion.
 
   it('POST /api/analyzer/save without auth returns 401', async () => {
     await request(app.getHttpServer())
