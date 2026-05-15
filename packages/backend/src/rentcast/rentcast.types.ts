@@ -35,6 +35,9 @@ export interface RentcastComp {
   city: string | null;
   state: string | null;
   zip: string | null;
+  /** Latitude/longitude when RentCast returned coordinates; required for map pins. */
+  lat: number | null;
+  lon: number | null;
   beds: number | null;
   baths: number | null;
   sqft: number | null;
