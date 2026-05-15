@@ -169,6 +169,8 @@ export class RentcastService {
       city: c.city ?? null,
       state: c.state ?? null,
       zip: c.zipCode ?? null,
+      lat: typeof c.latitude === 'number' ? c.latitude : null,
+      lon: typeof c.longitude === 'number' ? c.longitude : null,
       beds: c.bedrooms ?? null,
       baths: c.bathrooms ?? null,
       sqft: c.squareFootage ?? null,

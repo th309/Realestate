@@ -7,10 +7,11 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 export interface CompPin {
   address: string;
-  lat: number;
-  lon: number;
-  price?: number;
-  rent?: number;
+  /** lat/lon required for map pins; if either is null the pin is skipped. */
+  lat?: number | null;
+  lon?: number | null;
+  price?: number | null;
+  rent?: number | null;
   beds?: number | null;
   baths?: number | null;
   sqft?: number | null;
@@ -18,17 +19,22 @@ export interface CompPin {
 }
 
 interface CompsSectionProps {
-  subjectLat: number;
-  subjectLon: number;
-  pricePerSqftValues: number[]; // population
-  yourPricePerSqft: number; // marker
+  /** Subject lat/lon — when null/missing, the map is hidden and only chart+table render. */
+  subjectLat?: number | null;
+  subjectLon?: number | null;
+  pricePerSqftValues: number[];
+  yourPricePerSqft: number;
   salesComps: CompPin[];
   rentalComps: CompPin[];
-  mapboxToken: string;
+  /** Mapbox public token; if empty/undefined the map is hidden. */
+  mapboxToken?: string;
   aiText?: string | null;
   aiIsStale?: boolean;
   onRefreshAi?: () => void;
 }
+
+const isCoord = (v: number | null | undefined): v is number =>
+  typeof v === "number" && Number.isFinite(v);
 
 export function CompsSection({
   subjectLat,
@@ -42,6 +48,8 @@ export function CompsSection({
   aiIsStale,
   onRefreshAi,
 }: CompsSectionProps) {
+  const showMap =
+    Boolean(mapboxToken) && isCoord(subjectLat) && isCoord(subjectLon);
   const tableRows = [
     ...salesComps.slice(0, 6).map((c) => ({ ...c, kind: "sale" as const })),
     ...rentalComps.slice(0, 6).map((c) => ({ ...c, kind: "rent" as const })),
@@ -70,43 +78,58 @@ export function CompsSection({
             yourValue={yourPricePerSqft}
           />
         </div>
-        <div
-          data-comps-map
-          className="h-72 rounded-xl overflow-hidden border border-outline-variant"
-        >
-          <Map
-            mapboxAccessToken={mapboxToken}
-            initialViewState={{
-              latitude: subjectLat,
-              longitude: subjectLon,
-              zoom: 12,
-            }}
-            mapStyle="mapbox://styles/mapbox/light-v11"
-            style={{ width: "100%", height: "100%" }}
+        {showMap ? (
+          <div
+            data-comps-map
+            className="h-72 rounded-xl overflow-hidden border border-outline-variant"
           >
-            <Marker
-              latitude={subjectLat}
-              longitude={subjectLon}
-              color="var(--md-primary)"
-            />
-            {salesComps.map((c, i) => (
+            <Map
+              mapboxAccessToken={mapboxToken}
+              initialViewState={{
+                latitude: subjectLat as number,
+                longitude: subjectLon as number,
+                zoom: 12,
+              }}
+              mapStyle="mapbox://styles/mapbox/light-v11"
+              style={{ width: "100%", height: "100%" }}
+            >
               <Marker
-                key={`s${i}`}
-                latitude={c.lat}
-                longitude={c.lon}
-                color="var(--md-tertiary)"
+                latitude={subjectLat as number}
+                longitude={subjectLon as number}
+                color="var(--md-primary)"
               />
-            ))}
-            {rentalComps.map((c, i) => (
-              <Marker
-                key={`r${i}`}
-                latitude={c.lat}
-                longitude={c.lon}
-                color="var(--md-warning)"
-              />
-            ))}
-          </Map>
-        </div>
+              {salesComps
+                .filter((c) => isCoord(c.lat) && isCoord(c.lon))
+                .map((c, i) => (
+                  <Marker
+                    key={`s${i}`}
+                    latitude={c.lat as number}
+                    longitude={c.lon as number}
+                    color="var(--md-tertiary)"
+                  />
+                ))}
+              {rentalComps
+                .filter((c) => isCoord(c.lat) && isCoord(c.lon))
+                .map((c, i) => (
+                  <Marker
+                    key={`r${i}`}
+                    latitude={c.lat as number}
+                    longitude={c.lon as number}
+                    color="var(--md-warning)"
+                  />
+                ))}
+            </Map>
+          </div>
+        ) : (
+          <div
+            data-comps-map-empty
+            className="h-72 rounded-xl border border-dashed border-outline-variant flex items-center justify-center text-xs text-on-surface-variant text-center px-4"
+          >
+            {!mapboxToken
+              ? "Map unavailable — NEXT_PUBLIC_MAPBOX_TOKEN not configured."
+              : "Map unavailable — geocode the subject address to enable."}
+          </div>
+        )}
       </div>
       <table data-comps-table className="w-full text-xs mt-3">
         <thead>

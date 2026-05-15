@@ -10,6 +10,7 @@ import { InputPanel } from "./components/InputPanel/InputPanel";
 import { ProjectionSection } from "./components/sections/ProjectionSection";
 import { ExpenseSection } from "./components/sections/ExpenseSection";
 import { SensitivitySection } from "./components/sections/SensitivitySection";
+import { CompsSection } from "./components/sections/CompsSection";
 import { MarketContextSection } from "./components/sections/MarketContextSection";
 import { AfterTaxSection } from "./components/sections/AfterTaxSection";
 import { NotesSection } from "./components/sections/NotesSection";
@@ -51,6 +52,7 @@ export default function AnalyzerClient({
     setArvLocal,
     propertyLookup,
     rentcastData,
+    quotaExceeded,
     projection,
     sensitivity,
     afterTax,
@@ -96,6 +98,32 @@ export default function AnalyzerClient({
       bandLow: y.irrToDate * 0.7,
       bandHigh: y.irrToDate * 1.3,
     }));
+
+  // Comps-section data sourced from RentCast lookup (lat/lon + price/sqft)
+  type RawComp = {
+    address: string;
+    lat?: number | null;
+    lon?: number | null;
+    price?: number | null;
+    rent?: number | null;
+    beds?: number | null;
+    baths?: number | null;
+    sqft?: number | null;
+    distance?: number;
+  };
+  const salesComps = (rentcastData?.sales_comps ?? []) as RawComp[];
+  const rentalComps = (rentcastData?.rental_comps ?? []) as RawComp[];
+  const pricePerSqftValues = salesComps
+    .map((c) => (c.price && c.sqft && c.sqft > 0 ? c.price / c.sqft : null))
+    .filter((v): v is number => v != null);
+  const yourPricePerSqft =
+    analyzer.input.price && pricePerSqftValues.length > 0
+      ? analyzer.input.price / (pricePerSqftValues.length * 0 + 1500) // fallback est sqft 1500
+      : (pricePerSqftValues[0] ?? 0);
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+  const lookupErrorMsg = propertyLookup.error
+    ? String(propertyLookup.error.message ?? propertyLookup.error)
+    : null;
 
   const inputPanel = (
     <InputPanel
@@ -156,6 +184,43 @@ export default function AnalyzerClient({
 
               <StrategyCompare {...strategyProps} />
 
+              {(lookupErrorMsg || quotaExceeded) && (
+                <div
+                  data-rentcast-status
+                  role="alert"
+                  className="rounded-xl border-2 border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-on-error-container)] px-4 py-3 text-sm"
+                >
+                  <strong>RentCast lookup failed:</strong>{" "}
+                  {quotaExceeded
+                    ? "monthly quota exceeded — try again next month."
+                    : lookupErrorMsg}
+                </div>
+              )}
+
+              {rentcastData && (
+                <div
+                  data-rentcast-status
+                  className="rounded-xl border border-[var(--md-tertiary)] bg-[var(--md-tertiary-container)] text-[var(--md-on-tertiary-container)] px-4 py-3 text-xs flex flex-wrap gap-x-6 gap-y-1"
+                >
+                  <span>
+                    <strong>RentCast:</strong> AVM{" "}
+                    {rentcastData.avm
+                      ? fmtUsd(rentcastData.avm.value)
+                      : "unavailable"}
+                  </span>
+                  <span>
+                    Rent{" "}
+                    {rentcastData.rent
+                      ? `${fmtUsd(rentcastData.rent.value)}/mo`
+                      : "unavailable"}
+                  </span>
+                  <span>
+                    Sales comps {rentcastData.sales_comps.length} · Rental comps{" "}
+                    {rentcastData.rental_comps.length}
+                  </span>
+                </div>
+              )}
+
               <ProjectionSection projection={projection} />
               <ExpenseSection
                 grossRentMonthly={grossRentMonthly}
@@ -166,6 +231,15 @@ export default function AnalyzerClient({
               <SensitivitySection
                 sensitivity={sensitivity}
                 irrBandByYear={irrBandByYear}
+              />
+              <CompsSection
+                subjectLat={null}
+                subjectLon={null}
+                pricePerSqftValues={pricePerSqftValues}
+                yourPricePerSqft={yourPricePerSqft}
+                salesComps={salesComps}
+                rentalComps={rentalComps}
+                mapboxToken={mapboxToken}
               />
               <MarketContextSection
                 piqScore={null}
