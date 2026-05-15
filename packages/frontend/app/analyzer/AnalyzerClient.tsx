@@ -266,6 +266,27 @@ export default function AnalyzerClient({
                 </div>
               )}
 
+              {rentcastData && rentcastData.errors && (
+                <div
+                  data-rentcast-partial-errors
+                  role="alert"
+                  className="rounded-xl border-2 border-[var(--md-warning)] bg-[var(--md-error-container)] text-[var(--md-on-error-container)] px-4 py-3 text-xs"
+                >
+                  <strong>RentCast partial failure:</strong>
+                  <ul className="mt-1 list-disc list-inside">
+                    {rentcastData.errors.property && (
+                      <li>property: {rentcastData.errors.property}</li>
+                    )}
+                    {rentcastData.errors.avm && (
+                      <li>avm: {rentcastData.errors.avm}</li>
+                    )}
+                    {rentcastData.errors.rent && (
+                      <li>rent: {rentcastData.errors.rent}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
               {rentcastData && (
                 <div
                   data-rentcast-status

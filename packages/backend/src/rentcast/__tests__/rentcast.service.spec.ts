@@ -182,6 +182,76 @@ describe('RentcastService', () => {
     expect(client.set).not.toHaveBeenCalled();
   });
 
+  it('falls back to in-memory cache + quota when Redis is unavailable', async () => {
+    // Redis is DOWN locally (per [[project_redis-optional-local.md]] — backend
+    // must still serve analyzer features). Service must not throw and must hit
+    // the network.
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({
+        price: 245000,
+        priceRangeLow: 230000,
+        priceRangeHigh: 260000,
+        comparables: [],
+      }),
+    });
+
+    const svc = new RentcastService(makeConfig(), makeRedisService(null));
+    const result = await svc.getValueEstimate('123 Main St');
+
+    expect(result.value).toBe(245000);
+    expect(result.low).toBe(230000);
+    expect(result.high).toBe(260000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('in-memory cache hit (no Redis) skips a second network call', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({
+        rent: 2400,
+        rentRangeLow: 2200,
+        rentRangeHigh: 2600,
+        comparables: [],
+      }),
+    });
+
+    const svc = new RentcastService(makeConfig(), makeRedisService(null));
+    await svc.getRentEstimate('456 Oak Ave');
+    await svc.getRentEstimate('456 Oak Ave');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('in-memory quota counter enforces RENTCAST_MONTHLY_CAP', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({
+        price: 1,
+        priceRangeLow: 1,
+        priceRangeHigh: 1,
+        comparables: [],
+      }),
+    });
+
+    const svc = new RentcastService(
+      makeConfig({ RENTCAST_MONTHLY_CAP: 2 }),
+      makeRedisService(null),
+    );
+
+    await svc.getValueEstimate('A St');
+    await svc.getValueEstimate('B St');
+    await expect(svc.getValueEstimate('C St')).rejects.toBeInstanceOf(
+      RentcastQuotaExceededError,
+    );
+  });
+
   it('normalizes address case and surrounding whitespace to a single cache key', async () => {
     const client = makeRedisClient();
     const cached = { rent: 2400, low: 2200, high: 2600, comps: [] };

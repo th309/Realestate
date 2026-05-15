@@ -1,13 +1,16 @@
 /**
  * RentcastService — calls the RentCast property/AVM/rent endpoints with a
- * 30-day Redis cache and a hard monthly call cap.
+ * 30-day cache and a hard monthly call cap.
  *
+ * - Cache: Redis (multi-process safe) when available, else an in-process Map
+ *   (lost on restart but unblocks local dev where Redis is optional —
+ *   per `[[project_redis-optional-local]]`).
  * - Cache key: SHA1 of the trimmed/lowercased address, scoped per endpoint.
- * - Quota: `INCR rentcast:usage:YYYY-MM` with a 32-day TTL on first write.
- *   When the count exceeds `RENTCAST_MONTHLY_CAP` (default 45), every
- *   subsequent call throws `RentcastQuotaExceededError`.
- * - Fail closed: if Redis is unavailable we cannot enforce the cap, so we
- *   throw rather than silently bypass it (per `[[project_redis-optional-local]]`).
+ * - Quota: `INCR rentcast:usage:YYYY-MM` on Redis OR an in-process counter
+ *   keyed by month. When the count exceeds `RENTCAST_MONTHLY_CAP` (default 45),
+ *   every subsequent call throws `RentcastQuotaExceededError`.
+ *   The in-memory counter resets on backend restart, so the cap is approximate
+ *   without Redis — a warning is logged on first use.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -33,12 +36,24 @@ const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const QUOTA_KEY_TTL_SECONDS = 60 * 60 * 24 * 32; // 32 days, slightly past month boundary
 const QUOTA_WARN_THRESHOLD = 0.8;
 
+interface MemEntry {
+  value: string;
+  expiresAt: number;
+}
+
 @Injectable()
 export class RentcastService {
   private readonly logger = new Logger(RentcastService.name);
   private readonly apiKey: string;
   private readonly headerName: string;
   private readonly monthlyCap: number;
+
+  // In-process fallbacks used when Redis is unavailable. Keep these private
+  // and tied to the service instance so a single backend process serves a
+  // consistent view; restarts clear them (acceptable for local dev).
+  private readonly memCache = new Map<string, MemEntry>();
+  private readonly memQuota = new Map<string, number>();
+  private warnedNoRedis = false;
 
   constructor(
     config: ConfigService,
@@ -105,23 +120,27 @@ export class RentcastService {
     transform: (raw: any) => T,
   ): Promise<T> {
     const client = this.redis.getClient();
-    if (!client) {
-      // Fail closed — without Redis we cannot enforce the monthly quota and
-      // would silently burn API credits. Surface a clear error instead.
-      throw new Error(
-        'Redis unavailable: RentcastService requires Redis to enforce its monthly quota cap',
+    const useRedis = !!client;
+    if (!useRedis && !this.warnedNoRedis) {
+      this.warnedNoRedis = true;
+      this.logger.warn(
+        '[Redis unavailable] using in-process cache + quota counter; monthly cap is approximate and resets on backend restart',
       );
     }
 
     const cacheKey = this.buildCacheKey(endpoint, address);
-    const cached = await client.get(cacheKey);
+    const cached = useRedis
+      ? await client.get(cacheKey)
+      : this.memGet(cacheKey);
     if (cached) {
       return JSON.parse(cached) as T;
     }
 
     const monthKey = `rentcast:usage:${this.currentMonthKey()}`;
-    const usage = await client.incr(monthKey);
-    if (usage === 1) {
+    const usage = useRedis
+      ? await client.incr(monthKey)
+      : this.memIncr(monthKey);
+    if (useRedis && usage === 1) {
       await client.expire(monthKey, QUOTA_KEY_TTL_SECONDS);
     }
     if (usage > this.monthlyCap) {
@@ -135,7 +154,7 @@ export class RentcastService {
 
     const url = `${BASE_URL}/${endpoint}?address=${encodeURIComponent(address)}`;
     this.logger.log(
-      `RentCast → ${endpoint} for "${address}" (usage ${usage}/${this.monthlyCap})`,
+      `RentCast → ${endpoint} for "${address}" (usage ${usage}/${this.monthlyCap}${useRedis ? '' : ', in-mem'})`,
     );
     const res = await fetch(url, {
       headers: { [this.headerName]: this.apiKey },
@@ -154,12 +173,12 @@ export class RentcastService {
       `RentCast ← ${endpoint} OK (${JSON.stringify(raw).length} bytes)`,
     );
     const transformed = transform(raw);
-    await client.set(
-      cacheKey,
-      JSON.stringify(transformed),
-      'EX',
-      CACHE_TTL_SECONDS,
-    );
+    const serialized = JSON.stringify(transformed);
+    if (useRedis) {
+      await client.set(cacheKey, serialized, 'EX', CACHE_TTL_SECONDS);
+    } else {
+      this.memSet(cacheKey, serialized, CACHE_TTL_SECONDS);
+    }
     return transformed;
   }
 
@@ -171,6 +190,26 @@ export class RentcastService {
 
   private currentMonthKey(): string {
     return new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  }
+
+  private memGet(key: string): string | null {
+    const entry = this.memCache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.memCache.delete(key);
+      return null;
+    }
+    return entry.value;
+  }
+
+  private memSet(key: string, value: string, ttlSec: number): void {
+    this.memCache.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 });
+  }
+
+  private memIncr(monthKey: string): number {
+    const next = (this.memQuota.get(monthKey) ?? 0) + 1;
+    this.memQuota.set(monthKey, next);
+    return next;
   }
 
   private mapComp(c: any): RentcastComp {

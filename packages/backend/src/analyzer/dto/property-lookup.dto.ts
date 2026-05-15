@@ -35,4 +35,10 @@ export interface PropertyLookupDto {
   rental_comps: any[];
   cache_age_days: number;
   source: 'rentcast';
+  /**
+   * Per-endpoint error messages when one or more underlying RentCast calls
+   * rejected. Present only when at least one error occurred — the UI uses
+   * this to show "Why is X unavailable?" instead of silent nulls.
+   */
+  errors?: { property?: string; avm?: string; rent?: string };
 }

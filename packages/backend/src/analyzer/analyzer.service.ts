@@ -143,9 +143,9 @@ export class AnalyzerService {
    *
    * Uses `Promise.allSettled` so per-source failures degrade to nulls rather
    * than failing the whole request — a successful AVM is useful even if the
-   * rent estimate is unavailable. The underlying `RentcastService` enforces
-   * a Redis-backed monthly call cap; if Redis is down the calls reject and
-   * each field becomes `null`.
+   * rent estimate is unavailable. Rejection reasons are surfaced via the
+   * `errors` field so the UI can show *why* a section is empty (silent nulls
+   * are a debugging hellscape).
    */
   async lookupProperty(address: string): Promise<PropertyLookupDto> {
     const [recordResult, avmResult, rentResult] = await Promise.allSettled([
@@ -154,10 +154,29 @@ export class AnalyzerService {
       this.rentcast.getRentEstimate(address),
     ]);
 
+    const reason = (r: PromiseSettledResult<unknown>): string | undefined =>
+      r.status === 'rejected'
+        ? String((r.reason as Error)?.message ?? r.reason)
+        : undefined;
+    const errPropertyRecord = reason(recordResult);
+    const errAvm = reason(avmResult);
+    const errRent = reason(rentResult);
+
     const property_record =
       recordResult.status === 'fulfilled' ? recordResult.value : null;
     const avmRaw = avmResult.status === 'fulfilled' ? avmResult.value : null;
     const rentRaw = rentResult.status === 'fulfilled' ? rentResult.value : null;
+
+    const errors: PropertyLookupDto['errors'] = {};
+    if (errPropertyRecord) errors.property = errPropertyRecord;
+    if (errAvm) errors.avm = errAvm;
+    if (errRent) errors.rent = errRent;
+
+    if (errPropertyRecord || errAvm || errRent) {
+      this.logger.warn(
+        `[lookupProperty] partial failure for "${address}" — property=${errPropertyRecord ?? 'ok'}, avm=${errAvm ?? 'ok'}, rent=${errRent ?? 'ok'}`,
+      );
+    }
 
     return {
       property_record,
@@ -181,6 +200,7 @@ export class AnalyzerService {
       rental_comps: rentRaw?.comps ?? [],
       cache_age_days: 0,
       source: 'rentcast',
+      ...(Object.keys(errors).length > 0 ? { errors } : {}),
     };
   }
 

@@ -25,6 +25,8 @@ export interface PropertyLookupResult {
   rental_comps: unknown[];
   cache_age_days: number;
   source: "rentcast";
+  /** Per-endpoint error messages when a sub-call rejected (silent-null killer). */
+  errors?: { property?: string; avm?: string; rent?: string };
 }
 
 export async function fetchPropertyLookup(params: {
