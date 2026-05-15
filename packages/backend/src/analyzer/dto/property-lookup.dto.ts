@@ -36,6 +36,12 @@ export interface PropertyLookupDto {
   cache_age_days: number;
   source: 'rentcast';
   /**
+   * The address RentCast matched (from `subjectProperty.formattedAddress`).
+   * When this differs visibly from what the user typed, they may have a
+   * ZIP typo or vague input — surface in the UI for a sanity check.
+   */
+  resolved_address?: string;
+  /**
    * Per-endpoint error messages when one or more underlying RentCast calls
    * rejected. Present only when at least one error occurred — the UI uses
    * this to show "Why is X unavailable?" instead of silent nulls.

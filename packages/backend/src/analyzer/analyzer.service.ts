@@ -178,6 +178,9 @@ export class AnalyzerService {
       );
     }
 
+    const resolved_address =
+      avmRaw?.resolvedAddress ?? rentRaw?.resolvedAddress;
+
     return {
       property_record,
       avm: avmRaw
@@ -200,6 +203,7 @@ export class AnalyzerService {
       rental_comps: rentRaw?.comps ?? [],
       cache_age_days: 0,
       source: 'rentcast',
+      ...(resolved_address ? { resolved_address } : {}),
       ...(Object.keys(errors).length > 0 ? { errors } : {}),
     };
   }

@@ -94,6 +94,7 @@ export class RentcastService {
         value: raw.price ?? 0,
         low: raw.priceRangeLow ?? 0,
         high: raw.priceRangeHigh ?? 0,
+        resolvedAddress: raw.subjectProperty?.formattedAddress,
         comps: (raw.comparables ?? []).map((c: any) => this.mapComp(c)),
       }),
     );
@@ -107,6 +108,7 @@ export class RentcastService {
         rent: raw.rent ?? 0,
         low: raw.rentRangeLow ?? 0,
         high: raw.rentRangeHigh ?? 0,
+        resolvedAddress: raw.subjectProperty?.formattedAddress,
         comps: (raw.comparables ?? []).map((c: any) => this.mapComp(c)),
       }),
     );

@@ -292,6 +292,23 @@ export default function AnalyzerClient({
                   data-rentcast-status
                   className="rounded-xl border border-[var(--md-tertiary)] bg-[var(--md-tertiary-container)] text-[var(--md-on-tertiary-container)] px-4 py-3 text-xs flex flex-wrap gap-x-6 gap-y-1"
                 >
+                  {rentcastData.resolved_address && (
+                    <span className="w-full mb-1 font-semibold">
+                      Matched: {rentcastData.resolved_address}
+                      {address.trim() &&
+                        rentcastData.resolved_address
+                          .toLowerCase()
+                          .replace(/[,\s]+/g, " ") !==
+                          address
+                            .trim()
+                            .toLowerCase()
+                            .replace(/[,\s]+/g, " ") && (
+                          <span className="ml-2 text-[var(--md-warning)]">
+                            (differs from your input — verify ZIP/spelling)
+                          </span>
+                        )}
+                    </span>
+                  )}
                   <span>
                     <strong>RentCast:</strong> AVM{" "}
                     {rentcastData.avm

@@ -20,6 +20,8 @@ export interface RentcastValueEstimate {
   value: number;
   low: number;
   high: number;
+  /** RentCast's parsed address — useful to detect ZIP typos / wrong property. */
+  resolvedAddress?: string;
   comps: RentcastComp[];
 }
 
@@ -27,6 +29,8 @@ export interface RentcastRentEstimate {
   rent: number;
   low: number;
   high: number;
+  /** RentCast's parsed address — useful to detect ZIP typos / wrong property. */
+  resolvedAddress?: string;
   comps: RentcastComp[];
 }
 
