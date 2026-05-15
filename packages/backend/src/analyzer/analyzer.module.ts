@@ -12,6 +12,7 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 import { ScoringModule } from '../scoring/scoring.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { RentcastModule } from '../rentcast/rentcast.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
     ScoringModule,
     SupabaseModule,
     EntitlementsModule,
+    RentcastModule,
   ],
   controllers: [AnalyzerController],
   providers: [

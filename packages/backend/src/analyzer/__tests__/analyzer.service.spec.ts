@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AnalyzerService } from '../analyzer.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { ScoringService } from '../../scoring/scoring.service';
+import { RentcastService } from '../../rentcast/rentcast.service';
 import type { ResolvedMetric } from '../../metric-resolution/metric-resolution.types';
 
 /**
@@ -32,11 +33,17 @@ describe('AnalyzerService.getMarketContext', () => {
   beforeEach(async () => {
     metricResolution = { resolveMetricBatch: jest.fn() };
     scoringService = { getScore: jest.fn() };
+    const rentcastMock = {
+      getPropertyRecord: jest.fn(),
+      getValueEstimate: jest.fn(),
+      getRentEstimate: jest.fn(),
+    };
     const mod = await Test.createTestingModule({
       providers: [
         AnalyzerService,
         { provide: MetricResolutionService, useValue: metricResolution },
         { provide: ScoringService, useValue: scoringService },
+        { provide: RentcastService, useValue: rentcastMock },
       ],
     }).compile();
     service = mod.get(AnalyzerService);
@@ -147,5 +154,104 @@ describe('AnalyzerService.getMarketContext', () => {
     expect(ctx.market_heat).toBeNull();
     expect(ctx.net_migration).toBeNull();
     expect(ctx.piq_score).toBeNull();
+  });
+});
+
+describe('AnalyzerService.lookupProperty', () => {
+  it('orchestrates 3 RentCast calls and consolidates into PropertyLookupDto', async () => {
+    const rentcast = {
+      getPropertyRecord: jest.fn().mockResolvedValue({
+        beds: 3,
+        baths: 2,
+        sqft: 1450,
+        yearBuilt: 1998,
+        taxAssessment: 220_000,
+        propertyType: 'Single Family',
+      }),
+      getValueEstimate: jest.fn().mockResolvedValue({
+        value: 245_000,
+        low: 230_000,
+        high: 260_000,
+        comps: [{ address: '125 Main St' }, { address: '127 Main St' }],
+      }),
+      getRentEstimate: jest.fn().mockResolvedValue({
+        rent: 2_850,
+        low: 2_700,
+        high: 3_000,
+        comps: [{ address: '129 Main St' }],
+      }),
+    };
+    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+
+    const r = await service.lookupProperty('123 Main St');
+
+    expect(r.property_record).toEqual({
+      beds: 3,
+      baths: 2,
+      sqft: 1450,
+      yearBuilt: 1998,
+      taxAssessment: 220_000,
+      propertyType: 'Single Family',
+    });
+    expect(r.avm).toEqual({
+      value: 245_000,
+      low: 230_000,
+      high: 260_000,
+      comps_count: 2,
+    });
+    expect(r.rent).toEqual({
+      value: 2_850,
+      low: 2_700,
+      high: 3_000,
+      comps_count: 1,
+    });
+    expect(r.sales_comps).toHaveLength(2);
+    expect(r.rental_comps).toHaveLength(1);
+    expect(r.cache_age_days).toBe(0);
+    expect(r.source).toBe('rentcast');
+    expect(rentcast.getPropertyRecord).toHaveBeenCalledWith('123 Main St');
+    expect(rentcast.getValueEstimate).toHaveBeenCalledWith('123 Main St');
+    expect(rentcast.getRentEstimate).toHaveBeenCalledWith('123 Main St');
+  });
+
+  it('degrades to nulls on per-field failure (AVM rejects, rent succeeds)', async () => {
+    const rentcast = {
+      getPropertyRecord: jest.fn().mockResolvedValue({ beds: 3 }),
+      getValueEstimate: jest.fn().mockRejectedValue(new Error('boom')),
+      getRentEstimate: jest.fn().mockResolvedValue({
+        rent: 2_850,
+        low: 2_700,
+        high: 3_000,
+        comps: [],
+      }),
+    };
+    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+
+    const r = await service.lookupProperty('123 Main St');
+
+    expect(r.property_record).toEqual({ beds: 3 });
+    expect(r.avm).toBeNull();
+    expect(r.rent?.value).toBe(2_850);
+    expect(r.sales_comps).toEqual([]);
+    expect(r.rental_comps).toEqual([]);
+    expect(r.source).toBe('rentcast');
+  });
+
+  it('degrades all three fields when every RentCast call fails', async () => {
+    const rentcast = {
+      getPropertyRecord: jest.fn().mockRejectedValue(new Error('a')),
+      getValueEstimate: jest.fn().mockRejectedValue(new Error('b')),
+      getRentEstimate: jest.fn().mockRejectedValue(new Error('c')),
+    };
+    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+
+    const r = await service.lookupProperty('999 Bad Address');
+
+    expect(r.property_record).toBeNull();
+    expect(r.avm).toBeNull();
+    expect(r.rent).toBeNull();
+    expect(r.sales_comps).toEqual([]);
+    expect(r.rental_comps).toEqual([]);
+    expect(r.source).toBe('rentcast');
   });
 });

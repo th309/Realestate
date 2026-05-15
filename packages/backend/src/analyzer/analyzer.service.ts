@@ -4,6 +4,7 @@ import { MetricResolutionService } from '../metric-resolution/metric-resolution.
 import type { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import { ScoringService } from '../scoring/scoring.service';
 import type { GeographyLevel } from '../scoring/formula-weights';
+import { RentcastService } from '../rentcast/rentcast.service';
 import type {
   AnalyzerGeoLevel,
   MarketContextDto,
@@ -11,6 +12,7 @@ import type {
   MetricValueDto,
 } from './dto/market-context.dto';
 import type { AiVerdictRequestDto } from './dto/ai-verdict.dto';
+import type { PropertyLookupDto } from './dto/property-lookup.dto';
 
 /** Metric IDs requested for analyzer market context. */
 const MARKET_CONTEXT_METRICS = [
@@ -58,6 +60,7 @@ export class AnalyzerService {
   constructor(
     private readonly metricResolution: MetricResolutionService,
     private readonly scoringService: ScoringService,
+    private readonly rentcast: RentcastService,
   ) {}
 
   /**
@@ -130,6 +133,53 @@ export class AnalyzerService {
       market_heat: toMetricValueDto(metrics.market_heat),
       net_migration: toMetricValueDto(metrics.net_migration),
       piq_score: piq,
+    };
+  }
+
+  /**
+   * Fetch a consolidated property snapshot (record + AVM + rent estimate)
+   * from RentCast in a single round trip.
+   *
+   * Uses `Promise.allSettled` so per-source failures degrade to nulls rather
+   * than failing the whole request — a successful AVM is useful even if the
+   * rent estimate is unavailable. The underlying `RentcastService` enforces
+   * a Redis-backed monthly call cap; if Redis is down the calls reject and
+   * each field becomes `null`.
+   */
+  async lookupProperty(address: string): Promise<PropertyLookupDto> {
+    const [recordResult, avmResult, rentResult] = await Promise.allSettled([
+      this.rentcast.getPropertyRecord(address),
+      this.rentcast.getValueEstimate(address),
+      this.rentcast.getRentEstimate(address),
+    ]);
+
+    const property_record =
+      recordResult.status === 'fulfilled' ? recordResult.value : null;
+    const avmRaw = avmResult.status === 'fulfilled' ? avmResult.value : null;
+    const rentRaw = rentResult.status === 'fulfilled' ? rentResult.value : null;
+
+    return {
+      property_record,
+      avm: avmRaw
+        ? {
+            value: avmRaw.value,
+            low: avmRaw.low,
+            high: avmRaw.high,
+            comps_count: avmRaw.comps.length,
+          }
+        : null,
+      rent: rentRaw
+        ? {
+            value: rentRaw.rent,
+            low: rentRaw.low,
+            high: rentRaw.high,
+            comps_count: rentRaw.comps.length,
+          }
+        : null,
+      sales_comps: avmRaw?.comps ?? [],
+      rental_comps: rentRaw?.comps ?? [],
+      cache_age_days: 0,
+      source: 'rentcast',
     };
   }
 

@@ -26,6 +26,10 @@ import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
 import { ListSavedQueryDto } from './dto/list-saved.dto';
+import {
+  PropertyLookupQueryDto,
+  PropertyLookupDto,
+} from './dto/property-lookup.dto';
 
 /**
  * Share tokens are produced by `crypto.randomBytes(N).toString('base64url')`.
@@ -64,6 +68,25 @@ export class AnalyzerController {
   @Get('market-context')
   getMarketContext(@Query() query: MarketContextQueryDto) {
     return this.service.getMarketContext(query);
+  }
+
+  /**
+   * GET /api/analyzer/property-lookup?address=<string>
+   *
+   * Pro-gated property snapshot from RentCast. Orchestrates 3 upstream
+   * calls (record + AVM + rent estimate) via `Promise.allSettled` so a
+   * partial failure (e.g. rent estimate unavailable) still returns the
+   * surviving fields. The address is opaque to us — RentCast handles
+   * parsing, geocoding, and matching.
+   */
+  @Get('property-lookup')
+  @UseGuards(JwtAuthGuard)
+  async lookupProperty(
+    @AuthUserId() userId: string,
+    @Query() query: PropertyLookupQueryDto,
+  ): Promise<PropertyLookupDto> {
+    await this.requireProTier(userId);
+    return this.service.lookupProperty(query.address);
   }
 
   /**
