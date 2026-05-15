@@ -153,6 +153,37 @@ export default function AnalyzerClient({
 
           <div className="grid grid-cols-1 md:grid-cols-[62%_38%] gap-6">
             <div className="space-y-6 min-w-0">
+              {!address.trim() && !rentcastData && (
+                <div
+                  data-empty-cta
+                  className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
+                >
+                  <div className="font-semibold mb-1">
+                    Enter a property address to get started →
+                  </div>
+                  <div className="text-sm">
+                    Type the address in the panel on the right{" "}
+                    {isPro ? (
+                      <>
+                        and click{" "}
+                        <strong>Fetch property + comps from RentCast</strong> to
+                        auto-populate price, rent, and comps. Or open this page
+                        with{" "}
+                        <code className="font-mono text-xs">
+                          ?address=YOUR+ADDRESS
+                        </code>{" "}
+                        to auto-fetch on load.
+                      </>
+                    ) : (
+                      <>
+                        (Pro feature: RentCast lookup not available on free
+                        tier).
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <Hero
                 score={score}
                 aiText={
