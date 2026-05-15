@@ -33,6 +33,20 @@ export function DistributionViolinChart({
   height = 160,
 }: DistributionViolinChartProps) {
   const padding = 24;
+
+  // Empty-data guard: with no comp population the KDE divides by zero and
+  // emits NaN path coordinates. Render a placeholder instead.
+  if (!values || values.length === 0 || !Number.isFinite(yourValue)) {
+    return (
+      <div
+        data-violin-empty
+        className="h-[160px] flex items-center justify-center text-xs text-on-surface-variant border border-dashed border-outline-variant rounded-lg"
+      >
+        No comp distribution yet — fetch from RentCast to populate.
+      </div>
+    );
+  }
+
   const [minV = 0, maxV = 1] = extent(values);
   const domain = [Math.min(minV, yourValue), Math.max(maxV, yourValue)];
   const x = scaleLinear()

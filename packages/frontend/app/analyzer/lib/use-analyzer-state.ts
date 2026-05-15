@@ -77,19 +77,32 @@ export function useAnalyzerState({
   }, [rentcastData, analyzer, arvLocal]);
 
   // Auto-fetch on first render when address arrived via ?address= query param,
-  // saving the user a click in the common deep-link flow.
+  // saving the user a click in the common deep-link flow. Note: `mutate` from
+  // useMutation is stable, so we only depend on the trigger conditions.
   const autoFetchedRef = useRef(false);
+  const mutate = propertyLookup.mutate;
   useEffect(() => {
-    if (
+    const trimmed = address.trim();
+    const shouldFetch =
       !autoFetchedRef.current &&
       isPro &&
-      address.trim().length > 5 &&
-      paramAddress
-    ) {
-      autoFetchedRef.current = true;
-      propertyLookup.mutate({ address });
+      trimmed.length > 5 &&
+      Boolean(paramAddress);
+    if (process.env.NODE_ENV !== "production") {
+       
+      console.log("[analyzer] auto-fetch check", {
+        isPro,
+        addressLength: trimmed.length,
+        paramAddress,
+        autoFetched: autoFetchedRef.current,
+        shouldFetch,
+      });
     }
-  }, [isPro, address, paramAddress, propertyLookup]);
+    if (shouldFetch) {
+      autoFetchedRef.current = true;
+      mutate({ address: trimmed });
+    }
+  }, [isPro, address, paramAddress, mutate]);
 
   const projection = useMemo(
     () => computeProjection(analyzer.input),

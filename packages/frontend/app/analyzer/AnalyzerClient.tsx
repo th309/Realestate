@@ -184,6 +184,44 @@ export default function AnalyzerClient({
 
               <StrategyCompare {...strategyProps} />
 
+              {/* Always-visible debug box: tells us at a glance what state the RentCast lookup is in. */}
+              <div
+                data-rentcast-debug
+                className="rounded-xl border border-outline-variant bg-surface-container-low text-xs px-3 py-2 font-mono text-on-surface-variant flex flex-wrap gap-x-4 gap-y-1"
+              >
+                <span>
+                  tier: <strong>{entitlements.tier ?? "?"}</strong>
+                </span>
+                <span>
+                  isPro: <strong>{String(isPro)}</strong>
+                </span>
+                <span>
+                  address: <strong>{address || "(empty)"}</strong>
+                </span>
+                <span>
+                  lookup:{" "}
+                  <strong>
+                    {propertyLookup.isPending
+                      ? "pending…"
+                      : propertyLookup.isSuccess
+                        ? "success"
+                        : propertyLookup.isError
+                          ? "error"
+                          : "idle"}
+                  </strong>
+                </span>
+                {!propertyLookup.data && !propertyLookup.isPending && (
+                  <button
+                    onClick={() =>
+                      propertyLookup.mutate({ address: address.trim() })
+                    }
+                    className="underline text-[var(--md-primary)]"
+                  >
+                    Force fetch
+                  </button>
+                )}
+              </div>
+
               {(lookupErrorMsg || quotaExceeded) && (
                 <div
                   data-rentcast-status
