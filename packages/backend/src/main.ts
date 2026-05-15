@@ -1,7 +1,7 @@
 // Build trigger: 2026-03-28
 import './instrument'; // Sentry — must run before NestJS loads any modules
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import cookieParser from 'cookie-parser';
@@ -9,7 +9,32 @@ import { AppModule } from './app.module';
 
 // Build trigger: 2026-01-28
 
+/**
+ * Diagnostic: surface TLS env so a Norton-AV / corporate-CA TLS interception
+ * issue is obvious at boot instead of manifesting as silent fetch failures.
+ * See `[[reference_norton-ca-node-tls]]` memory + `start:dev` cross-env wrapper.
+ */
+function logTlsEnv() {
+  const log = new Logger('Bootstrap');
+  const opts = process.env.NODE_OPTIONS ?? '';
+  const hasUseSystemCa = opts.includes('--use-system-ca');
+  const extraCa = process.env.NODE_EXTRA_CA_CERTS ?? '';
+  const platform = process.platform;
+  if (platform === 'win32' && !hasUseSystemCa && !extraCa) {
+    log.warn(
+      '[TLS] NODE_OPTIONS does not include --use-system-ca AND NODE_EXTRA_CA_CERTS is unset on win32. ' +
+        'Outbound HTTPS fetches (e.g. RentCast) may FAIL with "fetch failed" if a TLS-intercepting AV ' +
+        'like Norton is active. Restart via `npm run dev` so the cross-env wrapper applies.',
+    );
+  } else {
+    log.log(
+      `[TLS] NODE_OPTIONS="${opts}" NODE_EXTRA_CA_CERTS="${extraCa ? 'SET' : 'unset'}" platform=${platform}`,
+    );
+  }
+}
+
 async function bootstrap() {
+  logTlsEnv();
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Trust the Railway edge proxy so Express resolves `req.ip` from the
