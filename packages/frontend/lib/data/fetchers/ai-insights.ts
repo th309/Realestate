@@ -1,0 +1,48 @@
+/**
+ * AI INSIGHTS FETCHER
+ *
+ * POST /api/analyzer/ai-insights/section returns a per-section AI annotation
+ * derived from the deal payload. 24-hour Redis cache backend-side; the
+ * `cacheHit` flag tells the UI whether to mark the annotation stale.
+ */
+
+import { API_URL } from "./base";
+import { getAuthHeaders } from "./auth-headers";
+
+export type AnalyzerSectionId =
+  | "projection"
+  | "expense_waterfall"
+  | "sensitivity"
+  | "comps"
+  | "market_context"
+  | "after_tax";
+
+export interface AiInsightPayload {
+  input: unknown;
+  result: unknown;
+  rentcast: unknown;
+  piq: unknown;
+}
+
+export interface AIAnnotationResult {
+  text: string;
+  threadId: string;
+  citedFacts: string[];
+  cacheHit: boolean;
+}
+
+export async function fetchAiInsight(params: {
+  id: AnalyzerSectionId;
+  payload: AiInsightPayload;
+}): Promise<AIAnnotationResult> {
+  const url = `${API_URL}/api/analyzer/ai-insights/section`;
+  const headers = await getAuthHeaders();
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`ai-insights ${res.status}`);
+  return (await res.json()) as AIAnnotationResult;
+}

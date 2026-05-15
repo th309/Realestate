@@ -8,6 +8,19 @@
  * compliance). Consumer imports are unchanged.
  */
 
+// Analyzer redesign Phase 1 — RentCast property lookup + AI insights
+export {
+  fetchPropertyLookup,
+  type PropertyLookupResult,
+} from "./fetchers/property-lookup";
+export {
+  fetchAiInsight,
+  type AIAnnotationResult,
+  type AiInsightPayload,
+  type AnalyzerSectionId,
+} from "./fetchers/ai-insights";
+export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
+
 // ============================================================================
 // TYPES
 // ============================================================================
