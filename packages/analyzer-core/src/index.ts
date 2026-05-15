@@ -3,3 +3,8 @@ export * from "./types";
 export * from "./rental";
 export * from "./flip";
 export * from "./brrrr";
+export * from "./compute-projection";
+export * from "./compute-sensitivity";
+export * from "./compute-breakeven";
+export * from "./compute-brrrr-timeline";
+export * from "./compute-after-tax";
