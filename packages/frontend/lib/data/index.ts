@@ -20,6 +20,9 @@ export {
   type AnalyzerSectionId,
 } from "./fetchers/ai-insights";
 export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
+export { usePropertyLookup } from "./hooks/usePropertyLookup";
+export { useAiSectionAnnotation } from "./hooks/useAiSectionAnnotation";
+export { useAiHeaderVerdict } from "./hooks/useAiHeaderVerdict";
 
 // ============================================================================
 // TYPES
