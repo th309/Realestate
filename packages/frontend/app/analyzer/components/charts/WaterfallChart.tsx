@@ -75,7 +75,9 @@ export function WaterfallChart({
 function computeLayout(steps: WaterfallStep[], width: number, height: number) {
   const padding = 30;
   const barW = Math.min(60, (width - 2 * padding) / steps.length - 8);
-  const maxVal = Math.max(...steps.map((s) => Math.abs(s.value)));
+  // Floor maxVal at 1 so empty/all-zero input doesn't divide by zero
+  // (callers can pass placeholder steps before the user fills inputs).
+  const maxVal = Math.max(1, ...steps.map((s) => Math.abs(s.value)));
   const scaleY = (height - 2 * padding) / maxVal;
   let runningTotal = 0;
   return steps.map((step, i) => {
