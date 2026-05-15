@@ -134,15 +134,25 @@ export class RentcastService {
     }
 
     const url = `${BASE_URL}/${endpoint}?address=${encodeURIComponent(address)}`;
+    this.logger.log(
+      `RentCast → ${endpoint} for "${address}" (usage ${usage}/${this.monthlyCap})`,
+    );
     const res = await fetch(url, {
       headers: { [this.headerName]: this.apiKey },
     });
     if (!res.ok) {
+      const bodyPreview = await res.text().catch(() => '');
+      this.logger.warn(
+        `RentCast ← ${endpoint} ${res.status} ${res.statusText}: ${bodyPreview.slice(0, 200)}`,
+      );
       throw new Error(
         `RentCast ${endpoint} returned ${res.status} ${res.statusText}`,
       );
     }
     const raw = await res.json();
+    this.logger.log(
+      `RentCast ← ${endpoint} OK (${JSON.stringify(raw).length} bytes)`,
+    );
     const transformed = transform(raw);
     await client.set(
       cacheKey,
