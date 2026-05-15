@@ -5,14 +5,19 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { AnalyzerController } from './analyzer.controller';
+import { AnalyzerAiController } from './analyzer-ai.controller';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
+import { AnalyzerTierGate } from './analyzer-tier-gate.service';
+import { AiInsightsService } from './ai-insights.service';
+import { AiInsightsCache } from './ai-insights.cache';
 import { FreePreviewMiddleware } from './free-preview.middleware';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { RentcastModule } from '../rentcast/rentcast.module';
+import { AiProviderModule } from '../ai-provider/ai-provider.module';
 
 @Module({
   imports: [
@@ -21,11 +26,15 @@ import { RentcastModule } from '../rentcast/rentcast.module';
     SupabaseModule,
     EntitlementsModule,
     RentcastModule,
+    AiProviderModule,
   ],
-  controllers: [AnalyzerController],
+  controllers: [AnalyzerController, AnalyzerAiController],
   providers: [
     AnalyzerService,
     AnalyzerPersistenceService,
+    AnalyzerTierGate,
+    AiInsightsService,
+    AiInsightsCache,
     FreePreviewMiddleware,
   ],
   exports: [AnalyzerService, AnalyzerPersistenceService],

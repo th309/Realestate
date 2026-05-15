@@ -3,27 +3,22 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
-  Logger,
   NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
   Query,
-  Res,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import type { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
-import { EntitlementsService } from '../entitlements/entitlements.service';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
+import { AnalyzerTierGate } from './analyzer-tier-gate.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
-import { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
 import { ListSavedQueryDto } from './dto/list-saved.dto';
 import {
@@ -38,22 +33,13 @@ import {
  */
 const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{16,64}$/;
 
-/**
- * Tiers allowed to invoke the AI verdict endpoint. Tier resolution itself
- * goes through `EntitlementsService.getUserTier` so trial / org-tier /
- * admin-fallback rules stay consistent with the rest of the backend.
- */
-const VERDICT_ALLOWED_TIERS = ['pro', 'enterprise', 'admin'];
-
 @Controller('api/analyzer')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class AnalyzerController {
-  private readonly logger = new Logger(AnalyzerController.name);
-
   constructor(
     private readonly service: AnalyzerService,
     private readonly persistence: AnalyzerPersistenceService,
-    private readonly entitlements: EntitlementsService,
+    private readonly tierGate: AnalyzerTierGate,
   ) {}
 
   /**
@@ -85,46 +71,8 @@ export class AnalyzerController {
     @AuthUserId() userId: string,
     @Query() query: PropertyLookupQueryDto,
   ): Promise<PropertyLookupDto> {
-    await this.requireProTier(userId);
+    await this.tierGate.requirePro(userId);
     return this.service.lookupProperty(query.address);
-  }
-
-  /**
-   * POST /api/analyzer/ai-verdict
-   *
-   * Streams an AI-generated deal verdict via Server-Sent Events.
-   * Pro-gated: anonymous users are blocked by FreePreviewMiddleware,
-   * logged-in users hit `requireProTier` below for a 403 on non-Pro tiers.
-   *
-   * Response is `text/event-stream`; each chunk is
-   * `data: {"chunk":"..."}\n\n`. Stream terminates with `data: [DONE]\n\n`.
-   * Errors mid-stream are emitted as `data: {"error":"..."}\n\n` before
-   * the connection ends.
-   */
-  @Post('ai-verdict')
-  @UseGuards(JwtAuthGuard)
-  async aiVerdict(
-    @AuthUserId() userId: string,
-    @Body() body: AiVerdictRequestDto,
-    @Res() res: Response,
-  ): Promise<void> {
-    await this.requireProTier(userId);
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    try {
-      for await (const chunk of this.service.streamAiVerdict(body)) {
-        res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-      }
-      res.write('data: [DONE]\n\n');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
-    } finally {
-      res.end();
-    }
   }
 
   /**
@@ -139,7 +87,7 @@ export class AnalyzerController {
     @AuthUserId() userId: string,
     @Body() body: AnalysisSnapshotDto,
   ) {
-    await this.requireProTier(userId);
+    await this.tierGate.requirePro(userId);
     return this.persistence.save(userId, body);
   }
 
@@ -211,31 +159,5 @@ export class AnalyzerController {
       throw new NotFoundException('shared analysis not found');
     }
     return row;
-  }
-
-  /**
-   * Resolve the user's effective tier via the cached `EntitlementsService`
-   * (which delegates to `TierResolverService` for trial / org-tier /
-   * admin-fallback resolution) and 403 if they aren't Pro-or-better.
-   *
-   * A `null` return from `getUserTier` means we have a userId but no
-   * resolvable tier — typically a missing `user_profiles` row. Surface that
-   * as a warning so we can spot orphaned auth users in production logs.
-   */
-  private async requireProTier(userId: string): Promise<void> {
-    const resolved = await this.entitlements.getUserTier(userId);
-
-    if (resolved == null) {
-      this.logger.warn(
-        `[Analyzer] requireProTier: no tier resolved for userId=${userId.substring(0, 8)}… — missing user_profiles row?`,
-      );
-    }
-
-    const tier = resolved ?? 'free';
-    if (!VERDICT_ALLOWED_TIERS.includes(tier)) {
-      throw new ForbiddenException(
-        `AI verdict requires a Pro or Enterprise subscription. Current tier: ${tier}`,
-      );
-    }
   }
 }
