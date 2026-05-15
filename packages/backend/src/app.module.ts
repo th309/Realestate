@@ -68,6 +68,7 @@ import { MigrationModule } from './migration/migration.module';
 import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
 import { AnonymousModule } from './anonymous/anonymous.module';
 import { AnalyzerModule } from './analyzer/analyzer.module';
+import { RentcastModule } from './rentcast/rentcast.module';
 
 @Module({
   imports: [
@@ -152,6 +153,7 @@ import { AnalyzerModule } from './analyzer/analyzer.module';
     EmploymentSectorsModule,
     AnonymousModule,
     AnalyzerModule,
+    RentcastModule,
   ],
   controllers: [AppController],
   providers: [
