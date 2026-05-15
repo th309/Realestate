@@ -2,22 +2,19 @@
  * E2E tests for the /analyzer page (Deal Analyzer).
  *
  * Covers:
- *  - Happy path (Pro user): autocomplete → results render → market tile visible
+ *  - Happy path (Pro user): autocomplete → KPI strip renders → market context visible
  *  - Graceful degradation: insurance field unavailable, rest still works
  *  - Anonymous quota wall after 3 analyses
  *  - Save → share URL publicly visible without auth
  *
  * Notes:
- *  - The /analyzer page renders a responsive layout with the InputForm appearing
- *    in BOTH a <details> accordion (mobile) and an <aside> (desktop) — both are
- *    in the DOM, hidden via CSS. Selectors that could match both must use
+ *  - The /analyzer page renders a responsive layout: the InputPanel lives in a
+ *    sticky <aside> on desktop, and inside the `EditInputsFab` drawer on mobile.
+ *    Both copies may be in the DOM; selectors that could match both must use
  *    `.first()` to avoid Playwright strict-mode violations.
- *  - The MarketContextTile renders both a locked-overlay variant and the
- *    underlying content for visual continuity, so "PropertyIQ Market Context"
- *    appears twice when locked.
- *  - These tests target desktop chromium only. Mobile-chrome viewport pointer
- *    events get intercepted by the open <details> accordion overlapping the
- *    action buttons. Add separate mobile coverage if needed.
+ *  - These tests target desktop chromium only — the mobile-chrome viewport's
+ *    open FAB drawer intercepts pointer events on action buttons. Add separate
+ *    mobile coverage if needed.
  */
 
 import { test, expect } from "@playwright/test";

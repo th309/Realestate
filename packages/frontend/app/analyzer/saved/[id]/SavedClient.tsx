@@ -1,9 +1,20 @@
 "use client";
 
 import { useSavedAnalysis } from "@/lib/analyzer/useSavedAnalysis";
-import HeroMetrics from "../../components/HeroMetrics";
-import StrategyTabs from "../../components/StrategyTabs";
-import MarketContextTile from "../../components/MarketContextTile";
+import type {
+  RentalResult,
+  FlipResult,
+  BrrrrResult,
+} from "@propertyiq/analyzer-core";
+import { Hero } from "../../components/Hero/Hero";
+import { ThreeStrategyGrid } from "../../components/StrategyCompare/ThreeStrategyGrid";
+import { MarketContextSection } from "../../components/sections/MarketContextSection";
+import {
+  buildKpiTilesFromRental,
+  buildStrategyCardsFromResult,
+  extractMarketContextProps,
+} from "../../lib/saved-render-builders";
+import { deriveGradeScore } from "../../lib/format-helpers";
 
 export default function SavedClient({ id }: { id: string }) {
   const { data: row, isLoading } = useSavedAnalysis(id);
@@ -19,7 +30,23 @@ export default function SavedClient({ id }: { id: string }) {
     );
   }
 
-  const r = row.result_snapshot as Record<string, any>;
+  const result = row.result_snapshot as {
+    rental?: Partial<RentalResult>;
+    flip?: FlipResult | null;
+    brrrr?: BrrrrResult | null;
+  };
+  const rental = (result.rental ?? {}) as Partial<RentalResult>;
+  const flip = result.flip ?? null;
+  const brrrr = result.brrrr ?? null;
+
+  const score = deriveGradeScore(
+    rental.capRatePct ?? null,
+    rental.dscr ?? null,
+  );
+  const kpiTiles = buildKpiTilesFromRental(rental);
+  const strategyCards = buildStrategyCardsFromResult(rental, flip, brrrr);
+  const marketProps = extractMarketContextProps(row.market_context);
+
   return (
     <main className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -29,25 +56,13 @@ export default function SavedClient({ id }: { id: string }) {
         <p className="text-sm text-on-surface-variant mb-6">
           Saved {new Date(row.created_at).toLocaleDateString()}
         </p>
-        <div className="space-y-4">
-          <HeroMetrics
-            capRatePct={r.rental?.capRatePct ?? null}
-            cocPct={r.rental?.cashOnCashPct ?? null}
-            cashflowMonthly={r.rental?.cashflowMonthly ?? null}
-            dscr={r.rental?.dscr ?? null}
-          />
-          <StrategyTabs
-            rental={r.rental as any}
-            flip={r.flip ?? null}
-            brrrr={r.brrrr ?? null}
-          />
-          {row.market_context && (
-            <MarketContextTile
-              context={row.market_context as any}
-              locked={false}
-            />
-          )}
+
+        <div className="space-y-6">
+          <Hero score={score} kpiTiles={kpiTiles} />
+          <ThreeStrategyGrid strategies={strategyCards} />
+          {row.market_context && <MarketContextSection {...marketProps} />}
         </div>
+
         <div className="mt-8 text-center">
           <a
             href={`/shared/analysis/${row.share_token}`}

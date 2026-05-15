@@ -6,21 +6,26 @@
  * SECURITY DEFINER Postgres function that strips PII (owner_id, full address,
  * lat/lon) before returning the row, so anything we render here is safe.
  *
- * Market context is always revealed (locked=false) because the analysis was
- * saved by a Pro user at the time of share.
+ * Market context is always revealed because the analysis was saved by a Pro
+ * user at the time of share.
  */
 
 import { fetchSharedAnalysis } from "@/lib/data";
-import type { MarketContext } from "@/lib/data";
 import type {
   RentalResult,
   FlipResult,
   BrrrrResult,
 } from "@propertyiq/analyzer-core";
 import { notFound } from "next/navigation";
-import HeroMetrics from "@/app/analyzer/components/HeroMetrics";
-import StrategyTabs from "@/app/analyzer/components/StrategyTabs";
-import MarketContextTile from "@/app/analyzer/components/MarketContextTile";
+import { Hero } from "@/app/analyzer/components/Hero/Hero";
+import { ThreeStrategyGrid } from "@/app/analyzer/components/StrategyCompare/ThreeStrategyGrid";
+import { MarketContextSection } from "@/app/analyzer/components/sections/MarketContextSection";
+import {
+  buildKpiTilesFromRental,
+  buildStrategyCardsFromResult,
+  extractMarketContextProps,
+} from "@/app/analyzer/lib/saved-render-builders";
+import { deriveGradeScore } from "@/app/analyzer/lib/format-helpers";
 
 // Each token returns different data and there's no per-user variance worth
 // caching, so render dynamically on every request.
@@ -45,6 +50,13 @@ export default async function SharedAnalysisPage({ params }: PageProps) {
   const brrrr = result.brrrr ?? null;
 
   const heading = row.label || `${row.address_city}, ${row.address_state}`;
+  const score = deriveGradeScore(
+    rental.capRatePct ?? null,
+    rental.dscr ?? null,
+  );
+  const kpiTiles = buildKpiTilesFromRental(rental);
+  const strategyCards = buildStrategyCardsFromResult(rental, flip, brrrr);
+  const marketProps = extractMarketContextProps(row.market_context);
 
   return (
     <main className="min-h-screen bg-surface">
@@ -58,24 +70,10 @@ export default async function SharedAnalysisPage({ params }: PageProps) {
           </h1>
         </header>
 
-        <div className="space-y-4">
-          <HeroMetrics
-            capRatePct={rental.capRatePct ?? null}
-            cocPct={rental.cashOnCashPct ?? null}
-            cashflowMonthly={rental.cashflowMonthly ?? null}
-            dscr={rental.dscr ?? null}
-          />
-          <StrategyTabs
-            rental={rental as RentalResult}
-            flip={flip}
-            brrrr={brrrr}
-          />
-          {row.market_context && (
-            <MarketContextTile
-              context={row.market_context as unknown as MarketContext}
-              locked={false}
-            />
-          )}
+        <div className="space-y-6">
+          <Hero score={score} kpiTiles={kpiTiles} />
+          <ThreeStrategyGrid strategies={strategyCards} />
+          {row.market_context && <MarketContextSection {...marketProps} />}
         </div>
 
         <footer className="mt-12 pt-6 border-t border-outline-variant text-center">
