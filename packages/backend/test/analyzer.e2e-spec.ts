@@ -125,4 +125,60 @@ describe('Analyzer (e2e)', () => {
   it.skip('POST /api/analyzer/save with Pro JWT persists and returns id + share_token', () => {
     // Requires SUPABASE_TEST_PRO_JWT env var. See comment above.
   });
+
+  // ------------------------------------------------------------------
+  // v2 endpoints: property-lookup + ai-insights/{section,header}
+  // ------------------------------------------------------------------
+  // All three are Pro-gated via @UseGuards(JwtAuthGuard). Guards execute
+  // before pipes in NestJS, so an empty body / missing token rejects at
+  // the guard with 401 *before* validation could turn it into a 400.
+  describe('v2 endpoints', () => {
+    it('GET /api/analyzer/property-lookup without auth returns 401', async () => {
+      await request(app.getHttpServer())
+        .get('/api/analyzer/property-lookup?address=123+Main+St')
+        .expect(401);
+    });
+
+    it('POST /api/analyzer/ai-insights/section without auth returns 401', async () => {
+      await request(app.getHttpServer())
+        .post('/api/analyzer/ai-insights/section')
+        .send({ id: 'projection', payload: {} })
+        .expect(401);
+    });
+
+    it('POST /api/analyzer/ai-insights/header without auth returns 401', async () => {
+      await request(app.getHttpServer())
+        .post('/api/analyzer/ai-insights/header')
+        .send({ payload: {} })
+        .expect(401);
+    });
+
+    // Pro-authenticated positive cases — same blocker as the .skip above
+    // (needs SUPABASE_TEST_PRO_JWT). They also burn live quota: property-lookup
+    // hits 3 RentCast endpoints per call, ai-insights/section hits the AI
+    // provider unless the cache layer already has a hit. When the JWT fixture
+    // lands, limit positive cases to 1-2 calls per suite run to stay under
+    // free-tier limits.
+    it.skip('GET /api/analyzer/property-lookup with Pro auth returns AVM + rent shape', () => {
+      // Requires SUPABASE_TEST_PRO_JWT.
+      // Assert: status 200, body has avm/rent/sales_comps/rental_comps,
+      // source === 'rentcast'.
+    });
+
+    it.skip('POST /api/analyzer/ai-insights/section with Pro auth returns AIAnnotationDto', () => {
+      // Requires SUPABASE_TEST_PRO_JWT.
+      // Assert: status 200/201, body has text + threadId + cacheHit:boolean.
+    });
+
+    it.skip('POST /api/analyzer/ai-insights/section twice with same payload sets cacheHit=true on second call', () => {
+      // Requires SUPABASE_TEST_PRO_JWT. First call populates cache; second
+      // returns cacheHit:true (Redis or in-memory fallback both fine).
+    });
+
+    it.skip('POST /api/analyzer/ai-insights/header with Pro auth streams SSE chunks then [DONE]', () => {
+      // Requires SUPABASE_TEST_PRO_JWT. Assert Content-Type text/event-stream,
+      // at least one `data: {"chunk":...}\n\n` frame, terminates with
+      // `data: [DONE]\n\n`.
+    });
+  });
 });
