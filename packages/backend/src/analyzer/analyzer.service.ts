@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import type { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import { ScoringService } from '../scoring/scoring.service';
 import type { GeographyLevel } from '../scoring/formula-weights';
 import { RentcastService } from '../rentcast/rentcast.service';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
 import type {
   AnalyzerGeoLevel,
   MarketContextDto,
@@ -61,6 +61,7 @@ export class AnalyzerService {
     private readonly metricResolution: MetricResolutionService,
     private readonly scoringService: ScoringService,
     private readonly rentcast: RentcastService,
+    private readonly aiProvider: AiProviderService,
   ) {}
 
   /**
@@ -215,11 +216,10 @@ export class AnalyzerService {
   /**
    * Stream an AI verdict as text deltas.
    *
-   * Hard-crashes if ANTHROPIC_API_KEY is missing (CLAUDE.md §1.2 — no
-   * default fallbacks for secrets). The content-pipeline and analytics-chat
-   * modules wrap the SDK in their own services for streaming/tool-use needs;
-   * we instantiate directly here for the same reason — `AnthropicService`
-   * only exposes the non-streaming `messages.create` path.
+   * Delegates to `AiProviderService.stream()` under the
+   * `analyzer_header_verdict` purpose so model selection, API-key
+   * resolution, and usage telemetry all live in the shared abstraction
+   * (CLAUDE.md §1.2 — no direct SDK use here).
    */
   async *streamAiVerdict(payload: AiVerdictRequestDto): AsyncGenerator<string> {
     // Cap combined serialized input+result at 4KB to prevent cost amplification
@@ -231,27 +231,11 @@ export class AnalyzerService {
       throw new Error('payload too large');
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is not set');
-    }
-    const client = new Anthropic({ apiKey });
-
-    const stream = client.messages.stream({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      system:
+    yield* this.aiProvider.stream('analyzer_header_verdict', {
+      systemPrompt:
         'You are a precise, numerate real-estate analyst. Output ONLY valid JSON.',
-      messages: [{ role: 'user', content: this.buildVerdictPrompt(payload) }],
+      userPrompt: this.buildVerdictPrompt(payload),
+      maxTokens: 800,
     });
-
-    for await (const event of stream) {
-      if (
-        event.type === 'content_block_delta' &&
-        event.delta.type === 'text_delta'
-      ) {
-        yield event.delta.text;
-      }
-    }
   }
 }

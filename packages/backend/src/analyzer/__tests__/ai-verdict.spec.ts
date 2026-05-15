@@ -2,7 +2,12 @@ import { AnalyzerService } from '../analyzer.service';
 
 describe('AnalyzerService.buildVerdictPrompt', () => {
   it('includes input, result, market context, and required output schema', () => {
-    const svc = new AnalyzerService(null as any, null as any, null as any);
+    const svc = new AnalyzerService(
+      null as any,
+      null as any,
+      null as any,
+      null as any,
+    );
     const prompt = svc.buildVerdictPrompt({
       input: {
         price: 425_000,
@@ -25,5 +30,61 @@ describe('AnalyzerService.buildVerdictPrompt', () => {
     expect(prompt).toContain('buy');
     expect(prompt).toContain('negotiate');
     expect(prompt).toContain('pass');
+  });
+});
+
+describe('AnalyzerService.streamAiVerdict', () => {
+  it('delegates to AiProviderService.stream with analyzer_header_verdict purpose', async () => {
+    const aiProvider = {
+      stream: jest.fn().mockImplementation(async function* () {
+        yield 'token';
+      }),
+    };
+    const service = new AnalyzerService(
+      {} as any,
+      {} as any,
+      {} as any,
+      aiProvider as any,
+    );
+    const chunks: string[] = [];
+    for await (const c of service.streamAiVerdict({
+      input: { price: 240000 } as any,
+      result: { capRatePct: 7.8 } as any,
+    })) {
+      chunks.push(c);
+    }
+    expect(aiProvider.stream).toHaveBeenCalledWith(
+      'analyzer_header_verdict',
+      expect.objectContaining({
+        systemPrompt: expect.any(String),
+        userPrompt: expect.any(String),
+        maxTokens: 800,
+      }),
+    );
+    expect(chunks).toEqual(['token']);
+  });
+
+  it('throws when combined input+result payload exceeds 4KB', async () => {
+    const aiProvider = {
+      stream: jest.fn().mockImplementation(async function* () {
+        yield 'should-not-be-yielded';
+      }),
+    };
+    const service = new AnalyzerService(
+      {} as any,
+      {} as any,
+      {} as any,
+      aiProvider as any,
+    );
+    const huge = 'x'.repeat(5000);
+    await expect(async () => {
+      for await (const _ of service.streamAiVerdict({
+        input: { note: huge } as any,
+        result: {} as any,
+      })) {
+        // drain
+      }
+    }).rejects.toThrow('payload too large');
+    expect(aiProvider.stream).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import { AnalyzerService } from '../analyzer.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import { RentcastService } from '../../rentcast/rentcast.service';
+import { AiProviderService } from '../../ai-provider/ai-provider.service';
 import type { ResolvedMetric } from '../../metric-resolution/metric-resolution.types';
 
 /**
@@ -44,6 +45,7 @@ describe('AnalyzerService.getMarketContext', () => {
         { provide: MetricResolutionService, useValue: metricResolution },
         { provide: ScoringService, useValue: scoringService },
         { provide: RentcastService, useValue: rentcastMock },
+        { provide: AiProviderService, useValue: { stream: jest.fn() } },
       ],
     }).compile();
     service = mod.get(AnalyzerService);
@@ -181,7 +183,12 @@ describe('AnalyzerService.lookupProperty', () => {
         comps: [{ address: '129 Main St' }],
       }),
     };
-    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+    const service = new AnalyzerService(
+      {} as any,
+      {} as any,
+      rentcast as any,
+      {} as any,
+    );
 
     const r = await service.lookupProperty('123 Main St');
 
@@ -225,7 +232,12 @@ describe('AnalyzerService.lookupProperty', () => {
         comps: [],
       }),
     };
-    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+    const service = new AnalyzerService(
+      {} as any,
+      {} as any,
+      rentcast as any,
+      {} as any,
+    );
 
     const r = await service.lookupProperty('123 Main St');
 
@@ -243,7 +255,12 @@ describe('AnalyzerService.lookupProperty', () => {
       getValueEstimate: jest.fn().mockRejectedValue(new Error('b')),
       getRentEstimate: jest.fn().mockRejectedValue(new Error('c')),
     };
-    const service = new AnalyzerService({} as any, {} as any, rentcast as any);
+    const service = new AnalyzerService(
+      {} as any,
+      {} as any,
+      rentcast as any,
+      {} as any,
+    );
 
     const r = await service.lookupProperty('999 Bad Address');
 
