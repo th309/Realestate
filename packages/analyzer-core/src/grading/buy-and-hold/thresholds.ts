@@ -166,9 +166,9 @@ export const GRADING_PRESET_META: Record<GradingPresetName, GradingPresetMeta> =
   };
 
 /**
- * BUY_AND_HOLD_DEFAULTS is an alias for the Balanced preset, kept for
- * backward compatibility with the original gradeDeal() signature. New
- * consumers should reference GRADING_PRESETS or BALANCED_THRESHOLDS directly.
+ * Default rubric for buy-and-hold grading — aliased to BALANCED_THRESHOLDS.
+ * Consumers that want explicit per-preset behavior should reference
+ * GRADING_PRESETS or BALANCED_THRESHOLDS directly.
  */
 export const BUY_AND_HOLD_DEFAULTS: UserThresholds = BALANCED_THRESHOLDS;
 

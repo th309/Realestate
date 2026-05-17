@@ -1,11 +1,13 @@
 /**
- * Upgrade-path engine: given a current deal that grades below a target letter,
- * find the smallest single-lever move (price, rent, down payment, rate) that
- * lifts the deal to the target grade or better. When no single lever reaches
- * the target, surface a combination hint instead.
+ * Upgrade-path engine: given a current B&H deal that grades below a target
+ * letter, find the smallest single-lever move (price, rent, down payment,
+ * rate) that lifts the deal to the target grade or better. When no single
+ * lever reaches the target, surface a combination hint instead.
  *
- * Calls `gradeDeal()` repeatedly inside a per-lever binary search. ~15 grade
- * calls per lever × 4 levers ≈ 60 calls per request; comfortably sub-100ms.
+ * Calls `gradeBuyAndHoldDeal()` repeatedly inside a per-lever binary search.
+ * ~15 grade calls per lever × 4 levers ≈ 60 calls per request; comfortably
+ * sub-100ms. Today the levers are B&H-shaped; a separate engine would be
+ * needed for fix-and-flip levers (purchase, ARV, rehab, hold months).
  *
  * Implementation is split across three files to satisfy CLAUDE.md §1.3:
  *   - upgrade-path-helpers.ts: lever metadata, formatting, feasibility, rounding
@@ -13,17 +15,16 @@
  *   - upgrade-path.ts (here):  public computeUpgradePath orchestrator
  */
 import type { DealInput } from "../types";
-import { gradeDeal } from "./grade";
-import { LETTER_RANK } from "./grade-helpers";
-import { BUY_AND_HOLD_DEFAULTS } from "./thresholds";
+import { gradeBuyAndHoldDeal } from "./buy-and-hold/grade";
+import { BUY_AND_HOLD_DEFAULTS } from "./buy-and-hold/thresholds";
 import type {
   GradingContext,
-  Letter,
   UpgradeLever,
   UpgradePathOption,
   UpgradePathResult,
   UserThresholds,
-} from "./types";
+} from "./buy-and-hold/types";
+import { LETTER_RANK, type Letter } from "./shared/types";
 import {
   FEASIBILITY_RANK,
   LEVER_LABEL,
@@ -38,7 +39,7 @@ export function computeUpgradePath(
   targetGrade: Letter,
   thresholds: UserThresholds = BUY_AND_HOLD_DEFAULTS,
 ): UpgradePathResult {
-  const baseResult = gradeDeal(input, context, thresholds);
+  const baseResult = gradeBuyAndHoldDeal(input, context, thresholds);
   const currentGrade = baseResult.letter;
 
   // Target must be strictly better than current (higher LETTER_RANK = better).

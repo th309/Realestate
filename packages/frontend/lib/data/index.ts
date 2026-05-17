@@ -39,6 +39,14 @@ export { usePropertyLookup } from "./hooks/usePropertyLookup";
 export { useAiSectionAnnotation } from "./hooks/useAiSectionAnnotation";
 export { useGradeDeal, type UseGradeDealOptions } from "./hooks/useGradeDeal";
 export {
+  useGradeFlipDeal,
+  type UseGradeFlipDealOptions,
+} from "./hooks/useGradeFlipDeal";
+export { fetchGradeFlipDeal } from "./fetchers/grade-flip";
+export type { FixAndFlipGradeRequest } from "./fetchers/grade-flip";
+export { useUpgradePathFlip } from "./hooks/useUpgradePathFlip";
+export type { UpgradePathFlipRequest } from "./fetchers/upgrade-path-flip";
+export {
   useUpgradePath,
   type UseUpgradePathOptions,
 } from "./hooks/useUpgradePath";

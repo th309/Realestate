@@ -4,8 +4,8 @@
  * Split out of upgrade-path.ts to keep that file under CLAUDE.md §1.3's
  * 300-line hard limit.
  */
-import { LETTER_RANK } from "./grade-helpers";
-import type { Letter, UpgradeLever, UpgradePathOption } from "./types";
+import type { UpgradeLever, UpgradePathOption } from "./buy-and-hold/types";
+import { LETTER_RANK, type Letter } from "./shared/types";
 
 export const LEVER_LABEL: Record<UpgradeLever, string> = {
   purchasePrice: "Negotiate purchase price down",

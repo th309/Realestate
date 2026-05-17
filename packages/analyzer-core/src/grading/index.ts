@@ -1,5 +1,31 @@
-export { gradeDeal } from "./grade";
-export { computeUpgradePath } from "./upgrade-path";
+/**
+ * Public surface of the grading module. Cross-strategy primitives come from
+ * `./shared`, strategy engines from `./buy-and-hold` and `./fix-and-flip`,
+ * and the (currently B&H-only) upgrade-path engine from `./upgrade-path`.
+ */
+
+// Cross-strategy aggregate utilities and types
+export {
+  clampGpa,
+  gpaPoints,
+  gradeMetric,
+  letterFromGpa,
+  marketAdjustment,
+} from "./shared/aggregate";
+export { LETTER_LABEL, LETTER_RANK } from "./shared/types";
+export type {
+  AdvisoryResult,
+  AutoKillFlag,
+  DealGradingResult,
+  Letter,
+  MetricResult,
+  MetricThreshold,
+  Strategy,
+  UserThresholdsGeneric,
+} from "./shared/types";
+
+// Buy-and-hold strategy
+export { gradeBuyAndHoldDeal } from "./buy-and-hold/grade";
 export {
   AGGRESSIVE_THRESHOLDS,
   BALANCED_THRESHOLDS,
@@ -8,20 +34,34 @@ export {
   GRADING_PRESET_META,
   GRADING_PRESETS,
   getPresetThresholds,
-} from "./thresholds";
-export type { GradingPresetMeta, GradingPresetName } from "./thresholds";
-export { gradeMetric, letterFromGpa, marketAdjustment } from "./aggregate";
+} from "./buy-and-hold/thresholds";
 export type {
-  AdvisoryResult,
-  AutoKillFlag,
-  DealGradingResult,
+  GradingPresetMeta,
+  GradingPresetName,
+} from "./buy-and-hold/thresholds";
+export type {
   GradingContext,
-  Letter,
-  MetricResult,
-  MetricThreshold,
-  Strategy,
   UpgradeLever,
   UpgradePathOption,
   UpgradePathResult,
   UserThresholds,
-} from "./types";
+} from "./buy-and-hold/types";
+
+// Fix-and-flip strategy
+export { gradeFixAndFlipDeal } from "./fix-and-flip/grade";
+export { FIX_AND_FLIP_DEFAULTS } from "./fix-and-flip/thresholds";
+export { computeFlipUpgradePath } from "./fix-and-flip/upgrade-path";
+export type {
+  FixAndFlipContext,
+  FixAndFlipInput,
+  FixAndFlipThresholds,
+} from "./fix-and-flip/types";
+export type {
+  FlipUpgradeLever,
+  FlipUpgradeOption,
+  FlipUpgradePathResult,
+} from "./fix-and-flip/upgrade-path-helpers";
+
+// Upgrade-path engine — B&H is at the top level (legacy location).
+// F&F upgrade-path lives in ./fix-and-flip/upgrade-path.ts (computeFlipUpgradePath).
+export { computeUpgradePath } from "./upgrade-path";

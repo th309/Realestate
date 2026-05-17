@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
+import { computeRentalMetrics } from "../../rental";
+import type { DealInput } from "../../types";
 import {
-  BUY_AND_HOLD_DEFAULTS,
-  gradeDeal,
   gradeMetric,
   letterFromGpa,
   marketAdjustment,
-} from "./index";
+} from "../shared/aggregate";
+import type { MetricThreshold } from "../shared/types";
+import { gradeBuyAndHoldDeal } from "./grade";
 import {
   annualOperatingExpenses,
   breakEvenOccupancy,
@@ -13,9 +15,7 @@ import {
   grm,
   opexRatio,
 } from "./metrics";
-import { computeRentalMetrics } from "../rental";
-import type { DealInput } from "../types";
-import type { MetricThreshold } from "./types";
+import { BUY_AND_HOLD_DEFAULTS } from "./thresholds";
 
 const baseFinancing = {
   downPaymentPct: 0.25,
@@ -75,7 +75,7 @@ describe("metrics module", () => {
   });
 
   it("breakEvenOccupancy returns Infinity when gross rent is zero", () => {
-    // bypass gradeDeal validation by calling the metric helper directly
+    // bypass gradeBuyAndHoldDeal validation by calling the metric helper directly
     const input = baseDeal({ rentMonthly: 0 });
     expect(breakEvenOccupancy(input, 5_000)).toBe(Number.POSITIVE_INFINITY);
   });
@@ -131,31 +131,36 @@ describe("metrics module", () => {
     expect(letterFromGpa(0.49)).toBe("F");
   });
 
-  it("marketAdjustment returns tier-based adjustments by PIQ score", () => {
-    expect(marketAdjustment(85)).toBe(0.25);
-    expect(marketAdjustment(67)).toBe(0);
-    expect(marketAdjustment(40)).toBe(-0.25);
-    expect(marketAdjustment(15)).toBe(-0.5);
-    expect(marketAdjustment(undefined)).toBe(0);
+  it("marketAdjustment (BUY_AND_HOLD) returns tier-based adjustments by PIQ score", () => {
+    expect(marketAdjustment(85, "BUY_AND_HOLD")).toBe(0.25);
+    expect(marketAdjustment(67, "BUY_AND_HOLD")).toBe(0);
+    expect(marketAdjustment(40, "BUY_AND_HOLD")).toBe(-0.25);
+    expect(marketAdjustment(15, "BUY_AND_HOLD")).toBe(-0.5);
+    expect(marketAdjustment(undefined, "BUY_AND_HOLD")).toBe(0);
+  });
+
+  it("marketAdjustment treats BRRRR the same as BUY_AND_HOLD (placeholder)", () => {
+    expect(marketAdjustment(85, "BRRRR")).toBe(0.25);
+    expect(marketAdjustment(40, "BRRRR")).toBe(-0.25);
   });
 });
 
-describe("gradeDeal", () => {
+describe("gradeBuyAndHoldDeal", () => {
   it("throws when rentMonthly is null or non-positive", () => {
-    expect(() => gradeDeal(baseDeal({ rentMonthly: null }))).toThrow(
+    expect(() => gradeBuyAndHoldDeal(baseDeal({ rentMonthly: null }))).toThrow(
       /rentMonthly/,
     );
-    expect(() => gradeDeal(baseDeal({ rentMonthly: 0 }))).toThrow(
+    expect(() => gradeBuyAndHoldDeal(baseDeal({ rentMonthly: 0 }))).toThrow(
       /rentMonthly/,
     );
   });
 
   it("throws when price is non-positive", () => {
-    expect(() => gradeDeal(baseDeal({ price: 0 }))).toThrow(/price/);
+    expect(() => gradeBuyAndHoldDeal(baseDeal({ price: 0 }))).toThrow(/price/);
   });
 
   it("returns five graded metrics in a fixed order", () => {
-    const result = gradeDeal(baseDeal());
+    const result = gradeBuyAndHoldDeal(baseDeal());
     expect(result.metrics.map((m) => m.key)).toEqual([
       "cashOnCash",
       "dscr",
@@ -166,7 +171,7 @@ describe("gradeDeal", () => {
   });
 
   it("returns three advisories (1% rule, GRM, opex ratio)", () => {
-    const result = gradeDeal(baseDeal());
+    const result = gradeBuyAndHoldDeal(baseDeal());
     expect(result.advisories.map((a) => a.key)).toEqual([
       "one_percent_rule",
       "grm",
@@ -180,19 +185,21 @@ describe("gradeDeal", () => {
     const rental = computeRentalMetrics(input);
     // sanity: DSCR should now be < 1
     expect(rental.dscr).toBeLessThan(1);
-    const result = gradeDeal(input, { appreciationPlayAccepted: true });
+    const result = gradeBuyAndHoldDeal(input, {
+      appreciationPlayAccepted: true,
+    });
     expect(result.letter).toBe("F");
     expect(result.autoKills.map((k) => k.code)).toContain("DSCR_BELOW_1");
   });
 
   it("auto-kills when flood zone is AE without quoted insurance", () => {
-    const result = gradeDeal(baseDeal(), { floodZone: "AE" });
+    const result = gradeBuyAndHoldDeal(baseDeal(), { floodZone: "AE" });
     expect(result.letter).toBe("F");
     expect(result.autoKills.map((k) => k.code)).toContain("FLOOD_NO_INSURANCE");
   });
 
   it("does not auto-kill when flood insurance is quoted", () => {
-    const result = gradeDeal(baseDeal(), {
+    const result = gradeBuyAndHoldDeal(baseDeal(), {
       floodZone: "AE",
       floodInsuranceQuoted: true,
     });
@@ -203,7 +210,9 @@ describe("gradeDeal", () => {
 
   it("auto-kills when taxes + insurance exceed 40% of gross annual rent", () => {
     const input = baseDeal({ taxAnnual: 10_000, insuranceAnnual: 2_000 });
-    const result = gradeDeal(input, { appreciationPlayAccepted: true });
+    const result = gradeBuyAndHoldDeal(input, {
+      appreciationPlayAccepted: true,
+    });
     expect(result.letter).toBe("F");
     expect(result.autoKills.map((k) => k.code)).toContain("TAX_INS_OVER_40");
   });
@@ -211,7 +220,7 @@ describe("gradeDeal", () => {
   it("auto-kills on negative cash flow without appreciation acknowledgment", () => {
     // Crank rent down so cash flow goes negative.
     const input = baseDeal({ rentMonthly: 900 });
-    const result = gradeDeal(input);
+    const result = gradeBuyAndHoldDeal(input);
     expect(result.letter).toBe("F");
     expect(result.autoKills.map((k) => k.code)).toContain(
       "NEG_CF_NO_APPRECIATION_ACK",
@@ -220,7 +229,9 @@ describe("gradeDeal", () => {
 
   it("does not auto-kill negative cash flow when appreciation play is acknowledged", () => {
     const input = baseDeal({ rentMonthly: 900 });
-    const result = gradeDeal(input, { appreciationPlayAccepted: true });
+    const result = gradeBuyAndHoldDeal(input, {
+      appreciationPlayAccepted: true,
+    });
     expect(result.autoKills.map((k) => k.code)).not.toContain(
       "NEG_CF_NO_APPRECIATION_ACK",
     );
@@ -233,7 +244,7 @@ describe("gradeDeal", () => {
       taxAnnual: 8_000,
       insuranceAnnual: 1_800,
     });
-    const result = gradeDeal(input, { floodZone: "VE" });
+    const result = gradeBuyAndHoldDeal(input, { floodZone: "VE" });
     expect(result.letter).toBe("F");
     const codes = result.autoKills.map((k) => k.code);
     expect(codes).toContain("DSCR_BELOW_1");
@@ -243,10 +254,6 @@ describe("gradeDeal", () => {
   });
 
   it("floors letter at D when DSCR metric grade is F (other metrics strong)", () => {
-    // To exercise the floor we need the *natural* letter to be above D and
-    // DSCR grade to be F. Use a deal with strong CoC/CF/Cap/BE and a custom
-    // threshold set whose DSCR A bar is unreachably high — so DSCR fails
-    // while everything else gets A.
     const input = strongDeal();
     const customThresholds = {
       ...BUY_AND_HOLD_DEFAULTS,
@@ -258,7 +265,7 @@ describe("gradeDeal", () => {
         direction: "higher_is_better" as const,
       },
     };
-    const result = gradeDeal(
+    const result = gradeBuyAndHoldDeal(
       input,
       { appreciationPlayAccepted: true },
       customThresholds,
@@ -271,8 +278,6 @@ describe("gradeDeal", () => {
   });
 
   it("floors letter at D when cash-on-cash metric grade is F", () => {
-    // Same approach as the DSCR floor test: strong deal + unreachable CoC
-    // threshold so CoC is the only F and natural letter would be above D.
     const input = strongDeal();
     const customThresholds = {
       ...BUY_AND_HOLD_DEFAULTS,
@@ -284,7 +289,7 @@ describe("gradeDeal", () => {
         direction: "higher_is_better" as const,
       },
     };
-    const result = gradeDeal(
+    const result = gradeBuyAndHoldDeal(
       input,
       { appreciationPlayAccepted: true },
       customThresholds,
@@ -299,15 +304,14 @@ describe("gradeDeal", () => {
   it("auto-kill overrides the D floor and forces letter F", () => {
     // CoC=F (floor applies) AND DSCR<1.0 (auto-kill applies)
     const input = baseDeal({ price: 400_000, rentMonthly: 1_400 });
-    const result = gradeDeal(input, { appreciationPlayAccepted: true });
+    const result = gradeBuyAndHoldDeal(input, {
+      appreciationPlayAccepted: true,
+    });
     expect(result.letter).toBe("F");
     expect(result.autoKills.map((k) => k.code)).toContain("DSCR_BELOW_1");
   });
 
   it("Indianapolis deal: produces a sensible graded result with no auto-kills", () => {
-    // The originally-spec'd Indianapolis numbers fail CoC under the default
-    // 25% threshold (CoC = ~4.8%), which floors the letter at D. The deal
-    // does NOT trigger any auto-kill, which is the key assertion below.
     const input: DealInput = {
       price: 185_000,
       rentMonthly: 1_850,
@@ -321,7 +325,7 @@ describe("gradeDeal", () => {
         closingCostsPct: 0.03,
       },
     };
-    const result = gradeDeal(input, { marketPiqScore: 67 });
+    const result = gradeBuyAndHoldDeal(input, { marketPiqScore: 67 });
     expect(result.autoKills).toHaveLength(0);
     // PIQ 67 sits in the 50-79 band → adjustment is 0.
     expect(result.marketAdjustment).toBe(0);
@@ -333,17 +337,13 @@ describe("gradeDeal", () => {
   });
 
   it("advisory 1% rule passes at 1.2%, marginal at 0.8%, fails at 0.5%", () => {
-    // Tune price to dial in 1%-rule values for a fixed $1,850 rent.
-    // 0.012 → price = 1850 / 0.012 ≈ 154,166
-    // 0.008 → price = 1850 / 0.008 = 231,250
-    // 0.005 → price = 1850 / 0.005 = 370,000
-    const pass = gradeDeal(baseDeal({ price: 154_166 }), {
+    const pass = gradeBuyAndHoldDeal(baseDeal({ price: 154_166 }), {
       appreciationPlayAccepted: true,
     });
-    const marginal = gradeDeal(baseDeal({ price: 231_250 }), {
+    const marginal = gradeBuyAndHoldDeal(baseDeal({ price: 231_250 }), {
       appreciationPlayAccepted: true,
     });
-    const fail = gradeDeal(baseDeal({ price: 370_000 }), {
+    const fail = gradeBuyAndHoldDeal(baseDeal({ price: 370_000 }), {
       appreciationPlayAccepted: true,
     });
     expect(

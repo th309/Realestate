@@ -1,33 +1,17 @@
-// Private helpers for gradeDeal. Kept in a sibling file so grade.ts stays
-// focused on orchestration and well under the 300-line logic-file limit.
+// Private helpers for gradeBuyAndHoldDeal. Kept in a sibling file so grade.ts
+// stays focused on orchestration and well under the 300-line logic-file limit.
 
-import type { DealInput } from "../types";
-import { gpaPoints, gradeMetric } from "./aggregate";
-import { grm, opexRatio } from "./metrics";
+import type { DealInput } from "../../types";
+import { gpaPoints, gradeMetric } from "../shared/aggregate";
 import type {
   AdvisoryResult,
   AutoKillFlag,
-  GradingContext,
   Letter,
   MetricResult,
   MetricThreshold,
-} from "./types";
-
-export const LETTER_LABEL: Record<Letter, string> = {
-  A: "Strong Buy",
-  B: "Buy",
-  C: "Hold / Reconsider",
-  D: "Avoid",
-  F: "Strong Avoid",
-};
-
-export const LETTER_RANK: Record<Letter, number> = {
-  A: 4,
-  B: 3,
-  C: 2,
-  D: 1,
-  F: 0,
-};
+} from "../shared/types";
+import { grm, opexRatio } from "./metrics";
+import type { GradingContext } from "./types";
 
 export function formatPercent(decimal: number): string {
   return `${(decimal * 100).toFixed(1)}%`;

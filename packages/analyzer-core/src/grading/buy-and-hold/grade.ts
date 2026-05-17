@@ -1,9 +1,14 @@
-import { computeRentalMetrics } from "../rental";
-import type { DealInput } from "../types";
-import { clampGpa, letterFromGpa, marketAdjustment } from "./aggregate";
+import { computeRentalMetrics } from "../../rental";
+import type { DealInput } from "../../types";
+import { clampGpa, letterFromGpa, marketAdjustment } from "../shared/aggregate";
 import {
   LETTER_LABEL,
   LETTER_RANK,
+  type DealGradingResult,
+  type Letter,
+  type MetricResult,
+} from "../shared/types";
+import {
   buildAdvisories,
   buildMetric,
   buildSummary,
@@ -14,24 +19,20 @@ import {
 } from "./grade-helpers";
 import { breakEvenOccupancy, cashFlowPerDoor } from "./metrics";
 import { BUY_AND_HOLD_DEFAULTS } from "./thresholds";
-import type {
-  DealGradingResult,
-  GradingContext,
-  Letter,
-  MetricResult,
-  UserThresholds,
-} from "./types";
+import type { GradingContext, UserThresholds } from "./types";
 
-export function gradeDeal(
+export function gradeBuyAndHoldDeal(
   input: DealInput,
   context: GradingContext = {},
   thresholds: UserThresholds = BUY_AND_HOLD_DEFAULTS,
 ): DealGradingResult {
   if (input.rentMonthly == null || input.rentMonthly <= 0) {
-    throw new Error("gradeDeal: rentMonthly must be a positive number");
+    throw new Error(
+      "gradeBuyAndHoldDeal: rentMonthly must be a positive number",
+    );
   }
   if (input.price <= 0) {
-    throw new Error("gradeDeal: price must be a positive number");
+    throw new Error("gradeBuyAndHoldDeal: price must be a positive number");
   }
 
   const rental = computeRentalMetrics(input);
@@ -92,7 +93,7 @@ export function gradeDeal(
   ];
 
   const rawGpa = clampGpa(metrics.reduce((sum, m) => sum + m.contribution, 0));
-  const adjustment = marketAdjustment(context.marketPiqScore);
+  const adjustment = marketAdjustment(context.marketPiqScore, "BUY_AND_HOLD");
   const finalGpa = clampGpa(rawGpa + adjustment);
 
   let letter: Letter = letterFromGpa(finalGpa);

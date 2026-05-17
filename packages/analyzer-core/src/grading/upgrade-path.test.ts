@@ -2,12 +2,16 @@
  * Vitest unit tests for the upgrade-path engine.
  *
  * Approach: pick deals empirically calibrated to grade B, D, or F under the
- * BUY_AND_HOLD_DEFAULTS rubric (verified via gradeDeal() in setup), then
+ * BUY_AND_HOLD_DEFAULTS rubric (verified via gradeBuyAndHoldDeal() in setup), then
  * assert that computeUpgradePath produces correctly-shaped options that
  * actually lift the deal to the requested target letter.
  */
 import { describe, it, expect } from "vitest";
-import { BUY_AND_HOLD_DEFAULTS, computeUpgradePath, gradeDeal } from "./index";
+import {
+  BUY_AND_HOLD_DEFAULTS,
+  computeUpgradePath,
+  gradeBuyAndHoldDeal,
+} from "./index";
 import type { DealInput } from "../types";
 
 function baseDeal(overrides: Partial<DealInput> = {}): DealInput {
@@ -33,18 +37,19 @@ function baseDeal(overrides: Partial<DealInput> = {}): DealInput {
 // ---- Sanity: fixtures grade where we expect ---------------------------------
 describe("upgrade-path fixtures", () => {
   it("base 200k/2200 deal grades B under defaults", () => {
-    expect(gradeDeal(baseDeal()).letter).toBe("B");
+    expect(gradeBuyAndHoldDeal(baseDeal()).letter).toBe("B");
   });
 
   it("220k/2200 grades D under defaults", () => {
     expect(
-      gradeDeal(baseDeal({ price: 220_000, taxAnnual: 3_300 })).letter,
+      gradeBuyAndHoldDeal(baseDeal({ price: 220_000, taxAnnual: 3_300 }))
+        .letter,
     ).toBe("D");
   });
 
   it("strong 150k/1900 grades A under defaults", () => {
     expect(
-      gradeDeal(
+      gradeBuyAndHoldDeal(
         baseDeal({ price: 150_000, rentMonthly: 1_900, taxAnnual: 2_250 }),
       ).letter,
     ).toBe("A");
@@ -52,7 +57,7 @@ describe("upgrade-path fixtures", () => {
 
   it("broken 350k/1500 grades F under defaults", () => {
     expect(
-      gradeDeal(
+      gradeBuyAndHoldDeal(
         baseDeal({ price: 350_000, rentMonthly: 1_500, taxAnnual: 5_250 }),
       ).letter,
     ).toBe("F");
@@ -141,7 +146,7 @@ describe("computeUpgradePath single-lever achievable (B→A)", () => {
 
   it("each option's targetValue actually grades at or above the target letter", () => {
     // End-to-end correctness check: feed each option's targetValue back into
-    // gradeDeal and confirm the resulting letter meets the target.
+    // gradeBuyAndHoldDeal and confirm the resulting letter meets the target.
     const result = computeUpgradePath(deal, {}, "A");
     for (const opt of result.options) {
       let mutated: DealInput;
@@ -163,7 +168,7 @@ describe("computeUpgradePath single-lever achievable (B→A)", () => {
           financing: { ...deal.financing, interestRatePct: opt.targetValue },
         };
       }
-      const letter = gradeDeal(mutated).letter;
+      const letter = gradeBuyAndHoldDeal(mutated).letter;
       expect(letter).toBe("A");
     }
   });

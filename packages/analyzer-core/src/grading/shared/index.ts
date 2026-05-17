@@ -1,0 +1,18 @@
+export {
+  clampGpa,
+  gpaPoints,
+  gradeMetric,
+  letterFromGpa,
+  marketAdjustment,
+} from "./aggregate";
+export { LETTER_LABEL, LETTER_RANK } from "./types";
+export type {
+  AdvisoryResult,
+  AutoKillFlag,
+  DealGradingResult,
+  Letter,
+  MetricResult,
+  MetricThreshold,
+  Strategy,
+  UserThresholdsGeneric,
+} from "./types";

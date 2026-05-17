@@ -1,8 +1,8 @@
-// Caller (gradeDeal) guarantees rentMonthly is a positive number and price > 0.
+// Caller (gradeBuyAndHoldDeal) guarantees rentMonthly is a positive number and price > 0.
 // The opex math here mirrors rental.ts so the grading engine and rental engine
 // stay numerically consistent for SFH (residential) deals.
 
-import type { DealInput } from "../types";
+import type { DealInput } from "../../types";
 
 const DEFAULTS = {
   maintenance: 0.08,

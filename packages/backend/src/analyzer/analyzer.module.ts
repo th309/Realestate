@@ -12,6 +12,7 @@ import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
 import { GradingService } from './grading.service';
 import { ThresholdsService } from './thresholds.service';
+import { MarketResolutionService } from './market-resolution.service';
 import { AiInsightsService } from './ai-insights.service';
 import { AiInsightsCache } from './ai-insights.cache';
 import { FreePreviewMiddleware } from './free-preview.middleware';
@@ -38,6 +39,7 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     AnalyzerTierGate,
     GradingService,
     ThresholdsService,
+    MarketResolutionService,
     AiInsightsService,
     AiInsightsCache,
     FreePreviewMiddleware,

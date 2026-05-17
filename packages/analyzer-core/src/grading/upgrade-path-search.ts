@@ -7,14 +7,14 @@
  * the grade to the target, or returns null when even the bound can't reach.
  */
 import type { DealInput } from "../types";
-import { gradeDeal } from "./grade";
-import { PRECISION, meetsTarget, roundTo } from "./upgrade-path-helpers";
+import { gradeBuyAndHoldDeal } from "./buy-and-hold/grade";
 import type {
   GradingContext,
-  Letter,
   UpgradeLever,
   UserThresholds,
-} from "./types";
+} from "./buy-and-hold/types";
+import type { Letter } from "./shared/types";
+import { PRECISION, meetsTarget, roundTo } from "./upgrade-path-helpers";
 
 /** Re-grade with one lever modified; everything else held constant. */
 export function gradeWithLever(
@@ -43,7 +43,7 @@ export function gradeWithLever(
       financing: { ...input.financing, interestRatePct: candidate },
     };
   }
-  return gradeDeal(next, context, thresholds).letter;
+  return gradeBuyAndHoldDeal(next, context, thresholds).letter;
 }
 
 /**

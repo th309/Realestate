@@ -26,6 +26,7 @@ import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { computeBestPlay } from "./lib/strategy-best-play";
+import { useFlipUpgradeProps } from "./lib/use-flip-upgrade-props";
 import { buildCompsViewProps } from "./lib/comps-view-props";
 import type { Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
@@ -88,9 +89,6 @@ export default function AnalyzerClient({
     piqScore: marketContext?.piq_score?.value ?? null,
   });
 
-  // Hero verdict is "pending" until we have the minimum signal needed to
-  // derive a grade: a non-zero price AND either rent or a comp-derived cap
-  // rate. Avoids the "fail-loud C/Marginal" sentinel from deriveVerdict.
   const hasGradableInput =
     (analyzer.input.price ?? 0) > 0 &&
     ((analyzer.input.rentMonthly ?? 0) > 0 || rental.capRatePct != null);
@@ -106,8 +104,6 @@ export default function AnalyzerClient({
     setAssumption,
     currentInput: analyzer.input,
   });
-  // In compare mode the user hasn't picked — surface the bestPlay in the hero
-  // so DealGrade + KPI tiles reflect the winning strategy.
   const activeStrategy: Strategy =
     analysisMode === "compare" ? bestPlay : focusedStrategy;
 
@@ -148,6 +144,23 @@ export default function AnalyzerClient({
     activeStrategy,
     hasGradableInput,
     piqScore: marketContext?.piq_score?.value,
+    arv: arvLocal,
+    rehabBudget,
+    holdingMonths: assumptions.holdingMonths,
+    sellingCostsPct: assumptions.sellingCostsPct,
+    marketZip: marketContext?.geo_id ?? undefined,
+  });
+  const flipProps = useFlipUpgradeProps({
+    input: analyzer.input,
+    setInput: analyzer.setInput,
+    arvLocal,
+    setArvLocal,
+    rehabBudget,
+    setRehabBudget,
+    assumptions,
+    setAssumption,
+    marketZip: marketContext?.geo_id ?? undefined,
+    marketPiqScore: marketContext?.piq_score?.value,
   });
 
   const compsView = buildCompsViewProps(
@@ -268,6 +281,7 @@ export default function AnalyzerClient({
                   }}
                   strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
                   onApplyLever={analyzer.setInput}
+                  {...flipProps}
                   onCustomizeClick={() => setDrawerOpen(true)}
                   presetLabel="Balanced"
                 />
@@ -299,9 +313,6 @@ export default function AnalyzerClient({
                 isCompareWinner={analysisMode === "compare"}
               />
 
-              {/* Compare Strategies only appears in "Help me decide" mode.
-                  When the user has committed to a strategy via "I know my
-                  strategy", they don't need the side-by-side comparison. */}
               {analysisMode === "compare" && (
                 <StrategyCompare
                   {...strategyProps}
@@ -311,10 +322,6 @@ export default function AnalyzerClient({
                 />
               )}
 
-              {/* Error/quota banners only — the success "Matched: ..." strip
-                  and the dev tier/lookup strip were removed as noise. The
-                  property address is shown in PropertyHeader; per-field
-                  RentCast badges sit inline next to Price/Rent. */}
               <RentcastBanners
                 lookupErrorMsg={lookupErrorMsg}
                 quotaExceeded={quotaExceeded}
