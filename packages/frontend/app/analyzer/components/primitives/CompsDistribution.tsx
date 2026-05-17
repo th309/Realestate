@@ -202,58 +202,113 @@ export function CompsDistribution({
                 />
               </line>
 
-              {[
-                { v: minPrice, label: formatPriceSqft(minPrice) },
-                {
-                  v: medianPrice,
-                  label: `${formatPriceSqft(medianPrice)} median`,
-                },
-                { v: maxPrice, label: formatPriceSqft(maxPrice) },
-              ].map((t, i) => (
-                <text
-                  key={`tick-${i}`}
-                  x={xScale(t.v)}
-                  y={baselineY + 18}
-                  textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"}
-                  style={{
-                    fontSize: "11px",
-                    fill: piq.textMuted,
-                    fontWeight: 500,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {t.label}
-                </text>
-              ))}
+              {(() => {
+                // Hide the min/max label when its x-position is within ~46px
+                // of the median label — otherwise the labels run into each
+                // other (e.g. subject at $212 vs median at $253 in a narrow
+                // chart). Median always stays anchored as the reference.
+                // Account for label widths: "$212" ≈ 28px (anchor=start, extends right)
+                // "$253 median" ≈ 90px (anchor=middle, extends both ways → ~45px each side).
+                // Min gap = end-of-min + half-of-median ≈ 75px to fully clear.
+                // Also suppress min/max when they duplicate the subject value
+                // already shown in the pill above the chart (within $2/sqft).
+                const MIN_GAP_PX = 75;
+                const SUBJECT_DEDUPE_USD = 2;
+                const xMin = xScale(minPrice);
+                const xMed = xScale(medianPrice);
+                const xMax = xScale(maxPrice);
+                const minMatchesSubject =
+                  Math.abs(minPrice - subjectPricePerSqft) < SUBJECT_DEDUPE_USD;
+                const maxMatchesSubject =
+                  Math.abs(maxPrice - subjectPricePerSqft) < SUBJECT_DEDUPE_USD;
+                const ticks = [
+                  {
+                    v: minPrice,
+                    label: formatPriceSqft(minPrice),
+                    anchor: "start" as const,
+                    show:
+                      !minMatchesSubject && Math.abs(xMin - xMed) >= MIN_GAP_PX,
+                  },
+                  {
+                    v: medianPrice,
+                    label: `${formatPriceSqft(medianPrice)} median`,
+                    anchor: "middle" as const,
+                    show: true,
+                  },
+                  {
+                    v: maxPrice,
+                    label: formatPriceSqft(maxPrice),
+                    anchor: "end" as const,
+                    show:
+                      !maxMatchesSubject && Math.abs(xMax - xMed) >= MIN_GAP_PX,
+                  },
+                ];
+                return ticks
+                  .filter((t) => t.show)
+                  .map((t, i) => (
+                    <text
+                      key={`tick-${i}`}
+                      x={xScale(t.v)}
+                      y={baselineY + 18}
+                      textAnchor={t.anchor}
+                      style={{
+                        fontSize: "11px",
+                        fill: piq.textMuted,
+                        fontWeight: 500,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {t.label}
+                    </text>
+                  ));
+              })()}
             </g>
           </svg>
         )}
 
-        {width > 0 && (
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: PADDING.left + subjectX,
-              top: PADDING.top - 8,
-              transform: "translate(-50%, -100%)",
-              background: piq.indigo,
-              color: "#FFFFFF",
-              fontSize: "11px",
-              fontWeight: 500,
-              padding: "4px 10px",
-              borderRadius: 999,
-              whiteSpace: "nowrap",
-              pointerEvents: "none",
-              fontVariantNumeric: "tabular-nums",
-              letterSpacing: "0.01em",
-              opacity: 0,
-              animation: `piq-fade-in 300ms ease ${overlayDelayS}s forwards`,
-            }}
-          >
-            {formatPriceSqft(subjectPricePerSqft)} / sqft · this deal
-          </div>
-        )}
+        {width > 0 &&
+          (() => {
+            // Clamp the pill anchor so it never slides past the chart's
+            // left/right edges. When subject is at the leftmost bin (e.g.
+            // $212/sqft = min), translate(-50%) would clip the start of
+            // the label — switch to left-anchored. Mirror on the right.
+            const PILL_HALF_WIDTH_EST = 60;
+            const leftPx = PADDING.left + subjectX;
+            const nearLeft = leftPx < PILL_HALF_WIDTH_EST + 8;
+            const nearRight =
+              width > 0 && leftPx > width - PILL_HALF_WIDTH_EST - 8;
+            const xTransform = nearLeft
+              ? "translate(0, -100%)"
+              : nearRight
+                ? "translate(-100%, -100%)"
+                : "translate(-50%, -100%)";
+            return (
+              <div
+                aria-hidden
+                data-subject-pill-top
+                style={{
+                  position: "absolute",
+                  left: leftPx,
+                  top: PADDING.top - 8,
+                  transform: xTransform,
+                  background: piq.indigo,
+                  color: "#FFFFFF",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  whiteSpace: "nowrap",
+                  pointerEvents: "none",
+                  fontVariantNumeric: "tabular-nums",
+                  letterSpacing: "0.01em",
+                  opacity: 0,
+                  animation: `piq-fade-in 300ms ease ${overlayDelayS}s forwards`,
+                }}
+              >
+                {formatPriceSqft(subjectPricePerSqft)} / sqft · this deal
+              </div>
+            );
+          })()}
 
         {tooltip && (
           <CompsTooltip

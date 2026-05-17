@@ -49,6 +49,7 @@ describe("BestPlayCallout", () => {
     expect(el?.getAttribute("data-winner")).toBe("flip");
     expect(el?.textContent).toMatch(/Flip/);
     expect(el?.textContent).toMatch(/25\.0% ROI/);
-    expect(el?.textContent).toMatch(/\$50K profit/);
+    // fmtUsd now emits exact-dollar formatting (was previously K-rounded).
+    expect(el?.textContent).toMatch(/\$50,000 profit/);
   });
 });

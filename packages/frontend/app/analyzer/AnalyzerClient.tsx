@@ -79,6 +79,7 @@ export default function AnalyzerClient({
     aiVerdict,
     isStreaming,
     marketContext,
+    piqByGeo,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -90,6 +91,13 @@ export default function AnalyzerClient({
     cashflowMonthly: rental.cashflowMonthly,
     piqScore: marketContext?.piq_score?.value ?? null,
   });
+
+  // Hero verdict is "pending" until we have the minimum signal needed to
+  // derive a grade: a non-zero price AND either rent or a comp-derived cap
+  // rate. Avoids the "fail-loud C/Marginal" sentinel from deriveVerdict.
+  const hasGradableInput =
+    (analyzer.input.price ?? 0) > 0 &&
+    ((analyzer.input.rentMonthly ?? 0) > 0 || rental.capRatePct != null);
 
   const router = useRouter();
   const bestPlay = computeBestPlay(rental, flip, brrrr, projection);
@@ -103,6 +111,11 @@ export default function AnalyzerClient({
   const displayAddress =
     rentcastData?.resolved_address ?? (address.trim() || null);
 
+  const pickStrategy = (s: Strategy) => {
+    setFocusedStrategy(s);
+    if (analysisMode === "compare") setAnalysisMode("focused");
+  };
+
   const strategyProps = buildStrategyCompareProps({
     rental,
     flip,
@@ -110,6 +123,8 @@ export default function AnalyzerClient({
     breakEven,
     brrrrTimeline,
     projection,
+    bestPlay,
+    onPickStrategy: pickStrategy,
   });
 
   const grossRentMonthly = analyzer.input.rentMonthly ?? 0;
@@ -193,17 +208,7 @@ export default function AnalyzerClient({
           </header>
 
           {displayAddress && (
-            <PropertyHeader
-              address={displayAddress}
-              piqScore={
-                marketContext?.piq_score
-                  ? {
-                      value: marketContext.piq_score.value,
-                      label: marketContext.piq_score.label,
-                    }
-                  : null
-              }
-            />
+            <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-[62%_38%] gap-6">
@@ -249,6 +254,7 @@ export default function AnalyzerClient({
                   activeStrategy === "buyAndHold" ? "buy-hold" : activeStrategy
                 }
                 onUpgrade={() => router.push("/pricing")}
+                pending={!hasGradableInput}
               />
 
               <StrategyKPI
@@ -267,7 +273,12 @@ export default function AnalyzerClient({
                 isCompareWinner={analysisMode === "compare"}
               />
 
-              <StrategyCompare {...strategyProps} />
+              <StrategyCompare
+                {...strategyProps}
+                isDealViable={
+                  hasGradableInput && verdict !== "bad" && verdict !== "avoid"
+                }
+              />
 
               {process.env.NODE_ENV !== "production" && (
                 <RentcastDevStrip

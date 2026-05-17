@@ -53,7 +53,7 @@ export function StrategyControls({
   return (
     <div data-strategy-controls className="space-y-2">
       <label className="text-xs uppercase font-semibold text-on-surface-variant block">
-        Investment Goal
+        Investment Strategy
       </label>
       <div
         role="tablist"
@@ -91,9 +91,9 @@ export function StrategyControls({
 
       {mode === "focused" && !isCommercial && (
         <div className="pt-1">
-          <label className="text-xs uppercase font-semibold text-on-surface-variant block mb-1.5">
-            Strategy
-          </label>
+          {/* Chips are self-labeling (Buy & Hold / Fix & Flip / BRRRR) so the
+              redundant "Strategy" sub-label was dropped — it sat directly
+              under the "Investment Strategy" header above. */}
           <StrategyChips active={activeStrategy} onChange={onStrategyChange} />
         </div>
       )}

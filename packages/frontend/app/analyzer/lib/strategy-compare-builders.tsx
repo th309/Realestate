@@ -9,6 +9,7 @@ import type {
   ProjectionResult,
 } from "@propertyiq/analyzer-core";
 import { fmtPct, fmtUsd, fmtRatio } from "./format-helpers";
+import type { Strategy } from "./strategy-tile-mappers";
 
 interface BuildArgs {
   rental: RentalResult;
@@ -17,6 +18,8 @@ interface BuildArgs {
   breakEven: BreakEvenResult;
   brrrrTimeline: BrrrrTimelineResult;
   projection: ProjectionResult;
+  bestPlay: Strategy;
+  onPickStrategy: (s: Strategy) => void;
 }
 
 /**
@@ -31,6 +34,8 @@ export function buildStrategyCompareProps({
   breakEven,
   brrrrTimeline,
   projection,
+  bestPlay,
+  onPickStrategy,
 }: BuildArgs) {
   const capRateDecimal = rental.capRatePct ? rental.capRatePct / 100 : null;
   const flipRoiDecimal = flip?.projectedRoiPct
@@ -61,6 +66,8 @@ export function buildStrategyCompareProps({
         { label: "Cashflow/mo", value: fmtUsd(rental.cashflowMonthly) },
         { label: "IRR (10y)", value: fmtPct(projection.horizons.y10.irr) },
       ],
+      isWinner: bestPlay === "buyAndHold",
+      onClick: () => onPickStrategy("buyAndHold"),
     },
     {
       id: "flip" as const,
@@ -69,6 +76,8 @@ export function buildStrategyCompareProps({
       stats: [
         { label: "Profit", value: fmtUsd(flip?.projectedProfit ?? null) },
       ],
+      isWinner: bestPlay === "flip",
+      onClick: () => onPickStrategy("flip"),
     },
     {
       id: "brrrr" as const,
@@ -83,6 +92,8 @@ export function buildStrategyCompareProps({
           value: fmtUsd(brrrr?.refinanceCashOut ?? null),
         },
       ],
+      isWinner: bestPlay === "brrrr",
+      onClick: () => onPickStrategy("brrrr"),
     },
   ];
 

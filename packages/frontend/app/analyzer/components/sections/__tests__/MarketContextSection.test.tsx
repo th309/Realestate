@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 
-// Mock @/lib/data so useDataCard returns a static null shape without needing
+// Mock @/lib/data so the data hooks return static null shapes without needing
 // a QueryClientProvider — the section's behavior under test is pill switching
 // + fallback-vs-live value resolution, not the actual network round trip.
 vi.mock("@/lib/data", () => ({
@@ -18,6 +18,9 @@ vi.mock("@/lib/data", () => ({
     error: null,
     gated: false,
   }),
+  // MarketContextSection calls useMarketContext directly; return an empty
+  // query shape so the component renders against fallback props instead.
+  useMarketContext: () => ({ data: null, isLoading: false, error: null }),
 }));
 
 import { MarketContextSection } from "../MarketContextSection";

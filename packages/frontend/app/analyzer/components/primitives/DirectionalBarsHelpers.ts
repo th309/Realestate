@@ -42,7 +42,12 @@ export function colorForBarType(
   return colors.negative;
 }
 
-export type BarValueFormat = "currency" | "percent" | "ratio" | "number";
+export type BarValueFormat =
+  | "currency"
+  | "currency-exact"
+  | "percent"
+  | "ratio"
+  | "number";
 
 export function formatBarValue(value: number, format: BarValueFormat): string {
   const abs = Math.abs(value);
@@ -51,6 +56,9 @@ export function formatBarValue(value: number, format: BarValueFormat): string {
     if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
     return `${sign}$${abs.toFixed(0)}`;
+  }
+  if (format === "currency-exact") {
+    return `${sign}$${Math.round(abs).toLocaleString()}`;
   }
   if (format === "percent") return `${sign}${abs.toFixed(2)}%`;
   if (format === "ratio") return `${sign}${abs.toFixed(2)}`;

@@ -9,6 +9,7 @@ import { CompsDistribution } from "../primitives/CompsDistribution";
 import type { Comp } from "../primitives/CompsDistribution";
 import { CompsTable, type CompRow } from "./CompsTable";
 import { piq } from "../primitives/piqTokens";
+import { MapLegend } from "./CompsMapLegend";
 
 export interface CompPin {
   address: string;
@@ -74,7 +75,10 @@ function CompMarker({
   onHover: () => void;
   onLeave: () => void;
 }) {
-  const size = hovered ? 12 : 8;
+  // Visible dot grows on hover, but a transparent 26px hit target sits behind
+  // it so the marker is comfortable to click on desktop and tappable on touch.
+  const visibleSize = hovered ? 18 : 14;
+  const HIT_SIZE = 26;
   const fill = kind === "sale" ? piq.green : piq.amber;
   return (
     <Marker
@@ -87,19 +91,29 @@ function CompMarker({
         onMouseLeave={onLeave}
         data-comp-marker={keyId}
         style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          background: fill,
-          border: "1.5px solid #FFFFFF",
-          boxShadow: hovered
-            ? "0 2px 8px rgba(15,23,42,0.25)"
-            : "0 1px 2px rgba(15,23,42,0.15)",
+          width: HIT_SIZE,
+          height: HIT_SIZE,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           cursor: "pointer",
-          transition:
-            "width 150ms ease, height 150ms ease, box-shadow 150ms ease",
         }}
-      />
+      >
+        <div
+          style={{
+            width: visibleSize,
+            height: visibleSize,
+            borderRadius: "50%",
+            background: fill,
+            border: "2px solid #FFFFFF",
+            boxShadow: hovered
+              ? "0 2px 10px rgba(15,23,42,0.35)"
+              : "0 1px 3px rgba(15,23,42,0.20)",
+            transition:
+              "width 150ms ease, height 150ms ease, box-shadow 150ms ease",
+          }}
+        />
+      </div>
     </Marker>
   );
 }
@@ -192,9 +206,10 @@ export function CompsSection({
         {showMap ? (
           <div
             data-comps-map
-            className="h-72 rounded-xl overflow-hidden"
+            className="h-72 rounded-xl overflow-hidden relative"
             style={{ border: `0.5px solid ${piq.border}` }}
           >
+            <MapLegend />
             <Map
               mapboxAccessToken={mapboxToken}
               initialViewState={{
@@ -205,28 +220,27 @@ export function CompsSection({
               mapStyle="mapbox://styles/mapbox/light-v11"
               style={{ width: "100%", height: "100%" }}
             >
-              {/* Subject pill */}
+              {/* Subject: a precise indigo pin at the exact lat/lon. The
+                  address itself is already shown in the Property Header
+                  above the page, so we skip the on-map address label. */}
               <Marker
                 latitude={subjectLat as number}
                 longitude={subjectLon as number}
-                anchor="bottom"
+                anchor="center"
               >
                 <div
+                  data-subject-pin
+                  aria-label="Subject property location"
                   style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
                     background: piq.indigo,
-                    color: "#FFFFFF",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    letterSpacing: "0.01em",
-                    whiteSpace: "nowrap",
-                    boxShadow: "0 2px 8px rgba(57, 73, 171, 0.35)",
+                    border: "3px solid #FFFFFF",
+                    boxShadow: "0 2px 10px rgba(57, 73, 171, 0.55)",
                     pointerEvents: "none",
                   }}
-                >
-                  {abbreviateAddress(subjectAddress)}
-                </div>
+                />
               </Marker>
 
               {salesComps
@@ -346,7 +360,10 @@ export function CompsSection({
         )}
       </div>
 
-      <CompsTable rows={tableRows} />
+      <CompsTable
+        rows={tableRows}
+        totalAvailable={salesComps.length + rentalComps.length}
+      />
     </SectionWrapper>
   );
 }

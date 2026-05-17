@@ -2,38 +2,40 @@
 
 import { piq } from "./primitives/piqTokens";
 import { useDirectionalColor } from "./primitives/useDirectionalColor";
+import type { PiqByGeo } from "../lib/use-piq-by-geo";
 
-interface PIQScoreBadgeProps {
+type GeoLevel = "metro" | "county" | "zip";
+const GEO_ORDER: GeoLevel[] = ["metro", "county", "zip"];
+const GEO_LABEL: Record<GeoLevel, string> = {
+  metro: "Metro",
+  county: "County",
+  zip: "ZIP",
+};
+
+interface PiqGeoChipProps {
+  level: GeoLevel;
   score: number;
-  label: string | null;
-  /** Optional month-over-month delta. Hidden when null/zero. */
-  delta?: number | null;
 }
 
-function PIQScoreBadge({ score, label, delta }: PIQScoreBadgeProps) {
+function PiqGeoChip({ level, score }: PiqGeoChipProps) {
   const color = useDirectionalColor({ value: score, variant: "score" });
-  const hasDelta = delta != null && Number.isFinite(delta) && delta !== 0;
-  const arrow = !hasDelta ? null : delta > 0 ? "▲" : "▼";
-  const deltaColor = !hasDelta
-    ? piq.textMuted
-    : delta > 0
-      ? piq.green
-      : piq.red;
-
   return (
-    <div className="inline-flex items-center gap-2" data-piq-badge>
+    <div
+      className="inline-flex items-center gap-1.5"
+      data-piq-chip={level}
+      aria-label={`${GEO_LABEL[level]} PropertyIQ ${Math.round(score)}`}
+    >
       <div
-        aria-label={`PropertyIQ score ${Math.round(score)}`}
         style={{
-          width: 36,
-          height: 36,
+          width: 28,
+          height: 28,
           borderRadius: "50%",
           background: color,
           color: "#FFFFFF",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: 600,
           fontVariantNumeric: "tabular-nums",
           flexShrink: 0,
@@ -43,50 +45,44 @@ function PIQScoreBadge({ score, label, delta }: PIQScoreBadgeProps) {
       </div>
       <span
         style={{
-          fontSize: 13,
-          fontWeight: 500,
-          color: piq.textPrimary,
-          whiteSpace: "nowrap",
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          color: piq.textMuted,
+          textTransform: "uppercase",
         }}
       >
-        PIQ {label ?? ""}
+        {GEO_LABEL[level]}
       </span>
-      {hasDelta && (
-        <span
-          style={{
-            fontSize: 11,
-            color: deltaColor,
-            fontWeight: 500,
-            fontVariantNumeric: "tabular-nums",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {arrow} {Math.abs(delta).toFixed(1)}
-        </span>
-      )}
     </div>
   );
 }
 
 interface PropertyHeaderProps {
   address: string;
-  piqScore?: { value: number; label: string | null } | null;
-  /** Optional month-over-month delta on the PIQ score. */
-  piqDelta?: number | null;
+  /** PIQ score at each available geography level. Levels with null are hidden. */
+  piqByGeo?: PiqByGeo | null;
   className?: string;
 }
 
 /**
- * Horizontal strip showing the resolved property address on the left and the
- * PropertyIQ score badge inline on the right. Rendered only when an address
- * exists (RentCast-resolved or user-typed).
+ * Horizontal strip with the resolved address on the left and up to three
+ * PIQ score chips on the right — one per geo level (Metro / County / ZIP).
+ * Each level renders only when its score is available so a property in an
+ * unmetropolitan ZIP gracefully degrades to County + ZIP.
  */
 export function PropertyHeader({
   address,
-  piqScore,
-  piqDelta,
+  piqByGeo,
   className = "",
 }: PropertyHeaderProps) {
+  const chips = piqByGeo
+    ? GEO_ORDER.filter((lvl) => piqByGeo[lvl] != null).map((lvl) => ({
+        level: lvl,
+        score: piqByGeo[lvl] as number,
+      }))
+    : [];
+
   return (
     <div
       data-property-header
@@ -109,12 +105,23 @@ export function PropertyHeader({
       >
         {address}
       </span>
-      {piqScore && (
-        <PIQScoreBadge
-          score={piqScore.value}
-          label={piqScore.label}
-          delta={piqDelta}
-        />
+      {chips.length > 0 && (
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              color: piq.textMuted,
+              textTransform: "uppercase",
+            }}
+          >
+            PropertyIQ Score
+          </span>
+          {chips.map((c) => (
+            <PiqGeoChip key={c.level} level={c.level} score={c.score} />
+          ))}
+        </div>
       )}
     </div>
   );

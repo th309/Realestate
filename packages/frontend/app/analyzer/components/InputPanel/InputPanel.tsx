@@ -191,6 +191,10 @@ export function InputPanel({
           value={address}
           onChange={(e) => onAddressChange(e.currentTarget.value)}
           placeholder="123 Main St, Atlanta, GA"
+          // The full address is also shown in the PropertyHeader; this title
+          // lets a user see it on hover when the input itself is too narrow
+          // (e.g. tablet width clips long addresses to '..., MD :').
+          title={address}
           className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-sm focus:outline-none focus:border-primary"
         />
       </div>
@@ -231,10 +235,11 @@ export function InputPanel({
           value={input.taxAnnual}
           onChange={(v) => update({ taxAnnual: v })}
           prefix="$"
+          // Treat empty as 0 so the nudge fires its "missing tax data
+          // understates expenses" warning — previously the user got no
+          // signal at all when this field was blank.
           nudge={
-            input.taxAnnual != null && input.price
-              ? nudgeForTax(input.taxAnnual, input.price)
-              : null
+            input.price ? nudgeForTax(input.taxAnnual ?? 0, input.price) : null
           }
         />
         <NumField
@@ -243,8 +248,8 @@ export function InputPanel({
           onChange={(v) => update({ insuranceAnnual: v })}
           prefix="$"
           nudge={
-            input.insuranceAnnual != null && input.price
-              ? nudgeForInsurance(input.insuranceAnnual, input.price)
+            input.price
+              ? nudgeForInsurance(input.insuranceAnnual ?? 0, input.price)
               : null
           }
         />

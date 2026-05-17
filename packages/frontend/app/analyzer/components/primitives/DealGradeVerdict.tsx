@@ -95,10 +95,10 @@ export function VerdictLocked({ onUpgrade }: { onUpgrade?: () => void }) {
 }
 
 /**
- * Pro tier streaming/settled verdict body. While `isStreaming`, the text grows
- * freely (no clamp, no fade) and a pulsing cursor sits at the end. Once
- * settled, max-height clamps to 4 lines and a bottom gradient fades the
- * overflow.
+ * Pro tier streaming/settled verdict body. Text grows naturally with content.
+ * The previous 4-line clamp + always-on bottom fade was hiding the end of
+ * normal-length verdicts mid-sentence; with AI verdicts typically being a
+ * short paragraph, letting the container grow is the cleaner read.
  */
 export function VerdictBody({
   text,
@@ -107,25 +107,13 @@ export function VerdictBody({
   text: string;
   isStreaming: boolean;
 }) {
-  const clampStyle = isStreaming
-    ? {}
-    : ({
-        maxHeight: "calc(1.6em * 4)",
-        overflow: "hidden",
-      } as const);
-
   return (
-    <div
-      aria-live="polite"
-      aria-atomic="false"
-      style={{ position: "relative" }}
-    >
+    <div aria-live="polite" aria-atomic="false">
       <div
         style={{
           fontSize: "15px",
           lineHeight: 1.6,
           color: piq.textPrimary,
-          ...clampStyle,
         }}
       >
         {text}
@@ -144,20 +132,6 @@ export function VerdictBody({
           </span>
         )}
       </div>
-      {!isStreaming && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "1.6em",
-            background: `linear-gradient(to bottom, transparent, ${piq.surface})`,
-            pointerEvents: "none",
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -55,7 +55,12 @@ export function ExpenseSection({
         size="lg"
         variant="directional"
       />
-      <DirectionalBars data={data} layout="waterfall" currency showConnectors />
+      <DirectionalBars
+        data={data}
+        layout="waterfall"
+        format="currency-exact"
+        showConnectors
+      />
     </SectionWrapper>
   );
 }

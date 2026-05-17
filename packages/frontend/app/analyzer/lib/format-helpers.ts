@@ -7,8 +7,11 @@
 export const fmtPct = (v: number | null): string =>
   v == null ? "—" : `${(v * 100).toFixed(1)}%`;
 
-export const fmtUsd = (v: number | null): string =>
-  v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
+export const fmtUsd = (v: number | null): string => {
+  if (v == null) return "—";
+  const abs = Math.round(Math.abs(v)).toLocaleString();
+  return v < 0 ? `-$${abs}` : `$${abs}`;
+};
 
 export const fmtRatio = (v: number | null): string =>
   v == null ? "—" : v.toFixed(2);

@@ -83,6 +83,8 @@ function HeaderCell({ label, sortKey, active, dir, onSort }: HeaderCellProps) {
 
 interface CompsTableProps {
   rows: CompRow[];
+  /** Total comps available before capping for display. Surfaces 'top N of M' when rows is a subset. */
+  totalAvailable?: number;
 }
 
 /**
@@ -90,7 +92,12 @@ interface CompsTableProps {
  * numerics + alternating subtle indigo-tinted row backgrounds + 0.5px
  * horizontal borders only.
  */
-export function CompsTable({ rows }: CompsTableProps) {
+export function CompsTable({ rows, totalAvailable }: CompsTableProps) {
+  const isCapped =
+    totalAvailable != null && totalAvailable > rows.length && rows.length > 0;
+  const countLabel = isCapped
+    ? `top ${rows.length} of ${totalAvailable}`
+    : `${rows.length}`;
   const [open, setOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -139,7 +146,7 @@ export function CompsTable({ rows }: CompsTableProps) {
           >
             {open ? "▾" : "▸"}
           </span>
-          Comp details ({rows.length})
+          Comp details ({countLabel})
         </button>
       </div>
       {open && (

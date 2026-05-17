@@ -32,6 +32,8 @@ export type DealGradeProps = {
   isPro: boolean;
   strategy: DealGradeStrategy;
   onUpgrade?: () => void;
+  /** When true, render a neutral placeholder instead of a graded result. */
+  pending?: boolean;
 };
 
 const STRATEGY_LABEL: Record<DealGradeStrategy, string> = {
@@ -71,9 +73,13 @@ export function DealGrade({
   isPro,
   strategy,
   onUpgrade,
+  pending = false,
 }: DealGradeProps) {
-  const color = gradeColor(grade);
-  const { base, modifier } = splitGrade(grade);
+  const color = pending ? piq.textMuted : gradeColor(grade);
+  const { base, modifier } = pending
+    ? { base: "—", modifier: null as null }
+    : splitGrade(grade);
+  const displayQualifier = pending ? "Enter address to score" : qualifier;
   const strategyLabel = STRATEGY_LABEL[strategy];
 
   return (
@@ -91,7 +97,9 @@ export function DealGrade({
         {/* Left: letter grade */}
         <div
           role="img"
-          aria-label={`Deal grade ${grade}: ${qualifier}`}
+          aria-label={
+            pending ? "No deal scored yet" : `Deal grade ${grade}: ${qualifier}`
+          }
           className="px-6 py-8 md:px-8 flex flex-col items-center justify-center text-center"
           style={{ borderRight: `0.5px solid ${piq.border}` }}
         >
@@ -123,7 +131,7 @@ export function DealGrade({
               letterSpacing: "0.01em",
             }}
           >
-            {qualifier}
+            {displayQualifier}
           </div>
           <div
             className="mt-4 inline-flex items-center rounded-full"
@@ -154,9 +162,21 @@ export function DealGrade({
             AI DEAL COACH
           </div>
 
-          {!isPro && <VerdictLocked onUpgrade={onUpgrade} />}
-          {isPro && !aiVerdict && <VerdictSkeleton />}
-          {isPro && aiVerdict && (
+          {pending && (
+            <div
+              style={{
+                fontSize: "14px",
+                color: piq.textMuted,
+                lineHeight: 1.5,
+              }}
+            >
+              Enter a property address to get a graded analysis and AI deal
+              coach.
+            </div>
+          )}
+          {!pending && !isPro && <VerdictLocked onUpgrade={onUpgrade} />}
+          {!pending && isPro && !aiVerdict && <VerdictSkeleton />}
+          {!pending && isPro && aiVerdict && (
             <VerdictBody text={aiVerdict} isStreaming={isStreaming} />
           )}
         </div>

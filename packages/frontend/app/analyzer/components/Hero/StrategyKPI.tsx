@@ -44,16 +44,13 @@ export function StrategyKPI({
 
   return (
     <section data-strategy-kpi className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span
-          className="text-xs uppercase font-semibold tracking-wider"
-          style={{ color: piq.textMuted }}
-        >
-          {STRATEGY_LABEL[active]}
-        </span>
-        {isCompareWinner && (
+      {/* Strategy name is already shown on the DealGrade chip above and in the
+          Compare Strategies cards below — repeating it here was redundant.
+          Only the "BEST PLAY" badge surfaces here (compare mode only). */}
+      {isCompareWinner && (
+        <div className="flex items-center gap-2">
           <span
-            aria-label="Best play"
+            aria-label={`${STRATEGY_LABEL[active]} is the best play`}
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider"
             style={{
               background: piq.amber,
@@ -62,8 +59,8 @@ export function StrategyKPI({
           >
             ★ BEST PLAY
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"

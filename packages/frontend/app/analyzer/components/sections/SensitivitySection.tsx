@@ -101,11 +101,16 @@ export function SensitivitySection({
     [impacts, selectedMetric.format],
   );
 
-  const data: BarItem[] = impacts.map((i) => ({
-    label: i.label,
-    value: i.magnitude,
-    tooltip: `${i.unit} → ${selectedMetric.label}`,
-  }));
+  // Drop rows where the underlying input is missing (magnitude = 0). They
+  // render as "$0 / $0" bars which read as "no sensitivity" when they
+  // actually mean "no data entered" — informationless clutter either way.
+  const data: BarItem[] = impacts
+    .filter((i) => i.magnitude > 0)
+    .map((i) => ({
+      label: i.label,
+      value: i.magnitude,
+      tooltip: `${i.unit} → ${selectedMetric.label}`,
+    }));
 
   return (
     <SectionWrapper

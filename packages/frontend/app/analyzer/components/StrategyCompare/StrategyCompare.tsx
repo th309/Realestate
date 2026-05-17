@@ -26,6 +26,9 @@ interface StrategyCompareProps {
     full: React.ReactNode;
     summary: { label: string; value: string }[];
   }[];
+  /** True when the overall deal verdict is at least "marginal" — drives
+   *  whether BestPlayCallout celebrates the winner or warns the user. */
+  isDealViable?: boolean;
 }
 
 export function StrategyCompare({
@@ -33,13 +36,14 @@ export function StrategyCompare({
   cards,
   fullViews,
   summaries,
+  isDealViable = true,
 }: StrategyCompareProps) {
   const [view, setView] = useState<StrategyView>("grid3");
   const winner = pickBestPlay(scores);
 
   return (
     <div data-strategy-compare className="space-y-4">
-      <BestPlayCallout scores={scores} />
+      <BestPlayCallout scores={scores} isDealViable={isDealViable} />
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-on-surface-variant">
           Compare strategies

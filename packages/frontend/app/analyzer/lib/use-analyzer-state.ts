@@ -20,6 +20,7 @@ import {
   type AnalyzerAssumptions,
 } from "./analyzer-assumptions";
 import { derivePropertyClass } from "./derive-property-class";
+import { usePiqByGeo } from "./use-piq-by-geo";
 
 export type { AnalyzerAssumptions };
 export { DEFAULT_ASSUMPTIONS };
@@ -241,6 +242,7 @@ export function useAnalyzerState({
     enabled: Boolean(zip),
   });
   const marketContext = marketContextQuery.data;
+  const { piqByGeo } = usePiqByGeo(marketContext?.chain);
 
   const verdictPayload = useMemo(
     () => ({
@@ -288,5 +290,6 @@ export function useAnalyzerState({
     isStreaming,
     marketContext,
     marketContextLoading: marketContextQuery.isLoading,
+    piqByGeo,
   };
 }
