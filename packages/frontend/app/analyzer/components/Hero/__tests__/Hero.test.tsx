@@ -17,10 +17,10 @@ vi.mock("recharts", async () => {
 });
 
 describe("Hero", () => {
-  it("renders GradeRing + AIQuoteHeader + KPIStrip", () => {
+  it("renders VerdictBadge + AIQuoteHeader + KPIStrip", () => {
     const { container, getByText } = render(
       <Hero
-        score={82}
+        verdict="good"
         aiText="Strong cashflow play"
         kpiTiles={[
           { label: "Cap Rate", value: "8.2%" },
@@ -30,7 +30,7 @@ describe("Hero", () => {
         ]}
       />,
     );
-    expect(container.querySelector("[data-grade-ring]")).toBeTruthy();
+    expect(container.querySelector("[data-verdict-badge]")).toBeTruthy();
     expect(container.querySelector("[data-ai-quote-header]")).toBeTruthy();
     expect(container.querySelector("[data-kpi-strip]")).toBeTruthy();
     expect(getByText("Strong cashflow play")).toBeTruthy();

@@ -14,18 +14,122 @@ export const fmtRatio = (v: number | null): string =>
   v == null ? "—" : v.toFixed(2);
 
 /**
- * Derive a 0-100 grade score from rental metrics.
- *
- * Rough heuristic intentionally — the analyzer's headline grade is a
- * gut-check, not a research-grade ranking. Cap rate dominates; DSCR
- * adjusts ±20 around it. Expand later via PIQ + sensitivity if needed.
+ * Five-point deal verdict. Letters map 1:1 to actions:
+ *   A → Great Deal, B → Good Deal, C → Marginal, D → Bad Deal, F → Avoid
  */
-export function deriveGradeScore(
-  capRatePct: number | null,
-  dscr: number | null,
-): number {
-  if (capRatePct == null) return 50;
-  let score = capRatePct * 8; // 8% cap → 64
-  if (dscr != null) score += Math.max(-20, Math.min(20, (dscr - 1) * 30));
-  return Math.max(0, Math.min(100, Math.round(score)));
+export type Verdict = "great" | "good" | "marginal" | "bad" | "avoid";
+
+const VERDICT_ORDER: Verdict[] = ["avoid", "bad", "marginal", "good", "great"];
+
+export const VERDICT_LETTER: Record<Verdict, string> = {
+  great: "A",
+  good: "B",
+  marginal: "C",
+  bad: "D",
+  avoid: "F",
+};
+
+export const VERDICT_LABEL: Record<Verdict, string> = {
+  great: "Great Deal",
+  good: "Good Deal",
+  marginal: "Marginal",
+  bad: "Bad Deal",
+  avoid: "Avoid",
+};
+
+export function verdictColor(verdict: Verdict): string {
+  // 5-hue piq palette: green / teal / amber / orange / red for A / B / C / D / F.
+  // Resolves to --piq-* CSS variables defined at :root in app/globals.css.
+  switch (verdict) {
+    case "great":
+      return "var(--piq-green)";
+    case "good":
+      return "var(--piq-teal)";
+    case "marginal":
+      return "var(--piq-amber)";
+    case "bad":
+      return "var(--piq-orange)";
+    case "avoid":
+      return "var(--piq-red)";
+  }
+}
+
+/** Map the 5-tier Verdict to a DealGrade letter (no +/- modifiers in v1). */
+export function verdictToGradeLetter(
+  verdict: Verdict,
+): "A" | "B" | "C" | "D" | "F" {
+  switch (verdict) {
+    case "great":
+      return "A";
+    case "good":
+      return "B";
+    case "marginal":
+      return "C";
+    case "bad":
+      return "D";
+    case "avoid":
+      return "F";
+  }
+}
+
+/** Short qualifier shown under the letter in DealGrade. */
+export function verdictToQualifier(verdict: Verdict): string {
+  switch (verdict) {
+    case "great":
+      return "Strong cash flow";
+    case "good":
+      return "Solid hold";
+    case "marginal":
+      return "Marginal";
+    case "bad":
+      return "Tight margins";
+    case "avoid":
+      return "Walk away";
+  }
+}
+
+export interface VerdictInputs {
+  capRatePct: number | null; // e.g. 7.5 means 7.5%
+  dscr: number | null; // debt service coverage
+  cashflowMonthly: number | null; // dollars / month after debt service
+  piqScore: number | null; // 1-99, 50 = state avg
+}
+
+/**
+ * Aggressive thresholds (user-chosen 2026-05-15):
+ *   GREAT:    cap ≥ 8.0%, DSCR ≥ 1.3, cashflow > 0
+ *   GOOD:     cap 6.5–7.9%, DSCR ≥ 1.2
+ *   MARGINAL: cap 5.0–6.4%, DSCR ≥ 1.0
+ *   BAD:      cap 3.5–4.9%
+ *   AVOID:    cap < 3.5% OR DSCR < 1.0
+ *
+ * Market adjustment: PIQ < 35 (weak market) demotes one tier (floor: avoid).
+ */
+export function deriveVerdict(inputs: VerdictInputs): Verdict {
+  const { capRatePct, dscr, cashflowMonthly, piqScore } = inputs;
+
+  if (capRatePct == null) return "marginal";
+  if (capRatePct < 3.5 || (dscr != null && dscr < 1.0)) return "avoid";
+
+  let tier: Verdict;
+  if (
+    capRatePct >= 8.0 &&
+    (dscr == null || dscr >= 1.3) &&
+    (cashflowMonthly == null || cashflowMonthly > 0)
+  ) {
+    tier = "great";
+  } else if (capRatePct >= 6.5 && (dscr == null || dscr >= 1.2)) {
+    tier = "good";
+  } else if (capRatePct >= 5.0 && (dscr == null || dscr >= 1.0)) {
+    tier = "marginal";
+  } else {
+    tier = "bad";
+  }
+
+  if (piqScore != null && piqScore < 35) {
+    const idx = VERDICT_ORDER.indexOf(tier);
+    tier = VERDICT_ORDER[Math.max(0, idx - 1)];
+  }
+
+  return tier;
 }

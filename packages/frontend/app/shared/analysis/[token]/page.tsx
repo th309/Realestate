@@ -25,7 +25,7 @@ import {
   buildStrategyCardsFromResult,
   extractMarketContextProps,
 } from "@/app/analyzer/lib/saved-render-builders";
-import { deriveGradeScore } from "@/app/analyzer/lib/format-helpers";
+import { deriveVerdict } from "@/app/analyzer/lib/format-helpers";
 
 // Each token returns different data and there's no per-user variance worth
 // caching, so render dynamically on every request.
@@ -50,10 +50,15 @@ export default async function SharedAnalysisPage({ params }: PageProps) {
   const brrrr = result.brrrr ?? null;
 
   const heading = row.label || `${row.address_city}, ${row.address_state}`;
-  const score = deriveGradeScore(
-    rental.capRatePct ?? null,
-    rental.dscr ?? null,
-  );
+  const piqScore =
+    (row.market_context as { piq_score?: { value?: number | null } } | null)
+      ?.piq_score?.value ?? null;
+  const verdict = deriveVerdict({
+    capRatePct: rental.capRatePct ?? null,
+    dscr: rental.dscr ?? null,
+    cashflowMonthly: rental.cashflowMonthly ?? null,
+    piqScore,
+  });
   const kpiTiles = buildKpiTilesFromRental(rental);
   const strategyCards = buildStrategyCardsFromResult(rental, flip, brrrr);
   const marketProps = extractMarketContextProps(row.market_context);
@@ -71,7 +76,7 @@ export default async function SharedAnalysisPage({ params }: PageProps) {
         </header>
 
         <div className="space-y-6">
-          <Hero score={score} kpiTiles={kpiTiles} />
+          <Hero verdict={verdict} kpiTiles={kpiTiles} />
           <ThreeStrategyGrid strategies={strategyCards} />
           {row.market_context && <MarketContextSection {...marketProps} />}
         </div>

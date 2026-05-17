@@ -151,8 +151,12 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   // --------------------------------------------------------------------------
   market_heat: {
     metricId: 'market_heat',
-    sources: [{ source: 'zillow', column: 'market_heat_index' }],
-    supportsGeoInheritance: false,
+    // Realtor's `hotness_score` (0-100) is the source of truth — covers
+    // zip / county / metro, which beats Zillow's metro-only market-heat
+    // index. Geo inheritance lets a ZIP miss fall back to its county, then
+    // metro, before giving up.
+    sources: [{ source: 'realtor', column: 'hotness_score' }],
+    supportsGeoInheritance: true,
   },
 
   hotness_score: {
@@ -439,7 +443,11 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   appreciation_yoy: {
     metricId: 'appreciation_yoy',
     sources: [
-      { source: 'realtor', column: 'median_listing_price_yy', transform: toPercent },
+      {
+        source: 'realtor',
+        column: 'median_listing_price_yy',
+        transform: toPercent,
+      },
       { source: 'redfin', column: 'median_sale_price_yoy' },
     ],
     supportsGeoInheritance: false,
@@ -468,27 +476,21 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   /** Alias for rent growth — used by briefing generator */
   rent_growth_yoy: {
     metricId: 'rent_growth_yoy',
-    sources: [
-      { source: 'calculated', column: 'zori_yoy' },
-    ],
+    sources: [{ source: 'calculated', column: 'zori_yoy' }],
     supportsGeoInheritance: false,
   },
 
   /** Alias for price_to_rent — used by briefing generator */
   price_to_rent: {
     metricId: 'price_to_rent',
-    sources: [
-      { source: 'calculated', column: 'price_rent_ratio' },
-    ],
+    sources: [{ source: 'calculated', column: 'price_rent_ratio' }],
     supportsGeoInheritance: false,
   },
 
   /** Alias for price_to_income — used by briefing generator */
   price_to_income: {
     metricId: 'price_to_income',
-    sources: [
-      { source: 'calculated', column: 'price_to_income' },
-    ],
+    sources: [{ source: 'calculated', column: 'price_to_income' }],
     supportsGeoInheritance: false,
   },
 

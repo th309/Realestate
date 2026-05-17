@@ -150,24 +150,35 @@ export class MigrationService {
 
   async getTopInflows(input: TopInflowsInput): Promise<MigrationFlow[]> {
     const limit = input.limit ?? 5;
-    const year =
+    const taxYear =
       input.year ?? new Date().getFullYear() - DEFAULT_MIGRATION_LAG_YEARS;
+    const client = this.supabase.getClient();
 
-    const { data, error } = await this.supabase
-      .from('migration_flows')
-      .select('from_county_fips, from_name, inflow_count')
-      .eq('to_county_fips', input.countyFips)
-      .eq('year', year)
-      .not('from_county_fips', 'is', null)
-      .not('from_name', 'is', null)
-      .order('inflow_count', { ascending: false })
-      .limit(limit);
+    const { data, error } = await client
+      .from('irs_county_migration_flows')
+      .select('origin_fips, num_returns')
+      .eq('destination_fips', input.countyFips)
+      .eq('tax_year', taxYear)
+      .order('num_returns', { ascending: false })
+      .limit(limit + 5);
 
     if (error || !data) return [];
-    return data.map((row) => ({
-      fromCountyFips: row.from_county_fips,
-      fromName: row.from_name,
-      inflowCount: row.inflow_count,
+
+    const filtered = (data as Array<Record<string, unknown>>)
+      .filter(
+        (r) =>
+          r.origin_fips !== input.countyFips &&
+          !RESERVED_PARTNER_FIPS.has(String(r.origin_fips)),
+      )
+      .slice(0, limit);
+
+    const partnerFips = filtered.map((r) => r.origin_fips as string);
+    const geoMap = await this.lookupGeoNames(partnerFips);
+
+    return filtered.map((r) => ({
+      fromCountyFips: r.origin_fips as string,
+      fromName: geoMap.get(r.origin_fips as string) ?? '',
+      inflowCount: (r.num_returns as number) ?? 0,
     }));
   }
 }

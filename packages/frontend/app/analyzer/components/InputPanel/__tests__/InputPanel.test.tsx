@@ -72,7 +72,7 @@ describe("InputPanel", () => {
     );
   });
 
-  it("ARV field renders when arv prop provided", () => {
+  it("ARV field renders when arv prop provided and strategy is not buyAndHold", () => {
     const { getByLabelText } = render(
       <InputPanel
         input={baseInput}
@@ -81,6 +81,7 @@ describe("InputPanel", () => {
         onChange={() => {}}
         address=""
         onAddressChange={() => {}}
+        activeStrategy="flip"
       />,
     );
     expect(getByLabelText(/ARV/)).toBeTruthy();

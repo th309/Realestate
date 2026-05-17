@@ -12,13 +12,36 @@ import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
 import {
   usePropertyLookup,
   useAiHeaderVerdict,
+  useMarketContext,
   type PropertyLookupResult,
 } from "@/lib/data";
+import {
+  DEFAULT_ASSUMPTIONS,
+  type AnalyzerAssumptions,
+} from "./analyzer-assumptions";
+import { derivePropertyClass } from "./derive-property-class";
+
+export type { AnalyzerAssumptions };
+export { DEFAULT_ASSUMPTIONS };
+
+/**
+ * Pull the trailing 5-digit ZIP out of a RentCast resolved_address like
+ * "123 S Market St, Frederick, MD 21701". Returns null when no ZIP is
+ * present so the market-context query stays disabled instead of firing
+ * with garbage.
+ */
+function extractZip(resolvedAddress: string | undefined): string | null {
+  if (!resolvedAddress) return null;
+  const match = resolvedAddress.match(/\b(\d{5})(?:-\d{4})?\b\s*$/);
+  return match ? match[1] : null;
+}
 
 interface AnalyzerStateOptions {
   isPro: boolean;
   initialAddress?: string;
   paramAddress?: string;
+  /** Explicit ZIP from `?zip=` URL param (highest priority). */
+  paramZip?: string;
 }
 
 /**
@@ -35,6 +58,7 @@ export function useAnalyzerState({
   isPro,
   initialAddress = "",
   paramAddress,
+  paramZip,
 }: AnalyzerStateOptions) {
   // Empty initial state — analyzer waits for the user (or RentCast fetch) to
   // supply numbers. Hardcoded defaults misled users into thinking the analyzer
@@ -48,6 +72,54 @@ export function useAnalyzerState({
 
   const [address, setAddress] = useState(initialAddress);
   const [arvLocal, setArvLocal] = useState<number>(0);
+  const [rehabBudget, setRehabBudget] = useState<number>(45_000);
+  const [propertyType, setPropertyType] = useState<"sfh" | "mf">("sfh");
+  const [unitCount, setUnitCount] = useState<number | null>(1);
+  const [assumptions, setAssumptionsState] =
+    useState<AnalyzerAssumptions>(DEFAULT_ASSUMPTIONS);
+  const setAssumption = <K extends keyof AnalyzerAssumptions>(
+    key: K,
+    value: AnalyzerAssumptions[K],
+  ) => setAssumptionsState((prev) => ({ ...prev, [key]: value }));
+
+  const propertyClass = derivePropertyClass(propertyType, unitCount);
+  const effectiveUnits = unitCount ?? 1;
+
+  // Keep flip/BRRRR-relevant fields on analyzer.input in sync so useAnalyzer's
+  // computeFlipMetrics + computeBrrrrScore receive the user's tuned values.
+  const setAnalyzerInput = analyzer.setInput;
+  const isCommercial = propertyClass === "commercial_mf";
+  useEffect(() => {
+    setAnalyzerInput((prev) => ({
+      ...prev,
+      arv: arvLocal > 0 ? arvLocal : undefined,
+      rehabBudget,
+      holdingMonths: assumptions.holdingMonths,
+      sellingCostsPct: assumptions.sellingCostsPct,
+      refinanceLTVPct: assumptions.refinanceLTVPct,
+      propertyClass,
+      unitCount: effectiveUnits,
+      marketCapRatePct: isCommercial ? assumptions.marketCapRatePct : undefined,
+      targetDSCR: isCommercial ? assumptions.targetDSCR : undefined,
+      capexReserveAnnualPerUnit: isCommercial
+        ? assumptions.capexReserveAnnualPerUnit
+        : undefined,
+      financing: {
+        ...prev.financing,
+        amortizationYears: isCommercial
+          ? assumptions.amortizationYears
+          : undefined,
+      },
+    }));
+  }, [
+    arvLocal,
+    rehabBudget,
+    assumptions,
+    propertyClass,
+    isCommercial,
+    effectiveUnits,
+    setAnalyzerInput,
+  ]);
 
   const propertyLookup = usePropertyLookup();
   const rentcastData =
@@ -89,7 +161,6 @@ export function useAnalyzerState({
       trimmed.length > 5 &&
       Boolean(paramAddress);
     if (process.env.NODE_ENV !== "production") {
-       
       console.log("[analyzer] auto-fetch check", {
         isPro,
         addressLength: trimmed.length,
@@ -105,16 +176,30 @@ export function useAnalyzerState({
   }, [isPro, address, paramAddress, mutate]);
 
   const projection = useMemo(
-    () => computeProjection(analyzer.input),
-    [analyzer.input],
+    () =>
+      computeProjection(analyzer.input, {
+        appreciationPct: assumptions.appreciationPct,
+        rentGrowthPct: assumptions.rentGrowthPct,
+        expenseGrowthPct: assumptions.expenseGrowthPct,
+      }),
+    [
+      analyzer.input,
+      assumptions.appreciationPct,
+      assumptions.rentGrowthPct,
+      assumptions.expenseGrowthPct,
+    ],
   );
   const sensitivity = useMemo(
     () => computeSensitivity(analyzer.input),
     [analyzer.input],
   );
   const afterTax = useMemo(
-    () => computeAfterTax(analyzer.input),
-    [analyzer.input],
+    () =>
+      computeAfterTax(analyzer.input, {
+        marginalTaxRate: assumptions.marginalTaxRate,
+        landValuePct: assumptions.landValuePct,
+      }),
+    [analyzer.input, assumptions.marginalTaxRate, assumptions.landValuePct],
   );
   const breakEven = useMemo(
     () => computeBreakEven(analyzer.input),
@@ -122,22 +207,55 @@ export function useAnalyzerState({
   );
   const brrrrTimeline = useMemo(
     () =>
-      computeBrrrrTimeline({
-        ...analyzer.input,
-        arv: arvLocal,
-        rehabBudget: 45_000,
-      }),
-    [analyzer.input, arvLocal],
+      computeBrrrrTimeline(
+        { ...analyzer.input, arv: arvLocal, rehabBudget },
+        {
+          seasoningMonths: assumptions.seasoningMonths,
+          rehabMonths: assumptions.rehabMonths,
+          leaseMonths: assumptions.leaseMonths,
+        },
+      ),
+    [
+      analyzer.input,
+      arvLocal,
+      rehabBudget,
+      assumptions.seasoningMonths,
+      assumptions.rehabMonths,
+      assumptions.leaseMonths,
+    ],
   );
+
+  // Market context geography priority:
+  //   1. ?zip= URL param (explicit, deep-link)
+  //   2. ZIP extracted from RentCast's resolved_address (canonical)
+  //   3. ZIP extracted from the user-typed address (works without RentCast,
+  //      so free-tier users still get market data)
+  // Server-side, MetricResolutionService handles county/state fallback if
+  // a ZIP has no metric coverage.
+  const zip =
+    (paramZip && /^\d{5}$/.test(paramZip) ? paramZip : null) ??
+    extractZip(rentcastData?.resolved_address) ??
+    extractZip(address);
+  const marketContextQuery = useMarketContext({
+    zip: zip ?? undefined,
+    enabled: Boolean(zip),
+  });
+  const marketContext = marketContextQuery.data;
 
   const verdictPayload = useMemo(
     () => ({
       input: analyzer.input,
       result: analyzer.rental,
       rentcast: rentcastData ?? {},
-      piq: {},
+      piq: marketContext?.piq_score
+        ? {
+            score: marketContext.piq_score.value,
+            label: marketContext.piq_score.label,
+            marketHeat: marketContext.market_heat?.value,
+          }
+        : {},
     }),
-    [analyzer.input, analyzer.rental, rentcastData],
+    [analyzer.input, analyzer.rental, rentcastData, marketContext],
   );
   const { text: aiVerdict, isStreaming } = useAiHeaderVerdict(
     isPro ? verdictPayload : null,
@@ -149,6 +267,15 @@ export function useAnalyzerState({
     setAddress,
     arvLocal,
     setArvLocal,
+    rehabBudget,
+    setRehabBudget,
+    assumptions,
+    setAssumption,
+    propertyType,
+    setPropertyType,
+    unitCount,
+    setUnitCount,
+    propertyClass,
     propertyLookup,
     rentcastData,
     quotaExceeded,
@@ -159,5 +286,7 @@ export function useAnalyzerState({
     brrrrTimeline,
     aiVerdict,
     isStreaming,
+    marketContext,
+    marketContextLoading: marketContextQuery.isLoading,
   };
 }

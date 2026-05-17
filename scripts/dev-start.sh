@@ -138,7 +138,7 @@ if [ "$REDIS_AVAILABLE" = true ]; then
     --prefix-colors "red.bold,magenta.bold,yellow.bold,cyan.bold" \
     "docker logs -f $REDIS_CONTAINER" \
     "$VIDEO_TEMPLATE_WATCH" \
-    "REDIS_URL=redis://localhost:${REDIS_PORT} npm run start:dev -w backend" \
+    "npm run start:dev -w backend" \
     "npm run dev -w web"
 else
   npx concurrently \

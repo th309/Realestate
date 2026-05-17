@@ -1,5 +1,7 @@
 "use client";
 
+import { MetricBlock } from "../primitives/MetricBlock";
+
 export interface StrategyCardData {
   id: "buyAndHold" | "flip" | "brrrr";
   title: string;
@@ -43,20 +45,24 @@ export function ThreeStrategyGrid({ strategies }: ThreeStrategyGridProps) {
               </span>
             )}
           </div>
-          <div className="font-mono text-3xl font-bold text-on-surface mb-1">
-            {s.heroMetric.value}
-          </div>
-          <div className="text-xs text-on-surface-variant mb-4">
-            {s.heroMetric.label}
+          <div className="mb-4">
+            <MetricBlock
+              label={s.heroMetric.label}
+              value={s.heroMetric.value}
+              format="raw"
+              size="md"
+              variant="neutral"
+            />
           </div>
           <div className="space-y-1">
             {s.stats.map((stat, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between text-sm"
+                style={{ fontVariantNumeric: "tabular-nums" }}
               >
                 <span className="text-on-surface-variant">{stat.label}</span>
-                <span className="font-mono text-on-surface">{stat.value}</span>
+                <span className="text-on-surface">{stat.value}</span>
               </div>
             ))}
           </div>

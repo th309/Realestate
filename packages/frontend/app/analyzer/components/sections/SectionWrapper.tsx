@@ -1,5 +1,6 @@
 "use client";
 import { useState, ReactNode } from "react";
+import { piq } from "../primitives/piqTokens";
 
 interface SectionWrapperProps {
   id: string;
@@ -8,6 +9,26 @@ interface SectionWrapperProps {
   onRefresh?: () => void;
   aiAnnotation?: ReactNode;
   children: ReactNode;
+}
+
+function LightbulbIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M12 2a7 7 0 0 1 5 11.95V16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-2.05A7 7 0 0 1 12 2z" />
+    </svg>
+  );
 }
 
 export function SectionWrapper({
@@ -58,9 +79,23 @@ export function SectionWrapper({
           {aiAnnotation && (
             <div
               data-section-ai
-              className="text-sm text-on-surface italic border-l-2 border-primary pl-3"
+              className="flex gap-2 items-start"
+              style={{
+                fontSize: "13px",
+                color: piq.textMuted,
+                padding: "12px",
+                borderRadius: 8,
+                background: "rgba(57, 73, 171, 0.04)",
+                lineHeight: 1.5,
+              }}
             >
-              {aiAnnotation}
+              <span
+                aria-hidden
+                style={{ flexShrink: 0, color: piq.indigo, marginTop: 1 }}
+              >
+                <LightbulbIcon />
+              </span>
+              <div className="flex-1">{aiAnnotation}</div>
             </div>
           )}
         </div>

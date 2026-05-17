@@ -1,59 +1,108 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { SensitivitySection } from "../SensitivitySection";
+import type {
+  DealInput,
+  RentalResult,
+  FlipResult,
+  BrrrrResult,
+} from "@propertyiq/analyzer-core";
 
-vi.mock("recharts", async () => {
-  const actual = await vi.importActual<typeof import("recharts")>("recharts");
-  return {
-    ...actual,
-    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-      <div style={{ width: 600, height: 280 }}>
-        <actual.ResponsiveContainer width={600} height={280}>
-          {children as React.ReactElement}
-        </actual.ResponsiveContainer>
-      </div>
-    ),
-  };
-});
+const input: DealInput = {
+  price: 350_000,
+  rentMonthly: 2800,
+  taxAnnual: 5000,
+  insuranceAnnual: 1200,
+  hoaMonthly: 0,
+  maintenancePctOfRent: 0.08,
+  managementPctOfRent: 0.08,
+  vacancyPctOfRent: 0.05,
+  financing: {
+    downPaymentPct: 0.2,
+    interestRatePct: 7.1,
+    termYears: 30,
+    closingCostsPct: 0.03,
+  },
+} as unknown as DealInput;
 
-const sensitivity = {
-  baseIRR: 0.1,
-  factors: [
-    {
-      name: "rate" as const,
-      irrAtMinus10pct: 0.05,
-      irrAtPlus10pct: 0.15,
-      impactMagnitude: 0.05,
-    },
-    {
-      name: "rent" as const,
-      irrAtMinus10pct: 0.07,
-      irrAtPlus10pct: 0.13,
-      impactMagnitude: 0.03,
-    },
-    {
-      name: "vacancy" as const,
-      irrAtMinus10pct: 0.08,
-      irrAtPlus10pct: 0.12,
-      impactMagnitude: 0.02,
-    },
-  ],
-};
+const rental = {
+  cashflowMonthly: 312,
+  capRatePct: 6.8,
+  dscr: 1.28,
+  noiAnnual: 24_000,
+  monthlyDebtService: 1300,
+} as unknown as RentalResult;
 
-const band = [
-  { year: 1, value: 0.08, bandLow: 0.06, bandHigh: 0.1 },
-  { year: 5, value: 0.1, bandLow: 0.07, bandHigh: 0.13 },
-  { year: 10, value: 0.12, bandLow: 0.08, bandHigh: 0.16 },
+const flip = {
+  projectedProfit: 38_000,
+  projectedRoiPct: 22,
+  mao70: 305_000,
+} as unknown as FlipResult;
+
+const brrrr = {
+  score: 75,
+  postRefiCashflowMonthly: 180,
+  refinanceCashOut: 250_000,
+  remainingCashInDeal: 14_000,
+} as unknown as BrrrrResult;
+
+const salesComps = [
+  { distance: 0.2 },
+  { distance: 0.3 },
+  { distance: 0.4 },
+  { distance: 0.45 },
+  { distance: 0.48 },
 ];
 
 describe("SensitivitySection", () => {
-  it("renders both charts inside section", () => {
+  it("renders header, headline, confidence indicator, and tornado", () => {
     const { container, getByText } = render(
-      <SensitivitySection sensitivity={sensitivity} irrBandByYear={band} />,
+      <SensitivitySection
+        input={input}
+        rental={rental}
+        flip={flip}
+        brrrr={brrrr}
+        arv={395_000}
+        rehabBudget={45_000}
+        activeStrategy="buyAndHold"
+        salesComps={salesComps}
+      />,
     );
+
     expect(getByText("Sensitivity & Confidence")).toBeTruthy();
-    expect(container.querySelectorAll("[data-tornado-row]").length).toBe(3);
-    expect(container.querySelector(".recharts-area")).toBeTruthy();
-    expect(container.querySelector(".recharts-line")).toBeTruthy();
+    expect(
+      container.querySelector('[data-directional-bars][data-layout="tornado"]'),
+    ).toBeTruthy();
+    expect(container.querySelector("[data-confidence]")).toBeTruthy();
+  });
+
+  it("flags High confidence with 5+ comps within 0.5mi", () => {
+    const { container } = render(
+      <SensitivitySection
+        input={input}
+        rental={rental}
+        flip={flip}
+        brrrr={brrrr}
+        arv={395_000}
+        activeStrategy="buyAndHold"
+        salesComps={salesComps}
+      />,
+    );
+    expect(container.querySelector('[data-confidence="high"]')).toBeTruthy();
+  });
+
+  it("flags Low confidence with no comps", () => {
+    const { container } = render(
+      <SensitivitySection
+        input={input}
+        rental={rental}
+        flip={flip}
+        brrrr={brrrr}
+        arv={395_000}
+        activeStrategy="buyAndHold"
+        salesComps={[]}
+      />,
+    );
+    expect(container.querySelector('[data-confidence="low"]')).toBeTruthy();
   });
 });

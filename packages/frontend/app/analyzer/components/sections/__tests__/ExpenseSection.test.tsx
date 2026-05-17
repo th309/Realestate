@@ -13,10 +13,12 @@ describe("ExpenseSection", () => {
       />,
     );
     expect(getByText("Where the Rent Goes")).toBeTruthy();
-    // 5 waterfall steps
-    expect(container.querySelectorAll("rect[data-waterfall-bar]").length).toBe(
-      5,
-    );
+    // DirectionalBars (waterfall layout) renders as path-based bars.
+    expect(
+      container.querySelector(
+        '[data-directional-bars][data-layout="waterfall"]',
+      ),
+    ).toBeTruthy();
   });
 
   it("renders AI annotation when text provided", () => {

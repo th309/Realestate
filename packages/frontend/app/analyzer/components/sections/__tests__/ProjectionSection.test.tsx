@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { ProjectionSection } from "../ProjectionSection";
-import type { ProjectionResult } from "@propertyiq/analyzer-core";
+import type { DealInput, ProjectionResult } from "@propertyiq/analyzer-core";
 
 // jsdom has no real layout, so ResponsiveContainer measures width=0 and
 // Recharts skips rendering. Stub it with a fixed-size wrapper so child
@@ -19,6 +19,23 @@ vi.mock("recharts", async () => {
     ),
   };
 });
+
+const sampleInput = {
+  price: 350_000,
+  rentMonthly: 2800,
+  taxAnnual: 5000,
+  insuranceAnnual: 1200,
+  hoaMonthly: 0,
+  maintenancePctOfRent: 0.08,
+  managementPctOfRent: 0.08,
+  vacancyPctOfRent: 0.05,
+  financing: {
+    downPaymentPct: 0.2,
+    interestRatePct: 7.1,
+    termYears: 30,
+    closingCostsPct: 0.03,
+  },
+} as unknown as DealInput;
 
 const sample: ProjectionResult = {
   yearly: Array.from({ length: 5 }, (_, i) => ({
@@ -44,20 +61,25 @@ const sample: ProjectionResult = {
 };
 
 describe("ProjectionSection", () => {
-  it("renders MultiLineChart and BulletBarChart inside SectionWrapper", () => {
+  it("renders SignatureChart with all four wealth series inline", () => {
     const { container, getByText } = render(
-      <ProjectionSection projection={sample} />,
+      <ProjectionSection input={sampleInput} projection={sample} />,
     );
     expect(getByText("30-Year Wealth Projection")).toBeTruthy();
-    expect(container.querySelectorAll(".recharts-line").length).toBe(2);
-    expect(
-      container.querySelectorAll(".recharts-bar-rectangle").length,
-    ).toBeGreaterThanOrEqual(6);
+    // SignatureChart in multi-series mode renders one Area for the primary
+    // series + 3 Line series + legend chips for all 4.
+    expect(container.querySelector("[data-signature-chart]")).toBeTruthy();
+    expect(container.querySelector("[data-signature-legend]")).toBeTruthy();
+    expect(getByText("Equity")).toBeTruthy();
+    expect(getByText("Property value")).toBeTruthy();
+    expect(getByText("Mortgage balance")).toBeTruthy();
+    expect(getByText("Cum. cash flow")).toBeTruthy();
   });
 
   it("renders AIAnnotation when aiText provided", () => {
     const { container } = render(
       <ProjectionSection
+        input={sampleInput}
         projection={sample}
         aiText="Cumulative equity dominates the 30-yr horizon."
       />,

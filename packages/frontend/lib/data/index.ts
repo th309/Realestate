@@ -23,6 +23,11 @@ export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
 export { usePropertyLookup } from "./hooks/usePropertyLookup";
 export { useAiSectionAnnotation } from "./hooks/useAiSectionAnnotation";
 export { useAiHeaderVerdict } from "./hooks/useAiHeaderVerdict";
+export { useMarketContext } from "./hooks/useMarketContext";
+export type {
+  UseMarketContextOptions,
+  UseMarketContextResult,
+} from "./hooks/useMarketContext";
 
 // ============================================================================
 // TYPES

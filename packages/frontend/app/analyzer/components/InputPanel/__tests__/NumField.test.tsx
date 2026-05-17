@@ -4,21 +4,33 @@ import { NumField } from "../NumField";
 import { RentCastBadge } from "../RentCastBadge";
 
 describe("NumField", () => {
-  it("renders label and current value", () => {
+  it("renders label and current value with thousands separators", () => {
     const { getByLabelText } = render(
       <NumField label="Price" value={240000} onChange={() => {}} />,
     );
     const input = getByLabelText("Price") as HTMLInputElement;
-    expect(input.value).toBe("240000");
+    expect(input.value).toBe("240,000");
   });
 
-  it("typing fires onChange with parsed number", () => {
+  it("typing fires onChange with parsed number (commas accepted, stripped)", () => {
     const onChange = vi.fn();
     const { getByLabelText } = render(
       <NumField label="Rent" value={null} onChange={onChange} />,
     );
-    fireEvent.change(getByLabelText("Rent"), { target: { value: "2850" } });
+    fireEvent.change(getByLabelText("Rent"), { target: { value: "2,850" } });
     expect(onChange).toHaveBeenCalledWith(2850);
+  });
+
+  it("groupThousands=false renders unformatted value", () => {
+    const { getByLabelText } = render(
+      <NumField
+        label="Price"
+        value={240000}
+        onChange={() => {}}
+        groupThousands={false}
+      />,
+    );
+    expect((getByLabelText("Price") as HTMLInputElement).value).toBe("240000");
   });
 
   it("clearing input fires onChange(null)", () => {

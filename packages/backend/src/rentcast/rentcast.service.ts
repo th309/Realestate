@@ -82,6 +82,8 @@ export class RentcastService {
         yearBuilt: raw.yearBuilt ?? null,
         taxAssessment: raw.taxAssessment ?? null,
         propertyType: raw.propertyType ?? null,
+        lat: typeof raw.latitude === 'number' ? raw.latitude : null,
+        lon: typeof raw.longitude === 'number' ? raw.longitude : null,
       }),
     );
   }

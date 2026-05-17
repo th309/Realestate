@@ -14,7 +14,7 @@ import {
   buildStrategyCardsFromResult,
   extractMarketContextProps,
 } from "../../lib/saved-render-builders";
-import { deriveGradeScore } from "../../lib/format-helpers";
+import { deriveVerdict } from "../../lib/format-helpers";
 
 export default function SavedClient({ id }: { id: string }) {
   const { data: row, isLoading } = useSavedAnalysis(id);
@@ -39,10 +39,15 @@ export default function SavedClient({ id }: { id: string }) {
   const flip = result.flip ?? null;
   const brrrr = result.brrrr ?? null;
 
-  const score = deriveGradeScore(
-    rental.capRatePct ?? null,
-    rental.dscr ?? null,
-  );
+  const piqScore =
+    (row.market_context as { piq_score?: { value?: number | null } } | null)
+      ?.piq_score?.value ?? null;
+  const verdict = deriveVerdict({
+    capRatePct: rental.capRatePct ?? null,
+    dscr: rental.dscr ?? null,
+    cashflowMonthly: rental.cashflowMonthly ?? null,
+    piqScore,
+  });
   const kpiTiles = buildKpiTilesFromRental(rental);
   const strategyCards = buildStrategyCardsFromResult(rental, flip, brrrr);
   const marketProps = extractMarketContextProps(row.market_context);
@@ -58,7 +63,7 @@ export default function SavedClient({ id }: { id: string }) {
         </p>
 
         <div className="space-y-6">
-          <Hero score={score} kpiTiles={kpiTiles} />
+          <Hero verdict={verdict} kpiTiles={kpiTiles} />
           <ThreeStrategyGrid strategies={strategyCards} />
           {row.market_context && <MarketContextSection {...marketProps} />}
         </div>

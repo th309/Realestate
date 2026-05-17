@@ -20,6 +20,12 @@ const DEFAULT_FINANCING: FinancingTerms = {
 export interface AnalyzerInputState extends DealInput {
   arv?: number;
   rehabBudget?: number;
+  /** Flip-only: months held before sale. Default 4. */
+  holdingMonths?: number;
+  /** Flip-only: selling costs as % of ARV. Default 0.07. */
+  sellingCostsPct?: number;
+  /** BRRRR-only: refi LTV cap. Default 0.75. */
+  refinanceLTVPct?: number;
 }
 
 /**
@@ -48,6 +54,8 @@ export function useAnalyzer(initial?: Partial<AnalyzerInputState>) {
       price: input.price,
       arv: input.arv,
       rehabBudget: input.rehabBudget,
+      holdingMonths: input.holdingMonths,
+      sellingCostsPct: input.sellingCostsPct,
     });
   }, [input]);
 
@@ -57,6 +65,7 @@ export function useAnalyzer(initial?: Partial<AnalyzerInputState>) {
       ...input,
       arv: input.arv,
       rehabBudget: input.rehabBudget,
+      refinanceLTVPct: input.refinanceLTVPct,
     });
   }, [input]);
 

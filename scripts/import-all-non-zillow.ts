@@ -10,10 +10,9 @@
  *   npx tsx scripts/import-all-non-zillow.ts                    # Run all imports
  *   npx tsx scripts/import-all-non-zillow.ts --skip=redfin      # Skip specific source
  *   npx tsx scripts/import-all-non-zillow.ts --only=census,economic  # Run only specific sources
- *   npx tsx scripts/import-all-non-zillow.ts --benchmark        # Run batch size benchmark first
  */
 
-import { execSync, ExecSyncOptions } from "child_process";
+import { execSync, execFileSync, ExecSyncOptions } from "child_process";
 import {
   PIPELINES,
   TIMEOUTS,
@@ -31,12 +30,10 @@ interface PipelineResult {
 function parseArgs(): {
   skip: Set<string>;
   only: Set<string> | null;
-  benchmark: boolean;
 } {
   const args = process.argv.slice(2);
   const skip = new Set<string>();
   let only: Set<string> | null = null;
-  let benchmark = false;
 
   for (const arg of args) {
     if (arg.startsWith("--skip=")) {
@@ -53,12 +50,9 @@ function parseArgs(): {
           .map((s) => s.trim()),
       );
     }
-    if (arg === "--benchmark") {
-      benchmark = true;
-    }
   }
 
-  return { skip, only, benchmark };
+  return { skip, only };
 }
 
 function runPipeline(pipeline: ImportPipeline): PipelineResult {
@@ -100,87 +94,18 @@ function runPipeline(pipeline: ImportPipeline): PipelineResult {
   }
 }
 
-function runBenchmark(): void {
-  console.log("\n" + "=".repeat(70));
-  console.log("  BATCH SIZE BENCHMARK");
-  console.log("=".repeat(70));
-  console.log("Testing batch sizes: 100, 250, 500, 1000, 2000");
-  console.log("Using economic_state (small dataset, fast turnaround)\n");
-
-  const batchSizes = [100, 250, 500, 1000, 2000];
-  const results: { batchSize: number; duration: number; rps: number }[] = [];
-
-  for (const batchSize of batchSizes) {
-    const cmd = `npx tsx scripts/import-economic-data.ts --geo=state --batch=${batchSize} --no-refresh`;
-    console.log(`Testing batch=${batchSize}...`);
-
-    const start = Date.now();
-    try {
-      execSync(cmd, {
-        stdio: "pipe",
-        timeout: 120_000,
-        maxBuffer: 10 * 1024 * 1024,
-      });
-      const duration = (Date.now() - start) / 1000;
-      const rps = 3000 / duration;
-      results.push({ batchSize, duration, rps });
-      console.log(
-        `  batch=${batchSize}: ${duration.toFixed(1)}s (~${rps.toFixed(0)} rec/s)`,
-      );
-    } catch (err: any) {
-      console.log(
-        `  batch=${batchSize}: FAILED - ${err.message?.substring(0, 100)}`,
-      );
-    }
-  }
-
-  if (results.length > 0) {
-    const best = results.reduce((a, b) => (a.rps > b.rps ? a : b));
-    console.log(
-      `\nOptimal batch size: ${best.batchSize} (${best.rps.toFixed(0)} rec/s, ${best.duration.toFixed(1)}s)`,
-    );
-    console.log(
-      "Note: Wider tables (Realtor ZIP, Redfin) may need smaller batches.\n",
-    );
-  }
-}
-
 function runFinalMetricRefresh(): boolean {
   console.log("\n" + "=".repeat(70));
   console.log("  FINAL: Refreshing Calculated Metrics (single run)");
   console.log("=".repeat(70) + "\n");
 
-  // Use a lightweight script to run the refresh once
-  const refreshScript = `
-    const dotenv = require('dotenv');
-    dotenv.config({ path: './packages/backend/.env' });
-    dotenv.config({ path: '.env.local' });
-    const { createClient } = require('@supabase/supabase-js');
-    const { refreshCalculatedMetrics } = require('./scripts/utils/refresh-calculated-metrics');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-    refreshCalculatedMetrics(supabase).then(() => {
-      console.log('Metric refresh complete');
-    }).catch(e => {
-      console.error('Metric refresh failed:', e.message);
-      process.exit(1);
-    });
-  `;
-
   try {
-    // Use one of the existing import scripts with --geo filter to just trigger refresh
-    execSync(
-      'npx tsx -e "' +
-        "import { createImportClient } from './scripts/census-economic-import/db-client';" +
-        "import { refreshCalculatedMetrics } from './scripts/utils/refresh-calculated-metrics';" +
-        "const supabase = createImportClient();" +
-        "refreshCalculatedMetrics(supabase).then(() => console.log('Done')).catch(e => { console.error(e); process.exit(1); });" +
-        '"',
-      {
-        stdio: "inherit",
-        timeout: 10 * 60 * 1000, // 10 minutes
-        maxBuffer: 10 * 1024 * 1024,
-      },
-    );
+    execFileSync("npx", ["tsx", "scripts/refresh-all-metrics.ts"], {
+      stdio: "inherit",
+      timeout: 10 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024,
+      shell: process.platform === "win32",
+    });
     return true;
   } catch (err: any) {
     console.error(`  Metric refresh failed: ${err.message?.substring(0, 200)}`);
@@ -190,7 +115,7 @@ function runFinalMetricRefresh(): boolean {
 
 function main() {
   const startTime = Date.now();
-  const { skip, only, benchmark } = parseArgs();
+  const { skip, only } = parseArgs();
 
   console.log("");
   console.log("=".repeat(70));
@@ -201,10 +126,6 @@ function main() {
   console.log(`  Only: ${only ? [...only].join(", ") : "all"}`);
   console.log(`  Mode: per-pipeline imports, single metric refresh at end`);
   console.log("=".repeat(70));
-
-  if (benchmark) {
-    runBenchmark();
-  }
 
   // Filter pipelines
   const pipelinesToRun = PIPELINES.filter((p) => {

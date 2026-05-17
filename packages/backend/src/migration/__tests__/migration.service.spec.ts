@@ -2,92 +2,153 @@ import { Test } from '@nestjs/testing';
 import { MigrationService } from '../migration.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 
-describe('MigrationService', () => {
-  let service: MigrationService;
-  let supabase: jest.Mocked<SupabaseService>;
+/**
+ * Unit tests for `MigrationService.getTopInflows`.
+ *
+ * The method now reads from `irs_county_migration_flows` (origin_fips /
+ * destination_fips / tax_year / num_returns) and joins `geographies` for
+ * county names. Reserved IRS partner buckets (`00000`, `99999`) and the
+ * "non-migrant" same-fips row are filtered in JS post-fetch — so the test
+ * fixtures can include those rows and we assert they are dropped.
+ */
 
-  beforeEach(async () => {
+interface MockRow {
+  origin_fips?: string | null;
+  num_returns?: number | null;
+}
+
+function buildClientMock(opts: {
+  flowsRows?: MockRow[];
+  geoRows?: Array<{ geography_id: string; name: string }>;
+  flowsError?: { message: string } | null;
+}): { from: jest.Mock; calls: { table: string }[] } {
+  const calls: { table: string }[] = [];
+
+  function makeFlowsChain() {
+    const limit = jest.fn().mockResolvedValue({
+      data: opts.flowsRows ?? [],
+      error: opts.flowsError ?? null,
+    });
+    const order = jest.fn().mockReturnValue({ limit });
+    const eqYear = jest.fn().mockReturnValue({ order });
+    const eqDest = jest.fn().mockReturnValue({ eq: eqYear });
+    const select = jest.fn().mockReturnValue({ eq: eqDest });
+    return { select, _trace: { eqDest, eqYear, order, limit } };
+  }
+
+  function makeGeoChain() {
+    const inFn = jest
+      .fn()
+      .mockResolvedValue({ data: opts.geoRows ?? [], error: null });
+    const select = jest.fn().mockReturnValue({ in: inFn });
+    return { select };
+  }
+
+  const from = jest.fn((table: string) => {
+    calls.push({ table });
+    if (table === 'irs_county_migration_flows') return makeFlowsChain();
+    if (table === 'geographies') return makeGeoChain();
+    throw new Error(`Unexpected table: ${table}`);
+  });
+
+  return { from, calls };
+}
+
+describe('MigrationService.getTopInflows', () => {
+  let service: MigrationService;
+
+  async function buildService(clientFromMock: jest.Mock) {
     const module = await Test.createTestingModule({
       providers: [
         MigrationService,
-        { provide: SupabaseService, useValue: { from: jest.fn() } },
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: () => ({ from: clientFromMock }),
+            from: clientFromMock,
+          },
+        },
       ],
     }).compile();
     service = module.get(MigrationService);
-    supabase = module.get(SupabaseService);
-  });
+  }
 
-  it('returns top-N inflow source counties for a destination county', async () => {
-    const limitMock = jest.fn().mockResolvedValue({
-      data: [
-        {
-          from_county_fips: '36061',
-          from_name: 'New York County, NY',
-          inflow_count: 1840,
-        },
-        {
-          from_county_fips: '11001',
-          from_name: 'District of Columbia',
-          inflow_count: 1210,
-        },
+  it('returns top-N inflow source counties with names from geographies join', async () => {
+    const { from } = buildClientMock({
+      flowsRows: [
+        { origin_fips: '36061', num_returns: 1840 },
+        { origin_fips: '11001', num_returns: 1210 },
       ],
-      error: null,
+      geoRows: [
+        { geography_id: '36061', name: 'New York County, NY' },
+        { geography_id: '11001', name: 'District of Columbia' },
+      ],
     });
-    const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
-    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
-    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
-    const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
-    const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
-    supabase.from.mockReturnValue({ select: selectMock } as any);
+    await buildService(from);
 
     const result = await service.getTopInflows({
       countyFips: '37183',
       limit: 5,
-      year: 2024,
+      year: 2023,
     });
 
     expect(result).toHaveLength(2);
-    expect(result[0].fromCountyFips).toBe('36061');
-    expect(result[0].inflowCount).toBe(1840);
+    expect(result[0]).toEqual({
+      fromCountyFips: '36061',
+      fromName: 'New York County, NY',
+      inflowCount: 1840,
+    });
+    expect(result[1].fromName).toBe('District of Columbia');
   });
 
-  it('returns empty array when no migration data exists for the county', async () => {
-    const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
-    const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
-    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
-    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
-    const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
-    supabase.from.mockReturnValue({
-      select: jest.fn().mockReturnValue({ eq: eq2Mock }),
-    } as any);
+  it('filters out same-fips non-migrant row and reserved 00000/99999 buckets', async () => {
+    const { from } = buildClientMock({
+      flowsRows: [
+        // non-migrant stayer: same fips on both sides
+        { origin_fips: '37183', num_returns: 437996 },
+        // reserved IRS bucket
+        { origin_fips: '00000', num_returns: 500 },
+        { origin_fips: '99999', num_returns: 300 },
+        // legitimate inflow
+        { origin_fips: '36061', num_returns: 1840 },
+      ],
+      geoRows: [{ geography_id: '36061', name: 'New York County, NY' }],
+    });
+    await buildService(from);
+
+    const result = await service.getTopInflows({
+      countyFips: '37183',
+      limit: 5,
+      year: 2023,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].fromCountyFips).toBe('36061');
+  });
+
+  it('returns empty array when destination county has no migration data', async () => {
+    const { from } = buildClientMock({ flowsRows: [], geoRows: [] });
+    await buildService(from);
 
     const result = await service.getTopInflows({
       countyFips: '99999',
       limit: 5,
-      year: 2024,
+      year: 2023,
     });
     expect(result).toEqual([]);
   });
 
-  it('filters out IRS-suppressed rows with null county FIPS at query time', async () => {
-    const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
-    const orderMock = jest.fn().mockReturnValue({ limit: limitMock });
-    const notMock2 = jest.fn().mockReturnValue({ order: orderMock });
-    const notMock1 = jest.fn().mockReturnValue({ not: notMock2 });
-    const eqMock = jest.fn().mockReturnValue({ not: notMock1 });
-    const eq2Mock = jest.fn().mockReturnValue({ eq: eqMock });
-    const selectMock = jest.fn().mockReturnValue({ eq: eq2Mock });
-    supabase.from.mockReturnValue({ select: selectMock } as any);
+  it('returns empty array on supabase error', async () => {
+    const { from } = buildClientMock({
+      flowsError: { message: 'connection refused' },
+    });
+    await buildService(from);
 
-    await service.getTopInflows({
+    const result = await service.getTopInflows({
       countyFips: '37183',
       limit: 5,
-      year: 2024,
+      year: 2023,
     });
-
-    expect(notMock1).toHaveBeenCalledWith('from_county_fips', 'is', null);
-    expect(notMock2).toHaveBeenCalledWith('from_name', 'is', null);
+    expect(result).toEqual([]);
   });
 });

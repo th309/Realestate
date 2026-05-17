@@ -14,6 +14,9 @@ export interface RentcastPropertyRecord {
   yearBuilt: number | null;
   taxAssessment: number | null;
   propertyType: string | null;
+  /** Latitude/longitude of the matched property — required for map pin. */
+  lat: number | null;
+  lon: number | null;
 }
 
 export interface RentcastValueEstimate {

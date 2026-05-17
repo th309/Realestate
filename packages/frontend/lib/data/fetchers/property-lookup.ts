@@ -20,7 +20,18 @@ export interface PropertyLookupResult {
     high: number;
     comps_count: number;
   } | null;
-  property_record: unknown;
+  property_record: {
+    beds: number | null;
+    baths: number | null;
+    sqft: number | null;
+    yearBuilt: number | null;
+    taxAssessment: number | null;
+    propertyType: string | null;
+    /** Lat/lon may be absent on cached responses written before the backend
+     *  started extracting them — frontend should defensively check. */
+    lat?: number | null;
+    lon?: number | null;
+  } | null;
   sales_comps: unknown[];
   rental_comps: unknown[];
   cache_age_days: number;

@@ -1,10 +1,10 @@
 "use client";
 
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements";
 import { ModeProvider } from "./lib/mode-context";
 import { ModeToolbar } from "./components/chrome/ModeToolbar";
-import { Hero } from "./components/Hero/Hero";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { InputPanel } from "./components/InputPanel/InputPanel";
 import { ProjectionSection } from "./components/sections/ProjectionSection";
@@ -18,11 +18,19 @@ import { EditInputsFab } from "./components/chrome/EditInputsFab";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import {
-  fmtPct,
-  fmtUsd,
-  fmtRatio,
-  deriveGradeScore,
+  deriveVerdict,
+  verdictToGradeLetter,
+  verdictToQualifier,
 } from "./lib/format-helpers";
+import { DealGrade } from "./components/primitives/DealGrade";
+import { StrategyKPI } from "./components/Hero/StrategyKPI";
+import { PropertyHeader } from "./components/PropertyHeader";
+import { RentcastDevStrip } from "./components/RentcastDevStrip";
+import { RentcastBanners } from "./components/RentcastBanners";
+import { computeBestPlay } from "./lib/strategy-best-play";
+import { buildCompsViewProps } from "./lib/comps-view-props";
+import type { Strategy } from "./lib/strategy-tile-mappers";
+import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
 
 export default function AnalyzerClient({
   searchParamsPromise,
@@ -43,6 +51,7 @@ export default function AnalyzerClient({
     isPro,
     initialAddress: params.address ?? "",
     paramAddress: params.address,
+    paramZip: params.zip,
   });
   const {
     analyzer,
@@ -50,6 +59,15 @@ export default function AnalyzerClient({
     setAddress,
     arvLocal,
     setArvLocal,
+    rehabBudget,
+    setRehabBudget,
+    assumptions,
+    setAssumption,
+    propertyType,
+    setPropertyType,
+    unitCount,
+    setUnitCount,
+    propertyClass,
     propertyLookup,
     rentcastData,
     quotaExceeded,
@@ -60,12 +78,31 @@ export default function AnalyzerClient({
     brrrrTimeline,
     aiVerdict,
     isStreaming,
+    marketContext,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
   const [inputsOpenMobile, setInputsOpenMobile] = useState(false);
 
-  const score = deriveGradeScore(rental.capRatePct, rental.dscr);
+  const verdict = deriveVerdict({
+    capRatePct: rental.capRatePct,
+    dscr: rental.dscr,
+    cashflowMonthly: rental.cashflowMonthly,
+    piqScore: marketContext?.piq_score?.value ?? null,
+  });
+
+  const router = useRouter();
+  const bestPlay = computeBestPlay(rental, flip, brrrr, projection);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
+  const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
+  // In compare mode the user hasn't picked — surface the bestPlay in the hero
+  // so DealGrade + KPI tiles reflect the winning strategy.
+  const activeStrategy: Strategy =
+    analysisMode === "compare" ? bestPlay : focusedStrategy;
+
+  const displayAddress =
+    rentcastData?.resolved_address ?? (address.trim() || null);
+
   const strategyProps = buildStrategyCompareProps({
     rental,
     flip,
@@ -88,39 +125,19 @@ export default function AnalyzerClient({
   const vacancyMonthly =
     grossRentMonthly * (analyzer.input.vacancyPctOfRent ?? 0.05);
 
-  const irrBandByYear = projection.yearly
-    .filter((y: (typeof projection.yearly)[number]) =>
-      [1, 3, 5, 10, 20, 30].includes(y.year),
-    )
-    .map((y: (typeof projection.yearly)[number]) => ({
-      year: y.year,
-      value: y.irrToDate,
-      bandLow: y.irrToDate * 0.7,
-      bandHigh: y.irrToDate * 1.3,
-    }));
-
-  // Comps-section data sourced from RentCast lookup (lat/lon + price/sqft)
-  type RawComp = {
-    address: string;
-    lat?: number | null;
-    lon?: number | null;
-    price?: number | null;
-    rent?: number | null;
-    beds?: number | null;
-    baths?: number | null;
-    sqft?: number | null;
-    distance?: number;
-  };
-  const salesComps = (rentcastData?.sales_comps ?? []) as RawComp[];
-  const rentalComps = (rentcastData?.rental_comps ?? []) as RawComp[];
-  const pricePerSqftValues = salesComps
-    .map((c) => (c.price && c.sqft && c.sqft > 0 ? c.price / c.sqft : null))
-    .filter((v): v is number => v != null);
-  const yourPricePerSqft =
-    analyzer.input.price && pricePerSqftValues.length > 0
-      ? analyzer.input.price / (pricePerSqftValues.length * 0 + 1500) // fallback est sqft 1500
-      : (pricePerSqftValues[0] ?? 0);
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+  const compsView = buildCompsViewProps(
+    rentcastData,
+    analyzer.input.price ?? 0,
+  );
+  const {
+    salesComps,
+    rentalComps,
+    pricePerSqftValues,
+    yourPricePerSqft,
+    subjectLat,
+    subjectLon,
+    mapboxToken,
+  } = compsView;
   const lookupErrorMsg = propertyLookup.error
     ? String(propertyLookup.error.message ?? propertyLookup.error)
     : null;
@@ -131,12 +148,25 @@ export default function AnalyzerClient({
       arv={arvLocal}
       onChange={analyzer.setInput}
       onArvChange={setArvLocal}
+      rehabBudget={rehabBudget}
+      onRehabBudgetChange={setRehabBudget}
+      assumptions={assumptions}
+      onAssumptionChange={setAssumption}
       address={address}
       onAddressChange={setAddress}
       isPro={isPro}
       isFetching={propertyLookup.isPending}
       onFetchProperty={() => propertyLookup.mutate({ address })}
       rentCastState={rentcastData ? "fresh" : "missing"}
+      activeStrategy={activeStrategy}
+      analysisMode={analysisMode}
+      onAnalysisModeChange={setAnalysisMode}
+      onStrategyChange={setFocusedStrategy}
+      propertyType={propertyType}
+      onPropertyTypeChange={setPropertyType}
+      unitCount={unitCount}
+      onUnitCountChange={setUnitCount}
+      propertyClass={propertyClass}
     />
   );
 
@@ -144,12 +174,26 @@ export default function AnalyzerClient({
     <ModeProvider>
       <main className="min-h-screen bg-surface">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-          <header className="flex items-center justify-between mb-6 gap-4">
+          <header className="flex items-center justify-between mb-4 gap-4">
             <h1 className="text-xl md:text-2xl font-bold text-on-surface">
               Deal Analyzer
             </h1>
             <ModeToolbar />
           </header>
+
+          {displayAddress && (
+            <PropertyHeader
+              address={displayAddress}
+              piqScore={
+                marketContext?.piq_score
+                  ? {
+                      value: marketContext.piq_score.value,
+                      label: marketContext.piq_score.label,
+                    }
+                  : null
+              }
+            />
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-[62%_38%] gap-6">
             <div className="space-y-6 min-w-0">
@@ -184,151 +228,57 @@ export default function AnalyzerClient({
                 </div>
               )}
 
-              <Hero
-                score={score}
-                aiText={
-                  aiVerdict ||
-                  (isPro ? null : "Pro members get a streaming AI verdict.")
+              <DealGrade
+                grade={verdictToGradeLetter(verdict)}
+                qualifier={verdictToQualifier(verdict)}
+                aiVerdict={aiVerdict}
+                isStreaming={isStreaming}
+                isPro={isPro}
+                strategy={
+                  activeStrategy === "buyAndHold" ? "buy-hold" : activeStrategy
                 }
-                aiIsStreaming={isStreaming}
-                kpiTiles={[
-                  {
-                    label: "Cap Rate",
-                    value: fmtPct(
-                      rental.capRatePct ? rental.capRatePct / 100 : null,
-                    ),
-                  },
-                  {
-                    label: "Cashflow",
-                    value:
-                      rental.cashflowMonthly != null
-                        ? `${fmtUsd(rental.cashflowMonthly)}/mo`
-                        : "—",
-                  },
-                  { label: "DSCR", value: fmtRatio(rental.dscr) },
-                  {
-                    label: "IRR (10y)",
-                    value: fmtPct(projection.horizons.y10.irr),
-                  },
-                ]}
+                onUpgrade={() => router.push("/pricing")}
+              />
+
+              <StrategyKPI
+                ctx={{
+                  input: analyzer.input,
+                  rental,
+                  flip,
+                  brrrr,
+                  projection,
+                  breakEven,
+                  afterTax,
+                  arv: arvLocal,
+                  rehabBudget,
+                }}
+                active={activeStrategy}
+                isCompareWinner={analysisMode === "compare"}
               />
 
               <StrategyCompare {...strategyProps} />
 
-              {/* Always-visible debug box: tells us at a glance what state the RentCast lookup is in. */}
-              <div
-                data-rentcast-debug
-                className="rounded-xl border border-outline-variant bg-surface-container-low text-xs px-3 py-2 font-mono text-on-surface-variant flex flex-wrap gap-x-4 gap-y-1"
-              >
-                <span>
-                  tier: <strong>{entitlements.tier ?? "?"}</strong>
-                </span>
-                <span>
-                  isPro: <strong>{String(isPro)}</strong>
-                </span>
-                <span>
-                  address: <strong>{address || "(empty)"}</strong>
-                </span>
-                <span>
-                  lookup:{" "}
-                  <strong>
-                    {propertyLookup.isPending
-                      ? "pending…"
-                      : propertyLookup.isSuccess
-                        ? "success"
-                        : propertyLookup.isError
-                          ? "error"
-                          : "idle"}
-                  </strong>
-                </span>
-                {!propertyLookup.data && !propertyLookup.isPending && (
-                  <button
-                    onClick={() =>
-                      propertyLookup.mutate({ address: address.trim() })
-                    }
-                    className="underline text-[var(--md-primary)]"
-                  >
-                    Force fetch
-                  </button>
-                )}
-              </div>
-
-              {(lookupErrorMsg || quotaExceeded) && (
-                <div
-                  data-rentcast-status
-                  role="alert"
-                  className="rounded-xl border-2 border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-on-error-container)] px-4 py-3 text-sm"
-                >
-                  <strong>RentCast lookup failed:</strong>{" "}
-                  {quotaExceeded
-                    ? "monthly quota exceeded — try again next month."
-                    : lookupErrorMsg}
-                </div>
+              {process.env.NODE_ENV !== "production" && (
+                <RentcastDevStrip
+                  tier={entitlements.tier}
+                  isPro={isPro}
+                  address={address}
+                  propertyLookup={propertyLookup}
+                />
               )}
 
-              {rentcastData && rentcastData.errors && (
-                <div
-                  data-rentcast-partial-errors
-                  role="alert"
-                  className="rounded-xl border-2 border-[var(--md-warning)] bg-[var(--md-error-container)] text-[var(--md-on-error-container)] px-4 py-3 text-xs"
-                >
-                  <strong>RentCast partial failure:</strong>
-                  <ul className="mt-1 list-disc list-inside">
-                    {rentcastData.errors.property && (
-                      <li>property: {rentcastData.errors.property}</li>
-                    )}
-                    {rentcastData.errors.avm && (
-                      <li>avm: {rentcastData.errors.avm}</li>
-                    )}
-                    {rentcastData.errors.rent && (
-                      <li>rent: {rentcastData.errors.rent}</li>
-                    )}
-                  </ul>
-                </div>
-              )}
+              <RentcastBanners
+                lookupErrorMsg={lookupErrorMsg}
+                quotaExceeded={quotaExceeded}
+                rentcastData={rentcastData}
+                address={address}
+              />
 
-              {rentcastData && (
-                <div
-                  data-rentcast-status
-                  className="rounded-xl border border-[var(--md-tertiary)] bg-[var(--md-tertiary-container)] text-[var(--md-on-tertiary-container)] px-4 py-3 text-xs flex flex-wrap gap-x-6 gap-y-1"
-                >
-                  {rentcastData.resolved_address && (
-                    <span className="w-full mb-1 font-semibold">
-                      Matched: {rentcastData.resolved_address}
-                      {address.trim() &&
-                        rentcastData.resolved_address
-                          .toLowerCase()
-                          .replace(/[,\s]+/g, " ") !==
-                          address
-                            .trim()
-                            .toLowerCase()
-                            .replace(/[,\s]+/g, " ") && (
-                          <span className="ml-2 text-[var(--md-warning)]">
-                            (differs from your input — verify ZIP/spelling)
-                          </span>
-                        )}
-                    </span>
-                  )}
-                  <span>
-                    <strong>RentCast:</strong> AVM{" "}
-                    {rentcastData.avm
-                      ? fmtUsd(rentcastData.avm.value)
-                      : "unavailable"}
-                  </span>
-                  <span>
-                    Rent{" "}
-                    {rentcastData.rent
-                      ? `${fmtUsd(rentcastData.rent.value)}/mo`
-                      : "unavailable"}
-                  </span>
-                  <span>
-                    Sales comps {rentcastData.sales_comps.length} · Rental comps{" "}
-                    {rentcastData.rental_comps.length}
-                  </span>
-                </div>
-              )}
-
-              <ProjectionSection projection={projection} />
+              <ProjectionSection
+                input={analyzer.input}
+                projection={projection}
+                afterTax={afterTax}
+              />
               <ExpenseSection
                 grossRentMonthly={grossRentMonthly}
                 vacancyMonthly={vacancyMonthly}
@@ -336,12 +286,19 @@ export default function AnalyzerClient({
                 debtServiceMonthly={debtServiceMonthly}
               />
               <SensitivitySection
-                sensitivity={sensitivity}
-                irrBandByYear={irrBandByYear}
+                input={analyzer.input}
+                rental={rental}
+                flip={flip}
+                brrrr={brrrr}
+                arv={arvLocal}
+                rehabBudget={rehabBudget}
+                activeStrategy={activeStrategy}
+                salesComps={salesComps}
               />
               <CompsSection
-                subjectLat={null}
-                subjectLon={null}
+                subjectLat={subjectLat}
+                subjectLon={subjectLon}
+                subjectAddress={displayAddress}
                 pricePerSqftValues={pricePerSqftValues}
                 yourPricePerSqft={yourPricePerSqft}
                 salesComps={salesComps}
@@ -349,11 +306,12 @@ export default function AnalyzerClient({
                 mapboxToken={mapboxToken}
               />
               <MarketContextSection
-                piqScore={null}
-                homeValue={null}
-                rentIndex={null}
-                marketHeat={null}
-                netMigration={null}
+                piqScore={marketContext?.piq_score?.value ?? null}
+                piqLabel={marketContext?.piq_score?.label ?? null}
+                homeValue={marketContext?.home_value?.value ?? null}
+                rentIndex={marketContext?.rent_index?.value ?? null}
+                marketHeat={marketContext?.market_heat?.value ?? null}
+                netMigration={marketContext?.net_migration?.value ?? null}
               />
               <AfterTaxSection afterTax={afterTax} />
               <NotesSection />

@@ -1,12 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { CompsSection, CompPin } from "../CompsSection";
+import { CompsSection, type CompPin } from "../CompsSection";
 
 vi.mock("react-map-gl/mapbox", () => ({
   Map: ({ children }: { children: React.ReactNode }) => (
     <div data-mapbox-mock>{children}</div>
   ),
-  Marker: ({ color }: { color: string }) => <div data-marker={color} />,
+  Marker: ({
+    children,
+    anchor,
+  }: {
+    children?: React.ReactNode;
+    anchor?: string;
+  }) => <div data-marker={anchor ?? "center"}>{children}</div>,
+  Popup: ({ children }: { children?: React.ReactNode }) => (
+    <div data-popup>{children}</div>
+  ),
 }));
 
 const sales: CompPin[] = [
@@ -45,11 +54,12 @@ const rents: CompPin[] = [
 ];
 
 describe("CompsSection", () => {
-  it("renders violin + map placeholder + table rows", () => {
+  it("renders distribution + map + table", () => {
     const { container, getByText } = render(
       <CompsSection
         subjectLat={30.27}
         subjectLon={-97.74}
+        subjectAddress="123 Subject St, Phoenix, AZ"
         pricePerSqftValues={[150, 160, 170, 180, 190, 200]}
         yourPricePerSqft={170}
         salesComps={sales}
@@ -58,11 +68,10 @@ describe("CompsSection", () => {
       />,
     );
     expect(getByText("Comparable Sales & Rentals")).toBeTruthy();
-    expect(container.querySelector("[data-comps-violin]")).toBeTruthy();
+    expect(container.querySelector("[data-comps-distribution]")).toBeTruthy();
     expect(container.querySelector("[data-comps-map]")).toBeTruthy();
     expect(container.querySelector("[data-mapbox-mock]")).toBeTruthy();
-    // 2 sales + 1 rental = 3 comp rows
-    expect(container.querySelectorAll("[data-comp-row]").length).toBe(3);
+    expect(container.querySelector("[data-comps-table]")).toBeTruthy();
   });
 
   it("renders subject + sales + rental markers", () => {
@@ -70,6 +79,7 @@ describe("CompsSection", () => {
       <CompsSection
         subjectLat={30.27}
         subjectLon={-97.74}
+        subjectAddress="123 Subject St"
         pricePerSqftValues={[]}
         yourPricePerSqft={170}
         salesComps={sales}
@@ -79,5 +89,25 @@ describe("CompsSection", () => {
     );
     // 1 subject + 2 sales + 1 rental = 4 markers
     expect(container.querySelectorAll("[data-marker]").length).toBe(4);
+    // Sales + rental markers carry data-comp-marker attribute (subject does not)
+    expect(container.querySelectorAll("[data-comp-marker]").length).toBe(3);
+  });
+
+  it("renders the empty-state distribution when no valid sales comps", () => {
+    const { container } = render(
+      <CompsSection
+        subjectLat={null}
+        subjectLon={null}
+        subjectAddress={null}
+        pricePerSqftValues={[]}
+        yourPricePerSqft={0}
+        salesComps={[]}
+        rentalComps={[]}
+        mapboxToken=""
+      />,
+    );
+    // Distribution slot still rendered, but CompsDistribution is replaced by
+    // a "No sales comps..." empty state. We just verify the slot exists.
+    expect(container.querySelector("[data-comps-distribution]")).toBeTruthy();
   });
 });

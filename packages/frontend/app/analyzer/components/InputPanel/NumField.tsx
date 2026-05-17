@@ -13,6 +13,19 @@ interface NumFieldProps {
   nudge?: { level: NudgeLevel; text: string } | null;
   placeholder?: string;
   ariaLabel?: string;
+  /** Display value with thousands separators. Default true. */
+  groupThousands?: boolean;
+}
+
+function formatDisplay(value: number | null, group: boolean): string {
+  if (value == null) return "";
+  if (!group) return String(value);
+  if (Number.isInteger(value)) return value.toLocaleString("en-US");
+  const [whole, decimal] = String(value).split(".");
+  const wholeNum = Number(whole);
+  return Number.isFinite(wholeNum)
+    ? `${wholeNum.toLocaleString("en-US")}.${decimal}`
+    : String(value);
 }
 
 export function NumField({
@@ -26,6 +39,7 @@ export function NumField({
   nudge,
   placeholder,
   ariaLabel,
+  groupThousands = true,
 }: NumFieldProps) {
   return (
     <div data-num-field className="flex flex-col gap-1">
@@ -40,16 +54,18 @@ export function NumField({
           <span className="pl-3 text-on-surface-variant text-sm">{prefix}</span>
         )}
         <input
-          type="number"
+          type="text"
           inputMode={step >= 1 ? "numeric" : "decimal"}
-          step={step}
           aria-label={ariaLabel ?? label}
-          value={value ?? ""}
+          value={formatDisplay(value, groupThousands)}
           placeholder={placeholder}
           onChange={(e) => {
             const raw = e.currentTarget.value;
-            if (raw === "") return onChange(null);
-            const n = Number(raw);
+            const cleaned = raw.replace(/[^\d.-]/g, "");
+            if (cleaned === "" || cleaned === "-" || cleaned === ".") {
+              return onChange(null);
+            }
+            const n = Number(cleaned);
             if (Number.isFinite(n)) onChange(n);
           }}
           className="flex-1 bg-transparent px-3 py-2 font-mono text-sm text-on-surface focus:outline-none"
