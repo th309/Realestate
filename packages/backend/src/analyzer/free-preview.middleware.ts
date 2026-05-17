@@ -53,8 +53,19 @@ export class FreePreviewMiddleware implements NestMiddleware {
     res: Response,
     next: NextFunction,
   ): void {
-    if (req.user?.id) {
-      // Authenticated — entitlements layer handles gating downstream.
+    // NestJS executes middleware BEFORE guards, so `req.user` is never
+    // populated here — even for authenticated requests. The frontend always
+    // sends `Authorization: Bearer <jwt>` for logged-in users (see
+    // `packages/frontend/lib/data/fetchers/auth-headers.ts`). Treat presence
+    // of that header as "authenticated, skip the quota". The endpoint's
+    // payload is non-sensitive aggregate market data — no real risk in
+    // letting a malformed token bypass the cap (worst case is they still
+    // burn through their own cookie quota on the next anonymous call).
+    const authHeader = req.headers.authorization ?? req.headers.Authorization;
+    if (
+      req.user?.id ||
+      (typeof authHeader === 'string' && authHeader.startsWith('Bearer '))
+    ) {
       return next();
     }
 

@@ -36,13 +36,17 @@ export interface UseMarketContextResult {
 export function useMarketContext(
   options: UseMarketContextOptions = {},
 ): UseMarketContextResult {
-  const { enabled = true, zip, county_fips, state } = options;
+  const { enabled = true, zip, county_fips, cbsa_code, state } = options;
 
-  const hasGeo = Boolean(zip || county_fips || state);
+  const hasGeo = Boolean(zip || county_fips || cbsa_code || state);
 
   const query = useQuery<MarketContextResult>({
-    queryKey: ["analyzer", "market-context", { zip, county_fips, state }],
-    queryFn: () => fetchMarketContext({ zip, county_fips, state }),
+    queryKey: [
+      "analyzer",
+      "market-context",
+      { zip, county_fips, cbsa_code, state },
+    ],
+    queryFn: () => fetchMarketContext({ zip, county_fips, cbsa_code, state }),
     enabled: enabled && hasGeo,
     // Market metrics change at most weekly; an in-session cache of 2h matches
     // the rest of the data layer (CLAUDE.md §5 data-binding hooks guidance).

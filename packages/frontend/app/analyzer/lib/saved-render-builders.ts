@@ -126,29 +126,34 @@ export function buildStrategyCardsFromResult(
 }
 
 export interface MarketContextSectionInputs {
-  piqScore: number | null;
-  piqLabel: string | null;
-  homeValue: number | null;
-  rentIndex: number | null;
-  marketHeat: number | null;
-  netMigration: number | null;
+  /** Pre-baked snapshot blob from saved/shared analyses doesn't include the
+   *  geography parent chain — pass null so the section renders pills-free. */
+  chain: null;
+  initialGeoLevel: "zip" | "county" | "metro" | "state" | null;
+  fallbackPiq: number | null;
+  fallbackHomeValue: number | null;
+  fallbackRentIndex: number | null;
+  fallbackMarketHeat: number | null;
+  fallbackNetMigration: number | null;
 }
 
 /**
  * Map the persisted `market_context` blob (matching `MarketContext`) to the
- * flat props expected by `MarketContextSection`. Each metric is wrapped in
- * `{ value, source }`; we only render the value, so the source is dropped.
+ * fallback props expected by `MarketContextSection`. Saved analyses are
+ * snapshot data with no live geography — pills are suppressed (chain=null)
+ * and the section paints the snapshot values without firing trend hooks.
  */
 export function extractMarketContextProps(
   mc: MarketContext | Record<string, unknown> | null | undefined,
 ): MarketContextSectionInputs {
   const ctx = (mc ?? {}) as Partial<MarketContext>;
   return {
-    piqScore: ctx.piq_score?.value ?? null,
-    piqLabel: ctx.piq_score?.label ?? null,
-    homeValue: ctx.home_value?.value ?? null,
-    rentIndex: ctx.rent_index?.value ?? null,
-    marketHeat: ctx.market_heat?.value ?? null,
-    netMigration: ctx.net_migration?.value ?? null,
+    chain: null,
+    initialGeoLevel: ctx.geo_level ?? null,
+    fallbackPiq: ctx.piq_score?.value ?? null,
+    fallbackHomeValue: ctx.home_value?.value ?? null,
+    fallbackRentIndex: ctx.rent_index?.value ?? null,
+    fallbackMarketHeat: ctx.market_heat?.value ?? null,
+    fallbackNetMigration: ctx.net_migration?.value ?? null,
   };
 }

@@ -22,6 +22,18 @@ export interface MarketContextMetric {
   source: string | null;
 }
 
+/**
+ * Geography parent chain — IDs at every level the requested geo rolls up to.
+ * Each field is optional; unmetropolitan ZIPs have no `cbsa_code`, etc.
+ * Lets the UI offer "view at metro / county / zip" pills without an extra RTT.
+ */
+export interface MarketContextChain {
+  zip?: string;
+  county_fips?: string;
+  cbsa_code?: string;
+  state?: string;
+}
+
 export interface MarketContext {
   geo_level: "zip" | "county" | "metro" | "state" | null;
   geo_id: string | null;
@@ -30,11 +42,15 @@ export interface MarketContext {
   market_heat: MarketContextMetric | null;
   net_migration: MarketContextMetric | null;
   piq_score: { value: number; label: string } | null;
+  /** Null when no geography was identified or the chain lookup failed. */
+  chain: MarketContextChain | null;
 }
 
 export interface MarketContextParams {
   zip?: string;
   county_fips?: string;
+  /** Metro CBSA code — analyzer geo-pills use this when user picks "Metro". */
+  cbsa_code?: string;
   state?: string;
 }
 
@@ -54,6 +70,7 @@ export async function fetchMarketContext(
   const qs = new URLSearchParams();
   if (params.zip) qs.set("zip", params.zip);
   if (params.county_fips) qs.set("county_fips", params.county_fips);
+  if (params.cbsa_code) qs.set("cbsa_code", params.cbsa_code);
   if (params.state) qs.set("state", params.state);
 
   const authHeaders = await getAuthHeaders();

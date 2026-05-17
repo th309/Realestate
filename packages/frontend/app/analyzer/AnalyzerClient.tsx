@@ -156,7 +156,18 @@ export default function AnalyzerClient({
       onAddressChange={setAddress}
       isPro={isPro}
       isFetching={propertyLookup.isPending}
-      onFetchProperty={() => propertyLookup.mutate({ address })}
+      onFetchProperty={() => {
+        // Persist the address to the URL so a page refresh re-fires the
+        // auto-fetch path in use-analyzer-state.ts. Combined with the 30-day
+        // Redis cache on the backend, refresh becomes ~instant — no second
+        // RentCast roundtrip needed for the same address.
+        const trimmed = address.trim();
+        if (trimmed.length > 0) {
+          const next = `/analyzer?address=${encodeURIComponent(trimmed)}`;
+          router.replace(next);
+        }
+        propertyLookup.mutate({ address });
+      }}
       rentCastState={rentcastData ? "fresh" : "missing"}
       activeStrategy={activeStrategy}
       analysisMode={analysisMode}
@@ -306,14 +317,20 @@ export default function AnalyzerClient({
                 mapboxToken={mapboxToken}
               />
               <MarketContextSection
-                piqScore={marketContext?.piq_score?.value ?? null}
-                piqLabel={marketContext?.piq_score?.label ?? null}
-                homeValue={marketContext?.home_value?.value ?? null}
-                rentIndex={marketContext?.rent_index?.value ?? null}
-                marketHeat={marketContext?.market_heat?.value ?? null}
-                netMigration={marketContext?.net_migration?.value ?? null}
+                chain={marketContext?.chain ?? null}
+                initialGeoLevel={marketContext?.geo_level ?? null}
+                fallbackPiq={marketContext?.piq_score?.value ?? null}
+                fallbackHomeValue={marketContext?.home_value?.value ?? null}
+                fallbackRentIndex={marketContext?.rent_index?.value ?? null}
+                fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
+                fallbackNetMigration={
+                  marketContext?.net_migration?.value ?? null
+                }
               />
-              <AfterTaxSection afterTax={afterTax} />
+              <AfterTaxSection
+                afterTax={afterTax}
+                marginalTaxRate={assumptions.marginalTaxRate}
+              />
               <NotesSection />
             </div>
 

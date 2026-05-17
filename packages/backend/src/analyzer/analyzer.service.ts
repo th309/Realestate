@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
-import type { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
+import { GeographyChainService } from '../metric-resolution/geography-chain.service';
+import type {
+  ResolvedMetric,
+  GeoChainStep,
+} from '../metric-resolution/metric-resolution.types';
 import { ScoringService } from '../scoring/scoring.service';
 import type { GeographyLevel } from '../scoring/formula-weights';
 import { RentcastService } from '../rentcast/rentcast.service';
@@ -11,6 +15,7 @@ import type {
   MarketContextQueryDto,
   MetricValueDto,
 } from './dto/market-context.dto';
+import { chainToDto } from './chain-to-dto';
 import type { AiVerdictRequestDto } from './dto/ai-verdict.dto';
 import type { PropertyLookupDto } from './dto/property-lookup.dto';
 
@@ -31,6 +36,7 @@ const EMPTY_CONTEXT: MarketContextDto = {
   market_heat: null,
   net_migration: null,
   piq_score: null,
+  chain: null,
 };
 
 /**
@@ -59,6 +65,7 @@ export class AnalyzerService {
 
   constructor(
     private readonly metricResolution: MetricResolutionService,
+    private readonly geographyChain: GeographyChainService,
     private readonly scoringService: ScoringService,
     private readonly rentcast: RentcastService,
     private readonly aiProvider: AiProviderService,
@@ -82,12 +89,17 @@ export class AnalyzerService {
     let geoLevel: AnalyzerGeoLevel | null = null;
     let geoId: string | null = null;
 
+    // Order matters: most-specific first when caller passes multiple (defensive
+    // against duplicate-param bugs). Metro slots between county and state.
     if (params.zip) {
       geoLevel = 'zip';
       geoId = params.zip;
     } else if (params.county_fips) {
       geoLevel = 'county';
       geoId = params.county_fips;
+    } else if (params.cbsa_code) {
+      geoLevel = 'metro';
+      geoId = params.cbsa_code;
     } else if (params.state) {
       geoLevel = 'state';
       geoId = params.state;
@@ -97,15 +109,28 @@ export class AnalyzerService {
       return { ...EMPTY_CONTEXT };
     }
 
-    const metrics = await this.metricResolution
-      .resolveMetricBatch([...MARKET_CONTEXT_METRICS], geoLevel, geoId)
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.warn(
-          `resolveMetricBatch failed for ${geoLevel}/${geoId}: ${message}`,
-        );
-        return {} as Record<string, ResolvedMetric>;
-      });
+    // Metrics + chain are independent — fetch in parallel. Chain is LRU-cached
+    // in GeographyChainService so this is near-free on warm calls.
+    const [metrics, chainSteps] = await Promise.all([
+      this.metricResolution
+        .resolveMetricBatch([...MARKET_CONTEXT_METRICS], geoLevel, geoId)
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.warn(
+            `resolveMetricBatch failed for ${geoLevel}/${geoId}: ${message}`,
+          );
+          return {} as Record<string, ResolvedMetric>;
+        }),
+      this.geographyChain
+        .getInheritanceChain(geoLevel, geoId)
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.warn(
+            `getInheritanceChain failed for ${geoLevel}/${geoId}: ${message}`,
+          );
+          return [] as GeoChainStep[];
+        }),
+    ]);
 
     let piq: MarketContextDto['piq_score'] = null;
     if (geoLevel !== 'state') {
@@ -134,6 +159,7 @@ export class AnalyzerService {
       market_heat: toMetricValueDto(metrics.market_heat),
       net_migration: toMetricValueDto(metrics.net_migration),
       piq_score: piq,
+      chain: chainSteps.length > 0 ? chainToDto(chainSteps) : null,
     };
   }
 

@@ -18,7 +18,7 @@ vi.mock("recharts", async () => {
 });
 
 const afterTax: AfterTaxResult = {
-  yearly: Array.from({ length: 5 }, (_, i) => ({
+  yearly: Array.from({ length: 10 }, (_, i) => ({
     year: i + 1,
     preTaxCashflow: 6000,
     depreciationDeduction: 6545,
@@ -29,12 +29,26 @@ const afterTax: AfterTaxResult = {
 };
 
 describe("AfterTaxSection", () => {
-  it("renders stacked bar chart inside section", () => {
+  it("renders a SignatureChart inside the section", () => {
     const { container, getByText } = render(
-      <AfterTaxSection afterTax={afterTax} />,
+      <AfterTaxSection afterTax={afterTax} marginalTaxRate={0.24} />,
     );
     expect(getByText("After-Tax Cashflow")).toBeTruthy();
-    // 3 bar series
-    expect(container.querySelectorAll(".recharts-bar").length).toBe(3);
+    // SignatureChart roots itself with this data attribute.
+    expect(container.querySelector("[data-signature-chart]")).toBeTruthy();
+    // Headline label appears via MetricBlock inside SignatureChart.
+    expect(getByText("After-tax cash flow")).toBeTruthy();
+  });
+
+  it("sub-label shows year + effective tax rate", () => {
+    const { container } = render(
+      <AfterTaxSection afterTax={afterTax} marginalTaxRate={0.24} />,
+    );
+    // Default scrub point is the last data point; year 10, base 2026 → 2036.
+    // Effective rate = 1 − (7500/6000) = −25% in this fixture (loss-shielded),
+    // but pre-tax > 0 path runs and yields a finite negative number; what
+    // matters is the sub-label is present in the document.
+    expect(container.textContent).toContain("Year 10");
+    expect(container.textContent).toContain("effective tax");
   });
 });

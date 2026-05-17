@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { AnalyzerService } from '../analyzer.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
+import { GeographyChainService } from '../../metric-resolution/geography-chain.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import { RentcastService } from '../../rentcast/rentcast.service';
 import { AiProviderService } from '../../ai-provider/ai-provider.service';
@@ -29,10 +30,22 @@ function resolved(
 describe('AnalyzerService.getMarketContext', () => {
   let service: AnalyzerService;
   let metricResolution: { resolveMetricBatch: jest.Mock };
+  let geographyChain: { getInheritanceChain: jest.Mock };
   let scoringService: { getScore: jest.Mock };
 
   beforeEach(async () => {
     metricResolution = { resolveMetricBatch: jest.fn() };
+    // Default: 78704 ZIP → Travis County → Austin Metro → TX → national.
+    // Individual tests can override mockResolvedValue as needed.
+    geographyChain = {
+      getInheritanceChain: jest.fn().mockResolvedValue([
+        { id: '78704', level: 'zip' },
+        { id: '48453', level: 'county' },
+        { id: '12420', level: 'metro' },
+        { id: '48', level: 'state' },
+        { id: 'national', level: 'national' },
+      ]),
+    };
     scoringService = { getScore: jest.fn() };
     const rentcastMock = {
       getPropertyRecord: jest.fn(),
@@ -43,6 +56,7 @@ describe('AnalyzerService.getMarketContext', () => {
       providers: [
         AnalyzerService,
         { provide: MetricResolutionService, useValue: metricResolution },
+        { provide: GeographyChainService, useValue: geographyChain },
         { provide: ScoringService, useValue: scoringService },
         { provide: RentcastService, useValue: rentcastMock },
         { provide: AiProviderService, useValue: { stream: jest.fn() } },
@@ -83,9 +97,19 @@ describe('AnalyzerService.getMarketContext', () => {
     expect(ctx.market_heat).toEqual({ value: 8.2, source: 'zillow' });
     expect(ctx.net_migration).toEqual({ value: 2_100, source: 'irs' });
     expect(ctx.piq_score).toEqual({ value: 73, label: 'GOOD' });
+    expect(ctx.chain).toEqual({
+      zip: '78704',
+      county_fips: '48453',
+      cbsa_code: '12420',
+      state: '48',
+    });
 
     expect(metricResolution.resolveMetricBatch).toHaveBeenCalledWith(
       ['home_value', 'rent_index', 'market_heat', 'net_migration'],
+      'zip',
+      '78704',
+    );
+    expect(geographyChain.getInheritanceChain).toHaveBeenCalledWith(
       'zip',
       '78704',
     );
@@ -120,8 +144,10 @@ describe('AnalyzerService.getMarketContext', () => {
       market_heat: null,
       net_migration: null,
       piq_score: null,
+      chain: null,
     });
     expect(metricResolution.resolveMetricBatch).not.toHaveBeenCalled();
+    expect(geographyChain.getInheritanceChain).not.toHaveBeenCalled();
     expect(scoringService.getScore).not.toHaveBeenCalled();
   });
 
@@ -186,6 +212,7 @@ describe('AnalyzerService.lookupProperty', () => {
     const service = new AnalyzerService(
       {} as any,
       {} as any,
+      {} as any,
       rentcast as any,
       {} as any,
     );
@@ -235,6 +262,7 @@ describe('AnalyzerService.lookupProperty', () => {
     const service = new AnalyzerService(
       {} as any,
       {} as any,
+      {} as any,
       rentcast as any,
       {} as any,
     );
@@ -256,6 +284,7 @@ describe('AnalyzerService.lookupProperty', () => {
       getRentEstimate: jest.fn().mockRejectedValue(new Error('c')),
     };
     const service = new AnalyzerService(
+      {} as any,
       {} as any,
       {} as any,
       rentcast as any,
