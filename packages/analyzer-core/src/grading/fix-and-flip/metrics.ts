@@ -8,6 +8,10 @@
  * Every helper takes a `FixAndFlipInput` and returns a plain number. All
  * defaults applied in one place so the grade orchestrator can stay terse.
  */
+import {
+  monthlyHoldingCosts as shMonthlyHoldingCosts,
+  monthlyLoanInterest as shMonthlyLoanInterest,
+} from "../shared/calculations";
 import type { FixAndFlipInput, FlipFinancingType } from "./types";
 
 const DEFAULTS = {
@@ -61,28 +65,36 @@ export function maoComplianceMargin(input: FixAndFlipInput): number {
   return (input.arv - rehabAdj - input.price) / input.arv;
 }
 
-/** Monthly interest on the loan (PERCENT-units rate / 12 × principal). */
+/**
+ * Monthly loan interest for the flip. Honors the `input.monthlyLoanInterest`
+ * override (some operators have the figure pre-computed elsewhere) and
+ * returns 0 for cash deals. Delegates the actual interest math to the
+ * shared primitive so the formula stays in one place.
+ */
 export function monthlyLoanInterest(input: FixAndFlipInput): number {
   if (input.monthlyLoanInterest != null) return input.monthlyLoanInterest;
   if (effectiveFinancingType(input) === "cash") return 0;
-  const principal = input.loanAmount ?? 0;
-  const ratePct = input.interestRatePct ?? 0;
-  if (principal <= 0 || ratePct <= 0) return 0;
-  return (principal * (ratePct / 100)) / 12;
+  return shMonthlyLoanInterest(
+    input.loanAmount ?? 0,
+    input.interestRatePct ?? 0,
+  );
 }
 
 /**
  * Per-month carrying cost during the hold (taxes, insurance, utilities,
- * HOA, plus loan interest). When `monthlyHoldingCosts` is set directly,
- * it wins — escape hatch for users who already have a number from elsewhere.
+ * HOA, plus loan interest). When `monthlyHoldingCosts` is set directly on
+ * the input, it wins — escape hatch for users who already have a number
+ * from elsewhere. Otherwise delegates to the shared primitive.
  */
 export function monthlyHoldingCosts(input: FixAndFlipInput): number {
   if (input.monthlyHoldingCosts != null) return input.monthlyHoldingCosts;
-  const tax = (input.propertyTaxAnnual ?? 0) / 12;
-  const insurance = (input.insuranceAnnual ?? 0) / 12;
-  const utilities = input.utilitiesMonthly ?? 0;
-  const hoa = input.hoaMonthly ?? 0;
-  return tax + insurance + utilities + hoa + monthlyLoanInterest(input);
+  return shMonthlyHoldingCosts({
+    propertyTaxAnnual: input.propertyTaxAnnual ?? 0,
+    insuranceAnnual: input.insuranceAnnual ?? 0,
+    utilitiesMonthly: input.utilitiesMonthly ?? 0,
+    hoaMonthly: input.hoaMonthly ?? 0,
+    monthlyLoanInterest: monthlyLoanInterest(input),
+  });
 }
 
 /**

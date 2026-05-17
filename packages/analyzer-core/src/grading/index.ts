@@ -12,6 +12,17 @@ export {
   letterFromGpa,
   marketAdjustment,
 } from "./shared/aggregate";
+export {
+  breakEvenOccupancy,
+  capRate,
+  cashFlowPerDoorMonthly,
+  dscr,
+  monthlyHoldingCosts,
+  monthlyLoanInterest,
+  monthlyPI,
+  noiAnnual,
+  operatingExpensesAnnual,
+} from "./shared/calculations";
 export { LETTER_LABEL, LETTER_RANK } from "./shared/types";
 export type {
   AdvisoryResult,
