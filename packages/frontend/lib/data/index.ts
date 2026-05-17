@@ -20,8 +20,28 @@ export {
   type AnalyzerSectionId,
 } from "./fetchers/ai-insights";
 export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
+export { fetchGradeDeal, type GradeDealRequest } from "./fetchers/grading";
+export {
+  fetchUpgradePath,
+  type UpgradePathRequest,
+} from "./fetchers/upgrade-path";
+export {
+  fetchThresholds,
+  updateThresholds,
+  deleteThresholds,
+} from "./fetchers/thresholds";
+export {
+  fetchAnalyzerDefaults,
+  updateAnalyzerDefaults,
+  type AnalyzerDefaults,
+} from "./fetchers/analyzer-defaults";
 export { usePropertyLookup } from "./hooks/usePropertyLookup";
 export { useAiSectionAnnotation } from "./hooks/useAiSectionAnnotation";
+export { useGradeDeal, type UseGradeDealOptions } from "./hooks/useGradeDeal";
+export {
+  useUpgradePath,
+  type UseUpgradePathOptions,
+} from "./hooks/useUpgradePath";
 export { useAiHeaderVerdict } from "./hooks/useAiHeaderVerdict";
 export { useMarketContext } from "./hooks/useMarketContext";
 export type {
@@ -244,6 +264,13 @@ export {
 
   // Tour signup mutation (anonymous → claimed user conversion)
   useTourSignup,
+
+  // Analyzer customization (thresholds + assumption defaults)
+  useThresholds,
+  useUpdateThresholds,
+  useDeleteThresholds,
+  useAnalyzerDefaults,
+  useUpdateAnalyzerDefaults,
 } from "./hooks";
 
 // ============================================================================

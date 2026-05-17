@@ -8,3 +8,4 @@ export * from "./compute-sensitivity";
 export * from "./compute-breakeven";
 export * from "./compute-brrrr-timeline";
 export * from "./compute-after-tax";
+export * from "./grading";

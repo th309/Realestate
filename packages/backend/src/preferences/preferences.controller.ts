@@ -31,6 +31,8 @@ import { AuthUserId } from '../common/decorators';
 import { PreferencesService } from './preferences.service';
 import { MarketMatchService } from './market-match.service';
 import { UpsertPreferencesDto } from './upsert-preferences.dto';
+import { AnalyzerDefaultsDto } from './analyzer-defaults.dto';
+import { AnalyzerDefaults } from './preferences.types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/preferences')
@@ -90,6 +92,57 @@ export class PreferencesController {
       this.logger.error(`Failed to upsert preferences: ${error.message}`);
       throw new HttpException(
         'Failed to save preferences',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // ==========================================================================
+  // Analyzer Defaults Endpoints
+  // ==========================================================================
+
+  /**
+   * GET /api/preferences/analyzer-defaults
+   *
+   * Returns the user's saved analyzer form defaults, or `{}` when none are
+   * saved. Empty object signals "use built-in analyzer defaults" to the
+   * frontend.
+   */
+  @Get('analyzer-defaults')
+  async getAnalyzerDefaults(
+    @AuthUserId() userId: string,
+  ): Promise<AnalyzerDefaults> {
+    try {
+      const saved = await this.preferencesService.getAnalyzerDefaults(userId);
+      return saved ?? {};
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get analyzer defaults: ${error.message}`);
+      throw new HttpException(
+        'Failed to fetch analyzer defaults',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * PUT /api/preferences/analyzer-defaults
+   *
+   * Upsert the user's analyzer form defaults. Body validated by
+   * AnalyzerDefaultsDto; service preserves other preferences columns.
+   */
+  @Put('analyzer-defaults')
+  async putAnalyzerDefaults(
+    @AuthUserId() userId: string,
+    @Body() body: AnalyzerDefaultsDto,
+  ): Promise<AnalyzerDefaults> {
+    try {
+      return await this.preferencesService.upsertAnalyzerDefaults(userId, body);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to upsert analyzer defaults: ${error.message}`);
+      throw new HttpException(
+        'Failed to save analyzer defaults',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

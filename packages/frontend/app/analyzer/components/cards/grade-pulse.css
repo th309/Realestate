@@ -1,0 +1,25 @@
+@keyframes piq-grade-pulse-glow {
+  from {
+    box-shadow: 0 0 0 0 var(--piq-grade-glow);
+  }
+  to {
+    box-shadow: 0 0 24px 4px var(--piq-grade-glow);
+  }
+}
+
+@keyframes piq-grade-scale-in {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.piq-grade-letter {
+  animation:
+    piq-grade-scale-in 0.3s ease-out both,
+    piq-grade-pulse-glow 2s ease-in-out 0.3s infinite alternate;
+}

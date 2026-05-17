@@ -6,9 +6,12 @@ import {
 } from '@nestjs/common';
 import { AnalyzerController } from './analyzer.controller';
 import { AnalyzerAiController } from './analyzer-ai.controller';
+import { GradeController } from './grade.controller';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
+import { GradingService } from './grading.service';
+import { ThresholdsService } from './thresholds.service';
 import { AiInsightsService } from './ai-insights.service';
 import { AiInsightsCache } from './ai-insights.cache';
 import { FreePreviewMiddleware } from './free-preview.middleware';
@@ -28,11 +31,13 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     RentcastModule,
     AiProviderModule,
   ],
-  controllers: [AnalyzerController, AnalyzerAiController],
+  controllers: [AnalyzerController, AnalyzerAiController, GradeController],
   providers: [
     AnalyzerService,
     AnalyzerPersistenceService,
     AnalyzerTierGate,
+    GradingService,
+    ThresholdsService,
     AiInsightsService,
     AiInsightsCache,
     FreePreviewMiddleware,

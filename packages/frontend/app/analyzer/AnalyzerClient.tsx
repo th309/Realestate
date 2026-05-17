@@ -17,15 +17,13 @@ import { NotesSection } from "./components/sections/NotesSection";
 import { EditInputsFab } from "./components/chrome/EditInputsFab";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
-import {
-  deriveVerdict,
-  verdictToGradeLetter,
-  verdictToQualifier,
-} from "./lib/format-helpers";
-import { DealGrade } from "./components/primitives/DealGrade";
+import { deriveVerdict } from "./lib/format-helpers";
+import { GradingResultPanel } from "./components/cards/GradingResultPanel";
+import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
+import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
+import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
-import { RentcastDevStrip } from "./components/RentcastDevStrip";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { computeBestPlay } from "./lib/strategy-best-play";
 import { buildCompsViewProps } from "./lib/comps-view-props";
@@ -76,8 +74,6 @@ export default function AnalyzerClient({
     afterTax,
     breakEven,
     brrrrTimeline,
-    aiVerdict,
-    isStreaming,
     marketContext,
     piqByGeo,
   } = state;
@@ -103,6 +99,13 @@ export default function AnalyzerClient({
   const bestPlay = computeBestPlay(rental, flip, brrrr, projection);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useAnalyzerDefaultsPrefill({
+    setInput: analyzer.setInput,
+    setAssumption,
+    currentInput: analyzer.input,
+  });
   // In compare mode the user hasn't picked — surface the bestPlay in the hero
   // so DealGrade + KPI tiles reflect the winning strategy.
   const activeStrategy: Strategy =
@@ -139,6 +142,13 @@ export default function AnalyzerClient({
         (analyzer.input.managementPctOfRent ?? 0.08));
   const vacancyMonthly =
     grossRentMonthly * (analyzer.input.vacancyPctOfRent ?? 0.05);
+
+  const grading = useGradingResult({
+    input: analyzer.input,
+    activeStrategy,
+    hasGradableInput,
+    piqScore: marketContext?.piq_score?.value,
+  });
 
   const compsView = buildCompsViewProps(
     rentcastData,
@@ -211,7 +221,11 @@ export default function AnalyzerClient({
             <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-[62%_38%] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
+            <div className="hidden md:block">
+              <div className="sticky top-6">{inputPanel}</div>
+            </div>
+
             <div className="space-y-6 min-w-0">
               {!address.trim() && !rentcastData && (
                 <div
@@ -219,10 +233,10 @@ export default function AnalyzerClient({
                   className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
                 >
                   <div className="font-semibold mb-1">
-                    Enter a property address to get started →
+                    ← Enter a property address to get started
                   </div>
                   <div className="text-sm">
-                    Type the address in the panel on the right{" "}
+                    Type the address in the panel on the left{" "}
                     {isPro ? (
                       <>
                         and click{" "}
@@ -244,18 +258,30 @@ export default function AnalyzerClient({
                 </div>
               )}
 
-              <DealGrade
-                grade={verdictToGradeLetter(verdict)}
-                qualifier={verdictToQualifier(verdict)}
-                aiVerdict={aiVerdict}
-                isStreaming={isStreaming}
-                isPro={isPro}
-                strategy={
-                  activeStrategy === "buyAndHold" ? "buy-hold" : activeStrategy
-                }
-                onUpgrade={() => router.push("/pricing")}
-                pending={!hasGradableInput}
-              />
+              {grading.data ? (
+                <GradingResultPanel
+                  result={grading.data}
+                  input={analyzer.input}
+                  context={{
+                    marketPiqScore:
+                      marketContext?.piq_score?.value ?? undefined,
+                  }}
+                  strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+                  onApplyLever={analyzer.setInput}
+                  onCustomizeClick={() => setDrawerOpen(true)}
+                  presetLabel="Balanced"
+                />
+              ) : grading.isLoading ? (
+                <div
+                  className="rounded-2xl border border-outline-variant bg-surface p-6 animate-pulse"
+                  aria-busy="true"
+                  role="status"
+                >
+                  <div className="h-24 w-24 rounded-xl bg-surface-container-high" />
+                  <div className="mt-4 h-6 w-32 rounded bg-surface-container-high" />
+                  <div className="mt-2 h-4 w-64 rounded bg-surface-container-high" />
+                </div>
+              ) : null}
 
               <StrategyKPI
                 ctx={{
@@ -273,22 +299,22 @@ export default function AnalyzerClient({
                 isCompareWinner={analysisMode === "compare"}
               />
 
-              <StrategyCompare
-                {...strategyProps}
-                isDealViable={
-                  hasGradableInput && verdict !== "bad" && verdict !== "avoid"
-                }
-              />
-
-              {process.env.NODE_ENV !== "production" && (
-                <RentcastDevStrip
-                  tier={entitlements.tier}
-                  isPro={isPro}
-                  address={address}
-                  propertyLookup={propertyLookup}
+              {/* Compare Strategies only appears in "Help me decide" mode.
+                  When the user has committed to a strategy via "I know my
+                  strategy", they don't need the side-by-side comparison. */}
+              {analysisMode === "compare" && (
+                <StrategyCompare
+                  {...strategyProps}
+                  isDealViable={
+                    hasGradableInput && verdict !== "bad" && verdict !== "avoid"
+                  }
                 />
               )}
 
+              {/* Error/quota banners only — the success "Matched: ..." strip
+                  and the dev tier/lookup strip were removed as noise. The
+                  property address is shown in PropertyHeader; per-field
+                  RentCast badges sit inline next to Price/Rent. */}
               <RentcastBanners
                 lookupErrorMsg={lookupErrorMsg}
                 quotaExceeded={quotaExceeded}
@@ -344,10 +370,6 @@ export default function AnalyzerClient({
               />
               <NotesSection />
             </div>
-
-            <div className="hidden md:block">
-              <div className="sticky top-6">{inputPanel}</div>
-            </div>
           </div>
         </div>
 
@@ -357,6 +379,12 @@ export default function AnalyzerClient({
         >
           {inputPanel}
         </EditInputsFab>
+
+        <CustomizeThresholdsDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+        />
       </main>
     </ModeProvider>
   );

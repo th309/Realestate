@@ -125,3 +125,14 @@ export {
 
 // Tour signup (anonymous → claimed user conversion)
 export { useTourSignup } from "./useTourSignup";
+
+// Analyzer customization — per-strategy thresholds + assumption defaults
+export {
+  useThresholds,
+  useUpdateThresholds,
+  useDeleteThresholds,
+} from "./useThresholds";
+export {
+  useAnalyzerDefaults,
+  useUpdateAnalyzerDefaults,
+} from "./useAnalyzerDefaults";

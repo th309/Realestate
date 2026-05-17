@@ -19,6 +19,24 @@ export type Timeline =
   | '1_to_2_years'
   | 'researching';
 
+/**
+ * Per-user defaults for the deal analyzer form. Stored as JSONB in
+ * `user_preferences.analyzer_defaults`. All fields optional; consumers fall
+ * back to the analyzer's built-in defaults when a key is missing.
+ *
+ * Units: all *Pct fields are decimals (0.05 = 5%). holdYears is an integer.
+ */
+export interface AnalyzerDefaults {
+  vacancyPct?: number;
+  maintenancePct?: number;
+  capexPct?: number;
+  pmPct?: number;
+  rentGrowthPct?: number;
+  appreciationPct?: number;
+  holdYears?: number;
+  closingCostsPct?: number;
+}
+
 export interface UserPreferences {
   id: string;
   user_id: string;
@@ -30,6 +48,7 @@ export interface UserPreferences {
   timeline: Timeline | null;
   archetype_id: string | null;
   quiz_completed_at: string | null;
+  analyzer_defaults: AnalyzerDefaults | null;
   created_at: string;
   updated_at: string;
 }
