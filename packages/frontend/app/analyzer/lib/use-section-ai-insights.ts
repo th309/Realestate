@@ -36,6 +36,9 @@ export interface UseSectionAiInsightsArgs {
   /** DealGradingResult — required so the recommendation_analysis prompt can
    *  cite the letter, GPA, auto-kills, and per-metric grades. */
   grading: DealGradingResult | null | undefined;
+  /** Active strategy in engine form (BUY_AND_HOLD / FIX_AND_FLIP / BRRRR).
+   *  Drives strategy-specific framing in the backend prompts. */
+  strategy: "BUY_AND_HOLD" | "FIX_AND_FLIP" | "BRRRR" | null;
 }
 
 export interface SectionAiProps {
@@ -69,6 +72,7 @@ export function useSectionAiInsights({
   rentcast,
   piq,
   grading,
+  strategy,
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
 
@@ -80,6 +84,7 @@ export function useSectionAiInsights({
     rentcast,
     piq,
     grading: grading ?? undefined,
+    strategy,
   };
 
   const recommendation = useAiSectionAnnotation(

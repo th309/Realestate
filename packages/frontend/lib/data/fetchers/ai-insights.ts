@@ -26,6 +26,9 @@ export interface AiInsightPayload {
   /** Optional DealGradingResult snapshot. Required for the
    *  recommendation_analysis section; other sections ignore it. */
   grading?: unknown;
+  /** Active strategy. Drives strategy-specific guidance in the backend
+   *  prompt so AI output is framed in the right terms for the user's play. */
+  strategy?: "BUY_AND_HOLD" | "FIX_AND_FLIP" | "BRRRR" | null;
 }
 
 export interface AIAnnotationResult {

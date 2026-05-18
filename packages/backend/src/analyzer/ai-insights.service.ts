@@ -13,6 +13,8 @@ import { AiInsightsCache, CachedInsight } from './ai-insights.cache';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
 import { getSectionPrompt, SectionId } from './prompts/section-prompts';
 
+export type AnalysisStrategy = 'BUY_AND_HOLD' | 'FIX_AND_FLIP' | 'BRRRR';
+
 export interface InsightPayload {
   input: any;
   result: any;
@@ -21,7 +23,37 @@ export interface InsightPayload {
   /** Optional grading snapshot from analyzer-core. Required for the
    *  recommendation_analysis section; ignored elsewhere. */
   grading?: any;
+  /** Active strategy the user is analyzing under. Drives the strategy-aware
+   *  guidance block in `assemblePrompt` so the AI talks in the right terms
+   *  (cashflow + DSCR for B&H, ARV minus all-in cost for F&F, refinance
+   *  outcome for BRRRR). Optional so older callers keep working — null falls
+   *  back to generic guidance. */
+  strategy?: AnalysisStrategy | null;
 }
+
+const STRATEGY_DISPLAY: Record<AnalysisStrategy, string> = {
+  BUY_AND_HOLD: 'buy and hold rental',
+  FIX_AND_FLIP: 'fix and flip',
+  BRRRR: 'BRRRR (buy, rehab, rent, refinance, repeat)',
+};
+
+const STRATEGY_KEY_METRICS: Record<AnalysisStrategy, string> = {
+  BUY_AND_HOLD:
+    'monthly cashflow, cap rate, cash-on-cash return, DSCR, and long-term wealth from principal paydown plus appreciation',
+  FIX_AND_FLIP:
+    'net profit after all costs (purchase, rehab, holding, selling), ARV (after-repair value), rehab budget vs contingency, holding period in months, and the maximum allowable offer multiplier',
+  BRRRR:
+    'the refinance outcome (does the new loan cover the all-in basis?), refinance LTV cap, cashflow after the refinance, equity left in the property, ARV, rehab budget, and seasoning months before refi',
+};
+
+const STRATEGY_LEVERS: Record<AnalysisStrategy, string> = {
+  BUY_AND_HOLD:
+    'lowering purchase price, raising rent, locking a lower interest rate, or increasing the down payment',
+  FIX_AND_FLIP:
+    'lowering purchase price, trimming rehab budget, increasing ARV (better finish or scope), shortening the holding period, or reducing selling cost percentage',
+  BRRRR:
+    'lowering purchase price, trimming rehab budget, raising ARV so the refinance pulls out more cash, increasing the refinance LTV, or shortening seasoning months',
+};
 
 /**
  * Convert an UPPER_SNAKE_CASE auto-kill code into a short human sentence the
@@ -50,12 +82,27 @@ export interface InsightResult extends CachedInsight {
 
 const SYSTEM_PROMPT = [
   'You are a precise, numerate real-estate analyst speaking to the investor like a knowledgeable friend.',
-  'Cite specific numbers from the data provided. Never invent figures. Keep numbers exact (do not round "$3,350" to "around $3K").',
+  'Cite specific numbers from the data provided. Never invent figures.',
+  'Money: always whole dollars, no cents. Write "$1,068" not "$1,068.49". Write "$552,800" not "$552,800.00". Round to the nearest dollar before writing.',
+  'Other numbers (ratios, percents, days, scores) keep their natural precision. "0.71 DSCR" stays "0.71".',
   'Write conversational prose. No markdown formatting at all: no asterisks for bold, no underscores around words.',
   'No em-dashes. Use commas, periods, or the word "and" instead.',
   'When the data contains code-style identifiers (UPPER_SNAKE_CASE like REFI_NOT_FINANCEABLE, or camelCase field names like rentMonthly, interestRatePct), translate them into plain English. "REFI_NOT_FINANCEABLE" becomes "the refinance can\'t be financed". "rentMonthly" becomes "monthly rent". Never leave the identifier raw in the output.',
+  'CRITICAL: never leave a thought unfinished. Every sentence you write must end with a period and a complete idea. If you are running low on space, stop at the previous complete sentence rather than starting one you can\'t finish. Never end with "$" or any other dangling fragment.',
   'Length: follow the section task brief. Be tight.',
 ].join(' ');
+
+/**
+ * Per-section token budget. Most sections need 1-2 sentences and 200 tokens
+ * is plenty. The recommendation_analysis section is the centerpiece of the
+ * grade card and asks for 3-5 sentences with concrete numbers, so it gets a
+ * larger budget to avoid mid-thought truncation. Header verdict is also a
+ * single sentence at most.
+ */
+function maxTokensForSection(sectionId: SectionId): number {
+  if (sectionId === 'recommendation_analysis') return 450;
+  return 200;
+}
 
 @Injectable()
 export class AiInsightsService {
@@ -81,7 +128,7 @@ export class AiInsightsService {
     const response = await this.provider.complete(purpose, {
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
-      maxTokens: 200,
+      maxTokens: maxTokensForSection(sectionId),
     });
 
     const result: CachedInsight = {
@@ -136,7 +183,18 @@ export class AiInsightsService {
     const worstMetrics = metricsSorted.slice(0, 2);
     const bestMetric = metricsSorted[metricsSorted.length - 1];
 
+    const strategy = payload.strategy ?? null;
+
     return [
+      ...(strategy
+        ? [
+            'STRATEGY:',
+            `- Mode: ${STRATEGY_DISPLAY[strategy]}`,
+            `- Metrics that matter for this strategy: ${STRATEGY_KEY_METRICS[strategy]}`,
+            `- Levers an investor can pull to improve this strategy: ${STRATEGY_LEVERS[strategy]}`,
+            '',
+          ]
+        : []),
       'DEAL INPUT:',
       JSON.stringify(payload.input, null, 2),
       '',

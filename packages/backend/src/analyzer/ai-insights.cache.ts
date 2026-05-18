@@ -39,7 +39,11 @@ export class AiInsightsCache {
       .update(JSON.stringify(rounded))
       .digest('hex')
       .slice(0, 8);
-    return `ai-insights:${sectionId}:${inputHash}:${rcHash}:${piqHash}`;
+    // Strategy is part of the key so switching between B&H / F&F / BRRRR on
+    // the same property invalidates the prior response and re-asks the model
+    // in the new strategy's terms.
+    const strategy = payload.strategy ?? 'none';
+    return `ai-insights:${sectionId}:${strategy}:${inputHash}:${rcHash}:${piqHash}`;
   }
 
   async get(key: string): Promise<CachedInsight | null> {

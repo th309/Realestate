@@ -162,6 +162,7 @@ export default function AnalyzerClient({
     rentcast: rentcastData,
     piq: marketContext,
     grading: grading.data ?? null,
+    strategy: toEngineStrategy(activeStrategy) ?? null,
   });
 
   const compsView = buildCompsViewProps(

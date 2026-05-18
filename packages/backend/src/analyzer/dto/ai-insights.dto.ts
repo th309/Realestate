@@ -26,6 +26,10 @@ export class AiInsightsBodyDto {
      *  autoKills/advisories). The `recommendation_analysis` section needs
      *  this; other sections ignore it. */
     grading?: any;
+    /** Active strategy ('BUY_AND_HOLD' | 'FIX_AND_FLIP' | 'BRRRR'). Drives
+     *  the strategy-aware guidance block so the AI talks in the right terms
+     *  for the user's chosen play. Optional; null falls back to generic. */
+    strategy?: 'BUY_AND_HOLD' | 'FIX_AND_FLIP' | 'BRRRR' | null;
   };
 }
 
