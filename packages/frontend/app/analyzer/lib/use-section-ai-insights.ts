@@ -100,16 +100,63 @@ export function useSectionAiInsights({
     },
   };
 
+  // Discriminator for React Query's cache. useAiSectionAnnotation truncates
+  // JSON.stringify(payload) to 200 chars, so fields like `piqByGeo`, `piq`,
+  // and `grading.letter` (which serialize past the cutoff) would silently
+  // collide across renders — e.g. when metro/county PIQ queries resolve
+  // later than ZIP, the queryKey wouldn't update and we'd serve the stale
+  // "no geography resolved" response forever.
+  //
+  // Building this discriminator out of every input that ACTUALLY changes the
+  // AI's output (PIQ scores by geo, geo_level, grading letter, strategy)
+  // mirrors the backend's own cache key fields so the two layers stay aligned.
+  const piqDiscriminator = [
+    piqByGeo.metro ?? "",
+    piqByGeo.county ?? "",
+    piqByGeo.zip ?? "",
+    typeof piq === "object" && piq && "geo_level" in piq
+      ? ((piq as { geo_level?: string }).geo_level ?? "")
+      : "",
+    grading?.letter ?? "",
+    strategy ?? "",
+  ].join("|");
+
   const recommendation = useAiSectionAnnotation(
     payload,
     "recommendation_analysis",
     enabled && !!grading,
+    piqDiscriminator,
   );
-  const projection = useAiSectionAnnotation(payload, "projection", enabled);
-  const expense = useAiSectionAnnotation(payload, "expense_waterfall", enabled);
-  const sensitivity = useAiSectionAnnotation(payload, "sensitivity", enabled);
-  const comps = useAiSectionAnnotation(payload, "comps", enabled);
-  const afterTax = useAiSectionAnnotation(payload, "after_tax", enabled);
+  const projection = useAiSectionAnnotation(
+    payload,
+    "projection",
+    enabled,
+    piqDiscriminator,
+  );
+  const expense = useAiSectionAnnotation(
+    payload,
+    "expense_waterfall",
+    enabled,
+    piqDiscriminator,
+  );
+  const sensitivity = useAiSectionAnnotation(
+    payload,
+    "sensitivity",
+    enabled,
+    piqDiscriminator,
+  );
+  const comps = useAiSectionAnnotation(
+    payload,
+    "comps",
+    enabled,
+    piqDiscriminator,
+  );
+  const afterTax = useAiSectionAnnotation(
+    payload,
+    "after_tax",
+    enabled,
+    piqDiscriminator,
+  );
 
   const buildRefresh = useCallback(
     (sectionId: SectionId) => () => {
