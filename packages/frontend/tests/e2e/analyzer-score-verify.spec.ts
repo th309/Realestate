@@ -115,7 +115,7 @@ test("VISIBLE: F&F grading + F&F-native upgrade-path", async ({ page }) => {
 
   // F&F-specific metric keys should be in the breakdown
   await expect(
-    page.locator('[data-metric-key="mao_compliance"]').first(),
+    page.locator('[data-metric-key="purchase_margin"]').first(),
   ).toBeVisible();
   await expect(
     page.locator('[data-metric-key="net_profit_margin"]').first(),

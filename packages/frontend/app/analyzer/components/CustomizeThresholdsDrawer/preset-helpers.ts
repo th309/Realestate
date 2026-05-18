@@ -126,7 +126,7 @@ const BH_ROWS: MetricRowMeta[] = [
 ];
 
 const FF_ROWS: MetricRowMeta[] = [
-  pctRow("mao_compliance", "Purchase Margin (ARV)"),
+  pctRow("purchase_margin", "Purchase Margin (ARV)"),
   pctRow("net_profit_margin", "Net Profit Margin"),
   pctRow("cash_on_cash_roi", "Cash-on-Cash ROI"),
   pctRow("annualized_roi", "Annualized ROI"),

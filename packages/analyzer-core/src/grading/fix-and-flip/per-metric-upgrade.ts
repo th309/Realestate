@@ -85,14 +85,14 @@ const RATE_DOWN: FlipLeverConfig = {
 /**
  * Per-metric lever applicability.
  *
- * mao_compliance = (ARV - rehabAdj - price) / ARV — acquisition-only ratio.
+ * purchase_margin = (ARV - rehabAdj - price) / ARV — acquisition-only ratio.
  *   Levers: price ↓, rehab ↓, ARV ↑. Hold/rate don't move it.
  * net_profit_margin / cash_on_cash_roi / annualized_roi / net_profit_dollar
  *   are all return metrics — all 5 levers help (lower price/rehab, higher
  *   ARV, shorter hold, lower rate).
  */
 const LEVER_MAP: Record<string, FlipLeverConfig[]> = {
-  mao_compliance: [PURCHASE_DOWN, REHAB_DOWN, ARV_UP],
+  purchase_margin: [PURCHASE_DOWN, REHAB_DOWN, ARV_UP],
   net_profit_margin: [PURCHASE_DOWN, REHAB_DOWN, ARV_UP, HOLD_DOWN, RATE_DOWN],
   cash_on_cash_roi: [PURCHASE_DOWN, REHAB_DOWN, ARV_UP, HOLD_DOWN, RATE_DOWN],
   annualized_roi: [PURCHASE_DOWN, REHAB_DOWN, ARV_UP, HOLD_DOWN, RATE_DOWN],

@@ -22,7 +22,7 @@ import { MetricThresholdDto } from './user-thresholds.dto';
 const NUM_OPTS = { allowNaN: false, allowInfinity: false } as const;
 
 export class FixAndFlipWeightsDto {
-  @IsNumber(NUM_OPTS) @Min(0) @Max(100) mao_compliance!: number;
+  @IsNumber(NUM_OPTS) @Min(0) @Max(100) purchase_margin!: number;
   @IsNumber(NUM_OPTS) @Min(0) @Max(100) net_profit_margin!: number;
   @IsNumber(NUM_OPTS) @Min(0) @Max(100) cash_on_cash_roi!: number;
   @IsNumber(NUM_OPTS) @Min(0) @Max(100) annualized_roi!: number;
@@ -36,7 +36,7 @@ class FlipWeightsSumToHundredConstraint implements ValidatorConstraintInterface 
     const w = obj.weights;
     if (!w) return true;
     const sum =
-      (w.mao_compliance ?? 0) +
+      (w.purchase_margin ?? 0) +
       (w.net_profit_margin ?? 0) +
       (w.cash_on_cash_roi ?? 0) +
       (w.annualized_roi ?? 0) +
@@ -51,7 +51,7 @@ class FlipWeightsSumToHundredConstraint implements ValidatorConstraintInterface 
 export class FixAndFlipThresholdsDto {
   @ValidateNested()
   @Type(() => MetricThresholdDto)
-  mao_compliance!: MetricThresholdDto;
+  purchase_margin!: MetricThresholdDto;
 
   @ValidateNested()
   @Type(() => MetricThresholdDto)

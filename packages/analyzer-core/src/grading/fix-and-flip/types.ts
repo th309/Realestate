@@ -127,13 +127,13 @@ export interface FixAndFlipContext {
  * MetricThreshold + a weights map) but with F&F-specific metric keys.
  */
 export interface FixAndFlipThresholds {
-  mao_compliance: MetricThreshold;
+  purchase_margin: MetricThreshold;
   net_profit_margin: MetricThreshold;
   cash_on_cash_roi: MetricThreshold;
   annualized_roi: MetricThreshold;
   net_profit_dollar: MetricThreshold;
   weights: {
-    mao_compliance: number;
+    purchase_margin: number;
     net_profit_margin: number;
     cash_on_cash_roi: number;
     annualized_roi: number;

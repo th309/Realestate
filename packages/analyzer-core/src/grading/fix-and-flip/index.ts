@@ -28,7 +28,7 @@ export {
   effectiveHoldMonths,
   effectiveSellingCostsPct,
   financingCosts,
-  maoComplianceMargin,
+  purchaseMargin,
   monthlyHoldingCosts,
   monthlyLoanInterest,
   netProfit,

@@ -146,7 +146,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
         context: { extendedHoldAccepted: true },
       } as unknown as GradeDealDto);
       expect(result.metrics.map((m) => m.key)).toEqual([
-        'mao_compliance',
+        'purchase_margin',
         'net_profit_margin',
         'cash_on_cash_roi',
         'annualized_roi',
@@ -158,7 +158,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
     it('authenticated → uses saved thresholds when present', async () => {
       const customs = {
         ...FIX_AND_FLIP_DEFAULTS,
-        mao_compliance: {
+        purchase_margin: {
           A: 0.5,
           B: 0.4,
           C: 0.3,
@@ -181,7 +181,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
       );
       // mao threshold A is now 0.5 (vs default 0.33) — the metric should
       // appear with the custom threshold in the result.
-      const maoMetric = result.metrics.find((m) => m.key === 'mao_compliance');
+      const maoMetric = result.metrics.find((m) => m.key === 'purchase_margin');
       expect(maoMetric?.threshold.A).toBe(0.5);
     });
 
@@ -273,7 +273,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
       expect(thresholds.upsertThresholds).toHaveBeenCalledWith(
         'user-1',
         'FIX_AND_FLIP',
-        expect.objectContaining({ mao_compliance: expect.any(Object) }),
+        expect.objectContaining({ purchase_margin: expect.any(Object) }),
       );
       expect(ok).toBeDefined();
     });

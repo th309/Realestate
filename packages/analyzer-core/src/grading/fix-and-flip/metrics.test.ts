@@ -9,7 +9,7 @@ import {
   annualizedROI,
   cashOnCashROI,
   financingCosts,
-  maoComplianceMargin,
+  purchaseMargin,
   monthlyHoldingCosts,
   monthlyLoanInterest,
   netProfit,
@@ -23,20 +23,20 @@ import type { FixAndFlipInput } from "./types";
 // ---- The 5 graded metric calculations: typical / edge / broken --------------
 
 describe("F&F metric calculations", () => {
-  it("maoComplianceMargin: typical case matches (arv - rehab*(1+contingency) - price)/arv", () => {
+  it("purchaseMargin: typical case matches (arv - rehab*(1+contingency) - price)/arv", () => {
     const d = strongCashDeal();
     const expected = (320_000 - 30_000 * 1.1 - 200_000) / 320_000;
-    expect(maoComplianceMargin(d)).toBeCloseTo(expected, 4);
+    expect(purchaseMargin(d)).toBeCloseTo(expected, 4);
   });
 
-  it("maoComplianceMargin: returns 0 when arv is 0 (broken input)", () => {
+  it("purchaseMargin: returns 0 when arv is 0 (broken input)", () => {
     const d = strongCashDeal({ arv: 0 });
-    expect(maoComplianceMargin(d)).toBe(0);
+    expect(purchaseMargin(d)).toBe(0);
   });
 
-  it("maoComplianceMargin: edge — negative when overpaid", () => {
+  it("purchaseMargin: edge — negative when overpaid", () => {
     const d = strongCashDeal({ price: 310_000 });
-    expect(maoComplianceMargin(d)).toBeLessThan(0);
+    expect(purchaseMargin(d)).toBeLessThan(0);
   });
 
   it("netProfit: revenue minus total project costs", () => {
@@ -86,22 +86,22 @@ describe("F&F metric calculations", () => {
   });
 });
 
-// ---- MAO under different maxAcquisitionMultiplier readings -----------------
+// ---- Purchase margin under different maxAcquisitionMultiplier readings -----
 
-describe("MAO margin under different maxAcquisitionMultiplier", () => {
+describe("purchase margin under different maxAcquisitionMultiplier", () => {
   it("conservative (0.65): a comfortably-priced deal shows healthy margin", () => {
     const d = strongCashDeal({ price: 165_000 });
-    expect(maoComplianceMargin(d)).toBeGreaterThan(0.07);
+    expect(purchaseMargin(d)).toBeGreaterThan(0.07);
   });
 
   it("standard 70%: 0.232 margin is the spec's Sacramento number", () => {
     const d = sacramentoDeal();
-    expect(maoComplianceMargin(d)).toBeCloseTo(0.232, 3);
+    expect(purchaseMargin(d)).toBeCloseTo(0.232, 3);
   });
 
   it("aggressive 75%: lower margin is acceptable for a wholetail", () => {
     const d = strongCashDeal({ price: 240_000 });
-    expect(maoComplianceMargin(d)).toBeCloseTo(0.147, 2);
+    expect(purchaseMargin(d)).toBeCloseTo(0.147, 2);
   });
 });
 

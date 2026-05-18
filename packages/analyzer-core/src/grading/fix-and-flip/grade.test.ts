@@ -32,7 +32,7 @@ describe("gradeFixAndFlipDeal result shape", () => {
   it("returns the 5 graded metrics in a fixed order", () => {
     const r = gradeFixAndFlipDeal(strongCashDeal());
     expect(r.metrics.map((m) => m.key)).toEqual([
-      "mao_compliance",
+      "purchase_margin",
       "net_profit_margin",
       "cash_on_cash_roi",
       "annualized_roi",
@@ -124,10 +124,10 @@ describe("floor caps", () => {
     expect(r.flooredAt).toBe("D");
   });
 
-  it("mao_compliance F caps letter at C", () => {
+  it("purchase margin F caps letter at C", () => {
     const customThresholds: FixAndFlipThresholds = {
       ...FIX_AND_FLIP_DEFAULTS,
-      mao_compliance: {
+      purchase_margin: {
         A: 0.99,
         B: 0.98,
         C: 0.97,
@@ -137,8 +137,8 @@ describe("floor caps", () => {
     };
     const d = strongCashDeal();
     const r = gradeFixAndFlipDeal(d, {}, customThresholds);
-    const maoGrade = r.metrics.find((m) => m.key === "mao_compliance")?.grade;
-    expect(maoGrade).toBe("F");
+    const pmGrade = r.metrics.find((m) => m.key === "purchase_margin")?.grade;
+    expect(pmGrade).toBe("F");
     expect(r.autoKills).toHaveLength(0);
     expect(["C", "D", "F"]).toContain(r.letter);
     expect(r.flooredAt).toBe("C");

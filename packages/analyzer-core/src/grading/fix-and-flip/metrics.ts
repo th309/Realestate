@@ -59,7 +59,7 @@ export function effectiveFinancingType(
  * raw margin is what the rubric grades. The context's max multiplier only
  * affects user-facing copy (you bought below your own line, etc.).
  */
-export function maoComplianceMargin(input: FixAndFlipInput): number {
+export function purchaseMargin(input: FixAndFlipInput): number {
   if (input.arv <= 0) return 0;
   const rehabAdj = input.rehabBudget * (1 + effectiveContingencyPct(input));
   return (input.arv - rehabAdj - input.price) / input.arv;

@@ -154,8 +154,8 @@ exports[`GOLDEN: F&F grade output unchanged across refactor > gradeFixAndFlipDea
       "formattedValue": "23.2%",
       "gpaPoints": 1,
       "grade": "D",
-      "key": "mao_compliance",
-      "label": "MAO Compliance",
+      "key": "purchase_margin",
+      "label": "Purchase Margin (ARV)",
       "threshold": {
         "A": 0.33,
         "B": 0.3,
@@ -236,6 +236,6 @@ exports[`GOLDEN: F&F grade output unchanged across refactor > gradeFixAndFlipDea
     },
   ],
   "rawGpa": 2.6500000000000004,
-  "summary": "Buy — solid margins, with MAO Compliance as the watch-item before close.",
+  "summary": "Buy — solid margins, with Purchase Margin (ARV) as the watch-item before close.",
 }
 `;

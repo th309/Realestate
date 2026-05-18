@@ -17,7 +17,7 @@ import type { FixAndFlipThresholds } from "./types";
  */
 
 const SHARED_WEIGHTS: FixAndFlipThresholds["weights"] = {
-  mao_compliance: 20,
+  purchase_margin: 20,
   net_profit_margin: 20,
   cash_on_cash_roi: 20,
   annualized_roi: 25,
@@ -25,7 +25,7 @@ const SHARED_WEIGHTS: FixAndFlipThresholds["weights"] = {
 };
 
 export const FIX_AND_FLIP_CONSERVATIVE: FixAndFlipThresholds = {
-  mao_compliance: {
+  purchase_margin: {
     A: 0.38,
     B: 0.35,
     C: 0.3,
@@ -64,7 +64,7 @@ export const FIX_AND_FLIP_CONSERVATIVE: FixAndFlipThresholds = {
 };
 
 export const FIX_AND_FLIP_BALANCED: FixAndFlipThresholds = {
-  mao_compliance: {
+  purchase_margin: {
     A: 0.33,
     B: 0.3,
     C: 0.25,
@@ -103,7 +103,7 @@ export const FIX_AND_FLIP_BALANCED: FixAndFlipThresholds = {
 };
 
 export const FIX_AND_FLIP_AGGRESSIVE: FixAndFlipThresholds = {
-  mao_compliance: {
+  purchase_margin: {
     A: 0.28,
     B: 0.25,
     C: 0.2,

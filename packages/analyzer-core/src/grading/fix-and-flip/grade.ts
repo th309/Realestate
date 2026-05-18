@@ -32,7 +32,7 @@ import {
 import {
   annualizedROI,
   cashOnCashROI,
-  maoComplianceMargin,
+  purchaseMargin,
   netProfit,
   netProfitMargin,
 } from "./metrics";
@@ -56,7 +56,7 @@ export function gradeFixAndFlipDeal(
   }
 
   // 1. Compute the 5 graded metric values.
-  const maoMargin = maoComplianceMargin(input);
+  const purchaseMarginValue = purchaseMargin(input);
   const npm = netProfitMargin(input);
   const coc = cashOnCashROI(input);
   const annROI = annualizedROI(input);
@@ -65,12 +65,12 @@ export function gradeFixAndFlipDeal(
   const w = thresholds.weights;
   const metrics: MetricResult[] = [
     buildFlipMetric(
-      "mao_compliance",
-      "MAO Compliance",
-      maoMargin,
-      formatPercent(maoMargin),
-      thresholds.mao_compliance,
-      w.mao_compliance,
+      "purchase_margin",
+      "Purchase Margin (ARV)",
+      purchaseMarginValue,
+      formatPercent(purchaseMarginValue),
+      thresholds.purchase_margin,
+      w.purchase_margin,
     ),
     buildFlipMetric(
       "net_profit_margin",
@@ -119,15 +119,17 @@ export function gradeFixAndFlipDeal(
   const npDollarGrade = metrics.find(
     (m) => m.key === "net_profit_dollar",
   )?.grade;
-  const maoGrade = metrics.find((m) => m.key === "mao_compliance")?.grade;
+  const purchaseMarginGrade = metrics.find(
+    (m) => m.key === "purchase_margin",
+  )?.grade;
 
   // net_profit_dollar F → cap at D
   if (npDollarGrade === "F" && LETTER_RANK[letter] > LETTER_RANK.D) {
     letter = "D";
     flooredAt = "D";
   }
-  // mao_compliance F → cap at C (only if not already lower)
-  if (maoGrade === "F" && LETTER_RANK[letter] > LETTER_RANK.C) {
+  // purchase_margin F → cap at C (only if not already lower)
+  if (purchaseMarginGrade === "F" && LETTER_RANK[letter] > LETTER_RANK.C) {
     letter = "C";
     flooredAt = "C";
   }
