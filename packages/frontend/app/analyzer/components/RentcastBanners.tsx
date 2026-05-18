@@ -1,6 +1,5 @@
 "use client";
 import type { PropertyLookupResult } from "@/lib/data";
-import { fmtUsd } from "../lib/format-helpers";
 
 interface RentcastBannersProps {
   lookupErrorMsg: string | null;
@@ -66,35 +65,15 @@ export function RentcastBanners({
         </div>
       )}
 
-      {rentcastData && (
+      {showMismatch && (
         <div
-          data-rentcast-status
-          className="rounded-xl border border-[var(--md-tertiary)] bg-[var(--md-tertiary-container)] text-[var(--md-on-tertiary-container)] px-4 py-3 text-xs flex flex-wrap gap-x-6 gap-y-1"
+          data-rentcast-mismatch
+          role="alert"
+          className="rounded-xl border border-[var(--md-warning)] bg-[var(--md-warning-container,#FFF4E5)] text-[var(--md-on-warning-container,#7A3E00)] px-4 py-2 text-xs"
         >
-          {rentcastData.resolved_address && (
-            <span className="w-full mb-1 font-semibold">
-              Matched: {rentcastData.resolved_address}
-              {showMismatch && (
-                <span className="ml-2 text-[var(--md-warning)]">
-                  (differs from your input — verify ZIP/spelling)
-                </span>
-              )}
-            </span>
-          )}
-          <span>
-            <strong>RentCast:</strong> AVM{" "}
-            {rentcastData.avm ? fmtUsd(rentcastData.avm.value) : "unavailable"}
-          </span>
-          <span>
-            Rent{" "}
-            {rentcastData.rent
-              ? `${fmtUsd(rentcastData.rent.value)}/mo`
-              : "unavailable"}
-          </span>
-          <span>
-            Sales comps {rentcastData.sales_comps.length} · Rental comps{" "}
-            {rentcastData.rental_comps.length}
-          </span>
+          <strong>Address differs from your input</strong> — RentCast matched “
+          {rentcastData?.resolved_address}.” Verify the ZIP/spelling if this
+          isn’t the property you meant.
         </div>
       )}
     </>

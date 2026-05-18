@@ -24,16 +24,20 @@ export function nudgeForPrice(price: number): NudgeResult {
 export function nudgeForRent(rentMonthly: number, price: number): NudgeResult {
   if (rentMonthly <= 0)
     return { level: "warn", text: "Rent must be greater than $0" };
-  const ratio = (rentMonthly * 12) / price;
-  if (ratio >= 0.12)
+  // The 1% rule is a MONTHLY ratio: monthly rent ÷ price should be ≥ 1%.
+  // Previous version computed the annual yield (rent × 12 / price) and
+  // displayed it next to a "1% rule" comparison, which made the percent and
+  // the label talk past each other (e.g. "5.8% — far below 1% rule").
+  const monthlyRatio = rentMonthly / price;
+  if (monthlyRatio >= 0.01)
     return {
       level: "ok",
-      text: `Rent-to-price ${(ratio * 100).toFixed(1)}% — well above 1% rule`,
+      text: `Rent-to-price ${(monthlyRatio * 100).toFixed(2)}% — meets the 1% rule`,
     };
-  if (ratio < 0.06)
+  if (monthlyRatio < 0.005)
     return {
       level: "warn",
-      text: `Rent-to-price ${(ratio * 100).toFixed(1)}% — far below 1% rule; verify rent`,
+      text: `Rent-to-price ${(monthlyRatio * 100).toFixed(2)}% — far below 1% rule; verify rent`,
     };
   return null;
 }
