@@ -11,6 +11,10 @@
  *   every subsequent call throws `RentcastQuotaExceededError`.
  *   The in-memory counter resets on backend restart, so the cap is approximate
  *   without Redis — a warning is logged on first use.
+ *
+ * Response-shape mapping lives in two sibling mapper modules
+ * (`rentcast-property-record.mapper.ts` and `rentcast-comp.mapper.ts`) so
+ * this file can stay focused on caching + quota orchestration.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -21,8 +25,9 @@ import type {
   RentcastPropertyRecord,
   RentcastValueEstimate,
   RentcastRentEstimate,
-  RentcastComp,
 } from './rentcast.types';
+import { mapPropertyRecord } from './rentcast-property-record.mapper';
+import { mapComp } from './rentcast-comp.mapper';
 
 export class RentcastQuotaExceededError extends Error {
   constructor() {
@@ -75,16 +80,7 @@ export class RentcastService {
     return this.fetchWithCache<RentcastPropertyRecord>(
       'properties',
       address,
-      (raw) => ({
-        beds: raw.bedrooms ?? null,
-        baths: raw.bathrooms ?? null,
-        sqft: raw.squareFootage ?? null,
-        yearBuilt: raw.yearBuilt ?? null,
-        taxAssessment: raw.taxAssessment ?? null,
-        propertyType: raw.propertyType ?? null,
-        lat: typeof raw.latitude === 'number' ? raw.latitude : null,
-        lon: typeof raw.longitude === 'number' ? raw.longitude : null,
-      }),
+      mapPropertyRecord,
     );
   }
 
@@ -97,7 +93,7 @@ export class RentcastService {
         low: raw.priceRangeLow ?? 0,
         high: raw.priceRangeHigh ?? 0,
         resolvedAddress: raw.subjectProperty?.formattedAddress,
-        comps: (raw.comparables ?? []).map((c: any) => this.mapComp(c)),
+        comps: (raw.comparables ?? []).map((c: any) => mapComp(c, 'sale')),
       }),
     );
   }
@@ -111,7 +107,7 @@ export class RentcastService {
         low: raw.rentRangeLow ?? 0,
         high: raw.rentRangeHigh ?? 0,
         resolvedAddress: raw.subjectProperty?.formattedAddress,
-        comps: (raw.comparables ?? []).map((c: any) => this.mapComp(c)),
+        comps: (raw.comparables ?? []).map((c: any) => mapComp(c, 'rent')),
       }),
     );
   }
@@ -214,24 +210,5 @@ export class RentcastService {
     const next = (this.memQuota.get(monthKey) ?? 0) + 1;
     this.memQuota.set(monthKey, next);
     return next;
-  }
-
-  private mapComp(c: any): RentcastComp {
-    return {
-      address: c.formattedAddress ?? '',
-      city: c.city ?? null,
-      state: c.state ?? null,
-      zip: c.zipCode ?? null,
-      lat: typeof c.latitude === 'number' ? c.latitude : null,
-      lon: typeof c.longitude === 'number' ? c.longitude : null,
-      beds: c.bedrooms ?? null,
-      baths: c.bathrooms ?? null,
-      sqft: c.squareFootage ?? null,
-      price: c.price ?? null,
-      rent: c.rent ?? null,
-      saleDate: c.lastSaleDate ?? null,
-      distance: c.distance ?? 0,
-      correlation: c.correlation ?? 0,
-    };
   }
 }

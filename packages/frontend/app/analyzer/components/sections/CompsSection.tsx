@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Map, Marker, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { SectionWrapper } from "./SectionWrapper";
-import { CompsDistribution } from "../primitives/CompsDistribution";
+import { CompsPriceDistributionPanel } from "./CompsPriceDistributionPanel";
 import type { Comp } from "../primitives/CompsDistribution";
 import { CompsTable, type CompRow } from "./CompsTable";
 import { piq } from "../primitives/piqTokens";
@@ -30,6 +30,8 @@ interface CompsSectionProps {
   subjectAddress?: string | null;
   pricePerSqftValues: number[];
   yourPricePerSqft: number;
+  /** Subject's input price — anchors the fallback price-only chart. */
+  subjectPrice?: number;
   salesComps: CompPin[];
   rentalComps: CompPin[];
   /** Mapbox public token; if empty/undefined the map is hidden. */
@@ -39,6 +41,12 @@ interface CompsSectionProps {
   aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
+
+/** Minimum sqft-having comps before we render the price-per-sqft chart. Below
+ *  this we fall back to a price-only distribution. RentCast frequently returns
+ *  null squareFootage on /avm/value comps, so 0–2 is common; 3+ is enough to
+ *  read a distribution shape. */
+const MIN_SQFT_COMPS_FOR_PRIMARY = 3;
 
 const isCoord = (v: number | null | undefined): v is number =>
   typeof v === "number" && Number.isFinite(v);
@@ -124,6 +132,7 @@ export function CompsSection({
   subjectAddress,
   pricePerSqftValues,
   yourPricePerSqft,
+  subjectPrice,
   salesComps,
   rentalComps,
   mapboxToken,
@@ -137,7 +146,7 @@ export function CompsSection({
 
   const [hovered, setHovered] = useState<HoveredComp | null>(null);
 
-  // Distribution data: comps with a derivable price/sqft.
+  // Distribution data: comps with a derivable price/sqft (PRIMARY chart).
   const distributionComps: Comp[] = useMemo(
     () =>
       salesComps
@@ -152,6 +161,38 @@ export function CompsSection({
         .filter((c): c is Comp => c !== null),
     [salesComps],
   );
+
+  // Price-only data: comps with just a price (FALLBACK chart). RentCast
+  // routinely returns null squareFootage on /avm/value, so we keep the chart
+  // useful by binning by total sale price when sqft is sparse.
+  const priceOnlyComps: Comp[] = useMemo(
+    () =>
+      salesComps
+        .map((c, i) => {
+          if (!c.price || c.price <= 0) return null;
+          // Reuse the `pricePerSqft` field as a generic numeric slot. The
+          // formatter + unitLabel props change the rendering, not the field.
+          return {
+            id: `p${i}`,
+            pricePerSqft: c.price,
+            address: c.address,
+          } as Comp;
+        })
+        .filter((c): c is Comp => c !== null),
+    [salesComps],
+  );
+
+  const totalSalesComps = salesComps.length;
+  const sqftCompCount = distributionComps.length;
+  const priceCompCount = priceOnlyComps.length;
+  const useFallbackPriceChart =
+    sqftCompCount < MIN_SQFT_COMPS_FOR_PRIMARY &&
+    priceCompCount >= MIN_SQFT_COMPS_FOR_PRIMARY;
+  const canRenderPrimary = sqftCompCount > 0 && yourPricePerSqft > 0;
+  const canRenderFallback =
+    useFallbackPriceChart &&
+    typeof subjectPrice === "number" &&
+    subjectPrice > 0;
 
   // Table rows: cap at 6 sales + 6 rentals to keep the expanded view scannable.
   const tableRows: CompRow[] = useMemo(
@@ -173,34 +214,18 @@ export function CompsSection({
       onRefreshAi={onRefreshAi}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div data-comps-distribution>
-          <h4
-            className="text-xs uppercase font-semibold mb-2"
-            style={{ color: piq.textMuted, letterSpacing: "0.08em" }}
-          >
-            Price-per-sqft distribution
-          </h4>
-          {distributionComps.length > 0 && yourPricePerSqft > 0 ? (
-            <CompsDistribution
-              comps={distributionComps}
-              subjectPricePerSqft={yourPricePerSqft}
-              subjectAddress={subjectAddress ?? undefined}
-            />
-          ) : (
-            <div
-              className="rounded-xl text-center py-12 px-4"
-              style={{
-                background: piq.canvas,
-                border: `0.5px dashed ${piq.border}`,
-                color: piq.textMuted,
-                fontSize: "13px",
-              }}
-            >
-              No sales comps with valid price/sqft yet — fetch property data to
-              populate.
-            </div>
-          )}
-        </div>
+        <CompsPriceDistributionPanel
+          totalSalesComps={totalSalesComps}
+          sqftCompCount={sqftCompCount}
+          priceCompCount={priceCompCount}
+          distributionComps={distributionComps}
+          priceOnlyComps={priceOnlyComps}
+          yourPricePerSqft={yourPricePerSqft}
+          subjectPrice={subjectPrice}
+          subjectAddress={subjectAddress}
+          canRenderPrimary={canRenderPrimary}
+          canRenderFallback={canRenderFallback}
+        />
         {showMap ? (
           <div
             data-comps-map

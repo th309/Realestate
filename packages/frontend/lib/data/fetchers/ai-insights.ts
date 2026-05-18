@@ -10,6 +10,7 @@ import { API_URL } from "./base";
 import { getAuthHeaders } from "./auth-headers";
 
 export type AnalyzerSectionId =
+  | "recommendation_analysis"
   | "projection"
   | "expense_waterfall"
   | "sensitivity"
@@ -22,6 +23,9 @@ export interface AiInsightPayload {
   result: unknown;
   rentcast: unknown;
   piq: unknown;
+  /** Optional DealGradingResult snapshot. Required for the
+   *  recommendation_analysis section; other sections ignore it. */
+  grading?: unknown;
 }
 
 export interface AIAnnotationResult {

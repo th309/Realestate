@@ -51,6 +51,8 @@ export interface MarketContextDto {
   geo_level: AnalyzerGeoLevel | null;
   geo_id: string | null;
   home_value: MetricValueDto | null;
+  /** Home-value YoY appreciation as a percent (e.g. 6.2 = +6.2%). */
+  home_value_yoy: MetricValueDto | null;
   rent_index: MetricValueDto | null;
   market_heat: MetricValueDto | null;
   net_migration: MetricValueDto | null;

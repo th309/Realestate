@@ -18,6 +18,12 @@ export interface CompsViewProps {
   rentalComps: RawComp[];
   pricePerSqftValues: number[];
   yourPricePerSqft: number;
+  /** Subject's input price — used as the reference in the price-only
+   *  fallback chart that fires when RentCast comps lack sqft. */
+  subjectPrice: number;
+  /** Sales comps that have a valid `price` (regardless of sqft). The
+   *  fallback chart bins by this when sqft is sparse. */
+  salesCompPrices: number[];
   /** null when neither property-record nor comp centroid is available. */
   subjectLat: number | null;
   subjectLon: number | null;
@@ -74,11 +80,20 @@ export function buildCompsViewProps(
         ? pricePerSqftValues[0]
         : 0;
 
+  // Price-only fallback: every sales comp with a numeric price. The chart
+  // bins by these when too few comps have sqft to render the per-sqft view
+  // (RentCast routinely returns null squareFootage for comps on /avm/value).
+  const salesCompPrices = salesComps
+    .map((c) => c.price)
+    .filter((p): p is number => typeof p === "number" && p > 0);
+
   return {
     salesComps,
     rentalComps,
     pricePerSqftValues,
     yourPricePerSqft,
+    subjectPrice: inputPrice,
+    salesCompPrices,
     subjectLat: propertyLat ?? centroidLat,
     subjectLon: propertyLon ?? centroidLon,
     mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "",

@@ -26,6 +26,19 @@ export type CompsDistributionProps = {
   bins?: number;
   height?: number;
   className?: string;
+  /**
+   * Value formatter for x-axis ticks, bar tooltips, and the subject pill.
+   * Defaults to `formatPriceSqft` (e.g. "$212"). Override to swap in a
+   * different unit — e.g. a price-only fallback when comps lack sqft.
+   */
+  formatValue?: (value: number) => string;
+  /**
+   * Unit suffix appended to value labels — defaults to " / sqft". Override
+   * to "" (or " sale price") when reusing the chart for a non-sqft metric.
+   */
+  unitLabel?: string;
+  /** Label used for the subject pill, e.g. "this deal" (default) or "list price". */
+  subjectPillSubject?: string;
 };
 
 const PADDING = { top: 56, right: 24, bottom: 36, left: 24 };
@@ -44,6 +57,9 @@ export function CompsDistribution({
   bins = 12,
   height = 200,
   className = "",
+  formatValue = formatPriceSqft,
+  unitLabel = " / sqft",
+  subjectPillSubject = "this deal",
 }: CompsDistributionProps) {
   const [hover, setHover] = useState<CompsHover>(null);
   const { ref, width } = useContainerWidth();
@@ -117,7 +133,7 @@ export function CompsDistribution({
       return {
         x: PADDING.left + bx + bw / 2,
         y: PADDING.top + yScale(b.length),
-        label: `${formatPriceSqft(b.x0 ?? 0)}–${formatPriceSqft(b.x1 ?? 0)} / sqft`,
+        label: `${formatValue(b.x0 ?? 0)}–${formatValue(b.x1 ?? 0)}${unitLabel}`,
         sub: `${b.length} comp${b.length === 1 ? "" : "s"}`,
       };
     }
@@ -125,7 +141,7 @@ export function CompsDistribution({
       x: PADDING.left + subjectX,
       y: PADDING.top,
       label: subjectAddress ?? "Subject property",
-      sub: `${formatPriceSqft(subjectPricePerSqft)} / sqft`,
+      sub: `${formatValue(subjectPricePerSqft)}${unitLabel}`,
     };
   })();
 
@@ -224,20 +240,20 @@ export function CompsDistribution({
                 const ticks = [
                   {
                     v: minPrice,
-                    label: formatPriceSqft(minPrice),
+                    label: formatValue(minPrice),
                     anchor: "start" as const,
                     show:
                       !minMatchesSubject && Math.abs(xMin - xMed) >= MIN_GAP_PX,
                   },
                   {
                     v: medianPrice,
-                    label: `${formatPriceSqft(medianPrice)} median`,
+                    label: `${formatValue(medianPrice)} median`,
                     anchor: "middle" as const,
                     show: true,
                   },
                   {
                     v: maxPrice,
-                    label: formatPriceSqft(maxPrice),
+                    label: formatValue(maxPrice),
                     anchor: "end" as const,
                     show:
                       !maxMatchesSubject && Math.abs(xMax - xMed) >= MIN_GAP_PX,
@@ -305,7 +321,8 @@ export function CompsDistribution({
                   animation: `piq-fade-in 300ms ease ${overlayDelayS}s forwards`,
                 }}
               >
-                {formatPriceSqft(subjectPricePerSqft)} / sqft · this deal
+                {formatValue(subjectPricePerSqft)}
+                {unitLabel} · {subjectPillSubject}
               </div>
             );
           })()}

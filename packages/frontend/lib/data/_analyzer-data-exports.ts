@@ -10,6 +10,11 @@
 export {
   fetchPropertyLookup,
   type PropertyLookupResult,
+  type RentcastPropertyRecord,
+  type RentcastComp,
+  type RentcastTaxAssessment,
+  type RentcastPropertyTax,
+  type RentcastSaleEvent,
 } from "./fetchers/property-lookup";
 export {
   fetchAiInsight,

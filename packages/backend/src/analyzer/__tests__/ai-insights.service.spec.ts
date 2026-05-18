@@ -26,18 +26,22 @@ describe('AiInsightsService', () => {
     rentcast: {
       avm: { value: 432_000 },
       rent: { value: 2_900 },
-      salesComps: [
-        { address: '123 Oak St', price: 420_000, distance: 0.4 },
-        { address: '456 Elm Ave', price: 435_000, distance: 0.6 },
+      property_record: { sqft: 1_700 },
+      sales_comps: [
+        { address: '123 Oak St', price: 420_000, sqft: 1_650, distance: 0.4 },
+        { address: '456 Elm Ave', price: 435_000, sqft: 1_780, distance: 0.6 },
       ],
-      rentalComps: [{ address: '789 Pine Rd', rent: 2_875 }],
+      rental_comps: [{ address: '789 Pine Rd', rent: 2_875 }],
     },
     piq: {
-      score: 73,
-      label: 'GOOD',
-      marketHeat: 8.2,
-      rentIndex: 2_950,
-      netMigration: 2_100,
+      geo_level: 'metro',
+      geo_id: '35620',
+      piq_score: { value: 73, label: 'GOOD' },
+      home_value: { value: 432_000, source: 'zillow' },
+      home_value_yoy: { value: 6.2, source: 'realtor' },
+      rent_index: { value: 2_950, source: 'zillow' },
+      market_heat: { value: 8.2, source: 'realtor' },
+      net_migration: { value: 2_100, source: 'irs' },
     },
   };
 
@@ -123,12 +127,26 @@ describe('AiInsightsService', () => {
 
     expect(userPrompt).toContain('DEAL INPUT:');
     expect(userPrompt).toContain('COMPUTED METRICS');
+    expect(userPrompt).toContain('SUBJECT PROPERTY:');
     expect(userPrompt).toContain('PROPERTY DATA (RentCast):');
     expect(userPrompt).toContain('MARKET CONTEXT (PropertyIQ):');
     // Sanity: numeric values from the payload should appear in the assembled prompt
     expect(userPrompt).toContain('425000');
     expect(userPrompt).toContain('123 Oak St');
     expect(userPrompt).toContain('73');
+    // Subject $/sqft = 425000 / 1700 = 250
+    expect(userPrompt).toContain('$250');
+    // Comp $/sqft annotated inline on each comp line: 420000/1650 = 255
+    expect(userPrompt).toContain('1650sqft');
+    expect(userPrompt).toContain('$255/sqft');
+    // Subject monthly rent + RentCast estimate surfaced for rent comparison
+    expect(userPrompt).toContain('Underwritten monthly rent: $2950');
+    expect(userPrompt).toContain('RentCast rent estimate: $2900');
+    // Rental comp lines include rent and (mi)
+    expect(userPrompt).toContain('789 Pine Rd $2875/mo');
+    // Price appreciation YoY surfaced with source
+    expect(userPrompt).toContain('Price appreciation YoY: 6.2%');
+    expect(userPrompt).toContain('Geography: metro');
     expect(request.systemPrompt).toContain('real-estate analyst');
   });
 

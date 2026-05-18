@@ -22,6 +22,7 @@ import { FlipUpgradePathPanel } from "./FlipUpgradePathPanel";
 import { RecommendationCard } from "./RecommendationCard";
 import { ScoreBreakdownTable } from "./ScoreBreakdownTable";
 import { UpgradePathPanel } from "./UpgradePathPanel";
+import type { SectionAiProps } from "../../lib/use-section-ai-insights";
 
 interface GradingResultPanelProps {
   result: DealGradingResult;
@@ -61,6 +62,12 @@ interface GradingResultPanelProps {
   onCustomizeClick?: () => void;
   /** Display name shown in the customize chip (e.g. "Balanced"). */
   presetLabel?: string;
+  /** Per-deal AI analysis from `useSectionAiInsights().recommendation_analysis`.
+   *  When provided and either `aiText` is non-empty OR `aiIsLoading` is true,
+   *  a 3-5 sentence narrative renders directly under the RecommendationCard
+   *  explaining the grade, the biggest improvement lever, and how the PIQ
+   *  score frames this market. Omit on saved/shared routes. */
+  aiProps?: SectionAiProps;
 }
 
 export function GradingResultPanel({
@@ -82,6 +89,7 @@ export function GradingResultPanel({
   onApplyBrrrrCombination,
   onCustomizeClick,
   presetLabel,
+  aiProps,
 }: GradingResultPanelProps) {
   // B&H upgrade-path renders only when strategy is BUY_AND_HOLD + B&H args
   // are wired. F&F and BRRRR have their own panels.
@@ -110,6 +118,7 @@ export function GradingResultPanel({
         result={result}
         onCustomizeClick={onCustomizeClick}
         presetLabel={presetLabel}
+        aiProps={aiProps}
       />
       <ScoreBreakdownTable
         metrics={result.metrics}

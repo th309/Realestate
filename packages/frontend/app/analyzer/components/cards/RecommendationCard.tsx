@@ -3,6 +3,7 @@
 import type { DealGradingResult } from "@propertyiq/analyzer-core";
 import { getGradeColor } from "../../lib/grade-colors";
 import { useCountUp } from "../../lib/use-count-up";
+import type { SectionAiProps } from "../../lib/use-section-ai-insights";
 import "./grade-pulse.css";
 
 interface RecommendationCardProps {
@@ -11,12 +12,17 @@ interface RecommendationCardProps {
   onCustomizeClick?: () => void;
   /** Display name of the active threshold preset (e.g. "Balanced") shown in the chip. */
   presetLabel?: string;
+  /** Per-deal AI analysis. When `aiText` is non-empty (or loading), the
+   *  card's summary line is replaced by the AI paragraph. Otherwise the
+   *  card falls back to the deterministic `result.summary`. */
+  aiProps?: SectionAiProps;
 }
 
 export function RecommendationCard({
   result,
   onCustomizeClick,
   presetLabel = "Balanced",
+  aiProps,
 }: RecommendationCardProps) {
   const color = getGradeColor(result.letter);
   const gpa = useCountUp(result.finalGpa, { durationMs: 600, precision: 2 });
@@ -63,12 +69,31 @@ export function RecommendationCard({
           >
             {result.label}
           </h2>
-          <p
-            data-recommendation-summary
-            className="text-base text-on-surface-variant leading-snug"
-          >
-            {result.summary}
-          </p>
+          {aiProps?.aiIsLoading ? (
+            <p
+              data-recommendation-summary
+              data-ai-loading
+              className="text-base italic text-primary opacity-70 leading-snug"
+            >
+              Generating deal analysis…
+            </p>
+          ) : aiProps?.aiText && aiProps.aiText.trim().length > 0 ? (
+            <p
+              data-recommendation-summary
+              data-ai-source="llm"
+              className="text-base italic text-primary leading-snug"
+            >
+              {aiProps.aiText}
+            </p>
+          ) : (
+            <p
+              data-recommendation-summary
+              data-ai-source="fallback"
+              className="text-base text-on-surface-variant leading-snug"
+            >
+              {result.summary}
+            </p>
+          )}
           <div data-recommendation-meta className="mt-1 flex flex-wrap gap-2">
             <span
               data-meta-pill="gpa"

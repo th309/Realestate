@@ -22,6 +22,7 @@ import type { PropertyLookupDto } from './dto/property-lookup.dto';
 /** Metric IDs requested for analyzer market context. */
 const MARKET_CONTEXT_METRICS = [
   'home_value',
+  'home_value_yoy',
   'rent_index',
   'market_heat',
   'net_migration',
@@ -32,6 +33,7 @@ const EMPTY_CONTEXT: MarketContextDto = {
   geo_level: null,
   geo_id: null,
   home_value: null,
+  home_value_yoy: null,
   rent_index: null,
   market_heat: null,
   net_migration: null,
@@ -155,6 +157,7 @@ export class AnalyzerService {
       geo_level: geoLevel,
       geo_id: geoId,
       home_value: toMetricValueDto(metrics.home_value),
+      home_value_yoy: toMetricValueDto(metrics.home_value_yoy),
       rent_index: toMetricValueDto(metrics.rent_index),
       market_heat: toMetricValueDto(metrics.market_heat),
       net_migration: toMetricValueDto(metrics.net_migration),

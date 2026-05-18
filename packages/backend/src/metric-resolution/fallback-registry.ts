@@ -715,6 +715,27 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     sources: [{ source: 'redfin_migration', column: 'inflow_share_pct' }],
     supportsGeoInheritance: false,
   },
+
+  // --------------------------------------------------------------------------
+  // Net Migration (compound: Redfin at metro, IRS at county, inherit at ZIP)
+  // --------------------------------------------------------------------------
+  // Per-geo source split:
+  //   - Metro request → Redfin net_inflow (monthly/quarterly)
+  //   - County request → IRS net_returns (annual)
+  //   - ZIP request → no native source; inherits from county (IRS) first,
+  //     then metro (Redfin) via the standard parent chain.
+  net_migration: {
+    metricId: 'net_migration',
+    sources: [
+      {
+        source: 'redfin_migration',
+        column: 'net_inflow',
+        geoLevels: ['metro'],
+      },
+      { source: 'irs', column: 'net_returns', geoLevels: ['county'] },
+    ],
+    supportsGeoInheritance: true,
+  },
 };
 
 /**

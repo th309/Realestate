@@ -36,8 +36,19 @@ interface SectionAiBundle {
   expense_waterfall: SectionAiProps;
   sensitivity: SectionAiProps;
   comps: SectionAiProps;
-  market_context: SectionAiProps;
   after_tax: SectionAiProps;
+}
+
+// `market_context` runs its own per-geo AI fetches inside MarketContextSection
+// (one per pill) so it isn't part of the shared sectionAi bundle. Instead the
+// parent passes the base payload + enabled flag.
+interface MarketContextAi {
+  aiPayloadBase: {
+    input: unknown;
+    result: unknown;
+    rentcast: unknown;
+  };
+  aiEnabled: boolean;
 }
 
 interface AnalyzerSectionsProps {
@@ -62,13 +73,16 @@ interface AnalyzerSectionsProps {
   displayAddress: string | null;
   pricePerSqftValues: number[];
   yourPricePerSqft: number;
+  subjectPrice: number;
   salesComps: CompPin[];
   rentalComps: CompPin[];
   mapboxToken?: string;
   // Market context (resolved shape, not the quotaExceeded sentinel)
   marketContext: MarketContext | null | undefined;
-  // AI bundle
+  // AI bundle for sections that share one payload
   sectionAi: SectionAiBundle;
+  // AI plumbing for the per-geo Market Context fetches
+  marketContextAi: MarketContextAi;
 }
 
 export function AnalyzerSections({
@@ -91,11 +105,13 @@ export function AnalyzerSections({
   displayAddress,
   pricePerSqftValues,
   yourPricePerSqft,
+  subjectPrice,
   salesComps,
   rentalComps,
   mapboxToken,
   marketContext,
   sectionAi,
+  marketContextAi,
 }: AnalyzerSectionsProps) {
   return (
     <>
@@ -129,6 +145,7 @@ export function AnalyzerSections({
         subjectAddress={displayAddress}
         pricePerSqftValues={pricePerSqftValues}
         yourPricePerSqft={yourPricePerSqft}
+        subjectPrice={subjectPrice}
         salesComps={salesComps}
         rentalComps={rentalComps}
         mapboxToken={mapboxToken}
@@ -139,10 +156,12 @@ export function AnalyzerSections({
         initialGeoLevel={marketContext?.geo_level ?? null}
         fallbackPiq={marketContext?.piq_score?.value ?? null}
         fallbackHomeValue={marketContext?.home_value?.value ?? null}
+        fallbackHomeValueYoy={marketContext?.home_value_yoy?.value ?? null}
         fallbackRentIndex={marketContext?.rent_index?.value ?? null}
         fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
         fallbackNetMigration={marketContext?.net_migration?.value ?? null}
-        {...sectionAi.market_context}
+        aiPayloadBase={marketContextAi.aiPayloadBase}
+        aiEnabled={marketContextAi.aiEnabled}
       />
       <AfterTaxSection
         afterTax={afterTax}

@@ -17,12 +17,22 @@ import type { SectionId } from '../prompts/section-prompts';
 
 export class AiInsightsBodyDto {
   @IsObject()
-  payload!: { input: any; result: any; rentcast: any; piq: any };
+  payload!: {
+    input: any;
+    result: any;
+    rentcast: any;
+    piq: any;
+    /** Optional grading snapshot from analyzer-core (letter/label/metrics/
+     *  autoKills/advisories). The `recommendation_analysis` section needs
+     *  this; other sections ignore it. */
+    grading?: any;
+  };
 }
 
 export class AiInsightsSectionBodyDto extends AiInsightsBodyDto {
   @IsString()
   @IsIn([
+    'recommendation_analysis',
     'projection',
     'expense_waterfall',
     'sensitivity',

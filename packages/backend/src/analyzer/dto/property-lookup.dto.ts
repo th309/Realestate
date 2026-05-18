@@ -1,4 +1,8 @@
 import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
+import type {
+  RentcastPropertyRecord,
+  RentcastComp,
+} from '../../rentcast/rentcast.types';
 
 /**
  * Query DTO for GET /api/analyzer/property-lookup.
@@ -21,6 +25,9 @@ export class PropertyLookupQueryDto {
  * is reserved for a future read-through cache layer; for Phase 1 it is
  * always 0 (every response is a fresh upstream call modulo Redis cache
  * inside `RentcastService`).
+ *
+ * `property_record`, `sales_comps`, and `rental_comps` carry the full
+ * RentCast field set — see the source types in `rentcast.types.ts`.
  */
 export interface PropertyLookupDto {
   avm: { value: number; low: number; high: number; comps_count: number } | null;
@@ -30,9 +37,9 @@ export interface PropertyLookupDto {
     high: number;
     comps_count: number;
   } | null;
-  property_record: any | null;
-  sales_comps: any[];
-  rental_comps: any[];
+  property_record: RentcastPropertyRecord | null;
+  sales_comps: RentcastComp[];
+  rental_comps: RentcastComp[];
   cache_age_days: number;
   source: 'rentcast';
   /**

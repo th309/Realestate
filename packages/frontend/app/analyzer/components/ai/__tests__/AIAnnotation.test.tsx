@@ -15,21 +15,24 @@ describe("AIAnnotation", () => {
     ).toBe("false");
   });
 
-  it("isStale: applies opacity/dim and shows refresh button when onRefresh provided", () => {
+  it("isStale: marks data-stale and shows refresh button when onRefresh provided", () => {
     const onRefresh = vi.fn();
     const { container } = render(
       <AIAnnotation text="cached" isStale={true} onRefresh={onRefresh} />,
     );
     const node = container.querySelector("[data-ai-annotation]");
     expect(node?.getAttribute("data-stale")).toBe("true");
-    expect(node?.className).toMatch(/opacity-70/);
+    // Brand: stale text stays primary-blue (no opacity fade). The refresh
+    // button is the sole visual cue that the insight is cached.
+    expect(node?.className).toMatch(/text-primary/);
+    expect(node?.className).not.toMatch(/opacity-70/);
     const btn = container.querySelector("[data-ai-refresh]");
     expect(btn).toBeTruthy();
     fireEvent.click(btn!);
     expect(onRefresh).toHaveBeenCalled();
   });
 
-  it("isStale without onRefresh: still dim, no refresh button", () => {
+  it("isStale without onRefresh: data-stale but no refresh button", () => {
     const { container } = render(<AIAnnotation text="cached" isStale={true} />);
     expect(container.querySelector("[data-ai-refresh]")).toBeFalsy();
   });

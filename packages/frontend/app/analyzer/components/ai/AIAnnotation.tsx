@@ -18,20 +18,22 @@ export function AIAnnotation({
       <div
         data-ai-annotation
         data-loading
-        className="text-sm italic text-on-surface-variant pl-3 border-l-2 border-outline-variant"
+        className="text-sm italic text-primary opacity-70 pl-3 border-l-2 border-primary"
       >
         Generating insight…
       </div>
     );
   }
   if (!text) return null;
+  // All AI annotations render in primary blue regardless of freshness. Stale
+  // state is signaled solely by the refresh button (↻) — fading the text
+  // historically made it read as grey, which the brand spec reserves for
+  // unavailable data, not for cached-but-still-useful insights.
   return (
     <div
       data-ai-annotation
       data-stale={isStale ? "true" : "false"}
-      className={`flex items-start gap-2 text-sm italic pl-3 border-l-2 border-primary ${
-        isStale ? "text-on-surface-variant opacity-70" : "text-on-surface"
-      }`}
+      className="flex items-start gap-2 text-sm italic pl-3 border-l-2 border-primary text-primary"
     >
       <span className="flex-1">{text}</span>
       {isStale && onRefresh && (

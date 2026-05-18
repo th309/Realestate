@@ -17,6 +17,7 @@
 import { useCallback } from "react";
 import type {
   BrrrrResult,
+  DealGradingResult,
   DealInput,
   FlipResult,
   RentalResult,
@@ -32,6 +33,9 @@ export interface UseSectionAiInsightsArgs {
   brrrr: BrrrrResult | null | undefined;
   rentcast: unknown;
   piq: unknown;
+  /** DealGradingResult — required so the recommendation_analysis prompt can
+   *  cite the letter, GPA, auto-kills, and per-metric grades. */
+  grading: DealGradingResult | null | undefined;
 }
 
 export interface SectionAiProps {
@@ -41,12 +45,17 @@ export interface SectionAiProps {
   onRefreshAi: () => void;
 }
 
+// `market_context` is intentionally excluded — that section runs its own
+// per-geo AI fetches (one per pill) from inside MarketContextSection so the
+// pill toggle is instant.
+// `recommendation_analysis` only fires when a grading result exists, so it
+// is also gated separately below.
 const SECTION_IDS = [
+  "recommendation_analysis",
   "projection",
   "expense_waterfall",
   "sensitivity",
   "comps",
-  "market_context",
   "after_tax",
 ] as const;
 type SectionId = (typeof SECTION_IDS)[number];
@@ -59,6 +68,7 @@ export function useSectionAiInsights({
   brrrr,
   rentcast,
   piq,
+  grading,
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
 
@@ -69,13 +79,18 @@ export function useSectionAiInsights({
     result: { rental, flip, brrrr },
     rentcast,
     piq,
+    grading: grading ?? undefined,
   };
 
+  const recommendation = useAiSectionAnnotation(
+    payload,
+    "recommendation_analysis",
+    enabled && !!grading,
+  );
   const projection = useAiSectionAnnotation(payload, "projection", enabled);
   const expense = useAiSectionAnnotation(payload, "expense_waterfall", enabled);
   const sensitivity = useAiSectionAnnotation(payload, "sensitivity", enabled);
   const comps = useAiSectionAnnotation(payload, "comps", enabled);
-  const market = useAiSectionAnnotation(payload, "market_context", enabled);
   const afterTax = useAiSectionAnnotation(payload, "after_tax", enabled);
 
   const buildRefresh = useCallback(
@@ -96,11 +111,11 @@ export function useSectionAiInsights({
   });
 
   return {
+    recommendation_analysis: toProps("recommendation_analysis", recommendation),
     projection: toProps("projection", projection),
     expense_waterfall: toProps("expense_waterfall", expense),
     sensitivity: toProps("sensitivity", sensitivity),
     comps: toProps("comps", comps),
-    market_context: toProps("market_context", market),
     after_tax: toProps("after_tax", afterTax),
   };
 }

@@ -18,6 +18,7 @@ import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
+import { PropertyRecordCard } from "./components/PropertyRecordCard";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { computeBestPlay } from "./lib/strategy-best-play";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
@@ -160,6 +161,7 @@ export default function AnalyzerClient({
     brrrr,
     rentcast: rentcastData,
     piq: marketContext,
+    grading: grading.data ?? null,
   });
 
   const compsView = buildCompsViewProps(
@@ -171,6 +173,7 @@ export default function AnalyzerClient({
     rentalComps,
     pricePerSqftValues,
     yourPricePerSqft,
+    subjectPrice,
     subjectLat,
     subjectLon,
     mapboxToken,
@@ -235,7 +238,12 @@ export default function AnalyzerClient({
 
           <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
             <div className="hidden md:block">
-              <div className="sticky top-6">{inputPanel}</div>
+              <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
+                {inputPanel}
+                {rentcastData?.property_record && (
+                  <PropertyRecordCard record={rentcastData.property_record} />
+                )}
+              </div>
             </div>
 
             <div className="space-y-6 min-w-0">
@@ -283,6 +291,7 @@ export default function AnalyzerClient({
                   {...upgradeProps}
                   onCustomizeClick={() => setDrawerOpen(true)}
                   presetLabel="Balanced"
+                  aiProps={sectionAi.recommendation_analysis}
                 />
               ) : grading.isLoading ? (
                 <div
@@ -348,11 +357,20 @@ export default function AnalyzerClient({
                 displayAddress={displayAddress}
                 pricePerSqftValues={pricePerSqftValues}
                 yourPricePerSqft={yourPricePerSqft}
+                subjectPrice={subjectPrice}
                 salesComps={salesComps}
                 rentalComps={rentalComps}
                 mapboxToken={mapboxToken}
                 marketContext={marketContext}
                 sectionAi={sectionAi}
+                marketContextAi={{
+                  aiPayloadBase: {
+                    input: analyzer.input,
+                    result: { rental, flip, brrrr },
+                    rentcast: rentcastData,
+                  },
+                  aiEnabled: isPro && hasGradableInput,
+                }}
               />
             </div>
           </div>

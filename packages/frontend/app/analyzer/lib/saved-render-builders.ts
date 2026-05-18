@@ -132,6 +132,7 @@ export interface MarketContextSectionInputs {
   initialGeoLevel: "zip" | "county" | "metro" | "state" | null;
   fallbackPiq: number | null;
   fallbackHomeValue: number | null;
+  fallbackHomeValueYoy: number | null;
   fallbackRentIndex: number | null;
   fallbackMarketHeat: number | null;
   fallbackNetMigration: number | null;
@@ -152,6 +153,7 @@ export function extractMarketContextProps(
     initialGeoLevel: ctx.geo_level ?? null,
     fallbackPiq: ctx.piq_score?.value ?? null,
     fallbackHomeValue: ctx.home_value?.value ?? null,
+    fallbackHomeValueYoy: ctx.home_value_yoy?.value ?? null,
     fallbackRentIndex: ctx.rent_index?.value ?? null,
     fallbackMarketHeat: ctx.market_heat?.value ?? null,
     fallbackNetMigration: ctx.net_migration?.value ?? null,

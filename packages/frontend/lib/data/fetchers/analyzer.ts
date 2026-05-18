@@ -38,6 +38,8 @@ export interface MarketContext {
   geo_level: "zip" | "county" | "metro" | "state" | null;
   geo_id: string | null;
   home_value: MarketContextMetric | null;
+  /** Home-value YoY appreciation as a percent (e.g. 6.2 = +6.2%). */
+  home_value_yoy: MarketContextMetric | null;
   rent_index: MarketContextMetric | null;
   market_heat: MarketContextMetric | null;
   net_migration: MarketContextMetric | null;

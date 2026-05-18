@@ -105,7 +105,13 @@ describe('AnalyzerService.getMarketContext', () => {
     });
 
     expect(metricResolution.resolveMetricBatch).toHaveBeenCalledWith(
-      ['home_value', 'rent_index', 'market_heat', 'net_migration'],
+      [
+        'home_value',
+        'home_value_yoy',
+        'rent_index',
+        'market_heat',
+        'net_migration',
+      ],
       'zip',
       '78704',
     );
@@ -140,6 +146,7 @@ describe('AnalyzerService.getMarketContext', () => {
       geo_level: null,
       geo_id: null,
       home_value: null,
+      home_value_yoy: null,
       rent_index: null,
       market_heat: null,
       net_migration: null,

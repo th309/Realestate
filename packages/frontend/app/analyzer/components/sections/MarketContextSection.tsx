@@ -1,10 +1,11 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { SectionWrapper } from "./SectionWrapper";
 import { MetricBlock } from "../primitives/MetricBlock";
-import { useMarketContext } from "@/lib/data";
-import type { MarketContextChain } from "@/lib/data/fetchers/analyzer";
+import type { MarketContextChain } from "@/lib/data";
+import { useMarketContextByGeo } from "../../lib/use-market-context-by-geo";
 
 type PillLevel = "zip" | "county" | "metro";
 
@@ -16,13 +17,24 @@ interface MarketContextSectionProps {
   /** Snapshot fallbacks — saved/shared routes only, no live geo. */
   fallbackPiq?: number | null;
   fallbackHomeValue?: number | null;
+  fallbackHomeValueYoy?: number | null;
   fallbackRentIndex?: number | null;
   fallbackMarketHeat?: number | null;
   fallbackNetMigration?: number | null;
+  /** Snapshot AI text — used on saved/shared routes where no live AI fetch
+   *  is wired. Live flows pass `aiPayloadBase` + `aiEnabled` instead and the
+   *  section runs one AI fetch per available geo so pill toggles are instant. */
   aiText?: string | null;
   aiIsStale?: boolean;
   aiIsLoading?: boolean;
   onRefreshAi?: () => void;
+  /** Base payload (input/result/rentcast) for the live AI fetch. The section
+   *  injects each geo's pill-aware MarketContext as the `piq` slice so the
+   *  resulting annotation is geo-specific. Omit on saved/shared. */
+  aiPayloadBase?: { input: unknown; result: unknown; rentcast: unknown };
+  /** Pro + has-input gate from the parent. Combined with geo availability to
+   *  decide whether to fire per-geo AI requests. */
+  aiEnabled?: boolean;
 }
 
 const PILL_ORDER: PillLevel[] = ["metro", "county", "zip"];
@@ -63,21 +75,12 @@ function pickDefaultPill(
   return "metro";
 }
 
-/** Build the analyzer market-context query params for a given pill level. */
-function paramsForPill(
-  level: PillLevel,
-  id: string,
-): { zip?: string; county_fips?: string; cbsa_code?: string } {
-  if (level === "zip") return { zip: id };
-  if (level === "county") return { county_fips: id };
-  return { cbsa_code: id };
-}
-
 export function MarketContextSection({
   chain,
   initialGeoLevel,
   fallbackPiq,
   fallbackHomeValue,
+  fallbackHomeValueYoy,
   fallbackRentIndex,
   fallbackMarketHeat,
   fallbackNetMigration,
@@ -85,6 +88,8 @@ export function MarketContextSection({
   aiIsStale,
   aiIsLoading,
   onRefreshAi,
+  aiPayloadBase,
+  aiEnabled,
 }: MarketContextSectionProps) {
   const availablePills = useMemo<PillLevel[]>(
     () => PILL_ORDER.filter((lvl) => idForLevel(chain, lvl) != null),
@@ -99,18 +104,40 @@ export function MarketContextSection({
       : availablePills[0];
   const activeId = idForLevel(chain, effectivePill);
 
-  // Single call to the analyzer's own market-context endpoint at the selected
-  // pill level. Backend handles metric resolution + fallback chains and
-  // returns all 5 metrics + provenance in one round trip. Pill switch = new
-  // queryKey = new fetch (React Query caches each level independently).
-  const ctxParams = activeId ? paramsForPill(effectivePill, activeId) : {};
-  const ctx = useMarketContext({ ...ctxParams, enabled: !!activeId });
-  const data = ctx.data;
+  // Prefetch market context + AI annotation for every available geo at mount.
+  // Pill toggles become instant — they just pick a cached slot. Cost: up to
+  // 3 parallel data + 3 parallel AI requests per analysis; the 24h Redis
+  // cache amortizes this across repeat views.
+  const byGeo = useMarketContextByGeo({
+    chain,
+    aiPayloadBase,
+    aiEnabled: aiEnabled ?? false,
+  });
+  const data = byGeo.dataByPill[effectivePill];
+  const activeAi = byGeo.aiByPill[effectivePill];
+
+  // Live AI props when aiPayloadBase is wired; fall back to caller-provided
+  // snapshot text for saved/shared routes.
+  const queryClient = useQueryClient();
+  const refreshActiveAi = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: ["ai-insight", "market_context"],
+    });
+  }, [queryClient]);
+
+  const liveAiText = aiPayloadBase ? activeAi.text : (aiText ?? null);
+  const liveAiLoading = aiPayloadBase
+    ? activeAi.isLoading
+    : (aiIsLoading ?? false);
+  const liveAiStale = aiPayloadBase ? activeAi.isStale : (aiIsStale ?? false);
+  const liveOnRefreshAi = aiPayloadBase ? refreshActiveAi : onRefreshAi;
 
   // Live values when fetch resolved; snapshot fallbacks for saved/shared routes
   // (chain=null → useMarketContext disabled → data=null → use fallbacks).
   const piqScore = data?.piq_score?.value ?? fallbackPiq ?? null;
   const homeValue = data?.home_value?.value ?? fallbackHomeValue ?? null;
+  const homeValueYoy =
+    data?.home_value_yoy?.value ?? fallbackHomeValueYoy ?? null;
   const rentIndex = data?.rent_index?.value ?? fallbackRentIndex ?? null;
   const marketHeat = data?.market_heat?.value ?? fallbackMarketHeat ?? null;
   const netMigration =
@@ -125,11 +152,11 @@ export function MarketContextSection({
     <SectionWrapper
       id="market_context"
       title="Market Context"
-      onRefresh={onRefreshAi}
-      aiText={aiText}
-      aiIsStale={aiIsStale}
-      aiIsLoading={aiIsLoading}
-      onRefreshAi={onRefreshAi}
+      onRefresh={liveOnRefreshAi}
+      aiText={liveAiText}
+      aiIsStale={liveAiStale}
+      aiIsLoading={liveAiLoading}
+      onRefreshAi={liveOnRefreshAi}
     >
       {availablePills.length > 0 && (
         <GeoPills
@@ -139,14 +166,14 @@ export function MarketContextSection({
         />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <TileLink href={url}>
           <MetricBlock
             label="PIQ Score"
             value={toNum(piqScore)}
             format="number"
             decimals={0}
-            size="md"
+            size="sm"
             variant="score"
             subLabel={piqLabel ?? pillLabel}
           />
@@ -157,8 +184,20 @@ export function MarketContextSection({
             label="Home Value"
             value={toNum(homeValue)}
             format="currency"
-            size="md"
+            size="sm"
             subLabel={data?.home_value?.source ?? pillLabel}
+          />
+        </TileLink>
+
+        <TileLink href={url}>
+          <MetricBlock
+            label="Price Apprec. YoY"
+            value={toNum(homeValueYoy)}
+            format="percent"
+            decimals={1}
+            size="sm"
+            variant="directional"
+            subLabel={data?.home_value_yoy?.source ?? pillLabel}
           />
         </TileLink>
 
@@ -167,7 +206,7 @@ export function MarketContextSection({
             label="Rent Index"
             value={toNum(rentIndex)}
             format="currency"
-            size="md"
+            size="sm"
             subLabel={data?.rent_index?.source ?? pillLabel}
           />
         </TileLink>
@@ -178,7 +217,7 @@ export function MarketContextSection({
             value={toNum(marketHeat)}
             format="number"
             decimals={1}
-            size="md"
+            size="sm"
             variant="directional"
             threshold={{ good: 70, warning: 40 }}
             subLabel={data?.market_heat?.source ?? pillLabel}
@@ -191,7 +230,7 @@ export function MarketContextSection({
             value={toNum(netMigration)}
             format="number"
             decimals={0}
-            size="md"
+            size="sm"
             variant="directional"
             subLabel={data?.net_migration?.source ?? pillLabel}
           />
