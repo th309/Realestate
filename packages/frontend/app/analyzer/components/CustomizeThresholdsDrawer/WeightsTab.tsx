@@ -1,25 +1,25 @@
 "use client";
 
 /**
- * WeightsTab — five numeric inputs, one per metric. Live sum indicator
- * underneath turns green at 100 (±0.01) and red with a delta hint
- * otherwise. The sum is computed in the parent via `validateWeights`
- * and surfaced here as `sum` + `isValid` props (no fetching done here).
+ * WeightsTab — N numeric inputs, one per metric. Strategy-aware via the
+ * `rows` prop. Live sum indicator underneath turns green at 100 (±0.01)
+ * and red with a delta hint otherwise. The sum is computed in the parent
+ * via `validateWeightsForStrategy` and surfaced here as `sum` + `isValid`
+ * props (no fetching done here).
  */
 
-import type { UserThresholds } from "@propertyiq/analyzer-core";
-import { METRIC_ROWS } from "./preset-helpers";
-
-type Weights = UserThresholds["weights"];
+import type { MetricRowMeta } from "./preset-helpers";
 
 interface WeightsTabProps {
-  weights: Weights;
-  onChange: (next: Weights) => void;
+  rows: MetricRowMeta[];
+  weights: Record<string, number>;
+  onChange: (next: Record<string, number>) => void;
   sum: number;
   isValid: boolean;
 }
 
 export function WeightsTab({
+  rows,
   weights,
   onChange,
   sum,
@@ -39,7 +39,7 @@ export function WeightsTab({
         How much each metric contributes to the overall grade. Must sum to 100.
       </p>
       <div className="flex flex-col gap-3">
-        {METRIC_ROWS.map((row) => (
+        {rows.map((row) => (
           <div
             key={row.key}
             data-testid={`weight-row-${row.key}`}
@@ -59,7 +59,7 @@ export function WeightsTab({
                 step="any"
                 min={0}
                 max={100}
-                value={weights[row.key]}
+                value={weights[row.key] ?? 0}
                 onChange={(e) => {
                   const raw = parseFloat(e.target.value);
                   onChange({

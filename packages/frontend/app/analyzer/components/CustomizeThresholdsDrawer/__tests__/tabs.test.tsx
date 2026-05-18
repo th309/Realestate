@@ -4,11 +4,15 @@ import { BALANCED_THRESHOLDS } from "@propertyiq/analyzer-core";
 import { ThresholdsTab } from "../ThresholdsTab";
 import { WeightsTab } from "../WeightsTab";
 import { AssumptionsTab } from "../AssumptionsTab";
+import { rowsForStrategy } from "../preset-helpers";
+
+const BH_ROWS = rowsForStrategy("BUY_AND_HOLD");
 
 describe("ThresholdsTab", () => {
   it("renders all five metric rows", () => {
     render(
       <ThresholdsTab
+        rows={BH_ROWS}
         thresholds={BALANCED_THRESHOLDS}
         preset={BALANCED_THRESHOLDS}
         onChange={() => {}}
@@ -29,6 +33,7 @@ describe("ThresholdsTab", () => {
   it("displays cashOnCash A in percent form", () => {
     render(
       <ThresholdsTab
+        rows={BH_ROWS}
         thresholds={BALANCED_THRESHOLDS}
         preset={BALANCED_THRESHOLDS}
         onChange={() => {}}
@@ -46,6 +51,7 @@ describe("ThresholdsTab", () => {
     const onChange = vi.fn();
     render(
       <ThresholdsTab
+        rows={BH_ROWS}
         thresholds={BALANCED_THRESHOLDS}
         preset={BALANCED_THRESHOLDS}
         onChange={onChange}
@@ -69,6 +75,7 @@ describe("ThresholdsTab", () => {
     };
     render(
       <ThresholdsTab
+        rows={BH_ROWS}
         thresholds={edited}
         preset={BALANCED_THRESHOLDS}
         onChange={onChange}
@@ -85,6 +92,7 @@ describe("ThresholdsTab", () => {
   it("shows inline error when errors prop has a value for that row", () => {
     render(
       <ThresholdsTab
+        rows={BH_ROWS}
         thresholds={BALANCED_THRESHOLDS}
         preset={BALANCED_THRESHOLDS}
         onChange={() => {}}
@@ -101,6 +109,7 @@ describe("WeightsTab", () => {
   it("renders sum indicator with green pill when valid", () => {
     render(
       <WeightsTab
+        rows={BH_ROWS}
         weights={BALANCED_THRESHOLDS.weights}
         onChange={() => {}}
         sum={100}
@@ -116,6 +125,7 @@ describe("WeightsTab", () => {
   it("renders red pill with delta hint when invalid", () => {
     render(
       <WeightsTab
+        rows={BH_ROWS}
         weights={BALANCED_THRESHOLDS.weights}
         onChange={() => {}}
         sum={95}
@@ -131,6 +141,7 @@ describe("WeightsTab", () => {
     const onChange = vi.fn();
     render(
       <WeightsTab
+        rows={BH_ROWS}
         weights={BALANCED_THRESHOLDS.weights}
         onChange={onChange}
         sum={100}

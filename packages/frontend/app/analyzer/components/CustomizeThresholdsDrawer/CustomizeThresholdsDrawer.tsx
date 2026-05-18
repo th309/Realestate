@@ -4,25 +4,32 @@
  * CustomizeThresholdsDrawer — right-side slide-in for editing per-user
  * grading thresholds, metric weights, and analyzer assumption defaults.
  *
+ * Strategy-aware: rubric rows (B&H / F&F / BRRRR) come from the active
+ * strategy, and the top-of-drawer preset selector (Conservative / Balanced /
+ * Aggressive) applies the matching strategy-specific preset.
+ *
  * Composition:
- *   - useDrawerState   — owns draft state, validation, save/reset handlers
- *   - ThresholdsTab    — A/B/C/D edits per metric
+ *   - useDrawerState   — owns draft state, validation, save/reset, applyPreset
+ *   - PresetSelector   — segmented control above the tabs
+ *   - ThresholdsTab    — A/B/C/D edits per metric for the active strategy
  *   - WeightsTab       — weight inputs + sum indicator
  *   - AssumptionsTab   — analyzer form defaults
  *   - DrawerFooter     — banner, confirm strip, Reset/Cancel/Save buttons
- *
- * Integration owner (RecommendationCard) wires the trigger chip and passes
- * `open` + `onClose`. This component is presentational w.r.t. those props.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
-import type { Strategy } from "@propertyiq/analyzer-core";
+import type { GradingPresetName, Strategy } from "@propertyiq/analyzer-core";
 import { ThresholdsTab } from "./ThresholdsTab";
 import { WeightsTab } from "./WeightsTab";
 import { AssumptionsTab } from "./AssumptionsTab";
 import { DrawerFooter } from "./DrawerFooter";
-import { presetForStrategy } from "./preset-helpers";
+import { PresetSelector, PresetConfirmModal } from "./PresetSelector";
+import {
+  presetForStrategy,
+  rowsForStrategy,
+  type AnyStrategyThresholds,
+} from "./preset-helpers";
 import { useDrawerState, type ThresholdsTabId } from "./useDrawerState";
 
 interface CustomizeThresholdsDrawerProps {
@@ -42,11 +49,17 @@ export function CustomizeThresholdsDrawer({
   onClose,
   strategy,
 }: CustomizeThresholdsDrawerProps) {
-  const preset = useMemo(() => presetForStrategy(strategy), [strategy]);
   const state = useDrawerState(open, strategy);
+  const rows = useMemo(() => rowsForStrategy(strategy), [strategy]);
+  const previewPreset = useMemo(
+    () => presetForStrategy(strategy, "balanced"),
+    [strategy],
+  );
 
   const [tab, setTab] = useState<ThresholdsTabId>("thresholds");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [presetToConfirm, setPresetToConfirm] =
+    useState<GradingPresetName | null>(null);
 
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<Element | null>(null);
@@ -82,6 +95,25 @@ export function CustomizeThresholdsDrawer({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, handleCancel]);
+
+  const handlePresetClick = useCallback(
+    (preset: GradingPresetName) => {
+      // No-op if already on this preset.
+      if (state.activePreset === preset) return;
+      // If user has custom edits (no preset match), require confirm.
+      if (state.draftThresholds && state.activePreset == null) {
+        setPresetToConfirm(preset);
+        return;
+      }
+      state.applyPreset(preset);
+    },
+    [state],
+  );
+
+  const confirmPresetSwitch = useCallback(() => {
+    if (presetToConfirm) state.applyPreset(presetToConfirm);
+    setPresetToConfirm(null);
+  }, [presetToConfirm, state]);
 
   if (!open) return null;
 
@@ -119,6 +151,12 @@ export function CustomizeThresholdsDrawer({
             <X className="w-5 h-5" />
           </button>
         </header>
+
+        <PresetSelector
+          activePreset={state.activePreset}
+          isCustom={state.draftThresholds != null && state.activePreset == null}
+          onSelect={handlePresetClick}
+        />
 
         <nav
           role="tablist"
@@ -160,19 +198,24 @@ export function CustomizeThresholdsDrawer({
             </div>
           ) : tab === "thresholds" ? (
             <ThresholdsTab
+              rows={rows}
               thresholds={state.draftThresholds}
-              preset={preset}
+              preset={previewPreset}
               onChange={state.setDraftThresholds}
               errors={state.thresholdErrors}
             />
           ) : tab === "weights" ? (
             <WeightsTab
-              weights={state.draftThresholds.weights}
+              rows={rows}
+              weights={
+                ((state.draftThresholds as { weights?: unknown })
+                  .weights as Record<string, number>) ?? {}
+              }
               onChange={(w) =>
                 state.setDraftThresholds({
-                  ...state.draftThresholds!,
+                  ...(state.draftThresholds as object),
                   weights: w,
-                })
+                } as AnyStrategyThresholds)
               }
               sum={state.weightsCheck.sum}
               isValid={state.weightsCheck.valid}
@@ -201,6 +244,14 @@ export function CustomizeThresholdsDrawer({
           isResetting={state.isResetting}
           canSave={state.canSave}
         />
+
+        {presetToConfirm && (
+          <PresetConfirmModal
+            target={presetToConfirm}
+            onConfirm={confirmPresetSwitch}
+            onCancel={() => setPresetToConfirm(null)}
+          />
+        )}
       </aside>
     </div>
   );

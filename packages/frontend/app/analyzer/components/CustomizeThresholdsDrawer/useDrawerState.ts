@@ -4,13 +4,17 @@
  * useDrawerState — owns the working-copy state for the Customize Thresholds
  * drawer plus validation memoization and save / reset handlers.
  *
- * Extracted from `CustomizeThresholdsDrawer.tsx` to keep that component under
- * the 400-line hard limit while preserving a single source of truth for the
- * drawer's mutable state.
+ * Strategy-aware: validation iterates the metric keys for the active strategy
+ * via the row metadata so B&H / F&F / BRRRR shapes are all handled correctly.
+ *
+ * Draft thresholds are typed as `UserThresholds` for back-compat with the
+ * data layer, but at runtime any of the three strategy shapes flow through.
+ * Internal consumers treat the object as opaque (`Record<string, ...>` via
+ * casts inside validators / tabs).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Strategy, UserThresholds } from "@propertyiq/analyzer-core";
+import type { GradingPresetName, Strategy } from "@propertyiq/analyzer-core";
 import {
   useThresholds,
   useUpdateThresholds,
@@ -21,10 +25,16 @@ import {
 } from "@/lib/data";
 import {
   hasAnyAssumptionError,
+  validateAllThresholds,
   validateAssumptions,
-  validateMetricThreshold,
-  validateWeights,
+  validateWeightsForStrategy,
+  type ThresholdErrors,
 } from "./validators";
+import {
+  detectActivePreset,
+  presetForStrategy,
+  type AnyStrategyThresholds,
+} from "./preset-helpers";
 
 export type ThresholdsTabId = "thresholds" | "weights" | "assumptions";
 
@@ -40,9 +50,8 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
   const defaultsQ = useAnalyzerDefaults();
   const updateDefaultsM = useUpdateAnalyzerDefaults();
 
-  const [draftThresholds, setDraftThresholds] = useState<UserThresholds | null>(
-    null,
-  );
+  const [draftThresholds, setDraftThresholds] =
+    useState<AnyStrategyThresholds | null>(null);
   const [draftDefaults, setDraftDefaults] = useState<AnalyzerDefaults | null>(
     null,
   );
@@ -51,7 +60,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
   // Seed working copies from server.
   useEffect(() => {
     if (thresholdsQ.data && draftThresholds === null) {
-      setDraftThresholds(thresholdsQ.data);
+      setDraftThresholds(thresholdsQ.data as AnyStrategyThresholds);
     }
   }, [thresholdsQ.data, draftThresholds]);
   useEffect(() => {
@@ -59,6 +68,12 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
       setDraftDefaults(defaultsQ.data);
     }
   }, [defaultsQ.data, draftDefaults]);
+
+  // Reset draft thresholds on strategy change so a stale rubric shape from
+  // the previous strategy doesn't leak into the new one's tab.
+  useEffect(() => {
+    setDraftThresholds(null);
+  }, [strategy]);
 
   // Auto-dismiss success banner after 3s.
   useEffect(() => {
@@ -83,23 +98,18 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     return Boolean(tDirty || dDirty);
   }, [draftThresholds, draftDefaults, thresholdsQ.data, defaultsQ.data]);
 
-  const thresholdErrors = useMemo(() => {
+  const thresholdErrors: ThresholdErrors = useMemo(() => {
     if (!draftThresholds) return {};
-    return {
-      cashOnCash: validateMetricThreshold(draftThresholds.cashOnCash),
-      dscr: validateMetricThreshold(draftThresholds.dscr),
-      cashFlowPerDoor: validateMetricThreshold(draftThresholds.cashFlowPerDoor),
-      capRate: validateMetricThreshold(draftThresholds.capRate),
-      breakEvenOccupancy: validateMetricThreshold(
-        draftThresholds.breakEvenOccupancy,
-      ),
-    } as const;
-  }, [draftThresholds]);
+    return validateAllThresholds(strategy, draftThresholds);
+  }, [draftThresholds, strategy]);
 
   const weightsCheck = useMemo(() => {
     if (!draftThresholds) return { valid: false, sum: 0 };
-    return validateWeights(draftThresholds.weights);
-  }, [draftThresholds]);
+    return validateWeightsForStrategy(
+      strategy,
+      (draftThresholds as { weights?: unknown }).weights,
+    );
+  }, [draftThresholds, strategy]);
 
   const assumptionErrors = useMemo(
     () =>
@@ -107,6 +117,11 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
         ? validateAssumptions(draftDefaults)
         : ({} as ReturnType<typeof validateAssumptions>),
     [draftDefaults],
+  );
+
+  const activePreset: GradingPresetName | null = useMemo(
+    () => detectActivePreset(strategy, draftThresholds),
+    [strategy, draftThresholds],
   );
 
   const canSave =
@@ -122,7 +137,9 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     if (!draftThresholds || !draftDefaults) return;
     try {
       await Promise.all([
-        updateThresholdsM.mutateAsync(draftThresholds),
+        // Cast back to the data-layer type at the boundary — runtime shape
+        // matches the backend's strategy-aware validation.
+        updateThresholdsM.mutateAsync(draftThresholds as never),
         updateDefaultsM.mutateAsync(draftDefaults),
       ]);
       setBanner({ kind: "success", message: "Saved" });
@@ -149,27 +166,30 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     }
   }, [deleteThresholdsM]);
 
+  const applyPreset = useCallback(
+    (preset: GradingPresetName) => {
+      setDraftThresholds(presetForStrategy(strategy, preset));
+    },
+    [strategy],
+  );
+
   return {
-    // server flags
     isLoading: thresholdsQ.isLoading || defaultsQ.isLoading,
-    // working copies
     draftThresholds,
     draftDefaults,
     setDraftThresholds,
     setDraftDefaults,
-    // validation
     thresholdErrors,
     weightsCheck,
     assumptionErrors,
     canSave,
     isDirty,
-    // banner
     banner,
-    // mutations status
+    activePreset,
     isSaving: updateThresholdsM.isPending || updateDefaultsM.isPending,
     isResetting: deleteThresholdsM.isPending,
-    // actions
     handleSave,
     handleResetAll,
+    applyPreset,
   };
 }

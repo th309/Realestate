@@ -1,52 +1,64 @@
 "use client";
 
 /**
- * ThresholdsTab — five metric rows, four A/B/C/D inputs each.
+ * ThresholdsTab — N metric rows × 4 A/B/C/D inputs each. Strategy-aware via
+ * the `rows` prop the parent passes in (rowsForStrategy).
  *
- * The component is presentation-only: it doesn't fetch, save, or own
- * canonical state. Parent owns `thresholds` and gets a fresh object back
- * via `onChange`. Per-row Reset uses presets supplied by the parent so the
- * tab stays preset-agnostic.
+ * Presentation-only: it doesn't fetch, save, or own canonical state. Parent
+ * owns `thresholds` and gets a fresh object back via `onChange`. Per-row
+ * Reset uses the active preset supplied by the parent.
  *
- * Display vs storage conversion lives in METRIC_ROWS (see preset-helpers).
+ * Display vs storage conversion lives in MetricRowMeta (see preset-helpers).
  * That keeps inputs human-readable ("12") while the wire format stays
  * decimal (0.12).
  */
 
-import type {
-  MetricThreshold,
-  UserThresholds,
-} from "@propertyiq/analyzer-core";
-import { METRIC_ROWS, type MetricKey } from "./preset-helpers";
+import type { MetricThreshold } from "@propertyiq/analyzer-core";
+import type { MetricRowMeta, AnyStrategyThresholds } from "./preset-helpers";
 
 interface ThresholdsTabProps {
-  thresholds: UserThresholds;
-  preset: UserThresholds;
-  onChange: (next: UserThresholds) => void;
-  errors: Partial<Record<MetricKey, string | null>>;
+  rows: MetricRowMeta[];
+  thresholds: AnyStrategyThresholds;
+  preset: AnyStrategyThresholds;
+  onChange: (next: AnyStrategyThresholds) => void;
+  errors: Record<string, string | null>;
 }
 
 const LETTERS: Array<"A" | "B" | "C" | "D"> = ["A", "B", "C", "D"];
 
+function getRow(
+  obj: AnyStrategyThresholds,
+  key: string,
+): MetricThreshold | undefined {
+  return (obj as unknown as Record<string, MetricThreshold>)[key];
+}
+
 export function ThresholdsTab({
+  rows,
   thresholds,
   preset,
   onChange,
   errors,
 }: ThresholdsTabProps) {
-  function setRow(key: MetricKey, next: MetricThreshold) {
-    onChange({ ...thresholds, [key]: next });
+  function setRow(key: string, next: MetricThreshold) {
+    onChange({
+      ...(thresholds as object),
+      [key]: next,
+    } as unknown as AnyStrategyThresholds);
   }
 
-  function resetRow(key: MetricKey) {
-    onChange({ ...thresholds, [key]: preset[key] });
+  function resetRow(key: string) {
+    const presetRow = getRow(preset, key);
+    if (!presetRow) return;
+    setRow(key, presetRow);
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {METRIC_ROWS.map((row) => {
-        const t = thresholds[row.key];
-        const presetRow = preset[row.key];
+      {rows.map((row) => {
+        const t = getRow(thresholds, row.key);
+        const presetRow = getRow(preset, row.key);
+        if (!t || !presetRow) return null;
         const err = errors[row.key];
         return (
           <div

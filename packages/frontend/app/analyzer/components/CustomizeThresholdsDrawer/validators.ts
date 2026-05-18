@@ -3,16 +3,22 @@
  *
  * - validateMetricThreshold: enforces monotonic A→D ordering matching the
  *   metric's favorable direction (higher_is_better: A>B>C>D; lower: A<B<C<D).
+ * - validateAllThresholds: runs validateMetricThreshold across every metric
+ *   row for the active strategy. Returns a {key → error|null} map.
  * - validateWeights: enforces sum ≈ 100 (±0.01 tolerance for FP drift).
- * - validateAssumptions: per-field bounds matching the backend DTO
- *   (`AnalyzerDefaultsDto`) so client errors mirror server rejections.
+ *   Original B&H signature retained for test back-compat.
+ * - validateWeightsForStrategy: strategy-aware variant that iterates the
+ *   weight keys for the active rubric.
+ * - validateAssumptions: per-field bounds matching the backend DTO so client
+ *   errors mirror server rejections.
  *
  * Each returns either `null` (valid) or a human-readable error string per
  * field — never throws.
  */
 
-import type { MetricThreshold } from "@propertyiq/analyzer-core";
+import type { MetricThreshold, Strategy } from "@propertyiq/analyzer-core";
 import type { AnalyzerDefaults } from "@/lib/data";
+import { weightKeysForStrategy, rowsForStrategy } from "./preset-helpers";
 
 export function validateMetricThreshold(t: MetricThreshold): string | null {
   const { A, B, C, D, direction } = t;
@@ -35,11 +41,30 @@ export function validateMetricThreshold(t: MetricThreshold): string | null {
   return null;
 }
 
+export type ThresholdErrors = Record<string, string | null>;
+
+export function validateAllThresholds(
+  strategy: Strategy,
+  thresholds: unknown,
+): ThresholdErrors {
+  const out: ThresholdErrors = {};
+  const t = thresholds as Record<string, MetricThreshold>;
+  for (const row of rowsForStrategy(strategy)) {
+    const value = t?.[row.key];
+    out[row.key] = value ? validateMetricThreshold(value) : "Missing threshold";
+  }
+  return out;
+}
+
 export interface WeightsValidation {
   valid: boolean;
   sum: number;
 }
 
+/**
+ * Original B&H validator — kept for back-compat with existing tests.
+ * New code paths should use `validateWeightsForStrategy`.
+ */
 export function validateWeights(w: {
   cashOnCash: number;
   dscr: number;
@@ -53,6 +78,18 @@ export function validateWeights(w: {
     (w.cashFlowPerDoor || 0) +
     (w.capRate || 0) +
     (w.breakEvenOccupancy || 0);
+  return { valid: Math.abs(sum - 100) <= 0.01, sum };
+}
+
+export function validateWeightsForStrategy(
+  strategy: Strategy,
+  weights: unknown,
+): WeightsValidation {
+  const w = (weights as Record<string, number>) ?? {};
+  let sum = 0;
+  for (const key of weightKeysForStrategy(strategy)) {
+    sum += w[key] || 0;
+  }
   return { valid: Math.abs(sum - 100) <= 0.01, sum };
 }
 
