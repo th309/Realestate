@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useMemo } from "react";
 import type {
   DealInput,
   GradingContext,
   Letter,
+  PerMetricUpgrade,
   Strategy,
   UpgradePathOption as UpgradePathOptionType,
   UserThresholds,
 } from "@propertyiq/analyzer-core";
 import { useUpgradePath, type UpgradePathRequest } from "@/lib/data";
 import { UpgradePathOption } from "./UpgradePathOption";
+import { getGradeColor } from "../../lib/grade-colors";
 
 interface UpgradePathPanelProps {
   input: DealInput;
@@ -20,17 +21,6 @@ interface UpgradePathPanelProps {
   strategy: Strategy;
   onApply: (next: DealInput) => void;
   overrideThresholds?: UserThresholds;
-}
-
-const LETTER_RANK: Record<Letter, number> = { F: 0, D: 1, C: 2, B: 3, A: 4 };
-const LETTERS: Letter[] = ["A", "B", "C", "D", "F"];
-
-/** Targets strictly better than the current letter (higher rank = better). */
-function targetsAbove(currentGrade: Letter): Letter[] {
-  const cur = LETTER_RANK[currentGrade];
-  return LETTERS.filter((l) => LETTER_RANK[l] > cur).sort(
-    (a, b) => LETTER_RANK[a] - LETTER_RANK[b],
-  );
 }
 
 /**
@@ -66,23 +56,6 @@ export function applyLever(
   }
 }
 
-/**
- * Attempt to parse a combination hint like
- * "drop price by $15,000 and raise rent by $200/mo" into concrete deltas.
- * Returns null if either delta is missing — caller hides the Apply button.
- */
-function parseCombinationHint(
-  hint: string,
-): { priceDelta: number; rentDelta: number } | null {
-  const priceMatch = hint.match(/price[^$]*\$([\d,]+)/i);
-  const rentMatch = hint.match(/rent[^$]*\$([\d,]+)/i);
-  if (!priceMatch || !rentMatch) return null;
-  const priceDelta = -Math.abs(Number(priceMatch[1].replace(/,/g, "")));
-  const rentDelta = Math.abs(Number(rentMatch[1].replace(/,/g, "")));
-  if (!Number.isFinite(priceDelta) || !Number.isFinite(rentDelta)) return null;
-  return { priceDelta, rentDelta };
-}
-
 export function UpgradePathPanel({
   input,
   context,
@@ -91,38 +64,25 @@ export function UpgradePathPanel({
   onApply,
   overrideThresholds,
 }: UpgradePathPanelProps) {
-  // Safety belt — caller should also gate. Compute hooks first to keep hook
-  // order stable across renders (currentGrade is a prop, not state).
-  const available = useMemo(() => targetsAbove(currentGrade), [currentGrade]);
-  const [targetGrade, setTargetGrade] = useState<Letter>(
-    available[0] ?? ("A" as Letter),
-  );
-
-  // If the current grade changes and the previously-selected target is no
-  // longer reachable (e.g. it became the current grade), snap to next-up.
-  // Note: simple resolution — render the first valid available target if
-  // the chosen one fell out of the list.
-  const effectiveTarget: Letter = available.includes(targetGrade)
-    ? targetGrade
-    : (available[0] ?? ("A" as Letter));
-
+  // We always ask for "next tier" as the overall target — but the meaningful
+  // payload here is the per-metric breakdown the engine returns alongside.
   const payload: UpgradePathRequest | null = useMemo(() => {
     if (currentGrade === "A") return null;
+    const NEXT: Record<Letter, Letter> = {
+      F: "D",
+      D: "C",
+      C: "B",
+      B: "A",
+      A: "A",
+    };
     return {
       strategy,
       input,
       context,
-      targetGrade: effectiveTarget,
+      targetGrade: NEXT[currentGrade],
       overrideThresholds,
     };
-  }, [
-    strategy,
-    input,
-    context,
-    effectiveTarget,
-    overrideThresholds,
-    currentGrade,
-  ]);
+  }, [strategy, input, context, currentGrade, overrideThresholds]);
 
   const { data, isLoading, isError, error } = useUpgradePath(payload, {
     enabled: payload !== null,
@@ -130,46 +90,32 @@ export function UpgradePathPanel({
 
   if (currentGrade === "A") return null;
 
-  const combinationParse =
-    data && !data.achievable && data.combinationHint
-      ? parseCombinationHint(data.combinationHint)
-      : null;
+  const perMetric = data?.perMetric ?? [];
 
   return (
     <div
       data-upgrade-path-panel
-      className="rounded-2xl border border-outline-variant bg-surface p-6 space-y-4"
+      className="rounded-2xl border border-outline-variant bg-surface p-6 space-y-5"
     >
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="space-y-1">
         <h3
           className="text-xl font-semibold text-on-surface"
           style={{ fontFamily: "var(--font-source-serif)" }}
         >
-          How to upgrade to {effectiveTarget}
+          What&apos;s holding this deal back
         </h3>
-        <label className="text-xs text-on-surface-variant flex items-center gap-2">
-          <span>Target grade</span>
-          <select
-            data-upgrade-target-select
-            value={effectiveTarget}
-            onChange={(e) => setTargetGrade(e.target.value as Letter)}
-            className="rounded-full border border-outline bg-surface px-3 py-1 text-sm text-on-surface tabular-nums"
-          >
-            {available.map((letter) => (
-              <option key={letter} value={letter}>
-                {letter}
-              </option>
-            ))}
-          </select>
-        </label>
+        <p className="text-sm text-on-surface-variant">
+          Each metric below feeds into your overall grade. Pick a lever to lift
+          that specific metric to its next tier.
+        </p>
       </div>
 
       {isLoading && (
-        <div data-upgrade-loading className="space-y-2">
+        <div data-upgrade-loading className="space-y-4">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-[72px] rounded-xl bg-surface-variant/40 animate-pulse"
+              className="h-[160px] rounded-xl bg-surface-variant/40 animate-pulse"
               aria-hidden
             />
           ))}
@@ -182,16 +128,80 @@ export function UpgradePathPanel({
           role="alert"
           className="rounded-xl border-2 border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-on-error-container)] px-4 py-3 text-sm"
         >
-          <strong>Couldn’t compute upgrade path:</strong>{" "}
+          <strong>Couldn&apos;t compute upgrade path:</strong>{" "}
           {error?.message ?? "unknown error"}
         </div>
       )}
 
-      {data && data.achievable && data.options.length > 0 && (
-        <div data-upgrade-options className="space-y-2">
-          {data.options.map((option, idx) => (
+      {data && perMetric.length === 0 && (
+        <div
+          data-upgrade-all-clear
+          className="rounded-xl border border-outline-variant bg-surface-variant/30 p-4 text-sm text-on-surface-variant"
+        >
+          All metrics are grading A. No upgrades needed.
+        </div>
+      )}
+
+      {data &&
+        perMetric.length > 0 &&
+        perMetric.map((entry) => (
+          <PerMetricSection
+            key={entry.metricKey}
+            entry={entry}
+            input={input}
+            onApply={onApply}
+          />
+        ))}
+    </div>
+  );
+}
+
+interface PerMetricSectionProps {
+  entry: PerMetricUpgrade;
+  input: DealInput;
+  onApply: (next: DealInput) => void;
+}
+
+function PerMetricSection({ entry, input, onApply }: PerMetricSectionProps) {
+  const currentColor = getGradeColor(entry.currentGrade);
+  const targetColor = getGradeColor(entry.targetGrade);
+
+  return (
+    <section
+      data-upgrade-metric={entry.metricKey}
+      className="rounded-xl border border-outline-variant bg-surface-variant/20 p-4 space-y-3"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="text-base font-semibold text-on-surface leading-tight">
+            {entry.metricLabel}
+          </h4>
+          <p className="mt-0.5 text-xs text-on-surface-variant tabular-nums">
+            Currently {entry.formattedValue}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <GradeChip letter={entry.currentGrade} color={currentColor} />
+          <span aria-hidden className="text-on-surface-variant">
+            →
+          </span>
+          <GradeChip letter={entry.targetGrade} color={targetColor} />
+        </div>
+      </header>
+
+      {entry.options.length === 0 ? (
+        <p
+          data-upgrade-metric-unreachable
+          className="text-xs text-on-surface-variant italic"
+        >
+          No single lever (within reasonable bounds) lifts this metric to{" "}
+          {entry.targetGrade}. Combine multiple changes or adjust the rubric.
+        </p>
+      ) : (
+        <div data-upgrade-metric-options className="space-y-2">
+          {entry.options.map((option, idx) => (
             <UpgradePathOption
-              key={`${option.lever}-${option.targetValue}`}
+              key={`${entry.metricKey}-${option.lever}-${option.targetValue}`}
               option={option}
               index={idx}
               onApply={() => onApply(applyLever(input, option))}
@@ -199,51 +209,23 @@ export function UpgradePathPanel({
           ))}
         </div>
       )}
+    </section>
+  );
+}
 
-      {data && !data.achievable && data.combinationHint && (
-        <div
-          data-upgrade-combination
-          className="rounded-xl border border-outline-variant bg-surface-variant/30 p-4 flex items-start gap-3"
-        >
-          <ChevronRight
-            size={18}
-            className="mt-0.5 shrink-0 text-on-surface-variant"
-            aria-hidden
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-on-surface leading-snug">
-              {data.combinationHint}
-            </p>
-            {combinationParse && (
-              <button
-                type="button"
-                data-upgrade-apply-combination
-                onClick={() =>
-                  onApply({
-                    ...input,
-                    price: input.price + combinationParse.priceDelta,
-                    rentMonthly:
-                      (input.rentMonthly ?? 0) + combinationParse.rentDelta,
-                  })
-                }
-                className="mt-2 rounded-full border border-outline px-4 py-1.5 text-xs font-medium text-primary hover:bg-primary-container/40 transition-colors duration-200"
-              >
-                Apply combination
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+interface GradeChipProps {
+  letter: Letter;
+  color: { fg: string; bg: string };
+}
 
-      {data && !data.achievable && !data.combinationHint && (
-        <div
-          data-upgrade-unreachable
-          className="rounded-xl border border-outline-variant bg-surface-variant/30 p-4 text-sm text-on-surface-variant"
-        >
-          No single lever reaches {effectiveTarget} from here. Try a lower
-          target grade.
-        </div>
-      )}
-    </div>
+function GradeChip({ letter, color }: GradeChipProps) {
+  return (
+    <span
+      aria-label={`Grade ${letter}`}
+      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold tabular-nums"
+      style={{ color: color.fg, background: color.bg }}
+    >
+      {letter}
+    </span>
   );
 }

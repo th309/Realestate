@@ -59,4 +59,23 @@ export interface UpgradePathResult {
   options: UpgradePathOption[];
   /** Populated when no single lever reaches the target — suggests a 2-lever combo. */
   combinationHint?: string;
+  /**
+   * Per-metric upgrade suggestions. Each entry covers ONE non-A metric and
+   * lists lever moves that improve THAT metric specifically to its next
+   * grade tier. Surfaces multiple actionable paths when several metrics
+   * are weak — the answer to "which lever fixes which number."
+   */
+  perMetric?: PerMetricUpgrade[];
+}
+
+export interface PerMetricUpgrade {
+  metricKey: string;
+  metricLabel: string;
+  /** Raw metric value (decimal for ratios/percents, dollars for $ metrics). */
+  currentValue: number;
+  formattedValue: string;
+  currentGrade: import("../shared/types").Letter;
+  /** Next better grade tier from current (e.g., F → D, C → B). */
+  targetGrade: import("../shared/types").Letter;
+  options: UpgradePathOption[];
 }

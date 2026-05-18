@@ -52,6 +52,7 @@ export type {
 } from "./buy-and-hold/thresholds";
 export type {
   GradingContext,
+  PerMetricUpgrade,
   UpgradeLever,
   UpgradePathOption,
   UpgradePathResult,

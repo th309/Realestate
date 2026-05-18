@@ -3,6 +3,8 @@ import { render, fireEvent } from "@testing-library/react";
 import type {
   DealInput,
   GradingContext,
+  PerMetricUpgrade,
+  UpgradePathOption,
   UpgradePathResult,
 } from "@propertyiq/analyzer-core";
 
@@ -39,43 +41,66 @@ const BASE_INPUT: DealInput = {
 
 const BASE_CONTEXT: GradingContext = {};
 
+const PRICE_OPTION: UpgradePathOption = {
+  lever: "purchasePrice",
+  label: "Negotiate purchase price down",
+  currentValue: 350_000,
+  targetValue: 335_000,
+  delta: -15_000,
+  formattedDelta: "-$15,000",
+  feasibility: "easy",
+  unlocksGrade: "D",
+};
+
+const RENT_OPTION: UpgradePathOption = {
+  lever: "monthlyRent",
+  label: "Raise rent (renovate, value-add)",
+  currentValue: 2_400,
+  targetValue: 2_600,
+  delta: 200,
+  formattedDelta: "+$200/mo",
+  feasibility: "moderate",
+  unlocksGrade: "D",
+};
+
+const DOWN_PAYMENT_OPTION: UpgradePathOption = {
+  lever: "downPayment",
+  label: "Increase down payment",
+  currentValue: 70_000,
+  targetValue: 87_500,
+  delta: 17_500,
+  formattedDelta: "+$17,500",
+  feasibility: "moderate",
+  unlocksGrade: "D",
+};
+
 function makeResult(over: Partial<UpgradePathResult> = {}): UpgradePathResult {
+  const perMetric: PerMetricUpgrade[] = [
+    {
+      metricKey: "cashOnCash",
+      metricLabel: "Cash-on-Cash",
+      currentValue: 0.045,
+      formattedValue: "4.5%",
+      currentGrade: "F",
+      targetGrade: "D",
+      options: [PRICE_OPTION, RENT_OPTION],
+    },
+    {
+      metricKey: "dscr",
+      metricLabel: "DSCR",
+      currentValue: 1.05,
+      formattedValue: "1.05",
+      currentGrade: "F",
+      targetGrade: "D",
+      options: [RENT_OPTION, DOWN_PAYMENT_OPTION],
+    },
+  ];
   return {
-    currentGrade: "B",
-    targetGrade: "A",
+    currentGrade: "F",
+    targetGrade: "D",
     achievable: true,
-    options: [
-      {
-        lever: "purchasePrice",
-        label: "Negotiate purchase price down",
-        currentValue: 350_000,
-        targetValue: 335_000,
-        delta: -15_000,
-        formattedDelta: "-$15,000",
-        feasibility: "easy",
-        unlocksGrade: "A",
-      },
-      {
-        lever: "monthlyRent",
-        label: "Raise rent (renovate, value-add)",
-        currentValue: 2_400,
-        targetValue: 2_600,
-        delta: 200,
-        formattedDelta: "+$200/mo",
-        feasibility: "moderate",
-        unlocksGrade: "A",
-      },
-      {
-        lever: "downPayment",
-        label: "Increase down payment",
-        currentValue: 70_000,
-        targetValue: 87_500,
-        delta: 17_500,
-        formattedDelta: "+$17,500",
-        feasibility: "moderate",
-        unlocksGrade: "A",
-      },
-    ],
+    options: [],
+    perMetric,
     ...over,
   };
 }
@@ -114,9 +139,6 @@ describe("UpgradePathPanel", () => {
       />,
     );
     expect(container.querySelector("[data-upgrade-loading]")).toBeTruthy();
-    expect(
-      container.querySelectorAll("[data-upgrade-loading] > div").length,
-    ).toBe(3);
   });
 
   it("renders the error banner when isError", () => {
@@ -135,8 +157,24 @@ describe("UpgradePathPanel", () => {
     expect(getByText(/network down/)).toBeTruthy();
   });
 
-  it("renders 3 option cards for a typical B→A path", () => {
+  it("renders one section per failing metric with its options", () => {
     upgradePathState.data = makeResult();
+    const { container } = render(
+      <UpgradePathPanel
+        input={BASE_INPUT}
+        context={BASE_CONTEXT}
+        currentGrade="F"
+        strategy="BUY_AND_HOLD"
+        onApply={() => {}}
+      />,
+    );
+    expect(container.querySelectorAll("[data-upgrade-metric]").length).toBe(2);
+    // Each metric section has its own option list keyed by metricKey-lever-targetValue.
+    expect(container.querySelectorAll("[data-upgrade-option]").length).toBe(4);
+  });
+
+  it("shows 'all clear' state when perMetric is empty", () => {
+    upgradePathState.data = makeResult({ perMetric: [] });
     const { container } = render(
       <UpgradePathPanel
         input={BASE_INPUT}
@@ -146,56 +184,35 @@ describe("UpgradePathPanel", () => {
         onApply={() => {}}
       />,
     );
-    const cards = container.querySelectorAll("[data-upgrade-option]");
-    expect(cards.length).toBe(3);
+    expect(container.querySelector("[data-upgrade-all-clear]")).toBeTruthy();
   });
 
-  it("renders the combination hint card when result is not achievable", () => {
-    upgradePathState.data = {
-      currentGrade: "D",
-      targetGrade: "B",
-      achievable: false,
-      options: [],
-      combinationHint:
-        "Drop price by $20,000 and raise rent by $300/mo to reach a B.",
-    };
-    const { container, getByText } = render(
-      <UpgradePathPanel
-        input={BASE_INPUT}
-        context={BASE_CONTEXT}
-        currentGrade="D"
-        strategy="BUY_AND_HOLD"
-        onApply={() => {}}
-      />,
-    );
-    expect(container.querySelector("[data-upgrade-combination]")).toBeTruthy();
-    expect(getByText(/Drop price by \$20,000/)).toBeTruthy();
-    // Both deltas present → Apply combination button shows.
-    expect(
-      container.querySelector("[data-upgrade-apply-combination]"),
-    ).toBeTruthy();
-  });
-
-  it("hides the Apply combination button when the hint doesn't mention both price and rent", () => {
-    upgradePathState.data = {
-      currentGrade: "D",
-      targetGrade: "B",
-      achievable: false,
-      options: [],
-      combinationHint: "Try lowering rate and increasing down payment.",
-    };
+  it("shows unreachable message for a metric section with no options", () => {
+    upgradePathState.data = makeResult({
+      perMetric: [
+        {
+          metricKey: "capRate",
+          metricLabel: "Cap Rate",
+          currentValue: 0.03,
+          formattedValue: "3.0%",
+          currentGrade: "F",
+          targetGrade: "D",
+          options: [],
+        },
+      ],
+    });
     const { container } = render(
       <UpgradePathPanel
         input={BASE_INPUT}
         context={BASE_CONTEXT}
-        currentGrade="D"
+        currentGrade="F"
         strategy="BUY_AND_HOLD"
         onApply={() => {}}
       />,
     );
     expect(
-      container.querySelector("[data-upgrade-apply-combination]"),
-    ).toBeNull();
+      container.querySelector("[data-upgrade-metric-unreachable]"),
+    ).toBeTruthy();
   });
 
   it("applies a purchasePrice lever to input.price", () => {
@@ -205,7 +222,7 @@ describe("UpgradePathPanel", () => {
       <UpgradePathPanel
         input={BASE_INPUT}
         context={BASE_CONTEXT}
-        currentGrade="B"
+        currentGrade="F"
         strategy="BUY_AND_HOLD"
         onApply={onApply}
       />,
@@ -213,6 +230,7 @@ describe("UpgradePathPanel", () => {
     const priceCard = container.querySelector(
       '[data-upgrade-option][data-lever="purchasePrice"]',
     ) as HTMLElement;
+    expect(priceCard).toBeTruthy();
     const btn = priceCard.querySelector(
       "[data-upgrade-apply]",
     ) as HTMLButtonElement;
@@ -230,7 +248,7 @@ describe("UpgradePathPanel", () => {
       <UpgradePathPanel
         input={BASE_INPUT}
         context={BASE_CONTEXT}
-        currentGrade="B"
+        currentGrade="F"
         strategy="BUY_AND_HOLD"
         onApply={onApply}
       />,
@@ -254,7 +272,7 @@ describe("UpgradePathPanel", () => {
       <UpgradePathPanel
         input={BASE_INPUT}
         context={BASE_CONTEXT}
-        currentGrade="B"
+        currentGrade="F"
         strategy="BUY_AND_HOLD"
         onApply={onApply}
       />,
@@ -267,7 +285,6 @@ describe("UpgradePathPanel", () => {
     ) as HTMLButtonElement;
     fireEvent.click(btn);
     const next = onApply.mock.calls[0][0] as DealInput;
-    // 87,500 / 350,000 = 0.25
     expect(next.financing.downPaymentPct).toBeCloseTo(0.25, 6);
     expect(next.price).toBe(BASE_INPUT.price);
   });

@@ -32,6 +32,7 @@ import {
   formatDeltaFor,
 } from "./upgrade-path-helpers";
 import { buildCombinationHint, findSmallestMove } from "./upgrade-path-search";
+import { computePerMetricUpgrade } from "./per-metric-upgrade";
 
 export function computeUpgradePath(
   input: DealInput,
@@ -42,6 +43,15 @@ export function computeUpgradePath(
   const baseResult = gradeBuyAndHoldDeal(input, context, thresholds);
   const currentGrade = baseResult.letter;
 
+  // Per-metric breakdown runs regardless of whether overall target is reachable —
+  // surfaces "which lever fixes which number" for every failing metric.
+  const perMetric = computePerMetricUpgrade(
+    input,
+    context,
+    thresholds,
+    baseResult.metrics,
+  );
+
   // Target must be strictly better than current (higher LETTER_RANK = better).
   if (LETTER_RANK[targetGrade] <= LETTER_RANK[currentGrade]) {
     return {
@@ -49,6 +59,7 @@ export function computeUpgradePath(
       targetGrade,
       achievable: false,
       options: [],
+      perMetric,
     };
   }
 
@@ -140,6 +151,7 @@ export function computeUpgradePath(
         thresholds,
         targetGrade,
       ),
+      perMetric,
     };
   }
 
@@ -148,5 +160,6 @@ export function computeUpgradePath(
     targetGrade,
     achievable: true,
     options,
+    perMetric,
   };
 }
