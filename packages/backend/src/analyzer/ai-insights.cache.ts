@@ -23,18 +23,24 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  * a bump guarantees a fresh regeneration across every user/section without a
  * manual Redis flush.
  *
+ *   v4 (2026-05-18): reapplied the v2 prompt tightenings at user request —
+ *                    PIQ Score reframed as probability of out/under-performing
+ *                    the state average; "X percent excess return" language
+ *                    explicitly banned in piq-by-geo-block + section-prompts;
+ *                    recommendation_analysis CRITICAL geography guard
+ *                    reinstated. If the narrative breaks again, isolate which
+ *                    specific guard is responsible before reverting wholesale.
  *   v3 (2026-05-18): rolled back the v2 prompt tightenings — the long stack
  *                    of "NEVER do X" CRITICAL guards was breaking the
  *                    recommendation narrative and section lightbulb hints.
- *                    Restored the v1 prompts. PIQ language refinements will
- *                    be reintroduced more carefully later.
+ *                    Restored the v1 prompts.
  *   v2 (2026-05-18): PIQ Score reframed as probability of out/under-performing
  *                    the state average; "X percent excess return" language
  *                    explicitly banned in piq-by-geo-block + section-prompts.
  *                    Broke the narrative for some prompts — rolled back in v3.
  *   v1 (initial)
  */
-const PROMPT_REVISION = 'v3';
+const PROMPT_REVISION = 'v4';
 
 @Injectable()
 export class AiInsightsCache {

@@ -54,11 +54,12 @@ export function buildPiqByGeoBlock(byGeo: PiqByGeo | undefined): string[] {
 
   return [
     'PIQ SCORE BY GEOGRAPHY:',
-    '- What it is: the PropertyIQ Score is a 1-99 percentile rank within state that predicts a market\'s excess return vs its state benchmark over the next 1-3 years. 50 equals the state average; 70 plus is good, 80 plus is great, 90 plus is excellent. It is NOT a national rank, it is "how does this market perform relative to its own state".',
-    '- What drives it: three Redfin supply-demand signals combined as a z-score (percent of homes selling above list price, median days on market, months of supply). Walk-forward validated across 14 years (2012-2025) at metro / county / ZIP. Top-quintile (Score 80 plus) metros average roughly 3 percent excess return per year over their state.',
+    '- What it is: the PropertyIQ Score is a 1-99 percentile rank within state that signals a market\'s chance of out-performing or under-performing its state benchmark over the next 1-3 years. 50 equals the state average; above 50 means a higher chance of out-performing the state, below 50 means a higher chance of under-performing. 70 plus is good, 80 plus is great, 90 plus is excellent. It is NOT a national rank, it is "how does this market perform relative to its own state".',
+    '- What drives it: three Redfin supply-demand signals combined as a z-score (percent of homes selling above list price, median days on market, months of supply). Walk-forward validated across 14 years (2012-2025) at metro / county / ZIP.',
     '- Scores by geography for this property (only levels that resolved are listed):',
     ...lines,
     '- Lead the market verdict with the most stable level that resolved above (Metro > County > ZIP). Only call out the ZIP score explicitly if it diverges sharply (15 plus points) from the Metro or County score, because that gap is the interesting micro-market signal: "the metro is hot but this ZIP is cooler" or vice versa. Do not state the ZIP score as gospel on its own; it is a noisy signal built on a small monthly sample.',
+    '- CRITICAL language rules when citing the PIQ Score in your output: NEVER state a specific percentage of over-performance or under-performance. NEVER write phrases like "outperforms the state by X%", "X percent excess return", "X percent above the state average", or "expect X% appreciation". The PIQ Score is a probability signal, not a return forecast. Phrase it as a HIGHER or LOWER CHANCE of out-performing or under-performing the state average. Examples of correct phrasing: "a strong chance of out-performing the state over the next 1-3 years", "leans toward under-performing its state benchmark", "tilted higher than the state average but not by a wide margin".',
     '',
   ];
 }
