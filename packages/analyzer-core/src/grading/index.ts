@@ -75,6 +75,7 @@ export type {
   FixAndFlipThresholds,
 } from "./fix-and-flip/types";
 export type {
+  FlipPerMetricUpgrade,
   FlipUpgradeLever,
   FlipUpgradeOption,
   FlipUpgradePathResult,
@@ -97,6 +98,7 @@ export type {
   BrrrrThresholds,
 } from "./brrrr/types";
 export type {
+  BrrrrPerMetricUpgrade,
   BrrrrUpgradeLever,
   BrrrrUpgradeOption,
   BrrrrUpgradePathResult,

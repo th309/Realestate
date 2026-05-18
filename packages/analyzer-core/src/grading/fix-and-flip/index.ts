@@ -8,6 +8,7 @@ export {
 } from "./thresholds";
 export { computeFlipUpgradePath } from "./upgrade-path";
 export type {
+  FlipPerMetricUpgrade,
   FlipUpgradeLever,
   FlipUpgradeOption,
   FlipUpgradePathResult,

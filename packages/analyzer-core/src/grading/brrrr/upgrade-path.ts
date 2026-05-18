@@ -33,6 +33,7 @@ import {
   type BrrrrUpgradePathResult,
 } from "./upgrade-path-helpers";
 import { buildCombinationHint, findSmallestMove } from "./upgrade-path-search";
+import { computeBrrrrPerMetricUpgrade } from "./per-metric-upgrade";
 
 export function computeBrrrrUpgradePath(
   input: BrrrrGradingInput,
@@ -43,6 +44,14 @@ export function computeBrrrrUpgradePath(
   const baseResult = gradeBrrrrDeal(input, context, thresholds);
   const currentGrade = baseResult.letter;
 
+  // Per-metric breakdown — runs regardless of overall target reachability.
+  const perMetric = computeBrrrrPerMetricUpgrade(
+    input,
+    context,
+    thresholds,
+    baseResult.metrics,
+  );
+
   // Target must be strictly better than current.
   if (LETTER_RANK[targetGrade] <= LETTER_RANK[currentGrade]) {
     return {
@@ -50,6 +59,7 @@ export function computeBrrrrUpgradePath(
       targetGrade,
       achievable: false,
       options: [],
+      perMetric,
     };
   }
 
@@ -169,6 +179,7 @@ export function computeBrrrrUpgradePath(
         thresholds,
         targetGrade,
       ),
+      perMetric,
     };
   }
 
@@ -177,5 +188,6 @@ export function computeBrrrrUpgradePath(
     targetGrade,
     achievable: true,
     options,
+    perMetric,
   };
 }

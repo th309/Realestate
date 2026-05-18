@@ -11,6 +11,7 @@ export {
 } from "./thresholds";
 export { computeBrrrrUpgradePath } from "./upgrade-path";
 export type {
+  BrrrrPerMetricUpgrade,
   BrrrrUpgradeLever,
   BrrrrUpgradeOption,
   BrrrrUpgradePathResult,

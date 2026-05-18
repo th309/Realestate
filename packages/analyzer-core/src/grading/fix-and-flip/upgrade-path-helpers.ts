@@ -86,6 +86,18 @@ export interface FlipUpgradePathResult {
   achievable: boolean;
   options: FlipUpgradeOption[];
   combinationHint?: string;
+  /** Per-metric upgrade suggestions — one entry per non-A metric. */
+  perMetric?: FlipPerMetricUpgrade[];
+}
+
+export interface FlipPerMetricUpgrade {
+  metricKey: string;
+  metricLabel: string;
+  currentValue: number;
+  formattedValue: string;
+  currentGrade: Letter;
+  targetGrade: Letter;
+  options: FlipUpgradeOption[];
 }
 
 export const FEASIBILITY_RANK: Record<

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
-import type { BrrrrUpgradePathResult, Letter } from "@propertyiq/analyzer-core";
+import type {
+  BrrrrPerMetricUpgrade,
+  BrrrrUpgradeOption,
+  BrrrrUpgradePathResult,
+  Letter,
+} from "@propertyiq/analyzer-core";
 import type { UpgradePathBrrrrRequest } from "@/lib/data";
 
 // React Query state stub. Mutated per-test to swap between loading/error/data.
@@ -40,35 +45,57 @@ const BASE_INPUT: UpgradePathBrrrrRequest["input"] = {
   monthlyRent: 1_450,
 };
 
+const PRICE_OPTION: BrrrrUpgradeOption = {
+  lever: "purchasePrice",
+  label: "Negotiate purchase price down",
+  currentValue: 95_000,
+  targetValue: 88_000,
+  delta: -7_000,
+  formattedDelta: "-$7,000",
+  feasibility: "easy",
+  unlocksGrade: "B",
+};
+
+const RENT_OPTION: BrrrrUpgradeOption = {
+  lever: "monthlyRent",
+  label: "Push post-refi rent higher",
+  currentValue: 1_450,
+  targetValue: 1_550,
+  delta: 100,
+  formattedDelta: "+$100",
+  feasibility: "moderate",
+  unlocksGrade: "B",
+};
+
 function makeResult(
   over: Partial<BrrrrUpgradePathResult> = {},
 ): BrrrrUpgradePathResult {
+  const perMetric: BrrrrPerMetricUpgrade[] = [
+    {
+      metricKey: "cash_left_in_deal",
+      metricLabel: "Cash Left in Deal",
+      currentValue: 8_500,
+      formattedValue: "$8,500",
+      currentGrade: "C",
+      targetGrade: "B",
+      options: [PRICE_OPTION],
+    },
+    {
+      metricKey: "post_refi_dscr",
+      metricLabel: "Post-Refi DSCR",
+      currentValue: 1.18,
+      formattedValue: "1.18",
+      currentGrade: "C",
+      targetGrade: "B",
+      options: [RENT_OPTION],
+    },
+  ];
   return {
     currentGrade: "C" as Letter,
     targetGrade: "B" as Letter,
     achievable: true,
-    options: [
-      {
-        lever: "purchasePrice",
-        label: "Negotiate purchase price down",
-        currentValue: 95_000,
-        targetValue: 88_000,
-        delta: -7_000,
-        formattedDelta: "-$7,000",
-        feasibility: "easy",
-        unlocksGrade: "B" as Letter,
-      },
-      {
-        lever: "monthlyRent",
-        label: "Push post-refi rent higher",
-        currentValue: 1_450,
-        targetValue: 1_550,
-        delta: 100,
-        formattedDelta: "+$100",
-        feasibility: "moderate",
-        unlocksGrade: "B" as Letter,
-      },
-    ],
+    options: [],
+    perMetric,
     ...over,
   };
 }
@@ -95,7 +122,7 @@ describe("BrrrrUpgradePathPanel", () => {
     ).toBeNull();
   });
 
-  it("renders 2 option cards for a typical C→B path", () => {
+  it("renders one section per failing metric with its options", () => {
     upgradePathState.data = makeResult();
     const { container } = render(
       <BrrrrUpgradePathPanel
@@ -104,10 +131,8 @@ describe("BrrrrUpgradePathPanel", () => {
         onApplyBrrrrLever={() => {}}
       />,
     );
-    const cards = container.querySelectorAll("[data-upgrade-option]");
-    expect(cards.length).toBe(2);
-    expect(cards[0].getAttribute("data-lever")).toBe("purchasePrice");
-    expect(cards[1].getAttribute("data-lever")).toBe("monthlyRent");
+    expect(container.querySelectorAll("[data-upgrade-metric]").length).toBe(2);
+    expect(container.querySelectorAll("[data-upgrade-option]").length).toBe(2);
   });
 
   it("clicking 'Apply to inputs' fires onApplyBrrrrLever with the option", () => {
@@ -126,30 +151,8 @@ describe("BrrrrUpgradePathPanel", () => {
     expect(onApply.mock.calls[0][0].lever).toBe("purchasePrice");
   });
 
-  it("shows the combination hint when not achievable on a single lever", () => {
-    upgradePathState.data = makeResult({
-      achievable: false,
-      options: [],
-      combinationHint:
-        "Combination needed: reduce purchase by ~$5,000 AND push rent up ~$100/mo",
-    });
-    const { container, getByText } = render(
-      <BrrrrUpgradePathPanel
-        input={BASE_INPUT}
-        currentGrade={"C" as Letter}
-        onApplyBrrrrLever={() => {}}
-        onApplyBrrrrCombination={() => {}}
-      />,
-    );
-    expect(container.querySelector("[data-upgrade-combination]")).toBeTruthy();
-    expect(getByText(/reduce purchase by/)).toBeTruthy();
-    expect(
-      container.querySelector("[data-upgrade-apply-combination]"),
-    ).toBeTruthy();
-  });
-
-  it("shows the unreachable message when no path and no hint", () => {
-    upgradePathState.data = makeResult({ achievable: false, options: [] });
+  it("shows 'all clear' state when perMetric is empty", () => {
+    upgradePathState.data = makeResult({ perMetric: [] });
     const { container } = render(
       <BrrrrUpgradePathPanel
         input={BASE_INPUT}
@@ -157,7 +160,33 @@ describe("BrrrrUpgradePathPanel", () => {
         onApplyBrrrrLever={() => {}}
       />,
     );
-    expect(container.querySelector("[data-upgrade-unreachable]")).toBeTruthy();
+    expect(container.querySelector("[data-upgrade-all-clear]")).toBeTruthy();
+  });
+
+  it("shows unreachable message for a metric section with no options", () => {
+    upgradePathState.data = makeResult({
+      perMetric: [
+        {
+          metricKey: "time_to_refinance_months",
+          metricLabel: "Time to Refinance",
+          currentValue: 18,
+          formattedValue: "18 mo",
+          currentGrade: "F",
+          targetGrade: "D",
+          options: [],
+        },
+      ],
+    });
+    const { container } = render(
+      <BrrrrUpgradePathPanel
+        input={BASE_INPUT}
+        currentGrade={"F" as Letter}
+        onApplyBrrrrLever={() => {}}
+      />,
+    );
+    expect(
+      container.querySelector("[data-upgrade-metric-unreachable]"),
+    ).toBeTruthy();
   });
 
   it("renders the loading skeleton when isLoading", () => {

@@ -85,6 +85,21 @@ export interface BrrrrUpgradePathResult {
   achievable: boolean;
   options: BrrrrUpgradeOption[];
   combinationHint?: string;
+  /**
+   * Per-metric upgrade suggestions. One entry per non-A metric, listing
+   * lever moves that lift THAT metric specifically to its next tier.
+   */
+  perMetric?: BrrrrPerMetricUpgrade[];
+}
+
+export interface BrrrrPerMetricUpgrade {
+  metricKey: string;
+  metricLabel: string;
+  currentValue: number;
+  formattedValue: string;
+  currentGrade: Letter;
+  targetGrade: Letter;
+  options: BrrrrUpgradeOption[];
 }
 
 export const FEASIBILITY_RANK: Record<

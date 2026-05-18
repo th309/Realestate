@@ -34,6 +34,7 @@ import {
   type FlipUpgradePathResult,
 } from "./upgrade-path-helpers";
 import { buildCombinationHint, findSmallestMove } from "./upgrade-path-search";
+import { computeFlipPerMetricUpgrade } from "./per-metric-upgrade";
 
 export function computeFlipUpgradePath(
   input: FixAndFlipInput,
@@ -44,6 +45,14 @@ export function computeFlipUpgradePath(
   const baseResult = gradeFixAndFlipDeal(input, context, thresholds);
   const currentGrade = baseResult.letter;
 
+  // Per-metric breakdown — runs regardless of overall target reachability.
+  const perMetric = computeFlipPerMetricUpgrade(
+    input,
+    context,
+    thresholds,
+    baseResult.metrics,
+  );
+
   // Target must be strictly better than current.
   if (LETTER_RANK[targetGrade] <= LETTER_RANK[currentGrade]) {
     return {
@@ -51,6 +60,7 @@ export function computeFlipUpgradePath(
       targetGrade,
       achievable: false,
       options: [],
+      perMetric,
     };
   }
 
@@ -163,6 +173,7 @@ export function computeFlipUpgradePath(
         thresholds,
         targetGrade,
       ),
+      perMetric,
     };
   }
 
@@ -171,5 +182,6 @@ export function computeFlipUpgradePath(
     targetGrade,
     achievable: true,
     options,
+    perMetric,
   };
 }

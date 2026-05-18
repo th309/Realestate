@@ -134,7 +134,6 @@ export function GradingResultPanel({
           context={flipContext}
           currentGrade={result.letter}
           onApplyFlipLever={onApplyFlipLever}
-          onApplyFlipCombination={onApplyFlipCombination}
           overrideThresholds={flipOverrideThresholds}
         />
       )}
@@ -144,7 +143,6 @@ export function GradingResultPanel({
           context={brrrrContext}
           currentGrade={result.letter}
           onApplyBrrrrLever={onApplyBrrrrLever}
-          onApplyBrrrrCombination={onApplyBrrrrCombination}
           overrideThresholds={brrrrOverrideThresholds}
         />
       )}
