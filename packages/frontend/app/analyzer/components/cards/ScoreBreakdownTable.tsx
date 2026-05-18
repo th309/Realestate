@@ -2,6 +2,8 @@
 
 import type { Letter, MetricResult } from "@propertyiq/analyzer-core";
 import { getGradeColor } from "../../lib/grade-colors";
+import { getMetricHelp } from "../../lib/metric-help";
+import { MetricHelpButton } from "./MetricHelpButton";
 
 interface ScoreBreakdownTableProps {
   metrics: MetricResult[];
@@ -24,37 +26,6 @@ function GradePill({ grade }: { grade: Letter }) {
     >
       {grade}
     </span>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg
-      aria-hidden
-      width="12"
-      height="12"
-      viewBox="0 0 16 16"
-      className="inline-block ml-1 text-on-surface-variant/60"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="7"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-      />
-      <text
-        x="8"
-        y="11.5"
-        textAnchor="middle"
-        fontSize="9"
-        fontWeight="700"
-        fill="currentColor"
-      >
-        ?
-      </text>
-    </svg>
   );
 }
 
@@ -126,7 +97,10 @@ export function ScoreBreakdownTable({
                 <td className="px-4 py-3 text-on-surface">
                   <span className="inline-flex items-center">
                     {m.label}
-                    <InfoIcon />
+                    <MetricHelpButton
+                      help={getMetricHelp(m.key)}
+                      metricLabel={m.label}
+                    />
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-on-surface font-mono">
