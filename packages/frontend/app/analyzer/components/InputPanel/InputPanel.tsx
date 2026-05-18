@@ -1,6 +1,12 @@
 "use client";
 import { useState } from "react";
-import type { DealInput, PropertyClass } from "@propertyiq/analyzer-core";
+import type {
+  BrrrrResult,
+  DealInput,
+  FlipResult,
+  PropertyClass,
+  RentalResult,
+} from "@propertyiq/analyzer-core";
 import { NumField } from "./NumField";
 import { SliderField } from "./SliderField";
 import { RentCastBadge, type RentCastState } from "./RentCastBadge";
@@ -9,6 +15,8 @@ import { AdvancedAssumptions } from "./AdvancedAssumptions";
 import { StrategyControls, type AnalysisMode } from "./StrategyControls";
 import { StrategyGroup } from "./StrategyGroup";
 import { CommercialUnderwritingGroup } from "./CommercialUnderwritingGroup";
+import { MetricMathPanel } from "./MetricMathPanel";
+import { PropertyTypeToggle } from "./PropertyTypeToggle";
 import {
   nudgeForPrice,
   nudgeForRent,
@@ -53,6 +61,11 @@ interface InputPanelProps {
   onUnitCountChange?: (n: number | null) => void;
   /** Derived class — when "commercial_mf", commercial input group is shown and Flip/BRRRR strategies are hidden. */
   propertyClass?: PropertyClass;
+  /** Computed rental/flip/BRRRR results — drives the math-derivation panel
+   *  that sits below the inputs and shows the underwriting waterfall. */
+  rental?: RentalResult | null;
+  flip?: FlipResult | null;
+  brrrr?: BrrrrResult | null;
 }
 
 const fmtUsd = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -82,6 +95,9 @@ export function InputPanel({
   unitCount: unitCountProp,
   onUnitCountChange,
   propertyClass = "sfh",
+  rental,
+  flip,
+  brrrr,
 }: InputPanelProps) {
   // Fall back to uncontrolled local state when parent doesn't supply propertyType
   // (keeps existing tests working). When parent passes the prop, that wins.
@@ -123,53 +139,13 @@ export function InputPanel({
       data-input-panel-sticky
       className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto"
     >
-      <div data-property-type-toggle>
-        <label className="text-xs uppercase font-semibold text-on-surface-variant block mb-1">
-          Property Type
-        </label>
-        <div className="inline-flex rounded-full overflow-hidden border border-outline-variant">
-          {(["sfh", "mf"] as const).map((t) => {
-            const isActive = t === propertyType;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setPropertyType(t)}
-                aria-pressed={isActive}
-                className="px-4 py-1 text-xs font-semibold transition-colors"
-                style={{
-                  background: isActive ? "var(--md-primary)" : "transparent",
-                  color: isActive
-                    ? "var(--md-on-primary)"
-                    : "var(--md-on-surface-variant)",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {t === "sfh" ? "SFH" : "MF"}
-              </button>
-            );
-          })}
-        </div>
-        {propertyType === "mf" && (
-          <>
-            <div className="mt-3">
-              <NumField
-                label="# of units"
-                value={unitCount}
-                onChange={setUnitCount}
-                placeholder="2"
-              />
-            </div>
-            <div className="mt-2 text-[10px] text-on-surface-variant leading-snug">
-              {propertyClass === "commercial_mf"
-                ? "5+ units → commercial underwriting (DSCR-sized loan, cap-rate valuation, balloon term)."
-                : propertyClass === "small_mf"
-                  ? "2–4 units → residential underwriting (HUD/FHA conventions, same loan products as SFH)."
-                  : "Enter unit count to determine underwriting class."}
-            </div>
-          </>
-        )}
-      </div>
+      <PropertyTypeToggle
+        propertyType={propertyType}
+        setPropertyType={setPropertyType}
+        unitCount={unitCount}
+        setUnitCount={setUnitCount}
+        propertyClass={propertyClass}
+      />
 
       {onAnalysisModeChange && onStrategyChange && (
         <StrategyControls
@@ -378,6 +354,17 @@ export function InputPanel({
           )}
         </span>
       </div>
+
+      <MetricMathPanel
+        input={input}
+        rental={rental}
+        flip={flip}
+        brrrr={brrrr}
+        activeStrategy={activeStrategy}
+        arvLocal={arv ?? 0}
+        rehabBudget={rehabBudget ?? 0}
+        assumptions={assumptions}
+      />
 
       {assumptions && onAssumptionChange && (
         <AdvancedAssumptions

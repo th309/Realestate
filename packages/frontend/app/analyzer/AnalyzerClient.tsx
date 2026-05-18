@@ -220,6 +220,9 @@ export default function AnalyzerClient({
       unitCount={unitCount}
       onUnitCountChange={setUnitCount}
       propertyClass={propertyClass}
+      rental={rental}
+      flip={flip}
+      brrrr={brrrr}
     />
   );
 
