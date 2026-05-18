@@ -7,18 +7,12 @@ import { ModeProvider } from "./lib/mode-context";
 import { ModeToolbar } from "./components/chrome/ModeToolbar";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { InputPanel } from "./components/InputPanel/InputPanel";
-import { ProjectionSection } from "./components/sections/ProjectionSection";
-import { ExpenseSection } from "./components/sections/ExpenseSection";
-import { SensitivitySection } from "./components/sections/SensitivitySection";
-import { CompsSection } from "./components/sections/CompsSection";
-import { MarketContextSection } from "./components/sections/MarketContextSection";
-import { AfterTaxSection } from "./components/sections/AfterTaxSection";
-import { NotesSection } from "./components/sections/NotesSection";
 import { EditInputsFab } from "./components/chrome/EditInputsFab";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import { deriveVerdict } from "./lib/format-helpers";
 import { GradingResultPanel } from "./components/cards/GradingResultPanel";
+import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
@@ -28,6 +22,7 @@ import { RentcastBanners } from "./components/RentcastBanners";
 import { computeBestPlay } from "./lib/strategy-best-play";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { deriveCashflowSummary } from "./lib/cashflow-summary";
+import { useSectionAiInsights } from "./lib/use-section-ai-insights";
 import { buildCompsViewProps } from "./lib/comps-view-props";
 import type { Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
@@ -155,6 +150,16 @@ export default function AnalyzerClient({
     setAssumption,
     marketZip: marketContext?.geo_id ?? undefined,
     marketPiqScore: marketContext?.piq_score?.value,
+  });
+
+  const sectionAi = useSectionAiInsights({
+    enabled: isPro && hasGradableInput,
+    input: analyzer.input,
+    rental,
+    flip,
+    brrrr,
+    rentcast: rentcastData,
+    piq: marketContext,
   });
 
   const compsView = buildCompsViewProps(
@@ -323,53 +328,32 @@ export default function AnalyzerClient({
                 address={address}
               />
 
-              <ProjectionSection
-                input={analyzer.input}
-                projection={projection}
-                afterTax={afterTax}
-              />
-              <ExpenseSection
-                grossRentMonthly={grossRentMonthly}
-                vacancyMonthly={vacancyMonthly}
-                opexMonthly={opexAnnual / 12}
-                debtServiceMonthly={debtServiceMonthly}
-              />
-              <SensitivitySection
+              <AnalyzerSections
                 input={analyzer.input}
                 rental={rental}
                 flip={flip}
                 brrrr={brrrr}
-                arv={arvLocal}
+                projection={projection}
+                afterTax={afterTax}
+                arvLocal={arvLocal}
                 rehabBudget={rehabBudget}
                 activeStrategy={activeStrategy}
-                salesComps={salesComps}
-              />
-              <CompsSection
+                marginalTaxRate={assumptions.marginalTaxRate}
+                grossRentMonthly={grossRentMonthly}
+                vacancyMonthly={vacancyMonthly}
+                opexAnnual={opexAnnual}
+                debtServiceMonthly={debtServiceMonthly}
                 subjectLat={subjectLat}
                 subjectLon={subjectLon}
-                subjectAddress={displayAddress}
+                displayAddress={displayAddress}
                 pricePerSqftValues={pricePerSqftValues}
                 yourPricePerSqft={yourPricePerSqft}
                 salesComps={salesComps}
                 rentalComps={rentalComps}
                 mapboxToken={mapboxToken}
+                marketContext={marketContext}
+                sectionAi={sectionAi}
               />
-              <MarketContextSection
-                chain={marketContext?.chain ?? null}
-                initialGeoLevel={marketContext?.geo_level ?? null}
-                fallbackPiq={marketContext?.piq_score?.value ?? null}
-                fallbackHomeValue={marketContext?.home_value?.value ?? null}
-                fallbackRentIndex={marketContext?.rent_index?.value ?? null}
-                fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
-                fallbackNetMigration={
-                  marketContext?.net_migration?.value ?? null
-                }
-              />
-              <AfterTaxSection
-                afterTax={afterTax}
-                marginalTaxRate={assumptions.marginalTaxRate}
-              />
-              <NotesSection />
             </div>
           </div>
         </div>

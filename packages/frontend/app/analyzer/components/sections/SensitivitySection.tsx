@@ -9,7 +9,6 @@ import type {
 } from "@propertyiq/analyzer-core";
 import { piq } from "../primitives/piqTokens";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { DirectionalBars } from "../primitives/DirectionalBars";
 import type { BarItem } from "../primitives/DirectionalBars";
 import { MetricBlock } from "../primitives/MetricBlock";
@@ -39,6 +38,7 @@ interface SensitivitySectionProps {
   salesComps: CompForConfidence[];
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -53,6 +53,7 @@ export function SensitivitySection({
   salesComps,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: SensitivitySectionProps) {
   const metrics = STRATEGY_METRICS[activeStrategy];
@@ -117,13 +118,10 @@ export function SensitivitySection({
       id="sensitivity"
       title="Sensitivity & Confidence"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       {/* Metric chip selector */}
       <div className="flex flex-wrap items-center gap-2">

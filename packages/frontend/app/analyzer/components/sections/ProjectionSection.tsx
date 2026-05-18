@@ -5,7 +5,6 @@ import type {
   AfterTaxResult,
 } from "@propertyiq/analyzer-core";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { SignatureChart } from "../primitives/SignatureChart";
 import type { DataPoint, SeriesSpec } from "../primitives/SignatureChart";
 import { MetricsExpander } from "../MetricsExpander";
@@ -18,6 +17,7 @@ interface ProjectionSectionProps {
   afterTax?: AfterTaxResult;
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -146,6 +146,7 @@ export function ProjectionSection({
   afterTax,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: ProjectionSectionProps) {
   const wealthData = buildWealthDataPoints(input, projection);
@@ -156,13 +157,10 @@ export function ProjectionSection({
       id="projection"
       title="30-Year Wealth Projection"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       <SignatureChart
         data={wealthData}

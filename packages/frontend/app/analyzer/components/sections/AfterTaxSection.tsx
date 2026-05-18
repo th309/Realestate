@@ -1,7 +1,6 @@
 "use client";
 import type { AfterTaxResult } from "@propertyiq/analyzer-core";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { SignatureChart } from "../primitives/SignatureChart";
 import type { DataPoint } from "../primitives/SignatureChart";
 
@@ -11,6 +10,7 @@ interface AfterTaxSectionProps {
   marginalTaxRate?: number;
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -50,6 +50,7 @@ export function AfterTaxSection({
   marginalTaxRate = 0.24,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: AfterTaxSectionProps) {
   const data = buildAfterTaxData(afterTax, marginalTaxRate);
@@ -60,13 +61,10 @@ export function AfterTaxSection({
       id="after_tax"
       title="After-Tax Cashflow"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       <SignatureChart
         data={data}

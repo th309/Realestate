@@ -1,6 +1,5 @@
 "use client";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { DirectionalBars } from "../primitives/DirectionalBars";
 import type { BarItem } from "../primitives/DirectionalBars";
 import { MetricBlock } from "../primitives/MetricBlock";
@@ -12,6 +11,7 @@ interface ExpenseSectionProps {
   debtServiceMonthly: number;
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -22,6 +22,7 @@ export function ExpenseSection({
   debtServiceMonthly,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: ExpenseSectionProps) {
   const monthlyCashFlow =
@@ -40,13 +41,10 @@ export function ExpenseSection({
       id="expense_waterfall"
       title="Where the Rent Goes"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       <MetricBlock
         label="Monthly cash flow"

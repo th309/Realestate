@@ -35,14 +35,32 @@ describe("SectionWrapper", () => {
     expect(getByText("child")).toBeTruthy();
   });
 
-  it("renders aiAnnotation slot when provided", () => {
+  it("renders the AI insight row when aiText is non-empty", () => {
     const { container } = render(
-      <SectionWrapper id="x" title="X" aiAnnotation={<span>AI text</span>}>
+      <SectionWrapper id="x" title="X" aiText="AI text">
         child
       </SectionWrapper>,
     );
-    expect(container.querySelector("[data-section-ai]")?.textContent).toBe(
+    expect(container.querySelector("[data-section-ai]")?.textContent).toContain(
       "AI text",
     );
+  });
+
+  it("hides the AI insight row when aiText is null/empty", () => {
+    const { container } = render(
+      <SectionWrapper id="x" title="X" aiText={null}>
+        child
+      </SectionWrapper>,
+    );
+    expect(container.querySelector("[data-section-ai]")).toBeNull();
+  });
+
+  it("shows the insight row while aiIsLoading is true", () => {
+    const { container } = render(
+      <SectionWrapper id="x" title="X" aiText={null} aiIsLoading>
+        child
+      </SectionWrapper>,
+    );
+    expect(container.querySelector("[data-section-ai]")).toBeTruthy();
   });
 });

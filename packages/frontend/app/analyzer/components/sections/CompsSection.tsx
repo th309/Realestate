@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Map, Marker, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { CompsDistribution } from "../primitives/CompsDistribution";
 import type { Comp } from "../primitives/CompsDistribution";
 import { CompsTable, type CompRow } from "./CompsTable";
@@ -37,6 +36,7 @@ interface CompsSectionProps {
   mapboxToken?: string;
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -129,6 +129,7 @@ export function CompsSection({
   mapboxToken,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: CompsSectionProps) {
   const showMap =
@@ -166,13 +167,10 @@ export function CompsSection({
       id="comps"
       title="Comparable Sales & Rentals"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div data-comps-distribution>

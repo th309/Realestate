@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { SectionWrapper } from "./SectionWrapper";
-import { AIAnnotation } from "../ai/AIAnnotation";
 import { MetricBlock } from "../primitives/MetricBlock";
 import { useMarketContext } from "@/lib/data";
 import type { MarketContextChain } from "@/lib/data/fetchers/analyzer";
@@ -22,6 +21,7 @@ interface MarketContextSectionProps {
   fallbackNetMigration?: number | null;
   aiText?: string | null;
   aiIsStale?: boolean;
+  aiIsLoading?: boolean;
   onRefreshAi?: () => void;
 }
 
@@ -83,6 +83,7 @@ export function MarketContextSection({
   fallbackNetMigration,
   aiText,
   aiIsStale,
+  aiIsLoading,
   onRefreshAi,
 }: MarketContextSectionProps) {
   const availablePills = useMemo<PillLevel[]>(
@@ -125,13 +126,10 @@ export function MarketContextSection({
       id="market_context"
       title="Market Context"
       onRefresh={onRefreshAi}
-      aiAnnotation={
-        <AIAnnotation
-          text={aiText}
-          isStale={aiIsStale}
-          onRefresh={onRefreshAi}
-        />
-      }
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
     >
       {availablePills.length > 0 && (
         <GeoPills

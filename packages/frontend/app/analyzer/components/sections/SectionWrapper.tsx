@@ -1,13 +1,24 @@
 "use client";
 import { useState, ReactNode } from "react";
 import { piq } from "../primitives/piqTokens";
+import { AIAnnotation } from "../ai/AIAnnotation";
 
 interface SectionWrapperProps {
   id: string;
   title: string;
   defaultOpen?: boolean;
   onRefresh?: () => void;
-  aiAnnotation?: ReactNode;
+  /**
+   * AI insight text for the section. When null/undefined/empty the lightbulb
+   * row is hidden entirely. Previously the wrapper rendered the lightbulb
+   * whenever an `aiAnnotation` JSX element was passed — but the inner
+   * component returns null when text is empty, leaving an empty lightbulb
+   * shell. Taking the text directly fixes that.
+   */
+  aiText?: string | null;
+  aiIsStale?: boolean;
+  aiIsLoading?: boolean;
+  onRefreshAi?: () => void;
   children: ReactNode;
 }
 
@@ -36,10 +47,14 @@ export function SectionWrapper({
   title,
   defaultOpen = true,
   onRefresh,
-  aiAnnotation,
+  aiText,
+  aiIsStale = false,
+  aiIsLoading = false,
+  onRefreshAi,
   children,
 }: SectionWrapperProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const hasInsight = aiIsLoading || Boolean(aiText && aiText.trim().length > 0);
   return (
     <section
       data-section={id}
@@ -76,7 +91,7 @@ export function SectionWrapper({
       {open && (
         <div className="px-4 pb-4 space-y-3">
           {children}
-          {aiAnnotation && (
+          {hasInsight && (
             <div
               data-section-ai
               className="flex gap-2 items-start"
@@ -95,7 +110,14 @@ export function SectionWrapper({
               >
                 <LightbulbIcon />
               </span>
-              <div className="flex-1">{aiAnnotation}</div>
+              <div className="flex-1">
+                <AIAnnotation
+                  text={aiText}
+                  isStale={aiIsStale}
+                  isLoading={aiIsLoading}
+                  onRefresh={onRefreshAi}
+                />
+              </div>
             </div>
           )}
         </div>
