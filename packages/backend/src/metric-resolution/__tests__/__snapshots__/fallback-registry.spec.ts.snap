@@ -1,0 +1,1077 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] = `
+{
+  "affordable_home_price": {
+    "metricId": "affordable_home_price",
+    "sources": [
+      {
+        "column": "affordable_home_price",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "appreciation_yoy": {
+    "metricId": "appreciation_yoy",
+    "sources": [
+      {
+        "column": "median_listing_price_yy",
+        "source": "realtor",
+        "transform": [Function],
+      },
+      {
+        "column": "median_sale_price_yoy",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "cap_rate": {
+    "metricId": "cap_rate",
+    "sources": [
+      {
+        "column": "cap_rate",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "cost_of_living": {
+    "metricId": "cost_of_living",
+    "sources": [
+      {
+        "column": "rpp_all_items",
+        "source": "economic",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "days_on_market": {
+    "metricId": "days_on_market",
+    "sources": [
+      {
+        "column": "median_days_on_market",
+        "source": "realtor",
+      },
+      {
+        "column": "median_dom",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "demand_score": {
+    "metricId": "demand_score",
+    "sources": [
+      {
+        "column": "demand_score",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "dom": {
+    "metricId": "dom",
+    "sources": [
+      {
+        "column": "median_days_on_market",
+        "source": "realtor",
+      },
+      {
+        "column": "median_dom",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "employment_construction": {
+    "metricId": "employment_construction",
+    "sources": [
+      {
+        "column": "ces_employment_construction",
+        "source": "ces",
+      },
+      {
+        "column": "employment_construction",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_education_health_services": {
+    "metricId": "employment_education_health_services",
+    "sources": [
+      {
+        "column": "ces_employment_education_health_services",
+        "source": "ces",
+      },
+      {
+        "column": "employment_education_health_services",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_financial_activities": {
+    "metricId": "employment_financial_activities",
+    "sources": [
+      {
+        "column": "ces_employment_financial_activities",
+        "source": "ces",
+      },
+      {
+        "column": "employment_financial_activities",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_information": {
+    "metricId": "employment_information",
+    "sources": [
+      {
+        "column": "ces_employment_information",
+        "source": "ces",
+      },
+      {
+        "column": "employment_information",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_leisure_hospitality": {
+    "metricId": "employment_leisure_hospitality",
+    "sources": [
+      {
+        "column": "ces_employment_leisure_hospitality",
+        "source": "ces",
+      },
+      {
+        "column": "employment_leisure_hospitality",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_manufacturing": {
+    "metricId": "employment_manufacturing",
+    "sources": [
+      {
+        "column": "ces_employment_manufacturing",
+        "source": "ces",
+      },
+      {
+        "column": "employment_manufacturing",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_natural_resources_mining": {
+    "metricId": "employment_natural_resources_mining",
+    "sources": [
+      {
+        "column": "ces_employment_natural_resources_mining",
+        "source": "ces",
+      },
+      {
+        "column": "employment_natural_resources_mining",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_other_services": {
+    "metricId": "employment_other_services",
+    "sources": [
+      {
+        "column": "ces_employment_other_services",
+        "source": "ces",
+      },
+      {
+        "column": "employment_other_services",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_professional_business_services": {
+    "metricId": "employment_professional_business_services",
+    "sources": [
+      {
+        "column": "ces_employment_professional_business_services",
+        "source": "ces",
+      },
+      {
+        "column": "employment_professional_business_services",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_public_administration": {
+    "metricId": "employment_public_administration",
+    "sources": [
+      {
+        "column": "ces_employment_public_administration",
+        "source": "ces",
+      },
+      {
+        "column": "employment_public_administration",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "employment_trade_transport_utilities": {
+    "metricId": "employment_trade_transport_utilities",
+    "sources": [
+      {
+        "column": "ces_employment_trade_transport_utilities",
+        "source": "ces",
+      },
+      {
+        "column": "employment_trade_transport_utilities",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "for_sale_inventory": {
+    "metricId": "for_sale_inventory",
+    "sources": [
+      {
+        "column": "active_listing_count",
+        "source": "realtor",
+      },
+      {
+        "column": "inventory",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "gdp_growth": {
+    "metricId": "gdp_growth",
+    "sources": [
+      {
+        "column": "gdp_yoy",
+        "source": "economic",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "grm": {
+    "metricId": "grm",
+    "sources": [
+      {
+        "column": "grm",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "gross_yield": {
+    "metricId": "gross_yield",
+    "sources": [
+      {
+        "column": "gross_yield",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_price_forecast": {
+    "metricId": "home_price_forecast",
+    "sources": [
+      {
+        "column": "zhvf_12m",
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_sales": {
+    "metricId": "home_sales",
+    "sources": [
+      {
+        "column": "sales_count",
+        "source": "zillow",
+      },
+      {
+        "column": "homes_sold",
+        "source": "redfin",
+      },
+      {
+        "column": "pending_listing_count",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_sales_yoy": {
+    "metricId": "home_sales_yoy",
+    "sources": [
+      {
+        "column": "pending_listing_count_yy",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_value": {
+    "metricId": "home_value",
+    "sources": [
+      {
+        "column": "zhvi",
+        "source": "zillow",
+      },
+      {
+        "column": "median_sale_price",
+        "source": "redfin",
+      },
+      {
+        "column": "median_listing_price",
+        "source": "realtor",
+      },
+      {
+        "column": "median_home_value",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_value_5yr": {
+    "metricId": "home_value_5yr",
+    "sources": [
+      {
+        "column": "home_value_5yr_cagr",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_value_mom": {
+    "metricId": "home_value_mom",
+    "sources": [
+      {
+        "column": "median_listing_price_mm",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "home_value_yoy": {
+    "metricId": "home_value_yoy",
+    "sources": [
+      {
+        "column": "median_listing_price_yy",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "homeownership_rate": {
+    "metricId": "homeownership_rate",
+    "sources": [
+      {
+        "column": "homeownership_rate",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "hotness_score": {
+    "metricId": "hotness_score",
+    "sources": [
+      {
+        "column": "hotness_score",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "income_growth": {
+    "metricId": "income_growth",
+    "sources": [
+      {
+        "column": "income_yoy",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "income_to_buy": {
+    "metricId": "income_to_buy",
+    "sources": [
+      {
+        "column": "income_to_buy",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "income_to_rent": {
+    "metricId": "income_to_rent",
+    "sources": [
+      {
+        "column": "renter_income",
+        "geoLevels": [
+          "metro",
+        ],
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "inventory": {
+    "metricId": "inventory",
+    "sources": [
+      {
+        "column": "active_listing_count",
+        "source": "realtor",
+      },
+      {
+        "column": "inventory",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "inventory_surplus": {
+    "metricId": "inventory_surplus",
+    "sources": [
+      {
+        "column": "inventory_surplus_pct",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "inventory_yoy": {
+    "metricId": "inventory_yoy",
+    "sources": [
+      {
+        "column": "active_listing_count_yy",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_in_avg_agi": {
+    "metricId": "irs_migration_in_avg_agi",
+    "sources": [
+      {
+        "column": "in_avg_agi",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_in_exemptions": {
+    "metricId": "irs_migration_in_exemptions",
+    "sources": [
+      {
+        "column": "in_exemptions",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_in_returns": {
+    "metricId": "irs_migration_in_returns",
+    "sources": [
+      {
+        "column": "in_returns",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_net_returns": {
+    "metricId": "irs_migration_net_returns",
+    "sources": [
+      {
+        "column": "net_returns",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_out_avg_agi": {
+    "metricId": "irs_migration_out_avg_agi",
+    "sources": [
+      {
+        "column": "out_avg_agi",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_out_exemptions": {
+    "metricId": "irs_migration_out_exemptions",
+    "sources": [
+      {
+        "column": "out_exemptions",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "irs_migration_out_returns": {
+    "metricId": "irs_migration_out_returns",
+    "sources": [
+      {
+        "column": "out_returns",
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "job_growth": {
+    "metricId": "job_growth",
+    "sources": [
+      {
+        "column": "employment_yoy",
+        "source": "economic",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "listing_price": {
+    "metricId": "listing_price",
+    "sources": [
+      {
+        "column": "median_listing_price",
+        "source": "realtor",
+      },
+      {
+        "column": "median_list_price",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "market_heat": {
+    "metricId": "market_heat",
+    "sources": [
+      {
+        "column": "hotness_score",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "median_age": {
+    "metricId": "median_age",
+    "sources": [
+      {
+        "column": "median_age",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "median_income": {
+    "metricId": "median_income",
+    "sources": [
+      {
+        "column": "median_household_income",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "mf_permits": {
+    "metricId": "mf_permits",
+    "sources": [
+      {
+        "column": "large_multi_units",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "net_migration": {
+    "metricId": "net_migration",
+    "sources": [
+      {
+        "column": "net_inflow",
+        "geoLevels": [
+          "metro",
+        ],
+        "source": "redfin_migration",
+      },
+      {
+        "column": "net_returns",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "irs",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "new_construction_ppsf": {
+    "metricId": "new_construction_ppsf",
+    "sources": [
+      {
+        "column": "new_con_median_price_per_sqft",
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "new_construction_price": {
+    "metricId": "new_construction_price",
+    "sources": [
+      {
+        "column": "new_con_median_price",
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "new_construction_sales": {
+    "metricId": "new_construction_sales",
+    "sources": [
+      {
+        "column": "new_con_sales",
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "new_listings": {
+    "metricId": "new_listings",
+    "sources": [
+      {
+        "column": "new_listing_count",
+        "source": "realtor",
+      },
+      {
+        "column": "new_listings",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "new_listings_yoy": {
+    "metricId": "new_listings_yoy",
+    "sources": [
+      {
+        "column": "new_listing_count_yy",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "overvalued_pct": {
+    "metricId": "overvalued_pct",
+    "sources": [
+      {
+        "column": "overvalued_pct",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "pending_listings": {
+    "metricId": "pending_listings",
+    "sources": [
+      {
+        "column": "pending_listing_count",
+        "source": "realtor",
+      },
+      {
+        "column": "pending_sales",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "pending_ratio": {
+    "metricId": "pending_ratio",
+    "sources": [
+      {
+        "column": "pending_ratio",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "permits_growth": {
+    "metricId": "permits_growth",
+    "sources": [
+      {
+        "column": "total_units_yoy",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "permits_yoy": {
+    "metricId": "permits_yoy",
+    "sources": [
+      {
+        "column": "total_units_yoy",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "population": {
+    "metricId": "population",
+    "sources": [
+      {
+        "column": "total_population",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "population_growth": {
+    "metricId": "population_growth",
+    "sources": [
+      {
+        "column": "population_yoy",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "price_cut_pct": {
+    "metricId": "price_cut_pct",
+    "sources": [
+      {
+        "column": "price_reduced_share",
+        "source": "realtor",
+        "transform": [Function],
+      },
+      {
+        "column": "price_drops",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "price_increase_pct": {
+    "metricId": "price_increase_pct",
+    "sources": [
+      {
+        "column": "price_increased_share",
+        "source": "realtor",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "price_per_sqft": {
+    "metricId": "price_per_sqft",
+    "sources": [
+      {
+        "column": "median_listing_price_per_square_foot",
+        "source": "realtor",
+      },
+      {
+        "column": "median_ppsf",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "price_to_income": {
+    "metricId": "price_to_income",
+    "sources": [
+      {
+        "column": "price_to_income",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "price_to_rent": {
+    "metricId": "price_to_rent",
+    "sources": [
+      {
+        "column": "price_rent_ratio",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "qcew_avg_weekly_wage": {
+    "metricId": "qcew_avg_weekly_wage",
+    "sources": [
+      {
+        "column": "qcew_avg_weekly_wage",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "qcew_total_establishments": {
+    "metricId": "qcew_total_establishments",
+    "sources": [
+      {
+        "column": "qcew_total_establishments",
+        "source": "qcew",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "redfin_migration_inflow_share": {
+    "metricId": "redfin_migration_inflow_share",
+    "sources": [
+      {
+        "column": "inflow_share_pct",
+        "source": "redfin_migration",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "redfin_migration_net_inflow": {
+    "metricId": "redfin_migration_net_inflow",
+    "sources": [
+      {
+        "column": "net_inflow",
+        "source": "redfin_migration",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "rent_for_houses": {
+    "metricId": "rent_for_houses",
+    "sources": [
+      {
+        "column": "zordi_sfr",
+        "source": "zillow",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "rent_growth_yoy": {
+    "metricId": "rent_growth_yoy",
+    "sources": [
+      {
+        "column": "zori_yoy",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "rent_index": {
+    "metricId": "rent_index",
+    "sources": [
+      {
+        "column": "zori",
+        "source": "zillow",
+      },
+      {
+        "column": "fmr_2br",
+        "geoLevels": [
+          "zip",
+        ],
+        "source": "hud_fmr",
+      },
+      {
+        "column": "median_gross_rent",
+        "source": "census",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "rent_to_price_ratio": {
+    "metricId": "rent_to_price_ratio",
+    "sources": [
+      {
+        "column": "rent_to_price_ratio",
+        "source": "calculated",
+        "transform": [Function],
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "sale_to_list": {
+    "metricId": "sale_to_list",
+    "sources": [
+      {
+        "column": "sale_to_list",
+        "source": "zillow",
+        "transform": [Function],
+      },
+      {
+        "column": "avg_sale_to_list",
+        "source": "redfin",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "sf_permits": {
+    "metricId": "sf_permits",
+    "sources": [
+      {
+        "column": "sf_units",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "supply_score": {
+    "metricId": "supply_score",
+    "sources": [
+      {
+        "column": "supply_score",
+        "source": "realtor",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "total_permits": {
+    "metricId": "total_permits",
+    "sources": [
+      {
+        "column": "total_units",
+        "geoLevels": [
+          "county",
+        ],
+        "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "unemployment_rate": {
+    "metricId": "unemployment_rate",
+    "sources": [
+      {
+        "column": "unemployment_rate",
+        "source": "economic",
+      },
+    ],
+    "supportsGeoInheritance": true,
+  },
+  "years_to_save": {
+    "metricId": "years_to_save",
+    "sources": [
+      {
+        "column": "years_to_save",
+        "geoLevels": [
+          "metro",
+        ],
+        "source": "zillow",
+      },
+      {
+        "column": "years_to_save",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+}
+`;
+
+exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set 1`] = `
+[
+  "affordable_home_price",
+  "appreciation_yoy",
+  "cap_rate",
+  "cost_of_living",
+  "days_on_market",
+  "demand_score",
+  "dom",
+  "employment_construction",
+  "employment_education_health_services",
+  "employment_financial_activities",
+  "employment_information",
+  "employment_leisure_hospitality",
+  "employment_manufacturing",
+  "employment_natural_resources_mining",
+  "employment_other_services",
+  "employment_professional_business_services",
+  "employment_public_administration",
+  "employment_trade_transport_utilities",
+  "for_sale_inventory",
+  "gdp_growth",
+  "grm",
+  "gross_yield",
+  "home_price_forecast",
+  "home_sales",
+  "home_sales_yoy",
+  "home_value",
+  "home_value_5yr",
+  "home_value_mom",
+  "home_value_yoy",
+  "homeownership_rate",
+  "hotness_score",
+  "income_growth",
+  "income_to_buy",
+  "income_to_rent",
+  "inventory",
+  "inventory_surplus",
+  "inventory_yoy",
+  "irs_migration_in_avg_agi",
+  "irs_migration_in_exemptions",
+  "irs_migration_in_returns",
+  "irs_migration_net_returns",
+  "irs_migration_out_avg_agi",
+  "irs_migration_out_exemptions",
+  "irs_migration_out_returns",
+  "job_growth",
+  "listing_price",
+  "market_heat",
+  "median_age",
+  "median_income",
+  "mf_permits",
+  "net_migration",
+  "new_construction_ppsf",
+  "new_construction_price",
+  "new_construction_sales",
+  "new_listings",
+  "new_listings_yoy",
+  "overvalued_pct",
+  "pending_listings",
+  "pending_ratio",
+  "permits_growth",
+  "permits_yoy",
+  "population",
+  "population_growth",
+  "price_cut_pct",
+  "price_increase_pct",
+  "price_per_sqft",
+  "price_to_income",
+  "price_to_rent",
+  "qcew_avg_weekly_wage",
+  "qcew_total_establishments",
+  "redfin_migration_inflow_share",
+  "redfin_migration_net_inflow",
+  "rent_for_houses",
+  "rent_growth_yoy",
+  "rent_index",
+  "rent_to_price_ratio",
+  "sale_to_list",
+  "sf_permits",
+  "supply_score",
+  "total_permits",
+  "unemployment_rate",
+  "years_to_save",
+]
+`;
