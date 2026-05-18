@@ -1,5 +1,11 @@
 export { gradeFixAndFlipDeal } from "./grade";
-export { FIX_AND_FLIP_DEFAULTS } from "./thresholds";
+export {
+  FIX_AND_FLIP_AGGRESSIVE,
+  FIX_AND_FLIP_BALANCED,
+  FIX_AND_FLIP_CONSERVATIVE,
+  FIX_AND_FLIP_DEFAULTS,
+  FIX_AND_FLIP_PRESETS,
+} from "./thresholds";
 export { computeFlipUpgradePath } from "./upgrade-path";
 export type {
   FlipUpgradeLever,

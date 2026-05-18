@@ -60,7 +60,13 @@ export type {
 
 // Fix-and-flip strategy
 export { gradeFixAndFlipDeal } from "./fix-and-flip/grade";
-export { FIX_AND_FLIP_DEFAULTS } from "./fix-and-flip/thresholds";
+export {
+  FIX_AND_FLIP_AGGRESSIVE,
+  FIX_AND_FLIP_BALANCED,
+  FIX_AND_FLIP_CONSERVATIVE,
+  FIX_AND_FLIP_DEFAULTS,
+  FIX_AND_FLIP_PRESETS,
+} from "./fix-and-flip/thresholds";
 export { computeFlipUpgradePath } from "./fix-and-flip/upgrade-path";
 export type {
   FixAndFlipContext,
@@ -75,7 +81,13 @@ export type {
 
 // BRRRR strategy
 export { gradeBrrrrDeal } from "./brrrr/grade";
-export { BRRRR_DEFAULTS } from "./brrrr/thresholds";
+export {
+  BRRRR_AGGRESSIVE,
+  BRRRR_BALANCED,
+  BRRRR_CONSERVATIVE,
+  BRRRR_DEFAULTS,
+  BRRRR_PRESETS,
+} from "./brrrr/thresholds";
 export { computeBrrrrUpgradePath } from "./brrrr/upgrade-path";
 export type {
   BrrrrContext,
