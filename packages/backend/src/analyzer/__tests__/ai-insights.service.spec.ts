@@ -43,6 +43,7 @@ describe('AiInsightsService', () => {
       market_heat: { value: 8.2, source: 'realtor' },
       net_migration: { value: 2_100, source: 'irs' },
     },
+    piqByGeo: { metro: 73, county: 68, zip: 42 },
   };
 
   beforeEach(async () => {
@@ -146,7 +147,13 @@ describe('AiInsightsService', () => {
     expect(userPrompt).toContain('789 Pine Rd $2875/mo');
     // Price appreciation YoY surfaced with source
     expect(userPrompt).toContain('Price appreciation YoY: 6.2%');
-    expect(userPrompt).toContain('Geography: metro');
+    expect(userPrompt).toContain('Geography resolved to: metro');
+    // PIQ SCORE BY GEOGRAPHY block surfaces all three levels with caveats
+    expect(userPrompt).toContain('PIQ SCORE BY GEOGRAPHY:');
+    expect(userPrompt).toContain('Metro (most stable');
+    expect(userPrompt).toContain('73');
+    expect(userPrompt).toContain('County (moderate sample');
+    expect(userPrompt).toContain('ZIP (small sample');
     expect(request.systemPrompt).toContain('real-estate analyst');
   });
 

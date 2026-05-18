@@ -29,6 +29,14 @@ export interface AiInsightPayload {
   /** Active strategy. Drives strategy-specific guidance in the backend
    *  prompt so AI output is framed in the right terms for the user's play. */
   strategy?: "BUY_AND_HOLD" | "FIX_AND_FLIP" | "BRRRR" | null;
+  /** PIQ scores at metro / county / zip. Surfaced to the AI with stability
+   *  annotations so it leads with the most stable available level instead
+   *  of citing the noisy ZIP score as gospel. */
+  piqByGeo?: {
+    zip?: number | null;
+    county?: number | null;
+    metro?: number | null;
+  };
 }
 
 export interface AIAnnotationResult {

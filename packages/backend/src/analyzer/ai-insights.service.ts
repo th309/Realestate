@@ -12,8 +12,16 @@ import { randomUUID } from 'crypto';
 import { AiInsightsCache, CachedInsight } from './ai-insights.cache';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
 import { getSectionPrompt, SectionId } from './prompts/section-prompts';
+import {
+  type AnalysisStrategy,
+  STRATEGY_DISPLAY,
+  STRATEGY_KEY_METRICS,
+  STRATEGY_LEVERS,
+} from './prompts/strategy-context';
+import { humanizeAutoKill } from './prompts/auto-kill-humanize';
+import { buildPiqByGeoBlock } from './prompts/piq-by-geo-block';
 
-export type AnalysisStrategy = 'BUY_AND_HOLD' | 'FIX_AND_FLIP' | 'BRRRR';
+export type { AnalysisStrategy };
 
 export interface InsightPayload {
   input: any;
@@ -29,51 +37,17 @@ export interface InsightPayload {
    *  outcome for BRRRR). Optional so older callers keep working — null falls
    *  back to generic guidance. */
   strategy?: AnalysisStrategy | null;
-}
-
-const STRATEGY_DISPLAY: Record<AnalysisStrategy, string> = {
-  BUY_AND_HOLD: 'buy and hold rental',
-  FIX_AND_FLIP: 'fix and flip',
-  BRRRR: 'BRRRR (buy, rehab, rent, refinance, repeat)',
-};
-
-const STRATEGY_KEY_METRICS: Record<AnalysisStrategy, string> = {
-  BUY_AND_HOLD:
-    'monthly cashflow, cap rate, cash-on-cash return, DSCR, and long-term wealth from principal paydown plus appreciation',
-  FIX_AND_FLIP:
-    'net profit after all costs (purchase, rehab, holding, selling), ARV (after-repair value), rehab budget vs contingency, holding period in months, and the maximum allowable offer multiplier',
-  BRRRR:
-    'the refinance outcome (does the new loan cover the all-in basis?), refinance LTV cap, cashflow after the refinance, equity left in the property, ARV, rehab budget, and seasoning months before refi',
-};
-
-const STRATEGY_LEVERS: Record<AnalysisStrategy, string> = {
-  BUY_AND_HOLD:
-    'lowering purchase price, raising rent, locking a lower interest rate, or increasing the down payment',
-  FIX_AND_FLIP:
-    'lowering purchase price, trimming rehab budget, increasing ARV (better finish or scope), shortening the holding period, or reducing selling cost percentage',
-  BRRRR:
-    'lowering purchase price, trimming rehab budget, raising ARV so the refinance pulls out more cash, increasing the refinance LTV, or shortening seasoning months',
-};
-
-/**
- * Convert an UPPER_SNAKE_CASE auto-kill code into a short human sentence the
- * prompt can plug in directly. Keeps the LLM from echoing the raw identifier.
- * Unknown codes fall back to a lowercased, underscore-replaced form so the
- * model has something to work with.
- */
-function humanizeAutoKill(code: string): string {
-  const map: Record<string, string> = {
-    REFI_NOT_FINANCEABLE:
-      "the refinance can't be financed at the projected ARV and LTV",
-    NEGATIVE_CASHFLOW_SEVERE: 'monthly cashflow is deeply negative',
-    DSCR_BELOW_FLOOR: 'debt service coverage is below lender minimums',
-    LTV_TOO_HIGH: 'the loan-to-value exceeds policy limits',
-    REHAB_BUDGET_BLOWN: 'the rehab budget consumes too much of the deal margin',
-    ARV_BELOW_ALL_IN:
-      'the after-repair value comes in below the all-in basis (you would lose money on resale)',
+  /** PIQ scores at all three geography levels for this property. Whichever
+   *  levels resolved are surfaced to the AI with stability annotations so
+   *  it leads with metro (most stable, thousands of sales) and only calls
+   *  out the ZIP score when it diverges sharply (the interesting micro-
+   *  market signal). Rural or unincorporated addresses naturally fall
+   *  through — only levels with actual data are surfaced. */
+  piqByGeo?: {
+    zip?: number | null;
+    county?: number | null;
+    metro?: number | null;
   };
-  if (map[code]) return map[code];
-  return code.toLowerCase().replace(/_/g, ' ');
 }
 
 export interface InsightResult extends CachedInsight {
@@ -250,9 +224,9 @@ export class AiInsightsService {
         })
         .join('; ')}`,
       '',
+      ...buildPiqByGeoBlock(payload.piqByGeo),
       'MARKET CONTEXT (PropertyIQ):',
-      `- Geography: ${payload.piq?.geo_level ?? 'unknown'}${payload.piq?.geo_id ? ` (id=${payload.piq.geo_id})` : ''}`,
-      `- PIQ Score: ${payload.piq?.piq_score?.value ?? 'n/a'} (${payload.piq?.piq_score?.label ?? ''}) — 50 = state average, higher = outperformance vs state`,
+      `- Geography resolved to: ${payload.piq?.geo_level ?? 'unknown'}${payload.piq?.geo_id ? ` (id=${payload.piq.geo_id})` : ''}`,
       `- Home value: ${payload.piq?.home_value?.value ?? 'n/a'} (source: ${payload.piq?.home_value?.source ?? 'n/a'})`,
       `- Price appreciation YoY: ${payload.piq?.home_value_yoy?.value != null ? `${payload.piq.home_value_yoy.value}%` : 'n/a'} (source: ${payload.piq?.home_value_yoy?.source ?? 'n/a'})`,
       `- Rent index: ${payload.piq?.rent_index?.value ?? 'n/a'} (source: ${payload.piq?.rent_index?.source ?? 'n/a'})`,

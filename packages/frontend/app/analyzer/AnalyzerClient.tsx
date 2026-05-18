@@ -163,6 +163,7 @@ export default function AnalyzerClient({
     piq: marketContext,
     grading: grading.data ?? null,
     strategy: toEngineStrategy(activeStrategy) ?? null,
+    piqByGeo,
   });
 
   const compsView = buildCompsViewProps(

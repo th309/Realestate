@@ -30,6 +30,14 @@ export class AiInsightsBodyDto {
      *  the strategy-aware guidance block so the AI talks in the right terms
      *  for the user's chosen play. Optional; null falls back to generic. */
     strategy?: 'BUY_AND_HOLD' | 'FIX_AND_FLIP' | 'BRRRR' | null;
+    /** PIQ scores at metro / county / zip for this property. Surfaced to
+     *  the AI with stability annotations so it leads with the most stable
+     *  available level. Levels that didn't resolve are simply omitted. */
+    piqByGeo?: {
+      zip?: number | null;
+      county?: number | null;
+      metro?: number | null;
+    };
   };
 }
 

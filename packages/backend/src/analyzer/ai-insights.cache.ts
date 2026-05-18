@@ -27,8 +27,16 @@ export class AiInsightsCache {
       rentMonthly: Math.round((payload.input?.rentMonthly ?? 0) / 25) * 25,
       taxAnnual: Math.round((payload.input?.taxAnnual ?? 0) / 100) * 100,
     };
+    // Hash both the resolved-level PIQ context AND the per-geo PIQ scores so
+    // a property with the same resolved geo but different metro/county/zip
+    // signals (e.g., a freshly updated metro figure) gets a fresh response.
     const piqHash = createHash('sha1')
-      .update(JSON.stringify(payload.piq ?? {}))
+      .update(
+        JSON.stringify({
+          ctx: payload.piq ?? {},
+          byGeo: payload.piqByGeo ?? {},
+        }),
+      )
       .digest('hex')
       .slice(0, 8);
     const rcHash = createHash('sha1')

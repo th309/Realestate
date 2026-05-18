@@ -39,6 +39,13 @@ export interface UseSectionAiInsightsArgs {
   /** Active strategy in engine form (BUY_AND_HOLD / FIX_AND_FLIP / BRRRR).
    *  Drives strategy-specific framing in the backend prompts. */
   strategy: "BUY_AND_HOLD" | "FIX_AND_FLIP" | "BRRRR" | null;
+  /** PIQ scores at metro / county / zip. Surfaced to backend so AI leads
+   *  with the most stable available level instead of the noisy ZIP score. */
+  piqByGeo: {
+    zip: number | null;
+    county: number | null;
+    metro: number | null;
+  };
 }
 
 export interface SectionAiProps {
@@ -73,6 +80,7 @@ export function useSectionAiInsights({
   piq,
   grading,
   strategy,
+  piqByGeo,
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
 
@@ -85,6 +93,11 @@ export function useSectionAiInsights({
     piq,
     grading: grading ?? undefined,
     strategy,
+    piqByGeo: {
+      zip: piqByGeo.zip,
+      county: piqByGeo.county,
+      metro: piqByGeo.metro,
+    },
   };
 
   const recommendation = useAiSectionAnnotation(
