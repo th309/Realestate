@@ -7,14 +7,19 @@
  *   BUY_AND_HOLD  → gradeBuyAndHoldDeal
  *   FIX_AND_FLIP  → gradeFixAndFlipDeal, with optional DOM/PIQ auto-resolution
  *                   when the input carries a market identifier (geoId / zip).
- *   BRRRR         → 501 NotImplementedException
+ *   BRRRR         → gradeBrrrrDeal, same DOM/PIQ auto-resolution pattern.
  */
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
+  BRRRR_DEFAULTS,
   BUY_AND_HOLD_DEFAULTS,
   FIX_AND_FLIP_DEFAULTS,
+  gradeBrrrrDeal,
   gradeBuyAndHoldDeal,
   gradeFixAndFlipDeal,
+  type BrrrrContext,
+  type BrrrrGradingInput,
+  type BrrrrThresholds,
   type DealGradingResult,
   type DealInput,
   type FixAndFlipContext,
@@ -27,11 +32,17 @@ import {
 import type { GradeDealDto } from './dto/grade-deal.dto';
 import type { FixAndFlipInputDto } from './dto/fix-and-flip-input.dto';
 import type { FixAndFlipContextDto } from './dto/fix-and-flip-context.dto';
+import type { BrrrrInputDto } from './dto/brrrr-input.dto';
+import type { BrrrrContextDto } from './dto/brrrr-context.dto';
+import { mapBrrrrDtoToEngine } from './brrrr-mapper';
 import { MarketResolutionService } from './market-resolution.service';
 import { ThresholdsService } from './thresholds.service';
 
 /** Strategy-specific threshold shape returned by resolveThresholds. */
-export type StrategyThresholds = UserThresholds | FixAndFlipThresholds;
+export type StrategyThresholds =
+  | UserThresholds
+  | FixAndFlipThresholds
+  | BrrrrThresholds;
 
 @Injectable()
 export class GradingService {
@@ -53,12 +64,6 @@ export class GradingService {
     dto: GradeDealDto,
     userId: string | null,
   ): Promise<DealGradingResult> {
-    if (dto.strategy === 'BRRRR') {
-      throw new NotImplementedException(
-        'BRRRR grading is not yet supported. Use BUY_AND_HOLD or FIX_AND_FLIP.',
-      );
-    }
-
     const thresholds = await this.resolveThresholds(
       dto.strategy,
       userId,
@@ -77,6 +82,21 @@ export class GradingService {
         flipInput,
         flipContext,
         thresholds as FixAndFlipThresholds,
+      );
+    }
+
+    if (dto.strategy === 'BRRRR') {
+      const brrrrInput = mapBrrrrDtoToEngine(
+        dto.input as unknown as BrrrrInputDto,
+      );
+      const brrrrContext = await this.buildBrrrrContext(
+        (dto.context ?? {}) as BrrrrContextDto,
+        dto.input as unknown as BrrrrInputDto,
+      );
+      return gradeBrrrrDeal(
+        brrrrInput,
+        brrrrContext,
+        thresholds as BrrrrThresholds,
       );
     }
 
@@ -105,9 +125,10 @@ export class GradingService {
     return this.defaultThresholdsFor(strategy);
   }
 
-  /** Per-strategy default preset. BRRRR falls back to B&H until tuned. */
+  /** Per-strategy default preset. */
   defaultThresholdsFor(strategy: Strategy): StrategyThresholds {
     if (strategy === 'FIX_AND_FLIP') return FIX_AND_FLIP_DEFAULTS;
+    if (strategy === 'BRRRR') return BRRRR_DEFAULTS;
     return BUY_AND_HOLD_DEFAULTS;
   }
 
@@ -147,6 +168,42 @@ export class GradingService {
       marketAvgRatePct: ctx.marketAvgRatePct,
       // Explicit context preempts the lookup. nullish-coalesce so an explicit
       // 0 (theoretical) wouldn't be replaced by the lookup either.
+      marketDomDays: ctx.marketDomDays ?? resolved.marketDomDays ?? undefined,
+      marketPiqScore:
+        ctx.marketPiqScore ?? resolved.marketPiqScore ?? undefined,
+    };
+  }
+
+  /** Same auto-resolution pattern as buildFlipContext, BRRRR-shaped output. */
+  private async buildBrrrrContext(
+    ctx: BrrrrContextDto,
+    input: BrrrrInputDto,
+  ): Promise<BrrrrContext> {
+    const needsLookup =
+      (ctx.marketDomDays == null || ctx.marketPiqScore == null) &&
+      (input.marketGeoId || input.marketZip || input.marketLat != null);
+
+    let resolved = { marketDomDays: null, marketPiqScore: null } as {
+      marketDomDays: number | null;
+      marketPiqScore: number | null;
+    };
+    if (needsLookup) {
+      resolved = await this.marketResolution.resolve({
+        marketGeoId: input.marketGeoId,
+        marketZip: input.marketZip,
+        marketLat: input.marketLat,
+        marketLng: input.marketLng,
+      });
+    }
+
+    return {
+      rehabVerification: ctx.rehabVerification,
+      rehabRiskAccepted: ctx.rehabRiskAccepted,
+      arvVerification: ctx.arvVerification,
+      rentEstimateSource: ctx.rentEstimateSource,
+      negativeCashFlowAccepted: ctx.negativeCashFlowAccepted,
+      capitalTrappingAccepted: ctx.capitalTrappingAccepted,
+      maximumCashToLeave: ctx.maximumCashToLeave,
       marketDomDays: ctx.marketDomDays ?? resolved.marketDomDays ?? undefined,
       marketPiqScore:
         ctx.marketPiqScore ?? resolved.marketPiqScore ?? undefined,

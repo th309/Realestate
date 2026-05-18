@@ -1,7 +1,7 @@
 "use client";
 
-import { useGradeDeal, useGradeFlipDeal } from "@/lib/data";
-import type { FixAndFlipGradeRequest } from "@/lib/data";
+import { useGradeBrrrrDeal, useGradeDeal, useGradeFlipDeal } from "@/lib/data";
+import type { BrrrrGradeRequest, FixAndFlipGradeRequest } from "@/lib/data";
 import type {
   DealInput,
   Strategy as EngineStrategy,
@@ -30,18 +30,26 @@ export interface UseGradingResultArgs {
   holdingMonths?: number;
   sellingCostsPct?: number;
   marketZip?: string;
+  // BRRRR-specific assumptions (sourced from AnalyzerAssumptions).
+  refinanceLTVPct?: number;
+  seasoningMonths?: number;
+  rehabMonths?: number;
 }
 
 /**
- * Wires the analyzer's reactive input → POST /api/analyzer/grade (B&H) or
- * /api/analyzer/grade-flip (F&F).
+ * Wires the analyzer's reactive input → POST /api/analyzer/grade (B&H),
+ * /grade-flip (F&F), or /grade-brrrr (BRRRR).
  *
  *   buyAndHold → /grade with B&H DealInput (committed path, unchanged)
  *   flip       → /grade-flip with FixAndFlipGradeRequest. F&F-specific
  *                fields (contingency, financing type, profit floor, MAO
  *                multiplier) are filled with sensible defaults so the panel
  *                renders immediately without forcing extra UI inputs.
- *   brrrr      → disabled until the BRRRR grading engine ships.
+ *   brrrr      → /grade-brrrr with BrrrrGradeRequest. BRRRR-specific fields
+ *                that don't yet have InputPanel exposure (hardMoneyRate,
+ *                hardMoneyPoints, refiTermYears, initialFinancingType) use
+ *                textbook BRRRR defaults; the rest derive from existing
+ *                input + assumptions.
  */
 export function useGradingResult({
   input,
@@ -53,6 +61,9 @@ export function useGradingResult({
   holdingMonths,
   sellingCostsPct,
   marketZip,
+  refinanceLTVPct,
+  seasoningMonths,
+  rehabMonths,
 }: UseGradingResultArgs) {
   const strategy = STRATEGY_MAP[activeStrategy];
 
@@ -110,8 +121,72 @@ export function useGradingResult({
 
   const flipResult = useGradeFlipDeal(flipPayload, { enabled: hasFlipInput });
 
-  // Both hooks run unconditionally (React rules), but only the active one
-  // has `enabled: true`. Surface whichever matches the active strategy.
+  // BRRRR — build BrrrrGradeRequest with sensible defaults for fields not
+  // yet exposed in InputPanel (financing type, hard-money points/rate, term).
+  const monthlyRent = input.rentMonthly ?? 0;
+  const hasBrrrrInput =
+    hasGradableInput &&
+    strategy === "BRRRR" &&
+    input.price > 0 &&
+    (arv ?? 0) > 0 &&
+    monthlyRent > 0;
+
+  const refiTermYears: 15 | 20 | 30 =
+    input.financing.termYears === 15 || input.financing.termYears === 20
+      ? input.financing.termYears
+      : 30;
+  const holdMonthsBeforeRefi = Math.max(
+    1,
+    Math.min(24, (seasoningMonths ?? 6) + (rehabMonths ?? 3)),
+  );
+
+  const brrrrPayload: BrrrrGradeRequest | null = hasBrrrrInput
+    ? {
+        strategy: "BRRRR",
+        input: {
+          strategy: "BRRRR",
+          purchasePrice: input.price,
+          arv: arv ?? 0,
+          rehabCost: rehabBudget ?? 0,
+          rehabContingencyPct: 0.1,
+          buyClosingPct: input.financing.closingCostsPct ?? 0.03,
+          holdMonthsBeforeRefi,
+          initialFinancingType: "hard_money",
+          hardMoneyRate: 12,
+          hardMoneyPoints: 0.02,
+          hardMoneyLtcPct: 0.8,
+          propertyTaxAnnual: input.taxAnnual ?? 0,
+          insuranceAnnual: input.insuranceAnnual ?? 0,
+          utilitiesMonthly: 0,
+          hoaMonthly: input.hoaMonthly ?? 0,
+          refiLtvPct: refinanceLTVPct ?? 0.75,
+          refiRate: input.financing.interestRatePct,
+          refiTermYears,
+          refiClosingPct: 0.025,
+          monthlyRent,
+          vacancyPct: input.vacancyPctOfRent ?? 0.05,
+          maintenancePct: input.maintenancePctOfRent ?? 0.08,
+          capexPct: 0,
+          pmPct: input.managementPctOfRent ?? 0.08,
+          unitCount: input.unitCount ?? 1,
+          marketZip,
+        },
+        context: {
+          rehabVerification: "estimate",
+          rehabRiskAccepted: true,
+          rentEstimateSource: "estimate",
+          marketPiqScore: piqScore ?? undefined,
+        },
+      }
+    : null;
+
+  const brrrrResult = useGradeBrrrrDeal(brrrrPayload, {
+    enabled: hasBrrrrInput,
+  });
+
+  // All three hooks run unconditionally (React rules), but only the active
+  // one has `enabled: true`. Surface whichever matches the active strategy.
   if (strategy === "FIX_AND_FLIP") return flipResult;
+  if (strategy === "BRRRR") return brrrrResult;
   return bnhResult;
 }

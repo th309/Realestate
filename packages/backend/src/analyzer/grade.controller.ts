@@ -1,71 +1,57 @@
 /**
- * GradeController — split out of AnalyzerController to keep that file under
- * the CLAUDE.md §1.3 logic-file limit. Same base path (`/api/analyzer`), same
- * ValidationPipe configuration.
+ * GradeController — grading + upgrade-path endpoints. User-thresholds CRUD
+ * lives in the sibling ThresholdsController (split per CLAUDE.md §1.3).
  *
  * Endpoints:
- *   POST   /api/analyzer/grade                  (optional auth)
- *   GET    /api/analyzer/thresholds/:strategy   (JwtAuthGuard)
- *   PUT    /api/analyzer/thresholds/:strategy   (JwtAuthGuard)
- *   DELETE /api/analyzer/thresholds/:strategy   (JwtAuthGuard)
+ *   POST /api/analyzer/grade                (optional auth)
+ *   POST /api/analyzer/grade-flip           (optional auth)
+ *   POST /api/analyzer/grade-brrrr          (optional auth)
+ *   POST /api/analyzer/upgrade-path         (optional auth, B&H only)
+ *   POST /api/analyzer/upgrade-path-flip    (optional auth, F&F)
+ *   POST /api/analyzer/upgrade-path-brrrr   (optional auth, BRRRR)
  */
 import {
   BadRequestException,
   Body,
   Controller,
-  Delete,
-  Get,
-  Param,
   Post,
-  Put,
   Req,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { plainToInstance } from 'class-transformer';
-import { validateSync } from 'class-validator';
 import {
-  BUY_AND_HOLD_DEFAULTS,
-  FIX_AND_FLIP_DEFAULTS,
+  computeBrrrrUpgradePath,
   computeFlipUpgradePath,
   computeUpgradePath,
+  type BrrrrContext,
+  type BrrrrThresholds,
+  type BrrrrUpgradePathResult,
   type DealGradingResult,
   type DealInput,
   type FixAndFlipContext,
   type FixAndFlipThresholds,
   type FlipUpgradePathResult,
   type GradingContext,
-  type Strategy,
   type UpgradePathResult,
   type UserThresholds,
 } from '@propertyiq/analyzer-core';
-import { JwtAuthGuard } from '../common/guards';
-import { AuthUserId } from '../common/decorators';
 import { SupabaseService } from '../supabase/supabase.service';
-import { GradingService, type StrategyThresholds } from './grading.service';
-import { ThresholdsService } from './thresholds.service';
+import { GradingService } from './grading.service';
+import { mapBrrrrDtoToEngine } from './brrrr-mapper';
 import { GradeDealDto } from './dto/grade-deal.dto';
 import { GradeFlipDealDto } from './dto/grade-flip-deal.dto';
+import { GradeBrrrrDealDto } from './dto/grade-brrrr-deal.dto';
 import { UpgradePathDto } from './dto/upgrade-path.dto';
 import { UpgradePathFlipDto } from './dto/upgrade-path-flip.dto';
-import { UserThresholdsDto } from './dto/user-thresholds.dto';
-import { FixAndFlipThresholdsDto } from './dto/fix-and-flip-thresholds.dto';
+import { UpgradePathBrrrrDto } from './dto/upgrade-path-brrrr.dto';
 import { mapFlipDtoToEngine } from './grading.service';
-
-const VALID_STRATEGIES: ReadonlySet<Strategy> = new Set<Strategy>([
-  'BUY_AND_HOLD',
-  'FIX_AND_FLIP',
-  'BRRRR',
-]);
 
 @Controller('api/analyzer')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class GradeController {
   constructor(
     private readonly grading: GradingService,
-    private readonly thresholds: ThresholdsService,
     private readonly supabase: SupabaseService,
   ) {}
 
@@ -87,14 +73,6 @@ export class GradeController {
       return data.user.id;
     } catch {
       return null;
-    }
-  }
-
-  private validateStrategy(strategy: string): asserts strategy is Strategy {
-    if (!VALID_STRATEGIES.has(strategy as Strategy)) {
-      throw new BadRequestException(
-        `invalid strategy "${strategy}" (expected one of: ${[...VALID_STRATEGIES].join(', ')})`,
-      );
     }
   }
 
@@ -194,99 +172,43 @@ export class GradeController {
   }
 
   /**
-   * GET /api/analyzer/thresholds/:strategy
+   * POST /api/analyzer/grade-brrrr
    *
-   * Returns the caller's saved thresholds for the strategy, or the default
-   * preset when no row exists.
+   * BRRRR-specific grading endpoint. Same separate-endpoint pattern as
+   * /grade-flip — keeps the B&H and F&F validation paths frozen while BRRRR
+   * iterates. Service-layer routing dispatches by strategy.
    */
-  @Get('thresholds/:strategy')
-  @UseGuards(JwtAuthGuard)
-  async getThresholds(
-    @AuthUserId() userId: string,
-    @Param('strategy') strategy: string,
-  ): Promise<StrategyThresholds> {
-    this.validateStrategy(strategy);
-    const saved = await this.thresholds.getThresholds(userId, strategy);
-    if (saved) return saved as StrategyThresholds;
-    return strategy === 'FIX_AND_FLIP'
-      ? FIX_AND_FLIP_DEFAULTS
-      : BUY_AND_HOLD_DEFAULTS;
+  @Post('grade-brrrr')
+  async gradeBrrrr(
+    @Req() req: Request,
+    @Body() body: GradeBrrrrDealDto,
+  ): Promise<DealGradingResult> {
+    const userId = await this.extractOptionalUserId(req);
+    return this.grading.gradeDeal(body as unknown as GradeDealDto, userId);
   }
 
   /**
-   * PUT /api/analyzer/thresholds/:strategy
+   * POST /api/analyzer/upgrade-path-brrrr
    *
-   * Upsert the caller's thresholds for the strategy. Validation is strategy-
-   * aware: BUY_AND_HOLD bodies must match the B&H rubric shape; FIX_AND_FLIP
-   * bodies must match the F&F rubric shape. Cross-shape submissions (e.g.,
-   * B&H keys on a flip strategy) return 400. Both shapes enforce
-   * grade ordering (A>B>C>D per direction) and weights summing to 100.
+   * BRRRR upgrade-path engine. Levers: purchasePrice, arv, rehabCost,
+   * refiLtvPct, monthlyRent, holdMonthsBeforeRefi, refiRate.
    */
-  @Put('thresholds/:strategy')
-  @UseGuards(JwtAuthGuard)
-  async putThresholds(
-    @AuthUserId() userId: string,
-    @Param('strategy') strategy: string,
-    @Body() body: unknown,
-  ): Promise<StrategyThresholds> {
-    this.validateStrategy(strategy);
-    const validated = this.validateThresholdsForStrategy(strategy, body);
-    return this.thresholds.upsertThresholds(
+  @Post('upgrade-path-brrrr')
+  async upgradePathBrrrr(
+    @Req() req: Request,
+    @Body() body: UpgradePathBrrrrDto,
+  ): Promise<BrrrrUpgradePathResult> {
+    const userId = await this.extractOptionalUserId(req);
+    const thresholds = await this.grading.resolveThresholds(
+      'BRRRR',
       userId,
-      strategy,
-      validated as UserThresholds,
-    ) as Promise<StrategyThresholds>;
-  }
-
-  /**
-   * Strategy-aware validation. Picks the right DTO class, runs class-validator
-   * synchronously, and surfaces the first failed constraint as a 400 reason.
-   */
-  private validateThresholdsForStrategy(
-    strategy: Strategy,
-    body: unknown,
-  ): StrategyThresholds {
-    if (body == null || typeof body !== 'object') {
-      throw new BadRequestException('thresholds body must be an object');
-    }
-    if (strategy === 'BRRRR') {
-      throw new BadRequestException(
-        'BRRRR threshold saving is not yet supported.',
-      );
-    }
-    const DtoClass: new () => object =
-      strategy === 'FIX_AND_FLIP' ? FixAndFlipThresholdsDto : UserThresholdsDto;
-    const instance = plainToInstance(DtoClass, body);
-    const errors = validateSync(instance, {
-      whitelist: false,
-      forbidNonWhitelisted: false,
-    });
-    if (errors.length > 0) {
-      const first = errors[0];
-      const constraintMsg = first.constraints
-        ? Object.values(first.constraints)[0]
-        : 'invalid';
-      throw new BadRequestException(
-        `${first.property}: ${constraintMsg} (strategy=${strategy})`,
-      );
-    }
-    return instance as unknown as StrategyThresholds;
-  }
-
-  /**
-   * DELETE /api/analyzer/thresholds/:strategy
-   *
-   * Idempotent — reverts the strategy to default-preset behavior on the
-   * caller's next GET / grade call.
-   */
-  @Delete('thresholds/:strategy')
-  @UseGuards(JwtAuthGuard)
-  async deleteThresholds(
-    @AuthUserId() userId: string,
-    @Param('strategy') strategy: string,
-  ): Promise<{ ok: true }> {
-    this.validateStrategy(strategy);
-    await this.thresholds.deleteThresholds(userId, strategy);
-    return { ok: true };
+      body.overrideThresholds as BrrrrThresholds | undefined,
+    );
+    return computeBrrrrUpgradePath(
+      mapBrrrrDtoToEngine(body.input),
+      (body.context ?? {}) as BrrrrContext,
+      body.targetGrade,
+      thresholds as BrrrrThresholds,
+    );
   }
 }

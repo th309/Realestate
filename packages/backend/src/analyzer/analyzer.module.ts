@@ -7,6 +7,7 @@ import {
 import { AnalyzerController } from './analyzer.controller';
 import { AnalyzerAiController } from './analyzer-ai.controller';
 import { GradeController } from './grade.controller';
+import { ThresholdsController } from './thresholds.controller';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
@@ -32,7 +33,12 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     RentcastModule,
     AiProviderModule,
   ],
-  controllers: [AnalyzerController, AnalyzerAiController, GradeController],
+  controllers: [
+    AnalyzerController,
+    AnalyzerAiController,
+    GradeController,
+    ThresholdsController,
+  ],
   providers: [
     AnalyzerService,
     AnalyzerPersistenceService,

@@ -17,6 +17,7 @@ import { plainToInstance } from 'class-transformer';
 import type { Request } from 'express';
 import { BUY_AND_HOLD_DEFAULTS } from '@propertyiq/analyzer-core';
 import { GradeController } from '../grade.controller';
+import { ThresholdsController } from '../thresholds.controller';
 import { GradingService } from '../grading.service';
 import { ThresholdsService } from '../thresholds.service';
 import { SupabaseService } from '../../supabase/supabase.service';
@@ -50,6 +51,7 @@ const STUB_GRADE_RESULT = {
 
 describe('GradeController', () => {
   let controller: GradeController;
+  let thresholdsController: ThresholdsController;
   let gradingService: { gradeDeal: jest.Mock };
   let thresholds: {
     getThresholds: jest.Mock;
@@ -79,7 +81,7 @@ describe('GradeController', () => {
     };
 
     const mod = await Test.createTestingModule({
-      controllers: [GradeController],
+      controllers: [GradeController, ThresholdsController],
       providers: [
         { provide: GradingService, useValue: gradingService },
         { provide: ThresholdsService, useValue: thresholds },
@@ -91,6 +93,7 @@ describe('GradeController', () => {
       .compile();
 
     controller = mod.get(GradeController);
+    thresholdsController = mod.get(ThresholdsController);
   });
 
   describe('POST /grade', () => {
@@ -147,7 +150,10 @@ describe('GradeController', () => {
   describe('GET /thresholds/:strategy', () => {
     it('returns saved thresholds when present', async () => {
       thresholds.getThresholds.mockResolvedValue(BUY_AND_HOLD_DEFAULTS);
-      const result = await controller.getThresholds('user-1', 'BUY_AND_HOLD');
+      const result = await thresholdsController.getThresholds(
+        'user-1',
+        'BUY_AND_HOLD',
+      );
       expect(result).toEqual(BUY_AND_HOLD_DEFAULTS);
       expect(thresholds.getThresholds).toHaveBeenCalledWith(
         'user-1',
@@ -157,20 +163,26 @@ describe('GradeController', () => {
 
     it('returns defaults when no row exists', async () => {
       thresholds.getThresholds.mockResolvedValue(null);
-      const result = await controller.getThresholds('user-1', 'BUY_AND_HOLD');
+      const result = await thresholdsController.getThresholds(
+        'user-1',
+        'BUY_AND_HOLD',
+      );
       expect(result).toEqual(BUY_AND_HOLD_DEFAULTS);
     });
 
     it('GET after DELETE returns defaults', async () => {
-      await controller.deleteThresholds('user-1', 'BUY_AND_HOLD');
+      await thresholdsController.deleteThresholds('user-1', 'BUY_AND_HOLD');
       thresholds.getThresholds.mockResolvedValue(null);
-      const result = await controller.getThresholds('user-1', 'BUY_AND_HOLD');
+      const result = await thresholdsController.getThresholds(
+        'user-1',
+        'BUY_AND_HOLD',
+      );
       expect(result).toEqual(BUY_AND_HOLD_DEFAULTS);
     });
 
     it('rejects unknown strategy with 400', async () => {
       await expect(
-        controller.getThresholds('user-1', 'NOT_A_STRATEGY'),
+        thresholdsController.getThresholds('user-1', 'NOT_A_STRATEGY'),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -178,7 +190,7 @@ describe('GradeController', () => {
   describe('PUT /thresholds/:strategy', () => {
     it('forwards body to ThresholdsService.upsertThresholds', async () => {
       thresholds.upsertThresholds.mockResolvedValue(BUY_AND_HOLD_DEFAULTS);
-      const result = await controller.putThresholds(
+      const result = await thresholdsController.putThresholds(
         'user-1',
         'BUY_AND_HOLD',
         // Cast: at runtime the body is the validated DTO; we pass the
@@ -195,7 +207,7 @@ describe('GradeController', () => {
 
     it('rejects unknown strategy with 400', async () => {
       await expect(
-        controller.putThresholds(
+        thresholdsController.putThresholds(
           'user-1',
           'NOPE',
           BUY_AND_HOLD_DEFAULTS as unknown as UserThresholdsDto,
@@ -206,7 +218,7 @@ describe('GradeController', () => {
 
   describe('DELETE /thresholds/:strategy', () => {
     it('calls ThresholdsService.deleteThresholds and returns ok', async () => {
-      const result = await controller.deleteThresholds(
+      const result = await thresholdsController.deleteThresholds(
         'user-1',
         'BUY_AND_HOLD',
       );

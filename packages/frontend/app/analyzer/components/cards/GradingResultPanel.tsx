@@ -1,6 +1,8 @@
 "use client";
 
 import type {
+  BrrrrThresholds,
+  BrrrrUpgradeOption,
   DealGradingResult,
   DealInput,
   FixAndFlipThresholds,
@@ -9,9 +11,13 @@ import type {
   Strategy,
   UserThresholds,
 } from "@propertyiq/analyzer-core";
-import type { UpgradePathFlipRequest } from "@/lib/data";
+import type {
+  UpgradePathBrrrrRequest,
+  UpgradePathFlipRequest,
+} from "@/lib/data";
 import { AdvisoriesStrip } from "./AdvisoriesStrip";
 import { AutoKillBanner } from "./AutoKillBanner";
+import { BrrrrUpgradePathPanel } from "./BrrrrUpgradePathPanel";
 import { FlipUpgradePathPanel } from "./FlipUpgradePathPanel";
 import { RecommendationCard } from "./RecommendationCard";
 import { ScoreBreakdownTable } from "./ScoreBreakdownTable";
@@ -39,6 +45,18 @@ interface GradingResultPanelProps {
     rehabDelta: number;
   }) => void;
 
+  /** BRRRR: API-shape BRRRR input for the BRRRR upgrade-path panel. */
+  brrrrInput?: UpgradePathBrrrrRequest["input"];
+  brrrrContext?: UpgradePathBrrrrRequest["context"];
+  brrrrOverrideThresholds?: BrrrrThresholds;
+  /** BRRRR: lever-apply handler — parent maps each lever to the right setter. */
+  onApplyBrrrrLever?: (option: BrrrrUpgradeOption) => void;
+  /** BRRRR: combination-hint apply handler (price reduction + rent boost). */
+  onApplyBrrrrCombination?: (combo: {
+    priceDelta: number;
+    rentDelta: number;
+  }) => void;
+
   /** Opens the Customize Thresholds drawer. Renders the chip when provided. */
   onCustomizeClick?: () => void;
   /** Display name shown in the customize chip (e.g. "Balanced"). */
@@ -57,11 +75,16 @@ export function GradingResultPanel({
   flipOverrideThresholds,
   onApplyFlipLever,
   onApplyFlipCombination,
+  brrrrInput,
+  brrrrContext,
+  brrrrOverrideThresholds,
+  onApplyBrrrrLever,
+  onApplyBrrrrCombination,
   onCustomizeClick,
   presetLabel,
 }: GradingResultPanelProps) {
   // B&H upgrade-path renders only when strategy is BUY_AND_HOLD + B&H args
-  // are wired. F&F has its own panel that hits /upgrade-path-flip.
+  // are wired. F&F and BRRRR have their own panels.
   const canRenderBnhUpgradePath =
     result.letter !== "A" &&
     input &&
@@ -73,6 +96,12 @@ export function GradingResultPanel({
     flipInput &&
     strategy === "FIX_AND_FLIP" &&
     onApplyFlipLever;
+
+  const canRenderBrrrrUpgradePath =
+    result.letter !== "A" &&
+    brrrrInput &&
+    strategy === "BRRRR" &&
+    onApplyBrrrrLever;
 
   return (
     <div data-grading-result-panel className="space-y-4">
@@ -107,6 +136,16 @@ export function GradingResultPanel({
           onApplyFlipLever={onApplyFlipLever}
           onApplyFlipCombination={onApplyFlipCombination}
           overrideThresholds={flipOverrideThresholds}
+        />
+      )}
+      {canRenderBrrrrUpgradePath && (
+        <BrrrrUpgradePathPanel
+          input={brrrrInput}
+          context={brrrrContext}
+          currentGrade={result.letter}
+          onApplyBrrrrLever={onApplyBrrrrLever}
+          onApplyBrrrrCombination={onApplyBrrrrCombination}
+          overrideThresholds={brrrrOverrideThresholds}
         />
       )}
       <AdvisoriesStrip advisories={result.advisories} />

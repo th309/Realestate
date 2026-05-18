@@ -8,54 +8,9 @@
  * compliance). Consumer imports are unchanged.
  */
 
-// Analyzer redesign Phase 1 — RentCast property lookup + AI insights
-export {
-  fetchPropertyLookup,
-  type PropertyLookupResult,
-} from "./fetchers/property-lookup";
-export {
-  fetchAiInsight,
-  type AIAnnotationResult,
-  type AiInsightPayload,
-  type AnalyzerSectionId,
-} from "./fetchers/ai-insights";
-export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
-export { fetchGradeDeal, type GradeDealRequest } from "./fetchers/grading";
-export {
-  fetchUpgradePath,
-  type UpgradePathRequest,
-} from "./fetchers/upgrade-path";
-export {
-  fetchThresholds,
-  updateThresholds,
-  deleteThresholds,
-} from "./fetchers/thresholds";
-export {
-  fetchAnalyzerDefaults,
-  updateAnalyzerDefaults,
-  type AnalyzerDefaults,
-} from "./fetchers/analyzer-defaults";
-export { usePropertyLookup } from "./hooks/usePropertyLookup";
-export { useAiSectionAnnotation } from "./hooks/useAiSectionAnnotation";
-export { useGradeDeal, type UseGradeDealOptions } from "./hooks/useGradeDeal";
-export {
-  useGradeFlipDeal,
-  type UseGradeFlipDealOptions,
-} from "./hooks/useGradeFlipDeal";
-export { fetchGradeFlipDeal } from "./fetchers/grade-flip";
-export type { FixAndFlipGradeRequest } from "./fetchers/grade-flip";
-export { useUpgradePathFlip } from "./hooks/useUpgradePathFlip";
-export type { UpgradePathFlipRequest } from "./fetchers/upgrade-path-flip";
-export {
-  useUpgradePath,
-  type UseUpgradePathOptions,
-} from "./hooks/useUpgradePath";
-export { useAiHeaderVerdict } from "./hooks/useAiHeaderVerdict";
-export { useMarketContext } from "./hooks/useMarketContext";
-export type {
-  UseMarketContextOptions,
-  UseMarketContextResult,
-} from "./hooks/useMarketContext";
+// Analyzer-specific exports (grading, upgrade-path, AI insights, property
+// lookup) extracted into `_analyzer-data-exports.ts` per CLAUDE.md §1.3.
+export * from "./_analyzer-data-exports";
 
 // ============================================================================
 // TYPES

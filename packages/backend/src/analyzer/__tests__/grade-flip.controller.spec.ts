@@ -20,7 +20,7 @@
  *   - BRRRR strategy on /grade → 501
  */
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotImplementedException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import type { Request } from 'express';
@@ -29,6 +29,7 @@ import {
   BUY_AND_HOLD_DEFAULTS,
 } from '@propertyiq/analyzer-core';
 import { GradeController } from '../grade.controller';
+import { ThresholdsController } from '../thresholds.controller';
 import { GradingService } from '../grading.service';
 import { ThresholdsService } from '../thresholds.service';
 import { MarketResolutionService } from '../market-resolution.service';
@@ -74,6 +75,7 @@ const SAMPLE_BNH_INPUT = {
 
 describe('GradeController — FIX_AND_FLIP path', () => {
   let controller: GradeController;
+  let thresholdsController: ThresholdsController;
   let thresholds: {
     getThresholds: jest.Mock;
     upsertThresholds: jest.Mock;
@@ -107,7 +109,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
     };
 
     const mod = await Test.createTestingModule({
-      controllers: [GradeController],
+      controllers: [GradeController, ThresholdsController],
       providers: [
         GradingService, // real service for end-to-end routing
         { provide: ThresholdsService, useValue: thresholds },
@@ -120,6 +122,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
       .compile();
 
     controller = mod.get(GradeController);
+    thresholdsController = mod.get(ThresholdsController);
   });
 
   // ---- DTO validation -------------------------------------------------------
@@ -235,37 +238,34 @@ describe('GradeController — FIX_AND_FLIP path', () => {
     });
   });
 
-  // ---- BRRRR ----------------------------------------------------------------
-
-  describe('BRRRR strategy', () => {
-    it('returns 501 (NotImplementedException) on /grade', async () => {
-      const req = { headers: {} } as unknown as Request;
-      await expect(
-        controller.grade(req, {
-          strategy: 'BRRRR',
-          input: SAMPLE_BNH_INPUT,
-        } as unknown as GradeDealDto),
-      ).rejects.toBeInstanceOf(NotImplementedException);
-    });
-  });
+  // BRRRR routing has its own /grade-brrrr endpoint; coverage lives in
+  // grade-brrrr.controller.spec.ts. Reference SAMPLE_BNH_INPUT so it stays
+  // wired into other tests but is not lint-trip-worthy when unused below.
+  void SAMPLE_BNH_INPUT;
 
   // ---- Threshold endpoints --------------------------------------------------
 
   describe('Threshold endpoints', () => {
     it('GET /thresholds/FIX_AND_FLIP returns FIX_AND_FLIP_DEFAULTS when no row exists', async () => {
       thresholds.getThresholds.mockResolvedValueOnce(null);
-      const result = await controller.getThresholds('user-1', 'FIX_AND_FLIP');
+      const result = await thresholdsController.getThresholds(
+        'user-1',
+        'FIX_AND_FLIP',
+      );
       expect(result).toEqual(FIX_AND_FLIP_DEFAULTS);
     });
 
     it('GET /thresholds/BUY_AND_HOLD returns BUY_AND_HOLD_DEFAULTS when no row exists', async () => {
       thresholds.getThresholds.mockResolvedValueOnce(null);
-      const result = await controller.getThresholds('user-1', 'BUY_AND_HOLD');
+      const result = await thresholdsController.getThresholds(
+        'user-1',
+        'BUY_AND_HOLD',
+      );
       expect(result).toEqual(BUY_AND_HOLD_DEFAULTS);
     });
 
     it('PUT /thresholds/FIX_AND_FLIP with valid flip rubric succeeds', async () => {
-      const ok = await controller.putThresholds(
+      const ok = await thresholdsController.putThresholds(
         'user-1',
         'FIX_AND_FLIP',
         FIX_AND_FLIP_DEFAULTS as unknown,
@@ -280,7 +280,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
 
     it('PUT /thresholds/FIX_AND_FLIP with B&H keys → 400', async () => {
       await expect(
-        controller.putThresholds(
+        thresholdsController.putThresholds(
           'user-1',
           'FIX_AND_FLIP',
           BUY_AND_HOLD_DEFAULTS as unknown,
@@ -291,7 +291,7 @@ describe('GradeController — FIX_AND_FLIP path', () => {
 
     it('PUT /thresholds/BUY_AND_HOLD with F&F keys → 400', async () => {
       await expect(
-        controller.putThresholds(
+        thresholdsController.putThresholds(
           'user-1',
           'BUY_AND_HOLD',
           FIX_AND_FLIP_DEFAULTS as unknown,
@@ -300,9 +300,9 @@ describe('GradeController — FIX_AND_FLIP path', () => {
       expect(thresholds.upsertThresholds).not.toHaveBeenCalled();
     });
 
-    it('PUT /thresholds/BRRRR → 400 (not yet supported)', async () => {
+    it('PUT /thresholds/BRRRR with F&F keys → 400 (shape mismatch)', async () => {
       await expect(
-        controller.putThresholds(
+        thresholdsController.putThresholds(
           'user-1',
           'BRRRR',
           FIX_AND_FLIP_DEFAULTS as unknown,

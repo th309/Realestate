@@ -149,6 +149,9 @@ export default function AnalyzerClient({
     holdingMonths: assumptions.holdingMonths,
     sellingCostsPct: assumptions.sellingCostsPct,
     marketZip: marketContext?.geo_id ?? undefined,
+    refinanceLTVPct: assumptions.refinanceLTVPct,
+    seasoningMonths: assumptions.seasoningMonths,
+    rehabMonths: assumptions.rehabMonths,
   });
   const flipProps = useFlipUpgradeProps({
     input: analyzer.input,

@@ -54,12 +54,15 @@ export function letterFromGpa(gpa: number): Letter {
  * GPA delta is added to rawGpa pre-clamp inside each strategy's grade()
  * orchestrator.
  *
- *   BUY_AND_HOLD / BRRRR:  >=80 +0.25, 50-79 0,  30-49 -0.25, <30 -0.50
- *   FIX_AND_FLIP:          >=70 +0.25, 50-69 0,  35-49 -0.25, <35 -0.50
+ *   BUY_AND_HOLD:   >=80 +0.25, 50-79 0,  30-49 -0.25, <30 -0.50
+ *   FIX_AND_FLIP:   >=70 +0.25, 50-69 0,  35-49 -0.25, <35 -0.50
+ *   BRRRR:          >=75 +0.25, 50-74 0,  35-49 -0.25, <35 -0.50
  *
  * F&F bands are looser at the top (a flip in a 70-PIQ market is already a
  * tailwind) and stricter at the bottom (illiquid markets disproportionately
- * hurt resale exits).
+ * hurt resale exits). BRRRR sits between B&H and F&F — refi appraisals
+ * benefit from any market tailwind (lower threshold than B&H) but post-refi
+ * holds are penalized for thin rent markets (same lower bound as F&F).
  */
 export function marketAdjustment(
   piq: number | undefined,
@@ -72,7 +75,13 @@ export function marketAdjustment(
     if (piq >= 35) return -0.25;
     return -0.5;
   }
-  // BUY_AND_HOLD and BRRRR (same bands for now — BRRRR placeholder).
+  if (strategy === "BRRRR") {
+    if (piq >= 75) return 0.25;
+    if (piq >= 50) return 0;
+    if (piq >= 35) return -0.25;
+    return -0.5;
+  }
+  // BUY_AND_HOLD
   if (piq >= 80) return 0.25;
   if (piq >= 50) return 0;
   if (piq >= 30) return -0.25;

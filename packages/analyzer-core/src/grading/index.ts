@@ -73,6 +73,23 @@ export type {
   FlipUpgradePathResult,
 } from "./fix-and-flip/upgrade-path-helpers";
 
+// BRRRR strategy
+export { gradeBrrrrDeal } from "./brrrr/grade";
+export { BRRRR_DEFAULTS } from "./brrrr/thresholds";
+export { computeBrrrrUpgradePath } from "./brrrr/upgrade-path";
+export type {
+  BrrrrContext,
+  BrrrrGradingInput,
+  BrrrrInitialFinancingType,
+  BrrrrThresholds,
+} from "./brrrr/types";
+export type {
+  BrrrrUpgradeLever,
+  BrrrrUpgradeOption,
+  BrrrrUpgradePathResult,
+} from "./brrrr/upgrade-path-helpers";
+
 // Upgrade-path engine — B&H is at the top level (legacy location).
 // F&F upgrade-path lives in ./fix-and-flip/upgrade-path.ts (computeFlipUpgradePath).
+// BRRRR upgrade-path lives in ./brrrr/upgrade-path.ts (computeBrrrrUpgradePath).
 export { computeUpgradePath } from "./upgrade-path";
