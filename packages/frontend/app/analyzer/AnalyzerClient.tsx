@@ -26,7 +26,8 @@ import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { computeBestPlay } from "./lib/strategy-best-play";
-import { useFlipUpgradeProps } from "./lib/use-flip-upgrade-props";
+import { useUpgradeProps } from "./lib/use-upgrade-props";
+import { deriveCashflowSummary } from "./lib/cashflow-summary";
 import { buildCompsViewProps } from "./lib/comps-view-props";
 import type { Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
@@ -126,18 +127,8 @@ export default function AnalyzerClient({
     onPickStrategy: pickStrategy,
   });
 
-  const grossRentMonthly = analyzer.input.rentMonthly ?? 0;
-  const debtServiceMonthly = rental.monthlyDebtService;
-  const opexAnnual =
-    (analyzer.input.taxAnnual ?? 0) +
-    (analyzer.input.insuranceAnnual ?? 0) +
-    (analyzer.input.hoaMonthly ?? 0) * 12 +
-    grossRentMonthly *
-      12 *
-      ((analyzer.input.maintenancePctOfRent ?? 0.08) +
-        (analyzer.input.managementPctOfRent ?? 0.08));
-  const vacancyMonthly =
-    grossRentMonthly * (analyzer.input.vacancyPctOfRent ?? 0.05);
+  const { grossRentMonthly, debtServiceMonthly, opexAnnual, vacancyMonthly } =
+    deriveCashflowSummary(analyzer.input, rental);
 
   const grading = useGradingResult({
     input: analyzer.input,
@@ -153,7 +144,7 @@ export default function AnalyzerClient({
     seasoningMonths: assumptions.seasoningMonths,
     rehabMonths: assumptions.rehabMonths,
   });
-  const flipProps = useFlipUpgradeProps({
+  const upgradeProps = useUpgradeProps({
     input: analyzer.input,
     setInput: analyzer.setInput,
     arvLocal,
@@ -284,7 +275,7 @@ export default function AnalyzerClient({
                   }}
                   strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
                   onApplyLever={analyzer.setInput}
-                  {...flipProps}
+                  {...upgradeProps}
                   onCustomizeClick={() => setDrawerOpen(true)}
                   presetLabel="Balanced"
                 />
