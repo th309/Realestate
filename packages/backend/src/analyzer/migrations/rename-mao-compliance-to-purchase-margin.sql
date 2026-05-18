@@ -10,16 +10,20 @@
 --   1. The top-level metric object: thresholds->'mao_compliance'
 --   2. The weights map: thresholds->'weights'->'mao_compliance'
 
+-- Explicit ::text casts on the key being subtracted disambiguate the `-`
+-- operator for the Postgres parser. Without them: "operator is not unique:
+-- unknown - unknown". `(thresholds -> 'weights')::jsonb` makes the inner
+-- jsonb explicit so the second `-` resolves to the jsonb variant cleanly.
 UPDATE user_thresholds
 SET thresholds =
   (
     -- Strip old metric key, add new one with the same value
-    (thresholds - 'mao_compliance')
+    (thresholds - 'mao_compliance'::text)
     || jsonb_build_object('purchase_margin', thresholds -> 'mao_compliance')
     -- Same swap inside the weights map
     || jsonb_build_object(
       'weights',
-      (thresholds -> 'weights' - 'mao_compliance')
+      ((thresholds -> 'weights')::jsonb - 'mao_compliance'::text)
       || jsonb_build_object(
         'purchase_margin',
         thresholds -> 'weights' -> 'mao_compliance'
