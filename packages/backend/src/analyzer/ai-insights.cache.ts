@@ -17,6 +17,19 @@ export interface CachedInsight {
 
 const TTL_SECONDS = 60 * 60 * 24; // 24h
 
+/**
+ * Prompt revision tag. Bump this whenever a prompt template change should
+ * invalidate all existing cached AI responses. The cache key includes it so
+ * a bump guarantees a fresh regeneration across every user/section without a
+ * manual Redis flush.
+ *
+ *   v2 (2026-05-18): PIQ Score reframed as probability of out/under-performing
+ *                    the state average; "X percent excess return" language
+ *                    explicitly banned in piq-by-geo-block + section-prompts.
+ *   v1 (initial)
+ */
+const PROMPT_REVISION = 'v2';
+
 @Injectable()
 export class AiInsightsCache {
   constructor(private readonly redis: RedisService) {}
@@ -51,7 +64,7 @@ export class AiInsightsCache {
     // the same property invalidates the prior response and re-asks the model
     // in the new strategy's terms.
     const strategy = payload.strategy ?? 'none';
-    return `ai-insights:${sectionId}:${strategy}:${inputHash}:${rcHash}:${piqHash}`;
+    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${inputHash}:${rcHash}:${piqHash}`;
   }
 
   async get(key: string): Promise<CachedInsight | null> {
