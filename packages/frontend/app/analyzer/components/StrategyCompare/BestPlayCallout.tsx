@@ -59,6 +59,10 @@ interface BestPlayCalloutProps {
    *  the deterministic `pickBestPlay(scores)` so the callout agrees with
    *  the strategy cards' BEST badge in goal-aware compare mode. */
   winnerOverride?: Winner | null;
+  /** True when a goal is selected but no strategy scores positively for
+   *  that goal — render the "no fit" callout instead of crowning a
+   *  fallback winner that misrepresents the recommendation. */
+  noGoalFit?: boolean;
 }
 
 export function BestPlayCallout({
@@ -66,7 +70,30 @@ export function BestPlayCallout({
   isDealViable = true,
   goal,
   winnerOverride,
+  noGoalFit = false,
 }: BestPlayCalloutProps) {
+  if (noGoalFit && goal) {
+    return (
+      <div
+        data-best-play
+        data-no-fit
+        className="flex items-center gap-3 rounded-xl px-5 py-3 bg-surface-container-low text-on-surface-variant border border-outline-variant"
+      >
+        <span aria-hidden className="text-xl">
+          ⚠
+        </span>
+        <div className="flex-1">
+          <div className="text-xs font-bold uppercase tracking-wider opacity-70">
+            No fit for {GOAL_LABEL[goal].toLowerCase()}
+          </div>
+          <div className="text-sm font-semibold">
+            None of these strategies fits this goal on this deal — try a
+            different goal above.
+          </div>
+        </div>
+      </div>
+    );
+  }
   const winner = winnerOverride ?? pickBestPlay(scores);
   const c = COPY[winner];
   const heading = !isDealViable

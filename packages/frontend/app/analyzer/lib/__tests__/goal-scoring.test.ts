@@ -199,18 +199,19 @@ describe("scoreForGoal — fast_cash", () => {
   it("B&H falls back to soft proxy when projection is absent", () => {
     const f = makeFixtures({});
     const s = scoreForGoal("fast_cash", f);
-    // totalCashInvested × 0.05 = 80_000 × 0.05 = 4_000 (consistent with the
-    // Recycle Capital B&H proxy — small but never zero)
+    // totalCashInvested × 0.05 = 80_000 × 0.05 = 4_000 — small but
+    // non-zero so a B&H deal with no projection isn't fully disqualified
+    // from the fast_cash goal (HELOC against equity is a real, if slow,
+    // way to pull cash from a rental).
     expect(s.buyAndHold).toBe(4_000);
   });
 });
 
 describe("scoreForGoal — recycle_capital", () => {
-  it("B&H proxy = totalCashInvested × 0.05", () => {
+  it("B&H scores 0 — buy-and-hold traps capital, doesn't recycle it", () => {
     const f = makeFixtures({});
     const s = scoreForGoal("recycle_capital", f);
-    // 80_000 × 0.05 = 4_000 — small, never zero
-    expect(s.buyAndHold).toBe(4_000);
+    expect(s.buyAndHold).toBe(0);
   });
 
   it("F&F velocity = (totalCashInvested / holdMonths) × 12 when profitable", () => {

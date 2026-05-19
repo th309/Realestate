@@ -75,12 +75,9 @@ export default function AnalyzerClient({
 
   const router = useRouter();
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
-  const { selectedGoal, setSelectedGoal, bestPlay } = useSelectedGoal(
-    analyzer,
-    projection,
-    assumptions,
-    analysisMode,
-    hasGradableInput,
+  // prettier-ignore
+  const { selectedGoal, setSelectedGoal, bestPlay, noGoalFit } = useSelectedGoal(
+    analyzer, projection, assumptions, analysisMode, hasGradableInput,
   );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -288,6 +285,7 @@ export default function AnalyzerClient({
                   }
                   selectedGoal={selectedGoal}
                   winner={bestPlay}
+                  noGoalFit={noGoalFit}
                 />
               )}
 

@@ -39,6 +39,10 @@ interface UseSelectedGoalResult {
   selectedGoal: InvestorGoal | null;
   setSelectedGoal: (goal: InvestorGoal) => void;
   bestPlay: Strategy;
+  /** True when a goal is selected in compare mode but no strategy scores
+   *  positively for that goal — UI should surface a "no strategy fits this
+   *  goal" callout instead of crowning a fallback winner. */
+  noGoalFit: boolean;
 }
 
 /**
@@ -105,5 +109,8 @@ export function useSelectedGoal(
   const bestPlay: Strategy =
     (goalBestPlay as Strategy | null) ?? defaultBestPlay;
 
-  return { selectedGoal, setSelectedGoal, bestPlay };
+  const noGoalFit =
+    analysisMode === "compare" && selectedGoal != null && goalBestPlay === null;
+
+  return { selectedGoal, setSelectedGoal, bestPlay, noGoalFit };
 }

@@ -113,9 +113,12 @@ const DEFAULT_REFI_SEASONING_MONTHS = 6;
 function scoreRecycleCapital(input: ScoringInput): GoalScores {
   const cashIn = input.rental?.totalCashInvested ?? 0;
 
-  // B&H: dollar-years trapped earn a flat 5% proxy. Tiny but non-zero so
-  // B&H is never disqualified — its real strength is on other goals.
-  const bnh = cashIn * BNH_NO_PROJECTION_PROXY;
+  // B&H is by definition NOT a capital-recycling play — it traps cash in
+  // equity for 30 years. Score it at 0 so it never wins this goal. When
+  // both F&F and BRRRR also fail to recycle, the orchestrator returns null
+  // and the UI surfaces a "no strategy fits this goal" state instead of
+  // falling back to a misleading B&H winner.
+  const bnh = 0;
 
   // F&F: total cash recovered per year via sale + redeployment.
   // Gated on positive profit — a money-losing flip doesn't "recycle"

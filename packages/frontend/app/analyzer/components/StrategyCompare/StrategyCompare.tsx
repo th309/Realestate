@@ -40,6 +40,9 @@ interface StrategyCompareProps {
    *  "no override" because the 3-card compare grid only houses B&H / Flip
    *  / BRRRR. */
   winner?: Strategy;
+  /** True when a goal is selected but no strategy scores positively — the
+   *  BestPlayCallout renders a "no fit" message instead of a winner. */
+  noGoalFit?: boolean;
 }
 
 type ResidentialWinner = "buyAndHold" | "flip" | "brrrr";
@@ -58,6 +61,7 @@ export function StrategyCompare({
   isDealViable = true,
   selectedGoal,
   winner,
+  noGoalFit = false,
 }: StrategyCompareProps) {
   const [view, setView] = useState<StrategyView>("grid3");
   const narrowedWinner = asResidentialWinner(winner);
@@ -71,6 +75,7 @@ export function StrategyCompare({
         isDealViable={isDealViable}
         goal={selectedGoal}
         winnerOverride={narrowedWinner}
+        noGoalFit={noGoalFit}
       />
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-on-surface-variant">
