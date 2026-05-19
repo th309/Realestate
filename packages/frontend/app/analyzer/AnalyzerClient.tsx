@@ -20,7 +20,7 @@ import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { PropertyRecordCard } from "./components/PropertyRecordCard";
 import { RentcastBanners } from "./components/RentcastBanners";
-import { computeBestPlay } from "./lib/strategy-best-play";
+import { useSelectedGoal } from "./lib/use-selected-goal";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { deriveCashflowSummary } from "./lib/cashflow-summary";
 import { useSectionAiInsights } from "./lib/use-section-ai-insights";
@@ -49,31 +49,13 @@ export default function AnalyzerClient({
     paramAddress: params.address,
     paramZip: params.zip,
   });
+  // prettier-ignore
   const {
-    analyzer,
-    address,
-    setAddress,
-    arvLocal,
-    setArvLocal,
-    rehabBudget,
-    setRehabBudget,
-    assumptions,
-    setAssumption,
-    propertyType,
-    setPropertyType,
-    unitCount,
-    setUnitCount,
-    propertyClass,
-    propertyLookup,
-    rentcastData,
-    quotaExceeded,
-    projection,
-    sensitivity,
-    afterTax,
-    breakEven,
-    brrrrTimeline,
-    marketContext,
-    piqByGeo,
+    analyzer, address, setAddress, arvLocal, setArvLocal, rehabBudget,
+    setRehabBudget, assumptions, setAssumption, propertyType, setPropertyType,
+    unitCount, setUnitCount, propertyClass, propertyLookup, rentcastData,
+    quotaExceeded, projection, sensitivity, afterTax, breakEven, brrrrTimeline,
+    marketContext, piqByGeo,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -91,8 +73,14 @@ export default function AnalyzerClient({
     ((analyzer.input.rentMonthly ?? 0) > 0 || rental.capRatePct != null);
 
   const router = useRouter();
-  const bestPlay = computeBestPlay(rental, flip, brrrr, projection);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
+  const { selectedGoal, setSelectedGoal, bestPlay } = useSelectedGoal(
+    analyzer,
+    projection,
+    assumptions,
+    analysisMode,
+    hasGradableInput,
+  );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
