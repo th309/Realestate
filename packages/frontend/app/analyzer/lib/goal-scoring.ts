@@ -52,9 +52,8 @@ export function scoreForGoal(
       return scoreLongTermWealth(input);
     case "fast_cash":
       return scoreFastCash(input);
-    default:
-      // Other goals filled in by later tasks.
-      return { buyAndHold: 0, flip: 0, brrrr: 0 };
+    case "recycle_capital":
+      return scoreRecycleCapital(input);
   }
 }
 
@@ -108,4 +107,27 @@ function scoreFastCash(input: ScoringInput): GoalScores {
       : cashIn * BNH_NO_PROJECTION_PROXY;
 
   return { buyAndHold: bnh, flip: flipProfit, brrrr: brrrrNet };
+}
+
+const DEFAULT_REFI_SEASONING_MONTHS = 6;
+
+function scoreRecycleCapital(input: ScoringInput): GoalScores {
+  const cashIn = input.rental?.totalCashInvested ?? 0;
+
+  // B&H: dollar-years trapped earn a flat 5% proxy. Tiny but non-zero so
+  // B&H is never disqualified — its real strength is on other goals.
+  const bnh = cashIn * BNH_NO_PROJECTION_PROXY;
+
+  // F&F: total cash recovered per year via sale + redeployment.
+  const months = input.holdMonths ?? 4;
+  const flip = (cashIn / Math.max(1, months)) * 12;
+
+  // BRRRR: cash recovered at refi per year. The lower remainingCashInDeal
+  // is, the higher this score gets.
+  const remaining = input.brrrr?.remainingCashInDeal ?? cashIn;
+  const recovered = Math.max(0, cashIn - remaining);
+  const seasoning = input.refiSeasoningMonths ?? DEFAULT_REFI_SEASONING_MONTHS;
+  const brrrr = (recovered / Math.max(1, seasoning)) * 12;
+
+  return { buyAndHold: bnh, flip, brrrr };
 }

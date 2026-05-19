@@ -185,3 +185,41 @@ describe("scoreForGoal — fast_cash", () => {
     expect(s.buyAndHold).toBe(4_000);
   });
 });
+
+describe("scoreForGoal — recycle_capital", () => {
+  it("B&H proxy = totalCashInvested × 0.05", () => {
+    const f = makeFixtures({});
+    const s = scoreForGoal("recycle_capital", f);
+    // 80_000 × 0.05 = 4_000 — small, never zero
+    expect(s.buyAndHold).toBe(4_000);
+  });
+
+  it("F&F velocity = (totalCashInvested / holdMonths) × 12", () => {
+    const f = makeFixtures({ flipHoldMonths: 5 });
+    const s = scoreForGoal("recycle_capital", f);
+    // 80_000 / 5 = 16_000; × 12 = 192_000 (cash recovered per year)
+    expect(s.flip).toBeCloseTo(192_000, 0);
+  });
+
+  it("BRRRR velocity rewards low remainingCashInDeal", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 5_000,
+    } as BrrrrResult;
+    f.refiSeasoningMonths = 6;
+    const s = scoreForGoal("recycle_capital", f);
+    // (80_000 − 5_000) / 6 × 12 = 150_000
+    expect(s.brrrr).toBeCloseTo(150_000, 0);
+  });
+
+  it("BRRRR floors at 0 when remainingCashInDeal exceeds totalCashInvested", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 100_000,
+    } as BrrrrResult;
+    const s = scoreForGoal("recycle_capital", f);
+    expect(s.brrrr).toBe(0);
+  });
+});
