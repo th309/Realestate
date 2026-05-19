@@ -38,6 +38,14 @@ export class AiInsightsBodyDto {
       county?: number | null;
       metro?: number | null;
     };
+    /** Investor goal for the "Help me decide" recommender. Optional —
+     *  focused-mode and saved/shared routes leave this null. */
+    goal?:
+      | 'cash_flow'
+      | 'long_term_wealth'
+      | 'fast_cash'
+      | 'recycle_capital'
+      | null;
   };
 }
 
