@@ -6,6 +6,7 @@ import type {
   ProjectionResult,
 } from "@propertyiq/analyzer-core";
 import type { InvestorGoal } from "./goal-types";
+import { ALL_GOALS } from "./goal-types";
 
 /**
  * Goal-aware strategy scoring. For each (goal × strategy) pair we return a
@@ -36,10 +37,12 @@ export interface GoalScores {
   brrrr: number;
 }
 
-/** F&F profit haircut for the cash_flow proxy. 0.4 = capital-gains tax
- *  (~25%) compounded with an opportunity-cost discount (~50%). Documented
- *  in the design spec. */
-const FLIP_CASHFLOW_PROXY_MULTIPLIER = 0.4;
+/** F&F cash-flow proxy: treat flip profit as if reinvested into a rental
+ *  at a 6% annual cap rate, expressed monthly. 0.06 / 12 = 0.005. This is
+ *  conceptually correct (lump-sum profit -> implied monthly income) instead
+ *  of the prior "(profit/months) * 0.4" which mistakenly treated one-time
+ *  profit as recurring monthly cashflow. Documented in the design spec. */
+const FLIP_CASHFLOW_IMPLIED_MONTHLY_YIELD = 0.005;
 
 export function scoreForGoal(
   goal: InvestorGoal,
@@ -61,11 +64,7 @@ function scoreCashFlow(input: ScoringInput): GoalScores {
   const bnh = input.rental?.cashflowMonthly ?? 0;
   const brrrr = input.brrrr?.postRefiCashflowMonthly ?? 0;
   const profit = input.flip?.projectedProfit ?? 0;
-  const months = input.holdMonths ?? 4;
-  const flip =
-    profit > 0
-      ? (profit / Math.max(1, months)) * FLIP_CASHFLOW_PROXY_MULTIPLIER
-      : 0;
+  const flip = profit > 0 ? profit * FLIP_CASHFLOW_IMPLIED_MONTHLY_YIELD : 0;
   return { buyAndHold: bnh, flip, brrrr };
 }
 
@@ -130,6 +129,39 @@ function scoreRecycleCapital(input: ScoringInput): GoalScores {
   const brrrr = (recovered / Math.max(1, seasoning)) * 12;
 
   return { buyAndHold: bnh, flip, brrrr };
+}
+
+/** Normalization anchors — score=1.0 lands at a typical Balanced-preset
+ *  A-grade outcome on each goal. Documented in the design spec. */
+const NORMALIZATION_ANCHOR: Record<InvestorGoal, number> = {
+  cash_flow: 500, // $500/door/month
+  long_term_wealth: 1_000_000, // $1M at year 30 (covers compounded flip-profit alt)
+  fast_cash: 80_000, // $80k in year 1
+  recycle_capital: 240_000, // canonical 4-mo flip of $80k cycles $240k/yr
+};
+
+/**
+ * Pre-selects the goal that fits this deal best. For each of the 4 goals
+ * we find the top-strategy score, normalize against the goal-specific
+ * anchor, and pick the goal with the highest normalized value.
+ *
+ * Ties are broken by ALL_GOALS iteration order (cash_flow first), so the
+ * fallback when every goal normalizes to 0 is cash_flow — sensible when
+ * the user hasn't entered enough data to make any goal stand out.
+ */
+export function inferDefaultGoal(input: ScoringInput): InvestorGoal {
+  let bestGoal: InvestorGoal = "cash_flow";
+  let bestNormalized = -Infinity;
+  for (const goal of ALL_GOALS) {
+    const s = scoreForGoal(goal, input);
+    const topRaw = Math.max(s.buyAndHold, s.flip, s.brrrr);
+    const normalized = topRaw / NORMALIZATION_ANCHOR[goal];
+    if (normalized > bestNormalized) {
+      bestNormalized = normalized;
+      bestGoal = goal;
+    }
+  }
+  return bestGoal;
 }
 
 /** Strategy identifier as used by the rest of the analyzer (matches

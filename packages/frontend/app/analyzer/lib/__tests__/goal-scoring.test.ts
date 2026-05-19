@@ -8,6 +8,7 @@ import type {
 } from "@propertyiq/analyzer-core";
 import { scoreForGoal } from "../goal-scoring";
 import { pickBestPlayForGoal } from "../goal-scoring";
+import { inferDefaultGoal } from "../goal-scoring";
 
 /** Minimal fixture builder — only the fields scoring functions actually read. */
 function makeFixtures(over: {
@@ -56,11 +57,12 @@ describe("scoreForGoal — cash_flow", () => {
     expect(s.brrrr).toBe(250);
   });
 
-  it("F&F gets the soft-penalty proxy: (profit / months) × 0.4", () => {
+  it("F&F gets the implied-yield proxy: profit × 0.005 (6% cap rate, monthly)", () => {
     const f = makeFixtures({ flipProfit: 50_000, flipHoldMonths: 5 });
-    // 50_000 / 5 = 10_000; × 0.4 = 4_000 per "month-equivalent"
+    // 50_000 × 0.005 = 250 (lump-sum profit reinvested at 6% annual yield,
+    // expressed monthly)
     const s = scoreForGoal("cash_flow", f);
-    expect(s.flip).toBeCloseTo(4_000, 1);
+    expect(s.flip).toBeCloseTo(250, 1);
   });
 
   it("F&F floors at 0 when profit is negative (degenerate flip)", () => {
@@ -229,7 +231,7 @@ describe("pickBestPlayForGoal", () => {
   it("cash_flow goal → strong B&H wins over weak F&F and BRRRR", () => {
     const f = makeFixtures({
       rentalCashflowMonthly: 400,
-      // F&F proxy: (2_000 / 4) × 0.4 = 200 — weak relative to B&H 400.
+      // F&F proxy: 2_000 × 0.005 = 10 — weak relative to B&H 400.
       flipProfit: 2_000,
       flipHoldMonths: 4,
       brrrrPostRefiCashflow: 50,
@@ -263,17 +265,57 @@ describe("pickBestPlayForGoal", () => {
   it("ties broken in declaration order (buyAndHold > flip > brrrr)", () => {
     const f = makeFixtures({
       rentalCashflowMonthly: 100,
-      flipProfit: 1_000,
+      // 20_000 × 0.005 = 100 — three-way tie on cash_flow.
+      flipProfit: 20_000,
       flipHoldMonths: 4,
       brrrrPostRefiCashflow: 100,
     });
-    // cash_flow: bnh=100, flip≈100, brrrr=100. Ties go to first in object
-    // iteration order (buyAndHold).
+    // cash_flow: bnh=100, flip=100, brrrr=100. Ties go to first in
+    // declaration order (buyAndHold).
     expect(pickBestPlayForGoal("cash_flow", f)).toBe("buyAndHold");
   });
 
   it("returns null when ALL three strategies score 0 (no usable data)", () => {
     const f = makeFixtures({});
     expect(pickBestPlayForGoal("cash_flow", f)).toBe(null);
+  });
+});
+
+describe("inferDefaultGoal", () => {
+  it("strong rental property → cash_flow default", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 500,
+      flipProfit: 5_000,
+      flipHoldMonths: 4,
+    });
+    expect(inferDefaultGoal(f)).toBe("cash_flow");
+  });
+
+  it("strong flip → fast_cash default", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 100,
+      flipProfit: 80_000,
+    });
+    expect(inferDefaultGoal(f)).toBe("fast_cash");
+  });
+
+  it("strong BRRRR with low cash-left → recycle_capital default", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 2_000,
+      postRefiCashflowMonthly: 100,
+    } as BrrrrResult;
+    f.holdMonths = 18; // pin F&F velocity low
+    expect(inferDefaultGoal(f)).toBe("recycle_capital");
+  });
+
+  it("falls back to cash_flow when all four goals normalize to ≤0", () => {
+    const f = makeFixtures({});
+    // Truly empty deal: zero out the rental cash-in so the B&H / BRRRR
+    // velocity proxies (recycle_capital + fast_cash) don't generate a
+    // spurious non-zero from the default 80k fixture.
+    f.rental = { ...f.rental, totalCashInvested: 0 } as RentalResult;
+    expect(inferDefaultGoal(f)).toBe("cash_flow");
   });
 });
