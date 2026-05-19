@@ -1,6 +1,7 @@
 "use client";
 
 import { fmtUsd } from "../../lib/format-helpers";
+import { GOAL_LABEL, type InvestorGoal } from "../../lib/goal-types";
 
 export interface StrategyScores {
   buyAndHold: { irr10: number; cashflowMonthly: number };
@@ -51,15 +52,23 @@ interface BestPlayCalloutProps {
   /** When verdict is bad/avoid, switch the "Best play" framing to "Least bad
    *  option" so the user isn't told a losing deal is the BEST play. */
   isDealViable?: boolean;
+  /** When set, the heading reframes to "Best for <goal>" so the user sees
+   *  the winner in the context of the goal they selected. */
+  goal?: InvestorGoal | null;
 }
 
 export function BestPlayCallout({
   scores,
   isDealViable = true,
+  goal,
 }: BestPlayCalloutProps) {
   const winner = pickBestPlay(scores);
   const c = COPY[winner];
-  const heading = isDealViable ? "Best play" : "Least bad option";
+  const heading = !isDealViable
+    ? "Least bad option"
+    : goal
+      ? `Best for ${GOAL_LABEL[goal].toLowerCase()}`
+      : "Best play";
   // Tertiary (green) container for viable deals; muted neutral for non-viable
   // ones so the user isn't visually rewarded for a losing strategy.
   const containerClass = isDealViable

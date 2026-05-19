@@ -9,6 +9,8 @@ import {
   StrategyScores,
   pickBestPlay,
 } from "./BestPlayCallout";
+import { GoalPicker } from "./GoalPicker";
+import type { InvestorGoal } from "../../lib/goal-types";
 
 interface StrategyCompareProps {
   scores: StrategyScores;
@@ -29,6 +31,10 @@ interface StrategyCompareProps {
   /** True when the overall deal verdict is at least "marginal" — drives
    *  whether BestPlayCallout celebrates the winner or warns the user. */
   isDealViable?: boolean;
+  /** Goal-aware picker integration. When both are passed, the picker
+   *  chip-row renders above the BestPlayCallout. */
+  selectedGoal?: InvestorGoal | null;
+  onGoalChange?: (goal: InvestorGoal) => void;
 }
 
 export function StrategyCompare({
@@ -37,13 +43,22 @@ export function StrategyCompare({
   fullViews,
   summaries,
   isDealViable = true,
+  selectedGoal,
+  onGoalChange,
 }: StrategyCompareProps) {
   const [view, setView] = useState<StrategyView>("grid3");
   const winner = pickBestPlay(scores);
 
   return (
     <div data-strategy-compare className="space-y-4">
-      <BestPlayCallout scores={scores} isDealViable={isDealViable} />
+      {selectedGoal !== undefined && onGoalChange && (
+        <GoalPicker selectedGoal={selectedGoal} onChange={onGoalChange} />
+      )}
+      <BestPlayCallout
+        scores={scores}
+        isDealViable={isDealViable}
+        goal={selectedGoal}
+      />
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-on-surface-variant">
           Compare strategies

@@ -320,6 +320,8 @@ export default function AnalyzerClient({
                   isDealViable={
                     hasGradableInput && verdict !== "bad" && verdict !== "avoid"
                   }
+                  selectedGoal={selectedGoal}
+                  onGoalChange={setSelectedGoal}
                 />
               )}
 
