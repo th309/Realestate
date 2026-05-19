@@ -7,6 +7,7 @@ import type {
   RentalResult,
 } from "@propertyiq/analyzer-core";
 import { scoreForGoal } from "../goal-scoring";
+import { pickBestPlayForGoal } from "../goal-scoring";
 
 /** Minimal fixture builder — only the fields scoring functions actually read. */
 function makeFixtures(over: {
@@ -221,5 +222,58 @@ describe("scoreForGoal — recycle_capital", () => {
     } as BrrrrResult;
     const s = scoreForGoal("recycle_capital", f);
     expect(s.brrrr).toBe(0);
+  });
+});
+
+describe("pickBestPlayForGoal", () => {
+  it("cash_flow goal → strong B&H wins over weak F&F and BRRRR", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 400,
+      // F&F proxy: (2_000 / 4) × 0.4 = 200 — weak relative to B&H 400.
+      flipProfit: 2_000,
+      flipHoldMonths: 4,
+      brrrrPostRefiCashflow: 50,
+    });
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe("buyAndHold");
+  });
+
+  it("fast_cash goal → strong F&F wins over decent B&H rental", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 200,
+      flipProfit: 75_000,
+    });
+    expect(pickBestPlayForGoal("fast_cash", f)).toBe("flip");
+  });
+
+  it("recycle_capital goal → strong BRRRR with low cash-left wins", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 2_000,
+    } as BrrrrResult;
+    f.refiSeasoningMonths = 6;
+    // BRRRR velocity: (80k − 2k)/6 × 12 ≈ 156_000
+    // F&F velocity: 80k / 4 × 12 = 240_000 — wait, F&F still wins here
+    // Force F&F to be slower so BRRRR wins:
+    f.holdMonths = 18;
+    // F&F: 80k / 18 × 12 ≈ 53_333; BRRRR: ≈ 156k → BRRRR
+    expect(pickBestPlayForGoal("recycle_capital", f)).toBe("brrrr");
+  });
+
+  it("ties broken in declaration order (buyAndHold > flip > brrrr)", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 100,
+      flipProfit: 1_000,
+      flipHoldMonths: 4,
+      brrrrPostRefiCashflow: 100,
+    });
+    // cash_flow: bnh=100, flip≈100, brrrr=100. Ties go to first in object
+    // iteration order (buyAndHold).
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe("buyAndHold");
+  });
+
+  it("returns null when ALL three strategies score 0 (no usable data)", () => {
+    const f = makeFixtures({});
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe(null);
   });
 });

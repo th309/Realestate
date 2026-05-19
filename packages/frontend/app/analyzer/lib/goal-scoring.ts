@@ -131,3 +131,37 @@ function scoreRecycleCapital(input: ScoringInput): GoalScores {
 
   return { buyAndHold: bnh, flip, brrrr };
 }
+
+/** Strategy identifier as used by the rest of the analyzer (matches
+ *  `Strategy` in strategy-tile-mappers.ts). Kept inline to avoid an import
+ *  cycle. */
+type StrategyKey = "buyAndHold" | "flip" | "brrrr";
+
+/**
+ * Argmax over scoreForGoal. Ties resolve in declaration order
+ * (buyAndHold > flip > brrrr) — deterministic so the same deal always
+ * produces the same recommendation.
+ *
+ * Returns null when every strategy scores 0 (no usable data) so callers
+ * can fall through to the deterministic pickBestPlay() and avoid a
+ * meaningless "winner."
+ */
+export function pickBestPlayForGoal(
+  goal: InvestorGoal,
+  input: ScoringInput,
+): StrategyKey | null {
+  const scores = scoreForGoal(goal, input);
+  const ordered: Array<[StrategyKey, number]> = [
+    ["buyAndHold", scores.buyAndHold],
+    ["flip", scores.flip],
+    ["brrrr", scores.brrrr],
+  ];
+  let best: [StrategyKey, number] | null = null;
+  for (const entry of ordered) {
+    if (entry[1] <= 0) continue;
+    if (best === null || entry[1] > best[1]) {
+      best = entry;
+    }
+  }
+  return best?.[0] ?? null;
+}
