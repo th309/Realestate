@@ -48,6 +48,12 @@ export interface InsightPayload {
     county?: number | null;
     metro?: number | null;
   };
+  goal?:
+    | 'cash_flow'
+    | 'long_term_wealth'
+    | 'fast_cash'
+    | 'recycle_capital'
+    | null;
 }
 
 export interface InsightResult extends CachedInsight {
@@ -233,8 +239,25 @@ export class AiInsightsService {
       `- Market heat: ${payload.piq?.market_heat?.value ?? 'n/a'} (source: ${payload.piq?.market_heat?.source ?? 'n/a'})`,
       `- Net migration: ${payload.piq?.net_migration?.value ?? 'n/a'} (source: ${payload.piq?.net_migration?.source ?? 'n/a'})`,
       '',
+      ...(payload.goal
+        ? [
+            'USER GOAL:',
+            `- The user picked "${humanizeGoal(payload.goal)}" as their goal for this deal.`,
+            '',
+          ]
+        : []),
       'TASK:',
       getSectionPrompt(sectionId),
     ].join('\n');
   }
+}
+
+function humanizeGoal(goal: string): string {
+  const labels: Record<string, string> = {
+    cash_flow: 'Maximize monthly cash flow',
+    long_term_wealth: 'Maximize long-term (30-year) wealth',
+    fast_cash: 'Maximize fast cash within 12 months',
+    recycle_capital: 'Recycle capital into the next deal as fast as possible',
+  };
+  return labels[goal] ?? goal;
 }
