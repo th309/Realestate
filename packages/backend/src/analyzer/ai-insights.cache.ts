@@ -23,6 +23,9 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  * a bump guarantees a fresh regeneration across every user/section without a
  * manual Redis flush.
  *
+ *   v5 (2026-05-18): goal-aware recommendation_analysis prompt; cache key
+ *                    now includes the user's investor goal so each goal
+ *                    gets its own cached narrative per deal.
  *   v4 (2026-05-18): reapplied the v2 prompt tightenings at user request —
  *                    PIQ Score reframed as probability of out/under-performing
  *                    the state average; "X percent excess return" language
@@ -40,7 +43,7 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  *                    Broke the narrative for some prompts — rolled back in v3.
  *   v1 (initial)
  */
-const PROMPT_REVISION = 'v4';
+const PROMPT_REVISION = 'v5';
 
 @Injectable()
 export class AiInsightsCache {
@@ -76,7 +79,8 @@ export class AiInsightsCache {
     // the same property invalidates the prior response and re-asks the model
     // in the new strategy's terms.
     const strategy = payload.strategy ?? 'none';
-    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${inputHash}:${rcHash}:${piqHash}`;
+    const goal = payload.goal ?? 'none';
+    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${inputHash}:${rcHash}:${piqHash}`;
   }
 
   async get(key: string): Promise<CachedInsight | null> {
