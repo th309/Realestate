@@ -131,3 +131,57 @@ describe("scoreForGoal — long_term_wealth", () => {
     expect(s.brrrr).toBe(425_000);
   });
 });
+
+describe("scoreForGoal — fast_cash", () => {
+  it("F&F score equals projectedProfit", () => {
+    const f = makeFixtures({ flipProfit: 65_000 });
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.flip).toBe(65_000);
+  });
+
+  it("BRRRR score equals refinanceCashOut − totalCashInvested, floored at 0", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      refinanceCashOut: 100_000,
+    } as BrrrrResult;
+    // rental.totalCashInvested defaults to 80_000 in the fixture; net = 20k
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.brrrr).toBe(20_000);
+  });
+
+  it("BRRRR floors at 0 when refi doesn't cover the cash put in", () => {
+    const f = makeFixtures({});
+    f.brrrr = { ...f.brrrr, refinanceCashOut: 50_000 } as BrrrrResult;
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.brrrr).toBe(0);
+  });
+
+  it("B&H uses the year-1 equity proxy when projection is present", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 100_000, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 0, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    // initialEquity defaults to rental.totalCashInvested (80k) when no
+    // separate down-payment field is on the input; helper picks 70% of the
+    // delta as HELOC-able. (100k − 80k) × 0.7 = 14_000
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.buyAndHold).toBeCloseTo(14_000, 0);
+  });
+
+  it("B&H falls back to soft proxy when projection is absent", () => {
+    const f = makeFixtures({});
+    const s = scoreForGoal("fast_cash", f);
+    // totalCashInvested × 0.05 = 80_000 × 0.05 = 4_000 (consistent with the
+    // Recycle Capital B&H proxy — small but never zero)
+    expect(s.buyAndHold).toBe(4_000);
+  });
+});

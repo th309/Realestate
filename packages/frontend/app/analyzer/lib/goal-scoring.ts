@@ -50,6 +50,8 @@ export function scoreForGoal(
       return scoreCashFlow(input);
     case "long_term_wealth":
       return scoreLongTermWealth(input);
+    case "fast_cash":
+      return scoreFastCash(input);
     default:
       // Other goals filled in by later tasks.
       return { buyAndHold: 0, flip: 0, brrrr: 0 };
@@ -84,4 +86,26 @@ function scoreLongTermWealth(input: ScoringInput): GoalScores {
       ? profit * Math.pow(1 + INDEX_FUND_GROWTH_RATE, HORIZON_YEARS)
       : 0;
   return { buyAndHold: bnhY30, flip, brrrr: brrrrY30 };
+}
+
+const HELOC_LTV = 0.7;
+const BNH_NO_PROJECTION_PROXY = 0.05;
+
+function scoreFastCash(input: ScoringInput): GoalScores {
+  const flipProfit = Math.max(0, input.flip?.projectedProfit ?? 0);
+
+  const refiCash = input.brrrr?.refinanceCashOut ?? 0;
+  const cashIn = input.rental?.totalCashInvested ?? 0;
+  const brrrrNet = Math.max(0, refiCash - cashIn);
+
+  // B&H: HELOC against year-1 appreciated equity (70% LTV less the
+  // cash already in). When projection is missing, fall back to a flat
+  // soft-penalty so this strategy is never disqualified.
+  const y1Equity = input.projection?.horizons.y1.equity ?? null;
+  const bnh =
+    y1Equity != null
+      ? Math.max(0, (y1Equity - cashIn) * HELOC_LTV)
+      : cashIn * BNH_NO_PROJECTION_PROXY;
+
+  return { buyAndHold: bnh, flip: flipProfit, brrrr: brrrrNet };
 }
