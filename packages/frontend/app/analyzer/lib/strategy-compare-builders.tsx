@@ -18,7 +18,10 @@ interface BuildArgs {
   breakEven: BreakEvenResult;
   brrrrTimeline: BrrrrTimelineResult;
   projection: ProjectionResult;
-  bestPlay: Strategy;
+  /** Strategy that gets the green BEST badge on its card. Pass null when
+   *  no strategy fits the selected goal — all three cards then render
+   *  without a winner badge, matching the BestPlayCallout's "no fit" state. */
+  bestPlay: Strategy | null;
   onPickStrategy: (s: Strategy) => void;
 }
 

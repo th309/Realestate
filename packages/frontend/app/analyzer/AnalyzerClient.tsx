@@ -105,7 +105,7 @@ export default function AnalyzerClient({
     breakEven,
     brrrrTimeline,
     projection,
-    bestPlay,
+    bestPlay: noGoalFit ? null : bestPlay,
     onPickStrategy: pickStrategy,
   });
 
