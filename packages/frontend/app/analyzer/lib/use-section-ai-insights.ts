@@ -125,14 +125,19 @@ export function useSectionAiInsights({
       : "",
     grading?.letter ?? "",
     strategy ?? "",
-    goal ?? "",
   ].join("|");
+
+  // Goal scope: only `recommendation_analysis` consumes it, so only that
+  // section's queryKey changes when the user switches goals. Without this,
+  // every goal-switch refetches all 6 sections (identical output) and
+  // burns through the global rate limit.
+  const recommendationDiscriminator = `${piqDiscriminator}|${goal ?? ""}`;
 
   const recommendation = useAiSectionAnnotation(
     payload,
     "recommendation_analysis",
     enabled && !!grading,
-    piqDiscriminator,
+    recommendationDiscriminator,
   );
   const projection = useAiSectionAnnotation(
     payload,

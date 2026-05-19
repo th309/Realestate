@@ -79,7 +79,14 @@ export class AiInsightsCache {
     // the same property invalidates the prior response and re-asks the model
     // in the new strategy's terms.
     const strategy = payload.strategy ?? 'none';
-    const goal = payload.goal ?? 'none';
+    // Goal only affects the recommendation_analysis prompt — every other
+    // section ignores it. Scope it to that key so switching goals doesn't
+    // cache-miss-then-LLM-call the other 5 sections (which produces identical
+    // output) and trip the global rate limiter.
+    const goal =
+      sectionId === 'recommendation_analysis'
+        ? (payload.goal ?? 'none')
+        : 'none';
     return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${inputHash}:${rcHash}:${piqHash}`;
   }
 
