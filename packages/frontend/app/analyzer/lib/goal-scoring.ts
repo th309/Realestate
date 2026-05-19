@@ -48,6 +48,8 @@ export function scoreForGoal(
   switch (goal) {
     case "cash_flow":
       return scoreCashFlow(input);
+    case "long_term_wealth":
+      return scoreLongTermWealth(input);
     default:
       // Other goals filled in by later tasks.
       return { buyAndHold: 0, flip: 0, brrrr: 0 };
@@ -64,4 +66,22 @@ function scoreCashFlow(input: ScoringInput): GoalScores {
       ? (profit / Math.max(1, months)) * FLIP_CASHFLOW_PROXY_MULTIPLIER
       : 0;
   return { buyAndHold: bnh, flip, brrrr };
+}
+
+/** 7% annualized compounding mirror an S&P-ish index alternative for the
+ *  F&F one-shot profit. Held flat for 30 years (no rolling-flip multiplier).
+ *  Documented in the design spec. */
+const INDEX_FUND_GROWTH_RATE = 0.07;
+const HORIZON_YEARS = 30;
+
+function scoreLongTermWealth(input: ScoringInput): GoalScores {
+  const bnhY30 = input.projection?.horizons.y30.equity ?? 0;
+  const brrrrY30 =
+    input.brrrr?.postRefiProjection?.horizons.y30.equity ?? bnhY30;
+  const profit = input.flip?.projectedProfit ?? 0;
+  const flip =
+    profit > 0
+      ? profit * Math.pow(1 + INDEX_FUND_GROWTH_RATE, HORIZON_YEARS)
+      : 0;
+  return { buyAndHold: bnhY30, flip, brrrr: brrrrY30 };
 }

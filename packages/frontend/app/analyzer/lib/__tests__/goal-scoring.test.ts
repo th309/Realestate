@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   BrrrrResult,
   FlipResult,
+  ProjectionResult,
   RentalResult,
 } from "@propertyiq/analyzer-core";
 import { scoreForGoal } from "../goal-scoring";
@@ -65,5 +66,68 @@ describe("scoreForGoal — cash_flow", () => {
     const f = makeFixtures({ flipProfit: -10_000, flipHoldMonths: 4 });
     const s = scoreForGoal("cash_flow", f);
     expect(s.flip).toBe(0);
+  });
+});
+
+describe("scoreForGoal — long_term_wealth", () => {
+  it("B&H score reads projection.horizons.y30.equity", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 0, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 425_000, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.buyAndHold).toBe(425_000);
+  });
+
+  it("F&F score compounds projectedProfit at 7% over 30 years", () => {
+    const f = makeFixtures({ flipProfit: 50_000 });
+    const s = scoreForGoal("long_term_wealth", f);
+    // 50_000 × 1.07^30 ≈ 380_612
+    expect(s.flip).toBeCloseTo(50_000 * Math.pow(1.07, 30), 0);
+  });
+
+  it("BRRRR score uses postRefiProjection.horizons.y30.equity when present", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      postRefiProjection: {
+        yearly: [],
+        horizons: {
+          y1: { equity: 0, irr: 0, cashflow: 0 },
+          y3: { equity: 0, irr: 0, cashflow: 0 },
+          y5: { equity: 0, irr: 0, cashflow: 0 },
+          y10: { equity: 0, irr: 0, cashflow: 0 },
+          y20: { equity: 0, irr: 0, cashflow: 0 },
+          y30: { equity: 500_000, irr: 0, cashflow: 0 },
+        },
+      },
+    } as BrrrrResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.brrrr).toBe(500_000);
+  });
+
+  it("BRRRR falls back to B&H y30 equity when postRefiProjection is absent", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 0, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 425_000, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.brrrr).toBe(425_000);
   });
 });
