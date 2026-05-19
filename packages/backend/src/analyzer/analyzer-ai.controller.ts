@@ -20,6 +20,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
@@ -93,6 +94,17 @@ export class AnalyzerAiController {
    * once cached, and consumed by static UI panels, so SSE adds no value
    * here. Streaming is reserved for the header verdict below.
    */
+  /**
+   * Throttle is skipped here because the natural page-load pattern fires
+   * 6 concurrent section requests (one per section), which combined with
+   * other parallel page traffic (RentCast, PIQ, market context,
+   * entitlements polls) can spike past the global 20/sec short window and
+   * 429 individual sections — producing the "narrative randomly missing"
+   * bug. Defense remains intact: JwtAuthGuard (auth) + tierGate.requirePro
+   * (paid tier) + AiInsightsCache (24h Redis dedupe of same-payload calls,
+   * so re-requests are nearly free LLM-wise).
+   */
+  @SkipThrottle()
   @Post('ai-insights/section')
   @UseGuards(JwtAuthGuard)
   async sectionInsight(

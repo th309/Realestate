@@ -54,18 +54,37 @@ export interface AIAnnotationResult {
   cacheHit: boolean;
 }
 
+/**
+ * Backoff schedule for 429 retries. We expect 429s to be brief — the global
+ * throttle short-window is 1 second. Three retries at ~0.5s, 1.2s, 2.5s
+ * gives the throttle plenty of room to drain before giving up.
+ */
+const RETRY_BACKOFF_MS_429 = [500, 1200, 2500];
+
 export async function fetchAiInsight(params: {
   id: AnalyzerSectionId;
   payload: AiInsightPayload;
 }): Promise<AIAnnotationResult> {
   const url = `${API_URL}/api/analyzer/ai-insights/section`;
   const headers = await getAuthHeaders();
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) throw new Error(`ai-insights ${res.status}`);
-  return (await res.json()) as AIAnnotationResult;
+  const body = JSON.stringify(params);
+
+  for (let attempt = 0; attempt <= RETRY_BACKOFF_MS_429.length; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body,
+    });
+    if (res.ok) return (await res.json()) as AIAnnotationResult;
+
+    // Retry only on 429 — other errors are not throttle-related and won't
+    // resolve by waiting. Final 429 falls through to the throw below.
+    if (res.status === 429 && attempt < RETRY_BACKOFF_MS_429.length) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS_429[attempt]));
+      continue;
+    }
+    throw new Error(`ai-insights ${res.status}`);
+  }
+  throw new Error("ai-insights 429 (exhausted retries)");
 }
