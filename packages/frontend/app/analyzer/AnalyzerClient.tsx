@@ -273,10 +273,21 @@ export default function AnalyzerClient({
                 </div>
               )}
 
-              {analysisMode === "compare" && hasGradableInput && (
+              {analysisMode === "compare" && (
                 <GoalPicker
                   selectedGoal={selectedGoal}
                   onChange={setSelectedGoal}
+                />
+              )}
+
+              {analysisMode === "compare" && (
+                <StrategyCompare
+                  {...strategyProps}
+                  isDealViable={
+                    hasGradableInput && verdict !== "bad" && verdict !== "avoid"
+                  }
+                  selectedGoal={selectedGoal}
+                  winner={bestPlay}
                 />
               )}
 
@@ -322,17 +333,6 @@ export default function AnalyzerClient({
                 active={activeStrategy}
                 isCompareWinner={analysisMode === "compare"}
               />
-
-              {analysisMode === "compare" && (
-                <StrategyCompare
-                  {...strategyProps}
-                  isDealViable={
-                    hasGradableInput && verdict !== "bad" && verdict !== "avoid"
-                  }
-                  selectedGoal={selectedGoal}
-                  winner={bestPlay}
-                />
-              )}
 
               <RentcastBanners
                 lookupErrorMsg={lookupErrorMsg}
