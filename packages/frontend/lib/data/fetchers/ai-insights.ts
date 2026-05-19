@@ -37,6 +37,14 @@ export interface AiInsightPayload {
     county?: number | null;
     metro?: number | null;
   };
+  /** Investor goal for the "Help me decide" recommender. When set, the
+   *  recommendation_analysis prompt frames its narrative around this goal. */
+  goal?:
+    | "cash_flow"
+    | "long_term_wealth"
+    | "fast_cash"
+    | "recycle_capital"
+    | null;
 }
 
 export interface AIAnnotationResult {

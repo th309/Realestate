@@ -11,12 +11,21 @@ import { pickBestPlayForGoal } from "../goal-scoring";
 import { inferDefaultGoal } from "../goal-scoring";
 
 /** Minimal fixture builder — only the fields scoring functions actually read. */
+interface Fixtures {
+  rental: RentalResult;
+  flip: FlipResult;
+  brrrr: BrrrrResult;
+  projection: ProjectionResult | undefined;
+  holdMonths: number;
+  refiSeasoningMonths: number | undefined;
+}
+
 function makeFixtures(over: {
   rentalCashflowMonthly?: number;
   flipProfit?: number;
   flipHoldMonths?: number;
   brrrrPostRefiCashflow?: number;
-}) {
+}): Fixtures {
   const rental = {
     cashflowMonthly: over.rentalCashflowMonthly ?? 0,
     noiAnnual: 0,
@@ -41,7 +50,14 @@ function makeFixtures(over: {
     rating: "OK",
   } as BrrrrResult;
   const holdMonths = over.flipHoldMonths ?? 4;
-  return { rental, flip, brrrr, projection: undefined, holdMonths };
+  return {
+    rental,
+    flip,
+    brrrr,
+    projection: undefined,
+    holdMonths,
+    refiSeasoningMonths: undefined,
+  };
 }
 
 describe("scoreForGoal — cash_flow", () => {

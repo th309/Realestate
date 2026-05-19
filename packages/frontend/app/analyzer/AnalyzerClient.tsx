@@ -152,6 +152,7 @@ export default function AnalyzerClient({
     grading: grading.data ?? null,
     strategy: toEngineStrategy(activeStrategy) ?? null,
     piqByGeo,
+    goal: selectedGoal,
   });
 
   const compsView = buildCompsViewProps(

@@ -24,6 +24,7 @@ import type {
 } from "@propertyiq/analyzer-core";
 import { useAiSectionAnnotation, type AiInsightPayload } from "@/lib/data";
 import { useQueryClient } from "@tanstack/react-query";
+import type { InvestorGoal } from "./goal-types";
 
 export interface UseSectionAiInsightsArgs {
   enabled: boolean;
@@ -46,6 +47,9 @@ export interface UseSectionAiInsightsArgs {
     county: number | null;
     metro: number | null;
   };
+  /** "Help me decide" investor goal. When set, the backend reframes the
+   *  recommendation_analysis narrative around this goal. */
+  goal?: InvestorGoal | null;
 }
 
 export interface SectionAiProps {
@@ -81,6 +85,7 @@ export function useSectionAiInsights({
   grading,
   strategy,
   piqByGeo,
+  goal,
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
 
@@ -98,6 +103,7 @@ export function useSectionAiInsights({
       county: piqByGeo.county,
       metro: piqByGeo.metro,
     },
+    goal: goal ?? null,
   };
 
   // Discriminator for React Query's cache. useAiSectionAnnotation truncates
@@ -119,6 +125,7 @@ export function useSectionAiInsights({
       : "",
     grading?.letter ?? "",
     strategy ?? "",
+    goal ?? "",
   ].join("|");
 
   const recommendation = useAiSectionAnnotation(
