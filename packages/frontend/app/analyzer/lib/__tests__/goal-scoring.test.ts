@@ -213,11 +213,17 @@ describe("scoreForGoal — recycle_capital", () => {
     expect(s.buyAndHold).toBe(4_000);
   });
 
-  it("F&F velocity = (totalCashInvested / holdMonths) × 12", () => {
-    const f = makeFixtures({ flipHoldMonths: 5 });
+  it("F&F velocity = (totalCashInvested / holdMonths) × 12 when profitable", () => {
+    const f = makeFixtures({ flipProfit: 10_000, flipHoldMonths: 5 });
     const s = scoreForGoal("recycle_capital", f);
     // 80_000 / 5 = 16_000; × 12 = 192_000 (cash recovered per year)
     expect(s.flip).toBeCloseTo(192_000, 0);
+  });
+
+  it("F&F floors at 0 when profit is non-positive (losing flip doesn't recycle)", () => {
+    const f = makeFixtures({ flipProfit: -5_000, flipHoldMonths: 5 });
+    const s = scoreForGoal("recycle_capital", f);
+    expect(s.flip).toBe(0);
   });
 
   it("BRRRR velocity rewards low remainingCashInDeal", () => {

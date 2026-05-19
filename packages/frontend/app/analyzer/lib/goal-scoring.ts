@@ -118,8 +118,13 @@ function scoreRecycleCapital(input: ScoringInput): GoalScores {
   const bnh = cashIn * BNH_NO_PROJECTION_PROXY;
 
   // F&F: total cash recovered per year via sale + redeployment.
+  // Gated on positive profit — a money-losing flip doesn't "recycle"
+  // capital, it burns it. Without this gate, recycle_capital would
+  // crown unprofitable flips as the best play just because they cycle
+  // capital fast.
+  const flipProfit = input.flip?.projectedProfit ?? 0;
   const months = input.holdMonths ?? 4;
-  const flip = (cashIn / Math.max(1, months)) * 12;
+  const flip = flipProfit > 0 ? (cashIn / Math.max(1, months)) * 12 : 0;
 
   // BRRRR: cash recovered at refi per year. The lower remainingCashInDeal
   // is, the higher this score gets.

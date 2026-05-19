@@ -9,8 +9,8 @@ import {
   StrategyScores,
   pickBestPlay,
 } from "./BestPlayCallout";
-import { GoalPicker } from "./GoalPicker";
 import type { InvestorGoal } from "../../lib/goal-types";
+import type { Strategy } from "../../lib/strategy-tile-mappers";
 
 interface StrategyCompareProps {
   scores: StrategyScores;
@@ -31,10 +31,23 @@ interface StrategyCompareProps {
   /** True when the overall deal verdict is at least "marginal" — drives
    *  whether BestPlayCallout celebrates the winner or warns the user. */
   isDealViable?: boolean;
-  /** Goal-aware picker integration. When both are passed, the picker
-   *  chip-row renders above the BestPlayCallout. */
+  /** When set, the BestPlayCallout heading reframes to "Best for <goal>". */
   selectedGoal?: InvestorGoal | null;
-  onGoalChange?: (goal: InvestorGoal) => void;
+  /** Goal-aware winner. When set, BestPlayCallout uses it instead of the
+   *  deterministic pickBestPlay so the callout agrees with the cards' BEST
+   *  badge. The grid-card winner is driven by the parent's bestPlay prop
+   *  via buildStrategyCompareProps. "multifamily" is treated as
+   *  "no override" because the 3-card compare grid only houses B&H / Flip
+   *  / BRRRR. */
+  winner?: Strategy;
+}
+
+type ResidentialWinner = "buyAndHold" | "flip" | "brrrr";
+
+function asResidentialWinner(
+  s: Strategy | undefined,
+): ResidentialWinner | null {
+  return s === "buyAndHold" || s === "flip" || s === "brrrr" ? s : null;
 }
 
 export function StrategyCompare({
@@ -44,20 +57,20 @@ export function StrategyCompare({
   summaries,
   isDealViable = true,
   selectedGoal,
-  onGoalChange,
+  winner,
 }: StrategyCompareProps) {
   const [view, setView] = useState<StrategyView>("grid3");
-  const winner = pickBestPlay(scores);
+  const narrowedWinner = asResidentialWinner(winner);
+  const resolvedWinner: ResidentialWinner =
+    narrowedWinner ?? pickBestPlay(scores);
 
   return (
     <div data-strategy-compare className="space-y-4">
-      {selectedGoal !== undefined && onGoalChange && (
-        <GoalPicker selectedGoal={selectedGoal} onChange={onGoalChange} />
-      )}
       <BestPlayCallout
         scores={scores}
         isDealViable={isDealViable}
         goal={selectedGoal}
+        winnerOverride={narrowedWinner}
       />
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -75,7 +88,7 @@ export function StrategyCompare({
           />
         )}
         {view === "winner" && (
-          <WinnerPlusOthers winnerKey={winner} strategies={summaries} />
+          <WinnerPlusOthers winnerKey={resolvedWinner} strategies={summaries} />
         )}
       </div>
     </div>

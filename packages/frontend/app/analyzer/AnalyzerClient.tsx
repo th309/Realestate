@@ -21,6 +21,7 @@ import { PropertyHeader } from "./components/PropertyHeader";
 import { PropertyRecordCard } from "./components/PropertyRecordCard";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { useSelectedGoal } from "./lib/use-selected-goal";
+import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { deriveCashflowSummary } from "./lib/cashflow-summary";
 import { useSectionAiInsights } from "./lib/use-section-ai-insights";
@@ -272,6 +273,13 @@ export default function AnalyzerClient({
                 </div>
               )}
 
+              {analysisMode === "compare" && hasGradableInput && (
+                <GoalPicker
+                  selectedGoal={selectedGoal}
+                  onChange={setSelectedGoal}
+                />
+              )}
+
               {grading.data ? (
                 <GradingResultPanel
                   result={grading.data}
@@ -322,7 +330,7 @@ export default function AnalyzerClient({
                     hasGradableInput && verdict !== "bad" && verdict !== "avoid"
                   }
                   selectedGoal={selectedGoal}
-                  onGoalChange={setSelectedGoal}
+                  winner={bestPlay}
                 />
               )}
 

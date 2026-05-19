@@ -55,14 +55,19 @@ interface BestPlayCalloutProps {
   /** When set, the heading reframes to "Best for <goal>" so the user sees
    *  the winner in the context of the goal they selected. */
   goal?: InvestorGoal | null;
+  /** Goal-aware winner from `pickBestPlayForGoal`. When passed, overrides
+   *  the deterministic `pickBestPlay(scores)` so the callout agrees with
+   *  the strategy cards' BEST badge in goal-aware compare mode. */
+  winnerOverride?: Winner | null;
 }
 
 export function BestPlayCallout({
   scores,
   isDealViable = true,
   goal,
+  winnerOverride,
 }: BestPlayCalloutProps) {
-  const winner = pickBestPlay(scores);
+  const winner = winnerOverride ?? pickBestPlay(scores);
   const c = COPY[winner];
   const heading = !isDealViable
     ? "Least bad option"
