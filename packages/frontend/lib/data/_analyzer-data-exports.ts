@@ -18,9 +18,12 @@ export {
 } from "./fetchers/property-lookup";
 export {
   fetchAiInsight,
+  fetchBatchedAiInsights,
   type AIAnnotationResult,
+  type AIAnnotationBatch,
   type AiInsightPayload,
   type AnalyzerSectionId,
+  type BatchedAnalyzerSectionId,
 } from "./fetchers/ai-insights";
 export { streamAiHeaderInsight } from "./fetchers/ai-insights-stream";
 

@@ -32,6 +32,7 @@ import {
   AiInsightsBodyDto,
   AiInsightsSectionBodyDto,
   AIAnnotationDto,
+  AIAnnotationBatchDto,
 } from './dto/ai-insights.dto';
 
 @Controller('api/analyzer')
@@ -113,6 +114,27 @@ export class AnalyzerAiController {
   ): Promise<AIAnnotationDto> {
     await this.tierGate.requirePro(userId);
     return this.aiInsights.complete(body.payload, body.id);
+  }
+
+  /**
+   * POST /api/analyzer/ai-insights/batch
+   *
+   * Returns all six section annotations in ONE round-trip — recommendation,
+   * projection, expense_waterfall, sensitivity, comps, after_tax — generated
+   * by a single Anthropic call that returns structured JSON. Replaces the
+   * six-concurrent-requests pattern that tripped Anthropic's upstream rate
+   * limit on every analyzer page load. Pro-gated. Cached 24h by composite
+   * payload key, so identical inputs short-circuit before the LLM.
+   */
+  @SkipThrottle()
+  @Post('ai-insights/batch')
+  @UseGuards(JwtAuthGuard)
+  async batchInsights(
+    @AuthUserId() userId: string,
+    @Body() body: AiInsightsBodyDto,
+  ): Promise<AIAnnotationBatchDto> {
+    await this.tierGate.requirePro(userId);
+    return this.aiInsights.completeAllSections(body.payload);
   }
 
   /**

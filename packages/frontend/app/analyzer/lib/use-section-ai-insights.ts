@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * Per-section AI insights for the analyzer page. Calls the data layer
- * `useAiSectionAnnotation` hook once per section (6 sections) and returns a
- * map of `{ aiText, aiIsLoading, aiIsStale, onRefreshAi }` per section.
+ * Per-section AI insights for the analyzer page. ONE batched call to
+ * `/api/analyzer/ai-insights/batch` returns all six section annotations in a
+ * single LLM round-trip; the result is distributed into the same
+ * `{ aiText, aiIsLoading, aiIsStale, onRefreshAi }` shape per section so
+ * consumers don't change.
  *
- * The endpoint is Pro-gated server-side. We disable the fetch entirely for
- * non-Pro users to avoid 403 noise. We also require minimum data
- * (`hasGradableInput`) before calling so the LLM has something to summarize.
+ * Replaces the previous pattern of six concurrent per-section requests, which
+ * fanned out to six Anthropic API calls and tripped upstream rate limits on
+ * every analyzer page load (1-2 of the 6 would 429 and the corresponding
+ * section narrative would silently disappear).
  *
- * Cache stale-detection: backend returns `cacheHit: true` when the response
- * came from Redis (24h TTL). We flag those as `isStale` so the UI shows a
- * subtle refresh affordance — the data is still useful, but the user can ask
- * for a fresh take if the deal has materially changed.
+ * Cache stale-detection: backend returns `cacheHit: true` on each section
+ * when the parent batched response came from Redis (24h TTL). We flag those
+ * as `isStale` so the UI shows a subtle refresh affordance.
  */
 import { useCallback } from "react";
 import type {
@@ -22,8 +24,12 @@ import type {
   FlipResult,
   RentalResult,
 } from "@propertyiq/analyzer-core";
-import { useAiSectionAnnotation, type AiInsightPayload } from "@/lib/data";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  fetchBatchedAiInsights,
+  type AiInsightPayload,
+  type AIAnnotationBatch,
+} from "@/lib/data";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { InvestorGoal } from "./goal-types";
 
 export interface UseSectionAiInsightsArgs {
@@ -34,21 +40,13 @@ export interface UseSectionAiInsightsArgs {
   brrrr: BrrrrResult | null | undefined;
   rentcast: unknown;
   piq: unknown;
-  /** DealGradingResult — required so the recommendation_analysis prompt can
-   *  cite the letter, GPA, auto-kills, and per-metric grades. */
   grading: DealGradingResult | null | undefined;
-  /** Active strategy in engine form (BUY_AND_HOLD / FIX_AND_FLIP / BRRRR).
-   *  Drives strategy-specific framing in the backend prompts. */
   strategy: "BUY_AND_HOLD" | "FIX_AND_FLIP" | "BRRRR" | null;
-  /** PIQ scores at metro / county / zip. Surfaced to backend so AI leads
-   *  with the most stable available level instead of the noisy ZIP score. */
   piqByGeo: {
     zip: number | null;
     county: number | null;
     metro: number | null;
   };
-  /** "Help me decide" investor goal. When set, the backend reframes the
-   *  recommendation_analysis narrative around this goal. */
   goal?: InvestorGoal | null;
 }
 
@@ -59,12 +57,7 @@ export interface SectionAiProps {
   onRefreshAi: () => void;
 }
 
-// `market_context` is intentionally excluded — that section runs its own
-// per-geo AI fetches (one per pill) from inside MarketContextSection so the
-// pill toggle is instant.
-// `recommendation_analysis` only fires when a grading result exists, so it
-// is also gated separately below.
-const SECTION_IDS = [
+const BATCHED_SECTION_IDS = [
   "recommendation_analysis",
   "projection",
   "expense_waterfall",
@@ -72,7 +65,9 @@ const SECTION_IDS = [
   "comps",
   "after_tax",
 ] as const;
-type SectionId = (typeof SECTION_IDS)[number];
+type SectionId = (typeof BATCHED_SECTION_IDS)[number];
+
+const BATCH_QUERY_KEY = "ai-insight-batch" as const;
 
 export function useSectionAiInsights({
   enabled,
@@ -89,8 +84,6 @@ export function useSectionAiInsights({
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
 
-  // Same payload for every section — the LLM picks out what's relevant to its
-  // assigned section. The backend dedupes responses 24h via Redis cache.
   const payload: AiInsightPayload = {
     input,
     result: { rental, flip, brrrr },
@@ -106,17 +99,10 @@ export function useSectionAiInsights({
     goal: goal ?? null,
   };
 
-  // Discriminator for React Query's cache. useAiSectionAnnotation truncates
-  // JSON.stringify(payload) to 200 chars, so fields like `piqByGeo`, `piq`,
-  // and `grading.letter` (which serialize past the cutoff) would silently
-  // collide across renders — e.g. when metro/county PIQ queries resolve
-  // later than ZIP, the queryKey wouldn't update and we'd serve the stale
-  // "no geography resolved" response forever.
-  //
-  // Building this discriminator out of every input that ACTUALLY changes the
-  // AI's output (PIQ scores by geo, geo_level, grading letter, strategy)
-  // mirrors the backend's own cache key fields so the two layers stay aligned.
-  const piqDiscriminator = [
+  // Discriminator mirrors the backend's cache key fields so the two layers
+  // stay aligned: re-fetch when PIQ scores by geo, resolved geo level,
+  // grading letter, strategy, or goal change.
+  const discriminator = [
     piqByGeo.metro ?? "",
     piqByGeo.county ?? "",
     piqByGeo.zip ?? "",
@@ -125,74 +111,40 @@ export function useSectionAiInsights({
       : "",
     grading?.letter ?? "",
     strategy ?? "",
+    goal ?? "",
   ].join("|");
 
-  // Goal scope: only `recommendation_analysis` consumes it, so only that
-  // section's queryKey changes when the user switches goals. Without this,
-  // every goal-switch refetches all 6 sections (identical output) and
-  // burns through the global rate limit.
-  const recommendationDiscriminator = `${piqDiscriminator}|${goal ?? ""}`;
-
-  const recommendation = useAiSectionAnnotation(
-    payload,
-    "recommendation_analysis",
-    enabled && !!grading,
-    recommendationDiscriminator,
-  );
-  const projection = useAiSectionAnnotation(
-    payload,
-    "projection",
+  // recommendation_analysis is gated on grading existing — same as before.
+  // For the batched call, simplest correct behavior is to gate the whole
+  // batch on enabled (other sections don't need grading; if grading is
+  // missing the recommendation will be a no-op in the response).
+  const query = useQuery<AIAnnotationBatch, Error>({
+    queryKey: [BATCH_QUERY_KEY, discriminator],
+    queryFn: () => fetchBatchedAiInsights(payload),
     enabled,
-    piqDiscriminator,
-  );
-  const expense = useAiSectionAnnotation(
-    payload,
-    "expense_waterfall",
-    enabled,
-    piqDiscriminator,
-  );
-  const sensitivity = useAiSectionAnnotation(
-    payload,
-    "sensitivity",
-    enabled,
-    piqDiscriminator,
-  );
-  const comps = useAiSectionAnnotation(
-    payload,
-    "comps",
-    enabled,
-    piqDiscriminator,
-  );
-  const afterTax = useAiSectionAnnotation(
-    payload,
-    "after_tax",
-    enabled,
-    piqDiscriminator,
-  );
-
-  const buildRefresh = useCallback(
-    (sectionId: SectionId) => () => {
-      qc.invalidateQueries({ queryKey: ["ai-insight", sectionId] });
-    },
-    [qc],
-  );
-
-  const toProps = (
-    sectionId: SectionId,
-    q: ReturnType<typeof useAiSectionAnnotation>,
-  ): SectionAiProps => ({
-    aiText: q.data?.text ?? null,
-    aiIsLoading: q.isLoading,
-    aiIsStale: Boolean(q.data?.cacheHit),
-    onRefreshAi: buildRefresh(sectionId),
+    staleTime: 1000 * 60 * 60 * 24, // 24h matches backend cache TTL
   });
 
+  const refreshAll = useCallback(() => {
+    qc.invalidateQueries({ queryKey: [BATCH_QUERY_KEY] });
+  }, [qc]);
+
+  const toProps = (sectionId: SectionId): SectionAiProps => {
+    const section = query.data?.[sectionId];
+    return {
+      aiText: section?.text ?? null,
+      aiIsLoading: query.isLoading,
+      aiIsStale: Boolean(section?.cacheHit),
+      onRefreshAi: refreshAll,
+    };
+  };
+
   return {
-    recommendation_analysis: toProps("recommendation_analysis", recommendation),
-    projection: toProps("projection", projection),
-    expense_waterfall: toProps("expense_waterfall", expense),
-    sensitivity: toProps("sensitivity", sensitivity),
-    comps: toProps("comps", comps),
-    after_tax: toProps("after_tax", afterTax),
+    recommendation_analysis: toProps("recommendation_analysis"),
+    projection: toProps("projection"),
+    expense_waterfall: toProps("expense_waterfall"),
+    sensitivity: toProps("sensitivity"),
+    comps: toProps("comps"),
+    after_tax: toProps("after_tax"),
   };
 }

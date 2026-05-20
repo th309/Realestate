@@ -13,7 +13,7 @@
  * the analyzer's evolving result snapshot.
  */
 import { IsString, IsObject, IsIn } from 'class-validator';
-import type { SectionId } from '../prompts/section-prompts';
+import type { BatchedSectionId, SectionId } from '../prompts/section-prompts';
 
 export class AiInsightsBodyDto {
   @IsObject()
@@ -69,3 +69,7 @@ export interface AIAnnotationDto {
   citedFacts: string[];
   cacheHit: boolean;
 }
+
+/** Response shape for the batched endpoint — one annotation per non-header,
+ *  non-market-context section, all from a single LLM call. */
+export type AIAnnotationBatchDto = Record<BatchedSectionId, AIAnnotationDto>;

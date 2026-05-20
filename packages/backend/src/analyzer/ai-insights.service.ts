@@ -1,64 +1,42 @@
 /**
  * AiInsightsService — generates AI insights for analyzer sections.
  *
+ * - `completeAllSections()` is the primary path: one Anthropic call returning
+ *   all six section annotations as JSON. Replaces the per-section pattern
+ *   that fired six concurrent requests and tripped Anthropic's upstream rate
+ *   limit on every analyzer page load.
+ * - `complete()` remains for callers that need a single section (e.g., admin
+ *   smoke tests) but is no longer used by the analyzer page.
+ * - `stream()` is the header-verdict SSE path, unchanged.
  * - Composite cache key from deterministic input + provider responses (24h TTL)
- * - Resolves model purpose: header_verdict → analyzer_header_verdict,
- *   else → analyzer_section_annotation
- * - Streams header verdict via async generator
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AiInsightsCache, CachedInsight } from './ai-insights.cache';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
-import { getSectionPrompt, SectionId } from './prompts/section-prompts';
 import {
-  type AnalysisStrategy,
-  STRATEGY_DISPLAY,
-  STRATEGY_KEY_METRICS,
-  STRATEGY_LEVERS,
-} from './prompts/strategy-context';
-import { humanizeAutoKill } from './prompts/auto-kill-humanize';
-import { buildPiqByGeoBlock } from './prompts/piq-by-geo-block';
+  getSectionPrompt,
+  buildBatchedSectionTasks,
+  BATCHED_SECTION_IDS,
+  type SectionId,
+  type BatchedSectionId,
+} from './prompts/section-prompts';
+import { type AnalysisStrategy } from './prompts/strategy-context';
+import {
+  assemblePrompt,
+  type AssemblePromptPayload,
+} from './prompts/assemble-prompt';
 
 export type { AnalysisStrategy };
 
-export interface InsightPayload {
-  input: any;
-  result: any;
-  rentcast: any;
-  piq: any;
-  /** Optional grading snapshot from analyzer-core. Required for the
-   *  recommendation_analysis section; ignored elsewhere. */
-  grading?: any;
-  /** Active strategy the user is analyzing under. Drives the strategy-aware
-   *  guidance block in `assemblePrompt` so the AI talks in the right terms
-   *  (cashflow + DSCR for B&H, ARV minus all-in cost for F&F, refinance
-   *  outcome for BRRRR). Optional so older callers keep working — null falls
-   *  back to generic guidance. */
-  strategy?: AnalysisStrategy | null;
-  /** PIQ scores at all three geography levels for this property. Whichever
-   *  levels resolved are surfaced to the AI with stability annotations so
-   *  it leads with metro (most stable, thousands of sales) and only calls
-   *  out the ZIP score when it diverges sharply (the interesting micro-
-   *  market signal). Rural or unincorporated addresses naturally fall
-   *  through — only levels with actual data are surfaced. */
-  piqByGeo?: {
-    zip?: number | null;
-    county?: number | null;
-    metro?: number | null;
-  };
-  goal?:
-    | 'cash_flow'
-    | 'long_term_wealth'
-    | 'fast_cash'
-    | 'recycle_capital'
-    | null;
-}
+export type InsightPayload = AssemblePromptPayload;
 
 export interface InsightResult extends CachedInsight {
   cacheHit: boolean;
 }
+
+export type BatchedInsightResult = Record<BatchedSectionId, InsightResult>;
 
 const SYSTEM_PROMPT = [
   'You are a precise, numerate real-estate analyst speaking to the investor like a knowledgeable friend.',
@@ -84,8 +62,14 @@ function maxTokensForSection(sectionId: SectionId): number {
   return 200;
 }
 
+/** Batched call must fit recommendation_analysis (~450) + five short sections
+ *  (~150 each) plus JSON syntax overhead. 1600 leaves comfortable headroom. */
+const BATCH_MAX_TOKENS = 1600;
+
 @Injectable()
 export class AiInsightsService {
+  private readonly logger = new Logger(AiInsightsService.name);
+
   constructor(
     private readonly cache: AiInsightsCache,
     private readonly provider: AiProviderService,
@@ -99,7 +83,7 @@ export class AiInsightsService {
     const cached = await this.cache.get(key);
     if (cached) return { ...cached, cacheHit: true };
 
-    const userPrompt = this.assemblePrompt(payload, sectionId);
+    const userPrompt = assemblePrompt(payload, getSectionPrompt(sectionId));
     const purpose =
       sectionId === 'header_verdict'
         ? 'analyzer_header_verdict'
@@ -120,8 +104,53 @@ export class AiInsightsService {
     return { ...result, cacheHit: false };
   }
 
+  /**
+   * Generate all six section annotations in ONE Anthropic call. This is what
+   * the analyzer page uses. Cached under a single composite key so identical
+   * payloads short-circuit before hitting the provider at all.
+   */
+  async completeAllSections(
+    payload: InsightPayload,
+  ): Promise<BatchedInsightResult> {
+    const key = this.cache.computeKey(payload, 'batch');
+    const cached = await this.cache.get(key);
+    if (cached) {
+      const parsed = this.parseBatchedJson(cached.text);
+      return this.buildBatchedResult(parsed, cached.threadId, true);
+    }
+
+    const userPrompt = assemblePrompt(payload, buildBatchedSectionTasks());
+    // Reuse the existing analyzer_section_annotation purpose so this inherits
+    // the same model/temperature config admins have already tuned for section
+    // annotations. Avoids requiring a new ai_model_config row to ship.
+    const response = await this.provider.complete(
+      'analyzer_section_annotation',
+      {
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt,
+        maxTokens: BATCH_MAX_TOKENS,
+        responseFormat: 'json',
+      },
+    );
+
+    const rawText = response.content ?? '';
+    const parsed = this.parseBatchedJson(rawText);
+
+    const threadId = randomUUID();
+    await this.cache.set(key, {
+      text: rawText,
+      threadId,
+      citedFacts: [],
+    });
+
+    return this.buildBatchedResult(parsed, threadId, false);
+  }
+
   async *stream(payload: InsightPayload): AsyncGenerator<string> {
-    const userPrompt = this.assemblePrompt(payload, 'header_verdict');
+    const userPrompt = assemblePrompt(
+      payload,
+      getSectionPrompt('header_verdict'),
+    );
     yield* this.provider.stream('analyzer_header_verdict', {
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
@@ -129,135 +158,43 @@ export class AiInsightsService {
     });
   }
 
-  private assemblePrompt(
-    payload: InsightPayload,
-    sectionId: SectionId,
-  ): string {
-    const comps = (payload.rentcast?.sales_comps ?? []).slice(0, 6);
-    const rentComps = (payload.rentcast?.rental_comps ?? []).slice(0, 6);
-
-    const subjectPrice = payload.input?.price ?? null;
-    const subjectSqft = payload.rentcast?.property_record?.sqft ?? null;
-    const subjectPpsf =
-      subjectPrice && subjectSqft && subjectSqft > 0
-        ? Math.round(subjectPrice / subjectSqft)
-        : null;
-    const subjectRent = payload.input?.rentMonthly ?? null;
-    const rentEstimate = payload.rentcast?.rent?.value ?? null;
-
-    const grading = payload.grading;
-    const autoKillsHumanized: string[] = Array.isArray(grading?.autoKills)
-      ? grading.autoKills.map((k: any) =>
-          humanizeAutoKill(typeof k === 'string' ? k : (k?.code ?? '')),
-        )
-      : [];
-    // Rank metrics so the prompt can name the worst one(s) and the best one
-    // without dumping the whole table.
-    const metricsSorted: any[] = Array.isArray(grading?.metrics)
-      ? [...grading.metrics].sort((a: any, b: any) => {
-          const av = typeof a?.gpa === 'number' ? a.gpa : 99;
-          const bv = typeof b?.gpa === 'number' ? b.gpa : 99;
-          return av - bv;
-        })
-      : [];
-    const worstMetrics = metricsSorted.slice(0, 2);
-    const bestMetric = metricsSorted[metricsSorted.length - 1];
-
-    const strategy = payload.strategy ?? null;
-
-    return [
-      ...(strategy
-        ? [
-            'STRATEGY:',
-            `- Mode: ${STRATEGY_DISPLAY[strategy]}`,
-            `- Metrics that matter for this strategy: ${STRATEGY_KEY_METRICS[strategy]}`,
-            `- Levers an investor can pull to improve this strategy: ${STRATEGY_LEVERS[strategy]}`,
-            '',
-          ]
-        : []),
-      'DEAL INPUT:',
-      JSON.stringify(payload.input, null, 2),
-      '',
-      'COMPUTED METRICS (analyzer-core, deterministic):',
-      JSON.stringify(payload.result, null, 2),
-      '',
-      ...(grading
-        ? [
-            'DEAL GRADING:',
-            `- Letter: ${grading.letter ?? 'n/a'} (${grading.label ?? ''})`,
-            `- GPA: raw ${grading.rawGpa ?? 'n/a'}, market adj ${grading.marketAdjustment ?? 'n/a'}, final ${grading.finalGpa ?? 'n/a'}${grading.flooredAt ? `, floored at ${grading.flooredAt}` : ''}`,
-            `- Auto-disqualifications (already humanized; cite these in plain English): ${autoKillsHumanized.length > 0 ? autoKillsHumanized.join('; ') : 'none'}`,
-            `- Worst metrics: ${
-              worstMetrics
-                .map(
-                  (m: any) =>
-                    `${m?.label ?? m?.id ?? 'metric'} = ${m?.formattedValue ?? m?.value ?? 'n/a'} (grade ${m?.letter ?? '?'})`,
-                )
-                .join('; ') || 'n/a'
-            }`,
-            `- Best metric: ${bestMetric ? `${bestMetric.label ?? bestMetric.id ?? 'metric'} = ${bestMetric.formattedValue ?? bestMetric.value ?? 'n/a'} (grade ${bestMetric.letter ?? '?'})` : 'n/a'}`,
-            '',
-          ]
-        : []),
-      'SUBJECT PROPERTY:',
-      `- Sqft: ${subjectSqft ?? 'unavailable'}`,
-      `- Price per sqft: ${subjectPpsf != null ? `$${subjectPpsf}` : 'unavailable'}`,
-      `- Underwritten monthly rent: ${subjectRent != null ? `$${subjectRent}` : 'unavailable'}`,
-      `- RentCast rent estimate: ${rentEstimate != null ? `$${rentEstimate}` : 'unavailable'}`,
-      '',
-      'PROPERTY DATA (RentCast):',
-      `- AVM: ${payload.rentcast?.avm?.value ?? 'unavailable'}`,
-      `- Top sales comps (${comps.length}): ${comps
-        .map((c: any) => {
-          const ppsf =
-            c.price && c.sqft && c.sqft > 0
-              ? Math.round(c.price / c.sqft)
-              : null;
-          const sqftPart = c.sqft ? `/${c.sqft}sqft` : '';
-          const ppsfPart = ppsf != null ? ` ($${ppsf}/sqft)` : '';
-          return `${c.address} $${c.price}${sqftPart}${ppsfPart} (${c.distance}mi)`;
-        })
-        .join('; ')}`,
-      `- Top rental comps (${rentComps.length}): ${rentComps
-        .map((c: any) => {
-          const physParts: string[] = [];
-          if (c.beds != null) physParts.push(`${c.beds}bd`);
-          if (c.baths != null) physParts.push(`${c.baths}ba`);
-          if (c.sqft != null) physParts.push(`${c.sqft}sqft`);
-          const physPart = physParts.length ? ` (${physParts.join('/')})` : '';
-          const distPart = c.distance != null ? ` (${c.distance}mi)` : '';
-          return `${c.address} $${c.rent}/mo${physPart}${distPart}`;
-        })
-        .join('; ')}`,
-      '',
-      ...buildPiqByGeoBlock(payload.piqByGeo),
-      'MARKET CONTEXT (PropertyIQ):',
-      `- Geography resolved to: ${payload.piq?.geo_level ?? 'unknown'}${payload.piq?.geo_id ? ` (id=${payload.piq.geo_id})` : ''}`,
-      `- Home value: ${payload.piq?.home_value?.value ?? 'n/a'} (source: ${payload.piq?.home_value?.source ?? 'n/a'})`,
-      `- Price appreciation YoY: ${payload.piq?.home_value_yoy?.value != null ? `${payload.piq.home_value_yoy.value}%` : 'n/a'} (source: ${payload.piq?.home_value_yoy?.source ?? 'n/a'})`,
-      `- Rent index: ${payload.piq?.rent_index?.value ?? 'n/a'} (source: ${payload.piq?.rent_index?.source ?? 'n/a'})`,
-      `- Market heat: ${payload.piq?.market_heat?.value ?? 'n/a'} (source: ${payload.piq?.market_heat?.source ?? 'n/a'})`,
-      `- Net migration: ${payload.piq?.net_migration?.value ?? 'n/a'} (source: ${payload.piq?.net_migration?.source ?? 'n/a'})`,
-      '',
-      ...(payload.goal
-        ? [
-            'USER GOAL:',
-            `- The user picked "${humanizeGoal(payload.goal)}" as their goal for this deal.`,
-            '',
-          ]
-        : []),
-      'TASK:',
-      getSectionPrompt(sectionId),
-    ].join('\n');
+  /**
+   * Parse the batched JSON response. Tolerates accidental code-fence wrapping
+   * by stripping ``` fences before parsing. Missing keys are filled with an
+   * empty string downstream so a partial response doesn't crash the page.
+   */
+  private parseBatchedJson(
+    text: string,
+  ): Partial<Record<BatchedSectionId, string>> {
+    const stripped = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '');
+    try {
+      const obj = JSON.parse(stripped);
+      return obj && typeof obj === 'object' ? obj : {};
+    } catch (err) {
+      this.logger.warn(
+        `Batched insights JSON parse failed: ${err instanceof Error ? err.message : String(err)}. Falling back to empty sections.`,
+      );
+      return {};
+    }
   }
-}
 
-function humanizeGoal(goal: string): string {
-  const labels: Record<string, string> = {
-    cash_flow: 'Maximize monthly cash flow',
-    long_term_wealth: 'Maximize long-term (30-year) wealth',
-    fast_cash: 'Maximize fast cash within 12 months',
-    recycle_capital: 'Recycle capital into the next deal as fast as possible',
-  };
-  return labels[goal] ?? goal;
+  private buildBatchedResult(
+    parsed: Partial<Record<BatchedSectionId, string>>,
+    threadId: string,
+    cacheHit: boolean,
+  ): BatchedInsightResult {
+    const result = {} as BatchedInsightResult;
+    for (const id of BATCHED_SECTION_IDS) {
+      result[id] = {
+        text: typeof parsed[id] === 'string' ? parsed[id] : '',
+        threadId,
+        citedFacts: [],
+        cacheHit,
+      };
+    }
+    return result;
+  }
 }

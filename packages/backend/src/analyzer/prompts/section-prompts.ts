@@ -8,6 +8,23 @@ export type SectionId =
   | 'market_context'
   | 'after_tax';
 
+/** Section IDs handled by the batched annotator. `header_verdict` is excluded
+ *  because it streams via SSE on its own endpoint, and `market_context` is
+ *  excluded because it runs per-geography from inside MarketContextSection. */
+export type BatchedSectionId = Exclude<
+  SectionId,
+  'header_verdict' | 'market_context'
+>;
+
+export const BATCHED_SECTION_IDS: readonly BatchedSectionId[] = [
+  'recommendation_analysis',
+  'projection',
+  'expense_waterfall',
+  'sensitivity',
+  'comps',
+  'after_tax',
+] as const;
+
 const PROMPTS: Record<SectionId, string> = {
   header_verdict:
     'Write a 1-2 sentence buy/negotiate/pass verdict for this deal. Cite the strongest number from the data and the biggest risk to verify. Format: "[VERDICT]. [Reasoning citing specific number]. [One risk to verify before offering]."',
@@ -30,4 +47,28 @@ const PROMPTS: Record<SectionId, string> = {
 
 export function getSectionPrompt(sectionId: SectionId): string {
   return PROMPTS[sectionId];
+}
+
+/**
+ * Build the SECTION TASKS block used by the batched annotator. Each section's
+ * existing prompt is preserved verbatim so we do not regress narrative quality
+ * (which has been bit by ad-hoc rewrites before — see PROMPT_REVISION v3
+ * rollback). The model is instructed to return a JSON object keyed by section.
+ */
+export function buildBatchedSectionTasks(): string {
+  const lines: string[] = [];
+  lines.push(
+    "Return a JSON object with one key per section listed below. The value at each key is the section's annotation as a plain string. Do not include any prose outside the JSON. Do not wrap the JSON in markdown code fences. Do not add extra keys.",
+    '',
+    'JSON shape:',
+    '{',
+    BATCHED_SECTION_IDS.map((id) => `  "${id}": "<annotation>"`).join(',\n'),
+    '}',
+    '',
+    'SECTION TASKS:',
+  );
+  for (const id of BATCHED_SECTION_IDS) {
+    lines.push(`[${id}]`, PROMPTS[id], '');
+  }
+  return lines.join('\n');
 }
