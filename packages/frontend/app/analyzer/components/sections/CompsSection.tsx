@@ -1,0 +1,392 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Map, Marker, Popup } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
+import { SectionWrapper } from "./SectionWrapper";
+import { CompsPriceDistributionPanel } from "./CompsPriceDistributionPanel";
+import type { Comp } from "../primitives/CompsDistribution";
+import { CompsTable, type CompRow } from "./CompsTable";
+import { piq } from "../primitives/piqTokens";
+import { MapLegend } from "./CompsMapLegend";
+
+export interface CompPin {
+  address: string;
+  /** lat/lon required for map pins; if either is null the pin is skipped. */
+  lat?: number | null;
+  lon?: number | null;
+  price?: number | null;
+  rent?: number | null;
+  beds?: number | null;
+  baths?: number | null;
+  sqft?: number | null;
+  distance?: number;
+}
+
+interface CompsSectionProps {
+  /** Subject lat/lon — when null/missing, the map is hidden and only chart+table render. */
+  subjectLat?: number | null;
+  subjectLon?: number | null;
+  subjectAddress?: string | null;
+  pricePerSqftValues: number[];
+  yourPricePerSqft: number;
+  /** Subject's input price — anchors the fallback price-only chart. */
+  subjectPrice?: number;
+  salesComps: CompPin[];
+  rentalComps: CompPin[];
+  /** Mapbox public token; if empty/undefined the map is hidden. */
+  mapboxToken?: string;
+  aiText?: string | null;
+  aiIsStale?: boolean;
+  aiIsLoading?: boolean;
+  onRefreshAi?: () => void;
+}
+
+/** Minimum sqft-having comps before we render the price-per-sqft chart. Below
+ *  this we fall back to a price-only distribution. RentCast frequently returns
+ *  null squareFootage on /avm/value comps, so 0–2 is common; 3+ is enough to
+ *  read a distribution shape. */
+const MIN_SQFT_COMPS_FOR_PRIMARY = 3;
+
+const isCoord = (v: number | null | undefined): v is number =>
+  typeof v === "number" && Number.isFinite(v);
+
+function abbreviateAddress(addr: string | null | undefined, max = 26): string {
+  if (!addr) return "Subject";
+  const first = addr.split(",")[0]?.trim() ?? addr;
+  return first.length > max ? `${first.slice(0, max - 1)}…` : first;
+}
+
+interface HoveredComp {
+  key: string;
+  lat: number;
+  lon: number;
+  kind: "sale" | "rent";
+  address: string;
+  price?: number | null;
+  rent?: number | null;
+  distance?: number;
+}
+
+function CompMarker({
+  comp,
+  kind,
+  keyId,
+  hovered,
+  onHover,
+  onLeave,
+}: {
+  comp: CompPin;
+  kind: "sale" | "rent";
+  keyId: string;
+  hovered: boolean;
+  onHover: () => void;
+  onLeave: () => void;
+}) {
+  // Visible dot grows on hover, but a transparent 26px hit target sits behind
+  // it so the marker is comfortable to click on desktop and tappable on touch.
+  const visibleSize = hovered ? 18 : 14;
+  const HIT_SIZE = 26;
+  const fill = kind === "sale" ? piq.green : piq.amber;
+  return (
+    <Marker
+      latitude={comp.lat as number}
+      longitude={comp.lon as number}
+      anchor="center"
+    >
+      <div
+        onMouseEnter={onHover}
+        onMouseLeave={onLeave}
+        data-comp-marker={keyId}
+        style={{
+          width: HIT_SIZE,
+          height: HIT_SIZE,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            width: visibleSize,
+            height: visibleSize,
+            borderRadius: "50%",
+            background: fill,
+            border: "2px solid #FFFFFF",
+            boxShadow: hovered
+              ? "0 2px 10px rgba(15,23,42,0.35)"
+              : "0 1px 3px rgba(15,23,42,0.20)",
+            transition:
+              "width 150ms ease, height 150ms ease, box-shadow 150ms ease",
+          }}
+        />
+      </div>
+    </Marker>
+  );
+}
+
+export function CompsSection({
+  subjectLat,
+  subjectLon,
+  subjectAddress,
+  pricePerSqftValues,
+  yourPricePerSqft,
+  subjectPrice,
+  salesComps,
+  rentalComps,
+  mapboxToken,
+  aiText,
+  aiIsStale,
+  aiIsLoading,
+  onRefreshAi,
+}: CompsSectionProps) {
+  const showMap =
+    Boolean(mapboxToken) && isCoord(subjectLat) && isCoord(subjectLon);
+
+  const [hovered, setHovered] = useState<HoveredComp | null>(null);
+
+  // Distribution data: comps with a derivable price/sqft (PRIMARY chart).
+  const distributionComps: Comp[] = useMemo(
+    () =>
+      salesComps
+        .map((c, i) => {
+          if (!c.price || !c.sqft || c.sqft <= 0) return null;
+          return {
+            id: `s${i}`,
+            pricePerSqft: c.price / c.sqft,
+            address: c.address,
+          } as Comp;
+        })
+        .filter((c): c is Comp => c !== null),
+    [salesComps],
+  );
+
+  // Price-only data: comps with just a price (FALLBACK chart). RentCast
+  // routinely returns null squareFootage on /avm/value, so we keep the chart
+  // useful by binning by total sale price when sqft is sparse.
+  const priceOnlyComps: Comp[] = useMemo(
+    () =>
+      salesComps
+        .map((c, i) => {
+          if (!c.price || c.price <= 0) return null;
+          // Reuse the `pricePerSqft` field as a generic numeric slot. The
+          // formatter + unitLabel props change the rendering, not the field.
+          return {
+            id: `p${i}`,
+            pricePerSqft: c.price,
+            address: c.address,
+          } as Comp;
+        })
+        .filter((c): c is Comp => c !== null),
+    [salesComps],
+  );
+
+  const totalSalesComps = salesComps.length;
+  const sqftCompCount = distributionComps.length;
+  const priceCompCount = priceOnlyComps.length;
+  const useFallbackPriceChart =
+    sqftCompCount < MIN_SQFT_COMPS_FOR_PRIMARY &&
+    priceCompCount >= MIN_SQFT_COMPS_FOR_PRIMARY;
+  const canRenderPrimary = sqftCompCount > 0 && yourPricePerSqft > 0;
+  const canRenderFallback =
+    useFallbackPriceChart &&
+    typeof subjectPrice === "number" &&
+    subjectPrice > 0;
+
+  // Table rows: cap at 6 sales + 6 rentals to keep the expanded view scannable.
+  const tableRows: CompRow[] = useMemo(
+    () => [
+      ...salesComps.slice(0, 6).map((c) => ({ ...c, kind: "sale" as const })),
+      ...rentalComps.slice(0, 6).map((c) => ({ ...c, kind: "rent" as const })),
+    ],
+    [salesComps, rentalComps],
+  );
+
+  return (
+    <SectionWrapper
+      id="comps"
+      title="Comparable Sales & Rentals"
+      onRefresh={onRefreshAi}
+      aiText={aiText}
+      aiIsStale={aiIsStale}
+      aiIsLoading={aiIsLoading}
+      onRefreshAi={onRefreshAi}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CompsPriceDistributionPanel
+          totalSalesComps={totalSalesComps}
+          sqftCompCount={sqftCompCount}
+          priceCompCount={priceCompCount}
+          distributionComps={distributionComps}
+          priceOnlyComps={priceOnlyComps}
+          yourPricePerSqft={yourPricePerSqft}
+          subjectPrice={subjectPrice}
+          subjectAddress={subjectAddress}
+          canRenderPrimary={canRenderPrimary}
+          canRenderFallback={canRenderFallback}
+        />
+        {showMap ? (
+          <div
+            data-comps-map
+            className="h-72 rounded-xl overflow-hidden relative"
+            style={{ border: `0.5px solid ${piq.border}` }}
+          >
+            <MapLegend />
+            <Map
+              mapboxAccessToken={mapboxToken}
+              initialViewState={{
+                latitude: subjectLat as number,
+                longitude: subjectLon as number,
+                zoom: 12,
+              }}
+              mapStyle="mapbox://styles/mapbox/light-v11"
+              style={{ width: "100%", height: "100%" }}
+            >
+              {/* Subject: a precise indigo pin at the exact lat/lon. The
+                  address itself is already shown in the Property Header
+                  above the page, so we skip the on-map address label. */}
+              <Marker
+                latitude={subjectLat as number}
+                longitude={subjectLon as number}
+                anchor="center"
+              >
+                <div
+                  data-subject-pin
+                  aria-label="Subject property location"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: piq.indigo,
+                    border: "3px solid #FFFFFF",
+                    boxShadow: "0 2px 10px rgba(57, 73, 171, 0.55)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </Marker>
+
+              {salesComps
+                .filter((c) => isCoord(c.lat) && isCoord(c.lon))
+                .map((c, i) => {
+                  const key = `s${i}`;
+                  return (
+                    <CompMarker
+                      key={key}
+                      comp={c}
+                      kind="sale"
+                      keyId={key}
+                      hovered={hovered?.key === key}
+                      onHover={() =>
+                        setHovered({
+                          key,
+                          lat: c.lat as number,
+                          lon: c.lon as number,
+                          kind: "sale",
+                          address: c.address,
+                          price: c.price,
+                          distance: c.distance,
+                        })
+                      }
+                      onLeave={() => setHovered(null)}
+                    />
+                  );
+                })}
+
+              {rentalComps
+                .filter((c) => isCoord(c.lat) && isCoord(c.lon))
+                .map((c, i) => {
+                  const key = `r${i}`;
+                  return (
+                    <CompMarker
+                      key={key}
+                      comp={c}
+                      kind="rent"
+                      keyId={key}
+                      hovered={hovered?.key === key}
+                      onHover={() =>
+                        setHovered({
+                          key,
+                          lat: c.lat as number,
+                          lon: c.lon as number,
+                          kind: "rent",
+                          address: c.address,
+                          rent: c.rent,
+                          distance: c.distance,
+                        })
+                      }
+                      onLeave={() => setHovered(null)}
+                    />
+                  );
+                })}
+
+              {hovered && (
+                <Popup
+                  latitude={hovered.lat}
+                  longitude={hovered.lon}
+                  closeButton={false}
+                  closeOnClick={false}
+                  anchor="bottom"
+                  offset={14}
+                >
+                  <div
+                    style={{
+                      background: piq.surface,
+                      border: `0.5px solid ${piq.border}`,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      fontSize: "12px",
+                      color: piq.textPrimary,
+                      boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)",
+                      minWidth: 160,
+                      maxWidth: 260,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{hovered.address}</div>
+                    <div
+                      style={{
+                        color: piq.textMuted,
+                        marginTop: 4,
+                        fontSize: "11px",
+                      }}
+                    >
+                      {hovered.kind === "sale"
+                        ? hovered.price
+                          ? `$${Math.round(hovered.price / 1000)}K`
+                          : "Sale"
+                        : hovered.rent
+                          ? `$${hovered.rent}/mo`
+                          : "Rent"}
+                      {hovered.distance != null &&
+                        ` · ${hovered.distance.toFixed(1)}mi`}
+                    </div>
+                  </div>
+                </Popup>
+              )}
+            </Map>
+          </div>
+        ) : (
+          <div
+            data-comps-map-empty
+            className="h-72 rounded-xl flex items-center justify-center text-xs text-center px-4"
+            style={{
+              border: `0.5px dashed ${piq.border}`,
+              background: piq.canvas,
+              color: piq.textMuted,
+            }}
+          >
+            {!mapboxToken
+              ? "Map unavailable — NEXT_PUBLIC_MAPBOX_TOKEN not configured."
+              : "Map unavailable — geocode the subject address to enable."}
+          </div>
+        )}
+      </div>
+
+      <CompsTable
+        rows={tableRows}
+        totalAvailable={salesComps.length + rentalComps.length}
+      />
+    </SectionWrapper>
+  );
+}

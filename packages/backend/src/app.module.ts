@@ -67,6 +67,8 @@ import { ContentPipelineModule } from './content-pipeline/content-pipeline.modul
 import { MigrationModule } from './migration/migration.module';
 import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
 import { AnonymousModule } from './anonymous/anonymous.module';
+import { AnalyzerModule } from './analyzer/analyzer.module';
+import { RentcastModule } from './rentcast/rentcast.module';
 
 @Module({
   imports: [
@@ -150,6 +152,8 @@ import { AnonymousModule } from './anonymous/anonymous.module';
     MigrationModule,
     EmploymentSectorsModule,
     AnonymousModule,
+    AnalyzerModule,
+    RentcastModule,
   ],
   controllers: [AppController],
   providers: [

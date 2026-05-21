@@ -1,0 +1,146 @@
+{
+  "cashflow_estimate::{\"zip\":\"78704\",\"purchase_price\":425000}": {
+    "market_data": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "purchase_assumptions": {
+      "purchase_price": 425000,
+      "down_payment": 85000,
+      "loan_amount": 340000,
+      "estimated_rate": "7%",
+      "monthly_mortgage": 2262,
+      "monthly_tax_insurance": 531,
+      "monthly_maintenance": 354,
+      "total_monthly_expenses": 3147
+    },
+    "instructions": "Calculate cashflow using the rent data from market_data. Show: gross rent, total expenses, net monthly cashflow, annual cashflow, cap rate (NOI/price), and cash-on-cash return (annual cashflow/down payment). Include a plain-language verdict."
+  },
+  "cashflow_estimate::{\"zip\":\"78704\",\"purchase_price\":425000,\"down_pct\":25}": {
+    "market_data": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "purchase_assumptions": {
+      "purchase_price": 425000,
+      "down_payment": 106250,
+      "loan_amount": 318750,
+      "estimated_rate": "7%",
+      "monthly_mortgage": 2121,
+      "monthly_tax_insurance": 531,
+      "monthly_maintenance": 354,
+      "total_monthly_expenses": 3006
+    },
+    "instructions": "Calculate cashflow using the rent data from market_data. Show: gross rent, total expenses, net monthly cashflow, annual cashflow, cap rate (NOI/price), and cash-on-cash return (annual cashflow/down payment). Include a plain-language verdict."
+  },
+  "cashflow_estimate::{\"zip\":\"90210\",\"purchase_price\":1500000,\"down_pct\":30}": {
+    "market_data": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "purchase_assumptions": {
+      "purchase_price": 1500000,
+      "down_payment": 450000,
+      "loan_amount": 1050000,
+      "estimated_rate": "7%",
+      "monthly_mortgage": 6986,
+      "monthly_tax_insurance": 1875,
+      "monthly_maintenance": 1250,
+      "total_monthly_expenses": 10111
+    },
+    "instructions": "Calculate cashflow using the rent data from market_data. Show: gross rent, total expenses, net monthly cashflow, annual cashflow, cap rate (NOI/price), and cash-on-cash return (annual cashflow/down payment). Include a plain-language verdict."
+  },
+  "cashflow_estimate::{\"zip\":\"50001\",\"purchase_price\":120000,\"down_pct\":100}": {
+    "market_data": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "purchase_assumptions": {
+      "purchase_price": 120000,
+      "down_payment": 120000,
+      "loan_amount": 0,
+      "estimated_rate": "7%",
+      "monthly_mortgage": 0,
+      "monthly_tax_insurance": 150,
+      "monthly_maintenance": 100,
+      "total_monthly_expenses": 250
+    },
+    "instructions": "Calculate cashflow using the rent data from market_data. Show: gross rent, total expenses, net monthly cashflow, annual cashflow, cap rate (NOI/price), and cash-on-cash return (annual cashflow/down payment). Include a plain-language verdict."
+  },
+  "deal_analyzer::{\"geography\":\"zip\",\"geo_id\":\"78704\",\"purchase_price\":425000,\"monthly_rent\":2950}": {
+    "deal_metrics": {
+      "purchase_price": 425000,
+      "monthly_rent": 2950,
+      "annual_rent": 35400,
+      "grm": "12.0",
+      "estimated_noi": 21240,
+      "cap_rate": "5.0%",
+      "cash_on_cash": "-3.0%",
+      "annual_cashflow": -2560
+    },
+    "market_context": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "instructions": "Analyze this deal. Compare GRM and cap rate to market averages. Give a verdict: Strong Buy, Buy, Hold, or Pass. Explain why in 2-3 sentences."
+  },
+  "deal_analyzer::{\"geography\":\"metro\",\"geo_id\":\"35620\",\"purchase_price\":600000,\"monthly_rent\":2000}": {
+    "deal_metrics": {
+      "purchase_price": 600000,
+      "monthly_rent": 2000,
+      "annual_rent": 24000,
+      "grm": "25.0",
+      "estimated_noi": 14400,
+      "cap_rate": "2.4%",
+      "cash_on_cash": "-16.0%",
+      "annual_cashflow": -19200
+    },
+    "market_context": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "instructions": "Analyze this deal. Compare GRM and cap rate to market averages. Give a verdict: Strong Buy, Buy, Hold, or Pass. Explain why in 2-3 sentences."
+  },
+  "deal_analyzer::{\"geography\":\"county\",\"geo_id\":\"06037\",\"purchase_price\":800000,\"monthly_rent\":4500,\"down_pct\":35}": {
+    "deal_metrics": {
+      "purchase_price": 800000,
+      "monthly_rent": 4500,
+      "annual_rent": 54000,
+      "grm": "14.8",
+      "estimated_noi": 32400,
+      "cap_rate": "4.0%",
+      "cash_on_cash": "-1.4%",
+      "annual_cashflow": -4000
+    },
+    "market_context": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "instructions": "Analyze this deal. Compare GRM and cap rate to market averages. Give a verdict: Strong Buy, Buy, Hold, or Pass. Explain why in 2-3 sentences."
+  },
+  "deal_analyzer::{\"geography\":\"zip\",\"geo_id\":\"50001\",\"purchase_price\":100000,\"monthly_rent\":1200}": {
+    "deal_metrics": {
+      "purchase_price": 100000,
+      "monthly_rent": 1200,
+      "annual_rent": 14400,
+      "grm": "6.9",
+      "estimated_noi": 8640,
+      "cap_rate": "8.6%",
+      "cash_on_cash": "15.2%",
+      "annual_cashflow": 3040
+    },
+    "market_context": {
+      "home_value": 425000,
+      "rent_index": 2950,
+      "propertyiq_score": 73
+    },
+    "instructions": "Analyze this deal. Compare GRM and cap rate to market averages. Give a verdict: Strong Buy, Buy, Hold, or Pass. Explain why in 2-3 sentences."
+  }
+}

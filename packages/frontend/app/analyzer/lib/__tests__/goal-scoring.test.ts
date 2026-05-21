@@ -1,0 +1,344 @@
+// packages/frontend/app/analyzer/lib/__tests__/goal-scoring.test.ts
+import { describe, expect, it } from "vitest";
+import type {
+  BrrrrResult,
+  FlipResult,
+  ProjectionResult,
+  RentalResult,
+} from "@propertyiq/analyzer-core";
+import { scoreForGoal } from "../goal-scoring";
+import { pickBestPlayForGoal } from "../goal-scoring";
+import { inferDefaultGoal } from "../goal-scoring";
+
+/** Minimal fixture builder — only the fields scoring functions actually read. */
+interface Fixtures {
+  rental: RentalResult;
+  flip: FlipResult;
+  brrrr: BrrrrResult;
+  projection: ProjectionResult | undefined;
+  holdMonths: number;
+  refiSeasoningMonths: number | undefined;
+}
+
+function makeFixtures(over: {
+  rentalCashflowMonthly?: number;
+  flipProfit?: number;
+  flipHoldMonths?: number;
+  brrrrPostRefiCashflow?: number;
+}): Fixtures {
+  const rental = {
+    cashflowMonthly: over.rentalCashflowMonthly ?? 0,
+    noiAnnual: 0,
+    capRatePct: 0,
+    cashOnCashPct: 0,
+    dscr: 1,
+    onePctRulePct: 0,
+    totalCashInvested: 80_000,
+    monthlyDebtService: 0,
+  } as RentalResult;
+  const flip = {
+    mao70: 0,
+    wholetailMax: 0,
+    projectedProfit: over.flipProfit ?? 0,
+    projectedRoiPct: 0,
+  } as FlipResult;
+  const brrrr = {
+    score: 0,
+    refinanceCashOut: 0,
+    remainingCashInDeal: 0,
+    postRefiCashflowMonthly: over.brrrrPostRefiCashflow ?? 0,
+    rating: "OK",
+  } as BrrrrResult;
+  const holdMonths = over.flipHoldMonths ?? 4;
+  return {
+    rental,
+    flip,
+    brrrr,
+    projection: undefined,
+    holdMonths,
+    refiSeasoningMonths: undefined,
+  };
+}
+
+describe("scoreForGoal — cash_flow", () => {
+  it("B&H score equals rental monthly cashflow", () => {
+    const f = makeFixtures({ rentalCashflowMonthly: 300 });
+    const s = scoreForGoal("cash_flow", f);
+    expect(s.buyAndHold).toBe(300);
+  });
+
+  it("BRRRR score equals post-refi monthly cashflow", () => {
+    const f = makeFixtures({ brrrrPostRefiCashflow: 250 });
+    const s = scoreForGoal("cash_flow", f);
+    expect(s.brrrr).toBe(250);
+  });
+
+  it("F&F gets the implied-yield proxy: profit × 0.005 (6% cap rate, monthly)", () => {
+    const f = makeFixtures({ flipProfit: 50_000, flipHoldMonths: 5 });
+    // 50_000 × 0.005 = 250 (lump-sum profit reinvested at 6% annual yield,
+    // expressed monthly)
+    const s = scoreForGoal("cash_flow", f);
+    expect(s.flip).toBeCloseTo(250, 1);
+  });
+
+  it("F&F floors at 0 when profit is negative (degenerate flip)", () => {
+    const f = makeFixtures({ flipProfit: -10_000, flipHoldMonths: 4 });
+    const s = scoreForGoal("cash_flow", f);
+    expect(s.flip).toBe(0);
+  });
+});
+
+describe("scoreForGoal — long_term_wealth", () => {
+  it("B&H score reads projection.horizons.y30.equity", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 0, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 425_000, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.buyAndHold).toBe(425_000);
+  });
+
+  it("F&F score compounds projectedProfit at 7% over 30 years", () => {
+    const f = makeFixtures({ flipProfit: 50_000 });
+    const s = scoreForGoal("long_term_wealth", f);
+    // 50_000 × 1.07^30 ≈ 380_612
+    expect(s.flip).toBeCloseTo(50_000 * Math.pow(1.07, 30), 0);
+  });
+
+  it("BRRRR score uses postRefiProjection.horizons.y30.equity when present", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      postRefiProjection: {
+        yearly: [],
+        horizons: {
+          y1: { equity: 0, irr: 0, cashflow: 0 },
+          y3: { equity: 0, irr: 0, cashflow: 0 },
+          y5: { equity: 0, irr: 0, cashflow: 0 },
+          y10: { equity: 0, irr: 0, cashflow: 0 },
+          y20: { equity: 0, irr: 0, cashflow: 0 },
+          y30: { equity: 500_000, irr: 0, cashflow: 0 },
+        },
+      },
+    } as BrrrrResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.brrrr).toBe(500_000);
+  });
+
+  it("BRRRR falls back to B&H y30 equity when postRefiProjection is absent", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 0, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 425_000, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    const s = scoreForGoal("long_term_wealth", f);
+    expect(s.brrrr).toBe(425_000);
+  });
+});
+
+describe("scoreForGoal — fast_cash", () => {
+  it("F&F score equals projectedProfit", () => {
+    const f = makeFixtures({ flipProfit: 65_000 });
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.flip).toBe(65_000);
+  });
+
+  it("BRRRR score equals refinanceCashOut − totalCashInvested, floored at 0", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      refinanceCashOut: 100_000,
+    } as BrrrrResult;
+    // rental.totalCashInvested defaults to 80_000 in the fixture; net = 20k
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.brrrr).toBe(20_000);
+  });
+
+  it("BRRRR floors at 0 when refi doesn't cover the cash put in", () => {
+    const f = makeFixtures({});
+    f.brrrr = { ...f.brrrr, refinanceCashOut: 50_000 } as BrrrrResult;
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.brrrr).toBe(0);
+  });
+
+  it("B&H uses the year-1 equity proxy when projection is present", () => {
+    const f = makeFixtures({});
+    f.projection = {
+      yearly: [],
+      horizons: {
+        y1: { equity: 100_000, irr: 0, cashflow: 0 },
+        y3: { equity: 0, irr: 0, cashflow: 0 },
+        y5: { equity: 0, irr: 0, cashflow: 0 },
+        y10: { equity: 0, irr: 0, cashflow: 0 },
+        y20: { equity: 0, irr: 0, cashflow: 0 },
+        y30: { equity: 0, irr: 0, cashflow: 0 },
+      },
+    } as ProjectionResult;
+    // initialEquity defaults to rental.totalCashInvested (80k) when no
+    // separate down-payment field is on the input; helper picks 70% of the
+    // delta as HELOC-able. (100k − 80k) × 0.7 = 14_000
+    const s = scoreForGoal("fast_cash", f);
+    expect(s.buyAndHold).toBeCloseTo(14_000, 0);
+  });
+
+  it("B&H falls back to soft proxy when projection is absent", () => {
+    const f = makeFixtures({});
+    const s = scoreForGoal("fast_cash", f);
+    // totalCashInvested × 0.05 = 80_000 × 0.05 = 4_000 — small but
+    // non-zero so a B&H deal with no projection isn't fully disqualified
+    // from the fast_cash goal (HELOC against equity is a real, if slow,
+    // way to pull cash from a rental).
+    expect(s.buyAndHold).toBe(4_000);
+  });
+});
+
+describe("scoreForGoal — recycle_capital", () => {
+  it("B&H scores 0 — buy-and-hold traps capital, doesn't recycle it", () => {
+    const f = makeFixtures({});
+    const s = scoreForGoal("recycle_capital", f);
+    expect(s.buyAndHold).toBe(0);
+  });
+
+  it("F&F velocity = (totalCashInvested / holdMonths) × 12 when profitable", () => {
+    const f = makeFixtures({ flipProfit: 10_000, flipHoldMonths: 5 });
+    const s = scoreForGoal("recycle_capital", f);
+    // 80_000 / 5 = 16_000; × 12 = 192_000 (cash recovered per year)
+    expect(s.flip).toBeCloseTo(192_000, 0);
+  });
+
+  it("F&F floors at 0 when profit is non-positive (losing flip doesn't recycle)", () => {
+    const f = makeFixtures({ flipProfit: -5_000, flipHoldMonths: 5 });
+    const s = scoreForGoal("recycle_capital", f);
+    expect(s.flip).toBe(0);
+  });
+
+  it("BRRRR velocity rewards low remainingCashInDeal", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 5_000,
+    } as BrrrrResult;
+    f.refiSeasoningMonths = 6;
+    const s = scoreForGoal("recycle_capital", f);
+    // (80_000 − 5_000) / 6 × 12 = 150_000
+    expect(s.brrrr).toBeCloseTo(150_000, 0);
+  });
+
+  it("BRRRR floors at 0 when remainingCashInDeal exceeds totalCashInvested", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 100_000,
+    } as BrrrrResult;
+    const s = scoreForGoal("recycle_capital", f);
+    expect(s.brrrr).toBe(0);
+  });
+});
+
+describe("pickBestPlayForGoal", () => {
+  it("cash_flow goal → strong B&H wins over weak F&F and BRRRR", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 400,
+      // F&F proxy: 2_000 × 0.005 = 10 — weak relative to B&H 400.
+      flipProfit: 2_000,
+      flipHoldMonths: 4,
+      brrrrPostRefiCashflow: 50,
+    });
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe("buyAndHold");
+  });
+
+  it("fast_cash goal → strong F&F wins over decent B&H rental", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 200,
+      flipProfit: 75_000,
+    });
+    expect(pickBestPlayForGoal("fast_cash", f)).toBe("flip");
+  });
+
+  it("recycle_capital goal → strong BRRRR with low cash-left wins", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 2_000,
+    } as BrrrrResult;
+    f.refiSeasoningMonths = 6;
+    // BRRRR velocity: (80k − 2k)/6 × 12 ≈ 156_000
+    // F&F velocity: 80k / 4 × 12 = 240_000 — wait, F&F still wins here
+    // Force F&F to be slower so BRRRR wins:
+    f.holdMonths = 18;
+    // F&F: 80k / 18 × 12 ≈ 53_333; BRRRR: ≈ 156k → BRRRR
+    expect(pickBestPlayForGoal("recycle_capital", f)).toBe("brrrr");
+  });
+
+  it("ties broken in declaration order (buyAndHold > flip > brrrr)", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 100,
+      // 20_000 × 0.005 = 100 — three-way tie on cash_flow.
+      flipProfit: 20_000,
+      flipHoldMonths: 4,
+      brrrrPostRefiCashflow: 100,
+    });
+    // cash_flow: bnh=100, flip=100, brrrr=100. Ties go to first in
+    // declaration order (buyAndHold).
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe("buyAndHold");
+  });
+
+  it("returns null when ALL three strategies score 0 (no usable data)", () => {
+    const f = makeFixtures({});
+    expect(pickBestPlayForGoal("cash_flow", f)).toBe(null);
+  });
+});
+
+describe("inferDefaultGoal", () => {
+  it("strong rental property → cash_flow default", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 500,
+      flipProfit: 5_000,
+      flipHoldMonths: 4,
+    });
+    expect(inferDefaultGoal(f)).toBe("cash_flow");
+  });
+
+  it("strong flip → fast_cash default", () => {
+    const f = makeFixtures({
+      rentalCashflowMonthly: 100,
+      flipProfit: 80_000,
+    });
+    expect(inferDefaultGoal(f)).toBe("fast_cash");
+  });
+
+  it("strong BRRRR with low cash-left → recycle_capital default", () => {
+    const f = makeFixtures({});
+    f.brrrr = {
+      ...f.brrrr,
+      remainingCashInDeal: 2_000,
+      postRefiCashflowMonthly: 100,
+    } as BrrrrResult;
+    f.holdMonths = 18; // pin F&F velocity low
+    expect(inferDefaultGoal(f)).toBe("recycle_capital");
+  });
+
+  it("falls back to cash_flow when all four goals normalize to ≤0", () => {
+    const f = makeFixtures({});
+    // Truly empty deal: zero out the rental cash-in so the B&H / BRRRR
+    // velocity proxies (recycle_capital + fast_cash) don't generate a
+    // spurious non-zero from the default 80k fixture.
+    f.rental = { ...f.rental, totalCashInvested: 0 } as RentalResult;
+    expect(inferDefaultGoal(f)).toBe("cash_flow");
+  });
+});

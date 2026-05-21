@@ -91,6 +91,19 @@ export class RedisService implements OnModuleInit {
   }
 
   /**
+   * Returns the underlying ioredis client when Redis is available, or `null`
+   * when REDIS_URL is unset or the connection has failed.
+   *
+   * Prefer the high-level `get`/`set`/`incrWithTTL` helpers above for caching.
+   * This accessor exists for callers that need raw ioredis primitives (e.g.
+   * `INCR`/`EXPIRE` for monthly rate-limit counters) and that want to fail
+   * closed when Redis is unavailable rather than silently degrade.
+   */
+  getClient(): Redis | null {
+    return this.isAvailable() ? this.client : null;
+  }
+
+  /**
    * Get cached value for a tool call
    */
   async get(toolName: string, args: Record<string, any>): Promise<any | null> {

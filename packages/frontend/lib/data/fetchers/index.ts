@@ -16,3 +16,6 @@ export * from "./_groups/billing";
 export * from "./_groups/onboarding";
 export * from "./_groups/organizations";
 export * from "./_groups/admin";
+
+// Deal Analyzer (market context, AI verdict, saved analyses)
+export * from "./analyzer";

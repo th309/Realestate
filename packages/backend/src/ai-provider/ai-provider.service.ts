@@ -20,6 +20,7 @@ import {
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
 import { logUsage } from './ai-usage-logger';
+import { executeStream } from './ai-stream-executor';
 
 @Injectable()
 export class AiProviderService {
@@ -83,6 +84,39 @@ export class AiProviderService {
   ): Promise<AiCompletionResponse> {
     const config = await this.configResolver.resolve(purpose);
     return this.executeCompletion(purpose, config, messages, { maxTokens });
+  }
+
+  /**
+   * Stream an AI completion as an async generator of text deltas.
+   *
+   * Resolves config the same way as `complete()` and re-uses `buildMessages()`
+   * for system-prompt / reasoner-quirk handling. Yields each non-empty
+   * `choices[0].delta.content` chunk from the OpenAI-compatible stream.
+   * Usage telemetry is logged once when the stream ends (success or failure).
+   */
+  async *stream(
+    purpose: string,
+    request: AiCompletionRequest,
+  ): AsyncGenerator<string> {
+    const config = await this.configResolver.resolve(purpose);
+    const client = this.getOrCreateClient(config);
+    const messages = this.buildMessages(config, request);
+    const temperature =
+      request.temperature ??
+      config.temperature ??
+      PROVIDER_PRESETS[config.provider].defaultTemperature;
+
+    yield* executeStream({
+      client,
+      supabase: this.supabase,
+      logger: this.logger,
+      purpose,
+      config,
+      messages,
+      request,
+      temperature,
+      activeTestRunId: this.activeTestRunId,
+    });
   }
 
   /**

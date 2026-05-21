@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "@propertyiq/analyzer-core": "*",
     "@supabase/supabase-js": "^2.101.1",
     "express": "^5.1.0",
     "jose": "^6.2.2",

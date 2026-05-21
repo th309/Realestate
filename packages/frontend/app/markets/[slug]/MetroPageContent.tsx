@@ -8,6 +8,7 @@ import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 import { MarketOverviewSection } from "./MarketOverviewSection";
 import { LeadMagnetModal } from "./components/LeadMagnetModal";
+import AnalyzeCTA from "../components/AnalyzeCTA";
 import { useMilestone } from "@/lib/hooks/useMilestone";
 
 interface MetroPageContentProps {
@@ -56,6 +57,15 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       <p className="text-on-surface-variant mb-8 max-w-2xl">
         AI-powered market intelligence for the {metro.name} metro area.
       </p>
+
+      {/* Analyze CTA — deep-link to Deal Analyzer */}
+      <div className="mb-8">
+        <AnalyzeCTA
+          geoLevel="metro"
+          geoId={metro.cbsaCode}
+          geoName={metro.shortName}
+        />
+      </div>
 
       {/* Scores */}
       <section

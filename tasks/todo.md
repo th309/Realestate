@@ -288,3 +288,80 @@ Before executing, confirm with operator:
 - No objection to 2h-ish implementation window
 
 Then Phase A → B → C → D → E → F, committing at sensible boundaries, verifying each phase's acceptance before moving on.
+
+---
+
+# RentCast Property Lookup Integration — `/analyzer`
+
+**Date:** 2026-05-14
+**Branch:** `feat/deal-analyzer`
+**Decisions:** Pro-only · explicit "Fetch property data" button · Developer (free, 50 calls/mo) tier
+**Reopens spec non-goal:** `docs/superpowers/specs/2026-05-14-deal-analyzer-design.md` §2/§3
+
+## Why this matters
+
+Today `/analyzer` only knows area-level Zillow indexes (ZHVI/ZORI). User wants per-property comps + AVM + rent estimate. RentCast `/properties`, `/avm/value`, `/avm/rent/long-term` deliver exactly that. With 50 free calls/mo and 3 calls per lookup, **cost discipline IS the build**.
+
+## Phase A — Backend RentCast client (cost-safe foundation)
+
+- [ ] **A1.** New module `packages/backend/src/rentcast/` (module + service + types).
+- [ ] **A2.** `RENTCAST_API_KEY` env var, no fallback (CLAUDE.md §1.2). Backend crashes at boot if missing — same pattern as `ANTHROPIC_API_KEY`.
+- [ ] **A3.** Service methods: `getPropertyRecord(address)`, `getValueEstimate(address)`, `getRentEstimate(address)`. Each → typed DTO.
+- [ ] **A4.** Redis cache wrapper. Key: `rentcast:<endpoint>:<sha1(normalized-address)>`. TTL 30 days. Cache miss → API call → cache set.
+- [ ] **A5.** Monthly budget cap. Redis counter `rentcast:usage:<YYYY-MM>` increments on each real API call (not cache hits). Hard stop at `RENTCAST_MONTHLY_CAP` (default 45 — 5-call buffer below the 50 free-tier ceiling). On cap → throw typed error → 429 to client.
+- [ ] **A6.** Soft-warn structured log at 80% (36 calls).
+- [ ] **A7.** Unit tests: cache hit skips fetch, cap-exceeded throws, malformed RentCast response handled.
+
+## Phase B — Backend analyzer endpoint
+
+- [ ] **B1.** `GET /api/analyzer/property-lookup` in `analyzer.controller.ts`. Pro-required (use existing entitlements guard).
+- [ ] **B2.** Class-validated query DTO: `address: string` (required, length-bounded).
+- [ ] **B3.** Orchestrator in `analyzer.service.ts`: parallel-fire 3 RentCast calls, consolidate → `PropertyLookupDto` (avm, rent_estimate, property_record, sales_comps[], rental_comps[], cache_age, source: "rentcast").
+- [ ] **B4.** Per-field nullability: any one of the 3 RentCast calls failing degrades that section to `null`, never throws.
+- [ ] **B5.** Backend e2e test against real Supabase + mocked RentCast HTTP (Pro auth, cache hit/miss, cap-exceeded → 429).
+
+## Phase C — Frontend data layer (CLAUDE.md §5)
+
+- [ ] **C1.** `packages/frontend/lib/data/fetchers/property-lookup.ts` — `fetchPropertyLookup(address)`.
+- [ ] **C2.** Hook `usePropertyLookup` — React Query, **`enabled: false`** (manual trigger only — never auto-fire). 24h stale time so re-clicks within a session are free.
+- [ ] **C3.** Export both from `lib/data/index.ts`.
+- [ ] **C4.** Quota-exceeded discriminator (`{ quotaExceeded: true }` on 429), mirroring `useMarketContext`.
+
+## Phase D — Frontend UI
+
+- [ ] **D1.** New component `app/analyzer/components/PropertyDataTile.tsx`:
+  - AVM big number + ±low/high range.
+  - Sales comps table (5–10 rows): address (city only for privacy), beds/baths/sqft, sale price, sale date, distance.
+  - Rental comps table (parallel structure).
+  - "Updated X days ago" cache-age line.
+- [ ] **D2.** "Fetch property data" button in `AnalyzerClient.tsx`, enabled only when `address` resolved + Pro tier. Triggers `usePropertyLookup`.
+- [ ] **D3.** On successful fetch, prefill Price (AVM `value`), Rent (rent estimate `rent`), Tax (property record `taxAssessment` if present), with `✓ from RentCast` badge (distinct from existing `✓ auto`).
+- [ ] **D4.** Quota-exceeded state → disabled button + explanatory tooltip ("Monthly RentCast budget exhausted; resets on the 1st").
+- [ ] **D5.** Loading state, error state — no `undefined` ever rendered.
+
+## Phase E — Spec addendum + secrets
+
+- [ ] **E1.** Append addendum section to `docs/superpowers/specs/2026-05-14-deal-analyzer-design.md` documenting the §2/§3 reversal and the new architecture.
+- [ ] **E2.** Add `RENTCAST_API_KEY` + `RENTCAST_MONTHLY_CAP` to `scripts/railway-set-analyzer-secrets.js` (already untracked in your tree).
+- [ ] **E3.** Local `.env.example` update — placeholder values, doc the cap.
+
+## Phase F — Verification
+
+- [ ] **F1.** `npm test --workspaces` green.
+- [ ] **F2.** Playwright e2e: Pro user clicks "Fetch property data" → tile renders comps. Free user → button is paywalled.
+- [ ] **F3.** Manual render check on `/analyzer` (per `[[feedback_verify-after-every-task]]`).
+- [ ] **F4.** Background `code-reviewer` + `data-layer-reviewer` + `security-reviewer` agents per CLAUDE.md §1.6.
+
+## Open items needing your input before Phase B starts
+
+1. **RentCast API key** — do you have one? If yes, drop it in (don't paste in chat — just confirm and add to Railway via your script). If no, I'll wire everything up but the backend won't actually fetch anything until the key lands.
+2. **Header name** — RentCast docs require login to confirm. Default I'll code: `X-Api-Key`. Override via `RENTCAST_API_KEY_HEADER` env var if their dashboard says otherwise.
+3. **ToS check** — RentCast prohibits raw-data resale in many tier agreements. Showing comps inside our analyzer to a paying Pro user is the standard use case, but worth a 30-second skim of their ToS before launch.
+
+## Acceptance gates
+
+- [ ] Pro user sees AVM + 5+ sales comps + 5+ rental comps for a real US address.
+- [ ] Free/anonymous user sees the same `/analyzer` page they see today, plus a Pro-locked teaser for "Property Data & Comps."
+- [ ] Same address clicked twice = 1 RentCast call, not 2 (cache works).
+- [ ] Monthly counter blocks at `RENTCAST_MONTHLY_CAP`; UI degrades gracefully.
+- [ ] No background test breaks (`packages/frontend/tests/e2e/analyzer.spec.ts` still green).

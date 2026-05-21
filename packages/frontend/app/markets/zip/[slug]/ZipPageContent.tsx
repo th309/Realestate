@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import AnalyzeCTA from "../../components/AnalyzeCTA";
 
 interface ZipPageContentProps {
   zip: ZipSlugEntry;
@@ -71,6 +72,11 @@ export function ZipPageContent({
           </>
         )}
       </p>
+
+      {/* Analyze CTA — deep-link to Deal Analyzer */}
+      <div className="mb-8">
+        <AnalyzeCTA geoLevel="zip" geoId={zip.zip} geoName={zip.shortName} />
+      </div>
 
       {/* Score */}
       <section className="mb-10">

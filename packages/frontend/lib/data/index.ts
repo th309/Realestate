@@ -8,6 +8,10 @@
  * compliance). Consumer imports are unchanged.
  */
 
+// Analyzer-specific exports (grading, upgrade-path, AI insights, property
+// lookup) extracted into `_analyzer-data-exports.ts` per CLAUDE.md §1.3.
+export * from "./_analyzer-data-exports";
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -223,6 +227,13 @@ export {
 
   // Tour signup mutation (anonymous → claimed user conversion)
   useTourSignup,
+
+  // Analyzer customization (thresholds + assumption defaults)
+  useThresholds,
+  useUpdateThresholds,
+  useDeleteThresholds,
+  useAnalyzerDefaults,
+  useUpdateAnalyzerDefaults,
 } from "./hooks";
 
 // ============================================================================

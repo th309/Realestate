@@ -111,6 +111,24 @@ export class EntitlementsService {
     return response;
   }
 
+  /**
+   * Resolve the effective tier for a user using the canonical
+   * `TierResolverService`. Single source of truth for tier checks across the
+   * backend hot path — direct `user_profiles.subscription_tier` reads in
+   * controllers should be replaced with this method so trial / org-tier /
+   * admin-fallback resolution stays consistent.
+   *
+   * Returns the resolved tier string (`'free' | 'pro' | 'enterprise' | 'admin'`)
+   * or `null` when no user is supplied. Returning `null` lets callers warn on
+   * "expected a profile, got nothing" cases without conflating with explicit
+   * free users.
+   */
+  async getUserTier(userId: string | null): Promise<string | null> {
+    if (!userId) return null;
+    const { tier } = await this.tierResolver.resolve(userId, null);
+    return tier ?? null;
+  }
+
   async trackPaywallEvent(data: {
     userId?: string;
     sessionId?: string;
