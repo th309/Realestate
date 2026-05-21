@@ -58,14 +58,15 @@ export function getSectionPrompt(sectionId: SectionId): string {
 export function buildBatchedSectionTasks(): string {
   const lines: string[] = [];
   lines.push(
-    "Return a JSON object with one key per section listed below. The value at each key is the section's annotation as a plain string. Do not include any prose outside the JSON. Do not wrap the JSON in markdown code fences. Do not add extra keys.",
+    "Return ONLY a JSON object with one key per section listed below. The value at each key is the section's annotation as a single JSON string.",
+    'STRICT JSON rules: (1) no prose outside the JSON; (2) no markdown code fences; (3) no extra keys; (4) every section listed below MUST appear as a key; (5) string values must be valid JSON — any literal newline inside a value MUST be encoded as \\n; (6) double-quotes inside a value MUST be escaped as \\"; (7) the output must parse with JSON.parse() on the first try.',
     '',
-    'JSON shape:',
+    'JSON shape (all keys required):',
     '{',
     BATCHED_SECTION_IDS.map((id) => `  "${id}": "<annotation>"`).join(',\n'),
     '}',
     '',
-    'SECTION TASKS:',
+    "SECTION TASKS (follow each task's length and content brief for its own annotation):",
   );
   for (const id of BATCHED_SECTION_IDS) {
     lines.push(`[${id}]`, PROMPTS[id], '');

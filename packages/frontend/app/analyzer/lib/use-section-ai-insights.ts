@@ -114,15 +114,18 @@ export function useSectionAiInsights({
     goal ?? "",
   ].join("|");
 
-  // recommendation_analysis is gated on grading existing — same as before.
-  // For the batched call, simplest correct behavior is to gate the whole
-  // batch on enabled (other sections don't need grading; if grading is
-  // missing the recommendation will be a no-op in the response).
+  // Gate the entire batched call on `enabled` AND grading being present.
+  // Five of the six sections don't strictly need grading, but firing without
+  // it would produce a hollow recommendation_analysis and force a second
+  // round-trip once grading lands. One coordinated fetch is cheaper than two.
   const query = useQuery<AIAnnotationBatch, Error>({
     queryKey: [BATCH_QUERY_KEY, discriminator],
     queryFn: () => fetchBatchedAiInsights(payload),
-    enabled,
+    enabled: enabled && !!grading,
     staleTime: 1000 * 60 * 60 * 24, // 24h matches backend cache TTL
+    // Fetcher already retries 429 up to 4 attempts. Cap react-query's own
+    // retry at 1 so a sustained failure doesn't multiply into 12+ attempts.
+    retry: 1,
   });
 
   const refreshAll = useCallback(() => {

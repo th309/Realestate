@@ -63,8 +63,10 @@ function maxTokensForSection(sectionId: SectionId): number {
 }
 
 /** Batched call must fit recommendation_analysis (~450) + five short sections
- *  (~150 each) plus JSON syntax overhead. 1600 leaves comfortable headroom. */
-const BATCH_MAX_TOKENS = 1600;
+ *  (~150 each) plus JSON syntax overhead. 2000 leaves headroom so the closing
+ *  `}` is never cut off mid-response (truncation would break JSON.parse for
+ *  the entire batch). */
+const BATCH_MAX_TOKENS = 2000;
 
 @Injectable()
 export class AiInsightsService {
@@ -116,34 +118,38 @@ export class AiInsightsService {
     const cached = await this.cache.get(key);
     if (cached) {
       const parsed = this.parseBatchedJson(cached.text);
-      return this.buildBatchedResult(parsed, cached.threadId, true);
+      return this.buildBatchedResult(parsed ?? {}, cached.threadId, true);
     }
 
     const userPrompt = assemblePrompt(payload, buildBatchedSectionTasks());
     // Reuse the existing analyzer_section_annotation purpose so this inherits
     // the same model/temperature config admins have already tuned for section
-    // annotations. Avoids requiring a new ai_model_config row to ship.
+    // annotations. `responseFormat: 'json'` is intentionally NOT requested
+    // here — the configured provider/model may not support
+    // response_format: { type: 'json_object' } and a 400 there would wipe
+    // out all six sections at once. The prompt instructs JSON-only output
+    // and parseBatchedJson() handles fence-stripping and graceful failure.
     const response = await this.provider.complete(
       'analyzer_section_annotation',
-      {
-        systemPrompt: SYSTEM_PROMPT,
-        userPrompt,
-        maxTokens: BATCH_MAX_TOKENS,
-        responseFormat: 'json',
-      },
+      { systemPrompt: SYSTEM_PROMPT, userPrompt, maxTokens: BATCH_MAX_TOKENS },
     );
 
     const rawText = response.content ?? '';
     const parsed = this.parseBatchedJson(rawText);
 
     const threadId = randomUUID();
-    await this.cache.set(key, {
-      text: rawText,
-      threadId,
-      citedFacts: [],
-    });
+    // Only cache when the parse actually yielded section keys. A failed parse
+    // returns {} — caching that would lock the user into empty narratives for
+    // 24h on every subsequent hit.
+    if (parsed !== null && Object.keys(parsed).length > 0) {
+      await this.cache.set(key, {
+        text: rawText,
+        threadId,
+        citedFacts: [],
+      });
+    }
 
-    return this.buildBatchedResult(parsed, threadId, false);
+    return this.buildBatchedResult(parsed ?? {}, threadId, false);
   }
 
   async *stream(payload: InsightPayload): AsyncGenerator<string> {
@@ -159,25 +165,36 @@ export class AiInsightsService {
   }
 
   /**
-   * Parse the batched JSON response. Tolerates accidental code-fence wrapping
-   * by stripping ``` fences before parsing. Missing keys are filled with an
-   * empty string downstream so a partial response doesn't crash the page.
+   * Parse the batched JSON response. Returns the parsed object on success,
+   * `null` on hard-fail so the caller can decide whether to cache. Tolerates:
+   *   - leading/trailing whitespace
+   *   - markdown code-fence wrapping
+   *   - a leading prose preamble like "Here is the JSON:" before the `{`
+   * Missing keys are tolerated downstream (filled with empty strings); only
+   * an unparseable string yields null.
    */
   private parseBatchedJson(
     text: string,
-  ): Partial<Record<BatchedSectionId, string>> {
-    const stripped = text
+  ): Partial<Record<BatchedSectionId, string>> | null {
+    let stripped = text
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/i, '');
+    // If the model emitted a preamble before the JSON object, locate the
+    // first `{` and last `}` and slice between them.
+    const firstBrace = stripped.indexOf('{');
+    const lastBrace = stripped.lastIndexOf('}');
+    if (firstBrace > 0 && lastBrace > firstBrace) {
+      stripped = stripped.slice(firstBrace, lastBrace + 1);
+    }
     try {
       const obj = JSON.parse(stripped);
-      return obj && typeof obj === 'object' ? obj : {};
+      return obj && typeof obj === 'object' ? obj : null;
     } catch (err) {
       this.logger.warn(
-        `Batched insights JSON parse failed: ${err instanceof Error ? err.message : String(err)}. Falling back to empty sections.`,
+        `Batched insights JSON parse failed: ${err instanceof Error ? err.message : String(err)}. Returning empty sections (not cached).`,
       );
-      return {};
+      return null;
     }
   }
 
