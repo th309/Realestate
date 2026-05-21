@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * useAiHeaderVerdict — debounced streaming AI verdict for the Hero.
  *

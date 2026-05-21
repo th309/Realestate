@@ -20,6 +20,7 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/emails/package.json ./packages/emails/
+COPY packages/analyzer-core/package.json ./packages/analyzer-core/
 # Postinstall script must exist before npm ci (it runs during install)
 COPY scripts/postinstall-fix-types.js ./scripts/
 # Type stub referenced by the postinstall script
@@ -42,8 +43,9 @@ ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 
 COPY . .
 
-# Build the emails package first (frontend depends on @propertyiq/emails)
-RUN npm run build -w @propertyiq/emails
+# Build workspace deps first — frontend imports their dist/ output at build time
+RUN npm run build -w @propertyiq/analyzer-core \
+    && npm run build -w @propertyiq/emails
 
 RUN npm run build:frontend
 

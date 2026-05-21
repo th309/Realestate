@@ -45,6 +45,7 @@ COPY packages/backend/package.json ./packages/backend/
 COPY packages/emails/package.json ./packages/emails/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/video-template/package.json ./packages/video-template/
+COPY packages/analyzer-core/package.json ./packages/analyzer-core/
 # Postinstall script must exist before npm ci
 COPY scripts/postinstall-fix-types.js ./scripts/
 COPY packages/frontend/types/ ./packages/frontend/types/
@@ -57,7 +58,8 @@ COPY . .
 # video-template is a workspace dep; RemotionCLIRenderer resolves its compiled
 # CLI at provider-construction time (require.resolve of dist/cli/render-cli.js),
 # so the dist must exist before Nest boots the content-pipeline module.
-RUN npm run build:cli -w @propertyiq/video-template \
+RUN npm run build -w @propertyiq/analyzer-core \
+    && npm run build:cli -w @propertyiq/video-template \
     && npm run build -w @propertyiq/emails \
     && npm run build:backend
 
