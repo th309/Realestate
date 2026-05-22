@@ -74,6 +74,81 @@ describe("entitlements-cache TTL split", () => {
   });
 });
 
+describe("fail-open on backend errors", () => {
+  beforeEach(() => {
+    __resetCacheForTests();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fails open and does not cache on HTTP 502", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            status: "error",
+            code: 502,
+            message: "Application failed to respond",
+          }),
+          { status: 502 },
+        ),
+      );
+
+    expect(await checkEntitlement("user-during-outage")).toBe(true);
+    // Not cached: the next call should re-fetch (proving no negative-cache leak)
+    expect(await checkEntitlement("user-during-outage")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    fetchSpy.mockRestore();
+  });
+
+  it("fails open and does not cache on HTTP 503", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("", { status: 503 }));
+
+    expect(await checkEntitlement("user-during-degradation")).toBe(true);
+    expect(await checkEntitlement("user-during-degradation")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    fetchSpy.mockRestore();
+  });
+
+  it("fails open and does not cache on network error (fetch rejection)", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new TypeError("fetch failed"));
+
+    expect(await checkEntitlement("user-no-network")).toBe(true);
+    expect(await checkEntitlement("user-no-network")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    fetchSpy.mockRestore();
+  });
+
+  it("once backend recovers, denial is honored normally", async () => {
+    // First call: backend down → fail-open, no cache
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    fetchSpy.mockResolvedValueOnce(new Response("", { status: 502 }));
+    expect(await checkEntitlement("user-recovering")).toBe(true);
+
+    // Second call: backend back, returns level=none → cache denial for 30s
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ access: { "feature:mcp_access": { level: "none" } } }),
+        { status: 200 },
+      ),
+    );
+    expect(await checkEntitlement("user-recovering")).toBe(false);
+
+    // Third call within 30s: served from negative cache, no fetch
+    expect(await checkEntitlement("user-recovering")).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    fetchSpy.mockRestore();
+  });
+});
+
 describe("invalidateMany", () => {
   beforeEach(() => {
     __resetCacheForTests();

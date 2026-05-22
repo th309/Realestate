@@ -47,6 +47,19 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
       `${BACKEND_URL}/api/entitlements/check?resources=${resource}`,
       { headers: { "x-user-id": userId } },
     );
+    // fetch() does NOT throw on non-2xx responses — only on network/TLS errors.
+    // A backend 5xx returns a Response with an error body that lacks the
+    // `access` field; without this guard we'd compute allowed=false and
+    // negative-cache the denial, surfacing "Pro subscription required" to
+    // users when the real cause is a backend outage. Fail open on any non-OK
+    // HTTP status and don't cache, so the next call retries once the backend
+    // recovers.
+    if (!res.ok) {
+      console.log(
+        `[Auth:Entitlements] Backend returned ${res.status}, failing open (not cached)`,
+      );
+      return true;
+    }
     const body = (await res.json()) as {
       access?: Record<string, { level?: string }>;
     };
@@ -58,7 +71,7 @@ export async function checkEntitlement(userId: string): Promise<boolean> {
     );
     return allowed;
   } catch (err) {
-    // On failure, allow access (fail open) but don't cache
+    // Network/TLS errors (fetch rejection) — fail open, don't cache.
     console.log(
       `[Auth:Entitlements] Check failed, failing open | error=${err instanceof Error ? err.message : String(err)}`,
     );
