@@ -27,8 +27,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -48,8 +48,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -69,8 +69,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -94,8 +94,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -115,8 +115,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -132,3 +132,31 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || '' }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN || 'placeholder_mapbox_token' }}
+
+  check-required-env-vars:
+    name: Check required env vars vs Railway
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Audit required env vars
+        run: node scripts/check-required-env-vars.js
+        env:
+          # All three required to enable the Railway-side diff. If any is
+          # missing the script still runs and prints the static list, but
+          # exits 0 without comparing against Railway. Add RAILWAY_TOKEN
+          # as a repo secret (Personal Access Token from
+          # https://railway.app/account/tokens) to enable the gate.
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+          RAILWAY_BACKEND_SERVICE_ID: ${{ secrets.RAILWAY_BACKEND_SERVICE_ID }}
+          RAILWAY_MCP_SERVER_SERVICE_ID: ${{ secrets.RAILWAY_MCP_SERVER_SERVICE_ID }}
