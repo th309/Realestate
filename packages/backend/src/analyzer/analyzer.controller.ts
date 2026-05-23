@@ -9,14 +9,17 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
+import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
@@ -40,6 +43,7 @@ export class AnalyzerController {
     private readonly service: AnalyzerService,
     private readonly persistence: AnalyzerPersistenceService,
     private readonly tierGate: AnalyzerTierGate,
+    private readonly pdfService: AnalyzerPdfService,
   ) {}
 
   /**
@@ -160,4 +164,60 @@ export class AnalyzerController {
     }
     return row;
   }
+
+  /**
+   * POST /api/analyzer/pdf/:token
+   *
+   * Render the shared analysis as a white-label PDF. Auth model matches the
+   * share page itself — possession of the token is the entitlement. The
+   * recipient of a share link can download the PDF without signing in.
+   */
+  /**
+   * GET /api/analyzer/share/:token/branding
+   *
+   * Public read of the owner's org branding for a shared analysis. Used by
+   * the share page + PDF render to apply white-label header/footer/accent.
+   * Returns `null` body (200) when the owner has no org configured.
+   */
+  @Get('share/:token/branding')
+  async getSharedBranding(@Param('token') token: string) {
+    if (!SHARE_TOKEN_REGEX.test(token)) {
+      throw new BadRequestException('invalid token format');
+    }
+    return this.persistence.getSharedBranding(token);
+  }
+
+  @Post('pdf/:token')
+  async pdfForToken(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!SHARE_TOKEN_REGEX.test(token)) {
+      throw new BadRequestException('invalid token format');
+    }
+    const row = await this.persistence.getShared(token);
+    if (!row) {
+      throw new NotFoundException('shared analysis not found');
+    }
+    const buffer = await this.pdfService.renderToBuffer(token);
+    const slug = slugify(row.address_city ?? 'analysis');
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="DealAnalysis-${slug}.pdf"`,
+      'Content-Length': buffer.length.toString(),
+    });
+    res.send(buffer);
+  }
+}
+
+function slugify(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'analysis'
+  );
 }

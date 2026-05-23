@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { AnalyzerController } from './analyzer.controller';
 import { AnalyzerAiController } from './analyzer-ai.controller';
+import { AnalyzerShareEmailController } from './analyzer-share-email.controller';
 import { GradeController } from './grade.controller';
 import { ThresholdsController } from './thresholds.controller';
+import { EmailModule } from '../email/email.module';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
+import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
 import { GradingService } from './grading.service';
 import { ThresholdsService } from './thresholds.service';
@@ -32,16 +35,19 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     EntitlementsModule,
     RentcastModule,
     AiProviderModule,
+    EmailModule,
   ],
   controllers: [
     AnalyzerController,
     AnalyzerAiController,
+    AnalyzerShareEmailController,
     GradeController,
     ThresholdsController,
   ],
   providers: [
     AnalyzerService,
     AnalyzerPersistenceService,
+    AnalyzerPdfService,
     AnalyzerTierGate,
     GradingService,
     ThresholdsService,

@@ -3,8 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements";
-import { ModeProvider } from "./lib/mode-context";
-import { ModeToolbar } from "./components/chrome/ModeToolbar";
+import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { InputPanel } from "./components/InputPanel/InputPanel";
 import { EditInputsFab } from "./components/chrome/EditInputsFab";
@@ -214,183 +213,185 @@ export default function AnalyzerClient({
   );
 
   return (
-    <ModeProvider>
-      <main className="min-h-screen bg-surface">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-          <header className="flex items-center justify-between mb-4 gap-4">
-            <h1 className="text-xl md:text-2xl font-bold text-on-surface">
-              Deal Analyzer
-            </h1>
-            <ModeToolbar />
-          </header>
+    <main className="min-h-screen bg-surface">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <AnalyzerHeader
+          isPro={isPro}
+          headingLabel={displayAddress ?? "analysis"}
+          state={state}
+          grading={grading}
+          compsView={compsView}
+          activeStrategy={activeStrategy}
+          activeEngineStrategy={toEngineStrategy(activeStrategy) ?? null}
+          selectedGoal={selectedGoal ?? null}
+          displayAddress={displayAddress}
+          paramZip={params.zip}
+        />
 
-          {displayAddress && (
-            <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
-          )}
+        {displayAddress && (
+          <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
-            <div className="hidden md:block">
-              <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
-                {inputPanel}
-                {rentcastData?.property_record && (
-                  <PropertyRecordCard record={rentcastData.property_record} />
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-6 min-w-0">
-              {!address.trim() && !rentcastData && (
-                <div
-                  data-empty-cta
-                  className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
-                >
-                  <div className="font-semibold mb-1">
-                    ← Enter a property address to get started
-                  </div>
-                  <div className="text-sm">
-                    Type the address in the panel on the left{" "}
-                    {isPro ? (
-                      <>
-                        and click{" "}
-                        <strong>Fetch property + comps from RentCast</strong> to
-                        auto-populate price, rent, and comps. Or open this page
-                        with{" "}
-                        <code className="font-mono text-xs">
-                          ?address=YOUR+ADDRESS
-                        </code>{" "}
-                        to auto-fetch on load.
-                      </>
-                    ) : (
-                      <>
-                        (Pro feature: RentCast lookup not available on free
-                        tier).
-                      </>
-                    )}
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
+          <div className="hidden md:block">
+            <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
+              {inputPanel}
+              {rentcastData?.property_record && (
+                <PropertyRecordCard record={rentcastData.property_record} />
               )}
-
-              {analysisMode === "compare" && (
-                <GoalPicker
-                  selectedGoal={selectedGoal}
-                  onChange={setSelectedGoal}
-                />
-              )}
-
-              {analysisMode === "compare" && (
-                <StrategyCompare
-                  {...strategyProps}
-                  isDealViable={
-                    hasGradableInput && verdict !== "bad" && verdict !== "avoid"
-                  }
-                  selectedGoal={selectedGoal}
-                  winner={bestPlay}
-                  noGoalFit={noGoalFit}
-                />
-              )}
-
-              {grading.data ? (
-                <GradingResultPanel
-                  result={grading.data}
-                  input={analyzer.input}
-                  context={{
-                    marketPiqScore:
-                      marketContext?.piq_score?.value ?? undefined,
-                  }}
-                  strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
-                  onApplyLever={analyzer.setInput}
-                  {...upgradeProps}
-                  onCustomizeClick={() => setDrawerOpen(true)}
-                  presetLabel="Balanced"
-                  aiProps={sectionAi.recommendation_analysis}
-                />
-              ) : grading.isLoading ? (
-                <div
-                  className="rounded-2xl border border-outline-variant bg-surface p-6 animate-pulse"
-                  aria-busy="true"
-                  role="status"
-                >
-                  <div className="h-24 w-24 rounded-xl bg-surface-container-high" />
-                  <div className="mt-4 h-6 w-32 rounded bg-surface-container-high" />
-                  <div className="mt-2 h-4 w-64 rounded bg-surface-container-high" />
-                </div>
-              ) : null}
-
-              <StrategyKPI
-                ctx={{
-                  input: analyzer.input,
-                  rental,
-                  flip,
-                  brrrr,
-                  projection,
-                  breakEven,
-                  afterTax,
-                  arv: arvLocal,
-                  rehabBudget,
-                }}
-                active={activeStrategy}
-                isCompareWinner={analysisMode === "compare"}
-              />
-
-              <RentcastBanners
-                lookupErrorMsg={lookupErrorMsg}
-                quotaExceeded={quotaExceeded}
-                rentcastData={rentcastData}
-                address={address}
-              />
-
-              <AnalyzerSections
-                input={analyzer.input}
-                rental={rental}
-                flip={flip}
-                brrrr={brrrr}
-                projection={projection}
-                afterTax={afterTax}
-                arvLocal={arvLocal}
-                rehabBudget={rehabBudget}
-                activeStrategy={activeStrategy}
-                marginalTaxRate={assumptions.marginalTaxRate}
-                grossRentMonthly={grossRentMonthly}
-                vacancyMonthly={vacancyMonthly}
-                opexAnnual={opexAnnual}
-                debtServiceMonthly={debtServiceMonthly}
-                subjectLat={subjectLat}
-                subjectLon={subjectLon}
-                displayAddress={displayAddress}
-                pricePerSqftValues={pricePerSqftValues}
-                yourPricePerSqft={yourPricePerSqft}
-                subjectPrice={subjectPrice}
-                salesComps={salesComps}
-                rentalComps={rentalComps}
-                mapboxToken={mapboxToken}
-                marketContext={marketContext}
-                sectionAi={sectionAi}
-                marketContextAi={{
-                  aiPayloadBase: {
-                    input: analyzer.input,
-                    result: { rental, flip, brrrr },
-                    rentcast: rentcastData,
-                  },
-                  aiEnabled: isPro && hasGradableInput,
-                }}
-              />
             </div>
           </div>
+
+          <div className="space-y-6 min-w-0">
+            {!address.trim() && !rentcastData && (
+              <div
+                data-empty-cta
+                className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
+              >
+                <div className="font-semibold mb-1">
+                  ← Enter a property address to get started
+                </div>
+                <div className="text-sm">
+                  Type the address in the panel on the left{" "}
+                  {isPro ? (
+                    <>
+                      and click{" "}
+                      <strong>Fetch property + comps from RentCast</strong> to
+                      auto-populate price, rent, and comps. Or open this page
+                      with{" "}
+                      <code className="font-mono text-xs">
+                        ?address=YOUR+ADDRESS
+                      </code>{" "}
+                      to auto-fetch on load.
+                    </>
+                  ) : (
+                    <>
+                      (Pro feature: RentCast lookup not available on free tier).
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {analysisMode === "compare" && (
+              <GoalPicker
+                selectedGoal={selectedGoal}
+                onChange={setSelectedGoal}
+              />
+            )}
+
+            {analysisMode === "compare" && (
+              <StrategyCompare
+                {...strategyProps}
+                isDealViable={
+                  hasGradableInput && verdict !== "bad" && verdict !== "avoid"
+                }
+                selectedGoal={selectedGoal}
+                winner={bestPlay}
+                noGoalFit={noGoalFit}
+              />
+            )}
+
+            {grading.data ? (
+              <GradingResultPanel
+                result={grading.data}
+                input={analyzer.input}
+                context={{
+                  marketPiqScore: marketContext?.piq_score?.value ?? undefined,
+                }}
+                strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+                onApplyLever={analyzer.setInput}
+                {...upgradeProps}
+                onCustomizeClick={() => setDrawerOpen(true)}
+                presetLabel="Balanced"
+                aiProps={sectionAi.recommendation_analysis}
+              />
+            ) : grading.isLoading ? (
+              <div
+                className="rounded-2xl border border-outline-variant bg-surface p-6 animate-pulse"
+                aria-busy="true"
+                role="status"
+              >
+                <div className="h-24 w-24 rounded-xl bg-surface-container-high" />
+                <div className="mt-4 h-6 w-32 rounded bg-surface-container-high" />
+                <div className="mt-2 h-4 w-64 rounded bg-surface-container-high" />
+              </div>
+            ) : null}
+
+            <StrategyKPI
+              ctx={{
+                input: analyzer.input,
+                rental,
+                flip,
+                brrrr,
+                projection,
+                breakEven,
+                afterTax,
+                arv: arvLocal,
+                rehabBudget,
+              }}
+              active={activeStrategy}
+              isCompareWinner={analysisMode === "compare"}
+            />
+
+            <RentcastBanners
+              lookupErrorMsg={lookupErrorMsg}
+              quotaExceeded={quotaExceeded}
+              rentcastData={rentcastData}
+              address={address}
+            />
+
+            <AnalyzerSections
+              input={analyzer.input}
+              rental={rental}
+              flip={flip}
+              brrrr={brrrr}
+              projection={projection}
+              afterTax={afterTax}
+              arvLocal={arvLocal}
+              rehabBudget={rehabBudget}
+              activeStrategy={activeStrategy}
+              marginalTaxRate={assumptions.marginalTaxRate}
+              grossRentMonthly={grossRentMonthly}
+              vacancyMonthly={vacancyMonthly}
+              opexAnnual={opexAnnual}
+              debtServiceMonthly={debtServiceMonthly}
+              subjectLat={subjectLat}
+              subjectLon={subjectLon}
+              displayAddress={displayAddress}
+              pricePerSqftValues={pricePerSqftValues}
+              yourPricePerSqft={yourPricePerSqft}
+              subjectPrice={subjectPrice}
+              salesComps={salesComps}
+              rentalComps={rentalComps}
+              mapboxToken={mapboxToken}
+              marketContext={marketContext}
+              sectionAi={sectionAi}
+              marketContextAi={{
+                aiPayloadBase: {
+                  input: analyzer.input,
+                  result: { rental, flip, brrrr },
+                  rentcast: rentcastData,
+                },
+                aiEnabled: isPro && hasGradableInput,
+              }}
+            />
+          </div>
         </div>
+      </div>
 
-        <EditInputsFab
-          open={inputsOpenMobile}
-          onToggle={() => setInputsOpenMobile((v) => !v)}
-        >
-          {inputPanel}
-        </EditInputsFab>
+      <EditInputsFab
+        open={inputsOpenMobile}
+        onToggle={() => setInputsOpenMobile((v) => !v)}
+      >
+        {inputPanel}
+      </EditInputsFab>
 
-        <CustomizeThresholdsDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
-        />
-      </main>
-    </ModeProvider>
+      <CustomizeThresholdsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+      />
+    </main>
   );
 }

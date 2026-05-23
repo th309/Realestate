@@ -101,4 +101,20 @@ export class AnalyzerPersistenceService {
     if (!data || data.length === 0) return null;
     return data[0];
   }
+
+  /**
+   * Resolve the owner's organization branding for a share token via the
+   * SECURITY DEFINER RPC `get_shared_analysis_branding`. Returns `null` when
+   * the token is invalid, the owner has no org, or the join finds nothing.
+   * Frontend callers fall back to PropertyIQ defaults in that case.
+   */
+  async getSharedBranding(token: string) {
+    const { data, error } = await this.supabase.rpc(
+      'get_shared_analysis_branding',
+      { p_token: token },
+    );
+    if (error) return null;
+    if (!data || data.length === 0) return null;
+    return data[0];
+  }
 }
