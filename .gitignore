@@ -115,6 +115,7 @@ data/zillow/*.csv
 
 # Machine-specific Claude Code settings
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # AI tool skill directories
 .agent/
