@@ -44,12 +44,25 @@ describe("redfin-dc-config", () => {
     ]);
   });
 
-  it("buyers_and_sellers uses property_type in conflict key", () => {
+  it("buyers_and_sellers metro key has region_name AND property_type", () => {
     const d = getDashboard("buyers_and_sellers");
     expect(d.geos.metro.conflictKeys).toEqual([
       "period_end",
       "region_id",
+      "region_name",
       "property_type",
+    ]);
+  });
+
+  it("metro conflict keys include region_name (division disambiguation)", () => {
+    for (const id of ["price_drops", "investors", "cash_loan", "rhpi"]) {
+      const d = getDashboard(id);
+      expect(d.geos.metro.conflictKeys).toContain("region_name");
+    }
+    // non-metro geos keep the plain (period_end, region_id) key
+    expect(getDashboard("price_drops").geos.county.conflictKeys).toEqual([
+      "period_end",
+      "region_id",
     ]);
   });
 

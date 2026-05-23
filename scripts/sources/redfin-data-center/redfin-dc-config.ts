@@ -51,6 +51,10 @@ export interface DashboardConfig {
 }
 
 const STD_CONFLICT = ["period_end", "region_id"];
+// Metro rows can be metropolitan DIVISIONS that share a parent CBSA (e.g. LA +
+// Anaheim -> 31080). region_name keeps both divisions instead of colliding on
+// the upsert conflict key.
+const METRO_CONFLICT = ["period_end", "region_id", "region_name"];
 
 /** Metadata columns present on every redfin_dc_* table. */
 export const STD_META_COLUMNS = [
@@ -78,7 +82,7 @@ function fullCoverage(id: string, folder: string): Record<string, GeoTarget> {
     metro: {
       path: `${folder}/monthly/all_metros.csv`,
       table: `redfin_dc_${id}_metro`,
-      conflictKeys: STD_CONFLICT,
+      conflictKeys: METRO_CONFLICT,
     },
     county: {
       path: `${folder}/monthly/all_counties.csv`,
@@ -131,7 +135,7 @@ export const DASHBOARDS: Record<string, DashboardConfig> = {
       metro: {
         path: "investors/by_metro/all_metros.csv",
         table: "redfin_dc_investors_metro",
-        conflictKeys: STD_CONFLICT,
+        conflictKeys: METRO_CONFLICT,
       },
       by_category: {
         path: "investors/by_category/price_tier.csv",
@@ -155,7 +159,7 @@ export const DASHBOARDS: Record<string, DashboardConfig> = {
       metro: {
         path: "all_cash_loan_types/all_metros.csv",
         table: "redfin_dc_cash_loan_metro",
-        conflictKeys: STD_CONFLICT,
+        conflictKeys: METRO_CONFLICT,
       },
     },
   },
@@ -181,7 +185,13 @@ export const DASHBOARDS: Record<string, DashboardConfig> = {
         // no all_metros.csv for buyers_and_sellers. Do not "fix" this to all_metros.
         path: "buyers_and_sellers/monthly/top_50_metros.csv",
         table: "redfin_dc_buyers_sellers_metro",
-        conflictKeys: ["period_end", "region_id", "property_type"],
+        // region_name disambiguates metro divisions sharing a CBSA (see METRO_CONFLICT).
+        conflictKeys: [
+          "period_end",
+          "region_id",
+          "region_name",
+          "property_type",
+        ],
         textDims: ["property_type", "balance_of_power"],
       },
     },
@@ -199,7 +209,7 @@ export const DASHBOARDS: Record<string, DashboardConfig> = {
       metro: {
         path: "rhpi/monthly/all_metros.csv",
         table: "redfin_dc_rhpi_metro",
-        conflictKeys: STD_CONFLICT,
+        conflictKeys: METRO_CONFLICT,
       },
     },
   },
