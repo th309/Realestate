@@ -17,18 +17,26 @@ describe("redfin-dc-geo-resolver helpers", () => {
     expect(extractStateCode("07002")).toBeNull();
   });
 
-  it("builds exact county candidates incl. city/County variants (Hampton fix)", () => {
-    // Independent city: must offer "hampton city" so it matches 51650, not
-    // substring-matching "southampton county".
-    const hampton = buildCountyNameCandidates("Hampton, VA");
-    expect(hampton).toContain("hampton");
-    expect(hampton).toContain("hampton city");
-    expect(hampton).toContain("hampton county");
-    expect(hampton).not.toContain("southampton county");
-
-    // Already-suffixed county name round-trips.
-    const southampton = buildCountyNameCandidates("Southampton County, VA");
-    expect(southampton).toContain("southampton county");
-    expect(southampton).toContain("southampton");
+  it("orders county candidates by Redfin's city/county suffix", () => {
+    // No suffix => independent city: try "<name> city" FIRST so "Hampton, VA"
+    // resolves to Hampton city (51650), not the county "Southampton".
+    expect(buildCountyNameCandidates("Hampton, VA")).toEqual([
+      "hampton city",
+      "hampton",
+    ]);
+    // "County" suffix => true county: try bare name FIRST.
+    expect(buildCountyNameCandidates("Southampton County, VA")).toEqual([
+      "southampton",
+      "southampton county",
+    ]);
+    // Same base, different type => DISTINCT ordered candidates (no collision):
+    expect(buildCountyNameCandidates("Richmond, VA")).toEqual([
+      "richmond city",
+      "richmond",
+    ]);
+    expect(buildCountyNameCandidates("Richmond County, VA")).toEqual([
+      "richmond",
+      "richmond county",
+    ]);
   });
 });

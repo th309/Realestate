@@ -152,7 +152,12 @@ async function main(): Promise<void> {
       datasetId: `redfin-dc-${id}`,
     });
     await logger.start(0);
-    const geoKeys = geoFilter ? [geoFilter] : Object.keys(dash.geos);
+    const geoKeys = geoFilter
+      ? geoFilter
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : Object.keys(dash.geos);
     for (const geoLevel of geoKeys) {
       const target = dash.geos[geoLevel];
       if (!target) continue;

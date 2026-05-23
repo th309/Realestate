@@ -1,19 +1,24 @@
 /**
  * Resolve Redfin Data Center region names to our standard geo IDs.
  *
- * State and county are resolved here with EXACT / suffix-aware matching, because
+ * State and county are resolved here with EXACT, suffix-aware matching, because
  * the legacy resolveRedfinGeoid falls back to substring (`%name%`) matching that
- * produces wrong ids for short names contained in longer ones:
- *   - "Kansas" matched "Ar-kansas" -> both got FIPS 05
- *   - "Hampton" matched "Sout-hampton County" -> Hampton city got 51175
- * For those two levels we do anchored exact lookups against the tiger tables and
- * only fall through to the legacy resolver (markets + deterministic fallback) on
- * a genuine miss. Metro keeps the legacy CBSA resolution by design: Redfin metro
- * divisions (LA / Anaheim) legitimately share a parent CBSA and are disambiguated
- * downstream by including region_name in the metro conflict key.
+ * produces wrong ids for short names contained in longer ones (e.g. "Kansas"
+ * matched "Ar-kansas"; "Hampton" matched "Sout-hampton County").
  *
- * `resolved` is false when the final id is a generated REDFIN-… fallback so the
- * caller can enforce an unresolved-rate threshold.
+ * County disambiguation is subtle: Census/tiger names counties bare ("Southampton")
+ * and independent cities with a " city" suffix ("Hampton city"). Redfin signals
+ * which is which via its own suffix — "Southampton County, VA" is a county,
+ * "Hampton, VA" (no "County") is an independent city. We therefore build an
+ * ORDERED candidate list from Redfin's suffix and return the first tiger match,
+ * so "Richmond, VA" -> 51760 (city) while "Richmond County, VA" -> 51159 (county)
+ * instead of both colliding on one FIPS.
+ *
+ * Metro keeps the legacy CBSA resolution by design: Redfin metro DIVISIONS
+ * (LA / Anaheim) legitimately share a parent CBSA and are disambiguated
+ * downstream by region_name in the metro conflict key.
+ *
+ * `resolved` is false when the final id is a generated REDFIN-… fallback.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,30 +36,85 @@ export function extractStateCode(name: string): string | null {
 }
 
 /**
- * Exact-match candidate names for a county/equivalent, given a Redfin region
- * name like "Hampton, VA" or "Southampton County, VA". Strips the trailing
- * state, then offers the bare name plus the common Census suffix variants so we
- * match "Hampton city" / "Southampton County" exactly instead of substring-
- * matching a longer county name. Lowercased for case-insensitive comparison.
+ * Ordered exact-match candidates (lowercased) for a county/equivalent, derived
+ * from Redfin's own suffix. First match wins, so the city/county designation is
+ * respected:
+ *   "Southampton County, VA" -> ["southampton", "southampton county"]
+ *   "Hampton, VA"            -> ["hampton city", "hampton"]
+ *   "St. Mary's Parish, LA"  -> ["st. mary's", "st. mary's parish"]
  */
 export function buildCountyNameCandidates(regionName: string): string[] {
   const noState = regionName.replace(/,\s*[A-Z]{2}$/, "").trim();
-  const base = noState.replace(/\s+(County|Parish|Borough|city)$/i, "").trim();
-  const variants = [
-    noState,
-    base,
-    `${base} County`,
-    `${base} Parish`,
-    `${base} Borough`,
-    `${base} city`,
-  ];
-  return [...new Set(variants.map((v) => v.toLowerCase()))];
+  const m = noState.match(
+    /^(.*?)\s+(County|Parish|Borough|Census Area|city)$/i,
+  );
+  let ordered: string[];
+  if (m) {
+    const base = m[1].trim();
+    const suffix = m[2].toLowerCase();
+    if (suffix === "city") {
+      ordered = [`${base} city`, base];
+    } else {
+      // county / parish / borough / census area: tiger usually stores it bare,
+      // but keep the suffixed form as a secondary match.
+      ordered = [base, `${base} ${m[2]}`];
+    }
+  } else {
+    // No type suffix => Redfin independent city (e.g. "Hampton, VA").
+    ordered = [`${noState} city`, noState];
+  }
+  return [...new Set(ordered.map((v) => v.toLowerCase()))];
 }
 
 export interface ResolvedGeo {
   regionId: string;
   /** False when the id is a generated REDFIN-… fallback. */
   resolved: boolean;
+}
+
+// --- caches (per import run) -------------------------------------------------
+const stateAbbrToFips = new Map<string, string>(); // 'VA' -> '51'
+const countyMapByStateFips = new Map<string, Map<string, string>>(); // '51' -> (lowerName -> geoid)
+
+/** Clear resolver caches (between runs/tests). */
+export function clearDcGeoCaches(): void {
+  stateAbbrToFips.clear();
+  countyMapByStateFips.clear();
+}
+
+async function getStateFips(
+  supabase: SupabaseClient,
+  stateCode: string,
+): Promise<string | null> {
+  const key = stateCode.toUpperCase();
+  const cached = stateAbbrToFips.get(key);
+  if (cached !== undefined) return cached;
+  const { data } = await supabase
+    .from("tiger_states")
+    .select("geoid")
+    .eq("state_abbreviation", key)
+    .maybeSingle();
+  const fips = (data as { geoid?: string } | null)?.geoid ?? null;
+  if (fips) stateAbbrToFips.set(key, fips);
+  return fips;
+}
+
+async function getCountyMap(
+  supabase: SupabaseClient,
+  stateFips: string,
+): Promise<Map<string, string>> {
+  const cached = countyMapByStateFips.get(stateFips);
+  if (cached) return cached;
+  const { data } = await supabase
+    .from("tiger_counties")
+    .select("geoid, name")
+    .eq("state_fips", stateFips);
+  const map = new Map<string, string>();
+  for (const row of (data ?? []) as { geoid: string; name: string }[]) {
+    map.set(row.name.toLowerCase(), row.geoid);
+  }
+  countyMapByStateFips.set(stateFips, map);
+  return map;
 }
 
 /** Exact (case-insensitive) state name -> FIPS. Null on miss. */
@@ -71,31 +131,19 @@ async function resolveStateExact(
   return (data as { geoid?: string } | null)?.geoid ?? null;
 }
 
-/** Exact / suffix-aware county name -> FIPS within its state. Null on miss. */
+/** Suffix-aware exact county/equivalent -> FIPS within its state. Null on miss. */
 async function resolveCountyExact(
   supabase: SupabaseClient,
   regionName: string,
 ): Promise<string | null> {
   const stateCode = extractStateCode(regionName);
   if (!stateCode) return null;
-
-  const { data: stateRow } = await supabase
-    .from("tiger_states")
-    .select("geoid")
-    .eq("state_abbreviation", stateCode.toUpperCase())
-    .maybeSingle();
-  const stateFips = (stateRow as { geoid?: string } | null)?.geoid;
+  const stateFips = await getStateFips(supabase, stateCode);
   if (!stateFips) return null;
-
-  const { data: counties } = await supabase
-    .from("tiger_counties")
-    .select("geoid, name")
-    .eq("state_fips", stateFips);
-  if (!counties) return null;
-
-  const candidates = new Set(buildCountyNameCandidates(regionName));
-  for (const row of counties as { geoid: string; name: string }[]) {
-    if (candidates.has(row.name.toLowerCase())) return row.geoid;
+  const countyMap = await getCountyMap(supabase, stateFips);
+  for (const candidate of buildCountyNameCandidates(regionName)) {
+    const geoid = countyMap.get(candidate);
+    if (geoid) return geoid;
   }
   return null;
 }
