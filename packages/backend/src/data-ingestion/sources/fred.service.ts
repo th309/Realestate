@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { TimeSeriesRecord } from '../types';
+import { getIncrementalCutoff } from '../utils/incremental-cutoff';
 
 const PIPELINE_API_URL =
   process.env.INTERNAL_API_URL || 'http://localhost:3001';
@@ -89,6 +90,7 @@ export class FredService {
   async importFREDData(
     seriesKeys: string[] = ['mortgage_rate_30yr'],
     apiKey?: string,
+    fullLoad: boolean = false,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
     const fredApiKey = apiKey || process.env.FRED_API_KEY;
@@ -99,7 +101,15 @@ export class FredService {
       );
     }
 
-    this.logger.log(`Starting FRED import for: ${seriesKeys.join(', ')}`);
+    // FRED supports server-side date filtering, so the cutoff cuts BOTH network
+    // and DB writes. Backfill uses 2000-01-01 (the original hardcoded value).
+    const observationStart =
+      getIncrementalCutoff({ frequency: 'monthly', fullLoad }) ?? '2000-01-01';
+
+    this.logger.log(
+      `Starting FRED import for: ${seriesKeys.join(', ')} ` +
+        `(mode: ${fullLoad ? 'FULL backfill' : `incremental >= ${observationStart}`})`,
+    );
 
     const startedAt = Date.now();
 
@@ -141,7 +151,7 @@ export class FredService {
           `Fetching ${series.description} (${series.series_id})...`,
         );
 
-        const url = `${FRED_API_BASE}?series_id=${series.series_id}&api_key=${fredApiKey}&file_type=json&observation_start=2000-01-01`;
+        const url = `${FRED_API_BASE}?series_id=${series.series_id}&api_key=${fredApiKey}&file_type=json&observation_start=${observationStart}`;
 
         const response = await axios.get<FREDResponse>(url, {
           timeout: 30000,

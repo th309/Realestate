@@ -16,7 +16,8 @@
 import {
   getSupabaseClient,
   runSourceImport,
-  computeDateCutoff,
+  getIncrementalCutoff,
+  parseIncrementalFlagsFromArgv,
 } from "../../lib";
 import type { ImportSourceResult } from "../../lib";
 import { refreshCalculatedMetrics } from "../../utils/refresh-calculated-metrics";
@@ -41,10 +42,7 @@ function parseArgValue(flag: string): string | null {
 }
 
 const geoFilter = parseArgValue("--geo");
-const recentMonthsRaw = parseArgValue("--recent");
-const recentMonths = recentMonthsRaw
-  ? parseInt(recentMonthsRaw, 10)
-  : undefined;
+const incrementalFlags = parseIncrementalFlagsFromArgv();
 
 const VALID_GEOS = ["national", "state", "metro", "county", "zip"];
 if (geoFilter && !VALID_GEOS.includes(geoFilter)) {
@@ -69,9 +67,13 @@ async function main(): Promise<void> {
   );
   console.log(`Filter:  ${geoFilter || "all geographies"}`);
 
-  const dateCutoff = recentMonths ? computeDateCutoff(recentMonths) : undefined;
-  if (dateCutoff)
-    console.log(`Recent:  last ${recentMonths} months (cutoff: ${dateCutoff})`);
+  // Default to monthly incremental; pass `--full` for a backfill.
+  const dateCutoff =
+    getIncrementalCutoff({ frequency: "monthly", ...incrementalFlags }) ??
+    undefined;
+  console.log(
+    `Mode:    ${incrementalFlags.fullLoad ? "FULL backfill" : `incremental (cutoff: ${dateCutoff})`}`,
+  );
   console.log("");
 
   let totalInserted = 0;

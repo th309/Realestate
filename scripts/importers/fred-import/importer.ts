@@ -2,21 +2,32 @@
  * FRED Data Importer
  */
 
-import type { ImportStats, FREDGeography, FREDSeries } from './types';
-import { getSeriesForGeography, FIELD_TO_SUFFIX } from './series-config';
-import { fetchFREDSeries } from './api-client';
-import { parseValue } from './parsers';
-import { batchUpsertSQL, ensureGeographicUnitExists, getGeographicUnits } from './sql-helpers';
-import { STATE_FIPS_TO_ABBREV, getFipsFromAbbreviation } from './state-mappings';
+import type { ImportStats, FREDGeography, FREDSeries } from "./types";
+import { getSeriesForGeography, FIELD_TO_SUFFIX } from "./series-config";
+import { fetchFREDSeries } from "./api-client";
+import { parseValue } from "./parsers";
+import {
+  batchUpsertSQL,
+  ensureGeographicUnitExists,
+  getGeographicUnits,
+} from "./sql-helpers";
+import {
+  STATE_FIPS_TO_ABBREV,
+  getFipsFromAbbreviation,
+} from "./state-mappings";
+import { getIncrementalCutoff } from "../../lib";
 
 const BATCH_SIZE = 100;
 
 /**
- * Import FRED data for a given year and geography
+ * Import FRED data for a given year and geography.
+ * `fullLoad=true` fetches the entire year; otherwise narrows to the
+ * incremental cutoff when running for the current year (no-op for past years).
  */
 export async function importFREDData(
   year: number,
-  geography: FREDGeography
+  geography: FREDGeography,
+  fullLoad: boolean = false,
 ): Promise<ImportStats> {
   const startTime = Date.now();
   const stats: ImportStats = {
@@ -25,12 +36,12 @@ export async function importFREDData(
     totalRecords: 0,
     seriesProcessed: 0,
     errors: [],
-    duration: 0
+    duration: 0,
   };
 
-  console.log(`\n${'='.repeat(60)}`);
+  console.log(`\n${"=".repeat(60)}`);
   console.log(`📊 Importing FRED ${year} Data - ${geography.toUpperCase()}`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   try {
     const relevantSeries = getSeriesForGeography(geography);
@@ -41,30 +52,53 @@ export async function importFREDData(
     }
 
     // Get geographic units
-    let geoUnits: Array<{ geoid: string;[key: string]: any }> = [];
+    let geoUnits: Array<{ geoid: string; [key: string]: any }> = [];
     let geoids: string[] = [];
 
-    if (geography !== 'national') {
-      geoUnits = await getGeographicUnits(geography as 'state' | 'county' | 'msa');
-      geoids = geoUnits.map(u => u.geoid);
+    if (geography !== "national") {
+      geoUnits = await getGeographicUnits(
+        geography as "state" | "county" | "msa",
+      );
+      geoids = geoUnits.map((u) => u.geoid);
       console.log(`   Found ${geoids.length} ${geography} units`);
     } else {
-      geoids = ['US'];
-      geoUnits = [{ geoid: 'US' }];
-      await ensureGeographicUnitExists('US', 'state', 'United States');
+      geoids = ["US"];
+      geoUnits = [{ geoid: "US" }];
+      await ensureGeographicUnitExists("US", "state", "United States");
       console.log(`   Ensured 'US' geographic unit exists`);
     }
 
-    const observationStart = `${year}-01-01`;
+    // When importing the current year incrementally, narrow the API window to
+    // the monthly cutoff. For past years there is nothing recent to narrow to,
+    // so use the full year. `fullLoad` forces the original year-wide fetch.
+    const currentYear = new Date().getUTCFullYear();
+    const incrementalStart =
+      !fullLoad && year === currentYear
+        ? getIncrementalCutoff({ frequency: "monthly" })
+        : null;
+    const observationStart = incrementalStart ?? `${year}-01-01`;
     const observationEnd = `${year}-12-31`;
+    console.log(
+      `   Window:  ${observationStart} -> ${observationEnd}` +
+        (incrementalStart ? " (incremental)" : fullLoad ? " (full)" : ""),
+    );
 
     // Process each series
     for (const series of relevantSeries) {
       try {
-        await processSeries(series, geography, geoUnits, geoids, observationStart, observationEnd, stats);
+        await processSeries(
+          series,
+          geography,
+          geoUnits,
+          geoids,
+          observationStart,
+          observationEnd,
+          stats,
+        );
         stats.seriesProcessed++;
       } catch (err: any) {
-        const seriesIdStr = typeof series.seriesId === 'string' ? series.seriesId : 'dynamic';
+        const seriesIdStr =
+          typeof series.seriesId === "string" ? series.seriesId : "dynamic";
         stats.errors.push(`${seriesIdStr}: ${err.message}`);
         console.warn(`   ⚠️  Error processing series: ${err.message}`);
       }
@@ -72,10 +106,9 @@ export async function importFREDData(
 
     stats.duration = Date.now() - startTime;
     printImportSummary(stats);
-
   } catch (error: any) {
     stats.errors.push(`Fatal error: ${error.message}`);
-    console.error('\n❌ Import failed:', error.message);
+    console.error("\n❌ Import failed:", error.message);
   }
 
   return stats;
@@ -87,13 +120,14 @@ export async function importFREDData(
 async function processSeries(
   series: FREDSeries,
   geography: FREDGeography,
-  geoUnits: Array<{ geoid: string;[key: string]: any }>,
+  geoUnits: Array<{ geoid: string; [key: string]: any }>,
   geoids: string[],
   observationStart: string,
   observationEnd: string,
-  stats: ImportStats
+  stats: ImportStats,
 ): Promise<void> {
-  const seriesIdStr = typeof series.seriesId === 'string' ? series.seriesId : 'dynamic';
+  const seriesIdStr =
+    typeof series.seriesId === "string" ? series.seriesId : "dynamic";
   console.log(`   Processing ${seriesIdStr} (${series.description})...`);
 
   const seriesIds = getSeriesIds(series, geography, geoUnits, geoids);
@@ -108,18 +142,30 @@ async function processSeries(
 
   for (const seriesId of seriesIds) {
     try {
-      const observations = await fetchFREDSeries(seriesId, observationStart, observationEnd);
+      const observations = await fetchFREDSeries(
+        seriesId,
+        observationStart,
+        observationEnd,
+      );
 
       if (observations.length === 0) {
         console.log(`     No data for ${seriesId}`);
         continue;
       }
 
-      const records = buildRecords(observations, series, seriesId, geography, geoidToSeriesId);
+      const records = buildRecords(
+        observations,
+        series,
+        seriesId,
+        geography,
+        geoidToSeriesId,
+      );
 
       if (records.length > 0) {
         await insertRecords(records, seriesId, stats);
-        console.log(`     ✅ Imported ${records.length} observations for ${seriesId}`);
+        console.log(
+          `     ✅ Imported ${records.length} observations for ${seriesId}`,
+        );
       }
     } catch (err: any) {
       stats.errors.push(`${seriesId}: ${err.message}`);
@@ -134,14 +180,14 @@ async function processSeries(
 function getSeriesIds(
   series: FREDSeries,
   geography: FREDGeography,
-  geoUnits: Array<{ geoid: string;[key: string]: any }>,
-  geoids: string[]
+  geoUnits: Array<{ geoid: string; [key: string]: any }>,
+  geoids: string[],
 ): string[] {
-  if (geography === 'national') {
-    if (typeof series.seriesId === 'string') {
+  if (geography === "national") {
+    if (typeof series.seriesId === "string") {
       return [series.seriesId];
     }
-    const id = series.seriesId('US');
+    const id = series.seriesId("US");
     return id ? [id] : [];
   }
 
@@ -155,8 +201,8 @@ function getSeriesIds(
     const possibleColumnNames = [
       `fred_${series.field}_series_id`,
       `fred_${series.field}`,
-      'fred_series_id',
-      'series_id'
+      "fred_series_id",
+      "series_id",
     ];
 
     for (const colName of possibleColumnNames) {
@@ -167,7 +213,7 @@ function getSeriesIds(
     }
 
     // For states, construct from abbreviation
-    if (!seriesId && geography === 'state' && unit.state_abbreviation) {
+    if (!seriesId && geography === "state" && unit.state_abbreviation) {
       const suffix = FIELD_TO_SUFFIX[series.field];
       if (suffix) {
         seriesId = `${unit.state_abbreviation}${suffix}`;
@@ -180,9 +226,13 @@ function getSeriesIds(
   }
 
   // Fallback: try function-based generation
-  if (seriesIds.length === 0 && geography === 'state' && typeof series.seriesId === 'function') {
+  if (
+    seriesIds.length === 0 &&
+    geography === "state" &&
+    typeof series.seriesId === "function"
+  ) {
     return geoids
-      .map(geoid => series.seriesId(geoid))
+      .map((geoid) => series.seriesId(geoid))
       .filter((id): id is string => id !== null);
   }
 
@@ -194,8 +244,8 @@ function getSeriesIds(
  */
 function buildGeoidToSeriesIdMap(
   series: FREDSeries,
-  geoUnits: Array<{ geoid: string;[key: string]: any }>,
-  geoids: string[]
+  geoUnits: Array<{ geoid: string; [key: string]: any }>,
+  geoids: string[],
 ): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -205,8 +255,8 @@ function buildGeoidToSeriesIdMap(
     const possibleColumnNames = [
       `fred_${series.field}_series_id`,
       `fred_${series.field}`,
-      'fred_series_id',
-      'series_id'
+      "fred_series_id",
+      "series_id",
     ];
 
     for (const colName of possibleColumnNames) {
@@ -239,7 +289,7 @@ function buildRecords(
   series: FREDSeries,
   seriesId: string,
   geography: FREDGeography,
-  geoidToSeriesId: Map<string, string>
+  geoidToSeriesId: Map<string, string>,
 ): any[] {
   const records: any[] = [];
 
@@ -250,9 +300,9 @@ function buildRecords(
     const value = series.transform ? series.transform(rawValue) : rawValue;
 
     // Determine GEOID
-    let geoid = 'US';
-    if (geography === 'national') {
-      geoid = 'US';
+    let geoid = "US";
+    if (geography === "national") {
+      geoid = "US";
     } else {
       // Reverse lookup from series ID
       for (const [gid, sid] of geoidToSeriesId.entries()) {
@@ -263,7 +313,7 @@ function buildRecords(
       }
 
       // Fallback: extract from series ID for states
-      if (geoid === 'US' && geography === 'state') {
+      if (geoid === "US" && geography === "state") {
         const stateAbbrev = seriesId.substring(0, 2);
         const fips = getFipsFromAbbreviation(stateAbbrev);
         if (fips) geoid = fips;
@@ -276,7 +326,7 @@ function buildRecords(
       metric_date: obs.date,
       [series.field]: value,
       data_vintage: obs.date,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     });
   }
 
@@ -289,16 +339,22 @@ function buildRecords(
 async function insertRecords(
   records: any[],
   seriesId: string,
-  stats: ImportStats
+  stats: ImportStats,
 ): Promise<void> {
-  const tableName = 'fred_economic_data';
+  const tableName = "fred_economic_data";
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE);
-    const result = await batchUpsertSQL(tableName, batch, 'geoid,series_id,metric_date');
+    const result = await batchUpsertSQL(
+      tableName,
+      batch,
+      "geoid,series_id,metric_date",
+    );
 
     if (result.error) {
-      stats.errors.push(`${seriesId} batch ${Math.floor(i / BATCH_SIZE)}: ${result.error}`);
+      stats.errors.push(
+        `${seriesId} batch ${Math.floor(i / BATCH_SIZE)}: ${result.error}`,
+      );
     } else {
       stats.totalRecords += result.inserted;
     }
@@ -309,20 +365,20 @@ async function insertRecords(
  * Print import summary
  */
 function printImportSummary(stats: ImportStats): void {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 IMPORT COMPLETE');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 IMPORT COMPLETE");
+  console.log("=".repeat(60));
   console.log(`Geography: ${stats.geography}`);
   console.log(`Year: ${stats.year}`);
   console.log(`Series Processed: ${stats.seriesProcessed}`);
   console.log(`Total Records: ${stats.totalRecords.toLocaleString()}`);
   console.log(`Errors: ${stats.errors.length}`);
   console.log(`Duration: ${(stats.duration / 1000).toFixed(2)}s`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   if (stats.errors.length > 0) {
-    console.log('\n⚠️  Errors encountered:');
-    stats.errors.slice(0, 10).forEach(err => console.log(`   - ${err}`));
+    console.log("\n⚠️  Errors encountered:");
+    stats.errors.slice(0, 10).forEach((err) => console.log(`   - ${err}`));
     if (stats.errors.length > 10) {
       console.log(`   ... and ${stats.errors.length - 10} more`);
     }
@@ -333,9 +389,9 @@ function printImportSummary(stats: ImportStats): void {
  * Print overall summary for multiple imports
  */
 export function printOverallSummary(allStats: ImportStats[]): void {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 OVERALL SUMMARY');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 OVERALL SUMMARY");
+  console.log("=".repeat(60));
 
   const totalRecords = allStats.reduce((sum, s) => sum + s.totalRecords, 0);
   const totalDuration = allStats.reduce((sum, s) => sum + s.duration, 0);
@@ -344,5 +400,5 @@ export function printOverallSummary(allStats: ImportStats[]): void {
   console.log(`Total Records: ${totalRecords.toLocaleString()}`);
   console.log(`Total Duration: ${(totalDuration / 1000).toFixed(2)}s`);
   console.log(`Total Errors: ${totalErrors}`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 }

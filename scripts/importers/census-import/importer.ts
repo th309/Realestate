@@ -2,19 +2,35 @@
  * Census Data Importer
  */
 
-import type { ImportStats, CensusGeography } from './types';
-import { getVariableCodes } from './variables';
-import { fetchCensusData, getGeoIdFromRecord } from './api-client';
-import { processDemographicsRecord, processEconomicsRecord, processHousingRecord, ultraCleanRecord } from './processors';
-import { batchUpsertSQL, createMarketEntries, createGeoUnitEntries } from './sql-helpers';
-import { MAX_INTEGER } from './types';
+import type { ImportStats, CensusGeography } from "./types";
+import { getVariableCodes } from "./variables";
+import { fetchCensusData, getGeoIdFromRecord } from "./api-client";
+import {
+  processDemographicsRecord,
+  processEconomicsRecord,
+  processHousingRecord,
+  ultraCleanRecord,
+} from "./processors";
+import {
+  batchUpsertSQL,
+  createMarketEntries,
+  createGeoUnitEntries,
+} from "./sql-helpers";
+import { MAX_INTEGER } from "./types";
+import { getSupabaseClient, getIncrementalCutoff } from "../../lib";
 
 const BATCH_SIZE = 100;
 
 /**
- * Import Census data for a given year and geography
+ * Import Census data for a given year and geography.
+ * Annual frequency: only re-fetch vintages within the incremental window
+ * (last 2 years). Older vintages already in DB are skipped unless fullLoad.
  */
-export async function importCensusData(year: number, geography: CensusGeography): Promise<ImportStats> {
+export async function importCensusData(
+  year: number,
+  geography: CensusGeography,
+  fullLoad: boolean = false,
+): Promise<ImportStats> {
   const startTime = Date.now();
   const stats: ImportStats = {
     geography,
@@ -24,35 +40,71 @@ export async function importCensusData(year: number, geography: CensusGeography)
     economics: 0,
     housing: 0,
     errors: [],
-    duration: 0
+    duration: 0,
   };
 
-  console.log(`\n${'='.repeat(60)}`);
+  console.log(`\n${"=".repeat(60)}`);
   console.log(`📊 Importing Census ${year} Data - ${geography.toUpperCase()}`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   try {
+    // Annual frequency: skip already-loaded historical vintages unless --full.
+    // Always re-fetch vintages within the last 24 months (catches new releases
+    // and ACS revisions of the prior year).
+    if (!fullLoad) {
+      const annualCutoff = getIncrementalCutoff({ frequency: "annual" });
+      const cutoffYear = annualCutoff
+        ? parseInt(annualCutoff.slice(0, 4), 10)
+        : null;
+      if (cutoffYear !== null && year < cutoffYear) {
+        const supabase = getSupabaseClient();
+        const { count } = await supabase
+          .from("census_demographics")
+          .select("geoid", { count: "exact", head: true })
+          .eq("vintage_year", year);
+        if (count && count > 0) {
+          console.log(
+            `   ⏩ Vintage ${year} already loaded (${count.toLocaleString()} rows) and outside the incremental window (>= ${cutoffYear}). Skipping. Pass --full to force re-import.`,
+          );
+          stats.duration = Date.now() - startTime;
+          return stats;
+        }
+      }
+    }
+
     const variableCodes = getVariableCodes();
     const records = await fetchCensusData(year, geography, variableCodes);
     stats.totalRecords = records.length;
 
-    console.log(`✅ Fetched ${records.length.toLocaleString()} records from Census API`);
+    console.log(
+      `✅ Fetched ${records.length.toLocaleString()} records from Census API`,
+    );
 
     // Create market and geographic unit entries
-    console.log(`   Ensuring market entries exist for ${records.length} ${geography} records...`);
+    console.log(
+      `   Ensuring market entries exist for ${records.length} ${geography} records...`,
+    );
 
     const getGeoId = (record: any) => getGeoIdFromRecord(record, geography);
 
-    const marketResult = await createMarketEntries(records, geography, getGeoId);
+    const marketResult = await createMarketEntries(
+      records,
+      geography,
+      getGeoId,
+    );
     if (marketResult.error) {
-      console.log(`   ⚠️  Warning: Could not create market entries: ${marketResult.error}`);
+      console.log(
+        `   ⚠️  Warning: Could not create market entries: ${marketResult.error}`,
+      );
     } else {
       console.log(`   ✅ Created/updated market entries`);
     }
 
     const geoResult = await createGeoUnitEntries(records, geography, getGeoId);
     if (geoResult.error) {
-      console.log(`   ⚠️  Warning: Could not create geographic_units entries: ${geoResult.error}`);
+      console.log(
+        `   ⚠️  Warning: Could not create geographic_units entries: ${geoResult.error}`,
+      );
     } else {
       console.log(`   ✅ Created/updated geographic_units entries`);
     }
@@ -73,22 +125,38 @@ export async function importCensusData(year: number, geography: CensusGeography)
 
         if ((i + 1) % BATCH_SIZE === 0 || i === records.length - 1) {
           // Process demographics
-          const demoStats = await insertDemographicsBatch(demographicsBatch, stats, i);
+          const demoStats = await insertDemographicsBatch(
+            demographicsBatch,
+            stats,
+            i,
+          );
           stats.demographics += demoStats.inserted;
           if (demoStats.error) stats.errors.push(demoStats.error);
 
           // Process economics
-          const econResult = await batchUpsertSQL('census_economics', economicsBatch, 'geoid,vintage_year');
+          const econResult = await batchUpsertSQL(
+            "census_economics",
+            economicsBatch,
+            "geoid,vintage_year",
+          );
           if (econResult.error) {
-            stats.errors.push(`Economics batch ${Math.floor(i / BATCH_SIZE)}: ${econResult.error}`);
+            stats.errors.push(
+              `Economics batch ${Math.floor(i / BATCH_SIZE)}: ${econResult.error}`,
+            );
           } else {
             stats.economics += econResult.inserted;
           }
 
           // Process housing
-          const houseResult = await batchUpsertSQL('census_housing', housingBatch, 'geoid,vintage_year');
+          const houseResult = await batchUpsertSQL(
+            "census_housing",
+            housingBatch,
+            "geoid,vintage_year",
+          );
           if (houseResult.error) {
-            stats.errors.push(`Housing batch ${Math.floor(i / BATCH_SIZE)}: ${houseResult.error}`);
+            stats.errors.push(
+              `Housing batch ${Math.floor(i / BATCH_SIZE)}: ${houseResult.error}`,
+            );
           } else {
             stats.housing += houseResult.inserted;
           }
@@ -106,10 +174,9 @@ export async function importCensusData(year: number, geography: CensusGeography)
 
     stats.duration = Date.now() - startTime;
     printImportSummary(stats);
-
   } catch (error: any) {
     stats.errors.push(`Fatal error: ${error.message}`);
-    console.error('\n❌ Import failed:', error.message);
+    console.error("\n❌ Import failed:", error.message);
   }
 
   return stats;
@@ -121,29 +188,49 @@ export async function importCensusData(year: number, geography: CensusGeography)
 async function insertDemographicsBatch(
   batch: any[],
   stats: ImportStats,
-  batchIndex: number
+  batchIndex: number,
 ): Promise<{ inserted: number; error?: string }> {
   const cleanBatch = batch.map(ultraCleanRecord);
 
-  const result = await batchUpsertSQL('census_demographics', cleanBatch, 'geoid,vintage_year');
+  const result = await batchUpsertSQL(
+    "census_demographics",
+    cleanBatch,
+    "geoid,vintage_year",
+  );
 
-  if (result.error && (result.error.includes('overflow') || result.error.includes('numeric'))) {
+  if (
+    result.error &&
+    (result.error.includes("overflow") || result.error.includes("numeric"))
+  ) {
     // Try individual inserts
     let successCount = 0;
     for (const record of cleanBatch) {
-      const singleResult = await batchUpsertSQL('census_demographics', [record], 'geoid,vintage_year');
+      const singleResult = await batchUpsertSQL(
+        "census_demographics",
+        [record],
+        "geoid,vintage_year",
+      );
 
-      if (singleResult.error && singleResult.error.includes('overflow')) {
+      if (singleResult.error && singleResult.error.includes("overflow")) {
         // Try with minimal fields
         const minimalRecord = {
           geoid: record.geoid,
           vintage_year: record.vintage_year,
           survey_type: record.survey_type,
           created_at: record.created_at,
-          total_population: record.total_population ? Math.min(MAX_INTEGER, Math.max(0, Math.round(record.total_population))) : null
+          total_population: record.total_population
+            ? Math.min(
+                MAX_INTEGER,
+                Math.max(0, Math.round(record.total_population)),
+              )
+            : null,
         };
 
-        const minResult = await batchUpsertSQL('census_demographics', [minimalRecord], 'geoid,vintage_year');
+        const minResult = await batchUpsertSQL(
+          "census_demographics",
+          [minimalRecord],
+          "geoid,vintage_year",
+        );
         if (!minResult.error) successCount++;
       } else if (!singleResult.error) {
         successCount++;
@@ -152,9 +239,10 @@ async function insertDemographicsBatch(
 
     return {
       inserted: successCount,
-      error: successCount < cleanBatch.length
-        ? `Demographics batch ${Math.floor(batchIndex / BATCH_SIZE)}: ${cleanBatch.length - successCount} records skipped`
-        : undefined
+      error:
+        successCount < cleanBatch.length
+          ? `Demographics batch ${Math.floor(batchIndex / BATCH_SIZE)}: ${cleanBatch.length - successCount} records skipped`
+          : undefined,
     };
   }
 
@@ -165,9 +253,9 @@ async function insertDemographicsBatch(
  * Print import summary
  */
 function printImportSummary(stats: ImportStats): void {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 IMPORT COMPLETE');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 IMPORT COMPLETE");
+  console.log("=".repeat(60));
   console.log(`Geography: ${stats.geography}`);
   console.log(`Year: ${stats.year}`);
   console.log(`Total Records: ${stats.totalRecords.toLocaleString()}`);
@@ -176,11 +264,11 @@ function printImportSummary(stats: ImportStats): void {
   console.log(`Housing: ${stats.housing.toLocaleString()}`);
   console.log(`Errors: ${stats.errors.length}`);
   console.log(`Duration: ${(stats.duration / 1000).toFixed(2)}s`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   if (stats.errors.length > 0) {
-    console.log('\n⚠️  Errors encountered:');
-    stats.errors.slice(0, 10).forEach(err => console.log(`   - ${err}`));
+    console.log("\n⚠️  Errors encountered:");
+    stats.errors.slice(0, 10).forEach((err) => console.log(`   - ${err}`));
     if (stats.errors.length > 10) {
       console.log(`   ... and ${stats.errors.length - 10} more`);
     }
@@ -191,9 +279,9 @@ function printImportSummary(stats: ImportStats): void {
  * Print overall summary for multiple imports
  */
 export function printOverallSummary(allStats: ImportStats[]): void {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 OVERALL SUMMARY');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 OVERALL SUMMARY");
+  console.log("=".repeat(60));
 
   const totalRecords = allStats.reduce((sum, s) => sum + s.totalRecords, 0);
   const totalDuration = allStats.reduce((sum, s) => sum + s.duration, 0);
@@ -202,5 +290,5 @@ export function printOverallSummary(allStats: ImportStats[]): void {
   console.log(`Total Records: ${totalRecords.toLocaleString()}`);
   console.log(`Total Duration: ${(totalDuration / 1000).toFixed(2)}s`);
   console.log(`Total Errors: ${totalErrors}`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 }

@@ -13,6 +13,7 @@ import {
   RealtorCombinedRecord,
 } from '../types/realtor.types';
 import { normalizeZipKey } from '../../common/zip';
+import { getIncrementalCutoff } from '../utils/incremental-cutoff';
 
 @Injectable()
 export class RealtorService {
@@ -20,10 +21,13 @@ export class RealtorService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async importAllRealtorData(limitRows?: number): Promise<ImportResult[]> {
+  async importAllRealtorData(
+    limitRows?: number,
+    fullLoad: boolean = false,
+  ): Promise<ImportResult[]> {
     const results: ImportResult[] = [];
     for (const dataset of REALTOR_DATASETS) {
-      results.push(await this.importDataset(dataset.id, limitRows));
+      results.push(await this.importDataset(dataset.id, limitRows, fullLoad));
     }
     return results;
   }
@@ -31,13 +35,26 @@ export class RealtorService {
   async importDataset(
     datasetId: string,
     limitRows?: number,
+    fullLoad: boolean = false,
   ): Promise<ImportResult> {
     const config = REALTOR_DATASETS.find((d) => d.id === datasetId);
     if (!config) {
       throw new Error(`Unknown dataset ID: ${datasetId}`);
     }
 
-    this.logger.log(`Starting import for ${config.description} (${datasetId})`);
+    // Realtor publishes cumulative CSVs with years of history. Filter to the
+    // last 3 months by default so we don't re-upsert unchanged rows. Realtor
+    // can revise the prior month, so the overlap window catches that.
+    const dateCutoffStr = getIncrementalCutoff({
+      frequency: 'monthly',
+      fullLoad,
+    });
+    const dateCutoff = dateCutoffStr ? new Date(dateCutoffStr) : null;
+
+    this.logger.log(
+      `Starting import for ${config.description} (${datasetId}) — ` +
+        `mode: ${fullLoad ? 'FULL backfill' : `incremental >= ${dateCutoffStr}`}`,
+    );
 
     try {
       // Download Core Data
@@ -79,6 +96,16 @@ export class RealtorService {
           break;
         default:
           throw new Error(`Unsupported geography: ${config.geography}`);
+      }
+
+      // Drop rows older than the cutoff BEFORE the upsert — this is where the
+      // bandwidth savings live for cumulative CSVs.
+      if (dateCutoff) {
+        const before = records.length;
+        records = records.filter((r) => r.period_date >= dateCutoff);
+        this.logger.log(
+          `Filtered to incremental window: ${before} -> ${records.length} rows (cutoff ${dateCutoffStr})`,
+        );
       }
 
       if (limitRows) {

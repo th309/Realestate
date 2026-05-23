@@ -15,50 +15,66 @@
  * Refactored to use modular components from ./census-import/
  */
 
-import type { ImportStats, CensusGeography } from './census-import/types';
-import { getCensusApiKey, getSupabaseUrl } from './census-import/db-client';
-import { importCensusData, printOverallSummary } from './census-import/importer';
+import type { ImportStats, CensusGeography } from "./census-import/types";
+import { getCensusApiKey, getSupabaseUrl } from "./census-import/db-client";
+import {
+  importCensusData,
+  printOverallSummary,
+} from "./census-import/importer";
 
 /**
  * CLI handling
  */
 async function main() {
   const args = process.argv.slice(2);
-  const yearArg = args.find(arg => arg.startsWith('--year='));
-  const geoArg = args.find(arg => arg.startsWith('--geography='));
-  const allFlag = args.includes('--all');
+  const yearArg = args.find((arg) => arg.startsWith("--year="));
+  const geoArg = args.find((arg) => arg.startsWith("--geography="));
+  const allFlag = args.includes("--all");
+  const fullLoad = args.includes("--full");
 
-  const year = yearArg ? parseInt(yearArg.split('=')[1]) : new Date().getFullYear() - 2;
+  const year = yearArg
+    ? parseInt(yearArg.split("=")[1])
+    : new Date().getFullYear() - 2;
   const apiKey = getCensusApiKey();
   const supabaseUrl = getSupabaseUrl();
 
-  console.log('🏛️  Census Bureau API Data Importer');
+  console.log("🏛️  Census Bureau API Data Importer");
   console.log(`📅 Year: ${year}`);
-  console.log(`🔑 API Key: ${apiKey ? '✅ Set' : '❌ Missing'}`);
+  console.log(`🔑 API Key: ${apiKey ? "✅ Set" : "❌ Missing"}`);
   console.log(`🔗 Supabase: ${supabaseUrl}\n`);
 
   if (!apiKey) {
-    console.error('❌ CENSUS_API_KEY not found in environment');
-    console.error('   Please set CENSUS_API_KEY in web/.env.local');
-    console.error('   Get your free API key at: https://api.census.gov/data/key_signup.html');
+    console.error("❌ CENSUS_API_KEY not found in environment");
+    console.error("   Please set CENSUS_API_KEY in web/.env.local");
+    console.error(
+      "   Get your free API key at: https://api.census.gov/data/key_signup.html",
+    );
     process.exit(1);
   }
 
   const allStats: ImportStats[] = [];
 
   if (allFlag) {
-    allStats.push(await importCensusData(year, 'state'));
-    allStats.push(await importCensusData(year, 'county'));
-    allStats.push(await importCensusData(year, 'zip'));
+    allStats.push(await importCensusData(year, "state", fullLoad));
+    allStats.push(await importCensusData(year, "county", fullLoad));
+    allStats.push(await importCensusData(year, "zip", fullLoad));
   } else if (geoArg) {
-    const geography = geoArg.split('=')[1] as CensusGeography;
-    allStats.push(await importCensusData(year, geography));
+    const geography = geoArg.split("=")[1] as CensusGeography;
+    allStats.push(await importCensusData(year, geography, fullLoad));
   } else {
-    console.error('Usage:');
-    console.error('  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=zip');
-    console.error('  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=county');
-    console.error('  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=state');
-    console.error('  npx tsx scripts/importers/census-api-importer.ts --year=2022 --all');
+    console.error("Usage:");
+    console.error(
+      "  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=zip",
+    );
+    console.error(
+      "  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=county",
+    );
+    console.error(
+      "  npx tsx scripts/importers/census-api-importer.ts --year=2022 --geography=state",
+    );
+    console.error(
+      "  npx tsx scripts/importers/census-api-importer.ts --year=2022 --all",
+    );
     process.exit(1);
   }
 
@@ -66,7 +82,7 @@ async function main() {
     printOverallSummary(allStats);
   }
 
-  const hasErrors = allStats.some(s => s.errors.length > 0);
+  const hasErrors = allStats.some((s) => s.errors.length > 0);
   process.exit(hasErrors ? 1 : 0);
 }
 

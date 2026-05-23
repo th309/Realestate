@@ -5,6 +5,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 import { ZILLOW_URLS } from '../config/zillow-urls';
 import { ImportResult, TimeSeriesRecord } from '../types';
 import { normalizeZipKey } from '../../common/zip';
+import { getIncrementalCutoff } from '../utils/incremental-cutoff';
 
 const PIPELINE_API_URL =
   process.env.INTERNAL_API_URL || 'http://localhost:3001';
@@ -90,10 +91,23 @@ export class ZillowService {
   async importZillowData(
     metricName: string = 'zhvi',
     limitRows?: number,
+    fullLoad: boolean = false,
   ): Promise<ImportResult> {
     const supabase = this.supabaseService.getClient();
 
-    this.logger.log(`Starting Zillow import for: ${metricName}`);
+    // Default: incremental (last 3 months). Pass fullLoad=true for backfill.
+    // Zillow ZHVI revises the trailing ~2 months on most releases, so a 3-month
+    // window catches revisions; the upsert dedupes unchanged rows for free.
+    const dateCutoff = getIncrementalCutoff({
+      frequency: 'monthly',
+      fullLoad,
+    });
+
+    this.logger.log(
+      `Starting Zillow import for: ${metricName} (mode: ${
+        fullLoad ? 'FULL backfill' : `incremental >= ${dateCutoff}`
+      })`,
+    );
 
     // Download CSV
     const url = ZILLOW_URLS[metricName];
@@ -218,9 +232,13 @@ export class ZillowService {
           // Prepare batch for insertion
           const recordsToInsert: any[] = [];
 
-          // Get all date columns (format: YYYY-MM-DD)
-          const dateColumns = Object.keys(record).filter((key) =>
-            /^\d{4}-\d{2}-\d{2}$/.test(key),
+          // Get all date columns (format: YYYY-MM-DD), filtered by cutoff.
+          // Filtering here means we skip writing 20+ years of unchanged history
+          // every run. String comparison works because YYYY-MM-DD sorts lexically.
+          const dateColumns = Object.keys(record).filter(
+            (key) =>
+              /^\d{4}-\d{2}-\d{2}$/.test(key) &&
+              (!dateCutoff || key >= dateCutoff),
           );
 
           // Normalize metric name for storage (e.g., 'zori_county' → 'zori')

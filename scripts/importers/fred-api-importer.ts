@@ -15,50 +15,63 @@
  * Refactored to use modular components from ./fred-import/
  */
 
-import type { ImportStats, FREDGeography } from './fred-import/types';
-import { getFredApiKey, getSupabaseUrl } from './fred-import/db-client';
-import { importFREDData, printOverallSummary } from './fred-import/importer';
+import type { ImportStats, FREDGeography } from "./fred-import/types";
+import { getFredApiKey, getSupabaseUrl } from "./fred-import/db-client";
+import { importFREDData, printOverallSummary } from "./fred-import/importer";
 
 /**
  * CLI handling
  */
 async function main() {
   const args = process.argv.slice(2);
-  const yearArg = args.find(arg => arg.startsWith('--year='));
-  const geoArg = args.find(arg => arg.startsWith('--geography='));
-  const allFlag = args.includes('--all');
+  const yearArg = args.find((arg) => arg.startsWith("--year="));
+  const geoArg = args.find((arg) => arg.startsWith("--geography="));
+  const allFlag = args.includes("--all");
+  const fullLoad = args.includes("--full");
 
-  const year = yearArg ? parseInt(yearArg.split('=')[1]) : new Date().getFullYear();
+  const year = yearArg
+    ? parseInt(yearArg.split("=")[1])
+    : new Date().getFullYear();
   const apiKey = getFredApiKey();
   const supabaseUrl = getSupabaseUrl();
 
-  console.log('🏛️  FRED API Data Importer');
+  console.log("🏛️  FRED API Data Importer");
   console.log(`📅 Year: ${year}`);
-  console.log(`🔑 API Key: ${apiKey ? '✅ Set' : '❌ Missing'}`);
+  console.log(`🔑 API Key: ${apiKey ? "✅ Set" : "❌ Missing"}`);
   console.log(`🔗 Supabase: ${supabaseUrl}\n`);
 
   if (!apiKey) {
-    console.error('❌ FRED_API_KEY not found in environment');
-    console.error('   Please set FRED_API_KEY in web/.env.local');
-    console.error('   Get your free API key at: https://fred.stlouisfed.org/docs/api/api_key.html');
+    console.error("❌ FRED_API_KEY not found in environment");
+    console.error("   Please set FRED_API_KEY in web/.env.local");
+    console.error(
+      "   Get your free API key at: https://fred.stlouisfed.org/docs/api/api_key.html",
+    );
     process.exit(1);
   }
 
   const allStats: ImportStats[] = [];
 
   if (allFlag) {
-    allStats.push(await importFREDData(year, 'national'));
-    allStats.push(await importFREDData(year, 'state'));
-    allStats.push(await importFREDData(year, 'msa'));
+    allStats.push(await importFREDData(year, "national", fullLoad));
+    allStats.push(await importFREDData(year, "state", fullLoad));
+    allStats.push(await importFREDData(year, "msa", fullLoad));
   } else if (geoArg) {
-    const geography = geoArg.split('=')[1] as FREDGeography;
-    allStats.push(await importFREDData(year, geography));
+    const geography = geoArg.split("=")[1] as FREDGeography;
+    allStats.push(await importFREDData(year, geography, fullLoad));
   } else {
-    console.error('Usage:');
-    console.error('  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=national');
-    console.error('  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=state');
-    console.error('  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=msa');
-    console.error('  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --all');
+    console.error("Usage:");
+    console.error(
+      "  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=national",
+    );
+    console.error(
+      "  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=state",
+    );
+    console.error(
+      "  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --geography=msa",
+    );
+    console.error(
+      "  npx tsx scripts/importers/fred-api-importer.ts --year=2024 --all",
+    );
     process.exit(1);
   }
 
@@ -66,7 +79,7 @@ async function main() {
     printOverallSummary(allStats);
   }
 
-  const hasErrors = allStats.some(s => s.errors.length > 0);
+  const hasErrors = allStats.some((s) => s.errors.length > 0);
   process.exit(hasErrors ? 1 : 0);
 }
 

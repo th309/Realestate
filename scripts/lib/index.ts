@@ -25,6 +25,15 @@ export { loadDataFile, downloadFromUrl } from "./csv-loader";
 
 export { batchUpsert } from "./batch-upsert";
 
+export {
+  getIncrementalCutoff,
+  parseIncrementalFlagsFromArgv,
+} from "./incremental-cutoff";
+export type {
+  IngestFrequency,
+  IncrementalCutoffOptions,
+} from "./incremental-cutoff";
+
 export { runSourceImport } from "./import-runner";
 
 export type {

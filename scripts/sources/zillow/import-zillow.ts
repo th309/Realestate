@@ -16,7 +16,8 @@ import {
   getSupabaseClient,
   loadDataFile,
   batchUpsert,
-  computeDateCutoff,
+  getIncrementalCutoff,
+  parseIncrementalFlagsFromArgv,
 } from "../../lib";
 import type { ImportGeographyResult, BatchUpsertResult } from "../../lib";
 import { createIngestionLogger } from "../../utils/ingestion-logger";
@@ -45,10 +46,7 @@ function getArgValue(flag: string): string | null {
 const geoFilter = getArgValue("--geo") as ZillowGeography | null;
 const metricFilter = getArgValue("--metric");
 const datasetFilter = getArgValue("--dataset");
-const recentMonthsRaw = getArgValue("--recent");
-const recentMonths = recentMonthsRaw
-  ? parseInt(recentMonthsRaw, 10)
-  : undefined;
+const incrementalFlags = parseIncrementalFlagsFromArgv();
 
 const VALID_GEOS: ZillowGeography[] = ["state", "metro", "county", "zip"];
 if (geoFilter && !VALID_GEOS.includes(geoFilter)) {
@@ -125,9 +123,10 @@ async function importSingleDataset(
     }
 
     // Step 2: Transpose wide-to-long
-    const dateCutoff = recentMonths
-      ? computeDateCutoff(recentMonths)
-      : undefined;
+    // Default to monthly incremental; pass `--full` for a backfill.
+    const dateCutoff =
+      getIncrementalCutoff({ frequency: "monthly", ...incrementalFlags }) ??
+      undefined;
     const { records, rowsSkipped } = transposeAllRows(
       loadResult.rows,
       dataset.metricName,
@@ -209,6 +208,9 @@ async function main(): Promise<void> {
   console.log(`Date:    ${new Date().toISOString()}`);
   console.log(
     `Filter:  geo=${geoFilter || "all"} metric=${metricFilter || "all"} dataset=${datasetFilter || "all"}`,
+  );
+  console.log(
+    `Mode:    ${incrementalFlags.fullLoad ? "FULL backfill" : `incremental (last ${incrementalFlags.lookbackMonthsOverride ?? 3} months)`}`,
   );
 
   const datasets = filterDatasets(ALL_ZILLOW_DATASETS);

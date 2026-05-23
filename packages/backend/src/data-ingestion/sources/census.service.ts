@@ -10,6 +10,7 @@ import {
   CENSUS_VARIABLES,
 } from '../types';
 import { normalizeZipKey } from '../../common/zip';
+import { getIncrementalCutoff } from '../utils/incremental-cutoff';
 
 const PIPELINE_API_URL =
   process.env.INTERNAL_API_URL || 'http://localhost:3001';
@@ -349,6 +350,7 @@ export class CensusService {
     year: number = 2022,
     geoLevel: CensusGeoLevel = 'metropolitan statistical area/micropolitan statistical area',
     apiKey?: string,
+    fullLoad: boolean = false,
   ): Promise<ImportResult> {
     const supabase = this.supabaseService.getClient();
     const censusApiKey = apiKey || process.env.CENSUS_API_KEY;
@@ -361,6 +363,55 @@ export class CensusService {
 
     this.logger.log(`Starting Census import for: ${variables.join(', ')}`);
     this.logger.log(`Year: ${year}, Geographic Level: ${geoLevel}`);
+
+    // Resolve target table early so we can do the existence check.
+    let tableName = '';
+    switch (geoLevel) {
+      case 'state':
+        tableName = 'census_state';
+        break;
+      case 'metropolitan statistical area/micropolitan statistical area':
+        tableName = 'census_metro';
+        break;
+      case 'place':
+        tableName = 'census_city';
+        break;
+      case 'zip code tabulation area':
+        tableName = 'census_zip';
+        break;
+      default:
+        throw new Error(`Unsupported census geography: ${geoLevel}`);
+    }
+
+    // Annual data: only re-fetch the last 2 vintages (covers new releases and
+    // ACS revisions). Older vintages already in DB are skipped unless fullLoad.
+    const annualCutoff = getIncrementalCutoff({
+      frequency: 'annual',
+      fullLoad,
+    });
+    const cutoffYear = annualCutoff
+      ? parseInt(annualCutoff.slice(0, 4), 10)
+      : null;
+
+    if (!fullLoad && cutoffYear !== null && tableName && year < cutoffYear) {
+      const { count } = await supabase
+        .from(tableName)
+        .select('region_id', { count: 'exact', head: true })
+        .eq('year', year);
+      if (count && count > 0) {
+        this.logger.log(
+          `Census ${year} already loaded into ${tableName} (${count} rows) and ` +
+            `outside incremental window (>= ${cutoffYear}); skipping. ` +
+            `Pass fullLoad=true to force re-import.`,
+        );
+        return {
+          success: true,
+          recordsInserted: 0,
+          errors: [],
+          message: `Census ${year}/${geoLevel} skipped — outside annual incremental window`,
+        };
+      }
+    }
 
     const startedAt = Date.now();
 
@@ -437,27 +488,7 @@ export class CensusService {
             }
           }
 
-          // Determine Census table name
-          let tableName = '';
-          switch (geoLevel) {
-            case 'state':
-              tableName = 'census_state';
-              break;
-            case 'metropolitan statistical area/micropolitan statistical area':
-              tableName = 'census_metro';
-              break;
-            case 'place':
-              tableName = 'census_city';
-              break;
-            case 'zip code tabulation area':
-              tableName = 'census_zip';
-              break;
-            default:
-              this.logger.warn(
-                `Skipping unsupported census geography: ${geoLevel}`,
-              );
-              continue;
-          }
+          // (tableName resolved earlier in the method)
 
           // Construct single record for the region/year
           // Census tables typically use: region_id, year, [metric_columns...]
