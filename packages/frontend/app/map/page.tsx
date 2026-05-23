@@ -547,7 +547,14 @@ function MapPageInner() {
     return () => {
       ro.disconnect();
       if (map.current) {
-        map.current.remove();
+        try {
+          map.current.remove();
+        } catch {
+          // map.remove() aborts in-flight tile/style requests during teardown.
+          // When the map is torn down mid-initialization (dev StrictMode /
+          // Fast Refresh remounts), that abort can throw "signal is aborted
+          // without reason". Teardown errors are benign — swallow them.
+        }
         map.current = null;
       }
     };
