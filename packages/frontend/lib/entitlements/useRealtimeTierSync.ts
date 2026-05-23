@@ -59,60 +59,73 @@ export function useRealtimeTierSync({
     if (!userId) return;
 
     const supabase = createSupabaseBrowserClient();
+    let cancelled = false;
 
-    // Set auth token for private channel access
-    supabase.realtime.setAuth();
+    async function setup() {
+      // Resolve the session BEFORE subscribing — passing setAuth() with no
+      // argument races the realtime client's internal token propagation and
+      // produces CHANNEL_ERROR on the first subscribe attempt.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled || !session?.access_token) return;
 
-    const channelName = `user:${userId}:profile`;
+      supabase.realtime.setAuth(session.access_token);
 
-    const channel = supabase
-      .channel(channelName, { config: { private: true } })
-      .on("broadcast", { event: "UPDATE" }, (payload: any) => {
-        const record = payload.payload?.record;
-        const oldRecord = payload.payload?.old_record;
+      const channelName = `user:${userId}:profile`;
 
-        const oldTier = oldRecord?.subscription_tier as UserTier | undefined;
-        const newTier = record?.subscription_tier as UserTier | undefined;
+      const channel = supabase
+        .channel(channelName, { config: { private: true } })
+        .on("broadcast", { event: "UPDATE" }, (payload: any) => {
+          const record = payload.payload?.record;
+          const oldRecord = payload.payload?.old_record;
 
-        if (newTier && oldTier !== newTier) {
-          console.info(
-            `[Entitlements] Realtime tier change detected: ${oldTier} → ${newTier}`,
-          );
+          const oldTier = oldRecord?.subscription_tier as UserTier | undefined;
+          const newTier = record?.subscription_tier as UserTier | undefined;
 
-          // Show toast notification
-          const displayName = TIER_DISPLAY_NAMES[newTier] ?? newTier;
-          setToastMessage(`Your plan has been updated to ${displayName}.`);
+          if (newTier && oldTier !== newTier) {
+            console.info(
+              `[Entitlements] Realtime tier change detected: ${oldTier} → ${newTier}`,
+            );
 
-          // Auto-dismiss after timeout
-          if (toastTimerRef.current) {
-            clearTimeout(toastTimerRef.current);
+            const displayName = TIER_DISPLAY_NAMES[newTier] ?? newTier;
+            setToastMessage(`Your plan has been updated to ${displayName}.`);
+
+            if (toastTimerRef.current) {
+              clearTimeout(toastTimerRef.current);
+            }
+            toastTimerRef.current = setTimeout(() => {
+              setToastMessage(null);
+              toastTimerRef.current = null;
+            }, TOAST_DISPLAY_DURATION_MS);
+
+            onTierChange();
           }
-          toastTimerRef.current = setTimeout(() => {
-            setToastMessage(null);
-            toastTimerRef.current = null;
-          }, TOAST_DISPLAY_DURATION_MS);
+        })
+        .subscribe((status: any) => {
+          if (status === "SUBSCRIBED") {
+            console.info(
+              "[Entitlements] Realtime tier sync subscription active (broadcast)",
+            );
+          }
+          if (status === "CHANNEL_ERROR") {
+            console.warn(
+              "[Entitlements] Realtime tier sync channel error — will retry automatically",
+            );
+          }
+        });
 
-          // Trigger entitlements refetch
-          onTierChange();
-        }
-      })
-      .subscribe((status: any) => {
-        if (status === "SUBSCRIBED") {
-          console.info(
-            "[Entitlements] Realtime tier sync subscription active (broadcast)",
-          );
-        }
-        if (status === "CHANNEL_ERROR") {
-          console.warn(
-            "[Entitlements] Realtime tier sync channel error — will retry automatically",
-          );
-        }
-      });
+      if (cancelled) {
+        supabase.removeChannel(channel);
+        return;
+      }
+      channelRef.current = channel;
+    }
 
-    channelRef.current = channel;
+    setup();
 
     return () => {
-      // Cleanup: remove the channel and clear any pending toast timer
+      cancelled = true;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
