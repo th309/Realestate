@@ -173,7 +173,7 @@ async function importLargeFile(
 export async function importRedfinGeography(
   geoLevel: string,
   _rowLimit?: number,
-  recentMonths?: number,
+  dateCutoff?: string | null,
 ): Promise<ImportGeographyResult> {
   const startTime = Date.now();
   const supabase = getSupabaseClient();
@@ -209,14 +209,9 @@ export async function importRedfinGeography(
 
     if (geoLevel === "county") initCountyFipsLookup();
 
-    // Compute date cutoff for --recent flag
-    let dateCutoff: string | null = null;
-    if (recentMonths) {
-      const cutoff = new Date();
-      cutoff.setMonth(cutoff.getMonth() - recentMonths);
-      dateCutoff = cutoff.toISOString().slice(0, 10);
+    if (dateCutoff) {
       console.log(
-        `  Date cutoff: ${dateCutoff} (recent ${recentMonths} months)`,
+        `  Date cutoff: ${dateCutoff} (rows older than this skipped)`,
       );
     }
 

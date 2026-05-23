@@ -17,6 +17,7 @@
  *   npx tsx scripts/sources/redfin/import-redfin.ts --limit 5000     # Limit rows per file (for testing)
  */
 
+import { getIncrementalCutoff, parseIncrementalFlagsFromArgv } from "../../lib";
 import type { ImportGeographyResult, ImportSourceResult } from "../../lib";
 import {
   printSummaryBanner,
@@ -44,9 +45,7 @@ const geoFilter = parseArgValue("--geo");
 const rowLimit = parseArgValue("--limit")
   ? parseInt(parseArgValue("--limit")!, 10)
   : undefined;
-const recentMonths = parseArgValue("--recent")
-  ? parseInt(parseArgValue("--recent")!, 10)
-  : undefined;
+const incrementalFlags = parseIncrementalFlagsFromArgv();
 
 function getGeographiesToImport(): string[] {
   if (!geoFilter || geoFilter === "default") return DEFAULT_IMPORT_GEOS;
@@ -68,20 +67,25 @@ async function main(): Promise<void> {
   const startTime = Date.now();
   const geos = getGeographiesToImport();
 
+  // Default to monthly incremental (3-month overlap); pass `--full` for a backfill.
+  const dateCutoff =
+    getIncrementalCutoff({ frequency: "monthly", ...incrementalFlags }) ?? null;
+
   console.log("Redfin Market Tracker Data Import");
   console.log("=".repeat(60));
   console.log(`Date:         ${new Date().toISOString()}`);
   console.log(`Geographies:  ${geos.join(", ")}`);
   if (rowLimit) console.log(`Row limit:    ${rowLimit.toLocaleString()}`);
-  if (recentMonths)
-    console.log(`Recent:       last ${recentMonths} months only`);
+  console.log(
+    `Mode:         ${incrementalFlags.fullLoad ? "FULL backfill" : `incremental (cutoff: ${dateCutoff})`}`,
+  );
   console.log("");
 
   const geoResults: ImportGeographyResult[] = [];
 
   // Import each geography sequentially (they share the geoid cache)
   for (const geo of geos) {
-    const geoResult = await importRedfinGeography(geo, rowLimit, recentMonths);
+    const geoResult = await importRedfinGeography(geo, rowLimit, dateCutoff);
     geoResults.push(geoResult);
   }
 

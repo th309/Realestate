@@ -3,15 +3,15 @@ name: Redfin Market Tracker Weekly Import
 on:
   # Redfin updates data every Wednesday; import Thursday morning
   schedule:
-    - cron: '0 8 * * 4'  # Every Thursday at 8:00 AM UTC
+    - cron: "0 8 * * 4" # Every Thursday at 8:00 AM UTC
 
   # Allow manual trigger with geo level filter
   workflow_dispatch:
     inputs:
       geo_level:
-        description: 'Which geography level to import (or all)'
+        description: "Which geography level to import (or all)"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -26,7 +26,7 @@ on:
 jobs:
   import-redfin-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 240  # 4 hours - neighborhood/zip files are large
+    timeout-minutes: 240 # 4 hours - neighborhood/zip files are large
 
     steps:
       - name: Checkout repository
@@ -35,8 +35,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -44,10 +44,10 @@ jobs:
       - name: Run Redfin Market Tracker Import
         id: import
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
-          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
         run: |
           echo "=============================================="
           echo "Redfin Market Tracker Import - $(date)"
@@ -58,6 +58,8 @@ jobs:
             GEO_ARG="--geo=${{ github.event.inputs.geo_level }}"
           fi
 
+          # Default behavior: 3-month incremental cutoff (see scripts/lib/incremental-cutoff.ts).
+          # Pass --full for a backfill of full history.
           npx tsx scripts/redfin-sales-import/import-redfin-sales.ts $GEO_ARG 2>&1 | tee import-output.txt
 
           if grep -q "ERRORS:" import-output.txt; then

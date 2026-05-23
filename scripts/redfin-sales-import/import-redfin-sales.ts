@@ -24,6 +24,7 @@ import { importDataset } from "./dataset-importer";
 import { initCountyFipsLookup } from "./county-fips-lookup";
 import type { RedfinGeoLevel, ImportResult } from "./types";
 import { REDFIN_S3_DATASETS } from "./types";
+import { getIncrementalCutoff, parseIncrementalFlagsFromArgv } from "../lib";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -32,7 +33,6 @@ import { REDFIN_S3_DATASETS } from "./types";
 interface CliOptions {
   geoFilters: RedfinGeoLevel[];
   rowLimit?: number;
-  recentMonths?: number;
 }
 
 function parseCliArgs(): CliOptions {
@@ -67,15 +67,8 @@ function parseCliArgs(): CliOptions {
         process.exit(1);
       }
       options.rowLimit = value;
-    } else if (arg.startsWith("--recent=")) {
-      const value = parseInt(arg.split("=")[1], 10);
-      if (isNaN(value) || value <= 0) {
-        console.error(
-          `Invalid --recent value. Must be a positive integer (months).`,
-        );
-        process.exit(1);
-      }
-      options.recentMonths = value;
+    } else if (arg === "--full" || arg.startsWith("--recent=")) {
+      // Handled by parseIncrementalFlagsFromArgv() in main().
     } else if (arg.startsWith("--batch=")) {
       console.error(
         "Manual --batch override is disabled. This importer auto-selects batch sizes (max 5000) per geography.",
@@ -92,6 +85,8 @@ Options:
   --geo=<level>    Import specific geography level(s) (supports multiple)
                    Valid: national, state, metro, county, city, zip, neighborhood
   --limit=<N>      Limit rows per dataset (for testing)
+  --recent=<N>     Override the default 3-month incremental cutoff (in months)
+  --full           Disable the incremental cutoff and load full history (backfill)
   --help, -h       Show this help message
 `);
       process.exit(0);
@@ -121,16 +116,14 @@ async function main(): Promise<void> {
     console.log(`  Row limit: ${options.rowLimit}`);
   }
 
-  // Compute date cutoff for --recent flag
-  let dateCutoff: string | undefined;
-  if (options.recentMonths) {
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - options.recentMonths);
-    dateCutoff = cutoff.toISOString().slice(0, 10);
-    console.log(
-      `  Recent: last ${options.recentMonths} months (cutoff: ${dateCutoff})`,
-    );
-  }
+  // Default to monthly incremental (3-month overlap); pass `--full` for a backfill.
+  const incrementalFlags = parseIncrementalFlagsFromArgv();
+  const dateCutoff =
+    getIncrementalCutoff({ frequency: "monthly", ...incrementalFlags }) ??
+    undefined;
+  console.log(
+    `  Mode: ${incrementalFlags.fullLoad ? "FULL backfill" : `incremental (cutoff: ${dateCutoff})`}`,
+  );
 
   // 2. Load county FIPS lookup (used by parser for county-level imports)
   initCountyFipsLookup();
