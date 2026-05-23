@@ -136,6 +136,12 @@ export interface DataFileLoadOptions {
   format?: FileFormat;
   /** Custom delimiter (only for CSV/TSV). Inferred from format if not set. */
   delimiter?: string;
+  /** Extra HTTP headers to send (merged on top of defaults). */
+  headers?: Record<string, string>;
+  /** Per-attempt download timeout in ms. Defaults to 300000 (5 min). */
+  timeoutMs?: number;
+  /** Number of retry attempts on transient failures. Defaults to 3. */
+  maxRetries?: number;
 }
 
 /** Result of loading and parsing a data file. */

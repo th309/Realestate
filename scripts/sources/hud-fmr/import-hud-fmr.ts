@@ -17,11 +17,23 @@
  * Data source: https://www.huduser.gov/portal/datasets/fmr.html
  */
 
-import { getSupabaseClient, batchUpsert, loadDataFile, downloadFromUrl } from '../../lib';
-import type { ImportSourceResult, ImportGeographyResult, BatchUpsertResult } from '../../lib';
-import type { IngestionSource } from '../../utils/ingestion-logger';
-import { createIngestionLogger } from '../../utils/ingestion-logger';
-import { printSummaryBanner, reportStatusToBackend } from '../../lib/import-reporter';
+import {
+  getSupabaseClient,
+  batchUpsert,
+  loadDataFile,
+  downloadFromUrl,
+} from "../../lib";
+import type {
+  ImportSourceResult,
+  ImportGeographyResult,
+  BatchUpsertResult,
+} from "../../lib";
+import type { IngestionSource } from "../../utils/ingestion-logger";
+import { createIngestionLogger } from "../../utils/ingestion-logger";
+import {
+  printSummaryBanner,
+  reportStatusToBackend,
+} from "../../lib/import-reporter";
 
 import {
   getCurrentFiscalYear,
@@ -31,8 +43,8 @@ import {
   HUD_FMR_TABLE,
   HUD_FMR_CONFLICT_KEYS,
   HUD_FMR_BATCH_SIZE,
-} from './hud-fmr-config';
-import type { HudFmrRecord } from './hud-fmr-config';
+} from "./hud-fmr-config";
+import type { HudFmrRecord } from "./hud-fmr-config";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -42,13 +54,15 @@ const args = process.argv.slice(2);
 
 function getCliArg(prefix: string): string | null {
   const match = args.find((a) => a.startsWith(prefix));
-  return match ? match.split('=')[1] : null;
+  return match ? match.split("=")[1] : null;
 }
 
-const cliFiscalYear = getCliArg('--fy=') ? parseInt(getCliArg('--fy=')!, 10) : null;
-const useLocalFile = args.includes('--local');
+const cliFiscalYear = getCliArg("--fy=")
+  ? parseInt(getCliArg("--fy=")!, 10)
+  : null;
+const useLocalFile = args.includes("--local");
 
-const SOURCE: IngestionSource = 'hud';
+const SOURCE: IngestionSource = "hud";
 
 // ---------------------------------------------------------------------------
 // Download HUD FMR file (trying multiple URL patterns)
@@ -58,13 +72,21 @@ const SOURCE: IngestionSource = 'hud';
  * Try each HUD FMR URL pattern in order until one succeeds.
  * Returns the downloaded buffer, or null if all patterns fail.
  */
-async function downloadFmrWithFallback(fiscalYear: number): Promise<Buffer | null> {
+async function downloadFmrWithFallback(
+  fiscalYear: number,
+): Promise<Buffer | null> {
   const urls = buildFmrDownloadUrls(fiscalYear);
 
   for (const url of urls) {
     console.log(`  Trying: ${url}`);
     try {
-      const buffer = await downloadFromUrl(url);
+      // HUD's WAF returns 202 + empty body for generic SDK UAs. A browser-like UA
+      // (set in csv-loader defaults) plus the fmr.html Referer makes it serve the file.
+      const buffer = await downloadFromUrl(url, {
+        headers: {
+          Referer: "https://www.huduser.gov/portal/datasets/fmr.html",
+        },
+      });
       return buffer;
     } catch {
       console.log(`    Failed, trying next pattern...`);
@@ -119,12 +141,16 @@ async function main(): Promise<void> {
   const currentFY = getCurrentFiscalYear();
   const targetFY = cliFiscalYear ?? currentFY;
 
-  console.log('HUD Fair Market Rent Unified Data Import');
-  console.log('='.repeat(60));
+  console.log("HUD Fair Market Rent Unified Data Import");
+  console.log("=".repeat(60));
   console.log(`Date:        ${new Date().toISOString()}`);
-  console.log(`Fiscal year: FY${targetFY}${cliFiscalYear ? ' (specified)' : ' (auto-detected)'}`);
-  console.log(`Mode:        ${useLocalFile ? 'Local file' : 'Download from HUD'}`);
-  console.log('');
+  console.log(
+    `Fiscal year: FY${targetFY}${cliFiscalYear ? " (specified)" : " (auto-detected)"}`,
+  );
+  console.log(
+    `Mode:        ${useLocalFile ? "Local file" : "Download from HUD"}`,
+  );
+  console.log("");
 
   const supabase = getSupabaseClient();
   const logger = createIngestionLogger(supabase, {
@@ -134,9 +160,9 @@ async function main(): Promise<void> {
   });
 
   const geoResult: ImportGeographyResult = {
-    geographyId: 'county',
+    geographyId: "county",
     tableName: HUD_FMR_TABLE,
-    status: 'failed',
+    status: "failed",
     recordsInserted: 0,
     recordsFailed: 0,
     totalRowsLoaded: 0,
@@ -156,13 +182,13 @@ async function main(): Promise<void> {
       const localPath = buildFmrLocalPath(targetFY);
       console.log(`Loading local file: data/${localPath}`);
       try {
-        const loadResult = await loadDataFile({ localPath, format: 'xlsx' });
+        const loadResult = await loadDataFile({ localPath, format: "xlsx" });
         rawRows = loadResult.rows;
       } catch (err) {
         throw new Error(
           `Failed to load local file at data/${localPath}. ` +
-          `Ensure the file exists or run without --local to download from HUD. ` +
-          `Original error: ${err instanceof Error ? err.message : String(err)}`,
+            `Ensure the file exists or run without --local to download from HUD. ` +
+            `Original error: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     } else {
@@ -171,43 +197,56 @@ async function main(): Promise<void> {
 
       // Fallback to previous FY if current FY not yet available
       if (!buffer && !cliFiscalYear && targetFY === currentFY) {
-        console.log(`\nFY${targetFY} not available, trying FY${targetFY - 1}...`);
+        console.log(
+          `\nFY${targetFY} not available, trying FY${targetFY - 1}...`,
+        );
         buffer = await downloadFmrWithFallback(targetFY - 1);
       }
 
       if (!buffer) {
-        const errorMessage = `Could not download HUD FMR data for FY${targetFY}. ` +
+        const errorMessage =
+          `Could not download HUD FMR data for FY${targetFY}. ` +
           `Visit https://www.huduser.gov/portal/datasets/fmr.html for manual download.`;
         throw new Error(errorMessage);
       }
 
       // Parse XLSX buffer using the shared csv-loader's XLSX parser
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.read(buffer, { type: "buffer" });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      rawRows = XLSX.utils.sheet_to_json<Record<string, string>>(firstSheet, { raw: false });
+      rawRows = XLSX.utils.sheet_to_json<Record<string, string>>(firstSheet, {
+        raw: false,
+      });
     }
 
     console.log(`  Raw rows loaded: ${rawRows.length}`);
     geoResult.totalRowsLoaded = rawRows.length;
 
     // Step 2: Parse and deduplicate
-    console.log('Parsing and deduplicating FMR records...');
+    console.log("Parsing and deduplicating FMR records...");
     const { records, skipped } = parseFmrRowsWithDedup(rawRows, targetFY);
     geoResult.rowsSkippedByMapping = skipped;
-    console.log(`  Unique county records: ${records.length} (${skipped} skipped/duplicates)`);
+    console.log(
+      `  Unique county records: ${records.length} (${skipped} skipped/duplicates)`,
+    );
 
     if (records.length === 0) {
-      throw new Error('No valid records parsed from HUD FMR file');
+      throw new Error("No valid records parsed from HUD FMR file");
     }
 
     // Step 3: Batch upsert
-    console.log(`\nUpserting ${records.length} records into ${HUD_FMR_TABLE}...`);
-    const upsertResult: BatchUpsertResult = await batchUpsert(supabase, records as unknown as Record<string, unknown>[], {
-      tableName: HUD_FMR_TABLE,
-      conflictKeys: HUD_FMR_CONFLICT_KEYS,
-      batchSize: HUD_FMR_BATCH_SIZE,
-    });
+    console.log(
+      `\nUpserting ${records.length} records into ${HUD_FMR_TABLE}...`,
+    );
+    const upsertResult: BatchUpsertResult = await batchUpsert(
+      supabase,
+      records as unknown as Record<string, unknown>[],
+      {
+        tableName: HUD_FMR_TABLE,
+        conflictKeys: HUD_FMR_CONFLICT_KEYS,
+        batchSize: HUD_FMR_BATCH_SIZE,
+      },
+    );
 
     geoResult.recordsInserted = upsertResult.inserted;
     geoResult.recordsFailed = upsertResult.failed;
@@ -218,9 +257,9 @@ async function main(): Promise<void> {
 
     // Determine status
     if (upsertResult.failed === 0 && upsertResult.inserted > 0) {
-      geoResult.status = 'success';
+      geoResult.status = "success";
     } else if (upsertResult.inserted > 0 && upsertResult.failed > 0) {
-      geoResult.status = 'partial';
+      geoResult.status = "partial";
     }
 
     await logger.complete({
@@ -242,8 +281,12 @@ async function main(): Promise<void> {
   const sourceResult: ImportSourceResult = {
     source: SOURCE,
     geographies: [geoResult],
-    overallStatus: geoResult.status === 'success' ? 'success'
-      : geoResult.status === 'partial' ? 'partial' : 'failed',
+    overallStatus:
+      geoResult.status === "success"
+        ? "success"
+        : geoResult.status === "partial"
+          ? "partial"
+          : "failed",
     totalInserted: geoResult.recordsInserted,
     totalFailed: geoResult.recordsFailed,
     totalDurationMs: geoResult.durationMs,
@@ -252,12 +295,12 @@ async function main(): Promise<void> {
   printSummaryBanner(sourceResult);
   await reportStatusToBackend(sourceResult);
 
-  if (geoResult.recordsFailed > 0 || geoResult.status === 'failed') {
+  if (geoResult.recordsFailed > 0 || geoResult.status === "failed") {
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

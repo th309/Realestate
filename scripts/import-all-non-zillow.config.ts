@@ -80,5 +80,7 @@ export const PIPELINES: ImportPipeline[] = [
 export const TIMEOUTS: Record<string, number> = {
   small: 5 * 60 * 1000, // 5 minutes
   medium: 15 * 60 * 1000, // 15 minutes
-  large: 60 * 60 * 1000, // 60 minutes
+  // Realtor + Redfin Market Tracker ingest hundreds of MB; on slow links the
+  // multi-level (state/metro/county/zip/city) pipeline can run >60 min.
+  large: 3 * 60 * 60 * 1000, // 3 hours
 };
