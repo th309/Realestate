@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
     const result = await parseBackendResponse(response);
     return NextResponse.json(result);
   } catch (error) {
+    console.error(
+      `[watchlist/folders GET] proxy to ${BACKEND_URL}/analytics/watchlist/folders failed:`,
+      error,
+    );
     return NextResponse.json(
       { success: false, error: "Failed to fetch folders" },
       { status: 500 },

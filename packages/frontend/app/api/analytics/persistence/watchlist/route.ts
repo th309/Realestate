@@ -49,6 +49,10 @@ export async function GET(request: NextRequest) {
     const result = await parseBackendResponse(response);
     return NextResponse.json(result);
   } catch (error) {
+    console.error(
+      `[watchlist GET] proxy to ${BACKEND_URL}/analytics/watchlist failed:`,
+      error,
+    );
     return NextResponse.json(
       { success: false, error: "Failed to fetch watchlist" },
       { status: 500 },
@@ -72,6 +76,10 @@ export async function POST(request: NextRequest) {
     const result = await parseBackendResponse(response);
     return NextResponse.json(result);
   } catch (error) {
+    console.error(
+      `[watchlist POST] proxy to ${BACKEND_URL}/analytics/watchlist failed:`,
+      error,
+    );
     return NextResponse.json(
       { success: false, error: "Failed to add to watchlist" },
       { status: 500 },
