@@ -11,6 +11,7 @@
 
 import { parseNumeric } from "../../lib";
 import { METRIC_COLUMNS, STATE_FIPS } from "./redfin-config";
+import { toCanonicalCbsa } from "./cbsa-crosswalk";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,8 +111,12 @@ export function mapTsvRowToRecord(
       break;
     case "metro":
       dbRecord.region_name = unquote(row.REGION);
-      dbRecord.cbsa_code =
-        tableId !== null ? String(Math.round(tableId)) : parentMetroCode;
+      // Redfin reports ~13 large metros under pre-2023 metro-division codes
+      // (e.g. NYC=35614); normalize to the system's canonical 2023 MSA code
+      // (35620) so scores/metrics join to the rest of the platform.
+      dbRecord.cbsa_code = toCanonicalCbsa(
+        tableId !== null ? String(Math.round(tableId)) : parentMetroCode,
+      );
       break;
     case "county":
       dbRecord.county_name = unquote(row.REGION);
