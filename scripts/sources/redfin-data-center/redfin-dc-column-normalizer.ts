@@ -10,7 +10,6 @@ export function normalizeColumnName(header: string): string {
     .toLowerCase()
     .replace(/\(\$\)|\(%\)|\(ppts\)|\(days\)/g, "")
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/_+/g, "_")
     .replace(/^_|_$/g, "");
 }
 

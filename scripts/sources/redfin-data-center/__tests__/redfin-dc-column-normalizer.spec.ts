@@ -26,7 +26,9 @@ describe("normalizeColumnName", () => {
   });
 
   it("handles embedded symbols and hyphens", () => {
-    expect(normalizeColumnName("BUYER-SELLER RATIO")).toBe("buyer_seller_ratio");
+    expect(normalizeColumnName("BUYER-SELLER RATIO")).toBe(
+      "buyer_seller_ratio",
+    );
     expect(normalizeColumnName("SELLER-BUYER % DIFFERENCE")).toBe(
       "seller_buyer_difference",
     );
@@ -43,5 +45,10 @@ describe("normalizeRegionTypeToGeoLevel", () => {
     expect(normalizeRegionTypeToGeoLevel("Census Region")).toBe(
       "census_region",
     );
+  });
+
+  it("falls back to the lowercased input for unknown region types", () => {
+    expect(normalizeRegionTypeToGeoLevel("Neighborhood")).toBe("neighborhood");
+    expect(normalizeRegionTypeToGeoLevel("  City  ")).toBe("city");
   });
 });

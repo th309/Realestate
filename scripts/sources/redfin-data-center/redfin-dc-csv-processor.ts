@@ -46,10 +46,9 @@ export async function mapRowToRecord(
   row: Record<string, string>,
   geoLevel: string,
   target: GeoTarget,
-  knownColumns: string[],
+  knownColumns: ReadonlySet<string>,
   resolve: ResolveFn = resolveDcGeo,
 ): Promise<(Record<string, unknown> & { __resolved: boolean }) | null> {
-  const known = new Set(knownColumns);
   const rec: Record<string, unknown> = {};
 
   for (const [rawHeader, rawValue] of Object.entries(row)) {
@@ -67,7 +66,7 @@ export async function mapRowToRecord(
       continue;
     }
     const col = normalizeColumnName(header);
-    if (!known.has(col)) continue;
+    if (!knownColumns.has(col)) continue;
     if (target.textDims?.includes(col)) {
       const v = (rawValue ?? "").trim();
       rec[col] = v === "" || v.toUpperCase() === "NA" ? null : v;
@@ -113,6 +112,8 @@ export async function processRows(
   let skipped = 0;
   let unresolved = 0;
   let latestPeriodEnd: string | null = null;
+  // Build the lookup set once per file, not once per row (files reach ~20k rows).
+  const known = new Set(knownColumns);
 
   for (const row of rows) {
     const mapped = await mapRowToRecord(
@@ -120,7 +121,7 @@ export async function processRows(
       row,
       geoLevel,
       target,
-      knownColumns,
+      known,
       resolve,
     );
     if (!mapped) {

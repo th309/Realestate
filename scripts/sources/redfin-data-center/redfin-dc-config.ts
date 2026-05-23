@@ -145,6 +145,8 @@ export const DASHBOARDS: Record<string, DashboardConfig> = {
         textDims: ["property_type", "balance_of_power"],
       },
       metro: {
+        // Redfin only publishes this dashboard at the top-50-metro level — there is
+        // no all_metros.csv for buyers_and_sellers. Do not "fix" this to all_metros.
         path: "buyers_and_sellers/monthly/top_50_metros.csv",
         table: "redfin_dc_buyers_sellers_metro",
         conflictKeys: ["period_end", "region_id", "property_type"],
