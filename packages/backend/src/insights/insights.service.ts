@@ -13,7 +13,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
@@ -40,7 +40,7 @@ const PROMPT_BUILDERS: Record<InsightType, (ctx: InsightContext) => string> = {
 @Injectable()
 export class InsightsService {
   private readonly logger = new Logger(InsightsService.name);
-  private aiClient: OpenAI | null = null;
+  private aiClient: Anthropic | null = null;
   private readonly aiModel: string;
 
   constructor(
@@ -50,23 +50,18 @@ export class InsightsService {
     private readonly metricResolution: MetricResolutionService,
     private readonly geoChain: GeographyChainService,
   ) {
-    const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
+    const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     this.aiModel =
-      this.configService.get<string>('AI_MODEL') || 'deepseek-chat';
+      this.configService.get<string>('AI_MODEL') || 'claude-sonnet-4-6';
 
-    if (deepseekKey) {
-      this.aiClient = new OpenAI({
-        apiKey: deepseekKey,
-        baseURL:
-          this.configService.get<string>('AI_BASE_URL') ||
-          'https://api.deepseek.com/v1',
-      });
+    if (anthropicKey) {
+      this.aiClient = new Anthropic({ apiKey: anthropicKey });
       this.logger.log(
-        `DeepSeek initialized for insights (model: ${this.aiModel})`,
+        `Anthropic initialized for insights (model: ${this.aiModel})`,
       );
     } else {
       this.logger.warn(
-        'DEEPSEEK_API_KEY not configured - insight generation disabled',
+        'ANTHROPIC_API_KEY not configured - insight generation disabled',
       );
     }
   }
@@ -103,6 +98,9 @@ export class InsightsService {
       context,
       insightType as InsightType,
     );
+
+    // Don't cache empty failures — let the next request retry generation.
+    if (!content) return null;
 
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
@@ -186,12 +184,19 @@ export class InsightsService {
     const prompt = buildPrompt(context);
     const maxTokens = insightType === 'market_overview' ? 1200 : 200;
 
-    const response = await this.aiClient.chat.completions.create({
-      model: this.aiModel,
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    return response.choices[0]?.message?.content || '';
+    try {
+      const response = await this.aiClient.messages.create({
+        model: this.aiModel,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const block = response.content?.[0];
+      return block && block.type === 'text' ? block.text : '';
+    } catch (err) {
+      this.logger.error(
+        `Anthropic generation failed for ${context.region_id}/${insightType} (model=${this.aiModel}): ${(err as Error).message}`,
+      );
+      return '';
+    }
   }
 }
