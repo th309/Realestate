@@ -29,6 +29,7 @@ import {
   fmtNum,
   fmtDuration,
 } from "./backfill-v4-helpers";
+import { bustFreshnessCache } from "./utils/refresh-freshness-cache";
 
 // ---------------------------------------------------------------------------
 // Supabase init
@@ -167,6 +168,9 @@ async function main() {
       .select("*", { count: "exact", head: true })
       .eq("score_type", "propertyiq");
     console.log(`  PropertyIQ rows in DB: ${fmtNum(count || 0)}`);
+
+    // Refresh the backend "as of" date cache so new scores surface immediately.
+    await bustFreshnessCache();
   }
 }
 

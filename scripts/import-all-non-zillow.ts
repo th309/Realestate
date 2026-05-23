@@ -18,6 +18,7 @@ import {
   TIMEOUTS,
   type ImportPipeline,
 } from "./import-all-non-zillow.config";
+import { bustFreshnessCache } from "./utils/refresh-freshness-cache";
 
 interface PipelineResult {
   id: string;
@@ -113,7 +114,7 @@ function runFinalMetricRefresh(): boolean {
   }
 }
 
-function main() {
+async function main() {
   const startTime = Date.now();
   const { skip, only } = parseArgs();
 
@@ -174,6 +175,8 @@ function main() {
   let refreshOk = true;
   if (anySuccess) {
     refreshOk = runFinalMetricRefresh();
+    // Refresh the backend "as of" date cache so new data surfaces immediately.
+    await bustFreshnessCache();
   }
 
   // Final summary
@@ -224,4 +227,7 @@ function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

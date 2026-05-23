@@ -104,8 +104,11 @@ export class HealthController {
     status: 200,
     description: 'Data freshness dates by table, source, and geography',
   })
-  async getDataFreshness() {
-    return this.dataFreshness.getFreshness();
+  async getDataFreshness(@Query('refresh') refresh?: string) {
+    // ?refresh=true busts the 24h in-memory cache — used by data pipelines
+    // after an ingest/scoring run so the "as of" dates reflect new data
+    // immediately instead of waiting out the TTL.
+    return this.dataFreshness.getFreshness(refresh === 'true');
   }
 
   @Get('pipeline-runs')
