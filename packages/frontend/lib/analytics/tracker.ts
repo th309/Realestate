@@ -15,7 +15,9 @@ import { getAnonymousSessionId } from "@/lib/entitlements/session";
 import { getVisitorId } from "./visitor-identity";
 import { getSessionContext } from "./session-context";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// Telemetry posts to a same-origin Next.js proxy (app/api/usage/*) which
+// forwards to the backend. Going same-origin bypasses third-party-tracker
+// blocking by privacy extensions (uBlock, Adblock Plus + EasyPrivacy, etc.).
 const BATCH_INTERVAL = 5000; // 5 seconds
 const MAX_BATCH_SIZE = 50;
 
@@ -155,12 +157,12 @@ export function flush(): void {
   // Try sendBeacon first (works during page unload)
   if (typeof navigator !== "undefined" && navigator.sendBeacon) {
     const blob = new Blob([payload], { type: "application/json" });
-    const sent = navigator.sendBeacon(`${API_URL}/api/usage/events`, blob);
+    const sent = navigator.sendBeacon(`/api/usage/events`, blob);
     if (sent) return;
   }
 
   // Fallback to fetch (fire and forget)
-  fetch(`${API_URL}/api/usage/events`, {
+  fetch(`/api/usage/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload,

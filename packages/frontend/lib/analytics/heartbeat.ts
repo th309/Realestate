@@ -11,7 +11,6 @@ import { getAnonymousSessionId } from "@/lib/entitlements/session";
 import { isTrackingExcluded } from "./tracker";
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export function useHeartbeat() {
   useEffect(() => {
@@ -30,7 +29,7 @@ export function useHeartbeat() {
 
       if (navigator.sendBeacon) {
         const blob = new Blob([payload], { type: "application/json" });
-        navigator.sendBeacon(`${API_URL}/api/usage/heartbeat`, blob);
+        navigator.sendBeacon(`/api/usage/heartbeat`, blob);
       }
     }
 
