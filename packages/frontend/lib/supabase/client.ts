@@ -11,6 +11,37 @@ import { createClient } from "@supabase/supabase-js";
  */
 let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
+// Serialize auth operations (getSession / token refresh) without using
+// navigator.locks. Supabase's default lock uses navigator.locks with "steal"
+// mode, which threw "Lock broken by another request with the 'steal' option"
+// AbortErrors in Next.js 16 when multiple components call getSession()
+// concurrently. The previous fix replaced it with a NO-OP lock — but that
+// removed serialization entirely, letting concurrent callers race the token
+// refresh and intermittently resolve the session as `null` on cold load
+// (the cause of admins seeing the free tier and Realtime joining as anon).
+// A plain promise-chain mutex keeps the serialization the refresh relies on
+// while avoiding navigator.locks' steal semantics.
+const authLockChains = new Map<string, Promise<unknown>>();
+
+async function serializingAuthLock<R>(
+  name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<R>,
+): Promise<R> {
+  const prior = authLockChains.get(name) ?? Promise.resolve();
+  // Run fn after the prior holder settles, whether it resolved or rejected.
+  const run = prior.then(fn, fn);
+  // Chain the next waiter on a swallowed copy so one failure can't poison the queue.
+  authLockChains.set(
+    name,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return run;
+}
+
 export function createSupabaseBrowserClient() {
   if (!browserClient) {
     browserClient = createBrowserClient(
@@ -19,11 +50,7 @@ export function createSupabaseBrowserClient() {
       {
         auth: {
           flowType: "implicit",
-          // Prevent "Lock broken by another request with the 'steal' option"
-          // AbortError in Next.js 16. The default uses navigator.locks with
-          // steal mode which races when multiple components call getSession()
-          // concurrently. The singleton pattern above already serializes access.
-          lock: async (_name, _acquireTimeout, fn) => fn(),
+          lock: serializingAuthLock,
         },
       },
     );

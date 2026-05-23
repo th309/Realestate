@@ -152,10 +152,14 @@ export function EntitlementsProvider({
     }
   }, [resources]);
 
-  // Refresh when simulatedTier or user changes, but only after auth resolves.
-  // Also wait for session to hydrate to avoid fetching with missing auth tokens.
+  // Refresh when simulatedTier or user changes, once auth has resolved.
+  // We intentionally do NOT wait for the full session to hydrate: the
+  // entitlements endpoint authorizes on the `x-user-id` header (derived from
+  // the instantly-available cookie user id), not the JWT. Gating on `session`
+  // here caused the first resolution to fall through as anonymous → a "free"
+  // flash before correcting to the real tier once the session arrived.
   useEffect(() => {
-    if (!authLoading && !(user?.id && !session)) {
+    if (!authLoading) {
       refresh();
     }
   }, [simulatedTier, user?.id, session, authLoading, refresh]);
