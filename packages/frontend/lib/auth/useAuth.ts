@@ -103,6 +103,16 @@ export function useAuthState(initialUserId: string | null) {
     supabase.auth
       .getSession()
       .then(({ data: { session } }: { data: { session: any } }) => {
+        // A transient null from getSession() (cookies not yet readable on a
+        // cold load, or mid token-refresh) must NOT downgrade a user the server
+        // already confirmed via the piq-uid cookie. Clobbering it here wiped the
+        // server-seeded id and poisoned cachedSession=null, pinning authenticated
+        // users (incl. admins) to the anonymous "free" tier until an unrelated
+        // onAuthStateChange event flipped them back. Keep the seeded id and wait
+        // for onAuthStateChange to deliver the real session.
+        if (!session && initialUserId) {
+          return;
+        }
         cachedSession = session;
         setState({ user: session?.user ?? null, session, loading: false });
         if (session?.user) {
