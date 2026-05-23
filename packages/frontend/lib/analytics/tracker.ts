@@ -43,7 +43,7 @@ let flushTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
 let sessionContextAttached = false;
 let currentUserId: string | null = null;
-let trackingExcluded = false;  
+let trackingExcluded = false;
 
 function getSessionId(): string {
   return getAnonymousSessionId();
@@ -155,12 +155,12 @@ export function flush(): void {
   // Try sendBeacon first (works during page unload)
   if (typeof navigator !== "undefined" && navigator.sendBeacon) {
     const blob = new Blob([payload], { type: "application/json" });
-    const sent = navigator.sendBeacon(`${API_URL}/api/analytics/events`, blob);
+    const sent = navigator.sendBeacon(`${API_URL}/api/usage/events`, blob);
     if (sent) return;
   }
 
   // Fallback to fetch (fire and forget)
-  fetch(`${API_URL}/api/analytics/events`, {
+  fetch(`${API_URL}/api/usage/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload,

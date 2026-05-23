@@ -30,7 +30,7 @@ export function useHeartbeat() {
 
       if (navigator.sendBeacon) {
         const blob = new Blob([payload], { type: "application/json" });
-        navigator.sendBeacon(`${API_URL}/api/analytics/heartbeat`, blob);
+        navigator.sendBeacon(`${API_URL}/api/usage/heartbeat`, blob);
       }
     }
 

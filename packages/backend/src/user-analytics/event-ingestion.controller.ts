@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { EventIngestionService } from './event-ingestion.service';
 import { SessionManagerService } from './session-manager.service';
 
-@Controller('api/analytics')
+@Controller('api/usage')
 export class EventIngestionController {
   private readonly logger = new Logger(EventIngestionController.name);
 
