@@ -1,6 +1,7 @@
 import {
   DASHBOARDS,
   getDashboard,
+  getKnownColumns,
   S3_BASE,
   ALL_DASHBOARD_IDS,
 } from "../redfin-dc-config";
@@ -65,5 +66,25 @@ describe("redfin-dc-config", () => {
     expect(S3_BASE).toBe(
       "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_data_center",
     );
+  });
+
+  it("getKnownColumns = meta + metric columns + target textDims", () => {
+    const d = getDashboard("price_drops");
+    const cols = getKnownColumns(d, d.geos.metro);
+    // standard metadata
+    expect(cols.has("region_id")).toBe(true);
+    expect(cols.has("period_end")).toBe(true);
+    // a price_drops metric
+    expect(cols.has("percent_active_with_price_drops_yoy")).toBe(true);
+    // not a column from another dashboard
+    expect(cols.has("buyer_seller_ratio")).toBe(false);
+  });
+
+  it("getKnownColumns includes textDims for targets that declare them", () => {
+    const d = getDashboard("investors");
+    const cols = getKnownColumns(d, d.geos.by_category);
+    expect(cols.has("category_type")).toBe(true);
+    expect(cols.has("property_type")).toBe(true);
+    expect(cols.has("investor_market_share")).toBe(true);
   });
 });

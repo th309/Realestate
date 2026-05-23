@@ -105,7 +105,7 @@ export async function processRows(
   rows: Record<string, string>[],
   geoLevel: string,
   target: GeoTarget,
-  knownColumns: string[],
+  knownColumns: Iterable<string>,
   resolve: ResolveFn = resolveDcGeo,
 ): Promise<ProcessResult> {
   const records: Record<string, unknown>[] = [];

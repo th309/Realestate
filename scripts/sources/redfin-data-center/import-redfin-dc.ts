@@ -29,7 +29,9 @@ import { createIngestionLogger } from "../../utils/ingestion-logger";
 import {
   ALL_DASHBOARD_IDS,
   getDashboard,
+  getKnownColumns,
   type GeoTarget,
+  type DashboardConfig,
 } from "./redfin-dc-config";
 import { fetchIndex, resolveCsvUrl } from "./redfin-dc-index-fetcher";
 import { processRows } from "./redfin-dc-csv-processor";
@@ -45,34 +47,17 @@ function argValue(flag: string): string | null {
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : null;
 }
 
-/** Read a table's column names from information_schema (for knownColumns). */
-async function getTableColumns(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  table: string,
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("information_schema.columns" as any)
-    .select("column_name")
-    .eq("table_name", table);
-  if (error || !data) {
-    throw new Error(
-      `Could not introspect columns for ${table}: ${error?.message}`,
-    );
-  }
-  return (data as { column_name: string }[]).map((r) => r.column_name);
-}
-
 async function importGeo(
   supabase: ReturnType<typeof getSupabaseClient>,
   index: Record<string, unknown>,
-  dashboardId: string,
-  indexKey: string,
+  dash: DashboardConfig,
   geoLevel: string,
   target: GeoTarget,
   dateCutoff: string | null,
   rowLimit: number | undefined,
 ): Promise<ImportGeographyResult> {
   const start = Date.now();
+  const dashboardId = dash.id;
   const result: ImportGeographyResult = {
     geographyId: `${dashboardId}/${geoLevel}`,
     tableName: target.table,
@@ -87,7 +72,7 @@ async function importGeo(
   };
 
   try {
-    const url = resolveCsvUrl(index, indexKey, geoLevel, target.path);
+    const url = resolveCsvUrl(index, dash.indexKey, geoLevel, target.path);
     console.log(`\n--- ${dashboardId}/${geoLevel} -> ${target.table} ---`);
     const buf = await downloadFromUrl(url);
     let rows = csvParse(buf, {
@@ -105,7 +90,7 @@ async function importGeo(
       });
     }
 
-    const knownColumns = await getTableColumns(supabase, target.table);
+    const knownColumns = getKnownColumns(dash, target);
     const { records, skipped, latestPeriodEnd } = await processRows(
       supabase,
       rows,
@@ -174,8 +159,7 @@ async function main(): Promise<void> {
       const r = await importGeo(
         supabase,
         index,
-        id,
-        dash.indexKey,
+        dash,
         geoLevel,
         target,
         dateCutoff,
