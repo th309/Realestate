@@ -1,70 +1,36 @@
 "use client";
 
-import {
-  Suspense,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// Import types and constants
-import type {
-  GeoLevel,
-  ForecastHorizon,
-  RentIndexType,
-  RenterDemandType,
-  ViewMode,
-  SelectedGeography,
-  SearchResult,
-  MapData,
-} from "./types";
-import { STATE_CENTERS, GEO_ZOOM_LEVELS } from "./types";
+import type { GeoLevel, SearchResult, MapData } from "./types";
 
-// Import components
-import { MenuIcon, TableIcon } from "./components";
-import {
-  SearchWidget,
-  GeoLevelPills,
-  Legend,
-  Sidebar,
-  DataTableModal,
-  RightDetailPanel,
-  MapContextMenu,
-  ScoreTypeToggle,
-  type ScoreViewMode,
-} from "./components";
-import { Breadcrumbs } from "@/components/navigation";
-import { EntitlementGate } from "@/components/entitlements";
+import { Sidebar, RightDetailPanel, MapContextMenu } from "./components";
+import { MapToolbar } from "./MapToolbar";
+import { MapCanvas } from "./MapCanvas";
 import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
-// Import hooks
 import { useMapData, useMapSearch, useMapLayers } from "./hooks";
 import { useScoreData } from "./hooks/useScoreData";
+import { useViewModePreference } from "./hooks/useViewModePreference";
+import { useSidebarLayout } from "./hooks/useSidebarLayout";
+import { useMapViewParams } from "./hooks/useMapViewParams";
+import { useMapInstance } from "./hooks/useMapInstance";
+import { useMapSelection } from "./hooks/useMapSelection";
+import { useSidebarScoreData } from "./hooks/useSidebarScoreData";
+import { useMapCamera } from "./hooks/useMapCamera";
+import { useMapDeepLinkNav } from "./hooks/useMapDeepLinkNav";
 
-// Import config
-import {
-  NAV_ITEMS,
-  getMetricCategories,
-  isMetricSupportedForGeo,
-  getMetricConfig,
-} from "./config";
+import { NAV_ITEMS, MAPBOX_ACCESS_TOKEN } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
-import { fetchGeographySearch } from "@/lib/data";
 import {
   usePreferences,
   useTopMarketMatches,
   useMarketMatch,
 } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
-
-const VIEW_MODE_STORAGE_KEY = "propertyiq-view-mode";
-
-import { MAPBOX_ACCESS_TOKEN } from "./config";
 
 mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
@@ -77,95 +43,59 @@ export default function MapPage() {
 }
 
 function MapPageInner() {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const popup = useRef<mapboxgl.Popup | null>(null);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const urlProcessedRef = useRef<string | null>(null);
-  const isInitialRender = useRef(true);
 
-  // Capture navigation params (geo, id, name, lat, lng, state) in a ref during
-  // render — BEFORE any effects run.  This makes them immune to the URL sync
-  // effect's replaceState which strips unknown params (especially under React
-  // Strict Mode where the double-invocation defeats the isInitialRender guard).
-  const pendingNavRef = useRef<
-    | {
-        geo: string;
-        id: string;
-        name: string;
-        lat?: string;
-        lng?: string;
-        state?: string;
-      }
-    | null
-    | undefined
-  >(undefined);
-  if (pendingNavRef.current === undefined) {
-    const geo = searchParams.get("geo");
-    const id = searchParams.get("id") || searchParams.get("region");
-    if (geo && id) {
-      pendingNavRef.current = {
-        geo,
-        id,
-        name: searchParams.get("name") || id,
-        lat: searchParams.get("lat") || undefined,
-        lng: searchParams.get("lng") || undefined,
-        state: searchParams.get("state") || undefined,
-      };
-    } else {
-      pendingNavRef.current = null;
-    }
-  }
+  const { isMetricGated } = useEntitlements();
 
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const { viewMode, handleViewModeChange } = useViewModePreference();
 
-  // Core state — initialized from URL params so browser back-button restores previous view
-  const [geoLevel, setGeoLevel] = useState<GeoLevel>(() => {
-    return (searchParams.get("level") as GeoLevel) || "state";
-  });
-  const [selectedState, setSelectedState] = useState<string>(() => {
-    return searchParams.get("st") || "";
-  });
-  const [selectedMetric, setSelectedMetric] = useState(() => {
-    return searchParams.get("metric") || "home_value";
-  });
-  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>(
-    () => {
-      return (searchParams.get("fh") as ForecastHorizon) || "12m";
-    },
-  );
-  const [rentIndexType, setRentIndexType] = useState<RentIndexType>(() => {
-    return (searchParams.get("ri") as RentIndexType) || "all";
-  });
-  const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>(
-    () => {
-      return (searchParams.get("rd") as RenterDemandType) || "all";
-    },
-  );
+  const {
+    geoLevel,
+    setGeoLevel,
+    selectedState,
+    setSelectedState,
+    selectedMetric,
+    setSelectedMetric,
+    forecastHorizon,
+    setForecastHorizon,
+    rentIndexType,
+    setRentIndexType,
+    renterDemandType,
+    setRenterDemandType,
+    expandedCategories,
+    toggleCategory,
+    metricCategories,
+  } = useMapViewParams({ viewMode, isMetricGated });
 
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([
-    "popular",
-  ]);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const sidebarCollapsedManualRef = useRef(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("homebuyer");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedGeography, setSelectedGeography] =
-    useState<SelectedGeography | null>(null);
+  const {
+    sidebarWidth,
+    sidebarCollapsed,
+    handleToggleSidebarCollapsed,
+    handleMouseDown,
+  } = useSidebarLayout();
+
+  const { mapContainer, map, popup, mapLoaded, mapError } =
+    useMapInstance(geoLevel);
+
+  const {
+    selectedGeography,
+    setSelectedGeography,
+    rightPanelOpen,
+    setRightPanelOpen,
+    contextMenu,
+    setContextMenu,
+    handleFeatureClick,
+    handleFeatureContextMenu,
+  } = useMapSelection();
+
+  const [highlightedFeature, setHighlightedFeature] =
+    useState<SearchResult | null>(null);
   const [showTableView, setShowTableView] = useState(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    geography: SelectedGeography;
-    x: number;
-    y: number;
-  } | null>(null);
-  const isResizing = useRef(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Market Match toggle state
-  const [scoreViewMode, setScoreViewMode] = useState<ScoreViewMode>("piq");
+  const [scoreViewMode, setScoreViewMode] =
+    useState<Parameters<typeof MapToolbar>[0]["scoreViewMode"]>("piq");
   const { preferences } = usePreferences();
   const quizCompleted = !!preferences?.quiz_completed_at;
 
@@ -184,76 +114,6 @@ function MapPageInner() {
     enabled: scoreViewMode === "match" && quizCompleted,
   });
 
-  // Load view mode from localStorage on mount
-  useEffect(() => {
-    const savedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (savedViewMode === "homebuyer" || savedViewMode === "investor") {
-      setViewMode(savedViewMode);
-    }
-  }, []);
-
-  // Handler to update view mode and persist to localStorage
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode);
-    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-  }, []);
-
-  // Auto-collapse sidebar on narrow screens (<1440px), auto-expand on wide screens.
-  // Manual toggle overrides auto-behavior until the next resize crosses the threshold.
-  useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1440px)");
-    // Set initial state based on current viewport
-    setSidebarCollapsed(!mql.matches);
-    const handleChange = (e: MediaQueryListEvent) => {
-      sidebarCollapsedManualRef.current = false;
-      setSidebarCollapsed(!e.matches);
-    };
-    mql.addEventListener("change", handleChange);
-    return () => mql.removeEventListener("change", handleChange);
-  }, []);
-
-  const handleToggleSidebarCollapsed = useCallback(() => {
-    sidebarCollapsedManualRef.current = true;
-    setSidebarCollapsed((prev) => !prev);
-  }, []);
-
-  // Sync core state to URL so the browser back button restores previous view.
-  // Uses replaceState to update the current history entry without creating new ones.
-  useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
-    const params = new URLSearchParams();
-    if (geoLevel !== "state") params.set("level", geoLevel);
-    if (selectedMetric !== "home_value") params.set("metric", selectedMetric);
-    if (selectedState) params.set("st", selectedState);
-    if (forecastHorizon !== "12m") params.set("fh", forecastHorizon);
-    if (rentIndexType !== "all") params.set("ri", rentIndexType);
-    if (renterDemandType !== "all") params.set("rd", renterDemandType);
-    const paramStr = params.toString();
-    const newUrl = paramStr ? `${pathname}?${paramStr}` : pathname;
-    window.history.replaceState(null, "", newUrl);
-  }, [
-    geoLevel,
-    selectedMetric,
-    selectedState,
-    forecastHorizon,
-    rentIndexType,
-    renterDemandType,
-    pathname,
-  ]);
-
-  // Compute metric categories based on view mode
-  const metricCategories = useMemo(
-    () => getMetricCategories(viewMode),
-    [viewMode],
-  );
-
-  const [highlightedFeature, setHighlightedFeature] =
-    useState<SearchResult | null>(null);
-
-  // Use extracted hooks
   const { mapData, dataLoading, fetchMapData } = useMapData();
 
   // Convert match scores to MapData for choropleth overlay
@@ -289,53 +149,12 @@ function MapPageInner() {
     geoLevel,
     onHighlightFeature: setHighlightedFeature,
   });
-  // Handle feature click - open right panel with geography details
-  const handleFeatureClick = useCallback(
-    (geography: SelectedGeography | null) => {
-      if (!geography) {
-        setSelectedGeography(null);
-        setRightPanelOpen(false);
-        return;
-      }
-      setSelectedGeography(geography);
-      if (geography) {
-        trackEvent("feature.region_select", {
-          region_id: geography.id,
-          region_name: geography.name,
-          geo_level: geography.geoLevel,
-        });
-        setRightPanelOpen(true);
-        // Persist to localStorage so other pages (graphs, reports) can pick it up
-        try {
-          localStorage.setItem(
-            "propertyiq-last-geography",
-            JSON.stringify({
-              id: geography.id,
-              name: geography.name,
-              type: geography.geoLevel,
-              state: geography.stateAbbr,
-            }),
-          );
-        } catch {
-          /* ignore storage errors */
-        }
-      }
-    },
-    [],
-  );
-
-  const handleFeatureContextMenu = useCallback(
-    (info: { geography: SelectedGeography; x: number; y: number }) => {
-      setContextMenu(info);
-    },
-    [],
-  );
 
   // When in match mode, override metric to "index" style (0-100 score)
   const effectiveMetric =
     scoreViewMode === "match" ? "propertyiq_score" : selectedMetric;
 
-  const { updateMapLayers } = useMapLayers({
+  useMapLayers({
     map,
     popup,
     geoLevel,
@@ -352,114 +171,54 @@ function MapPageInner() {
 
   // Single fetch through data binding layer: scores with 3-month trend for sidebar + right panel
   const { data: scoreResponse, loading: scoresLoading } = useScoreData(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     geoLevel as any,
     selectedGeography?.id ?? null,
     { expanded: true, historyMonths: 3 },
   );
 
-  const {
-    isMetricGated,
-    getAccess,
-    loading: entitlementsLoading,
-  } = useEntitlements();
-
-  // Map score response to sidebar format with single PropertyIQ score
-  // Gating info flows from entitlements through props — no hardcoded tier checks
-  const sidebarScoreData = useMemo(() => {
-    if (scoresLoading) {
-      return { isLoading: true };
-    }
-
-    if (!scoreResponse) return undefined;
-
-    const isBreakdownGated =
-      !entitlementsLoading &&
-      getAccess("feature", "score_breakdown").level === "none";
-
-    const scoreObj = scoreResponse.propertyiq;
-    if (!scoreObj || typeof scoreObj !== "object" || !("score" in scoreObj)) {
-      return { isLoading: false };
-    }
-
-    const scoreMetricAccess = getAccess("metric", "propertyiq_score");
-    const gated = !entitlementsLoading && scoreMetricAccess.level === "none";
-
-    return {
-      propertyiq: {
-        score: gated ? undefined : (scoreObj.score ?? undefined),
-        trend: gated ? undefined : ((scoreObj as any).trendChange ?? undefined),
-        access: (isBreakdownGated ? "teaser" : "full") as "full" | "teaser",
-        gated,
-        tierRequired: gated ? scoreMetricAccess.tierRequired : undefined,
-      },
-      isLoading: false,
-    };
-  }, [scoreResponse, scoresLoading, entitlementsLoading, getAccess]);
-
-  // Fallback to home_value if selected metric becomes gated (e.g., subscription expired)
-  useEffect(() => {
-    if (isMetricGated(selectedMetric)) {
-      setSelectedMetric("home_value");
-    }
-  }, [selectedMetric, isMetricGated]);
-
-  // Auto-switch geo level when metric doesn't support current level
-  // Uses central config as single source of truth for metric/geo compatibility
-  useEffect(() => {
-    // Check if current geoLevel is supported for the selected metric
-    if (!isMetricSupportedForGeo(selectedMetric, geoLevel)) {
-      // Get the first supported geo level from the metric's config
-      const config = getMetricConfig(selectedMetric);
-      const supportedGeos = config?.supportedGeos;
-      if (supportedGeos && supportedGeos.length > 0) {
-        // Auto-switch to the first supported geo (usually the broadest available)
-        setGeoLevel(supportedGeos[0] as GeoLevel);
-      }
-    }
-  }, [selectedMetric, geoLevel]);
+  const sidebarScoreData = useSidebarScoreData(scoreResponse, scoresLoading);
 
   // Handler to change geo level and clear state filter for levels that don't need it
-  const handleGeoLevelChange = useCallback((level: GeoLevel) => {
-    setGeoLevel(level);
-    setSelectedGeography(null);
-    setRightPanelOpen(false);
-    // Clear state filter when switching to levels that don't require it
-    // (only city, zip, tract need state filtering)
-    if (!["city", "zip", "tract"].includes(level)) {
-      setSelectedState("");
-    }
-  }, []);
-
-  // Sidebar resize handlers
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
-      const newWidth = e.clientX - 80;
-      setSidebarWidth(Math.min(Math.max(newWidth, 200), 500));
-    };
-
-    const handleMouseUp = () => {
-      if (isResizing.current) {
-        isResizing.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
+  const handleGeoLevelChange = useCallback(
+    (level: GeoLevel) => {
+      setGeoLevel(level);
+      setSelectedGeography(null);
+      setRightPanelOpen(false);
+      // Clear state filter when switching to levels that don't require it
+      // (only city, zip, tract need state filtering)
+      if (!["city", "zip", "tract"].includes(level)) {
+        setSelectedState("");
       }
-    };
+    },
+    [setGeoLevel, setSelectedState, setSelectedGeography, setRightPanelOpen],
+  );
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
+  const handleSelectMetric = useCallback(
+    (id: string) => {
+      trackEvent("feature.map_filter", { metric_id: id, geo_level: geoLevel });
+      setSelectedMetric(id);
+    },
+    [geoLevel, setSelectedMetric],
+  );
+
+  // Deep-link navigation (/map?geo=...&id=...)
+  useMapDeepLinkNav({
+    mapRef: map,
+    mapLoaded,
+    onFeatureClick: handleFeatureClick,
+    onSelectSearchResult: handleSelectSearchResult,
+  });
+
+  // Camera: zoom on geo/state change + close context menu on map move
+  useMapCamera({
+    mapRef: map,
+    mapLoaded,
+    geoLevel,
+    selectedState,
+    searchNavigatedRef,
+    setContextMenu,
+  });
 
   // Fetch data immediately on mount and when parameters change (don't wait for map)
   useEffect(() => {
@@ -496,203 +255,6 @@ function MapPageInner() {
     fetchMapData,
   ]);
 
-  // Handle Mapbox resize when right panel or sidebar collapse state changes
-  useEffect(() => {
-    if (!map.current) return;
-
-    // Trigger a resize after a small delay to allow for animations
-    const timer = setTimeout(() => {
-      map.current?.resize();
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [rightPanelOpen, sidebarCollapsed]);
-
-  // Initialize map
-  useEffect(() => {
-    if (map.current || !mapContainer.current) return;
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [-96, 37.8],
-      zoom: GEO_ZOOM_LEVELS[geoLevel],
-      projection: "mercator",
-    });
-
-    map.current.on("load", () => setMapLoaded(true));
-    map.current.on(
-      "error",
-      (
-        e: mapboxgl.ErrorEvent & {
-          error?: { message?: string; status?: number };
-        },
-      ) => {
-        const msg = e.error?.message || "Unknown map error";
-        // Tile/source errors are transient — only set fatal error if the map never loaded
-        if (!map.current?.loaded()) {
-          console.error("[Map] fatal load error:", msg);
-          setMapError("Map failed to load");
-        } else {
-          console.warn("[Map] non-fatal error:", msg);
-        }
-      },
-    );
-
-    // Resize map when container dimensions change (handles client-side
-    // navigation where flex layout settles after the map initializes)
-    const ro = new ResizeObserver(() => map.current?.resize());
-    ro.observe(mapContainer.current);
-
-    return () => {
-      ro.disconnect();
-      if (map.current) {
-        try {
-          map.current.remove();
-        } catch {
-          // map.remove() aborts in-flight tile/style requests during teardown.
-          // When the map is torn down mid-initialization (dev StrictMode /
-          // Fast Refresh remounts), that abort can throw "signal is aborted
-          // without reason". Teardown errors are benign — swallow them.
-        }
-        map.current = null;
-      }
-    };
-  }, []);
-
-  // Process navigation params captured in pendingNavRef (e.g. /map?geo=metro&id=31080).
-  // Reads from the ref (populated during render) rather than searchParams to avoid
-  // the URL sync effect's replaceState stripping these one-time navigation params.
-  //
-  // Two fixes vs. the original implementation:
-  // 1. Looks up centroid coordinates from the backend (same API as the search bar)
-  //    so handleSelectSearchResult gets a real `center` instead of falling through
-  //    to the unreliable async Mapbox geocode fallback.
-  // 2. Opens the right panel and resizes the map BEFORE the flyTo so the camera
-  //    targets the final (narrower) container instead of the pre-panel width.
-  useEffect(() => {
-    if (!mapLoaded) return;
-
-    const nav = pendingNavRef.current;
-    if (!nav) return;
-
-    // Consume — prevent re-processing on subsequent renders
-    pendingNavRef.current = null;
-
-    const navigateToGeography = async () => {
-      // Resolve center coordinates: prefer URL params → backend → Mapbox geocode.
-      // We await all lookups here so handleSelectSearchResult always gets a real
-      // `center` and never falls through to its fire-and-forget geocode branch.
-      let center: [number, number] | undefined;
-      if (nav.lat && nav.lng) {
-        center = [parseFloat(nav.lng), parseFloat(nav.lat)];
-      } else {
-        // 1. Try backend geography search (same API the search bar uses)
-        try {
-          const results = await fetchGeographySearch(nav.name, {
-            type: nav.geo,
-            limit: 1,
-          });
-          const hit = results[0];
-          if (hit?.longitude != null && hit?.latitude != null) {
-            center = [hit.longitude, hit.latitude];
-          }
-        } catch {
-          /* fall through */
-        }
-
-        // 2. If backend has no coords (e.g. county centroids not in DB), use Mapbox geocoding
-        if (!center && mapboxgl.accessToken) {
-          try {
-            const query = encodeURIComponent(nav.name);
-            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${mapboxgl.accessToken}&limit=1&country=us`;
-            const res = await fetch(url);
-            const data = await res.json();
-            const feature = data.features?.[0];
-            if (feature?.center) {
-              center = feature.center as [number, number];
-            }
-          } catch {
-            /* no coords available — handleSelectSearchResult will try its own fallback */
-          }
-        }
-      }
-
-      // Open the panel FIRST so the map container reaches its final width
-      handleFeatureClick({
-        id: nav.id,
-        name: nav.name,
-        geoLevel: nav.geo as GeoLevel,
-        value: null,
-        stateAbbr: nav.state,
-      });
-
-      // Wait one frame for the DOM to reflow, then resize the map canvas
-      // to match the now-narrower container before issuing the flyTo.
-      await new Promise((r) => requestAnimationFrame(r));
-      map.current?.resize();
-
-      handleSelectSearchResult({
-        id: nav.id,
-        name: nav.name,
-        type: nav.geo as SearchResult["type"],
-        center,
-        state: nav.state,
-      });
-    };
-
-    navigateToGeography();
-  }, [mapLoaded, handleSelectSearchResult, handleFeatureClick]);
-
-  // Close context menu on map move/zoom
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-    const close = () => setContextMenu(null);
-    map.current.on("movestart", close);
-    return () => {
-      map.current?.off("movestart", close);
-    };
-  }, [mapLoaded]);
-
-  // Adjust zoom for different geo levels (skip if search or URL already handled navigation)
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-
-    // Skip if search or URL navigation recently positioned the map.
-    // Uses a timestamp (not a consumed boolean) so the guard survives
-    // React Strict Mode's double-invocation (mount → unmount → remount).
-    if (
-      searchNavigatedRef.current > 0 &&
-      Date.now() - searchNavigatedRef.current < 3000
-    ) {
-      return;
-    }
-
-    // City, ZIP, and Tract levels zoom to the selected state
-    const requiresState = ["city", "zip", "tract"].includes(geoLevel);
-    if (requiresState && selectedState && STATE_CENTERS[selectedState]) {
-      const center = STATE_CENTERS[selectedState];
-      map.current.flyTo({
-        center: [center.lng, center.lat],
-        zoom: center.zoom,
-        duration: 800,
-      });
-      return;
-    }
-
-    map.current.flyTo({
-      center: [-96, 37.8],
-      zoom: GEO_ZOOM_LEVELS[geoLevel],
-      duration: 500,
-    });
-  }, [geoLevel, selectedState]);
-
-  const toggleCategory = (id: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
-    );
-  };
-
   return (
     <div
       className="absolute inset-0 flex flex-col bg-surface overflow-hidden"
@@ -700,85 +262,26 @@ function MapPageInner() {
         fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
       }}
     >
-      {/* Map Controls Toolbar */}
-      <div className="bg-surface-container-lowest/80 backdrop-blur-md border-b border-outline-variant px-4 py-3 z-20 shadow-sm">
-        <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center gap-4">
-          {/* Top Row (Desktop) or Only Row (Mobile) */}
-          <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            {/* Breadcrumbs */}
-            <Breadcrumbs
-              items={[{ label: "Map" }]}
-              className="hidden md:flex text-sm"
-            />
-            <div className="hidden md:block h-5 w-px bg-outline-variant" />
-
-            {/* Sidebar Toggle */}
-            <button
-              className="p-2.5 text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-full transition-all duration-200 active:scale-95 flex-shrink-0"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle sidebar"
-            >
-              <MenuIcon />
-            </button>
-
-            {/* Search Bar - Flexible Width */}
-            <div className="flex-1 max-w-xl" data-tour="search-bar">
-              <SearchWidget
-                searchRef={searchRef}
-                searchQuery={searchQuery}
-                searchResults={searchResults}
-                searchLoading={searchLoading}
-                showSearchResults={showSearchResults}
-                onSearch={handleSearch}
-                onSelectResult={handleSelectSearchResult}
-                onFocus={() =>
-                  searchResults.length > 0 && setShowSearchResults(true)
-                }
-              />
-            </div>
-          </div>
-
-          {/* Desktop Geo Pills + Match Toggle */}
-          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-            <GeoLevelPills
-              geoLevel={geoLevel}
-              selectedMetric={selectedMetric}
-              selectedState={selectedState}
-              onGeoLevelChange={handleGeoLevelChange}
-              onStateChange={setSelectedState}
-            />
-            {quizCompleted && (
-              <EntitlementGate type="feature" id="market_match">
-                <ScoreTypeToggle
-                  activeMode={scoreViewMode}
-                  onChange={setScoreViewMode}
-                />
-              </EntitlementGate>
-            )}
-          </div>
-
-          {/* Mobile Geo Pills + Match Toggle (Stacked) */}
-          <div className="md:hidden w-full overflow-x-auto pb-1">
-            <div className="flex justify-center items-center gap-2 min-w-max px-2">
-              <GeoLevelPills
-                geoLevel={geoLevel}
-                selectedMetric={selectedMetric}
-                selectedState={selectedState}
-                onGeoLevelChange={handleGeoLevelChange}
-                onStateChange={setSelectedState}
-              />
-              {quizCompleted && (
-                <EntitlementGate type="feature" id="market_match">
-                  <ScoreTypeToggle
-                    activeMode={scoreViewMode}
-                    onChange={setScoreViewMode}
-                  />
-                </EntitlementGate>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <MapToolbar
+        searchRef={searchRef}
+        searchQuery={searchQuery}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        showSearchResults={showSearchResults}
+        onSearch={handleSearch}
+        onSelectSearchResult={handleSelectSearchResult}
+        onShowSearchResults={setShowSearchResults}
+        mobileMenuOpen={mobileMenuOpen}
+        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        geoLevel={geoLevel}
+        selectedMetric={selectedMetric}
+        selectedState={selectedState}
+        onGeoLevelChange={handleGeoLevelChange}
+        onStateChange={setSelectedState}
+        quizCompleted={quizCompleted}
+        scoreViewMode={scoreViewMode}
+        onScoreViewModeChange={setScoreViewMode}
+      />
 
       <div className="flex-1 flex h-0 overflow-hidden relative">
         {/* M3 Scrim - Mobile overlay backdrop */}
@@ -808,13 +311,7 @@ function MapPageInner() {
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebarCollapsed={handleToggleSidebarCollapsed}
             onToggleCategory={toggleCategory}
-            onSelectMetric={(id: string) => {
-              trackEvent("feature.map_filter", {
-                metric_id: id,
-                geo_level: geoLevel,
-              });
-              setSelectedMetric(id);
-            }}
+            onSelectMetric={handleSelectMetric}
             onGeoLevelChange={handleGeoLevelChange}
             onStateChange={setSelectedState}
             onForecastHorizonChange={setForecastHorizon}
@@ -831,55 +328,20 @@ function MapPageInner() {
         </div>
 
         {/* Map */}
-        <main className="flex-1 relative min-h-0" data-tour="map-area">
-          {mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
-              <p className="text-on-error-container font-medium">{mapError}</p>
-            </div>
-          )}
-          {effectiveDataLoading && (
-            <div className="absolute inset-0 z-10 animate-pulse bg-surface/80 p-4 flex flex-col">
-              {/* Skeleton: map area */}
-              <div className="flex-1 bg-surface-container-high rounded-xl" />
-              {/* Skeleton: legend bar */}
-              <div className="mt-3 h-10 w-64 bg-surface-container-high rounded-xl" />
-            </div>
-          )}
-          <div
-            ref={mapContainer}
-            className="absolute inset-0"
-            style={{ width: "100%", height: "100%" }}
-          />
-
-          <Legend
-            selectedMetric={effectiveMetric}
-            forecastHorizon={forecastHorizon}
-            geoLevel={geoLevel}
-            mapData={activeMapData}
-            overrideTitle={
-              scoreViewMode === "match" ? "Market Match Score" : undefined
-            }
-          />
-
-          {/* M3 Extended FAB */}
-          <button
-            onClick={() => setShowTableView(true)}
-            className="absolute bottom-8 right-3 md:bottom-10 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
-          >
-            <TableIcon />
-            <span className="hidden sm:inline font-medium">Table View</span>
-          </button>
-
-          {/* Data Table Modal */}
-          <DataTableModal
-            isOpen={showTableView}
-            onClose={() => setShowTableView(false)}
-            mapData={mapData}
-            selectedMetric={selectedMetric}
-            geoLevel={geoLevel}
-            forecastHorizon={forecastHorizon}
-          />
-        </main>
+        <MapCanvas
+          mapContainer={mapContainer}
+          mapError={mapError}
+          effectiveDataLoading={effectiveDataLoading}
+          effectiveMetric={effectiveMetric}
+          selectedMetric={selectedMetric}
+          forecastHorizon={forecastHorizon}
+          geoLevel={geoLevel}
+          activeMapData={activeMapData}
+          mapData={mapData}
+          scoreViewMode={scoreViewMode}
+          showTableView={showTableView}
+          onShowTableView={setShowTableView}
+        />
 
         {/* Right-click context menu */}
         {contextMenu && (
