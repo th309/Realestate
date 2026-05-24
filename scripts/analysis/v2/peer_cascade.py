@@ -35,7 +35,10 @@ def build_peer_index(panel: pd.DataFrame, *, n_state: int, n_division: int, n_re
     if missing:
         raise ValueError(f"panel missing columns: {missing}")
 
-    labels = panel.set_index("region_id")[["state_abbrev", "division", "region", "period_date"]]
+    if len(panel) == 0:
+        raise ValueError("panel is empty — nothing to index")
+
+    labels = panel.set_index(["region_id", "period_date"])[["state_abbrev", "division", "region"]]
 
     state_counts = (
         panel.groupby(["period_date", "state_abbrev"], observed=True).size().rename("n")
@@ -65,14 +68,12 @@ def resolve_peer_tier(region_id: str, period_date: pd.Timestamp, idx: PeerIndex)
     Returns (tier, (level, group_key)) where tier in {1,2,3,4}.
     Tier 4 ('national', 'US') is the always-available fallback.
 
-    Raises KeyError if region_id is not in the panel.
+    Raises KeyError if (region_id, period_date) is not in the peer index.
     """
-    if region_id not in idx.labels.index:
-        raise KeyError(f"region_id {region_id!r} not in peer index")
-
-    row = idx.labels.loc[region_id]
-    if isinstance(row, pd.DataFrame):
-        row = row[row["period_date"] == period_date].iloc[0]
+    try:
+        row = idx.labels.loc[(region_id, period_date)]
+    except KeyError:
+        raise KeyError(f"({region_id!r}, {period_date}) not in peer index")
 
     state, division, region = row["state_abbrev"], row["division"], row["region"]
 

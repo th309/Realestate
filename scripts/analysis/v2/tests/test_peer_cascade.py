@@ -70,3 +70,34 @@ def test_unknown_region_id_raises():
     idx = build_peer_index(panel, n_state=10, n_division=20, n_region=40)
     with pytest.raises(KeyError):
         resolve_peer_tier("Z-999", pd.Timestamp("2024-01-01"), idx)
+
+
+def test_resolves_correctly_when_market_present_in_one_period_but_queried_for_another():
+    panel = _df(
+        # RI-001 only in 2024-01
+        [("RI-001", "RI", "New England", "Northeast", "2024-01-01")]
+        # 20 MA markets in BOTH 2024-01 and 2024-02 (meets division threshold)
+        + [(f"MA-{i:03d}", "MA", "New England", "Northeast", "2024-01-01") for i in range(20)]
+        + [(f"MA-{i:03d}", "MA", "New England", "Northeast", "2024-02-01") for i in range(20)]
+    )
+    panel["period_date"] = pd.to_datetime(panel["period_date"])
+    idx = build_peer_index(panel, n_state=10, n_division=20, n_region=40)
+    # In 2024-01, RI has only 1 → falls to division. Division (RI+MA) has 21 → tier 2.
+    tier, _ = resolve_peer_tier("RI-001", pd.Timestamp("2024-01-01"), idx)
+    assert tier == 2
+    # Querying RI-001 in 2024-02 (where it doesn't exist) must raise KeyError, not IndexError
+    with pytest.raises(KeyError):
+        resolve_peer_tier("RI-001", pd.Timestamp("2024-02-01"), idx)
+
+
+def test_resolves_in_correct_period_when_market_present_in_many():
+    panel = _df(
+        [(f"CA-{i:03d}", "CA", "Pacific", "West", "2024-01-01") for i in range(15)]
+        + [(f"CA-{i:03d}", "CA", "Pacific", "West", "2024-02-01") for i in range(15)]
+        + [(f"CA-{i:03d}", "CA", "Pacific", "West", "2024-03-01") for i in range(15)]
+    )
+    panel["period_date"] = pd.to_datetime(panel["period_date"])
+    idx = build_peer_index(panel, n_state=10, n_division=20, n_region=40)
+    tier, peer_key = resolve_peer_tier("CA-005", pd.Timestamp("2024-02-01"), idx)
+    assert tier == 1
+    assert peer_key == ("state", "CA")
