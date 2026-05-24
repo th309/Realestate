@@ -55,6 +55,12 @@ def load_feature_panel(geo_level: GeoLevel, *, data_dir: Path = DEFAULT_DATA_DIR
     from disk are skipped silently — supported geo coverage varies per spec §5.
     Annual sources are forward-filled per region_id with a 13-month staleness cap.
 
+    Note: `limit=13` is row-based (13 consecutive NaN rows per region). For
+    a gap-free monthly panel this equals 13 months. If the monthly spine
+    has gaps (a region missing data for some months), 13 rows can span
+    more than 13 calendar months. The PIQ V2 panels are guaranteed
+    gap-free per (region_id, period_date) by the dump pipeline.
+
     Raises FileNotFoundError if NO source files exist for the geo level.
     """
     data_dir = Path(data_dir)
@@ -137,7 +143,8 @@ def load_feature_panel(geo_level: GeoLevel, *, data_dir: Path = DEFAULT_DATA_DIR
         for cols in annual_cols_by_source.values():
             all_annual_cols.extend(cols)
 
-        # Forward-fill: group by region_id, fill only annual columns with limit=13
+        # Forward-fill annual sources within each region, 13 ROWS (= 13 months for
+        # our gap-free monthly spine). Sort already done above.
         result[all_annual_cols] = result.groupby("region_id")[all_annual_cols].ffill(limit=13)
 
     # Extract feature columns (all columns except region_id and period_date)
