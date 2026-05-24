@@ -118,7 +118,9 @@ describe('Scoring Pipeline Integration', () => {
             return createMockQueryBuilder(mockPercentiles);
           case 'geography_inheritance':
             return createMockQueryBuilder(mockInheritanceChain);
+          // reads hit the `propertyiq_scores` view; writes hit the v2 base table
           case 'propertyiq_scores':
+          case 'propertyiq_scores_v2':
             return {
               ...createMockQueryBuilder(),
               upsert: jest.fn().mockResolvedValue({ error: null }),
