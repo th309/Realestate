@@ -56,7 +56,7 @@ def rank_features(
         )
 
     shap_sums = pd.Series(0.0, index=feature_cols)
-    n_obs_seen = 0
+    n_rows_seen = 0
 
     for i in range(2, len(years)):
         train_years = years[:i]
@@ -79,17 +79,17 @@ def rank_features(
         explainer = shap.TreeExplainer(model)
         sv = explainer.shap_values(X_te)
         shap_sums = shap_sums.add(
-            pd.Series(np.abs(sv).mean(axis=0), index=feature_cols),
+            pd.Series(np.abs(sv).sum(axis=0), index=feature_cols),
             fill_value=0,
         )
-        n_obs_seen += 1
+        n_rows_seen += len(test)
 
-    if n_obs_seen == 0:
+    if n_rows_seen == 0:
         raise RuntimeError(
             "No usable walk-forward folds — check panel size and year coverage"
         )
 
-    mean_abs_shap = (shap_sums / n_obs_seen).sort_values(ascending=False)
+    mean_abs_shap = (shap_sums / n_rows_seen).sort_values(ascending=False)
     return pd.DataFrame(
         {
             "feature": mean_abs_shap.index,
