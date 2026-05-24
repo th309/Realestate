@@ -29,17 +29,27 @@ def test_forward_return_is_simple_pct_change_over_36_months():
 
 
 def test_excess_is_own_return_minus_peer_mean():
-    # Build 40 months of continuous data (to support 36-month forward returns)
-    panel_rows = []
-    for region in [f"CA-{i:03d}" for i in range(10)]:
-        for month in range(40):
-            date = pd.Timestamp("2020-01-01") + pd.DateOffset(months=month)
-            # Each region has slightly different growth to create different returns
-            region_idx = int(region.split("-")[1])
-            zhvi_value = 100 * (1 + month * 0.01 + region_idx * 0.001)
-            panel_rows.append((region, date, zhvi_value))
+    """10 CA counties with deterministic ZHVI trajectories. Each county i has
+    its ZHVI grow linearly so that the 36-month return at t=2020-01-01 is
+    exactly (i+1) * 0.10. The state mean of those returns is 0.55. Therefore
+    excess for CA-000 must be exactly 0.10 - 0.55 = -0.45.
 
-    panel = _zhvi_panel(panel_rows)
+    Continuous monthly panel is required because compute_forward_returns uses
+    pivot_table + positional shift; sparse panels don't have a valid t+36
+    position relative to t=0.
+    """
+    rows = []
+    for i in range(10):
+        # Each county starts at zhvi=100 at 2020-01-01 and ends at
+        # 100 * (1 + (i+1)*0.10) at 2023-01-01. Linear interpolation between.
+        start_value = 100.0
+        end_value = 100.0 * (1.0 + (i + 1) * 0.10)
+        for m in range(37):  # months 0..36 inclusive
+            d = pd.Timestamp("2020-01-01") + pd.DateOffset(months=m)
+            v = start_value + (end_value - start_value) * (m / 36.0)
+            rows.append((f"CA-{i:03d}", d, v))
+    panel = pd.DataFrame(rows, columns=["region_id", "period_date", "zhvi"])
+
     fr = compute_forward_returns(panel, horizon_months=36)
 
     geos = pd.DataFrame({
@@ -52,10 +62,18 @@ def test_excess_is_own_return_minus_peer_mean():
     idx = build_peer_index(geos, n_state=5, n_division=20, n_region=40)
     ex = compute_excess(fr, idx, horizon_months=36)
 
-    # Should have excess returns for the first 4 months (which have t+36 observations)
-    assert len(ex) > 0
-    # All should have peer_tier=1 (state level, since n_state=5 >= threshold 5)
-    assert (ex["peer_tier"] == 1).all()
+    # CA-000's 3-yr return at 2020-01-01 is (110/100) - 1 = 0.10
+    # State mean return = mean(0.10, 0.20, ..., 1.00) = 0.55
+    # Therefore excess_3y[CA-000, 2020-01-01] = 0.10 - 0.55 = -0.45
+    e_000 = ex[
+        (ex["region_id"] == "CA-000")
+        & (ex["period_date"] == pd.Timestamp("2020-01-01"))
+    ]["excess_3y"].iloc[0]
+    assert abs(e_000 - (0.10 - 0.55)) < 1e-9, f"expected -0.45, got {e_000}"
+
+    # All 10 markets are CA (n=10 >= n_state=5) so all rows must be peer_tier=1
+    ex_2020_01 = ex[ex["period_date"] == pd.Timestamp("2020-01-01")]
+    assert (ex_2020_01["peer_tier"] == 1).all()
 
 
 def test_forward_return_handles_month_end_dates():
