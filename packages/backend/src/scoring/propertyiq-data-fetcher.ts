@@ -27,7 +27,7 @@ import {
  *   - rf_sold_above_list, rf_median_dom, months_of_supply (dynamic key)
  *   - median_price (from median_sale_price)
  */
-export async function fetchV4Metrics(
+export async function fetchPropertyIqMetrics(
   supabase: SupabaseClient,
   geography: GeographyLevel,
   periodDate: string,

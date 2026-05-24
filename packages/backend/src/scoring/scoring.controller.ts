@@ -325,7 +325,7 @@ export class ScoringController {
     required: false,
     description: 'Period date (YYYY-MM-DD), defaults to latest Redfin date',
   })
-  async calculateV4Scores(
+  async calculatePropertyIqScores(
     @Param('geography') geography: string,
     @Query('period_date') periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
@@ -335,7 +335,7 @@ export class ScoringController {
         `Invalid geography: ${geography}. Must be one of: ${validGeos.join(', ')}`,
       );
     }
-    return this.scoringService.calculateV4Scores(
+    return this.scoringService.calculatePropertyIqScores(
       geography as GeographyLevel,
       periodDate,
     );

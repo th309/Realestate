@@ -1,4 +1,4 @@
-import { mergeMosFallback } from '../v4-scoring-data-fetcher';
+import { mergeMosFallback } from '../propertyiq-data-fetcher';
 
 describe('mergeMosFallback', () => {
   it('fills missing months_of_supply from the calculated map; legacy wins', () => {

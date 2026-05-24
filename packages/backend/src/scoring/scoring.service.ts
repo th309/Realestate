@@ -8,8 +8,8 @@
  * computed but can still be read from historical DB rows.
  *
  * Delegates to:
- * - v4-scoring-engine.ts: Demand-signal calculation (z-scores, percentile, re-centering)
- * - v4-scoring-data-fetcher.ts: Redfin metric assembly
+ * - propertyiq-scoring-engine.ts: Demand-signal calculation (z-scores, percentile, re-centering)
+ * - propertyiq-data-fetcher.ts: Redfin metric assembly
  * - scoring-queries.ts: Score reads from propertyiq_scores table
  * - scoring-persistence.ts: Score writes (upsert with retry)
  * - scoring-distribution.ts: Score distribution analysis
@@ -20,17 +20,9 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
 import { CalibrationService } from './calibration/calibration.service';
-import {
-  FORMULA_WEIGHTS,
-  scoreToGrade,
-  ScoreType,
-  GeographyLevel,
-} from './formula-weights';
-import {
-  calculateV4Scores as runV4Engine,
-  V4ScoreResult,
-} from './v4-scoring-engine';
-import { fetchV4Metrics } from './v4-scoring-data-fetcher';
+import { scoreToGrade, ScoreType, GeographyLevel } from './formula-weights';
+import { calculatePropertyIqScores as runEngine } from './propertyiq-scoring-engine';
+import { fetchPropertyIqMetrics } from './propertyiq-data-fetcher';
 import {
   GeographyType,
   LocationMetrics,
@@ -41,14 +33,7 @@ import {
   ComponentStatus,
   SCORE_HISTORY_MONTHS_MAX,
 } from './scoring.types';
-import {
-  getAllMetricNames,
-  calculateZScores,
-  applyFormula,
-  normalizeScores,
-  calculateComponentBreakdown,
-  calculateConfidence,
-} from './scoring-engine';
+import { calculateConfidence } from './scoring-engine';
 import { getLatestRedfinDate, fetchAllMetrics } from './scoring-data-fetcher';
 import {
   getLatestScoreDate,
@@ -100,14 +85,14 @@ export class ScoringService {
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
     // v4: delegate to the demand-signal engine
-    return this.calculateV4Scores(geography, periodDate);
+    return this.calculatePropertyIqScores(geography, periodDate);
   }
 
   /**
    * Calculate v4 demand-signal scores for all locations at a given geography level.
    * Uses only 3 Redfin metrics (sold_above_list, median_dom, months_of_supply).
    */
-  async calculateV4Scores(
+  async calculatePropertyIqScores(
     geography: GeographyLevel,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
@@ -119,13 +104,17 @@ export class ScoringService {
     }
 
     // 2. Fetch only v4 metrics (3 Redfin columns)
-    const locations = await fetchV4Metrics(this.supabase, geography, scoreDate);
+    const locations = await fetchPropertyIqMetrics(
+      this.supabase,
+      geography,
+      scoreDate,
+    );
     if (locations.length === 0) {
       return { calculated: 0, errors: 0, scoreDate };
     }
 
     // 3. Calculate scores using v4 engine
-    const results = runV4Engine(locations, geography);
+    const results = runEngine(locations, geography);
 
     // 4. Build rows for persistence
     // Note: formula_version is NOT a column in propertyiq_scores_v2 — omit it.

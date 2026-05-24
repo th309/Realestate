@@ -11,10 +11,10 @@
 
 import {
   GeographyLevel,
-  V4_FORMULA_METRICS,
-  V4_METRIC_DIRECTIONS,
-  V4_ZERO_CROSSING,
-  V4_FORMULA_VERSION,
+  PROPERTYIQ_FORMULA_METRICS,
+  PROPERTYIQ_METRIC_DIRECTIONS,
+  PROPERTYIQ_ZERO_CROSSING,
+  PROPERTYIQ_FORMULA_VERSION,
   scoreToGrade,
   getConfidenceLevel,
 } from './formula-weights';
@@ -24,7 +24,7 @@ import type { LocationMetrics, ConfidenceLevel } from './scoring.types';
 // Types
 // ============================================================================
 
-export interface V4ScoreResult {
+export interface PropertyIqScoreResult {
   locationId: string;
   locationName: string;
   score: number; // 1-99
@@ -54,7 +54,7 @@ function getMetricValue(loc: LocationMetrics, metric: string): number | null {
       return loc.rf_median_dom ?? null;
     case 'months_of_supply':
       // months_of_supply is not on the standard LocationMetrics interface
-      // (it's a Redfin column fetched by fetchV4Metrics). We access it via
+      // (it's a Redfin column fetched by fetchPropertyIqMetrics). We access it via
       // a dynamic key set by the fetcher.
       return (loc as Record<string, any>).months_of_supply ?? null;
     default:
@@ -169,15 +169,15 @@ function recenterScore(pctRank: number, zeroCrossing: number): number {
  * Calculate v4 confidence based on Redfin data completeness.
  * 3/3 metrics present = 100%, 2/3 = 67%, 1/3 = 33%, 0/3 = 0%.
  */
-function calculateV4Confidence(loc: LocationMetrics): number {
+function calculatePropertyIqConfidence(loc: LocationMetrics): number {
   let available = 0;
-  for (const metric of V4_FORMULA_METRICS) {
+  for (const metric of PROPERTYIQ_FORMULA_METRICS) {
     const val = getMetricValue(loc, metric);
     if (val != null && isFinite(val)) {
       available++;
     }
   }
-  return Math.round((available / V4_FORMULA_METRICS.length) * 100);
+  return Math.round((available / PROPERTYIQ_FORMULA_METRICS.length) * 100);
 }
 
 // ============================================================================
@@ -195,15 +195,15 @@ function calculateV4Confidence(loc: LocationMetrics): number {
  * 5. Grade using standard scoreToGrade()
  * 6. Confidence based on metric completeness
  */
-export function calculateV4Scores(
+export function calculatePropertyIqScores(
   locations: LocationMetrics[],
   geography: GeographyLevel,
-): V4ScoreResult[] {
+): PropertyIqScoreResult[] {
   if (locations.length === 0) return [];
 
   // Step 1: Compute z-scores for each metric
   const zScoreMaps = new Map<string, Map<string, number>>();
-  for (const metric of V4_FORMULA_METRICS) {
+  for (const metric of PROPERTYIQ_FORMULA_METRICS) {
     zScoreMaps.set(metric, computeZScores(locations, metric));
   }
 
@@ -217,11 +217,11 @@ export function calculateV4Scores(
     let signal = 0;
     let metricCount = 0;
 
-    for (const metric of V4_FORMULA_METRICS) {
+    for (const metric of PROPERTYIQ_FORMULA_METRICS) {
       const zMap = zScoreMaps.get(metric)!;
       const z = zMap.get(loc.location_id);
       if (z == null) continue;
-      const direction = V4_METRIC_DIRECTIONS[metric];
+      const direction = PROPERTYIQ_METRIC_DIRECTIONS[metric];
       signal += z * direction;
       metricCount++;
     }
@@ -236,11 +236,11 @@ export function calculateV4Scores(
   const pctRankMap = percentileRank(signalEntries);
 
   // Step 4 & 5 & 6: Re-center, grade, confidence
-  const zeroCrossing = V4_ZERO_CROSSING[geography];
-  const results: V4ScoreResult[] = [];
+  const zeroCrossing = PROPERTYIQ_ZERO_CROSSING[geography];
+  const results: PropertyIqScoreResult[] = [];
 
   for (const loc of locations) {
-    const confidence = calculateV4Confidence(loc);
+    const confidence = calculatePropertyIqConfidence(loc);
     const confidenceLevel = getConfidenceLevel(confidence);
     const signal = signalMap.get(loc.location_id);
     const pctRank = pctRankMap.get(loc.location_id);
@@ -275,4 +275,4 @@ export function calculateV4Scores(
 }
 
 /** Current formula version for v4 scores. */
-export const FORMULA_VERSION = V4_FORMULA_VERSION;
+export const FORMULA_VERSION = PROPERTYIQ_FORMULA_VERSION;
