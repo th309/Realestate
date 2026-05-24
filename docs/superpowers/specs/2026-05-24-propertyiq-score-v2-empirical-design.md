@@ -28,10 +28,24 @@ peer_return_3y(g, t)   = mean over peers in P(g) of return_3y(peer, t)
 excess_3y(g, t)        = return_3y(g, t) − peer_return_3y(g, t)
 ```
 
-Peer set `P(g)`:
+Peer set `P(g, t)` uses a **cascade** to handle small states gracefully:
 
-- **metro / county / ZIP** → all geos of the same level within the same state (state-relative)
-- **state** → all 50 states + DC (nationally-relative)
+For metro / county / ZIP, evaluate in order and use the first tier that has ≥ N markets in period t:
+
+| Tier | Peer set                                                                     | Threshold               |
+| ---- | ---------------------------------------------------------------------------- | ----------------------- |
+| 1    | All geos of the same level within the same **state**                         | n ≥ N_state             |
+| 2    | All geos of the same level within the same **Census division** (9 divisions) | n ≥ N_division          |
+| 3    | All geos of the same level within the same **Census region** (4 regions)     | n ≥ N_region            |
+| 4    | All geos of the same level **nationally**                                    | always (final fallback) |
+
+For state model: peer set is always all 50 states + DC. No cascade.
+
+Thresholds **N_state, N_division, N_region are determined empirically in P1** (read-only prototype using `scripts/analysis/within_state_prototype.py` and `anchor_walkforward.py`). The previous chat's exploratory work suggests N_state ≈ 10–20 is the right range; we lock the values from real backtest IC.
+
+Each scored geo's record carries a `peer_tier` field (1/2/3/4) so the UI can disclose **"scored within state"** vs **"scored within division (state too small)"**.
+
+Division/region mapping comes from `census_division_mapping` (table already exists).
 
 The **score** is the within-peer percentile of the model's predicted `excess_3y`, re-centered via isotonic-fit zero-crossing so that **50 = peer average**, clamped to 1–99.
 
@@ -132,9 +146,13 @@ Computed from the live Supabase DB census, 2026-05-24.
 ```
 zhvi(g, t)            = zillow_<L>.value WHERE metric_name='zhvi'
 return_3y(g, t)       = zhvi(g, t+36mo) / zhvi(g, t) − 1
-peer_return_3y(g, t)  = mean over peers in P(g)  [ return_3y(peer, t) ]
+peer_set(g, t)        = cascade resolver from §2 (state → division → region → national)
+peer_return_3y(g, t)  = mean over peers in peer_set(g, t)  [ return_3y(peer, t) ]
 excess_3y(g, t)       = return_3y(g, t) − peer_return_3y(g, t)
+peer_tier(g, t)       = which tier of the cascade was used (1/2/3/4)
 ```
+
+Note: `excess_3y` is computed against whatever peer tier the cascade selected for that (g, t). A market in RI county may have `excess_3y` measured vs Census division (tier 2) rather than vs state, because RI has too few counties. This is the honest comparison — the score then ranks the market against the same peer set.
 
 Computed from raw ZHVI long tables (not `zhvi_forward_returns` — that table only covers 2020+; raw ZHVI goes back to 2000+ giving more backtest folds).
 
@@ -215,12 +233,17 @@ Mitigation:
 ## 8. Deliverables
 
 1. **Per-geo-level model artifacts** in new `scoring_model_artifacts` table:
+
    ```
    geo_level | fit_date | formula_version | feature_names[] |
-   feature_means[] | feature_stdevs[] | ridge_weights[] |
+   feature_means[] | feature_stdevs[] | ridge_weights[] | ridge_alpha |
    zero_crossing | bootstrap_ic_5pct | bootstrap_hit_5pct |
-   bootstrap_spread_5pct | bootstrap_mono_freq
+   bootstrap_spread_5pct | bootstrap_mono_freq |
+   peer_cascade_thresholds (JSON: {N_state, N_division, N_region})
    ```
+
+   `propertyiq_scores_v2` also gains a `peer_tier` column (1=state, 2=division, 3=region, 4=national) so the resolver can disclose which peer set was used per score.
+
 2. **`recompute_scores.ts`** — reads active artifacts + latest source data → writes scores to `propertyiq_scores_v2` with the new `formula_version` (does NOT overwrite live in P5)
 3. **Resolver refactor** in `packages/backend/src/scoring/` — load active artifact, no hardcoded formula
 4. **Updated validation report** via the existing `piq-validation-report` skill: per-level feature list, bootstrap CIs, all 9 tests, decile tables
@@ -235,38 +258,38 @@ Mitigation:
 
 ## 10. Rollout
 
-| Phase         | Work                                                                                                                                                                 | Gate                                         |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| P0            | Extend `county_backtest.py` harness to metro + ZIP + state                                                                                                           | Existing county IC reproduced (sanity check) |
-| P1            | LightGBM+SHAP discovery on metro; bar test                                                                                                                           | Metro passes bar OR documented failure       |
-| P2            | Same for county                                                                                                                                                      | Same gate                                    |
-| P3            | Same for ZIP                                                                                                                                                         | Same gate                                    |
-| P4            | Same for state (relaxed bar)                                                                                                                                         | Honest pass/fail                             |
-| P5            | Persist artifacts; refactor resolver; **compute candidate scores into `propertyiq_scores_v2` with new `formula_version` value alongside live scores (no overwrite)** | Build + scoring tests green                  |
-| P6            | Build side-by-side live-vs-candidate comparison report; stakeholder review                                                                                           | Stakeholder sign-off                         |
-| P7a           | Canary: feature flag flip for internal users only                                                                                                                    | No surprises ≥ 7 days                        |
-| P7b           | Flip default. Live scores now run on new formula. Old `formula_version` preserved for audit/rollback.                                                                | Score Health admin card green for 30 days    |
-| P8 (parallel) | Vintaging cron live; collect 12 months of point-in-time snapshots for V2                                                                                             | V2 work begins ~12 months later              |
+| Phase         | Work                                                                                                                                                                                                   | Gate                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| P0            | Extend `county_backtest.py` harness to metro + ZIP + state; implement peer-set cascade resolver                                                                                                        | Existing county IC reproduced (sanity check); cascade resolver returns correct tier for known small states (RI, VT, HI, AK) |
+| P1            | Empirically determine N_state / N_division / N_region thresholds (extend `within_state_prototype.py` and `anchor_walkforward.py`); LightGBM+SHAP discovery on metro using the chosen cascade; bar test | Thresholds locked from real IC; metro passes bar OR documented failure                                                      |
+| P2            | Same for county                                                                                                                                                                                        | Same gate                                                                                                                   |
+| P3            | Same for ZIP                                                                                                                                                                                           | Same gate                                                                                                                   |
+| P4            | Same for state (relaxed bar)                                                                                                                                                                           | Honest pass/fail                                                                                                            |
+| P5            | Persist artifacts; refactor resolver; **compute candidate scores into `propertyiq_scores_v2` with new `formula_version` value alongside live scores (no overwrite)**                                   | Build + scoring tests green                                                                                                 |
+| P6            | Build side-by-side live-vs-candidate comparison report; stakeholder review                                                                                                                             | Stakeholder sign-off                                                                                                        |
+| P7a           | Canary: feature flag flip for internal users only                                                                                                                                                      | No surprises ≥ 7 days                                                                                                       |
+| P7b           | Flip default. Live scores now run on new formula. Old `formula_version` preserved for audit/rollback.                                                                                                  | Score Health admin card green for 30 days                                                                                   |
+| P8 (parallel) | Vintaging cron live; collect 12 months of point-in-time snapshots for V2                                                                                                                               | V2 work begins ~12 months later                                                                                             |
 
 ## 11. Explicit non-goals
 
 - Don't change the score range (1–99) or "50 = peer average" semantic
 - Don't bulk-recompute history
-- Don't change `propertyiq_scores_v2` schema except adding `formula_version`
+- Don't change `propertyiq_scores_v2` schema except adding `formula_version` and `peer_tier`
 - Don't resurrect legacy score types (homeready/investoredge/markethealth)
 - Don't ship a state-level model that fails its bar — document the gap and ship without it
 
 ## 12. Risks and how we mitigate them
 
-| Risk                                                                | Mitigation                                                                                                                                                                                                 |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bar is unreachable on revised Redfin data                           | Honest "we don't ship this level" outcome; vintaging cron unlocks V2                                                                                                                                       |
-| Feature drift (a feature that worked in 2018 stops working in 2024) | Validation test #7 (signal decay) gates the ship; refit on schedule                                                                                                                                        |
-| Few-folds overfitting via SHAP-then-ridge                           | Bootstrap-95% CI gate is the discipline; year-clustered resampling preserves cross-sectional structure                                                                                                     |
-| Score discontinuity from old → new formula                          | P5/P6/P7a parallel-write + canary + comparison report; never a silent flip                                                                                                                                 |
-| Within-state n is tiny for small states (e.g., RI has 5 counties)   | Forward selection runs on the full pooled dataset; the **percentile-rank** step is what's state-relative. Small states still get scored but the percentile is computed across whatever counties they have. |
-| State model fails its relaxed bar                                   | Don't ship it; document the gap. Geo levels still ship.                                                                                                                                                    |
-| Look-ahead bias from revised Redfin                                 | V1 disclosure + V2 vintaged re-validation                                                                                                                                                                  |
+| Risk                                                                | Mitigation                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bar is unreachable on revised Redfin data                           | Honest "we don't ship this level" outcome; vintaging cron unlocks V2                                                                                                                                                                                                                  |
+| Feature drift (a feature that worked in 2018 stops working in 2024) | Validation test #7 (signal decay) gates the ship; refit on schedule                                                                                                                                                                                                                   |
+| Few-folds overfitting via SHAP-then-ridge                           | Bootstrap-95% CI gate is the discipline; year-clustered resampling preserves cross-sectional structure                                                                                                                                                                                |
+| Score discontinuity from old → new formula                          | P5/P6/P7a parallel-write + canary + comparison report; never a silent flip                                                                                                                                                                                                            |
+| Within-state n is tiny for small states (e.g., RI has 5 counties)   | **Peer-set cascade (§2):** state → Census division → Census region → national. Markets in small states are scored against their division. UI surfaces `peer_tier` so users know "scored vs state" vs "scored vs division (state too small)." Thresholds determined empirically in P1. |
+| State model fails its relaxed bar                                   | Don't ship it; document the gap. Geo levels still ship.                                                                                                                                                                                                                               |
+| Look-ahead bias from revised Redfin                                 | V1 disclosure + V2 vintaged re-validation                                                                                                                                                                                                                                             |
 
 ## 13. References
 
