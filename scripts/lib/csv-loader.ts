@@ -7,6 +7,7 @@
  */
 
 import { readFileSync, existsSync } from "fs";
+import type { Readable } from "stream";
 import { join } from "path";
 import axios, { AxiosError } from "axios";
 import { parse as csvParse } from "csv-parse/sync";
@@ -43,6 +44,61 @@ function isRetryableError(err: unknown): boolean {
   }
   // Non-axios errors (e.g. our own empty-body throw) are also retryable.
   return true;
+}
+
+/**
+ * Open a streaming HTTP connection to a remote URL and return the response
+ * body as a Node Readable stream. The caller is responsible for consuming
+ * the stream (and handling any mid-stream errors via the stream's "error"
+ * event or stream/promises pipeline).
+ *
+ * Use this instead of downloadFromUrl when the file is too large to buffer
+ * entirely in memory (e.g. 400MB+ CSVs). Retry logic covers connection
+ * failures only — once the stream is handed back, mid-stream errors are the
+ * caller's responsibility.
+ *
+ * Defaults match downloadFromUrl: 5min timeout, 3 retries, browser UA.
+ */
+export async function downloadStream(
+  url: string,
+  options: DownloadOptions = {},
+): Promise<Readable> {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const headers = {
+    "User-Agent": DEFAULT_USER_AGENT,
+    Accept: "*/*",
+    ...(options.headers ?? {}),
+  };
+
+  console.log(`  Streaming from: ${url.substring(0, 80)}...`);
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.get(url, {
+        responseType: "stream",
+        timeout: timeoutMs,
+        headers,
+      });
+      return response.data as Readable;
+    } catch (err) {
+      lastErr = err;
+      const retryable = isRetryableError(err);
+      const attemptsLeft = maxRetries - attempt;
+      if (!retryable || attemptsLeft <= 0) {
+        throw err;
+      }
+      const backoffMs = 30_000 * Math.pow(2, attempt);
+      const reason = err instanceof Error ? err.message : String(err);
+      console.log(
+        `  Stream attempt ${attempt + 1}/${maxRetries + 1} failed (${reason}). Retrying in ${backoffMs / 1000}s...`,
+      );
+      await sleep(backoffMs);
+    }
+  }
+
+  throw lastErr;
 }
 
 /**

@@ -9,10 +9,8 @@
  *   npx tsx scripts/sources/redfin-data-center/import-redfin-dc.ts --full
  */
 
-import { parse as csvParse } from "csv-parse/sync";
 import { getSupabaseClient } from "../../lib/db-client";
-import { batchUpsert } from "../../lib/batch-upsert";
-import { downloadFromUrl } from "../../lib/csv-loader";
+import { downloadStream } from "../../lib/csv-loader";
 import {
   getIncrementalCutoff,
   parseIncrementalFlagsFromArgv,
@@ -34,10 +32,16 @@ import {
   type DashboardConfig,
 } from "./redfin-dc-config";
 import { fetchIndex, resolveCsvUrl } from "./redfin-dc-index-fetcher";
-import { processRows } from "./redfin-dc-csv-processor";
 import { runMonthsOfSupplyHook } from "./redfin-dc-mos-hook";
+import {
+  runStreamingPipeline,
+  PIPELINE_BATCH_SIZE,
+} from "./redfin-dc-streaming";
 
-const UPSERT_BATCH_SIZE = 1000;
+// processRows is kept exported from redfin-dc-csv-processor for other callers.
+// importGeo no longer uses it — streaming pipeline handles row-by-row mapping.
+
+const UPSERT_BATCH_SIZE = PIPELINE_BATCH_SIZE;
 
 function argValue(flag: string): string | null {
   const argv = process.argv.slice(2);
@@ -74,45 +78,31 @@ async function importGeo(
   try {
     const url = resolveCsvUrl(index, dash.indexKey, geoLevel, target.path);
     console.log(`\n--- ${dashboardId}/${geoLevel} -> ${target.table} ---`);
-    const buf = await downloadFromUrl(url);
-    let rows = csvParse(buf, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      relax_column_count: true,
-    }) as Record<string, string>[];
-    result.totalRowsLoaded = rows.length;
-    if (rowLimit) rows = rows.slice(0, rowLimit);
-    if (dateCutoff) {
-      rows = rows.filter((r) => {
-        const pe = (r["PERIOD END"] ?? r["period end"] ?? "").trim();
-        return !pe || pe >= dateCutoff;
-      });
-    }
 
+    const stream = await downloadStream(url);
     const knownColumns = getKnownColumns(dash, target);
-    const { records, skipped, latestPeriodEnd } = await processRows(
-      supabase,
-      rows,
-      geoLevel,
-      target,
-      knownColumns,
-    );
-    result.rowsSkippedByMapping = skipped;
-    result.latestPeriodDate = latestPeriodEnd;
 
-    const up = await batchUpsert(supabase, records, {
-      tableName: target.table,
-      conflictKeys: target.conflictKeys,
-      batchSize: UPSERT_BATCH_SIZE,
+    const pipelineResult = await runStreamingPipeline({
+      supabase,
+      stream,
+      target,
+      geoLevel,
+      knownColumns,
+      dateCutoff,
+      rowLimit,
+      upsertBatchSize: UPSERT_BATCH_SIZE,
     });
-    result.recordsInserted = up.inserted;
-    result.recordsFailed = up.failed;
-    result.errors.push(...up.errors);
+
+    result.totalRowsLoaded = pipelineResult.totalRowsLoaded;
+    result.rowsSkippedByMapping = pipelineResult.rowsSkippedByMapping;
+    result.latestPeriodDate = pipelineResult.latestPeriodDate;
+    result.recordsInserted = pipelineResult.recordsInserted;
+    result.recordsFailed = pipelineResult.recordsFailed;
+    result.errors.push(...pipelineResult.errors);
     result.status =
-      up.failed === 0 && up.inserted > 0
+      pipelineResult.recordsFailed === 0 && pipelineResult.recordsInserted > 0
         ? "success"
-        : up.inserted > 0
+        : pipelineResult.recordsInserted > 0
           ? "partial"
           : "failed";
   } catch (err) {
