@@ -84,5 +84,62 @@ export async function fetchV4Metrics(
     page += 1;
   }
 
+  // Fallback: fill any region missing legacy months_of_supply from the computed
+  // source (new-format housing_market -> calculated_metrics). Bulk (one paged
+  // query), and skipped entirely when legacy MoS is already complete.
+  const needsFallback = results.some(
+    (r) => (r as Record<string, any>).months_of_supply == null,
+  );
+  if (needsFallback) {
+    const calcMos = await fetchCalculatedMosMap(
+      supabase,
+      geography,
+      redfinDate,
+    );
+    mergeMosFallback(results as Array<Record<string, any>>, calcMos);
+  }
+
   return results;
+}
+
+/** Bulk-load computed months_of_supply for a geo+period into Map<geoId, mos>. */
+export async function fetchCalculatedMosMap(
+  supabase: SupabaseClient,
+  geography: GeographyLevel,
+  periodEndDate: string,
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  let page = 0;
+  while (true) {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('calculated_metrics')
+      .select('geography_id, months_of_supply, period_date')
+      .eq('geography_type', String(geography))
+      .eq('period_date', periodEndDate)
+      .not('months_of_supply', 'is', null)
+      .range(from, to);
+    if (error) throw new Error(`calc MoS fetch failed: ${error.message}`);
+    if (!data || data.length === 0) break;
+    for (const row of data as Record<string, any>[]) {
+      map.set(String(row.geography_id), Number(row.months_of_supply));
+    }
+    if (data.length < PAGE_SIZE) break;
+    page += 1;
+  }
+  return map;
+}
+
+/** Fill any location missing months_of_supply from the calculated map. Legacy wins. */
+export function mergeMosFallback(
+  locations: Array<Record<string, any>>,
+  calcMos: Map<string, number>,
+): void {
+  for (const loc of locations) {
+    if (loc.months_of_supply == null) {
+      const fallback = calcMos.get(String(loc.location_id));
+      if (fallback != null) loc.months_of_supply = fallback;
+    }
+  }
 }
