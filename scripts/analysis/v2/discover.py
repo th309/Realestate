@@ -126,7 +126,15 @@ def discover(geo_level: GeoLevel, *, data_dir: Path, output_dir: Path, n_bootstr
         on=["region_id", "period_month"], how="inner",
     )
     joined["year"] = joined["period_date"].dt.year
-    print(f"Joined: {len(joined):,} rows")
+    print(f"Joined (pre-window-filter): {len(joined):,} rows")
+
+    # Restrict to the feature window. ZHVI extends back to 2000 but RFDC starts
+    # 2012-2019; pre-2012 rows have only Census filled in, which makes every
+    # RFDC feature look ~50%+ null in the joined panel even though it's fully
+    # populated post-2012. Cut to 2012-01-01 so coverage is honest.
+    FEATURE_WINDOW_START = pd.Timestamp("2012-01-01")
+    joined = joined[joined["period_date"] >= FEATURE_WINDOW_START].copy()
+    print(f"Joined (post-{FEATURE_WINDOW_START.date()}): {len(joined):,} rows")
 
     if len(joined) < 1000:
         return _write_report(
@@ -134,9 +142,12 @@ def discover(geo_level: GeoLevel, *, data_dir: Path, output_dir: Path, n_bootstr
             error=f"Panel too small ({len(joined)}) — discovery aborted",
         )
 
-    # 6. Filter features by coverage (≥50% non-null); median-impute the rest
-    usable = [c for c in fp.feature_cols if joined[c].notna().mean() >= 0.5]
-    print(f"Usable features (≥50% coverage): {len(usable)} / {len(fp.feature_cols)}")
+    # 6. Filter features by coverage (≥30% non-null); median-impute the rest.
+    # 30% threshold accommodates dashboards with later starts (e.g. RFDC
+    # investors begins ~2019). Below this we'd be imputing more than we observe.
+    COVERAGE_THRESHOLD = 0.30
+    usable = [c for c in fp.feature_cols if joined[c].notna().mean() >= COVERAGE_THRESHOLD]
+    print(f"Usable features (>={int(COVERAGE_THRESHOLD * 100)}% coverage): {len(usable)} / {len(fp.feature_cols)}")
     for c in usable:
         joined[c] = joined[c].fillna(joined[c].median())
 

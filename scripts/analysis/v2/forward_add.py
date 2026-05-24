@@ -4,6 +4,8 @@ Per spec §6.3. The K we ship is the smallest such that ALL four
 metrics' bootstrap-95% lower CI bounds clear the strict bar.
 """
 
+import sys
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -11,6 +13,12 @@ import pandas as pd
 from scipy import stats
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
+
+
+def _log(msg: str) -> None:
+    """Timestamped, immediately-flushed progress log so tail -f shows live state."""
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    sys.stdout.flush()
 
 
 @dataclass
@@ -52,11 +60,19 @@ class ForwardAddResult:
     ridge_weights: dict
 
 
-def _bootstrap_metrics(df, feature_cols, target_col, year_col, n_bootstrap, rng):
+def _bootstrap_metrics(df, feature_cols, target_col, year_col, n_bootstrap, rng, log_every: int = 200):
+    """Year-cluster bootstrap. Logs progress every `log_every` iterations
+    so a tail of the script's stdout shows bootstrap forward motion."""
     years = sorted(df[year_col].unique())
     metrics = {"ic": [], "hit": [], "spread": [], "mono": []}
+    t0 = time.time()
 
-    for _ in range(n_bootstrap):
+    for i in range(n_bootstrap):
+        if i > 0 and i % log_every == 0:
+            elapsed = time.time() - t0
+            rate = i / elapsed
+            eta = (n_bootstrap - i) / rate if rate > 0 else 0
+            _log(f"      bootstrap {i}/{n_bootstrap} | {rate:.1f} it/s | ETA {eta:.0f}s")
         chosen_years = rng.choice(years, size=len(years), replace=True)
         sample = pd.concat([df[df[year_col] == y] for y in chosen_years])
         holdout_year = sample[year_col].max()
@@ -126,23 +142,38 @@ def forward_add_with_ci_gate(
     rng = np.random.default_rng(seed)
     selected: list[str] = []
     last_b = None
+    _log(f"forward_add: starting with {len(ranked_features)} ranked features, k_max={bar.k_max}, n_bootstrap={n_bootstrap}")
+    _log(f"forward_add: bar = ic>={bar.ic_min:.3f}, hit>={bar.hit_min:.2f}, spread>={bar.spread_min:.3f}, mono_freq>={bar.mono_freq_min:.2f}")
 
     for f in ranked_features:
         selected.append(f)
+        k = len(selected)
         df = panel.dropna(subset=selected + [target_col])
         if len(df) < 500:
+            _log(f"  K={k} skip ({f}): panel too small after dropna ({len(df)} rows)")
             selected.pop()
             continue
 
+        t_start = time.time()
+        _log(f"  K={k} eval: +{f}  panel={len(df):,} rows")
         b = _bootstrap_metrics(df, selected, target_col, year_col, n_bootstrap, rng)
+        elapsed = time.time() - t_start
         if b is None:
+            _log(f"  K={k} skip ({f}): no usable bootstrap samples ({elapsed:.1f}s)")
             selected.pop()
             continue
         last_b = b
+        verdict = "PASS" if _clears_bar(b, bar) else "FAIL"
+        _log(
+            f"  K={k} {verdict} ({elapsed:.1f}s)  "
+            f"ic5%={b['ic_5pct']:+.4f}  hit5%={b['hit_5pct']:+.3f}  "
+            f"spread5%={b['spread_5pct']:+.4f}  mono={b['mono_freq']:.3f}"
+        )
 
         if _clears_bar(b, bar):
             scaler = StandardScaler().fit(df[selected].values)
             model = Ridge(alpha=1.0).fit(scaler.transform(df[selected].values), df[target_col].values)
+            _log(f"forward_add: SHIPPING at K={k}, features={selected}")
             return ForwardAddResult(
                 selected=selected, k=len(selected), shipped=True,
                 last_bootstrap=b, ridge_alpha=1.0,
@@ -152,8 +183,10 @@ def forward_add_with_ci_gate(
             )
 
         if len(selected) >= bar.k_max:
+            _log(f"forward_add: hit k_max={bar.k_max} without clearing bar — stopping")
             break
 
+    _log(f"forward_add: NO SHIP. Evaluated {len(selected)} features without clearing bar.")
     return ForwardAddResult(
         selected=selected, k=0, shipped=False, last_bootstrap=last_b or {},
         ridge_alpha=1.0, feature_means={}, feature_stdevs={}, ridge_weights={},
