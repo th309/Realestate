@@ -24,6 +24,24 @@ class StrictBar:
 
 @dataclass
 class ForwardAddResult:
+    """Outcome of a minimum-feature forward-add run.
+
+    Attributes:
+        selected: features that were evaluated (in the order they were added).
+            On a successful ship, this is exactly the K features in the final
+            model. On a no-ship (bar unreachable), this is the trace of every
+            feature that was tried before giving up — useful for debugging
+            "why didn't the bar clear?"
+        k: the K that ships. On a no-ship outcome, k=0 regardless of len(selected).
+        shipped: True iff a K-feature model cleared the strict bar.
+        last_bootstrap: bootstrap CI metrics from the FINAL evaluation
+            (i.e. the K that shipped, or the last K tried before giving up).
+        ridge_alpha: regularization strength used in the final fit (0.0 if no-ship).
+        feature_means / feature_stdevs: per-feature standardization params used
+            in the production model. Empty dict on no-ship.
+        ridge_weights: per-feature coefficients in the production model.
+            Empty dict on no-ship.
+    """
     selected: list[str]
     k: int
     shipped: bool
