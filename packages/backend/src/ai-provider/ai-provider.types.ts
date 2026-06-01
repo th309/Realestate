@@ -59,6 +59,22 @@ export interface ProviderPreset {
 }
 
 /**
+ * Models that reject sampling parameters (`temperature`, `top_p`, `top_k`).
+ * Sending them yields HTTP 400. Add new model IDs here as Anthropic releases them.
+ * See: shared/model-migration.md → Migrating to Opus 4.7.
+ */
+const ANTHROPIC_NO_SAMPLING_MODELS = new Set<string>(['claude-opus-4-7']);
+
+export function modelRejectsSamplingParams(
+  provider: AiProviderType,
+  model: string,
+): boolean {
+  if (provider !== 'anthropic' && provider !== 'openrouter') return false;
+  const bareId = model.startsWith('anthropic/') ? model.slice(10) : model;
+  return ANTHROPIC_NO_SAMPLING_MODELS.has(bareId);
+}
+
+/**
  * Per-model pricing in USD per 1M tokens.
  * Used by AiUsageLogger to estimate cost from token counts.
  * Update when providers change pricing.
@@ -69,7 +85,8 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> =
     'deepseek-chat': { input: 0.27, output: 1.1 },
     'deepseek-reasoner': { input: 0.55, output: 2.19 },
     // Anthropic
-    'claude-opus-4-6': { input: 15.0, output: 75.0 },
+    'claude-opus-4-7': { input: 5.0, output: 25.0 },
+    'claude-opus-4-6': { input: 5.0, output: 25.0 },
     'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
     'claude-sonnet-4-5': { input: 3.0, output: 15.0 },
     'claude-haiku-4-5': { input: 0.8, output: 4.0 },
@@ -115,6 +132,7 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
     envKeyName: 'ANTHROPIC_API_KEY',
     supportsSystemPrompt: true,
     availableModels: [
+      { id: 'claude-opus-4-7', label: 'Claude Opus 4.7', context: '1M' },
       { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', context: '1M' },
       { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', context: '200K' },
       {
@@ -182,6 +200,11 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
     envKeyName: 'OPENROUTER_API_KEY',
     supportsSystemPrompt: true,
     availableModels: [
+      {
+        id: 'anthropic/claude-opus-4-7',
+        label: 'Claude Opus 4.7',
+        context: '1M',
+      },
       {
         id: 'anthropic/claude-opus-4-6',
         label: 'Claude Opus 4.6',

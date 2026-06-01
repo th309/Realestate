@@ -17,6 +17,7 @@ import {
   AiCompletionRequest,
   AiCompletionResponse,
   PROVIDER_PRESETS,
+  modelRejectsSamplingParams,
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
 import { logUsage } from './ai-usage-logger';
@@ -175,11 +176,15 @@ export class AiProviderService {
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
     try {
+      const rejectsSampling = modelRejectsSamplingParams(
+        config.provider,
+        config.model,
+      );
       const response = await client.chat.completions.create({
         model: config.model,
         messages,
         max_tokens: options.maxTokens,
-        temperature,
+        ...(rejectsSampling ? {} : { temperature }),
         ...(options.responseFormat === 'json' && {
           response_format: { type: 'json_object' },
         }),

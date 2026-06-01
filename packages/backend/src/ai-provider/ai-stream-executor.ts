@@ -13,7 +13,11 @@
 import { Logger } from '@nestjs/common';
 import type OpenAI from 'openai';
 import type { SupabaseService } from '../supabase/supabase.service';
-import { AiProviderConfig, AiCompletionRequest } from './ai-provider.types';
+import {
+  AiProviderConfig,
+  AiCompletionRequest,
+  modelRejectsSamplingParams,
+} from './ai-provider.types';
 import { logUsage } from './ai-usage-logger';
 
 export interface StreamExecutorParams {
@@ -52,11 +56,15 @@ export async function* executeStream(
   let usage: any | undefined;
 
   try {
+    const rejectsSampling = modelRejectsSamplingParams(
+      config.provider,
+      config.model,
+    );
     const stream = (await client.chat.completions.create({
       model: config.model,
       messages,
       max_tokens: request.maxTokens,
-      temperature,
+      ...(rejectsSampling ? {} : { temperature }),
       stream: true,
     } as any)) as any;
 
