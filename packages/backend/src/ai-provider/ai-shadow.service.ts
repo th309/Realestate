@@ -15,15 +15,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import type {
   AiProviderConfig,
   AiCompletionResponse,
   AiProviderType,
 } from './ai-provider.types';
+import { PROVIDER_PRESETS } from './ai-provider.types';
 import { estimateCostUsd } from './cost-estimator';
 
 const SHADOW_CONFIG_CACHE_MS = 30_000;
+const INPUT_PREVIEW_MAX_LEN = 1024;
 
 export interface ShadowContext {
   purpose: string;
@@ -152,22 +155,99 @@ export class AiShadowService {
     return `shadow:daily_cost:${yyyy}-${mm}-${dd}`;
   }
 
-  /** Implemented in Task T7. */
   protected async fireShadowCall(
-    _provider: AiProviderType,
-    _model: string,
-    _ctx: ShadowContext,
+    provider: AiProviderType,
+    model: string,
+    ctx: ShadowContext,
   ): Promise<AiCompletionResponse> {
-    throw new Error('fireShadowCall not implemented yet — see Task T7');
+    const preset = PROVIDER_PRESETS[provider];
+    const apiKey = this.configService.get<string>(preset.envKeyName);
+    if (!apiKey) {
+      throw new Error(
+        `No API key for shadow provider ${provider} (${preset.envKeyName})`,
+      );
+    }
+
+    const client = new OpenAI({ apiKey, baseURL: preset.baseUrl });
+
+    // Tool-use replay: research_agent must not issue new tool calls — the
+    // shadow generates its final assistant turn from the same evidence the
+    // primary collected. Suppression syntax differs by provider.
+    const isResearchAgent = ctx.purpose === 'research_agent';
+    const toolChoice = isResearchAgent
+      ? provider === 'anthropic'
+        ? ({ type: 'none' } as unknown)
+        : 'none'
+      : undefined;
+
+    const startedAt = Date.now();
+    const completion = await client.chat.completions.create({
+      model,
+      messages: ctx.callArgs.messages as never,
+      ...(toolChoice !== undefined ? { tool_choice: toolChoice as never } : {}),
+      stream: false,
+    });
+
+    return {
+      content: completion.choices[0]?.message?.content ?? '',
+      provider,
+      model,
+      usage: completion.usage
+        ? {
+            promptTokens: completion.usage.prompt_tokens,
+            completionTokens: completion.usage.completion_tokens,
+            totalTokens: completion.usage.total_tokens,
+          }
+        : undefined,
+      durationMs: Date.now() - startedAt,
+    };
   }
 
-  /** Implemented in Task T7. */
   protected async insertLog(
-    _ctx: ShadowContext,
-    _shadowResult: AiCompletionResponse | null,
-    _shadowCostUsd: number | null,
-    _errorMessage?: string,
+    ctx: ShadowContext,
+    shadowResult: AiCompletionResponse | null,
+    shadowCostUsd: number | null,
+    errorMessage?: string,
   ): Promise<void> {
-    throw new Error('insertLog not implemented yet — see Task T7');
+    const primaryCost = estimateCostUsd(
+      ctx.primaryConfig.model,
+      ctx.primaryResult.usage?.promptTokens,
+      ctx.primaryResult.usage?.completionTokens,
+    );
+
+    const inputPreview = JSON.stringify(ctx.callArgs.messages).slice(
+      0,
+      INPUT_PREVIEW_MAX_LEN,
+    );
+
+    const { error } = await this.supabase
+      .getClient()
+      .from('ai_shadow_log')
+      .insert({
+        request_id: ctx.requestId,
+        purpose: ctx.purpose,
+        primary_provider: ctx.primaryConfig.provider,
+        primary_model: ctx.primaryConfig.model,
+        primary_output: ctx.primaryResult.content,
+        primary_duration_ms: ctx.primaryResult.durationMs,
+        primary_cost_usd: primaryCost,
+        primary_tokens_in: ctx.primaryResult.usage?.promptTokens ?? null,
+        primary_tokens_out: ctx.primaryResult.usage?.completionTokens ?? null,
+        shadow_provider: ctx.primaryConfig.shadowProvider,
+        shadow_model: ctx.primaryConfig.shadowModel,
+        shadow_output: shadowResult?.content ?? null,
+        shadow_duration_ms: shadowResult?.durationMs ?? null,
+        shadow_cost_usd: shadowCostUsd,
+        shadow_tokens_in: shadowResult?.usage?.promptTokens ?? null,
+        shadow_tokens_out: shadowResult?.usage?.completionTokens ?? null,
+        shadow_error: errorMessage ?? null,
+        input_preview: inputPreview,
+      });
+
+    if (error) {
+      this.logger.warn(
+        `Failed to insert ai_shadow_log row: ${(error as { message?: string }).message ?? String(error)}`,
+      );
+    }
   }
 }

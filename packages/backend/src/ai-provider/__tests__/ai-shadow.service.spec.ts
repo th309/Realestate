@@ -103,3 +103,57 @@ describe('AiShadowService gates', () => {
     expect(fireSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AiShadowService.runShadow integration', () => {
+  it('writes a complete ai_shadow_log row on success', async () => {
+    const insertSpy = jest.fn().mockResolvedValue({ error: null });
+    const mod = await Test.createTestingModule({
+      providers: [
+        AiShadowService,
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: () => ({
+              from: (table: string) => {
+                if (table === 'ai_shadow_log') return { insert: insertSpy };
+                if (table === 'ai_shadow_config')
+                  return {
+                    select: () => ({
+                      eq: () => ({
+                        maybeSingle: () => ({
+                          data: { enabled: true, daily_usd_ceiling: 100 },
+                        }),
+                      }),
+                    }),
+                  };
+                throw new Error(`unexpected table ${table}`);
+              },
+            }),
+          },
+        },
+        { provide: ConfigService, useValue: { get: () => undefined } },
+      ],
+    }).compile();
+    const service = mod.get(AiShadowService);
+
+    jest.spyOn(service as any, 'fireShadowCall').mockResolvedValue({
+      content: 'shadow says hi',
+      provider: 'anthropic',
+      model: 'claude-opus-4-7',
+      usage: { promptTokens: 100, completionTokens: 200, totalTokens: 300 },
+      durationMs: 500,
+    });
+    jest.spyOn(Math, 'random').mockReturnValue(0.0);
+
+    await service.runShadow(makeCtx());
+
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    const row = insertSpy.mock.calls[0][0];
+    expect(row.purpose).toBe('market_insight');
+    expect(row.primary_provider).toBe('deepseek');
+    expect(row.shadow_provider).toBe('anthropic');
+    expect(row.shadow_output).toBe('shadow says hi');
+    expect(row.shadow_cost_usd).toBeGreaterThan(0);
+    expect(row.input_preview).toContain('hi');
+  });
+});
