@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AiProviderService } from '../ai-provider.service';
+import { AiShadowService } from '../ai-shadow.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 // Mock OpenAI at module level (mirrors ai-provider.service.spec.ts pattern).
@@ -77,6 +78,7 @@ describe('AiProviderService.stream()', () => {
         AiProviderService,
         { provide: SupabaseService, useValue: buildMockSupabase() },
         { provide: ConfigService, useValue: { get: (k: string) => env[k] } },
+        { provide: AiShadowService, useValue: { runShadow: jest.fn() } },
       ],
     }).compile();
 
