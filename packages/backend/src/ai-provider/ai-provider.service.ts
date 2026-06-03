@@ -108,8 +108,29 @@ export class AiProviderService {
     messages: OpenAI.ChatCompletionMessageParam[],
     maxTokens: number,
   ): Promise<AiCompletionResponse> {
+    const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    return this.executeCompletion(purpose, config, messages, { maxTokens });
+    const response = await this.executeCompletion(purpose, config, messages, {
+      maxTokens,
+    });
+
+    void this.shadow.runShadow({
+      purpose,
+      requestId,
+      primaryConfig: config,
+      primaryResult: {
+        content: response.content,
+        usage: response.usage,
+        durationMs: response.durationMs,
+      },
+      callArgs: {
+        messages: messages as Array<{ role: string; content: unknown }>,
+        options: { maxTokens },
+      },
+      primaryFailedOver: false,
+    });
+
+    return response;
   }
 
   /**
