@@ -8,7 +8,7 @@
 
 import { Logger } from '@nestjs/common';
 import type { SupabaseService } from '../supabase/supabase.service';
-import { MODEL_PRICING } from './ai-provider.types';
+import { estimateCostUsd } from './cost-estimator';
 
 export interface UsageLogEntry {
   purpose: string;
@@ -28,22 +28,6 @@ export interface UsageLogEntry {
 const logger = new Logger('AiUsageLogger');
 
 /**
- * Calculate estimated cost in USD from token counts and model pricing.
- */
-function estimateCost(
-  model: string,
-  promptTokens?: number,
-  completionTokens?: number,
-): number | null {
-  const pricing = MODEL_PRICING[model];
-  if (!pricing || promptTokens == null || completionTokens == null) return null;
-
-  const inputCost = (promptTokens / 1_000_000) * pricing.input;
-  const outputCost = (completionTokens / 1_000_000) * pricing.output;
-  return inputCost + outputCost;
-}
-
-/**
  * Log a usage entry to the ai_usage_log table. Fire-and-forget — errors
  * are logged but never thrown to avoid disrupting the AI completion flow.
  */
@@ -51,7 +35,7 @@ export function logUsage(
   supabase: SupabaseService,
   entry: UsageLogEntry,
 ): void {
-  const cost = estimateCost(
+  const cost = estimateCostUsd(
     entry.model,
     entry.promptTokens,
     entry.completionTokens,
