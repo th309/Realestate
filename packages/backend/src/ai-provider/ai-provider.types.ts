@@ -20,6 +20,10 @@ export interface AiProviderConfig {
   baseUrl: string;
   temperature?: number;
   maxRetries?: number;
+  // Shadow mode — populated by AiConfigResolver from ai_model_config
+  shadowProvider?: AiProviderType;
+  shadowModel?: string;
+  shadowSampleRate?: number;
 }
 
 export interface AiCompletionRequest {
