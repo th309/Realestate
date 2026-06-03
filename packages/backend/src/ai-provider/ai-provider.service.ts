@@ -145,6 +145,7 @@ export class AiProviderService {
     purpose: string,
     request: AiCompletionRequest,
   ): AsyncGenerator<string> {
+    const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
     const client = this.getOrCreateClient(config);
     const messages = this.buildMessages(config, request);
@@ -153,17 +154,41 @@ export class AiProviderService {
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
-    yield* executeStream({
-      client,
-      supabase: this.supabase,
-      logger: this.logger,
-      purpose,
-      config,
-      messages,
-      request,
-      temperature,
-      activeTestRunId: this.activeTestRunId,
-    });
+    const startedAt = Date.now();
+    let buffered = '';
+
+    try {
+      for await (const delta of executeStream({
+        client,
+        supabase: this.supabase,
+        logger: this.logger,
+        purpose,
+        config,
+        messages,
+        request,
+        temperature,
+        activeTestRunId: this.activeTestRunId,
+      })) {
+        buffered += delta;
+        yield delta;
+      }
+    } finally {
+      const durationMs = Date.now() - startedAt;
+      // Fire-and-forget shadow dispatch after stream completes, errors, or
+      // the consumer disconnects. Usage tokens are not captured here because
+      // the executor logs them internally; shadow runs without primary usage.
+      void this.shadow.runShadow({
+        purpose,
+        requestId,
+        primaryConfig: config,
+        primaryResult: { content: buffered, usage: undefined, durationMs },
+        callArgs: {
+          messages: messages as Array<{ role: string; content: unknown }>,
+          options: { maxTokens: request.maxTokens, temperature },
+        },
+        primaryFailedOver: false,
+      });
+    }
   }
 
   /**
