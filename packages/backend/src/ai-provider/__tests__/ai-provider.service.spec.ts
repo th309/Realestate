@@ -95,7 +95,7 @@ describe('AiProviderService', () => {
       });
 
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-chat');
+      expect(result.model).toBe('deepseek-v4-pro');
       expect(result.content).toBe('Hello from AI');
       expect(result.usage?.totalTokens).toBe(30);
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
@@ -195,7 +195,7 @@ describe('AiProviderService', () => {
       await buildModule({
         data: {
           provider: 'deepseek',
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-pro',
           api_key: 'key',
           base_url: 'https://api.deepseek.com/v1',
           temperature: 0.7,
@@ -264,7 +264,7 @@ describe('AiProviderService', () => {
       await buildModule({
         data: {
           provider: 'deepseek',
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-pro',
           api_key: 'key',
           base_url: 'https://api.deepseek.com/v1',
           temperature: 0.7,
@@ -338,6 +338,24 @@ describe('AiProviderService', () => {
         userPrompt: 'Return text',
         maxTokens: 100,
         responseFormat: 'text',
+      });
+
+      const callArgs = mockCreate.mock.calls[0][0];
+      expect(callArgs.response_format).toBeUndefined();
+    });
+
+    it('omits json response_format for Anthropic (rejects json_object, needs json_schema)', async () => {
+      // Force the resolver onto the Anthropic env-fallback path.
+      await buildModule(
+        { data: null, error: { code: 'PGRST116' } },
+        { AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'test-anthropic-key' },
+      );
+      mockCreate.mockResolvedValue(standardCompletionResponse);
+
+      await service.complete('test', {
+        userPrompt: 'Return JSON',
+        maxTokens: 100,
+        responseFormat: 'json',
       });
 
       const callArgs = mockCreate.mock.calls[0][0];

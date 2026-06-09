@@ -19,6 +19,7 @@ import {
   AiCompletionResponse,
   PROVIDER_PRESETS,
   modelRejectsSamplingParams,
+  providerSupportsJsonObjectFormat,
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
 import { AiShadowService } from './ai-shadow.service';
@@ -256,9 +257,10 @@ export class AiProviderService {
         messages,
         max_tokens: options.maxTokens,
         ...(rejectsSampling ? {} : { temperature }),
-        ...(options.responseFormat === 'json' && {
-          response_format: { type: 'json_object' },
-        }),
+        ...(options.responseFormat === 'json' &&
+          providerSupportsJsonObjectFormat(config.provider) && {
+            response_format: { type: 'json_object' },
+          }),
       });
 
       const durationMs = Date.now() - startTime;
