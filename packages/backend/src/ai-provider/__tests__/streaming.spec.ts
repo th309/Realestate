@@ -62,7 +62,7 @@ describe('AiProviderService.stream()', () => {
 
     // Use env-fallback path: AI_PROVIDER=deepseek + DEEPSEEK_API_KEY=test-key.
     // Resolved config will be { provider: 'deepseek', baseUrl:
-    // 'https://api.deepseek.com/v1', model: 'deepseek-chat', ... } so the
+    // 'https://api.deepseek.com/v1', model: 'deepseek-v4-pro', ... } so the
     // clientCache key for fake-client injection is
     // 'deepseek::https://api.deepseek.com/v1'.
     const env: Record<string, string | undefined> = {
@@ -124,7 +124,7 @@ describe('AiProviderService.stream()', () => {
     expect(create).toHaveBeenCalledTimes(1);
     const callArgs = create.mock.calls[0][0];
     expect(callArgs.stream).toBe(true);
-    expect(callArgs.model).toBe('deepseek-chat');
+    expect(callArgs.model).toBe('deepseek-v4-pro');
     expect(callArgs.max_tokens).toBe(100);
     expect(callArgs.messages).toEqual([{ role: 'user', content: 'test' }]);
   });

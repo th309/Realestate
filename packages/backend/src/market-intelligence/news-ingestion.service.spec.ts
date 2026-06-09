@@ -77,24 +77,31 @@ const LLM_CLASSIFICATION_JSON = JSON.stringify({
 // -- Mock Supabase ------------------------------------------------------------
 
 function createMockSupabaseClient(existingUrls: string[] = []) {
-  const mockInsert = jest.fn().mockResolvedValue({ data: null, error: null });
+  // processAndStoreArticle writes via .upsert(payload, { onConflict: 'url' }),
+  // so the write spy mirrors upsert — not insert.
+  const mockUpsert = jest.fn().mockResolvedValue({ data: null, error: null });
+  // findExistingUrlsBatched: .select('url').in('url', chunk)
   const mockSelectIn = jest.fn().mockResolvedValue({
-    data: existingUrls.map(url => ({ url })),
+    data: existingUrls.map((url) => ({ url })),
     error: null,
   });
+  // findExistingHeadlines: .select('headline').gte('published_at', cutoff)
+  const mockSelectGte = jest.fn().mockResolvedValue({ data: [], error: null });
+  const selectChain = { in: mockSelectIn, gte: mockSelectGte };
 
   return {
     from: jest.fn().mockImplementation((table: string) => {
       if (table === 'market_news') {
         return {
-          select: jest.fn().mockReturnValue({ in: mockSelectIn }),
-          insert: mockInsert,
+          select: jest.fn().mockReturnValue(selectChain),
+          upsert: mockUpsert,
         };
       }
-      return { select: jest.fn().mockReturnValue({ in: mockSelectIn }) };
+      return { select: jest.fn().mockReturnValue(selectChain) };
     }),
-    _mockInsert: mockInsert,
+    _mockUpsert: mockUpsert,
     _mockSelectIn: mockSelectIn,
+    _mockSelectGte: mockSelectGte,
   };
 }
 
@@ -102,17 +109,29 @@ function createMockSupabaseClient(existingUrls: string[] = []) {
 
 function createMockGeoTagger(): jest.Mocked<GeoTaggerService> {
   return {
-    tagArticle: jest.fn().mockImplementation(
-      async (headline: string): Promise<GeoTagResult[]> => {
+    tagArticle: jest
+      .fn()
+      .mockImplementation(async (headline: string): Promise<GeoTagResult[]> => {
         if (headline.toLowerCase().includes('denver')) {
-          return [{ geography_id: '19740', geography_name: 'Denver-Aurora-Lakewood, CO', confidence: 0.95 }];
+          return [
+            {
+              geography_id: '19740',
+              geography_name: 'Denver-Aurora-Lakewood, CO',
+              confidence: 0.95,
+            },
+          ];
         }
         if (headline.toLowerCase().includes('tampa')) {
-          return [{ geography_id: '45300', geography_name: 'Tampa-St. Petersburg-Clearwater, FL', confidence: 0.95 }];
+          return [
+            {
+              geography_id: '45300',
+              geography_name: 'Tampa-St. Petersburg-Clearwater, FL',
+              confidence: 0.95,
+            },
+          ];
         }
         return [];
-      },
-    ),
+      }),
     clearCache: jest.fn(),
   } as any;
 }
@@ -124,7 +143,7 @@ function createMockAppConfig() {
     get: jest.fn().mockImplementation((key: string, defaultValue = '') => {
       const config: Record<string, string> = {
         AI_BASE_URL: 'https://api.deepseek.com',
-        AI_MODEL: 'deepseek-chat',
+        AI_MODEL: 'deepseek-v4-pro',
         DEEPSEEK_API_KEY: 'test-deepseek-key',
       };
       return Promise.resolve(config[key] ?? defaultValue);
@@ -170,7 +189,13 @@ describe('NewsIngestionService', () => {
         { provide: SupabaseService, useValue: { getClient: () => mockClient } },
         { provide: AppConfigService, useValue: mockAppConfig },
         { provide: GeoTaggerService, useValue: mockGeoTagger },
-        { provide: BriefingGeneratorService, useValue: { generateBriefing: jest.fn(), generateBriefingOnDemand: jest.fn() } },
+        {
+          provide: BriefingGeneratorService,
+          useValue: {
+            generateBriefing: jest.fn(),
+            generateBriefingOnDemand: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -207,7 +232,7 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      expect(mockClient._mockInsert).toHaveBeenCalledTimes(3);
+      expect(mockClient._mockUpsert).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -229,7 +254,7 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      const firstInsertCall = mockClient._mockInsert.mock.calls[0][0];
+      const firstInsertCall = mockClient._mockUpsert.mock.calls[0][0];
       expect(firstInsertCall.geography_ids).toEqual(['19740']);
       expect(firstInsertCall.geo_tag_confidence).toBe(0.95);
     });
@@ -241,7 +266,7 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      const thirdInsertCall = mockClient._mockInsert.mock.calls[2][0];
+      const thirdInsertCall = mockClient._mockUpsert.mock.calls[2][0];
       expect(thirdInsertCall.geography_ids).toEqual([]);
       expect(thirdInsertCall.geo_tag_confidence).toBe(0);
     });
@@ -265,8 +290,10 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      const firstInsert = mockClient._mockInsert.mock.calls[0][0];
-      expect(firstInsert.summary).toBe('Denver home prices continue to rise significantly.');
+      const firstInsert = mockClient._mockUpsert.mock.calls[0][0];
+      expect(firstInsert.summary).toBe(
+        'Denver home prices continue to rise significantly.',
+      );
       expect(firstInsert.tags).toEqual(['housing', 'prices', 'denver']);
       expect(firstInsert.sentiment).toBe('positive');
     });
@@ -280,7 +307,7 @@ describe('NewsIngestionService', () => {
       const result = await service.ingestLatestNews();
 
       expect(result.ingested).toBe(3);
-      const firstInsert = mockClient._mockInsert.mock.calls[0][0];
+      const firstInsert = mockClient._mockUpsert.mock.calls[0][0];
       expect(firstInsert.summary).toBe('Denver housing market surges');
       expect(firstInsert.tags).toEqual([]);
       expect(firstInsert.sentiment).toBe('neutral');
@@ -301,19 +328,29 @@ describe('NewsIngestionService', () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           NewsIngestionService,
-          { provide: SupabaseService, useValue: { getClient: () => clientWithExisting } },
+          {
+            provide: SupabaseService,
+            useValue: { getClient: () => clientWithExisting },
+          },
           { provide: AppConfigService, useValue: mockAppConfig },
           { provide: GeoTaggerService, useValue: mockGeoTagger },
-          { provide: BriefingGeneratorService, useValue: { generateBriefing: jest.fn(), generateBriefingOnDemand: jest.fn() } },
+          {
+            provide: BriefingGeneratorService,
+            useValue: {
+              generateBriefing: jest.fn(),
+              generateBriefingOnDemand: jest.fn(),
+            },
+          },
         ],
       }).compile();
 
-      const dedupService = module.get<NewsIngestionService>(NewsIngestionService);
+      const dedupService =
+        module.get<NewsIngestionService>(NewsIngestionService);
       const result = await dedupService.ingestLatestNews();
 
       expect(result.skipped).toBe(2);
       expect(result.ingested).toBe(1);
-      expect(clientWithExisting._mockInsert).toHaveBeenCalledTimes(1);
+      expect(clientWithExisting._mockUpsert).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -345,7 +382,7 @@ describe('NewsIngestionService', () => {
         .mockResolvedValue({ items: [] });
 
       let callCount = 0;
-      mockClient._mockInsert.mockImplementation(() => {
+      mockClient._mockUpsert.mockImplementation(() => {
         callCount++;
         if (callCount === 2) {
           return Promise.resolve({
@@ -365,7 +402,14 @@ describe('NewsIngestionService', () => {
     it('silently filters articles with null title at RSS parse stage', async () => {
       mockParseURL
         .mockResolvedValueOnce({
-          items: [{ title: null, contentSnippet: 'Desc', link: 'https://example.com/x', isoDate: '2026-02-20T10:00:00Z' }],
+          items: [
+            {
+              title: null,
+              contentSnippet: 'Desc',
+              link: 'https://example.com/x',
+              isoDate: '2026-02-20T10:00:00Z',
+            },
+          ],
         })
         .mockResolvedValue({ items: [] });
 
@@ -385,12 +429,13 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      const firstInsert = mockClient._mockInsert.mock.calls[0][0];
+      const firstInsert = mockClient._mockUpsert.mock.calls[0][0];
       expect(firstInsert).toMatchObject({
         url: 'https://example.com/denver-housing',
         headline: 'Denver housing market surges',
         published_at: '2026-02-20T10:00:00Z',
-        raw_description: 'Home prices in the Denver metro area continue to climb.',
+        raw_description:
+          'Home prices in the Denver metro area continue to climb.',
         geography_type: 'metro',
       });
       expect(firstInsert.source_name).toBeDefined();
@@ -404,7 +449,7 @@ describe('NewsIngestionService', () => {
 
       await service.ingestLatestNews();
 
-      const thirdInsert = mockClient._mockInsert.mock.calls[2][0];
+      const thirdInsert = mockClient._mockUpsert.mock.calls[2][0];
       expect(thirdInsert.geography_type).toBeNull();
     });
   });

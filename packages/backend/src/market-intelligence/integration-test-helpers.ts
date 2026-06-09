@@ -20,9 +20,13 @@ export function makeResolvedMetric(
   date = '2026-01-15',
 ): ResolvedMetric {
   return {
-    value, date, source,
-    sourceGeoId: '31080', sourceGeoLevel: 'metro',
-    isInherited: false, isFallback: false,
+    value,
+    date,
+    source,
+    sourceGeoId: '31080',
+    sourceGeoLevel: 'metro',
+    isInherited: false,
+    isFallback: false,
   };
 }
 
@@ -68,9 +72,21 @@ export function createIntegrationSupabaseClient() {
     rankings_cache: [],
     market_news: [],
     geographies: [
-      { geography_id: '31080', geography_name: 'Los Angeles-Long Beach-Anaheim, CA', geography_type: 'metro' },
-      { geography_id: '19740', geography_name: 'Denver-Aurora-Lakewood, CO', geography_type: 'metro' },
-      { geography_id: '45300', geography_name: 'Tampa-St. Petersburg-Clearwater, FL', geography_type: 'metro' },
+      {
+        geography_id: '31080',
+        geography_name: 'Los Angeles-Long Beach-Anaheim, CA',
+        geography_type: 'metro',
+      },
+      {
+        geography_id: '19740',
+        geography_name: 'Denver-Aurora-Lakewood, CO',
+        geography_type: 'metro',
+      },
+      {
+        geography_id: '45300',
+        geography_name: 'Tampa-St. Petersburg-Clearwater, FL',
+        geography_type: 'metro',
+      },
     ],
   };
 
@@ -86,7 +102,7 @@ export function createIntegrationSupabaseClient() {
       contains: jest.fn().mockImplementation(() => chain),
       in: jest.fn().mockImplementation((col: string, vals: any[]) => {
         const rows = tables[tableName] || [];
-        const matched = rows.filter(r => vals.includes(r[col]));
+        const matched = rows.filter((r) => vals.includes(r[col]));
         return Promise.resolve({ data: matched, error: null });
       }),
       gte: jest.fn().mockImplementation(() => chain),
@@ -95,7 +111,7 @@ export function createIntegrationSupabaseClient() {
       limit: jest.fn().mockImplementation(() => chain),
       single: jest.fn().mockImplementation(() => {
         const rows = tables[tableName] || [];
-        const match = rows.find(r =>
+        const match = rows.find((r) =>
           Object.entries(filters).every(([k, v]) => r[k] === v),
         );
         return Promise.resolve({ data: match || null, error: null });
@@ -145,7 +161,9 @@ export function createIntegrationSupabaseClient() {
   }
 
   return {
-    from: jest.fn().mockImplementation((tableName: string) => buildQuery(tableName)),
+    from: jest
+      .fn()
+      .mockImplementation((tableName: string) => buildQuery(tableName)),
     _tables: tables,
   };
 }
@@ -167,7 +185,7 @@ export function createMockAppConfig(
 ) {
   const config: Record<string, string> = {
     AI_BASE_URL: 'https://api.deepseek.com',
-    AI_MODEL: 'deepseek-chat',
+    AI_MODEL: 'deepseek-v4-pro',
     DEEPSEEK_API_KEY: 'test-api-key',
     NEWS_API_PROVIDER: 'newsapi',
     NEWS_API_KEY: 'test-news-api-key',
@@ -177,30 +195,46 @@ export function createMockAppConfig(
   };
 
   return {
-    get: jest.fn().mockImplementation((key: string, defaultValue = '') =>
-      Promise.resolve(config[key] ?? defaultValue),
-    ),
-    getBool: jest.fn().mockImplementation((key: string, defaultValue = false) => {
-      const val = config[key];
-      if (val === undefined) return Promise.resolve(defaultValue);
-      return Promise.resolve(val === 'true' || val === '1');
-    }),
+    get: jest
+      .fn()
+      .mockImplementation((key: string, defaultValue = '') =>
+        Promise.resolve(config[key] ?? defaultValue),
+      ),
+    getBool: jest
+      .fn()
+      .mockImplementation((key: string, defaultValue = false) => {
+        const val = config[key];
+        if (val === undefined) return Promise.resolve(defaultValue);
+        return Promise.resolve(val === 'true' || val === '1');
+      }),
   } as any;
 }
 
 export function createMockGeoTagger(): jest.Mocked<GeoTaggerService> {
   return {
-    tagArticle: jest.fn().mockImplementation(
-      async (headline: string): Promise<any[]> => {
+    tagArticle: jest
+      .fn()
+      .mockImplementation(async (headline: string): Promise<any[]> => {
         if (headline.toLowerCase().includes('denver')) {
-          return [{ geography_id: '19740', geography_name: 'Denver-Aurora-Lakewood, CO', confidence: 0.95 }];
+          return [
+            {
+              geography_id: '19740',
+              geography_name: 'Denver-Aurora-Lakewood, CO',
+              confidence: 0.95,
+            },
+          ];
         }
         if (headline.toLowerCase().includes('tampa')) {
-          return [{ geography_id: '45300', geography_name: 'Tampa-St. Petersburg-Clearwater, FL', confidence: 0.95 }];
+          return [
+            {
+              geography_id: '45300',
+              geography_name: 'Tampa-St. Petersburg-Clearwater, FL',
+              confidence: 0.95,
+            },
+          ];
         }
         return [];
-      },
-    ),
+      }),
     clearCache: jest.fn(),
   } as any;
 }

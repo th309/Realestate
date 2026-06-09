@@ -35,7 +35,7 @@ async function callLlmForClassification(
 ): Promise<ArticleClassification> {
   const [baseUrl, model, apiKey] = await Promise.all([
     appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
-    appConfig.get('AI_MODEL', 'deepseek-chat'),
+    appConfig.get('AI_MODEL', 'deepseek-v4-pro'),
     appConfig.get('DEEPSEEK_API_KEY'),
   ]);
 
@@ -52,7 +52,10 @@ async function callLlmForClassification(
       temperature: 0.3,
     }),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('LLM request timed out')), LLM_TIMEOUT_MS),
+      setTimeout(
+        () => reject(new Error('LLM request timed out')),
+        LLM_TIMEOUT_MS,
+      ),
     ),
   ]);
 
@@ -62,7 +65,10 @@ async function callLlmForClassification(
   return parseLlmClassification(content, headline);
 }
 
-function buildClassificationPrompt(headline: string, description: string): string {
+function buildClassificationPrompt(
+  headline: string,
+  description: string,
+): string {
   return `Classify this real estate news article.
 
 Headline: ${headline}
@@ -78,11 +84,15 @@ Return ONLY valid JSON (no markdown fences):
 
 /** Parse the LLM JSON response, falling back gracefully */
 function parseLlmClassification(
-  raw: string, headline: string,
+  raw: string,
+  headline: string,
 ): ArticleClassification {
   try {
     // Strip markdown fences if present
-    const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    const cleaned = raw
+      .replace(/```json?\n?/g, '')
+      .replace(/```/g, '')
+      .trim();
     const parsed = JSON.parse(cleaned);
 
     return {

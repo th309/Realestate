@@ -68,7 +68,7 @@ export class AiProviderService {
     }
 
     const model =
-      this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-chat';
+      this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-v4-pro';
 
     const stream = await this.deepseekClient.chat.completions.create({
       model,

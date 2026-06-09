@@ -16,8 +16,8 @@ describe('estimateCostUsd', () => {
   });
 
   it('scales linearly with token counts', () => {
-    const half = estimateCostUsd('deepseek-chat', 500_000, 500_000)!;
-    const full = estimateCostUsd('deepseek-chat', 1_000_000, 1_000_000)!;
+    const half = estimateCostUsd('deepseek-v4-pro', 500_000, 500_000)!;
+    const full = estimateCostUsd('deepseek-v4-pro', 1_000_000, 1_000_000)!;
     expect(full).toBeCloseTo(half * 2, 5);
   });
 });

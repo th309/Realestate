@@ -8,7 +8,7 @@ const makeCtx = (overrides: Partial<any> = {}) => ({
   requestId: '00000000-0000-0000-0000-000000000001',
   primaryConfig: {
     provider: 'deepseek',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-pro',
     apiKey: 'sk-x',
     baseUrl: 'https://api.deepseek.com/v1',
     shadowProvider: 'anthropic',
