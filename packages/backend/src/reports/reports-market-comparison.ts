@@ -172,7 +172,7 @@ export function calculatePriorityWeightedWinner(
   primaryMarket: MarketInput,
   comparisonMarkets: MarketInput[],
   priorities: string[],
-  _userType: 'homebuyer' | 'investor',
+  _userType: 'homebuyer' | 'investor' | 'universal',
 ): PriorityWeightedResult | null {
   if (
     !priorities ||
