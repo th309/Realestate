@@ -38,11 +38,23 @@ jest.mock('openai', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mock global fetch (used by NewsIngestionService)
+// Mock the news sources NewsIngestionService uses: national RSS feeds via
+// rss-parser, plus the local-news fetcher and high-severity detector.
 // ---------------------------------------------------------------------------
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+const mockParseURL = jest.fn();
+jest.mock('rss-parser', () =>
+  jest.fn().mockImplementation(() => ({ parseURL: mockParseURL })),
+);
+
+jest.mock('./local-news-fetcher', () => ({
+  loadTargetGeographies: jest.fn().mockResolvedValue([]),
+  fetchLocalNews: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('./high-severity-detector', () => ({
+  triggerHighSeverityBriefingRefresh: jest.fn().mockResolvedValue(undefined),
+}));
 
 // ===========================================================================
 // Flow 1: Briefing Generation -> Storage -> Lookup
@@ -293,33 +305,27 @@ describe('Flow 3: News ingestion -> geo-tagging -> storage', () => {
   let mockGeoTagger: jest.Mocked<GeoTaggerService>;
   let mockBriefingGenerator: jest.Mocked<BriefingGeneratorService>;
 
-  const SAMPLE_NEWSAPI_RESPONSE = {
-    status: 'ok',
-    totalResults: 3,
-    articles: [
-      {
-        title: 'Denver housing market surges',
-        description: 'Home prices in the Denver metro area continue to climb.',
-        url: 'https://example.com/denver-housing',
-        source: { name: 'Reuters' },
-        publishedAt: '2026-02-20T10:00:00Z',
-      },
-      {
-        title: 'Tampa real estate booms',
-        description: 'Tampa Bay area sees record buyer activity.',
-        url: 'https://example.com/tampa-real-estate',
-        source: { name: 'Bloomberg' },
-        publishedAt: '2026-02-19T14:00:00Z',
-      },
-      {
-        title: 'National housing trends for 2026',
-        description: 'Nationwide analysis of the housing market.',
-        url: 'https://example.com/national-trends',
-        source: { name: 'CNBC' },
-        publishedAt: '2026-02-18T09:00:00Z',
-      },
-    ],
-  };
+  // RSS feed items as rss-parser would yield them (link/contentSnippet/isoDate).
+  const SAMPLE_RSS_ITEMS = [
+    {
+      title: 'Denver housing market surges',
+      contentSnippet: 'Home prices in the Denver metro area continue to climb.',
+      link: 'https://example.com/denver-housing',
+      isoDate: '2026-02-20T10:00:00Z',
+    },
+    {
+      title: 'Tampa real estate booms',
+      contentSnippet: 'Tampa Bay area sees record buyer activity.',
+      link: 'https://example.com/tampa-real-estate',
+      isoDate: '2026-02-19T14:00:00Z',
+    },
+    {
+      title: 'National housing trends for 2026',
+      contentSnippet: 'Nationwide analysis of the housing market.',
+      link: 'https://example.com/national-trends',
+      isoDate: '2026-02-18T09:00:00Z',
+    },
+  ];
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -330,10 +336,11 @@ describe('Flow 3: News ingestion -> geo-tagging -> storage', () => {
       generateBriefingOnDemand: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => SAMPLE_NEWSAPI_RESPONSE,
-    });
+    // Only the first RSS feed returns articles; the rest return none
+    // (the others would otherwise be deduped by URL anyway).
+    mockParseURL
+      .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+      .mockResolvedValue({ items: [] });
 
     mockChatCompletionsCreate.mockResolvedValue({
       choices: [

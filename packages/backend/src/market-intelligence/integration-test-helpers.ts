@@ -130,6 +130,16 @@ export function createIntegrationSupabaseClient() {
           }),
         };
       }),
+      // NewsIngestionService writes via .upsert(payload, { onConflict: 'url' }).
+      // Dedup is handled upstream in the service, so this just stores the row.
+      upsert: jest.fn().mockImplementation((row: any) => {
+        if (!tables[tableName]) tables[tableName] = [];
+        tables[tableName].push({
+          id: `${tableName}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          ...row,
+        });
+        return Promise.resolve({ data: null, error: null });
+      }),
       update: jest.fn().mockImplementation((payload: any) => {
         const updateFilters: Record<string, any> = {};
         // Use a plain self-referential object (not jest.fn) to avoid
@@ -207,6 +217,10 @@ export function createMockAppConfig(
         if (val === undefined) return Promise.resolve(defaultValue);
         return Promise.resolve(val === 'true' || val === '1');
       }),
+    getNumber: jest.fn().mockImplementation((key: string, defaultValue = 0) => {
+      const val = config[key];
+      return Promise.resolve(val === undefined ? defaultValue : Number(val));
+    }),
   } as any;
 }
 

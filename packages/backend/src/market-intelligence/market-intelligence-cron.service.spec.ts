@@ -22,13 +22,17 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 function createMockAppConfig(overrides: Record<string, boolean> = {}) {
   return {
-    getBool: jest.fn().mockImplementation((key: string, defaultValue: boolean) => {
-      if (key in overrides) return Promise.resolve(overrides[key]);
-      return Promise.resolve(defaultValue);
-    }),
-    getNumber: jest.fn().mockImplementation((_key: string, defaultValue: number) => {
-      return Promise.resolve(defaultValue);
-    }),
+    getBool: jest
+      .fn()
+      .mockImplementation((key: string, defaultValue: boolean) => {
+        if (key in overrides) return Promise.resolve(overrides[key]);
+        return Promise.resolve(defaultValue);
+      }),
+    getNumber: jest
+      .fn()
+      .mockImplementation((_key: string, defaultValue: number) => {
+        return Promise.resolve(defaultValue);
+      }),
   };
 }
 
@@ -64,14 +68,20 @@ function createMockMetricResolution() {
   };
 }
 
-function createMockSupabase(geographies: Array<{ geography_id: string; geography_name: string; geography_type: string }> = []) {
+function createMockSupabase(
+  geographies: Array<{
+    geography_id: string;
+    name: string;
+    geography_type: string;
+  }> = [],
+) {
   const mockClient = {
     from: jest.fn().mockImplementation(() => ({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockImplementation((_col: string, geoType: string) => ({
           order: jest.fn().mockReturnValue({
             limit: jest.fn().mockResolvedValue({
-              data: geographies.filter(g => g.geography_type === geoType),
+              data: geographies.filter((g) => g.geography_type === geoType),
               error: null,
             }),
           }),
@@ -97,11 +107,22 @@ describe('MarketIntelligenceCronService', () => {
   let supabaseService: ReturnType<typeof createMockSupabase>;
 
   const sampleGeographies = [
-    { geography_id: '31080', geography_name: 'Los Angeles-Long Beach-Anaheim, CA', geography_type: 'metro' },
-    { geography_id: '35620', geography_name: 'New York-Newark-Jersey City, NY-NJ-PA', geography_type: 'metro' },
+    {
+      geography_id: '31080',
+      name: 'Los Angeles-Long Beach-Anaheim, CA',
+      geography_type: 'metro',
+    },
+    {
+      geography_id: '35620',
+      name: 'New York-Newark-Jersey City, NY-NJ-PA',
+      geography_type: 'metro',
+    },
   ];
 
-  async function buildModule(configOverrides: Record<string, boolean> = {}, geos = sampleGeographies) {
+  async function buildModule(
+    configOverrides: Record<string, boolean> = {},
+    geos = sampleGeographies,
+  ) {
     appConfig = createMockAppConfig(configOverrides);
     briefingGenerator = createMockBriefingGenerator();
     newsIngestion = createMockNewsIngestion();
@@ -131,7 +152,10 @@ describe('MarketIntelligenceCronService', () => {
       await buildModule({ BRIEFING_GENERATION_ENABLED: false });
       await cronService.handleWeeklyBriefings();
 
-      expect(appConfig.getBool).toHaveBeenCalledWith('BRIEFING_GENERATION_ENABLED', false);
+      expect(appConfig.getBool).toHaveBeenCalledWith(
+        'BRIEFING_GENERATION_ENABLED',
+        false,
+      );
       expect(briefingGenerator.generateBriefing).not.toHaveBeenCalled();
     });
 
@@ -155,7 +179,9 @@ describe('MarketIntelligenceCronService', () => {
 
     it('should use default benchmarks when metric resolution fails', async () => {
       await buildModule({ BRIEFING_GENERATION_ENABLED: true });
-      metricResolution.resolveMetricBatch.mockRejectedValue(new Error('DB down'));
+      metricResolution.resolveMetricBatch.mockRejectedValue(
+        new Error('DB down'),
+      );
 
       await cronService.handleWeeklyBriefings();
 
@@ -199,7 +225,9 @@ describe('MarketIntelligenceCronService', () => {
       });
 
       // Should not throw
-      await expect(cronService.handleWeeklyBriefings()).resolves.toBeUndefined();
+      await expect(
+        cronService.handleWeeklyBriefings(),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -210,7 +238,10 @@ describe('MarketIntelligenceCronService', () => {
       await buildModule({ NEWS_INGESTION_ENABLED: false });
       await cronService.handleDailyNewsIngestion();
 
-      expect(appConfig.getBool).toHaveBeenCalledWith('NEWS_INGESTION_ENABLED', false);
+      expect(appConfig.getBool).toHaveBeenCalledWith(
+        'NEWS_INGESTION_ENABLED',
+        false,
+      );
       expect(newsIngestion.ingestLatestNews).not.toHaveBeenCalled();
     });
 
@@ -223,9 +254,13 @@ describe('MarketIntelligenceCronService', () => {
 
     it('should not crash when news ingestion throws', async () => {
       await buildModule({ NEWS_INGESTION_ENABLED: true });
-      newsIngestion.ingestLatestNews.mockRejectedValue(new Error('API unreachable'));
+      newsIngestion.ingestLatestNews.mockRejectedValue(
+        new Error('API unreachable'),
+      );
 
-      await expect(cronService.handleDailyNewsIngestion()).resolves.toBeUndefined();
+      await expect(
+        cronService.handleDailyNewsIngestion(),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -236,7 +271,10 @@ describe('MarketIntelligenceCronService', () => {
       await buildModule({ RANKINGS_CACHE_ENABLED: false });
       await cronService.handleWeeklyRankings();
 
-      expect(appConfig.getBool).toHaveBeenCalledWith('RANKINGS_CACHE_ENABLED', false);
+      expect(appConfig.getBool).toHaveBeenCalledWith(
+        'RANKINGS_CACHE_ENABLED',
+        false,
+      );
       expect(rankingsCache.refreshAll).not.toHaveBeenCalled();
     });
 
