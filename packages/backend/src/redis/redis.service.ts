@@ -286,8 +286,8 @@ export class RedisService implements OnModuleInit {
     }
 
     try {
-      // Delete only quinn-prefixed keys to avoid affecting other services
-      const keys = await this.client.keys('quinn:*');
+      // Delete only tool-result cache keys to avoid affecting other services
+      const keys = await this.client.keys('tool:v1:*');
       if (keys.length > 0) {
         await this.client.del(...keys);
         this.logger.log(`[Redis Cache] Flushed ${keys.length} entries`);

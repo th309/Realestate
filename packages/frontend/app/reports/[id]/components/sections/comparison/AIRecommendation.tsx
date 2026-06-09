@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Sparkles, CheckCircle, ArrowRight, MessageSquare } from 'lucide-react';
-import { SectionProps } from '../../types';
+import React from "react";
+import { Sparkles, CheckCircle, ArrowRight } from "lucide-react";
+import { SectionProps } from "../../types";
 
 /**
  * AIRecommendation - Claude-generated personalized recommendation
@@ -11,58 +11,63 @@ import { SectionProps } from '../../types';
  * The "money shot" - personalized, actionable recommendation.
  */
 export function AIRecommendation({ section, report }: SectionProps) {
-  const isInvestor = report.user_type === 'investor';
+  const isInvestor = report.user_type === "investor";
 
   // Get AI-generated recommendation from report data
   const aiNarratives = report.ai_narratives || report.ai_narrative || {};
-  const recommendation = aiNarratives.final_recommendation as string | undefined;
+  const recommendation = aiNarratives.final_recommendation as
+    | string
+    | undefined;
   const nextSteps = aiNarratives.next_steps as string[] | undefined;
   const tradeOffs = aiNarratives.trade_offs as string | undefined;
 
   // Get winner info
-  const priorityWinner = report.populated_data?.priority_weighted_winner as {
-    winnerId: string;
-    winnerName: string;
-  } | undefined;
+  const priorityWinner = report.populated_data?.priority_weighted_winner as
+    | {
+        winnerId: string;
+        winnerName: string;
+      }
+    | undefined;
 
   // Get user inputs for personalization context
   const userInputs = report.user_inputs || {};
-  const priorities = userInputs.priorities as string[] || [];
+  const priorities = (userInputs.priorities as string[]) || [];
   const income = userInputs.annual_income || userInputs.household_income;
   const downPayment = userInputs.down_payment;
 
   // Format priorities for display
   const priorityLabels: Record<string, string> = {
-    affordability: 'Affordability',
-    appreciation: 'Appreciation',
-    job_market: 'Job Market',
-    market_timing: 'Market Timing',
-    lifestyle: 'Lifestyle',
-    cash_flow: 'Cash Flow',
-    tenant_demand: 'Tenant Demand',
-    entry_price: 'Entry Price',
-    stability: 'Stability',
+    affordability: "Affordability",
+    appreciation: "Appreciation",
+    job_market: "Job Market",
+    market_timing: "Market Timing",
+    lifestyle: "Lifestyle",
+    cash_flow: "Cash Flow",
+    tenant_demand: "Tenant Demand",
+    entry_price: "Entry Price",
+    stability: "Stability",
   };
 
   const formattedPriorities = priorities
     .slice(0, 3)
-    .map(p => priorityLabels[p] || p)
-    .join(' → ');
+    .map((p) => priorityLabels[p] || p)
+    .join(" → ");
 
   // Default next steps if not provided by AI
   const defaultNextSteps = isInvestor
     ? [
-        'Run detailed cash flow analysis for specific properties',
-        'Connect with local property managers for rental insights',
-        'Review recent comparable sales in target neighborhoods',
+        "Run detailed cash flow analysis for specific properties",
+        "Connect with local property managers for rental insights",
+        "Review recent comparable sales in target neighborhoods",
       ]
     : [
-        'Get pre-approved with a local lender',
-        'Explore neighborhoods that match your budget',
-        'Ask Quinn any follow-up questions about this analysis',
+        "Get pre-approved with a local lender",
+        "Explore neighborhoods that match your budget",
+        "Review the detailed market report for deeper analysis",
       ];
 
-  const displayNextSteps = nextSteps && nextSteps.length > 0 ? nextSteps : defaultNextSteps;
+  const displayNextSteps =
+    nextSteps && nextSteps.length > 0 ? nextSteps : defaultNextSteps;
 
   return (
     <div className="report-section report-animate-in">
@@ -84,15 +89,21 @@ export function AIRecommendation({ section, report }: SectionProps) {
           {/* Context Line */}
           {(formattedPriorities || income) && (
             <p className="text-sm text-on-primary/80 mb-4">
-              Based on your priorities ({formattedPriorities || 'not specified'})
-              {income && ` and financial profile ($${formatCurrency(income)} income${downPayment ? `, $${formatCurrency(downPayment)} down` : ''})`}:
+              Based on your priorities ({formattedPriorities || "not specified"}
+              )
+              {income &&
+                ` and financial profile ($${formatCurrency(income)} income${downPayment ? `, $${formatCurrency(downPayment)} down` : ""})`}
+              :
             </p>
           )}
 
           {/* Main Recommendation */}
           {priorityWinner ? (
             <div className="text-2xl font-bold mb-4">
-              <span className="text-on-primary/90">{priorityWinner.winnerName}</span> is the stronger choice for you.
+              <span className="text-on-primary/90">
+                {priorityWinner.winnerName}
+              </span>{" "}
+              is the stronger choice for you.
             </div>
           ) : (
             <div className="text-2xl font-bold mb-4">
@@ -107,8 +118,9 @@ export function AIRecommendation({ section, report }: SectionProps) {
             </p>
           ) : (
             <p className="text-on-primary/90 leading-relaxed">
-              Based on your selected priorities and market data, this market offers the best combination
-              of factors that matter to you. Review the detailed analysis above for specifics.
+              Based on your selected priorities and market data, this market
+              offers the best combination of factors that matter to you. Review
+              the detailed analysis above for specifics.
             </p>
           )}
         </div>
@@ -120,9 +132,7 @@ export function AIRecommendation({ section, report }: SectionProps) {
           <h3 className="text-sm font-semibold text-amber-600 mb-2">
             The Trade-Off to Consider
           </h3>
-          <p className="text-sm text-on-surface leading-relaxed">
-            {tradeOffs}
-          </p>
+          <p className="text-sm text-on-surface leading-relaxed">{tradeOffs}</p>
         </div>
       )}
 
@@ -146,22 +156,11 @@ export function AIRecommendation({ section, report }: SectionProps) {
         </div>
       </div>
 
-      {/* CTA: Talk to Quinn */}
-      <div className="mt-6 p-5 bg-primary/5 rounded-xl border border-primary/20 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <MessageSquare className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-primary">Have Questions?</span>
-        </div>
-        <p className="text-sm text-on-surface-variant">
-          Ask Quinn to dive deeper into any aspect of this analysis.
-          Our AI assistant can provide additional insights tailored to your situation.
-        </p>
-      </div>
-
       {/* Disclaimer */}
       <p className="mt-4 text-[10px] text-on-surface-variant text-center">
-        This recommendation is based on available market data and your stated priorities.
-        It is not financial advice. Consult with local professionals before making decisions.
+        This recommendation is based on available market data and your stated
+        priorities. It is not financial advice. Consult with local professionals
+        before making decisions.
       </p>
     </div>
   );

@@ -6,10 +6,10 @@
  * optimistic updates and "Saved" confirmation feedback.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
 export interface ConfigEntry {
   key: string;
@@ -38,10 +38,10 @@ interface UseIntelligenceConfigReturn {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  intelligence: 'Intelligence Features',
-  news: 'News API',
-  llm: 'LLM Provider',
-  quinn: 'Quinn Chat & Briefings',
+  intelligence: "Intelligence Features",
+  news: "News API",
+  llm: "LLM Provider",
+  quinn: "Briefings & News",
 };
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -52,13 +52,20 @@ export function useIntelligenceConfig(): UseIntelligenceConfigReturn {
       Object.fromEntries(
         CATEGORIES.map((cat) => [
           cat,
-          { label: CATEGORY_LABELS[cat], entries: [], loading: true, error: null },
+          {
+            label: CATEGORY_LABELS[cat],
+            entries: [],
+            loading: true,
+            error: null,
+          },
         ]),
       ) as Record<string, ConfigCategory>,
   );
 
   const [recentlySaved, setRecentlySaved] = useState<Set<string>>(new Set());
-  const savedTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const savedTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
 
   const fetchCategory = useCallback(async (category: string) => {
     setCategories((prev) => ({
@@ -82,7 +89,7 @@ export function useIntelligenceConfig(): UseIntelligenceConfigReturn {
         [category]: {
           ...prev[category],
           loading: false,
-          error: err instanceof Error ? err.message : 'Failed to load',
+          error: err instanceof Error ? err.message : "Failed to load",
         },
       }));
     }
@@ -96,50 +103,47 @@ export function useIntelligenceConfig(): UseIntelligenceConfigReturn {
     refreshAll();
   }, [refreshAll]);
 
-  const updateConfigValue = useCallback(
-    async (key: string, value: string) => {
-      // Optimistic update in local state
-      setCategories((prev) => {
-        const updated = { ...prev };
-        for (const cat of CATEGORIES) {
-          const idx = updated[cat].entries.findIndex((e) => e.key === key);
-          if (idx !== -1) {
-            const newEntries = [...updated[cat].entries];
-            newEntries[idx] = { ...newEntries[idx], value };
-            updated[cat] = { ...updated[cat], entries: newEntries };
-            break;
-          }
+  const updateConfigValue = useCallback(async (key: string, value: string) => {
+    // Optimistic update in local state
+    setCategories((prev) => {
+      const updated = { ...prev };
+      for (const cat of CATEGORIES) {
+        const idx = updated[cat].entries.findIndex((e) => e.key === key);
+        if (idx !== -1) {
+          const newEntries = [...updated[cat].entries];
+          newEntries[idx] = { ...newEntries[idx], value };
+          updated[cat] = { ...updated[cat], entries: newEntries };
+          break;
         }
-        return updated;
-      });
-
-      // PUT to the backend
-      const res = await fetchAPIRaw(`/api/admin/config/${key}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to save ${key}: HTTP ${res.status}`);
       }
+      return updated;
+    });
 
-      // Show "Saved" indicator for 2 seconds
-      setRecentlySaved((prev) => new Set(prev).add(key));
-      const existingTimer = savedTimers.current.get(key);
-      if (existingTimer) clearTimeout(existingTimer);
-      const timer = setTimeout(() => {
-        setRecentlySaved((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-        savedTimers.current.delete(key);
-      }, 2000);
-      savedTimers.current.set(key, timer);
-    },
-    [],
-  );
+    // PUT to the backend
+    const res = await fetchAPIRaw(`/api/admin/config/${key}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to save ${key}: HTTP ${res.status}`);
+    }
+
+    // Show "Saved" indicator for 2 seconds
+    setRecentlySaved((prev) => new Set(prev).add(key));
+    const existingTimer = savedTimers.current.get(key);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      setRecentlySaved((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      savedTimers.current.delete(key);
+    }, 2000);
+    savedTimers.current.set(key, timer);
+  }, []);
 
   // Cleanup timers on unmount
   useEffect(() => {

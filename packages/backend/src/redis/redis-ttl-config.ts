@@ -16,12 +16,6 @@ export const TTL_MAP: Record<string, number> = {
   watchlist: 300, // 5 minutes
   recommendations: 3600, // 1 hour
 
-  // ── Quinn tool-level TTLs ──
-  get_rankings: 3600, // 1 hour
-  analyze_data: 1800, // 30 minutes
-  filter_geographies: 7200, // 2 hours
-  compare_to_benchmark: 1800, // 30 minutes
-  get_time_series: 3600, // 1 hour
-  query_database_table: 1800, // 30 minutes
+  // Fallback for any domain not listed above.
   default: 1800, // 30 minutes
 };

@@ -7,7 +7,7 @@ import { Heart, ExternalLink, FileText, Loader2, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
-import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import { useWatchlist } from "@/lib/watchlist/useWatchlist";
 import type { SelectedGeography, GeoLevel } from "../../types";
 
 interface QuickActionsProps {

@@ -33,9 +33,6 @@ interface BrandingFields {
   customTosUrl: string;
   customPrivacyUrl: string;
   customSubdomain: string;
-  // Quinn (paused — hooks only)
-  quinnBotName: string;
-  quinnGreeting: string;
 }
 
 const DEFAULT_FIELDS: BrandingFields = {
@@ -62,8 +59,6 @@ const DEFAULT_FIELDS: BrandingFields = {
   customTosUrl: "",
   customPrivacyUrl: "",
   customSubdomain: "",
-  quinnBotName: "",
-  quinnGreeting: "",
 };
 
 /**
@@ -152,8 +147,6 @@ export function useBrandingForm(orgSlug: string | undefined) {
         customTosUrl: data.custom_tos_url || "",
         customPrivacyUrl: data.custom_privacy_url || "",
         customSubdomain: data.custom_subdomain || "",
-        quinnBotName: data.quinn_bot_name || "",
-        quinnGreeting: data.quinn_greeting || "",
       };
       setFields(loaded);
       setInitial(loaded);
@@ -215,8 +208,6 @@ export function useBrandingForm(orgSlug: string | undefined) {
         welcome_message: fields.welcomeMessage.trim() || undefined,
         custom_tos_url: fields.customTosUrl.trim() || undefined,
         custom_privacy_url: fields.customPrivacyUrl.trim() || undefined,
-        quinn_bot_name: fields.quinnBotName.trim() || undefined,
-        quinn_greeting: fields.quinnGreeting.trim() || undefined,
       });
       const saved: BrandingFields = {
         accentColor: result.accent_color || fields.accentColor,
@@ -242,8 +233,6 @@ export function useBrandingForm(orgSlug: string | undefined) {
         customTosUrl: result.custom_tos_url || "",
         customPrivacyUrl: result.custom_privacy_url || "",
         customSubdomain: result.custom_subdomain || "",
-        quinnBotName: result.quinn_bot_name || "",
-        quinnGreeting: result.quinn_greeting || "",
       };
       setFields(saved);
       setInitial(saved);

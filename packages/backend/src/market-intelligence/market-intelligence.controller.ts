@@ -16,7 +16,7 @@ interface IntelligenceStats {
   oldest_briefing_days: number | null;
   news_articles_last_7d: number;
   rankings_last_refresh: string | null;
-  quinn_available: boolean;
+  briefings_available: boolean;
 }
 
 @UseGuards(AdminGuard)
@@ -43,7 +43,7 @@ export class MarketIntelligenceController {
       oldestBriefingResult,
       newsCountResult,
       latestRankingResult,
-      quinnAvailable,
+      briefingsEnabled,
     ] = await Promise.all([
       // Total latest briefings
       client
@@ -78,7 +78,10 @@ export class MarketIntelligenceController {
       client
         .from('market_news')
         .select('*', { count: 'exact', head: true })
-        .gte('published_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),
+        .gte(
+          'published_at',
+          new Date(Date.now() - 7 * 86_400_000).toISOString(),
+        ),
 
       // Most recent rankings refresh
       client
@@ -89,18 +92,17 @@ export class MarketIntelligenceController {
         .limit(1)
         .single(),
 
-      // Quinn (briefing generation) feature flag
+      // Briefing generation feature flag
       this.appConfig.getBool('BRIEFING_GENERATION_ENABLED', false),
     ]);
 
-    const oldestDays =
-      oldestBriefingResult.data?.generated_date
-        ? Math.floor(
-            (Date.now() -
-              new Date(oldestBriefingResult.data.generated_date).getTime()) /
-              86_400_000,
-          )
-        : null;
+    const oldestDays = oldestBriefingResult.data?.generated_date
+      ? Math.floor(
+          (Date.now() -
+            new Date(oldestBriefingResult.data.generated_date).getTime()) /
+            86_400_000,
+        )
+      : null;
 
     return {
       total_briefings: totalBriefingsResult.count ?? 0,
@@ -109,7 +111,7 @@ export class MarketIntelligenceController {
       oldest_briefing_days: oldestDays,
       news_articles_last_7d: newsCountResult.count ?? 0,
       rankings_last_refresh: latestRankingResult.data?.generated_date ?? null,
-      quinn_available: quinnAvailable,
+      briefings_available: briefingsEnabled,
     };
   }
 

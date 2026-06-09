@@ -2,13 +2,13 @@
  * useIntelligenceStats Hook
  *
  * Fetches system health stats from the market intelligence admin endpoint.
- * Returns briefing coverage, news volume, rankings freshness, and Quinn status.
+ * Returns briefing coverage, news volume, rankings freshness, and briefing status.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
+import { useState, useEffect, useCallback } from "react";
+import { fetchAPIRaw } from "@/lib/data";
 
 export interface IntelligenceStats {
   total_briefings: number;
@@ -17,7 +17,7 @@ export interface IntelligenceStats {
   oldest_briefing_days: number | null;
   news_articles_last_7d: number;
   rankings_last_refresh: string | null;
-  quinn_available: boolean;
+  briefings_available: boolean;
 }
 
 interface UseIntelligenceStatsReturn {
@@ -36,12 +36,12 @@ export function useIntelligenceStats(): UseIntelligenceStatsReturn {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchAPIRaw('/api/admin/intelligence/stats');
+      const res = await fetchAPIRaw("/api/admin/intelligence/stats");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: IntelligenceStats = await res.json();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load stats');
+      setError(err instanceof Error ? err.message : "Failed to load stats");
     } finally {
       setLoading(false);
     }

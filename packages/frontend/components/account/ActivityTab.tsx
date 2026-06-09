@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Mail, TrendingUp, Megaphone, Loader2, Lock } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
 import type { UserTier } from '@/lib/entitlements';
-import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
+import { useWatchlist } from '@/lib/watchlist/useWatchlist';
 import { useAlerts, useAlertHistory } from '@/lib/alerts/hooks';
 import { WatchlistDashboard } from '@/components/watchlist';
 import { AlertFeed } from '@/components/alerts';

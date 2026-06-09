@@ -10,7 +10,6 @@ import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "./components/AppFooter";
 import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
 import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
-// import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -192,8 +191,6 @@ export default async function RootLayout({
             <AppFooter />
             <DevToolbarLoader />
           </EnterpriseOnboardingGate>
-          {/* <QuinnFloatingButton /> */}{" "}
-          {/* PAUSED: Quinn development on hold */}
         </Providers>
       </body>
     </html>

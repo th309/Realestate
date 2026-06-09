@@ -6,13 +6,13 @@
  * Shows the user's saved watchlist items with score information.
  * If no watchlist exists, prompts the user to add markets.
  *
- * Uses the existing useWatchlist hook from analytics-assistant/persistence
+ * Uses the useWatchlist hook from lib/watchlist
  * and reuses the WatchlistDashboard display component.
  */
 
 import Link from "next/link";
 import { Bookmark, ChevronRight, MapPin } from "lucide-react";
-import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import { useWatchlist } from "@/lib/watchlist/useWatchlist";
 import { WatchlistDashboard } from "@/components/watchlist/WatchlistDashboard";
 
 // ---------------------------------------------------------------------------

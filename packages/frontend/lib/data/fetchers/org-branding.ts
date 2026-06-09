@@ -61,11 +61,6 @@ export interface OrgBranding {
   display_name: string | null;
   department_label: string | null;
   default_member_role: string | null;
-
-  // Quinn AI Assistant
-  quinn_bot_name: string | null;
-  quinn_greeting: string | null;
-  quinn_topic_restrictions: string[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,8 +115,6 @@ export async function updateOrgBranding(
     display_name?: string;
     department_label?: string;
     default_member_role?: string;
-    quinn_bot_name?: string;
-    quinn_greeting?: string;
   },
 ): Promise<OrgBranding> {
   const res = await fetchAPIRaw(`/api/org/${slug}/branding`, {

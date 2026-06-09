@@ -48,9 +48,6 @@ const BRANDING_SELECT = [
   'display_name',
   'department_label',
   'default_member_role',
-  'quinn_bot_name',
-  'quinn_greeting',
-  'quinn_topic_restrictions',
 ].join(', ');
 
 export interface BrandingResponse {
@@ -81,9 +78,6 @@ export interface BrandingResponse {
   display_name: string | null;
   department_label: string | null;
   default_member_role: string;
-  quinn_bot_name: string | null;
-  quinn_greeting: string | null;
-  quinn_topic_restrictions: string[] | null;
 }
 
 /** Map a raw DB row to the public BrandingResponse shape. */
@@ -116,9 +110,6 @@ function toBrandingResponse(row: Record<string, any>): BrandingResponse {
     display_name: row.display_name,
     department_label: row.department_label,
     default_member_role: row.default_member_role ?? 'member',
-    quinn_bot_name: row.quinn_bot_name,
-    quinn_greeting: row.quinn_greeting,
-    quinn_topic_restrictions: row.quinn_topic_restrictions,
   };
 }
 
@@ -174,7 +165,7 @@ export class OrgBrandingService {
 
   /**
    * Update branding fields (accent color, website URL, phone, address,
-   * managing broker, reports, email, subdomain, fonts, quinn, and more).
+   * managing broker, reports, email, subdomain, fonts, and more).
    */
   async updateBranding(
     orgId: string,
@@ -207,9 +198,6 @@ export class OrgBrandingService {
       'display_name',
       'department_label',
       'default_member_role',
-      'quinn_bot_name',
-      'quinn_greeting',
-      'quinn_topic_restrictions',
     ];
 
     for (const field of directFields) {

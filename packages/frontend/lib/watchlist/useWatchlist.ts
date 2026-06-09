@@ -1,12 +1,26 @@
 "use client";
 
 /**
- * Hook for managing market watchlist
+ * Hook for managing market watchlist.
+ *
+ * Standalone, live feature used by the account, dashboard, and map surfaces.
+ * Backed by the surviving `/api/analytics/persistence/watchlist` route.
  */
 
 import { useState, useCallback, useEffect } from "react";
 import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
-import type { WatchlistItem } from "./types";
+
+export interface WatchlistItem {
+  id: string;
+  user_id: string;
+  geography_type: string;
+  geography_id: string;
+  geography_name?: string;
+  tags?: string[];
+  folder?: string;
+  added_at: string;
+  score_at_add?: number;
+}
 
 interface UseWatchlistOptions {
   userId: string;

@@ -26,27 +26,27 @@ Plus analytics, automation rules, and a monetization playbook to optimize conver
 
 ### User Tiers
 
-| Tier | Description |
-|------|-------------|
-| **Free** | Single user, limited features/data |
-| **Pro** | Single user, full access |
+| Tier           | Description                                                 |
+| -------------- | ----------------------------------------------------------- |
+| **Free**       | Single user, limited features/data                          |
+| **Pro**        | Single user, full access                                    |
 | **Enterprise** | Multiple users under one account (team management deferred) |
 
 ### Gated Dimensions
 
-| Dimension | Example |
-|-----------|---------|
-| **Metrics** | `home_value` = free, `rental_yield` = pro |
-| **Geographies** | Metro = free, Zip = pro |
-| **Features** | Map = free, AI Quinn = pro, API Access = enterprise |
+| Dimension       | Example                                   |
+| --------------- | ----------------------------------------- |
+| **Metrics**     | `home_value` = free, `rental_yield` = pro |
+| **Geographies** | Metro = free, Zip = pro                   |
+| **Features**    | Map = free, API Access = enterprise       |
 
 ### Access Levels
 
-| Level | Behavior |
-|-------|----------|
-| **full** | Complete access |
+| Level       | Behavior                           |
+| ----------- | ---------------------------------- |
+| **full**    | Complete access                    |
 | **preview** | Show first N results, then paywall |
-| **none** | Hidden or blocked entirely |
+| **none**    | Hidden or blocked entirely         |
 
 ---
 
@@ -223,10 +223,10 @@ async function syncMetricsToEntitlements() {
   for (const metricId of metricsFromRegistry) {
     // Ensure metric exists in entitlement_rules with default tier
     await upsertDefaultRule({
-      resourceType: 'metric',
+      resourceType: "metric",
       resourceId: metricId,
-      tier: 'free',  // Default to free, admin can change
-      access: 'full',
+      tier: "free", // Default to free, admin can change
+      access: "full",
     });
   }
 }
@@ -354,7 +354,7 @@ async function getEffectiveAccess(
   tier: UserTier,
   resourceType: ResourceType,
   resourceId: string,
-  environment: Environment
+  environment: Environment,
 ): Promise<AccessLevel> {
   // 1. Check for override in current environment
   const override = await db.entitlementRules.findFirst({
@@ -362,7 +362,7 @@ async function getEffectiveAccess(
       tier,
       resourceType,
       resourceId,
-      source: 'override',
+      source: "override",
       environment,
     },
   });
@@ -375,14 +375,14 @@ async function getEffectiveAccess(
       tier,
       resourceType,
       resourceId,
-      source: 'default',
+      source: "default",
     },
   });
 
   if (defaultRule) return defaultRule;
 
   // 3. No rule found = deny access
-  return { access: 'none', previewLimit: null };
+  return { access: "none", previewLimit: null };
 }
 ```
 
@@ -606,34 +606,46 @@ packages/frontend/app/_dev/admin/entitlements/components/
 ```typescript
 const ADMIN_NAV = [
   {
-    label: 'Overview',
-    href: '/_dev/admin/entitlements',
+    label: "Overview",
+    href: "/_dev/admin/entitlements",
     icon: LayoutDashboard,
   },
   {
-    label: 'Configure',
+    label: "Configure",
     items: [
-      { label: 'Tiers', href: '/_dev/admin/entitlements/tiers', icon: Layers },
-      { label: 'Trial', href: '/_dev/admin/entitlements/trial', icon: Clock },
-      { label: 'Users', href: '/_dev/admin/entitlements/users', icon: Users },
+      { label: "Tiers", href: "/_dev/admin/entitlements/tiers", icon: Layers },
+      { label: "Trial", href: "/_dev/admin/entitlements/trial", icon: Clock },
+      { label: "Users", href: "/_dev/admin/entitlements/users", icon: Users },
     ],
   },
   {
-    label: 'Insights',
+    label: "Insights",
     items: [
-      { label: 'Analytics', href: '/_dev/admin/entitlements/analytics', icon: BarChart },
+      {
+        label: "Analytics",
+        href: "/_dev/admin/entitlements/analytics",
+        icon: BarChart,
+      },
     ],
   },
   {
-    label: 'Automate',
+    label: "Automate",
     items: [
-      { label: 'Rules', href: '/_dev/admin/entitlements/automations', icon: Zap },
+      {
+        label: "Rules",
+        href: "/_dev/admin/entitlements/automations",
+        icon: Zap,
+      },
     ],
   },
   {
-    label: 'Learn',
+    label: "Learn",
     items: [
-      { label: 'Playbook', href: '/_dev/admin/entitlements/playbook', icon: BookOpen },
+      {
+        label: "Playbook",
+        href: "/_dev/admin/entitlements/playbook",
+        icon: BookOpen,
+      },
     ],
   },
 ];
@@ -650,6 +662,7 @@ const ADMIN_NAV = [
 ```
 
 Sets a cookie that overrides the user's actual tier. Only works when:
+
 - In development environment, OR
 - User is on `/_dev/*` routes
 
@@ -666,6 +679,7 @@ Always visible in admin sidebar footer:
 ```
 
 Shows clear indicator when simulating:
+
 - Badge: "Viewing as Pro"
 - Different background color
 - "Reset" button to clear simulation
@@ -676,21 +690,21 @@ Shows clear indicator when simulating:
 
 ### 7.1 Tracked Events
 
-| Event | When | Data |
-|-------|------|------|
-| `paywall_view` | User sees a paywall | resource, tier, page |
-| `paywall_click` | User clicks upgrade | resource, tier, page |
-| `paywall_dismiss` | User dismisses paywall | resource, tier |
-| `teaser_view` | User sees teaser content | resource, tier, items_shown |
-| `teaser_expand` | User tries to see more | resource, tier |
+| Event             | When                     | Data                        |
+| ----------------- | ------------------------ | --------------------------- |
+| `paywall_view`    | User sees a paywall      | resource, tier, page        |
+| `paywall_click`   | User clicks upgrade      | resource, tier, page        |
+| `paywall_dismiss` | User dismisses paywall   | resource, tier              |
+| `teaser_view`     | User sees teaser content | resource, tier, items_shown |
+| `teaser_expand`   | User tries to see more   | resource, tier              |
 
 ### 7.2 Calculated Metrics
 
-| Metric | Formula |
-|--------|---------|
-| Conversion rate | clicks / views |
+| Metric               | Formula                     |
+| -------------------- | --------------------------- |
+| Conversion rate      | clicks / views              |
 | Teaser effectiveness | teaser_expand / teaser_view |
-| Paywall friction | dismiss / views |
+| Paywall friction     | dismiss / views             |
 
 ### 7.3 Recommendation Engine
 
@@ -700,18 +714,20 @@ Rules-based recommendations:
 const RECOMMENDATION_RULES = [
   {
     condition: (stats) => stats.views > 100 && stats.conversionRate < 0.02,
-    recommendation: 'High views, low conversion. Consider adding teaser preview.',
-    action: 'add_teaser',
+    recommendation:
+      "High views, low conversion. Consider adding teaser preview.",
+    action: "add_teaser",
   },
   {
-    condition: (stats) => stats.conversionRate > 0.10,
-    recommendation: 'High conversion rate. This gate is working well.',
-    action: 'none',
+    condition: (stats) => stats.conversionRate > 0.1,
+    recommendation: "High conversion rate. This gate is working well.",
+    action: "none",
   },
   {
-    condition: (stats) => stats.dismissRate > 0.80,
-    recommendation: 'Users are dismissing this paywall. Consider lowering tier or improving copy.',
-    action: 'review_tier',
+    condition: (stats) => stats.dismissRate > 0.8,
+    recommendation:
+      "Users are dismissing this paywall. Consider lowering tier or improving copy.",
+    action: "review_tier",
   },
 ];
 ```
@@ -722,23 +738,23 @@ const RECOMMENDATION_RULES = [
 
 ### 8.1 Trigger Types
 
-| Trigger | Parameters | Description |
-|---------|------------|-------------|
-| `paywall_count` | count, days | User hits N paywalls in X days |
-| `inactive_days` | days | User hasn't logged in for X days |
-| `trial_ending` | days_before | Trial expires in X days |
-| `trial_ended` | days_after | Trial ended X days ago |
-| `subscription_cancelled` | days_after | Cancelled X days ago |
+| Trigger                  | Parameters  | Description                      |
+| ------------------------ | ----------- | -------------------------------- |
+| `paywall_count`          | count, days | User hits N paywalls in X days   |
+| `inactive_days`          | days        | User hasn't logged in for X days |
+| `trial_ending`           | days_before | Trial expires in X days          |
+| `trial_ended`            | days_after  | Trial ended X days ago           |
+| `subscription_cancelled` | days_after  | Cancelled X days ago             |
 
 ### 8.2 Action Types
 
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `send_email` | template_id | Send email from template |
-| `apply_discount` | percent, duration | Create discount code |
-| `extend_trial` | days | Extend trial by X days |
-| `upgrade_tier` | tier, duration | Temporary tier upgrade |
-| `webhook` | url, payload | Call external webhook |
+| Action           | Parameters        | Description              |
+| ---------------- | ----------------- | ------------------------ |
+| `send_email`     | template_id       | Send email from template |
+| `apply_discount` | percent, duration | Create discount code     |
+| `extend_trial`   | days              | Extend trial by X days   |
+| `upgrade_tier`   | tier, duration    | Temporary tier upgrade   |
+| `webhook`        | url, payload      | Call external webhook    |
 
 ### 8.3 Execution
 
@@ -748,14 +764,14 @@ Automations run via a scheduled job (cron):
 // Every hour, check automation triggers
 async function runAutomations() {
   const activeAutomations = await db.automations.findMany({
-    where: { status: 'active' },
+    where: { status: "active" },
   });
 
   for (const automation of activeAutomations) {
     const users = await findUsersMatchingTrigger(automation);
 
     for (const user of users) {
-      if (!await hasRecentRun(automation, user)) {
+      if (!(await hasRecentRun(automation, user))) {
         await executeAction(automation, user);
         await recordRun(automation, user);
       }
@@ -771,17 +787,20 @@ async function runAutomations() {
 Static content embedded in admin, organized by topic:
 
 ### Getting Started
+
 - Setting your first gates
 - Free vs Teaser vs Paid decision framework
 - Pricing psychology basics
 
 ### Conversion Optimization
+
 - Optimal teaser limits (research-backed)
 - Paywall copy that converts
 - When to offer discounts
 - Trial length best practices (7 vs 14 vs 30 days)
 
 ### Retention
+
 - Early warning signs of churn
 - Re-engagement email timing
 - Win-back campaign strategies
@@ -794,6 +813,7 @@ Content stored as MDX files, rendered in admin UI.
 ## 10. Implementation Phases
 
 ### Phase 1: Core Entitlements (MVP)
+
 - [ ] Database schema
 - [ ] Backend API (rules, features)
 - [ ] Frontend context and hooks
@@ -801,28 +821,33 @@ Content stored as MDX files, rendered in admin UI.
 - [ ] Config file seeding
 
 ### Phase 2: Admin UI
+
 - [ ] Admin layout and navigation
 - [ ] Tier configuration (drag-and-drop)
 - [ ] Features management
 - [ ] Tier simulation
 
 ### Phase 3: Analytics
+
 - [ ] Event tracking
 - [ ] Analytics dashboard
 - [ ] Recommendation engine
 
 ### Phase 4: Trials & Overrides
+
 - [ ] Trial configuration
 - [ ] User overrides
 - [ ] Trial banner component
 
 ### Phase 5: Automations
+
 - [ ] Automation CRUD
 - [ ] Trigger evaluation
 - [ ] Action execution
 - [ ] Run history
 
 ### Phase 6: Playbook & Polish
+
 - [ ] Playbook content
 - [ ] UI polish
 - [ ] Production admin access
@@ -840,9 +865,9 @@ Content stored as MDX files, rendered in admin UI.
 
 ## 12. Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| Free → Pro conversion | > 5% |
-| Trial → Paid conversion | > 20% |
-| Pro churn rate | < 5% monthly |
-| Paywall-to-upgrade rate | > 3% |
+| Metric                  | Target       |
+| ----------------------- | ------------ |
+| Free → Pro conversion   | > 5%         |
+| Trial → Paid conversion | > 20%        |
+| Pro churn rate          | < 5% monthly |
+| Paywall-to-upgrade rate | > 3%         |

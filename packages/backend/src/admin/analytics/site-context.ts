@@ -136,7 +136,6 @@ PRO (monthly/yearly billing, free trial available):
 - Everything in Free, plus:
 - Metro, county, and ZIP code level data
 - PropertyIQ Score (unified market quality score)
-- Quinn AI assistant (conversational market analysis)
 - Unlimited AI report generation
 - CSV data export
 - Metric filtering & comparisons
@@ -174,12 +173,7 @@ ENTERPRISE (contact sales):
    - User inputs: priorities, down payment, investment horizon, income
    - Unlimited for Pro+ users
 
-5. Quinn Analytics Chat (AI Assistant)
-   - Conversational market analysis with live data
-   - Compare markets, get rankings, analyze trends
-   - Pro+ only
-
-6. Time-Series & Charts
+5. Time-Series & Charts
    - 3Y/5Y historical trends for any metric
    - Dual-axis charts (score + returns overlay)
    - CSV export for Pro+
@@ -259,7 +253,6 @@ Key API Endpoints (frontend-hosted):
 /api/newsletter/confirm (double opt-in confirmation)
 /api/betatest/feedback (beta tester feedback submission)
 /api/betatest/upload (beta tester screenshot/file upload)
-/api/analytics/chat/[conversationId] (Quinn AI chat — conversational market analysis)
 /api/analytics/persistence/* (saved queries, watchlist, alerts, conversations)
 
 ${buildBlogSection(input.blogPosts)}

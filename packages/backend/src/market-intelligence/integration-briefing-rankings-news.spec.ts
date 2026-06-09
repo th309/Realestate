@@ -1,7 +1,7 @@
 /**
  * Market Intelligence Integration Tests: Flows 1-3
  *
- * 1. Briefing generation -> storage -> Quinn lookup
+ * 1. Briefing generation -> storage -> lookup
  * 2. Rankings cache refresh -> retrieval
  * 3. News ingestion -> geo-tagging -> storage
  */
@@ -16,9 +16,13 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import {
-  makeResolvedMetric, buildFullResolvedBatch, BENCHMARKS,
-  createIntegrationSupabaseClient, createMockMetricResolution,
-  createMockAppConfig, createMockGeoTagger,
+  makeResolvedMetric,
+  buildFullResolvedBatch,
+  BENCHMARKS,
+  createIntegrationSupabaseClient,
+  createMockMetricResolution,
+  createMockAppConfig,
+  createMockGeoTagger,
 } from './integration-test-helpers';
 
 // ---------------------------------------------------------------------------
@@ -41,7 +45,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ===========================================================================
-// Flow 1: Briefing Generation -> Storage -> Quinn Lookup
+// Flow 1: Briefing Generation -> Storage -> Lookup
 // ===========================================================================
 
 describe('Flow 1: Briefing generation -> storage -> lookup', () => {
@@ -55,24 +59,38 @@ describe('Flow 1: Briefing generation -> storage -> lookup', () => {
     mockMetricResolution = createMockMetricResolution();
 
     mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: 'LA shows bullish momentum with 4.2% appreciation.' } }],
+      choices: [
+        {
+          message: {
+            content: 'LA shows bullish momentum with 4.2% appreciation.',
+          },
+        },
+      ],
     });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BriefingGeneratorService,
         { provide: MetricResolutionService, useValue: mockMetricResolution },
-        { provide: SupabaseService, useValue: { getClient: () => supabaseClient } },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: () => supabaseClient },
+        },
         { provide: AppConfigService, useValue: createMockAppConfig() },
       ],
     }).compile();
 
-    briefingService = module.get<BriefingGeneratorService>(BriefingGeneratorService);
+    briefingService = module.get<BriefingGeneratorService>(
+      BriefingGeneratorService,
+    );
   });
 
   it('generates a briefing, stores it, and it becomes queryable by geography_id', async () => {
     const briefing = await briefingService.generateBriefing(
-      '31080', 'metro', 'Los Angeles-Long Beach-Anaheim, CA', BENCHMARKS,
+      '31080',
+      'metro',
+      'Los Angeles-Long Beach-Anaheim, CA',
+      BENCHMARKS,
     );
 
     expect(briefing.geography_id).toBe('31080');
@@ -90,7 +108,12 @@ describe('Flow 1: Briefing generation -> storage -> lookup', () => {
   });
 
   it('marks previous briefing as not latest before inserting new one', async () => {
-    await briefingService.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
+    await briefingService.generateBriefing(
+      '31080',
+      'metro',
+      'Los Angeles',
+      BENCHMARKS,
+    );
 
     const fromCalls = supabaseClient.from.mock.calls;
     const briefingTableCalls = fromCalls.filter(
@@ -102,16 +125,23 @@ describe('Flow 1: Briefing generation -> storage -> lookup', () => {
 
   it('stores stance signals and risk flags in the briefing', async () => {
     const briefing = await briefingService.generateBriefing(
-      '31080', 'metro', 'Los Angeles', BENCHMARKS,
+      '31080',
+      'metro',
+      'Los Angeles',
+      BENCHMARKS,
     );
 
     // With appreciation_yoy=4.2 > 3, we expect a bullish signal
     expect(briefing.stance_signals.length).toBeGreaterThan(0);
-    const bullishSignal = briefing.stance_signals.find(s => s.direction === 'bullish');
+    const bullishSignal = briefing.stance_signals.find(
+      (s) => s.direction === 'bullish',
+    );
     expect(bullishSignal).toBeDefined();
 
     // With price_to_income=6.25 > 6.0, we expect an affordability_squeeze flag
-    const affordabilityFlag = briefing.risk_flags.find(f => f.flag === 'affordability_squeeze');
+    const affordabilityFlag = briefing.risk_flags.find(
+      (f) => f.flag === 'affordability_squeeze',
+    );
     expect(affordabilityFlag).toBeDefined();
     expect(affordabilityFlag!.severity).toBe('medium');
   });
@@ -122,15 +152,21 @@ describe('Flow 1: Briefing generation -> storage -> lookup', () => {
         choices: [{ message: { content: 'Strong bullish narrative for LA.' } }],
       })
       .mockResolvedValueOnce({
-        choices: [{
-          message: {
-            content: '1. How does LA compare to national trends?\n2. What are the top risk factors?\n3. Is now a good time to invest?',
+        choices: [
+          {
+            message: {
+              content:
+                '1. How does LA compare to national trends?\n2. What are the top risk factors?\n3. Is now a good time to invest?',
+            },
           },
-        }],
+        ],
       });
 
     const briefing = await briefingService.generateBriefing(
-      '31080', 'metro', 'Los Angeles', BENCHMARKS,
+      '31080',
+      'metro',
+      'Los Angeles',
+      BENCHMARKS,
     );
 
     expect(briefing.suggested_questions).toBeInstanceOf(Array);
@@ -156,7 +192,10 @@ describe('Flow 2: Rankings cache refresh -> retrieval', () => {
       providers: [
         RankingsCacheService,
         { provide: MetricResolutionService, useValue: mockMetricResolution },
-        { provide: SupabaseService, useValue: { getClient: () => supabaseClient } },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: () => supabaseClient },
+        },
       ],
     }).compile();
 
@@ -176,7 +215,9 @@ describe('Flow 2: Rankings cache refresh -> retrieval', () => {
     expect(storedRankings.length).toBe(2);
 
     const topRanking = storedRankings.find((r: any) => r.direction === 'top');
-    const bottomRanking = storedRankings.find((r: any) => r.direction === 'bottom');
+    const bottomRanking = storedRankings.find(
+      (r: any) => r.direction === 'bottom',
+    );
 
     expect(topRanking).toBeDefined();
     expect(bottomRanking).toBeDefined();
@@ -220,7 +261,9 @@ describe('Flow 2: Rankings cache refresh -> retrieval', () => {
   });
 
   it('refreshAll processes all metric x geo combinations', async () => {
-    const spy = jest.spyOn(rankingsService, 'refreshMetric').mockResolvedValue();
+    const spy = jest
+      .spyOn(rankingsService, 'refreshMetric')
+      .mockResolvedValue();
     const result = await rankingsService.refreshAll();
 
     // 12 metrics x 3 geo levels = 36 combinations
@@ -293,21 +336,26 @@ describe('Flow 3: News ingestion -> geo-tagging -> storage', () => {
     });
 
     mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{
-        message: {
-          content: JSON.stringify({
-            summary: 'Market continues to show strength.',
-            tags: ['housing', 'prices'],
-            sentiment: 'positive',
-          }),
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              summary: 'Market continues to show strength.',
+              tags: ['housing', 'prices'],
+              sentiment: 'positive',
+            }),
+          },
         },
-      }],
+      ],
     });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NewsIngestionService,
-        { provide: SupabaseService, useValue: { getClient: () => supabaseClient } },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: () => supabaseClient },
+        },
         { provide: AppConfigService, useValue: createMockAppConfig() },
         { provide: GeoTaggerService, useValue: mockGeoTagger },
         { provide: BriefingGeneratorService, useValue: mockBriefingGenerator },
@@ -334,15 +382,21 @@ describe('Flow 3: News ingestion -> geo-tagging -> storage', () => {
 
     const storedNews = supabaseClient._tables.market_news;
 
-    const denverArticle = storedNews.find((n: any) => n.headline.includes('Denver'));
+    const denverArticle = storedNews.find((n: any) =>
+      n.headline.includes('Denver'),
+    );
     expect(denverArticle.geography_ids).toEqual(['19740']);
     expect(denverArticle.geo_tag_confidence).toBe(0.95);
     expect(denverArticle.geography_type).toBe('metro');
 
-    const tampaArticle = storedNews.find((n: any) => n.headline.includes('Tampa'));
+    const tampaArticle = storedNews.find((n: any) =>
+      n.headline.includes('Tampa'),
+    );
     expect(tampaArticle.geography_ids).toEqual(['45300']);
 
-    const nationalArticle = storedNews.find((n: any) => n.headline.includes('National'));
+    const nationalArticle = storedNews.find((n: any) =>
+      n.headline.includes('National'),
+    );
     expect(nationalArticle.geography_ids).toEqual([]);
     expect(nationalArticle.geography_type).toBeNull();
   });
