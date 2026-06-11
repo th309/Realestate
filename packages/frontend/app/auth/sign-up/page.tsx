@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, FormEvent } from "react";
+import { Suspense, useState, useEffect, useRef, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -87,6 +87,9 @@ function SignUpContent() {
   const [error, setError] = useState<string | null>(null);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const tosRef = useRef<HTMLLabelElement>(null);
+  const tosError =
+    error === "You must accept the Terms of Service to create an account";
 
   // Track signup form shown once on mount
   useEffect(() => {
@@ -99,6 +102,7 @@ function SignUpContent() {
     e.preventDefault();
     if (!tosAccepted) {
       setError("You must accept the Terms of Service to create an account");
+      tosRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (!email || !password || !confirmPassword) return;
@@ -181,6 +185,7 @@ function SignUpContent() {
   const handleOAuth = async (provider: "google") => {
     if (!tosAccepted) {
       setError("You must accept the Terms of Service to create an account");
+      tosRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -354,7 +359,14 @@ function SignUpContent() {
               </div>
 
               {/* Terms of Service Checkbox */}
-              <label className="flex items-start gap-3 cursor-pointer select-none py-1">
+              <label
+                ref={tosRef}
+                className={`flex items-start gap-3 cursor-pointer select-none py-1 rounded-lg transition-shadow ${
+                  tosError
+                    ? "ring-2 ring-error/60 ring-offset-2 ring-offset-surface-container px-2"
+                    : ""
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={tosAccepted}
@@ -379,7 +391,7 @@ function SignUpContent() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || !tosAccepted}
+                disabled={loading}
                 className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -401,7 +413,7 @@ function SignUpContent() {
               <button
                 type="button"
                 onClick={() => handleOAuth("google")}
-                disabled={loading || !tosAccepted}
+                disabled={loading}
                 className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
