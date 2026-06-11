@@ -111,6 +111,10 @@ rm -f "$ROOT_DIR/packages/backend/tsconfig.build.tsbuildinfo"
 rm -f "$ROOT_DIR/packages/backend/.tsbuildinfo"
 
 echo ""
+echo "Wiping frontend .next cache (forces a clean client bundle so restart picks up new code)..."
+rm -rf "$ROOT_DIR/packages/frontend/.next"
+
+echo ""
 if [ "$REDIS_AVAILABLE" = true ]; then
   echo "Starting servers (redis :$REDIS_PORT, backend :$BACKEND_PORT, frontend :$FRONTEND_PORT)"
 else
