@@ -3,63 +3,19 @@
 import { Suspense, useState, useEffect, useRef, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Building2,
-  Lock,
-  Loader2,
-  AlertCircle,
-  Check,
-  Circle,
-  Mail,
-} from "lucide-react";
+import { Building2, Lock, Loader2, AlertCircle, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
-
-interface PasswordRequirement {
-  label: string;
-  met: boolean;
-}
-
-function getPasswordRequirements(password: string): PasswordRequirement[] {
-  return [
-    { label: "At least 8 characters", met: password.length >= 8 },
-    { label: "At least 1 uppercase letter", met: /[A-Z]/.test(password) },
-    { label: "At least 1 lowercase letter", met: /[a-z]/.test(password) },
-    { label: "At least 1 number", met: /[0-9]/.test(password) },
-  ];
-}
-
-function allRequirementsMet(password: string): boolean {
-  return getPasswordRequirements(password).every((r) => r.met);
-}
-
-/** Read the content-pipeline attribution cookie set by /go/[slug]. */
-function readAttributionCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)__piq_attr=([^;]+)/);
-  if (!match) return null;
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return match[1];
-  }
-}
-
-/** Map raw Supabase/OAuth error messages to user-friendly text. */
-function friendlyAuthError(message: string): string {
-  const lower = message.toLowerCase();
-  if (lower.includes("provider") && lower.includes("not enabled")) {
-    return "Google sign-up is not currently available. Please use email and password instead.";
-  }
-  if (lower.includes("provider") && lower.includes("disabled")) {
-    return "Google sign-up is not currently available. Please use email and password instead.";
-  }
-  if (lower.includes("popup") || lower.includes("cancelled")) {
-    return "Sign-up was cancelled. Please try again.";
-  }
-  return message;
-}
+import {
+  allRequirementsMet,
+  friendlyAuthError,
+  getPasswordRequirements,
+  readAttributionCookie,
+} from "./helpers";
+import { ConfirmationSent } from "./ConfirmationSent";
+import { PasswordStrength } from "./PasswordStrength";
+import { GoogleIcon } from "./GoogleIcon";
 
 export default function SignUpPage() {
   return (
@@ -228,25 +184,7 @@ function SignUpContent() {
 
         {/* Confirmation Sent Success */}
         {confirmationSent ? (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-6 h-6 text-primary" />
-            </div>
-            <h2 className="text-lg font-medium text-on-surface mb-2">
-              Check your email
-            </h2>
-            <p className="text-sm text-on-surface-variant mb-6">
-              We sent a confirmation link to{" "}
-              <span className="font-medium text-on-surface">{email}</span>.
-              Click the link in the email to activate your account.
-            </p>
-            <Link
-              href="/auth/sign-in"
-              className="text-sm text-primary hover:text-primary/80 font-medium"
-            >
-              Back to sign in
-            </Link>
-          </div>
+          <ConfirmationSent email={email} />
         ) : (
           <>
             {/* Error Banner */}
@@ -308,32 +246,7 @@ function SignUpContent() {
 
                 {/* Password Strength Indicator */}
                 {password.length > 0 && (
-                  <div
-                    data-testid="password-strength"
-                    className="mt-2 space-y-1"
-                  >
-                    {requirements.map((req) => (
-                      <div
-                        key={req.label}
-                        className="flex items-center gap-2 text-xs"
-                      >
-                        {req.met ? (
-                          <Check className="w-3.5 h-3.5 text-green-500" />
-                        ) : (
-                          <Circle className="w-3.5 h-3.5 text-on-surface-variant/40" />
-                        )}
-                        <span
-                          className={
-                            req.met
-                              ? "text-green-600"
-                              : "text-on-surface-variant/60"
-                          }
-                        >
-                          {req.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <PasswordStrength requirements={requirements} />
                 )}
               </div>
 
@@ -424,24 +337,7 @@ function SignUpContent() {
                 disabled={loading}
                 className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
+                <GoogleIcon />
                 Google
               </button>
             </div>
