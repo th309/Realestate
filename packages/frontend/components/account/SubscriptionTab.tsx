@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useEntitlements } from "@/lib/entitlements";
 import type { UserTier } from "@/lib/entitlements";
-import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import { useWatchlist } from "@/lib/watchlist/useWatchlist";
 import { useAlerts } from "@/lib/alerts/hooks";
 import { usePricingTiers, buildPriceLookup } from "@/lib/data";
 import { PlanComparison } from "./PlanComparison";

@@ -52,7 +52,7 @@ export class InsightsService {
   ) {
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     this.aiModel =
-      this.configService.get<string>('AI_MODEL') || 'claude-sonnet-4-6';
+      this.configService.get<string>('AI_MODEL') || 'claude-opus-4-7';
 
     if (anthropicKey) {
       this.aiClient = new Anthropic({ apiKey: anthropicKey });

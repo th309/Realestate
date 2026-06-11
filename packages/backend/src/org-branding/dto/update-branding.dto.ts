@@ -178,21 +178,4 @@ export class UpdateBrandingDto {
   @IsString()
   @MaxLength(50)
   default_member_role?: string;
-
-  // --- Quinn AI customization ---
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  quinn_bot_name?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  quinn_greeting?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  quinn_topic_restrictions?: string[];
 }

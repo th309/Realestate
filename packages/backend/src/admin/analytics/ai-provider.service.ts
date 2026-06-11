@@ -68,7 +68,7 @@ export class AiProviderService {
     }
 
     const model =
-      this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-chat';
+      this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-v4-pro';
 
     const stream = await this.deepseekClient.chat.completions.create({
       model,
@@ -104,7 +104,7 @@ export class AiProviderService {
 
     const model =
       this.configService.get<string>('CLAUDE_INSIGHTS_MODEL') ||
-      'claude-sonnet-4-6';
+      'claude-opus-4-7';
 
     const stream = await this.anthropicClient.messages.stream({
       model,
@@ -114,7 +114,6 @@ export class AiProviderService {
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
-      temperature: 0.7,
     });
 
     for await (const event of stream) {

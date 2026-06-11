@@ -1,7 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 
+// Non-secret test config (committed). Loaded first so it wins for shared keys.
 dotenv.config({ path: ".env.test" });
+// Real local secrets (gitignored): Supabase URL + service key for E2E DB
+// assertions/cleanup. dotenv never overrides already-set vars, so .env.test
+// values and CLI overrides (e.g. PLAYWRIGHT_BASE_URL) take precedence.
+dotenv.config({ path: ".env.local" });
 
 /**
  * Playwright configuration for PropertyIQ E2E tests.

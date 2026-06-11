@@ -1,8 +1,16 @@
-import { Controller, Post, Param, Body, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
 import {
   MarketAnalysisService,
   MarketAnalysisResult,
 } from './market-analysis.service';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 interface MarketAnalysisBody {
   geoName: string;
@@ -23,6 +31,7 @@ export class MarketAnalysisController {
   constructor(private readonly marketAnalysisService: MarketAnalysisService) {}
 
   @Post(':geoType/:geoId/ai-analysis')
+  @UseGuards(JwtAuthGuard)
   async getAnalysis(
     @Param('geoType') geoType: string,
     @Param('geoId') geoId: string,

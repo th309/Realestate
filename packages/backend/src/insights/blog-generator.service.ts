@@ -45,7 +45,7 @@ export class BlogGeneratorService {
   ) {
     const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
     this.aiModel =
-      this.configService.get<string>('AI_MODEL') || 'deepseek-chat';
+      this.configService.get<string>('AI_MODEL') || 'deepseek-v4-pro';
 
     if (deepseekKey) {
       this.aiClient = new OpenAI({

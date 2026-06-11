@@ -17,7 +17,6 @@ const VALID_MILESTONE_KEYS = new Set([
   'first_market_viewed',
   'first_comparison',
   'first_score_explored',
-  'first_quinn_query',
 ]);
 
 @UseGuards(JwtAuthGuard)

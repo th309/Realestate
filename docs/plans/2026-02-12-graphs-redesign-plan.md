@@ -53,6 +53,7 @@ Implement the question-driven comparison experience for the graphs page. This pl
 ### 1.3 Add backend endpoint for user's markets (if needed)
 
 Check if existing endpoints can provide:
+
 - User's pinned/favorite markets
 - Recent report geographies
 - Recent search history
@@ -143,6 +144,7 @@ Check if existing endpoints can provide:
 **File:** `packages/frontend/app/graphs/components/templates/AffordabilityTemplate.tsx`
 
 Metrics:
+
 - Price-to-Income Ratio
 - Median Home Price
 - Rent-to-Income Ratio
@@ -155,6 +157,7 @@ Visualization: Scatter (X: Price-to-Income, Y: 5Y Appreciation)
 **File:** `packages/frontend/app/graphs/components/templates/InvestmentTemplate.tsx`
 
 Metrics:
+
 - Cap Rate
 - Cash-on-Cash Return (calculated)
 - 5Y Appreciation CAGR
@@ -167,6 +170,7 @@ Visualization: Scatter (X: Cap Rate, Y: Appreciation)
 **File:** `packages/frontend/app/graphs/components/templates/MomentumTemplate.tsx`
 
 Metrics:
+
 - Days on Market
 - Inventory Change YoY
 - Price Growth 1Y
@@ -179,6 +183,7 @@ Visualization: Multi-line trend
 **File:** `packages/frontend/app/graphs/components/templates/CashFlowTemplate.tsx`
 
 Metrics:
+
 - Gross Rent Yield
 - Price-to-Rent Ratio
 - Vacancy Rate
@@ -206,16 +211,7 @@ Visualization: Heatmap
 - Click handler updates visualization
 - Emoji icons + question text
 
-### 5.3 Create QuinnInsight component
-
-**File:** `packages/frontend/app/graphs/components/ExplorationSidebar/QuinnInsight.tsx`
-
-- Gradient card (primary → tertiary)
-- AI-generated comparison summary
-- Integration with existing Gemini service
-- Loading state
-
-### 5.4 Create MetricExplorer component
+### 5.3 Create MetricExplorer component
 
 **File:** `packages/frontend/app/graphs/components/ExplorationSidebar/MetricExplorer.tsx`
 
@@ -224,7 +220,7 @@ Visualization: Heatmap
 - Click updates D3 visualization
 - Active chip highlighting
 
-### 5.5 Create ReportCTA component
+### 5.4 Create ReportCTA component
 
 **File:** `packages/frontend/app/graphs/components/ExplorationSidebar/ReportCTA.tsx`
 
@@ -287,7 +283,7 @@ Visualization: Heatmap
 
 ### 8.1 AI Insight Integration
 
-- Connect QuinnInsight to Gemini service
+- Connect AI insight card to Gemini service
 - Create comparison-specific prompts
 - Cache insights per comparison
 
@@ -300,6 +296,7 @@ Visualization: Heatmap
 ### 8.3 Analytics Events
 
 Add tracking for:
+
 - Template switches
 - Market selections
 - Question clicks
@@ -324,33 +321,39 @@ Add tracking for:
 ## Implementation Order
 
 ### Sprint 1: Foundation
+
 1. [ ] 1.1 useMyMarkets hook
 2. [ ] 1.2 useMarketComparison hook
 3. [ ] 1.3 useGraphsState hook
 4. [ ] 1.4 Template configurations
 
 ### Sprint 2: Core UI
+
 5. [ ] 2.1-2.3 MyMarketsBar (all sub-components)
 6. [ ] 3.1-3.2 HeroComparison + TemplateTabs
 7. [ ] 3.3 ScoreShowdown
 
 ### Sprint 3: Priorities & Templates
+
 8. [ ] 3.4 PriorityBreakdown
 9. [ ] 4.1 AffordabilityTemplate
 10. [ ] 4.2 InvestmentTemplate
 11. [ ] 3.5 TemplateVisualization
 
 ### Sprint 4: Sidebar & Page
+
 12. [ ] 5.1-5.5 ExplorationSidebar (all sub-components)
 13. [ ] 6.1 GraphsPage
 14. [ ] 6.2 Routing update
 
 ### Sprint 5: D3 & Polish
+
 15. [ ] 7.1 TrendComparison
 16. [ ] 7.2-7.3 D3 enhancements
 17. [ ] 4.3-4.4 Momentum + CashFlow templates
 
 ### Sprint 6: Integration
+
 18. [ ] 8.1 AI Insight integration
 19. [ ] 8.2 Report generation link
 20. [ ] 8.3-8.5 Analytics, accessibility, performance
@@ -378,7 +381,6 @@ packages/frontend/app/graphs/
 │   ├── ExplorationSidebar/
 │   │   ├── ExplorationSidebar.tsx           # NEW
 │   │   ├── QuestionCards.tsx                # NEW
-│   │   ├── QuinnInsight.tsx                 # NEW
 │   │   ├── MetricExplorer.tsx               # NEW
 │   │   └── ReportCTA.tsx                    # NEW
 │   └── templates/
@@ -419,16 +421,19 @@ packages/frontend/app/components/scoring/ScoreDisplay.tsx  # Reuse for gauges
 ## Dependencies
 
 ### Existing Components to Reuse
+
 - `ScoreDisplay` - Score gauges
 - `GeographySearch` - Market search
 - `D3VisualizationSection` - Custom template
 - `ScatterPlot`, `Heatmap` - D3 visualizations
 
 ### Existing Hooks to Reuse
+
 - `useDashboardState` - Reference for state patterns
 - `useChartData` - Reference for data fetching
 
 ### Existing Services to Reuse
+
 - `geminiService` - AI insights
 - `@/lib/data` - All data fetching
 
@@ -437,16 +442,19 @@ packages/frontend/app/components/scoring/ScoreDisplay.tsx  # Reuse for gauges
 ## Testing Strategy
 
 ### Unit Tests
+
 - Hook logic (winner calculation, URL sync)
 - Template configurations
 - Metric formatting
 
 ### Integration Tests
+
 - Market comparison flow
 - Template switching
 - Report generation link
 
 ### Visual Regression
+
 - Prototype comparison screenshots
 - Responsive breakpoints
 - D3 visualization rendering

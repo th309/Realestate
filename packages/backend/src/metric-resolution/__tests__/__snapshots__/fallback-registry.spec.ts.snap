@@ -601,6 +601,20 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     ],
     "supportsGeoInheritance": false,
   },
+  "months_of_supply": {
+    "metricId": "months_of_supply",
+    "sources": [
+      {
+        "column": "months_of_supply",
+        "source": "redfin",
+      },
+      {
+        "column": "months_of_supply",
+        "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
   "net_migration": {
     "metricId": "net_migration",
     "sources": [
@@ -1041,6 +1055,7 @@ exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set
   "median_age",
   "median_income",
   "mf_permits",
+  "months_of_supply",
   "net_migration",
   "new_construction_ppsf",
   "new_construction_price",

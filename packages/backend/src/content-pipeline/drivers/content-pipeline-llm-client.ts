@@ -15,7 +15,7 @@ export const DEEPSEEK_ANTHROPIC_BASE_URL_DEFAULT =
   'https://api.deepseek.com/anthropic';
 
 /** Default when DeepSeek is the active backend and SCRIPT_LLM_MODEL is unset. */
-export const DEFAULT_DEEPSEEK_SCRIPT_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_DEEPSEEK_SCRIPT_MODEL = 'deepseek-v4-pro';
 
 /** DeepSeek models that reject forced tool_use / tool_choice on the Anthropic-compatible API. */
 const DEEPSEEK_MODELS_WITHOUT_ANTHROPIC_TOOLS = new Set(['deepseek-reasoner']);

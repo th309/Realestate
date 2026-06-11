@@ -22,7 +22,6 @@ import { PermitsModule } from './permits/permits.module';
 import { HealthModule } from './health/health.module';
 import { MLWorkflowModule } from './ml-workflow/ml-workflow.module';
 import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
-import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
 import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-persistence.module';
 import { FeaturesModule } from './admin/features/features.module';
 import { UsersModule as AdminUsersModule } from './admin/users/users.module';
@@ -55,7 +54,6 @@ import { OrgApiKeysModule } from './org-api-keys/org-api-keys.module';
 import { UserApiKeysModule } from './user-api-keys/user-api-keys.module';
 import { PlatformApiModule } from './platform-api/platform-api.module';
 import { DeviceAuthModule } from './device-auth/device-auth.module';
-import { CacheRefreshJob } from './jobs/cache-refresh.job';
 import { AdminMetricsModule } from './admin-metrics/admin-metrics.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { ReferralsModule } from './referrals/referrals.module';
@@ -111,7 +109,6 @@ import { RentcastModule } from './rentcast/rentcast.module';
     HealthModule,
     MLWorkflowModule,
     DataIngestionModule,
-    AnalyticsChatModule,
     AnalyticsPersistenceModule,
     FeaturesModule,
     AdminUsersModule,
@@ -158,7 +155,6 @@ import { RentcastModule } from './rentcast/rentcast.module';
   controllers: [AppController],
   providers: [
     AppService,
-    CacheRefreshJob,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

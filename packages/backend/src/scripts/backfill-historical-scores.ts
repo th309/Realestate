@@ -36,13 +36,6 @@ import { GeographyLevel } from '../scoring/formula-weights';
 const CHECKPOINT = getCheckpointPath('backfill-scores');
 
 async function main() {
-  if (!process.env.QUINN_CACHE_WARM_ON_STARTUP) {
-    process.env.QUINN_CACHE_WARM_ON_STARTUP = 'false';
-  }
-  if (!process.env.ANALYTICS_TOOLS_ENABLED) {
-    process.env.ANALYTICS_TOOLS_ENABLED = 'false';
-  }
-
   const args = parseBackfillArgs();
   const normalizedEndDate = normalizeToMonthStart(args.endDate);
   const startDate = args.startDate

@@ -19,7 +19,7 @@ export interface MessagesResponse {
  * Thin DI wrapper around the Anthropic SDK's `messages.create` API.
  *
  * Why: lets services that need Claude inject `AnthropicService` and easily
- * mock it in tests. Other consumers (content-pipeline, analytics-chat) use
+ * mock it in tests. Other consumers (content-pipeline) use
  * the SDK directly because they need provider-specific features (streaming,
  * tool use); this wrapper is for the simpler request/response cases.
  */

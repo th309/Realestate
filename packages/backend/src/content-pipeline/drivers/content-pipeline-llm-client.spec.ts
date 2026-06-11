@@ -46,7 +46,7 @@ describe('content-pipeline-llm-client', () => {
     process.env.ANTHROPIC_API_KEY = 'ak';
     delete process.env.SCRIPT_LLM_MODEL;
     expect(resolveContentPipelineLlmBackend()).toBe('deepseek');
-    expect(resolveDefaultScriptLlmModel()).toBe('deepseek-v4-flash');
+    expect(resolveDefaultScriptLlmModel()).toBe('deepseek-v4-pro');
   });
 
   it('creates client for DeepSeek with DeepSeek base URL', () => {
@@ -61,6 +61,6 @@ describe('content-pipeline-llm-client', () => {
     process.env.DEEPSEEK_API_KEY = 'dk';
     process.env.ANTHROPIC_API_KEY = 'ak';
     process.env.SCRIPT_LLM_MODEL = 'deepseek-reasoner';
-    expect(resolveDefaultScriptLlmModel()).toBe('deepseek-v4-flash');
+    expect(resolveDefaultScriptLlmModel()).toBe('deepseek-v4-pro');
   });
 });

@@ -16,6 +16,7 @@ interface PricingCardsProps {
   trial: TrialInfo | null;
   checkoutLoading: string | null;
   onUpgrade: (planSlug: string) => void;
+  isAuthenticated: boolean;
 }
 
 export function PricingCards({
@@ -27,6 +28,7 @@ export function PricingCards({
   trial,
   checkoutLoading,
   onUpgrade,
+  isAuthenticated,
 }: PricingCardsProps) {
   return (
     <>
@@ -89,6 +91,7 @@ export function PricingCards({
             trial={trial}
             checkoutLoading={checkoutLoading}
             onUpgrade={onUpgrade}
+            isAuthenticated={isAuthenticated}
           />
         ))}
       </div>
@@ -107,6 +110,7 @@ interface PricingCardProps {
   trial: TrialInfo | null;
   checkoutLoading: string | null;
   onUpgrade: (planSlug: string) => void;
+  isAuthenticated: boolean;
 }
 
 function PricingCard({
@@ -116,8 +120,9 @@ function PricingCard({
   trial,
   checkoutLoading,
   onUpgrade,
+  isAuthenticated,
 }: PricingCardProps) {
-  const isCurrentPlan = effectiveTier === plan.slug;
+  const isCurrentPlan = isAuthenticated && effectiveTier === plan.slug;
   const isTrialPlan = trial?.active && trial.tier === plan.slug;
   const isHighlighted = plan.slug === "pro";
   const rawMonthly = Number(plan.price_monthly) || 0;
@@ -130,7 +135,8 @@ function PricingCard({
     effectiveMonthly === 0 ? "$0" : `$${Math.round(effectiveMonthly)}`;
   const periodDisplay = effectiveMonthly === 0 ? "forever" : "/month";
   const variant = plan.slug === "pro" ? getPricingCtaVariant() : null;
-  const ctaText = plan.slug === "pro" ? PRICING_CTA_COPY[variant!] : "Get Started";
+  const ctaText =
+    plan.slug === "pro" ? PRICING_CTA_COPY[variant!] : "Get Started";
 
   const featureBullets =
     plan.pricing_card_items?.length > 0
@@ -218,6 +224,7 @@ function PricingCard({
         variant={variant ?? undefined}
         checkoutLoading={checkoutLoading}
         onUpgrade={onUpgrade}
+        isAuthenticated={isAuthenticated}
       />
     </div>
   );
@@ -236,6 +243,7 @@ function CardCTA({
   variant,
   checkoutLoading,
   onUpgrade,
+  isAuthenticated,
 }: {
   slug: string;
   isCurrentPlan: boolean;
@@ -245,6 +253,7 @@ function CardCTA({
   variant?: string;
   checkoutLoading: string | null;
   onUpgrade: (s: string) => void;
+  isAuthenticated: boolean;
 }) {
   if (isCurrentPlan && !isTrialPlan) {
     return (
@@ -256,10 +265,10 @@ function CardCTA({
   if (slug === "free") {
     return (
       <a
-        href="/map"
+        href={isAuthenticated ? "/map" : "/auth/sign-up"}
         className="block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
       >
-        Get Started
+        {isAuthenticated ? "Get Started" : "Sign up free"}
       </a>
     );
   }
@@ -267,7 +276,10 @@ function CardCTA({
     <button
       onClick={() => {
         if (variant) {
-          trackEvent("conversion.pricing_cta_click", { variant, source: "pricing_page" });
+          trackEvent("conversion.pricing_cta_click", {
+            variant,
+            source: "pricing_page",
+          });
         }
         onUpgrade(slug);
       }}

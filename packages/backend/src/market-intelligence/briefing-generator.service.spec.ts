@@ -26,12 +26,18 @@ jest.mock('openai', () => {
 // -- Test Helpers -----------------------------------------------------------
 
 function makeResolvedMetric(
-  value: number | null, source = 'zillow', date = '2026-01-15',
+  value: number | null,
+  source = 'zillow',
+  date = '2026-01-15',
 ): ResolvedMetric {
   return {
-    value, date, source,
-    sourceGeoId: '31080', sourceGeoLevel: 'metro',
-    isInherited: false, isFallback: false,
+    value,
+    date,
+    source,
+    sourceGeoId: '31080',
+    sourceGeoLevel: 'metro',
+    isInherited: false,
+    isFallback: false,
   };
 }
 
@@ -56,7 +62,9 @@ function buildFullResolvedBatch(): Record<string, ResolvedMetric> {
 }
 
 const BENCHMARKS: NationalBenchmarks = {
-  vacancy_rate: 5.1, appreciation_yoy: 3.0, unemployment_rate: 3.7,
+  vacancy_rate: 5.1,
+  appreciation_yoy: 3.0,
+  unemployment_rate: 3.7,
 };
 
 // -- Mock Supabase ----------------------------------------------------------
@@ -66,9 +74,14 @@ const mockSupabaseUpdate = jest.fn();
 
 function createMockSupabaseClient() {
   const chainable: Record<string, jest.Mock> = {
-    select: jest.fn(), insert: mockSupabaseInsert, update: mockSupabaseUpdate,
-    eq: jest.fn(), contains: jest.fn(), order: jest.fn(),
-    limit: jest.fn(), gte: jest.fn(),
+    select: jest.fn(),
+    insert: mockSupabaseInsert,
+    update: mockSupabaseUpdate,
+    eq: jest.fn(),
+    contains: jest.fn(),
+    order: jest.fn(),
+    limit: jest.fn(),
+    gte: jest.fn(),
   };
   for (const fn of Object.values(chainable)) fn.mockReturnValue(chainable);
 
@@ -79,7 +92,8 @@ function createMockSupabaseClient() {
   mockSupabaseInsert.mockReturnValue({
     ...chainable,
     select: jest.fn().mockResolvedValue({
-      data: [{ id: 'briefing-uuid-123' }], error: null,
+      data: [{ id: 'briefing-uuid-123' }],
+      error: null,
     }),
   });
   mockSupabaseUpdate.mockReturnValue({
@@ -114,18 +128,26 @@ describe('BriefingGeneratorService', () => {
       get: jest.fn().mockImplementation((key: string, defaultValue = '') => {
         const config: Record<string, string> = {
           AI_BASE_URL: 'https://api.deepseek.com',
-          AI_MODEL: 'deepseek-chat',
+          AI_MODEL: 'deepseek-v4-pro',
           DEEPSEEK_API_KEY: 'test-api-key',
         };
         return Promise.resolve(config[key] ?? defaultValue);
       }),
-      getNumber: jest.fn().mockImplementation((_key: string, defaultValue = 0) => {
-        return Promise.resolve(defaultValue);
-      }),
+      getNumber: jest
+        .fn()
+        .mockImplementation((_key: string, defaultValue = 0) => {
+          return Promise.resolve(defaultValue);
+        }),
     } as any;
 
     mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: 'LA shows bullish momentum with 4.2% appreciation.' } }],
+      choices: [
+        {
+          message: {
+            content: 'LA shows bullish momentum with 4.2% appreciation.',
+          },
+        },
+      ],
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -143,12 +165,17 @@ describe('BriefingGeneratorService', () => {
   describe('generateBriefing returns a complete MarketBriefing', () => {
     it('populates all required fields', async () => {
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles-Long Beach-Anaheim, CA', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles-Long Beach-Anaheim, CA',
+        BENCHMARKS,
       );
 
       expect(briefing.geography_id).toBe('31080');
       expect(briefing.geography_type).toBe('metro');
-      expect(briefing.geography_name).toBe('Los Angeles-Long Beach-Anaheim, CA');
+      expect(briefing.geography_name).toBe(
+        'Los Angeles-Long Beach-Anaheim, CA',
+      );
       expect(briefing.generated_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(briefing.metrics_snapshot).toBeDefined();
       expect(briefing.market_stance).toBeDefined();
@@ -166,7 +193,12 @@ describe('BriefingGeneratorService', () => {
 
   describe('metrics are fetched via resolveMetricBatch', () => {
     it('calls resolveMetricBatch with BRIEFING_METRIC_IDS', async () => {
-      await service.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
+      await service.generateBriefing(
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
+      );
 
       expect(mockMetricResolution.resolveMetricBatch).toHaveBeenCalledTimes(1);
       const [metricIds, geoLevel, geoId] =
@@ -182,10 +214,17 @@ describe('BriefingGeneratorService', () => {
   describe('market stance is computed from resolved metrics', () => {
     it('produces a valid stance with bullish signals', async () => {
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect([
-        'strong_bullish', 'weak_bullish', 'neutral', 'weak_bearish', 'strong_bearish',
+        'strong_bullish',
+        'weak_bullish',
+        'neutral',
+        'weak_bearish',
+        'strong_bearish',
       ]).toContain(briefing.market_stance);
       expect(briefing.stance_signals.length).toBeGreaterThan(0);
     });
@@ -194,9 +233,14 @@ describe('BriefingGeneratorService', () => {
   describe('risk flags are computed from resolved metrics', () => {
     it('flags affordability squeeze when price_to_income > 6', async () => {
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
-      const flag = briefing.risk_flags.find(f => f.flag === 'affordability_squeeze');
+      const flag = briefing.risk_flags.find(
+        (f) => f.flag === 'affordability_squeeze',
+      );
       expect(flag).toBeDefined();
       expect(flag!.severity).toBe('medium');
     });
@@ -204,19 +248,34 @@ describe('BriefingGeneratorService', () => {
 
   describe('briefing is stored in market_briefings table', () => {
     it('calls Supabase from market_briefings', async () => {
-      await service.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
+      await service.generateBriefing(
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
+      );
       expect(mockClient.from).toHaveBeenCalledWith('market_briefings');
     });
 
     it('sets previous is_latest to false before inserting new', async () => {
-      await service.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
+      await service.generateBriefing(
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
+      );
       expect(mockSupabaseUpdate).toHaveBeenCalledWith({ is_latest: false });
     });
   });
 
   describe('LLM narrative generation', () => {
     it('calls LLM with prompt containing stance and metrics', async () => {
-      await service.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
+      await service.generateBriefing(
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
+      );
 
       expect(mockChatCompletionsCreate).toHaveBeenCalled();
       const callArgs = mockChatCompletionsCreate.mock.calls[0][0];
@@ -227,9 +286,20 @@ describe('BriefingGeneratorService', () => {
     });
 
     it('reads LLM config from AppConfigService', async () => {
-      await service.generateBriefing('31080', 'metro', 'Los Angeles', BENCHMARKS);
-      expect(mockAppConfig.get).toHaveBeenCalledWith('AI_BASE_URL', 'https://api.deepseek.com');
-      expect(mockAppConfig.get).toHaveBeenCalledWith('AI_MODEL', 'deepseek-chat');
+      await service.generateBriefing(
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
+      );
+      expect(mockAppConfig.get).toHaveBeenCalledWith(
+        'AI_BASE_URL',
+        'https://api.deepseek.com',
+      );
+      expect(mockAppConfig.get).toHaveBeenCalledWith(
+        'AI_MODEL',
+        'deepseek-v4-pro',
+      );
       expect(mockAppConfig.get).toHaveBeenCalledWith('DEEPSEEK_API_KEY');
     });
   });
@@ -239,7 +309,10 @@ describe('BriefingGeneratorService', () => {
       mockChatCompletionsCreate.mockRejectedValue(new Error('API rate limit'));
 
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing).toBeDefined();
       expect(briefing.narrative_summary).toContain('Los Angeles');
@@ -255,7 +328,10 @@ describe('BriefingGeneratorService', () => {
       mockMetricResolution.resolveMetricBatch.mockResolvedValue(partial);
 
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing.metrics_count).toBeLessThan(15);
       expect(briefing.market_stance).toBeDefined();
@@ -267,7 +343,10 @@ describe('BriefingGeneratorService', () => {
         new Error('DB connection timeout'),
       );
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing.metrics_count).toBe(0);
       expect(briefing.narrative_summary).toBeTruthy();
@@ -277,7 +356,10 @@ describe('BriefingGeneratorService', () => {
   describe('generation_time_ms is tracked', () => {
     it('records non-negative generation time', async () => {
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing.generation_time_ms).toBeGreaterThanOrEqual(0);
     });
@@ -290,15 +372,21 @@ describe('BriefingGeneratorService', () => {
           choices: [{ message: { content: 'Strong bullish narrative.' } }],
         })
         .mockResolvedValueOnce({
-          choices: [{
-            message: {
-              content: '1. How does LA compare to national trends?\n2. What are the top risk factors?\n3. Is now a good time to invest?',
+          choices: [
+            {
+              message: {
+                content:
+                  '1. How does LA compare to national trends?\n2. What are the top risk factors?\n3. Is now a good time to invest?',
+              },
             },
-          }],
+          ],
         });
 
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing.suggested_questions).toBeInstanceOf(Array);
     });
@@ -311,7 +399,10 @@ describe('BriefingGeneratorService', () => {
         .mockRejectedValueOnce(new Error('LLM timeout'));
 
       const briefing = await service.generateBriefing(
-        '31080', 'metro', 'Los Angeles', BENCHMARKS,
+        '31080',
+        'metro',
+        'Los Angeles',
+        BENCHMARKS,
       );
       expect(briefing.suggested_questions).toEqual([]);
     });

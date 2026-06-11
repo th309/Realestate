@@ -3,7 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsArray,
-  IsEnum,
+  IsIn,
   ValidateNested,
   ArrayMaxSize,
 } from 'class-validator';
@@ -40,7 +40,7 @@ export class GeographyDto {
   @IsNotEmpty()
   id: string;
 
-  @IsEnum(['national', 'state', 'metro', 'county', 'city', 'zip'])
+  @IsIn(['national', 'state', 'metro', 'county', 'city', 'zip'])
   type: 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
 
   @IsString()
@@ -57,8 +57,8 @@ export class GenerateReportDto {
   @IsNotEmpty()
   template_slug: string;
 
-  @IsEnum(['homebuyer', 'investor'])
-  user_type: 'homebuyer' | 'investor';
+  @IsIn(['homebuyer', 'investor', 'universal'])
+  user_type: 'homebuyer' | 'investor' | 'universal';
 
   @ValidateNested()
   @Type(() => GeographyDto)
@@ -92,7 +92,7 @@ export class SendMessageDto {
 }
 
 export class CreateShareDto {
-  @IsEnum(['view', 'download'])
+  @IsIn(['view', 'download'])
   @IsOptional()
   access_level?: 'view' | 'download';
 

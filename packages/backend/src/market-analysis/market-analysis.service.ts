@@ -31,9 +31,12 @@ export interface MarketAnalysisResult {
   cached: boolean;
 }
 
+const CACHE_TTL_SECONDS = 86400; // 24h — analyses are expensive and inputs change slowly
+
 @Injectable()
 export class MarketAnalysisService {
   private readonly logger = new Logger(MarketAnalysisService.name);
+  private readonly inflight = new Map<string, Promise<MarketAnalysisResult>>();
 
   constructor(
     private readonly reportAiService: ReportAiService,
@@ -43,16 +46,35 @@ export class MarketAnalysisService {
   async generateAnalysis(
     request: AnalysisRequest,
   ): Promise<MarketAnalysisResult> {
-    const cacheKey = `piq:market-analysis:v2:${request.geoType}:${request.geoId}`;
+    const cacheKey = `piq:market-analysis:v3:${request.geoType}:${request.geoId}`;
 
-    // Check cache
-    const cached = await this.redisService.get(cacheKey, {});
+    const cached = await this.redisService.getByKey(cacheKey);
     if (cached) {
       this.logger.log(`[MarketAnalysis] Cache hit for ${request.geoName}`);
       return { ...cached, cached: true };
     }
 
-    // Generate with AI or fallback
+    const existing = this.inflight.get(cacheKey);
+    if (existing) {
+      this.logger.log(
+        `[MarketAnalysis] Coalescing concurrent request for ${request.geoName}`,
+      );
+      return existing;
+    }
+
+    const promise = this.computeAndCache(request, cacheKey);
+    this.inflight.set(cacheKey, promise);
+    try {
+      return await promise;
+    } finally {
+      this.inflight.delete(cacheKey);
+    }
+  }
+
+  private async computeAndCache(
+    request: AnalysisRequest,
+    cacheKey: string,
+  ): Promise<MarketAnalysisResult> {
     let homebuyer: AnalysisSection[];
     let investor: AnalysisSection[];
 
@@ -75,8 +97,7 @@ export class MarketAnalysisService {
       cached: false,
     };
 
-    // Cache result
-    await this.redisService.set(cacheKey, {}, result);
+    await this.redisService.setByKey(cacheKey, result, CACHE_TTL_SECONDS);
 
     return result;
   }

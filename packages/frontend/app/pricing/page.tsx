@@ -135,7 +135,7 @@ function PricingContent() {
           }),
         );
         router.push(
-          `/auth/sign-in?redirect=${encodeURIComponent(`/pricing?from=${encodeURIComponent(returnContext)}`)}`,
+          `/auth/sign-up?redirect=${encodeURIComponent(`/pricing?from=${encodeURIComponent(returnContext)}`)}`,
         );
         return;
       }
@@ -191,6 +191,7 @@ function PricingContent() {
           trial={trial}
           checkoutLoading={checkoutLoading}
           onUpgrade={handleUpgrade}
+          isAuthenticated={!!user}
         />
 
         {/* Trial note */}
@@ -273,7 +274,10 @@ function PricingContent() {
                 <button
                   onClick={() => {
                     const variant = getPricingCtaVariant();
-                    trackEvent("conversion.pricing_cta_click", { variant, source: "pricing_page" });
+                    trackEvent("conversion.pricing_cta_click", {
+                      variant,
+                      source: "pricing_page",
+                    });
                     handleUpgrade("pro");
                   }}
                   disabled={checkoutLoading === "pro"}
@@ -286,7 +290,8 @@ function PricingContent() {
                     </>
                   ) : (
                     <>
-                      {PRICING_CTA_COPY[getPricingCtaVariant()]} <ArrowRight className="w-4 h-4" />
+                      {PRICING_CTA_COPY[getPricingCtaVariant()]}{" "}
+                      <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>

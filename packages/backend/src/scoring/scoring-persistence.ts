@@ -51,7 +51,10 @@ export async function upsertScoresWithRetry(
 ): Promise<boolean> {
   const maxAttempts = 4;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const { error } = await supabase.from('propertyiq_scores').upsert(rows, {
+    // Write to the base table, not the `propertyiq_scores` VIEW: upsert needs a
+    // real unique constraint (unique_normalized_score lives on v2). Reads still
+    // use the view, which is a 1:1 passthrough of v2.
+    const { error } = await supabase.from('propertyiq_scores_v2').upsert(rows, {
       onConflict: 'geography,location_id,score_type,score_date',
     });
 

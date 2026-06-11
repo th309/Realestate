@@ -34,11 +34,11 @@ export {
   getRequiredMetrics,
   validateFormulaWeights,
   // v4 demand-signal formula exports
-  V4_FORMULA_METRICS,
-  V4_METRIC_DIRECTIONS,
-  V4_ZERO_CROSSING,
-  V4_FORMULA_VERSION,
-  V4_CALIBRATION,
+  PROPERTYIQ_FORMULA_METRICS,
+  PROPERTYIQ_METRIC_DIRECTIONS,
+  PROPERTYIQ_ZERO_CROSSING,
+  PROPERTYIQ_FORMULA_VERSION,
+  PROPERTYIQ_CALIBRATION,
 } from './formula-weights';
 
 // ============================================================================

@@ -40,7 +40,7 @@ export interface GeographyFormulas {
 
 /**
  * @deprecated v3 formula weights — kept for backward compat with v3 scoring engine and component breakdowns.
- * v4 PropertyIQ uses V4_FORMULA_METRICS / V4_METRIC_DIRECTIONS instead.
+ * v4 PropertyIQ uses PROPERTYIQ_FORMULA_METRICS / PROPERTYIQ_METRIC_DIRECTIONS instead.
  *
  * v3.0: Optimized via walk-forward CV with model tournament (XGBoost/LightGBM/ElasticNet).
  * Features: Redfin market activity, Census demographics, Realtor listings, calculated affordability,
@@ -287,7 +287,7 @@ export function getConfidenceLevel(confidenceScore: number): ConfidenceLevel {
 
 /**
  * Get all metric names required for a specific score calculation.
- * @deprecated v3 helper — v4 uses V4_FORMULA_METRICS
+ * @deprecated v3 helper — v4 uses PROPERTYIQ_FORMULA_METRICS
  */
 export function getRequiredMetrics(
   geography: GeographyLevel,
@@ -300,7 +300,7 @@ export function getRequiredMetrics(
 
 /**
  * Validate that formula weights sum to approximately 1.0 (100%).
- * @deprecated v3 helper — v4 uses V4_FORMULA_METRICS
+ * @deprecated v3 helper — v4 uses PROPERTYIQ_FORMULA_METRICS
  */
 export function validateFormulaWeights(
   geography: GeographyLevel,
@@ -651,13 +651,13 @@ export const FORMULA_VERSION = 'v3.0';
  * signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
  * Then percentile-ranked and re-centered at the zero-crossing.
  */
-export const V4_FORMULA_METRICS = [
+export const PROPERTYIQ_FORMULA_METRICS = [
   'sold_above_list',
   'median_dom',
   'months_of_supply',
 ] as const;
 
-export const V4_METRIC_DIRECTIONS: Record<string, 1 | -1> = {
+export const PROPERTYIQ_METRIC_DIRECTIONS: Record<string, 1 | -1> = {
   sold_above_list: 1, // higher = hotter
   median_dom: -1, // lower = hotter
   months_of_supply: -1, // lower = hotter
@@ -668,19 +668,19 @@ export const V4_METRIC_DIRECTIONS: Record<string, 1 | -1> = {
  * This is the percentile rank where excess return vs state = 0.
  * Determined from isotonic regression in recentered_score.py.
  */
-export const V4_ZERO_CROSSING: Record<GeographyLevel, number> = {
+export const PROPERTYIQ_ZERO_CROSSING: Record<GeographyLevel, number> = {
   metro: 55.6,
   county: 62.4,
   zip: 55.6,
 };
 
-export const V4_FORMULA_VERSION = 'v4.0-demand-signal';
+export const PROPERTYIQ_FORMULA_VERSION = 'v4.0-demand-signal';
 
 /**
  * v4 calibration data: maps score quintiles to average historical excess return.
  * From county backtest (recentered_score.py) — stronger signal separation than v3.
  */
-export const V4_CALIBRATION: CalibrationEntry[] = [
+export const PROPERTYIQ_CALIBRATION: CalibrationEntry[] = [
   { quintile: 1, scoreRange: [1, 20], label: 'Bottom', avgExcessReturn: -3.34 },
   {
     quintile: 2,

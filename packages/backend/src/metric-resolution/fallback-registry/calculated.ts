@@ -63,4 +63,15 @@ export const calculatedMetrics: Record<string, MetricFallbackChain> = {
     sources: [{ source: 'calculated', column: 'affordable_home_price' }],
     supportsGeoInheritance: false,
   },
+
+  // Legacy redfin column first; computed (new-format housing_market ->
+  // calculated_metrics) is the fallback so MoS survives legacy deprecation.
+  months_of_supply: {
+    metricId: 'months_of_supply',
+    sources: [
+      { source: 'redfin', column: 'months_of_supply' },
+      { source: 'calculated', column: 'months_of_supply' },
+    ],
+    supportsGeoInheritance: false,
+  },
 };

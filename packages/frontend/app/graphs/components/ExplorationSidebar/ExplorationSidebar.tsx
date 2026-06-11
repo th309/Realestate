@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { MyMarket } from '../../hooks/useMyMarkets';
-import { TemplateType } from '../../hooks/useGraphsState';
-import { QuestionCards } from './QuestionCards';
-import { QuinnInsight } from './QuinnInsight';
-import { MetricExplorer } from './MetricExplorer';
-import { ReportCTA } from './ReportCTA';
+import React from "react";
+import { MyMarket } from "../../hooks/useMyMarkets";
+import { TemplateType } from "../../hooks/useGraphsState";
+import { QuestionCards } from "./QuestionCards";
+import { MetricExplorer } from "./MetricExplorer";
+import { ReportCTA } from "./ReportCTA";
 
 interface ExplorationSidebarProps {
   primaryMarket: MyMarket | null;
@@ -14,7 +13,7 @@ interface ExplorationSidebarProps {
   template: TemplateType;
   activeMetric: string;
   onMetricChange: (metric: string) => void;
-  userType: 'homebuyer' | 'investor';
+  userType: "homebuyer" | "investor";
 }
 
 /**
@@ -26,7 +25,6 @@ export function ExplorationSidebar({
   template,
   activeMetric,
   onMetricChange,
-  userType,
 }: ExplorationSidebarProps) {
   const hasComparison = primaryMarket && comparisonMarket;
 
@@ -38,15 +36,6 @@ export function ExplorationSidebar({
         comparisonMarket={comparisonMarket}
         template={template}
       />
-
-      {/* Quinn's AI Insight */}
-      {hasComparison && (
-        <QuinnInsight
-          primaryMarket={primaryMarket}
-          comparisonMarket={comparisonMarket}
-          userType={userType}
-        />
-      )}
 
       {/* Metric Explorer */}
       <MetricExplorer

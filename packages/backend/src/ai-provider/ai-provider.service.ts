@@ -10,6 +10,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
@@ -17,8 +18,11 @@ import {
   AiCompletionRequest,
   AiCompletionResponse,
   PROVIDER_PRESETS,
+  modelRejectsSamplingParams,
+  providerSupportsJsonObjectFormat,
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
+import { AiShadowService } from './ai-shadow.service';
 import { logUsage } from './ai-usage-logger';
 import { executeStream } from './ai-stream-executor';
 
@@ -31,7 +35,11 @@ export class AiProviderService {
   /** Global test run ID applied to all usage logs. Set via admin API. */
   private activeTestRunId: string | null = null;
 
-  constructor(supabase: SupabaseService, configService: ConfigService) {
+  constructor(
+    supabase: SupabaseService,
+    configService: ConfigService,
+    private readonly shadow: AiShadowService,
+  ) {
     this.supabase = supabase;
     this.configResolver = new AiConfigResolver(supabase, configService);
 
@@ -56,6 +64,7 @@ export class AiProviderService {
     purpose: string,
     request: AiCompletionRequest,
   ): Promise<AiCompletionResponse> {
+    const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
     const messages = this.buildMessages(config, request);
     const temperature =
@@ -63,7 +72,7 @@ export class AiProviderService {
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
-    return this.executeCompletion(purpose, config, messages, {
+    const response = await this.executeCompletion(purpose, config, messages, {
       maxTokens: request.maxTokens,
       temperature,
       responseFormat: request.responseFormat,
@@ -71,6 +80,24 @@ export class AiProviderService {
       reportId: request.reportId,
       sectionId: request.sectionId,
     });
+
+    void this.shadow.runShadow({
+      purpose,
+      requestId,
+      primaryConfig: config,
+      primaryResult: {
+        content: response.content,
+        usage: response.usage,
+        durationMs: response.durationMs,
+      },
+      callArgs: {
+        messages: messages as Array<{ role: string; content: unknown }>,
+        options: { maxTokens: request.maxTokens, temperature },
+      },
+      primaryFailedOver: false,
+    });
+
+    return response;
   }
 
   /**
@@ -82,8 +109,29 @@ export class AiProviderService {
     messages: OpenAI.ChatCompletionMessageParam[],
     maxTokens: number,
   ): Promise<AiCompletionResponse> {
+    const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    return this.executeCompletion(purpose, config, messages, { maxTokens });
+    const response = await this.executeCompletion(purpose, config, messages, {
+      maxTokens,
+    });
+
+    void this.shadow.runShadow({
+      purpose,
+      requestId,
+      primaryConfig: config,
+      primaryResult: {
+        content: response.content,
+        usage: response.usage,
+        durationMs: response.durationMs,
+      },
+      callArgs: {
+        messages: messages as Array<{ role: string; content: unknown }>,
+        options: { maxTokens },
+      },
+      primaryFailedOver: false,
+    });
+
+    return response;
   }
 
   /**
@@ -98,6 +146,7 @@ export class AiProviderService {
     purpose: string,
     request: AiCompletionRequest,
   ): AsyncGenerator<string> {
+    const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
     const client = this.getOrCreateClient(config);
     const messages = this.buildMessages(config, request);
@@ -106,17 +155,41 @@ export class AiProviderService {
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
-    yield* executeStream({
-      client,
-      supabase: this.supabase,
-      logger: this.logger,
-      purpose,
-      config,
-      messages,
-      request,
-      temperature,
-      activeTestRunId: this.activeTestRunId,
-    });
+    const startedAt = Date.now();
+    let buffered = '';
+
+    try {
+      for await (const delta of executeStream({
+        client,
+        supabase: this.supabase,
+        logger: this.logger,
+        purpose,
+        config,
+        messages,
+        request,
+        temperature,
+        activeTestRunId: this.activeTestRunId,
+      })) {
+        buffered += delta;
+        yield delta;
+      }
+    } finally {
+      const durationMs = Date.now() - startedAt;
+      // Fire-and-forget shadow dispatch after stream completes, errors, or
+      // the consumer disconnects. Usage tokens are not captured here because
+      // the executor logs them internally; shadow runs without primary usage.
+      void this.shadow.runShadow({
+        purpose,
+        requestId,
+        primaryConfig: config,
+        primaryResult: { content: buffered, usage: undefined, durationMs },
+        callArgs: {
+          messages: messages as Array<{ role: string; content: unknown }>,
+          options: { maxTokens: request.maxTokens, temperature },
+        },
+        primaryFailedOver: false,
+      });
+    }
   }
 
   /**
@@ -175,14 +248,19 @@ export class AiProviderService {
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
     try {
+      const rejectsSampling = modelRejectsSamplingParams(
+        config.provider,
+        config.model,
+      );
       const response = await client.chat.completions.create({
         model: config.model,
         messages,
         max_tokens: options.maxTokens,
-        temperature,
-        ...(options.responseFormat === 'json' && {
-          response_format: { type: 'json_object' },
-        }),
+        ...(rejectsSampling ? {} : { temperature }),
+        ...(options.responseFormat === 'json' &&
+          providerSupportsJsonObjectFormat(config.provider) && {
+            response_format: { type: 'json_object' },
+          }),
       });
 
       const durationMs = Date.now() - startTime;

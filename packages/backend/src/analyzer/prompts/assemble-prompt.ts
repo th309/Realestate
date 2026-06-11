@@ -150,7 +150,7 @@ export function assemblePrompt(
     ...buildPiqByGeoBlock(payload.piqByGeo),
     'MARKET CONTEXT (PropertyIQ):',
     `- Geography resolved to: ${payload.piq?.geo_level ?? 'unknown'}${payload.piq?.geo_id ? ` (id=${payload.piq.geo_id})` : ''}`,
-    `- Home value: ${payload.piq?.home_value?.value ?? 'n/a'} (source: ${payload.piq?.home_value?.source ?? 'n/a'})`,
+    `- Area typical-home value INDEX (Zillow ZHVI for the entire ${payload.piq?.geo_level ?? 'area'} — a smoothed benchmark for a typical home, NOT an appraisal of this specific property; do NOT treat the subject's price being above or below it as evidence of over/under-pricing): ${payload.piq?.home_value?.value ?? 'n/a'} (source: ${payload.piq?.home_value?.source ?? 'n/a'})`,
     `- Price appreciation YoY: ${payload.piq?.home_value_yoy?.value != null ? `${payload.piq.home_value_yoy.value}%` : 'n/a'} (source: ${payload.piq?.home_value_yoy?.source ?? 'n/a'})`,
     `- Rent index: ${payload.piq?.rent_index?.value ?? 'n/a'} (source: ${payload.piq?.rent_index?.source ?? 'n/a'})`,
     `- Market heat: ${payload.piq?.market_heat?.value ?? 'n/a'} (source: ${payload.piq?.market_heat?.source ?? 'n/a'})`,

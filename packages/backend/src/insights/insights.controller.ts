@@ -8,7 +8,9 @@
  * POST /api/insights/generate-batch        — Trigger batch generation
  * POST /api/insights/blog/generate         — Generate monthly blog posts (admin)
  *
- * Note: generate-batch and blog/generate will get an AdminGuard in Task 7 (entitlements).
+ * generate-batch and blog/generate are gated by AdminGuard — they trigger
+ * paid Anthropic generations and must not be reachable by unauthenticated
+ * traffic.
  */
 
 import {
@@ -20,10 +22,12 @@ import {
   Body,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { InsightsService } from './insights.service';
 import { BlogGeneratorService } from './blog-generator.service';
 import { BlogPostType } from './blog-prompts';
+import { AdminGuard } from '../common/guards/admin-auth.guard';
 
 @Controller('api/insights')
 export class InsightsController {
@@ -58,6 +62,7 @@ export class InsightsController {
   }
 
   @Post('generate-batch')
+  @UseGuards(AdminGuard)
   async generateBatch(@Body('geoLevel') geoLevel: string) {
     return this.insightsService.generateBatchInsights(geoLevel);
   }
@@ -69,6 +74,7 @@ export class InsightsController {
    * Returns MDX content for admin review before publishing.
    */
   @Post('blog/generate')
+  @UseGuards(AdminGuard)
   async generateBlogPosts(@Body('type') type?: BlogPostType) {
     if (type) {
       const post = await this.blogGenerator.generatePostByType(type);

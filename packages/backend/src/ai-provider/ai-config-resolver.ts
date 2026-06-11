@@ -84,7 +84,9 @@ export class AiConfigResolver {
       const { data, error } = await this.supabase
         .getClient()
         .from('ai_model_config')
-        .select('provider, model, base_url, temperature')
+        .select(
+          'provider, model, base_url, temperature, shadow_provider, shadow_model, shadow_sample_rate',
+        )
         .eq('purpose', purpose)
         .eq('is_active', true)
         .single();
@@ -111,6 +113,11 @@ export class AiConfigResolver {
         baseUrl: data.base_url || preset.baseUrl,
         temperature: data.temperature ?? preset.defaultTemperature,
         maxRetries: 2,
+        shadowProvider:
+          (data.shadow_provider as AiProviderType | null) ?? undefined,
+        shadowModel: data.shadow_model ?? undefined,
+        shadowSampleRate:
+          data.shadow_sample_rate != null ? Number(data.shadow_sample_rate) : 0,
       };
     } catch (error: any) {
       this.logger.warn(

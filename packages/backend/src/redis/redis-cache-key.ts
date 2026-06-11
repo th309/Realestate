@@ -84,5 +84,5 @@ export function buildCacheKey(
 ): string {
   const normalized = normalizeParams(args);
   const paramStr = JSON.stringify(normalized);
-  return `quinn:v1:tool:${toolName}:${paramStr}`;
+  return `tool:v1:${toolName}:${paramStr}`;
 }

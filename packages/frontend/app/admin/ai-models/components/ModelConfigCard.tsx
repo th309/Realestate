@@ -32,12 +32,7 @@ const PROVIDER_MODELS: Record<
   Array<{ id: string; label: string; context?: string }>
 > = {
   deepseek: [
-    { id: "deepseek-chat", label: "DeepSeek Chat (V3.2)", context: "128K" },
-    {
-      id: "deepseek-reasoner",
-      label: "DeepSeek Reasoner (V3.2)",
-      context: "128K",
-    },
+    { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", context: "128K" },
   ],
   anthropic: [
     { id: "claude-opus-4-6", label: "Claude Opus 4.6", context: "1M" },
@@ -91,10 +86,9 @@ const PROVIDER_MODELS: Record<
     { id: "openai/gpt-5.4", label: "GPT-5.4", context: "200K" },
     { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", context: "1M" },
     { id: "google/gemini-3-flash", label: "Gemini 3 Flash", context: "1M" },
-    { id: "deepseek/deepseek-chat", label: "DeepSeek Chat", context: "128K" },
     {
-      id: "deepseek/deepseek-reasoner",
-      label: "DeepSeek Reasoner",
+      id: "deepseek/deepseek-v4-pro",
+      label: "DeepSeek V4 Pro",
       context: "128K",
     },
   ],
@@ -118,7 +112,7 @@ const PURPOSE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
-  deepseek: "deepseek-chat",
+  deepseek: "deepseek-v4-pro",
   anthropic: "claude-sonnet-4-6",
   openai: "gpt-5.4",
   google: "gemini-2.5-pro",

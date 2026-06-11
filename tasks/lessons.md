@@ -117,7 +117,7 @@
 ## Railway Monorepo Deployment: railway.json Overrides Dashboard Settings
 
 **Date:** 2026-02-27
-**Context:** Backend deploy failed with `packages/quinn-widget/package.json: not found`. The Dockerfile's COPY command couldn't find a file that existed in git. Root cause: `packages/backend/railway.json` caused Railway to set `root directory as 'packages/backend'`, limiting the Docker build context to that subdirectory — sibling packages were invisible. Previous COPY steps succeeded only from stale Docker layer cache.
+**Context:** Backend deploy failed with a `packages/<sibling-package>/package.json: not found` error. The Dockerfile's COPY command couldn't find a file that existed in git. Root cause: `packages/backend/railway.json` caused Railway to set `root directory as 'packages/backend'`, limiting the Docker build context to that subdirectory — sibling packages were invisible. Previous COPY steps succeeded only from stale Docker layer cache.
 
 **The cascade:**
 

@@ -20,6 +20,10 @@ export interface AiProviderConfig {
   baseUrl: string;
   temperature?: number;
   maxRetries?: number;
+  // Shadow mode — populated by AiConfigResolver from ai_model_config
+  shadowProvider?: AiProviderType;
+  shadowModel?: string;
+  shadowSampleRate?: number;
 }
 
 export interface AiCompletionRequest {
@@ -59,6 +63,37 @@ export interface ProviderPreset {
 }
 
 /**
+ * Models that reject sampling parameters (`temperature`, `top_p`, `top_k`).
+ * Sending them yields HTTP 400. Add new model IDs here as Anthropic releases them.
+ * See: shared/model-migration.md → Migrating to Opus 4.7.
+ */
+const ANTHROPIC_NO_SAMPLING_MODELS = new Set<string>(['claude-opus-4-7']);
+
+export function modelRejectsSamplingParams(
+  provider: AiProviderType,
+  model: string,
+): boolean {
+  if (provider !== 'anthropic' && provider !== 'openrouter') return false;
+  const bareId = model.startsWith('anthropic/') ? model.slice(10) : model;
+  return ANTHROPIC_NO_SAMPLING_MODELS.has(bareId);
+}
+
+/**
+ * Whether a provider accepts OpenAI-style `response_format: { type: 'json_object' }`.
+ *
+ * Anthropic's OpenAI-compatible endpoint rejects `json_object` — it only accepts
+ * `'json_schema'` (which requires a full schema we do not supply per narrative
+ * section), returning `400 response_format.type: Input should be 'json_schema'`.
+ * For Anthropic we omit response_format and rely on the prompt's JSON instructions
+ * plus downstream parsing. DeepSeek / OpenAI support json_object natively.
+ */
+export function providerSupportsJsonObjectFormat(
+  provider: AiProviderType,
+): boolean {
+  return provider !== 'anthropic';
+}
+
+/**
  * Per-model pricing in USD per 1M tokens.
  * Used by AiUsageLogger to estimate cost from token counts.
  * Update when providers change pricing.
@@ -66,10 +101,10 @@ export interface ProviderPreset {
 export const MODEL_PRICING: Record<string, { input: number; output: number }> =
   {
     // DeepSeek
-    'deepseek-chat': { input: 0.27, output: 1.1 },
-    'deepseek-reasoner': { input: 0.55, output: 2.19 },
+    'deepseek-v4-pro': { input: 0.435, output: 0.87 },
     // Anthropic
-    'claude-opus-4-6': { input: 15.0, output: 75.0 },
+    'claude-opus-4-7': { input: 5.0, output: 25.0 },
+    'claude-opus-4-6': { input: 5.0, output: 25.0 },
     'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
     'claude-sonnet-4-5': { input: 3.0, output: 15.0 },
     'claude-haiku-4-5': { input: 0.8, output: 4.0 },
@@ -95,17 +130,12 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> =
 export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
   deepseek: {
     baseUrl: 'https://api.deepseek.com/v1',
-    defaultModel: 'deepseek-chat',
+    defaultModel: 'deepseek-v4-pro',
     defaultTemperature: 0.7,
     envKeyName: 'DEEPSEEK_API_KEY',
     supportsSystemPrompt: true,
     availableModels: [
-      { id: 'deepseek-chat', label: 'DeepSeek Chat (V3.2)', context: '128K' },
-      {
-        id: 'deepseek-reasoner',
-        label: 'DeepSeek Reasoner (V3.2)',
-        context: '128K',
-      },
+      { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', context: '128K' },
     ],
   },
   anthropic: {
@@ -115,6 +145,7 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
     envKeyName: 'ANTHROPIC_API_KEY',
     supportsSystemPrompt: true,
     availableModels: [
+      { id: 'claude-opus-4-7', label: 'Claude Opus 4.7', context: '1M' },
       { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', context: '1M' },
       { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', context: '200K' },
       {
@@ -183,6 +214,11 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
     supportsSystemPrompt: true,
     availableModels: [
       {
+        id: 'anthropic/claude-opus-4-7',
+        label: 'Claude Opus 4.7',
+        context: '1M',
+      },
+      {
         id: 'anthropic/claude-opus-4-6',
         label: 'Claude Opus 4.6',
         context: '1M',
@@ -195,10 +231,9 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
       { id: 'openai/gpt-5.4', label: 'GPT-5.4', context: '200K' },
       { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', context: '1M' },
       { id: 'google/gemini-3-flash', label: 'Gemini 3 Flash', context: '1M' },
-      { id: 'deepseek/deepseek-chat', label: 'DeepSeek Chat', context: '128K' },
       {
-        id: 'deepseek/deepseek-reasoner',
-        label: 'DeepSeek Reasoner',
+        id: 'deepseek/deepseek-v4-pro',
+        label: 'DeepSeek V4 Pro',
         context: '128K',
       },
     ],

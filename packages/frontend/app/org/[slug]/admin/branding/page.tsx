@@ -13,7 +13,6 @@ import { EmailBrandingSection } from "./EmailBrandingSection";
 import { TypographySection } from "./TypographySection";
 import { ClientExperienceSection } from "./ClientExperienceSection";
 import { CustomDomainSection } from "./CustomDomainSection";
-import { QuinnCustomizationSection } from "./QuinnCustomizationSection";
 import { useBrandingForm } from "./useBrandingForm";
 
 /**
@@ -170,14 +169,6 @@ export default function OrgAdminBranding() {
             customDomainStatus={form.customDomainStatus}
             customDomainVerifiedAt={form.customDomainVerifiedAt}
             onDomainChanged={form.reloadBranding}
-          />
-
-          {/* Quinn — hooks in place, UI paused */}
-          <QuinnCustomizationSection
-            botName={form.fields.quinnBotName}
-            greeting={form.fields.quinnGreeting}
-            onBotNameChange={(v) => form.setField("quinnBotName", v)}
-            onGreetingChange={(v) => form.setField("quinnGreeting", v)}
           />
 
           {/* Save button */}

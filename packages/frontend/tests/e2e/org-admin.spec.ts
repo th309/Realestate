@@ -91,13 +91,6 @@ test.describe("Enterprise Org Admin — Live E2E", () => {
     });
   });
 
-  test("branding has quinn coming soon", async ({ page }) => {
-    await page.goto(`${BASE}/branding`);
-    await expect(page.getByText(/quinn/i).first()).toBeVisible({
-      timeout: 20000,
-    });
-  });
-
   // ─── API KEYS ───────────────────────────────────────
 
   test("api keys page renders", async ({ page }) => {

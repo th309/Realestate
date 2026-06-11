@@ -4,16 +4,17 @@ import { useCallback, useRef } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 type MilestoneKey =
   | "first_market_viewed"
   | "first_comparison"
-  | "first_score_explored"
-  | "first_quinn_query";
+  | "first_score_explored";
 
-const MILESTONE_TOASTS: Record<MilestoneKey, { message: string; emoji: string }> = {
+const MILESTONE_TOASTS: Record<
+  MilestoneKey,
+  { message: string; emoji: string }
+> = {
   first_market_viewed: {
     emoji: "🗺️",
     message: "First market explored! You're on your way.",
@@ -25,10 +26,6 @@ const MILESTONE_TOASTS: Record<MilestoneKey, { message: string; emoji: string }>
   first_score_explored: {
     emoji: "📊",
     message: "First score explored! You're digging into the data.",
-  },
-  first_quinn_query: {
-    emoji: "🤖",
-    message: "First Quinn question answered! Ask me anything.",
   },
 };
 

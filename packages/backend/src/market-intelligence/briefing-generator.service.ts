@@ -10,15 +10,27 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import {
-  MarketBriefing, MetricSnapshot, NationalBenchmarks,
-  DEFAULT_NATIONAL_BENCHMARKS, NewsItem, BRIEFING_METRIC_IDS,
+  MarketBriefing,
+  MetricSnapshot,
+  NationalBenchmarks,
+  DEFAULT_NATIONAL_BENCHMARKS,
+  NewsItem,
+  BRIEFING_METRIC_IDS,
 } from './market-intelligence.types';
-import { computeMarketStance, StanceSignal } from './engines/market-stance.engine';
+import {
+  computeMarketStance,
+  StanceSignal,
+} from './engines/market-stance.engine';
 import { computeRiskFlags, RiskFlag } from './engines/risk-flags.engine';
 import {
-  buildMetricsSnapshot, extractStanceMetrics, extractRiskMetrics,
-  calculateFreshness, buildNarrativePrompt, buildSuggestedQuestionsPrompt,
-  parseSuggestedQuestions, buildFallbackNarrative,
+  buildMetricsSnapshot,
+  extractStanceMetrics,
+  extractRiskMetrics,
+  calculateFreshness,
+  buildNarrativePrompt,
+  buildSuggestedQuestionsPrompt,
+  parseSuggestedQuestions,
+  buildFallbackNarrative,
 } from './briefing-generator.helpers';
 
 @Injectable()
@@ -51,13 +63,21 @@ export class BriefingGeneratorService {
     const riskInput = extractRiskMetrics(resolvedMetrics);
     const riskFlags = computeRiskFlags(riskInput, nationalBenchmarks, null);
 
-    const metricsCount = Object.values(metricsSnapshot).filter(m => m.value !== null).length;
+    const metricsCount = Object.values(metricsSnapshot).filter(
+      (m) => m.value !== null,
+    ).length;
     const narrative = await this.generateNarrative(
-      geographyName, stanceResult.stance, stanceResult.signals,
-      riskFlags, metricsSnapshot, newsSnapshot, metricsCount,
+      geographyName,
+      stanceResult.stance,
+      stanceResult.signals,
+      riskFlags,
+      metricsSnapshot,
+      newsSnapshot,
+      metricsCount,
     );
     const suggestedQuestions = await this.generateSuggestedQuestions(
-      geographyName, stanceResult.stance,
+      geographyName,
+      stanceResult.stance,
     );
     const generationTimeMs = Date.now() - startTime;
     const briefing: MarketBriefing = {
@@ -83,7 +103,7 @@ export class BriefingGeneratorService {
 
     this.logger.log(
       `Briefing generated for ${geographyName} (${geographyId}) in ${generationTimeMs}ms ` +
-      `— stance=${stanceResult.stance}, metrics=${metricsCount}, risks=${riskFlags.length}`,
+        `— stance=${stanceResult.stance}, metrics=${metricsCount}, risks=${riskFlags.length}`,
     );
 
     return briefing;
@@ -111,7 +131,10 @@ export class BriefingGeneratorService {
         `On-demand briefing generation for ${geographyName} (${geographyId})`,
       );
       await this.generateBriefing(
-        geographyId, geographyType, geographyName, DEFAULT_NATIONAL_BENCHMARKS,
+        geographyId,
+        geographyType,
+        geographyName,
+        DEFAULT_NATIONAL_BENCHMARKS,
       );
     } catch (error: any) {
       this.logger.warn(
@@ -126,10 +149,14 @@ export class BriefingGeneratorService {
   ): Promise<Record<string, ResolvedMetric>> {
     try {
       return await this.metricResolution.resolveMetricBatch(
-        [...BRIEFING_METRIC_IDS], geoLevel, geoId,
+        [...BRIEFING_METRIC_IDS],
+        geoLevel,
+        geoId,
       );
     } catch (err) {
-      this.logger.error(`Metric resolution failed for ${geoLevel}/${geoId}: ${err.message}`);
+      this.logger.error(
+        `Metric resolution failed for ${geoLevel}/${geoId}: ${err.message}`,
+      );
       return {};
     }
   }
@@ -137,7 +164,10 @@ export class BriefingGeneratorService {
   private async fetchRecentNews(geographyId: string): Promise<NewsItem[]> {
     try {
       const client = this.supabase.getClient();
-      const lookbackDays = await this.appConfig.getNumber('QUINN_NEWS_LOOKBACK_DAYS', 30);
+      const lookbackDays = await this.appConfig.getNumber(
+        'QUINN_NEWS_LOOKBACK_DAYS',
+        30,
+      );
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - lookbackDays);
 
@@ -152,52 +182,69 @@ export class BriefingGeneratorService {
       if (error || !data) return [];
       return data as NewsItem[];
     } catch (err) {
-      this.logger.warn(`Failed to fetch news for ${geographyId}: ${err.message}`);
+      this.logger.warn(
+        `Failed to fetch news for ${geographyId}: ${err.message}`,
+      );
       return [];
     }
   }
 
   private async generateNarrative(
-    geographyName: string, stance: string, signals: StanceSignal[],
-    riskFlags: RiskFlag[], metricsSnapshot: Record<string, MetricSnapshot>,
-    newsSnapshot: NewsItem[], metricsCount: number,
+    geographyName: string,
+    stance: string,
+    signals: StanceSignal[],
+    riskFlags: RiskFlag[],
+    metricsSnapshot: Record<string, MetricSnapshot>,
+    newsSnapshot: NewsItem[],
+    metricsCount: number,
   ): Promise<string> {
     try {
       const newsHeadlines = newsSnapshot.map(
-        n => `- ${n.headline} (${n.source_name}, ${n.sentiment})`,
+        (n) => `- ${n.headline} (${n.source_name}, ${n.sentiment})`,
       );
       const prompt = buildNarrativePrompt(
-        geographyName, stance, signals, riskFlags, metricsSnapshot, newsHeadlines,
+        geographyName,
+        stance,
+        signals,
+        riskFlags,
+        metricsSnapshot,
+        newsHeadlines,
       );
       return await this.callLlm(prompt);
     } catch (err) {
-      this.logger.warn(`LLM narrative failed for ${geographyName}: ${err.message}`);
+      this.logger.warn(
+        `LLM narrative failed for ${geographyName}: ${err.message}`,
+      );
       return buildFallbackNarrative(geographyName, stance, metricsCount);
     }
   }
 
   private async generateSuggestedQuestions(
-    geographyName: string, stance: string,
+    geographyName: string,
+    stance: string,
   ): Promise<string[]> {
     try {
       const prompt = buildSuggestedQuestionsPrompt(geographyName, stance);
       const raw = await this.callLlm(prompt);
       return parseSuggestedQuestions(raw);
     } catch (err) {
-      this.logger.warn(`LLM questions failed for ${geographyName}: ${err.message}`);
+      this.logger.warn(
+        `LLM questions failed for ${geographyName}: ${err.message}`,
+      );
       return [];
     }
   }
 
   private async callLlm(prompt: string): Promise<string> {
-    const [baseUrl, model, apiKey, timeoutMs, maxTokens, temperatureStr] = await Promise.all([
-      this.appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
-      this.appConfig.get('AI_MODEL', 'deepseek-chat'),
-      this.appConfig.get('DEEPSEEK_API_KEY'),
-      this.appConfig.getNumber('QUINN_LLM_TIMEOUT_MS', 30000),
-      this.appConfig.getNumber('QUINN_LLM_MAX_TOKENS', 500),
-      this.appConfig.get('QUINN_LLM_TEMPERATURE', '0.7'),
-    ]);
+    const [baseUrl, model, apiKey, timeoutMs, maxTokens, temperatureStr] =
+      await Promise.all([
+        this.appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
+        this.appConfig.get('AI_MODEL', 'deepseek-v4-pro'),
+        this.appConfig.get('DEEPSEEK_API_KEY'),
+        this.appConfig.getNumber('QUINN_LLM_TIMEOUT_MS', 30000),
+        this.appConfig.getNumber('QUINN_LLM_MAX_TOKENS', 500),
+        this.appConfig.get('QUINN_LLM_TEMPERATURE', '0.7'),
+      ]);
 
     if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
 

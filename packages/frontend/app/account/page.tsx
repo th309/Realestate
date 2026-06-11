@@ -6,7 +6,7 @@ import { User, HelpCircle, Building2 } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
-import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import { useWatchlist } from "@/lib/watchlist/useWatchlist";
 import { useAlerts, useAlertHistory } from "@/lib/alerts/hooks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SupportTab } from "@/components/account";

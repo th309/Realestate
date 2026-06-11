@@ -40,7 +40,7 @@ export interface RawScoreResult {
 
 /**
  * Get all metric names used across v3 formulas for a geography.
- * @deprecated v3 legacy — will be removed. v4 PropertyIQ uses V4_FORMULA_METRICS from v4-scoring-engine.ts.
+ * @deprecated v3 legacy — will be removed. PropertyIQ uses PROPERTYIQ_FORMULA_METRICS from propertyiq-scoring-engine.ts.
  * Still called by v3 scoring paths for historical component breakdowns.
  */
 export function getAllMetricNames(geography: GeographyLevel): string[] {

@@ -16,16 +16,10 @@ export interface TestModel {
 
 export const TEST_MODELS: TestModel[] = [
   {
-    id: "dsreasoner",
-    shortName: "DS-Reasoner",
+    id: "dsv4pro",
+    shortName: "DS-V4-Pro",
     provider: "deepseek",
-    model: "deepseek-reasoner",
-  },
-  {
-    id: "dschat",
-    shortName: "DS-Chat",
-    provider: "deepseek",
-    model: "deepseek-chat",
+    model: "deepseek-v4-pro",
   },
   {
     id: "sonnet46",
