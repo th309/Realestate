@@ -173,7 +173,15 @@ function SignUpContent() {
         }).catch(() => {});
       }
 
-      router.push(redirectTo);
+      // Honor a pending purchase intent: if the user clicked a paid CTA before
+      // signing up, skip the /tour and return to /pricing so the existing
+      // auto-checkout effect resumes Stripe. Otherwise use the normal flow.
+      const hasCheckoutIntent =
+        typeof window !== "undefined" &&
+        !!window.sessionStorage.getItem("checkoutIntent");
+      router.push(
+        hasCheckoutIntent && explicitRedirect ? explicitRedirect : redirectTo,
+      );
       return;
     }
 
