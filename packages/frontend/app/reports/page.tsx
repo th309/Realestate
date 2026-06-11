@@ -477,6 +477,7 @@ function ReportCreationPage() {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const urlPrefillApplied = useRef(false);
 
   // Read prefill data from URL params (e.g. from "Generate Report" on market page)
@@ -596,7 +597,7 @@ function ReportCreationPage() {
 
       const userId = user?.id;
       if (!userId) {
-        setError("You must be signed in to generate a report.");
+        setShowSignupPrompt(true);
         setIsGenerating(false);
         return;
       }
@@ -723,6 +724,36 @@ function ReportCreationPage() {
                 </>
               )}
             </motion.button>
+
+            {showSignupPrompt && markets[0] && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border border-primary/30 bg-primary-container/40 p-5 text-center"
+              >
+                <h3 className="text-base font-semibold text-on-surface mb-1">
+                  Sign up free to generate your {markets[0].name} report
+                </h3>
+                <p className="text-sm text-on-surface-variant mb-4">
+                  Create a free account and we&apos;ll bring you right back to
+                  this report.
+                </p>
+                <a
+                  href={`/auth/sign-up?redirect=${encodeURIComponent(
+                    `/reports?mid=${encodeURIComponent(markets[0].id)}&mname=${encodeURIComponent(
+                      markets[0].name,
+                    )}&mtype=${encodeURIComponent(markets[0].type)}${
+                      markets[0].state
+                        ? `&mstate=${encodeURIComponent(markets[0].state)}`
+                        : ""
+                    }`,
+                  )}`}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm hover:bg-primary/90 transition-all"
+                >
+                  Sign up free <ArrowRight className="w-4 h-4" />
+                </a>
+              </motion.div>
+            )}
 
             {!canGenerate && (
               <p className="text-center text-sm text-on-surface-variant">
