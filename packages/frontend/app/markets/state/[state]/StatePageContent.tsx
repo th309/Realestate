@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { StateSlugEntry } from "@/lib/data/state-slug-data";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
+import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface StatePageContentProps {
   state: StateSlugEntry;
@@ -47,11 +48,17 @@ export function StatePageContent({
         Census, and FRED.
       </p>
 
-      {/* CTAs */}
+      {/* CTAs — report builder is the primary geo-scale action */}
       <section className="flex flex-wrap gap-4 mb-10">
+        <MarketReportCTA
+          geoLevel="state"
+          geoId={state.abbrev}
+          geoName={state.name}
+          stateAbbr={state.abbrev}
+        />
         <Link
           href={`/map?state=${state.abbrev}`}
-          className="px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors"
+          className="px-6 py-3 border border-outline text-on-surface rounded-full font-medium hover:bg-surface-variant transition-colors"
         >
           View {state.abbrev} on Map
         </Link>
@@ -133,8 +140,8 @@ export function StatePageContent({
             Get AI-Powered Market Analysis
           </h3>
           <p className="text-sm text-on-surface-variant">
-            PropertyIQ scores every {state.name} market on 40+ indicators.
-            Sign up free to unlock the full dashboard.
+            PropertyIQ scores every {state.name} market on 40+ indicators. Sign
+            up free to unlock the full dashboard.
           </p>
         </div>
         <Link

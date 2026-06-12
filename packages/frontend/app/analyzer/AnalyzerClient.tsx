@@ -34,7 +34,6 @@ export default function AnalyzerClient({
   searchParamsPromise: Promise<{
     address?: string;
     zip?: string;
-    piq_market?: string;
   }>;
 }) {
   const params = use(searchParamsPromise);

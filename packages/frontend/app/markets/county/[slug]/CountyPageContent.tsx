@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
-import AnalyzeCTA from "../../components/AnalyzeCTA";
+import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface CountyPageContentProps {
   county: CountySlugEntry;
@@ -56,12 +56,13 @@ export function CountyPageContent({
         )}
       </p>
 
-      {/* Analyze CTA — deep-link to Deal Analyzer */}
+      {/* Market report CTA — deep-link to the AI Report builder (geo-scale) */}
       <div className="mb-8">
-        <AnalyzeCTA
+        <MarketReportCTA
           geoLevel="county"
           geoId={county.fips}
           geoName={county.shortName}
+          stateAbbr={county.state}
         />
       </div>
 

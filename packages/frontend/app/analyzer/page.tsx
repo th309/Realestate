@@ -12,7 +12,6 @@ export default function AnalyzerPage({
   searchParams: Promise<{
     address?: string;
     zip?: string;
-    piq_market?: string;
   }>;
 }) {
   return <AnalyzerClient searchParamsPromise={searchParams} />;
