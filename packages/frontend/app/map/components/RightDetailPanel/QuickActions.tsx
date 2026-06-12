@@ -7,6 +7,9 @@ import { Heart, ExternalLink, FileText, Loader2, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { useIsAnonymous } from "@/lib/entitlements/useIsAnonymous";
+import { buildAnonReturnTo } from "@/lib/entitlements/buildAnonReturnTo";
+import { AnonCaptureModal } from "@/components/entitlements/AnonCaptureModal";
 import { useWatchlist } from "@/lib/watchlist/useWatchlist";
 import type { SelectedGeography, GeoLevel } from "../../types";
 
@@ -50,6 +53,8 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
     if (geography.stateAbbr) params.set("state", geography.stateAbbr);
     router.push(`/market/${geography.id}?${params.toString()}`);
   };
+
+  const isAnonymous = useIsAnonymous();
 
   const { getAccess } = useEntitlements();
   const watchlistAccess = getAccess("feature", "watchlist_limit");
@@ -161,25 +166,47 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
 
       {showPaywall &&
         typeof document !== "undefined" &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
-            onClick={() => setShowPaywall(null)}
-          >
-            <div className="max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-              <PaywallCard
-                type="feature"
-                id={showPaywall === "watchlist" ? "watchlist_limit" : "reports"}
-                title={
-                  showPaywall === "watchlist"
-                    ? "Unlock Favorites"
-                    : "Unlock Reports"
+        (isAnonymous
+          ? createPortal(
+              <AnonCaptureModal
+                featureName={
+                  showPaywall === "watchlist" ? "Favorites" : "Reports"
                 }
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
+                returnTo={buildAnonReturnTo(
+                  window.location.pathname,
+                  window.location.search,
+                  undefined,
+                )}
+                onDismiss={() => setShowPaywall(null)}
+              />,
+              document.body,
+            )
+          : createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+                onClick={() => setShowPaywall(null)}
+              >
+                <div
+                  className="max-w-sm mx-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <PaywallCard
+                    type="feature"
+                    id={
+                      showPaywall === "watchlist"
+                        ? "watchlist_limit"
+                        : "reports"
+                    }
+                    title={
+                      showPaywall === "watchlist"
+                        ? "Unlock Favorites"
+                        : "Unlock Reports"
+                    }
+                  />
+                </div>
+              </div>,
+              document.body,
+            ))}
     </div>
   );
 }
