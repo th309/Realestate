@@ -12,6 +12,7 @@ import {
   findUserIdByEmail,
   hasSignupCompleteEvent,
   deleteUser,
+  getSignupOtp,
 } from "./helpers/supabase-admin";
 
 test.describe("Signup chain", () => {
@@ -82,52 +83,72 @@ test.describe("Signup chain", () => {
   });
 
   // ---- Email signup happy path + DB assertions (creates + deletes a real user) ----
-  test("completes email signup from homepage and logs signup_complete", async ({
+  test("email signup completes via OTP and logs signup_complete", async ({
     page,
   }) => {
     const email = `piq-e2e-${Date.now()}@example.com`;
-    // Unique, non-breached password: prod Supabase rejects leaked passwords
-    // (HaveIBeenPwned). Still satisfies the 8+/upper/lower/number rules.
     const password = `Zq9${Date.now()}Lr`;
-    let userId: string | null = null;
     try {
       await page.goto("/auth/sign-up");
       await page.getByLabel(/^email$/i).fill(email);
       await page.locator("#password").fill(password);
       await page.locator("#confirm-password").fill(password);
-      await page.getByRole("checkbox").check(); // ToS
+      await page.getByRole("checkbox").check();
       await page.getByRole("button", { name: /create account/i }).click();
 
-      // Prod requires email confirmation (no autoconfirm): the form lands on
-      // "Check your email". With autoconfirm it navigates to /tour|/map.
-      // Accept either — both mean Supabase created the account.
-      const confirmation = page.getByText(/check your email/i);
-      await Promise.race([
-        page.waitForURL(/\/(tour|map)/, { timeout: 25_000 }).catch(() => {}),
-        confirmation.waitFor({ timeout: 25_000 }).catch(() => {}),
-      ]);
+      // OTP entry screen
+      await expect(
+        page.getByRole("heading", { name: /enter your code/i }),
+      ).toBeVisible({ timeout: 20_000 });
 
-      // The account row now exists in auth.users (even if unconfirmed).
+      // Read a valid code (re-mints for the existing unconfirmed user).
+      const otp = await getSignupOtp(email, password);
+      expect(otp).toBeTruthy();
+      await page
+        .locator('input[autocomplete="one-time-code"]')
+        .fill(otp as string);
+      await page.getByRole("button", { name: /^verify$/i }).click();
+
+      // Lands in the app (tour/map, or pricing if a checkout intent existed).
+      await page.waitForURL(/\/(tour|map|pricing)/, { timeout: 25_000 });
+
+      const userId = await findUserIdByEmail(email);
+      expect(userId).toBeTruthy();
       await expect
-        .poll(async () => (userId = await findUserIdByEmail(email)), {
+        .poll(() => hasSignupCompleteEvent(userId as string), {
           timeout: 20_000,
         })
-        .not.toBeNull();
-
-      if (/\/(tour|map)/.test(page.url())) {
-        // Autoconfirm path: a session was issued, so signup_complete is logged.
-        await expect
-          .poll(async () => hasSignupCompleteEvent(userId as string), {
-            timeout: 15_000,
-          })
-          .toBe(true);
-      } else {
-        // Confirmation path: signup_complete fires only after the user clicks
-        // the emailed link (via /auth/callback), which automation can't do.
-        await expect(confirmation).toBeVisible();
-      }
+        .toBe(true);
     } finally {
-      if (userId) await deleteUser(userId);
+      const id = await findUserIdByEmail(email);
+      if (id) await deleteUser(id);
+    }
+  });
+
+  test("wrong OTP shows an inline error", async ({ page }) => {
+    const email = `piq-e2e-${Date.now()}@example.com`;
+    const password = `Zq9${Date.now()}Lr`;
+    try {
+      await page.goto("/auth/sign-up");
+      await page.getByLabel(/^email$/i).fill(email);
+      await page.locator("#password").fill(password);
+      await page.locator("#confirm-password").fill(password);
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: /create account/i }).click();
+      await expect(
+        page.getByRole("heading", { name: /enter your code/i }),
+      ).toBeVisible({ timeout: 20_000 });
+
+      await page.locator('input[autocomplete="one-time-code"]').fill("000000");
+      await page.getByRole("button", { name: /^verify$/i }).click();
+      await expect(
+        page.getByText(/didn't match|expired|too many/i),
+      ).toBeVisible({
+        timeout: 10_000,
+      });
+    } finally {
+      const id = await findUserIdByEmail(email);
+      if (id) await deleteUser(id);
     }
   });
 });
