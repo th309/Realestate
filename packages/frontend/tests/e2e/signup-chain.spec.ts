@@ -143,7 +143,7 @@ test.describe("Signup chain", () => {
       const wrong = real === "000000" ? "111111" : "000000";
       await page.locator('input[autocomplete="one-time-code"]').fill(wrong);
       await page.getByRole("button", { name: /^verify$/i }).click();
-      await expect(page.getByText(/didn't match/i)).toBeVisible({
+      await expect(page.getByText(/incorrect or has expired/i)).toBeVisible({
         timeout: 10_000,
       });
     } finally {
