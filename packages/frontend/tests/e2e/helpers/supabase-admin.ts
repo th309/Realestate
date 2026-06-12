@@ -59,3 +59,34 @@ export async function deleteUser(userId: string): Promise<void> {
   const supabase = adminClient();
   await supabase.auth.admin.deleteUser(userId).catch(() => {});
 }
+
+/**
+ * Returns a VALID 6-digit signup OTP for `email` via the admin generateLink
+ * API (expects Supabase `mailer_otp_length: 6`). Re-mints for an existing
+ * unconfirmed user (verified), so call it AFTER the UI signup so the returned
+ * code is the current one. No inbox needed. Throws if the returned code is not
+ * 6 digits, so a Supabase OTP-length config drift fails the test loudly
+ * instead of silently truncating in the component.
+ */
+export async function getSignupOtp(
+  email: string,
+  password: string,
+): Promise<string> {
+  const supabase = adminClient();
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "signup",
+    email,
+    password,
+  });
+  if (error) {
+    throw new Error(`getSignupOtp(${email}) failed: ${error.message}`);
+  }
+  const props = data?.properties as { email_otp?: string } | undefined;
+  const otp = props?.email_otp ?? null;
+  if (!otp || !/^\d{6}$/.test(otp)) {
+    throw new Error(
+      `getSignupOtp(${email}) expected a 6-digit code but got '${otp}' — check Supabase mailer_otp_length=6`,
+    );
+  }
+  return otp;
+}
