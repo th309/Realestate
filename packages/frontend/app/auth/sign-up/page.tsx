@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useRef, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Lock, Loader2, AlertCircle, Mail } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
@@ -11,11 +12,11 @@ import {
   allRequirementsMet,
   friendlyAuthError,
   getPasswordRequirements,
-  readAttributionCookie,
 } from "./helpers";
-import { ConfirmationSent } from "./ConfirmationSent";
 import { PasswordStrength } from "./PasswordStrength";
 import { GoogleIcon } from "./GoogleIcon";
+import { OtpConfirmation } from "./OtpConfirmation";
+import { completeSignup } from "./complete-signup";
 
 export default function SignUpPage() {
   return (
@@ -36,13 +37,42 @@ function SignUpContent() {
     ? `/tour?next=${encodeURIComponent(explicitRedirect)}`
     : "/tour";
 
-  const [email, setEmail] = useState("");
+  // Lazy initializers restore state from sessionStorage on mount (OTP refresh).
+  const [email, setEmail] = useState(() => {
+    try {
+      const raw =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem("piq_signup_pending")
+          : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as { email?: string };
+        return parsed.email ?? "";
+      }
+    } catch {
+      /* ignore */
+    }
+    return "";
+  });
+  const [awaitingOtp, setAwaitingOtp] = useState(() => {
+    try {
+      const raw =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem("piq_signup_pending")
+          : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as { email?: string };
+        return !!parsed.email;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
+  });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tosAccepted, setTosAccepted] = useState(false);
-  const [confirmationSent, setConfirmationSent] = useState(false);
   const tosRef = useRef<HTMLLabelElement>(null);
   const tosError =
     error === "You must accept the Terms of Service to create an account";
@@ -76,11 +106,11 @@ function SignUpContent() {
     setLoading(true);
     setError(null);
 
-    const { error: authError, session } = await signUp(
-      email,
-      password,
-      redirectTo,
-    );
+    const {
+      error: authError,
+      session,
+      user,
+    } = await signUp(email, password, redirectTo);
 
     if (authError) {
       setError(authError.message);
@@ -88,67 +118,56 @@ function SignUpContent() {
       return;
     }
 
-    // With autoconfirm enabled, signup returns a session immediately.
-    // Upsert profile row (trigger creates it, but belt-and-suspenders)
-    // and send welcome email since the Supabase email hook is skipped.
+    // Autoconfirm path (rare in prod): a session is returned immediately.
     if (session) {
-      trackEvent("conversion.signup_complete", { method: "email" });
-      flush(); // Send queued events via sendBeacon BEFORE any navigation unmounts this page
-      const supabase = createSupabaseBrowserClient();
-      await supabase.from("user_profiles").upsert(
-        {
-          id: session.user.id,
-          email: session.user.email,
-          full_name:
-            (session.user.user_metadata?.full_name as string) ||
-            email.split("@")[0],
-          tos_accepted_at: new Date().toISOString(),
-        },
-        { onConflict: "id" },
-      );
-
-      // Fire-and-forget welcome email
-      fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
-
-      // Capture content-pipeline attribution: read the __piq_attr cookie
-      // set by /go/[slug] on first touch and forward it to the backend.
-      // Fire-and-forget; never block signup on attribution.
-      const attributionCookie = readAttributionCookie();
-      if (attributionCookie) {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        fetch(`${apiUrl}/api/auth-hooks/on-user-created`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: session.user.id,
-            cookieValue: attributionCookie,
-            tierAtSignup: "free",
-          }),
-          keepalive: true,
-        }).catch(() => {});
-      }
-
-      // Honor a pending purchase intent: if the user clicked a paid CTA before
-      // signing up, skip the /tour and return to /pricing so the existing
-      // auto-checkout effect resumes Stripe. Otherwise use the normal flow.
-      const hasCheckoutIntent =
-        typeof window !== "undefined" &&
-        !!window.sessionStorage.getItem("checkoutIntent");
-      router.push(
-        hasCheckoutIntent && explicitRedirect ? explicitRedirect : redirectTo,
-      );
+      const destination = await completeSignup(session, {
+        email,
+        explicitRedirect,
+        redirectTo,
+        method: "email",
+      });
+      router.push(destination);
       return;
     }
 
-    // Email confirmation required — no session returned. Record the funnel
-    // stage ("started → awaiting confirmation") so it's distinguishable from
-    // abandonment; signup_complete fires later in /auth/callback when the user
-    // clicks the emailed link.
+    // Already-registered (confirmed) users get an obfuscated user with no
+    // identities and no session — route them to sign in, don't show OTP.
+    if (user && (user.identities?.length ?? 0) === 0) {
+      setError("This email is already registered. Please sign in instead.");
+      setLoading(false);
+      return;
+    }
+
+    // Brand-new OR existing-unconfirmed: Supabase sent an 8-digit OTP code.
+    // Persist the email so a refresh on the OTP screen recovers, record the
+    // funnel stage, and show the code-entry screen.
+    try {
+      window.sessionStorage.setItem(
+        "piq_signup_pending",
+        JSON.stringify({ email }),
+      );
+    } catch {
+      /* ignore */
+    }
     trackEvent("conversion.signup_pending_confirmation", { method: "email" });
     flush();
-    setConfirmationSent(true);
+    setAwaitingOtp(true);
     setLoading(false);
+  };
+
+  const handleOtpVerified = async (session: Session) => {
+    try {
+      window.sessionStorage.removeItem("piq_signup_pending");
+    } catch {
+      /* ignore */
+    }
+    const destination = await completeSignup(session, {
+      email,
+      explicitRedirect,
+      redirectTo,
+      method: "email",
+    });
+    router.push(destination);
   };
 
   const handleOAuth = async (provider: "google") => {
@@ -187,9 +206,9 @@ function SignUpContent() {
           </h1>
         </div>
 
-        {/* Confirmation Sent Success */}
-        {confirmationSent ? (
-          <ConfirmationSent email={email} />
+        {/* OTP code entry (post-signup) */}
+        {awaitingOtp ? (
+          <OtpConfirmation email={email} onVerified={handleOtpVerified} />
         ) : (
           <>
             {/* Error Banner */}
