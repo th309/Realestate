@@ -2,6 +2,7 @@ import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush, setUserId } from "@/lib/analytics/tracker";
 import { readAttributionCookie } from "./helpers";
+import { startOnboardingTrial } from "@/lib/data";
 
 /**
  * Runs every post-signup side-effect once a session exists (autoconfirm OR
@@ -55,6 +56,11 @@ export async function completeSignup(
       keepalive: true,
     }).catch(() => {});
   }
+
+  // Grant the reverse Pro trial at signup so the anon-capture promise
+  // ("14 days of Pro") is honest regardless of whether the user finishes the
+  // tour. ensureTrialStarted is idempotent; best-effort — never block signup.
+  void startOnboardingTrial().catch(() => {});
 
   // Honor a pending purchase intent: resume checkout on /pricing, else normal.
   const hasCheckoutIntent =
