@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
-import AnalyzeCTA from "../../components/AnalyzeCTA";
+import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface ZipPageContentProps {
   zip: ZipSlugEntry;
@@ -73,9 +73,14 @@ export function ZipPageContent({
         )}
       </p>
 
-      {/* Analyze CTA — deep-link to Deal Analyzer */}
+      {/* Market report CTA — deep-link to the AI Report builder (geo-scale) */}
       <div className="mb-8">
-        <AnalyzeCTA geoLevel="zip" geoId={zip.zip} geoName={zip.shortName} />
+        <MarketReportCTA
+          geoLevel="zip"
+          geoId={zip.zip}
+          geoName={zip.shortName}
+          stateAbbr={zip.state}
+        />
       </div>
 
       {/* Score */}
