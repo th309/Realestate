@@ -8,26 +8,27 @@
  * Dismissible via X button or clicking outside.
  */
 
-'use client';
+"use client";
 
-import React, { useEffect, useCallback, useRef } from 'react';
-import Link from 'next/link';
-import { X, Lock, Check, Minus } from 'lucide-react';
-import { startCheckout } from '@/lib/data/fetchers/billing';
-import { trackPaywallEvent } from '@/lib/entitlements/api';
-import { getPricingCtaVariant, PRICING_CTA_COPY } from '@/lib/ab';
-import { trackEvent } from '@/lib/analytics/tracker';
+import React, { useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { X, Lock, Check, Minus } from "lucide-react";
+import { startCheckout } from "@/lib/data/fetchers/billing";
+import { trackPaywallEvent } from "@/lib/entitlements/api";
+import { useDismissable } from "@/lib/entitlements/useDismissable";
+import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface FreeUserUpgradeModalProps {
   onDismiss: () => void;
 }
 
 const COMPARISON_ROWS = [
-  { feature: 'Market access', free: '5 markets', pro: 'Unlimited' },
-  { feature: 'Data metrics', free: 'Basic set', pro: 'All 40+ metrics' },
-  { feature: 'AI reports', free: false, pro: true },
-  { feature: 'Score breakdowns', free: false, pro: true },
-  { feature: 'Data export', free: false, pro: true },
+  { feature: "Market access", free: "5 markets", pro: "Unlimited" },
+  { feature: "Data metrics", free: "Basic set", pro: "All 40+ metrics" },
+  { feature: "AI reports", free: false, pro: true },
+  { feature: "Score breakdowns", free: false, pro: true },
+  { feature: "Data export", free: false, pro: true },
 ] as const;
 
 export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
@@ -35,39 +36,45 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
   const variant = getPricingCtaVariant();
 
   useEffect(() => {
-    trackPaywallEvent('feature', 'site-paywall-free', 'view', window.location.pathname);
-    document.body.style.overflow = 'hidden';
+    trackPaywallEvent(
+      "feature",
+      "site-paywall-free",
+      "view",
+      window.location.pathname,
+    );
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, []);
 
-  const handleScrimClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        trackPaywallEvent('feature', 'site-paywall-free', 'dismiss', window.location.pathname);
-        onDismiss();
-      }
-    },
-    [onDismiss],
-  );
+  const { onScrimClick } = useDismissable({ onDismiss, cardRef });
 
   const handleUpgradeClick = useCallback(async () => {
-    trackPaywallEvent('feature', 'site-paywall-free', 'click_upgrade', window.location.pathname);
-    trackEvent('conversion.pricing_cta_click', { variant, source: 'modal' });
+    trackPaywallEvent(
+      "feature",
+      "site-paywall-free",
+      "click_upgrade",
+      window.location.pathname,
+    );
+    trackEvent("conversion.pricing_cta_click", { variant, source: "modal" });
     try {
-      const checkoutUrl = await startCheckout('pro', 'month', window.location.pathname);
+      const checkoutUrl = await startCheckout(
+        "pro",
+        "month",
+        window.location.pathname,
+      );
       window.location.href = checkoutUrl;
     } catch {
       // Fallback: send to pricing page
-      window.location.href = '/pricing';
+      window.location.href = "/pricing";
     }
   }, []);
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-400"
-      onClick={handleScrimClick}
+      onClick={onScrimClick}
     >
       <div
         ref={cardRef}
@@ -79,7 +86,12 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
         {/* Close button */}
         <button
           onClick={() => {
-            trackPaywallEvent('feature', 'site-paywall-free', 'dismiss', window.location.pathname);
+            trackPaywallEvent(
+              "feature",
+              "site-paywall-free",
+              "dismiss",
+              window.location.pathname,
+            );
             onDismiss();
           }}
           className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-on-surface/8"
@@ -126,7 +138,7 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
             >
               <span className="text-sm text-on-surface">{feature}</span>
               <span className="flex items-center justify-center text-sm text-on-surface-variant">
-                {typeof free === 'string' ? (
+                {typeof free === "string" ? (
                   free
                 ) : free ? (
                   <Check className="h-4 w-4 text-on-surface-variant" />
@@ -135,7 +147,7 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
                 )}
               </span>
               <span className="flex items-center justify-center text-sm font-medium text-primary">
-                {typeof pro === 'string' ? (
+                {typeof pro === "string" ? (
                   pro
                 ) : pro ? (
                   <Check className="h-4 w-4 text-primary" />
@@ -157,7 +169,10 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
 
         {/* Secondary */}
         <p className="mt-3 text-center text-sm text-on-surface-variant">
-          <Link href="/pricing" className="font-medium text-primary hover:text-primary/80">
+          <Link
+            href="/pricing"
+            className="font-medium text-primary hover:text-primary/80"
+          >
             View all plans
           </Link>
         </p>

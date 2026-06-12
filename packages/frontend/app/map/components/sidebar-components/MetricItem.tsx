@@ -14,6 +14,9 @@ import { PropertyTypeSelector } from "./PropertyTypeSelector";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { useEntitlements } from "@/lib/entitlements";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { useIsAnonymous } from "@/lib/entitlements/useIsAnonymous";
+import { buildAnonReturnTo } from "@/lib/entitlements/buildAnonReturnTo";
+import { AnonCaptureModal } from "@/components/entitlements/AnonCaptureModal";
 
 interface MetricItemProps {
   metric: { id: string; name: string; isNew?: boolean };
@@ -42,6 +45,7 @@ export function MetricItem({
 }: MetricItemProps) {
   const { isMetricGated } = useEntitlements();
   const isLocked = isMetricGated(metric.id);
+  const isAnonymous = useIsAnonymous();
   const [showPaywall, setShowPaywall] = useState(false);
 
   return (
@@ -90,25 +94,41 @@ export function MetricItem({
         />
       )}
 
-      {/* Paywall modal for locked metrics */}
+      {/* Locked-metric modal: capture for anon, upgrade card for free users */}
       {showPaywall &&
         typeof document !== "undefined" &&
-        createPortal(
-          <div
-            data-testid={`paywall-overlay-${metric.id}`}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
-            onClick={() => setShowPaywall(false)}
-          >
-            <div className="max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-              <PaywallCard
-                type="metric"
-                id={metric.id}
-                title={`Unlock ${metric.name}`}
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
+        (isAnonymous
+          ? createPortal(
+              <AnonCaptureModal
+                featureName={metric.name}
+                returnTo={buildAnonReturnTo(
+                  window.location.pathname,
+                  window.location.search,
+                  metric.id,
+                )}
+                onDismiss={() => setShowPaywall(false)}
+              />,
+              document.body,
+            )
+          : createPortal(
+              <div
+                data-testid={`paywall-overlay-${metric.id}`}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+                onClick={() => setShowPaywall(false)}
+              >
+                <div
+                  className="max-w-sm mx-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <PaywallCard
+                    type="metric"
+                    id={metric.id}
+                    title={`Unlock ${metric.name}`}
+                  />
+                </div>
+              </div>,
+              document.body,
+            ))}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { startOnboardingTrial } from "@/lib/data";
 
 /**
  * Auth callback page — handles session establishment after email
@@ -266,6 +267,9 @@ async function handlePostSignup(
         { onConflict: "id" },
       );
   }
+
+  // Reverse Pro trial for OAuth / email-confirm signups (idempotent, best-effort).
+  void startOnboardingTrial().catch(() => {});
 
   // Welcome email (fire-and-forget)
   fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});

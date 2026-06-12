@@ -37,7 +37,7 @@ export function PaywallCard({
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }: { data: any }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setIsAuthenticated(!!data.session);
     });
   }, []);
@@ -77,7 +77,11 @@ export function PaywallCard({
 
       <Link
         data-testid="paywall-cta"
-        href={`/pricing?from=${encodeURIComponent(pathname)}`}
+        href={
+          isAuthenticated
+            ? `/pricing?from=${encodeURIComponent(pathname)}`
+            : `/auth/sign-up?redirect=${encodeURIComponent(pathname)}`
+        }
         onClick={handleUpgradeClick}
         className="
           inline-flex items-center gap-2 px-6 py-2.5

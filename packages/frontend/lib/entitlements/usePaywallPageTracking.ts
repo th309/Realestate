@@ -1,75 +1,27 @@
 /**
- * Tracks unique product-page visits in sessionStorage for paywall gating.
+ * Tracks whether the current page is a product page for paywall gating.
  *
- * Only counts paths under PRODUCT_PREFIXES.
+ * The view-threshold / sessionStorage counting logic was removed when the
+ * anon hard-block wall was retired (Task 5). Only isOnProductPage remains;
+ * it drives the free-user 5-minute nag timer in PaywallProvider.
+ *
  * Excludes EXEMPT_PATHS (sample report, shared reports).
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from "next/navigation";
 
-const STORAGE_KEY = 'piq-paywall-views';
-const VIEW_THRESHOLD = 5;
-
-const PRODUCT_PREFIXES = ['/map', '/graphs', '/market', '/scores', '/reports'];
-const EXEMPT_PATHS = ['/reports/sample', '/reports/shared'];
+const PRODUCT_PREFIXES = ["/map", "/graphs", "/market", "/scores", "/reports"];
+const EXEMPT_PATHS = ["/reports/sample", "/reports/shared"];
 
 function isProductPage(pathname: string): boolean {
   if (EXEMPT_PATHS.some((p) => pathname.startsWith(p))) return false;
   return PRODUCT_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function getStoredViews(): Set<string> {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function storeViews(views: Set<string>): void {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...views]));
-  } catch {
-    // sessionStorage unavailable — degrade gracefully
-  }
-}
-
-export function usePaywallPageTracking() {
+export function usePaywallPageTracking(): { isOnProductPage: boolean } {
   const pathname = usePathname();
-  const [viewCount, setViewCount] = useState(0);
-
-  // Sync initial count from sessionStorage on mount
-  useEffect(() => {
-    setViewCount(getStoredViews().size);
-  }, []);
-
-  // Record new page views
-  useEffect(() => {
-    if (!pathname || !isProductPage(pathname)) return;
-
-    const views = getStoredViews();
-    if (!views.has(pathname)) {
-      views.add(pathname);
-      storeViews(views);
-      setViewCount(views.size);
-    }
-  }, [pathname]);
-
-  const isOverThreshold = viewCount >= VIEW_THRESHOLD;
   const isOnProductPage = !!pathname && isProductPage(pathname);
-
-  const resetViews = useCallback(() => {
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-    setViewCount(0);
-  }, []);
-
-  return { viewCount, isOverThreshold, isOnProductPage, resetViews };
+  return { isOnProductPage };
 }
