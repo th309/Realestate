@@ -59,3 +59,23 @@ export async function deleteUser(userId: string): Promise<void> {
   const supabase = adminClient();
   await supabase.auth.admin.deleteUser(userId).catch(() => {});
 }
+
+/**
+ * Returns a VALID 8-digit signup OTP for `email` via the admin generateLink
+ * API. Re-mints for an existing unconfirmed user (verified), so call it AFTER
+ * the UI signup so the returned code is the current one. No inbox needed.
+ */
+export async function getSignupOtp(
+  email: string,
+  password: string,
+): Promise<string | null> {
+  const supabase = adminClient();
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "signup",
+    email,
+    password,
+  });
+  if (error) throw error;
+  const props = data?.properties as { email_otp?: string } | undefined;
+  return props?.email_otp ?? null;
+}
