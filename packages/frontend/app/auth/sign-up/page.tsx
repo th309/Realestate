@@ -37,7 +37,7 @@ function SignUpContent() {
     ? `/tour?next=${encodeURIComponent(explicitRedirect)}`
     : "/tour";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [awaitingOtp, setAwaitingOtp] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
