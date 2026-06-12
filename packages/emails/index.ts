@@ -1,6 +1,7 @@
 // Templates
 export { default as WelcomeEmail } from "./emails/welcome";
 export { default as EmailVerification } from "./emails/email-verification";
+export { default as EmailOtpCode } from "./emails/email-otp-code";
 export { default as PasswordReset } from "./emails/password-reset";
 export { default as WeeklyDigest } from "./emails/weekly-digest";
 export { default as BetaInvite } from "./emails/beta-invite";
@@ -22,6 +23,7 @@ export { LeadMagnetDelivery } from "./emails/lead-magnet-delivery";
 // Types
 export type { WelcomeEmailProps } from "./emails/welcome";
 export type { EmailVerificationProps } from "./emails/email-verification";
+export type { EmailOtpCodeProps } from "./emails/email-otp-code";
 export type { PasswordResetProps } from "./emails/password-reset";
 export type { WeeklyDigestProps } from "./emails/weekly-digest";
 export type { BetaInviteProps } from "./emails/beta-invite";

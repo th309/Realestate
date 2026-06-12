@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import React from 'react';
 import { EmailService } from '../email/email.service';
-import { EmailVerification, PasswordReset } from '@propertyiq/emails';
+import {
+  EmailVerification,
+  EmailOtpCode,
+  PasswordReset,
+} from '@propertyiq/emails';
 import { SupabaseEmailHookPayload } from './auth-hooks.types';
 
 interface EmailTemplate {
@@ -24,7 +28,7 @@ export class AuthHooksService {
 
   async handleEmailHook(payload: SupabaseEmailHookPayload): Promise<void> {
     const { user, email_data } = payload;
-    const { token_hash, redirect_to, email_action_type } = email_data;
+    const { token, token_hash, redirect_to, email_action_type } = email_data;
 
     const confirmationUrl = this.buildConfirmationUrl(
       token_hash,
@@ -39,6 +43,7 @@ export class AuthHooksService {
       email_action_type,
       userName,
       confirmationUrl,
+      token,
     );
 
     const sent = await this.emailService.sendEmail({
@@ -77,6 +82,7 @@ export class AuthHooksService {
     actionType: string,
     name: string,
     confirmationUrl: string,
+    code: string,
   ): EmailTemplate {
     switch (actionType) {
       case 'recovery':
@@ -90,11 +96,14 @@ export class AuthHooksService {
         };
 
       case 'signup':
+        // Scanner-proof OTP code — NOT a link. Email link-scanners (Gmail,
+        // Outlook SafeLinks) prefetch and consume magic-link tokens, which
+        // then breaks the user's own click. A typed code can't be consumed.
         return {
-          subject: 'Verify your PropertyIQ email',
-          react: React.createElement(EmailVerification, {
+          subject: 'Your PropertyIQ verification code',
+          react: React.createElement(EmailOtpCode, {
             name,
-            verificationUrl: confirmationUrl,
+            code,
           }),
         };
 
