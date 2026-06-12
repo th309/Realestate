@@ -12,11 +12,16 @@ const MAX_ATTEMPTS = 5;
 
 function friendlyOtpError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes("expired")) {
-    return "That code has expired. Request a new one below.";
-  }
-  if (m.includes("invalid") || m.includes("token") || m.includes("otp")) {
-    return "That code didn't match. Check it and try again.";
+  // Supabase returns ONE ambiguous message ("Token has expired or is invalid")
+  // for both wrong and expired codes — by design, to avoid leaking which — so
+  // we can't distinguish them. Show a single clear message.
+  if (
+    m.includes("expired") ||
+    m.includes("invalid") ||
+    m.includes("token") ||
+    m.includes("otp")
+  ) {
+    return "That code is incorrect or has expired. Double-check it, or request a new one below.";
   }
   return message;
 }

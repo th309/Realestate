@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { trackEvent, flush, setUserId } from "@/lib/analytics/tracker";
 import { readAttributionCookie } from "./helpers";
 
 /**
@@ -16,6 +16,11 @@ export async function completeSignup(
     method: string;
   },
 ): Promise<string> {
+  // Attribute the conversion to the new user BEFORE firing the event — the
+  // tracker's user id is otherwise set reactively (after auth state updates),
+  // which races the synchronous trackEvent below and would log signup_complete
+  // with no user_id (unqueryable by user, breaks funnel attribution).
+  setUserId(session.user.id);
   trackEvent("conversion.signup_complete", { method: opts.method });
   flush(); // send queued events before navigation unmounts the page
 
