@@ -21,7 +21,7 @@ const ensuredProfileUserIds = new Set<string>();
  * Defensive belt-and-suspenders: if the `handle_new_user` trigger silently
  * failed for this user (see troyhouston76@gmail.com on 2026-04-13), their
  * auth.users row exists but user_profiles does not. On every session
- * establishment, check and backfill with 14-day trial columns.
+ * establishment, check and backfill the profile row.
  *
  * Fire-and-forget — never blocks auth flow. Never throws.
  */
@@ -41,17 +41,13 @@ async function ensureProfile(
       .maybeSingle();
 
     if (!profile) {
-      const now = new Date();
-      const trialStart = now.toISOString();
-      const trialEnd = new Date(now.getTime() + 14 * 86_400_000).toISOString();
+      const nowIso = new Date().toISOString();
       await supabase.from("user_profiles").upsert(
         {
           id: userId,
           email: email ?? null,
-          created_at: trialStart,
-          updated_at: trialStart,
-          trial_started_at: trialStart,
-          trial_ends_at: trialEnd,
+          created_at: nowIso,
+          updated_at: nowIso,
         },
         { onConflict: "id" },
       );
