@@ -141,7 +141,12 @@ function SignUpContent() {
       return;
     }
 
-    // Email confirmation required — show success message on this page
+    // Email confirmation required — no session returned. Record the funnel
+    // stage ("started → awaiting confirmation") so it's distinguishable from
+    // abandonment; signup_complete fires later in /auth/callback when the user
+    // clicks the emailed link.
+    trackEvent("conversion.signup_pending_confirmation", { method: "email" });
+    flush();
     setConfirmationSent(true);
     setLoading(false);
   };
