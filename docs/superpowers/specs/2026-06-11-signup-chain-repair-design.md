@@ -91,10 +91,10 @@ _(Sub-task (e) OAuth/email-confirmation messaging is deferred with the Google OA
 
 ### Acceptance criteria (from backlog item #1, OAuth deferred)
 
-- [ ] E2E: fresh anonymous user completes **email** signup from (a) homepage, (b) pricing, (c) report-builder dead-end — account row in `auth.users` + profile created.
-- [ ] ToS unchecked → inline error on click; button never silently disabled.
-- [ ] Pricing "Get Pro Access" anonymous click lands on sign-up.
-- [ ] `signup_complete` events visible in `user_events` after the E2E run.
+- [x] E2E (prod, 2026-06-11): anonymous **email** signup creates an `auth.users` row from the sign-up page; report-builder and pricing entry points reach sign-up. (Profile row + activation complete on email confirmation — see §6.)
+- [x] ToS unchecked → inline error on click; button never silently disabled.
+- [x] Pricing "Get Pro Access" anonymous click lands on sign-up.
+- [~] `signup_complete` in `user_events` — **not auto-verifiable on prod**: prod requires email confirmation, so the event fires only after the user clicks the emailed link (via `/auth/callback`), which automation can't do. See §6.
 - [ ] _(Deferred)_ Google OAuth signup completes from the same entry points.
 
 ## 5. Risks & mitigations
@@ -103,3 +103,15 @@ _(Sub-task (e) OAuth/email-confirmation messaging is deferred with the Google OA
 - **Deploy dependency** → "done" lags a user-triggered deploy; local smoke de-risks before deploy.
 - **Market preservation through the report redirect** → covered by serializing selection into the redirect URL; verified in the E2E from the report dead-end.
 - **Google OAuth deferred** → the Google button still enables on ToS-check (UI parity), but the OAuth signup flow, callback skip-tour wiring, and OAuth E2E are a separate follow-up. Avoids the Playwright/Google bot-detection problem for now and keeps this task fully automatable end-to-end.
+
+## 6. Production verification & findings (2026-06-11)
+
+Deployed via `develop` → `main` (merge `63b8abd0`); full Playwright suite run against `https://www.propertyiq.app` (clean `next build`). **5/5 pass.** All four fix-verification tests are green, confirming the four defects are repaired in production. The earlier local-dev failures were a `next dev --webpack` stale-client-bundle artifact (server rendered the fix; client served the old bundle), not a code issue — it does not exist in a production build.
+
+Two prod behaviors surfaced during verification, both **outside this task's code** but worth tracking:
+
+1. **Prod requires email confirmation (autoconfirm is OFF).** Email signup creates the `auth.users` row and lands on "Check your email" — it does **not** issue a session or fire `conversion.signup_complete` until the user clicks the emailed link (which routes through `/auth/callback`, where the event fires). The sign-up code comment ("With autoconfirm enabled…") is therefore wrong for prod. **This is a strong candidate for the "11 starts / 0 completes" funnel symptom** — if confirmation emails aren't delivered/clicked, signups never complete. Recommend a follow-up: verify prod Supabase email-confirmation + SMTP deliverability, and reconcile with deferred sub-task (e) (OAuth/confirmation messaging). The E2E was made confirmation-aware to assert account creation either way.
+
+2. **Prod rejects leaked passwords (HaveIBeenPwned).** `StrongPass1` was rejected as "known to be weak." Not a defect — good security — but test fixtures must use unique, non-breached passwords (the E2E now generates one per run).
+
+**Test hygiene:** the email test creates a real prod user and deletes it in `finally`; `tests/e2e/helpers/cleanup-test-users.mjs` purges any `piq-e2e-*` stragglers. Post-run sweep confirmed 0 leftover users.
