@@ -716,7 +716,7 @@ test("wrong OTP shows an inline error", async ({ page }) => {
       page.getByRole("heading", { name: /enter your code/i }),
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.locator('input[autocomplete="one-time-code"]').fill("00000000");
+    await page.locator('input[autocomplete="one-time-code"]').fill("000000");
     await page.getByRole("button", { name: /^verify$/i }).click();
     await expect(page.getByText(/didn't match|expired|too many/i)).toBeVisible({
       timeout: 10_000,
@@ -773,7 +773,7 @@ Expected: no matches (all references removed).
 
 - [ ] **Step 1: Hand off the Supabase template change**
 
-Ask the user to update **Auth → Emails → "Confirm signup"** to the `{{ .Token }}` template from spec §3 (remove `{{ .ConfirmationURL }}`), keeping "Confirm email" ON. The link MUST be removed (shared token).
+Ask the user to (a) update **Auth → Emails → "Confirm signup"** to the `{{ .Token }}` template from spec §3 (remove `{{ .ConfirmationURL }}`), keeping "Confirm email" ON — the link MUST be removed (shared token); and (b) set the **Email OTP Length to 6** (`mailer_otp_length: 6`) so the emitted code matches the 6-digit input. Both are required before the prod E2E.
 
 - [ ] **Step 2: Push + deploy**
 
