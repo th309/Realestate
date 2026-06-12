@@ -102,9 +102,13 @@ export async function startOnboardingTrial(): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
+  // keepalive: the trial grant is fired post-signup right before a client-side
+  // navigation (router.push); without it the in-flight request is canceled on
+  // unload and the reverse Pro trial intermittently never lands.
   await fetch(`${API_URL}/api/onboarding/start-trial`, {
     method: "POST",
     headers: { "x-user-id": user.id },
+    keepalive: true,
   });
 }
 
