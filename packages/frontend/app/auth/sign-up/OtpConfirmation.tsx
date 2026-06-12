@@ -47,11 +47,7 @@ export function OtpConfirmation({
     return () => clearInterval(t);
   }, [cooldown]);
 
-  const canVerify =
-    code.length >= 6 &&
-    code.length <= 8 &&
-    !verifying &&
-    attempts < MAX_ATTEMPTS;
+  const canVerify = code.length === 6 && !verifying && attempts < MAX_ATTEMPTS;
 
   const handleVerify = async (e: FormEvent) => {
     e.preventDefault();
@@ -124,12 +120,12 @@ export function OtpConfirmation({
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9]*"
-          maxLength={8}
-          placeholder="00000000"
+          maxLength={6}
+          placeholder="000000"
           aria-label="Verification code"
           value={code}
           onChange={(e) =>
-            setCode(e.target.value.replace(/\D/g, "").slice(0, 8))
+            setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
           }
           disabled={verifying}
           className="w-full text-center font-mono text-lg tracking-[0.5em] py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
