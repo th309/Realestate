@@ -98,16 +98,21 @@ export async function saveOnboardingPreferences(
 export async function startOnboardingTrial(): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return;
 
-  // keepalive: the trial grant is fired post-signup right before a client-side
-  // navigation (router.push); without it the in-flight request is canceled on
-  // unload and the reverse Pro trial intermittently never lands.
+  // The endpoint is protected by JwtAuthGuard, which REQUIRES a Bearer token
+  // (x-user-id alone 401s and the trial silently never lands). Send the access
+  // token for the guard plus x-user-id for the controller. keepalive: this is
+  // fired post-signup right before a client-side navigation (router.push), so
+  // without it the in-flight request is canceled on unload.
   await fetch(`${API_URL}/api/onboarding/start-trial`, {
     method: "POST",
-    headers: { "x-user-id": user.id },
+    headers: {
+      "x-user-id": session.user.id,
+      Authorization: `Bearer ${session.access_token}`,
+    },
     keepalive: true,
   });
 }
