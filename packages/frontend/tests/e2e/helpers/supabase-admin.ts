@@ -35,14 +35,20 @@ export async function findUserIdByEmail(email: string): Promise<string | null> {
   return match?.id ?? null;
 }
 
-/** True once a signup_complete event for this user is in user_events. */
+/**
+ * True once a signup_complete event for this user is in user_events.
+ * user_events keys events by (event_category, event_action) — there is NO
+ * event_name column. The app fires trackEvent("conversion.signup_complete")
+ * which the ingestion layer stores as category="conversion", action="signup_complete".
+ */
 export async function hasSignupCompleteEvent(userId: string): Promise<boolean> {
   const supabase = adminClient();
   const { data, error } = await supabase
     .from("user_events")
     .select("id")
     .eq("user_id", userId)
-    .eq("event_name", "signup_complete")
+    .eq("event_category", "conversion")
+    .eq("event_action", "signup_complete")
     .limit(1);
   if (error) throw error;
   return !!data && data.length > 0;

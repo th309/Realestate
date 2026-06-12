@@ -86,7 +86,9 @@ test.describe("Signup chain", () => {
     page,
   }) => {
     const email = `piq-e2e-${Date.now()}@example.com`;
-    const password = "StrongPass1";
+    // Unique, non-breached password: prod Supabase rejects leaked passwords
+    // (HaveIBeenPwned). Still satisfies the 8+/upper/lower/number rules.
+    const password = `Zq9${Date.now()}Lr`;
     let userId: string | null = null;
     try {
       await page.goto("/auth/sign-up");
@@ -96,22 +98,34 @@ test.describe("Signup chain", () => {
       await page.getByRole("checkbox").check(); // ToS
       await page.getByRole("button", { name: /create account/i }).click();
 
-      // Autoconfirm returns a session and navigates into the app (tour/map).
-      await page.waitForURL(/\/(tour|map)/, { timeout: 20_000 });
+      // Prod requires email confirmation (no autoconfirm): the form lands on
+      // "Check your email". With autoconfirm it navigates to /tour|/map.
+      // Accept either — both mean Supabase created the account.
+      const confirmation = page.getByText(/check your email/i);
+      await Promise.race([
+        page.waitForURL(/\/(tour|map)/, { timeout: 25_000 }).catch(() => {}),
+        confirmation.waitFor({ timeout: 25_000 }).catch(() => {}),
+      ]);
 
-      // Account row exists.
+      // The account row now exists in auth.users (even if unconfirmed).
       await expect
         .poll(async () => (userId = await findUserIdByEmail(email)), {
-          timeout: 15_000,
+          timeout: 20_000,
         })
         .not.toBeNull();
 
-      // signup_complete landed in user_events (not analytics_events).
-      await expect
-        .poll(async () => hasSignupCompleteEvent(userId as string), {
-          timeout: 15_000,
-        })
-        .toBe(true);
+      if (/\/(tour|map)/.test(page.url())) {
+        // Autoconfirm path: a session was issued, so signup_complete is logged.
+        await expect
+          .poll(async () => hasSignupCompleteEvent(userId as string), {
+            timeout: 15_000,
+          })
+          .toBe(true);
+      } else {
+        // Confirmation path: signup_complete fires only after the user clicks
+        // the emailed link (via /auth/callback), which automation can't do.
+        await expect(confirmation).toBeVisible();
+      }
     } finally {
       if (userId) await deleteUser(userId);
     }

@@ -181,11 +181,19 @@ function CallbackHandler() {
             );
             const profile = profileResult?.data;
             needsOnboarding = !!profile && profile.onboarding_market === null;
+            // Fire signup_complete on first activation. Two triggers:
+            //  - Email confirmation: the Supabase confirm link carries
+            //    type=signup; the click can happen minutes/hours after signup,
+            //    so the 60s window below would miss it.
+            //  - OAuth: fast, so the freshly-created-profile window catches it.
+            const isEmailConfirm = type === "signup";
             const isFreshSignup =
               !!profile &&
               Date.now() - new Date(profile.created_at).getTime() < 60_000;
-            if (isFreshSignup) {
-              trackEvent("conversion.signup_complete", { method: "oauth" });
+            if (isEmailConfirm || isFreshSignup) {
+              trackEvent("conversion.signup_complete", {
+                method: isEmailConfirm ? "email" : "oauth",
+              });
               flush();
             }
           } catch (err) {
