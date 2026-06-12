@@ -86,6 +86,7 @@ export function OtpConfirmation({
       );
       return;
     }
+    trackEvent("conversion.signup_otp_resent", {});
     setAttempts(0);
     setCode("");
     setCooldown(RESEND_COOLDOWN_SECONDS);
@@ -114,6 +115,8 @@ export function OtpConfirmation({
       )}
 
       <form onSubmit={handleVerify} className="space-y-4">
+        {/* maxLength/slice MUST match Supabase mailer_otp_length (6). If that
+            config changes, update here AND the getSignupOtp E2E length guard. */}
         <input
           ref={inputRef}
           type="text"
@@ -156,6 +159,15 @@ export function OtpConfirmation({
       <p className="mt-6 text-sm text-on-surface-variant">
         <Link
           href="/auth/sign-in"
+          onClick={() => {
+            // Abandoning the OTP step: clear the pending email so returning to
+            // /auth/sign-up shows a fresh form, not a stale code screen.
+            try {
+              window.sessionStorage.removeItem("piq_signup_pending");
+            } catch {
+              /* ignore */
+            }
+          }}
           className="text-primary hover:text-primary/80 font-medium"
         >
           Back to sign in

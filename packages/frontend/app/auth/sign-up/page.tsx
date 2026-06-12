@@ -37,37 +37,8 @@ function SignUpContent() {
     ? `/tour?next=${encodeURIComponent(explicitRedirect)}`
     : "/tour";
 
-  // Lazy initializers restore state from sessionStorage on mount (OTP refresh).
-  const [email, setEmail] = useState(() => {
-    try {
-      const raw =
-        typeof window !== "undefined"
-          ? window.sessionStorage.getItem("piq_signup_pending")
-          : null;
-      if (raw) {
-        const parsed = JSON.parse(raw) as { email?: string };
-        return parsed.email ?? "";
-      }
-    } catch {
-      /* ignore */
-    }
-    return "";
-  });
-  const [awaitingOtp, setAwaitingOtp] = useState(() => {
-    try {
-      const raw =
-        typeof window !== "undefined"
-          ? window.sessionStorage.getItem("piq_signup_pending")
-          : null;
-      if (raw) {
-        const parsed = JSON.parse(raw) as { email?: string };
-        return !!parsed.email;
-      }
-    } catch {
-      /* ignore */
-    }
-    return false;
-  });
+  const [email, setEmail] = useState("");
+  const [awaitingOtp, setAwaitingOtp] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,6 +52,28 @@ function SignUpContent() {
   useEffect(() => {
     trackEvent("conversion.signup_start", { redirect_to: redirectTo });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore the OTP screen after a refresh. Runs client-only AFTER hydration so
+  // the server and first client render match (no hydration mismatch); the
+  // pending email is persisted in sessionStorage when we transition to it.
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem("piq_signup_pending");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { email?: string };
+        if (parsed.email) {
+          // One-time restore from sessionStorage after hydration; the
+          // set-state-in-effect "cascading render" rule is a false positive here.
+          /* eslint-disable react-hooks/set-state-in-effect */
+          setEmail(parsed.email);
+          setAwaitingOtp(true);
+          /* eslint-enable react-hooks/set-state-in-effect */
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const requirements = getPasswordRequirements(password);
 
@@ -138,7 +131,7 @@ function SignUpContent() {
       return;
     }
 
-    // Brand-new OR existing-unconfirmed: Supabase sent an 8-digit OTP code.
+    // Brand-new OR existing-unconfirmed: Supabase sent a 6-digit OTP code.
     // Persist the email so a refresh on the OTP screen recovers, record the
     // funnel stage, and show the code-entry screen.
     try {

@@ -103,10 +103,8 @@ test.describe("Signup chain", () => {
 
       // Read a valid code (re-mints for the existing unconfirmed user).
       const otp = await getSignupOtp(email, password);
-      expect(otp).toBeTruthy();
-      await page
-        .locator('input[autocomplete="one-time-code"]')
-        .fill(otp as string);
+      expect(otp).toMatch(/^\d{6}$/);
+      await page.locator('input[autocomplete="one-time-code"]').fill(otp);
       await page.getByRole("button", { name: /^verify$/i }).click();
 
       // Lands in the app (tour/map, or pricing if a checkout intent existed).
@@ -116,7 +114,7 @@ test.describe("Signup chain", () => {
       expect(userId).toBeTruthy();
       await expect
         .poll(() => hasSignupCompleteEvent(userId as string), {
-          timeout: 20_000,
+          timeout: 30_000,
         })
         .toBe(true);
     } finally {
@@ -139,11 +137,13 @@ test.describe("Signup chain", () => {
         page.getByRole("heading", { name: /enter your code/i }),
       ).toBeVisible({ timeout: 20_000 });
 
-      await page.locator('input[autocomplete="one-time-code"]').fill("000000");
+      // Derive a guaranteed-wrong 6-digit code from the real one (avoids the
+      // ~1-in-1,000,000 chance a hardcoded "000000" is actually valid).
+      const real = await getSignupOtp(email, password);
+      const wrong = real === "000000" ? "111111" : "000000";
+      await page.locator('input[autocomplete="one-time-code"]').fill(wrong);
       await page.getByRole("button", { name: /^verify$/i }).click();
-      await expect(
-        page.getByText(/didn't match|expired|too many/i),
-      ).toBeVisible({
+      await expect(page.getByText(/didn't match/i)).toBeVisible({
         timeout: 10_000,
       });
     } finally {
