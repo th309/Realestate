@@ -22,7 +22,16 @@ interface AuthContextValue {
     email: string,
     password: string,
     redirectTo?: string,
+  ) => Promise<{
+    error: AuthError | null;
+    session: Session | null;
+    user: User | null;
+  }>;
+  verifySignupOtp: (
+    email: string,
+    token: string,
   ) => Promise<{ error: AuthError | null; session: Session | null }>;
+  resendSignupOtp: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -91,10 +100,30 @@ export function AuthProvider({
           data: { tos_accepted_at: new Date().toISOString() },
         },
       });
-      return { error, session: data?.session ?? null };
+      return {
+        error,
+        session: data?.session ?? null,
+        user: data?.user ?? null,
+      };
     },
     [],
   );
+
+  const verifySignupOtp = useCallback(async (email: string, token: string) => {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+    return { error, session: data?.session ?? null };
+  }, []);
+
+  const resendSignupOtp = useCallback(async (email: string) => {
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    return { error };
+  }, []);
 
   const signOut = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -135,6 +164,8 @@ export function AuthProvider({
       signInWithMagicLink,
       signInWithOAuth,
       signUp,
+      verifySignupOtp,
+      resendSignupOtp,
       signOut,
       resetPassword,
       updatePassword,
@@ -148,6 +179,8 @@ export function AuthProvider({
       signInWithMagicLink,
       signInWithOAuth,
       signUp,
+      verifySignupOtp,
+      resendSignupOtp,
       signOut,
       resetPassword,
       updatePassword,
