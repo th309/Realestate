@@ -1,15 +1,19 @@
 /**
  * PropertyIQ Scoring Service
  *
- * Orchestrates the PropertyIQ Score — a single demand-signal score
- * measuring market heat relative to state average using 3 Redfin metrics.
+ * Orchestrates the PropertyIQ Score — a single demand-signal score built from
+ * Zillow ZHVI price momentum (12-mo + 3-mo) and Realtor.com market-flow signals
+ * (median days on market, price-reduced share). No Redfin. The signal is
+ * z-scored cross-sectionally across all markets at a geography level (national
+ * pool, NOT partitioned by state), percentile-ranked, and re-centered so the
+ * scale is calibrated to 50 = the market's state average.
  *
  * Legacy score types (homeready, investoredge, markethealth) are no longer
  * computed but can still be read from historical DB rows.
  *
  * Delegates to:
  * - propertyiq-scoring-engine.ts: Demand-signal calculation (z-scores, percentile, re-centering)
- * - propertyiq-data-fetcher.ts: Redfin metric assembly
+ * - propertyiq-data-fetcher.ts: Zillow + Realtor metric assembly
  * - scoring-queries.ts: Score reads from propertyiq_scores table
  * - scoring-persistence.ts: Score writes (upsert with retry)
  * - scoring-distribution.ts: Score distribution analysis

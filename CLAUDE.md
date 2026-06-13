@@ -428,7 +428,7 @@ Use `queryLatestPerRegion()` for most recent data point per region (not a single
 
 **All score displays MUST use standardized components in `app/components/scoring/`.** Do NOT create custom score visualizations.
 
-**One score type:** PropertyIQ Score (`score_type = 'propertyiq'`). Measures market demand signal relative to state average.
+**One score type:** PropertyIQ Score (`score_type = 'propertyiq'`). Ranks a market's demand signal cross-sectionally across all markets at its geography level (national pool), then calibrates the scale so **50 = its state average**.
 
 ### Components
 
@@ -445,11 +445,10 @@ Use `queryLatestPerRegion()` for most recent data point per region (not a single
 
 ```
 signal = z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market) - z(price_reduced_share)
-→ percentile rank within state → re-center at zero-crossing 50 → clamp 1-99
+→ cross-sectional percentile rank (per geo level + month, NATIONAL pool) → re-center at zero-crossing 50 → clamp 1-99
 ```
 
-- **50 = state average** — higher means outperformance
-- Scores are relative within each state, not nationally
+- **Computed nationally, calibrated to state (CRITICAL — do not conflate):** z-scores and the percentile rank are cross-sectional across ALL markets at a geo level — they are **NOT** partitioned by state. The scale is then calibrated and empirically validated so **50 = state-average 3-year performance** (markets scoring 45–55 realized ≈0 excess return vs their state), and higher scores predict outperformance **relative to the market's state**. So "50 = state average" and "national-basis computation" are both true — they answer different questions. **Never write that the score is "ranked within state" / "relative within each state, not nationally"** — that describes the prediction target, not the computation.
 - Input metrics: ZHVI 12-mo momentum (↑), ZHVI 3-mo momentum (↑), Median Days on Market (↓), Price-Reduced Share (↓). Momentum derived from **Zillow** ZHVI; DOM + price cuts from **Realtor.com**. **No Redfin.** Engine requires ≥2 of 4 (confidence = inputs/4 → A/B/C/F).
 - Zero-crossing is **50 at every geo level** (one constant; the old per-geo 55.6/62.4 is retired).
 - **Coverage:** ~935 metros, ~3,150 counties, ~34,000 ZIPs; history backfilled to 2001 (pre-2016 is momentum-only, C confidence).

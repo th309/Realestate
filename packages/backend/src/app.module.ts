@@ -2,7 +2,7 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
-import { ScheduleModule } from '@nestjs/schedule';
+import { cronScheduleImports } from './config/cron-schedule.imports';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -74,7 +74,7 @@ import { RentcastModule } from './rentcast/rentcast.module';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
-    ScheduleModule.forRoot(),
+    ...cronScheduleImports(),
     ThrottlerModule.forRoot([
       {
         name: 'short',

@@ -65,7 +65,7 @@ const REGIONAL_CONTEXT: Record<string, string> = {
   "Mid-Atlantic":
     "Mid-Atlantic counties range from dense urban centers to exurban growth corridors. PropertyIQ's county scores help investors pinpoint which specific counties within major metro areas offer the strongest demand-to-supply dynamics.",
   Midwest:
-    "Midwestern counties often offer entry prices well below national medians. PropertyIQ scores identify which counties show demand signals — fast sales, above-list pricing, and tight supply — that predict near-term appreciation.",
+    "Midwestern counties often offer entry prices well below national medians. PropertyIQ scores identify which counties show demand signals — fast sales, rising price momentum, and few price cuts — that predict near-term appreciation.",
   "South Atlantic":
     "South Atlantic counties benefit from sustained migration inflows and job growth. PropertyIQ scores help distinguish between counties riding a temporary wave and those with durable demand fundamentals.",
   Southeast:
@@ -94,14 +94,14 @@ const OPENING_TEMPLATES = [
   (name: string, state: string) =>
     `${name}, ${state} is one of over 3,100 U.S. counties that PropertyIQ analyzes with AI-powered demand signal scoring. The PropertyIQ Score for this county measures how local housing demand compares to the state average, helping investors and homebuyers identify outperformance potential before it shows up in price data.`,
   (name: string, state: string) =>
-    `PropertyIQ provides county-level market intelligence for ${name}, ${state} — going deeper than metro-area averages to reveal local demand dynamics. By analyzing % Sold Above List, Median Days on Market, and Months of Supply at the county level, PropertyIQ predicts which markets within ${state} are positioned to outperform.`,
+    `PropertyIQ provides county-level market intelligence for ${name}, ${state} — going deeper than metro-area averages to reveal local demand dynamics. By tracking Zillow home-value momentum alongside Realtor.com market-flow signals — median days on market and the share of listings with price cuts — at the county level, PropertyIQ predicts which markets within ${state} are positioned to outperform.`,
   (name: string, state: string) =>
-    `Understanding the ${name}, ${state} housing market at the county level reveals patterns invisible in metro-wide data. PropertyIQ's demand signal scoring — validated across 13 years and 746 metros — now extends to county-level granularity, giving investors and agents a competitive edge in ${state}.`,
+    `Understanding the ${name}, ${state} housing market at the county level reveals patterns invisible in metro-wide data. PropertyIQ's demand signal scoring — validated across more than two decades of housing data (2001–2023) — now extends to county-level granularity, giving investors and agents a competitive edge in ${state}.`,
 ];
 
 const MIDDLE_TEMPLATES = [
   (name: string) =>
-    `The PropertyIQ Score for ${name} is based on three proven demand indicators. When homes sell above asking price, sell quickly, and supply is tight, the score rises — signaling a market outperforming its state peers. Historically, top-scored markets delivered significantly higher returns than bottom-scored markets over 1-year and 3-year horizons.`,
+    `The PropertyIQ Score for ${name} blends four proven demand indicators. When home values are gaining momentum, homes sell quickly, and few sellers cut prices, the score rises — signaling a market positioned to outperform its state. Historically, top-scored markets delivered significantly higher 3-year excess returns than bottom-scored markets.`,
   (name: string) =>
     `For ${name}, PropertyIQ calculates a demand signal score updated monthly using the latest housing data. A score above 50 means this county's demand dynamics are stronger than the state average. Scores in the 80+ range have historically corresponded with meaningful outperformance in home price appreciation.`,
   (name: string) =>
@@ -136,7 +136,7 @@ export function generateCountySeoContent(
   const closingIdx = (hash >> 6) % CLOSING_TEMPLATES.length;
 
   return {
-    opening: OPENING_TEMPLATES[openingIdx](county.shortName, county.state),
+    opening: OPENING_TEMPLATES[openingIdx](county.name, county.state),
     regional: regionContext,
     middle: MIDDLE_TEMPLATES[middleIdx](county.shortName),
     closing: CLOSING_TEMPLATES[closingIdx](county.shortName),

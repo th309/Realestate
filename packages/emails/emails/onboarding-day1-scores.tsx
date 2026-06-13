@@ -2,6 +2,7 @@ import { Text, Section, Link } from "@react-email/components";
 import Layout from "./components/layout";
 import BrandedButton from "./components/branded-button";
 import EmailHeading from "./components/email-heading";
+import { SCORE_DESCRIPTION, SCORES_ACCURACY_PATH } from "../copy/email-copy";
 
 export interface OnboardingDay1ScoresProps {
   name: string;
@@ -15,9 +16,13 @@ export default function OnboardingDay1Scores({
   unsubscribeUrl,
 }: OnboardingDay1ScoresProps) {
   const mapUrl = `${loginUrl}/map`;
+  const accuracyUrl = `${loginUrl}${SCORES_ACCURACY_PATH}`;
 
   return (
-    <Layout preview="What does a 74 actually mean?" unsubscribeUrl={unsubscribeUrl}>
+    <Layout
+      preview="What does a 74 actually mean?"
+      unsubscribeUrl={unsubscribeUrl}
+    >
       <EmailHeading>How to Read Your Scores</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         Hey {name},
@@ -32,14 +37,14 @@ export default function OnboardingDay1Scores({
         predicted to outperform its state; lower means underperformance.
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-2">
-        The score is built from 3 demand-signal metrics: % Sold Above List
-        Price, Median Days on Market, and Months of Supply — validated across 13
-        years with a 100% year hit rate.
+        {SCORE_DESCRIPTION}
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        Markets scoring 80+ have historically gained{" "}
-        <strong>$18,100 more</strong> on a typical home over 3 years compared to
-        bottom-scoring markets.
+        Want the receipts? See how the score has performed against real market
+        outcomes:{" "}
+        <Link href={accuracyUrl} className="text-brand underline">
+          {accuracyUrl}
+        </Link>
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-6">
         Pick a market on the map and see your PropertyIQ Score:
