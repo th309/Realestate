@@ -188,14 +188,11 @@ export class ScoringService {
     }
     if (!result) return null;
 
-    // Attach component breakdowns if requested
-    if (options?.components && result.z_scores) {
-      const zs = result.z_scores;
-      const rawValues: Record<string, number | null> = {};
-      for (const key of Object.keys(zs)) {
-        rawValues[key] = null;
-      }
-      // propertyiq uses v4 engine — input metrics stored in z_scores field
+    // Attach component breakdowns if requested. For the v4 PropertyIQ score the
+    // four raw input values live in z_scores; expose them as `components` so
+    // callers (market snapshot, admin) can render the score's receipts.
+    if (options?.components && result.z_scores && result.scores?.propertyiq) {
+      result.scores.propertyiq.components = result.z_scores;
     }
 
     const rawMonths = options?.historyMonths ?? 0;
