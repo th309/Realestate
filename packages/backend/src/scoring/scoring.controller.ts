@@ -20,7 +20,6 @@ import {
   Header,
   HttpException,
   HttpStatus,
-  BadRequestException,
   Res,
   Req,
   UseGuards,
@@ -306,39 +305,6 @@ export class ScoringController {
       success: result.errors === 0,
       ...result,
     };
-  }
-
-  /**
-   * Trigger v4 demand-signal score calculation for all locations at a geography level
-   *
-   * POST /api/scores/calculate-v4/:geography
-   */
-  @Post('calculate-v4/:geography')
-  @UseGuards(AdminGuard)
-  @ApiOperation({
-    summary:
-      'Calculate v4 demand-signal scores for all locations at a geography level',
-  })
-  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({
-    name: 'period_date',
-    required: false,
-    description: 'Period date (YYYY-MM-DD), defaults to latest Redfin date',
-  })
-  async calculatePropertyIqScores(
-    @Param('geography') geography: string,
-    @Query('period_date') periodDate?: string,
-  ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
-    const validGeos = ['metro', 'county', 'zip'];
-    if (!validGeos.includes(geography)) {
-      throw new BadRequestException(
-        `Invalid geography: ${geography}. Must be one of: ${validGeos.join(', ')}`,
-      );
-    }
-    return this.scoringService.calculatePropertyIqScores(
-      geography as GeographyLevel,
-      periodDate,
-    );
   }
 
   // ============================================================================
