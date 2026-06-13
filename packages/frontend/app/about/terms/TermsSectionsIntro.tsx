@@ -155,11 +155,12 @@ export function IntroSections() {
           </p>
         </Callout>
         <p>
-          The AI Features of PropertyIQ, including Quinn and all scoring
-          algorithms, utilize artificial intelligence and machine learning
-          technologies that are inherently probabilistic in nature. This means
-          that outputs may contain errors, inaccuracies, outdated information,
-          or biases that we may not be able to detect or correct in real time.
+          The AI Features of PropertyIQ, including the PropertyIQ Score and all
+          scoring and report-generation algorithms, utilize artificial
+          intelligence and machine learning technologies that are inherently
+          probabilistic in nature. This means that outputs may contain errors,
+          inaccuracies, outdated information, or biases that we may not be able
+          to detect or correct in real time.
         </p>
         <p>
           AI-Generated Content is provided for{" "}
@@ -297,7 +298,7 @@ export function IntroSections() {
           <strong className="text-on-surface">
             6.3 &mdash; AI-Generated Statements.
           </strong>{" "}
-          Our AI Features, including but not limited to Quinn, may generate
+          Our AI Features, including AI-generated market reports, may generate
           language that could be interpreted as professional advice,
           recommendations, or guidance. You expressly acknowledge and agree that
           any such statements are the product of automated language generation
