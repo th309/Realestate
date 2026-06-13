@@ -64,9 +64,9 @@ function DemoSiteHomeContent() {
           </div>
         </DemoSection>
 
-        {/* Market Health — score widget */}
+        {/* PropertyIQ Score — score widget */}
         <DemoSection
-          title="Market Health"
+          title="PropertyIQ Score"
           subtitle="Our proprietary score for the Dallas-Fort Worth market"
         >
           <div
@@ -78,7 +78,7 @@ function DemoSiteHomeContent() {
             <EmbedIframe
               embedPath="/embed/score/metro/31080"
               embedParams={{ scoreType: "propertyiq" }}
-              title="Market Health Score — Dallas Metro"
+              title="PropertyIQ Score — Dallas Metro"
               height="340px"
             />
           </div>

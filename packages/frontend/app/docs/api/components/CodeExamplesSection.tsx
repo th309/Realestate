@@ -19,7 +19,7 @@ const response = await fetch(
 );
 
 const { data } = await response.json();
-console.log(data.homeready.score); // 82`}
+console.log(data.propertyiq.score); // 82`}
         language="javascript"
       />
 
@@ -37,7 +37,7 @@ resp = requests.get(
     headers=headers,
 )
 data = resp.json()["data"]
-print(data["homeready"]["score"])  # 82`}
+print(data["propertyiq"]["score"])  # 82`}
         language="python"
       />
     </>
