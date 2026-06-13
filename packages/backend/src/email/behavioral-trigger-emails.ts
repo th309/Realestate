@@ -1,3 +1,5 @@
+import { SCORE_DESCRIPTION } from '@propertyiq/emails';
+
 const BASE_STYLES =
   "font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;";
 
@@ -173,7 +175,7 @@ export function buildActiveExplorerEmail(
       <li><strong>Score &lt;50:</strong> Buyer's market — price concessions are common</li>
     </ul>
     <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
-      Scores are calculated from sold-above-list rate, days on market, and months of supply — updated monthly from Redfin data.
+      ${SCORE_DESCRIPTION}
     </p>
     <a href="${dashboardUrl}"
        style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
