@@ -29,6 +29,19 @@ export {
   type MarketSnapshotResponse,
 } from "../market-snapshot";
 
+// SEO market stats block (headline stats + score receipts, server-rendered)
+export {
+  fetchSeoMarketStats,
+  assembleMarketStats,
+  type MarketStatsData,
+  type MarketStatField,
+  type ScoreReceipt,
+  type ReceiptKey,
+} from "../market-stats";
+
+// PropertyIQ rankings (same-state by score; state-page tables + related markets)
+export { fetchRankings, type RankingRow } from "../rankings";
+
 // Recommendations
 export {
   fetchMarketsToWatch,
