@@ -115,9 +115,8 @@ export function GeographyCoverage() {
   const chartData = rawData.map((g) => ({
     name: GEO_LABELS[g.geographyType] || g.geographyType,
     type: g.geographyType,
-    correlation1y: g.avgCorrelation1y,
     correlation3y: g.avgCorrelation3y,
-    hitRate: g.avgHitRate1y,
+    hitRate: g.avgHitRate3y,
     count: g.totalScores,
   }));
 
@@ -194,21 +193,12 @@ export function GeographyCoverage() {
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                formatter={(value: number, name: string) => [
-                  value.toFixed(3),
-                  name === "correlation1y" ? "1-Year Corr" : "3-Year Corr",
-                ]}
+                formatter={(value: number) => [value.toFixed(3), "3-Year Corr"]}
               />
               <Bar
                 dataKey="correlation3y"
                 name="3-Year"
                 fill="var(--primary)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="correlation1y"
-                name="1-Year"
-                fill="var(--secondary)"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -218,10 +208,6 @@ export function GeographyCoverage() {
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-[var(--primary)]" />
             <span>3-Year Correlation</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-[var(--secondary)]" />
-            <span>1-Year Correlation</span>
           </div>
         </div>
       </div>

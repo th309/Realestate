@@ -18,12 +18,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Methodology — How PropertyIQ Scores Predict Market Performance",
   description:
-    "Walk-forward validated across 14 years of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
+    "Out-of-sample validated across more than two decades of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
   alternates: { canonical: "https://www.propertyiq.app/scores/methodology" },
   openGraph: {
     title: "Methodology — How PropertyIQ Scores Predict Market Performance",
     description:
-      "Walk-forward validated across 14 years of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
+      "Out-of-sample validated across more than two decades of market data. See the statistical proof behind PropertyIQ Demand Signal Scores.",
     url: "https://www.propertyiq.app/scores/methodology",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
@@ -32,55 +32,56 @@ export const metadata: Metadata = {
 const STATS = [
   {
     icon: DollarSign,
-    value: "$24,384",
-    label: "Extra equity — top vs bottom scored market (3yr)",
+    value: "$21,741",
+    label: "Extra equity — top vs bottom scored market, within state (3yr)",
   },
   {
     icon: Briefcase,
-    value: "$73,100",
+    value: "$65,200",
     label: "Extra appreciation on a 3-property portfolio (3yr)",
   },
   {
     icon: Target,
-    value: "57.8%",
-    label: "Hit rate — top-scored markets beat state average",
+    value: "100%",
+    label: "Validated years with a positive score-to-return link",
   },
   {
     icon: Database,
-    value: "23,600+",
+    value: "38,000+",
     label: "Locations scored across metro, county, and ZIP",
   },
 ];
 
+// Mean annualized 3-year excess return vs state, by metro score band.
 const QUINTILES = [
-  { label: "Q5 (Top 20%)", range: "81–99", return: 3.05, width: 100 },
-  { label: "Q4", range: "61–80", return: 1.17, width: 55 },
-  { label: "Q3", range: "41–60", return: -0.15, width: 30 },
-  { label: "Q2", range: "21–40", return: -1.2, width: 15 },
-  { label: "Q1 (Bottom 20%)", range: "1–20", return: -3.34, width: 5 },
+  { label: "Q5 (Top 20%)", range: "81–99", return: 0.38, width: 100 },
+  { label: "Q4", range: "61–80", return: 0.08, width: 72 },
+  { label: "Q3", range: "41–60", return: -0.13, width: 52 },
+  { label: "Q2", range: "21–40", return: -0.46, width: 32 },
+  { label: "Q1 (Bottom 20%)", range: "1–20", return: -1.29, width: 10 },
 ];
 
 const KEY_FINDINGS = [
   {
     icon: Shield,
     iconClass: "bg-secondary/10 p-2 rounded-xl text-secondary w-fit",
-    title: "Walk-Forward Validated",
+    title: "Walk-Forward & Out-of-Sample Tested",
     description:
-      "Expanding-window walk-forward validation across 14 years (2012–2025). Positive OOS IC in every single year — 100% hit rate across all test windows.",
+      "Features were selected with walk-forward analysis — trained on earlier years, tested on later ones. The final equal-weight formula has no fitted parameters, so every score is out-of-sample: measured against returns that came after the score date. Positive IC in every validated year (2001–2023).",
   },
   {
     icon: TrendingUp,
     iconClass: "bg-primary/10 p-2 rounded-xl text-primary w-fit",
     title: "Consistent Across Geographies",
     description:
-      "Validated at metro (IC 0.24), county, and ZIP code levels. Strictly monotonic score-to-return tables at every decile — no reversals.",
+      "Validated at metro (IC 0.27), county (0.20), and ZIP (0.20) levels. Strictly monotonic score-to-return bands at every level — no reversals.",
   },
   {
     icon: CheckCircle,
     iconClass: "bg-tertiary/10 p-2 rounded-xl text-tertiary w-fit",
-    title: "v4.0: Demand Signal",
+    title: "PropertyIQ Demand Signal",
     description:
-      "Three Redfin supply-demand metrics combined into a single interpretable score. Statistically significant at p < 0.000001 via 10,000-shuffle permutation test.",
+      "Four signals — Zillow price momentum (3- and 12-month) plus Realtor.com days on market and price-cut share — combined into one interpretable score. Significant at p < 0.000001 (permutation test, 52–201σ above the null).",
   },
 ];
 
@@ -126,7 +127,7 @@ export default function MethodologyPage() {
                 "@type": "Article",
                 headline: "How PropertyIQ Scores Predict Market Performance",
                 description:
-                  "Walk-forward validated across 14 years of market data. Technical methodology behind PropertyIQ's demand signal real estate scores.",
+                  "Out-of-sample validated across more than two decades of market data. Technical methodology behind the PropertyIQ Score.",
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {
@@ -175,7 +176,7 @@ export default function MethodologyPage() {
             { label: "Methodology" },
           ]}
           title="The Proof Behind PropertyIQ Scores"
-          description="Walk-forward validated across 14 years of market data"
+          description="Out-of-sample validated across more than two decades of market data"
           icon={<Target className="w-5 h-5" />}
         />
       </section>
@@ -214,9 +215,9 @@ export default function MethodologyPage() {
           How Scores Predict Returns
         </h2>
         <p className="text-on-surface-variant mt-2 max-w-2xl">
-          PropertyIQ Demand Signal scores, validated across 14 years of
-          walk-forward windows. Higher scores consistently predict higher 3-year
-          excess returns vs state benchmarks.
+          The PropertyIQ Score, validated across more than two decades of market
+          outcomes. Higher scores consistently predict higher 3-year excess
+          returns versus the market&apos;s state.
         </p>
 
         <div className="mt-8 space-y-3">
@@ -243,14 +244,14 @@ export default function MethodologyPage() {
 
         <div className="mt-6 p-4 bg-primary-container/30 rounded-xl border border-primary/20">
           <p className="text-sm font-medium text-on-surface">
-            Top-20% scored markets earned{" "}
+            Top-20% scored markets outperformed their state by{" "}
             <span className="text-primary font-bold">
-              6.39 percentage points more
+              about 1.7 percentage points more per year
             </span>{" "}
-            over 3 years than bottom-20% scored markets. At the extremes, a
-            score-100 market outperforms a score-10 market by{" "}
-            <span className="text-primary font-bold">$24,384</span> on a $245K
-            home.
+            than bottom-20% scored markets. Within the same state, a top-band
+            market outperforms a bottom-band market by{" "}
+            <span className="text-primary font-bold">about $21,700</span> over 3
+            years on a $252K home.
           </p>
         </div>
       </section>
@@ -299,8 +300,8 @@ export default function MethodologyPage() {
             permutation testing
           </h2>
           <p className="text-sm text-on-surface-variant mt-2 mb-8">
-            Full methodology and results from our v4.0 scoring validation,
-            covering January 2012 through February 2025 across 3.1M scored
+            Full methodology and results from the PropertyIQ scoring validation,
+            covering January 2001 through 2023 across 5.7M scored
             location-periods.
           </p>
           <MarkdownRenderer content={reportContent} />

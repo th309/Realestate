@@ -435,7 +435,7 @@ export function PearsonVsSpearman() {
             </p>
             <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
               For context: our walk-forward OOS IC (Information Coefficient) of
-              0.37 is strong for real estate prediction, where noise is high.
+              0.27 is strong for real estate prediction, where noise is high.
               The IC is computed on held-out test data the model never saw
               during training. But Spearman is the right tool for answering the
               question investors actually ask: &quot;Will following the score

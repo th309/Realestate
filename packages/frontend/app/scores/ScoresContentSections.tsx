@@ -20,9 +20,9 @@ export function HowToUseScoresSection() {
             <p className="text-sm text-on-surface-variant leading-relaxed">
               Markets scoring 80 or above have historically outperformed their
               state benchmark by a meaningful margin. These metros show strong
-              demand signals: homes selling above list price, fast days on
-              market, and tight supply. Historically, top-quintile markets beat
-              the state 56% of the time over 1-year horizons.
+              demand signals: rising home values, fast sales, and few price
+              cuts. Historically, top-scored markets have beaten their state
+              about 56% of the time over 3-year horizons.
             </p>
           </div>
 
@@ -35,10 +35,10 @@ export function HowToUseScoresSection() {
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
               Markets below 40 have historically underperformed their state
-              benchmark. Weak demand signals — homes selling below list, long
-              days on market, excess supply — suggest caution. Bottom-quintile
-              markets beat the state only 39% of the time. Use low scores as a
-              guardrail when evaluating markets.
+              benchmark. Weak demand signals — flat or falling values, slow
+              sales, and frequent price cuts — suggest caution. Bottom-scored
+              markets have beaten their state only about 37% of the time. Use
+              low scores as a guardrail when evaluating markets.
             </p>
           </div>
 
@@ -51,8 +51,8 @@ export function HowToUseScoresSection() {
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
               Every score includes a confidence grade reflecting data quality
-              and coverage. A/B confidence means robust data across all three
-              input metrics. C/F confidence means data gaps exist — treat the
+              and coverage. A/B confidence means robust data across all four
+              input signals. C/F confidence means data gaps exist — treat the
               score directionally rather than precisely. Always supplement
               low-confidence scores with local market knowledge.
             </p>
@@ -72,21 +72,20 @@ export function MethodologyOverviewSection() {
           How We Build the Score
         </h2>
         <p className="text-on-surface-variant leading-relaxed mb-6">
-          The PropertyIQ Score uses three housing metrics — % Sold Above List,
-          Median Days on Market, and Months of Supply — chosen because they are
-          the most predictive signals of future home price appreciation. We
-          tested 40+ features from Zillow, Census, FRED, BLS, and housing. These
-          three survived rigorous out-of-sample validation; more metrics added
-          noise, not signal.
+          The PropertyIQ Score uses four signals — 12- and 3-month Zillow price
+          momentum, Realtor.com median days on market, and the share of listings
+          with price cuts — chosen because they are the most predictive signals
+          of future home price appreciation. We tested dozens of candidate
+          signals; these four survived rigorous out-of-sample validation; more
+          metrics added noise, not signal.
         </p>
         <p className="text-on-surface-variant leading-relaxed mb-6">
-          Each metric is z-score normalized against the national distribution
-          for its time period, removing scale differences. The composite z-score
-          is then mapped to a 1-99 percentile where 50 equals the state average.
-          This approach is transparent, reproducible, and validated across 746
-          metros over 13 years of data with 100% year hit rate — every single
-          year, higher-scored metros outperformed lower-scored metros on
-          average.
+          Each signal is z-score normalized within its geography level for its
+          time period, removing scale differences. The combined signal is then
+          mapped to a 1-99 percentile where 50 equals the state average. This
+          approach is transparent, reproducible, and validated across 935 metros
+          over more than two decades of data, positive in every validated year —
+          higher-scored metros outperformed lower-scored metros on average.
         </p>
         <div className="flex flex-wrap gap-4">
           <a

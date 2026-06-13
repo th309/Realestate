@@ -37,11 +37,11 @@ const REPORT_TYPE_BADGES: Record<
   { label: string; className: string }
 > = {
   homeready: {
-    label: "HomeReady Analysis",
+    label: "Market Analysis",
     className: "bg-blue-50 text-blue-700 border-blue-200",
   },
   investoredge: {
-    label: "InvestorEdge Brief",
+    label: "Market Analysis",
     className: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
   custom: {
@@ -84,7 +84,7 @@ function MetadataItem({
  * <V2ReportHeader
  *   reportType="homeready"
  *   marketName="Austin-Round Rock, TX"
- *   title="Austin Metro HomeReady Analysis"
+ *   title="Austin Metro Market Analysis"
  *   subtitle="A comprehensive look at homebuyer readiness in the Austin metro area"
  *   generatedDate="March 7, 2026"
  *   dataFreshness="2026-03-01"

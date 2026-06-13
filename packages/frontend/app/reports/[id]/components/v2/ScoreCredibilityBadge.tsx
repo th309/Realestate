@@ -4,11 +4,15 @@ import React, { useState, useRef, useEffect } from "react";
 import { ShieldCheck } from "lucide-react";
 
 interface ScoreCredibilityBadgeProps {
-  /** Which score type this badge is for */
-  scoreType?: "homeready" | "investoredge" | "markethealth";
-  /** Override the metros count (defaults to 924) */
+  /**
+   * Retained for backward compatibility with callers from the retired
+   * 3-score era. The platform now has a single PropertyIQ Score, so this
+   * value is accepted but ignored.
+   */
+  scoreType?: string;
+  /** Override the metros count (defaults to 865) */
   metrosValidated?: number;
-  /** Override the hit rate (defaults based on scoreType) */
+  /** Override the positive-validated-years figure (defaults to 100%) */
   hitRate?: string;
   /** Visual variant */
   variant?: "default" | "compact";
@@ -16,26 +20,16 @@ interface ScoreCredibilityBadgeProps {
   className?: string;
 }
 
-/** Default hit rates by score type (from v3 validation report OOS results) */
-const DEFAULT_HIT_RATES: Record<string, string> = {
-  homeready: "63.8%",
-  investoredge: "69.5%",
-  markethealth: "66.6%",
-};
-
-/** Quintile spread by score type (from v3 validation report OOS results) */
-const QUINTILE_SPREADS: Record<string, string> = {
-  homeready: "2.66 pp",
-  investoredge: "5.55 pp",
-  markethealth: "3.76 pp",
-};
-
-/** Information coefficients by score type (from v3 OOS) */
-const INFORMATION_COEFFICIENTS: Record<string, string> = {
-  homeready: "0.30",
-  investoredge: "0.37",
-  markethealth: "0.37",
-};
+/**
+ * Out-of-sample validation figures for the single PropertyIQ Score (metro
+ * level). Source: app/scores/methodology/validation-report.md (2026-06-13).
+ */
+/** Share of validated years with a positive Information Coefficient. */
+const POSITIVE_VALIDATED_YEARS = "100%";
+/** Quintile spread (Q5−Q1, annualized 3-year excess vs state). */
+const QUINTILE_SPREAD = "1.67 pp";
+/** Out-of-sample Information Coefficient (3-year). */
+const INFORMATION_COEFFICIENT = "0.27";
 
 /**
  * ScoreCredibilityBadge — small inline badge near score displays that
@@ -43,8 +37,8 @@ const INFORMATION_COEFFICIENTS: Record<string, string> = {
  * with a tooltip containing detailed backtest statistics.
  */
 export function ScoreCredibilityBadge({
-  scoreType = "homeready",
-  metrosValidated = 924,
+  scoreType: _scoreType,
+  metrosValidated = 865,
   hitRate,
   variant = "default",
   className = "",
@@ -53,9 +47,9 @@ export function ScoreCredibilityBadge({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
 
-  const resolvedHitRate = hitRate || DEFAULT_HIT_RATES[scoreType] || "64%";
-  const quintileSpread = QUINTILE_SPREADS[scoreType] || "2.66 pp";
-  const informationCoefficient = INFORMATION_COEFFICIENTS[scoreType] || "0.30";
+  const resolvedHitRate = hitRate || POSITIVE_VALIDATED_YEARS;
+  const quintileSpread = QUINTILE_SPREAD;
+  const informationCoefficient = INFORMATION_COEFFICIENT;
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -74,18 +68,13 @@ export function ScoreCredibilityBadge({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTooltip]);
 
-  const scoreLabel =
-    scoreType === "investoredge"
-      ? "InvestorEdge"
-      : scoreType === "markethealth"
-        ? "Market Health"
-        : "HomeReady";
+  const scoreLabel = "PropertyIQ";
 
   if (variant === "compact") {
     return (
       <span
         className={`inline-flex items-center gap-1 text-xs text-on-surface-variant ${className}`}
-        title={`Validated across ${metrosValidated}+ metros with ${resolvedHitRate} out-of-sample accuracy`}
+        title={`Validated across ${metrosValidated}+ metros with ${resolvedHitRate} positive validated years`}
       >
         <ShieldCheck className="w-3 h-3 text-emerald-500" />
         Validated
@@ -117,7 +106,8 @@ export function ScoreCredibilityBadge({
       >
         <ShieldCheck className="w-3.5 h-3.5" />
         <span>
-          Validated · {metrosValidated}+ metros · {resolvedHitRate} accuracy
+          Validated · {metrosValidated}+ metros · {resolvedHitRate} positive
+          years
         </span>
       </div>
 
@@ -142,7 +132,7 @@ export function ScoreCredibilityBadge({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Out-of-sample accuracy</span>
+              <span>Positive validated years</span>
               <span className="font-medium text-on-surface">
                 {resolvedHitRate}
               </span>
@@ -160,19 +150,19 @@ export function ScoreCredibilityBadge({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Walk-forward windows</span>
-              <span className="font-medium text-on-surface">4</span>
+              <span>Permutation significance</span>
+              <span className="font-medium text-on-surface">52σ</span>
             </div>
             <div className="flex justify-between">
               <span>Backtest period</span>
-              <span className="font-medium text-on-surface">2018-2023</span>
+              <span className="font-medium text-on-surface">2001–2023</span>
             </div>
           </div>
 
           <div className="mt-3 pt-2 border-t border-outline-variant">
             <p className="text-xs text-on-surface-variant leading-relaxed">
               Scores are validated using walk-forward cross-validation where the
-              model never sees future data. All accuracy metrics are
+              model never sees future data. All validation metrics are
               out-of-sample.
             </p>
           </div>

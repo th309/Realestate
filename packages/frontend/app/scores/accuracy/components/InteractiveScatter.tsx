@@ -12,9 +12,8 @@ import {
   ScatterPlot,
   type ScatterDataPoint,
 } from "@/lib/visualizations/d3/ScatterPlot";
-import { useValidationScatter, useValidationSummary } from "@/lib/data";
+import { useValidationScatter } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
-import { HorizonToggle } from "./HorizonToggle";
 
 const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
   { value: "metro", label: "Metro Areas" },
@@ -27,33 +26,22 @@ const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
 ];
 
 /**
- * Official v3 OOS metrics from validation_report.md (2026-03-04).
- * Keyed by `{geography}_{scoreType}`.
+ * Official out-of-sample metrics for the single PropertyIQ Score.
+ * Source: app/scores/methodology/validation-report.md (2026-06-13).
+ * Keyed by `{geography}_{scoreType}` where scoreType is always `propertyiq`.
+ * `hitRate` here is the share of positive validated years (not a directional
+ * accuracy %); it is displayed as "Positive years".
  */
 const V3_OOS_METRICS: Record<
   string,
   { ic: number; spread: string; hitRate: string }
 > = {
-  metro_homeready: { ic: 0.3, spread: "2.66 pp", hitRate: "63.8%" },
-  metro_investoredge: { ic: 0.372, spread: "5.55 pp", hitRate: "69.5%" },
-  metro_markethealth: { ic: 0.366, spread: "3.76 pp", hitRate: "66.6%" },
-  county_homeready: { ic: 0.246, spread: "2.49 pp", hitRate: "60.9%" },
-  county_investoredge: { ic: 0.246, spread: "2.49 pp", hitRate: "60.9%" },
-  county_markethealth: { ic: 0.282, spread: "3.12 pp", hitRate: "65.3%" },
-  zip_homeready: { ic: 0.184, spread: "1.69 pp", hitRate: "59.9%" },
-  zip_investoredge: { ic: 0.184, spread: "1.69 pp", hitRate: "59.9%" },
-  zip_markethealth: { ic: 0.221, spread: "2.16 pp", hitRate: "63.3%" },
+  metro_propertyiq: { ic: 0.273, spread: "1.67 pp", hitRate: "100%" },
+  county_propertyiq: { ic: 0.201, spread: "1.50 pp", hitRate: "100%" },
+  zip_propertyiq: { ic: 0.196, spread: "1.58 pp", hitRate: "100%" },
 };
 
-interface InteractiveScatterProps {
-  horizon?: "1y" | "3y";
-  onHorizonChange?: (h: "1y" | "3y") => void;
-}
-
-export function InteractiveScatter({
-  horizon = "3y",
-  onHorizonChange,
-}: InteractiveScatterProps) {
+export function InteractiveScatter() {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
@@ -64,18 +52,14 @@ export function InteractiveScatter({
   } = useValidationScatter({
     geography,
     scoreType,
-    horizon,
+    horizon: "3y",
     limit: 1000,
   });
 
   const scatterData: ScatterDataPoint[] = useMemo(() => {
     if (!rawData) return [];
     return rawData
-      .filter((p) =>
-        horizon === "3y"
-          ? p.excessVsState3y !== null
-          : p.excessVsState1y !== null,
-      )
+      .filter((p) => p.excessVsState3y !== null)
       .map((p) => {
         // Assign quartile category for coloring
         const q =
@@ -90,38 +74,21 @@ export function InteractiveScatter({
           id: p.geographyId,
           label: p.geographyName,
           x: p.score,
-          y: horizon === "3y" ? p.excessVsState3y! : p.excessVsState1y!,
+          y: p.excessVsState3y!,
           category: q,
         };
       });
-  }, [rawData, horizon]);
+  }, [rawData]);
 
-  // For 3Y: use official v3 walk-forward OOS metrics (authoritative)
-  // For 1Y: use live validation API (early signal, not the trained horizon)
+  // Official v3 walk-forward OOS metrics (authoritative, 3-year horizon)
   const v3Metrics = V3_OOS_METRICS[`${geography}_${scoreType}`];
-  const { data: liveSummary } = useValidationSummary({
-    geography,
-    scoreType,
-  });
 
   const oosMetrics = v3Metrics
     ? {
-        ic:
-          horizon === "3y"
-            ? v3Metrics.ic
-            : (liveSummary?.correlation1y ?? v3Metrics.ic),
-        spread:
-          horizon === "3y"
-            ? v3Metrics.spread
-            : liveSummary?.avgExcessVsState1y != null
-              ? `${liveSummary.avgExcessVsState1y.toFixed(2)} pp`
-              : v3Metrics.spread,
-        hitRate:
-          horizon === "3y"
-            ? v3Metrics.hitRate
-            : liveSummary?.hitRate1y != null
-              ? `${liveSummary.hitRate1y.toFixed(1)}%`
-              : v3Metrics.hitRate,
+        ic: v3Metrics.ic,
+        spread: v3Metrics.spread,
+        // Share of positive validated years (100% at every level).
+        hitRate: v3Metrics.hitRate,
       }
     : null;
 
@@ -179,7 +146,7 @@ export function InteractiveScatter({
         </div>
       </div>
 
-      {/* OOS validation metrics + horizon toggle */}
+      {/* OOS validation metrics */}
       {oosMetrics && (
         <div className="flex items-end gap-4 mt-4">
           <div className="bg-surface-container rounded-xl px-4 py-2 border border-outline-variant">
@@ -200,7 +167,7 @@ export function InteractiveScatter({
           </div>
           <div className="bg-surface-container rounded-xl px-4 py-2 border border-outline-variant">
             <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
-              Hit Rate
+              Positive Years
             </p>
             <p className="text-lg font-bold text-on-surface">
               {oosMetrics.hitRate}
@@ -214,11 +181,6 @@ export function InteractiveScatter({
               {scatterData.length.toLocaleString()}
             </p>
           </div>
-          {onHorizonChange && (
-            <div className="ml-auto">
-              <HorizonToggle value={horizon} onChange={onHorizonChange} />
-            </div>
-          )}
         </div>
       )}
 
@@ -246,7 +208,7 @@ export function InteractiveScatter({
           <ScatterPlot
             data={scatterData}
             xLabel="PropertyIQ Score"
-            yLabel={`${horizon === "3y" ? "3-Year" : "1-Year"} Excess Return vs State (pp)`}
+            yLabel="3-Year Excess Return vs State (pp)"
             xFormat="integer"
             yFormat="percentAbs"
             height={550}

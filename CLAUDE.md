@@ -444,15 +444,18 @@ Use `queryLatestPerRegion()` for most recent data point per region (not a single
 ### PropertyIQ Score Formula
 
 ```
-signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
-→ percentile rank within state → re-center at 55.6 → clamp 1-99
+signal = z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market) - z(price_reduced_share)
+→ percentile rank within state → re-center at zero-crossing 50 → clamp 1-99
 ```
 
 - **50 = state average** — higher means outperformance
 - Scores are relative within each state, not nationally
-- Input metrics: % Sold Above List (↑), Median DOM (↓), Months of Supply (↓) — all from Redfin
-- **Coverage:** 746 metros, 2,983 counties, 19,880 ZIPs
-- **Database:** `propertyiq_scores` table, `score_type = 'propertyiq'`
+- Input metrics: ZHVI 12-mo momentum (↑), ZHVI 3-mo momentum (↑), Median Days on Market (↓), Price-Reduced Share (↓). Momentum derived from **Zillow** ZHVI; DOM + price cuts from **Realtor.com**. **No Redfin.** Engine requires ≥2 of 4 (confidence = inputs/4 → A/B/C/F).
+- Zero-crossing is **50 at every geo level** (one constant; the old per-geo 55.6/62.4 is retired).
+- **Coverage:** ~935 metros, ~3,150 counties, ~34,000 ZIPs; history backfilled to 2001 (pre-2016 is momentum-only, C confidence).
+- **Database:** WRITE to `propertyiq_scores_v2` (`score_type = 'propertyiq'`), READ via `propertyiq_scores` view. `z_scores` JSONB holds the 4 raw input values.
+- **No version numbers** — the formula IS the PropertyIQ score; do not introduce v4/v5 naming.
+- Discovery + validation: `docs/superpowers/results/2026-06-12-monolithic-feature-discovery.md` and the metro/county/zip score-backtests; productionized per `docs/superpowers/plans/2026-06-12-piq-score-production-wiring.md`.
 
 ### Score Labels
 

@@ -204,7 +204,50 @@ export class ValidationService {
   ): Promise<QuintileData[]> {
     const client = this.supabase.getClient();
 
-    // Use server-side RPC for efficient aggregation (avoids Supabase row limits)
+    // Fast path: read the pre-aggregated summary table. At ZIP scale the live
+    // NTILE in get_quintile_performance() takes ~10s; the summary is a ~5-row
+    // PK lookup. Populated by refresh_propertyiq_quintile_summary() (3y only).
+    const { data: summaryRows, error: summaryError } = await client
+      .from('propertyiq_quintile_summary')
+      .select('*')
+      .eq('score_type', scoreType || 'propertyiq')
+      .eq('geography_type', geographyType || 'metro')
+      .eq('horizon', horizon)
+      .order('quintile', { ascending: true });
+
+    if (!summaryError && summaryRows && summaryRows.length > 0) {
+      return summaryRows.map((row: any) => ({
+        quintile: row.quintile,
+        label: row.label,
+        scoreMin: Number(row.score_min),
+        scoreMax: Number(row.score_max),
+        avgScore: Number(row.avg_score),
+        count: Number(row.sample_count),
+        avgReturn1y:
+          row.avg_return_1y != null ? Number(row.avg_return_1y) : null,
+        avgReturn3y:
+          row.avg_return_3y != null ? Number(row.avg_return_3y) : null,
+        avgExcessVsState1y:
+          row.avg_excess_vs_state_1y != null
+            ? Number(row.avg_excess_vs_state_1y)
+            : null,
+        avgExcessVsState3y:
+          row.avg_excess_vs_state_3y != null
+            ? Number(row.avg_excess_vs_state_3y)
+            : null,
+        avgExcessVsNational1y:
+          row.avg_excess_vs_national_1y != null
+            ? Number(row.avg_excess_vs_national_1y)
+            : null,
+        avgExcessVsNational3y:
+          row.avg_excess_vs_national_3y != null
+            ? Number(row.avg_excess_vs_national_3y)
+            : null,
+      }));
+    }
+
+    // Fallback: server-side RPC (live NTILE) for horizons/score types not in
+    // the summary table, or before the first refresh.
     const { data: rpcData, error: rpcError } = await client.rpc(
       'get_quintile_performance',
       {

@@ -24,22 +24,18 @@ import { useValidationQuintiles } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
 
 const QUINTILE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#059669"];
-const MEDIAN_HOME = 240_000;
+const MEDIAN_HOME = 251_629;
 
 /**
- * Official v3 OOS quintile spreads from validation_report.md (2026-03-04).
- * Keyed by `{geography}_{scoreType}`. Values in percentage points.
+ * Official out-of-sample quintile spreads (Q5−Q1, annualized 3-year excess
+ * return vs state, percentage points) for the single PropertyIQ Score.
+ * Source: app/scores/methodology/validation-report.md (2026-06-13).
+ * Keyed by `{geography}_{scoreType}` where scoreType is always `propertyiq`.
  */
 const V3_OOS_SPREAD: Record<string, number> = {
-  metro_homeready: 2.66,
-  metro_investoredge: 5.55,
-  metro_markethealth: 3.76,
-  county_homeready: 2.49,
-  county_investoredge: 2.49,
-  county_markethealth: 3.12,
-  zip_homeready: 1.69,
-  zip_investoredge: 1.69,
-  zip_markethealth: 2.16,
+  metro_propertyiq: 1.67,
+  county_propertyiq: 1.5,
+  zip_propertyiq: 1.58,
 };
 
 const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
@@ -52,13 +48,7 @@ const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
   { value: "propertyiq", label: "PropertyIQ" },
 ];
 
-interface QuintilePerformanceProps {
-  horizon?: "1y" | "3y";
-}
-
-export function QuintilePerformance({
-  horizon: propHorizon,
-}: QuintilePerformanceProps = {}) {
+export function QuintilePerformance() {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
@@ -69,18 +59,13 @@ export function QuintilePerformance({
   } = useValidationQuintiles({
     geography,
     scoreType,
-    horizon: propHorizon ?? "3y",
+    horizon: "3y",
   });
-
-  const activeHorizon = propHorizon ?? "3y";
 
   const chartData = useMemo(() => {
     if (!rawData) return [];
     return rawData.map((q) => {
-      const ret =
-        activeHorizon === "3y"
-          ? (q.avgExcessVsState3y ?? 0)
-          : (q.avgExcessVsState1y ?? 0);
+      const ret = q.avgExcessVsState3y ?? 0;
       const dollarImpact = Math.round((ret / 100) * MEDIAN_HOME);
       return {
         name: q.label,
@@ -194,13 +179,13 @@ export function QuintilePerformance({
           </div>
           <div className="text-right">
             <p className="text-xs text-on-surface-variant">
-              OOS Quintile Spread ({activeHorizon === "3y" ? "3Y" : "1Y"})
+              OOS Quintile Spread (3Y)
             </p>
             <p className="text-xl font-bold text-primary">
               +{oosSpread.toFixed(2)}pp
             </p>
             <p className="text-xs text-on-surface-variant">
-              = ${oosDollarSpread.toLocaleString()}/yr on $240K home
+              = ${oosDollarSpread.toLocaleString()}/yr on $252K home
             </p>
           </div>
         </div>

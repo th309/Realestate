@@ -3,7 +3,7 @@
  *
  * Type definitions for the PropertyIQ scoring system.
  * Single score type: PropertyIQ Score — measures market demand signal
- * relative to state average using 3 Redfin metrics.
+ * from price momentum (Zillow) and market-flow (Realtor.com) metrics.
  *
  * Legacy score types (homeready, investoredge, markethealth) are preserved
  * as LegacyScoreType / AnyScoreType for backward compat when reading
@@ -33,11 +33,10 @@ export {
   getConfidenceLevel,
   getRequiredMetrics,
   validateFormulaWeights,
-  // v4 demand-signal formula exports
+  // PropertyIQ demand-signal formula exports
   PROPERTYIQ_FORMULA_METRICS,
   PROPERTYIQ_METRIC_DIRECTIONS,
   PROPERTYIQ_ZERO_CROSSING,
-  PROPERTYIQ_FORMULA_VERSION,
   PROPERTYIQ_CALIBRATION,
 } from './formula-weights';
 

@@ -36,7 +36,7 @@ export function EndpointsReference() {
         id="endpoint-scores"
         method="GET"
         path="/api/v1/scores/:geoLevel/:geoId"
-        description="Retrieve all PropertyIQ scores (HomeReady, InvestorEdge, Market Health) for a single geography."
+        description="Retrieve the PropertyIQ Score for a single geography."
         scope="scores:read"
         queryParams={[
           {
@@ -71,8 +71,7 @@ export function EndpointsReference() {
             name: "scoreType",
             type: "string",
             required: true,
-            description:
-              "propertyiq (default), homeready, investoredge, or markethealth",
+            description: "propertyiq (the only score)",
           },
         ]}
         curlExample={`curl "https://api.propertyiq.app/api/v1/scores/metro/31080/propertyiq" \\

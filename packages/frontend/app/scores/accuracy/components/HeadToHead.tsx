@@ -19,25 +19,25 @@ function buildRows(proPrice: string): ComparisonRow[] {
   return [
     {
       dimension: "OOS predictive accuracy",
-      propertyiq: "IC = 0.37 (walk-forward CV)",
+      propertyiq: "IC = 0.27 (out-of-sample)",
       competitor: "r = 0.79 (1 cherry-picked window)",
       winner: "propertyiq",
     },
     {
-      dimension: "Validation windows tested",
-      propertyiq: "4 walk-forward windows (2018\u20132023)",
+      dimension: "Validation period",
+      propertyiq: "2001\u20132023, positive every year",
       competitor: "1 cherry-picked window",
       winner: "propertyiq",
     },
     {
       dimension: "Geography coverage",
-      propertyiq: "924 metros + 2,482 counties + 19,923 ZIPs",
+      propertyiq: "935 metros + 3,150 counties + 34,000 ZIPs",
       competitor: "~380 metros",
       winner: "propertyiq",
     },
     {
       dimension: "Quintile dollar impact",
-      propertyiq: "$13,320/yr per home",
+      propertyiq: "$3,550/yr per home",
       competitor: "Not published",
       winner: "propertyiq",
     },

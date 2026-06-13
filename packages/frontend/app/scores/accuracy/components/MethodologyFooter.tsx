@@ -10,9 +10,9 @@ import { FileText, ArrowRight } from "lucide-react";
 
 const METHODS = [
   {
-    title: "Walk-Forward Cross-Validation",
+    title: "Out-of-Sample by Construction",
     description:
-      "Four walk-forward windows (2018\u20132023) with non-overlapping test periods ensure the model never sees future data. No look-ahead bias.",
+      "The equal-weight formula has no fitted parameters, and every score is measured against returns from after the score date (2001\u20132023). Feature selection used walk-forward analysis. No look-ahead bias.",
   },
   {
     title: "Excess Return Measurement",

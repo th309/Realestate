@@ -1,10 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
-import { ScoreDisplay, getLetterGrade } from '@/app/components/scoring/ScoreDisplay';
-import { AIAnalysisBlock } from '../core';
-import type { ReportInstance } from '../../../../types';
+import {
+  ScoreDisplay,
+  getLetterGrade,
+} from "@/app/components/scoring/ScoreDisplay";
+import { AIAnalysisBlock } from "../core";
+import type { ReportInstance } from "../../../../types";
 
 export interface ClientOverviewProps {
   /** The full report data */
@@ -21,12 +24,12 @@ function getQuickVerdict(score: number): {
   color: string;
 } {
   if (score >= 70) {
-    return { label: 'Strong Market', color: 'var(--report-success)' };
+    return { label: "Strong Market", color: "var(--report-success)" };
   }
   if (score >= 50) {
-    return { label: 'Moderate Market', color: 'var(--report-warning)' };
+    return { label: "Moderate Market", color: "var(--report-warning)" };
   }
-  return { label: "Buyer's Market", color: 'var(--report-stone)' };
+  return { label: "Buyer's Market", color: "var(--report-stone)" };
 }
 
 /**
@@ -35,10 +38,10 @@ function getQuickVerdict(score: number): {
 function formatDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   } catch {
     return dateStr;
@@ -56,7 +59,7 @@ function formatDate(dateStr: string): string {
  */
 export function ClientOverview({
   report,
-  className = '',
+  className = "",
 }: ClientOverviewProps): React.ReactElement {
   const score =
     report.scores_snapshot?.markethealth_score ??
@@ -77,9 +80,9 @@ export function ClientOverview({
     <section
       className={`bg-gradient-to-b from-[var(--report-cream)] to-white report-animate-in ${className}`.trim()}
       style={{
-        padding: 'var(--report-space-xl) var(--report-space-lg)',
-        borderRadius: 'var(--report-radius-lg)',
-        border: '1px solid rgba(27, 46, 74, 0.06)',
+        padding: "var(--report-space-xl) var(--report-space-lg)",
+        borderRadius: "var(--report-radius-lg)",
+        border: "1px solid rgba(27, 46, 74, 0.06)",
       }}
       aria-label="Market Snapshot Overview"
     >
@@ -87,14 +90,14 @@ export function ClientOverview({
       <h1
         className="text-center mb-2"
         style={{
-          fontFamily: 'var(--report-font-display)',
-          color: 'var(--report-navy)',
-          fontSize: '1.75rem',
+          fontFamily: "var(--report-font-display)",
+          color: "var(--report-navy)",
+          fontSize: "1.75rem",
           fontWeight: 700,
-          letterSpacing: '-0.02em',
+          letterSpacing: "-0.02em",
           lineHeight: 1.2,
           margin: 0,
-          marginBottom: 'var(--report-space-xs)',
+          marginBottom: "var(--report-space-xs)",
         }}
       >
         {report.primary_geography_name}
@@ -103,10 +106,10 @@ export function ClientOverview({
       <p
         className="text-center"
         style={{
-          fontFamily: 'var(--report-font-body)',
-          color: 'var(--report-stone-light)',
-          fontSize: '0.875rem',
-          marginBottom: 'var(--report-space-lg)',
+          fontFamily: "var(--report-font-body)",
+          color: "var(--report-stone-light)",
+          fontSize: "0.875rem",
+          marginBottom: "var(--report-space-lg)",
         }}
       >
         Market Snapshot Report
@@ -116,7 +119,7 @@ export function ClientOverview({
       {score !== null && (
         <div
           className="flex flex-col items-center"
-          style={{ marginBottom: 'var(--report-space-lg)' }}
+          style={{ marginBottom: "var(--report-space-lg)" }}
         >
           <ScoreDisplay
             value={score}
@@ -128,15 +131,13 @@ export function ClientOverview({
 
           {/* Grade Badge */}
           {grade && (
-            <div
-              className="flex items-center gap-2 mt-3"
-            >
+            <div className="flex items-center gap-2 mt-3">
               <span
                 className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold"
                 style={{
-                  backgroundColor: 'var(--report-cream-dark)',
-                  color: 'var(--report-navy)',
-                  fontFamily: 'var(--report-font-display)',
+                  backgroundColor: "var(--report-cream-dark)",
+                  color: "var(--report-navy)",
+                  fontFamily: "var(--report-font-display)",
                 }}
               >
                 Grade: {grade}
@@ -144,19 +145,19 @@ export function ClientOverview({
             </div>
           )}
 
-          {/* Market Health Label */}
+          {/* PropertyIQ Score Label */}
           <p
             className="text-center mt-2"
             style={{
-              fontFamily: 'var(--report-font-body)',
-              color: 'var(--report-stone)',
-              fontSize: '0.75rem',
+              fontFamily: "var(--report-font-body)",
+              color: "var(--report-stone)",
+              fontSize: "0.75rem",
               fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
             }}
           >
-            Market Health
+            PropertyIQ Score
           </p>
 
           {/* Quick Verdict */}
@@ -164,9 +165,9 @@ export function ClientOverview({
             <p
               className="text-center mt-1"
               style={{
-                fontFamily: 'var(--report-font-display)',
+                fontFamily: "var(--report-font-display)",
                 color: verdict.color,
-                fontSize: '1.125rem',
+                fontSize: "1.125rem",
                 fontWeight: 600,
               }}
             >
@@ -179,25 +180,22 @@ export function ClientOverview({
       {/* Date and Data Freshness */}
       <div
         className="flex items-center justify-center gap-4 flex-wrap"
-        style={{ marginBottom: aiSummary ? 'var(--report-space-lg)' : 0 }}
+        style={{ marginBottom: aiSummary ? "var(--report-space-lg)" : 0 }}
       >
-        <p
-          className="text-xs"
-          style={{ color: 'var(--report-stone-light)' }}
-        >
+        <p className="text-xs" style={{ color: "var(--report-stone-light)" }}>
           Generated {formatDate(report.created_at)}
         </p>
         {report.data_as_of_date && (
           <>
             <span
               className="text-xs"
-              style={{ color: 'var(--report-stone-light)', opacity: 0.4 }}
+              style={{ color: "var(--report-stone-light)", opacity: 0.4 }}
             >
               |
             </span>
             <p
               className="text-xs"
-              style={{ color: 'var(--report-stone-light)' }}
+              style={{ color: "var(--report-stone-light)" }}
             >
               Data as of {formatDate(report.data_as_of_date)}
             </p>
@@ -208,7 +206,9 @@ export function ClientOverview({
       {/* AI Summary */}
       {aiSummary && (
         <AIAnalysisBlock
-          content={typeof aiSummary === 'string' ? aiSummary : String(aiSummary)}
+          content={
+            typeof aiSummary === "string" ? aiSummary : String(aiSummary)
+          }
           variant="summary"
         />
       )}

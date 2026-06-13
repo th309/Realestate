@@ -45,7 +45,7 @@ export interface UseWaterfallDataResult {
  * @param preset - Which waterfall breakdown to compute
  * @param geoLevel - Geography level (metro, county, zip, etc.)
  * @param regionId - Region identifier to fetch data for
- * @param scoreType - Score type for the 'score' preset (default: 'homeready')
+ * @param scoreType - Score type for the 'score' preset (default: 'propertyiq')
  *
  * @example
  * const { bars, totalValue, totalLabel, isLoading } = useWaterfallData(
@@ -544,14 +544,7 @@ export function useWaterfallData(
           });
         }
 
-        const scoreLabel =
-          scoreType === "propertyiq"
-            ? "PropertyIQ"
-            : scoreType === "homeready"
-              ? "HomeReady"
-              : scoreType === "investoredge"
-                ? "InvestorEdge"
-                : "Market Health";
+        const scoreLabel = "PropertyIQ";
 
         return {
           bars,

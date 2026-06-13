@@ -1,174 +1,118 @@
 export interface DecileRow {
   score: number;
+  /** Mean cumulative 3-year excess return vs state (%) */
   meanExcess: number;
+  /** Median cumulative 3-year excess return vs state (%) */
   medianExcess: number;
+  /** Std dev of the 3-year excess return (%) */
   stdDev: number;
+  /** Mean cumulative 3-year total return of the market itself (%) */
+  totalReturn: number;
+  /** Share of markets in this decile that beat their state (%) */
   pBeatState: number;
   n: number;
 }
 
-export const METRO_DECILE_1Y: DecileRow[] = [
-  {
-    score: 10,
-    meanExcess: -2.11,
-    medianExcess: -1.66,
-    stdDev: 5.6,
-    pBeatState: 34.0,
-    n: 13048,
-  },
-  {
-    score: 20,
-    meanExcess: -1.26,
-    medianExcess: -1.08,
-    stdDev: 5.0,
-    pBeatState: 38.8,
-    n: 13826,
-  },
-  {
-    score: 30,
-    meanExcess: -0.84,
-    medianExcess: -0.73,
-    stdDev: 4.7,
-    pBeatState: 41.7,
-    n: 13816,
-  },
-  {
-    score: 40,
-    meanExcess: -0.47,
-    medianExcess: -0.36,
-    stdDev: 4.5,
-    pBeatState: 46.0,
-    n: 13823,
-  },
-  {
-    score: 50,
-    meanExcess: -0.15,
-    medianExcess: -0.09,
-    stdDev: 4.5,
-    pBeatState: 49.0,
-    n: 13676,
-  },
-  {
-    score: 60,
-    meanExcess: 0.07,
-    medianExcess: 0.07,
-    stdDev: 4.3,
-    pBeatState: 51.0,
-    n: 11037,
-  },
-  {
-    score: 70,
-    meanExcess: 0.23,
-    medianExcess: 0.28,
-    stdDev: 4.3,
-    pBeatState: 53.9,
-    n: 11030,
-  },
-  {
-    score: 80,
-    meanExcess: 0.53,
-    medianExcess: 0.48,
-    stdDev: 4.3,
-    pBeatState: 56.0,
-    n: 11027,
-  },
-  {
-    score: 90,
-    meanExcess: 1.03,
-    medianExcess: 0.79,
-    stdDev: 4.5,
-    pBeatState: 59.9,
-    n: 11033,
-  },
-  {
-    score: 100,
-    meanExcess: 1.64,
-    medianExcess: 1.32,
-    stdDev: 4.4,
-    pBeatState: 66.1,
-    n: 9461,
-  },
-];
-
+/**
+ * SINGLE SOURCE OF TRUTH for the per-decile PropertyIQ metro performance shown
+ * on /scores (decile table) AND /scores/methodology (Cost of Choosing Wrong
+ * dollar table). Both pages derive from this so the numbers can never drift.
+ *
+ * Metro score backtest, 2001-2023, 3-year horizon. PropertyIQ Score =
+ * z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market) - z(price_reduced_share).
+ */
 export const METRO_DECILE_3Y: DecileRow[] = [
   {
     score: 10,
-    meanExcess: -5.66,
-    medianExcess: -4.81,
+    meanExcess: -4.36,
+    medianExcess: -3.51,
     stdDev: 13.1,
-    pBeatState: 32.3,
-    n: 10948,
+    totalReturn: 6.91,
+    pBeatState: 32.4,
+    n: 17392,
   },
   {
     score: 20,
-    meanExcess: -3.34,
-    medianExcess: -2.64,
-    stdDev: 12.8,
-    pBeatState: 39.2,
-    n: 11601,
+    meanExcess: -2.5,
+    medianExcess: -2.03,
+    stdDev: 11.0,
+    totalReturn: 9.58,
+    pBeatState: 37.4,
+    n: 18446,
   },
   {
     score: 30,
-    meanExcess: -2.04,
-    medianExcess: -1.76,
-    stdDev: 11.8,
-    pBeatState: 42.4,
-    n: 11594,
+    meanExcess: -1.92,
+    medianExcess: -1.35,
+    stdDev: 10.3,
+    totalReturn: 11.04,
+    pBeatState: 40.9,
+    n: 18364,
   },
   {
     score: 40,
-    meanExcess: -1.2,
-    medianExcess: -1.11,
-    stdDev: 11.5,
-    pBeatState: 45.3,
-    n: 11604,
+    meanExcess: -1.21,
+    medianExcess: -0.84,
+    stdDev: 11.4,
+    totalReturn: 12.45,
+    pBeatState: 43.9,
+    n: 18423,
   },
   {
     score: 50,
-    meanExcess: -0.28,
-    medianExcess: -0.35,
-    stdDev: 11.2,
-    pBeatState: 48.4,
-    n: 11479,
+    meanExcess: -0.72,
+    medianExcess: -0.45,
+    stdDev: 11.0,
+    totalReturn: 13.53,
+    pBeatState: 46.8,
+    n: 18376,
   },
   {
     score: 60,
-    meanExcess: 0.31,
-    medianExcess: 0.26,
-    stdDev: 10.9,
-    pBeatState: 51.2,
-    n: 9267,
+    meanExcess: -0.34,
+    medianExcess: -0.14,
+    stdDev: 11.6,
+    totalReturn: 14.8,
+    pBeatState: 49.0,
+    n: 18609,
   },
   {
     score: 70,
-    meanExcess: 1.17,
-    medianExcess: 1.01,
-    stdDev: 10.6,
-    pBeatState: 55.4,
-    n: 9251,
+    meanExcess: -0.11,
+    medianExcess: 0.09,
+    stdDev: 12.0,
+    totalReturn: 16.37,
+    pBeatState: 50.6,
+    n: 18580,
   },
   {
     score: 80,
-    meanExcess: 1.87,
-    medianExcess: 1.44,
-    stdDev: 11.3,
-    pBeatState: 56.4,
-    n: 9249,
+    meanExcess: -0.19,
+    medianExcess: 0.08,
+    stdDev: 11.4,
+    totalReturn: 17.8,
+    pBeatState: 50.4,
+    n: 18604,
   },
   {
     score: 90,
-    meanExcess: 3.05,
-    medianExcess: 2.06,
-    stdDev: 11.7,
-    pBeatState: 59.3,
-    n: 9257,
+    meanExcess: 0.47,
+    medianExcess: 0.79,
+    stdDev: 11.1,
+    totalReturn: 19.61,
+    pBeatState: 54.9,
+    n: 18641,
   },
   {
     score: 100,
-    meanExcess: 4.28,
-    medianExcess: 3.12,
-    stdDev: 11.8,
-    pBeatState: 63.7,
-    n: 7943,
+    meanExcess: 1.94,
+    medianExcess: 1.54,
+    stdDev: 13.0,
+    totalReturn: 22.13,
+    pBeatState: 58.5,
+    n: 15973,
   },
 ];
+
+/** Median metro home value (Zillow ZHVI, April 2026) used for dollar conversions. */
+export const MEDIAN_METRO_HOME = 251_629;

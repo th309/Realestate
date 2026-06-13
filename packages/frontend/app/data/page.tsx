@@ -101,7 +101,7 @@ const DATA_PROVIDERS: DataProvider[] = [
     id: "propertyiq",
     name: "PropertyIQ (Calculated)",
     description:
-      "PropertyIQ generates proprietary calculated metrics and scores by combining data from multiple sources. Our scoring engine produces HomeReady, InvestorEdge, and MarketHealth scores validated across 1.1M+ observations. We also calculate derived metrics like cap rates, gross yields, affordability indices, inventory surplus/deficit, and months of supply by combining inputs from Zillow, Realtor.com, Census, and FRED data.",
+      "PropertyIQ generates proprietary calculated metrics and a single market score by combining data from multiple sources. The PropertyIQ Score blends Zillow price momentum with Realtor.com flow signals to predict a market's three-year excess return relative to its state. We also calculate derived metrics like cap rates, gross yields, affordability indices, inventory surplus/deficit, and months of supply by combining inputs from Zillow, Realtor.com, Census, and FRED data.",
     url: "/scores/methodology",
     updateFrequency: "Monthly",
   },

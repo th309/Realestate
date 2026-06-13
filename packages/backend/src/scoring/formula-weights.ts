@@ -643,62 +643,64 @@ export const SCORE_CALIBRATION: Record<AnyScoreType, CalibrationEntry[]> = {
 export const FORMULA_VERSION = 'v3.0';
 
 // ============================================================================
-// v4 Demand Signal Formula (PropertyIQ unified score)
+// PropertyIQ Demand Signal Formula (Zillow + Realtor.com)
 // ============================================================================
 
 /**
- * v4 Demand Signal formula — 3 Redfin metrics.
- * signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
- * Then percentile-ranked and re-centered at the zero-crossing.
+ * PropertyIQ formula — price momentum + market-flow confirmation.
+ * signal = z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market)
+ *          - z(price_reduced_share)
+ * Discovered + validated 2026-06-12 (docs/superpowers/results/
+ * 2026-06-12-monolithic-feature-discovery.md and the three score backtests).
  */
 export const PROPERTYIQ_FORMULA_METRICS = [
-  'sold_above_list',
-  'median_dom',
-  'months_of_supply',
+  'zhvi_yoy',
+  'zhvi_mom_3m',
+  'median_days_on_market',
+  'price_reduced_share',
 ] as const;
 
 export const PROPERTYIQ_METRIC_DIRECTIONS: Record<string, 1 | -1> = {
-  sold_above_list: 1, // higher = hotter
-  median_dom: -1, // lower = hotter
-  months_of_supply: -1, // lower = hotter
+  zhvi_yoy: 1, // rising values = hotter
+  zhvi_mom_3m: 1, // recent momentum = hotter
+  median_days_on_market: -1, // fast sales = hotter
+  price_reduced_share: -1, // price cuts = colder
 };
 
 /**
- * Zero-crossing percentile by geography level.
- * This is the percentile rank where excess return vs state = 0.
- * Determined from isotonic regression in recentered_score.py.
+ * Zero-crossing percentile: where signal = 0 maps to score 50.
+ * The new signal is symmetric — one constant for every geography level
+ * (empirical: metro 49.7, county 49.3, zip 50.3; backtests 2026-06-12).
  */
 export const PROPERTYIQ_ZERO_CROSSING: Record<GeographyLevel, number> = {
-  metro: 55.6,
-  county: 62.4,
-  zip: 55.6,
+  metro: 50.0,
+  county: 50.0,
+  zip: 50.0,
 };
 
-export const PROPERTYIQ_FORMULA_VERSION = 'v4.0-demand-signal';
-
 /**
- * v4 calibration data: maps score quintiles to average historical excess return.
- * From county backtest (recentered_score.py) — stronger signal separation than v3.
+ * Calibration: mean 3Y-forward ANNUALIZED excess return vs state by score band,
+ * full-formula era (2016-2023), averaged across metro/county/zip backtests.
  */
 export const PROPERTYIQ_CALIBRATION: CalibrationEntry[] = [
-  { quintile: 1, scoreRange: [1, 20], label: 'Bottom', avgExcessReturn: -3.34 },
+  { quintile: 1, scoreRange: [1, 20], label: 'Bottom', avgExcessReturn: -1.11 },
   {
     quintile: 2,
     scoreRange: [21, 40],
     label: 'Below Avg',
-    avgExcessReturn: -1.2,
+    avgExcessReturn: -0.36,
   },
   {
     quintile: 3,
     scoreRange: [41, 60],
     label: 'Average',
-    avgExcessReturn: -0.15,
+    avgExcessReturn: -0.06,
   },
   {
     quintile: 4,
     scoreRange: [61, 80],
     label: 'Above Avg',
-    avgExcessReturn: +1.17,
+    avgExcessReturn: +0.17,
   },
-  { quintile: 5, scoreRange: [81, 99], label: 'Top', avgExcessReturn: +3.05 },
+  { quintile: 5, scoreRange: [81, 99], label: 'Top', avgExcessReturn: +0.47 },
 ];

@@ -3,8 +3,8 @@
 /**
  * Hero Stats Section
  *
- * Five stat cards showing key v4 PropertyIQ validation metrics.
- * Accepts a `horizon` prop to switch between 1Y and 3Y labels.
+ * Five stat cards showing key PropertyIQ validation metrics.
+ * The PropertyIQ Score targets a 3-year horizon, so all labels read "(3Y)".
  * Values are sourced from V4_CLAIMS (the single PropertyIQ score validation).
  */
 
@@ -17,43 +17,34 @@ import {
 } from "lucide-react";
 import { V4_CLAIMS } from "@/lib/data";
 
-interface HeroStatsProps {
-  horizon: "1y" | "3y";
-}
-
-export function HeroStats({ horizon }: HeroStatsProps) {
-  const is3Y = horizon === "3y";
-  const horizonLabel = is3Y ? "3Y" : "1Y";
-
-  const correlation = is3Y ? V4_CLAIMS.ic3Y : V4_CLAIMS.ic1Y;
-  const hitRate = is3Y ? V4_CLAIMS.yearHitRate3Y : V4_CLAIMS.yearHitRate1Y;
-  const dollarGap = is3Y
-    ? V4_CLAIMS.scoreExtreme3YGap
-    : V4_CLAIMS.scoreExtreme1YGap;
+export function HeroStats() {
+  const correlation = V4_CLAIMS.ic3Y;
+  const hitRate = V4_CLAIMS.yearHitRate3Y;
+  const dollarGap = V4_CLAIMS.scoreExtreme3YGap;
 
   const stats = [
     {
       icon: TrendingUp,
       value: correlation.toFixed(2),
-      label: `OOS Correlation (${horizonLabel})`,
+      label: "OOS Correlation (3Y)",
       sublabel: "PropertyIQ Score, walk-forward validated",
     },
     {
       icon: DollarSign,
       value: `$${dollarGap.toLocaleString("en-US")}`,
-      label: `Score 100 vs Score 10 (${horizonLabel})`,
+      label: "Score 100 vs Score 10 (3Y)",
       sublabel: `Dollar difference on $${Math.round(V4_CLAIMS.medianHomeValue / 1000)}K home`,
     },
     {
       icon: Calendar,
       value: String(V4_CLAIMS.backtestYears),
       label: "Years of backtest data",
-      sublabel: "Walk-forward validated (2012\u20132024)",
+      sublabel: "Out-of-sample, 2001\u20132023",
     },
     {
       icon: CheckCircle,
       value: `${hitRate}%`,
-      label: `Hit rate (${horizonLabel})`,
+      label: "Hit rate (3Y)",
       sublabel: "Top-scored markets beating benchmark",
     },
     {
@@ -74,9 +65,9 @@ export function HeroStats({ horizon }: HeroStatsProps) {
         Years. <span className="text-primary">Real Data.</span>
       </h1>
       <p className="text-on-surface-variant mt-3 max-w-3xl text-base leading-relaxed">
-        PropertyIQ validates with walk-forward cross-validation across{" "}
-        {V4_CLAIMS.backtestYears} years of data. Every number on this page comes
-        from held-out test periods the model never trained on.
+        PropertyIQ validates out-of-sample across {V4_CLAIMS.backtestYears}{" "}
+        years of data. Every number on this page comes by measuring each score
+        against returns from after the score date.
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-8">

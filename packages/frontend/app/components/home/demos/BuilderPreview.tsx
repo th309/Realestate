@@ -20,7 +20,7 @@ const AVAILABLE_SECTIONS = [
 ];
 
 const INITIAL_SECTIONS = [
-  { id: "sec-1", type: "score", label: "HomeReady Score" },
+  { id: "sec-1", type: "score", label: "PropertyIQ Score" },
   { id: "sec-2", type: "metrics", label: "Market Metrics" },
 ];
 

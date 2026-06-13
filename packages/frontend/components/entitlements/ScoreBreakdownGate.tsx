@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { Lock, ChevronRight } from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
-import { trackEvent } from '@/lib/analytics/tracker';
-import Link from 'next/link';
+import React, { useEffect } from "react";
+import { Lock, ChevronRight } from "lucide-react";
+import { useEntitlements } from "@/lib/entitlements";
+import { trackEvent } from "@/lib/analytics/tracker";
+import Link from "next/link";
 
-type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
+type ScoreType = "homeready" | "investoredge" | "markethealth";
 
 interface ScoreBreakdownGateProps {
   scoreType: ScoreType;
@@ -15,27 +15,30 @@ interface ScoreBreakdownGateProps {
 }
 
 const SCORE_LABELS: Record<ScoreType, string> = {
-  homeready: 'HomeReady',
-  investoredge: 'InvestorEdge',
-  markethealth: 'Market Health',
+  homeready: "PropertyIQ Score",
+  investoredge: "PropertyIQ Score",
+  markethealth: "PropertyIQ Score",
 };
 
 const SCORE_DESCRIPTIONS: Record<ScoreType, string> = {
-  homeready: 'See what drives this score — affordability, market timing, and livability factors.',
-  investoredge: 'See what drives this score — cash flow potential, appreciation trends, and risk analysis.',
-  markethealth: 'See the full breakdown of supply, demand, and pricing dynamics.',
+  homeready:
+    "See what drives this score — the demand signals and market-flow factors behind it.",
+  investoredge:
+    "See what drives this score — the demand signals and market-flow factors behind it.",
+  markethealth:
+    "See what drives this score — the demand signals and market-flow factors behind it.",
 };
 
 export function ScoreBreakdownGate({
   scoreType,
   componentCount = 5,
-  className = '',
+  className = "",
 }: ScoreBreakdownGateProps) {
   const { trackPaywallView, trackUpgradeClick } = useEntitlements();
 
   useEffect(() => {
-    trackPaywallView('feature', `score_breakdown_${scoreType}`);
-    trackEvent('paywall.view', { feature: 'score_breakdown', scoreType });
+    trackPaywallView("feature", `score_breakdown_${scoreType}`);
+    trackEvent("paywall.view", { feature: "score_breakdown", scoreType });
   }, [scoreType, trackPaywallView]);
 
   return (
@@ -75,7 +78,9 @@ export function ScoreBreakdownGate({
 
       <Link
         href="/pricing"
-        onClick={() => trackUpgradeClick('feature', `score_breakdown_${scoreType}`)}
+        onClick={() =>
+          trackUpgradeClick("feature", `score_breakdown_${scoreType}`)
+        }
         className="
           mt-3 inline-flex items-center gap-1
           text-sm font-medium text-primary

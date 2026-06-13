@@ -22,7 +22,10 @@ import { GeographyChainService } from '../metric-resolution/geography-chain.serv
 import { CalibrationService } from './calibration/calibration.service';
 import { scoreToGrade, ScoreType, GeographyLevel } from './formula-weights';
 import { calculatePropertyIqScores as runEngine } from './propertyiq-scoring-engine';
-import { fetchPropertyIqMetrics } from './propertyiq-data-fetcher';
+import {
+  fetchPropertyIqMetrics,
+  getLatestScorableDate,
+} from './propertyiq-data-fetcher';
 import {
   GeographyType,
   LocationMetrics,
@@ -78,32 +81,33 @@ export class ScoringService {
 
   /**
    * Calculate scores for all locations at a given geography level.
-   * Uses the v4 demand-signal engine (single PropertyIQ score).
+   * Uses the demand-signal engine (single PropertyIQ score).
    */
   async calculateAllScores(
     geography: GeographyLevel,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
-    // v4: delegate to the demand-signal engine
     return this.calculatePropertyIqScores(geography, periodDate);
   }
 
   /**
-   * Calculate v4 demand-signal scores for all locations at a given geography level.
-   * Uses only 3 Redfin metrics (sold_above_list, median_dom, months_of_supply).
+   * Calculate demand-signal scores for all locations at a given geography level.
+   * Uses the 4 PropertyIQ formula inputs: zhvi_yoy and zhvi_mom_3m (derived from
+   * Zillow ZHVI momentum) plus median_days_on_market and price_reduced_share
+   * (Realtor.com market flow). Coverage is the union of Zillow and Realtor regions.
    */
   async calculatePropertyIqScores(
     geography: GeographyLevel,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
-    // 1. Get latest Redfin date if not specified
+    // 1. Get the latest scorable month-end (min of latest Zillow + Realtor) if not specified
     const scoreDate =
-      periodDate || (await getLatestRedfinDate(this.supabase, geography));
+      periodDate || (await getLatestScorableDate(this.supabase, geography));
     if (!scoreDate) {
-      throw new Error(`No Redfin data found for ${geography}`);
+      throw new Error(`No scorable Zillow/Realtor data found for ${geography}`);
     }
 
-    // 2. Fetch only v4 metrics (3 Redfin columns)
+    // 2. Fetch the 4 formula inputs (Zillow momentum + Realtor flow)
     const locations = await fetchPropertyIqMetrics(
       this.supabase,
       geography,
@@ -113,12 +117,12 @@ export class ScoringService {
       return { calculated: 0, errors: 0, scoreDate };
     }
 
-    // 3. Calculate scores using v4 engine
+    // 3. Calculate scores using the demand-signal engine
     const results = runEngine(locations, geography);
 
     // 4. Build rows for persistence
-    // Note: formula_version is NOT a column in propertyiq_scores_v2 — omit it.
-    // The version is tracked via score_type='propertyiq' which is implicitly v4.
+    // Note: there is no formula_version column in propertyiq_scores_v2 — omit it.
+    // score_type='propertyiq' is the single live score type.
     const rows = results.map((r) => ({
       geography,
       location_id: r.locationId,

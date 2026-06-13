@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ReportInstance, UserType } from '../types';
-import { MapPin, Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { SCORE_INFO } from '../constants';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import React from "react";
+import { ReportInstance, UserType } from "../types";
+import {
+  MapPin,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from "lucide-react";
+import { SCORE_INFO } from "../constants";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 
 interface ReportCoverProps {
   report: ReportInstance;
@@ -12,19 +18,19 @@ interface ReportCoverProps {
 
 export function ReportCover({ report }: ReportCoverProps) {
   const userType = report.user_type as UserType;
+  // Single PropertyIQ Score: read whichever score field the report stored
+  // (old reports persisted under investoredge_score / homeready_score).
   const heroScore =
-    userType === 'investor' ? report.investoredge_score : report.homeready_score;
-  const heroScoreType = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
-  const secondaryScore =
-    userType === 'investor' ? report.homeready_score : report.investoredge_score;
-  const secondaryScoreType = userType === 'investor' ? 'HomeReady' : 'InvestorEdge';
+    userType === "investor"
+      ? report.investoredge_score
+      : report.homeready_score;
 
   // Get sentiment trend icon
   const sentiment = report.populated_data?.realtime?.sentiment;
   const TrendIcon =
-    sentiment?.sentiment === 'bullish'
+    sentiment?.sentiment === "bullish"
       ? TrendingUp
-      : sentiment?.sentiment === 'bearish'
+      : sentiment?.sentiment === "bearish"
         ? TrendingDown
         : Minus;
 
@@ -49,25 +55,18 @@ export function ReportCover({ report }: ReportCoverProps) {
         </div>
       </div>
 
-      {/* Score Display */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-        {/* Hero Score */}
-        <div className="flex flex-col items-center">
-          <ScoreDisplay value={heroScore || 0} size={176} strokeWidth={12} />
-          <div className="mt-3 text-center">
-            <span className={`text-lg font-semibold ${SCORE_INFO[heroScoreType].color}`}>
-              {heroScoreType} Score
-            </span>
-            <p className="text-xs text-on-surface-variant mt-1 max-w-48">
-              {SCORE_INFO[heroScoreType].description}
-            </p>
-          </div>
-        </div>
-
-        {/* Secondary Score (smaller) */}
-        <div className="flex flex-col items-center opacity-60">
-          <ScoreDisplay value={secondaryScore || 0} size={96} strokeWidth={6} showGrade={false} />
-          <span className="text-sm text-on-surface-variant mt-2">{secondaryScoreType}</span>
+      {/* Score Display — single PropertyIQ Score */}
+      <div className="flex flex-col items-center justify-center">
+        <ScoreDisplay value={heroScore || 0} size={176} strokeWidth={12} />
+        <div className="mt-3 text-center">
+          <span
+            className={`text-lg font-semibold ${SCORE_INFO.propertyiq.color}`}
+          >
+            {SCORE_INFO.propertyiq.name}
+          </span>
+          <p className="text-xs text-on-surface-variant mt-1 max-w-48">
+            {SCORE_INFO.propertyiq.description}
+          </p>
         </div>
       </div>
 
@@ -76,16 +75,20 @@ export function ReportCover({ report }: ReportCoverProps) {
         <div className="flex justify-center mt-6">
           <div
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
-              sentiment.sentiment === 'bullish'
-                ? 'bg-green-500/10 text-green-600'
-                : sentiment.sentiment === 'bearish'
-                  ? 'bg-red-500/10 text-red-600'
-                  : 'bg-amber-500/10 text-amber-600'
+              sentiment.sentiment === "bullish"
+                ? "bg-green-500/10 text-green-600"
+                : sentiment.sentiment === "bearish"
+                  ? "bg-red-500/10 text-red-600"
+                  : "bg-amber-500/10 text-amber-600"
             }`}
           >
             <TrendIcon className="w-4 h-4" />
-            <span className="font-medium capitalize">{sentiment.sentiment} Market</span>
-            <span className="opacity-60">({Math.round(sentiment.confidence * 100)}% confidence)</span>
+            <span className="font-medium capitalize">
+              {sentiment.sentiment} Market
+            </span>
+            <span className="opacity-60">
+              ({Math.round(sentiment.confidence * 100)}% confidence)
+            </span>
           </div>
         </div>
       )}

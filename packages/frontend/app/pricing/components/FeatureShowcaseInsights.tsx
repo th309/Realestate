@@ -74,8 +74,8 @@ export function AIInsightsSection() {
               <span className="text-xs font-semibold text-on-surface/70 block mb-1">
                 Affordability
               </span>
-              Nashville shows moderate conditions for homebuyers (HomeReady
-              score: 62). The median listing price is $445K. You&apos;d need
+              Nashville shows moderate conditions for homebuyers (PropertyIQ
+              Score: 62). The median listing price is $445K. You&apos;d need
               roughly $98K in annual income to afford a home here.
             </div>
             <div>
@@ -110,7 +110,7 @@ export function AIInsightsSection() {
               </span>
               Nashville&apos;s market presents a mixed affordability picture
               that <strong>rewards strategic timing</strong>. While $445K
-              requires ~$98K income, the HomeReady score of 62 suggests the
+              requires ~$98K income, the PropertyIQ Score of 62 suggests the
               window hasn&apos;t closed. Key leverage point: the 4.2-year
               save-to-buy timeline is <em>compressing</em> as new construction
               in Antioch and Hermitage expands sub-$350K inventory. First-time
@@ -143,19 +143,24 @@ export function ScoresSection() {
     <CollapsibleFeature
       id="scores"
       icon={<Target className="w-5 h-5 text-primary" />}
-      title="PropertyIQ Scores"
+      title="PropertyIQ Score"
       subtitle="34,000+ markets scored"
-      summary="Composite scores that predict what's likely to happen next."
+      summary="A single score that predicts how a market will perform versus its state over the next 3 years."
     >
       <div className="mb-8">
         <ul className="space-y-1.5 text-[15px] text-on-surface-variant leading-relaxed">
           <li>
-            Raw metrics tell you <em>what happened</em>. Our scores tell you{" "}
+            Raw metrics tell you <em>what happened</em>. The PropertyIQ Score
+            tells you{" "}
             <strong className="text-on-surface">
               what&apos;s likely to happen next.
             </strong>
           </li>
-          <li>Designed to surface excess returns and flag excess risk.</li>
+          <li>
+            One score that predicts how a market will perform versus its state
+            over the next 3 years — combining Zillow price momentum with
+            Realtor.com flow signals.
+          </li>
           <li className="text-on-surface font-medium">
             Every metro, county, and ZIP in the country — 34,000+ markets
             scored.
@@ -246,19 +251,15 @@ export function ScoresSection() {
             <div className="flex items-center gap-3 text-sm">
               <TrendingUp className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="text-on-surface">
-                <strong>HomeReady</strong> — buyer opportunity rating
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <TrendingUp className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-on-surface">
-                <strong>InvestorEdge</strong> — investment return potential
+                <strong>PropertyIQ Score</strong> — predicted 3-year performance
+                versus the state
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="text-on-surface">
-                <strong>Market Health</strong> — stability &amp; downside risk
+                Confidence rating — how complete and fresh the underlying data
+                is
               </span>
             </div>
           </div>
@@ -266,34 +267,14 @@ export function ScoresSection() {
             <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider mb-2">
               Nashville — what you&apos;d see
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div>
-                <div className="text-[10px] text-on-surface-variant/60">
-                  HomeReady
-                </div>
-                <div className="text-xl font-bold text-on-surface leading-tight">
-                  62
-                </div>
-                <div className="text-[10px] font-bold text-amber-600">B-</div>
+            <div className="text-center">
+              <div className="text-[10px] text-on-surface-variant/60">
+                PropertyIQ Score
               </div>
-              <div>
-                <div className="text-[10px] text-on-surface-variant/60">
-                  InvestorEdge
-                </div>
-                <div className="text-xl font-bold text-on-surface leading-tight">
-                  74
-                </div>
-                <div className="text-[10px] font-bold text-green-600">B+</div>
+              <div className="text-3xl font-bold text-on-surface leading-tight">
+                68
               </div>
-              <div>
-                <div className="text-[10px] text-on-surface-variant/60">
-                  Market Health
-                </div>
-                <div className="text-xl font-bold text-on-surface leading-tight">
-                  68
-                </div>
-                <div className="text-[10px] font-bold text-amber-600">B</div>
-              </div>
+              <div className="text-[10px] font-bold text-amber-600">B</div>
             </div>
             <div className="mt-2.5 pt-2 border-t border-outline-variant/20 flex justify-between items-center text-[11px]">
               <span className="text-on-surface-variant">

@@ -906,9 +906,9 @@ export function UseCasesTab() {
         icon={<TrendingUp className="w-5 h-5" />}
       >
         <p>
-          Fetch the InvestorEdge rankings endpoint, filter to your watchlist
-          ZIPs, and sort by score. The result is a ranked table you can paste
-          into a report or feed into your CRM.
+          Fetch the PropertyIQ rankings endpoint, filter to your watchlist ZIPs,
+          and sort by score. The result is a ranked table you can paste into a
+          report or feed into your CRM.
         </p>
 
         <CodeTabs

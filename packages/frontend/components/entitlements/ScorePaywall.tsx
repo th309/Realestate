@@ -32,8 +32,8 @@ const STATS = [
   },
   {
     icon: BarChart3,
-    stat: "3 Scores",
-    label: "HomeReady, InvestorEdge, Market Health",
+    stat: "3-Year",
+    label: "PropertyIQ Score predicts excess return vs state",
   },
 ];
 

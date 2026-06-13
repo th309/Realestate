@@ -67,7 +67,7 @@ export function MarketDeepDive({ section, report }: SectionProps) {
   const isInvestor = report.user_type === 'investor';
   const metrics = isInvestor ? INVESTOR_METRICS : HOMEBUYER_METRICS;
   const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = isInvestor ? 'InvestorEdge' : 'HomeReady';
+  const scoreLabel = 'PropertyIQ';
 
   // Build market data list (use comparisons record keyed by geo ID)
   const comparisons = report.populated_data?.comparisons;
