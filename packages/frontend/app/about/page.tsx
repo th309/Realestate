@@ -165,10 +165,10 @@ export default function AboutPage() {
                   <p className="text-on-surface-variant leading-relaxed">
                     The team&apos;s background spans hedge fund analytics, real
                     estate portfolio management, and production ML systems. This
-                    cross-disciplinary expertise is why PropertyIQ&apos;s scores
-                    achieve a 0.37 out-of-sample Information Coefficient — a
-                    level of predictive accuracy typically found only in
-                    institutional-grade analytics tools.
+                    cross-disciplinary expertise is why the PropertyIQ Score
+                    achieves a 0.27 out-of-sample Information Coefficient at
+                    metro level — a level of predictive accuracy typically found
+                    only in institutional-grade analytics tools.
                   </p>
                 </div>
               </div>
