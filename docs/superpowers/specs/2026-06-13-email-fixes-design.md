@@ -1,4 +1,4 @@
-# Email Fixes — Design
+# Email & Cron Fixes — Design
 
 **Date:** 2026-06-13
 **Status:** Approved (pending spec review)
@@ -19,16 +19,17 @@ Investigation via the Resend MCP (send logs) plus the codebase established:
 
 - **All emails are sent from backend code**, not Resend-managed templates/broadcasts/automations (the Resend dashboard has zero templates/broadcasts/automations). Email bodies are built in `packages/emails` (React Email) and `packages/backend/src/email/behavioral-trigger-emails.ts` (hand-rolled HTML), then sent through Resend purely as a delivery transport. **This architecture is being kept** (no migration).
 - **Issues #2 and #3 share one root cause:** the **dev** backend (`FRONTEND_URL=https://devpropertyiq.up.railway.app`) runs the **same scheduled email cron jobs** as prod, against the **same shared production Supabase database**. Each environment independently enumerates the same users and sends its own copy — prod with `www` links, dev with `devpropertyiq` links. Proof: the two copies of each duplicate differ only by link host (one `www`, one `devpropertyiq`), sent within the same second. The in-code dedup (Redis locks + `email_log`/`email_triggers`) does not prevent this: the Redis locks are per-environment (separate Redis instances) and the DB dedup loses a same-second race between the two environments.
+- **This is not limited to email.** The same mechanism affects **every** `@Cron` in the backend: the dev Railway service **and local dev** (whose `.env` points at the prod `SUPABASE_URL`) run `trial-expiration` (mutating real trials), `snapshot-recorder`, `market-intelligence`, daily rollups, content-pipeline jobs, etc. against production. Email duplicates were simply the visible symptom. The fix therefore gates **all** crons, not just email crons.
 - **Issue #1** is independent: the score-explainer copy is frozen at a retired methodology (the "v4 demand signal" 3-metric Redfin formula). The copy hardcodes methodology-specific statistics that have now gone stale across at least three score re-tunes (v3 → v4 → current).
 
 ## Decisions (from brainstorming)
 
-| Decision             | Choice                                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Architecture         | Keep emails code-driven. **No** migration to Resend-managed templates/broadcasts.                                                          |
-| Stop dev sending     | **Env-gate the email crons** behind a single `EMAIL_CRONS_ENABLED` flag; set `true` on prod only.                                          |
-| Score-copy stats     | **Describe the 4 inputs + link to the live `/scores/accuracy` page.** Do **not** hardcode volatile stats ($/hit-rate/years) in email copy. |
-| Copy maintainability | **Centralize all onboarding/marketing drip copy** into a single `email-copy.ts` so future edits are one-liners.                            |
+| Decision                 | Choice                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Architecture             | Keep emails code-driven. **No** migration to Resend-managed templates/broadcasts.                                                          |
+| Stop dev cron collisions | **Gate all crons** behind a single global `RUN_CRONS` flag (gates `ScheduleModule.forRoot()`); set `true` on exactly one prod service.     |
+| Score-copy stats         | **Describe the 4 inputs + link to the live `/scores/accuracy` page.** Do **not** hardcode volatile stats ($/hit-rate/years) in email copy. |
+| Copy maintainability     | **Centralize all onboarding/marketing drip copy** into a single `email-copy.ts` so future edits are one-liners.                            |
 
 ## Current PropertyIQ Score formula (source of truth: CLAUDE.md §9)
 
@@ -47,50 +48,35 @@ No Redfin. Stats (IC, hit rate, dollar impact) live on `/scores/accuracy` and ar
 
 ## Design
 
-### Item A — Env-gate email crons (fixes duplicates + dev links)
+### Item A — Global cron gate (fixes duplicates + dev links, and all dev↔prod cron collisions)
 
-**Goal:** Only the production environment may run user-facing email cron jobs. Every other environment (dev, local, future preview envs) stays silent by default.
+**Goal:** Exactly one designated production instance runs scheduled jobs. Every other environment — dev Railway, local dev, future preview envs, all of which currently point at the production Supabase DB — runs **no** cron jobs at all.
 
-**Mechanism:**
+**Mechanism:** Gate the single global `ScheduleModule.forRoot()` registration in `packages/backend/src/app.module.ts` behind one env var:
 
-1. New config flag `EMAIL_CRONS_ENABLED` (string `"true"` to enable; default off / unset = disabled).
-2. New shared helper, e.g. `packages/backend/src/email/email-crons.util.ts`:
-   ```ts
-   export function areEmailCronsEnabled(config: ConfigService): boolean {
-     return config.get<string>("EMAIL_CRONS_ENABLED") === "true";
-   }
-   ```
-3. At the **top** of every user-facing email cron handler, before any DB work:
-   ```ts
-   if (!areEmailCronsEnabled(this.config)) {
-     this.logger.log(
-       "Email crons disabled (EMAIL_CRONS_ENABLED!=true); skipping <name>",
-     );
-     return;
-   }
-   ```
+```ts
+// app.module.ts imports
+imports: [
+  // ...
+  ...(process.env.RUN_CRONS === 'true' ? [ScheduleModule.forRoot()] : []),
+  // ...
+],
+```
 
-**Crons to gate** (every `@Cron` that enumerates users and calls `emailService.sendEmail`):
+When `RUN_CRONS !== 'true'`, NestJS never loads the schedule explorer, so **no** `@Cron` is registered — email crons **and** data-job crons (`trial-expiration`, `snapshot-recorder`, `market-intelligence`, daily rollups, content-pipeline, alerts, etc.), including any cron added in the future. Providers still instantiate normally; only scheduling is suppressed.
 
-| Service                               | Method                  | Cron          |
-| ------------------------------------- | ----------------------- | ------------- |
-| `email/drip.service.ts`               | `processOnboardingDrip` | `0 9 * * *`   |
-| `email/drip.service.ts`               | `processWinbackDrip`    | `0 9 * * *`   |
-| `email/drip.service.ts`               | `processNpsDrip`        | `0 9 * * *`   |
-| `email/behavioral-trigger.service.ts` | `processTriggersHourly` | `0 * * * *`   |
-| `email/digest.service.ts`             | `sendWeeklyDigests`     | `0 8 * * MON` |
-| `email/monthly-digest.service.ts`     | `sendMonthlyDigests`    | `0 12 1 * *`  |
-| `alerts/threshold-alert.service.ts`   | (monthly alert email)   | `0 14 1 * *`  |
+**Why this is safe:** `ScheduleModule.forRoot()` is registered in exactly one place (`app.module.ts:77`); `SchedulingModule` and all feature modules rely on that global registration and do **not** import `ScheduleModule` themselves; nothing in the codebase injects `SchedulerRegistry` (no dynamic job scheduling that would break without the module).
 
-> Implementation note: `DigestService` does not currently inject `ConfigService` — add it. Also audit `alerts/alert-processor.service.ts` (`EVERY_DAY_AT_6AM`); gate it **only if** it sends user-facing email. The gate is applied to email-sending crons only — internal data-job crons (snapshots, rollups, content-pipeline, etc.) are out of scope.
+**Why an explicit flag, not `NODE_ENV`:** the dev Railway service and local dev almost certainly run the production build (`NODE_ENV=production`) and point at the prod Supabase DB, so `NODE_ENV` cannot distinguish the single instance that should own the crons. `RUN_CRONS`, set on exactly one service, makes cron ownership a deliberate, visible decision.
 
-**Rollout (critical ordering):**
+**Rollout (single highest-risk step):**
 
-- Set `EMAIL_CRONS_ENABLED=true` on the **prod** Railway backend service **before/at** the deploy. Until set, prod also pauses cron emails (acceptable: better than continuing duplicate/wrong sends; pausing is reversible).
-- Leave it unset on dev/local.
-- Add to `packages/backend/.env.example` with an explanatory comment.
+- Set `RUN_CRONS=true` on **exactly one** prod service — the canonical backend (`backend-production-ee4d`) — **before/at** the deploy.
+- Do **not** set it on the dev backend, local, or any other service. In particular, if `analytics-production` runs this same backend image it must **not** get `RUN_CRONS=true` (that would reintroduce prod-vs-prod double-runs).
+- Add `RUN_CRONS` to `packages/backend/.env.example` with an explanatory comment.
+- ⚠️ Until `RUN_CRONS=true` is set on prod, **all** prod background jobs are paused (emails, snapshots, rollups, trial expiration, content pipeline). This is the entire blast radius of the change, concentrated in one variable — set it as part of the deploy.
 
-**Why not gate at `EmailService.sendEmail`:** that path also serves transactional emails (verification codes) which dev legitimately sends for its own signups. Gating at the cron entry is the precise boundary and also skips the expensive enumeration in non-prod.
+**Why gate the module, not each handler:** one gate at the single registration point covers all ~35 current crons and every future one, with no per-service edits to drift out of sync. Transactional emails (verification codes) are unaffected — they are action-triggered, not scheduled, and never run through `ScheduleModule`.
 
 ### Item B — Correct the stale score copy
 
@@ -130,18 +116,19 @@ The `/scores/accuracy` link uses the template's existing base-URL prop (`loginUr
 
 - **Build:** TypeScript build of `packages/emails` and `packages/backend` passes; emails package rebuilt to `dist/`.
 - **Render check (real, not mocked):** render `onboarding-day1-scores` and `active_explorer` and confirm: says four inputs, names Zillow + Realtor, contains **no** "Redfin"/"months of supply"/"% sold above list", includes a working `/scores/accuracy` link, and no hardcoded $/hit-rate/years stats.
-- **Cron gate unit test:** `areEmailCronsEnabled` returns false when unset/`"false"`, true when `"true"`.
-- **Cron gate behavior (real DB):** with `EMAIL_CRONS_ENABLED` unset, invoking a drip cron method logs the skip and performs **zero** sends (no Resend call); with it set, it proceeds.
-- **Post-deploy duplicate check:** after prod deploy + prod var set, confirm via Resend send log that each recipient gets exactly **one** copy and all links use `www.propertyiq.app`. Confirm dev produces no cron sends at the next scheduled time.
+- **Cron gate (boot test):** boot the app with `RUN_CRONS` unset → `ScheduleModule` is absent from the module graph and zero scheduled jobs are registered; boot with `RUN_CRONS=true` → jobs are registered. Assert the scheduled-job count both ways.
+- **Cron gate (behavior, real):** with `RUN_CRONS` unset, no cron fires — no Resend sends at the next scheduled time and no data-job DB writes; with it set on prod only, exactly one instance runs them.
+- **Post-deploy duplicate check:** after prod deploy + `RUN_CRONS=true` on prod, confirm via Resend send log that each recipient gets exactly **one** copy and all links use `www.propertyiq.app`. Confirm dev/local produce no cron sends at the next scheduled time.
 
 ## Risks & Mitigations
 
-- **Prod var not set → prod stops sending.** Mitigation: set `EMAIL_CRONS_ENABLED=true` on prod as part of the deploy; call it out explicitly in rollout.
-- **A missed email cron keeps double-sending.** Mitigation: gate is derived from "every `@Cron` that calls `emailService.sendEmail` on enumerated users"; verify by grepping all `sendEmail` callers reachable from a `@Cron`.
+- **Prod var not set → ALL prod background jobs stop** (not just emails — snapshots, rollups, trial expiration, content pipeline). Mitigation: set `RUN_CRONS=true` on the prod backend as part of the deploy; this is the single highest-risk step, called out in rollout.
+- **`RUN_CRONS` set on a second prod service → prod-vs-prod double-runs.** Mitigation: set on exactly one service; document which one (`backend-production-ee4d`).
 - **Copy centralization breaks template rendering across ~17 files.** Mitigation: render each touched template; rely on TS types for the copy object; rebuild `dist/`.
 
 ## Out of Scope / Follow-ups
 
 - Migrating any email to Resend-managed templates/broadcasts.
-- The broader infrastructure risk that the **dev backend shares the production Supabase DB and runs all (non-email) data-job crons against it** (e.g. trial-expiration, snapshots, market-intelligence). This is a real concern surfaced during investigation but is not an email fix; recommend a separate follow-up.
+- **Multi-replica prod hardening:** if the prod backend runs more than one replica, the non-email data-job crons (which mostly lack Redis locks) could double-run across replicas. The `RUN_CRONS` gate fixes cross-environment collisions but not intra-prod multi-replica; recommend a follow-up (single dedicated cron worker, or add locks) if prod scales beyond one replica.
+- **Separate dev database:** dev/local pointing at the prod Supabase DB is the underlying reason crons there are dangerous. `RUN_CRONS` neutralizes the cron vector; a true fix (isolated dev DB) is a larger, separate effort.
 - Centralizing transactional/digest copy.
