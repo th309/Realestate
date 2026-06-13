@@ -3,89 +3,6 @@ import { DollarSign } from "lucide-react";
 // Per-decile mean returns from the PropertyIQ metro score backtest (2001-2023),
 // excess vs state. Dollars on the median metro home ($251,629, Zillow ZHVI Apr 2026).
 // "excess" and "totalReturn" are cumulative over the horizon; gain = appreciation $.
-const ONE_YEAR_ROWS = [
-  {
-    score: 10,
-    excess: -2.03,
-    totalReturn: 0.27,
-    homeValue: 252_299,
-    gain: 670,
-    vs50: -9_331,
-  },
-  {
-    score: 20,
-    excess: -0.85,
-    totalReturn: 2.0,
-    homeValue: 256_663,
-    gain: 5_034,
-    vs50: -4_967,
-  },
-  {
-    score: 30,
-    excess: -0.62,
-    totalReturn: 2.8,
-    homeValue: 258_679,
-    gain: 7_050,
-    vs50: -2_951,
-  },
-  {
-    score: 40,
-    excess: -0.35,
-    totalReturn: 3.51,
-    homeValue: 260_471,
-    gain: 8_842,
-    vs50: -1_159,
-  },
-  {
-    score: 50,
-    excess: -0.25,
-    totalReturn: 3.97,
-    homeValue: 261_630,
-    gain: 10_001,
-    vs50: 0,
-  },
-  {
-    score: 60,
-    excess: -0.09,
-    totalReturn: 4.55,
-    homeValue: 263_070,
-    gain: 11_441,
-    vs50: 1_440,
-  },
-  {
-    score: 70,
-    excess: 0.07,
-    totalReturn: 5.22,
-    homeValue: 264_774,
-    gain: 13_145,
-    vs50: 3_144,
-  },
-  {
-    score: 80,
-    excess: 0.1,
-    totalReturn: 6.03,
-    homeValue: 266_791,
-    gain: 15_162,
-    vs50: 5_161,
-  },
-  {
-    score: 90,
-    excess: 0.45,
-    totalReturn: 7.22,
-    homeValue: 269_790,
-    gain: 18_161,
-    vs50: 8_160,
-  },
-  {
-    score: 100,
-    excess: 1.54,
-    totalReturn: 9.3,
-    homeValue: 275_034,
-    gain: 23_405,
-    vs50: 13_404,
-  },
-];
-
 const THREE_YEAR_ROWS = [
   {
     score: 10,
@@ -190,7 +107,7 @@ function ImpactTable({
   spread,
 }: {
   title: string;
-  rows: typeof ONE_YEAR_ROWS;
+  rows: typeof THREE_YEAR_ROWS;
   spread: number;
 }) {
   return (
@@ -272,12 +189,7 @@ export function DollarImpactSection() {
         point translates to real dollars gained or lost.
       </p>
 
-      <div className="mt-8 grid gap-12 lg:grid-cols-2">
-        <ImpactTable
-          title="1-Year Dollar Impact"
-          rows={ONE_YEAR_ROWS}
-          spread={22_735}
-        />
+      <div className="mt-8 max-w-2xl">
         <ImpactTable
           title="3-Year Dollar Impact"
           rows={THREE_YEAR_ROWS}
