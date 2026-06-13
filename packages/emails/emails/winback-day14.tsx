@@ -2,6 +2,7 @@ import { Text, Section, Hr } from "@react-email/components";
 import Layout from "./components/layout";
 import BrandedButton from "./components/branded-button";
 import EmailHeading from "./components/email-heading";
+import { WINBACK_DAY14 } from "../copy/email-copy";
 
 export interface WinbackDay14Props {
   name: string;
@@ -13,43 +14,43 @@ export default function WinbackDay14({ name, loginUrl }: WinbackDay14Props) {
   const marketsUrl = `${loginUrl}/markets`;
 
   return (
-    <Layout preview="Markets have moved since you last checked in">
-      <EmailHeading>Markets have moved since you last checked in</EmailHeading>
+    <Layout preview={WINBACK_DAY14.preview}>
+      <EmailHeading>{WINBACK_DAY14.heading}</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        Hey {name},
+        {WINBACK_DAY14.greeting(name)}
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        A lot can change in two weeks. PropertyIQ scores are updated monthly
-        from Zillow, Census, and Realtor.com data — and some of the markets you
-        were watching may have shifted.
+        {WINBACK_DAY14.body}
       </Text>
 
       <Hr className="border-gray-200 my-5" />
 
       <Text className="text-sm font-semibold text-gray-900 m-0 mb-2">
-        What&apos;s new since you left:
+        {WINBACK_DAY14.whatsNewHeading}
       </Text>
-      <Text className="text-sm text-gray-600 leading-5 m-0 mb-1">
-        📈 &nbsp;Monthly score updates across 400+ metros, 2,000+ counties, and
-        20,000+ ZIP codes
-      </Text>
-      <Text className="text-sm text-gray-600 leading-5 m-0 mb-1">
-        🗺️ &nbsp;Interactive map with heat-mapped PropertyIQ scores
-      </Text>
-      <Text className="text-sm text-gray-600 leading-5 m-0 mb-5">
-        🤖 &nbsp;Quinn AI can answer market questions in plain English
-      </Text>
+      {WINBACK_DAY14.whatsNew.map((item, index) => (
+        <Text
+          key={item}
+          className={
+            index === WINBACK_DAY14.whatsNew.length - 1
+              ? "text-sm text-gray-600 leading-5 m-0 mb-5"
+              : "text-sm text-gray-600 leading-5 m-0 mb-1"
+          }
+        >
+          {item}
+        </Text>
+      ))}
 
       <Hr className="border-gray-200 my-5" />
 
       <Section className="text-center mb-5">
-        <BrandedButton href={mapUrl}>See What&apos;s Changed</BrandedButton>
+        <BrandedButton href={mapUrl}>{WINBACK_DAY14.cta}</BrandedButton>
       </Section>
 
       <Text className="text-sm text-gray-500 leading-5 m-0">
-        Or browse all markets at{" "}
+        {WINBACK_DAY14.browseLeadIn}{" "}
         <a href={marketsUrl} className="text-brand underline">
-          propertyiq.app/markets
+          {WINBACK_DAY14.browseLinkText}
         </a>
         .
       </Text>

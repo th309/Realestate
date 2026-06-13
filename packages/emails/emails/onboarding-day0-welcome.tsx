@@ -2,6 +2,7 @@ import { Text, Section, Link } from "@react-email/components";
 import Layout from "./components/layout";
 import BrandedButton from "./components/branded-button";
 import EmailHeading from "./components/email-heading";
+import { ONBOARDING_DAY0, BUTTON_FALLBACK_PREFIX } from "../copy/email-copy";
 
 export interface OnboardingDay0WelcomeProps {
   name: string;
@@ -18,24 +19,21 @@ export default function OnboardingDay0Welcome({
 
   return (
     <Layout
-      preview={`Your free PropertyIQ Score is ready, ${name}`}
+      preview={ONBOARDING_DAY0.preview(name)}
       unsubscribeUrl={unsubscribeUrl}
     >
-      <EmailHeading>Your Free PropertyIQ Score Is Ready</EmailHeading>
+      <EmailHeading>{ONBOARDING_DAY0.heading}</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-        Hey {name},
+        {ONBOARDING_DAY0.greeting(name)}
       </Text>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-6">
-        Welcome. Here&apos;s how to get your first market score in 60 seconds:
-        open the map, search for any U.S. city or ZIP code, and click it.
-        You&apos;ll see a 0–100 PropertyIQ Score that captures supply, demand,
-        affordability, rent growth, and economic momentum — all in one number.
+        {ONBOARDING_DAY0.body}
       </Text>
       <Section className="text-center mb-6">
-        <BrandedButton href={mapUrl}>Explore the Map</BrandedButton>
+        <BrandedButton href={mapUrl}>{ONBOARDING_DAY0.cta}</BrandedButton>
       </Section>
       <Text className="text-sm text-gray-500 leading-5 m-0">
-        If the button doesn&apos;t work, copy this link:{" "}
+        {BUTTON_FALLBACK_PREFIX}{" "}
         <Link href={mapUrl} className="text-brand underline">
           {mapUrl}
         </Link>
