@@ -27,7 +27,7 @@ export const ONBOARDING_DAY0 = {
   heading: "Your Free PropertyIQ Score Is Ready",
   preview: (name: string) => `Your free PropertyIQ Score is ready, ${name}`,
   greeting: (name: string) => `Hey ${name},`,
-  body: "Welcome. Here's how to get your first market score in 60 seconds: open the map, search for any U.S. city or ZIP code, and click it. You'll see a 0–100 PropertyIQ Score that captures supply, demand, affordability, rent growth, and economic momentum — all in one number.",
+  body: "Welcome. Here's how to get your first market score in 60 seconds: open the map, search for any U.S. city or ZIP code, and click it. You'll see a 1–99 PropertyIQ Score that blends four demand signals — home-value momentum, how fast homes sell, and the share of listings with price cuts — into a single number.",
   cta: "Explore the Map",
 } as const;
 
@@ -110,7 +110,7 @@ export const ONBOARDING_DAY10 = {
   propertyiqLabel: "PropertyIQ answers:",
   propertyiqBody: " Which markets should I be in?",
   body2:
-    "Zillow works at the property level — individual listings, Zestimates, days on market for a single home. PropertyIQ works at the market level — scoring every metro, county, and ZIP on supply, demand, affordability, rent growth, and economic momentum. Updated monthly.",
+    "Zillow works at the property level — individual listings, Zestimates, days on market for a single home. PropertyIQ works at the market level — scoring every metro, county, and ZIP on demand signals like home-value momentum, days on market, and price cuts. Updated monthly.",
   closing:
     "Use Zillow to pick the property. Use PropertyIQ to pick the market.",
   cta: "See Your Market Scores",
@@ -123,7 +123,7 @@ export const ONBOARDING_DAY14 = {
   greeting: (name: string) => `Hey ${name},`,
   intro: "You've had two weeks of PropertyIQ. Here's where things stand:",
   body1:
-    "Your free account gives you access to scores across 400+ markets, the interactive map, and Quinn — our AI analyst — forever. No credit card, no expiration.",
+    "Your free account gives you access to scores across thousands of markets and the interactive map — forever. No credit card, no expiration.",
   body2:
     "If you've been curious about what's behind the scores — the 40+ data metrics, AI-generated market reports, score breakdowns, and unlimited market comparisons — that's Pro.",
   closing:
@@ -139,12 +139,12 @@ export const WINBACK_DAY14 = {
   heading: "Markets have moved since you last checked in",
   preview: "Markets have moved since you last checked in",
   greeting: (name: string) => `Hey ${name},`,
-  body: "A lot can change in two weeks. PropertyIQ scores are updated monthly from Zillow, Census, and Realtor.com data — and some of the markets you were watching may have shifted.",
+  body: "A lot can change in two weeks. PropertyIQ scores are updated monthly from Zillow and Realtor data — and some of the markets you were watching may have shifted.",
   whatsNewHeading: "What's new since you left:",
   whatsNew: [
-    "📈  Monthly score updates across 400+ metros, 2,000+ counties, and 20,000+ ZIP codes",
+    "📈  Monthly score updates across thousands of metros, counties, and ZIP codes",
     "🗺️  Interactive map with heat-mapped PropertyIQ scores",
-    "🤖  Quinn AI can answer market questions in plain English",
+    "🤖  AI-generated market reports in plain English",
   ],
   cta: "See What's Changed",
   browseLeadIn: "Or browse all markets at",
@@ -161,7 +161,7 @@ export const WINBACK_DAY14 = {
 export const WELCOME_EMAIL = {
   heading: (name: string) => `Welcome to PropertyIQ, ${name}.`,
   intro:
-    "You now have access to real-time market intelligence for over 20,000 ZIP codes, 3,000 counties, and 750 metros across the US.",
+    "You now have access to real-time market intelligence for thousands of ZIP codes, counties, and metros across the US.",
   bulletsHeading: "Here's what to do first:",
   bullets: [
     "Search any market and check its PropertyIQ Score",
@@ -216,7 +216,7 @@ export const POST_TRIAL_7D_EMAIL = {
 export const INACTIVE_24H_EMAIL = {
   heading: (name: string) => `Hi ${name},`,
   intro:
-    "You signed up for PropertyIQ yesterday — great call. Your market intelligence dashboard is ready with real-time scores for over 20,000 ZIP codes, 3,000 counties, and 750 metros.",
+    "You signed up for PropertyIQ yesterday — great call. Your market intelligence dashboard is ready with real-time scores for thousands of ZIP codes, counties, and metros.",
   body: "Takes less than 2 minutes to explore your first market. Pick any city, county, or ZIP and see how it ranks.",
   cta: "Open My Dashboard",
 } as const;
