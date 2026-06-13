@@ -12,9 +12,8 @@ import {
   ScatterPlot,
   type ScatterDataPoint,
 } from "@/lib/visualizations/d3/ScatterPlot";
-import { useValidationScatter, useValidationSummary } from "@/lib/data";
+import { useValidationScatter } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
-import { HorizonToggle } from "./HorizonToggle";
 
 const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [
   { value: "metro", label: "Metro Areas" },
@@ -42,15 +41,7 @@ const V3_OOS_METRICS: Record<
   zip_propertyiq: { ic: 0.196, spread: "1.58 pp", hitRate: "100%" },
 };
 
-interface InteractiveScatterProps {
-  horizon?: "1y" | "3y";
-  onHorizonChange?: (h: "1y" | "3y") => void;
-}
-
-export function InteractiveScatter({
-  horizon = "3y",
-  onHorizonChange,
-}: InteractiveScatterProps) {
+export function InteractiveScatter() {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
@@ -61,18 +52,14 @@ export function InteractiveScatter({
   } = useValidationScatter({
     geography,
     scoreType,
-    horizon,
+    horizon: "3y",
     limit: 1000,
   });
 
   const scatterData: ScatterDataPoint[] = useMemo(() => {
     if (!rawData) return [];
     return rawData
-      .filter((p) =>
-        horizon === "3y"
-          ? p.excessVsState3y !== null
-          : p.excessVsState1y !== null,
-      )
+      .filter((p) => p.excessVsState3y !== null)
       .map((p) => {
         // Assign quartile category for coloring
         const q =
@@ -87,35 +74,20 @@ export function InteractiveScatter({
           id: p.geographyId,
           label: p.geographyName,
           x: p.score,
-          y: horizon === "3y" ? p.excessVsState3y! : p.excessVsState1y!,
+          y: p.excessVsState3y!,
           category: q,
         };
       });
-  }, [rawData, horizon]);
+  }, [rawData]);
 
-  // For 3Y: use official v3 walk-forward OOS metrics (authoritative)
-  // For 1Y: use live validation API (early signal, not the trained horizon)
+  // Official v3 walk-forward OOS metrics (authoritative, 3-year horizon)
   const v3Metrics = V3_OOS_METRICS[`${geography}_${scoreType}`];
-  const { data: liveSummary } = useValidationSummary({
-    geography,
-    scoreType,
-  });
 
   const oosMetrics = v3Metrics
     ? {
-        ic:
-          horizon === "3y"
-            ? v3Metrics.ic
-            : (liveSummary?.correlation1y ?? v3Metrics.ic),
-        spread:
-          horizon === "3y"
-            ? v3Metrics.spread
-            : liveSummary?.avgExcessVsState1y != null
-              ? `${liveSummary.avgExcessVsState1y.toFixed(2)} pp`
-              : v3Metrics.spread,
-        // Share of positive validated years (100% at every level). This is a
-        // backtest fact, not a directional-accuracy %, so it is identical for
-        // both horizons and never substitutes the live 1Y directional hit rate.
+        ic: v3Metrics.ic,
+        spread: v3Metrics.spread,
+        // Share of positive validated years (100% at every level).
         hitRate: v3Metrics.hitRate,
       }
     : null;
@@ -174,7 +146,7 @@ export function InteractiveScatter({
         </div>
       </div>
 
-      {/* OOS validation metrics + horizon toggle */}
+      {/* OOS validation metrics */}
       {oosMetrics && (
         <div className="flex items-end gap-4 mt-4">
           <div className="bg-surface-container rounded-xl px-4 py-2 border border-outline-variant">
@@ -209,11 +181,6 @@ export function InteractiveScatter({
               {scatterData.length.toLocaleString()}
             </p>
           </div>
-          {onHorizonChange && (
-            <div className="ml-auto">
-              <HorizonToggle value={horizon} onChange={onHorizonChange} />
-            </div>
-          )}
         </div>
       )}
 
@@ -241,7 +208,7 @@ export function InteractiveScatter({
           <ScatterPlot
             data={scatterData}
             xLabel="PropertyIQ Score"
-            yLabel={`${horizon === "3y" ? "3-Year" : "1-Year"} Excess Return vs State (pp)`}
+            yLabel="3-Year Excess Return vs State (pp)"
             xFormat="integer"
             yFormat="percentAbs"
             height={550}

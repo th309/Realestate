@@ -21,13 +21,7 @@ import {
 } from "recharts";
 import { useValidationTimeSeries } from "@/lib/data";
 
-interface CorrelationTimelineProps {
-  horizon?: "1y" | "3y";
-}
-
-export function CorrelationTimeline({
-  horizon = "1y",
-}: CorrelationTimelineProps) {
+export function CorrelationTimeline() {
   const {
     data: rawData,
     isLoading,
@@ -35,7 +29,7 @@ export function CorrelationTimeline({
   } = useValidationTimeSeries({
     geography: "metro",
     scoreType: "propertyiq",
-    horizon,
+    horizon: "3y",
   });
 
   const chartData = useMemo(() => {
@@ -96,7 +90,7 @@ export function CorrelationTimeline({
   return (
     <section>
       <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-        Consistency Over Time ({horizon === "3y" ? "3-Year" : "1-Year"} Horizon)
+        Consistency Over Time (3-Year Horizon)
       </p>
       <h2 className="text-2xl font-[var(--font-source-serif)] text-on-surface mt-2">
         Our Best Window Beats Theirs. And We Show All {chartData.length}.

@@ -48,13 +48,7 @@ const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
   { value: "propertyiq", label: "PropertyIQ" },
 ];
 
-interface QuintilePerformanceProps {
-  horizon?: "1y" | "3y";
-}
-
-export function QuintilePerformance({
-  horizon: propHorizon,
-}: QuintilePerformanceProps = {}) {
+export function QuintilePerformance() {
   const [geography, setGeography] = useState<ValidationGeography>("metro");
   const [scoreType, setScoreType] = useState<ValidationScoreType>("propertyiq");
 
@@ -65,18 +59,13 @@ export function QuintilePerformance({
   } = useValidationQuintiles({
     geography,
     scoreType,
-    horizon: propHorizon ?? "3y",
+    horizon: "3y",
   });
-
-  const activeHorizon = propHorizon ?? "3y";
 
   const chartData = useMemo(() => {
     if (!rawData) return [];
     return rawData.map((q) => {
-      const ret =
-        activeHorizon === "3y"
-          ? (q.avgExcessVsState3y ?? 0)
-          : (q.avgExcessVsState1y ?? 0);
+      const ret = q.avgExcessVsState3y ?? 0;
       const dollarImpact = Math.round((ret / 100) * MEDIAN_HOME);
       return {
         name: q.label,
@@ -190,7 +179,7 @@ export function QuintilePerformance({
           </div>
           <div className="text-right">
             <p className="text-xs text-on-surface-variant">
-              OOS Quintile Spread ({activeHorizon === "3y" ? "3Y" : "1Y"})
+              OOS Quintile Spread (3Y)
             </p>
             <p className="text-xl font-bold text-primary">
               +{oosSpread.toFixed(2)}pp

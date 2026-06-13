@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { HeroStats } from "./HeroStats";
 import { DollarImpactSection } from "./DollarImpactSection";
 import { AlphaCallout } from "./AlphaCallout";
@@ -16,12 +16,10 @@ interface AccuracyPageShellProps {
 }
 
 export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
-  const [horizon, setHorizon] = useState<"1y" | "3y">("3y");
-
   return (
     <div className="space-y-16">
       {/* 1. Hero Stats */}
-      <HeroStats horizon={horizon} />
+      <HeroStats />
 
       {/* 2. Dollar Impact */}
       <DollarImpactSection />
@@ -29,14 +27,14 @@ export function AccuracyPageShell({ children }: AccuracyPageShellProps) {
       {/* 2b. Alpha vs Beta Callout */}
       <AlphaCallout />
 
-      {/* 3. Interactive Scatter (toggle inside, on OOS metrics row) */}
-      <InteractiveScatter horizon={horizon} onHorizonChange={setHorizon} />
+      {/* 3. Interactive Scatter */}
+      <InteractiveScatter />
 
       {/* 4. Quintile Performance */}
-      <QuintilePerformance horizon={horizon} />
+      <QuintilePerformance />
 
       {/* 5. Correlation Timeline */}
-      <CorrelationTimeline horizon={horizon} />
+      <CorrelationTimeline />
 
       {/* 6. Pearson vs Spearman Explainer */}
       <PearsonVsSpearman />
