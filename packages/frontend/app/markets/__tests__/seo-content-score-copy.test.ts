@@ -38,9 +38,9 @@ const zip = {
   cbsaCode: "12420",
 };
 
-function allText(obj: Record<string, string | null | undefined>): string {
+function allText(obj: object): string {
   return Object.values(obj)
-    .filter((v): v is string => Boolean(v))
+    .filter((v): v is string => typeof v === "string")
     .join(" ");
 }
 
