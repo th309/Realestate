@@ -57,9 +57,8 @@ export function IntroSections() {
             </strong>{" "}
             means any artificial intelligence, machine learning, or
             algorithmically generated features of the Service, including but not
-            limited to Quinn (our AI chatbot), HomeReady scores, InvestorEdge
-            scores, market predictions, and any other automated analysis or
-            content generation.
+            limited to the PropertyIQ Score, AI-generated market reports, market
+            predictions, and any other automated analysis or content generation.
           </li>
           <li>
             <strong className="text-on-surface">
@@ -126,9 +125,11 @@ export function IntroSections() {
           real estate decisions. The Service includes, but is not limited to:
         </p>
         <ul className="list-disc pl-6 space-y-1.5">
-          <li>HomeReady&trade; scoring for homebuyers</li>
-          <li>InvestorEdge&trade; scoring for real estate investors</li>
-          <li>Quinn, an AI-powered real estate chatbot assistant</li>
+          <li>
+            The PropertyIQ Score &mdash; predictive market scoring for
+            homebuyers, investors, and agents
+          </li>
+          <li>AI-generated market reports and analysis</li>
           <li>Market analytics dashboards and reports</li>
           <li>Data integrations from public and proprietary data sources</li>
         </ul>

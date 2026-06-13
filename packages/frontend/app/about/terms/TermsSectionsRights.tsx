@@ -11,8 +11,8 @@ export function RightsSections() {
         </h3>
         <p>
           The Service, including all software, algorithms, scoring methodologies
-          (including HomeReady&trade; and InvestorEdge&trade;), user interface
-          designs, trademarks, trade names, logos, documentation, and all other
+          (including the PropertyIQ&trade; Score), user interface designs,
+          trademarks, trade names, logos, documentation, and all other
           proprietary materials, are and shall remain the exclusive property of
           Federal Contracting Services LLC and its licensors. Nothing in these
           Terms grants you any right, title, or interest in our intellectual
