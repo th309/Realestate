@@ -1,7 +1,7 @@
 ---
 title: "How the PropertyIQ Score Works: A Transparent Look at Our Demand Signal Model"
-description: "The PropertyIQ Score measures real-time market demand using three Redfin metrics, ranked within each state. Here is exactly how it works, why we built it this way, and what the score actually tells you."
-date: "2026-03-31"
+description: "The PropertyIQ Score blends Zillow price momentum with Realtor.com market-flow signals into a single 1–99 demand score, calibrated so 50 equals a market's state average. Here is exactly how it works, why we built it this way, and what the score actually tells you."
+date: "2026-06-13"
 author: "PropertyIQ Research"
 authorTitle: "Data Science & Market Analysis"
 category: "methodology"
@@ -11,141 +11,134 @@ targetKeyword: "PropertyIQ Score methodology"
 
 # How the PropertyIQ Score Works: A Transparent Look at Our Demand Signal Model
 
-Most real estate platforms bury their methodology. We publish ours. The PropertyIQ Score is a demand signal model that ranks markets relative to their state average using three metrics — all from the same source, all updated monthly, all publicly verifiable. No black boxes, no proprietary data you cannot check, no vague references to "AI" doing something unspecified.
+Most real estate platforms bury their methodology. We publish ours. The PropertyIQ Score is a demand signal model that ranks markets against every other market at their level nationwide, then calibrates the scale so the midpoint lands on each market's state average — using four metrics, all updated monthly, all publicly verifiable. No black boxes, no proprietary data you cannot check, no vague references to "AI" doing something unspecified.
 
 This article explains exactly how the score is calculated, what it measures, what it does not measure, and how to use it.
 
 ## What the Score Measures
 
-The PropertyIQ Score answers one question: **is this market experiencing stronger or weaker buyer demand than its state average?**
+The PropertyIQ Score answers one question: **is this market positioned to outperform or underperform its state over the next three years?**
 
-A score of 50 means the market is performing exactly at its state average. Higher means stronger demand. Lower means weaker. The scale runs from 1 to 99.
+A score of 50 is calibrated to state-average performance — a market scoring 50 has historically gone on to perform in line with its state. Higher predicts outperformance relative to its state; lower predicts underperformance. The scale runs from 1 to 99.
 
-This is intentionally narrow. We are not trying to predict whether home prices will go up nationwide (that is beta — everyone gets it right). We are measuring which specific markets within a state are outperforming their peers right now (that is alpha — the insight worth paying for).
+This is intentionally narrow. We are not trying to predict whether home prices will go up nationwide (that is beta — everyone gets it right). We are measuring which specific markets are set to outperform their state peers (that is alpha — the insight worth paying for).
+
+A note on "national vs. state," because it trips people up: the score is **computed** nationally — a market is ranked against all other markets at its level. The scale is then **calibrated** so 50 equals the state average. Both are true at once; they answer different questions ("where does this market rank?" vs. "what does that rank predict relative to its state?").
 
 ## The Formula
 
-The score is built on exactly three inputs, all sourced from Redfin:
+The score is built on exactly four inputs, drawn from two sources:
 
-| Metric | What It Measures | Direction |
-|--------|-----------------|-----------|
-| **% Sold Above List** | Share of homes that sold above asking price | Higher = hotter demand |
-| **Median Days on Market** | How long homes sit before going under contract | Lower = hotter demand |
-| **Months of Supply** | Active inventory divided by monthly sales pace | Lower = hotter demand |
+| Metric | Source | What It Measures | Direction |
+|--------|--------|-----------------|-----------|
+| **12-month ZHVI momentum** | Zillow | Home-value trend over the past year | Rising = stronger |
+| **3-month ZHVI momentum** | Zillow | Recent home-value trend | Rising = stronger |
+| **Median Days on Market** | Realtor.com | How long homes sit before going under contract | Lower = stronger |
+| **Price-Reduced Share** | Realtor.com | Share of active listings with a price cut | Lower = stronger |
 
-The calculation:
+The calculation, for each geography level and month:
 
-1. **Z-score each metric** across all locations within the same geography level (metro vs. metro, county vs. county, ZIP vs. ZIP)
-2. **Combine into a signal**: `signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)`
+1. **Z-score each metric cross-sectionally** across all locations at the same geography level (metro vs. metro, county vs. county, ZIP vs. ZIP), using the population standard deviation
+2. **Combine into a signal** with equal weights and fixed signs: `signal = z(zhvi_yoy) + z(zhvi_mom_3m) − z(median_days_on_market) − z(price_reduced_share)` (requiring at least 2 of the 4 inputs)
 3. **Percentile rank** the signal values (ties receive the average rank)
-4. **Re-center** so that the state-average performance maps to a score of 50
+4. **Re-center** at the empirical zero-crossing so that state-average performance maps to a score of 50
 5. **Clamp** to the range 1–99
 
-That is it. No hidden weighting, no proprietary adjustments, no "AI" layer on top. The formula is deterministic: given the same inputs, it always produces the same output.
+That is it. No hidden weighting, no proprietary adjustments, no "AI" layer on top. There are no parameters fit to returns, so there is effectively nothing to overfit. The formula is deterministic: given the same inputs, it always produces the same output.
 
-### Why These Three Metrics
+### Why These Four Metrics
 
-We tested dozens of potential inputs during development — home values, rent indices, employment figures, permit data, income growth, population trends. Most of them either lagged too far behind actual market conditions or added noise without improving the signal.
+We tested dozens of potential inputs during development — rent indices, employment figures, permit data, income growth, population trends. Most either lagged too far behind actual market conditions or added noise without improving the signal.
 
-These three Redfin metrics won because they are:
+These four won because they pair two complementary forces:
 
-- **Coincident indicators**: They reflect what buyers and sellers are doing right now, not what happened six months ago
-- **Available at every geography level**: Metro, county, and ZIP code
-- **From a single source**: No cross-source alignment issues, no conflicting update schedules
-- **Publicly verifiable**: You can check the underlying Redfin data yourself
+- **Price momentum** (the two Zillow ZHVI features): markets that have been appreciating tend to keep outperforming for several years — a well-documented housing-market effect
+- **Demand pressure** (the two Realtor.com features): homes selling quickly and few price cuts flag cooling *before* it shows up in price momentum
 
-The formula's simplicity is a feature, not a limitation. Three clean signals outperformed every complex model we tested in out-of-sample validation.
+They are coincident, available at metro, county, and ZIP level, and publicly verifiable — you can check the underlying Zillow and Realtor.com data yourself. The formula's simplicity is a feature, not a limitation: these four clean signals outperformed every more complex model we tested in out-of-sample validation.
 
-## Score Grades
+## Score Labels
 
-Every score maps to a letter grade based on percentile position:
+Every score maps to a plain-language label based on its position:
 
-| Grade | Score Range | Meaning |
-|-------|------------|---------|
-| **A+** | 97–99 | Top 3% — exceptional demand signal |
-| **A** | 93–96 | Top 7% — very strong demand |
-| **A-** | 90–92 | Top 10% — strong demand |
-| **B+** | 87–89 | Above average, clear positive signal |
-| **B** | 83–86 | Solid demand above state average |
-| **B-** | 80–82 | Moderately above average |
-| **C+** | 77–79 | Slightly above average |
-| **C** | 73–76 | Near average, mild positive signal |
-| **C-** | 70–72 | Near average |
-| **D+** | 67–69 | Slightly below average |
-| **D** | 63–66 | Below average demand |
-| **D-** | 60–62 | Weak demand signal |
-| **F** | 1–59 | Significantly below state average |
+| Score | Label | Score | Label |
+|-------|-------|-------|-------|
+| 90+ | Excellent | 50–59 | Average |
+| 80–89 | Great | 40–49 | Below Average |
+| 70–79 | Good | 20–39 | Poor |
+| 60–69 | Fair | 1–19 | Very Poor |
 
-A score of 50 is not "bad." It means the market is performing at exactly its state average. Context matters: a 50 in California represents a very different market than a 50 in Mississippi.
+A score of 50 is not "bad." It means the market is calibrated to perform at its state average. Context matters: a 50 in California represents a very different market than a 50 in Mississippi.
 
 ## Confidence: How Much to Trust the Score
 
-Every score comes with a separate **confidence rating** that measures data quality — not how good the market is. A market can have a high score with low confidence (promising but we lack data to be sure) or a low score with high confidence (reliably underperforming).
+Every score comes with a separate **confidence rating** that measures data quality — not how good the market is. A market can have a high score with low confidence (promising but we lack data to be sure) or a low score with high confidence (reliably underperforming). Score and confidence are independent.
 
-Confidence is calculated from metric completeness: how many of the three input metrics have valid, recent data for that location.
+Confidence reflects how many of the four inputs have valid, recent data for that location:
 
-| Confidence Level | Range | Meaning |
-|-----------------|-------|---------|
-| **A** | 80–100% | All three metrics available — high trust |
-| **B** | 65–79% | Two of three metrics, or minor data gaps |
-| **C** | 45–64% | Notable gaps — use with caution |
-| **F** | 0–44% | Insufficient data — score may be unreliable |
+| Confidence | Range | Meaning |
+|-----------|-------|---------|
+| **A** | 80–100% | All four inputs present — high trust |
+| **B** | 65–79% | Three of four inputs, or minor data gaps |
+| **C** | 45–64% | Two inputs (e.g. momentum only) — use with caution |
+| **F** | 0–44% | Insufficient data — score not produced |
 
-At the ZIP code level, months of supply is often unavailable. The model degrades gracefully: it requires at least two of three metrics to produce a score. A ZIP with only sold-above-list and median DOM data will still receive a score, but with lower confidence.
+The model degrades gracefully: it requires at least two of the four inputs to produce a score. History before July 2016 — when the Realtor.com inputs begin — is scored on the two Zillow momentum features alone, and carries C confidence.
 
 ## Coverage
 
 The PropertyIQ Score currently covers:
 
-- **746 metropolitan areas** (CBSAs)
-- **2,983 counties**
-- **19,880 ZIP codes**
+- **~935 metropolitan areas** (CBSAs)
+- **~3,150 counties**
+- **~34,000 ZIP codes**
 
-Scores are recalculated monthly as new Redfin data arrives. Every score includes a date stamp showing which data period it reflects.
+Monthly history is backfilled to January 2001. Scores are recalculated monthly as new Zillow and Realtor.com data arrives, and every score includes a date stamp showing which data period it reflects.
 
 ## What the Score Does Not Do
 
 Transparency means being honest about limitations:
 
-- **It does not forecast appreciation.** The score measures current demand conditions, not future price movement. Markets with high scores have historically outperformed, but the score is not a price prediction.
-- **It does not account for affordability.** A market can have a score of 95 and still be unaffordable for most buyers. Use the score alongside affordability metrics, not instead of them.
-- **It does not compare across states.** A 70 in Texas and a 70 in Ohio mean each market is performing at the same relative position within its own state. They are not directly comparable to each other.
-- **It does not incorporate employment, income, or demographic data.** We display these metrics on the platform for context, but they are not inputs to the score formula.
+- **It predicts *relative* performance, not absolute prices.** The score forecasts a market's 3-year appreciation *in excess of its state* — not whether prices will rise or fall outright. A market can have a high score and still decline in a falling state; it just declines less.
+- **It is not a guarantee.** Score bands describe averages over tens of thousands of observations. Individual markets and individual properties vary widely around them.
+- **It does not account for affordability.** A market can score 95 and still be unaffordable for most buyers. Use the score alongside affordability metrics, not instead of them.
+- **It does not incorporate employment, income, or demographic data.** We display these on the platform for context, but they are not inputs to the score formula.
+- **Cross-state comparisons are loose.** Because the midpoint is calibrated to each market's own state, a 70 in Texas and a 70 in Ohio each sit at roughly the same position relative to their own state — not necessarily the same absolute strength.
 
 ## Validation: Does It Actually Work?
 
-We validated the PropertyIQ Score against 13 years of historical data (2012–2025) across 746 metropolitan areas. The test: do markets that score higher actually deliver better returns?
+We validated the PropertyIQ Score against more than two decades of historical data (2001–2023 scoring vintages) across all three geography levels. The test: do markets that score higher actually deliver better returns, relative to their state, on data the model never saw during development?
 
-The results:
+The results, for the 2016-onward period when all four inputs are present:
 
-- **Top-scored markets outperformed in 100% of years tested** — every single calendar year, the top quintile beat the bottom quintile on 3-year excess returns versus state average
-- **Average outperformance of $18,100** in home equity over 3 years for top-scored versus bottom-scored markets
-- **7.83 percentage points of alpha** — the spread between top and bottom quintile 3-year returns, out of sample
+- **Positive in every validated year, at every level.** The score-to-return relationship was positive in 100% of calendar years 2016–2023 for metros, counties, and ZIPs.
+- **Information Coefficient of +0.27 (metro), +0.20 (county), +0.20 (ZIP)** — the rank correlation between score and 3-year forward excess return vs. state, far above statistical noise (permutation significance of 52σ to 201σ).
+- **Roughly $21,700 (metro), $17,800 (county), $22,900 (ZIP)** in 3-year excess home equity, comparing a top-band market (95–99) to a bottom-band market (1–5) in the same state, on each level's median home value.
 
-"Out of sample" is the key phrase. These results are from data the model never saw during development. We used walk-forward validation: train on past data, test on future data, repeat for every year. No peeking.
+These are out-of-sample results: each score is graded only against price changes that happened *after* the scoring date, using walk-forward validation — train on past data, test on future data, repeat for every year. No peeking. The full breakdown, including year-by-year IC and the score-band → excess-return mapping, lives in the [scores dashboard](/scores) and the published validation report.
 
-The score measures demand signal, not price levels. It turns out that markets with stronger demand signals today tend to deliver better relative returns over the next few years. Not always, and not guaranteed — but consistently enough to be useful.
+The score measures demand signal, not price levels. It turns out markets with stronger demand signals today tend to deliver better relative returns over the next few years — not always, and not guaranteed, but consistently enough to be useful.
 
 ## Why We Moved to a Single Score
 
-PropertyIQ previously used three separate scores (HomeReady, InvestorEdge, Market Health), each built from dozens of weighted inputs across multiple data sources. We replaced all three with the single PropertyIQ Score in early 2026.
+PropertyIQ previously used three separate scores, each built from dozens of weighted inputs across multiple data sources. We replaced all of them with the single PropertyIQ Score.
 
-The reason: the simpler model performed better. In out-of-sample testing, the three-input demand signal formula delivered stronger separation between winner and loser markets than the complex multi-factor models. More inputs meant more noise, more overfitting risk, and more opportunities for stale or misaligned data to corrupt the signal.
+The reason: the simpler model performed better. On the identical validation panel, the four-input demand-signal formula beat the prior approach at every level — by 24% at metro, 43% at county, and 140% at ZIP, where most scored markets exist. More inputs meant more noise, more overfitting risk, and more opportunities for stale or misaligned data to corrupt the signal.
 
-We still display all 40+ metrics on the platform — home values, rent trends, employment, demographics, affordability indices — because they provide valuable context for decision-making. But the score itself is built on three metrics that earned their place through validation, not intuition.
+We still display 40+ metrics on the platform — home values, rent trends, employment, demographics, affordability indices — because they provide valuable context for decision-making. But the score itself is built on four metrics that earned their place through validation, not intuition.
 
 ## How to Use the Score
 
 The PropertyIQ Score is one input into a decision, not the decision itself. Here is how we recommend using it:
 
-1. **Screen markets**: Use the score to identify which markets within your target states are showing the strongest demand signals
+1. **Screen markets**: Use the score to identify which markets are showing the strongest demand signals
 2. **Layer in context**: Check affordability, employment trends, and rental yields on the [interactive map](/map) or in an [AI market report](/reports)
-3. **Compare within states**: A score of 80 in Florida tells you that market is outperforming most other Florida markets. Compare it to other Florida markets, not to markets in Ohio
+3. **Read it against the state**: A score of 80 in Florida means that market is calibrated to outperform the typical Florida market. Use it to shortlist within a state you already want to be in
 4. **Track over time**: Scores change monthly. A rising score means demand conditions are improving; a falling score means they are softening
-5. **Check confidence**: Before acting on a score, verify the confidence level. An A-confidence score of 75 is more actionable than an F-confidence score of 95
+5. **Check confidence**: Before acting on a score, verify the confidence level. An A-confidence score of 75 is more actionable than a C-confidence score of 95
 
 Explore scores for every market in the country on the [PropertyIQ scores dashboard](/scores), or dive into individual markets on the [interactive map](/map).
 
 ---
 
-*The PropertyIQ Score methodology is version v4.0 (demand signal). Full scoring code is deterministic and reproducible. If you have questions about the methodology, reach out at [info@propertyiq.app](mailto:info@propertyiq.app).*
+*The PropertyIQ Score formula is deterministic and reproducible. If you have questions about the methodology, reach out at [info@propertyiq.app](mailto:info@propertyiq.app).*

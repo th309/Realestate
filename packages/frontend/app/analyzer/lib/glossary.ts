@@ -247,8 +247,9 @@ export const GLOSSARY: Record<GlossaryKey, GlossaryEntry> = {
   piq_score: {
     name: "PropertyIQ Score",
     formula:
-      "z(% sold above list) − z(median DOM) − z(months of supply), percentile-ranked within state",
-    plain: "Demand strength of the market relative to the state, 1–99.",
+      "z(ZHVI 12-mo) + z(ZHVI 3-mo) − z(median DOM) − z(price-cut share), cross-sectional percentile rank (national, per geo level)",
+    plain:
+      "Demand strength of the market, 1–99, calibrated so 50 = its state average.",
     whyMatters:
       "50 = state average; 80+ markets are sellers' markets where price negotiation is harder.",
   },

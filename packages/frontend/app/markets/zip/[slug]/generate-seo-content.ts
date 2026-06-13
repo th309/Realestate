@@ -65,7 +65,7 @@ const REGIONAL_CONTEXT: Record<string, string> = {
   "Mid-Atlantic":
     "Mid-Atlantic ZIP codes range from dense urban blocks to suburban cul-de-sacs, each with distinct demand dynamics. PropertyIQ's ZIP-level scores help investors and agents identify which specific neighborhoods within metro areas offer the strongest demand-to-supply ratios and near-term appreciation potential.",
   Midwest:
-    "Midwestern ZIP codes frequently offer entry prices far below national medians, but performance varies dramatically even within the same city. PropertyIQ scores individual ZIP codes to identify which neighborhoods show the demand signals — fast sales, above-list pricing, tight supply — that predict near-term appreciation.",
+    "Midwestern ZIP codes frequently offer entry prices far below national medians, but performance varies dramatically even within the same city. PropertyIQ scores individual ZIP codes to identify which neighborhoods show the demand signals — fast sales, rising price momentum, few price cuts — that predict near-term appreciation.",
   "South Atlantic":
     "South Atlantic ZIP codes benefit from sustained migration inflows, but hyperlocal performance varies widely between neighborhoods. PropertyIQ's ZIP-level scoring helps distinguish between ZIP codes riding a temporary wave and those with durable, block-by-block demand fundamentals.",
   Southeast:
@@ -94,16 +94,16 @@ const OPENING_TEMPLATES = [
   (shortName: string, zip: string, state: string) =>
     `${shortName} is one of nearly 20,000 U.S. ZIP codes that PropertyIQ analyzes with AI-powered demand signal scoring. ZIP-level analysis provides the most hyperlocal view of housing market dynamics available, measuring how demand within ${zip} compares to the ${state} state average and identifying outperformance potential before it appears in price data.`,
   (shortName: string, zip: string, state: string) =>
-    `PropertyIQ provides ZIP-code-level market intelligence for ${shortName} — going deeper than metro or county averages to reveal neighborhood-specific demand dynamics. By analyzing % Sold Above List, Median Days on Market, and Months of Supply specifically within ZIP code ${zip}, PropertyIQ predicts which micro-markets within ${state} are positioned to outperform.`,
+    `PropertyIQ provides ZIP-code-level market intelligence for ${shortName} — going deeper than metro or county averages to reveal neighborhood-specific demand dynamics. By tracking Zillow home-value momentum alongside Realtor.com market-flow signals — median days on market and the share of listings with price cuts — specifically within ZIP code ${zip}, PropertyIQ predicts which micro-markets within ${state} are positioned to outperform.`,
   (shortName: string, zip: string, state: string) =>
-    `Understanding the housing market in ZIP code ${zip} requires hyperlocal data that metro and county analyses simply cannot provide. PropertyIQ's demand signal scoring — validated across 13 years of housing data — extends to ZIP-code granularity for ${shortName}, giving investors and agents a competitive edge in ${state}'s most specific market segments.`,
+    `Understanding the housing market in ZIP code ${zip} requires hyperlocal data that metro and county analyses simply cannot provide. PropertyIQ's demand signal scoring — validated across more than two decades of housing data (2001–2023) — extends to ZIP-code granularity for ${shortName}, giving investors and agents a competitive edge in ${state}'s most specific market segments.`,
   (shortName: string, zip: string, state: string) =>
     `The ${shortName} housing market operates at a level of granularity that broader geographic analyses miss entirely. PropertyIQ's ZIP-level scoring for ${zip} captures neighborhood-specific demand patterns within ${state}, revealing micro-market trends that metro and county data average away. This hyperlocal intelligence is critical for making precise investment and homebuying decisions.`,
 ];
 
 const MIDDLE_TEMPLATES = [
   (shortName: string) =>
-    `The PropertyIQ Score for ${shortName} is built on three proven demand indicators measured at the ZIP-code level. When homes in this ZIP code sell above asking price, sell quickly, and local supply is tight, the score rises — signaling a micro-market outperforming its state peers. This ZIP-level precision captures neighborhood dynamics that county and metro scores smooth over.`,
+    `The PropertyIQ Score for ${shortName} is built on four proven demand indicators measured at the ZIP-code level. When home values are gaining momentum, homes sell quickly, and few sellers cut prices, the score rises — signaling a micro-market positioned to outperform its state. This ZIP-level precision captures neighborhood dynamics that county and metro scores smooth over.`,
   (shortName: string) =>
     `For ${shortName}, PropertyIQ calculates a hyperlocal demand signal score updated monthly using the latest housing transaction data. A ZIP-level score above 50 means this specific area's demand dynamics are stronger than the state average. Unlike metro or county scores, ZIP-level analysis captures the true neighborhood-by-neighborhood variation in market performance.`,
   (shortName: string) =>

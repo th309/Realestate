@@ -147,11 +147,12 @@ export function ReadonlyAnalyticsPage(p: Props) {
           Sources & Methodology
         </p>
         <p className="type-foot">
-          PropertyIQ Score is a percentile rank of demand signal vs. state
-          average — sourced from Redfin (% sold above list, median DOM, months
-          of supply). Cashflow, cap rate, DSCR computed from your inputs. Market
-          metrics from Zillow ZHVI/ZORI, BLS, IRS migration files. Projections
-          are estimates; actuals will vary.
+          PropertyIQ Score is a cross-sectional percentile rank of demand signal
+          across all markets at its level, calibrated so 50 equals the state
+          average — built from Zillow ZHVI price momentum and Realtor.com median
+          days on market and price-cut share. Cashflow, cap rate, DSCR computed
+          from your inputs. Market metrics from Zillow ZHVI/ZORI, BLS, IRS
+          migration files. Projections are estimates; actuals will vary.
         </p>
         <p className="type-foot" style={{ marginTop: 4 }}>
           {p.disclaimer}
