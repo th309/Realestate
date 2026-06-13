@@ -41,3 +41,6 @@ export type { NpsDay30Props } from "./emails/nps-day30";
 export type { MonthlyDigestProps } from "./emails/monthly-digest";
 export type { ThresholdAlertProps } from "./emails/threshold-alert";
 export type { LeadMagnetDeliveryProps } from "./emails/lead-magnet-delivery";
+
+// Shared copy (single source of truth for marketing/lifecycle wording)
+export { SCORE_DESCRIPTION, SCORES_ACCURACY_PATH } from "./copy/email-copy";
