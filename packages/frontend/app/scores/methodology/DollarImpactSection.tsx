@@ -1,168 +1,171 @@
 import { DollarSign } from "lucide-react";
 
+// Per-decile mean returns from the PropertyIQ metro score backtest (2001-2023),
+// excess vs state. Dollars on the median metro home ($251,629, Zillow ZHVI Apr 2026).
+// "excess" and "totalReturn" are cumulative over the horizon; gain = appreciation $.
 const ONE_YEAR_ROWS = [
   {
     score: 10,
-    excess: -2.11,
-    totalReturn: 3.87,
-    homeValue: 254_860,
-    gain: 9_499,
-    vs50: -4_808,
+    excess: -2.03,
+    totalReturn: 0.27,
+    homeValue: 252_299,
+    gain: 670,
+    vs50: -9_331,
   },
   {
     score: 20,
-    excess: -1.26,
-    totalReturn: 4.72,
-    homeValue: 256_947,
-    gain: 11_586,
-    vs50: -2_721,
+    excess: -0.85,
+    totalReturn: 2.0,
+    homeValue: 256_663,
+    gain: 5_034,
+    vs50: -4_967,
   },
   {
     score: 30,
-    excess: -0.84,
-    totalReturn: 5.14,
-    homeValue: 257_978,
-    gain: 12_617,
-    vs50: -1_690,
+    excess: -0.62,
+    totalReturn: 2.8,
+    homeValue: 258_679,
+    gain: 7_050,
+    vs50: -2_951,
   },
   {
     score: 40,
-    excess: -0.47,
-    totalReturn: 5.51,
-    homeValue: 258_887,
-    gain: 13_526,
-    vs50: -781,
+    excess: -0.35,
+    totalReturn: 3.51,
+    homeValue: 260_471,
+    gain: 8_842,
+    vs50: -1_159,
   },
   {
     score: 50,
-    excess: -0.15,
-    totalReturn: 5.83,
-    homeValue: 259_668,
-    gain: 14_307,
+    excess: -0.25,
+    totalReturn: 3.97,
+    homeValue: 261_630,
+    gain: 10_001,
     vs50: 0,
   },
   {
     score: 60,
-    excess: 0.07,
-    totalReturn: 6.05,
-    homeValue: 260_207,
-    gain: 14_846,
-    vs50: 539,
+    excess: -0.09,
+    totalReturn: 4.55,
+    homeValue: 263_070,
+    gain: 11_441,
+    vs50: 1_440,
   },
   {
     score: 70,
-    excess: 0.23,
-    totalReturn: 6.21,
-    homeValue: 260_600,
-    gain: 15_239,
-    vs50: 932,
+    excess: 0.07,
+    totalReturn: 5.22,
+    homeValue: 264_774,
+    gain: 13_145,
+    vs50: 3_144,
   },
   {
     score: 80,
-    excess: 0.53,
-    totalReturn: 6.51,
-    homeValue: 261_336,
-    gain: 15_975,
-    vs50: 1_668,
+    excess: 0.1,
+    totalReturn: 6.03,
+    homeValue: 266_791,
+    gain: 15_162,
+    vs50: 5_161,
   },
   {
     score: 90,
-    excess: 1.03,
-    totalReturn: 7.01,
-    homeValue: 262_563,
-    gain: 17_202,
-    vs50: 2_895,
+    excess: 0.45,
+    totalReturn: 7.22,
+    homeValue: 269_790,
+    gain: 18_161,
+    vs50: 8_160,
   },
   {
     score: 100,
-    excess: 1.64,
-    totalReturn: 7.62,
-    homeValue: 264_059,
-    gain: 18_698,
-    vs50: 4_391,
+    excess: 1.54,
+    totalReturn: 9.3,
+    homeValue: 275_034,
+    gain: 23_405,
+    vs50: 13_404,
   },
 ];
 
 const THREE_YEAR_ROWS = [
   {
     score: 10,
-    excess: -5.66,
-    totalReturn: 14.84,
-    homeValue: 281_797,
-    gain: 36_436,
-    vs50: -13_196,
+    excess: -4.36,
+    totalReturn: 6.91,
+    homeValue: 269_013,
+    gain: 17_384,
+    vs50: -16_688,
   },
   {
     score: 20,
-    excess: -3.34,
-    totalReturn: 17.16,
-    homeValue: 287_490,
-    gain: 42_129,
-    vs50: -7_503,
+    excess: -2.49,
+    totalReturn: 9.59,
+    homeValue: 275_760,
+    gain: 24_131,
+    vs50: -9_941,
   },
   {
     score: 30,
-    excess: -2.04,
-    totalReturn: 18.46,
-    homeValue: 298_679,
-    gain: 45_318,
-    vs50: -4_314,
+    excess: -1.93,
+    totalReturn: 11.05,
+    homeValue: 279_422,
+    gain: 27_793,
+    vs50: -6_279,
   },
   {
     score: 40,
     excess: -1.2,
-    totalReturn: 19.3,
-    homeValue: 292_736,
-    gain: 47_375,
-    vs50: -2_257,
+    totalReturn: 12.46,
+    homeValue: 282_984,
+    gain: 31_355,
+    vs50: -2_717,
   },
   {
     score: 50,
-    excess: -0.28,
-    totalReturn: 20.22,
-    homeValue: 294_993,
-    gain: 49_632,
+    excess: -0.73,
+    totalReturn: 13.54,
+    homeValue: 285_701,
+    gain: 34_072,
     vs50: 0,
   },
   {
     score: 60,
-    excess: 0.31,
-    totalReturn: 20.81,
-    homeValue: 296_439,
-    gain: 51_078,
-    vs50: 1_446,
+    excess: -0.34,
+    totalReturn: 14.82,
+    homeValue: 288_916,
+    gain: 37_287,
+    vs50: 3_215,
   },
   {
     score: 70,
-    excess: 1.17,
-    totalReturn: 21.67,
-    homeValue: 298_550,
-    gain: 53_189,
-    vs50: 3_557,
+    excess: -0.11,
+    totalReturn: 16.37,
+    homeValue: 292_816,
+    gain: 41_187,
+    vs50: 7_115,
   },
   {
     score: 80,
-    excess: 1.87,
-    totalReturn: 22.37,
-    homeValue: 300_267,
-    gain: 54_906,
-    vs50: 5_274,
+    excess: -0.18,
+    totalReturn: 17.82,
+    homeValue: 296_471,
+    gain: 44_842,
+    vs50: 10_770,
   },
   {
     score: 90,
-    excess: 3.05,
-    totalReturn: 23.55,
-    homeValue: 303_163,
-    gain: 57_802,
-    vs50: 8_170,
+    excess: 0.49,
+    totalReturn: 19.65,
+    homeValue: 301_064,
+    gain: 49_435,
+    vs50: 15_363,
   },
   {
     score: 100,
-    excess: 4.28,
-    totalReturn: 24.78,
-    homeValue: 306_181,
-    gain: 60_820,
-    vs50: 11_188,
+    excess: 1.93,
+    totalReturn: 22.14,
+    homeValue: 307_336,
+    gain: 55_707,
+    vs50: 21_635,
   },
 ];
 
@@ -242,7 +245,7 @@ function ImpactTable({
         <p className="text-sm font-medium text-on-surface">
           Score 100 vs Score 10:{" "}
           <span className="text-primary font-bold">+{fmt(spread)}</span>{" "}
-          difference on the same $245K purchase.
+          difference on the same $252K purchase.
         </p>
       </div>
     </div>
@@ -264,21 +267,21 @@ export function DollarImpactSection() {
         The Cost of Choosing Wrong
       </h2>
       <p className="text-on-surface-variant mt-2 max-w-2xl">
-        Based on a median metro home value of $245,361 (Zillow ZHVI, February
-        2026) and an average state 3-year cumulative return of 20.50%. Every
-        score point translates to real dollars gained or lost.
+        Based on a median metro home value of $251,629 (Zillow ZHVI, April 2026)
+        and an average state 3-year cumulative return of about 14%. Every score
+        point translates to real dollars gained or lost.
       </p>
 
       <div className="mt-8 grid gap-12 lg:grid-cols-2">
         <ImpactTable
           title="1-Year Dollar Impact"
           rows={ONE_YEAR_ROWS}
-          spread={9_199}
+          spread={22_735}
         />
         <ImpactTable
           title="3-Year Dollar Impact"
           rows={THREE_YEAR_ROWS}
-          spread={24_384}
+          spread={38_323}
         />
       </div>
     </section>
