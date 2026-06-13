@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
-import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
-import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
 import { MarketOverviewSection } from "./MarketOverviewSection";
 import { LeadMagnetModal } from "./components/LeadMagnetModal";
 import MarketReportCTA from "../components/MarketReportCTA";
@@ -27,10 +26,6 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
     );
     return () => clearTimeout(timer);
   }, [recordMilestone]);
-
-  const nearbyMetros = METRO_SLUG_DATA.filter(
-    (m) => m.state === metro.state && m.cbsaCode !== metro.cbsaCode,
-  ).slice(0, 5);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 overflow-x-hidden min-w-0">
@@ -118,33 +113,8 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
         </button>
       </section>
 
-      {/* Newsletter Signup */}
-      <NewsletterSignup
-        source="city-page"
-        label="Get monthly score updates for this market"
-        description="Stay informed when the PropertyIQ score for this market changes."
-        buttonText="Subscribe"
-      />
-
-      {/* Nearby Markets (internal linking) */}
-      {nearbyMetros.length > 0 && (
-        <section className="mt-10 pt-8 border-t border-outline-variant">
-          <h2 className="text-xl font-semibold text-on-surface mb-4">
-            More Markets in {metro.state}
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {nearbyMetros.map((m) => (
-              <Link
-                key={m.cbsaCode}
-                href={`/markets/${m.slug}`}
-                className="px-4 py-2 rounded-full bg-surface-container-low text-on-surface text-sm hover:bg-surface-container-high transition-colors"
-              >
-                {m.shortName}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Role-segmented persona capture */}
+      <PersonaCaptureBlock geoName={metro.shortName} />
 
       {/* JSON-LD structured data */}
       <script

@@ -5,6 +5,8 @@ import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
 import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
+import { fetchRankings } from "@/lib/data";
+import { StateTopMarketsTables } from "@/app/markets/components/StateTopMarketsTables";
 import { StatePageContent } from "./StatePageContent";
 import { generateStateSeoContent } from "./generate-seo-content";
 
@@ -90,15 +92,53 @@ export default async function StatePage({
     }
   }
 
+  // Top-10 metros and counties in this state, ranked by PropertyIQ score.
+  // Rows carry slugs (not raw CBSA/FIPS) so links resolve to /markets/<slug>.
+  const [topMetrosRaw, topCountiesRaw] = await Promise.all([
+    fetchRankings("propertyiq", "metro", {
+      state: stateEntry.abbrev,
+      limit: 10,
+    }),
+    fetchRankings("propertyiq", "county", {
+      state: stateEntry.abbrev,
+      limit: 10,
+    }),
+  ]);
+  const metroSlugById = new Map(
+    METRO_SLUG_DATA.map((m) => [m.cbsaCode, m.slug]),
+  );
+  const countySlugById = new Map(COUNTY_SLUG_DATA.map((c) => [c.fips, c.slug]));
+  const topMetros = topMetrosRaw
+    .filter((r) => metroSlugById.has(r.id))
+    .map((r) => ({ ...r, id: metroSlugById.get(r.id)! }));
+  const topCounties = topCountiesRaw
+    .filter((r) => countySlugById.has(r.id))
+    .map((r) => ({ ...r, id: countySlugById.get(r.id)! }));
+
   // Safe: JSON.stringify of server-built objects — no user input, consistent with
   // the same pattern used in /markets/[slug]/page.tsx and /markets/county/[slug]/page.tsx
   const breadcrumbJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.propertyiq.app" },
-      { "@type": "ListItem", position: 2, name: "Markets", item: "https://www.propertyiq.app/markets" },
-      { "@type": "ListItem", position: 3, name: stateEntry.name, item: `https://www.propertyiq.app/markets/state/${stateEntry.slug}` },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://www.propertyiq.app",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Markets",
+        item: "https://www.propertyiq.app/markets",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: stateEntry.name,
+        item: `https://www.propertyiq.app/markets/state/${stateEntry.slug}`,
+      },
     ],
   });
 
@@ -110,14 +150,31 @@ export default async function StatePage({
     url: `https://www.propertyiq.app/markets/state/${stateEntry.slug}`,
   });
 
-  const seoContent = generateStateSeoContent(stateEntry.abbrev, stateEntry.name);
+  const seoContent = generateStateSeoContent(
+    stateEntry.abbrev,
+    stateEntry.name,
+  );
   const today = new Date().toISOString().split("T")[0];
 
   return (
     <>
       {/* Safe JSON-LD injection — server-generated from trusted static data only */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stateSchemaJsonLd }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: stateSchemaJsonLd }}
+      />
+
+      <StateTopMarketsTables
+        stateName={stateEntry.name}
+        metros={topMetros}
+        counties={topCounties}
+        metroHrefBase="/markets"
+        countyHrefBase="/markets/county"
+      />
 
       <StatePageContent
         state={stateEntry}

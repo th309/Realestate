@@ -3,11 +3,17 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { COUNTY_SLUG_DATA, SLUG_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
+import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
+import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { CountyPageContent } from "./CountyPageContent";
 import { generateCountySeoContent } from "./generate-seo-content";
 
+// Pre-render a bounded set at build; the long tail renders on-demand via ISR (dynamicParams default true) to avoid OOM from per-page server fetches.
 export function generateStaticParams() {
-  return COUNTY_SLUG_DATA.map((county) => ({ slug: county.slug }));
+  return COUNTY_SLUG_DATA.slice(0, 150).map((county) => ({
+    slug: county.slug,
+  }));
 }
 
 export async function generateMetadata({
@@ -51,6 +57,7 @@ export async function generateMetadata({
 }
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
+export const dynamicParams = true;
 
 export default async function CountyPage({
   params,
@@ -66,10 +73,21 @@ export default async function CountyPage({
     ? CBSA_TO_METRO.get(county.cbsaCode)
     : null;
 
-  // Find neighboring counties in the same state
-  const nearbyCounties = COUNTY_SLUG_DATA.filter(
-    (c) => c.state === county.state && c.fips !== county.fips,
-  ).slice(0, 6);
+  // Neighboring counties in the same state, ranked by PropertyIQ score.
+  const countyRank = await fetchRankings("propertyiq", "county", {
+    state: county.state,
+    limit: 12,
+  });
+  const countyByFips = new Map(COUNTY_SLUG_DATA.map((c) => [c.fips, c]));
+  const rankedCounties = countyRank
+    .filter((r) => r.id !== county.fips && countyByFips.has(r.id))
+    .map((r) => countyByFips.get(r.id)!)
+    .slice(0, 6);
+  const nearbyCounties = rankedCounties.length
+    ? rankedCounties
+    : COUNTY_SLUG_DATA.filter(
+        (c) => c.state === county.state && c.fips !== county.fips,
+      ).slice(0, 6);
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -97,7 +115,8 @@ export default async function CountyPage({
   };
 
   const seoContent = generateCountySeoContent(county);
-  const today = new Date().toISOString().split("T")[0];
+
+  const stats = await fetchSeoMarketStats("county", county.fips, county.state);
 
   return (
     <>
@@ -112,6 +131,22 @@ export default async function CountyPage({
         parentMetroSlug={parentMetro?.slug ?? null}
         parentMetroName={parentMetro?.shortName ?? null}
       />
+
+      {stats && <MarketStatsBlock data={stats} geoName={county.shortName} />}
+      {stats && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              buildStatsJsonLd(
+                stats,
+                county.shortName,
+                `https://propertyiq.up.railway.app/markets/county/${county.slug}`,
+              ),
+            ),
+          }}
+        />
+      )}
 
       {/* Server-rendered SEO content */}
       <section className="max-w-4xl mx-auto px-4 py-12">
@@ -160,8 +195,11 @@ export default async function CountyPage({
         )}
 
         <p className="mt-8 text-xs text-on-surface-variant/60">
-          Last updated: {today}. Data from Zillow, Realtor.com, Redfin, U.S.
-          Census Bureau, FRED, BLS, and BEA.
+          {stats?.latestDate
+            ? `Market data through ${new Date(stats.latestDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.`
+            : ""}{" "}
+          Sourced from Zillow, Realtor.com, Redfin, U.S. Census Bureau, FRED,
+          BLS, and BEA. Per-statistic source and date shown above.
         </p>
       </section>
     </>

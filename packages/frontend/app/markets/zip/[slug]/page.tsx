@@ -4,11 +4,15 @@ import Link from "next/link";
 import { ZIP_SLUG_DATA, SLUG_TO_ZIP } from "@/lib/data/zip-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { FIPS_TO_COUNTY } from "@/lib/data/county-slug-data";
+import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
+import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { ZipPageContent } from "./ZipPageContent";
 import { generateZipSeoContent } from "./generate-seo-content";
 
+// Pre-render a bounded set at build; the long tail renders on-demand via ISR (dynamicParams default true) to avoid OOM from per-page server fetches.
 export function generateStaticParams() {
-  return ZIP_SLUG_DATA.map((zip) => ({ slug: zip.slug }));
+  return ZIP_SLUG_DATA.slice(0, 50).map((zip) => ({ slug: zip.slug }));
 }
 
 export async function generateMetadata({
@@ -53,6 +57,7 @@ export async function generateMetadata({
 }
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
+export const dynamicParams = true;
 
 export default async function ZipPage({
   params,
@@ -71,10 +76,21 @@ export default async function ZipPage({
     ? FIPS_TO_COUNTY.get(zip.countyFips)
     : null;
 
-  // Find nearby ZIPs in the same state
-  const nearbyZips = ZIP_SLUG_DATA.filter(
-    (z) => z.state === zip.state && z.zip !== zip.zip,
-  ).slice(0, 6);
+  // Nearby ZIPs in the same state, ranked by PropertyIQ score.
+  const zipRank = await fetchRankings("propertyiq", "zip", {
+    state: zip.state,
+    limit: 12,
+  });
+  const zipByCode = new Map(ZIP_SLUG_DATA.map((z) => [z.zip, z]));
+  const rankedZips = zipRank
+    .filter((r) => r.id !== zip.zip && zipByCode.has(r.id))
+    .map((r) => zipByCode.get(r.id)!)
+    .slice(0, 6);
+  const nearbyZips = rankedZips.length
+    ? rankedZips
+    : ZIP_SLUG_DATA.filter(
+        (z) => z.state === zip.state && z.zip !== zip.zip,
+      ).slice(0, 6);
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -102,7 +118,8 @@ export default async function ZipPage({
   };
 
   const seoContent = generateZipSeoContent(zip);
-  const today = new Date().toISOString().split("T")[0];
+
+  const stats = await fetchSeoMarketStats("zip", zip.zip, zip.state);
 
   return (
     <>
@@ -118,6 +135,22 @@ export default async function ZipPage({
         parentCountySlug={parentCounty?.slug ?? null}
         parentCountyName={parentCounty?.shortName ?? null}
       />
+
+      {stats && <MarketStatsBlock data={stats} geoName={zip.shortName} />}
+      {stats && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              buildStatsJsonLd(
+                stats,
+                zip.shortName,
+                `https://propertyiq.up.railway.app/markets/zip/${zip.slug}`,
+              ),
+            ),
+          }}
+        />
+      )}
 
       {/* Server-rendered SEO content */}
       <section className="max-w-4xl mx-auto px-4 py-12">
@@ -179,8 +212,11 @@ export default async function ZipPage({
         )}
 
         <p className="mt-8 text-xs text-on-surface-variant/60">
-          Last updated: {today}. Data from Zillow, Realtor.com, Redfin, U.S.
-          Census Bureau, FRED, BLS, and BEA.
+          {stats?.latestDate
+            ? `Market data through ${new Date(stats.latestDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.`
+            : ""}{" "}
+          Sourced from Zillow, Realtor.com, Redfin, U.S. Census Bureau, FRED,
+          BLS, and BEA. Per-statistic source and date shown above.
         </p>
       </section>
     </>
