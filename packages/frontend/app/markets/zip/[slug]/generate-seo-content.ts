@@ -103,11 +103,11 @@ const OPENING_TEMPLATES = [
 
 const MIDDLE_TEMPLATES = [
   (shortName: string) =>
-    `The PropertyIQ Score for ${shortName} is built on four proven demand indicators measured at the ZIP-code level. When home values are gaining momentum, homes sell quickly, and few sellers cut prices, the score rises — signaling a micro-market positioned to outperform its state. This ZIP-level precision captures neighborhood dynamics that county and metro scores smooth over.`,
+    `The PropertyIQ Score for ${shortName} is built from four inputs measured at the ZIP-code level: Zillow home-value momentum over twelve months, Zillow home-value momentum over three months, the median days listings spend on the market (Realtor.com), and the share of listings with a price cut (Realtor.com). The score runs on a 1 to 99 scale computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a score above 50 points to a micro-market positioned to outperform its state.`,
   (shortName: string) =>
-    `For ${shortName}, PropertyIQ calculates a hyperlocal demand signal score updated monthly using the latest housing transaction data. A ZIP-level score above 50 means this specific area's demand dynamics are stronger than the state average. Unlike metro or county scores, ZIP-level analysis captures the true neighborhood-by-neighborhood variation in market performance.`,
+    `For ${shortName}, PropertyIQ updates a hyperlocal score each month from four signals: twelve-month and three-month Zillow home-value momentum, Realtor.com median days on market, and the Realtor.com share of price-reduced listings. The score is computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a value above 50 means this ZIP's demand dynamics read stronger than its state. ZIP-level analysis captures neighborhood variation that county and metro scores smooth over.`,
   (shortName: string) =>
-    `PropertyIQ's ZIP-level score for ${shortName} distills three housing metrics into a single 1-99 number at the most granular geography available. This is not a generic market health grade — it is a validated predictor of which ZIP codes within a state will see the strongest home price growth. The ZIP-level view often tells a different story than the broader county or metro score.`,
+    `PropertyIQ distills four housing signals into a single 1 to 99 score for ${shortName} at the most granular geography available: Zillow twelve-month and three-month home-value momentum, Realtor.com median days on market, and the Realtor.com price-reduced share. It is not a generic market-health grade; it is a validated predictor of which ZIP codes are positioned to outperform their state. The ZIP-level view often tells a different story than the broader county or metro score.`,
 ];
 
 const CLOSING_TEMPLATES = [
