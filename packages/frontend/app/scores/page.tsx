@@ -7,47 +7,47 @@ import {
   HowToUseScoresSection,
   MethodologyOverviewSection,
 } from "./ScoresContentSections";
-import { METRO_DECILE_1Y, METRO_DECILE_3Y } from "./decile-data";
+import { METRO_DECILE_3Y } from "./decile-data";
 import type { DecileRow } from "./decile-data";
 
 export const metadata: Metadata = {
   title: "PropertyIQ Score — Predict Real Estate Market Performance",
   description:
-    "One number that predicts market performance. Validated across 746 metros and 13 years of data with 100% year hit rate. See the methodology and proof.",
+    "One number that predicts market performance. Validated across 935 metros and more than two decades of data, positive in every year. See the methodology and proof.",
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
     title: "PropertyIQ Score — Predict Real Estate Market Performance",
     description:
-      "One number that predicts real estate market performance. Validated across 746 metros with 100% year hit rate.",
+      "One number that predicts real estate market performance. Validated across 935 metros, positive in every year.",
     url: "https://www.propertyiq.app/scores",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
 };
 
 const STAT_PILLS = [
-  { label: "746 metros", icon: BarChart3 },
-  { label: "13 years", icon: TrendingUp },
-  { label: "100% year hit rate", icon: Percent },
+  { label: "935 metros", icon: BarChart3 },
+  { label: "20+ years validated", icon: TrendingUp },
+  { label: "Positive every year", icon: Percent },
 ];
 
 const HOW_IT_WORKS_STEPS = [
   {
     number: 1,
-    title: "3 Housing Metrics",
+    title: "4 Market Signals",
     description:
-      "% Sold Above List, Median Days on Market, Months of Supply — the three signals that actually predict future returns.",
+      "12- and 3-month Zillow price momentum, plus Realtor.com days on market and the share of listings with price cuts — the signals that predict future returns.",
   },
   {
     number: 2,
     title: "Z-Score Normalization",
     description:
-      "Each metric is standardized against the national distribution, removing scale differences so they combine cleanly.",
+      "Each signal is standardized within its geography level every month, removing scale differences so they combine cleanly.",
   },
   {
     number: 3,
     title: "Percentile Score",
     description:
-      "The composite z-score is mapped to 1-99 where 50 equals the state average. Higher is better.",
+      "The combined signal is mapped to 1-99 where 50 equals the state average. Higher is better.",
   },
 ];
 
@@ -188,16 +188,10 @@ export default function ScoresPage() {
             Decile Performance
           </h2>
           <p className="text-on-surface-variant mt-3 max-w-3xl">
-            Higher-scored metros consistently outperform their state benchmark.
-            The pattern holds across both 1-year and 3-year horizons, with
-            monotonic separation between deciles.
+            Higher-scored metros consistently outperform their state benchmark
+            over the 3-year horizon, with monotonic separation between deciles.
           </p>
-          <div className="grid md:grid-cols-2 gap-6 mt-8">
-            <DecileTable
-              title="1-Year Returns"
-              data={METRO_DECILE_1Y}
-              horizon="1-year"
-            />
+          <div className="mt-8 max-w-2xl">
             <DecileTable
               title="3-Year Returns"
               data={METRO_DECILE_3Y}
@@ -240,7 +234,7 @@ export default function ScoresPage() {
             Why It Matters
           </p>
           <p className="text-4xl md:text-5xl font-bold text-on-surface mt-4 font-[family-name:var(--font-roboto-mono)]">
-            $24,384
+            $21,741
           </p>
           <p className="text-lg text-on-surface-variant mt-2">
             The cost of choosing wrong
@@ -254,10 +248,10 @@ export default function ScoresPage() {
               <p className="text-sm text-on-surface-variant leading-relaxed">
                 Top-quintile metros averaged{" "}
                 <span className="font-[family-name:var(--font-roboto-mono)] font-medium text-green-600">
-                  +0.53%
+                  +0.38%
                 </span>{" "}
                 excess return per year over their state benchmark. On a typical
-                $300K home, that compounds to meaningful wealth over 3 years.
+                $252K home, that compounds to meaningful wealth over 3 years.
               </p>
             </div>
             <div className="border border-outline-variant rounded-xl p-6">
@@ -268,11 +262,11 @@ export default function ScoresPage() {
               <p className="text-sm text-on-surface-variant leading-relaxed">
                 Bottom-quintile metros averaged{" "}
                 <span className="font-[family-name:var(--font-roboto-mono)] font-medium text-red-600">
-                  -1.26%
+                  -1.29%
                 </span>{" "}
                 excess return per year versus their state. At the extremes,
                 choosing a score-10 over a score-100 market costs roughly
-                $24,384 in lost equity over 3 years.
+                $21,741 in lost equity over 3 years.
               </p>
             </div>
           </div>

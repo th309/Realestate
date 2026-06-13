@@ -1,90 +1,30 @@
 import { DollarSign } from "lucide-react";
+import { METRO_DECILE_3Y, MEDIAN_METRO_HOME } from "../decile-data";
 
-// Per-decile mean returns from the PropertyIQ metro score backtest (2001-2023),
-// excess vs state. Dollars on the median metro home ($251,629, Zillow ZHVI Apr 2026).
-// "excess" and "totalReturn" are cumulative over the horizon; gain = appreciation $.
-const THREE_YEAR_ROWS = [
-  {
-    score: 10,
-    excess: -4.36,
-    totalReturn: 6.91,
-    homeValue: 269_013,
-    gain: 17_384,
-    vs50: -16_688,
-  },
-  {
-    score: 20,
-    excess: -2.49,
-    totalReturn: 9.59,
-    homeValue: 275_760,
-    gain: 24_131,
-    vs50: -9_941,
-  },
-  {
-    score: 30,
-    excess: -1.93,
-    totalReturn: 11.05,
-    homeValue: 279_422,
-    gain: 27_793,
-    vs50: -6_279,
-  },
-  {
-    score: 40,
-    excess: -1.2,
-    totalReturn: 12.46,
-    homeValue: 282_984,
-    gain: 31_355,
-    vs50: -2_717,
-  },
-  {
-    score: 50,
-    excess: -0.73,
-    totalReturn: 13.54,
-    homeValue: 285_701,
-    gain: 34_072,
-    vs50: 0,
-  },
-  {
-    score: 60,
-    excess: -0.34,
-    totalReturn: 14.82,
-    homeValue: 288_916,
-    gain: 37_287,
-    vs50: 3_215,
-  },
-  {
-    score: 70,
-    excess: -0.11,
-    totalReturn: 16.37,
-    homeValue: 292_816,
-    gain: 41_187,
-    vs50: 7_115,
-  },
-  {
-    score: 80,
-    excess: -0.18,
-    totalReturn: 17.82,
-    homeValue: 296_471,
-    gain: 44_842,
-    vs50: 10_770,
-  },
-  {
-    score: 90,
-    excess: 0.49,
-    totalReturn: 19.65,
-    homeValue: 301_064,
-    gain: 49_435,
-    vs50: 15_363,
-  },
-  {
-    score: 100,
-    excess: 1.93,
-    totalReturn: 22.14,
-    homeValue: 307_336,
-    gain: 55_707,
-    vs50: 21_635,
-  },
-];
+// Derived from the single source of truth (../decile-data) so the methodology
+// dollar table and the /scores decile table can never drift. Each decile's
+// dollar gain = median home x its 3-year total return; vs50 is relative to the
+// score-50 decile.
+const gainFor = (totalReturn: number) =>
+  Math.round((MEDIAN_METRO_HOME * totalReturn) / 100);
+
+const GAIN_AT_50 = gainFor(
+  METRO_DECILE_3Y.find((d) => d.score === 50)!.totalReturn,
+);
+
+const THREE_YEAR_ROWS = METRO_DECILE_3Y.map((d) => {
+  const gain = gainFor(d.totalReturn);
+  return {
+    score: d.score,
+    excess: d.meanExcess,
+    gain,
+    vs50: gain - GAIN_AT_50,
+  };
+});
+
+const SPREAD_100_VS_10 =
+  gainFor(METRO_DECILE_3Y.find((d) => d.score === 100)!.totalReturn) -
+  gainFor(METRO_DECILE_3Y.find((d) => d.score === 10)!.totalReturn);
 
 const COLUMNS = [
   { key: "score", label: "Score", align: "text-left" as const },
@@ -193,7 +133,7 @@ export function DollarImpactSection() {
         <ImpactTable
           title="3-Year Dollar Impact"
           rows={THREE_YEAR_ROWS}
-          spread={38_323}
+          spread={SPREAD_100_VS_10}
         />
       </div>
     </section>
