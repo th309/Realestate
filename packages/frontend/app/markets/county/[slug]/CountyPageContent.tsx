@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
-import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface CountyPageContentProps {
@@ -94,14 +94,8 @@ export function CountyPageContent({
         </Link>
       </section>
 
-      {/* Newsletter */}
-      <section className="mb-10">
-        <NewsletterSignup
-          source="city-page"
-          label="Get monthly score updates for this county"
-          description="Stay informed when the PropertyIQ score for this county changes."
-        />
-      </section>
+      {/* Role-segmented persona capture */}
+      <PersonaCaptureBlock geoName={county.shortName} />
     </div>
   );
 }
