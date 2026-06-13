@@ -200,13 +200,23 @@ export async function fetchPropertyIqMetrics(
   periodDate: string,
 ): Promise<LocationMetrics[]> {
   const monthEnd = toEndOfMonth(periodDate);
-  const [zhviNow, zhvi3m, zhvi12m, names, realtor] = await Promise.all([
-    fetchZhviAt(supabase, geography, monthEnd),
-    fetchZhviAt(supabase, geography, monthsBack(monthEnd, 3)),
-    fetchZhviAt(supabase, geography, monthsBack(monthEnd, 12)),
-    fetchZillowNames(supabase, geography, monthEnd),
-    fetchRealtorAt(supabase, geography, monthEnd),
-  ]);
+  // Fetch sequentially, not via Promise.all: at ZIP scale each source is a
+  // ~26k-row paginated scan, and running 4+ of them concurrently against
+  // PostgREST causes statement-timeout contention. Sequential keeps every
+  // statement fast and the whole fetch well within limits.
+  const zhviNow = await fetchZhviAt(supabase, geography, monthEnd);
+  const zhvi3m = await fetchZhviAt(
+    supabase,
+    geography,
+    monthsBack(monthEnd, 3),
+  );
+  const zhvi12m = await fetchZhviAt(
+    supabase,
+    geography,
+    monthsBack(monthEnd, 12),
+  );
+  const names = await fetchZillowNames(supabase, geography, monthEnd);
+  const realtor = await fetchRealtorAt(supabase, geography, monthEnd);
 
   const allIds = new Set<string>([...zhviNow.keys(), ...realtor.keys()]);
   const results: LocationMetrics[] = [];
