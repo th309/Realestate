@@ -44,3 +44,14 @@ export type { LeadMagnetDeliveryProps } from "./emails/lead-magnet-delivery";
 
 // Shared copy (single source of truth for marketing/lifecycle wording)
 export { SCORE_DESCRIPTION, SCORES_ACCURACY_PATH } from "./copy/email-copy";
+export {
+  WELCOME_EMAIL,
+  REPORT_GENERATED_EMAIL,
+  PAYWALL_HIT_EMAIL,
+  POST_TRIAL_7D_EMAIL,
+  INACTIVE_24H_EMAIL,
+  TRIAL_DAY10_EMAIL,
+  TRIAL_DAY13_EMAIL,
+  TRIAL_EXPIRED_EMAIL,
+  ACTIVE_EXPLORER_EMAIL,
+} from "./copy/email-copy";
