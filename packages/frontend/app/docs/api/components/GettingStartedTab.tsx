@@ -57,7 +57,7 @@ const firstCallExamples = [
     code: `curl -X POST \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"geography_type": "zip", "geography_id": "90210", "score_type": "homeready"}' \\
+  -d '{"geography_type": "zip", "geography_id": "90210", "score_type": "propertyiq"}' \\
   ${API_BASE}/api/v1/reports`,
   },
   {
@@ -74,7 +74,7 @@ const firstCallExamples = [
     body: JSON.stringify({
       geography_type: "zip",
       geography_id: "90210",
-      score_type: "homeready",
+      score_type: "propertyiq",
     }),
   }
 );
@@ -95,7 +95,7 @@ response = requests.post(
     json={
         "geography_type": "zip",
         "geography_id": "90210",
-        "score_type": "homeready",
+        "score_type": "propertyiq",
     }
 )
 print(response.json())`,
@@ -256,7 +256,7 @@ export function GettingStartedTab() {
           Now let&apos;s do something useful — generate a market report. This
           asks PropertyIQ for a{" "}
           <span className="text-on-surface-variant italic">
-            (HomeReady buyer score)
+            (PropertyIQ Score)
           </span>{" "}
           for ZIP code 90210:
         </p>

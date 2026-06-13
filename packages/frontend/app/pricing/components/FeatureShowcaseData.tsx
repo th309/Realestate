@@ -170,7 +170,7 @@ export function ReportsSection({
             <p className="text-xs text-on-surface-variant italic leading-relaxed">
               &ldquo;Nashville presents a compelling buy opportunity for
               mid-term investors. The combination of 2.8% job growth, sustained
-              in-migration, and a HomeReady score trending upward from 58 to 62
+              in-migration, and a PropertyIQ Score trending upward from 58 to 62
               over six months signals strengthening fundamentals. The primary
               risk — rising inventory — is concentrated in new construction
               above $500K, which doesn&apos;t threaten the core investment
