@@ -12,17 +12,17 @@ const IMPACTS = [
     icon: Home,
     iconClass: "bg-primary/10 text-primary",
     title: "Single Home",
-    value: "+$13,320/yr",
+    value: "+$3,550/yr",
     description:
-      "Top-quintile scored markets (Q5) earned $13,320 more in annual appreciation than bottom-quintile markets (Q1) on a $240K home.",
+      "Top-quintile scored markets (Q5) earned about $3,550 more in annual excess appreciation than bottom-quintile markets (Q1) on a $252K home.",
   },
   {
     icon: Building2,
     iconClass: "bg-secondary/10 text-secondary",
     title: "3-Property Portfolio",
-    value: "+$39,960/yr",
+    value: "+$10,650/yr",
     description:
-      "A 3-property portfolio in top-scored markets generates nearly $40K more per year in equity versus bottom-scored markets.",
+      "A 3-property portfolio in top-scored markets generates roughly $10K more per year in excess equity versus bottom-scored markets.",
   },
   {
     icon: ShieldAlert,

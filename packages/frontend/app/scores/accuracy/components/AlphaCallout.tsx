@@ -42,7 +42,7 @@ export function AlphaCallout() {
                 &mdash; that&rsquo;s{" "}
                 <strong className="text-on-surface">alpha</strong>. Given two
                 metros in the same state, which one will <em>outperform</em>?
-                That&rsquo;s the question worth $13,320 per year.
+                That&rsquo;s the question worth about $3,550 per year.
               </p>
             </div>
 
@@ -64,12 +64,12 @@ export function AlphaCallout() {
                   Alpha (What PropertyIQ Predicts)
                 </p>
                 <p className="text-sm text-on-surface">
-                  &ldquo;Tampa will beat other FL metros by 2.3pp&rdquo;
+                  &ldquo;Tampa will beat other FL metros by 1.4pp&rdquo;
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <ArrowRight className="w-3 h-3 text-primary" />
                   <p className="text-xs text-primary font-medium">
-                    This is the $13,320 insight.
+                    This is the $3,550 insight.
                   </p>
                 </div>
               </div>

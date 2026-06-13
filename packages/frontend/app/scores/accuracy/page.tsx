@@ -8,12 +8,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
   description:
-    "OOS IC = 0.37, walk-forward validated across 4 windows, 924 metros, 23,000+ locations. See how PropertyIQ Scores predict real-world returns.",
+    "OOS IC = 0.27, validated across 935 metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.",
   alternates: { canonical: "https://www.propertyiq.app/scores/accuracy" },
   openGraph: {
     title: "Forecast Accuracy — PropertyIQ",
     description:
-      "0.37 OOS correlation. 4 walk-forward windows. Zero cherry-picking. See the proof behind PropertyIQ Scores.",
+      "0.27 OOS correlation. Positive in every validated year. Zero cherry-picking. See the proof behind PropertyIQ Scores.",
     url: "https://www.propertyiq.app/scores/accuracy",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
@@ -33,7 +33,7 @@ export default function AccuracyPage() {
                 headline:
                   "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
                 description:
-                  "OOS IC = 0.37, walk-forward validated across 4 windows, 924 metros, 23,000+ locations. See how PropertyIQ Scores predict real-world returns.",
+                  "OOS IC = 0.27, validated across 935 metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.",
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {

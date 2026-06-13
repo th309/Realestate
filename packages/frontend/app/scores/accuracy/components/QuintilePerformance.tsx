@@ -24,7 +24,7 @@ import { useValidationQuintiles } from "@/lib/data";
 import type { ValidationGeography, ValidationScoreType } from "@/lib/data";
 
 const QUINTILE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#059669"];
-const MEDIAN_HOME = 240_000;
+const MEDIAN_HOME = 251_629;
 
 /**
  * Official out-of-sample quintile spreads (Q5−Q1, annualized 3-year excess
@@ -185,7 +185,7 @@ export function QuintilePerformance() {
               +{oosSpread.toFixed(2)}pp
             </p>
             <p className="text-xs text-on-surface-variant">
-              = ${oosDollarSpread.toLocaleString()}/yr on $240K home
+              = ${oosDollarSpread.toLocaleString()}/yr on $252K home
             </p>
           </div>
         </div>

@@ -3,7 +3,7 @@
 /**
  * Hero Stats Section
  *
- * Five stat cards showing key v4 PropertyIQ validation metrics.
+ * Five stat cards showing key PropertyIQ validation metrics.
  * The PropertyIQ Score targets a 3-year horizon, so all labels read "(3Y)".
  * Values are sourced from V4_CLAIMS (the single PropertyIQ score validation).
  */
@@ -39,7 +39,7 @@ export function HeroStats() {
       icon: Calendar,
       value: String(V4_CLAIMS.backtestYears),
       label: "Years of backtest data",
-      sublabel: "Walk-forward validated (2012\u20132024)",
+      sublabel: "Out-of-sample, 2001\u20132023",
     },
     {
       icon: CheckCircle,
@@ -65,9 +65,9 @@ export function HeroStats() {
         Years. <span className="text-primary">Real Data.</span>
       </h1>
       <p className="text-on-surface-variant mt-3 max-w-3xl text-base leading-relaxed">
-        PropertyIQ validates with walk-forward cross-validation across{" "}
-        {V4_CLAIMS.backtestYears} years of data. Every number on this page comes
-        from held-out test periods the model never trained on.
+        PropertyIQ validates out-of-sample across {V4_CLAIMS.backtestYears}{" "}
+        years of data. Every number on this page comes by measuring each score
+        against returns from after the score date.
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-8">

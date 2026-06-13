@@ -66,10 +66,9 @@ export const V4_CLAIMS = {
   /** Total scored region-month rows across all three levels.
    *  Source: sum of {level}.coverage.n_scored_rows (94,019 + 328,862 + 2,706,066) */
   totalObservations: 3_128_947,
-  /** Years of backtest history — NO direct field in claims_stats.json (the
-   *  claims window spans 2016+ full-formula era; the underlying score history
-   *  runs 2001–2023). Retained from prior artifact pending an explicit field. */
-  backtestYears: 13,
+  /** Years of validated backtest history: 2001–2023 scoring vintages with
+   *  observable 3-year forward outcomes. */
+  backtestYears: 22,
   /** Median home value used for dollar calculations.
    *  Source: metro.median_home_value */
   medianHomeValue: 251_629,
