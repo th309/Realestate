@@ -8,8 +8,9 @@ import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { MetroPageContent } from "./MetroPageContent";
 import { generateMarketSeoContent } from "./generate-seo-content";
 
+// Pre-render a bounded set at build; the long tail renders on-demand via ISR (dynamicParams default true) to avoid OOM from per-page server fetches.
 export function generateStaticParams() {
-  return METRO_SLUG_DATA.map((metro) => ({ slug: metro.slug }));
+  return METRO_SLUG_DATA.slice(0, 150).map((metro) => ({ slug: metro.slug }));
 }
 
 export async function generateMetadata({
@@ -55,6 +56,7 @@ export async function generateMetadata({
 }
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
+export const dynamicParams = true;
 
 export default async function MetroPage({
   params,

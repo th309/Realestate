@@ -10,8 +10,9 @@ import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { ZipPageContent } from "./ZipPageContent";
 import { generateZipSeoContent } from "./generate-seo-content";
 
+// Pre-render a bounded set at build; the long tail renders on-demand via ISR (dynamicParams default true) to avoid OOM from per-page server fetches.
 export function generateStaticParams() {
-  return ZIP_SLUG_DATA.map((zip) => ({ slug: zip.slug }));
+  return ZIP_SLUG_DATA.slice(0, 50).map((zip) => ({ slug: zip.slug }));
 }
 
 export async function generateMetadata({
@@ -56,6 +57,7 @@ export async function generateMetadata({
 }
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
+export const dynamicParams = true;
 
 export default async function ZipPage({
   params,
