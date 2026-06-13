@@ -1,6 +1,9 @@
-// Data-layer fetcher over the public rankings endpoint
-// (GET /api/v1/rankings/:scoreType/:geoLevel). Used to rank same-state markets
+// Data-layer fetcher over the PUBLIC top-markets endpoint
+// (GET /api/scores/top — anonymous, 6h-cached). Used to rank same-state markets
 // by PropertyIQ score for SEO related-market links and state-page top-10 tables.
+//
+// NOTE: the /api/v1/rankings endpoint is Platform-API-key gated (401 for anon SSR),
+// so it cannot be used from public server-rendered pages. /api/scores/top is public.
 import { fetchAPIWithParams } from "./base";
 
 export interface RankingRow {
@@ -11,13 +14,11 @@ export interface RankingRow {
   grade: string;
 }
 
-interface RankingsApiResponse {
-  rankings: {
-    rank: number;
-    geography: { id: string; name: string };
-    score: number;
-    grade: string;
-  }[];
+interface TopMarketRow {
+  location_id: string;
+  location_name: string;
+  score: number;
+  grade: string;
 }
 
 export async function fetchRankings(
@@ -26,18 +27,21 @@ export async function fetchRankings(
   opts?: { state?: string; limit?: number; order?: "asc" | "desc" },
 ): Promise<RankingRow[]> {
   try {
-    const params: Record<string, string | number | undefined> = {};
+    const params: Record<string, string | number | undefined> = {
+      geography: geoLevel,
+      score_type: scoreType,
+      sort: opts?.order ?? "desc",
+    };
     if (opts?.state) params.state = opts.state;
     if (opts?.limit) params.limit = opts.limit;
-    if (opts?.order) params.order = opts.order;
-    const res = await fetchAPIWithParams<RankingsApiResponse>(
-      `/api/v1/rankings/${scoreType}/${geoLevel}`,
-      Object.keys(params).length ? params : undefined,
+    const rows = await fetchAPIWithParams<TopMarketRow[]>(
+      `/api/scores/top`,
+      params,
     );
-    return (res.rankings ?? []).map((r) => ({
-      rank: r.rank,
-      id: r.geography.id,
-      name: r.geography.name,
+    return (Array.isArray(rows) ? rows : []).map((r, i) => ({
+      rank: i + 1,
+      id: r.location_id,
+      name: r.location_name,
       score: r.score,
       grade: r.grade,
     }));

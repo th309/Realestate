@@ -12,29 +12,22 @@ import { fetchRankings } from "../rankings";
 describe("fetchRankings", () => {
   beforeEach(() => mockFetch.mockReset());
 
-  it("maps the rankings response to flat RankingRow[]", async () => {
-    mockFetch.mockResolvedValue({
-      score_type: "propertyiq",
-      geography_level: "metro",
-      score_date: "2026-04-30",
-      rankings: [
-        {
-          rank: 1,
-          geography: { id: "12420", name: "Austin, TX" },
-          score: 88,
-          grade: "A",
-          confidence: { level: "A", percentage: 100 },
-        },
-        {
-          rank: 2,
-          geography: { id: "26420", name: "Houston, TX" },
-          score: 71,
-          grade: "B",
-          confidence: { level: "B", percentage: 75 },
-        },
-      ],
-      count: 2,
-    });
+  it("maps the public /api/scores/top flat array to ranked RankingRow[]", async () => {
+    // /api/scores/top returns a flat array of {location_id, location_name, score, grade}
+    mockFetch.mockResolvedValue([
+      {
+        location_id: "12420",
+        location_name: "Austin, TX",
+        score: 88,
+        grade: "A",
+      },
+      {
+        location_id: "26420",
+        location_name: "Houston, TX",
+        score: 71,
+        grade: "B",
+      },
+    ]);
     const rows = await fetchRankings("propertyiq", "metro", {
       state: "TX",
       limit: 10,
@@ -47,10 +40,20 @@ describe("fetchRankings", () => {
       score: 88,
       grade: "A",
     });
+    expect(rows[1].rank).toBe(2);
+    // hits the public endpoint, not the gated /api/v1/rankings
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/scores/top",
+      expect.objectContaining({
+        geography: "metro",
+        score_type: "propertyiq",
+        state: "TX",
+      }),
+    );
   });
 
   it("returns [] on a malformed or empty response (graceful degradation)", async () => {
-    mockFetch.mockResolvedValue({}); // no `rankings` field
+    mockFetch.mockResolvedValue({}); // not an array
     await expect(
       fetchRankings("propertyiq", "county", { state: "TX" }),
     ).resolves.toEqual([]);
