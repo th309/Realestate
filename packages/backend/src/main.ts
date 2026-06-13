@@ -98,6 +98,13 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 API running on http://localhost:${port}`);
+  console.log(
+    `Scheduled jobs (cron): ${
+      process.env.RUN_CRONS === 'true'
+        ? 'ENABLED'
+        : 'DISABLED (set RUN_CRONS=true to enable — production only)'
+    }`,
+  );
   console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
   console.log(`📅 Build: ${new Date().toISOString()}`);
 }
