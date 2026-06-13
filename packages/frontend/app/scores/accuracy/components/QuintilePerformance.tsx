@@ -27,19 +27,15 @@ const QUINTILE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#059669"];
 const MEDIAN_HOME = 240_000;
 
 /**
- * Official v3 OOS quintile spreads from validation_report.md (2026-03-04).
- * Keyed by `{geography}_{scoreType}`. Values in percentage points.
+ * Official out-of-sample quintile spreads (Q5−Q1, annualized 3-year excess
+ * return vs state, percentage points) for the single PropertyIQ Score.
+ * Source: app/scores/methodology/validation-report.md (2026-06-13).
+ * Keyed by `{geography}_{scoreType}` where scoreType is always `propertyiq`.
  */
 const V3_OOS_SPREAD: Record<string, number> = {
-  metro_homeready: 2.66,
-  metro_investoredge: 5.55,
-  metro_markethealth: 3.76,
-  county_homeready: 2.49,
-  county_investoredge: 2.49,
-  county_markethealth: 3.12,
-  zip_homeready: 1.69,
-  zip_investoredge: 1.69,
-  zip_markethealth: 2.16,
+  metro_propertyiq: 1.67,
+  county_propertyiq: 1.5,
+  zip_propertyiq: 1.58,
 };
 
 const GEO_OPTIONS: { value: ValidationGeography; label: string }[] = [

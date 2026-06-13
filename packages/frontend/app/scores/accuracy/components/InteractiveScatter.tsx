@@ -27,22 +27,19 @@ const SCORE_OPTIONS: { value: ValidationScoreType; label: string }[] = [
 ];
 
 /**
- * Official v3 OOS metrics from validation_report.md (2026-03-04).
- * Keyed by `{geography}_{scoreType}`.
+ * Official out-of-sample metrics for the single PropertyIQ Score.
+ * Source: app/scores/methodology/validation-report.md (2026-06-13).
+ * Keyed by `{geography}_{scoreType}` where scoreType is always `propertyiq`.
+ * `hitRate` here is the share of positive validated years (not a directional
+ * accuracy %); it is displayed as "Positive years".
  */
 const V3_OOS_METRICS: Record<
   string,
   { ic: number; spread: string; hitRate: string }
 > = {
-  metro_homeready: { ic: 0.3, spread: "2.66 pp", hitRate: "63.8%" },
-  metro_investoredge: { ic: 0.372, spread: "5.55 pp", hitRate: "69.5%" },
-  metro_markethealth: { ic: 0.366, spread: "3.76 pp", hitRate: "66.6%" },
-  county_homeready: { ic: 0.246, spread: "2.49 pp", hitRate: "60.9%" },
-  county_investoredge: { ic: 0.246, spread: "2.49 pp", hitRate: "60.9%" },
-  county_markethealth: { ic: 0.282, spread: "3.12 pp", hitRate: "65.3%" },
-  zip_homeready: { ic: 0.184, spread: "1.69 pp", hitRate: "59.9%" },
-  zip_investoredge: { ic: 0.184, spread: "1.69 pp", hitRate: "59.9%" },
-  zip_markethealth: { ic: 0.221, spread: "2.16 pp", hitRate: "63.3%" },
+  metro_propertyiq: { ic: 0.273, spread: "1.67 pp", hitRate: "100%" },
+  county_propertyiq: { ic: 0.201, spread: "1.50 pp", hitRate: "100%" },
+  zip_propertyiq: { ic: 0.196, spread: "1.58 pp", hitRate: "100%" },
 };
 
 interface InteractiveScatterProps {
@@ -116,12 +113,10 @@ export function InteractiveScatter({
             : liveSummary?.avgExcessVsState1y != null
               ? `${liveSummary.avgExcessVsState1y.toFixed(2)} pp`
               : v3Metrics.spread,
-        hitRate:
-          horizon === "3y"
-            ? v3Metrics.hitRate
-            : liveSummary?.hitRate1y != null
-              ? `${liveSummary.hitRate1y.toFixed(1)}%`
-              : v3Metrics.hitRate,
+        // Share of positive validated years (100% at every level). This is a
+        // backtest fact, not a directional-accuracy %, so it is identical for
+        // both horizons and never substitutes the live 1Y directional hit rate.
+        hitRate: v3Metrics.hitRate,
       }
     : null;
 
@@ -200,7 +195,7 @@ export function InteractiveScatter({
           </div>
           <div className="bg-surface-container rounded-xl px-4 py-2 border border-outline-variant">
             <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
-              Hit Rate
+              Positive Years
             </p>
             <p className="text-lg font-bold text-on-surface">
               {oosMetrics.hitRate}
