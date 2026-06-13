@@ -1,4 +1,4 @@
-"""Monthly PIQ score backtest for all metros, 2001 → present.
+"""Monthly PIQ score backtest per geo level, 2001 → present.
 
 Replicates the production engine's score construction with the discovered
 Candidate B formula:
@@ -9,7 +9,7 @@ Candidate B formula:
     signal -> percentile rank within month -> re-center at the zero-crossing
     percentile (where signal = 0, mapped to score 50) -> clamp 1-99
 
-Like the current engine's 2-of-3 rule, a metro is scored when >=2 of the 4
+Like the current engine's 2-of-3 rule, a region is scored when >=2 of the 4
 features are present. ZHVI momentum exists from 2001; Realtor DOM and
 price-cut share join in 2016-07, so 2001-2016 scores are momentum-only
 (would carry a C confidence in production).
@@ -20,9 +20,12 @@ state, yearly tables, quintile/decile mean excess, calibration around score
 formula).
 
 Usage:
-    python score_backtest_metro.py
+    python score_backtest.py --level metro
+    python score_backtest.py --level county
+    python score_backtest.py --level zip
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -49,12 +52,37 @@ ERAS = {
     "2016-2023 full formula": ("2016-01", "2023-02"),
 }
 
+# Per-level source tables and join keys (see MEMORY.md: zillow_zip.region_id
+# is Zillow-internal; the postal code lives in region_name).
+LEVELS = {
+    "metro": {
+        "zillow_table": "zillow_metro",
+        "zillow_id": "cbsa_code",
+        "realtor_table": "realtor_metro",
+        "realtor_id": "cbsa_code",
+    },
+    "county": {
+        "zillow_table": "zillow_county",
+        "zillow_id": "fips_code",
+        "realtor_table": "realtor_county",
+        "realtor_id": "county_fips",
+    },
+    "zip": {
+        "zillow_table": "zillow_zip",
+        "zillow_id": "lpad(region_name, 5, '0')",
+        "realtor_table": "realtor_zip",
+        "realtor_id": "postal_code",
+    },
+}
 
-def load_features(engine) -> pd.DataFrame:
+
+def load_features(engine, level: str) -> pd.DataFrame:
+    cfg = LEVELS[level]
     zhvi = pd.read_sql(
-        """
-        SELECT cbsa_code AS location_id, period_date, value
-        FROM zillow_metro WHERE metric_name = 'zhvi' AND cbsa_code IS NOT NULL
+        f"""
+        SELECT {cfg['zillow_id']} AS location_id, period_date, value
+        FROM {cfg['zillow_table']}
+        WHERE metric_name = 'zhvi' AND {cfg['zillow_id']} IS NOT NULL
         """,
         engine,
     )
@@ -71,10 +99,10 @@ def load_features(engine) -> pd.DataFrame:
     ).reset_index()
 
     realtor = pd.read_sql(
-        """
-        SELECT cbsa_code AS location_id, period_date,
+        f"""
+        SELECT {cfg['realtor_id']} AS location_id, period_date,
                median_days_on_market, price_reduced_share
-        FROM realtor_metro
+        FROM {cfg['realtor_table']}
         """,
         engine,
     )
@@ -125,12 +153,12 @@ def compute_scores(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_outcomes(engine) -> pd.DataFrame:
+def load_outcomes(engine, level: str) -> pd.DataFrame:
     own = pd.read_sql(
-        """
+        f"""
         SELECT location_id, period_date, return_3y_ann
         FROM zhvi_forward_returns
-        WHERE geography_level = 'metro' AND return_3y_ann IS NOT NULL
+        WHERE geography_level = '{level}' AND return_3y_ann IS NOT NULL
         """,
         engine,
     )
@@ -143,7 +171,7 @@ def load_outcomes(engine) -> pd.DataFrame:
         engine,
     )
     geo_map = pd.read_sql(
-        "SELECT location_id, state_code FROM score_geo_state_map WHERE geography='metro'",
+        f"SELECT location_id, state_code FROM score_geo_state_map WHERE geography='{level}'",
         engine,
     )
     own["month"] = pd.to_datetime(own["period_date"]).dt.to_period("M")
@@ -198,7 +226,7 @@ def evaluate(scored: pd.DataFrame) -> dict:
 
     return {
         "n_scored_rows": int(len(scored)),
-        "n_metros": int(scored["location_id"].nunique()),
+        "n_regions": int(scored["location_id"].nunique()),
         "vintage_range": [str(scored["month"].min()), str(scored["month"].max())],
         "median_yearly_ic": round(float(yearly.median()), 4),
         "pct_positive_years": round(100 * (yearly > 0).mean(), 1),
@@ -214,13 +242,18 @@ def evaluate(scored: pd.DataFrame) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--level", choices=list(LEVELS), required=True)
+    args = parser.parse_args()
+    level = args.level
+
     engine = get_engine()
-    print("loading features…")
-    features = load_features(engine)
-    print(f"  rows={len(features):,} metros={features['location_id'].nunique():,} "
+    print(f"[{level}] loading features…")
+    features = load_features(engine, level)
+    print(f"  rows={len(features):,} regions={features['location_id'].nunique():,} "
           f"months={features['month'].nunique()}")
 
-    print("computing scores…")
+    print(f"[{level}] computing scores…")
     scores = compute_scores(features)
     zc = scores.attrs["zero_crossing"]
     print(f"  scored rows={len(scores):,} zero-crossing percentile={zc:.1f}")
@@ -228,19 +261,19 @@ def main() -> None:
     print(f"  score distribution: mean={dist['mean']:.1f} p25={dist['25%']:.0f} "
           f"p50={dist['50%']:.0f} p75={dist['75%']:.0f}")
 
-    out_scores = DATA_DIR / "metro_score_history.parquet"
+    out_scores = DATA_DIR / f"{level}_score_history.parquet"
     save = scores[["location_id", "month", "n_features", "signal", "score"]].copy()
     save["month"] = save["month"].dt.to_timestamp()
     save.to_parquet(out_scores, index=False)
     print(f"wrote {out_scores}")
 
-    print("evaluating vs excess_3y…")
-    outcomes = load_outcomes(engine)
+    print(f"[{level}] evaluating vs excess_3y…")
+    outcomes = load_outcomes(engine, level)
     scored = scores.merge(outcomes, on=["location_id", "month"], how="inner")
     report = evaluate(scored)
     report["zero_crossing_percentile"] = round(zc, 1)
 
-    out = DATA_DIR / "metro_score_backtest.json"
+    out = DATA_DIR / f"{level}_score_backtest.json"
     out.write_text(json.dumps(report, indent=2))
     print(json.dumps(report, indent=2))
     print(f"wrote {out}")

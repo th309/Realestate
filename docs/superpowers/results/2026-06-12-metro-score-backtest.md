@@ -1,7 +1,7 @@
 # Metro PIQ Score Backtest — Candidate B Formula, 2001–2023
 
 **Date:** 2026-06-12
-**Code:** `scripts/analysis/monolithic-discovery/score_backtest_metro.py`
+**Code:** `scripts/analysis/monolithic-discovery/score_backtest.py --level metro`
 **Inputs:** discovered formula from `2026-06-12-monolithic-feature-discovery.md`
 **Artifacts:** `data/metro_score_history.parquet` (213,206 monthly scores), `data/metro_score_backtest.json`
 
