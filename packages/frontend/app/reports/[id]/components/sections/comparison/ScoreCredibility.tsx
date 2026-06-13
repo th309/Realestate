@@ -32,7 +32,7 @@ export function ScoreCredibility({ section, report }: SectionProps) {
 
   const isInvestor = report.user_type === 'investor';
   const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = isInvestor ? 'InvestorEdge' : 'HomeReady';
+  const scoreLabel = 'PropertyIQ';
 
   // Get the winner's score for context
   const winnerData = report.populated_data?.priority_weighted_winner as {

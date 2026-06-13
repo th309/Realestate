@@ -148,7 +148,7 @@ export function ComparisonVerdict({
                 </>
               )}
               <span className="ml-1 text-xs" style={{ color: 'var(--report-stone-light)' }}>
-                ({isInvestor ? 'InvestorEdge' : 'HomeReady'} Score)
+                (PropertyIQ Score)
               </span>
             </p>
           )}
@@ -220,7 +220,7 @@ export function ComparisonVerdict({
               className="text-xs mt-[var(--report-space-xs)]"
               style={{ color: 'var(--report-stone-light)' }}
             >
-              {isInvestor ? 'InvestorEdge' : 'HomeReady'} Score
+              PropertyIQ Score
             </p>
           </div>
         )

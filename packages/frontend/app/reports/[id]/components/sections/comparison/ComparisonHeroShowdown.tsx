@@ -22,7 +22,7 @@ interface MarketScore {
 export function ComparisonHeroShowdown({ section, report }: SectionProps) {
   const isInvestor = report.user_type === 'investor';
   const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = isInvestor ? 'InvestorEdge' : 'HomeReady';
+  const scoreLabel = 'PropertyIQ';
 
   // Get primary market score
   const primaryScore = isInvestor

@@ -36,7 +36,7 @@ interface MarketCard {
 export function ComparisonHero({ report, className = '' }: ComparisonHeroProps): React.ReactElement {
   const isInvestor = report.user_type === 'investor';
   const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = isInvestor ? 'InvestorEdge Score' : 'HomeReady Score';
+  const scoreLabel = 'PropertyIQ Score';
 
   // -----------------------------------------------------------------------
   // Primary market score
