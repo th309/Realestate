@@ -50,3 +50,10 @@ WHERE s.score_type = 'propertyiq'
 
 -- 4) After all three: VACUUM (ANALYZE) propertyiq_backtest_outcomes;
 --    and ensure migration 20260613190000 (quintile covering index) is applied.
+--
+-- 5) Rebuild the pre-aggregated quintile summary the /scores/accuracy chart
+--    reads (migration 20260613210000). Run on the SESSION pooler with
+--    statement_timeout=0 (ZIP NTILE exceeds the transaction pooler cap):
+--        SELECT refresh_propertyiq_quintile_summary();
+--    Skipping this leaves the chart showing the PREVIOUS regeneration's
+--    quintiles, so it must run every time outcomes change.
