@@ -67,6 +67,7 @@ import { EmploymentSectorsModule } from './employment-sectors/employment-sectors
 import { AnonymousModule } from './anonymous/anonymous.module';
 import { AnalyzerModule } from './analyzer/analyzer.module';
 import { RentcastModule } from './rentcast/rentcast.module';
+import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.module';
 
 @Module({
   imports: [
@@ -151,6 +152,7 @@ import { RentcastModule } from './rentcast/rentcast.module';
     AnonymousModule,
     AnalyzerModule,
     RentcastModule,
+    SeoRevalidationModule,
   ],
   controllers: [AppController],
   providers: [
