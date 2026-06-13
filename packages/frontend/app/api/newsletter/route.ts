@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { RateLimiter } from "../_lib/rate-limiter";
 import { sendConfirmationEmail } from "./send-confirmation-email";
+import { VALID_SOURCES } from "./sources";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -27,15 +28,6 @@ async function addToResendContacts(
     console.warn("Resend contact create skipped:", err);
   }
 }
-
-const VALID_SOURCES = [
-  "homepage",
-  "city-page",
-  "exit-intent",
-  "newsletter-page",
-  "sticky-bar",
-  "seo_conversion_bar",
-] as const;
 
 const VALID_CONTEXTS = ["market", "blog"] as const;
 
