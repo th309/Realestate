@@ -150,3 +150,121 @@ export const WINBACK_DAY14 = {
   browseLeadIn: "Or browse all markets at",
   browseLinkText: "propertyiq.app/markets",
 } as const;
+
+/**
+ * Copy for the hand-rolled HTML email builders in
+ * packages/backend/src/email/behavioral-trigger-emails.ts.
+ * Lines below are MOVED VERBATIM from those builders — rendered HTML must not change.
+ */
+
+/** buildWelcomeEmail */
+export const WELCOME_EMAIL = {
+  heading: (name: string) => `Welcome to PropertyIQ, ${name}.`,
+  intro:
+    "You now have access to real-time market intelligence for over 20,000 ZIP codes, 3,000 counties, and 750 metros across the US.",
+  bulletsHeading: "Here's what to do first:",
+  bullets: [
+    "Search any market and check its PropertyIQ Score",
+    "Compare metros side-by-side",
+    "Generate your first market report",
+  ],
+  cta: "Get Started",
+} as const;
+
+/** buildReportGeneratedEmail */
+export const REPORT_GENERATED_EMAIL = {
+  heading: (name: string) => `Your report is ready, ${name}.`,
+  intro: "Here's how to get the most out of your PropertyIQ market report:",
+  bullets: [
+    "<strong>PropertyIQ Score</strong> — demand signal relative to the state average (50 = average)",
+    "<strong>Trend charts</strong> — scroll down to see how key metrics have moved over 3–5 years",
+    "<strong>AI narrative</strong> — plain-language summary of what the data means for buyers and investors",
+    "<strong>Share link</strong> — send a read-only version to clients or partners",
+  ],
+  closing: "You can access all your reports from the Reports tab any time.",
+  cta: "View My Reports",
+} as const;
+
+/** buildPaywallHitEmail */
+export const PAYWALL_HIT_EMAIL = {
+  heading: (name: string) => `You found something good, ${name}.`,
+  intro: (featureName: string) =>
+    `You tried to access <strong>${featureName}</strong> — that's a Pro feature. Upgrade now to unlock it along with:`,
+  bullets: [
+    "Full market deep-dive reports",
+    "ZIP-level PropertyIQ Scores",
+    "Historical trend data (5 years)",
+    "Unlimited market comparisons",
+  ],
+  closing: "Start a free 14-day trial — no credit card required.",
+  cta: "Unlock Pro Features",
+} as const;
+
+/** buildPostTrial7dEmail */
+export const POST_TRIAL_7D_EMAIL = {
+  heading: (name: string) =>
+    `Your free report credit is still waiting, ${name}.`,
+  intro:
+    "It's been a week since your Pro trial ended. You still have a free report credit on your account — use it to generate a full market deep-dive at no cost.",
+  body: "Pick any market — city, county, or ZIP — and get a complete analysis with PropertyIQ Scores, trend charts, and an AI narrative.",
+  cta: "Use My Free Report",
+  upgradePrompt: "Ready to go Pro?",
+  upgradeLinkText: "See plans",
+} as const;
+
+/** buildInactive24hEmail */
+export const INACTIVE_24H_EMAIL = {
+  heading: (name: string) => `Hi ${name},`,
+  intro:
+    "You signed up for PropertyIQ yesterday — great call. Your market intelligence dashboard is ready with real-time scores for over 20,000 ZIP codes, 3,000 counties, and 750 metros.",
+  body: "Takes less than 2 minutes to explore your first market. Pick any city, county, or ZIP and see how it ranks.",
+  cta: "Open My Dashboard",
+} as const;
+
+/** buildTrialDay10Email */
+export const TRIAL_DAY10_EMAIL = {
+  heading: (name: string) => `Hi ${name},`,
+  intro:
+    "Your PropertyIQ Pro trial ends in <strong>4 days</strong>. After that, you'll lose access to:",
+  bullets: [
+    "Full market deep-dive reports",
+    "ZIP-level PropertyIQ Scores",
+    "Historical trend data (5 years)",
+    "Unlimited market comparisons",
+  ],
+  closing: "Lock in your access now and keep the edge you've been building.",
+  cta: "Upgrade to Pro",
+} as const;
+
+/** buildTrialDay13Email */
+export const TRIAL_DAY13_EMAIL = {
+  heading: (name: string) => `Hi ${name},`,
+  intro:
+    "Your Pro trial expires <strong>tomorrow</strong>. Don't lose access right when markets are moving.",
+  body: "Upgrading takes 30 seconds. Your analysis, your saved markets, your history — all stays right where you left it.",
+  cta: "Keep My Pro Access",
+  footnote: "Questions? Reply to this email — we're real people.",
+} as const;
+
+/** buildTrialExpiredEmail */
+export const TRIAL_EXPIRED_EMAIL = {
+  heading: (name: string) => `Hi ${name},`,
+  intro:
+    "Your PropertyIQ Pro trial has ended. Your account is still active on the free plan, but you've lost access to deep-dive reports and ZIP-level scores.",
+  body: "Upgrade any time to get everything back instantly — no re-setup required.",
+  cta: "Reactivate Pro",
+} as const;
+
+/** buildActiveExplorerEmail (score sentence uses SCORE_DESCRIPTION, kept in builder) */
+export const ACTIVE_EXPLORER_EMAIL = {
+  heading: (name: string) => `You're asking the right questions, ${name}.`,
+  intro:
+    "You've already checked several PropertyIQ Scores — here's how experienced investors use them to time their moves.",
+  bulletsHeading: "The investor playbook:",
+  bullets: [
+    "<strong>Score 70+:</strong> Strong demand signal — competition is high, act fast",
+    "<strong>Score 50–69:</strong> Balanced market — good for negotiation leverage",
+    "<strong>Score &lt;50:</strong> Buyer's market — price concessions are common",
+  ],
+  cta: "Keep Exploring Markets",
+} as const;
