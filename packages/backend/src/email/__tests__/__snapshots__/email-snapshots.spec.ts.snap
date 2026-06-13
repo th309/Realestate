@@ -1,0 +1,612 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Backend HTML email builders — rendered HTML is pinned active_explorer 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">You're asking the right questions, Sample.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You've already checked several PropertyIQ Scores — here's how experienced investors use them to time their moves.
+    </p>
+    <p style="margin:0 0 8px; font-size:15px; font-weight:600; color:#1A237E;">The investor playbook:</p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li><strong>Score 70+:</strong> Strong demand signal — competition is high, act fast</li>
+      <li><strong>Score 50–69:</strong> Balanced market — good for negotiation leverage</li>
+      <li><strong>Score &lt;50:</strong> Buyer's market — price concessions are common</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      The PropertyIQ Score blends four demand signals: home-value momentum over the last 12 and 3 months (from Zillow), how fast homes are selling (median days on market), and the share of listings with price cuts (from Realtor).
+    </p>
+    <a href="https://example.com/graphs"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Keep Exploring Markets
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned inactive_24h 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Hi Sample,</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You signed up for PropertyIQ yesterday — great call. Your market intelligence dashboard is ready with real-time scores for thousands of ZIP codes, counties, and metros.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Takes less than 2 minutes to explore your first market. Pick any city, county, or ZIP and see how it ranks.
+    </p>
+    <a href="https://example.com/graphs"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Open My Dashboard
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned paywall_hit 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">You found something good, Sample.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You tried to access <strong>ZIP-level scores</strong> — that's a Pro feature. Upgrade now to unlock it along with:
+    </p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li>Full market deep-dive reports</li>
+      <li>ZIP-level PropertyIQ Scores</li>
+      <li>Historical trend data (5 years)</li>
+      <li>Unlimited market comparisons</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      Start a free 14-day trial — no credit card required.
+    </p>
+    <a href="https://example.com/pricing"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Unlock Pro Features
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned post_trial_7d 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Your free report credit is still waiting, Sample.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      It's been a week since your Pro trial ended. You still have a free report credit on your account — use it to generate a full market deep-dive at no cost.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Pick any market — city, county, or ZIP — and get a complete analysis with PropertyIQ Scores, trend charts, and an AI narrative.
+    </p>
+    <a href="https://example.com/reports"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Use My Free Report
+    </a>
+    <p style="margin:16px 0 0; font-size:13px; color:#757575;">
+      Ready to go Pro? <a href="https://example.com/pricing" style="color:#3949AB; text-decoration:none;">See plans</a>
+    </p>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned report_generated 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Your report is ready, Sample.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Here's how to get the most out of your PropertyIQ market report:
+    </p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li><strong>PropertyIQ Score</strong> — demand signal relative to the state average (50 = average)</li>
+      <li><strong>Trend charts</strong> — scroll down to see how key metrics have moved over 3–5 years</li>
+      <li><strong>AI narrative</strong> — plain-language summary of what the data means for buyers and investors</li>
+      <li><strong>Share link</strong> — send a read-only version to clients or partners</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:15px; color:#424242; line-height:1.6;">
+      You can access all your reports from the Reports tab any time.
+    </p>
+    <a href="https://example.com/reports"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      View My Reports
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned trial_day10 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Hi Sample,</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Your PropertyIQ Pro trial ends in <strong>4 days</strong>. After that, you'll lose access to:
+    </p>
+    <ul style="margin:0 0 16px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li>Full market deep-dive reports</li>
+      <li>ZIP-level PropertyIQ Scores</li>
+      <li>Historical trend data (5 years)</li>
+      <li>Unlimited market comparisons</li>
+    </ul>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Lock in your access now and keep the edge you've been building.
+    </p>
+    <a href="https://example.com/pricing"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Upgrade to Pro
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned trial_day13 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Hi Sample,</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Your Pro trial expires <strong>tomorrow</strong>. Don't lose access right when markets are moving.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Upgrading takes 30 seconds. Your analysis, your saved markets, your history — all stays right where you left it.
+    </p>
+    <a href="https://example.com/pricing"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Keep My Pro Access
+    </a>
+    <p style="margin:16px 0 0; font-size:13px; color:#757575;">
+      Questions? Reply to this email — we're real people.
+    </p>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned trial_expired 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Hi Sample,</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Your PropertyIQ Pro trial has ended. Your account is still active on the free plan, but you've lost access to deep-dive reports and ZIP-level scores.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      Upgrade any time to get everything back instantly — no re-setup required.
+    </p>
+    <a href="https://example.com/pricing"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Reactivate Pro
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`Backend HTML email builders — rendered HTML is pinned welcome 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #FAFBFF; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFBFF; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; max-width:600px; width:100%;">
+          <tr>
+            <td style="background-color:#3949AB; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px;">PropertyIQ</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Welcome to PropertyIQ, Sample.</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      You now have access to real-time market intelligence for thousands of ZIP codes, counties, and metros across the US.
+    </p>
+    <p style="margin:0 0 8px; font-size:15px; font-weight:600; color:#1A237E;">Here's what to do first:</p>
+    <ul style="margin:0 0 24px; padding-left:20px; font-size:15px; color:#424242; line-height:1.8;">
+      <li>Search any market and check its PropertyIQ Score</li>
+      <li>Compare metros side-by-side</li>
+      <li>Generate your first market report</li>
+    </ul>
+    <a href="https://example.com/get-started"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Get Started
+    </a>
+  
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px; border-top:1px solid #E8EAF6;">
+              <p style="margin:0; font-size:12px; color:#9E9E9E;">
+                You're receiving this because you have a PropertyIQ account.
+                <a href="https://example.com/account/notifications" style="color:#3949AB; text-decoration:none;">Manage notifications</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day0-welcome 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">Your free PropertyIQ Score is ready, Sample<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">Your Free PropertyIQ Score Is Ready</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Welcome. Here&#x27;s how to get your first market score in 60 seconds: open the map, search for any U.S. city or ZIP code, and click it. You&#x27;ll see a 1–99 PropertyIQ Score that blends four demand signals — home-value momentum, how fast homes sell, and the share of listings with price cuts — into a single number.</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.5rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">Explore the Map</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/map</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day1-scores 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">What does a 74 actually mean?<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">How to Read Your Scores</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Every market on PropertyIQ gets a <strong>PropertyIQ Score (1-99)</strong> that predicts which markets will outperform. Here&#x27;s how to read it:</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>Score 50 = state average.</strong> Higher means the market is predicted to outperform its state; lower means underperformance.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">The PropertyIQ Score blends four demand signals: home-value momentum over the last 12 and 3 months (from Zillow), how fast homes are selling (median days on market), and the share of listings with price cuts (from Realtor).</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Want the receipts? See how the score has performed against real market outcomes: <a href="https://example.com/scores/accuracy" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/scores/accuracy</a></p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Pick a market on the map and see your PropertyIQ Score:</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.5rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">See Scores on the Map</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/map</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day3-compare 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">Here&#x27;s how investors are using PropertyIQ to find their next market<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">How Investors Use PropertyIQ</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Here&#x27;s how a typical PropertyIQ session goes for an investor looking for their next market:</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>Step 1:</strong> Open the map and filter by PropertyIQ Score &gt; 70. This removes markets with weak fundamentals immediately.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>Step 2:</strong> Sort by rent-to-price ratio or score momentum to surface markets gaining ground fast.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>Step 3:</strong> Drop 2–3 finalists into the comparison view. Side-by-side metrics, trends, and demographics. Pick the one.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">The whole process takes about 10 minutes. Give it a try:</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">Find Your Next Market</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="background-color:rgb(239,246,255);border-style:solid;border-width:1px;border-color:rgb(190,219,255);border-radius:0.5rem;padding:1rem;margin-bottom:1.5rem"><tbody><tr><td><p style="font-size:0.875rem;line-height:1.25rem;font-weight:600;color:rgb(28,57,142);margin:0rem;margin-bottom:0.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Want unlimited access?</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(20,71,230);margin:0rem;margin-bottom:0.75rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Pro users get 40+ metrics per market, AI-powered reports, and no 5-market cap — everything you need to vet a deal fast.</p><a href="https://example.com/pricing?from=email_day3" style="color:rgb(20,71,230);text-decoration-line:underline;font-size:0.875rem;line-height:1.4285714285714286;font-weight:600" target="_blank">See Pro plans →</a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/map</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day5-upgrade 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">The 5 markets that moved the most this month<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">The 5 Markets That Moved the Most This Month</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ scores update monthly. Here are the markets that saw the biggest score movement this month — markets gaining ground fast are worth watching before the rest of the market catches on.</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="background-color:rgb(249,250,251);border-style:solid;border-width:1px;border-color:rgb(229,231,235);border-radius:0.5rem;padding:1rem;margin-bottom:1.5rem"><tbody><tr><td><p style="font-size:0.875rem;line-height:1.25rem;font-weight:600;color:rgb(16,24,40);margin:0rem;margin-bottom:0.75rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Top movers this month</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🔼 <strong>Check the platform</strong> for this month&#x27;s live rankings — scores update each month and the top movers change.</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0.75rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">See current rankings →</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">View Live Market Scores</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/map</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day7-profile 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">What Pro users see that free users miss<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">Ready to Go Further?</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">You&#x27;ve had a week to explore PropertyIQ. Here&#x27;s what free users can&#x27;t see yet:</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="margin-bottom:1.25rem"><tbody><tr><td><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🔒 <strong>Score breakdowns</strong> — understand exactly why a market ranks the way it does</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🔒 <strong>40+ data metrics</strong> — median DOM, price cuts, rent yield, cap rate, and more</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🔒 <strong>AI market reports</strong> — plain-English summaries ready to share with partners or agents</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(54,65,83);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">🔒 <strong>Unlimited markets</strong> — no 5-market cap</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/pricing?from=email_day7" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">Unlock Pro Access</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Or, if you haven&#x27;t set up your preferences yet, take 60 seconds to tell us your goals and we&#x27;ll surface markets matched to you: <a href="https://example.com/onboarding" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">Complete your profile</a></p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/pricing?from=email_day7" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/pricing?from=email_day7</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day10-zillow 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">PropertyIQ does market-level scoring. Zillow does property listings. Different tools.<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">“I already use Zillow for this.”</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">We hear this a lot. Zillow is great — for what it does.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>Zillow answers:</strong> What is this property worth?</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem"><strong>PropertyIQ answers:</strong> Which markets should I be in?</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Zillow works at the property level — individual listings, Zestimates, days on market for a single home. PropertyIQ works at the market level — scoring every metro, county, and ZIP on demand signals like home-value momentum, days on market, and price cuts. Updated monthly.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Use Zillow to pick the property. Use PropertyIQ to pick the market.</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">See Your Market Scores</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/map</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned onboarding-day14-report 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">One thing before you go<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">One Thing Before You Go</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">You&#x27;ve had two weeks of PropertyIQ. Here&#x27;s where things stand:</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Your free account gives you access to scores across thousands of markets and the interactive map — forever. No credit card, no expiration.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">If you&#x27;ve been curious about what&#x27;s behind the scores — the 40+ data metrics, AI-generated market reports, score breakdowns, and unlimited market comparisons — that&#x27;s Pro.</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">One number per market is powerful. The full picture is how investors make the call with confidence.</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/pricing?from=email_day14" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">Explore Pro</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-bottom:0.75rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Not ready? No problem — <a href="https://example.com/map" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">your free access</a> is always here.</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">If the button doesn&#x27;t work, copy this link: <a href="https://example.com/pricing?from=email_day14" style="color:rgb(103,80,164);text-decoration-line:underline" target="_blank">https://example.com/pricing?from=email_day14</a></p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem"><a href="https://example.com/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">Unsubscribe</a> or <a href="https://propertyiq.app/account/notifications" style="color:rgb(153,161,175);text-decoration-line:underline" target="_blank">manage preferences</a></p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
+
+exports[`React email templates — rendered markup is pinned winback-day14 1`] = `
+"<html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/><style></style><style>
+    @font-face {
+      font-family: 'Roboto';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'Arial';
+      src: url(https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.woff2) format('woff2');
+    }
+
+    * {
+      font-family: 'Roboto', Arial;
+    }
+  </style></head><body style="background-color:rgb(243,244,246)"><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">Markets have moved since you last checked in<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:rgb(243,244,246);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;padding-bottom:2.5rem;padding-top:2.5rem"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;background-color:rgb(255,255,255);border-radius:0.75rem;margin-right:auto;margin-left:auto;padding:0rem"><tbody><tr style="width:100%"><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:2rem;padding-bottom:1.5rem;border-bottom:3px solid #6750A4"><tbody><tr><td><p style="font-size:1.5rem;line-height:1.3333333333333333;font-weight:700;margin:0rem;color:#6750A4;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-bottom:1.5rem;padding-top:1.5rem"><tbody><tr><td><h1 style="font-size:1.25rem;line-height:1.4;font-weight:700;color:rgb(16,24,40);margin:0rem;margin-bottom:1rem">Markets have moved since you last checked in</h1><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">Hey Sample,</p><p style="font-size:1rem;line-height:1.5rem;color:rgb(54,65,83);margin:0rem;margin-bottom:1rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">A lot can change in two weeks. PropertyIQ scores are updated monthly from Zillow and Realtor data — and some of the markets you were watching may have shifted.</p><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:rgb(229,231,235);margin-bottom:1.25rem;margin-top:1.25rem"/><p style="font-size:0.875rem;line-height:1.4285714285714286;font-weight:600;color:rgb(16,24,40);margin:0rem;margin-bottom:0.5rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">What&#x27;s new since you left:</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(74,85,101);margin:0rem;margin-bottom:0.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">📈  Monthly score updates across thousands of metros, counties, and ZIP codes</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(74,85,101);margin:0rem;margin-bottom:0.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🗺️  Interactive map with heat-mapped PropertyIQ scores</p><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(74,85,101);margin:0rem;margin-bottom:1.25rem;margin-top:0rem;margin-left:0rem;margin-right:0rem">🤖  AI-generated market reports in plain English</p><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:rgb(229,231,235);margin-bottom:1.25rem;margin-top:1.25rem"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;margin-bottom:1.25rem"><tbody><tr><td><a href="https://example.com/map" style="line-height:1.5;text-decoration:none;display:block;max-width:100%;mso-padding-alt:0px;background-color:rgb(103,80,164);color:rgb(255,255,255);font-size:1rem;font-weight:600;padding-bottom:12px;padding-top:12px;padding-right:32px;padding-left:32px;border-radius:0.5rem;box-sizing:border-box;text-decoration-line:none;text-align:center" target="_blank"><span><!--[if mso]><i style="mso-font-width:400%;mso-text-raise:18" hidden>&#8202;&#8202;&#8202;&#8202;</i><![endif]--></span><span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">See What&#x27;s Changed</span><span><!--[if mso]><i style="mso-font-width:400%" hidden>&#8202;&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span></a></td></tr></tbody></table><p style="font-size:0.875rem;line-height:1.25rem;color:rgb(106,114,130);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">Or browse all markets at <a href="https://example.com/markets" style="color:rgb(103,80,164);text-decoration-line:underline">propertyiq.app/markets</a>.</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-right:2.5rem;padding-left:2.5rem;padding-top:1.5rem;padding-bottom:2rem;background-color:rgb(249,250,251);border-top:1px solid #e5e5e5"><tbody><tr><td><p style="font-size:0.75rem;line-height:1.25rem;color:rgb(153,161,175);margin:0rem;margin-top:0rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">PropertyIQ</p><p style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(153,161,175);margin:0rem;margin-top:0.25rem;margin-bottom:0rem;margin-left:0rem;margin-right:0rem">© 2026 PropertyIQ. All rights reserved.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>"
+`;
