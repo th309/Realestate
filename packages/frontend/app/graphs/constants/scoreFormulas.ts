@@ -26,11 +26,13 @@ type GeographyFormulas = Record<ScoreType, FormulaDefinition>;
 
 /** Human-readable labels for internal metric names */
 const METRIC_LABELS: Record<string, string> = {
+  zhvi_yoy: "12-Month Price Momentum",
+  zhvi_mom_3m: "3-Month Price Momentum",
   median_days_on_market: "Days on Market",
+  price_reduced_share: "Price Cut Share",
   demand_score: "Demand Score",
   hotness_score: "Hotness Score",
   affordability_ratio: "Affordability",
-  price_reduced_share: "Price Cuts",
   pending_ratio: "Pending Ratio",
   unemployment_rate_yoy: "Unemployment Trend",
   population_yoy: "Population Growth",
@@ -50,15 +52,30 @@ function w(weight: number, direction: 1 | -1, metric: string): MetricWeight {
   return { weight, direction, label: label(metric) };
 }
 
+/**
+ * PropertyIQ demand-signal formula — four equal-weighted momentum + market-flow
+ * components, identical at every geography level. Keys match the z_scores JSON
+ * the scoring engine writes (zhvi_yoy, zhvi_mom_3m, median_days_on_market,
+ * price_reduced_share). signal = +z(yoy) +z(3m) -z(DOM) -z(price cuts).
+ * Validated 2026-06-12 (docs/superpowers/results/
+ * 2026-06-12-monolithic-feature-discovery.md and the three score backtests).
+ */
+const PROPERTYIQ_FORMULA: FormulaDefinition = {
+  zhvi_yoy: w(0.25, 1, "zhvi_yoy"),
+  zhvi_mom_3m: w(0.25, 1, "zhvi_mom_3m"),
+  median_days_on_market: w(0.25, -1, "median_days_on_market"),
+  price_reduced_share: w(0.25, -1, "price_reduced_share"),
+};
+
 export const SCORE_FORMULAS: Record<string, GeographyFormulas> = {
   metro: {
-    propertyiq: {},
+    propertyiq: PROPERTYIQ_FORMULA,
   },
   county: {
-    propertyiq: {},
+    propertyiq: PROPERTYIQ_FORMULA,
   },
   zip: {
-    propertyiq: {},
+    propertyiq: PROPERTYIQ_FORMULA,
   },
 };
 

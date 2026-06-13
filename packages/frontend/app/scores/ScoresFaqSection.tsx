@@ -1,35 +1,35 @@
 const FAQ_ITEMS = [
   {
     q: "What is a real estate market score?",
-    a: "A real estate market score is a single number that measures how strong a housing market is relative to others. The PropertyIQ Score ranks markets from 1 to 99 based on demand signals — % Sold Above List, Median Days on Market, and Months of Supply. A score of 50 equals the state average; higher scores indicate markets outperforming their peers. It helps investors and homebuyers quickly compare thousands of markets without analyzing dozens of data points manually.",
+    a: "A real estate market score is a single number that measures how strong a housing market is relative to others. The PropertyIQ Score ranks markets from 1 to 99 based on four demand signals — how fast home values have grown over the last year, how fast they've grown over the last 3 months, how quickly homes are selling (days on market), and whether sellers are cutting their asking prices. A score of 50 equals the state average; higher scores indicate markets outperforming their peers. It helps investors and homebuyers quickly compare thousands of markets without analyzing dozens of data points manually.",
   },
   {
     q: "How can I predict housing market performance?",
-    a: "The most reliable way to predict housing market performance is to track leading demand indicators rather than lagging price data. The PropertyIQ Score combines three proven predictors — how often homes sell above asking, how fast they sell, and how much inventory is available. In 13 years of backtesting across 746 metros, these three signals predicted which markets would outperform every single year. You can check any market's score for free on PropertyIQ.",
+    a: "The most reliable way to predict housing market performance is to track leading demand signals rather than lagging price data. The PropertyIQ Score combines four proven indicators — price growth over the past year, price growth over the last 3 months, how fast homes sell, and whether sellers are cutting prices. Across more than two decades of monthly backtesting, higher-scored markets outperformed lower-scored markets in every year tested. You can check any market's score for free on PropertyIQ.",
   },
   {
     q: "How often is the PropertyIQ Score updated?",
-    a: "The score is recalculated monthly as new housing data arrives. The three input metrics — % Sold Above List, Median Days on Market, and Months of Supply — update monthly. Each refresh incorporates the latest available data.",
+    a: "The score is recalculated monthly as new housing data arrives. The four input signals — price growth over the last year, price growth over the last 3 months, days on market, and the share of listings with price cuts — update monthly. Each refresh incorporates the latest available data.",
   },
   {
     q: "What data sources power the score?",
-    a: "The PropertyIQ Score is built on three housing metrics: % Sold Above List, Median Days on Market, and Months of Supply. We tested 40+ features from Zillow, Census, FRED, BLS, and housing — these three are the most predictive of future home price appreciation in out-of-sample testing.",
+    a: "The PropertyIQ Score is built on four housing signals: price growth over the last year and the last 3 months (from Zillow's home value index), plus how fast homes sell (days on market) and the share of sellers cutting prices (both from Realtor.com listing data). We tested 40+ features across Zillow, Realtor.com, Census, FRED, and BLS — these four are the most predictive of future home price appreciation in out-of-sample testing.",
   },
   {
     q: "How accurate is the PropertyIQ Score?",
-    a: "The score has a 100% year hit rate across 13 years of backtesting: every single year, higher-scored metros outperformed lower-scored metros on average. Top-quintile markets (Score 80+) beat the state 56% of the time, while bottom-quintile markets (Score 20) beat the state only 39% of the time. At the extremes, choosing a score-100 market over a score-10 market translates to roughly $24,384 in extra equity on a typical home over 3 years.",
+    a: "Across more than two decades of monthly backtesting, higher-scored markets outperformed lower-scored markets in essentially every year, at metro, county, and ZIP level. Comparing equally-priced homes in the same state, a top-band market has historically added roughly $18,400 more equity than a bottom-band market over 3 years at metro level, and around $24,000 at ZIP level — where investors actually pick neighborhoods. These are historical averages across thousands of markets, not guarantees about any single property.",
   },
   {
-    q: "Why only 3 metrics?",
-    a: "We tested 40+ features across multiple data sources. These 3 housing metrics are the most predictive of future returns in rigorous out-of-sample testing. More metrics didn't improve performance — they added noise. Simpler models generalize better, and these three capture the core demand-supply dynamics that drive home price appreciation.",
+    q: "Why only 4 signals?",
+    a: "We tested 40+ features across multiple data sources. These four housing signals are the most predictive of future returns in rigorous out-of-sample testing. They carry equal weight and no fitted parameters, so there is almost nothing to overfit. More metrics didn't improve performance — they added noise. Simpler models generalize better, and these four capture the price-momentum and demand dynamics that drive home price appreciation.",
   },
   {
     q: "Can I trust scores for smaller markets?",
-    a: "Each score comes with a confidence rating (A through F) that indicates data quality and coverage. Markets with A or B confidence have robust data across all three input metrics. Markets with C or F confidence have data gaps, and their scores should be used directionally rather than as precise predictions. We always recommend supplementing score data with local market knowledge.",
+    a: "Each score comes with a confidence rating (A through F) that reflects how many of the four input signals are available for that market and how fresh the data is. Markets with A or B confidence have all four inputs covered; markets with C or F confidence are missing some inputs (for example, scored on price momentum alone), and their scores should be used directionally rather than as precise predictions. We always recommend supplementing score data with local market knowledge.",
   },
   {
     q: "How many markets does PropertyIQ cover?",
-    a: "PropertyIQ scores 746 metropolitan statistical areas (MSAs), covering the vast majority of the U.S. housing market. Coverage is focused at the metro level where data density supports reliable scoring. The validation dataset spans 13 years of historical data.",
+    a: "PropertyIQ scores housing markets at three levels — roughly 865 metro areas, 3,073 counties, and over 26,000 ZIP codes in the validation window — covering the vast majority of the U.S. housing market. The validation dataset spans more than two decades of monthly history.",
   },
 ];
 
