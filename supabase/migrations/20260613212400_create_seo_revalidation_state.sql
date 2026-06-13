@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS public.seo_revalidation_state (
   CONSTRAINT seo_revalidation_state_singleton CHECK (id = 1)
 );
 
--- Without these GRANTs even sb_secret_/service_role keys hit permission-denied.
+-- Backend-internal table: only the SeoRevalidationService cron (service_role)
+-- reads/writes it. No client (anon/authenticated) ever touches it, so it gets
+-- no `authenticated` grant.
 GRANT ALL ON public.seo_revalidation_state TO service_role;
-GRANT ALL ON public.seo_revalidation_state TO authenticated;
+-- Defense in depth: RLS on with zero policies denies anon/authenticated entirely;
+-- service_role bypasses RLS, so the cron is unaffected.
+ALTER TABLE public.seo_revalidation_state ENABLE ROW LEVEL SECURITY;
