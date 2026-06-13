@@ -1,12 +1,14 @@
 /**
- * v4 Demand Signal Scoring Engine
+ * PropertyIQ Demand Signal Scoring Engine
  *
- * Pure math module — no database access. Implements the v4 formula:
- *   signal = z(sold_above_list) - z(median_dom) - z(months_of_supply)
+ * Pure math module — no database access. Implements the formula:
+ *   signal = z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market)
+ *            - z(price_reduced_share)
  *
  * Then: percentile rank -> re-center at zero-crossing -> score 1-99
  *
- * Reference implementation: scripts/analysis/recentered_score.py
+ * Python replica (must stay bit-for-bit identical):
+ * scripts/analysis/monolithic-discovery/backfill_generate.py
  */
 
 import {
@@ -14,7 +16,6 @@ import {
   PROPERTYIQ_FORMULA_METRICS,
   PROPERTYIQ_METRIC_DIRECTIONS,
   PROPERTYIQ_ZERO_CROSSING,
-  PROPERTYIQ_FORMULA_VERSION,
   scoreToGrade,
   getConfidenceLevel,
 } from './formula-weights';
@@ -34,32 +35,17 @@ export interface PropertyIqScoreResult {
   signal: number; // raw z-score signal
   percentileRank: number; // 0-100
   medianPrice: number | null;
-  inputMetrics: {
-    sold_above_list: number | null;
-    median_dom: number | null;
-    months_of_supply: number | null;
-  };
+  inputMetrics: Record<string, number | null>;
 }
 
 // ============================================================================
 // Internal helpers
 // ============================================================================
 
-/** Extract the raw value for a v4 metric from a LocationMetrics record. */
+/** Extract the raw value for a formula metric from a LocationMetrics record.
+ *  All four metrics are set as dynamic keys by fetchPropertyIqMetrics. */
 function getMetricValue(loc: LocationMetrics, metric: string): number | null {
-  switch (metric) {
-    case 'sold_above_list':
-      return loc.rf_sold_above_list ?? null;
-    case 'median_dom':
-      return loc.rf_median_dom ?? null;
-    case 'months_of_supply':
-      // months_of_supply is not on the standard LocationMetrics interface
-      // (it's a Redfin column fetched by fetchPropertyIqMetrics). We access it via
-      // a dynamic key set by the fetcher.
-      return (loc as Record<string, any>).months_of_supply ?? null;
-    default:
-      return null;
-  }
+  return (loc as Record<string, any>)[metric] ?? null;
 }
 
 /** Compute mean and standard deviation of an array of numbers. */
@@ -166,8 +152,8 @@ function recenterScore(pctRank: number, zeroCrossing: number): number {
 }
 
 /**
- * Calculate v4 confidence based on Redfin data completeness.
- * 3/3 metrics present = 100%, 2/3 = 67%, 1/3 = 33%, 0/3 = 0%.
+ * Calculate confidence from formula-input completeness.
+ * 4/4 metrics present = 100%, 3/4 = 75%, 2/4 = 50%, fewer = unscored anyway.
  */
 function calculatePropertyIqConfidence(loc: LocationMetrics): number {
   let available = 0;
@@ -185,13 +171,13 @@ function calculatePropertyIqConfidence(loc: LocationMetrics): number {
 // ============================================================================
 
 /**
- * Calculate v4 PropertyIQ demand signal scores for a set of locations.
+ * Calculate PropertyIQ demand signal scores for a set of locations.
  *
- * Algorithm (matches recentered_score.py):
- * 1. Z-score each of the 3 metrics cross-sectionally
- * 2. Compute signal = z(sold_above_list) * 1 + z(median_dom) * (-1) + z(months_of_supply) * (-1)
+ * Algorithm:
+ * 1. Z-score each formula metric cross-sectionally
+ * 2. Compute signal = sum of z(metric) * direction over PROPERTYIQ_FORMULA_METRICS
  * 3. Percentile rank (average rank for ties, 0-100)
- * 4. Re-center at zero-crossing so score 50 = state average performance
+ * 4. Re-center at zero-crossing so signal = 0 maps to score 50
  * 5. Grade using standard scoreToGrade()
  * 6. Confidence based on metric completeness
  */
@@ -207,8 +193,9 @@ export function calculatePropertyIqScores(
     zScoreMaps.set(metric, computeZScores(locations, metric));
   }
 
-  // Step 2: Compute signal. Require at least 2 of 3 metrics (months_of_supply
-  // is universally NULL at ZIP level, so we degrade gracefully to 2 metrics).
+  // Step 2: Compute signal. Require at least 2 of the 4 metrics — Realtor
+  // flow metrics start 2016-07 and coverage is a Zillow ∪ Realtor union, so
+  // momentum-only or flow-only regions still score (at reduced confidence).
   const MIN_METRICS_FOR_SIGNAL = 2;
   const signalEntries: { locationId: string; signal: number }[] = [];
   const signalMap = new Map<string, number>();
@@ -245,7 +232,7 @@ export function calculatePropertyIqScores(
     const signal = signalMap.get(loc.location_id);
     const pctRank = pctRankMap.get(loc.location_id);
 
-    // Locations without enough metrics (min 2 of 3) get no score — skip.
+    // Locations without enough metrics (min 2 of 4) get no score — skip.
     if (signal == null || pctRank == null) {
       continue;
     }
@@ -263,16 +250,11 @@ export function calculatePropertyIqScores(
       signal,
       percentileRank: Math.round(pctRank * 100) / 100,
       medianPrice: loc.median_price ?? null,
-      inputMetrics: {
-        sold_above_list: getMetricValue(loc, 'sold_above_list'),
-        median_dom: getMetricValue(loc, 'median_dom'),
-        months_of_supply: getMetricValue(loc, 'months_of_supply'),
-      },
+      inputMetrics: Object.fromEntries(
+        PROPERTYIQ_FORMULA_METRICS.map((m) => [m, getMetricValue(loc, m)]),
+      ),
     });
   }
 
   return results;
 }
-
-/** Current formula version for v4 scores. */
-export const FORMULA_VERSION = PROPERTYIQ_FORMULA_VERSION;
