@@ -106,13 +106,7 @@ export function ReportHeader({
                   report.investoredge_score ??
                   (report as any).markethealth_score
                 }
-                scoreLabel={
-                  templateType.includes("investoredge")
-                    ? "InvestorEdge Score"
-                    : templateType.includes("market_snapshot")
-                      ? "MarketHealth Score"
-                      : "HomeReady Score"
-                }
+                scoreLabel="PropertyIQ Score"
                 grade={
                   (report.scores_snapshot as any)?.homeready_grade ??
                   (report.scores_snapshot as any)?.investoredge_grade ??

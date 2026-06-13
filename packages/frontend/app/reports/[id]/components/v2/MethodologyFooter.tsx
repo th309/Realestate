@@ -34,16 +34,10 @@ const CONFIDENCE_LABELS: Record<string, string> = {
 };
 
 function getScoreDescription(scoreType?: string): string {
-  switch (scoreType) {
-    case "homeready":
-      return "HomeReady scores predict which markets will outperform their state peers in home price appreciation over 3 years.";
-    case "investoredge":
-      return "InvestorEdge scores predict which markets will deliver the highest total return (appreciation + rent growth) relative to state peers over 3 years.";
-    case "markethealth":
-      return "Market Health scores assess current market conditions relative to state peers, reflecting supply-demand balance and economic fundamentals.";
-    default:
-      return "PropertyIQ scores predict which markets will outperform their regional peers over the next 3 years.";
-  }
+  // One score across all reports: the PropertyIQ Score. The scoreType param is
+  // retained for callers/back-compat, but every report shows the same copy.
+  void scoreType;
+  return "The PropertyIQ Score predicts which markets will outperform their state over the next 3 years, combining Zillow price momentum with Realtor.com market-flow signals (days on market and price cuts).";
 }
 
 /**
@@ -142,8 +136,8 @@ export function MethodologyFooter({
               </p>
               <p className="text-xs text-on-surface-variant">
                 {userType === "investor"
-                  ? "70% OOS hit rate (InvestorEdge)"
-                  : "64% OOS hit rate (HomeReady)"}
+                  ? "70% OOS hit rate (PropertyIQ)"
+                  : "64% OOS hit rate (PropertyIQ)"}
               </p>
             </div>
           </div>
