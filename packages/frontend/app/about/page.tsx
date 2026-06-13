@@ -7,12 +7,12 @@ import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 export const metadata: Metadata = {
   title: "About PropertyIQ — Our Mission, Team & Data Sources",
   description:
-    "Learn how PropertyIQ uses machine learning to analyze 925 US metros and 33,000+ ZIP codes, helping homebuyers, investors, and agents.",
+    "Learn how PropertyIQ uses machine learning to analyze 935 US metros and 33,000+ ZIP codes, helping homebuyers, investors, and agents.",
   alternates: { canonical: "https://www.propertyiq.app/about" },
   openGraph: {
     title: "About PropertyIQ | AI Real Estate Intelligence",
     description:
-      "How PropertyIQ uses machine learning to analyze 925 US metros and 33,000+ ZIP codes.",
+      "How PropertyIQ uses machine learning to analyze 935 US metros and 33,000+ ZIP codes.",
     url: "https://www.propertyiq.app/about",
     siteName: "PropertyIQ",
     images: [
@@ -59,7 +59,7 @@ export default function AboutPage() {
                 everyone, from first-time homebuyers to seasoned investors,
                 deserves access to the same market intelligence that was once
                 reserved for institutional players. Our AI-powered platform
-                analyzes millions of data points across 925 US metros, 3,100+
+                analyzes millions of data points across 935 US metros, 3,100+
                 counties, and 33,000+ ZIP codes to deliver actionable insights.
               </p>
             </section>
@@ -75,10 +75,10 @@ export default function AboutPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
                   <span>
                     <strong className="text-on-surface">
-                      Proprietary Scores:
+                      The PropertyIQ Score:
                     </strong>{" "}
-                    HomeReady Score for livability, InvestorEdge Score for
-                    investment potential
+                    a single 1–100 market score that predicts how a market will
+                    perform versus its state over the next 3 years
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -189,12 +189,12 @@ export default function AboutPage() {
                   {
                     date: "Early 2025",
                     event:
-                      "First scoring models trained on 6 years of historical data across 924 metros",
+                      "First scoring models trained and validated on more than two decades of historical price data across 900+ metros",
                   },
                   {
                     date: "Mid 2025",
                     event:
-                      "Walk-forward validation completed: 0.37 OOS IC confirmed across 4 time windows",
+                      "Out-of-sample validation completed: 0.27 information coefficient at metro level, positive in every validated year",
                   },
                   {
                     date: "Late 2025",
@@ -239,9 +239,10 @@ export default function AboutPage() {
                     Validated with Real Data
                   </h3>
                   <p className="text-sm text-on-surface-variant">
-                    Our scores are walk-forward validated across 4
-                    non-overlapping time windows. We publish our accuracy
-                    metrics openly — something most competitors don&apos;t do.
+                    The PropertyIQ Score is validated against actual market
+                    outcomes across more than two decades, and was positive in
+                    every validated year. We publish our accuracy metrics openly
+                    — something most competitors don&apos;t do.
                   </p>
                 </div>
                 <div className="p-6 rounded-xl bg-surface-container-low">
@@ -249,7 +250,7 @@ export default function AboutPage() {
                     Comprehensive Coverage
                   </h3>
                   <p className="text-sm text-on-surface-variant">
-                    925 metros, 3,100+ counties, 33,000+ ZIP codes. From major
+                    935 metros, 3,100+ counties, 33,000+ ZIP codes. From major
                     cities to small towns, PropertyIQ covers every corner of the
                     US housing market.
                   </p>
