@@ -18,8 +18,14 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
-import { MarketInsight, InsightContext, InsightType } from './insights.types';
+import {
+  MarketInsight,
+  InsightContext,
+  InsightType,
+  GeoLevel,
+} from './insights.types';
 import { buildInsightContext } from './insight-context-builder';
+import { buildFallbackInsightContent } from './insights-fallback';
 import { generateBatchInsights, CACHE_TTL_MS } from './insight-batch-generator';
 import {
   buildMarketTakePrompt,
@@ -75,9 +81,7 @@ export class InsightsService {
     insightType: string,
     archetypeId?: string,
   ): Promise<MarketInsight | null> {
-    if (!this.aiClient) return null;
-
-    // Check cache
+    // Check cache first (works regardless of AI availability).
     let query = this.supabase
       .from('market_insights')
       .select('*')
@@ -92,15 +96,50 @@ export class InsightsService {
 
     if (cached) return cached as MarketInsight;
 
-    // Generate fresh insight
+    // Build context (needed for live generation AND the deterministic fallback).
     const context = await this.buildInsightContext(regionId, geoLevel);
+
+    const componentValue = (o?: { value: number | null }): number | null =>
+      o && typeof o.value === 'number' ? o.value : null;
+    const makeFallback = (): MarketInsight => ({
+      id: '',
+      region_id: regionId,
+      geo_level: geoLevel as GeoLevel,
+      insight_type: insightType as InsightType,
+      content: buildFallbackInsightContent(
+        {
+          region_name: context.region_name,
+          score: context.scores?.propertyiq ?? null,
+          grade: null,
+          median_price: componentValue(context.key_metrics?.['home_value']),
+          days_on_market: componentValue(
+            context.score_components?.['median_days_on_market'],
+          ),
+          price_reduced_share: componentValue(
+            context.score_components?.['price_reduced_share'],
+          ),
+          zhvi_yoy: componentValue(context.score_components?.['zhvi_yoy']),
+        },
+        insightType,
+      ),
+      model: 'fallback-template',
+      archetype_id: archetypeId || '__none__',
+      generated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
+    });
+
+    // No AI client configured — serve the deterministic fallback (HTTP 200).
+    if (!this.aiClient) return makeFallback();
+
+    // Generate fresh insight
     const content = await this.generateSingleInsight(
       context,
       insightType as InsightType,
     );
 
-    // Don't cache empty failures — let the next request retry generation.
-    if (!content) return null;
+    // Generation failed/empty — serve the fallback instead of throwing 404.
+    // Do not cache the fallback; a later request regenerates with the AI client.
+    if (!content) return makeFallback();
 
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
