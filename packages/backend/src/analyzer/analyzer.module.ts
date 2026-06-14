@@ -11,6 +11,7 @@ import { GradeController } from './grade.controller';
 import { ThresholdsController } from './thresholds.controller';
 import { EmailModule } from '../email/email.module';
 import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPrefillService } from './analyzer-prefill.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
@@ -46,6 +47,7 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
   ],
   providers: [
     AnalyzerService,
+    AnalyzerPrefillService,
     AnalyzerPersistenceService,
     AnalyzerPdfService,
     AnalyzerTierGate,
@@ -56,7 +58,11 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     AiInsightsCache,
     FreePreviewMiddleware,
   ],
-  exports: [AnalyzerService, AnalyzerPersistenceService],
+  exports: [
+    AnalyzerService,
+    AnalyzerPrefillService,
+    AnalyzerPersistenceService,
+  ],
 })
 export class AnalyzerModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

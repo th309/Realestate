@@ -19,6 +19,7 @@ import type { Request, Response } from 'express';
 import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPrefillService } from './analyzer-prefill.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
@@ -43,6 +44,7 @@ const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{16,64}$/;
 export class AnalyzerController {
   constructor(
     private readonly service: AnalyzerService,
+    private readonly prefillService: AnalyzerPrefillService,
     private readonly persistence: AnalyzerPersistenceService,
     private readonly tierGate: AnalyzerTierGate,
     private readonly pdfService: AnalyzerPdfService,
@@ -77,7 +79,7 @@ export class AnalyzerController {
     @Query() query: AnalyzerPrefillQueryDto,
   ) {
     const isPro = await this.tierGate.isPro(req.userId);
-    return this.service.getPrefillBundle(query, { isPro });
+    return this.prefillService.getPrefillBundle(query, { isPro });
   }
 
   /**

@@ -1,4 +1,4 @@
-import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPrefillService } from './analyzer-prefill.service';
 import type { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 
 const NOW = new Date('2026-06-14T00:00:00Z');
@@ -27,26 +27,21 @@ function makeService(opts: {
   const geographyChain = {
     getInheritanceChain: jest.fn().mockResolvedValue(opts.chain ?? []),
   };
-  const scoringService = { getScore: jest.fn().mockResolvedValue(null) };
-  const rentcast = {};
-  const aiProvider = {};
-  const service = new AnalyzerService(
+  const analyzerStub = {
+    lookupProperty: jest.fn(),
+  };
+  if (opts.rentcast !== undefined) {
+    analyzerStub.lookupProperty.mockResolvedValue(opts.rentcast);
+  }
+  const service = new AnalyzerPrefillService(
     metricResolution as never,
     geographyChain as never,
-    scoringService as never,
-    rentcast as never,
-    aiProvider as never,
+    analyzerStub as never,
   );
-  // lookupProperty is exercised separately; stub it for the parcel path.
-  if (opts.rentcast !== undefined) {
-    jest
-      .spyOn(service, 'lookupProperty')
-      .mockResolvedValue(opts.rentcast as never);
-  }
-  return { service, metricResolution };
+  return { service, metricResolution, analyzerStub };
 }
 
-describe('AnalyzerService.getPrefillBundle', () => {
+describe('AnalyzerPrefillService.getPrefillBundle', () => {
   it('free tier: geo-layer data + estimates, no parcel, tax is an estimate', async () => {
     const { service } = makeService({
       metrics: {
@@ -165,7 +160,7 @@ describe('AnalyzerService.getPrefillBundle', () => {
   });
 
   it('pro tier: RentCast failure degrades to geo layer with a note', async () => {
-    const { service } = makeService({
+    const { service, analyzerStub } = makeService({
       metrics: {
         rent_index: metric({
           value: 1850,
@@ -187,9 +182,7 @@ describe('AnalyzerService.getPrefillBundle', () => {
         }),
       },
     });
-    jest
-      .spyOn(service, 'lookupProperty')
-      .mockRejectedValue(new Error('quota exceeded'));
+    analyzerStub.lookupProperty.mockRejectedValue(new Error('quota exceeded'));
 
     const bundle = await service.getPrefillBundle(
       { zip: '78702', address: '123 Main St' },
