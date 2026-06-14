@@ -5,6 +5,8 @@ interface MapboxFeature {
   id: string;
   place_name: string;
   text: string;
+  /** House number for address-type results (Mapbox returns it separately from `text`). */
+  address?: string;
   center: [number, number];
   context?: Array<{ id: string; text: string; short_code?: string }>;
 }
@@ -15,10 +17,16 @@ function parse(feature: MapboxFeature): AddressSuggestion {
   const place = ctx.find((c) => c.id.startsWith("place"))?.text ?? "";
   const region = ctx.find((c) => c.id.startsWith("region"));
   const state = region?.short_code?.replace("US-", "") ?? "";
+  // Mapbox puts the house number in `feature.address`, not `feature.text`
+  // (which is the street name only). Prepend it so the dropdown shows
+  // "123 S Market St" rather than just "S Market St".
+  const street = feature.address
+    ? `${feature.address} ${feature.text}`
+    : feature.text;
   return {
     id: feature.id,
     full: feature.place_name,
-    street: feature.text,
+    street,
     city: place,
     state,
     postalCode: postcode,
