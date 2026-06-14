@@ -66,3 +66,43 @@ if (!fileCheck || !fileCheck.allFilesPresent) {
   };
 }
 log("Compute complete — all 5 JSON outputs present.");
+
+const DRAFT_SCHEMA = {
+  type: "object",
+  required: ["draftPath", "homeValueSource"],
+  properties: {
+    draftPath: { type: "string" },
+    homeValueSource: { type: "string" },
+    headlineNumbers: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          label: { type: "string" },
+          value: { type: "string" },
+          jsonPath: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+// ---- Phase 1: Draft ----
+phase("Draft");
+const draft = await agent(
+  [
+    `Write the PropertyIQ monthly validation report draft to ${DRAFT}.`,
+    `Read these first and follow them EXACTLY:`,
+    `- ${SKILL}/references/report-template.md (exact section order + placeholders)`,
+    `- ${SKILL}/references/data-dictionary.md (every metric -> JSON source path)`,
+    `- ${SKILL}/SKILL.md (the Five Absolute Rules, Prohibited Content, section order, edge cases)`,
+    `Data sources: the 5 JSON files in ${OUT}. For dollar conversions, query the latest median home values from the DB (cite source month/year); if the DB is unavailable, write "N/A" and flag it — never fabricate.`,
+    `Adapt any legacy 3-score (HomeReady/InvestorEdge) template language to the single PropertyIQ Score.`,
+    `Every number must trace to a JSON path or a cited external source. Keep cross-section numbers consistent (the Executive Summary must match Section 3).`,
+    `Return draftPath, the homeValueSource string, and headlineNumbers (label/value/jsonPath) for the key figures you used.`,
+  ].join("\n"),
+  { label: "draft-report", model: "opus", schema: DRAFT_SCHEMA },
+);
+log(
+  `Draft written to ${draft.draftPath} (home values: ${draft.homeValueSource}).`,
+);
