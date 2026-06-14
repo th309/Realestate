@@ -56,6 +56,31 @@ async function main() {
       (res.investment?.stored ?? 0) +
       (res.overvalued?.stored ?? 0) +
       (res.growth?.stored ?? 0);
+
+    // Surface per-section errors without failing on a handful of region-level
+    // issues (a monthly run with a few bad regions is still a useful run).
+    const errors = [
+      ...(res.investment?.errors ?? []),
+      ...(res.overvalued?.errors ?? []),
+      ...(res.growth?.errors ?? []),
+    ];
+    if (errors.length > 0) {
+      console.warn(
+        `[WARN] ${errors.length} error(s) during refresh (first 10):`,
+      );
+      for (const e of errors.slice(0, 10)) console.warn(`  - ${e}`);
+    }
+
+    // A run that stored nothing is a failure, not a success — guard against the
+    // CI gate going green on "TOTAL: 0" when every upsert failed.
+    if (stored === 0) {
+      console.error(
+        '[FATAL] calculated metrics refresh stored 0 rows — treating as failure',
+      );
+      await app.close();
+      process.exit(1);
+    }
+
     console.log(
       `TOTAL: ${stored} calculated_metrics rows stored in ${((Date.now() - start) / 1000).toFixed(1)}s`,
     );
