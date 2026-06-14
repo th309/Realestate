@@ -30,7 +30,7 @@ import type { AnalyzerAssumptions } from "../../lib/analyzer-assumptions";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { FieldProvenance } from "./FieldProvenance";
 import { isDivergent, type ProvenanceMap } from "../../lib/use-analyzer-state";
-import type { AddressSuggestion } from "@/lib/data";
+import type { AddressSuggestion } from "@/lib/analyzer/types";
 
 type PropertyType = "sfh" | "mf";
 

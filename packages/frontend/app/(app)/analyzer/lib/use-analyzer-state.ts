@@ -16,6 +16,7 @@ import {
   useAnalyzerPrefill,
   type PropertyLookupResult,
 } from "@/lib/data";
+import type { AddressSuggestion } from "@/lib/analyzer/types";
 import {
   DEFAULT_ASSUMPTIONS,
   type AnalyzerAssumptions,
@@ -280,11 +281,11 @@ export function useAnalyzerState({
     provenance,
     applyPrefillBundle,
     prefill,
-    handleAddressSelect: async (s: { label: string; zip: string | null }) => {
-      setAddress(s.label);
+    handleAddressSelect: async (s: AddressSuggestion) => {
+      setAddress(s.full);
       const bundle = await prefill.mutateAsync({
-        zip: s.zip ?? undefined,
-        address: isPro ? s.label : undefined,
+        zip: s.postalCode ?? undefined,
+        address: isPro ? s.full : undefined,
       });
       if (bundle) applyPrefillBundle(bundle);
     },

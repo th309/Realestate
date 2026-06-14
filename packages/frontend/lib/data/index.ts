@@ -235,8 +235,7 @@ export {
   useAnalyzerDefaults,
   useUpdateAnalyzerDefaults,
 
-  // Address geocoding + prefill hooks
-  useAddressGeocode,
+  // Analyzer prefill hook
   useAnalyzerPrefill,
 } from "./hooks";
 

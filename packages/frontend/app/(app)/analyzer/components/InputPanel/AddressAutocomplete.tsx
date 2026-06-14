@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useAddressGeocode, type AddressSuggestion } from "@/lib/data";
+import { useAddressAutocomplete } from "@/lib/analyzer/useAddressAutocomplete";
+import type { AddressSuggestion } from "@/lib/analyzer/types";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -22,7 +23,7 @@ export function AddressAutocomplete({
   placeholder = "Enter a property address",
 }: AddressAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const { suggestions, loading } = useAddressGeocode(value);
+  const { setQuery, suggestions, loading } = useAddressAutocomplete();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,9 +43,11 @@ export function AddressAutocomplete({
     <div ref={containerRef} className="relative">
       <input
         type="text"
+        aria-label="Address search"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
+          setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
@@ -63,13 +66,13 @@ export function AddressAutocomplete({
               <button
                 type="button"
                 onClick={() => {
-                  onChange(s.label);
+                  onChange(s.full);
                   onSelect(s);
                   setOpen(false);
                 }}
                 className="block w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-primary-container"
               >
-                {s.label}
+                {`${s.street}, ${s.city}, ${s.state}`}
               </button>
             </li>
           ))}

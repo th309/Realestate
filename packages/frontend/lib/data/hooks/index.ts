@@ -137,8 +137,5 @@ export {
   useUpdateAnalyzerDefaults,
 } from "./useAnalyzerDefaults";
 
-// Address geocoding (Mapbox street-address autocomplete for the Deal Analyzer)
-export { useAddressGeocode } from "./useAddressGeocode";
-
 // Analyzer prefill bundle (address-driven field prefill with provenance)
 export { useAnalyzerPrefill } from "./useAnalyzerPrefill";
