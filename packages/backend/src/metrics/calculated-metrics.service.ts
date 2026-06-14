@@ -2991,6 +2991,44 @@ export class CalculatedMetricsService {
   }
 
   /**
+   * Single entry point for the monthly calculated_metrics refresh: investment
+   * metrics + months_of_supply (all geos), overvalued_pct (all geos), and
+   * 5-year growth (all geos). Affordability metrics (income_to_buy /
+   * affordable_home_price / years_to_save) are produced separately by the
+   * scripts/calculations affordability runner (FRED-dependent) and are NOT here.
+   */
+  async refreshAllCalculatedMetrics(year?: number): Promise<{
+    investment: { processed: number; stored: number; errors: string[] };
+    overvalued: { processed: number; stored: number; errors: string[] };
+    growth: { processed: number; stored: number; errors: string[] };
+  }> {
+    const inv = await this.calculateAllInvestmentMetrics(year);
+    const growthRaw = await this.calculate5YrGrowthForAll(year);
+    // calculate5YrGrowthForAll returns {metros,states,counties,zips,national} each {processed,stored}.
+    // Aggregate across all geo levels; no error channel exists on sub-results so errors stays empty.
+    const growth = {
+      processed:
+        growthRaw.metros.processed +
+        growthRaw.states.processed +
+        growthRaw.counties.processed +
+        growthRaw.zips.processed +
+        growthRaw.national.processed,
+      stored:
+        growthRaw.metros.stored +
+        growthRaw.states.stored +
+        growthRaw.counties.stored +
+        growthRaw.zips.stored +
+        growthRaw.national.stored,
+      errors: [] as string[],
+    };
+    return {
+      investment: inv.investmentMetrics,
+      overvalued: inv.overvalued,
+      growth,
+    };
+  }
+
+  /**
    * Calculate and store overvalued percentage for all counties (latest period only).
    * Uses ZHVI from zillow_county and median_household_income from census_county.
    */
