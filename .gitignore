@@ -150,3 +150,6 @@ scripts/analysis/data/
 # Windows artifacts
 NUL
 .claude/worktrees/
+
+# Claude Code per-session scratch (stop-validators)
+.claude/.touched-files
