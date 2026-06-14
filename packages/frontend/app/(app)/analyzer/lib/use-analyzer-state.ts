@@ -13,37 +13,29 @@ import {
   usePropertyLookup,
   useAiHeaderVerdict,
   useMarketContext,
+  useAnalyzerPrefill,
   type PropertyLookupResult,
 } from "@/lib/data";
+import type { AddressSuggestion } from "@/lib/analyzer/types";
 import {
   DEFAULT_ASSUMPTIONS,
   type AnalyzerAssumptions,
 } from "./analyzer-assumptions";
 import { derivePropertyClass } from "./derive-property-class";
 import { usePiqByGeo } from "./use-piq-by-geo";
+import {
+  buildProvenanceFromBundle,
+  extractZip,
+  type AnalyzerStateOptions,
+  type FieldProvenance,
+  type ProvenanceMap,
+  isDivergent,
+} from "./use-analyzer-state.provenance";
 
+export type { FieldProvenance, ProvenanceMap };
+export { isDivergent };
 export type { AnalyzerAssumptions };
 export { DEFAULT_ASSUMPTIONS };
-
-/**
- * Pull the trailing 5-digit ZIP out of a RentCast resolved_address like
- * "123 S Market St, Frederick, MD 21701". Returns null when no ZIP is
- * present so the market-context query stays disabled instead of firing
- * with garbage.
- */
-function extractZip(resolvedAddress: string | undefined): string | null {
-  if (!resolvedAddress) return null;
-  const match = resolvedAddress.match(/\b(\d{5})(?:-\d{4})?\b\s*$/);
-  return match ? match[1] : null;
-}
-
-interface AnalyzerStateOptions {
-  isPro: boolean;
-  initialAddress?: string;
-  paramAddress?: string;
-  /** Explicit ZIP from `?zip=` URL param (highest priority). */
-  paramZip?: string;
-}
 
 /**
  * Combines all the analyzer state + side effects into one consumable hook so
@@ -131,23 +123,27 @@ export function useAnalyzerState({
     propertyLookup.data && "quotaExceeded" in propertyLookup.data,
   );
 
-  // Sync RentCast result → input fields once per fresh fetch. The mutation
-  // `data` ref changes only when a new request resolves, so user edits made
-  // afterwards are not clobbered by a re-render.
+  const [provenance, setProvenance] = useState<ProvenanceMap>({});
+  const prefill = useAnalyzerPrefill();
+
+  const applyPrefillBundle = (
+    bundle: Parameters<typeof buildProvenanceFromBundle>[0],
+  ) => {
+    setProvenance(
+      buildProvenanceFromBundle(bundle, analyzer.setInput, setAssumptionsState),
+    );
+  };
+
+  // RentCast still seeds ARV for flip/BRRRR; field prefill now flows through
+  // applyPrefillBundle, so price/rent are no longer set here.
   const lastSyncedRef = useRef<PropertyLookupResult | null>(null);
   useEffect(() => {
     if (!rentcastData || rentcastData === lastSyncedRef.current) return;
     lastSyncedRef.current = rentcastData;
-    analyzer.setInput((prev) => ({
-      ...prev,
-      price: rentcastData.avm?.value ?? prev.price,
-      rentMonthly: rentcastData.rent?.value ?? prev.rentMonthly,
-    }));
     if (rentcastData.avm?.value && arvLocal === 0) {
-      // Default ARV to AVM × 1.15 as a starting point for flip/BRRRR analysis
       setArvLocal(Math.round(rentcastData.avm.value * 1.15));
     }
-  }, [rentcastData, analyzer, arvLocal]);
+  }, [rentcastData, arvLocal]);
 
   // Auto-fetch on first render when address arrived via ?address= query param,
   // saving the user a click in the common deep-link flow. Note: `mutate` from
@@ -161,15 +157,6 @@ export function useAnalyzerState({
       isPro &&
       trimmed.length > 5 &&
       Boolean(paramAddress);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[analyzer] auto-fetch check", {
-        isPro,
-        addressLength: trimmed.length,
-        paramAddress,
-        autoFetched: autoFetchedRef.current,
-        shouldFetch,
-      });
-    }
     if (shouldFetch) {
       autoFetchedRef.current = true;
       mutate({ address: trimmed });
@@ -291,5 +278,16 @@ export function useAnalyzerState({
     marketContext,
     marketContextLoading: marketContextQuery.isLoading,
     piqByGeo,
+    provenance,
+    applyPrefillBundle,
+    prefill,
+    handleAddressSelect: async (s: AddressSuggestion) => {
+      setAddress(s.full);
+      const bundle = await prefill.mutateAsync({
+        zip: s.postalCode ?? undefined,
+        address: isPro ? s.full : undefined,
+      });
+      if (bundle) applyPrefillBundle(bundle);
+    },
   };
 }

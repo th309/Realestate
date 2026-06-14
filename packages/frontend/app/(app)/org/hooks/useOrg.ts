@@ -13,6 +13,7 @@ export interface OrgContextValue {
     billing_status: string;
     created_at: string;
     updated_at: string;
+    embed_enabled: boolean;
   } | null;
   role: "admin" | "member" | null;
   loading: boolean;

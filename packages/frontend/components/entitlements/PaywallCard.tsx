@@ -37,9 +37,13 @@ export function PaywallCard({
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
-      setIsAuthenticated(!!data.session);
-    });
+    supabase.auth
+      .getSession()
+      .then(
+        ({ data }: Awaited<ReturnType<typeof supabase.auth.getSession>>) => {
+          setIsAuthenticated(!!data.session);
+        },
+      );
   }, []);
 
   const variant = getPricingCtaVariant();

@@ -136,3 +136,6 @@ export {
   useAnalyzerDefaults,
   useUpdateAnalyzerDefaults,
 } from "./useAnalyzerDefaults";
+
+// Analyzer prefill bundle (address-driven field prefill with provenance)
+export { useAnalyzerPrefill } from "./useAnalyzerPrefill";

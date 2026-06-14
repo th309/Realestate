@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface NewsletterSignupProps {
-  source?: "homepage" | "city-page" | "exit-intent";
+  source?: "homepage" | "city-page" | "exit-intent" | "newsletter-page";
   label?: string;
   description?: string;
   buttonText?: string;

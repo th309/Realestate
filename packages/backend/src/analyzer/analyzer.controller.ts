@@ -9,15 +9,17 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Req,
   Res,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import type { Response } from 'express';
-import { JwtAuthGuard } from '../common/guards';
+import type { Request, Response } from 'express';
+import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { AnalyzerService } from './analyzer.service';
+import { AnalyzerPrefillService } from './analyzer-prefill.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
@@ -28,6 +30,7 @@ import {
   PropertyLookupQueryDto,
   PropertyLookupDto,
 } from './dto/property-lookup.dto';
+import { AnalyzerPrefillQueryDto } from './dto/analyzer-prefill.dto';
 
 /**
  * Share tokens are produced by `crypto.randomBytes(N).toString('base64url')`.
@@ -41,6 +44,7 @@ const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{16,64}$/;
 export class AnalyzerController {
   constructor(
     private readonly service: AnalyzerService,
+    private readonly prefillService: AnalyzerPrefillService,
     private readonly persistence: AnalyzerPersistenceService,
     private readonly tierGate: AnalyzerTierGate,
     private readonly pdfService: AnalyzerPdfService,
@@ -58,6 +62,24 @@ export class AnalyzerController {
   @Get('market-context')
   getMarketContext(@Query() query: MarketContextQueryDto) {
     return this.service.getMarketContext(query);
+  }
+
+  /**
+   * GET /api/analyzer/prefill?zip=78702&address=<string>
+   *
+   * Address-driven prefill bundle. Serves ALL tiers from one route via the
+   * optional JWT guard: anonymous/free get the geo layer + estimates; Pro
+   * callers additionally get the RentCast parcel layer. Each field carries
+   * source + as-of + A/B/C/F confidence. Never 401s.
+   */
+  @Get('prefill')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getPrefill(
+    @Req() req: Request & { userId?: string },
+    @Query() query: AnalyzerPrefillQueryDto,
+  ) {
+    const isPro = await this.tierGate.isPro(req.userId);
+    return this.prefillService.getPrefillBundle(query, { isPro });
   }
 
   /**

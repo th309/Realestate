@@ -54,7 +54,7 @@ export default function AnalyzerClient({
     setRehabBudget, assumptions, setAssumption, propertyType, setPropertyType,
     unitCount, setUnitCount, propertyClass, propertyLookup, rentcastData,
     quotaExceeded, projection, sensitivity, afterTax, breakEven, brrrrTimeline,
-    marketContext, piqByGeo,
+    marketContext, piqByGeo, provenance, handleAddressSelect,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -208,6 +208,8 @@ export default function AnalyzerClient({
       rental={rental}
       flip={flip}
       brrrr={brrrr}
+      provenance={provenance}
+      onAddressSelect={handleAddressSelect}
     />
   );
 
@@ -245,30 +247,15 @@ export default function AnalyzerClient({
             {!address.trim() && !rentcastData && (
               <div
                 data-empty-cta
-                className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
+                className="rounded-xl border-2 border-dashed border-primary bg-primary-container text-on-primary-container px-5 py-4"
               >
                 <div className="font-semibold mb-1">
                   ← Enter a property address to get started
                 </div>
-                <div className="text-sm">
-                  Type the address in the panel on the left{" "}
-                  {isPro ? (
-                    <>
-                      and click{" "}
-                      <strong>Fetch property + comps from RentCast</strong> to
-                      auto-populate price, rent, and comps. Or open this page
-                      with{" "}
-                      <code className="font-mono text-xs">
-                        ?address=YOUR+ADDRESS
-                      </code>{" "}
-                      to auto-fetch on load.
-                    </>
-                  ) : (
-                    <>
-                      (Pro feature: RentCast lookup not available on free tier).
-                    </>
-                  )}
-                </div>
+                <p className="text-sm text-on-surface-variant">
+                  2-minute analysis, zero spreadsheet — enter an address and
+                  we'll fill in the market data.
+                </p>
               </div>
             )}
 

@@ -1,5 +1,10 @@
 // Backend v1.2.0 - Added affordable_home_price endpoints
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  ExecutionContext,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { cronScheduleImports } from './config/cron-schedule.imports';
@@ -76,23 +81,27 @@ import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.modul
       envFilePath: ['.env.local', '.env'],
     }),
     ...cronScheduleImports(),
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000,
-        limit: 20,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        { name: 'short', ttl: 1000, limit: 20 },
+        { name: 'medium', ttl: 60000, limit: 100 },
+        { name: 'long', ttl: 600000, limit: 500 },
+      ],
+      // Skip per-IP throttling for trusted internal callers. The Next.js frontend's
+      // server-side ISR/build/regeneration data fetches carry the shared
+      // REVALIDATE_SECRET in the x-internal-key header. They originate from a single
+      // egress IP in large bursts (prerendering ~150 metros, ISR regeneration,
+      // crawl-driven regeneration) and would otherwise be 429'd — rendering the SEO
+      // market pages with empty data. Public/anonymous traffic stays throttled.
+      skipIf: (context: ExecutionContext): boolean => {
+        const secret = process.env.REVALIDATE_SECRET;
+        if (!secret) return false;
+        const req = context.switchToHttp().getRequest<{
+          headers?: Record<string, string | string[] | undefined>;
+        }>();
+        return req.headers?.['x-internal-key'] === secret;
       },
-      {
-        name: 'medium',
-        ttl: 60000,
-        limit: 100,
-      },
-      {
-        name: 'long',
-        ttl: 600000,
-        limit: 500,
-      },
-    ]),
+    }),
     RedisModule,
     SupabaseModule,
     AiProviderModule,

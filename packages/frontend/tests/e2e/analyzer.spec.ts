@@ -101,7 +101,7 @@ test.describe("/analyzer (Pro-gated paths)", () => {
 });
 
 test.describe("/analyzer (no auth required)", () => {
-  test("graceful: insurance field renders unavailable, rest works", async ({
+  test("graceful: insurance field renders estimate stamp, rest works", async ({
     page,
   }) => {
     await page.goto("/analyzer");
@@ -113,17 +113,18 @@ test.describe("/analyzer (no auth required)", () => {
       .first()
       .click();
 
-    // Insurance comes from a third-party metric that may be unavailable for
-    // some markets — verify the "unavailable" badge renders rather than
-    // silently falling back to a fake value. The badge appears in both the
-    // mobile <details> (hidden on desktop) and desktop <aside>; scope to the
-    // <aside> which is the desktop-visible copy.
-    await expect(page.locator("aside").getByText(/unavailable/i)).toBeVisible();
+    // Insurance has no third-party data source — per the address-prefill feature
+    // (backlog #5) it is now prefilled as an estimate (0.55%/yr × price) and the
+    // FieldProvenance stamp shows the literal "Estimate" label instead of
+    // "unavailable". Scope to <aside> (desktop-visible copy).
+    await expect(
+      page.locator("aside").getByText("Estimate").first(),
+    ).toBeVisible();
 
     // User can still override insurance manually and the rest of the
     // analysis surface keeps working.
     const insField = page.locator(
-      'aside label:has-text("Insurance / year") input',
+      'aside label:has-text("Insurance (annual)") input',
     );
     await insField.fill("1500");
 

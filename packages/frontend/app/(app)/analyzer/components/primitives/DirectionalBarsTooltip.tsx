@@ -20,6 +20,15 @@ const TRANSFORM: Record<TooltipSide, string> = {
   left: "translate(calc(-100% - 12px), -50%)",
 };
 
+/** Maps BarValueFormat → MetricBlock's format prop. "currency-exact" has no
+ *  exact MetricBlock equivalent so it collapses to "currency". */
+function toMetricBlockFormat(
+  fmt: BarValueFormat,
+): "currency" | "percent" | "number" | "ratio" | "raw" {
+  if (fmt === "currency-exact") return "currency";
+  return fmt;
+}
+
 /**
  * Floating tooltip card positioned absolutely over the chart container. Uses
  * the MetricBlock pattern (muted label + value) plus an optional muted
@@ -55,7 +64,7 @@ export function BarTooltip({
       <MetricBlock
         label={item.label}
         value={item.value}
-        format={format}
+        format={toMetricBlockFormat(format)}
         size="sm"
         variant="neutral"
       />

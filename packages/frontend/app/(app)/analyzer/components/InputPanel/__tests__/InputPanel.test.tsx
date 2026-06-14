@@ -31,7 +31,9 @@ describe("InputPanel", () => {
       container.querySelectorAll("[data-num-field]").length,
     ).toBeGreaterThanOrEqual(4);
     expect(container.querySelectorAll("[data-slider-field]").length).toBe(3);
-    expect(container.querySelector("[data-address-input]")).toBeTruthy();
+    expect(
+      container.querySelector('input[aria-label="Address search"]'),
+    ).toBeTruthy();
     expect(
       container.querySelector("[data-fetch-property-button]"),
     ).toBeTruthy();
@@ -48,7 +50,9 @@ describe("InputPanel", () => {
       />,
     );
     fireEvent.change(
-      container.querySelector("[data-address-input]") as HTMLInputElement,
+      container.querySelector(
+        'input[aria-label="Address search"]',
+      ) as HTMLInputElement,
       {
         target: { value: "123 Main St" },
       },

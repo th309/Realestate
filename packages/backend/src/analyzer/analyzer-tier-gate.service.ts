@@ -21,6 +21,17 @@ export class AnalyzerTierGate {
 
   constructor(private readonly entitlements: EntitlementsService) {}
 
+  /**
+   * Non-throwing tier probe for endpoints that serve all tiers from one route
+   * (e.g. prefill). Returns false for anonymous callers without hitting
+   * EntitlementsService.
+   */
+  async isPro(userId: string | undefined): Promise<boolean> {
+    if (!userId) return false;
+    const tier = (await this.entitlements.getUserTier(userId)) ?? 'free';
+    return PRO_ALLOWED_TIERS.includes(tier);
+  }
+
   async requirePro(userId: string): Promise<void> {
     const resolved = await this.entitlements.getUserTier(userId);
 

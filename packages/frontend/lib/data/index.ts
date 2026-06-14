@@ -234,6 +234,9 @@ export {
   useDeleteThresholds,
   useAnalyzerDefaults,
   useUpdateAnalyzerDefaults,
+
+  // Analyzer prefill hook
+  useAnalyzerPrefill,
 } from "./hooks";
 
 // ============================================================================

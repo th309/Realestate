@@ -19,3 +19,13 @@ export * from "./_groups/admin";
 
 // Deal Analyzer (market context, AI verdict, saved analyses)
 export * from "./analyzer";
+
+// Analyzer prefill bundle (address-driven field prefill with provenance)
+export {
+  fetchAnalyzerPrefill,
+  type AnalyzerPrefillBundle,
+  type AnalyzerPrefillParams,
+  type PrefillField,
+  type PrefillFieldKey,
+  type PrefillConfidenceGrade,
+} from "./analyzer-prefill";
