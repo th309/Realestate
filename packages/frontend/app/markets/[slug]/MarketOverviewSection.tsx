@@ -118,6 +118,11 @@ export function MarketOverviewSection({
               "@type": "Article",
               headline: `${metroName} Real Estate Market Analysis`,
               datePublished: generatedAt,
+              image: `https://www.propertyiq.app/api/og?title=${encodeURIComponent(metroName)}`,
+              author: {
+                "@type": "Organization",
+                name: "PropertyIQ",
+              },
               publisher: {
                 "@type": "Organization",
                 name: "PropertyIQ",
