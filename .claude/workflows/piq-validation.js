@@ -106,3 +106,114 @@ const draft = await agent(
 log(
   `Draft written to ${draft.draftPath} (home values: ${draft.homeValueSource}).`,
 );
+
+const FINDINGS_SCHEMA = {
+  type: "object",
+  required: ["verifier", "violations"],
+  properties: {
+    verifier: { type: "string" },
+    violations: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["rule", "location", "found"],
+        properties: {
+          rule: { type: "string" },
+          location: { type: "string" },
+          expected: { type: "string" },
+          found: { type: "string" },
+          severity: { type: "string", enum: ["blocker", "warn"] },
+        },
+      },
+    },
+  },
+};
+
+// Five lenses. editorial + structure run the deterministic linter; the other
+// three are pure LLM judgment. All are prompted adversarially.
+const LENSES = [
+  {
+    key: "number-tracing",
+    prompt: `Adversarially verify ${FINAL}: every numeric value must trace to a JSON path in ${SKILL}/references/data-dictionary.md (read the 5 JSON in ${OUT}) or a cited external source. Flag any value you cannot trace. If unsure, flag it.`,
+  },
+  {
+    key: "benchmark-horizon",
+    prompt: `Adversarially verify ${FINAL}: the model must be described as "3Y excess return vs state" everywhere; NO 1Y returns in headline metrics/exec summary; Census Division may appear ONLY in Section 5. Flag any violation.`,
+  },
+  {
+    key: "dollar-derivation",
+    prompt: `Adversarially verify ${FINAL}: dollar values must derive from 3Y excess spreads (Q5_excess - Q1_excess), NOT raw returns; no ROE/leverage/"on $X down"; the median home value source + date must be cited. Flag any violation.`,
+  },
+  {
+    key: "editorial",
+    prompt: `Run \`node scripts/analysis/report-lint.js ${FINAL}\` and report every editorial finding it returns. THEN read ${FINAL} for any superlative/forward-looking/emotional framing the regex missed. Return all as violations.`,
+  },
+  {
+    key: "structure",
+    prompt: `Run \`node scripts/analysis/report-lint.js ${FINAL}\` and report every structure finding. THEN verify section order matches ${SKILL}/SKILL.md, degradation uses the same benchmark in both columns, and the Executive Summary numbers match Section 3. Return all as violations.`,
+  },
+];
+
+// The synthesizer needs the draft promoted to FINAL before the first verify pass.
+await agent(
+  `Copy ${DRAFT} to ${FINAL} verbatim (the verify/fix loop edits ${FINAL}).`,
+  { label: "promote-draft", model: "haiku" },
+);
+
+let round = 0;
+let unresolved = [];
+let totalFixed = 0;
+while (round < 3) {
+  round++;
+  phase("Verify");
+  const findings = (
+    await parallel(
+      LENSES.map(
+        (lens) => () =>
+          agent(lens.prompt, {
+            label: `verify:${lens.key}`,
+            phase: "Verify",
+            model:
+              lens.key === "editorial" || lens.key === "structure"
+                ? "sonnet"
+                : "sonnet",
+            schema: FINDINGS_SCHEMA,
+          }),
+      ),
+    )
+  ).filter(Boolean);
+
+  const open = findings.flatMap((f) =>
+    (f.violations || []).map((v) => ({ ...v, verifier: f.verifier })),
+  );
+  log(`Round ${round}: ${open.length} violation(s) found.`);
+  if (open.length === 0) {
+    unresolved = [];
+    break;
+  }
+
+  phase("Synthesize");
+  await agent(
+    `Fix these violations in ${FINAL} without introducing new ones (re-read ${SKILL}/SKILL.md rules). Violations:\n` +
+      JSON.stringify(open, null, 2),
+    { label: `synthesize:round-${round}`, phase: "Synthesize", model: "opus" },
+  );
+  totalFixed += open.length;
+  unresolved = open; // carried forward; cleared if next round is clean
+}
+
+if (unresolved.length) {
+  await agent(
+    `The verify loop did not converge after 3 rounds. Append a section titled exactly "## UNRESOLVED VIOLATIONS" to ${FINAL} listing each of these, then STOP. Do not delete content to make them disappear.\n` +
+      JSON.stringify(unresolved, null, 2),
+    { label: "mark-unresolved", model: "sonnet" },
+  );
+}
+
+return {
+  reportPath: FINAL,
+  rounds: round,
+  totalViolationsFixed: totalFixed,
+  clean: unresolved.length === 0,
+  unresolved,
+};
