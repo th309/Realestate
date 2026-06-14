@@ -1,6 +1,6 @@
 ---
 name: local-dev-servers
-description: Use when starting, restarting, monitoring, or troubleshooting local development servers, when ports 3000 or 3001 are blocked or unresponsive, or after .env/config/dependency changes that require a server restart
+description: Use when starting, restarting, monitoring, or troubleshooting local development servers (frontend :3000, backend :3001, Redis :6379); when ports are blocked, a server is unresponsive, wedged, or returns 500 / "Internal Server Error", a page won't render, or after .env/config/dependency changes that require a restart
 ---
 
 # Local Dev Server Management
@@ -75,12 +75,15 @@ The script automatically:
 2. Exports `REDIS_URL=redis://localhost:6379` for the backend
 3. Clears ports 3000 and 3001
 4. **Wipes `packages/backend/dist/` and `*.tsbuildinfo`** so `nest start --watch` can't serve stale compiled code on restart (fix added 2026-04-26 — `nest-cli.json`'s `deleteOutDir: true` only fires on `nest build`, not `nest start --watch`, so without this step `incremental: true` + a stale tsbuildinfo could skip emit and run yesterday's code)
-5. Starts backend and frontend with concurrently
-6. Streams Redis logs alongside backend/frontend output
+5. **Wipes `packages/frontend/.next`** for a clean client bundle — this is also what clears a `.next` polluted by a stray `next build` (see **Frontend 500**). NOTE: the wipe can silently fail if an orphaned node worker still holds a handle, which is why the **Restart Workflow always kills node first**
+6. Starts backend and frontend (plus the video-template `tsc --watch`) with concurrently
+7. Streams Redis logs alongside backend/frontend output
 
 ### Manual: Restart a Single Server
 
 Use only when you know the other server is healthy and you want to bounce one process — not a full "restart" per the rule above.
+
+> ⚠️ **Surgical backend restart is unreliable under `dev:fresh`.** Killing just the 3001 listener PID does NOT trigger `concurrently`'s `--restart-tries`, because `nest start --watch` keeps its wrapper alive and silently respawns `dist/main` (often on a new PID). Under `dev:fresh`, "restart the backend" means a **full nuclear restart**, not a single-PID kill. The single-server blocks below are for when you started a server standalone (not via `dev:fresh`).
 
 ```bash
 # Backend only
@@ -119,6 +122,33 @@ docker exec rei-redis redis-cli ping 2>/dev/null && echo " Redis OK" || echo " R
 
 **Caution:** A `200` response only proves *something* is listening on that port — it does not prove that the listener is the `dev:fresh` you just started. After a restart, also run the netstat check from the Restart Workflow to confirm the listener PID belongs to the new tree.
 
+## Health-Check Semantics — a status code is not health
+
+A port being open, a status code, and a rendered page are three different facts. Check the right one:
+
+- **`000` on a live listener = wedged.** If `netstat` shows the port `LISTENING` but `curl` returns `000` even after 30–45s, the process is **wedged** (accepts the socket, never answers) — distinct from dead (no listener at all → `000` instantly) and from compiling (slow but eventually answers). A wedged `next dev` does not recover on its own → nuclear-kill node + `dev:fresh`.
+- **`200` ≠ rendered.** A real page is large — frontend `/` and `/map` are ~90–150 KB. A `500` "Internal Server Error" body is ~21 bytes. Check the body size with `curl -s -o /dev/null -w '%{http_code} %{size_download}b'`, and for UI fixes open the actual page in a browser. After any fix, re-hit the route **3–5× over ~20s to confirm it holds** — the first `200` can be a pre-failure compile (see next section).
+- **Backend up + frontend down = asymmetric orphan.** After a kill / `TaskStop` / reap, `nest start --watch` resurrects its backend child (3001 stays `200`) but `next dev` dies (3000 → `000`). Do NOT just start the frontend onto a half-alive tree — nuclear-kill **all** node first, then one `dev:fresh`.
+
+## Frontend 500 "Internal Server Error" — a `next build` clobbered `.next`
+
+**Symptom:** every frontend route returns HTTP 500 with a 21-byte "Internal Server Error" body; the `dev:fresh` log repeats:
+
+```
+Error: ENOENT: no such file or directory, open '…\packages\frontend\.next\dev\routes-manifest.json'
+```
+
+**Cause:** `packages/frontend/next.config` uses `distDir: process.env.NEXT_DIST_DIR || '.next'`, so `next build` writes to **`.next`** — the same directory `next dev` uses. Running a production build while the dev server is live replaces the dev layout with a production tree (`BUILD_ID`, `export-marker.json`, `*.nft.json`, root `routes-manifest.json`) and removes `.next/dev/routes-manifest.json`. The dev server stays up but 500s on every route. Tell-tale: `.next/dev/` is missing `routes-manifest.json` while `.next/` root has fresh production artifacts timestamped **after** the dev server booted.
+
+**Fix:**
+
+1. `Get-Process node | Stop-Process -Force` (PowerShell)
+2. `rm -rf packages/frontend/.next`
+3. `npm run dev:fresh` (regenerates a clean `.next/dev/`)
+4. Verify `/map` returns 200 across **repeated** hits — a single 200 may be the pre-clobber compile.
+
+**Prevent:** never run `npm run build -w web` while `dev:fresh` is up. For a verification build, isolate the output dir: `NEXT_DIST_DIR=.next-verify npm run build -w web` (that is what the existing `.next-verify/` folder is for).
+
 ## Crash Recovery Is Built In — Do NOT Layer External Monitors
 
 `npm run dev:fresh` already runs both servers under `concurrently --restart-tries 5 --restart-after 3000`, which restarts a crashed server up to 5 times with a 3s backoff. **Do NOT wrap it in an external `while true` curl-loop monitor that calls `taskkill` + `nohup npm run start:dev`.**
@@ -134,6 +164,8 @@ The two recovery paths race each other on cold start: the curl probe sees a non-
 
 **When servers seem flaky:** read the `dev:fresh` background output first — concurrently logs each retry attempt and the failure reason. The actual crash is usually a TS compile error or port conflict, not something a polling loop can fix.
 
+**In-session task vs dedicated terminal (persistence):** a `dev:fresh` started as an agent `run_in_background` task is tied to the agent/session lifecycle and can be terminated when that task is reaped — the **whole `concurrently` tree** dies at once, abruptly, mid-request, with **no app error and no `concurrently` teardown** in the log (the log just ends mid-line). Distinguish reap vs crash: a crash logs a stack trace or `concurrently`'s `--> Sending SIGTERM to other processes`; a reap leaves the log ending cleanly mid-line. If the servers must survive long idle gaps, have the **user run `npm run dev:fresh` in their own terminal window** — that is decoupled from the agent and immune to anything on the agent side. Verify from the agent with the one-shot health block; don't relaunch in a loop.
+
 ## When Restart Is Needed
 
 | Change Type                       | Auto-Reloads?   | Action                     |
@@ -147,16 +179,21 @@ The two recovery paths race each other on cold start: the curl probe sees a non-
 
 ## Troubleshooting
 
-| Symptom                                 | Fix                                                                                                 |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| "Port already in use" / EADDRINUSE      | Use the **Restart Workflow** (PowerShell node-kill → confirm 000 → `dev:fresh`); orphans from a prior `TaskStop` are the usual cause |
-| Backend on wrong port (3005)            | Check `packages/backend/.env` has `PORT=3001`                                                       |
-| Frontend can't reach backend            | Verify `NEXT_PUBLIC_API_URL=http://localhost:3001` in frontend `.env.local`                         |
-| Server crashes immediately              | Check compile: `npm run build -w backend` or `npm run build -w web`                                 |
-| Zombie processes after Ctrl+C           | `taskkill //IM node.exe //F` then restart                                                           |
-| Redis not connecting                    | `docker logs rei-redis` to check container health                                                   |
-| Redis container missing                 | `docker run -d --name rei-redis -p 6379:6379 --restart unless-stopped redis:7-alpine`               |
-| Backend logs "REDIS_URL not configured" | Restart via `dev:fresh` (auto-sets REDIS_URL) or manually export `REDIS_URL=redis://localhost:6379` |
+| Symptom | Fix |
+| --- | --- |
+| "Port already in use" / EADDRINUSE | Restart Workflow (PowerShell node-kill → confirm 000 → `dev:fresh`); orphans from a prior `TaskStop` are the usual cause |
+| Frontend 500 / "Internal Server Error" on every route; log shows `ENOENT … .next/dev/routes-manifest.json` | A `next build` clobbered the dev `.next`. See **Frontend 500** section: kill node → `rm -rf packages/frontend/.next` → `dev:fresh`. Never `npm run build -w web` while dev is up |
+| Frontend port LISTENING but `curl` returns `000` (even after 45s) | Wedged `next dev` — not dead, not compiling. Nuclear restart. See **Health-Check Semantics** |
+| Backend up (3001→200) but frontend gone (3000→000) after a kill/`TaskStop` | Asymmetric orphan — `nest --watch` resurrected the backend, `next dev` died. Nuclear-kill ALL node, then `dev:fresh`. Don't just start the frontend |
+| SSR shows new code but browser DOM is stale | Orphaned webpack workers locked `.next`. `Get-Process node \| Stop-Process -Force` (PowerShell) then `dev:fresh` (wipes `.next`) |
+| Backend on wrong port (3005) | Check `packages/backend/.env` has `PORT=3001` |
+| Frontend can't reach backend | Verify `NEXT_PUBLIC_API_URL=http://localhost:3001` in frontend `.env.local` |
+| Backend won't start / `npm install` hangs / `UNABLE_TO_VERIFY_LEAF_SIGNATURE` | Norton intercepts node TLS. Ensure `NODE_OPTIONS=--use-system-ca` is set (Windows User env); `dev:fresh`'s backend already passes it via cross-env |
+| Server crashes immediately on boot | Read the `dev:fresh` background log for the TS compile error. Do NOT run `npm run build -w web` to "check" — it clobbers the dev `.next` (see Frontend 500). For a standalone build use `NEXT_DIST_DIR=.next-verify`. Backend-only standalone check: `npm run build -w backend` |
+| Zombie processes after Ctrl+C | `Get-Process node \| Stop-Process -Force` (PowerShell) then restart |
+| Redis not connecting | `docker logs rei-redis` to check container health |
+| Redis container missing | `docker run -d --name rei-redis -p 6379:6379 --restart unless-stopped redis:7-alpine` |
+| Backend logs "REDIS_URL not configured" | Restart via `dev:fresh` (auto-sets REDIS_URL) or export `REDIS_URL=redis://localhost:6379` |
 
 ## Port Config Files
 
