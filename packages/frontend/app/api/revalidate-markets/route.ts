@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 // revalidatePath is server-only; keep this handler on the Node runtime and never
 // cached so the backend cron can invalidate the market pages on demand.
@@ -28,13 +28,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Bust the tagged data cache first (covers every page using the cacheable SEO
+  // fetches), then the route caches. Tag = SEO_MARKET_CACHE_TAG in
+  // lib/data/fetchers/market-stats.ts (literal here to keep this route dependency-free).
+  // Cast to the documented runtime signature (1 arg); local next types disagree
+  // on arity but the build (ignoreBuildErrors) + runtime use revalidateTag(tag).
+  (revalidateTag as (tag: string) => void)("piq-market-data");
   for (const route of MARKET_ROUTES) {
     revalidatePath(route, "page");
   }
-  revalidatePath("/markets");
+  revalidatePath("/markets", "page");
 
   return NextResponse.json({
     revalidated: true,
+    tags: ["piq-market-data"],
     routes: [...MARKET_ROUTES, "/markets"],
   });
 }

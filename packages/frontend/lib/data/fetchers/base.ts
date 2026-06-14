@@ -39,10 +39,7 @@ export const API_URL = resolveApiUrl();
  */
 function resolveContentPipelineAdminFetchUrl(endpoint: string): string {
   const pipelineAdmin = endpoint.startsWith("/api/admin/content-pipeline");
-  if (
-    typeof window !== "undefined" &&
-    pipelineAdmin
-  ) {
+  if (typeof window !== "undefined" && pipelineAdmin) {
     return new URL(endpoint, window.location.origin).toString();
   }
   return `${API_URL}${endpoint}`;
@@ -205,6 +202,33 @@ export async function fetchWithRetry(
     lastError ??
     new Error(`Failed to fetch ${url} after ${maxRetries + 1} attempts`)
   );
+}
+
+/**
+ * Public, cacheable GET for ISR server rendering.
+ * No auth headers, no credentials — safe for anonymous public endpoints.
+ * Uses Next's data cache (next.revalidate + next.tags) so the entire route
+ * can be ISR-cached instead of forced dynamic by a no-store fetch.
+ */
+export async function fetchAPICached<T>(
+  endpoint: string,
+  params: Record<string, string | number | undefined> | undefined,
+  opts: { revalidate: number; tags?: string[] },
+): Promise<T> {
+  const url = new URL(resolveContentPipelineAdminFetchUrl(endpoint));
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined) url.searchParams.append(k, String(v));
+    });
+  }
+  const response = await fetch(url.toString(), {
+    next: {
+      revalidate: opts.revalidate,
+      ...(opts.tags ? { tags: opts.tags } : {}),
+    },
+  });
+  if (!response.ok) throw new Error(`API error: ${response.status}`);
+  return response.json();
 }
 
 /**

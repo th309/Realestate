@@ -18,6 +18,12 @@ export function buildStatsJsonLd(
       value: f.value,
       ...(f.date ? { observationDate: f.date } : {}),
     }));
+  let origin = "https://www.propertyiq.app";
+  try {
+    origin = new URL(url).origin;
+  } catch {
+    /* keep default origin */
+  }
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
@@ -26,6 +32,7 @@ export function buildStatsJsonLd(
     url,
     ...(data.latestDate ? { dateModified: data.latestDate } : {}),
     creator: { "@type": "Organization", name: "PropertyIQ" },
+    license: `${origin}/terms`,
     variableMeasured: vars,
   };
 }

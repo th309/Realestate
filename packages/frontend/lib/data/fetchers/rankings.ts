@@ -4,7 +4,8 @@
 //
 // NOTE: the /api/v1/rankings endpoint is Platform-API-key gated (401 for anon SSR),
 // so it cannot be used from public server-rendered pages. /api/scores/top is public.
-import { fetchAPIWithParams } from "./base";
+import { fetchAPICached } from "./base";
+import { SEO_MARKET_CACHE_TAG } from "./market-stats";
 
 export interface RankingRow {
   rank: number;
@@ -34,9 +35,15 @@ export async function fetchRankings(
     };
     if (opts?.state) params.state = opts.state;
     if (opts?.limit) params.limit = opts.limit;
-    const rows = await fetchAPIWithParams<TopMarketRow[]>(
+    // Cacheable (ISR) so SEO pages using rankings stay statically cached and
+    // refresh via revalidateTag when a new score period lands.
+    const rows = await fetchAPICached<TopMarketRow[]>(
       `/api/scores/top`,
       params,
+      {
+        revalidate: 86400,
+        tags: [SEO_MARKET_CACHE_TAG],
+      },
     );
     return (Array.isArray(rows) ? rows : []).map((r, i) => ({
       rank: i + 1,

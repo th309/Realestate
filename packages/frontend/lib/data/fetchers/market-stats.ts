@@ -145,6 +145,14 @@ export function assembleMarketStats(
   };
 }
 
+/** Cache tag used across all SEO market-page fetches. */
+export const SEO_MARKET_CACHE_TAG = "piq-market-data";
+
+const SEO_CACHE_OPTS: { revalidate: number; tags: string[] } = {
+  revalidate: 86400,
+  tags: [SEO_MARKET_CACHE_TAG],
+};
+
 // Renamed from `fetchMarketStats` to avoid colliding with the existing
 // `fetchMarketStats` exported from ./markets.
 export async function fetchSeoMarketStats(
@@ -154,10 +162,16 @@ export async function fetchSeoMarketStats(
 ): Promise<MarketStatsData | null> {
   try {
     const [snapshot, timeseries] = await Promise.all([
-      fetchMarketSnapshot(geoType, geoId, state),
-      fetchTimeSeriesData("home_value", geoType, geoId, {
-        historyMonths: 12,
-      }).catch(() => null),
+      fetchMarketSnapshot(geoType, geoId, state, SEO_CACHE_OPTS),
+      fetchTimeSeriesData(
+        "home_value",
+        geoType,
+        geoId,
+        {
+          historyMonths: 12,
+        },
+        SEO_CACHE_OPTS,
+      ).catch(() => null),
     ]);
     if (!snapshot?.success) return null;
     return assembleMarketStats(snapshot, timeseries);

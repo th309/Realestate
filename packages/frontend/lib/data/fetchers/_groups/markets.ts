@@ -33,6 +33,7 @@ export {
 export {
   fetchSeoMarketStats,
   assembleMarketStats,
+  SEO_MARKET_CACHE_TAG,
   type MarketStatsData,
   type MarketStatField,
   type ScoreReceipt,
