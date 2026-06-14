@@ -1,0 +1,6 @@
+# Deploy trigger (inert marker)
+#
+# Bump this file to force a fresh Railway build + redeploy of the frontend service
+# (matches the /packages/frontend/** watch pattern). Not imported into the app.
+#
+# 2026-06-14T00:31Z — forced rebuild alongside the backend recovery.

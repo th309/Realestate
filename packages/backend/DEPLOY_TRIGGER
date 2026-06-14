@@ -1,0 +1,9 @@
+# Deploy trigger (inert marker)
+#
+# Bump this file to force a fresh Railway build + redeploy of the backend service
+# (matches the /packages/backend/** watch pattern). Not imported or copied into
+# runtime; safe to edit freely.
+#
+# 2026-06-14T00:31Z — forced rebuild to recover the backend after a 502
+# (no healthcheck is configured, so Railway cut traffic to the new container
+# before NestJS finished booting). A clean rebuild + container start clears it.
