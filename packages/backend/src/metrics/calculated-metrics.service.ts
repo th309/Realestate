@@ -3070,11 +3070,11 @@ export class CalculatedMetricsService {
         .eq('metric_name', 'zhvi')
         .eq('period_date', targetDate)
         .not('value', 'is', null)
-        .range(zhviOffset, zhviOffset + 1999);
+        .range(zhviOffset, zhviOffset + 999);
       if (!page || page.length === 0) break;
       zhviData.push(...page);
-      if (page.length < 2000) break;
-      zhviOffset += 2000;
+      if (page.length < 1000) break;
+      zhviOffset += 1000;
     }
 
     if (zhviData.length === 0) {
@@ -3208,11 +3208,11 @@ export class CalculatedMetricsService {
         .eq('metric_name', 'zhvi')
         .eq('period_date', targetDate)
         .not('value', 'is', null)
-        .range(zhviOffset, zhviOffset + 4999);
+        .range(zhviOffset, zhviOffset + 999);
       if (!page || page.length === 0) break;
       zhviData.push(...page);
-      if (page.length < 5000) break;
-      zhviOffset += 5000;
+      if (page.length < 1000) break;
+      zhviOffset += 1000;
     }
 
     if (zhviData.length === 0) {
@@ -3251,7 +3251,7 @@ export class CalculatedMetricsService {
           .select('zcta, median_household_income')
           .eq('year', censusYear)
           .not('median_household_income', 'is', null)
-          .range(censusOffset, censusOffset + 1999);
+          .range(censusOffset, censusOffset + 999);
         if (!page || page.length === 0) break;
         for (const row of page) {
           if (row.zcta && row.median_household_income) {
@@ -3260,8 +3260,8 @@ export class CalculatedMetricsService {
             incomeByZcta[zcta] = Number(row.median_household_income);
           }
         }
-        if (page.length < 2000) break;
-        censusOffset += 2000;
+        if (page.length < 1000) break;
+        censusOffset += 1000;
       }
     }
 
