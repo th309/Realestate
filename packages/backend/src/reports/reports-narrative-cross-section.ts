@@ -23,11 +23,18 @@ export function computeComponentExtremes(
 ): Record<string, string | number> {
   // Always use propertyiq; fall back to legacy types for old data
   const scoreType = 'propertyiq';
-  const components: Array<{ component: string; score: number }> =
+  const rawComponents =
     scores?.scores?.[scoreType]?.components ||
     scores?.scores?.[userType === 'investor' ? 'investoredge' : 'homeready']
-      ?.components ||
-    [];
+      ?.components;
+  // Defensive: only legacy multi-component scores yield an array. v4 PropertyIQ
+  // has none, and a non-array here (e.g. a raw z_scores Record) must NOT reach
+  // the [...components] spread below — that throws "components is not iterable".
+  const components: Array<{ component: string; score: number }> = Array.isArray(
+    rawComponents,
+  )
+    ? rawComponents
+    : [];
 
   if (components.length === 0) {
     return {
@@ -56,11 +63,18 @@ export function computeComponentExtremes(
 export function computeKeyTension(scores: any, userType: string): string {
   // Always use propertyiq; fall back to legacy types for old data
   const scoreType = 'propertyiq';
-  const components: Array<{ component: string; score: number }> =
+  const rawComponents =
     scores?.scores?.[scoreType]?.components ||
     scores?.scores?.[userType === 'investor' ? 'investoredge' : 'homeready']
-      ?.components ||
-    [];
+      ?.components;
+  // Defensive: only legacy multi-component scores yield an array. v4 PropertyIQ
+  // has none, and a non-array here (e.g. a raw z_scores Record) must NOT reach
+  // the [...components] spread below — that throws "components is not iterable".
+  const components: Array<{ component: string; score: number }> = Array.isArray(
+    rawComponents,
+  )
+    ? rawComponents
+    : [];
 
   if (components.length < 2) return 'Insufficient data for tension analysis';
 

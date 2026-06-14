@@ -54,12 +54,13 @@ export async function getScoreForLocation(
   }
   if (!result) return null;
 
-  // Attach component breakdowns if requested. For the v4 PropertyIQ score the
-  // four raw input values live in z_scores; expose them as `components` so
-  // callers (market snapshot, admin) can render the score's receipts.
-  if (options?.components && result.z_scores && result.scores?.propertyiq) {
-    result.scores.propertyiq.components = result.z_scores;
-  }
+  // NOTE: v4 PropertyIQ has no multi-component breakdown, so `components` stays
+  // unset here. The four raw input values live on `result.z_scores`, and
+  // market-snapshot exposes THOSE directly. Do NOT assign the z_scores Record to
+  // `components`: report/insight narrative builders iterate `components` as a
+  // ScoreComponentBreakdown[] (spread/for-of), and a Record throws
+  // "components is not iterable". The `options.components` flag is retained for
+  // legacy score types that still produce array breakdowns.
 
   const rawMonths = options?.historyMonths ?? 0;
   const historyMonths = Math.min(
