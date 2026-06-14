@@ -1226,9 +1226,12 @@ export class CalculatedMetricsService {
       for (const r of data as any[]) {
         const id = r[idCol];
         if (!id) continue;
+        const active = r.active_listing_count;
+        const pending = r.pending_listing_count;
+        if (active == null || pending == null) continue;
         out.set(String(id), {
-          active: Number(r.active_listing_count),
-          pending: Number(r.pending_listing_count),
+          active: Number(active),
+          pending: Number(pending),
         });
       }
       if (data.length < page) break;
@@ -1274,6 +1277,7 @@ export class CalculatedMetricsService {
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
     const metroMosInputs = await this.fetchRealtorMosInputs('metro');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestMosDate = uniqueDates[0];
 
     for (const targetDate of uniqueDates) {
@@ -1461,7 +1465,7 @@ export class CalculatedMetricsService {
           zori_5y_cagr: zori5yCagr,
           calculated_at: new Date().toISOString(),
         };
-        if (targetDate === latestMosDate) {
+        if (latestMosDate != null && targetDate === latestMosDate) {
           const m = metroMosInputs.get(String(cbsaCode));
           const mos = m
             ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -1677,7 +1681,7 @@ export class CalculatedMetricsService {
                 zori_5y_cagr: hudZori5yCagr,
                 calculated_at: new Date().toISOString(),
               };
-              if (targetDate === latestMosDate) {
+              if (latestMosDate != null && targetDate === latestMosDate) {
                 const m = metroMosInputs.get(String(cbsa));
                 const mos = m
                   ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -1969,6 +1973,7 @@ export class CalculatedMetricsService {
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
     const countyMosInputs = await this.fetchRealtorMosInputs('county');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestCountyMosDate = uniqueDates[0];
 
     for (const targetDate of uniqueDates) {
@@ -2063,7 +2068,7 @@ export class CalculatedMetricsService {
           grm: grm ? Math.round(grm * 100) / 100 : null,
           calculated_at: new Date().toISOString(),
         };
-        if (targetDate === latestCountyMosDate) {
+        if (latestCountyMosDate != null && targetDate === latestCountyMosDate) {
           const m = countyMosInputs.get(String(fipsCode));
           const mos = m
             ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -2173,7 +2178,10 @@ export class CalculatedMetricsService {
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
             };
-            if (targetDate === latestCountyMosDate) {
+            if (
+              latestCountyMosDate != null &&
+              targetDate === latestCountyMosDate
+            ) {
               const m = countyMosInputs.get(String(fips));
               const mos = m
                 ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -2369,7 +2377,10 @@ export class CalculatedMetricsService {
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
             };
-            if (storagePeriodDate === latestCountyMosDate) {
+            if (
+              latestCountyMosDate != null &&
+              storagePeriodDate === latestCountyMosDate
+            ) {
               const m = countyMosInputs.get(String(fips));
               const mos = m
                 ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -2454,6 +2465,7 @@ export class CalculatedMetricsService {
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
     const zipMosInputs = await this.fetchRealtorMosInputs('zip');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestZipMosDate = uniqueDates[0];
 
     for (const targetDate of uniqueDates) {
@@ -2540,7 +2552,7 @@ export class CalculatedMetricsService {
             grm: grm ? Math.round(grm * 100) / 100 : null,
             calculated_at: new Date().toISOString(),
           };
-          if (targetDate === latestZipMosDate) {
+          if (latestZipMosDate != null && targetDate === latestZipMosDate) {
             const m = zipMosInputs.get(String(zipCode));
             const mos = m
               ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -2654,7 +2666,7 @@ export class CalculatedMetricsService {
           grm: grm ? Math.round(grm * 100) / 100 : null,
           calculated_at: new Date().toISOString(),
         };
-        if (targetDate === latestZipMosDate) {
+        if (latestZipMosDate != null && targetDate === latestZipMosDate) {
           const m = zipMosInputs.get(String(zipCode));
           const mos = m
             ? this.calculateMonthsOfSupply(m.active, m.pending)
@@ -2874,7 +2886,10 @@ export class CalculatedMetricsService {
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
             };
-            if (zipStoragePeriodDate === latestZipMosDate) {
+            if (
+              latestZipMosDate != null &&
+              zipStoragePeriodDate === latestZipMosDate
+            ) {
               const m = zipMosInputs.get(String(zipCode));
               const mos = m
                 ? this.calculateMonthsOfSupply(m.active, m.pending)
