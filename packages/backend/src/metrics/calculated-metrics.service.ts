@@ -1187,6 +1187,57 @@ export class CalculatedMetricsService {
   // ============================================================================
 
   /**
+   * Months-of-supply proxy inputs from Realtor: active_listing_count and
+   * pending_listing_count (pending used as the monthly-sales proxy, since
+   * Realtor has no closed-sales column). Returns Map<regionId, {active, pending}>
+   * for the latest Realtor period at the given geo level.
+   * metro -> realtor_metro keyed by cbsa_code; county -> realtor_county by county_fips;
+   * zip -> realtor_zip by postal_code.
+   */
+  private async fetchRealtorMosInputs(
+    geoLevel: 'metro' | 'county' | 'zip',
+  ): Promise<Map<string, { active: number; pending: number }>> {
+    const table = `realtor_${geoLevel}`;
+    const idCol =
+      geoLevel === 'metro'
+        ? 'cbsa_code'
+        : geoLevel === 'county'
+          ? 'county_fips'
+          : 'postal_code';
+    const { data: latest } = await this.supabase
+      .from(table)
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const out = new Map<string, { active: number; pending: number }>();
+    if (!latest?.period_date) return out;
+    let from = 0;
+    const page = 1000;
+    while (true) {
+      const { data, error } = await this.supabase
+        .from(table)
+        .select(`${idCol}, active_listing_count, pending_listing_count`)
+        .eq('period_date', latest.period_date)
+        .range(from, from + page - 1);
+      if (error)
+        throw new Error(`${table} MOS inputs failed: ${error.message}`);
+      if (!data || data.length === 0) break;
+      for (const r of data as any[]) {
+        const id = r[idCol];
+        if (!id) continue;
+        out.set(String(id), {
+          active: Number(r.active_listing_count),
+          pending: Number(r.pending_listing_count),
+        });
+      }
+      if (data.length < page) break;
+      from += page;
+    }
+    return out;
+  }
+
+  /**
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
    * Combines Zillow ZORI data with Realtor median_listing_price
    */
@@ -1217,6 +1268,9 @@ export class CalculatedMetricsService {
 
     let totalProcessed = 0;
     let totalStored = 0;
+
+    // Fetch MOS inputs once for the latest Realtor metro period
+    const metroMosInputs = await this.fetchRealtorMosInputs('metro');
 
     for (const targetDate of uniqueDates) {
       // Get ZORI (rent) data for all metros from zillow_metro table
@@ -1388,6 +1442,7 @@ export class CalculatedMetricsService {
             ? Math.round(calculateCAGR(pastRent5yr, zori, 5)! * 100) / 100
             : null;
 
+        const metroMos = metroMosInputs.get(String(cbsaCode));
         recordsToUpsert.push({
           geography_id: cbsaCode,
           geography_type: 'metro',
@@ -1401,6 +1456,12 @@ export class CalculatedMetricsService {
           grm: grm ? Math.round(grm * 100) / 100 : null,
           zori_yoy: zoriYoy,
           zori_5y_cagr: zori5yCagr,
+          months_of_supply: metroMos
+            ? this.calculateMonthsOfSupply(metroMos.active, metroMos.pending)
+            : null,
+          absorption_rate: metroMos
+            ? this.calculateAbsorptionRate(metroMos.pending, metroMos.active)
+            : null,
           calculated_at: new Date().toISOString(),
         });
 
@@ -1588,6 +1649,7 @@ export class CalculatedMetricsService {
                     ) / 100
                   : null;
 
+              const hudMetroMos = metroMosInputs.get(String(cbsa));
               hudMetroUpsert.push({
                 geography_id: cbsa,
                 geography_type: 'metro',
@@ -1603,6 +1665,18 @@ export class CalculatedMetricsService {
                 grm: grm ? Math.round(grm * 100) / 100 : null,
                 zori_yoy: hudZoriYoy,
                 zori_5y_cagr: hudZori5yCagr,
+                months_of_supply: hudMetroMos
+                  ? this.calculateMonthsOfSupply(
+                      hudMetroMos.active,
+                      hudMetroMos.pending,
+                    )
+                  : null,
+                absorption_rate: hudMetroMos
+                  ? this.calculateAbsorptionRate(
+                      hudMetroMos.pending,
+                      hudMetroMos.active,
+                    )
+                  : null,
                 calculated_at: new Date().toISOString(),
               });
             }
@@ -1878,6 +1952,9 @@ export class CalculatedMetricsService {
     let totalProcessed = 0;
     let totalStored = 0;
 
+    // Fetch MOS inputs once for the latest Realtor county period
+    const countyMosInputs = await this.fetchRealtorMosInputs('county');
+
     for (const targetDate of uniqueDates) {
       // Get ZORI (rent) data for all counties (paginated)
       const zoriData: any[] = [];
@@ -1957,6 +2034,7 @@ export class CalculatedMetricsService {
         const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
         const grm = this.calculateGRM(price, zori);
 
+        const countyMos = countyMosInputs.get(String(fipsCode));
         recordsToUpsert.push({
           geography_id: fipsCode,
           geography_type: 'county',
@@ -1968,6 +2046,12 @@ export class CalculatedMetricsService {
             ? Math.round(rentToPriceRatio * 10000) / 10000
             : null,
           grm: grm ? Math.round(grm * 100) / 100 : null,
+          months_of_supply: countyMos
+            ? this.calculateMonthsOfSupply(countyMos.active, countyMos.pending)
+            : null,
+          absorption_rate: countyMos
+            ? this.calculateAbsorptionRate(countyMos.pending, countyMos.active)
+            : null,
           calculated_at: new Date().toISOString(),
         });
 
@@ -2051,6 +2135,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, fmr.rent);
 
+            const hudCountyMos = countyMosInputs.get(String(fips));
             hudUpsert.push({
               geography_id: fips,
               geography_type: 'county',
@@ -2064,6 +2149,18 @@ export class CalculatedMetricsService {
                 ? Math.round(rentToPriceRatio * 10000) / 10000
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
+              months_of_supply: hudCountyMos
+                ? this.calculateMonthsOfSupply(
+                    hudCountyMos.active,
+                    hudCountyMos.pending,
+                  )
+                : null,
+              absorption_rate: hudCountyMos
+                ? this.calculateAbsorptionRate(
+                    hudCountyMos.pending,
+                    hudCountyMos.active,
+                  )
+                : null,
               calculated_at: new Date().toISOString(),
             });
           }
@@ -2233,6 +2330,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, rent);
 
+            const realtorCountyMos = countyMosInputs.get(String(fips));
             realtorUpsert.push({
               geography_id: fips,
               geography_type: 'county',
@@ -2246,6 +2344,18 @@ export class CalculatedMetricsService {
                 ? Math.round(rentToPriceRatio * 10000) / 10000
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
+              months_of_supply: realtorCountyMos
+                ? this.calculateMonthsOfSupply(
+                    realtorCountyMos.active,
+                    realtorCountyMos.pending,
+                  )
+                : null,
+              absorption_rate: realtorCountyMos
+                ? this.calculateAbsorptionRate(
+                    realtorCountyMos.pending,
+                    realtorCountyMos.active,
+                  )
+                : null,
               calculated_at: new Date().toISOString(),
             });
 
@@ -2313,6 +2423,9 @@ export class CalculatedMetricsService {
 
     let totalProcessed = 0;
     let totalStored = 0;
+
+    // Fetch MOS inputs once for the latest Realtor zip period
+    const zipMosInputs = await this.fetchRealtorMosInputs('zip');
 
     for (const targetDate of uniqueDates) {
       // Get ZHVI data for all zips (paginated)
@@ -2385,6 +2498,7 @@ export class CalculatedMetricsService {
           const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
           const grm = this.calculateGRM(price, zori);
 
+          const zipMos = zipMosInputs.get(String(zipCode));
           recordsToUpsert.push({
             geography_id: zipCode,
             geography_type: 'zip',
@@ -2396,6 +2510,12 @@ export class CalculatedMetricsService {
               ? Math.round(rentToPriceRatio * 10000) / 10000
               : null,
             grm: grm ? Math.round(grm * 100) / 100 : null,
+            months_of_supply: zipMos
+              ? this.calculateMonthsOfSupply(zipMos.active, zipMos.pending)
+              : null,
+            absorption_rate: zipMos
+              ? this.calculateAbsorptionRate(zipMos.pending, zipMos.active)
+              : null,
             calculated_at: new Date().toISOString(),
           });
         }
@@ -2485,6 +2605,7 @@ export class CalculatedMetricsService {
         );
         const grm = this.calculateGRM(price, countyRent);
 
+        const zipFallbackMos = zipMosInputs.get(String(zipCode));
         zipFallbackBatch.push({
           geography_id: zipCode,
           geography_type: 'zip',
@@ -2496,6 +2617,18 @@ export class CalculatedMetricsService {
             ? Math.round(rentToPriceRatio * 10000) / 10000
             : null,
           grm: grm ? Math.round(grm * 100) / 100 : null,
+          months_of_supply: zipFallbackMos
+            ? this.calculateMonthsOfSupply(
+                zipFallbackMos.active,
+                zipFallbackMos.pending,
+              )
+            : null,
+          absorption_rate: zipFallbackMos
+            ? this.calculateAbsorptionRate(
+                zipFallbackMos.pending,
+                zipFallbackMos.active,
+              )
+            : null,
           calculated_at: new Date().toISOString(),
         });
       }
@@ -2689,6 +2822,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, rent);
 
+            const realtorZipMos = zipMosInputs.get(String(zipCode));
             batch.push({
               geography_id: zipCode,
               geography_type: 'zip',
@@ -2702,6 +2836,18 @@ export class CalculatedMetricsService {
                 ? Math.round(rentToPriceRatio * 10000) / 10000
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
+              months_of_supply: realtorZipMos
+                ? this.calculateMonthsOfSupply(
+                    realtorZipMos.active,
+                    realtorZipMos.pending,
+                  )
+                : null,
+              absorption_rate: realtorZipMos
+                ? this.calculateAbsorptionRate(
+                    realtorZipMos.pending,
+                    realtorZipMos.active,
+                  )
+                : null,
               calculated_at: new Date().toISOString(),
             });
 
