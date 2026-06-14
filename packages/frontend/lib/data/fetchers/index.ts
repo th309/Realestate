@@ -19,3 +19,20 @@ export * from "./_groups/admin";
 
 // Deal Analyzer (market context, AI verdict, saved analyses)
 export * from "./analyzer";
+
+// Address geocoding (Mapbox street-address autocomplete for the Deal Analyzer)
+export {
+  geocodeAddress,
+  featureToSuggestion,
+  type AddressSuggestion,
+} from "./address-geocode";
+
+// Analyzer prefill bundle (address-driven field prefill with provenance)
+export {
+  fetchAnalyzerPrefill,
+  type AnalyzerPrefillBundle,
+  type AnalyzerPrefillParams,
+  type PrefillField,
+  type PrefillFieldKey,
+  type PrefillConfidenceGrade,
+} from "./analyzer-prefill";

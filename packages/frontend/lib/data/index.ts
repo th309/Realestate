@@ -234,6 +234,10 @@ export {
   useDeleteThresholds,
   useAnalyzerDefaults,
   useUpdateAnalyzerDefaults,
+
+  // Address geocoding + prefill hooks
+  useAddressGeocode,
+  useAnalyzerPrefill,
 } from "./hooks";
 
 // ============================================================================
