@@ -141,7 +141,7 @@ export default async function CountyPage({
               buildStatsJsonLd(
                 stats,
                 county.shortName,
-                `https://propertyiq.up.railway.app/markets/county/${county.slug}`,
+                `https://www.propertyiq.app/markets/county/${county.slug}`,
               ),
             ),
           }}

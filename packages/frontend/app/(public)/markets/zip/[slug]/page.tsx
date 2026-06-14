@@ -145,7 +145,7 @@ export default async function ZipPage({
               buildStatsJsonLd(
                 stats,
                 zip.shortName,
-                `https://propertyiq.up.railway.app/markets/zip/${zip.slug}`,
+                `https://www.propertyiq.app/markets/zip/${zip.slug}`,
               ),
             ),
           }}
