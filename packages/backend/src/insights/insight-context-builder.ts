@@ -103,7 +103,7 @@ function extractScoreComponents(
 
   for (const scoreType of ['propertyiq'] as const) {
     const singleScore = scoreResult?.scores?.[scoreType];
-    if (singleScore?.components) {
+    if (Array.isArray(singleScore?.components)) {
       for (const comp of singleScore.components) {
         components[comp.component] = {
           status: comp.status,

@@ -285,7 +285,7 @@ export function buildComponentVars(
   fallbackNames: string[],
 ): Record<string, any> {
   const ctx: Record<string, any> = {};
-  if (components) {
+  if (Array.isArray(components)) {
     for (const comp of components) {
       ctx[`${comp.component}_score`] = Math.round(comp.score);
       ctx[`${comp.component}_status`] = comp.status;
@@ -309,10 +309,12 @@ export function buildComponentVars(
  */
 function formatStanceForNarrative(stance: string): string {
   const stanceDescriptions: Record<string, string> = {
-    strong_bullish: 'strongly bullish — the data overwhelmingly favors this market',
+    strong_bullish:
+      'strongly bullish — the data overwhelmingly favors this market',
     weak_bullish: 'cautiously bullish — more positive signals than negative',
     neutral: 'neutral — mixed signals with no clear directional trend',
-    weak_bearish: 'cautiously bearish — more warning signs than positive signals',
+    weak_bearish:
+      'cautiously bearish — more warning signs than positive signals',
     strong_bearish: 'strongly bearish — significant risk factors present',
   };
   return stanceDescriptions[stance] || 'neutral';
@@ -337,7 +339,9 @@ function buildBriefingTemplateVars(briefingContext?: any): Record<string, any> {
     };
   }
 
-  const stanceDescription = formatStanceForNarrative(briefingContext.market_stance);
+  const stanceDescription = formatStanceForNarrative(
+    briefingContext.market_stance,
+  );
 
   const riskFlagsText = (briefingContext.risk_flags || [])
     .map((f: any) => f.detail || f.description || f.flag)

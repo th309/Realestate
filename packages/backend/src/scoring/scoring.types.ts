@@ -202,8 +202,8 @@ export interface SingleScoreResult {
   trend_change?: number;
   /** Up to 6 months of history for real-time calculations when historyMonths requested */
   history?: ScoreHistoryResult;
-  /** options.components===true: legacy breakdown OR v4 raw input values keyed by metric. */
-  components?: ScoreComponentBreakdown[] | Record<string, number>;
+  /** Per-component breakdown when options.components === true (legacy multi-component scores). */
+  components?: ScoreComponentBreakdown[];
 }
 
 // ============================================================================

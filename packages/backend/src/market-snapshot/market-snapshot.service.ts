@@ -437,7 +437,11 @@ export class MarketSnapshotService {
           ? {
               score: Math.round(s.scores.propertyiq.score),
               grade: s.scores.propertyiq.grade,
-              components: s.scores.propertyiq.components,
+              // The "score receipts" exposed to SEO pages are the four raw v4
+              // inputs, which live on the top-level z_scores (NOT components,
+              // which is a legacy ScoreComponentBreakdown[] that report builders
+              // iterate — see scoring-retrieval.ts).
+              components: s.z_scores,
             }
           : null,
       };
