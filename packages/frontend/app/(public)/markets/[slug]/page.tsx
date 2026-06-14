@@ -124,7 +124,7 @@ export default async function MetroPage({
               buildStatsJsonLd(
                 stats,
                 metro.shortName,
-                `https://propertyiq.up.railway.app/markets/${metro.slug}`,
+                `https://www.propertyiq.app/markets/${metro.slug}`,
               ),
             ),
           }}
