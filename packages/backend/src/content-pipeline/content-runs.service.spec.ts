@@ -5,6 +5,7 @@ import { RunOrchestratorService } from './orchestrator/run-orchestrator.service'
 import { QueueService } from './orchestrator/queue.service';
 import { ContentDataService } from './data/content-data.service';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
+import { CostCapService } from './auto-ideation/cost-cap.service';
 
 describe('ContentRunsService.triggerTestMagnet', () => {
   function buildHarness(overrides?: {
@@ -75,6 +76,18 @@ describe('ContentRunsService.triggerTestMagnet', () => {
       queueService,
       contentData,
       rankingResolver,
+      {
+        canEnqueue: jest.fn().mockResolvedValue({
+          allowed: true,
+          remainingUsd: 100,
+          usdSpent: 0,
+          usdCap: 100,
+        }),
+        canEnqueueFormat: jest
+          .fn()
+          .mockResolvedValue({ allowed: true, count: 0, cap: 100 }),
+        incrementFormatCount: jest.fn().mockResolvedValue(undefined),
+      } as unknown as CostCapService,
     );
 
     return {
@@ -319,6 +332,18 @@ describe('ContentRunsService.createRun — ranking drift check', () => {
       queueService,
       contentData,
       rankingResolver,
+      {
+        canEnqueue: jest.fn().mockResolvedValue({
+          allowed: true,
+          remainingUsd: 100,
+          usdSpent: 0,
+          usdCap: 100,
+        }),
+        canEnqueueFormat: jest
+          .fn()
+          .mockResolvedValue({ allowed: true, count: 0, cap: 100 }),
+        incrementFormatCount: jest.fn().mockResolvedValue(undefined),
+      } as unknown as CostCapService,
     );
 
     return { service, rankingResolver };

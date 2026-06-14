@@ -7,6 +7,7 @@ describe('AnalyzerService.buildVerdictPrompt', () => {
       null as any,
       null as any,
       null as any,
+      null as any,
     );
     const prompt = svc.buildVerdictPrompt({
       input: {
@@ -44,6 +45,7 @@ describe('AnalyzerService.streamAiVerdict', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       aiProvider as any,
     );
     const chunks: string[] = [];
@@ -71,6 +73,7 @@ describe('AnalyzerService.streamAiVerdict', () => {
       }),
     };
     const service = new AnalyzerService(
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

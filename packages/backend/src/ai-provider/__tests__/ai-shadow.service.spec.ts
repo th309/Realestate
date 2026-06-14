@@ -2,12 +2,14 @@ import { Test } from '@nestjs/testing';
 import { AiShadowService } from '../ai-shadow.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
+import type { AiProviderType } from '../ai-provider.types';
+import type { ShadowContext } from '../ai-shadow.service';
 
-const makeCtx = (overrides: Partial<any> = {}) => ({
+const makeCtx = (overrides: Partial<ShadowContext> = {}): ShadowContext => ({
   purpose: 'market_insight',
   requestId: '00000000-0000-0000-0000-000000000001',
   primaryConfig: {
-    provider: 'deepseek',
+    provider: 'deepseek' as AiProviderType,
     model: 'deepseek-v4-pro',
     apiKey: 'sk-x',
     baseUrl: 'https://api.deepseek.com/v1',
