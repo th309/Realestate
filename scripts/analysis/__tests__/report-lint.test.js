@@ -83,6 +83,39 @@ ok(
   ),
 );
 
+// GATE PROOF against the committed fixture
+const fixturePath = path.join(
+  __dirname,
+  "..",
+  "__fixtures__",
+  "known-bad-report.md",
+);
+const fixtureFindings = (() => {
+  let out = "";
+  try {
+    out = execFileSync("node", [LINT, fixturePath], { encoding: "utf8" });
+  } catch (e) {
+    out = e.stdout || "";
+  }
+  return JSON.parse(out).violations;
+})();
+ok(
+  "fixture: superlative caught",
+  fixtureFindings.some((v) => v.detail === "superlative"),
+);
+ok(
+  "fixture: 1Y headline caught",
+  fixtureFindings.some((v) => /1Y/.test(v.detail)),
+);
+ok(
+  "fixture: unlabeled quintile caught",
+  fixtureFindings.some((v) => /vs State/.test(v.detail)),
+);
+ok(
+  "fixture: numbering gap caught",
+  fixtureFindings.some((v) => /numbering/.test(v.detail)),
+);
+
 console.log(`${pass} passed, ${fails.length} failed`);
 if (fails.length) {
   console.log("FAILURES:\n  " + fails.join("\n  "));
