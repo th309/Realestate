@@ -221,7 +221,14 @@ export async function fetchAPICached<T>(
       if (v !== undefined) url.searchParams.append(k, String(v));
     });
   }
+  // Send the shared internal secret so the backend skips per-IP throttling for
+  // these server-side ISR/build fetches (see ThrottlerModule.skipIf in the
+  // backend). Without it, a burst of regenerations from the frontend's single
+  // egress IP gets 429'd and the pages render with empty data. REVALIDATE_SECRET
+  // is server-only — this fetcher never runs in the browser, so it is not exposed.
+  const internalKey = process.env.REVALIDATE_SECRET;
   const response = await fetch(url.toString(), {
+    ...(internalKey ? { headers: { "x-internal-key": internalKey } } : {}),
     next: {
       revalidate: opts.revalidate,
       ...(opts.tags ? { tags: opts.tags } : {}),
