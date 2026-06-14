@@ -2,8 +2,10 @@
 import { useState } from "react";
 import type { DealInput } from "@propertyiq/analyzer-core";
 import { NumField } from "./NumField";
+import { FieldProvenance } from "./FieldProvenance";
 import type { AnalyzerAssumptions } from "../../lib/analyzer-assumptions";
 import { DEFAULT_ASSUMPTIONS } from "../../lib/analyzer-assumptions";
+import { isDivergent, type ProvenanceMap } from "../../lib/use-analyzer-state";
 
 interface AdvancedAssumptionsProps {
   assumptions: AnalyzerAssumptions;
@@ -15,6 +17,7 @@ interface AdvancedAssumptionsProps {
   input: DealInput;
   onInputChange: (patch: Partial<DealInput>) => void;
   onFinancingChange: (patch: Partial<DealInput["financing"]>) => void;
+  provenance?: ProvenanceMap;
 }
 
 // analyzer-core defaults — mirrored so reset works on input-side fields too.
@@ -42,6 +45,7 @@ export function AdvancedAssumptions({
   input,
   onInputChange,
   onFinancingChange,
+  provenance = {},
 }: AdvancedAssumptionsProps) {
   const [open, setOpen] = useState(false);
 
@@ -125,13 +129,23 @@ export function AdvancedAssumptions({
               Operating reserves (% of rent)
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <NumField
-                label="Vacancy"
-                value={pctValue(input.vacancyPctOfRent ?? 0.05)}
-                onChange={pctOnInputChange("vacancyPctOfRent")}
-                suffix="%"
-                placeholder="5.0"
-              />
+              <div>
+                <NumField
+                  label="Vacancy"
+                  value={pctValue(input.vacancyPctOfRent ?? 0.05)}
+                  onChange={pctOnInputChange("vacancyPctOfRent")}
+                  suffix="%"
+                  placeholder="5.0"
+                />
+                <FieldProvenance
+                  data={provenance.vacancyPctOfRent}
+                  current={input.vacancyPctOfRent ?? null}
+                  divergent={isDivergent(
+                    provenance.vacancyPctOfRent?.baseline ?? null,
+                    input.vacancyPctOfRent ?? null,
+                  )}
+                />
+              </div>
               <NumField
                 label="Maintenance"
                 value={pctValue(input.maintenancePctOfRent ?? 0.08)}
@@ -180,20 +194,40 @@ export function AdvancedAssumptions({
               Growth (annual)
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <NumField
-                label="Appreciation"
-                value={pctValue(assumptions.appreciationPct)}
-                onChange={pctOnChange("appreciationPct")}
-                suffix="%"
-                placeholder="3.0"
-              />
-              <NumField
-                label="Rent growth"
-                value={pctValue(assumptions.rentGrowthPct)}
-                onChange={pctOnChange("rentGrowthPct")}
-                suffix="%"
-                placeholder="3.0"
-              />
+              <div>
+                <NumField
+                  label="Appreciation"
+                  value={pctValue(assumptions.appreciationPct)}
+                  onChange={pctOnChange("appreciationPct")}
+                  suffix="%"
+                  placeholder="3.0"
+                />
+                <FieldProvenance
+                  data={provenance.appreciationPct}
+                  current={assumptions.appreciationPct * 100}
+                  divergent={isDivergent(
+                    provenance.appreciationPct?.baseline ?? null,
+                    assumptions.appreciationPct * 100,
+                  )}
+                />
+              </div>
+              <div>
+                <NumField
+                  label="Rent growth"
+                  value={pctValue(assumptions.rentGrowthPct)}
+                  onChange={pctOnChange("rentGrowthPct")}
+                  suffix="%"
+                  placeholder="3.0"
+                />
+                <FieldProvenance
+                  data={provenance.rentGrowthPct}
+                  current={assumptions.rentGrowthPct}
+                  divergent={isDivergent(
+                    provenance.rentGrowthPct?.baseline ?? null,
+                    assumptions.rentGrowthPct,
+                  )}
+                />
+              </div>
               <NumField
                 label="Expense growth"
                 value={pctValue(assumptions.expenseGrowthPct)}

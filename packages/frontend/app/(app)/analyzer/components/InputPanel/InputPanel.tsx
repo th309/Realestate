@@ -13,7 +13,7 @@ import { RentCastBadge, type RentCastState } from "./RentCastBadge";
 import { FetchPropertyDataButton } from "./FetchPropertyDataButton";
 import { AdvancedAssumptions } from "./AdvancedAssumptions";
 import { StrategyControls, type AnalysisMode } from "./StrategyControls";
-import { StrategyGroup } from "./StrategyGroup";
+import { StrategyFields } from "./StrategyFields";
 import { CommercialUnderwritingGroup } from "./CommercialUnderwritingGroup";
 import { MetricMathPanel } from "./MetricMathPanel";
 import { PropertyTypeToggle } from "./PropertyTypeToggle";
@@ -222,29 +222,51 @@ export function InputPanel({
             />
           </div>
         )}
-        <NumField
-          label="Tax (annual)"
-          value={input.taxAnnual}
-          onChange={(v) => update({ taxAnnual: v })}
-          prefix="$"
-          // Treat empty as 0 so the nudge fires its "missing tax data
-          // understates expenses" warning — previously the user got no
-          // signal at all when this field was blank.
-          nudge={
-            input.price ? nudgeForTax(input.taxAnnual ?? 0, input.price) : null
-          }
-        />
-        <NumField
-          label="Insurance (annual)"
-          value={input.insuranceAnnual}
-          onChange={(v) => update({ insuranceAnnual: v })}
-          prefix="$"
-          nudge={
-            input.price
-              ? nudgeForInsurance(input.insuranceAnnual ?? 0, input.price)
-              : null
-          }
-        />
+        <div>
+          <NumField
+            label="Tax (annual)"
+            value={input.taxAnnual}
+            onChange={(v) => update({ taxAnnual: v })}
+            prefix="$"
+            // Treat empty as 0 so the nudge fires its "missing tax data
+            // understates expenses" warning — previously the user got no
+            // signal at all when this field was blank.
+            nudge={
+              input.price
+                ? nudgeForTax(input.taxAnnual ?? 0, input.price)
+                : null
+            }
+          />
+          <FieldProvenance
+            data={provenance.taxAnnual}
+            current={input.taxAnnual}
+            divergent={isDivergent(
+              provenance.taxAnnual?.baseline ?? null,
+              input.taxAnnual,
+            )}
+          />
+        </div>
+        <div>
+          <NumField
+            label="Insurance (annual)"
+            value={input.insuranceAnnual}
+            onChange={(v) => update({ insuranceAnnual: v })}
+            prefix="$"
+            nudge={
+              input.price
+                ? nudgeForInsurance(input.insuranceAnnual ?? 0, input.price)
+                : null
+            }
+          />
+          <FieldProvenance
+            data={provenance.insuranceAnnual}
+            current={input.insuranceAnnual}
+            divergent={isDivergent(
+              provenance.insuranceAnnual?.baseline ?? null,
+              input.insuranceAnnual,
+            )}
+          />
+        </div>
         {showArv && (
           <NumField
             label="ARV (after rehab)"
@@ -309,56 +331,13 @@ export function InputPanel({
         />
       )}
 
-      {showFlipGroup && assumptions && onAssumptionChange && (
-        <StrategyGroup label="Flip carry & exit" chip="FLIP">
-          <NumField
-            label="Holding months"
-            value={assumptions.holdingMonths}
-            onChange={(v) => onAssumptionChange("holdingMonths", v ?? 0)}
-            placeholder="4"
-          />
-          <NumField
-            label="Selling costs"
-            value={Math.round(assumptions.sellingCostsPct * 1000) / 10}
-            onChange={(v) =>
-              onAssumptionChange("sellingCostsPct", v == null ? 0 : v / 100)
-            }
-            suffix="%"
-            placeholder="7.0"
-          />
-        </StrategyGroup>
-      )}
-
-      {showBrrrrGroup && assumptions && onAssumptionChange && (
-        <StrategyGroup label="BRRRR refi & timeline" chip="BRRRR">
-          <NumField
-            label="Refi LTV"
-            value={Math.round(assumptions.refinanceLTVPct * 1000) / 10}
-            onChange={(v) =>
-              onAssumptionChange("refinanceLTVPct", v == null ? 0 : v / 100)
-            }
-            suffix="%"
-            placeholder="75"
-          />
-          <NumField
-            label="Seasoning months"
-            value={assumptions.seasoningMonths}
-            onChange={(v) => onAssumptionChange("seasoningMonths", v ?? 0)}
-            placeholder="6"
-          />
-          <NumField
-            label="Rehab months"
-            value={assumptions.rehabMonths}
-            onChange={(v) => onAssumptionChange("rehabMonths", v ?? 0)}
-            placeholder="3"
-          />
-          <NumField
-            label="Lease-up months"
-            value={assumptions.leaseMonths}
-            onChange={(v) => onAssumptionChange("leaseMonths", v ?? 0)}
-            placeholder="1"
-          />
-        </StrategyGroup>
+      {assumptions && onAssumptionChange && (
+        <StrategyFields
+          assumptions={assumptions}
+          onAssumptionChange={onAssumptionChange}
+          showFlipGroup={showFlipGroup}
+          showBrrrrGroup={showBrrrrGroup}
+        />
       )}
 
       <div className="text-[10px] text-on-surface-variant pt-2 border-t border-outline-variant">
@@ -389,6 +368,7 @@ export function InputPanel({
           input={input}
           onInputChange={update}
           onFinancingChange={updateFin}
+          provenance={provenance}
         />
       )}
     </aside>
