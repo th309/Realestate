@@ -21,6 +21,11 @@ describe("MapPage integrates TourSpotlight (Phase 03 T6)", () => {
   });
 
   it('retains the data-tour="search-bar" hook the spotlight targets', () => {
-    expect(src).toMatch(/data-tour=["']search-bar["']/);
+    // The search-bar hook lives in MapToolbar (rendered by the page), not page.tsx.
+    const toolbarSrc = fs.readFileSync(
+      path.resolve(__dirname, "../MapToolbar.tsx"),
+      "utf8",
+    );
+    expect(toolbarSrc).toMatch(/data-tour=["']search-bar["']/);
   });
 });
