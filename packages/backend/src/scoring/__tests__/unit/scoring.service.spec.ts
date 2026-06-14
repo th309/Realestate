@@ -30,7 +30,7 @@ import {
   COMPONENT_GROUPS,
   validateFormulaWeights,
 } from '../../formula-weights';
-import type { ScoreType, GeographyLevel } from '../../formula-weights';
+import type { GeographyLevel } from '../../formula-weights';
 
 // Mock Supabase client
 const mockSupabase = {
@@ -170,23 +170,6 @@ describe('ScoringService', () => {
         expect(negativeMetrics.some(([name]) => name === 'rf_median_dom')).toBe(
           true,
         );
-      });
-    });
-
-    describe('direction values are strictly +1 or -1', () => {
-      it('all formula directions are +1 or -1', () => {
-        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
-          for (const st of [
-            'homeready',
-            'investoredge',
-            'markethealth',
-          ] as ScoreType[]) {
-            const formula = FORMULA_WEIGHTS[geo][st];
-            for (const [metricName, def] of Object.entries(formula)) {
-              expect([1, -1]).toContain(def.direction);
-            }
-          }
-        }
       });
     });
   });

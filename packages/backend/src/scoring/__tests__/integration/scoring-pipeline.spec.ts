@@ -14,7 +14,6 @@ import { SupabaseService } from '../../../supabase/supabase.service';
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
 import { CalibrationService } from '../../calibration/calibration.service';
 import { GeographyChainService } from '../../../metric-resolution/geography-chain.service';
-import type { PropertyIQScore } from '../../scoring.types';
 
 describe('Scoring Pipeline Integration', () => {
   let scoringService: ScoringService;
