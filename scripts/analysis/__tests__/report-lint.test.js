@@ -51,6 +51,38 @@ ok(
   ),
 );
 
+// STRUCTURE
+ok(
+  "flags non-sequential section numbering",
+  lint("## 1. A\n## 3. C").violations.some(
+    (v) => v.rule === "structure" && /numbering/.test(v.detail),
+  ),
+);
+ok(
+  "flags unlabeled quintile 'Excess Return' header",
+  lint("| Quintile | Excess Return |\n|---|---|").violations.some(
+    (v) => v.rule === "structure" && /vs State/.test(v.detail),
+  ),
+);
+ok(
+  "accepts 'Excess Return (vs State)'",
+  lint("| Quintile | Excess Return (vs State) |\n|---|---|").violations.every(
+    (v) => v.rule !== "structure",
+  ),
+);
+ok(
+  "flags 1Y in executive summary",
+  lint(
+    "## 1. Executive Summary\nThe 1Y return was 5%.\n## 2. Next",
+  ).violations.some((v) => v.rule === "structure" && /1Y/.test(v.detail)),
+);
+ok(
+  "sequential numbering passes",
+  lint("## 1. A\n## 2. B\n## 3. C").violations.every(
+    (v) => v.rule !== "structure",
+  ),
+);
+
 console.log(`${pass} passed, ${fails.length} failed`);
 if (fails.length) {
   console.log("FAILURES:\n  " + fails.join("\n  "));
