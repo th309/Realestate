@@ -1187,6 +1187,60 @@ export class CalculatedMetricsService {
   // ============================================================================
 
   /**
+   * Months-of-supply proxy inputs from Realtor: active_listing_count and
+   * pending_listing_count (pending used as the monthly-sales proxy, since
+   * Realtor has no closed-sales column). Returns Map<regionId, {active, pending}>
+   * for the latest Realtor period at the given geo level.
+   * metro -> realtor_metro keyed by cbsa_code; county -> realtor_county by county_fips;
+   * zip -> realtor_zip by postal_code.
+   */
+  private async fetchRealtorMosInputs(
+    geoLevel: 'metro' | 'county' | 'zip',
+  ): Promise<Map<string, { active: number; pending: number }>> {
+    const table = `realtor_${geoLevel}`;
+    const idCol =
+      geoLevel === 'metro'
+        ? 'cbsa_code'
+        : geoLevel === 'county'
+          ? 'county_fips'
+          : 'postal_code';
+    const { data: latest } = await this.supabase
+      .from(table)
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const out = new Map<string, { active: number; pending: number }>();
+    if (!latest?.period_date) return out;
+    let from = 0;
+    const page = 1000;
+    while (true) {
+      const { data, error } = await this.supabase
+        .from(table)
+        .select(`${idCol}, active_listing_count, pending_listing_count`)
+        .eq('period_date', latest.period_date)
+        .range(from, from + page - 1);
+      if (error)
+        throw new Error(`${table} MOS inputs failed: ${error.message}`);
+      if (!data || data.length === 0) break;
+      for (const r of data as any[]) {
+        const id = r[idCol];
+        if (!id) continue;
+        const active = r.active_listing_count;
+        const pending = r.pending_listing_count;
+        if (active == null || pending == null) continue;
+        out.set(String(id), {
+          active: Number(active),
+          pending: Number(pending),
+        });
+      }
+      if (data.length < page) break;
+      from += page;
+    }
+    return out;
+  }
+
+  /**
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
    * Combines Zillow ZORI data with Realtor median_listing_price
    */
@@ -1217,6 +1271,14 @@ export class CalculatedMetricsService {
 
     let totalProcessed = 0;
     let totalStored = 0;
+
+    // Fetch MOS inputs once for the latest Realtor metro period. MOS/absorption
+    // are only stamped onto the latest period's rows (uniqueDates is descending),
+    // and only when a real value is computable — never null, never historical —
+    // so historical rows and any per-period MOS from other sources are preserved.
+    const metroMosInputs = await this.fetchRealtorMosInputs('metro');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
+    const latestMosDate = uniqueDates[0];
 
     for (const targetDate of uniqueDates) {
       // Get ZORI (rent) data for all metros from zillow_metro table
@@ -1388,7 +1450,7 @@ export class CalculatedMetricsService {
             ? Math.round(calculateCAGR(pastRent5yr, zori, 5)! * 100) / 100
             : null;
 
-        recordsToUpsert.push({
+        const metroRec: any = {
           geography_id: cbsaCode,
           geography_type: 'metro',
           geography_name: metro.region_name,
@@ -1402,7 +1464,21 @@ export class CalculatedMetricsService {
           zori_yoy: zoriYoy,
           zori_5y_cagr: zori5yCagr,
           calculated_at: new Date().toISOString(),
-        });
+        };
+        if (latestMosDate != null && targetDate === latestMosDate) {
+          const m = metroMosInputs.get(String(cbsaCode));
+          const mos = m
+            ? this.calculateMonthsOfSupply(m.active, m.pending)
+            : null;
+          if (m && mos != null) {
+            metroRec.months_of_supply = mos;
+            metroRec.absorption_rate = this.calculateAbsorptionRate(
+              m.pending,
+              m.active,
+            );
+          }
+        }
+        recordsToUpsert.push(metroRec);
 
         if (recordsToUpsert.length >= batchSize) {
           const { error } = await this.supabase
@@ -1588,7 +1664,7 @@ export class CalculatedMetricsService {
                     ) / 100
                   : null;
 
-              hudMetroUpsert.push({
+              const hudMetroRec: any = {
                 geography_id: cbsa,
                 geography_type: 'metro',
                 geography_name: nameByCode[cbsa] || `Metro ${cbsa}`,
@@ -1604,7 +1680,21 @@ export class CalculatedMetricsService {
                 zori_yoy: hudZoriYoy,
                 zori_5y_cagr: hudZori5yCagr,
                 calculated_at: new Date().toISOString(),
-              });
+              };
+              if (latestMosDate != null && targetDate === latestMosDate) {
+                const m = metroMosInputs.get(String(cbsa));
+                const mos = m
+                  ? this.calculateMonthsOfSupply(m.active, m.pending)
+                  : null;
+                if (m && mos != null) {
+                  hudMetroRec.months_of_supply = mos;
+                  hudMetroRec.absorption_rate = this.calculateAbsorptionRate(
+                    m.pending,
+                    m.active,
+                  );
+                }
+              }
+              hudMetroUpsert.push(hudMetroRec);
             }
 
             if (hudMetroUpsert.length > 0) {
@@ -1878,6 +1968,14 @@ export class CalculatedMetricsService {
     let totalProcessed = 0;
     let totalStored = 0;
 
+    // Fetch MOS inputs once for the latest Realtor county period. MOS/absorption
+    // are only stamped onto the latest period's rows (uniqueDates is descending),
+    // and only when a real value is computable — never null, never historical —
+    // so historical rows and any per-period MOS from other sources are preserved.
+    const countyMosInputs = await this.fetchRealtorMosInputs('county');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
+    const latestCountyMosDate = uniqueDates[0];
+
     for (const targetDate of uniqueDates) {
       // Get ZORI (rent) data for all counties (paginated)
       const zoriData: any[] = [];
@@ -1957,7 +2055,7 @@ export class CalculatedMetricsService {
         const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
         const grm = this.calculateGRM(price, zori);
 
-        recordsToUpsert.push({
+        const countyRec: any = {
           geography_id: fipsCode,
           geography_type: 'county',
           geography_name: county.region_name,
@@ -1969,7 +2067,21 @@ export class CalculatedMetricsService {
             : null,
           grm: grm ? Math.round(grm * 100) / 100 : null,
           calculated_at: new Date().toISOString(),
-        });
+        };
+        if (latestCountyMosDate != null && targetDate === latestCountyMosDate) {
+          const m = countyMosInputs.get(String(fipsCode));
+          const mos = m
+            ? this.calculateMonthsOfSupply(m.active, m.pending)
+            : null;
+          if (m && mos != null) {
+            countyRec.months_of_supply = mos;
+            countyRec.absorption_rate = this.calculateAbsorptionRate(
+              m.pending,
+              m.active,
+            );
+          }
+        }
+        recordsToUpsert.push(countyRec);
 
         if (recordsToUpsert.length >= batchSize) {
           const { error } = await this.supabase
@@ -2051,7 +2163,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, fmr.rent);
 
-            hudUpsert.push({
+            const hudCountyRec: any = {
               geography_id: fips,
               geography_type: 'county',
               geography_name: fmr.name || nameByCode[fips] || `County ${fips}`,
@@ -2065,7 +2177,24 @@ export class CalculatedMetricsService {
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
-            });
+            };
+            if (
+              latestCountyMosDate != null &&
+              targetDate === latestCountyMosDate
+            ) {
+              const m = countyMosInputs.get(String(fips));
+              const mos = m
+                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                : null;
+              if (m && mos != null) {
+                hudCountyRec.months_of_supply = mos;
+                hudCountyRec.absorption_rate = this.calculateAbsorptionRate(
+                  m.pending,
+                  m.active,
+                );
+              }
+            }
+            hudUpsert.push(hudCountyRec);
           }
 
           if (hudUpsert.length > 0) {
@@ -2233,7 +2362,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, rent);
 
-            realtorUpsert.push({
+            const realtorCountyRec: any = {
               geography_id: fips,
               geography_type: 'county',
               geography_name: county.county_name || `County ${fips}`,
@@ -2247,7 +2376,24 @@ export class CalculatedMetricsService {
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
-            });
+            };
+            if (
+              latestCountyMosDate != null &&
+              storagePeriodDate === latestCountyMosDate
+            ) {
+              const m = countyMosInputs.get(String(fips));
+              const mos = m
+                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                : null;
+              if (m && mos != null) {
+                realtorCountyRec.months_of_supply = mos;
+                realtorCountyRec.absorption_rate = this.calculateAbsorptionRate(
+                  m.pending,
+                  m.active,
+                );
+              }
+            }
+            realtorUpsert.push(realtorCountyRec);
 
             if (realtorUpsert.length >= 500) {
               const { error } = await this.supabase
@@ -2313,6 +2459,14 @@ export class CalculatedMetricsService {
 
     let totalProcessed = 0;
     let totalStored = 0;
+
+    // Fetch MOS inputs once for the latest Realtor zip period. MOS/absorption
+    // are only stamped onto the latest period's rows (uniqueDates is descending),
+    // and only when a real value is computable — never null, never historical —
+    // so historical rows and any per-period MOS from other sources are preserved.
+    const zipMosInputs = await this.fetchRealtorMosInputs('zip');
+    // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
+    const latestZipMosDate = uniqueDates[0];
 
     for (const targetDate of uniqueDates) {
       // Get ZHVI data for all zips (paginated)
@@ -2385,7 +2539,7 @@ export class CalculatedMetricsService {
           const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
           const grm = this.calculateGRM(price, zori);
 
-          recordsToUpsert.push({
+          const zipRec: any = {
             geography_id: zipCode,
             geography_type: 'zip',
             geography_name: zipCode,
@@ -2397,7 +2551,21 @@ export class CalculatedMetricsService {
               : null,
             grm: grm ? Math.round(grm * 100) / 100 : null,
             calculated_at: new Date().toISOString(),
-          });
+          };
+          if (latestZipMosDate != null && targetDate === latestZipMosDate) {
+            const m = zipMosInputs.get(String(zipCode));
+            const mos = m
+              ? this.calculateMonthsOfSupply(m.active, m.pending)
+              : null;
+            if (m && mos != null) {
+              zipRec.months_of_supply = mos;
+              zipRec.absorption_rate = this.calculateAbsorptionRate(
+                m.pending,
+                m.active,
+              );
+            }
+          }
+          recordsToUpsert.push(zipRec);
         }
 
         if (recordsToUpsert.length > 0) {
@@ -2485,7 +2653,7 @@ export class CalculatedMetricsService {
         );
         const grm = this.calculateGRM(price, countyRent);
 
-        zipFallbackBatch.push({
+        const zipFallbackRec: any = {
           geography_id: zipCode,
           geography_type: 'zip',
           geography_name: zipCode,
@@ -2497,7 +2665,21 @@ export class CalculatedMetricsService {
             : null,
           grm: grm ? Math.round(grm * 100) / 100 : null,
           calculated_at: new Date().toISOString(),
-        });
+        };
+        if (latestZipMosDate != null && targetDate === latestZipMosDate) {
+          const m = zipMosInputs.get(String(zipCode));
+          const mos = m
+            ? this.calculateMonthsOfSupply(m.active, m.pending)
+            : null;
+          if (m && mos != null) {
+            zipFallbackRec.months_of_supply = mos;
+            zipFallbackRec.absorption_rate = this.calculateAbsorptionRate(
+              m.pending,
+              m.active,
+            );
+          }
+        }
+        zipFallbackBatch.push(zipFallbackRec);
       }
 
       if (zipFallbackBatch.length > 0) {
@@ -2689,7 +2871,7 @@ export class CalculatedMetricsService {
             );
             const grm = this.calculateGRM(price, rent);
 
-            batch.push({
+            const realtorZipRec: any = {
               geography_id: zipCode,
               geography_type: 'zip',
               geography_name: zip.zip_name || zipCode,
@@ -2703,7 +2885,24 @@ export class CalculatedMetricsService {
                 : null,
               grm: grm ? Math.round(grm * 100) / 100 : null,
               calculated_at: new Date().toISOString(),
-            });
+            };
+            if (
+              latestZipMosDate != null &&
+              zipStoragePeriodDate === latestZipMosDate
+            ) {
+              const m = zipMosInputs.get(String(zipCode));
+              const mos = m
+                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                : null;
+              if (m && mos != null) {
+                realtorZipRec.months_of_supply = mos;
+                realtorZipRec.absorption_rate = this.calculateAbsorptionRate(
+                  m.pending,
+                  m.active,
+                );
+              }
+            }
+            batch.push(realtorZipRec);
 
             // Mark as existing so we don't double-process
             existingZips.add(zipCode);
@@ -2754,8 +2953,27 @@ export class CalculatedMetricsService {
     ]);
 
     // Then run overvalued AFTER investment metrics are stored,
-    // so the update-only upsert preserves cap_rate/gross_yield/grm
-    const overvalued = await this.calculateOvervaluedForMetros(year);
+    // so the upsert preserves cap_rate/gross_yield/grm on existing rows.
+    // County and ZIP run latest-period-only (no year loop) for performance.
+    const [metroOvervalued, countyOvervalued, zipOvervalued] =
+      await Promise.all([
+        this.calculateOvervaluedForMetros(year),
+        this.calculateOvervaluedForCounties(),
+        this.calculateOvervaluedForZips(),
+      ]);
+    const overvalued = {
+      processed:
+        metroOvervalued.processed +
+        countyOvervalued.processed +
+        zipOvervalued.processed,
+      stored:
+        metroOvervalued.stored + countyOvervalued.stored + zipOvervalued.stored,
+      errors: [
+        ...metroOvervalued.errors,
+        ...countyOvervalued.errors,
+        ...zipOvervalued.errors,
+      ],
+    };
 
     // Aggregate investment metric results
     const investmentMetrics = {
@@ -2770,6 +2988,316 @@ export class CalculatedMetricsService {
     };
 
     return { investmentMetrics, overvalued };
+  }
+
+  /**
+   * Single entry point for the monthly calculated_metrics refresh: investment
+   * metrics + months_of_supply (all geos), overvalued_pct (all geos), and
+   * 5-year growth (all geos). Affordability metrics (income_to_buy /
+   * affordable_home_price / years_to_save) are produced separately by the
+   * scripts/calculations affordability runner (FRED-dependent) and are NOT here.
+   */
+  async refreshAllCalculatedMetrics(year?: number): Promise<{
+    investment: { processed: number; stored: number; errors: string[] };
+    overvalued: { processed: number; stored: number; errors: string[] };
+    growth: { processed: number; stored: number; errors: string[] };
+  }> {
+    const inv = await this.calculateAllInvestmentMetrics(year);
+    const growthRaw = await this.calculate5YrGrowthForAll(year);
+    // calculate5YrGrowthForAll returns {metros,states,counties,zips,national} each {processed,stored}.
+    // Aggregate across all geo levels; no error channel exists on sub-results so errors stays empty.
+    const growth = {
+      processed:
+        growthRaw.metros.processed +
+        growthRaw.states.processed +
+        growthRaw.counties.processed +
+        growthRaw.zips.processed +
+        growthRaw.national.processed,
+      stored:
+        growthRaw.metros.stored +
+        growthRaw.states.stored +
+        growthRaw.counties.stored +
+        growthRaw.zips.stored +
+        growthRaw.national.stored,
+      errors: [] as string[],
+    };
+    return {
+      investment: inv.investmentMetrics,
+      overvalued: inv.overvalued,
+      growth,
+    };
+  }
+
+  /**
+   * Calculate and store overvalued percentage for all counties (latest period only).
+   * Uses ZHVI from zillow_county and median_household_income from census_county.
+   */
+  async calculateOvervaluedForCounties(): Promise<{
+    processed: number;
+    stored: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    const NATIONAL_MEDIAN_INCOME = 75000;
+    const CHUNK_SIZE = 1000;
+
+    // Latest ZHVI date for counties only
+    const { data: latestDateRow } = await this.supabase
+      .from('zillow_county')
+      .select('period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return {
+        processed: 0,
+        stored: 0,
+        errors: ['No ZHVI data found for counties'],
+      };
+    }
+    const targetDate = latestDateRow.period_date;
+    const targetYear = parseInt(targetDate.substring(0, 4));
+
+    // Fetch all county ZHVI for the latest date (paginated)
+    const zhviData: any[] = [];
+    let zhviOffset = 0;
+    while (true) {
+      const { data: page } = await this.supabase
+        .from('zillow_county')
+        .select('region_name, fips_code, value')
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null)
+        .range(zhviOffset, zhviOffset + 1999);
+      if (!page || page.length === 0) break;
+      zhviData.push(...page);
+      if (page.length < 2000) break;
+      zhviOffset += 2000;
+    }
+
+    if (zhviData.length === 0) {
+      return {
+        processed: 0,
+        stored: 0,
+        errors: [`No county ZHVI for ${targetDate}`],
+      };
+    }
+
+    // Normalize FIPS to 5-digit string
+    const normalizeFips = (f: string | null | undefined) =>
+      f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f;
+
+    // Build ZHVI lookup keyed by normalized FIPS
+    const zhviByFips: Record<string, { value: number; name: string }> = {};
+    for (const row of zhviData) {
+      const fips = normalizeFips(row.fips_code);
+      if (fips && row.value) {
+        zhviByFips[fips] = { value: row.value, name: row.region_name ?? fips };
+      }
+    }
+
+    // Fetch census income for closest year <= targetYear (paginated)
+    const { data: latestCensusYearRow } = await this.supabase
+      .from('census_county')
+      .select('year')
+      .lte('year', targetYear)
+      .order('year', { ascending: false })
+      .limit(1)
+      .single();
+
+    const censusYear = latestCensusYearRow?.year;
+    const incomeByFips: Record<string, number> = {};
+
+    if (censusYear) {
+      let censusOffset = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('census_county')
+          .select('fips_code, median_household_income')
+          .eq('year', censusYear)
+          .not('median_household_income', 'is', null)
+          .range(censusOffset, censusOffset + 999);
+        if (!page || page.length === 0) break;
+        for (const row of page) {
+          const fips = normalizeFips(row.fips_code);
+          if (fips && row.median_household_income) {
+            incomeByFips[fips] = Number(row.median_household_income);
+          }
+        }
+        if (page.length < 1000) break;
+        censusOffset += 1000;
+      }
+    }
+
+    // Compute overvalued_pct and build records
+    const records: any[] = [];
+    for (const [fips, zhvi] of Object.entries(zhviByFips)) {
+      const income = incomeByFips[fips] || NATIONAL_MEDIAN_INCOME;
+      const overvaluedPct = this.calculateOvervalued(zhvi.value, income);
+      if (overvaluedPct === null) continue;
+      records.push({
+        geography_id: fips,
+        geography_type: 'county',
+        geography_name: zhvi.name,
+        period_date: targetDate,
+        overvalued_pct: Math.round(overvaluedPct * 10) / 10,
+        calculated_at: new Date().toISOString(),
+      });
+    }
+
+    // Batched upsert in chunks of CHUNK_SIZE (non-clobbering: only overvalued_pct + name + calculated_at)
+    let stored = 0;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(chunk, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
+      if (error) {
+        errors.push(`county chunk ${i}-${i + chunk.length}: ${error.message}`);
+      } else {
+        stored += chunk.length;
+      }
+    }
+
+    return { processed: zhviData.length, stored, errors };
+  }
+
+  /**
+   * Calculate and store overvalued percentage for all ZIP codes (latest period only).
+   * Uses ZHVI from zillow_zip and median_household_income from census_zip.
+   */
+  async calculateOvervaluedForZips(): Promise<{
+    processed: number;
+    stored: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    const NATIONAL_MEDIAN_INCOME = 75000;
+    const CHUNK_SIZE = 1000;
+
+    // Latest ZHVI date for ZIPs only
+    const { data: latestDateRow } = await this.supabase
+      .from('zillow_zip')
+      .select('period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return {
+        processed: 0,
+        stored: 0,
+        errors: ['No ZHVI data found for ZIPs'],
+      };
+    }
+    const targetDate = latestDateRow.period_date;
+    const targetYear = parseInt(targetDate.substring(0, 4));
+
+    // Fetch all ZIP ZHVI for the latest date (paginated)
+    const zhviData: any[] = [];
+    let zhviOffset = 0;
+    while (true) {
+      const { data: page } = await this.supabase
+        .from('zillow_zip')
+        .select('region_name, value')
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null)
+        .range(zhviOffset, zhviOffset + 4999);
+      if (!page || page.length === 0) break;
+      zhviData.push(...page);
+      if (page.length < 5000) break;
+      zhviOffset += 5000;
+    }
+
+    if (zhviData.length === 0) {
+      return {
+        processed: 0,
+        stored: 0,
+        errors: [`No ZIP ZHVI for ${targetDate}`],
+      };
+    }
+
+    // Build ZHVI lookup keyed by ZIP (region_name)
+    const zhviByZip: Record<string, number> = {};
+    for (const row of zhviData) {
+      if (row.region_name && row.value) {
+        zhviByZip[row.region_name] = row.value;
+      }
+    }
+
+    // Fetch census income for closest year <= targetYear
+    const { data: latestCensusYearRow } = await this.supabase
+      .from('census_zip')
+      .select('year')
+      .lte('year', targetYear)
+      .order('year', { ascending: false })
+      .limit(1)
+      .single();
+
+    const censusYear = latestCensusYearRow?.year;
+    const incomeByZcta: Record<string, number> = {};
+
+    if (censusYear) {
+      let censusOffset = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('census_zip')
+          .select('zcta, median_household_income')
+          .eq('year', censusYear)
+          .not('median_household_income', 'is', null)
+          .range(censusOffset, censusOffset + 1999);
+        if (!page || page.length === 0) break;
+        for (const row of page) {
+          if (row.zcta && row.median_household_income) {
+            // Normalize ZCTA to 5-digit padded string to match zillow_zip region_name
+            const zcta = String(row.zcta).padStart(5, '0');
+            incomeByZcta[zcta] = Number(row.median_household_income);
+          }
+        }
+        if (page.length < 2000) break;
+        censusOffset += 2000;
+      }
+    }
+
+    // Compute overvalued_pct and build records
+    const records: any[] = [];
+    for (const [zipCode, zhvi] of Object.entries(zhviByZip)) {
+      const income = incomeByZcta[zipCode] || NATIONAL_MEDIAN_INCOME;
+      const overvaluedPct = this.calculateOvervalued(zhvi, income);
+      if (overvaluedPct === null) continue;
+      records.push({
+        geography_id: zipCode,
+        geography_type: 'zip',
+        geography_name: zipCode,
+        period_date: targetDate,
+        overvalued_pct: Math.round(overvaluedPct * 10) / 10,
+        calculated_at: new Date().toISOString(),
+      });
+    }
+
+    // Batched upsert in chunks of CHUNK_SIZE (non-clobbering)
+    let stored = 0;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(chunk, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
+      if (error) {
+        errors.push(`zip chunk ${i}-${i + chunk.length}: ${error.message}`);
+      } else {
+        stored += chunk.length;
+      }
+    }
+
+    return { processed: zhviData.length, stored, errors };
   }
 
   /**

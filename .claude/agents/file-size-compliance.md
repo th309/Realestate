@@ -1,7 +1,7 @@
 ---
 name: file-size-compliance
 description: Scans codebase for files exceeding CLAUDE.md line limits and proposes splits
-model: sonnet
+model: haiku
 tools:
   - Grep
   - Read

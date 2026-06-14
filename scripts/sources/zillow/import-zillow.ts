@@ -19,6 +19,7 @@ import {
   getIncrementalCutoff,
   parseIncrementalFlagsFromArgv,
 } from "../../lib";
+import { buildCanonicalMetroCbsaMap } from "./zillow-metro-cbsa-map";
 import type { ImportGeographyResult, BatchUpsertResult } from "../../lib";
 import { createIngestionLogger } from "../../utils/ingestion-logger";
 import {
@@ -146,6 +147,30 @@ async function importSingleDataset(
     }
 
     await logger.updateProgress(0, 0);
+
+    // Step 2b: Stamp canonical cbsa_code on every metro record from the crosswalk.
+    // Zillow metro CSVs do not reliably carry a CBSACode column, and the
+    // full-row upsert (scripts/lib/batch-upsert.ts) NULLs any column absent
+    // from the payload. Without this, every incremental run writes new-month
+    // metro rows with NULL cbsa_code, dropping them from cbsa-keyed joins/scoring.
+    if (dataset.geography === "metro") {
+      const cbsaByRegionId = await buildCanonicalMetroCbsaMap(supabase);
+      let stamped = 0;
+      let missing = 0;
+      for (const rec of records) {
+        const code = cbsaByRegionId.get(rec.region_id as number);
+        if (code) {
+          rec.cbsa_code = code;
+          stamped++;
+        } else {
+          delete (rec as Record<string, unknown>).cbsa_code;
+          missing++;
+        }
+      }
+      console.log(
+        `  CBSA stamp: ${stamped} mapped, ${missing} left NULL (non-canonical / not in crosswalk)`,
+      );
+    }
 
     // Step 3: Batch upsert
     const upsertResult: BatchUpsertResult = await batchUpsert(
