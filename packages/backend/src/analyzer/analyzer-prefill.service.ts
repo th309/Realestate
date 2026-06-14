@@ -26,6 +26,9 @@ import type {
 /** Whole months between an as-of date/year and `now` (0 if unparseable). */
 function monthsStaleFrom(asOf: string | null, now: Date): number {
   if (!asOf) return 0;
+  // For year-only dates (e.g. tax years) we anchor to Dec 31 of that year:
+  // slightly pessimistic for mid-year values but conservative, and avoids
+  // reading a same-year record as "future" (a Jan 1 anchor would).
   const asYear = /^\d{4}$/.test(asOf)
     ? new Date(`${asOf}-12-31T00:00:00Z`)
     : new Date(asOf);

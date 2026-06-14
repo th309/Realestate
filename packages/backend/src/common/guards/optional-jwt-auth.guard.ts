@@ -13,17 +13,13 @@ import {
   ExecutionContext,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
 export class OptionalJwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(OptionalJwtAuthGuard.name);
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly supabaseService: SupabaseService,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();

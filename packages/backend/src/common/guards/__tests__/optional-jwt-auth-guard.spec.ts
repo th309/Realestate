@@ -13,7 +13,7 @@ function ctxWith(headers: Record<string, string>) {
 
 function makeGuard(getUser: jest.Mock) {
   const supabaseService = { getClient: () => ({ auth: { getUser } }) };
-  return new OptionalJwtAuthGuard({} as never, supabaseService as never);
+  return new OptionalJwtAuthGuard(supabaseService as never);
 }
 
 describe('OptionalJwtAuthGuard', () => {

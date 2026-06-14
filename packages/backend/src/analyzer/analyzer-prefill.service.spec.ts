@@ -202,5 +202,6 @@ describe('AnalyzerPrefillService.getPrefillBundle', () => {
     );
     expect(bundle.geo.zip).toBeNull();
     expect(bundle.fields.rentMonthly.value).toBeNull();
+    expect(bundle.fields.taxAnnual.value).toBeNull();
   });
 });
