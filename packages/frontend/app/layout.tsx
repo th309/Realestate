@@ -1,15 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { Roboto, Roboto_Mono, Source_Serif_4, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/src/components/layout/Header";
-import { Providers } from "./providers";
-import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
-import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
-import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
-import { AppFooter } from "./components/AppFooter";
-import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
-import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -134,13 +125,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default async function RootLayout({
+// The root layout intentionally does NOT read cookies. Reading `cookies()` here
+// would opt EVERY route out of static rendering. The application chrome and the
+// `piq-uid` auth seed now live in the per-group layouts (see app/(app)/layout.tsx
+// and app/(public)/layout.tsx) so that the public SEO pages can be statically
+// rendered / ISR-cached while the authenticated app stays dynamic + seeded.
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const initialUserId = cookieStore.get("piq-uid")?.value ?? null;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -175,23 +169,7 @@ export default async function RootLayout({
             </p>
           </div>
         </noscript>
-        <GoogleAnalytics />
-        <Providers initialUserId={initialUserId}>
-          <Header />
-          <EnterpriseGraceBanner />
-          <EnterpriseOnboardingGate>
-            <AnalyticsProvider>
-              <main
-                id="main-content"
-                className="flex-1 min-h-0 flex flex-col relative"
-              >
-                {children}
-              </main>
-            </AnalyticsProvider>
-            <AppFooter />
-            <DevToolbarLoader />
-          </EnterpriseOnboardingGate>
-        </Providers>
+        {children}
       </body>
     </html>
   );

@@ -1,4 +1,4 @@
-import { MagnetLandingShell } from "../components/magnet-landing/MagnetLandingShell";
+import { MagnetLandingShell } from "@/app/components/magnet-landing/MagnetLandingShell";
 
 export const metadata = {
   title: "5-Market Deep Comparison — Free PDF",

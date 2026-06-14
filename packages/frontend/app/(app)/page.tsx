@@ -16,7 +16,7 @@ import {
   Footer,
   JsonLd,
   StickyScoreBar,
-} from "./components/home";
+} from "@/app/components/home";
 
 export const metadata: Metadata = {
   title: {
