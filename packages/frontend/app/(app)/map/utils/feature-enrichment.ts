@@ -46,7 +46,8 @@ function enrichNationalFeatures(geojson: any, mapData: MapData): void {
     const name =
       feature.properties.NAME || feature.properties.name || "United States";
     const entry = mapData["United States"] ?? mapData["US"] ?? mapData[name];
-    feature.properties.value = getValueFromEntry(entry) || 0;
+    // Preserve null for missing data so it renders as "no data" (grey), not a real 0.
+    feature.properties.value = getValueFromEntry(entry);
     feature.properties.dataDate = getDateFromEntry(entry);
     feature.properties.id = feature.properties.GEOID || "US";
     feature.properties.displayName = name;
@@ -59,7 +60,8 @@ function enrichStateFeatures(geojson: any, mapData: MapData): void {
     const name = feature.properties.name;
     // Try exact match first, then case-insensitive fallback (handles "District Of Columbia" vs "District of Columbia")
     const entry = mapData[name] ?? findCaseInsensitive(mapData, name);
-    feature.properties.value = getValueFromEntry(entry) || 0;
+    // Preserve null for missing data so it renders as "no data" (grey), not a real 0.
+    feature.properties.value = getValueFromEntry(entry);
     feature.properties.dataDate = getDateFromEntry(entry);
     const stateFips =
       feature.properties.STATEFP || STATE_NAME_TO_FIPS[name] || feature.id;

@@ -11,7 +11,8 @@ import {
 export interface RealtorDataPoint {
   region_id: string;
   region_name: string;
-  value: number;
+  /** null = no data for this region (renders as "no data", NOT a real 0) */
+  value: number | null;
   date?: string;
   state_id?: string;
   cbsa_code?: string;
@@ -236,6 +237,18 @@ export class RealtorService {
   private safeString(val: unknown): string {
     if (val === null || val === undefined) return '';
     return String(val);
+  }
+
+  /**
+   * Coerce a raw DB cell to a numeric metric value, PRESERVING null for missing
+   * data. A missing value must stay null (not become 0) so the map renders it as
+   * "no data" (grey) instead of a real low score (the bottom color). Genuine 0s
+   * are kept; only null/undefined/empty/NaN become null.
+   */
+  private toNumericValue(raw: unknown): number | null {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
   }
 
   // ============================================================================
@@ -606,11 +619,11 @@ export class RealtorService {
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
     return ((data || []) as unknown as RealtorRow[]).map((row) => {
-      let value = Number(row[metric]) || 0;
+      let value: number | null = this.toNumericValue(row[metric]);
 
       // Filter out only clearly corrupt data (values in millions of percent)
       // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
-      if (isGrowthMetric && (value > 100 || value < -100)) {
+      if (isGrowthMetric && value !== null && (value > 100 || value < -100)) {
         value = 0; // Treat as corrupt data
       }
 
@@ -649,11 +662,11 @@ export class RealtorService {
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
     return ((data || []) as unknown as RealtorRow[]).map((row) => {
-      let value = Number(row[metric]) || 0;
+      let value: number | null = this.toNumericValue(row[metric]);
 
       // Filter out only clearly corrupt data (values in millions of percent)
       // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
-      if (isGrowthMetric && (value > 100 || value < -100)) {
+      if (isGrowthMetric && value !== null && (value > 100 || value < -100)) {
         value = 0; // Treat as corrupt data
       }
 
@@ -691,11 +704,11 @@ export class RealtorService {
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
     return data.map((row) => {
-      let value = Number(row[metric]) || 0;
+      let value: number | null = this.toNumericValue(row[metric]);
 
       // Filter out only clearly corrupt data (values in millions of percent)
       // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
-      if (isGrowthMetric && (value > 100 || value < -100)) {
+      if (isGrowthMetric && value !== null && (value > 100 || value < -100)) {
         value = 0; // Treat as corrupt data
       }
 
@@ -740,11 +753,11 @@ export class RealtorService {
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
     return data.map((row) => {
-      let value = Number(row[metric]) || 0;
+      let value: number | null = this.toNumericValue(row[metric]);
 
       // Filter out only clearly corrupt data (values in millions of percent)
       // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
-      if (isGrowthMetric && (value > 100 || value < -100)) {
+      if (isGrowthMetric && value !== null && (value > 100 || value < -100)) {
         value = 0; // Treat as corrupt data
       }
 

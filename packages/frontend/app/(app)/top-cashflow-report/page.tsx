@@ -1,4 +1,4 @@
-import { MagnetLandingShell } from "../components/magnet-landing/MagnetLandingShell";
+import { MagnetLandingShell } from "@/app/components/magnet-landing/MagnetLandingShell";
 
 export const metadata = {
   title: "Top 50 Cashflow Markets — Free Report",

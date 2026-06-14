@@ -510,6 +510,8 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ["metro", "county", "zip"],
     rangeType: "full",
     favorableDirection: "higher",
+    coverageNote:
+      "Realtor.com ranks only higher-volume markets, so greyed areas show no Hotness data.",
   },
 
   supply_score: {
@@ -522,6 +524,8 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ["metro", "county", "zip"],
     rangeType: "full",
     favorableDirection: "lower",
+    coverageNote:
+      "Realtor.com ranks only higher-volume markets, so greyed areas show no Supply data.",
   },
 
   demand_score: {
@@ -534,6 +538,8 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ["metro", "county", "zip"],
     rangeType: "full",
     favorableDirection: "higher",
+    coverageNote:
+      "Realtor.com ranks only higher-volume markets, so greyed areas show no Demand data.",
   },
 
   // ============================================================================

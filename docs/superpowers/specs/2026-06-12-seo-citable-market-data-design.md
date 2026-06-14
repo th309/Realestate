@@ -1,7 +1,10 @@
 # Design: Citable Market Data on SEO Pages (Backlog #4 — GEO Play)
 
+> ⚠️ **SUPERSEDED 2026-06-13** by `2026-06-13-seo-citable-market-data-design.md`.
+> The PropertyIQ Score was rebuilt 2026-06-12 (Zillow momentum + Realtor flow, **Redfin-free, no Months-of-Supply input**). This spec's P0 workstream (county→CBSA MOS rollup, which existed only to protect the score's MOS input) and its "three named inputs" are obsolete. Do not implement from this document.
+
 **Date:** 2026-06-12
-**Status:** Approved design → writing implementation plan
+**Status:** SUPERSEDED — see 2026-06-13 rebuild
 **Backlog item:** #4 "Put real, citable market data on the 94%-traffic SEO pages (GEO play)"
 **Audit ref:** `docs/superpowers/results/2026-06-10-piq-product-audit.md` §3 Rec #4
 **Discovery artifact:** `tasks/issue4-discovery-findings.md` (7-agent codebase + DB sweep)
@@ -22,7 +25,7 @@
 - **Batch endpoint already exists:** `GET /api/market-snapshot/{geoType}/{geoId}?state=XX` → `fetchMarketSnapshot()` (`lib/data/fetchers/market-snapshot.ts`). Returns score + grade + all metrics, each with `{value, date, source, sourceGeoId, sourceGeoLevel, isInherited, isFallback}`. SSR-friendly: one call per page.
 - **Data depth (verified by SQL):** 14+ trailing monthly points at metro/county, 10+ years at ZIP. 12-month sparkline + YoY are real. Freshness: Zillow/Realtor ≈ Apr 2026, legacy Redfin frozen Mar 2026.
 - **YoY data is abundant** in `redfin_*`/`realtor_*` (`median_sale_price_yoy`, `median_dom_yoy`, `median_listing_price_yy`, …). The empty `calculated_metrics.zhvi_yoy_change` column is irrelevant.
-- **Months of supply:** computed `MoS = active_listings / homes_sold` from `redfin_dc_housing_market_*` via `scripts/sources/redfin-data-center/redfin-dc-mos-hook.ts` → `calculated_metrics`. **County (Apr 2026, ~3,107) and ZIP (~30,249) are fresh and broad. Metro is the gap: the Redfin DC _metro_ feed only carries ~93 metros.** The legacy `redfin_metro.months_of_supply` is dead (frozen Mar 2026). The PropertyIQ Score's supply input reads legacy Redfin first, computed `calculated_metrics` as fallback (`propertyiq-data-fetcher.ts`) — so it is exposed to the same staleness.
+- **Months of supply:** computed `MoS = active_listings / homes_sold` from `redfin_dc_housing_market_*` via `scripts/sources/redfin-data-center/redfin-dc-mos-hook.ts` → `calculated_metrics`. **Computed April 2026 MoS already exists for county (~2,879) and ZIP (~24,788). Metro is the _only_ level stuck (~92) — the bug.** Root cause: the hook computes metro MoS only from `redfin_dc_housing_market_metro`, which is structurally ~93 metros (Redfin's DC metro file = top ~100; exactly 100 rows/period across all 172 periods 2012→2026). It **never rolls the broad county feed (all 3,107 counties, April) up to metro CBSA.** The legacy `redfin_metro.months_of_supply` (~924 metros — the source the score actually reads) is **frozen at Mar 2026** (Redfin feed change). The score reads legacy `redfin_metro` MoS first, then falls back to `calculated_metrics` (`propertyiq-data-fetcher.ts`); with legacy frozen, **April metro scoring can only fall back to those ~92 computed metros.** So producing computed April MoS for all metros unblocks both the score and this stats block.
 - **Bugs confirmed:** county SEO generator double-appends state ("Bastrop County, TX, TX") at `app/markets/county/[slug]/generate-seo-content.ts:139`; AI-insights endpoint `GET /api/insights/:geoLevel/:regionId` throws **404** when generation is unavailable (no fallback), section silently disappears.
 - **Related markets** are an alphabetical `.filter(state).slice(N)` with no relevance signal; the rankings API (`get_top_markets_by_state` RPC, `/api/v1/rankings/...`) exists but is unused by SEO pages.
 - **Capture components** exist and are reusable: `NewsletterSignup` (source/context tracked → `newsletter_signups`), `LeadMagnetModal` (`/api/lead-magnet`), `AnonCaptureModal` (email-first, backlog #2). Persona type `"agent" | "investor" | "homebuyer"` exists; SEO pages are anonymous (persona = UI toggle, not stateful).
@@ -48,7 +51,7 @@
 
 ### 4.1 MOS computation fix (P0 — gates the stats block and protects the score)
 
-**Why first:** the stats block must show a fresh, broad MOS at metro level, and the legacy Redfin column is dead. The fresh source (`redfin_dc_housing_market_county`, ~3,107 counties, Apr 2026) covers everything; metros are county aggregations.
+**Why first:** county and ZIP already get fresh April computed MoS from this hook; **metro is the only level stuck (~92)** because the hook reads the thin ~93-metro DC metro file and never rolls county up. The legacy `redfin_metro` MoS the score actually reads is frozen at Mar 2026, so computing metro MoS here **also unblocks April scoring for all metros** (the score falls back to `calculated_metrics`). The county feed (`redfin_dc_housing_market_county`, ~3,107 counties, Apr 2026) covers every metro's component counties.
 
 **Change:** extend `redfin-dc-mos-hook.ts` to compute **metro** MOS by rolling county DC rows up to CBSA:
 

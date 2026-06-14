@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  Suspense,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,19 +38,29 @@ const TourContext = createContext<TourContextValue>({
 
 export const useTour = () => useContext(TourContext);
 
-export function TourProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const { onboardingState, markComplete, resetTour } = useTourState();
-  const queryClient = useQueryClient();
-  const router = useRouter();
-  const pathname = usePathname();
+/**
+ * Reads tour-related URL search params (?resetTour=1, ?onboarding=true) and
+ * drives the tour accordingly. Isolated into its own component so the provider
+ * can wrap it in <Suspense>: `useSearchParams()` forces client-side rendering
+ * of its Suspense subtree, and keeping it in this tiny null-rendering watcher
+ * (a sibling of {children}) prevents it from opting the page content out of
+ * static rendering. Behavior is unchanged — these effects only ever run on the
+ * client after hydration.
+ */
+function TourUrlParamsWatcher({
+  phase,
+  resetTour,
+  router,
+  setPhase,
+  setStepIndex,
+}: {
+  phase: TourPhase;
+  resetTour: () => void;
+  router: ReturnType<typeof useRouter>;
+  setPhase: (phase: TourPhase) => void;
+  setStepIndex: (index: number) => void;
+}) {
   const searchParams = useSearchParams();
-
-  const [phase, setPhase] = useState<TourPhase>("idle");
-  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /tour
-  const [navigating, setNavigating] = useState(false);
-  const actionListenerRef = useRef<(() => void) | null>(null);
-  const stepMountedAtRef = useRef<number>(0);
 
   // Detect ?resetTour=1 — clears onboarding_completed_at and routes to
   // /tour?resume=fresh so the full tour re-runs. Works on any URL the provider
@@ -59,7 +70,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     resetTour();
     setStepIndex(0);
     router.replace("/tour?resume=fresh");
-  }, [searchParams, resetTour, router]);
+  }, [searchParams, resetTour, router, setStepIndex]);
 
   // Detect ?onboarding=true (set after market selection in legacy flow)
   useEffect(() => {
@@ -67,7 +78,23 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       setPhase("guided");
       setStepIndex(1); // Step 1: view-score
     }
-  }, [searchParams, phase]);
+  }, [searchParams, phase, setPhase, setStepIndex]);
+
+  return null;
+}
+
+export function TourProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const { onboardingState, markComplete, resetTour } = useTourState();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [phase, setPhase] = useState<TourPhase>("idle");
+  const [stepIndex, setStepIndex] = useState(1); // Start at 1 — step 0 is /tour
+  const [navigating, setNavigating] = useState(false);
+  const actionListenerRef = useRef<(() => void) | null>(null);
+  const stepMountedAtRef = useRef<number>(0);
 
   // Reset on signout
   useEffect(() => {
@@ -249,6 +276,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         restartTour: restartTourHandler,
       }}
     >
+      <Suspense fallback={null}>
+        <TourUrlParamsWatcher
+          phase={phase}
+          resetTour={resetTour}
+          router={router}
+          setPhase={setPhase}
+          setStepIndex={setStepIndex}
+        />
+      </Suspense>
       {children}
 
       <OnboardingProgressBar

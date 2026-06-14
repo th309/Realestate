@@ -101,6 +101,13 @@ export interface MetricConfig {
 
   /** Direction in which a higher value is favorable from a real estate investing perspective */
   favorableDirection: "higher" | "lower" | "neutral";
+
+  /**
+   * Optional short note explaining source coverage gaps. Shown in the map legend
+   * beside the "No data available" swatch so users understand greyed-out regions
+   * reflect the source (e.g. Realtor only ranks higher-volume markets), not a bug.
+   */
+  coverageNote?: string;
 }
 
 // ============================================================================
