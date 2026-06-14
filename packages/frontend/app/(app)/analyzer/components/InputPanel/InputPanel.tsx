@@ -27,6 +27,10 @@ import {
 } from "../../lib/nudges";
 import type { Strategy } from "../../lib/strategy-tile-mappers";
 import type { AnalyzerAssumptions } from "../../lib/analyzer-assumptions";
+import { AddressAutocomplete } from "./AddressAutocomplete";
+import { FieldProvenance } from "./FieldProvenance";
+import { isDivergent, type ProvenanceMap } from "../../lib/use-analyzer-state";
+import type { AddressSuggestion } from "@/lib/data";
 
 type PropertyType = "sfh" | "mf";
 
@@ -66,6 +70,8 @@ interface InputPanelProps {
   rental?: RentalResult | null;
   flip?: FlipResult | null;
   brrrr?: BrrrrResult | null;
+  provenance?: ProvenanceMap;
+  onAddressSelect?: (s: AddressSuggestion) => void;
 }
 
 const fmtUsd = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -98,6 +104,8 @@ export function InputPanel({
   rental,
   flip,
   brrrr,
+  provenance = {},
+  onAddressSelect,
 }: InputPanelProps) {
   // Fall back to uncontrolled local state when parent doesn't supply propertyType
   // (keeps existing tests working). When parent passes the prop, that wins.
@@ -157,23 +165,11 @@ export function InputPanel({
         />
       )}
 
-      <div>
-        <label className="text-xs uppercase font-semibold text-on-surface-variant block mb-1">
-          Property Address
-        </label>
-        <input
-          data-address-input
-          type="text"
-          value={address}
-          onChange={(e) => onAddressChange(e.currentTarget.value)}
-          placeholder="123 Main St, Atlanta, GA"
-          // The full address is also shown in the PropertyHeader; this title
-          // lets a user see it on hover when the input itself is too narrow
-          // (e.g. tablet width clips long addresses to '..., MD :').
-          title={address}
-          className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-sm focus:outline-none focus:border-primary"
-        />
-      </div>
+      <AddressAutocomplete
+        value={address}
+        onChange={onAddressChange}
+        onSelect={onAddressSelect ?? (() => {})}
+      />
 
       <FetchPropertyDataButton
         address={address}
@@ -183,28 +179,48 @@ export function InputPanel({
       />
 
       <div className="grid grid-cols-2 gap-3">
-        <NumField
-          label="Price"
-          value={input.price > 0 ? input.price : null}
-          onChange={(v) => update({ price: v ?? 0 })}
-          prefix="$"
-          placeholder="350,000"
-          badge={<RentCastBadge state={rentCastState} />}
-          nudge={input.price > 0 ? nudgeForPrice(input.price) : null}
-        />
-        {showRent && (
+        <div>
           <NumField
-            label="Monthly Rent"
-            value={input.rentMonthly}
-            onChange={(v) => update({ rentMonthly: v })}
+            label="Price"
+            value={input.price > 0 ? input.price : null}
+            onChange={(v) => update({ price: v ?? 0 })}
             prefix="$"
+            placeholder="350,000"
             badge={<RentCastBadge state={rentCastState} />}
-            nudge={
-              input.rentMonthly && input.price
-                ? nudgeForRent(input.rentMonthly, input.price)
-                : null
-            }
+            nudge={input.price > 0 ? nudgeForPrice(input.price) : null}
           />
+          <FieldProvenance
+            data={provenance.price}
+            current={input.price}
+            divergent={isDivergent(
+              provenance.price?.baseline ?? null,
+              input.price,
+            )}
+          />
+        </div>
+        {showRent && (
+          <div>
+            <NumField
+              label="Monthly Rent"
+              value={input.rentMonthly}
+              onChange={(v) => update({ rentMonthly: v })}
+              prefix="$"
+              badge={<RentCastBadge state={rentCastState} />}
+              nudge={
+                input.rentMonthly && input.price
+                  ? nudgeForRent(input.rentMonthly, input.price)
+                  : null
+              }
+            />
+            <FieldProvenance
+              data={provenance.rentMonthly}
+              current={input.rentMonthly}
+              divergent={isDivergent(
+                provenance.rentMonthly?.baseline ?? null,
+                input.rentMonthly,
+              )}
+            />
+          </div>
         )}
         <NumField
           label="Tax (annual)"
