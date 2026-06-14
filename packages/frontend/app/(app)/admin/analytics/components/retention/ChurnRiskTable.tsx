@@ -15,7 +15,7 @@ interface ChurnRiskUser {
   email?: string;
   lastSeen: string;
   sessionCount: number;
-  tier: string;
+  tier: string | null;
   topFeatures: string[];
 }
 
@@ -43,21 +43,21 @@ function formatLastSeen(dateStr: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
-function TierBadge({ tier }: { tier: string }) {
+function TierBadge({ tier }: { tier: string | null }) {
   const colorMap: Record<string, string> = {
     free: "bg-surface-container-high text-on-surface-variant",
     pro: "bg-blue-100 text-blue-700",
     enterprise: "bg-amber-100 text-amber-700",
     trial: "bg-indigo-100 text-indigo-700",
   };
+  const normalized = tier?.toLowerCase() || "free";
   const color =
-    colorMap[tier.toLowerCase()] ??
-    "bg-surface-container-high text-on-surface-variant";
+    colorMap[normalized] ?? "bg-surface-container-high text-on-surface-variant";
   return (
     <span
       className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${color}`}
     >
-      {tier}
+      {normalized}
     </span>
   );
 }

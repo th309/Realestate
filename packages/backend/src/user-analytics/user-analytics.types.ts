@@ -181,7 +181,7 @@ export interface ChurnRiskUser {
   email?: string;
   lastSeen: string;
   sessionCount: number;
-  tier: string;
+  tier: string | null;
   topFeatures: string[];
 }
 

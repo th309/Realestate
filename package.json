@@ -21,7 +21,7 @@
     "test:locations": "npm run test:unit -w web -- __tests__/location-coverage.test.ts",
     "test:api": "npm run test -w backend -- --testPathPatterns=api-endpoints",
     "test:all": "npm run test:frontend && npm run test",
-    "clean": "rimraf node_modules packages/*/node_modules packages/*/dist packages/*/.next",
+    "clean": "rimraf --glob node_modules \"packages/*/node_modules\" \"packages/*/dist\" \"packages/*/.next\"",
     "zillow:import": "npx tsx scripts/zillow-import/import-all.ts",
     "zillow:import:state": "npx tsx scripts/zillow-import/import-state.ts",
     "zillow:import:metro": "npx tsx scripts/zillow-import/import-metro.ts",

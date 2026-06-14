@@ -10,6 +10,7 @@ import {
 } from "../utils";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { useMetricFreshness } from "@/lib/data/hooks";
+import { getMetricConfig } from "@/lib/data";
 
 interface LegendProps {
   selectedMetric: string;
@@ -33,6 +34,10 @@ export function Legend({
     <MetricTitle metricId={selectedMetric} geoLevel={geoLevel} />
   );
   const metricFormat = getMetricFormat(selectedMetric);
+
+  // Source-coverage note (e.g. Realtor ranks only higher-volume markets) shown
+  // beside the "No data available" swatch so greyed regions read as expected, not broken.
+  const coverageNote = getMetricConfig(selectedMetric)?.coverageNote;
 
   // Use shared range calculation - ensures consistency with map layer colors
   // Pass selectedMetric and geoLevel (e.g., permits 0–200+ scale only at county)
@@ -79,7 +84,7 @@ export function Legend({
             {singleValueLabel}
           </span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -104,7 +109,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -129,7 +134,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -154,7 +159,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -179,7 +184,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -204,7 +209,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator dataDate={dataDate} />
+        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
       </div>
     );
   }
@@ -234,7 +239,13 @@ export function Legend({
   );
 }
 
-function NoDataIndicator({ dataDate }: { dataDate: string }) {
+function NoDataIndicator({
+  dataDate,
+  coverageNote,
+}: {
+  dataDate: string;
+  coverageNote?: string;
+}) {
   return (
     <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
       <div className="flex items-center gap-1.5 md:gap-2">
@@ -246,6 +257,11 @@ function NoDataIndicator({ dataDate }: { dataDate: string }) {
           No data available
         </span>
       </div>
+      {coverageNote ? (
+        <p className="text-[9px] md:text-[10px] leading-snug text-on-surface-variant mt-1.5 max-w-[180px] md:max-w-[220px]">
+          {coverageNote}
+        </p>
+      ) : null}
       <div className="text-[9px] md:text-[10px] text-outline mt-1.5">
         {dataDate ? `as of ${dataDate}` : "as of —"}
       </div>
