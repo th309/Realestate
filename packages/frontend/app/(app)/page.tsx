@@ -98,7 +98,6 @@ export default async function HomePage() {
         <BrandBanner />
         <HeroSection />
         <StatsSection />
-        {/* @ts-expect-error Async Server Component */}
         <ScoreTeaser />
         <ProblemSection />
         <ValuePropsSection />

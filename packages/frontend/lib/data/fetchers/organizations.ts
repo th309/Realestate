@@ -18,6 +18,8 @@ export interface OrgData {
   owner_id: string;
   website_url: string | null;
   seat_limit: number;
+  billing_status: string;
+  embed_enabled: boolean;
   created_at: string;
   updated_at: string;
   role?: string;

@@ -59,9 +59,8 @@ export function OrgContextProvider({
           owner_id: org.owner_id,
           seat_limit: org.seat_limit,
           website_url: org.website_url,
-          billing_status:
-            ((org as unknown as Record<string, unknown>)
-              .billing_status as string) ?? "active",
+          billing_status: org.billing_status,
+          embed_enabled: org.embed_enabled,
           created_at: org.created_at,
           updated_at: org.updated_at,
         }
