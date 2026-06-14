@@ -160,13 +160,23 @@ export function AdvancedAssumptions({
                 suffix="%"
                 placeholder="8.0"
               />
-              <NumField
-                label="HOA (monthly)"
-                value={input.hoaMonthly ?? 0}
-                onChange={(v) => onInputChange({ hoaMonthly: v ?? 0 })}
-                prefix="$"
-                placeholder="0"
-              />
+              <div>
+                <NumField
+                  label="HOA (monthly)"
+                  value={input.hoaMonthly ?? 0}
+                  onChange={(v) => onInputChange({ hoaMonthly: v ?? 0 })}
+                  prefix="$"
+                  placeholder="0"
+                />
+                <FieldProvenance
+                  data={provenance.hoaMonthly}
+                  current={input.hoaMonthly ?? null}
+                  divergent={isDivergent(
+                    provenance.hoaMonthly?.baseline ?? null,
+                    input.hoaMonthly ?? null,
+                  )}
+                />
+              </div>
             </div>
           </div>
 

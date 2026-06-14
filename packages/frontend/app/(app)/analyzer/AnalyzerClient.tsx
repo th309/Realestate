@@ -247,7 +247,7 @@ export default function AnalyzerClient({
             {!address.trim() && !rentcastData && (
               <div
                 data-empty-cta
-                className="rounded-xl border-2 border-dashed border-[var(--md-primary)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] px-5 py-4"
+                className="rounded-xl border-2 border-dashed border-primary bg-primary-container text-on-primary-container px-5 py-4"
               >
                 <div className="font-semibold mb-1">
                   ← Enter a property address to get started

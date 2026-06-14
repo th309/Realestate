@@ -24,7 +24,9 @@ export function useAddressGeocode(query: string, debounceMs = 250) {
       abortRef.current = controller;
       setLoading(true);
       geocodeAddress(query, controller.signal)
-        .then((next) => setSuggestions(next))
+        .then((next) => {
+          if (!controller.signal.aborted) setSuggestions(next);
+        })
         .finally(() => setLoading(false));
     }, debounceMs);
     return () => clearTimeout(handle);
