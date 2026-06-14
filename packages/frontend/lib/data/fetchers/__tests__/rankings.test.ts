@@ -4,6 +4,7 @@ const mockFetch = vi.fn();
 vi.mock("../base", () => ({
   API_URL: "http://test",
   fetchAPIWithParams: (...a: unknown[]) => mockFetch(...a),
+  fetchAPICached: (...a: unknown[]) => mockFetch(...a),
   fetchAPI: (...a: unknown[]) => mockFetch(...a),
 }));
 
@@ -49,6 +50,7 @@ describe("fetchRankings", () => {
         score_type: "propertyiq",
         state: "TX",
       }),
+      expect.objectContaining({ revalidate: 86400, tags: ["piq-market-data"] }),
     );
   });
 

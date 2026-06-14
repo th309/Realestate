@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const revalidatePath = vi.fn();
+const revalidateTag = vi.fn();
 vi.mock("next/cache", () => ({
   revalidatePath: (...a: unknown[]) => revalidatePath(...a),
+  revalidateTag: (...a: unknown[]) => revalidateTag(...a),
 }));
 
 import { POST } from "../route";
@@ -17,6 +19,7 @@ function req(secret?: string): Request {
 describe("POST /api/revalidate-markets", () => {
   beforeEach(() => {
     revalidatePath.mockClear();
+    revalidateTag.mockClear();
     process.env.REVALIDATE_SECRET = "test-secret";
   });
   afterEach(() => {
@@ -34,6 +37,7 @@ describe("POST /api/revalidate-markets", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.revalidated).toBe(true);
+    expect(revalidateTag).toHaveBeenCalledWith("piq-market-data");
     expect(revalidatePath).toHaveBeenCalledWith("/markets/[slug]", "page");
     expect(revalidatePath).toHaveBeenCalledWith(
       "/markets/county/[slug]",

@@ -5,9 +5,13 @@
  * Used for charts, trend calculations, and historical analysis.
  */
 
-import type { TimeSeriesResult, TimeSeriesFetchOptions, DateRangeResponse } from '../types';
-import { fetchAPI } from './base';
-import { getMetricConfig } from '../registry-helpers';
+import type {
+  TimeSeriesResult,
+  TimeSeriesFetchOptions,
+  DateRangeResponse,
+} from "../types";
+import { fetchAPI, fetchAPICached } from "./base";
+import { getMetricConfig } from "../registry-helpers";
 
 /**
  * Fetch time series data for a specific metric, geography level, and region.
@@ -22,37 +26,47 @@ export async function fetchTimeSeriesData(
   metricId: string,
   geoLevel: string,
   regionId: string,
-  options?: TimeSeriesFetchOptions
+  options?: TimeSeriesFetchOptions,
+  cache?: { revalidate: number; tags?: string[] },
 ): Promise<TimeSeriesResult> {
   const params = new URLSearchParams();
 
-  if (options?.startDate) params.append('startDate', options.startDate);
-  if (options?.endDate) params.append('endDate', options.endDate);
-  if (options?.limit != null) params.append('limit', options.limit.toString());
+  if (options?.startDate) params.append("startDate", options.startDate);
+  if (options?.endDate) params.append("endDate", options.endDate);
+  if (options?.limit != null) params.append("limit", options.limit.toString());
   if (options?.historyMonths != null && options.historyMonths > 0) {
-    params.append('historyMonths', Math.min(6, options.historyMonths).toString());
+    params.append(
+      "historyMonths",
+      Math.min(6, options.historyMonths).toString(),
+    );
   }
 
   const queryString = params.toString();
-  const url = `/api/timeseries/${metricId}/${geoLevel}/${encodeURIComponent(regionId)}${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/timeseries/${metricId}/${geoLevel}/${encodeURIComponent(regionId)}${queryString ? `?${queryString}` : ""}`;
 
-  const result = await fetchAPI<TimeSeriesResult>(url);
+  const result = cache
+    ? await fetchAPICached<TimeSeriesResult>(url, undefined, cache)
+    : await fetchAPI<TimeSeriesResult>(url);
 
   // Apply asPercent conversion to match snapshot.ts behavior.
   // Backend returns raw fractions (e.g. 0.1185 for 11.85%); multiply by 100.
   const config = getMetricConfig(metricId);
   if (config?.asPercent && result.data) {
-    result.data = result.data.map(point => ({
+    result.data = result.data.map((point) => ({
       ...point,
       value: point.value * 100,
     }));
     if (result.current != null) result.current = result.current * 100;
     if (result.prior != null) result.prior = result.prior * 100;
-    if (result.trend_change != null) result.trend_change = result.trend_change * 100;
+    if (result.trend_change != null)
+      result.trend_change = result.trend_change * 100;
     if (result.history?.data) {
       result.history = {
         ...result.history,
-        data: result.history.data.map(point => ({ ...point, value: point.value * 100 })),
+        data: result.history.data.map((point) => ({
+          ...point,
+          value: point.value * 100,
+        })),
         change: result.history.change * 100,
       };
     }
@@ -70,9 +84,11 @@ export async function fetchTimeSeriesData(
  */
 export async function fetchAvailableDates(
   metricId: string,
-  geoLevel: string
+  geoLevel: string,
 ): Promise<DateRangeResponse> {
-  return fetchAPI<DateRangeResponse>(`/api/timeseries/dates/${metricId}/${geoLevel}`);
+  return fetchAPI<DateRangeResponse>(
+    `/api/timeseries/dates/${metricId}/${geoLevel}`,
+  );
 }
 
 /**
@@ -89,7 +105,7 @@ export const timeSeriesApi = {
     startDate?: string,
     endDate?: string,
     limit?: number,
-    historyMonths?: number
+    historyMonths?: number,
   ): Promise<TimeSeriesResult> => {
     return fetchTimeSeriesData(metric, geoLevel, regionId, {
       startDate,
@@ -102,7 +118,10 @@ export const timeSeriesApi = {
   /**
    * Get available date range for a metric/geography combination
    */
-  getAvailableDates: async (metric: string, geoLevel: string): Promise<DateRangeResponse> => {
+  getAvailableDates: async (
+    metric: string,
+    geoLevel: string,
+  ): Promise<DateRangeResponse> => {
     return fetchAvailableDates(metric, geoLevel);
   },
 };
