@@ -156,15 +156,6 @@ export function useAnalyzerState({
       isPro &&
       trimmed.length > 5 &&
       Boolean(paramAddress);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[analyzer] auto-fetch check", {
-        isPro,
-        addressLength: trimmed.length,
-        paramAddress,
-        autoFetched: autoFetchedRef.current,
-        shouldFetch,
-      });
-    }
     if (shouldFetch) {
       autoFetchedRef.current = true;
       mutate({ address: trimmed });
@@ -289,5 +280,13 @@ export function useAnalyzerState({
     provenance,
     applyPrefillBundle,
     prefill,
+    handleAddressSelect: async (s: { label: string; zip: string | null }) => {
+      setAddress(s.label);
+      const bundle = await prefill.mutateAsync({
+        zip: s.zip ?? undefined,
+        address: isPro ? s.label : undefined,
+      });
+      if (bundle) applyPrefillBundle(bundle);
+    },
   };
 }
