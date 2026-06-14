@@ -17,37 +17,59 @@ function fakeSupabase(rows: any[]) {
 }
 
 describe("buildCanonicalMetroCbsaMap", () => {
-  it("keeps one canonical region per CBSA (title match wins)", async () => {
+  it("picks the region whose city is named in the title, even with a higher id", async () => {
+    // CBSA 10860 "Aransas Pass-Rockport, TX": Rockport is in the title; Alice is not.
     const rows = [
       {
-        zillow_region_id: 200,
-        zillow_region_name: "Helena, MT",
-        cbsa_code: "25740",
-        cbsa_title: "Helena, MT",
+        zillow_region_id: 394316,
+        zillow_region_name: "Alice, TX",
+        cbsa_code: "10860",
+        cbsa_title: "Aransas Pass-Rockport, TX",
       },
       {
-        zillow_region_id: 100,
-        zillow_region_name: "Helena, AR",
-        cbsa_code: "25740",
-        cbsa_title: "Helena, MT",
+        zillow_region_id: 845169,
+        zillow_region_name: "Rockport, TX",
+        cbsa_code: "10860",
+        cbsa_title: "Aransas Pass-Rockport, TX",
       },
     ];
     const map = await buildCanonicalMetroCbsaMap(fakeSupabase(rows));
-    expect(map.get(200)).toBe("25740");
-    expect(map.has(100)).toBe(false);
+    expect(map.get(845169)).toBe("10860"); // Rockport wins despite higher id
+    expect(map.has(394316)).toBe(false);
   });
 
-  it("breaks ties by lowest region_id when neither matches title", async () => {
+  it("picks the principal city for hyphenated titles (not luck)", async () => {
+    // CBSA 12100 "Atlantic City-Hammonton, NJ"
     const rows = [
       {
-        zillow_region_id: 900,
-        zillow_region_name: "Aaa, XX",
+        zillow_region_id: 394348,
+        zillow_region_name: "Atlantic City, NJ",
+        cbsa_code: "12100",
+        cbsa_title: "Atlantic City-Hammonton, NJ",
+      },
+      {
+        zillow_region_id: 394928,
+        zillow_region_name: "Ocean City, NJ",
+        cbsa_code: "12100",
+        cbsa_title: "Atlantic City-Hammonton, NJ",
+      },
+    ];
+    const map = await buildCanonicalMetroCbsaMap(fakeSupabase(rows));
+    expect(map.get(394348)).toBe("12100");
+    expect(map.has(394928)).toBe(false);
+  });
+
+  it("falls back to lowest region_id when no city is named in the title", async () => {
+    const rows = [
+      {
+        zillow_region_id: 800,
+        zillow_region_name: "Bbb, XX",
         cbsa_code: "99999",
         cbsa_title: "Zzz, XX",
       },
       {
-        zillow_region_id: 800,
-        zillow_region_name: "Bbb, XX",
+        zillow_region_id: 900,
+        zillow_region_name: "Aaa, XX",
         cbsa_code: "99999",
         cbsa_title: "Zzz, XX",
       },

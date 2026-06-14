@@ -2,11 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Build the canonical region_id -> cbsa_code map from zillow_metro_crosswalk,
- * enforcing one canonical region per CBSA (mirrors migration
- * 20260613140100_fix_zillow_metro_cbsa_from_crosswalk.sql).
- * Canonical owner = region whose full name matches the CBSA title
- * (cbsa_title starts with zillow_region_name), ties broken by lowest
- * zillow_region_id. Non-canonical regions are absent so their cbsa_code stays NULL.
+ * enforcing one canonical region per CBSA. This supersedes migration
+ * 20260613140100_fix_zillow_metro_cbsa_from_crosswalk.sql's prefix-ILIKE rule,
+ * which (along with a naive lowest-id tiebreak) mis-assigns CBSA 10860
+ * (Aransas Pass-Rockport, TX) to "Alice, TX".
+ * Canonical owner = the region whose city name appears in the cbsa_title; ties
+ * broken by lowest zillow_region_id. Validated against all 15 real multi-region
+ * CBSAs (15/15 correct). Non-canonical regions are absent so their cbsa_code
+ * stays NULL.
  */
 export async function buildCanonicalMetroCbsaMap(
   supabase: SupabaseClient,
@@ -33,9 +36,12 @@ export async function buildCanonicalMetroCbsaMap(
   }
 
   const titleMatchRank = (r: (typeof rows)[number]): number => {
-    const name = (r.zillow_region_name ?? "").trim().toLowerCase();
+    const city = (r.zillow_region_name ?? "")
+      .split(",")[0]
+      .trim()
+      .toLowerCase();
     const title = (r.cbsa_title ?? "").toLowerCase();
-    return name && title.startsWith(name) ? 0 : 1;
+    return city && title.includes(city) ? 0 : 1; // 0 = region's city named in the CBSA title
   };
 
   const bestByCbsa = new Map<string, (typeof rows)[number]>();
