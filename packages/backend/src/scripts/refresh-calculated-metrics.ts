@@ -65,10 +65,11 @@ async function main() {
       ...(res.growth?.errors ?? []),
     ];
     if (errors.length > 0) {
+      const uniqueErrors = [...new Set(errors)];
       console.warn(
-        `[WARN] ${errors.length} error(s) during refresh (first 10):`,
+        `[WARN] ${errors.length} error(s) during refresh (${uniqueErrors.length} unique):`,
       );
-      for (const e of errors.slice(0, 10)) console.warn(`  - ${e}`);
+      for (const e of uniqueErrors.slice(0, 40)) console.warn(`  - ${e}`);
     }
 
     // A run that stored nothing is a failure, not a success — guard against the
