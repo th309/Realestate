@@ -55,14 +55,20 @@ jobs:
           echo "BEFORE: $P"
           echo "periods=$P" >> "$GITHUB_OUTPUT"
 
+      # continue-on-error: a few deprecated Zillow dataset URLs (404) or one
+      # flaky source must NOT block the others or scoring. The AFTER freshness
+      # probe gates the refresh on whether data ACTUALLY advanced, so a failed
+      # source simply doesn't advance its tables. Failures surface as warnings.
       - name: Import Zillow
         if: ${{ env.SOURCE == 'all' || env.SOURCE == 'zillow' }}
+        continue-on-error: true
         run: |
           set -euo pipefail
           npx tsx scripts/sources/zillow/import-zillow.ts
 
       - name: Import non-Zillow (selected sources)
         if: ${{ env.SOURCE != 'zillow' }}
+        continue-on-error: true
         run: |
           set -euo pipefail
           case "$SOURCE" in
