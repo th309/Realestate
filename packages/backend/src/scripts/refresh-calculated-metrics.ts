@@ -6,8 +6,8 @@
  *   npx ts-node packages/backend/src/scripts/refresh-calculated-metrics.ts --year=2025
  *
  * Runs investment metrics + months_of_supply (all geos), overvalued_pct (all
- * geos), and 5-year growth (all geos). Affordability metrics are produced
- * separately (FRED-dependent) and are NOT included here.
+ * geos), 5-year growth (all geos), and affordability (income_to_buy /
+ * affordable_home_price / years_to_save, all geos — mortgage rate from FRED).
  *
  * Success gate for CI: output line starting with "TOTAL:".
  */
@@ -71,10 +71,16 @@ async function main() {
     const yearArg = process.argv.find((a) => a.startsWith('--year='));
     const year = yearArg ? Number(yearArg.split('=')[1]) : undefined;
     const res = await svc.refreshAllCalculatedMetrics(year);
+    const aff = res.affordability;
+    const affStored =
+      (aff?.incomeToBuy?.stored ?? 0) +
+      (aff?.affordableHomePrice?.stored ?? 0) +
+      (aff?.yearsToSave?.stored ?? 0);
     const stored =
       (res.investment?.stored ?? 0) +
       (res.overvalued?.stored ?? 0) +
-      (res.growth?.stored ?? 0);
+      (res.growth?.stored ?? 0) +
+      affStored;
 
     // Surface per-section errors without failing on a handful of region-level
     // issues (a monthly run with a few bad regions is still a useful run).
@@ -82,6 +88,9 @@ async function main() {
       ...(res.investment?.errors ?? []),
       ...(res.overvalued?.errors ?? []),
       ...(res.growth?.errors ?? []),
+      ...(aff?.incomeToBuy?.errors ?? []),
+      ...(aff?.affordableHomePrice?.errors ?? []),
+      ...(aff?.yearsToSave?.errors ?? []),
     ];
     if (errors.length > 0) {
       const uniqueErrors = [...new Set(errors)];

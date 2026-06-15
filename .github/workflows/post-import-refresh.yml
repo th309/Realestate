@@ -74,8 +74,8 @@ jobs:
           SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
           NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
           SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
-          # Affordability runner needs the real mortgage rate; without it the run
-          # logs "No FRED_API_KEY, using default rate".
+          # The NestJS refresh computes affordability (income_to_buy etc.) using
+          # the live FRED 30-yr rate; without the key it falls back to a default.
           FRED_API_KEY: "${{ secrets.FRED_API_KEY }}"
         run: |
           echo "=============================================="
@@ -83,19 +83,14 @@ jobs:
           echo "Trigger: ${{ github.event.inputs.trigger_source || 'scheduled' }}"
           echo "=============================================="
 
-          # Investment + months_of_supply + overvalued + 5yr growth via the
-          # consolidated NestJS service (single source of truth).
+          # Investment + months_of_supply + overvalued + 5yr growth + affordability
+          # (income_to_buy / affordable_home_price / years_to_save) via the
+          # consolidated NestJS service — the single source of truth for the refresh.
           echo ""
           echo ">>> Running NestJS calculated metrics refresh..."
           npx ts-node -P packages/backend/tsconfig.json \
             packages/backend/src/scripts/refresh-calculated-metrics.ts \
             2>&1 | tee metrics-output.txt
-
-          # Affordability metrics (income_to_buy, affordable_home_price,
-          # years_to_save) — FRED-dependent, no service equivalent yet.
-          echo ""
-          echo ">>> Running affordability metrics..."
-          npx tsx scripts/calculations/calculated-metrics-runner.ts 2>&1 | tee -a metrics-output.txt
 
           # Success gate: the NestJS refresh prints "TOTAL:"; [FATAL] marks its failure.
           if grep -q "TOTAL:" metrics-output.txt && ! grep -q "\[FATAL\]" metrics-output.txt; then
