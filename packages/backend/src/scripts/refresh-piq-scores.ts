@@ -7,8 +7,14 @@
  *
  * Scores metro, county, and zip for the latest scorable month (min of latest
  * Zillow ZHVI + Realtor date) and upserts into propertyiq_scores_v2. Only the
- * latest period is (re)scored — never historical months (re-scoring history
- * diverges from published values). Mirrors refresh-calculated-metrics.ts.
+ * latest period is (re)scored — never historical months.
+ *
+ * Boots a SLIM module (ScoringModule only), NOT the full AppModule. AppModule
+ * instantiates every service — email, content-pipeline credential crypto, Stripe,
+ * AI — each of which hard-requires env (PLATFORM_CREDENTIALS_ENCRYPTION_KEY,
+ * OPENAI_API_KEY, ...) the scoring path never uses, so it crashes at DI in CI.
+ * ScoringModule pulls in only Supabase + metric-resolution, so this boots with
+ * just the DB credentials.
  *
  * Success gate for CI: output line starting with "TOTAL:". [FATAL] marks failure.
  */
@@ -38,16 +44,27 @@ if (fs.existsSync(envLocalPath)) {
   }
 }
 
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { ScoringModule } from '../scoring/scoring.module';
 import { ScoringService } from '../scoring/scoring.service';
 import { GeographyLevel } from '../scoring/formula-weights';
+
+/**
+ * Minimal context for the scoring CLI — just ScoringModule and its deps. Avoids
+ * booting AppModule and its unrelated env-hard-requirements (see file header).
+ */
+@Module({
+  imports: [ConfigModule.forRoot({ isGlobal: true }), ScoringModule],
+})
+class ScoringCliModule {}
 
 const GEO_LEVELS: GeographyLevel[] = ['metro', 'county', 'zip'];
 
 async function main() {
   const start = Date.now();
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(ScoringCliModule, {
     logger: ['error', 'warn', 'log'],
   });
   try {

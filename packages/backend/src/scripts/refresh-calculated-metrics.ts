@@ -38,14 +38,32 @@ if (fs.existsSync(envLocalPath)) {
   }
 }
 
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { MetricsModule } from '../metrics/metrics.module';
 import { CalculatedMetricsService } from '../metrics/calculated-metrics.service';
+import { ScreenerModule } from '../screener/screener.module';
 import { ScreenerService } from '../screener/screener.service';
+
+/**
+ * Minimal context for the metrics CLI. MetricsModule + ScreenerModule each import
+ * only SupabaseModule, so this boots with just the DB credentials and avoids
+ * AppModule's unrelated env-hard-requirements (PLATFORM_CREDENTIALS_ENCRYPTION_KEY,
+ * OPENAI_API_KEY, ...) that crash the full-app bootstrap in CI.
+ */
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MetricsModule,
+    ScreenerModule,
+  ],
+})
+class MetricsCliModule {}
 
 async function main() {
   const start = Date.now();
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(MetricsCliModule, {
     logger: ['error', 'warn', 'log'],
   });
   try {
