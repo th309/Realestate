@@ -41,6 +41,7 @@ if (fs.existsSync(envLocalPath)) {
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { CalculatedMetricsService } from '../metrics/calculated-metrics.service';
+import { ScreenerService } from '../screener/screener.service';
 
 async function main() {
   const start = Date.now();
@@ -82,8 +83,13 @@ async function main() {
       process.exit(1);
     }
 
+    // Rebuild screener_snapshot after calculated metrics are fresh
+    const screenerRows = await app
+      .get(ScreenerService)
+      .refreshScreenerSnapshot();
+
     console.log(
-      `TOTAL: ${stored} calculated_metrics rows stored in ${((Date.now() - start) / 1000).toFixed(1)}s`,
+      `TOTAL: ${stored} calculated_metrics rows stored, screener:${screenerRows} in ${((Date.now() - start) / 1000).toFixed(1)}s`,
     );
     await app.close();
     process.exit(0);
