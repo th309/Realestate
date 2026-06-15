@@ -1,4 +1,4 @@
-import { CalculatedMetricsService } from '../calculated-metrics.service';
+import { RealtorMosInputsService } from '../pipelines/realtor-mos-inputs.service';
 import {
   calculateMonthsOfSupply,
   calculateAbsorptionRate,
@@ -69,8 +69,8 @@ describe('fetchRealtorMosInputs null-skip regression', () => {
       }),
     };
 
-    const svcWithFake = new CalculatedMetricsService(fakeSupabase as any);
-    const result = await (svcWithFake as any).fetchRealtorMosInputs('metro');
+    const svcWithFake = new RealtorMosInputsService(fakeSupabase as any);
+    const result = await svcWithFake.fetchRealtorMosInputs('metro');
 
     // Only the row with both values present should be stored
     expect(result.size).toBe(1);

@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeZipKey, calculateCAGR } from '../common/zip';
+import { RealtorMosInputsService } from './pipelines/realtor-mos-inputs.service';
 import {
   CalculatedMetricsInput,
   CalculatedMetricsOutput,
@@ -23,6 +24,7 @@ export type { CalculatedMetricsInput, CalculatedMetricsOutput };
 export class CalculatedMetricsService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly mosInputs: RealtorMosInputsService,
   ) {}
 
   /**
@@ -862,52 +864,6 @@ export class CalculatedMetricsService {
    * metro -> realtor_metro keyed by cbsa_code; county -> realtor_county by county_fips;
    * zip -> realtor_zip by postal_code.
    */
-  private async fetchRealtorMosInputs(
-    geoLevel: 'metro' | 'county' | 'zip',
-  ): Promise<Map<string, { active: number; pending: number }>> {
-    const table = `realtor_${geoLevel}`;
-    const idCol =
-      geoLevel === 'metro'
-        ? 'cbsa_code'
-        : geoLevel === 'county'
-          ? 'county_fips'
-          : 'postal_code';
-    const { data: latest } = await this.supabase
-      .from(table)
-      .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const out = new Map<string, { active: number; pending: number }>();
-    if (!latest?.period_date) return out;
-    let from = 0;
-    const page = 1000;
-    while (true) {
-      const { data, error } = await this.supabase
-        .from(table)
-        .select(`${idCol}, active_listing_count, pending_listing_count`)
-        .eq('period_date', latest.period_date)
-        .range(from, from + page - 1);
-      if (error)
-        throw new Error(`${table} MOS inputs failed: ${error.message}`);
-      if (!data || data.length === 0) break;
-      for (const r of data as any[]) {
-        const id = r[idCol];
-        if (!id) continue;
-        const active = r.active_listing_count;
-        const pending = r.pending_listing_count;
-        if (active == null || pending == null) continue;
-        out.set(String(id), {
-          active: Number(active),
-          pending: Number(pending),
-        });
-      }
-      if (data.length < page) break;
-      from += page;
-    }
-    return out;
-  }
-
   /**
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
    * Combines Zillow ZORI data with Realtor median_listing_price
@@ -944,7 +900,7 @@ export class CalculatedMetricsService {
     // are only stamped onto the latest period's rows (uniqueDates is descending),
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
-    const metroMosInputs = await this.fetchRealtorMosInputs('metro');
+    const metroMosInputs = await this.mosInputs.fetchRealtorMosInputs('metro');
     // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestMosDate = uniqueDates[0];
 
@@ -1640,7 +1596,8 @@ export class CalculatedMetricsService {
     // are only stamped onto the latest period's rows (uniqueDates is descending),
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
-    const countyMosInputs = await this.fetchRealtorMosInputs('county');
+    const countyMosInputs =
+      await this.mosInputs.fetchRealtorMosInputs('county');
     // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestCountyMosDate = uniqueDates[0];
 
@@ -2124,7 +2081,7 @@ export class CalculatedMetricsService {
     // are only stamped onto the latest period's rows (uniqueDates is descending),
     // and only when a real value is computable — never null, never historical —
     // so historical rows and any per-period MOS from other sources are preserved.
-    const zipMosInputs = await this.fetchRealtorMosInputs('zip');
+    const zipMosInputs = await this.mosInputs.fetchRealtorMosInputs('zip');
     // MOS is stamped only on the newest row per geo; it carries the latest Realtor active/pending (ZORI month-end and Realtor month-start are the same calendar month in practice).
     const latestZipMosDate = uniqueDates[0];
 
