@@ -6,320 +6,24 @@ import {
   CalculatedMetricsInput,
   CalculatedMetricsOutput,
 } from './calculated-metrics.types';
+import {
+  calculateCapRate,
+  calculateGrossYield,
+  calculateRentToPriceRatio,
+  calculateGRM,
+  calculateMonthsOfSupply,
+  calculateAbsorptionRate,
+  calculateOvervalued,
+} from './metric-formulas';
 
 // Back-compat: keep these importable from the service path.
 export type { CalculatedMetricsInput, CalculatedMetricsOutput };
 
 @Injectable()
 export class CalculatedMetricsService {
-  private readonly EXPENSE_RATIO = 0.6; // 60% NOI for cap rate calculation
-  private readonly PRICE_TO_INCOME_BENCHMARK = 3.5; // Traditional affordability benchmark
-
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
-
-  /**
-   * Calculate Cap Rate: (ZORI × 12 × expense_ratio) / price × 100
-   */
-  calculateCapRate(
-    zori: number | undefined,
-    price: number | undefined,
-  ): number | null {
-    if (!zori || !price || price === 0) return null;
-    return ((zori * 12 * this.EXPENSE_RATIO) / price) * 100;
-  }
-
-  /**
-   * Calculate Gross Yield: (ZORI × 12) / price × 100
-   */
-  calculateGrossYield(
-    zori: number | undefined,
-    price: number | undefined,
-  ): number | null {
-    if (!zori || !price || price === 0) return null;
-    return ((zori * 12) / price) * 100;
-  }
-
-  /**
-   * Calculate Rent-to-Price Ratio: ZORI / price
-   */
-  calculateRentToPriceRatio(
-    zori: number | undefined,
-    price: number | undefined,
-  ): number | null {
-    if (!zori || !price || price === 0) return null;
-    return zori / price;
-  }
-
-  /**
-   * Calculate Gross Rent Multiplier (GRM): price / (ZORI × 12)
-   * Lower GRM indicates potentially better investment value
-   * Typical range: 8-20 years
-   */
-  calculateGRM(
-    price: number | undefined,
-    zori: number | undefined,
-  ): number | null {
-    if (!price || !zori || zori === 0) return null;
-    const annualRent = zori * 12;
-    return price / annualRent;
-  }
-
-  /**
-   * Calculate Months of Supply: inventory / monthly_sales
-   * Balanced market: 4-6 months
-   * Seller's market: < 4 months
-   * Buyer's market: > 6 months
-   */
-  calculateMonthsOfSupply(
-    inventory: number | undefined,
-    monthlySales: number | undefined,
-  ): number | null {
-    if (!inventory || !monthlySales || monthlySales === 0) return null;
-    return inventory / monthlySales;
-  }
-
-  /**
-   * Calculate Absorption Rate: (monthly_sales / inventory) × 100
-   * Percentage of available inventory sold per month
-   * Higher rate indicates stronger demand
-   */
-  calculateAbsorptionRate(
-    monthlySales: number | undefined,
-    inventory: number | undefined,
-  ): number | null {
-    if (!monthlySales || !inventory || inventory === 0) return null;
-    return (monthlySales / inventory) * 100;
-  }
-
-  /**
-   * Calculate 5-Year CAGR: (current / past)^(1/5) - 1
-   */
-  calculate5YearCagr(
-    current: number | undefined,
-    past: number | undefined,
-  ): number | null {
-    if (!current || !past || past === 0) return null;
-    return Math.pow(current / past, 1 / 5) - 1;
-  }
-
-  /**
-   * Calculate Inventory Surplus: Current Inventory - Historical Average Inventory
-   * Positive values indicate more homes available than typical (buyer's market)
-   * Negative values indicate fewer homes than typical (seller's market)
-   */
-  calculateInventorySurplus(
-    current: number | undefined,
-    avg: number | undefined,
-  ): number | null {
-    if (!current || !avg) return null;
-    return current - avg;
-  }
-
-  /**
-   * Calculate Overvalued %: (price_to_income - benchmark) / benchmark × 100
-   */
-  calculateOvervalued(
-    price: number | undefined,
-    income: number | undefined,
-  ): number | null {
-    if (!price || !income || income === 0) return null;
-    const priceToIncome = price / income;
-    return (
-      ((priceToIncome - this.PRICE_TO_INCOME_BENCHMARK) /
-        this.PRICE_TO_INCOME_BENCHMARK) *
-      100
-    );
-  }
-
-  /**
-   * Calculate Market Health Score (0-100)
-   * Components: DOM (inverse), inventory, price cuts (inverse), pending ratio
-   */
-  calculateMarketHealthScore(
-    dom: number | undefined,
-    inventoryYoy: number | undefined,
-    priceCutShare: number | undefined,
-    pendingRatio: number | undefined,
-  ): number | null {
-    let score = 50; // Base score
-    let factors = 0;
-
-    // DOM component (lower is better, national avg ~40-60 days)
-    if (dom !== undefined && dom !== null) {
-      const domScore = Math.max(0, Math.min(100, 100 - (dom / 90) * 100));
-      score += domScore - 50;
-      factors++;
-    }
-
-    // Inventory YoY (moderate increase is healthy, but not too much)
-    if (inventoryYoy !== undefined && inventoryYoy !== null) {
-      // -20% to +20% is healthy zone
-      const inventoryScore = Math.max(
-        0,
-        Math.min(100, 50 + inventoryYoy * 2.5),
-      );
-      score += inventoryScore - 50;
-      factors++;
-    }
-
-    // Price cut share (lower is better, typical range 0-30%)
-    if (priceCutShare !== undefined && priceCutShare !== null) {
-      const priceCutScore = Math.max(
-        0,
-        Math.min(100, 100 - (priceCutShare / 0.3) * 100),
-      );
-      score += priceCutScore - 50;
-      factors++;
-    }
-
-    // Pending ratio (higher is better, indicates buyer demand)
-    if (pendingRatio !== undefined && pendingRatio !== null) {
-      const pendingScore = Math.max(0, Math.min(100, pendingRatio * 100));
-      score += pendingScore - 50;
-      factors++;
-    }
-
-    if (factors === 0) return null;
-    return Math.max(0, Math.min(100, (score / factors) * 2));
-  }
-
-  /**
-   * Calculate Investment Score (0-100)
-   * Components: cap rate, gross yield, rent growth (if available)
-   */
-  calculateInvestmentScore(
-    capRate: number | null,
-    grossYield: number | null,
-    rentGrowth?: number,
-  ): number | null {
-    let score = 0;
-    let factors = 0;
-
-    // Cap rate component (higher is better, typical range 3-8%)
-    if (capRate !== null) {
-      const capRateScore = Math.max(0, Math.min(100, (capRate / 8) * 100));
-      score += capRateScore;
-      factors++;
-    }
-
-    // Gross yield component (higher is better, typical range 5-12%)
-    if (grossYield !== null) {
-      const yieldScore = Math.max(0, Math.min(100, (grossYield / 12) * 100));
-      score += yieldScore;
-      factors++;
-    }
-
-    // Rent growth component (positive growth is good)
-    if (rentGrowth !== undefined && rentGrowth !== null) {
-      const growthScore = Math.max(0, Math.min(100, 50 + rentGrowth * 10));
-      score += growthScore;
-      factors++;
-    }
-
-    if (factors === 0) return null;
-    return score / factors;
-  }
-
-  /**
-   * Calculate Long-Term Growth Score (0-100)
-   * Components: 5yr CAGR, price appreciation trends
-   */
-  calculateLongTermGrowthScore(
-    cagr5yr: number | null,
-    priceYoy: number | undefined,
-  ): number | null {
-    let score = 0;
-    let factors = 0;
-
-    // 5-year CAGR component (typical range -5% to +15%)
-    if (cagr5yr !== null) {
-      const cagrScore = Math.max(0, Math.min(100, 50 + cagr5yr * 500));
-      score += cagrScore;
-      factors++;
-    }
-
-    // Price YoY component
-    if (priceYoy !== undefined && priceYoy !== null) {
-      const yoyScore = Math.max(0, Math.min(100, 50 + priceYoy * 500));
-      score += yoyScore;
-      factors++;
-    }
-
-    if (factors === 0) return null;
-    return score / factors;
-  }
-
-  /**
-   * Calculate all metrics for a geography
-   */
-  calculateAll(input: CalculatedMetricsInput): CalculatedMetricsOutput {
-    const capRate = this.calculateCapRate(
-      input.zori,
-      input.median_listing_price,
-    );
-    const grossYield = this.calculateGrossYield(
-      input.zori,
-      input.median_listing_price,
-    );
-    const rentToPriceRatio = this.calculateRentToPriceRatio(
-      input.zori,
-      input.median_listing_price,
-    );
-    const grm = this.calculateGRM(input.median_listing_price, input.zori);
-    const monthsOfSupply = this.calculateMonthsOfSupply(
-      input.active_listing_count,
-      input.monthly_sales,
-    );
-    const absorptionRate = this.calculateAbsorptionRate(
-      input.monthly_sales,
-      input.active_listing_count,
-    );
-    const homeValue5yrCagr = this.calculate5YearCagr(
-      input.median_listing_price,
-      input.listing_price_5yr_ago,
-    );
-    const inventorySurplusPct = this.calculateInventorySurplus(
-      input.active_listing_count,
-      input.inventory_5yr_avg,
-    );
-    const overvaluedPct = this.calculateOvervalued(
-      input.median_listing_price,
-      input.median_income,
-    );
-
-    const marketHealthScore = this.calculateMarketHealthScore(
-      input.median_days_on_market,
-      undefined, // inventory YoY would need to be calculated separately
-      input.price_reduced_share,
-      input.pending_ratio,
-    );
-
-    const investmentScore = this.calculateInvestmentScore(capRate, grossYield);
-    const longTermGrowthScore = this.calculateLongTermGrowthScore(
-      homeValue5yrCagr,
-      undefined,
-    );
-
-    return {
-      cap_rate: capRate,
-      gross_yield: grossYield,
-      rent_to_price_ratio: rentToPriceRatio,
-      grm,
-      months_of_supply: monthsOfSupply,
-      absorption_rate: absorptionRate,
-      market_health_score: marketHealthScore,
-      investment_score: investmentScore,
-      long_term_growth_score: longTermGrowthScore,
-      home_value_5yr_cagr: homeValue5yrCagr,
-      zhvi_3y_cagr: null,
-      zori_yoy: null,
-      zori_5y_cagr: null,
-      inventory_surplus_pct: inventorySurplusPct,
-      overvalued_pct: overvaluedPct,
-    };
-  }
 
   /**
    * Store calculated metrics to the database
@@ -1396,10 +1100,10 @@ export class CalculatedMetricsService {
 
         if (!zori || !price) continue;
 
-        const capRate = this.calculateCapRate(zori, price);
-        const grossYield = this.calculateGrossYield(zori, price);
-        const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-        const grm = this.calculateGRM(price, zori);
+        const capRate = calculateCapRate(zori, price);
+        const grossYield = calculateGrossYield(zori, price);
+        const rentToPriceRatio = calculateRentToPriceRatio(zori, price);
+        const grm = calculateGRM(price, zori);
 
         // Rent growth metrics
         const pastRent1yr = cbsaCode ? zoriPast1yr[cbsaCode] : null;
@@ -1431,12 +1135,10 @@ export class CalculatedMetricsService {
         };
         if (latestMosDate != null && targetDate === latestMosDate) {
           const m = metroMosInputs.get(String(cbsaCode));
-          const mos = m
-            ? this.calculateMonthsOfSupply(m.active, m.pending)
-            : null;
+          const mos = m ? calculateMonthsOfSupply(m.active, m.pending) : null;
           if (m && mos != null) {
             metroRec.months_of_supply = mos;
-            metroRec.absorption_rate = this.calculateAbsorptionRate(
+            metroRec.absorption_rate = calculateAbsorptionRate(
               m.pending,
               m.active,
             );
@@ -1597,13 +1299,13 @@ export class CalculatedMetricsService {
               const price = priceByCode[cbsa];
               if (!price) continue;
 
-              const capRate = this.calculateCapRate(avgRent, price);
-              const grossYield = this.calculateGrossYield(avgRent, price);
-              const rentToPriceRatio = this.calculateRentToPriceRatio(
+              const capRate = calculateCapRate(avgRent, price);
+              const grossYield = calculateGrossYield(avgRent, price);
+              const rentToPriceRatio = calculateRentToPriceRatio(
                 avgRent,
                 price,
               );
-              const grm = this.calculateGRM(price, avgRent);
+              const grm = calculateGRM(price, avgRent);
 
               // HUD FMR rent growth proxies
               const avgRentPrevYear = computeWeightedFmr(
@@ -1648,11 +1350,11 @@ export class CalculatedMetricsService {
               if (latestMosDate != null && targetDate === latestMosDate) {
                 const m = metroMosInputs.get(String(cbsa));
                 const mos = m
-                  ? this.calculateMonthsOfSupply(m.active, m.pending)
+                  ? calculateMonthsOfSupply(m.active, m.pending)
                   : null;
                 if (m && mos != null) {
                   hudMetroRec.months_of_supply = mos;
-                  hudMetroRec.absorption_rate = this.calculateAbsorptionRate(
+                  hudMetroRec.absorption_rate = calculateAbsorptionRate(
                     m.pending,
                     m.active,
                   );
@@ -1778,7 +1480,7 @@ export class CalculatedMetricsService {
         const medianIncome =
           (cbsaCode && incomeMap[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
 
-        const overvaluedPct = this.calculateOvervalued(zhvi, medianIncome);
+        const overvaluedPct = calculateOvervalued(zhvi, medianIncome);
 
         if (overvaluedPct === null) continue;
 
@@ -2016,10 +1718,10 @@ export class CalculatedMetricsService {
 
         if (!zori || !price) continue;
 
-        const capRate = this.calculateCapRate(zori, price);
-        const grossYield = this.calculateGrossYield(zori, price);
-        const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-        const grm = this.calculateGRM(price, zori);
+        const capRate = calculateCapRate(zori, price);
+        const grossYield = calculateGrossYield(zori, price);
+        const rentToPriceRatio = calculateRentToPriceRatio(zori, price);
+        const grm = calculateGRM(price, zori);
 
         const countyRec: any = {
           geography_id: fipsCode,
@@ -2036,12 +1738,10 @@ export class CalculatedMetricsService {
         };
         if (latestCountyMosDate != null && targetDate === latestCountyMosDate) {
           const m = countyMosInputs.get(String(fipsCode));
-          const mos = m
-            ? this.calculateMonthsOfSupply(m.active, m.pending)
-            : null;
+          const mos = m ? calculateMonthsOfSupply(m.active, m.pending) : null;
           if (m && mos != null) {
             countyRec.months_of_supply = mos;
-            countyRec.absorption_rate = this.calculateAbsorptionRate(
+            countyRec.absorption_rate = calculateAbsorptionRate(
               m.pending,
               m.active,
             );
@@ -2121,13 +1821,10 @@ export class CalculatedMetricsService {
             if (!fmr || !price || fmr.rent <= 0) continue;
             processedFipsThisDate.add(fips);
 
-            const capRate = this.calculateCapRate(fmr.rent, price);
-            const grossYield = this.calculateGrossYield(fmr.rent, price);
-            const rentToPriceRatio = this.calculateRentToPriceRatio(
-              fmr.rent,
-              price,
-            );
-            const grm = this.calculateGRM(price, fmr.rent);
+            const capRate = calculateCapRate(fmr.rent, price);
+            const grossYield = calculateGrossYield(fmr.rent, price);
+            const rentToPriceRatio = calculateRentToPriceRatio(fmr.rent, price);
+            const grm = calculateGRM(price, fmr.rent);
 
             const hudCountyRec: any = {
               geography_id: fips,
@@ -2150,11 +1847,11 @@ export class CalculatedMetricsService {
             ) {
               const m = countyMosInputs.get(String(fips));
               const mos = m
-                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                ? calculateMonthsOfSupply(m.active, m.pending)
                 : null;
               if (m && mos != null) {
                 hudCountyRec.months_of_supply = mos;
-                hudCountyRec.absorption_rate = this.calculateAbsorptionRate(
+                hudCountyRec.absorption_rate = calculateAbsorptionRate(
                   m.pending,
                   m.active,
                 );
@@ -2320,13 +2017,10 @@ export class CalculatedMetricsService {
             const rent = countyZoriByFips[fips] ?? fmrByFips[fips];
             if (!rent || rent <= 0) continue;
 
-            const capRate = this.calculateCapRate(rent, price);
-            const grossYield = this.calculateGrossYield(rent, price);
-            const rentToPriceRatio = this.calculateRentToPriceRatio(
-              rent,
-              price,
-            );
-            const grm = this.calculateGRM(price, rent);
+            const capRate = calculateCapRate(rent, price);
+            const grossYield = calculateGrossYield(rent, price);
+            const rentToPriceRatio = calculateRentToPriceRatio(rent, price);
+            const grm = calculateGRM(price, rent);
 
             const realtorCountyRec: any = {
               geography_id: fips,
@@ -2349,11 +2043,11 @@ export class CalculatedMetricsService {
             ) {
               const m = countyMosInputs.get(String(fips));
               const mos = m
-                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                ? calculateMonthsOfSupply(m.active, m.pending)
                 : null;
               if (m && mos != null) {
                 realtorCountyRec.months_of_supply = mos;
-                realtorCountyRec.absorption_rate = this.calculateAbsorptionRate(
+                realtorCountyRec.absorption_rate = calculateAbsorptionRate(
                   m.pending,
                   m.active,
                 );
@@ -2500,10 +2194,10 @@ export class CalculatedMetricsService {
 
           if (!zori || !price) continue;
 
-          const capRate = this.calculateCapRate(zori, price);
-          const grossYield = this.calculateGrossYield(zori, price);
-          const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-          const grm = this.calculateGRM(price, zori);
+          const capRate = calculateCapRate(zori, price);
+          const grossYield = calculateGrossYield(zori, price);
+          const rentToPriceRatio = calculateRentToPriceRatio(zori, price);
+          const grm = calculateGRM(price, zori);
 
           const zipRec: any = {
             geography_id: zipCode,
@@ -2520,12 +2214,10 @@ export class CalculatedMetricsService {
           };
           if (latestZipMosDate != null && targetDate === latestZipMosDate) {
             const m = zipMosInputs.get(String(zipCode));
-            const mos = m
-              ? this.calculateMonthsOfSupply(m.active, m.pending)
-              : null;
+            const mos = m ? calculateMonthsOfSupply(m.active, m.pending) : null;
             if (m && mos != null) {
               zipRec.months_of_supply = mos;
-              zipRec.absorption_rate = this.calculateAbsorptionRate(
+              zipRec.absorption_rate = calculateAbsorptionRate(
                 m.pending,
                 m.active,
               );
@@ -2611,13 +2303,10 @@ export class CalculatedMetricsService {
         const countyRent = countyFips ? countyRentByFips[countyFips] : null;
         if (!countyRent) continue;
 
-        const capRate = this.calculateCapRate(countyRent, price);
-        const grossYield = this.calculateGrossYield(countyRent, price);
-        const rentToPriceRatio = this.calculateRentToPriceRatio(
-          countyRent,
-          price,
-        );
-        const grm = this.calculateGRM(price, countyRent);
+        const capRate = calculateCapRate(countyRent, price);
+        const grossYield = calculateGrossYield(countyRent, price);
+        const rentToPriceRatio = calculateRentToPriceRatio(countyRent, price);
+        const grm = calculateGRM(price, countyRent);
 
         const zipFallbackRec: any = {
           geography_id: zipCode,
@@ -2634,12 +2323,10 @@ export class CalculatedMetricsService {
         };
         if (latestZipMosDate != null && targetDate === latestZipMosDate) {
           const m = zipMosInputs.get(String(zipCode));
-          const mos = m
-            ? this.calculateMonthsOfSupply(m.active, m.pending)
-            : null;
+          const mos = m ? calculateMonthsOfSupply(m.active, m.pending) : null;
           if (m && mos != null) {
             zipFallbackRec.months_of_supply = mos;
-            zipFallbackRec.absorption_rate = this.calculateAbsorptionRate(
+            zipFallbackRec.absorption_rate = calculateAbsorptionRate(
               m.pending,
               m.active,
             );
@@ -2829,13 +2516,10 @@ export class CalculatedMetricsService {
               countyZoriForZip[countyFips] ?? fmrByFipsForZip[countyFips];
             if (!rent || rent <= 0) continue;
 
-            const capRate = this.calculateCapRate(rent, price);
-            const grossYield = this.calculateGrossYield(rent, price);
-            const rentToPriceRatio = this.calculateRentToPriceRatio(
-              rent,
-              price,
-            );
-            const grm = this.calculateGRM(price, rent);
+            const capRate = calculateCapRate(rent, price);
+            const grossYield = calculateGrossYield(rent, price);
+            const rentToPriceRatio = calculateRentToPriceRatio(rent, price);
+            const grm = calculateGRM(price, rent);
 
             const realtorZipRec: any = {
               geography_id: zipCode,
@@ -2858,11 +2542,11 @@ export class CalculatedMetricsService {
             ) {
               const m = zipMosInputs.get(String(zipCode));
               const mos = m
-                ? this.calculateMonthsOfSupply(m.active, m.pending)
+                ? calculateMonthsOfSupply(m.active, m.pending)
                 : null;
               if (m && mos != null) {
                 realtorZipRec.months_of_supply = mos;
-                realtorZipRec.absorption_rate = this.calculateAbsorptionRate(
+                realtorZipRec.absorption_rate = calculateAbsorptionRate(
                   m.pending,
                   m.active,
                 );
@@ -3666,7 +3350,7 @@ export class CalculatedMetricsService {
     const records: any[] = [];
     for (const [fips, zhvi] of Object.entries(zhviByFips)) {
       const income = incomeByFips[fips] || NATIONAL_MEDIAN_INCOME;
-      const overvaluedPct = this.calculateOvervalued(zhvi.value, income);
+      const overvaluedPct = calculateOvervalued(zhvi.value, income);
       if (overvaluedPct === null) continue;
       records.push({
         geography_id: fips,
@@ -3800,7 +3484,7 @@ export class CalculatedMetricsService {
     const records: any[] = [];
     for (const [zipCode, zhvi] of Object.entries(zhviByZip)) {
       const income = incomeByZcta[zipCode] || NATIONAL_MEDIAN_INCOME;
-      const overvaluedPct = this.calculateOvervalued(zhvi, income);
+      const overvaluedPct = calculateOvervalued(zhvi, income);
       if (overvaluedPct === null) continue;
       records.push({
         geography_id: zipCode,
