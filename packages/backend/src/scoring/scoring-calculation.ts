@@ -18,7 +18,7 @@ import {
   fetchPropertyIqMetrics,
   getLatestScorableDate,
 } from './propertyiq-data-fetcher';
-import { upsertScoresWithRetry } from './scoring-persistence';
+import { buildScoreRow, upsertScoresWithRetry } from './scoring-persistence';
 
 /**
  * Calculate demand-signal scores for all locations at a given geography level.
@@ -51,23 +51,26 @@ export async function calculateAndPersistPropertyIqScores(
   // 3. Calculate scores using the demand-signal engine
   const results = runEngine(locations, geography);
 
-  // 4. Build rows for persistence
-  // Note: there is no formula_version column in propertyiq_scores_v2 — omit it.
-  // score_type='propertyiq' is the single live score type.
-  const rows = results.map((r) => ({
-    geography,
-    location_id: r.locationId,
-    location_name: r.locationName,
-    score_type: 'propertyiq' as const,
-    score: r.score,
-    grade: r.grade,
-    confidence: r.confidence,
-    confidence_level: r.confidenceLevel,
-    median_price: r.medianPrice,
-    score_date: scoreDate,
-    created_at: new Date().toISOString(),
-    z_scores: JSON.stringify(r.inputMetrics),
-  }));
+  // 4. Build rows via the shared row builder so this path and the batch path
+  // (buildScoreRows) can't drift. z_scores is passed as an OBJECT — the column is
+  // jsonb, so stringifying it would be stored as a quoted string and read back as
+  // null by every consumer that checks `typeof z_scores === 'object'`.
+  const createdAt = new Date().toISOString();
+  const rows = results.map((r) =>
+    buildScoreRow({
+      geography,
+      locationId: r.locationId,
+      locationName: r.locationName,
+      score: r.score,
+      grade: r.grade,
+      confidence: r.confidence,
+      confidenceLevel: r.confidenceLevel,
+      medianPrice: r.medianPrice,
+      scoreDate,
+      createdAt,
+      zScores: r.inputMetrics,
+    }),
+  );
 
   // 5. Persist in batches. A single upsert of every row (e.g. ~29K zips) exceeds
   // Postgres statement_timeout (error 57014) and writes nothing; chunking keeps
