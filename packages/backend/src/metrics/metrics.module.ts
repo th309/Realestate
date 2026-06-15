@@ -18,6 +18,7 @@ import { FiveYearGrowthMetroService } from './pipelines/five-year-growth-metro.s
 import { FiveYearGrowthAggregateService } from './pipelines/five-year-growth-aggregate.service';
 import { FiveYearGrowthGranularService } from './pipelines/five-year-growth-granular.service';
 import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
+import { AffordabilityMetricsService } from './pipelines/affordability-metrics.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -39,6 +40,7 @@ import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
     FiveYearGrowthAggregateService,
     FiveYearGrowthGranularService,
     FiveYearGrowthService,
+    AffordabilityMetricsService,
   ],
   exports: [CalculatedMetricsService, InventorySurplusService],
 })
