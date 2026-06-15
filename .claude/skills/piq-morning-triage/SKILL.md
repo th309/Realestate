@@ -26,12 +26,25 @@ Run: `gh run list --branch develop --limit 15 --json status,conclusion,name,crea
 Surface any run with conclusion `failure` / `cancelled` / `timed_out` in the last ~24h.
 
 ### 2. Data-pipeline freshness (Supabase MCP, read-only SELECT)
-For each of `zillow_metro`, `zillow_county`, `zillow_zip`, `propertyiq_scores_v2`,
-`calculated_metrics`: query latest period and row count via
-`mcp__supabase-db__execute_sql` (SELECT only — never write). Example:
-`select 'propertyiq_scores_v2' t, max(period_date) latest, count(*) n from propertyiq_scores_v2;`
-Surface any table whose latest `period_date` is stale for its cadence (monthly
-tables should be within ~5 weeks) or whose count dropped vs. expectation.
+Use whichever Supabase MCP is authed this session: `mcp__supabase-db__execute_sql`,
+or if that returns Unauthorized, `mcp__plugin_supabase_supabase__execute_sql`
+(project_id `pysflbhpnqwoczyuaaif`). SELECT only — never write.
+
+Query the latest **actual** period + row count for each table. Mind the two traps:
+- Date column differs: `zillow_metro` / `zillow_county` / `zillow_zip` /
+  `calculated_metrics` use `period_date`; `propertyiq_scores_v2` uses `score_date`
+  (it has NO `period_date` — querying it errors).
+- `zillow_metro` and `zillow_zip` also hold Zillow **forecast** rows whose
+  `period_date` runs to year-end, so a raw `MAX(period_date)` overstates freshness.
+  Exclude forecasts to read true actuals, e.g.
+  `where metric_name not ilike '%forecast%' and metric_name not ilike '%zhvf%'`.
+
+Examples:
+`select 'calculated_metrics' t, max(period_date)::text latest, count(*) n from calculated_metrics;`
+`select 'propertyiq_scores_v2' t, max(score_date)::text latest, count(*) n from propertyiq_scores_v2;`
+
+Surface any table whose latest **actual** period is stale for its cadence (monthly
+tables should be within ~6 weeks of today) or whose row count dropped vs. expectation.
 
 ### 3. GitHub issues / PRs / commits
 Run: `gh pr list --state open --json number,title,updatedAt,isDraft,url`
