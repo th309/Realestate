@@ -13,6 +13,7 @@ import { OvervaluedMetricsService } from './pipelines/overvalued-metrics.service
 import { OvervaluedMetricsMetrosService } from './pipelines/overvalued-metrics-metros.service';
 import { OvervaluedMetricsCountiesService } from './pipelines/overvalued-metrics-counties.service';
 import { OvervaluedMetricsZipsService } from './pipelines/overvalued-metrics-zips.service';
+import { MetricsPersistenceService } from './pipelines/metrics-persistence.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -29,6 +30,7 @@ import { OvervaluedMetricsZipsService } from './pipelines/overvalued-metrics-zip
     OvervaluedMetricsCountiesService,
     OvervaluedMetricsZipsService,
     OvervaluedMetricsService,
+    MetricsPersistenceService,
   ],
   exports: [CalculatedMetricsService, InventorySurplusService],
 })
