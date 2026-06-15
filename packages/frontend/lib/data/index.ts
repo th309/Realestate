@@ -237,6 +237,11 @@ export {
 
   // Analyzer prefill hook
   useAnalyzerPrefill,
+
+  // Market screener hook
+  useScreener,
+  type UseScreenerOptions,
+  type UseScreenerResult,
 } from "./hooks";
 
 // ============================================================================

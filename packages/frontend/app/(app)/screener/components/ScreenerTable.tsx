@@ -1,0 +1,251 @@
+"use client";
+
+import React from "react";
+import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import type { ScreenerRow, ScreenerQuery } from "@/lib/data";
+import { formatMetricValue } from "@/lib/data";
+import {
+  getScoreColor,
+  getLetterGrade,
+  getGradeColor,
+} from "@/app/components/scoring/ScoreDisplay";
+
+type SortableCol = NonNullable<ScreenerQuery["sortBy"]>;
+
+interface ColumnDef {
+  key: SortableCol | null;
+  label: string;
+  align: "left" | "right";
+}
+
+const COLUMNS: ColumnDef[] = [
+  { key: null, label: "#", align: "right" },
+  { key: "region_name", label: "Market", align: "left" },
+  { key: "score", label: "Score", align: "right" },
+  { key: "median_price", label: "Median Price", align: "right" },
+  { key: "cap_rate", label: "Cap Rate", align: "right" },
+  { key: "months_of_supply", label: "MoS", align: "right" },
+  { key: "overvalued_pct", label: "Overvalued %", align: "right" },
+];
+
+interface ScreenerTableProps {
+  rows: ScreenerRow[];
+  sortBy: SortableCol;
+  sortOrder: "asc" | "desc";
+  page: number;
+  pageSize: number;
+  isFetching: boolean;
+  onSort: (col: SortableCol) => void;
+}
+
+function ScoreCell({
+  score,
+  grade,
+}: {
+  score: number | null;
+  grade: string | null;
+}) {
+  if (score === null) {
+    return (
+      <span className="font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
+        —
+      </span>
+    );
+  }
+
+  const color = getScoreColor(score);
+  const displayGrade = grade ?? getLetterGrade(score);
+  const gradeColors = getGradeColor(displayGrade);
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="font-[family-name:var(--font-roboto-mono)] font-semibold text-sm"
+        style={{ color }}
+      >
+        {score}
+      </span>
+      <span
+        className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-bold ${gradeColors.bg} ${gradeColors.text}`}
+      >
+        {displayGrade}
+      </span>
+    </span>
+  );
+}
+
+function SortIcon({
+  col,
+  sortBy,
+  sortOrder,
+}: {
+  col: SortableCol;
+  sortBy: SortableCol;
+  sortOrder: "asc" | "desc";
+}) {
+  if (sortBy !== col) {
+    return <ChevronsUpDown className="w-3.5 h-3.5 opacity-30" />;
+  }
+  return sortOrder === "asc" ? (
+    <ArrowUp className="w-3.5 h-3.5 text-primary" />
+  ) : (
+    <ArrowDown className="w-3.5 h-3.5 text-primary" />
+  );
+}
+
+export function ScreenerTable({
+  rows,
+  sortBy,
+  sortOrder,
+  page,
+  pageSize,
+  isFetching,
+  onSort,
+}: ScreenerTableProps) {
+  const baseRank = page * pageSize + 1;
+
+  return (
+    <div
+      className={`
+        bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant
+        overflow-hidden transition-opacity duration-200
+        ${isFetching ? "opacity-60" : "opacity-100"}
+      `}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm" aria-label="Market screener results">
+          <thead>
+            <tr className="bg-surface-container border-b border-outline-variant">
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.label}
+                  scope="col"
+                  className={`
+                    px-4 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant
+                    whitespace-nowrap select-none
+                    ${col.align === "right" ? "text-right" : "text-left"}
+                    ${col.key ? "cursor-pointer hover:text-primary hover:bg-primary-container/20 transition-colors" : ""}
+                  `}
+                  onClick={() => col.key && onSort(col.key)}
+                  aria-sort={
+                    col.key && sortBy === col.key
+                      ? sortOrder === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : col.key
+                        ? "none"
+                        : undefined
+                  }
+                >
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    {col.align === "right" && col.key && (
+                      <SortIcon
+                        col={col.key}
+                        sortBy={sortBy}
+                        sortOrder={sortOrder}
+                      />
+                    )}
+                    {col.label}
+                    {col.align === "left" && col.key && (
+                      <SortIcon
+                        col={col.key}
+                        sortBy={sortBy}
+                        sortOrder={sortOrder}
+                      />
+                    )}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={COLUMNS.length}
+                  className="px-4 py-12 text-center text-on-surface-variant"
+                >
+                  No markets match the current filters.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, i) => (
+                <tr
+                  key={`${row.geo_level}-${row.region_id}`}
+                  className="
+                    border-b border-outline-variant/40 last:border-0
+                    hover:bg-primary-container/10 transition-colors duration-100
+                  "
+                  style={{
+                    animationDelay: `${Math.min(i * 20, 300)}ms`,
+                  }}
+                >
+                  {/* Rank */}
+                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-xs text-on-surface-variant w-12">
+                    {baseRank + i}
+                  </td>
+
+                  {/* Market name */}
+                  <td className="px-4 py-3 text-left min-w-[180px]">
+                    <span className="font-medium text-on-surface">
+                      {row.region_name}
+                    </span>
+                    {row.state_code && (
+                      <span className="ml-1.5 text-xs text-on-surface-variant">
+                        {row.state_code}
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Score */}
+                  <td className="px-4 py-3 text-right">
+                    <ScoreCell score={row.score} grade={row.grade} />
+                  </td>
+
+                  {/* Median Price */}
+                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                    {row.median_price !== null
+                      ? formatMetricValue(row.median_price, "currency")
+                      : "—"}
+                  </td>
+
+                  {/* Cap Rate */}
+                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                    {row.cap_rate !== null
+                      ? formatMetricValue(row.cap_rate, "percent_abs")
+                      : "—"}
+                  </td>
+
+                  {/* Months of Supply */}
+                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                    {row.months_of_supply !== null
+                      ? row.months_of_supply.toFixed(1)
+                      : "—"}
+                  </td>
+
+                  {/* Overvalued % */}
+                  <td
+                    className={`
+                      px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)]
+                      ${
+                        row.overvalued_pct !== null
+                          ? row.overvalued_pct > 0
+                            ? "text-error"
+                            : "text-tertiary"
+                          : "text-on-surface"
+                      }
+                    `}
+                  >
+                    {row.overvalued_pct !== null
+                      ? `${row.overvalued_pct > 0 ? "+" : ""}${row.overvalued_pct.toFixed(1)}%`
+                      : "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
