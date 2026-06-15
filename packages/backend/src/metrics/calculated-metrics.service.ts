@@ -1863,6 +1863,8 @@ export class CalculatedMetricsService {
       | 'rent_to_price_ratio'
       | 'grm'
       | 'overvalued_pct'
+      | 'months_of_supply'
+      | 'absorption_rate'
       | 'renter_demand_index',
     geographyType: 'metro' | 'county' | 'zip' | 'state' | 'national' = 'metro',
   ): Promise<{ data: any[]; success: boolean; source: string }> {

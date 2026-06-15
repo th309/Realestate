@@ -456,6 +456,18 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     notes:
       "Uses 3.5× income as the historical norm for price-to-income ratio. Covers 400+ metro areas.",
   },
+  months_of_supply: {
+    id: "months_of_supply",
+    name: "Months of Supply",
+    description:
+      "How many months it would take to sell all active inventory at the current sales pace. Under ~4 months signals a seller's market (tight supply, strong demand); over ~6 months a buyer's market.",
+    formula:
+      "Active Listings / Pending Listings (pending used as the monthly-sales proxy)",
+    dataSource: "Calculated from Realtor.com active and pending listing counts",
+    updateFrequency: "Monthly",
+    notes:
+      "Computed for the latest period only (no historical series). Available for metros, counties, and ZIP codes wherever Realtor active/pending data exists.",
+  },
   income_to_buy: {
     id: "income_to_buy",
     name: "Income Needed to Buy",
