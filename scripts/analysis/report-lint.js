@@ -24,7 +24,9 @@ const add = (rule, lineIdx, match, detail) =>
 // --- EDITORIAL (Rule 5 + Prohibited 3,6,7) ---
 const EDITORIAL = [
   {
-    re: /\b(strongest|best|most powerful|exceptional|weakest|unmatched|outstanding)\b/i,
+    // "best" only as a quality claim — allow neutral collocations like
+    // "best practices", "best available data", "best estimate/effort/fit".
+    re: /\b(strongest|most powerful|exceptional|weakest|unmatched|outstanding)\b|\bbest\b(?!\s+(?:practices?|available|estimate|effort|fit))/i,
     detail: "superlative",
   },
   {

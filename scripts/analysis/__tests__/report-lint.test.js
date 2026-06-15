@@ -39,6 +39,18 @@ ok(
   lint("Q5 will outperform Q1.").violations.some((v) => v.rule === "editorial"),
 );
 ok(
+  "flags superlative 'best' as a quality claim",
+  lint("This is the best market.").violations.some(
+    (v) => v.rule === "editorial",
+  ),
+);
+ok(
+  "allows neutral 'best practices' / 'best available'",
+  lint("We used best available data per best practices.").violations.every(
+    (v) => v.rule !== "editorial",
+  ),
+);
+ok(
   "flags ROE language",
   lint("Returns on $50,000 down payment.").violations.some(
     (v) => v.rule === "editorial",

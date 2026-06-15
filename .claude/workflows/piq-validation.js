@@ -163,7 +163,11 @@ await agent(
 let round = 0;
 let unresolved = [];
 let totalFixed = 0;
-while (round < 3) {
+const MAX_SYNTH_ROUNDS = 3;
+// verify -> (clean? stop) -> (over cap? stop, reporting freshly-verified open) ->
+// synth -> loop. A verify ALWAYS follows the last synth, so `unresolved` is never
+// stale: it is always the result of a verify pass, never a pre-synth snapshot.
+while (true) {
   round++;
   phase("Verify");
   const findings = (
@@ -173,22 +177,26 @@ while (round < 3) {
           agent(lens.prompt, {
             label: `verify:${lens.key}`,
             phase: "Verify",
-            model:
-              lens.key === "editorial" || lens.key === "structure"
-                ? "sonnet"
-                : "sonnet",
+            model: "sonnet",
             schema: FINDINGS_SCHEMA,
-          }),
+          }).then((r) => (r ? { ...r, lensKey: lens.key } : null)),
       ),
     )
   ).filter(Boolean);
 
+  // Stamp the lens key from the thunk closure (survives the .filter(Boolean)) so
+  // every violation keeps its verifier attribution.
   const open = findings.flatMap((f) =>
-    (f.violations || []).map((v) => ({ ...v, verifier: f.verifier })),
+    (f.violations || []).map((v) => ({ ...v, verifier: f.lensKey })),
   );
   log(`Round ${round}: ${open.length} violation(s) found.`);
+
   if (open.length === 0) {
-    unresolved = [];
+    unresolved = []; // a clean verify pass -> genuinely clean
+    break;
+  }
+  if (round > MAX_SYNTH_ROUNDS) {
+    unresolved = open; // freshly verified after the final synth -> truly still-open
     break;
   }
 
@@ -199,7 +207,6 @@ while (round < 3) {
     { label: `synthesize:round-${round}`, phase: "Synthesize", model: "opus" },
   );
   totalFixed += open.length;
-  unresolved = open; // carried forward; cleared if next round is clean
 }
 
 if (unresolved.length) {
