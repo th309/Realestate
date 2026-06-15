@@ -1,6 +1,5 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { Injectable } from '@nestjs/common';
+import { calculateAll as calculateAllMetrics } from './metric-formulas';
 import { InvestmentMetricsService } from './pipelines/investment-metrics.service';
 import { MetricsPersistenceService } from './pipelines/metrics-persistence.service';
 import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
@@ -16,12 +15,14 @@ export type { CalculatedMetricsInput, CalculatedMetricsOutput };
 @Injectable()
 export class CalculatedMetricsService {
   constructor(
-    @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly investment: InvestmentMetricsService,
     private readonly persistence: MetricsPersistenceService,
     private readonly fiveYear: FiveYearGrowthService,
     private readonly affordability: AffordabilityMetricsService,
   ) {}
+
+  /** Pure per-geography metric computation (no DB). */
+  calculateAll = (input: CalculatedMetricsInput) => calculateAllMetrics(input);
 
   getInvestmentMetricsForMap = (
     ...args: Parameters<InvestmentMetricsService['getInvestmentMetricsForMap']>
