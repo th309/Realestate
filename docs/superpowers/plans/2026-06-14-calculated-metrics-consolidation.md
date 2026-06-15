@@ -757,8 +757,70 @@ Expected: non-zero where they were non-zero before (affordability not regressed 
 
 ---
 
-## Review (fill in after execution)
+## EXECUTION OUTCOME (2026-06-14 → 06-15)
 
-- Before/after coverage table:
-- Issues found during execution:
-- Follow-ups filed:
+**Status: data fix DONE + verified live; screener (backend + frontend) DONE + verified live in a browser. All on `develop`.**
+
+### What shipped (do NOT redo)
+
+- **calculated_metrics consolidation** — cron repointed to a NestJS headless CLI (`packages/backend/src/scripts/refresh-calculated-metrics.ts` → `CalculatedMetricsService.refreshAllCalculatedMetrics`), MOS via Realtor `active/pending` proxy (latest-period only, never clobbers Redfin), overvalued % added for county/zip (latest-period, non-clobber batched upsert), cbsa fixed at ingest (`scripts/sources/zillow/zillow-metro-cbsa-map.ts` contains-in-title rule + stamp in `import-zillow.ts`). Affordability still produced by the kept `scripts/calculations/calculated-metrics-runner.ts` (FRED-dependent).
+- **Two bugs found ONLY by the live run** (tsc/unit passed): (1) `absorption_rate` column never existed though the code wrote it → every latest-period batch 400'd → silently blocked the MOS/cap_rate write. Fixed via migration `20260614233816_add_absorption_rate_to_calculated_metrics.sql`. (2) overvalued ZHVI/income fetches used 2000/5000-row `.range()` windows but **PostgREST caps reads at ~1000** → loop broke after one page → capped at exactly 1000. Fixed to 1000-row windows.
+- **Verified coverage @2026-04-30** (66,339 rows, 0 errors): metro cap_rate **0→865**, MOS **92→871**; county overvalued **0→3,072**, MOS 2,955, cap_rate 1,907; zip overvalued **0→26,275**, MOS 24,788, cap_rate 8,312. cbsa backfill was a no-op (data already canonical). Investment `.range` windows audited — NOT capped (cap_rate tracks ZORI coverage).
+- **Screener** — `screener_snapshot` table + `refresh_screener_snapshot()` SQL fn (migrations `20260615111801/02`, 33,566 rows); `GET /api/screener/:geo` (`packages/backend/src/screener/`, filters/sort/pagination, allowlisted sort, validated); frontend `/screener` (`packages/frontend/app/(app)/screener/`) — ranked table, geo control, 3 preset chips, range filters, **state selector**, URL-shareable state, CSV + ZIP tier gating. Verified live in a real browser: 50 rows render with correct formatting/score-colors; ZIP shows "ZIP Code Data Requires Pro" lock for free users; CSV button locked for free. Vitest covers the filter-summary helper (6/6).
+
+### CRITICAL context for any follow-up session
+
+- Supabase project id `pysflbhpnqwoczyuaaif` (use `mcp__plugin_supabase_supabase__execute_sql`). Memories: `reference_calculated-metrics-staggered-coverage` (RESOLVED), `reference_supabase-1000-row-read-cap`.
+- **PostgREST caps reads at ~1000 rows** → always paginate supabase-js `.range()` in 1000-row windows (`.range(off, off+999)`, break on `<1000`). Raw SQL / the SQL fn is exempt.
+- **A parallel `piq-validation` session is active on `develop`** — it auto-commits/pushes and currently has **uncommitted** `scripts/import-realtor-data.ts` + `scripts/sources/realtor/import-realtor.ts`. Stage ONLY your own files (`git -C <repo> add <explicit paths>`), never `git add -A`. develop is auto-synced (push often "Everything up-to-date").
+- **Playwright MCP is disconnected** → verify UI with a temp `@playwright/test` headless chromium script + `Read` the screenshot. Frontend tests run on **vitest** (not jest). Delete temp scripts after.
+- Refresh CLI: `npx ts-node -P packages/backend/tsconfig.json packages/backend/src/scripts/refresh-calculated-metrics.ts --year=2026` (loads `packages/backend/.env.local`). Frontend: `npm run dev:fresh`. Verify branch before commit; user pushes.
+
+---
+
+## SESSION UPDATE 2026-06-15 (cont.) — A, B, D + map-layer wiring SHIPPED
+
+**Done + committed on `develop` (live-verified, no mocks):**
+
+- **A. Row-stagger animation** — added `screener-row-in` keyframe + `.animate-screener-row` (reduced-motion safe) in `globals.css`; the rows already set `animationDelay` but had no keyframe. Commit `bb8adede`.
+- **B. home_value / rent columns** — new migration `20260615162207_screener_snapshot_home_value_rent.sql`: `refresh_screener_snapshot()` now LEFT JOINs latest ZHVI→`home_value` + ZORI→`rent` (metro=cbsa, county=fips, zip=region_name); inline `SET statement_timeout='600s'` so CREATE OR REPLACE keeps the relax. Screener table gained a **Rent** column (exact `$` via `formatMetricValue(...,'number')`, not the `$K` bucket); CSV gained Rent. Verified live: home_value ≈ median_price (so NOT surfaced as a dup column), rent coverage metro 755 / county 1,413 / zip 8,897. Browser-verified Rent renders ("$1,185"). Commit `bb8adede`.
+- **MAP-LAYER WIRING (extra, user-requested)** — MoS + county/zip overvalued existed in `calculated_metrics` + investment-bundle + screener but were NOT selectable map metrics. Added: backend `getInvestmentMetricsForMap` accepts `months_of_supply`/`absorption_rate`; new pre-calc endpoints `months-of-supply/{metros,counties,zips}` + `overvalued/{counties,zips}`; registry `months_of_supply` (index_1dec, all geos, no timeseries) + `overvalued_pct` → all geos; added to Demand & Risk + Market Competition categories + a metric definition. Verified live: all 5 endpoints return real data; MoS selectable on the map (entitlement modal titled "Unlock Months of Supply" confirms registry integration). Commit `c5d6e1c8`.
+- **D. Affordability port** — `income_to_buy` / `affordable_home_price` / `years_to_save` ported INTO `CalculatedMetricsService` (faithful), wired into `refreshAllCalculatedMetrics`, FRED rate fetched once (optional — warns + uses default rate if key absent, no fallback _key_ per §1.2). CLI counts affordability; workflow drops the separate runner step. Verified live: itb 32,438 / ahp 38,238 / yts 32,242 stored, 0 errors (national/state yts gaps are pre-existing script quirks, faithfully preserved). Commit `42f52170`.
+
+**REMAINING: E (service split) + C (dead-script delete — now has a NEW complication):**
+
+- **C complication (resolve before deleting):** the parallel session committed `60aaa8f7` which **repoints `scripts/import-realtor-data.ts` → `calculated-metrics-runner.ts`** (the affordability runner). So the runner + `affordability-metrics.ts` + `years-to-save-metrics.ts` are NOT dead — they are now the affordability path for the LOCAL realtor-import flow, while the CI cron computes affordability via the service (Task D). Two affordability paths now exist. Deleting the runner/scripts (original Task 9 / D cleanup) would break `import-realtor-data.ts`. Also `scripts/refresh-all-metrics.ts` is still called by `import-all-non-zillow.ts`. **Decision needed:** either (a) also consolidate the local import flow onto the backend CLI (then delete runner + affordability scripts), or (b) keep the runner for local imports and only delete the truly-unreferenced files (`investment-metrics.ts`, `valuation-metrics.ts`, the `utils/refresh-calculated-metrics.ts` shim + its `run-refresh-calculated.ts` consumer, `ensure-calculated-metrics-populated.ts`) after updating `import-all-non-zillow.ts`/`refresh-all-metrics.ts`.
+- **E** remains a large ATOMIC refactor (now ~3,929 lines incl. affordability): extract investment + valuation (+ affordability) calculators behind the facade, preserve exact behavior (MOS latest-period gating, overvalued non-clobber + 1000-row pagination, absorption_rate, HUD fallbacks), then re-run the refresh CLI + re-check coverage.
+
+---
+
+## REMAINING WORK (next session — suggested order: A+B → D → E → C)
+
+### A. Frontend polish — row-stagger animation (small, low risk)
+
+`packages/frontend/app/(app)/screener/components/ScreenerTable.tsx`: each `<tr>` sets `style={{ animationDelay }}` (capped 300ms) but has **no paired keyframe / `animate-*` class** → no visible entrance. Add a fade-in-up keyframe (reuse an existing reveal utility from `globals.css`/tailwind config if present) + apply to rows. Verify with a headless screenshot.
+
+### B. Frontend polish — populate `home_value` / `rent` columns
+
+`screener_snapshot.home_value` + `rent` are **NULL** (the fn doesn't populate them). Recommended: populate **rent** (ZORI) — useful cash-flow context; `home_value` (ZHVI) ≈ `median_price` (populate too, cheap, or drop).
+
+- Update `refresh_screener_snapshot()` (`supabase/migrations/20260615111802_refresh_screener_snapshot_fn.sql` + apply via `execute_sql` CREATE OR REPLACE): LEFT JOIN latest `zillow_{metro,county,zip}` ZHVI→home_value, ZORI→rent per region (keys: metro=cbsa_code, county=fips_code, zip=region_name; `period_date >= now()-6mo` + DISTINCT ON, like the existing zip_state CTE). SQL → no 1000-row cap.
+- `SELECT refresh_screener_snapshot();` then verify `count(rent)` per geo. Add a **Rent** column to `ScreenerTable.tsx` (mono, `formatMetricValue(rent,'currency')`) + `CSV_COLUMNS` in `ScreenerPageInner.tsx`.
+
+### C. Delete dead duplicate calc scripts (#14)
+
+Delete `scripts/calculations/investment-metrics.ts`, `scripts/calculations/valuation-metrics.ts`, `scripts/utils/refresh-calculated-metrics.ts` (shim), `scripts/refresh-all-metrics.ts`, `scripts/run-refresh-calculated.ts`, and obsolete `scripts/ensure-calculated-metrics-populated.ts`.
+
+- Nearly unblocked (trimmed runner no longer imports investment/valuation; only the shim's own doc comment referenced the dead paths). Before deleting: fix `import-all-non-zillow.ts` (`execFileSync ... refresh-all-metrics.ts` string ref) and check what imports the shim (committed `import-realtor-data.ts` may; the parallel session's uncommitted copy repoints to the runner). **Coordinate with the parallel session — ideally do C after it commits its `import-realtor` work** to avoid clobbering its WIP. Verify scripts tsc after.
+
+### D. Affordability port (scripts → service) — do BEFORE E
+
+Move `income_to_buy` / `affordable_home_price` / `years_to_save` from `scripts/calculations/affordability-metrics.ts` + `years-to-save-metrics.ts` INTO `CalculatedMetricsService` (finishes RC-0, single source of truth). **Gotcha: port the FRED rate fetch** (`scripts/calculations/metric-calculation-helpers.ts` `fetchMortgageRateFromFRED`) — the service has no FRED integration. Then call from `refreshAllCalculatedMetrics`, remove the affordability-runner step from `.github/workflows/post-import-refresh.yml`, delete the affordability scripts + runner. Re-run; verify the three metrics populate.
+
+### E. Split `calculated-metrics.service.ts` (3,362 lines → focused files) — do LAST
+
+§1.3 hard-limit violation. Keep the facade (`@Injectable` + per-record calc helpers + `storeMetrics` + read methods `getMetrics`/`getMetricsForMap` + `refreshAllCalculatedMetrics`); extract `calculateInvestmentMetricsFor{Metros,Counties,Zips}` + `fetchRealtorMosInputs` into an investment calculator, and overvalued + 5yr-growth into a valuation calculator (separate `@Injectable`s delegated to, or free functions taking the supabase client). **CRITICAL — preserve exact behavior**: MOS latest-period gating (omit keys otherwise; never clobber Redfin), overvalued non-clobber batched upsert + **1000-row pagination**, `absorption_rate` writes, HUD-FMR fallbacks. Gate: `cd packages/backend && npx tsc --noEmit` clean, THEN re-run the refresh CLI and re-check coverage (metro cap_rate ~865 / MOS ~871; county/zip overvalued full) — no regression.
+
+### Other tracked defects (lower priority, same class as RC-3)
+
+Sibling NULL-on-incremental-upsert bugs: `zillow_county.fips_code`, `zillow_zip.county_fips` (likely never populated), `realtor_county.cbsa_code`, `redfin_county.fips_code` — same canonical-stamp fix pattern. Not screener-blocking.
