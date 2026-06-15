@@ -5,11 +5,12 @@
  * Supports: create, soft-delete, reactivate, regenerate link, resend email.
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { UserPlus, X, RotateCcw } from 'lucide-react';
-import { TesterTable } from './TesterTable';
+import { useState } from "react";
+import { UserPlus, X, RotateCcw } from "lucide-react";
+import { TesterTable } from "./TesterTable";
+import { getPublicSiteUrl } from "@/lib/config/site-url";
 
 interface Tester {
   id: string;
@@ -26,14 +27,17 @@ interface TesterManagerProps {
 }
 
 type ConfirmAction = {
-  type: 'deactivate' | 'regenerate';
+  type: "deactivate" | "regenerate";
   testerId: string;
 };
 
-export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) {
+export function TesterManager({
+  testers,
+  onTesterCreated,
+}: TesterManagerProps) {
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +45,13 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
   const [newTesterLink, setNewTesterLink] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
+    null,
+  );
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  // Always the live site, even when the admin UI runs on localhost, so copied
+  // links are reachable by external testers (see lib/config/site-url.ts).
+  const baseUrl = getPublicSiteUrl();
 
   // ──────────────────────────────────────────────
   // Handlers
@@ -55,10 +63,10 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
     setIsCreating(true);
 
     try {
-      const response = await fetch('/api/admin/testers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const response = await fetch("/api/admin/testers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim() || undefined,
@@ -68,25 +76,27 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create tester');
+        throw new Error(data.error || "Failed to create tester");
       }
 
       const { tester, emailSent } = await response.json();
       setNewTesterLink(`${baseUrl}/betatest/${tester.token}`);
 
       if (emailSent) {
-        setSuccessMsg(`Tester created and invite email sent to ${email.trim()}`);
+        setSuccessMsg(
+          `Tester created and invite email sent to ${email.trim()}`,
+        );
       } else {
-        setSuccessMsg('Tester created successfully');
+        setSuccessMsg("Tester created successfully");
       }
 
-      setName('');
-      setEmail('');
+      setName("");
+      setEmail("");
       setSendEmail(true);
       setShowForm(false);
       onTesterCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsCreating(false);
     }
@@ -104,13 +114,15 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
     setConfirmAction(null);
     try {
       const res = await fetch(`/api/admin/testers/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
+        method: "DELETE",
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to deactivate');
+      if (!res.ok) throw new Error("Failed to deactivate");
       onTesterCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to deactivate tester');
+      setError(
+        err instanceof Error ? err.message : "Failed to deactivate tester",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -120,13 +132,15 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/testers/${id}`, {
-        method: 'PATCH',
-        credentials: 'include',
+        method: "PATCH",
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to reactivate');
+      if (!res.ok) throw new Error("Failed to reactivate");
       onTesterCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reactivate tester');
+      setError(
+        err instanceof Error ? err.message : "Failed to reactivate tester",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -137,19 +151,21 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
     setConfirmAction(null);
     try {
       const res = await fetch(`/api/admin/testers/${id}/regenerate`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to regenerate link');
+      if (!res.ok) throw new Error("Failed to regenerate link");
       const { emailSent } = await res.json();
       setSuccessMsg(
         emailSent
-          ? 'Link regenerated and new invite email sent'
-          : 'Link regenerated successfully',
+          ? "Link regenerated and new invite email sent"
+          : "Link regenerated successfully",
       );
       onTesterCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to regenerate link');
+      setError(
+        err instanceof Error ? err.message : "Failed to regenerate link",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -159,27 +175,27 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/testers/${id}/resend`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to resend email');
+        throw new Error(data.error || "Failed to resend email");
       }
-      setSuccessMsg('Invite email resent successfully');
+      setSuccessMsg("Invite email resent successfully");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend email');
+      setError(err instanceof Error ? err.message : "Failed to resend email");
     } finally {
       setActionLoading(null);
     }
   };
 
   const formatDate = (dateStr?: string): string => {
-    if (!dateStr) return '\u2014';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    if (!dateStr) return "\u2014";
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -198,7 +214,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-medium text-green-800">
-                {successMsg || 'Tester created successfully!'}
+                {successMsg || "Tester created successfully!"}
               </p>
               {newTesterLink && (
                 <>
@@ -219,7 +235,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
               }}
               className="px-3 py-1 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 shrink-0"
             >
-              {newTesterLink ? 'Copy & Close' : 'Dismiss'}
+              {newTesterLink ? "Copy & Close" : "Dismiss"}
             </button>
           </div>
         </div>
@@ -229,7 +245,10 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
       {error && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center justify-between">
           <p className="text-sm text-red-800">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -308,7 +327,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
             />
             <label
               htmlFor="send-email"
-              className={`text-sm ${email.trim() ? 'text-on-surface' : 'text-on-surface-variant'}`}
+              className={`text-sm ${email.trim() ? "text-on-surface" : "text-on-surface-variant"}`}
             >
               Send invite email
             </label>
@@ -320,7 +339,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
               disabled={isCreating || !name.trim()}
               className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50"
             >
-              {isCreating ? 'Creating...' : 'Create Tester'}
+              {isCreating ? "Creating..." : "Create Tester"}
             </button>
           </div>
         </form>
@@ -333,9 +352,13 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
         actionLoading={actionLoading}
         confirmAction={confirmAction}
         onCopyLink={copyLink}
-        onDeactivate={(id) => setConfirmAction({ type: 'deactivate', testerId: id })}
+        onDeactivate={(id) =>
+          setConfirmAction({ type: "deactivate", testerId: id })
+        }
         onConfirmDeactivate={handleDeactivate}
-        onRegenerate={(id) => setConfirmAction({ type: 'regenerate', testerId: id })}
+        onRegenerate={(id) =>
+          setConfirmAction({ type: "regenerate", testerId: id })
+        }
         onConfirmRegenerate={handleRegenerate}
         onResendEmail={handleResendEmail}
         onCancelConfirm={() => setConfirmAction(null)}
@@ -370,7 +393,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
                       {tester.name}
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
-                      {tester.email || '\u2014'}
+                      {tester.email || "\u2014"}
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -379,7 +402,9 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
                         className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-surface-container-high text-on-surface hover:bg-primary/10 disabled:opacity-50"
                       >
                         <RotateCcw className="w-3 h-3" />
-                        {actionLoading === tester.id ? 'Reactivating...' : 'Reactivate'}
+                        {actionLoading === tester.id
+                          ? "Reactivating..."
+                          : "Reactivate"}
                       </button>
                     </td>
                   </tr>
