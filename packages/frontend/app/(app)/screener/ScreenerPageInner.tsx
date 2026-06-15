@@ -26,6 +26,7 @@ import {
   buildScreenerUrl,
   type SortBy,
 } from "./lib/screener-url-state";
+import { summarizeScreenerFilters } from "./lib/screener-filter-summary";
 
 // ---------------------------------------------------------------------------
 // URL ↔ state serialisation helpers
@@ -101,6 +102,10 @@ export function ScreenerPageInner() {
   const total = data?.total ?? 0;
   const hasMore = data?.hasMore ?? false;
 
+  // Plain-English list of active constraints, surfaced in the empty state so a
+  // no-results view reads as "filters are narrow", not "the screener is broken".
+  const activeFilters = summarizeScreenerFilters(filters, stateFilter);
+
   // Push URL updates (replace, not push — avoids polluting history)
   const pushUrl = useCallback(
     (
@@ -163,7 +168,10 @@ export function ScreenerPageInner() {
     setPageState(0);
   }, []);
 
+  // Full reset: clears every active filter the empty state lists as a chip
+  // (state, score/price, preset) so "Clear filters" does exactly what it says.
   const handleFilterReset = useCallback(() => {
+    setStateFilterState("");
     setFiltersState({});
     setActivePreset("hottest");
     setSortByState("score");
@@ -294,6 +302,8 @@ export function ScreenerPageInner() {
             pageSize={PAGE_SIZE}
             isFetching={isFetching}
             onSort={handleSort}
+            activeFilters={activeFilters}
+            onClearFilters={handleFilterReset}
           />
 
           {/* ── Pagination ── */}

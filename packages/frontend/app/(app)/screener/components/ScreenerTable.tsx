@@ -36,6 +36,10 @@ interface ScreenerTableProps {
   pageSize: number;
   isFetching: boolean;
   onSort: (col: SortableCol) => void;
+  /** Human-readable active filters, shown in the empty state for context. */
+  activeFilters?: string[];
+  /** Resets every active filter (state, score/price, preset) to defaults. */
+  onClearFilters?: () => void;
 }
 
 function ScoreCell({
@@ -101,6 +105,8 @@ export function ScreenerTable({
   pageSize,
   isFetching,
   onSort,
+  activeFilters = [],
+  onClearFilters,
 }: ScreenerTableProps) {
   const baseRank = page * pageSize + 1;
 
@@ -161,11 +167,44 @@ export function ScreenerTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={COLUMNS.length}
-                  className="px-4 py-12 text-center text-on-surface-variant"
-                >
-                  No markets match the current filters.
+                <td colSpan={COLUMNS.length} className="px-4 py-12">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <p className="text-on-surface font-medium">
+                      No markets match your current filters.
+                    </p>
+                    {activeFilters.length > 0 ? (
+                      <>
+                        <p className="text-sm text-on-surface-variant max-w-md">
+                          The screener is working — these active filters just
+                          narrowed everything out. Loosen or clear them to see
+                          results.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl">
+                          {activeFilters.map((label) => (
+                            <span
+                              key={label}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant border border-outline-variant font-[family-name:var(--font-roboto-mono)]"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                        {onClearFilters && (
+                          <button
+                            type="button"
+                            onClick={onClearFilters}
+                            className="mt-1 px-4 py-2 rounded-full text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors"
+                          >
+                            Clear filters
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-on-surface-variant">
+                        Try a different geography or adjust your filters.
+                      </p>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
