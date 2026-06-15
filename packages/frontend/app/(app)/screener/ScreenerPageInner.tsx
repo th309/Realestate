@@ -14,6 +14,18 @@ import type { PresetId, Preset } from "./components/PresetChips";
 import { FilterRail } from "./components/FilterRail";
 import { ScreenerTable } from "./components/ScreenerTable";
 import { Pagination } from "./components/Pagination";
+import { StateSelect } from "./components/StateSelect";
+import {
+  readGeo,
+  readState,
+  readPreset,
+  readSortBy,
+  readSortOrder,
+  readPage,
+  readFilters,
+  buildScreenerUrl,
+  type SortBy,
+} from "./lib/screener-url-state";
 
 // ---------------------------------------------------------------------------
 // URL ↔ state serialisation helpers
@@ -21,100 +33,7 @@ import { Pagination } from "./components/Pagination";
 
 const PAGE_SIZE = 50;
 
-type SortBy = NonNullable<ScreenerQuery["sortBy"]>;
-
-function readGeo(params: URLSearchParams): ScreenerGeoLevel {
-  const v = params.get("geo");
-  if (v === "metro" || v === "county" || v === "zip") return v;
-  return "metro";
-}
-
-function readPreset(params: URLSearchParams): PresetId | null {
-  const v = params.get("preset");
-  if (v === "hottest" || v === "undervalued" || v === "cashflow") return v;
-  return null;
-}
-
-function readNum(params: URLSearchParams, key: string): number | undefined {
-  const v = params.get(key);
-  if (!v) return undefined;
-  const n = parseFloat(v);
-  return isNaN(n) ? undefined : n;
-}
-
-function readSortBy(params: URLSearchParams): SortBy {
-  const v = params.get("sortBy") as SortBy | null;
-  const VALID: SortBy[] = [
-    "score",
-    "median_price",
-    "cap_rate",
-    "gross_yield",
-    "rent_to_price_ratio",
-    "grm",
-    "months_of_supply",
-    "overvalued_pct",
-    "region_name",
-  ];
-  return v && VALID.includes(v) ? v : "score";
-}
-
-function readSortOrder(params: URLSearchParams): "asc" | "desc" {
-  return params.get("sortOrder") === "asc" ? "asc" : "desc";
-}
-
-function readPage(params: URLSearchParams): number {
-  const v = parseInt(params.get("page") ?? "0", 10);
-  return isNaN(v) || v < 0 ? 0 : v;
-}
-
-function readFilters(params: URLSearchParams): Partial<ScreenerQuery> {
-  return {
-    scoreMin: readNum(params, "scoreMin"),
-    scoreMax: readNum(params, "scoreMax"),
-    medianPriceMin: readNum(params, "medianPriceMin"),
-    medianPriceMax: readNum(params, "medianPriceMax"),
-    capRateMin: readNum(params, "capRateMin"),
-    capRateMax: readNum(params, "capRateMax"),
-    monthsOfSupplyMin: readNum(params, "monthsOfSupplyMin"),
-    monthsOfSupplyMax: readNum(params, "monthsOfSupplyMax"),
-    overvaluedMin: readNum(params, "overvaluedMin"),
-    overvaluedMax: readNum(params, "overvaluedMax"),
-  };
-}
-
-function buildParams(
-  geo: ScreenerGeoLevel,
-  preset: PresetId | null,
-  filters: Partial<ScreenerQuery>,
-  sortBy: SortBy,
-  sortOrder: "asc" | "desc",
-  page: number,
-): string {
-  const p = new URLSearchParams();
-  p.set("geo", geo);
-  if (preset) p.set("preset", preset);
-  if (sortBy !== "score") p.set("sortBy", sortBy);
-  if (sortOrder !== "desc") p.set("sortOrder", sortOrder);
-  if (page > 0) p.set("page", String(page));
-
-  const FILTER_KEYS: (keyof ScreenerQuery)[] = [
-    "scoreMin",
-    "scoreMax",
-    "medianPriceMin",
-    "medianPriceMax",
-    "capRateMin",
-    "capRateMax",
-    "monthsOfSupplyMin",
-    "monthsOfSupplyMax",
-    "overvaluedMin",
-    "overvaluedMax",
-  ];
-  for (const k of FILTER_KEYS) {
-    const v = filters[k];
-    if (v !== undefined) p.set(k, String(v));
-  }
-  return p.toString();
-}
+// URL <-> state helpers live in ./lib/screener-url-state
 
 // ---------------------------------------------------------------------------
 // CSV column definitions
@@ -143,6 +62,9 @@ export function ScreenerPageInner() {
 
   // Read initial state from URL
   const [geo, setGeoState] = useState<ScreenerGeoLevel>(() => readGeo(params));
+  const [stateFilter, setStateFilterState] = useState<string>(() =>
+    readState(params),
+  );
   const [activePreset, setActivePreset] = useState<PresetId | null>(() =>
     readPreset(params),
   );
@@ -164,6 +86,7 @@ export function ScreenerPageInner() {
   // Build the query sent to the hook
   const query: ScreenerQuery = {
     ...filters,
+    state: stateFilter || undefined,
     sortBy,
     sortOrder,
     page,
@@ -182,14 +105,16 @@ export function ScreenerPageInner() {
   const pushUrl = useCallback(
     (
       nextGeo: ScreenerGeoLevel,
+      nextState: string,
       nextPreset: PresetId | null,
       nextFilters: Partial<ScreenerQuery>,
       nextSortBy: SortBy,
       nextSortOrder: "asc" | "desc",
       nextPage: number,
     ) => {
-      const qs = buildParams(
+      const qs = buildScreenerUrl(
         nextGeo,
+        nextState,
         nextPreset,
         nextFilters,
         nextSortBy,
@@ -203,14 +128,19 @@ export function ScreenerPageInner() {
 
   // Sync state → URL whenever anything changes
   useEffect(() => {
-    pushUrl(geo, activePreset, filters, sortBy, sortOrder, page);
+    pushUrl(geo, stateFilter, activePreset, filters, sortBy, sortOrder, page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geo, activePreset, filters, sortBy, sortOrder, page]);
+  }, [geo, stateFilter, activePreset, filters, sortBy, sortOrder, page]);
 
   // --- Handlers ---
 
   const handleGeoChange = useCallback((next: ScreenerGeoLevel) => {
     setGeoState(next);
+    setPageState(0);
+  }, []);
+
+  const handleStateChange = useCallback((next: string) => {
+    setStateFilterState(next);
     setPageState(0);
   }, []);
 
@@ -332,6 +262,7 @@ export function ScreenerPageInner() {
       {/* ── Geo selector + Preset chips ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <GeoSegmentedControl value={geo} onChange={handleGeoChange} />
+        <StateSelect value={stateFilter} onChange={handleStateChange} />
         <PresetChips
           activePreset={activePreset}
           onSelect={handlePresetSelect}
