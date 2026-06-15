@@ -1,12 +1,8 @@
 name: Post-Import Data Refresh
 
 on:
-  # Run on the 25th of every month at 6:00 AM UTC
-  # After all data imports complete (15th-22nd)
-  schedule:
-    - cron: "0 6 25 * *"
-
-  # Allow manual trigger
+  # Manual trigger + invoked by the weekly-data-pipeline orchestrator when new
+  # data lands. No standalone cron — the weekly pipeline owns the cadence now.
   workflow_dispatch:
     inputs:
       trigger_source:

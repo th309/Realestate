@@ -79,8 +79,8 @@ describe("parseQcewSectorRows", () => {
 
 describe("defaultQcewPeriod", () => {
   // BLS publishes QCEW with a ~6-month lag. The function maps a calendar
-  // month to the most-recently-published (year, qtr). Mirrors the bash
-  // logic in `.github/workflows/economic-monthly-import.yml`.
+  // month to the most-recently-published (year, qtr). This function is now the
+  // sole source of truth (the economic-monthly-import.yml workflow was retired).
   const cases: Array<{
     label: string;
     iso: string;
