@@ -5,6 +5,8 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ScreenerService, ScreenerResult } from './screener.service';
@@ -15,6 +17,7 @@ type GeoLevel = (typeof VALID_GEO_LEVELS)[number];
 
 @ApiTags('screener')
 @Controller('api/screener')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ScreenerController {
   constructor(private readonly screenerService: ScreenerService) {}
 

@@ -77,7 +77,12 @@ export class ScreenerService {
       ? rawSortBy
       : DEFAULT_SORT_BY;
 
-    const sortOrder = opts.sortOrder ?? DEFAULT_SORT_ORDER;
+    // Defense-in-depth (mirrors sortBy): never trust the raw value for an
+    // internal caller that bypasses the controller's ValidationPipe.
+    const sortOrder =
+      opts.sortOrder === 'asc' || opts.sortOrder === 'desc'
+        ? opts.sortOrder
+        : DEFAULT_SORT_ORDER;
     const page = opts.page ?? DEFAULT_PAGE;
     const pageSize = Math.min(
       opts.pageSize ?? DEFAULT_PAGE_SIZE,

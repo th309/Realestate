@@ -6,6 +6,8 @@ import {
   IsIn,
   Min,
   Max,
+  Length,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -26,6 +28,10 @@ export type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 export class ScreenerQueryDto {
   @IsOptional()
   @IsString()
+  @Length(2, 2)
+  @Matches(/^[A-Z]{2}$/i, {
+    message: 'state must be a 2-letter code (e.g. TX)',
+  })
   state?: string;
 
   @IsOptional()
