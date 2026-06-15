@@ -47,16 +47,27 @@ if (fs.existsSync(envLocalPath)) {
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { ScoringModule } from '../scoring/scoring.module';
+import { SupabaseModule } from '../supabase/supabase.module';
+import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringService } from '../scoring/scoring.service';
+import { CalibrationService } from '../scoring/calibration/calibration.service';
 import { GeographyLevel } from '../scoring/formula-weights';
 
 /**
- * Minimal context for the scoring CLI — just ScoringModule and its deps. Avoids
- * booting AppModule and its unrelated env-hard-requirements (see file header).
+ * Minimal context for the scoring CLI. ScoringService needs only the Supabase
+ * client, CalibrationService (which has no deps of its own), and an @Optional
+ * GeographyChainService (from MetricResolutionModule). Wiring those directly —
+ * rather than importing the full ScoringModule — avoids ScoringModule's
+ * FeaturesModule -> BillingModule -> StripeService / EmailModule chain, none of
+ * which the scoring path uses, so the CLI boots with only DB credentials.
  */
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), ScoringModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    SupabaseModule,
+    MetricResolutionModule,
+  ],
+  providers: [ScoringService, CalibrationService],
 })
 class ScoringCliModule {}
 

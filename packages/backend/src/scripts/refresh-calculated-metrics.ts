@@ -101,10 +101,21 @@ async function main() {
       process.exit(1);
     }
 
-    // Rebuild screener_snapshot after calculated metrics are fresh
-    const screenerRows = await app
-      .get(ScreenerService)
-      .refreshScreenerSnapshot();
+    // Rebuild screener_snapshot after calculated metrics are fresh. This is a
+    // SUPPLEMENTARY step: a screener timeout/failure must not fail the primary
+    // calculated_metrics refresh (which already succeeded above), or it would
+    // block the whole monthly pipeline — including scoring — on a secondary
+    // snapshot. (screener_snapshot refresh currently exceeds statement_timeout;
+    // tracked separately for query optimization.)
+    let screenerRows = -1;
+    try {
+      screenerRows = await app.get(ScreenerService).refreshScreenerSnapshot();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(
+        `[WARN] screener_snapshot refresh failed (non-fatal): ${msg}`,
+      );
+    }
 
     console.log(
       `TOTAL: ${stored} calculated_metrics rows stored, screener:${screenerRows} in ${((Date.now() - start) / 1000).toFixed(1)}s`,
