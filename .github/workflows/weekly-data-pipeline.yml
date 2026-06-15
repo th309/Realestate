@@ -118,6 +118,10 @@ jobs:
     needs: import
     if: ${{ needs.import.outputs.has_new_data == 'true' }}
     runs-on: ubuntu-latest
+    # createWorkflowDispatch needs actions:write; the default token is read-only
+    # (the 403 "Resource not accessible by integration" that failed the dispatch).
+    permissions:
+      actions: write
     steps:
       - uses: actions/github-script@v7
         with:
