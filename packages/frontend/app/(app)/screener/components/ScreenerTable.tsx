@@ -23,6 +23,7 @@ const COLUMNS: ColumnDef[] = [
   { key: "region_name", label: "Market", align: "left" },
   { key: "score", label: "Score", align: "right" },
   { key: "median_price", label: "Median Price", align: "right" },
+  { key: null, label: "Rent", align: "right" },
   { key: "cap_rate", label: "Cap Rate", align: "right" },
   { key: "months_of_supply", label: "MoS", align: "right" },
   { key: "overvalued_pct", label: "Overvalued %", align: "right" },
@@ -212,6 +213,7 @@ export function ScreenerTable({
                 <tr
                   key={`${row.geo_level}-${row.region_id}`}
                   className="
+                    animate-screener-row
                     border-b border-outline-variant/40 last:border-0
                     hover:bg-primary-container/10 transition-colors duration-100
                   "
@@ -245,6 +247,13 @@ export function ScreenerTable({
                   <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
                     {row.median_price !== null
                       ? formatMetricValue(row.median_price, "currency")
+                      : "—"}
+                  </td>
+
+                  {/* Rent (ZORI) — exact monthly $, not the $K currency bucket */}
+                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
+                    {row.rent !== null
+                      ? `$${formatMetricValue(Math.round(row.rent), "number")}`
                       : "—"}
                   </td>
 

@@ -46,6 +46,7 @@ const CSV_COLUMNS = [
   { key: "score", label: "PIQ Score" },
   { key: "grade", label: "Grade" },
   { key: "median_price", label: "Median Price" },
+  { key: "rent", label: "Rent (ZORI)" },
   { key: "cap_rate", label: "Cap Rate %" },
   { key: "gross_yield", label: "Gross Yield %" },
   { key: "months_of_supply", label: "Months of Supply" },
