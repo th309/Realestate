@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeStateToCode } from '../common/geo';
@@ -13,6 +14,7 @@ const NATIONAL_MEDIAN_INCOME = 75000;
 // Traditional price-to-income affordability benchmark
 const PRICE_TO_INCOME_BENCHMARK = 3.5;
 
+@ApiTags('metrics')
 @Controller('api/metrics')
 export class MetricsController {
   constructor(
@@ -158,6 +160,9 @@ export class MetricsController {
    * Get overvalued percentage for counties (pre-calculated, latest period).
    */
   @Get('overvalued/counties')
+  @ApiOperation({
+    summary: 'Overvalued % for all counties (pre-calculated, latest period)',
+  })
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyOvervalued() {
     return this.precalculatedMapResponse('overvalued_pct', 'county', 'County');
@@ -167,6 +172,9 @@ export class MetricsController {
    * Get overvalued percentage for ZIPs (pre-calculated, latest period).
    */
   @Get('overvalued/zips')
+  @ApiOperation({
+    summary: 'Overvalued % for all ZIPs (pre-calculated, latest period)',
+  })
   @Header('Cache-Control', 'public, max-age=21600')
   async getZipOvervalued() {
     return this.precalculatedMapResponse('overvalued_pct', 'zip', 'Zip');
@@ -759,12 +767,16 @@ export class MetricsController {
    * pre-calculated in calculated_metrics on the latest period only.
    */
   @Get('months-of-supply/metros')
+  @ApiOperation({ summary: 'Months of supply for all metros (latest period)' })
   @Header('Cache-Control', 'public, max-age=21600')
   async getMetroMonthsOfSupply() {
     return this.precalculatedMapResponse('months_of_supply', 'metro', 'Metro');
   }
 
   @Get('months-of-supply/counties')
+  @ApiOperation({
+    summary: 'Months of supply for all counties (latest period)',
+  })
   @Header('Cache-Control', 'public, max-age=21600')
   async getCountyMonthsOfSupply() {
     return this.precalculatedMapResponse(
@@ -775,6 +787,7 @@ export class MetricsController {
   }
 
   @Get('months-of-supply/zips')
+  @ApiOperation({ summary: 'Months of supply for all ZIPs (latest period)' })
   @Header('Cache-Control', 'public, max-age=21600')
   async getZipMonthsOfSupply() {
     return this.precalculatedMapResponse('months_of_supply', 'zip', 'Zip');
