@@ -212,10 +212,17 @@ try {
   ok("record: doc excluded", !/README/.test(logged));
 
   // ---- stop-validators (Stop) ----
-  fs.writeFileSync(
-    logPath,
-    "packages/backend/src/billing/billing.controller.ts\npackages/frontend/lib/data/fetchers/f.ts\n",
-  );
+  // Logged files must be genuinely DIRTY in git to count, so create them as
+  // real untracked files (the git-status filter drops clean/committed entries).
+  const ctrlRel = "packages/backend/__ht__/billing/billing.controller.ts";
+  const dlRel = "packages/frontend/__ht__/lib/data/fetchers/f.ts";
+  fs.mkdirSync(path.join(projectDir, path.dirname(ctrlRel)), {
+    recursive: true,
+  });
+  fs.mkdirSync(path.join(projectDir, path.dirname(dlRel)), { recursive: true });
+  fs.writeFileSync(path.join(projectDir, ctrlRel), "export class C {}");
+  fs.writeFileSync(path.join(projectDir, dlRel), "export const f = 1;");
+  fs.writeFileSync(logPath, `${ctrlRel}\n${dlRel}\n`);
   const r1 = reason(run("stop-validators.js", { stop_hook_active: false }));
   ok("stop: code-reviewer", r1.includes("code-reviewer"));
   ok(
@@ -226,7 +233,14 @@ try {
   ok("stop: data-layer (lib/data)", r1.includes("data-layer-reviewer"));
   ok("stop: log cleared after fire", fs.readFileSync(logPath, "utf8") === "");
 
-  fs.writeFileSync(logPath, "packages/backend/src/x.controller.ts\n");
+  // The fix: a clean/committed logged file is dropped (no false dispatch).
+  fs.writeFileSync(logPath, "CLAUDE.md\n"); // tracked + clean this session
+  ok(
+    "stop: clean/committed file dropped (git-status filter)",
+    run("stop-validators.js", { stop_hook_active: false }).trim() === "",
+  );
+
+  fs.writeFileSync(logPath, `${ctrlRel}\n`);
   ok(
     "stop: loop guard allows (stop_hook_active)",
     run("stop-validators.js", { stop_hook_active: true }).trim() === "",
