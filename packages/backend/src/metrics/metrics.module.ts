@@ -14,6 +14,10 @@ import { OvervaluedMetricsMetrosService } from './pipelines/overvalued-metrics-m
 import { OvervaluedMetricsCountiesService } from './pipelines/overvalued-metrics-counties.service';
 import { OvervaluedMetricsZipsService } from './pipelines/overvalued-metrics-zips.service';
 import { MetricsPersistenceService } from './pipelines/metrics-persistence.service';
+import { FiveYearGrowthMetroService } from './pipelines/five-year-growth-metro.service';
+import { FiveYearGrowthAggregateService } from './pipelines/five-year-growth-aggregate.service';
+import { FiveYearGrowthGranularService } from './pipelines/five-year-growth-granular.service';
+import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -31,6 +35,10 @@ import { MetricsPersistenceService } from './pipelines/metrics-persistence.servi
     OvervaluedMetricsZipsService,
     OvervaluedMetricsService,
     MetricsPersistenceService,
+    FiveYearGrowthMetroService,
+    FiveYearGrowthAggregateService,
+    FiveYearGrowthGranularService,
+    FiveYearGrowthService,
   ],
   exports: [CalculatedMetricsService, InventorySurplusService],
 })
