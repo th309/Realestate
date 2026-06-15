@@ -475,8 +475,9 @@ interface CliArgs {
  * BLS QCEW publishes ~6 months after quarter end:
  *   Q1 → ~July, Q2 → ~October, Q3 → ~January, Q4 → ~April.
  *
- * Mirrors the bash logic in `.github/workflows/economic-monthly-import.yml`
- * (`steps.qcew_period`) so the GitHub Action and this script stay in lockstep.
+ * This is the single source of truth for the default QCEW quarter. (The old
+ * economic-monthly-import.yml that mirrored this bash logic was retired; QCEW
+ * now imports via scripts/import-all-non-zillow.ts in the weekly pipeline.)
  *   Jan-Mar → previous-year Q3
  *   Apr-Jun → previous-year Q4
  *   Jul-Sep → current-year  Q1
@@ -510,9 +511,9 @@ function parseCliArgs(argv: string[]): CliArgs {
 
   if (!yearStr && !qtrStr) {
     // Neither flag given: default to most-recently-published QCEW quarter.
-    // This keeps the legacy `npx tsx download-qcew-employment.ts` (no flags)
-    // invocation in `.github/workflows/economic-monthly-import.yml` working
-    // after Phase 1.4 made the sector-ingest path the default.
+    // This keeps the no-flag `npx tsx download-qcew-employment.ts` invocation
+    // (run via scripts/import-all-non-zillow.ts) working after Phase 1.4 made
+    // the sector-ingest path the default.
     const def = defaultQcewPeriod();
     year = def.year;
     qtr = def.qtr;

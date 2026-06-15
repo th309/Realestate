@@ -18,7 +18,7 @@ on:
         required: false
         default: "all"
         type: choice
-        options: [all, zillow, realtor, economic, permits, hud]
+        options: [all, zillow, realtor, economic, permits, hud, redfin]
       force_refresh:
         description: "Run post-import refresh even if no new data landed"
         required: false
@@ -66,12 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           case "$SOURCE" in
-            all)      ONLY="realtor,economic,census,permits,hud" ;;
+            all)      ONLY="realtor,economic,census,permits,hud,redfin" ;;
             realtor)  ONLY="realtor" ;;
             economic) ONLY="economic,census" ;;
             permits)  ONLY="permits" ;;
             hud)      ONLY="hud" ;;
-            *)        ONLY="realtor,economic,census,permits,hud" ;;
+            redfin)   ONLY="redfin" ;;
+            *)        ONLY="realtor,economic,census,permits,hud,redfin" ;;
           esac
           echo ">>> import-all-non-zillow --only=$ONLY"
           npx tsx scripts/import-all-non-zillow.ts --only="$ONLY"
