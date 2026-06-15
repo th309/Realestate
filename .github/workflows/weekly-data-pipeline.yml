@@ -105,12 +105,22 @@ jobs:
           fi
 
   # Heavy recompute (calculated metrics + PIQ scoring + validation + calibration).
-  # Runs only when the import job saw a period advance. workflow_call = synchronous
-  # and failure-surfacing, on the SAME ref as this orchestrator.
+  # Dispatches post-import-refresh.yml only when the import job saw a period
+  # advance. Uses createWorkflowDispatch (the proven pattern the old import
+  # workflows used) rather than a reusable `uses:` call.
   refresh:
     needs: import
     if: ${{ needs.import.outputs.has_new_data == 'true' }}
-    uses: ./.github/workflows/post-import-refresh.yml
-    secrets: inherit
-    with:
-      trigger_source: weekly-data-pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'post-import-refresh.yml',
+              ref: 'main',
+              inputs: { trigger_source: 'weekly-data-pipeline' }
+            });
+            console.log('Dispatched post-import-refresh (new data detected).');
