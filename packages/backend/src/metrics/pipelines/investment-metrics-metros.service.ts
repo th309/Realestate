@@ -1,3 +1,4 @@
+// FILE-SIZE EXCEPTION (CLAUDE.md §1.3): one cohesive investment-metrics DB pipeline method; splitting it further risks behavior. See docs/superpowers/specs/2026-06-15-calculated-metrics-service-refactor-design.md.
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
