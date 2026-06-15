@@ -1,0 +1,115 @@
+name: Weekly Data Pipeline
+
+# Single weekly poll that replaces the old per-source monthly import crons
+# (which silently no-op'd from Feb–Jun 2026 by calling deleted scripts).
+# Imports run idempotently; the heavy post-import refresh/scoring fires ONLY when
+# a new data period actually lands. A quiet week is a green no-op, not a failure.
+
+on:
+  schedule:
+    # Tuesdays 04:00 UTC — finishes before the Tue ~10–11am ET "scores updated"
+    # send (Tuesday = peak B2B email open/click).
+    - cron: "0 4 * * 2"
+
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Which source(s) to import"
+        required: false
+        default: "all"
+        type: choice
+        options: [all, zillow, realtor, economic, permits, hud]
+      force_refresh:
+        description: "Run post-import refresh even if no new data landed"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      has_new_data: ${{ steps.decide.outputs.has_new_data }}
+    env:
+      SOURCE: ${{ github.event.inputs.source || 'all' }}
+      FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
+      SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+      SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+      NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+      SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+
+      - name: Snapshot freshness BEFORE import
+        id: before
+        run: |
+          set -euo pipefail
+          # tail -1: drop any dotenvx/tsx banner lines; keep only the JSON line.
+          P=$(npx tsx scripts/lib/latest-periods.ts | tail -1)
+          echo "BEFORE: $P"
+          echo "periods=$P" >> "$GITHUB_OUTPUT"
+
+      - name: Import Zillow
+        if: ${{ env.SOURCE == 'all' || env.SOURCE == 'zillow' }}
+        run: |
+          set -euo pipefail
+          npx tsx scripts/sources/zillow/import-zillow.ts
+
+      - name: Import non-Zillow (selected sources)
+        if: ${{ env.SOURCE != 'zillow' }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE" in
+            all)      ONLY="realtor,economic,census,permits,hud" ;;
+            realtor)  ONLY="realtor" ;;
+            economic) ONLY="economic,census" ;;
+            permits)  ONLY="permits" ;;
+            hud)      ONLY="hud" ;;
+            *)        ONLY="realtor,economic,census,permits,hud" ;;
+          esac
+          echo ">>> import-all-non-zillow --only=$ONLY"
+          npx tsx scripts/import-all-non-zillow.ts --only="$ONLY"
+
+      - name: Snapshot freshness AFTER import
+        id: after
+        run: |
+          set -euo pipefail
+          P=$(npx tsx scripts/lib/latest-periods.ts | tail -1)
+          echo "AFTER: $P"
+          echo "periods=$P" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether new data landed
+        id: decide
+        run: |
+          set -euo pipefail
+          BEFORE='${{ steps.before.outputs.periods }}'
+          AFTER='${{ steps.after.outputs.periods }}'
+          echo "before: $BEFORE"
+          echo "after:  $AFTER"
+          if [ "$FORCE_REFRESH" = "true" ]; then
+            echo "force_refresh requested -> refresh"
+            echo "has_new_data=true" >> "$GITHUB_OUTPUT"
+          elif [ "$BEFORE" != "$AFTER" ]; then
+            echo "new data detected -> refresh"
+            echo "has_new_data=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no new data this week -> green no-op, skipping refresh"
+            echo "has_new_data=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Heavy recompute (calculated metrics + PIQ scoring + validation + calibration).
+  # Runs only when the import job saw a period advance. workflow_call = synchronous
+  # and failure-surfacing, on the SAME ref as this orchestrator.
+  refresh:
+    needs: import
+    if: ${{ needs.import.outputs.has_new_data == 'true' }}
+    uses: ./.github/workflows/post-import-refresh.yml
+    secrets: inherit
+    with:
+      trigger_source: weekly-data-pipeline
