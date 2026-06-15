@@ -90,9 +90,27 @@ export const INVESTOR_METRICS: Record<string, MetricConfig> = {
     dataSource: "calculated",
     apiEndpoint: "/api/metrics/overvalued/{geo}",
     keyField: "auto",
-    supportedGeos: ["metro"],
+    // County/zip overvalued is now pre-calculated in calculated_metrics
+    // (latest period only); metro keeps its on-the-fly fallback.
+    supportedGeos: ["metro", "county", "zip"],
     valueField: "overvalued_pct",
     hasTimeSeries: true,
+    favorableDirection: "lower",
+  },
+
+  months_of_supply: {
+    id: "months_of_supply",
+    title: "Months of Supply",
+    // 1-decimal display ("4.2"); dynamic min→p95 color scale (no fixed range).
+    format: "index_1dec",
+    dataSource: "calculated",
+    apiEndpoint: "/api/metrics/months-of-supply/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county", "zip"],
+    valueField: "months_of_supply",
+    // MOS is stamped on the latest period only (Realtor active/pending proxy),
+    // so there is no historical series to chart.
+    hasTimeSeries: false,
     favorableDirection: "lower",
   },
 

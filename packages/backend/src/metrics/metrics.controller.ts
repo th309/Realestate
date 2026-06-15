@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeStateToCode } from '../common/geo';
@@ -13,12 +14,38 @@ const NATIONAL_MEDIAN_INCOME = 75000;
 // Traditional price-to-income affordability benchmark
 const PRICE_TO_INCOME_BENCHMARK = 3.5;
 
+@ApiTags('metrics')
 @Controller('api/metrics')
 export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly calculatedMetricsService: CalculatedMetricsService,
   ) {}
+
+  /**
+   * Shared response for map metrics that exist ONLY as pre-calculated columns in
+   * calculated_metrics (months_of_supply, county/zip overvalued_pct). They are
+   * produced by the monthly calculated-metrics refresh and have no on-the-fly
+   * fallback, so an empty result reports success:false rather than computing.
+   */
+  private async precalculatedMapResponse(
+    metricName: 'months_of_supply' | 'overvalued_pct',
+    geographyType: 'metro' | 'county' | 'zip',
+    geographyLabel: string,
+  ) {
+    const pre = await this.calculatedMetricsService.getInvestmentMetricsForMap(
+      metricName,
+      geographyType,
+    );
+    return {
+      success: pre.success && pre.data.length > 0,
+      count: pre.data.length,
+      geography: geographyLabel,
+      metric: metricName,
+      source: 'pre-calculated',
+      data: pre.data,
+    };
+  }
 
   /**
    * Get overvalued percentage for metros
@@ -127,6 +154,30 @@ export class MetricsController {
       },
       data: results,
     };
+  }
+
+  /**
+   * Get overvalued percentage for counties (pre-calculated, latest period).
+   */
+  @Get('overvalued/counties')
+  @ApiOperation({
+    summary: 'Overvalued % for all counties (pre-calculated, latest period)',
+  })
+  @Header('Cache-Control', 'public, max-age=21600')
+  async getCountyOvervalued() {
+    return this.precalculatedMapResponse('overvalued_pct', 'county', 'County');
+  }
+
+  /**
+   * Get overvalued percentage for ZIPs (pre-calculated, latest period).
+   */
+  @Get('overvalued/zips')
+  @ApiOperation({
+    summary: 'Overvalued % for all ZIPs (pre-calculated, latest period)',
+  })
+  @Header('Cache-Control', 'public, max-age=21600')
+  async getZipOvervalued() {
+    return this.precalculatedMapResponse('overvalued_pct', 'zip', 'Zip');
   }
 
   /**
@@ -711,6 +762,37 @@ export class MetricsController {
   /**
    * Get all investment metrics for a specific metro
    */
+  /**
+   * Months of supply (Realtor active/pending proxy) for the map — all geos,
+   * pre-calculated in calculated_metrics on the latest period only.
+   */
+  @Get('months-of-supply/metros')
+  @ApiOperation({ summary: 'Months of supply for all metros (latest period)' })
+  @Header('Cache-Control', 'public, max-age=21600')
+  async getMetroMonthsOfSupply() {
+    return this.precalculatedMapResponse('months_of_supply', 'metro', 'Metro');
+  }
+
+  @Get('months-of-supply/counties')
+  @ApiOperation({
+    summary: 'Months of supply for all counties (latest period)',
+  })
+  @Header('Cache-Control', 'public, max-age=21600')
+  async getCountyMonthsOfSupply() {
+    return this.precalculatedMapResponse(
+      'months_of_supply',
+      'county',
+      'County',
+    );
+  }
+
+  @Get('months-of-supply/zips')
+  @ApiOperation({ summary: 'Months of supply for all ZIPs (latest period)' })
+  @Header('Cache-Control', 'public, max-age=21600')
+  async getZipMonthsOfSupply() {
+    return this.precalculatedMapResponse('months_of_supply', 'zip', 'Zip');
+  }
+
   @Get('investment/:geoType/:geoId')
   @Header('Cache-Control', 'public, max-age=21600')
   async getInvestmentMetrics(

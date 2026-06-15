@@ -346,6 +346,33 @@ body {
   }
 }
 
+/* Screener — per-row entrance. Rows set their own animation-delay inline
+   (capped, staggered by index) so results cascade in; this supplies the
+   keyframe + utility that delay was missing. Honors reduced-motion. */
+@keyframes screener-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-screener-row {
+  opacity: 0;
+  animation: screener-row-in 0.4s
+    var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1)) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-screener-row {
+    opacity: 1;
+    animation: none;
+  }
+}
+
 /* ── Print: hide site chrome on all pages ────────────────────────────── */
 @media print {
   /* Hide navigation bar, site footer, and dev toolbar globally */

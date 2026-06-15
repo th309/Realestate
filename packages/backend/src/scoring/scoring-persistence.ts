@@ -6,38 +6,79 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { ScoreType } from './formula-weights';
+import { ConfidenceLevel } from './formula-weights';
 import { ScoreResult } from './scoring.types';
 
+/** Column-level inputs for a single propertyiq_scores_v2 row. */
+export interface ScoreRowInput {
+  geography: string;
+  locationId: string;
+  locationName: string | null;
+  score: number | null;
+  grade: string | null;
+  confidence: number | null;
+  confidenceLevel: ConfidenceLevel | null;
+  medianPrice: number | null;
+  scoreDate: string;
+  createdAt: string;
+  /** Raw input metrics; stored in the jsonb z_scores column as an OBJECT. */
+  zScores: Record<string, number | null> | null;
+}
+
 /**
- * Build database rows from ScoreResult objects for upsert.
+ * Build a single propertyiq_scores_v2 row. THE one place the row/column shape
+ * lives, so the batch path (buildScoreRows) and the all-locations calculation
+ * path (calculateAndPersistPropertyIqScores) cannot drift.
+ *
+ * z_scores MUST be an object, not a JSON.stringify'd string: the column is jsonb,
+ * so a stringified value is stored as a quoted string and read back as null by
+ * every consumer that checks `typeof z_scores === 'object'`.
+ */
+export function buildScoreRow(input: ScoreRowInput): Record<string, any> {
+  return {
+    geography: input.geography,
+    location_id: input.locationId,
+    location_name: input.locationName,
+    score_type: 'propertyiq',
+    score: input.score,
+    grade: input.grade,
+    confidence: input.confidence,
+    confidence_level: input.confidenceLevel,
+    median_price: input.medianPrice,
+    score_date: input.scoreDate,
+    created_at: input.createdAt,
+    z_scores: input.zScores ?? null,
+  };
+}
+
+/**
+ * Build database rows from ScoreResult objects for upsert. Only writes the
+ * propertyiq score type — legacy types are historical and no longer computed.
  */
 export function buildScoreRows(
   results: ScoreResult[],
   scoreDate: string,
 ): Array<Record<string, any>> {
-  const rows: Array<Record<string, any>> = [];
   const createdAt = new Date().toISOString();
+  const rows: Array<Record<string, any>> = [];
   for (const result of results) {
-    // Only write propertyiq rows — legacy score types are historical and no longer computed
-    for (const scoreType of ['propertyiq'] as ScoreType[]) {
-      const scoreData = result.scores[scoreType];
-      if (!scoreData) continue;
-      rows.push({
+    const scoreData = result.scores.propertyiq;
+    if (!scoreData) continue;
+    rows.push(
+      buildScoreRow({
         geography: result.geography,
-        location_id: result.location_id,
-        location_name: result.location_name,
-        score_type: scoreType,
+        locationId: result.location_id,
+        locationName: result.location_name,
         score: scoreData.score,
         grade: scoreData.grade,
         confidence: scoreData.confidence,
-        confidence_level: scoreData.confidence_level,
-        median_price: result.median_price,
-        score_date: scoreDate,
-        created_at: createdAt,
-        z_scores: result.z_scores || null,
-      });
-    }
+        confidenceLevel: scoreData.confidence_level,
+        medianPrice: result.median_price,
+        scoreDate,
+        createdAt,
+        zScores: result.z_scores ?? null,
+      }),
+    );
   }
   return rows;
 }

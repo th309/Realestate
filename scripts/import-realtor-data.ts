@@ -19,25 +19,36 @@
  *   npx tsx scripts/import-realtor-data.ts --geo=zip --batch=500 --since=202601
  */
 
-import { createReadStream, existsSync } from 'fs';
-import { join } from 'path';
-import { parse } from 'csv-parse';
-import { createRealtorImportClient } from './realtor-import/db-client';
-import { downloadDataset, loadFromFile } from './realtor-import/download';
+import { createReadStream, existsSync } from "fs";
+import { join } from "path";
+import { parse } from "csv-parse";
+import { createRealtorImportClient } from "./realtor-import/db-client";
+import { downloadDataset, loadFromFile } from "./realtor-import/download";
 import {
-  parseNationalCSV, importNationalRecords,
-  parseStateCSV, importStateRecords,
-  parseMetroCoreCSV, parseMetroHotnessCSV, mergeMetroData, importMetroRecords,
-  parseCountyCoreCSV, parseCountyHotnessCSV, mergeCountyData, importCountyRecords,
+  parseNationalCSV,
+  importNationalRecords,
+  parseStateCSV,
+  importStateRecords,
+  parseMetroCoreCSV,
+  parseMetroHotnessCSV,
+  mergeMetroData,
+  importMetroRecords,
+  parseCountyCoreCSV,
+  parseCountyHotnessCSV,
+  mergeCountyData,
+  importCountyRecords,
   parseZipHotnessCSV,
-} from './realtor-import/csv-processor';
-import { REALTOR_DATASETS, RealtorCombinedRecord } from './realtor-import/types';
-import type { ImportResult } from './realtor-import/types';
-import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
-import { createIngestionLogger } from './utils/ingestion-logger';
-import { normalizeZipKey } from './utils/zip';
+} from "./realtor-import/csv-processor";
+import {
+  REALTOR_DATASETS,
+  RealtorCombinedRecord,
+} from "./realtor-import/types";
+import type { ImportResult } from "./realtor-import/types";
+import { refreshCalculatedMetrics } from "./calculations/calculated-metrics-runner";
+import { createIngestionLogger } from "./utils/ingestion-logger";
+import { normalizeZipKey } from "./utils/zip";
 
-const DATA_DIR = join(process.cwd(), 'data/realtor');
+const DATA_DIR = join(process.cwd(), "data/realtor");
 
 // ────────────────────────────────────────────────────────────────────────────
 // ZIP streaming helpers (extracted from import-realtor-zip.ts)
@@ -50,7 +61,8 @@ function parseYYYYMM(yyyymm: string): Date {
 }
 
 function parseNumeric(value: string | undefined): number | null {
-  if (!value || value === '' || value === 'null' || value === 'undefined') return null;
+  if (!value || value === "" || value === "null" || value === "undefined")
+    return null;
   const num = parseFloat(value);
   return isNaN(num) ? null : num;
 }
@@ -60,9 +72,14 @@ function parseInteger(value: string | undefined): number | null {
   return num !== null ? Math.round(num) : null;
 }
 
-function parseZipRow(row: any, hotnessMap: Map<string, Partial<RealtorCombinedRecord>>): any {
+function parseZipRow(
+  row: any,
+  hotnessMap: Map<string, Partial<RealtorCombinedRecord>>,
+): any {
   const periodDate = parseYYYYMM(row.month_date_yyyymm);
-  const postalCode = row.postal_code ? normalizeZipKey(String(row.postal_code)) : row.postal_code;
+  const postalCode = row.postal_code
+    ? normalizeZipKey(String(row.postal_code))
+    : row.postal_code;
 
   const record: any = {
     period_date: periodDate,
@@ -95,9 +112,15 @@ function parseZipRow(row: any, hotnessMap: Map<string, Partial<RealtorCombinedRe
     pending_listing_count: parseInteger(row.pending_listing_count),
     pending_listing_count_mm: parseNumeric(row.pending_listing_count_mm),
     pending_listing_count_yy: parseNumeric(row.pending_listing_count_yy),
-    median_listing_price_per_square_foot: parseNumeric(row.median_listing_price_per_square_foot),
-    median_listing_price_per_square_foot_mm: parseNumeric(row.median_listing_price_per_square_foot_mm),
-    median_listing_price_per_square_foot_yy: parseNumeric(row.median_listing_price_per_square_foot_yy),
+    median_listing_price_per_square_foot: parseNumeric(
+      row.median_listing_price_per_square_foot,
+    ),
+    median_listing_price_per_square_foot_mm: parseNumeric(
+      row.median_listing_price_per_square_foot_mm,
+    ),
+    median_listing_price_per_square_foot_yy: parseNumeric(
+      row.median_listing_price_per_square_foot_yy,
+    ),
     median_square_feet: parseInteger(row.median_square_feet),
     median_square_feet_mm: parseNumeric(row.median_square_feet_mm),
     median_square_feet_yy: parseNumeric(row.median_square_feet_yy),
@@ -114,8 +137,9 @@ function parseZipRow(row: any, hotnessMap: Map<string, Partial<RealtorCombinedRe
   };
 
   // Merge hotness data if available
-  const dateStr = periodDate.getFullYear().toString() +
-    (periodDate.getMonth() + 1).toString().padStart(2, '0');
+  const dateStr =
+    periodDate.getFullYear().toString() +
+    (periodDate.getMonth() + 1).toString().padStart(2, "0");
   const hotnessKey = `${dateStr}_${postalCode}`;
   const hotness = hotnessMap.get(hotnessKey);
   if (hotness) {
@@ -131,17 +155,15 @@ async function processZipBatch(
 ): Promise<{ inserted: number; errors: number }> {
   if (records.length === 0) return { inserted: 0, errors: 0 };
 
-  const formattedBatch = records.map(record => ({
+  const formattedBatch = records.map((record) => ({
     ...record,
-    period_date: record.period_date.toISOString().split('T')[0],
+    period_date: record.period_date.toISOString().split("T")[0],
   }));
 
-  const { error } = await supabase
-    .from('realtor_zip')
-    .upsert(formattedBatch, {
-      onConflict: 'period_date,postal_code',
-      ignoreDuplicates: false,
-    });
+  const { error } = await supabase.from("realtor_zip").upsert(formattedBatch, {
+    onConflict: "period_date,postal_code",
+    ignoreDuplicates: false,
+  });
 
   if (error) return { inserted: 0, errors: records.length };
   return { inserted: records.length, errors: 0 };
@@ -197,7 +219,9 @@ async function streamImportZipCore(
             errors += result.errors;
 
             if (totalRead % 10000 === 0) {
-              process.stdout.write(`\r  Progress: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted`);
+              process.stdout.write(
+                `\r  Progress: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted`,
+              );
             }
           }
         }
@@ -209,7 +233,9 @@ async function streamImportZipCore(
           errors += result.errors;
         }
 
-        console.log(`\n  Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted${skipped > 0 ? `, ${skipped.toLocaleString()} skipped (before filter)` : ''}`);
+        console.log(
+          `\n  Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted${skipped > 0 ? `, ${skipped.toLocaleString()} skipped (before filter)` : ""}`,
+        );
 
         fileStream.destroy();
         resolve({ recordsInserted, errors });
@@ -229,11 +255,11 @@ async function importNational(
   supabase: any,
   useHistory: boolean,
 ): Promise<ImportResult> {
-  const config = REALTOR_DATASETS.find(d => d.id === 'realtor-national')!;
+  const config = REALTOR_DATASETS.find((d) => d.id === "realtor-national")!;
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
-    tableName: 'realtor_national',
-    datasetId: 'realtor-national',
+    source: "realtor",
+    tableName: "realtor_national",
+    datasetId: "realtor-national",
   });
 
   let csvContent: string;
@@ -241,21 +267,40 @@ async function importNational(
     const result = loadFromFile(config.historyFile);
     if (!result.success) {
       await logger.fail(`Failed to load file: ${result.error}`);
-      return { datasetId: 'national', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+      return {
+        datasetId: "national",
+        success: false,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        errors: 1,
+      };
     }
     csvContent = result.csvContent!;
   } else {
     const result = await downloadDataset(config.downloadUrl);
     if (!result.success) {
       await logger.fail(`Failed to download: ${result.error}`);
-      return { datasetId: 'national', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+      return {
+        datasetId: "national",
+        success: false,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        errors: 1,
+      };
     }
     csvContent = result.csvContent!;
   }
 
   const records = parseNationalCSV(csvContent);
   console.log(`  Parsed ${records.length} records`);
-  if (records.length === 0) return { datasetId: 'national', success: true, recordsInserted: 0, recordsUpdated: 0, errors: 0 };
+  if (records.length === 0)
+    return {
+      datasetId: "national",
+      success: true,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 0,
+    };
 
   await logger.start(records.length);
   const result = await importNationalRecords(supabase, records);
@@ -272,11 +317,11 @@ async function importState(
   supabase: any,
   useHistory: boolean,
 ): Promise<ImportResult> {
-  const config = REALTOR_DATASETS.find(d => d.id === 'realtor-state')!;
+  const config = REALTOR_DATASETS.find((d) => d.id === "realtor-state")!;
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
-    tableName: 'realtor_state',
-    datasetId: 'realtor-state',
+    source: "realtor",
+    tableName: "realtor_state",
+    datasetId: "realtor-state",
   });
 
   let csvContent: string;
@@ -284,21 +329,40 @@ async function importState(
     const result = loadFromFile(config.historyFile);
     if (!result.success) {
       await logger.fail(`Failed to load file: ${result.error}`);
-      return { datasetId: 'state', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+      return {
+        datasetId: "state",
+        success: false,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        errors: 1,
+      };
     }
     csvContent = result.csvContent!;
   } else {
     const result = await downloadDataset(config.downloadUrl);
     if (!result.success) {
       await logger.fail(`Failed to download: ${result.error}`);
-      return { datasetId: 'state', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+      return {
+        datasetId: "state",
+        success: false,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        errors: 1,
+      };
     }
     csvContent = result.csvContent!;
   }
 
   const records = parseStateCSV(csvContent);
   console.log(`  Parsed ${records.length} records`);
-  if (records.length === 0) return { datasetId: 'state', success: true, recordsInserted: 0, recordsUpdated: 0, errors: 0 };
+  if (records.length === 0)
+    return {
+      datasetId: "state",
+      success: true,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 0,
+    };
 
   await logger.start(records.length);
   const result = await importStateRecords(supabase, records);
@@ -311,37 +375,56 @@ async function importState(
   return result;
 }
 
-async function importMetro(
-  supabase: any,
-): Promise<ImportResult> {
-  const config = REALTOR_DATASETS.find(d => d.id === 'realtor-metro')!;
+async function importMetro(supabase: any): Promise<ImportResult> {
+  const config = REALTOR_DATASETS.find((d) => d.id === "realtor-metro")!;
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
-    tableName: 'realtor_metro',
-    datasetId: 'realtor-metro',
+    source: "realtor",
+    tableName: "realtor_metro",
+    datasetId: "realtor-metro",
   });
 
   // Load core data
-  console.log('  Loading core data...');
+  console.log("  Loading core data...");
   const coreResult = loadFromFile(config.historyFile!);
   if (!coreResult.success) {
     await logger.fail(`Failed to load core file: ${coreResult.error}`);
-    return { datasetId: 'metro', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "metro",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
   // Load hotness data
-  console.log('  Loading hotness data...');
+  console.log("  Loading hotness data...");
   const hotnessResult = loadFromFile(config.hotnessHistoryFile!);
   if (!hotnessResult.success) {
     await logger.fail(`Failed to load hotness file: ${hotnessResult.error}`);
-    return { datasetId: 'metro', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "metro",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
   const coreRecords = parseMetroCoreCSV(coreResult.csvContent!);
   const hotnessMap = parseMetroHotnessCSV(hotnessResult.csvContent!);
   const mergedRecords = mergeMetroData(coreRecords, hotnessMap);
-  console.log(`  Parsed ${coreRecords.length} core + ${hotnessMap.size} hotness => ${mergedRecords.length} merged`);
-  if (mergedRecords.length === 0) return { datasetId: 'metro', success: true, recordsInserted: 0, recordsUpdated: 0, errors: 0 };
+  console.log(
+    `  Parsed ${coreRecords.length} core + ${hotnessMap.size} hotness => ${mergedRecords.length} merged`,
+  );
+  if (mergedRecords.length === 0)
+    return {
+      datasetId: "metro",
+      success: true,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 0,
+    };
 
   await logger.start(mergedRecords.length);
   const result = await importMetroRecords(supabase, mergedRecords);
@@ -354,35 +437,54 @@ async function importMetro(
   return result;
 }
 
-async function importCounty(
-  supabase: any,
-): Promise<ImportResult> {
-  const config = REALTOR_DATASETS.find(d => d.id === 'realtor-county')!;
+async function importCounty(supabase: any): Promise<ImportResult> {
+  const config = REALTOR_DATASETS.find((d) => d.id === "realtor-county")!;
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
-    tableName: 'realtor_county',
-    datasetId: 'realtor-county',
+    source: "realtor",
+    tableName: "realtor_county",
+    datasetId: "realtor-county",
   });
 
-  console.log('  Loading core data...');
+  console.log("  Loading core data...");
   const coreResult = loadFromFile(config.historyFile!);
   if (!coreResult.success) {
     await logger.fail(`Failed to load core file: ${coreResult.error}`);
-    return { datasetId: 'county', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "county",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
-  console.log('  Loading hotness data...');
+  console.log("  Loading hotness data...");
   const hotnessResult = loadFromFile(config.hotnessHistoryFile!);
   if (!hotnessResult.success) {
     await logger.fail(`Failed to load hotness file: ${hotnessResult.error}`);
-    return { datasetId: 'county', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "county",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
   const coreRecords = parseCountyCoreCSV(coreResult.csvContent!);
   const hotnessMap = parseCountyHotnessCSV(hotnessResult.csvContent!);
   const mergedRecords = mergeCountyData(coreRecords, hotnessMap);
-  console.log(`  Parsed ${coreRecords.length} core + ${hotnessMap.size} hotness => ${mergedRecords.length} merged`);
-  if (mergedRecords.length === 0) return { datasetId: 'county', success: true, recordsInserted: 0, recordsUpdated: 0, errors: 0 };
+  console.log(
+    `  Parsed ${coreRecords.length} core + ${hotnessMap.size} hotness => ${mergedRecords.length} merged`,
+  );
+  if (mergedRecords.length === 0)
+    return {
+      datasetId: "county",
+      success: true,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 0,
+    };
 
   await logger.start(mergedRecords.length);
   const result = await importCountyRecords(supabase, mergedRecords);
@@ -402,15 +504,15 @@ async function importZip(
   limit: number | null,
   sinceDate: string | null,
 ): Promise<ImportResult> {
-  const config = REALTOR_DATASETS.find(d => d.id === 'realtor-zip')!;
+  const config = REALTOR_DATASETS.find((d) => d.id === "realtor-zip")!;
   const logger = createIngestionLogger(supabase, {
-    source: 'realtor',
-    tableName: 'realtor_zip',
-    datasetId: 'realtor-zip',
+    source: "realtor",
+    tableName: "realtor_zip",
+    datasetId: "realtor-zip",
   });
 
   // Load hotness data first (smaller file, fits in memory)
-  console.log('  Loading hotness data...');
+  console.log("  Loading hotness data...");
   let hotnessResult;
   if (useHistory) {
     hotnessResult = loadFromFile(config.hotnessHistoryFile!);
@@ -419,7 +521,13 @@ async function importZip(
   }
   if (!hotnessResult.success) {
     await logger.fail(`Failed to load hotness file: ${hotnessResult.error}`);
-    return { datasetId: 'zip', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "zip",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
   const hotnessMap = parseZipHotnessCSV(hotnessResult.csvContent!);
@@ -429,15 +537,25 @@ async function importZip(
 
   if (!useHistory) {
     // Current month mode: download and import core data directly
-    console.log('  Downloading current month core data...');
+    console.log("  Downloading current month core data...");
     const coreResult = await downloadDataset(config.downloadUrl);
     if (!coreResult.success) {
       await logger.fail(`Failed to download core data: ${coreResult.error}`);
-      return { datasetId: 'zip', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+      return {
+        datasetId: "zip",
+        success: false,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        errors: 1,
+      };
     }
 
-    const { parse: parseCSV } = await import('csv-parse/sync');
-    const rows = parseCSV(coreResult.csvContent!, { columns: true, skip_empty_lines: true, trim: true });
+    const { parse: parseCSV } = await import("csv-parse/sync");
+    const rows = parseCSV(coreResult.csvContent!, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
     console.log(`  Parsed ${rows.length.toLocaleString()} core records`);
 
     let recordsInserted = 0;
@@ -458,18 +576,37 @@ async function importZip(
       errors: errors > 0 ? [`${errors} records failed`] : [],
     });
 
-    return { datasetId: 'zip', success: errors === 0, recordsInserted, recordsUpdated: 0, errors };
+    return {
+      datasetId: "zip",
+      success: errors === 0,
+      recordsInserted,
+      recordsUpdated: 0,
+      errors,
+    };
   }
 
   // History mode: stream from large file
-  console.log('  Streaming core data from history file...');
+  console.log("  Streaming core data from history file...");
   const coreFilePath = join(DATA_DIR, config.historyFile!);
   if (!existsSync(coreFilePath)) {
     await logger.fail(`Core history file not found: ${coreFilePath}`);
-    return { datasetId: 'zip', success: false, recordsInserted: 0, recordsUpdated: 0, errors: 1 };
+    return {
+      datasetId: "zip",
+      success: false,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: 1,
+    };
   }
 
-  const result = await streamImportZipCore(supabase, coreFilePath, hotnessMap, batchSize, limit, sinceDate);
+  const result = await streamImportZipCore(
+    supabase,
+    coreFilePath,
+    hotnessMap,
+    batchSize,
+    limit,
+    sinceDate,
+  );
 
   await logger.complete({
     recordsProcessed: result.recordsInserted + result.errors,
@@ -478,14 +615,20 @@ async function importZip(
     errors: result.errors > 0 ? [`${result.errors} records failed`] : [],
   });
 
-  return { datasetId: 'zip', success: result.errors === 0, recordsInserted: result.recordsInserted, recordsUpdated: 0, errors: result.errors };
+  return {
+    datasetId: "zip",
+    success: result.errors === 0,
+    recordsInserted: result.recordsInserted,
+    recordsUpdated: 0,
+    errors: result.errors,
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // Main
 // ────────────────────────────────────────────────────────────────────────────
 
-const VALID_GEOS = ['national', 'state', 'metro', 'county', 'zip'];
+const VALID_GEOS = ["national", "state", "metro", "county", "zip"];
 
 async function main() {
   const startTime = Date.now();
@@ -496,23 +639,23 @@ async function main() {
   let batchSize = 500;
   let limit: number | null = null;
   let sinceDate: string | null = null;
-  const useHistory = args.includes('--history');
-  const noRefresh = args.includes('--no-refresh');
+  const useHistory = args.includes("--history");
+  const noRefresh = args.includes("--no-refresh");
 
   for (const arg of args) {
-    if (arg.startsWith('--geo=')) {
-      geoFilters.push(arg.split('=')[1].toLowerCase());
+    if (arg.startsWith("--geo=")) {
+      geoFilters.push(arg.split("=")[1].toLowerCase());
     }
-    if (arg.startsWith('--batch=')) {
-      const val = parseInt(arg.split('=')[1]);
+    if (arg.startsWith("--batch=")) {
+      const val = parseInt(arg.split("=")[1]);
       if (!isNaN(val) && val > 0) batchSize = val;
     }
-    if (arg.startsWith('--limit=')) {
-      const val = parseInt(arg.split('=')[1]);
+    if (arg.startsWith("--limit=")) {
+      const val = parseInt(arg.split("=")[1]);
       if (!isNaN(val) && val > 0) limit = val;
     }
-    if (arg.startsWith('--since=')) {
-      sinceDate = arg.split('=')[1];
+    if (arg.startsWith("--since=")) {
+      sinceDate = arg.split("=")[1];
     }
   }
 
@@ -522,18 +665,20 @@ async function main() {
   for (const geo of geosToImport) {
     if (!VALID_GEOS.includes(geo)) {
       console.error(`Unknown geography: ${geo}`);
-      console.error(`Valid options: ${VALID_GEOS.join(', ')}`);
+      console.error(`Valid options: ${VALID_GEOS.join(", ")}`);
       process.exit(1);
     }
   }
 
-  console.log('Realtor.com Data Import');
-  console.log('='.repeat(60));
+  console.log("Realtor.com Data Import");
+  console.log("=".repeat(60));
   console.log(`Date: ${new Date().toISOString()}`);
-  console.log(`Mode: ${useHistory ? 'Historical files' : 'Current month download'}`);
-  console.log(`Geographies: ${geosToImport.join(', ')}`);
+  console.log(
+    `Mode: ${useHistory ? "Historical files" : "Current month download"}`,
+  );
+  console.log(`Geographies: ${geosToImport.join(", ")}`);
   if (sinceDate) console.log(`Since filter: ${sinceDate}`);
-  console.log('');
+  console.log("");
 
   const supabase = createRealtorImportClient();
 
@@ -546,20 +691,26 @@ async function main() {
     let result: ImportResult;
     try {
       switch (geo) {
-        case 'national':
+        case "national":
           result = await importNational(supabase, useHistory);
           break;
-        case 'state':
+        case "state":
           result = await importState(supabase, useHistory);
           break;
-        case 'metro':
+        case "metro":
           result = await importMetro(supabase);
           break;
-        case 'county':
+        case "county":
           result = await importCounty(supabase);
           break;
-        case 'zip':
-          result = await importZip(supabase, useHistory, batchSize, limit, sinceDate);
+        case "zip":
+          result = await importZip(
+            supabase,
+            useHistory,
+            batchSize,
+            limit,
+            sinceDate,
+          );
           break;
         default:
           continue;
@@ -583,23 +734,25 @@ async function main() {
   const totalRecords = results.reduce((sum, r) => sum + r.recordsInserted, 0);
   const totalErrors = results.reduce((sum, r) => sum + r.errors, 0);
 
-  console.log('\n' + '='.repeat(60));
-  console.log('IMPORT SUMMARY');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("IMPORT SUMMARY");
+  console.log("=".repeat(60));
 
   for (const result of results) {
-    const status = result.success ? 'OK' : 'ERRORS';
-    console.log(`${result.datasetId}: ${result.recordsInserted.toLocaleString()} records [${status}]`);
+    const status = result.success ? "OK" : "ERRORS";
+    console.log(
+      `${result.datasetId}: ${result.recordsInserted.toLocaleString()} records [${status}]`,
+    );
   }
 
-  console.log('-'.repeat(60));
+  console.log("-".repeat(60));
   console.log(`Total records: ${totalRecords.toLocaleString()}`);
   console.log(`Total errors: ${totalErrors}`);
   console.log(`Duration: ${duration}s`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   if (totalErrors > 0) {
-    console.log('\nImport completed with errors');
+    console.log("\nImport completed with errors");
     process.exit(1);
   }
 
@@ -608,10 +761,10 @@ async function main() {
     await refreshCalculatedMetrics(supabase);
   }
 
-  console.log('\nImport completed successfully');
+  console.log("\nImport completed successfully");
 }
 
-main().catch(error => {
-  console.error('Fatal error:', error);
+main().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });

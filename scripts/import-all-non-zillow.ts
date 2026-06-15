@@ -97,16 +97,23 @@ function runPipeline(pipeline: ImportPipeline): PipelineResult {
 
 function runFinalMetricRefresh(): boolean {
   console.log("\n" + "=".repeat(70));
-  console.log("  FINAL: Refreshing Calculated Metrics (single run)");
+  console.log("  FINAL: Refreshing affordability metrics (single run)");
   console.log("=".repeat(70) + "\n");
 
+  // Affordability (income_to_buy / affordable_home_price / years_to_save) via the
+  // consolidated runner. Investment / overvalued / 5yr-growth are produced by the
+  // NestJS CalculatedMetricsService (backend refresh CLI), not here.
   try {
-    execFileSync("npx", ["tsx", "scripts/refresh-all-metrics.ts"], {
-      stdio: "inherit",
-      timeout: 10 * 60 * 1000,
-      maxBuffer: 10 * 1024 * 1024,
-      shell: process.platform === "win32",
-    });
+    execFileSync(
+      "npx",
+      ["tsx", "scripts/calculations/calculated-metrics-runner.ts"],
+      {
+        stdio: "inherit",
+        timeout: 10 * 60 * 1000,
+        maxBuffer: 10 * 1024 * 1024,
+        shell: process.platform === "win32",
+      },
+    );
     return true;
   } catch (err: any) {
     console.error(`  Metric refresh failed: ${err.message?.substring(0, 200)}`);

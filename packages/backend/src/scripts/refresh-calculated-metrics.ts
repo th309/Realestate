@@ -6,8 +6,8 @@
  *   npx ts-node packages/backend/src/scripts/refresh-calculated-metrics.ts --year=2025
  *
  * Runs investment metrics + months_of_supply (all geos), overvalued_pct (all
- * geos), and 5-year growth (all geos). Affordability metrics are produced
- * separately (FRED-dependent) and are NOT included here.
+ * geos), 5-year growth (all geos), and affordability (income_to_buy /
+ * affordable_home_price / years_to_save, all geos — mortgage rate from FRED).
  *
  * Success gate for CI: output line starting with "TOTAL:".
  */
@@ -38,13 +38,32 @@ if (fs.existsSync(envLocalPath)) {
   }
 }
 
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { MetricsModule } from '../metrics/metrics.module';
 import { CalculatedMetricsService } from '../metrics/calculated-metrics.service';
+import { ScreenerModule } from '../screener/screener.module';
+import { ScreenerService } from '../screener/screener.service';
+
+/**
+ * Minimal context for the metrics CLI. MetricsModule + ScreenerModule each import
+ * only SupabaseModule, so this boots with just the DB credentials and avoids
+ * AppModule's unrelated env-hard-requirements (PLATFORM_CREDENTIALS_ENCRYPTION_KEY,
+ * OPENAI_API_KEY, ...) that crash the full-app bootstrap in CI.
+ */
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MetricsModule,
+    ScreenerModule,
+  ],
+})
+class MetricsCliModule {}
 
 async function main() {
   const start = Date.now();
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(MetricsCliModule, {
     logger: ['error', 'warn', 'log'],
   });
   try {
@@ -52,10 +71,16 @@ async function main() {
     const yearArg = process.argv.find((a) => a.startsWith('--year='));
     const year = yearArg ? Number(yearArg.split('=')[1]) : undefined;
     const res = await svc.refreshAllCalculatedMetrics(year);
+    const aff = res.affordability;
+    const affStored =
+      (aff?.incomeToBuy?.stored ?? 0) +
+      (aff?.affordableHomePrice?.stored ?? 0) +
+      (aff?.yearsToSave?.stored ?? 0);
     const stored =
       (res.investment?.stored ?? 0) +
       (res.overvalued?.stored ?? 0) +
-      (res.growth?.stored ?? 0);
+      (res.growth?.stored ?? 0) +
+      affStored;
 
     // Surface per-section errors without failing on a handful of region-level
     // issues (a monthly run with a few bad regions is still a useful run).
@@ -63,6 +88,9 @@ async function main() {
       ...(res.investment?.errors ?? []),
       ...(res.overvalued?.errors ?? []),
       ...(res.growth?.errors ?? []),
+      ...(aff?.incomeToBuy?.errors ?? []),
+      ...(aff?.affordableHomePrice?.errors ?? []),
+      ...(aff?.yearsToSave?.errors ?? []),
     ];
     if (errors.length > 0) {
       const uniqueErrors = [...new Set(errors)];
@@ -82,8 +110,24 @@ async function main() {
       process.exit(1);
     }
 
+    // Rebuild screener_snapshot after calculated metrics are fresh. This is a
+    // SUPPLEMENTARY step: a screener timeout/failure must not fail the primary
+    // calculated_metrics refresh (which already succeeded above), or it would
+    // block the whole monthly pipeline — including scoring — on a secondary
+    // snapshot. (screener_snapshot refresh currently exceeds statement_timeout;
+    // tracked separately for query optimization.)
+    let screenerRows = -1;
+    try {
+      screenerRows = await app.get(ScreenerService).refreshScreenerSnapshot();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(
+        `[WARN] screener_snapshot refresh failed (non-fatal): ${msg}`,
+      );
+    }
+
     console.log(
-      `TOTAL: ${stored} calculated_metrics rows stored in ${((Date.now() - start) / 1000).toFixed(1)}s`,
+      `TOTAL: ${stored} calculated_metrics rows stored, screener:${screenerRows} in ${((Date.now() - start) / 1000).toFixed(1)}s`,
     );
     await app.close();
     process.exit(0);

@@ -139,3 +139,10 @@ export {
 
 // Analyzer prefill bundle (address-driven field prefill with provenance)
 export { useAnalyzerPrefill } from "./useAnalyzerPrefill";
+
+// Market screener
+export {
+  useScreener,
+  type UseScreenerOptions,
+  type UseScreenerResult,
+} from "./useScreener";

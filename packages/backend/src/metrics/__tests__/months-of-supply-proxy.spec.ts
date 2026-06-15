@@ -1,19 +1,19 @@
-import { CalculatedMetricsService } from '../calculated-metrics.service';
+import { RealtorMosInputsService } from '../pipelines/realtor-mos-inputs.service';
+import {
+  calculateMonthsOfSupply,
+  calculateAbsorptionRate,
+} from '../metric-formulas';
 
 describe('months-of-supply Realtor proxy', () => {
-  const svc = new CalculatedMetricsService({} as any);
-
   it('computes MOS = active / pending', () => {
-    expect(svc.calculateMonthsOfSupply(600, 200)).toBeCloseTo(3.0);
+    expect(calculateMonthsOfSupply(600, 200)).toBeCloseTo(3.0);
   });
-
   it('returns null when pending is missing or zero', () => {
-    expect(svc.calculateMonthsOfSupply(600, 0)).toBeNull();
-    expect(svc.calculateMonthsOfSupply(600, undefined)).toBeNull();
+    expect(calculateMonthsOfSupply(600, 0)).toBeNull();
+    expect(calculateMonthsOfSupply(600, undefined)).toBeNull();
   });
-
   it('absorption is the reciprocal percentage', () => {
-    expect(svc.calculateAbsorptionRate(200, 600)).toBeCloseTo(33.33, 1);
+    expect(calculateAbsorptionRate(200, 600)).toBeCloseTo(33.33, 1);
   });
 });
 
@@ -69,8 +69,8 @@ describe('fetchRealtorMosInputs null-skip regression', () => {
       }),
     };
 
-    const svcWithFake = new CalculatedMetricsService(fakeSupabase as any);
-    const result = await (svcWithFake as any).fetchRealtorMosInputs('metro');
+    const svcWithFake = new RealtorMosInputsService(fakeSupabase as any);
+    const result = await svcWithFake.fetchRealtorMosInputs('metro');
 
     // Only the row with both values present should be stored
     expect(result.size).toBe(1);

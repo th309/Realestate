@@ -11,6 +11,22 @@ Runs the PropertyIQ backtest pipeline and generates a validation report from the
 
 > **NOTE:** The legacy 3-score system (HomeReady, InvestorEdge, MarketHealth) was replaced by a single PropertyIQ Score in March 2026. References to HomeReady/InvestorEdge in the report template and data dictionary below are from the legacy system and should be adapted to the single PropertyIQ Score when generating new reports.
 
+## Run as a Workflow (recommended)
+
+This report can be produced end-to-end by the `piq-validation` Workflow
+(`.claude/workflows/piq-validation.js`), which runs the compute, drafts the
+report, then verifies it with five independent adversarial agents
+(loop-until-clean, 3-round cap) before writing `validation_report.md`.
+
+The Workflow requires explicit opt-in and is billed (it can spawn ~20 agents).
+**Offer it, do not auto-run it:** when asked to generate the monthly report,
+ask the user whether to launch the `piq-validation` workflow or to run the
+manual steps below. The workflow never fires on its own.
+
+The deterministic editorial/structure checks live in
+`scripts/analysis/report-lint.js` (`node scripts/analysis/report-lint.js <report.md>`)
+and can be run by hand against any draft.
+
 ## Before You Start
 
 1. Read `references/report-template.md` in this skill's directory — it defines the exact report structure

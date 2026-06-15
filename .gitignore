@@ -153,3 +153,7 @@ NUL
 
 # Claude Code per-session scratch (stop-validators)
 .claude/.touched-files
+
+# PIQ morning-triage loop (loop-engineering v0.1) — ephemeral outputs
+tasks/triage/*.md
+# (run logs under scripts/loops/logs/ are already ignored by the logs/ rule above)

@@ -29,6 +29,7 @@
     "zillow:import:zip": "npx tsx scripts/zillow-import/import-zip.ts",
     "zillow:import:city": "npx tsx scripts/zillow-import/import-city.ts",
     "email:dev": "npm run dev -w @propertyiq/emails",
+    "build:libs": "npm run build -w @propertyiq/analyzer-core && npm run build -w @propertyiq/emails",
     "postinstall": "node scripts/postinstall-fix-types.js"
   },
   "dependencies": {

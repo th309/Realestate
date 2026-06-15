@@ -12,6 +12,7 @@ import {
   InfoIcon,
   MarketsIcon,
   ChartIcon,
+  ScreenerIcon,
 } from "@/src/components/common/Icons";
 
 /* ─── Types ─── */
@@ -42,6 +43,7 @@ export const NAV: NavEntry[] = [
     items: [
       { name: "Maps", href: "/map", icon: MapIcon },
       { name: "Markets", href: "/market", icon: MarketsIcon },
+      { name: "Screener", href: "/screener", icon: ScreenerIcon },
       { name: "Graphs", href: "/graphs", icon: TrendingIcon },
     ],
   },

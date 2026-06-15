@@ -20,7 +20,7 @@ import {
   parseIncrementalFlagsFromArgv,
 } from "../../lib";
 import type { ImportSourceResult } from "../../lib";
-import { refreshCalculatedMetrics } from "../../utils/refresh-calculated-metrics";
+import { refreshCalculatedMetrics } from "../../calculations/calculated-metrics-runner";
 import { buildNationalStateConfig } from "./realtor-config";
 import {
   buildMergeGeographies,

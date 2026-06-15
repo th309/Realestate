@@ -73,6 +73,7 @@ import { AnonymousModule } from './anonymous/anonymous.module';
 import { AnalyzerModule } from './analyzer/analyzer.module';
 import { RentcastModule } from './rentcast/rentcast.module';
 import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.module';
+import { ScreenerModule } from './screener/screener.module';
 
 @Module({
   imports: [
@@ -162,6 +163,7 @@ import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.modul
     AnalyzerModule,
     RentcastModule,
     SeoRevalidationModule,
+    ScreenerModule,
   ],
   controllers: [AppController],
   providers: [

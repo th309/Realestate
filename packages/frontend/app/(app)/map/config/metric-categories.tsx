@@ -145,6 +145,7 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
   icon: <SpeedIcon />,
   metrics: [
     metric("days_on_market"),
+    metric("months_of_supply"),
     metric("for_sale_inventory"),
     metric("inventory_yoy"),
     metric("pending_ratio"),
@@ -218,6 +219,7 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
   icon: <ShieldIcon />,
   metrics: [
     metric("days_on_market"),
+    metric("months_of_supply"),
     metric("for_sale_inventory"),
     metric("inventory_yoy"),
     metric("pending_ratio"),
