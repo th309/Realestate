@@ -69,8 +69,21 @@ export async function calculateAndPersistPropertyIqScores(
     z_scores: JSON.stringify(r.inputMetrics),
   }));
 
-  // 5. Persist
-  await upsertScoresWithRetry(supabase, rows);
+  // 5. Persist in batches. A single upsert of every row (e.g. ~29K zips) exceeds
+  // Postgres statement_timeout (error 57014) and writes nothing; chunking keeps
+  // each statement well under the limit. Track real stored/failed counts so a
+  // timeout surfaces as `errors` instead of a silent false success — the previous
+  // code ignored the upsert result and always reported `errors: 0`, so a timed-out
+  // zip batch logged "29213 scored" while the DB received nothing.
+  const PERSIST_BATCH_SIZE = 500;
+  let stored = 0;
+  let failed = 0;
+  for (let i = 0; i < rows.length; i += PERSIST_BATCH_SIZE) {
+    const chunk = rows.slice(i, i + PERSIST_BATCH_SIZE);
+    const ok = await upsertScoresWithRetry(supabase, chunk);
+    if (ok) stored += chunk.length;
+    else failed += chunk.length;
+  }
 
-  return { calculated: results.length, errors: 0, scoreDate };
+  return { calculated: stored, errors: failed, scoreDate };
 }

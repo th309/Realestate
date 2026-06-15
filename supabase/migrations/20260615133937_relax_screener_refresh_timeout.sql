@@ -1,0 +1,11 @@
+-- refresh_screener_snapshot() rebuilds screener_snapshot in a single
+-- INSERT...SELECT with three DISTINCT ON CTEs over the full score history
+-- (propertyiq_scores ~7.4M rows + calculated_metrics + zillow_zip), covering
+-- ~34K zips. That one statement legitimately exceeds the role's default
+-- statement_timeout (error 57014), so the monthly screener refresh was failing.
+--
+-- It is a batch maintenance rebuild called once a month by the calculated-metrics
+-- orchestrator — not a request-path query — so relax the timeout for THIS
+-- function only. (ALTER ... SET applies a per-function GUC; the function body is
+-- unchanged.)
+ALTER FUNCTION public.refresh_screener_snapshot() SET statement_timeout = '600s';
