@@ -9,6 +9,10 @@ import { InvestmentMetricsService } from './pipelines/investment-metrics.service
 import { InvestmentMetricsMetrosService } from './pipelines/investment-metrics-metros.service';
 import { InvestmentMetricsCountiesService } from './pipelines/investment-metrics-counties.service';
 import { InvestmentMetricsZipsService } from './pipelines/investment-metrics-zips.service';
+import { OvervaluedMetricsService } from './pipelines/overvalued-metrics.service';
+import { OvervaluedMetricsMetrosService } from './pipelines/overvalued-metrics-metros.service';
+import { OvervaluedMetricsCountiesService } from './pipelines/overvalued-metrics-counties.service';
+import { OvervaluedMetricsZipsService } from './pipelines/overvalued-metrics-zips.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -21,6 +25,10 @@ import { InvestmentMetricsZipsService } from './pipelines/investment-metrics-zip
     InvestmentMetricsCountiesService,
     InvestmentMetricsZipsService,
     InvestmentMetricsService,
+    OvervaluedMetricsMetrosService,
+    OvervaluedMetricsCountiesService,
+    OvervaluedMetricsZipsService,
+    OvervaluedMetricsService,
   ],
   exports: [CalculatedMetricsService, InventorySurplusService],
 })

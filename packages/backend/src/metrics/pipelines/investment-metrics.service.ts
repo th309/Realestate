@@ -5,6 +5,7 @@ import { PAGE_SIZE } from '../metric-pagination.constants';
 import { InvestmentMetricsMetrosService } from './investment-metrics-metros.service';
 import { InvestmentMetricsCountiesService } from './investment-metrics-counties.service';
 import { InvestmentMetricsZipsService } from './investment-metrics-zips.service';
+import { OvervaluedMetricsService } from './overvalued-metrics.service';
 
 @Injectable()
 export class InvestmentMetricsService {
@@ -13,6 +14,7 @@ export class InvestmentMetricsService {
     private readonly metros: InvestmentMetricsMetrosService,
     private readonly counties: InvestmentMetricsCountiesService,
     private readonly zips: InvestmentMetricsZipsService,
+    private readonly overvalued: OvervaluedMetricsService,
   ) {}
 
   /**
@@ -115,5 +117,57 @@ export class InvestmentMetricsService {
 
   calculateInvestmentMetricsForZips(year?: number) {
     return this.zips.calculateInvestmentMetricsForZips(year);
+  }
+
+  /**
+   * Calculate all investment metrics for all metros (master batch)
+   */
+  async calculateAllInvestmentMetrics(year?: number): Promise<{
+    investmentMetrics: { processed: number; stored: number; errors: string[] };
+    overvalued: { processed: number; stored: number; errors: string[] };
+  }> {
+    // Run investment metrics first (in parallel across geo types)
+    const [metroResult, countyResult, zipResult] = await Promise.all([
+      this.calculateInvestmentMetricsForMetros(year),
+      this.calculateInvestmentMetricsForCounties(year),
+      this.calculateInvestmentMetricsForZips(year),
+    ]);
+
+    // Then run overvalued AFTER investment metrics are stored,
+    // so the upsert preserves cap_rate/gross_yield/grm on existing rows.
+    // County and ZIP run latest-period-only (no year loop) for performance.
+    const [metroOvervalued, countyOvervalued, zipOvervalued] =
+      await Promise.all([
+        this.overvalued.calculateOvervaluedForMetros(year),
+        this.overvalued.calculateOvervaluedForCounties(),
+        this.overvalued.calculateOvervaluedForZips(),
+      ]);
+    const overvalued = {
+      processed:
+        metroOvervalued.processed +
+        countyOvervalued.processed +
+        zipOvervalued.processed,
+      stored:
+        metroOvervalued.stored + countyOvervalued.stored + zipOvervalued.stored,
+      errors: [
+        ...metroOvervalued.errors,
+        ...countyOvervalued.errors,
+        ...zipOvervalued.errors,
+      ],
+    };
+
+    // Aggregate investment metric results
+    const investmentMetrics = {
+      processed:
+        metroResult.processed + countyResult.processed + zipResult.processed,
+      stored: metroResult.stored + countyResult.stored + zipResult.stored,
+      errors: [
+        ...metroResult.errors,
+        ...countyResult.errors,
+        ...zipResult.errors,
+      ],
+    };
+
+    return { investmentMetrics, overvalued };
   }
 }
