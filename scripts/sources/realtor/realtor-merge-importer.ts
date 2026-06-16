@@ -5,7 +5,8 @@
  * applies date filtering and deduplication, then batch upserts.
  */
 
-import { getSupabaseClient, loadDataFile, batchUpsert } from "../../lib";
+import { getSupabaseClient, batchUpsert } from "../../lib";
+import { loadDataFileFiltered } from "../../lib/csv-stream-loader";
 import type {
   ImportGeographyResult,
   BatchUpsertResult,
@@ -22,7 +23,7 @@ import {
   REALTOR_HISTORY_FILES,
   REALTOR_TABLES,
 } from "./realtor-config";
-import { windowRowsByCutoff } from "./realtor-row-window";
+import { monthCutoffFilter } from "./realtor-row-window";
 
 export interface MergeGeographySpec {
   id: string;
@@ -107,27 +108,30 @@ export async function importMergeGeography(
   try {
     await logger.start(0);
 
-    const coreData = await loadDataFile({
-      url: spec.coreUrl,
-      localPath: useHistory ? spec.coreLocalPath : undefined,
-      format: "csv",
-    });
-    const coreRows = windowRowsByCutoff(
-      coreData.rows,
-      "month_date_yyyymm",
-      dateCutoff,
+    const coreData = await loadDataFileFiltered(
+      {
+        url: spec.coreUrl,
+        localPath: useHistory ? spec.coreLocalPath : undefined,
+        format: "csv",
+      },
+      monthCutoffFilter("month_date_yyyymm", dateCutoff),
     );
+    const coreRows = coreData.rows; // already windowed during the stream
     console.log(
-      `  Core rows loaded: ${coreData.rowCount}` +
-        (dateCutoff ? ` (windowed to ${coreRows.length})` : ""),
+      `  Core rows: ${coreData.rowCount} seen -> ${coreRows.length} in window`,
     );
 
-    const hotnessData = await loadDataFile({
-      url: spec.hotnessUrl,
-      localPath: useHistory ? spec.hotnessLocalPath : undefined,
-      format: "csv",
-    });
-    console.log(`  Hotness rows loaded: ${hotnessData.rowCount}`);
+    const hotnessData = await loadDataFileFiltered(
+      {
+        url: spec.hotnessUrl,
+        localPath: useHistory ? spec.hotnessLocalPath : undefined,
+        format: "csv",
+      },
+      monthCutoffFilter("month_date_yyyymm", dateCutoff),
+    );
+    console.log(
+      `  Hotness rows: ${hotnessData.rowCount} seen -> ${hotnessData.rows.length} in window`,
+    );
 
     const coreRecords: Record<string, unknown>[] = [];
     let rowsSkippedByMapping = 0;
@@ -144,18 +148,13 @@ export async function importMergeGeography(
     );
 
     const hotnessMap = buildHotnessMap(
-      windowRowsByCutoff(hotnessData.rows, "month_date_yyyymm", dateCutoff),
+      hotnessData.rows,
       spec.regionKeyField,
       spec.hotnessIncludesExtras,
     );
-    console.log(
-      `  Hotness map entries: ${hotnessMap.size}` +
-        (dateCutoff
-          ? ` (windowed >= ${dateCutoff} from ${hotnessData.rowCount} rows)`
-          : ` (full history: ${hotnessData.rowCount} rows)`),
-    );
+    console.log(`  Hotness map entries: ${hotnessMap.size}`);
 
-    let mergedRecords = mergeCoreAndHotness(
+    const mergedRecords = mergeCoreAndHotness(
       coreRecords,
       hotnessMap,
       spec.regionKeyField,
@@ -196,19 +195,10 @@ export async function importMergeGeography(
       null,
     );
 
-    // Filter by date cutoff (--recent flag)
-    if (dateCutoff) {
-      const beforeDate = mergedRecords.length;
-      mergedRecords = mergedRecords.filter((r) => {
-        const pd = r.period_date as string | undefined;
-        return !pd || pd >= dateCutoff;
-      });
-      if (mergedRecords.length < beforeDate) {
-        console.log(
-          `  Date filter (>= ${dateCutoff}): ${beforeDate} → ${mergedRecords.length} records`,
-        );
-      }
-    }
+    // Date windowing was applied during the streaming parse (monthCutoffFilter),
+    // so mergedRecords is already the rolling window — no post-merge filter. (A
+    // day-level `pd >= dateCutoff` here would wrongly drop the oldest month's
+    // first-of-month rows that the month-level stream filter kept.)
 
     // Deduplicate by conflict keys
     const dedupKey = (r: Record<string, unknown>) =>

@@ -1,22 +1,19 @@
 /**
- * Window CSV rows (core or hotness) to those on/after `isoCutoff` BEFORE the
- * merge. The Realtor _History files are full multi-year history (Zip core ~770MB,
- * Zip hotness ~340MB); an incremental run only needs rows back to the cutoff, and
- * holding the entire history in memory OOMs (exit 134 / JS heap). This does NOT
- * touch the years of history already in the DB — it only bounds what the live
- * merge holds. Callers pass `undefined` for a `--full` backfill (load it all).
- * `monthField` values are YYYYMM strings, which sort lexically.
+ * Build a per-row predicate that keeps rows whose `monthField` (a YYYYMM string)
+ * is on/after `isoCutoff`. Applied DURING the streaming parse of the multi-year
+ * Realtor _History files so the full history never materializes (the Zip
+ * core-History is ~770MB / ~3M rows and OOMs if parsed whole). An `undefined`
+ * cutoff keeps everything (a `--full` backfill). YYYYMM strings sort lexically.
  */
-export function windowRowsByCutoff(
-  rows: Record<string, string>[],
+export function monthCutoffFilter(
   monthField: string,
   isoCutoff: string | undefined,
-): Record<string, string>[] {
-  if (!isoCutoff) return rows; // full backfill — keep the entire history
+): (row: Record<string, string>) => boolean {
+  if (!isoCutoff) return () => true;
   const cutoffYm = isoCutoff.slice(0, 7).replace("-", ""); // 2026-03-15 -> 202603
-  if (cutoffYm.length !== 6) return rows;
-  return rows.filter((r) => {
-    const ym = r[monthField];
-    return !ym || ym >= cutoffYm;
-  });
+  if (cutoffYm.length !== 6) return () => true;
+  return (row) => {
+    const ym = row[monthField];
+    return typeof ym === "string" && ym.length === 6 && ym >= cutoffYm;
+  };
 }
