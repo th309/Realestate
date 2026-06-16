@@ -18,6 +18,16 @@ vi.mock("@/lib/data", () => ({
   TourRateLimitError: class TourRateLimitError extends Error {},
 }));
 
+let mockAuthState: any = { user: null, loading: false };
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => mockAuthState,
+}));
+
+const triggerConfettiSpy = vi.fn();
+vi.mock("../../primitives/celebrations", () => ({
+  triggerConfetti: () => triggerConfettiSpy(),
+}));
+
 let mockSession: any = null;
 vi.mock("../../TourStateProvider", () => ({
   useTour: () => ({ session: mockSession }),
@@ -25,7 +35,16 @@ vi.mock("../../TourStateProvider", () => ({
 
 vi.mock("../ListingPresentation", () => ({
   ListingPresentation: (p: any) => (
-    <div data-testid="listing-presentation" data-market={p.marketName} />
+    <div
+      data-testid="listing-presentation"
+      data-market={p.marketName}
+      data-watermark={String(p.showWatermark)}
+    />
+  ),
+}));
+vi.mock("../PersonaSpringboard", () => ({
+  PersonaSpringboard: (p: any) => (
+    <div data-testid="persona-springboard" data-persona={p.persona} />
   ),
 }));
 vi.mock("../ListingPresentationLoading", () => ({
@@ -48,6 +67,8 @@ vi.mock("../InlineSignupForm", () => ({
 describe("Step4Aha", () => {
   beforeEach(() => {
     mutateSpy.mockClear();
+    triggerConfettiSpy.mockClear();
+    mockAuthState = { user: null, loading: false };
     mockMutationState = {
       isIdle: true,
       isPending: false,
@@ -135,7 +156,7 @@ describe("Step4Aha", () => {
     window.location = originalLocation;
   });
 
-  it("renders ListingPresentation on success with showWatermark=true and #signup-cta anchor", () => {
+  it("anonymous success renders watermarked report + inline signup, no springboard, no confetti", () => {
     mockMutationState = {
       ...mockMutationState,
       isIdle: false,
@@ -147,6 +168,34 @@ describe("Step4Aha", () => {
     expect(
       screen.getByTestId("listing-presentation").getAttribute("data-market"),
     ).toBe("Charlotte");
+    expect(
+      screen.getByTestId("listing-presentation").getAttribute("data-watermark"),
+    ).toBe("true");
     expect(container.querySelector("#signup-cta")).toBeTruthy();
+    expect(screen.queryByTestId("persona-springboard")).toBeNull();
+    expect(triggerConfettiSpy).not.toHaveBeenCalled();
+  });
+
+  it("authenticated success: no demo watermark, no signup form, shows the springboard + confetti", () => {
+    mockAuthState = { user: { id: "u1" }, loading: false };
+    mockMutationState = {
+      ...mockMutationState,
+      isIdle: false,
+      isSuccess: true,
+      data: { report: { sections: [] } },
+    };
+    const { container } = render(<Step4Aha />);
+    // de-watermarked report
+    expect(screen.queryByText(/Demo report/i)).toBeNull();
+    expect(
+      screen.getByTestId("listing-presentation").getAttribute("data-watermark"),
+    ).toBe("false");
+    // anonymous signup funnel is replaced by the springboard
+    expect(container.querySelector("#signup-cta")).toBeNull();
+    expect(screen.queryByTestId("inline-signup")).toBeNull();
+    expect(screen.getByTestId("persona-springboard")).toBeInTheDocument();
+    // Pro framing + celebration
+    expect(screen.getByText(/set with Pro/i)).toBeInTheDocument();
+    expect(triggerConfettiSpy).toHaveBeenCalled();
   });
 });
