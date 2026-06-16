@@ -26,18 +26,18 @@ beforeEach(() => {
 
 describe("BreathingSpotlight", () => {
   it("renders four dim panels and leaves the target rect uncovered", () => {
-    render(<BreathingSpotlight targetSelector="#x" visible />);
-    const top = screen.getByTestId("spotlight-dim-top");
-    const bottom = screen.getByTestId("spotlight-dim-bottom");
-    const left = screen.getByTestId("spotlight-dim-left");
-    const right = screen.getByTestId("spotlight-dim-right");
-    // Top panel ends exactly where the (padded) target begins.
-    expect(top).toBeInTheDocument();
-    expect(bottom).toBeInTheDocument();
-    expect(left).toBeInTheDocument();
-    expect(right).toBeInTheDocument();
-    // No panel is the target itself; the hole has no covering element.
-    expect(screen.queryByTestId("spotlight-fullscreen-blur")).toBeNull();
+    const { container } = render(
+      <BreathingSpotlight targetSelector="#x" visible />,
+    );
+    expect(screen.getByTestId("spotlight-dim-top")).toBeInTheDocument();
+    expect(screen.getByTestId("spotlight-dim-bottom")).toBeInTheDocument();
+    expect(screen.getByTestId("spotlight-dim-left")).toBeInTheDocument();
+    expect(screen.getByTestId("spotlight-dim-right")).toBeInTheDocument();
+    // Exactly four dim panels tile AROUND the target — there is no panel
+    // covering the target rect itself (the old full-screen blur is gone).
+    expect(
+      container.querySelectorAll('[data-testid^="spotlight-dim-"]'),
+    ).toHaveLength(4);
   });
 
   it("calls onTargetMissing (and renders nothing) when the target never appears", async () => {

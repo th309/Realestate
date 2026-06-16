@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface BreathingSpotlightProps {
   targetSelector: string | null;
@@ -26,6 +26,16 @@ export function BreathingSpotlight({
   onTargetMissing,
 }: BreathingSpotlightProps) {
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
+
+  // The parent's onTargetMissing (= onContinue) is NOT memoized in
+  // useTourFromUrl, so its identity changes on every parent render. Keep it in
+  // a ref so the measure-effect's poll never restarts just because the handler
+  // identity changed — otherwise every re-render would reset attempts to 0 and
+  // the "~4s then auto-skip" guarantee could be deferred indefinitely.
+  const onTargetMissingRef = useRef(onTargetMissing);
+  useEffect(() => {
+    onTargetMissingRef.current = onTargetMissing;
+  });
 
   const measureTarget = useCallback(() => {
     if (!targetSelector) {
@@ -67,7 +77,7 @@ export function BreathingSpotlight({
           if (el) {
             measureTarget();
           } else {
-            onTargetMissing?.();
+            onTargetMissingRef.current?.();
           }
           if (pollInterval) clearInterval(pollInterval);
         }
@@ -80,7 +90,7 @@ export function BreathingSpotlight({
       window.removeEventListener("scroll", measureTarget, true);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [visible, targetSelector, measureTarget, onTargetMissing]);
+  }, [visible, targetSelector, measureTarget]);
 
   if (!visible) return null;
 
@@ -104,7 +114,7 @@ export function BreathingSpotlight({
         style={{
           top: 0,
           left: 0,
-          width: "100vw",
+          right: 0,
           height: Math.max(0, spotlight.top),
         }}
         onClick={onClick}
@@ -113,7 +123,7 @@ export function BreathingSpotlight({
         data-testid="spotlight-dim-bottom"
         aria-hidden="true"
         className={dim}
-        style={{ top: bottom, left: 0, width: "100vw", bottom: 0 }}
+        style={{ top: bottom, left: 0, right: 0, bottom: 0 }}
         onClick={onClick}
       />
       <div
