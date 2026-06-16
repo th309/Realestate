@@ -13,6 +13,7 @@ describe("useTourFromUrl", () => {
   beforeEach(() => {
     pushSpy.mockClear();
     currentParams = "";
+    window.sessionStorage.clear();
   });
 
   it("returns null active when no tour param", () => {
@@ -90,10 +91,25 @@ describe("useTourFromUrl", () => {
     );
   });
 
-  it("dismiss() pushes /", () => {
+  it("dismiss() routes into the app (/dashboard), not the marketing home", () => {
     currentParams = "tour=step1&persona=agent&market=metro-39580&sessionId=abc";
     const { result } = renderHook(() => useTourFromUrl());
     act(() => result.current.dismiss());
-    expect(pushSpy).toHaveBeenCalledWith("/");
+    expect(pushSpy).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("rehydrates the active tour from sessionStorage when URL params are absent", () => {
+    window.sessionStorage.setItem(
+      "piq.activeTour",
+      JSON.stringify({
+        stepId: "step2",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise" },
+        sessionId: "abc",
+      }),
+    );
+    currentParams = ""; // params were stripped by a stray navigation
+    const { result } = renderHook(() => useTourFromUrl());
+    expect(result.current.active?.stepId).toBe("step2");
   });
 });

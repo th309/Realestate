@@ -22,17 +22,46 @@ export function useTourFromUrl() {
   const router = useRouter();
 
   const active = useMemo<ActiveTour | null>(() => {
+    const STORAGE_KEY = "piq.activeTour";
     const stepId = sp?.get("tour") as SandboxStepId | null;
-    if (!stepId || !SANDBOX_STEP_ORDER.includes(stepId)) return null;
-    const market = parseMarket(sp?.get("market") ?? null);
-    const sessionId = sp?.get("sessionId") ?? null;
-    if (!market || !sessionId) return null;
-    return {
-      stepId,
-      persona: (sp?.get("persona") as Persona | null) ?? null,
-      market,
-      sessionId,
-    };
+
+    if (stepId && SANDBOX_STEP_ORDER.includes(stepId)) {
+      const market = parseMarket(sp?.get("market") ?? null);
+      const sessionId = sp?.get("sessionId") ?? null;
+      if (market && sessionId) {
+        const tour: ActiveTour = {
+          stepId,
+          persona: (sp?.get("persona") as Persona | null) ?? null,
+          market,
+          sessionId,
+        };
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tour));
+        }
+        return tour;
+      }
+    }
+
+    // URL has no tour params — try to rehydrate one that was interrupted.
+    if (typeof window !== "undefined") {
+      const raw = window.sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw) as ActiveTour;
+          if (
+            saved?.stepId &&
+            SANDBOX_STEP_ORDER.includes(saved.stepId) &&
+            saved.market &&
+            saved.sessionId
+          ) {
+            return saved;
+          }
+        } catch {
+          /* ignore corrupt storage */
+        }
+      }
+    }
+    return null;
   }, [sp]);
 
   function buildStepUrl(target: SandboxStepId, route: string): string {
@@ -59,7 +88,9 @@ export function useTourFromUrl() {
   }
 
   function dismiss() {
-    router.push("/"); // exit tour back to homepage
+    if (typeof window !== "undefined")
+      window.sessionStorage.removeItem("piq.activeTour");
+    router.push("/dashboard"); // exit the tour INTO the app, not the marketing home
   }
 
   function advanceToStep4() {
@@ -69,6 +100,8 @@ export function useTourFromUrl() {
     params.set("market", `${active.market.geoLevel}-${active.market.geoId}`);
     params.set("sessionId", active.sessionId);
     params.set("phase", "step4");
+    if (typeof window !== "undefined")
+      window.sessionStorage.removeItem("piq.activeTour");
     router.push(`/tour?${params}`);
   }
 
