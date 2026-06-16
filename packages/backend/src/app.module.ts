@@ -74,6 +74,7 @@ import { AnalyzerModule } from './analyzer/analyzer.module';
 import { RentcastModule } from './rentcast/rentcast.module';
 import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.module';
 import { ScreenerModule } from './screener/screener.module';
+import { UsageModule } from './usage/usage.module';
 
 @Module({
   imports: [
@@ -164,6 +165,7 @@ import { ScreenerModule } from './screener/screener.module';
     RentcastModule,
     SeoRevalidationModule,
     ScreenerModule,
+    UsageModule,
   ],
   controllers: [AppController],
   providers: [
