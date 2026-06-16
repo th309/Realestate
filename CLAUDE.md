@@ -121,6 +121,16 @@ After completing a task, suggest relevant skills in ONE line. Don't invoke autom
 - When given a bug report: just fix it. Don't ask for hand-holding.
 - Zero context switching required from the user.
 
+### 2.6 Branch & Release Workflow (`develop` ↔ `main`)
+
+Work lands on `develop`. Releases go `develop → main` via a `--no-ff` merge commit (`Merge develop into main: <desc>`). That merge commit is born on `main` and **must be back-merged into `develop`**, or `develop`'s pointer drifts behind `main` every release (identical code, growing "N commits behind" count).
+
+- **NEVER** merge `develop` into `main` by hand. Use the script — it couples the merge with the mandatory back-merge and verifies both branches end on an identical tree:
+  - `npm run release:main -- "<merge description>"` — local merge + back-merge, prints the push command (does not push).
+  - `npm run release:main -- "<merge description>" --push` — same, then pushes both branches.
+  - `npm run sync:develop` — fast-forward `develop` up to `origin/main` when a merge landed elsewhere (GitHub UI / another machine).
+- Script: `scripts/git/release-to-main.sh`. After any release, `git rev-list --count develop..origin/main` MUST be `0`.
+
 ---
 
 ## 3. TASK MANAGEMENT
