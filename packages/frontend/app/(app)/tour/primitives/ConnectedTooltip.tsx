@@ -90,8 +90,6 @@ export function ConnectedTooltip({
     const rafId = requestAnimationFrame(calculatePosition);
     window.addEventListener("resize", calculatePosition);
     window.addEventListener("scroll", calculatePosition, true);
-    const showTimer = setTimeout(() => setShow(true), 50);
-    const dismissTimer = setTimeout(() => setShowDismiss(true), 10000);
 
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     if (!isCentered && step.targetSelector) {
@@ -110,11 +108,23 @@ export function ConnectedTooltip({
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", calculatePosition);
       window.removeEventListener("scroll", calculatePosition, true);
-      clearTimeout(showTimer);
-      clearTimeout(dismissTimer);
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [calculatePosition, isCentered, step.targetSelector]);
+
+  // Entry animation + the "Do this later" grace timer. Kept OUT of the position
+  // effect above (which re-runs on every parent re-render — the live map churns
+  // during data load) and keyed empty so it fires exactly once per step mount.
+  // Previously these timers lived in the position effect, so re-render churn kept
+  // restarting the 10s grace and the dismiss control could effectively never appear.
+  useEffect(() => {
+    const showTimer = setTimeout(() => setShow(true), 50);
+    const dismissTimer = setTimeout(() => setShowDismiss(true), 10000);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(dismissTimer);
+    };
+  }, []);
 
   // Focus management: focus the tooltip card on mount so screen readers
   // announce it and so Esc / Tab work as expected. Restore the previously
