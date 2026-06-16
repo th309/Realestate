@@ -7,7 +7,7 @@ const dismissSpy = vi.fn();
 const advanceToStep4Spy = vi.fn();
 
 let mockActive: {
-  stepId: "step1" | "step2" | "step3";
+  stepId: "step1" | "step2";
   persona: "agent" | "investor" | "homebuyer" | null;
   market: { geoLevel: "metro"; geoId: string; name: string };
   sessionId: string;

@@ -81,14 +81,9 @@ export function useTourFromUrl() {
   function advance() {
     if (!active) return;
     const next = nextSandboxStep(active.stepId);
-    if (!next) return;
-    const route =
-      next === "step2"
-        ? `/market/${active.market.geoId}`
-        : next === "step3"
-          ? `/compare/markets`
-          : "/map";
-    router.push(buildStepUrl(next, route));
+    if (!next) return; // step2 is last → caller uses advanceToStep4
+    // step2 lives on the same market page as step1.
+    router.push(buildStepUrl(next, `/market/${active.market.geoId}`));
   }
 
   function dismiss() {

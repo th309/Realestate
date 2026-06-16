@@ -47,16 +47,23 @@ function TourPhaseSwitch() {
     case "market":
       return <MarketPickerStep />;
     case "step1":
-      // The tour body renders on /map. Redirect there with the tour params
-      // attached. The spotlight on /map reads ?tour=step1 to render itself.
-      return <RedirectToStep step="step1" route="/map" />;
+      // The tour body now renders on the market-detail page: step1 (the score)
+      // and step2 (the AI assessment) both live on /market/<geoId>. Redirect
+      // there with the tour params so the spotlight can mount over the score.
+      return (
+        <RedirectToStep
+          step="step1"
+          route={`/market/${session.market?.geoId ?? ""}`}
+        />
+      );
     case "step4":
       return <Step4Aha />;
     case "step2":
     case "step3":
-      // step2/step3 spotlights mount on /map and /market pages, not /tour.
-      // This placeholder is unreachable in normal navigation; kept as a
-      // visible safety net if the user lands here directly via a stale URL.
+      // The value-arc spotlights (step1 + step2) mount on the market-detail
+      // page, not /tour; step3 is a vestigial phase. This placeholder is
+      // unreachable in normal navigation; kept as a visible safety net if the
+      // user lands here directly via a stale URL.
       return (
         <div className="mx-auto max-w-xl px-4 py-12 text-center">
           <p className="text-sm uppercase tracking-wide text-on-surface-variant">
@@ -80,10 +87,10 @@ function TourPhaseSwitch() {
 
 /**
  * Redirects from /tour to the in-app surface that renders a given tour step
- * (currently /map for step1). The /tour page is the entry point for the
- * onboarding flow; once we've collected persona + market we hand control
- * back to /map with the tour params attached so the spotlight can mount
- * over the real product surface.
+ * (the market-detail page /market/<geoId> for step1). The /tour page is the
+ * entry point for the onboarding flow; once we've collected persona + market
+ * we hand control back to the market page with the tour params attached so the
+ * spotlight can mount over the real product surface.
  */
 function RedirectToStep({ step, route }: { step: "step1"; route: string }) {
   const router = useRouter();

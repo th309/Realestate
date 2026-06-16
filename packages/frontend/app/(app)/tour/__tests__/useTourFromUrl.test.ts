@@ -57,7 +57,7 @@ describe("useTourFromUrl", () => {
     expect(result.current.active).toBe(null);
   });
 
-  it("advance() pushes /market/<geoId>?tour=step2&... when current is step1", () => {
+  it("advance() at step1 pushes /market/<geoId>?tour=step2 (both steps on the market page)", () => {
     currentParams = "tour=step1&persona=agent&market=metro-39580&sessionId=abc";
     const { result } = renderHook(() => useTourFromUrl());
     act(() => result.current.advance());
@@ -66,24 +66,15 @@ describe("useTourFromUrl", () => {
     );
   });
 
-  it("advance() pushes /compare/markets?tour=step3&... when current is step2", () => {
+  it("advance() at step2 does not push (terminal — caller uses advanceToStep4)", () => {
     currentParams = "tour=step2&persona=agent&market=metro-39580&sessionId=abc";
-    const { result } = renderHook(() => useTourFromUrl());
-    act(() => result.current.advance());
-    expect(pushSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/compare\/markets\?.*tour=step3/),
-    );
-  });
-
-  it("advance() at step3 does not push (terminal — caller uses advanceToStep4)", () => {
-    currentParams = "tour=step3&persona=agent&market=metro-39580&sessionId=abc";
     const { result } = renderHook(() => useTourFromUrl());
     act(() => result.current.advance());
     expect(pushSpy).not.toHaveBeenCalled();
   });
 
   it("advanceToStep4() pushes /tour?phase=step4&...", () => {
-    currentParams = "tour=step3&persona=agent&market=metro-39580&sessionId=abc";
+    currentParams = "tour=step2&persona=agent&market=metro-39580&sessionId=abc";
     const { result } = renderHook(() => useTourFromUrl());
     act(() => result.current.advanceToStep4());
     expect(pushSpy).toHaveBeenCalledWith(

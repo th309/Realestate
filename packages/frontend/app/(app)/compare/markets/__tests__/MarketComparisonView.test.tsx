@@ -42,12 +42,6 @@ vi.mock("@/lib/data", () => ({
   useDataCard: () => ({ formattedValue: "$400K", isLoading: false }),
 }));
 
-vi.mock("@/app/tour/components/TourSpotlight", () => ({
-  TourSpotlight: (props: { stepId: string }) => (
-    <div data-testid="tour-spotlight" data-step={props.stepId} />
-  ),
-}));
-
 describe("MarketComparisonView", () => {
   it("renders 'Pick a market first' when no market query param", () => {
     currentParams = "";
@@ -55,16 +49,14 @@ describe("MarketComparisonView", () => {
     expect(screen.getByText(/pick a market/i)).toBeInTheDocument();
   });
 
-  it("fetches peers and renders the comparison grid + step3 spotlight", async () => {
-    currentParams = "market=metro-39580&tour=step3";
+  it("fetches peers and renders the comparison grid", async () => {
+    currentParams = "market=metro-39580";
     render(<MarketComparisonView />);
     await waitFor(() => {
-      expect(screen.getByTestId("tour-spotlight")).toBeInTheDocument();
+      expect(
+        screen.getByText(/how your market stacks up/i),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByTestId("tour-spotlight").getAttribute("data-step")).toBe(
-      "step3",
-    );
-    expect(screen.getByText(/how your market stacks up/i)).toBeInTheDocument();
     expect(screen.getByText("VS")).toBeInTheDocument();
     // Verify we render the real ScoreResponse path (location_name, score, label)
     // rather than silently falling back to "metro/16740" + "—".
@@ -86,7 +78,7 @@ describe("MarketComparisonView", () => {
       },
       peers: [],
     });
-    currentParams = "market=metro-39580&tour=step3";
+    currentParams = "market=metro-39580";
     render(<MarketComparisonView />);
     await waitFor(() => {
       expect(screen.getByText(/one-of-a-kind/i)).toBeInTheDocument();

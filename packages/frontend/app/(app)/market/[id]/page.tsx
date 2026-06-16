@@ -1,7 +1,6 @@
 "use client";
 
 import { use } from "react";
-import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 import { MarketDashboard } from "./MarketDashboard";
 
 interface PageProps {
@@ -13,15 +12,14 @@ export default function MarketPage({ params, searchParams }: PageProps) {
   const { id } = use(params);
   const { type = "metro", view = "investor", state } = use(searchParams);
 
+  // The tour spotlights (step1 = PropertyIQ Score, step2 = AI assessment) mount
+  // inside MarketDashboard, co-located with their data-tour targets.
   return (
-    <>
-      <MarketDashboard
-        geographyId={id}
-        geographyType={type as "metro" | "county" | "zip"}
-        userView={view as "investor" | "homebuyer"}
-        stateFilter={state}
-      />
-      <TourSpotlight stepId="step2" />
-    </>
+    <MarketDashboard
+      geographyId={id}
+      geographyType={type as "metro" | "county" | "zip"}
+      userView={view as "investor" | "homebuyer"}
+      stateFilter={state}
+    />
   );
 }

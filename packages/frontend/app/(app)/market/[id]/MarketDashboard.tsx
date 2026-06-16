@@ -33,6 +33,7 @@ import {
   ShareMarketModal,
 } from "./components";
 import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
+import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
 interface MarketDashboardProps {
   geographyId: string;
@@ -290,6 +291,14 @@ export function MarketDashboard({
         dom={displayData["days_on_market"]?.formattedValue}
         supply={displayData["pending_ratio"]?.formattedValue}
       />
+
+      {/* Sandbox tour value-arc spotlights — each renders null unless the URL
+          carries its matching ?tour=step. step1 highlights the PropertyIQ
+          Score (data-tour="propertyiq-score" in ScoreColumn); step2 highlights
+          the AI assessment (data-tour="ai-assessment" above). Both live on this
+          market-detail page. */}
+      <TourSpotlight stepId="step1" />
+      <TourSpotlight stepId="step2" />
     </div>
   );
 }
