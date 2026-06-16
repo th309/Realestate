@@ -6,6 +6,7 @@
  */
 
 import { getAuthHeaders } from "./auth-headers";
+import { withRequestLimit } from "./concurrency-limit";
 
 /**
  * Default API origin when NEXT_PUBLIC_API_URL was not set at build time.
@@ -56,10 +57,12 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const authHeaders = await getAuthHeaders();
     try {
-      const response = await fetch(url, {
-        credentials: "include",
-        headers: { ...authHeaders },
-      });
+      const response = await withRequestLimit(() =>
+        fetch(url, {
+          credentials: "include",
+          headers: { ...authHeaders },
+        }),
+      );
 
       if (response.status >= 500 && attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
@@ -117,11 +120,13 @@ export async function fetchAPIWithParams<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const authHeaders = await getAuthHeaders();
     try {
-      const response = await fetch(urlStr, {
-        credentials: "include",
-        cache: "no-store",
-        headers: { ...authHeaders },
-      });
+      const response = await withRequestLimit(() =>
+        fetch(urlStr, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { ...authHeaders },
+        }),
+      );
 
       if (response.status >= 500 && attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
@@ -164,10 +169,12 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(url, {
-        credentials: "include",
-        headers: { ...authHeaders },
-      });
+      const response = await withRequestLimit(() =>
+        fetch(url, {
+          credentials: "include",
+          headers: { ...authHeaders },
+        }),
+      );
 
       // Only retry on 5xx server errors
       if (response.status >= 500 && attempt < maxRetries) {
@@ -251,12 +258,14 @@ export async function fetchAPIRaw(
 ): Promise<Response> {
   const url = resolveContentPipelineAdminFetchUrl(endpoint);
   const authHeaders = await getAuthHeaders();
-  return fetch(url, {
-    credentials: "include",
-    ...init,
-    headers: {
-      ...authHeaders,
-      ...init?.headers,
-    },
-  });
+  return withRequestLimit(() =>
+    fetch(url, {
+      credentials: "include",
+      ...init,
+      headers: {
+        ...authHeaders,
+        ...init?.headers,
+      },
+    }),
+  );
 }
