@@ -242,6 +242,11 @@ export {
   useScreener,
   type UseScreenerOptions,
   type UseScreenerResult,
+
+  // Admin AI model configuration hooks
+  useAiModelConfigs,
+  useProviderPresets,
+  useUpdateAiModelConfig,
 } from "./hooks";
 
 // ============================================================================

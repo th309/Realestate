@@ -9,86 +9,58 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
-  fetchAiModelConfigs,
-  updateAiModelConfig,
-  fetchProviderPresets,
-  type AiModelConfig,
-  type ProviderPresets,
-} from "@/lib/data/fetchers/ai-models";
+  useAiModelConfigs,
+  useProviderPresets,
+  useUpdateAiModelConfig,
+} from "@/lib/data/hooks";
+import type { AiModelConfig } from "@/lib/data/fetchers/ai-models";
 import { ModelConfigCard } from "./components/ModelConfigCard";
 
 export default function AiModelConfigPage() {
-  const [configs, setConfigs] = useState<AiModelConfig[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const configsQuery = useAiModelConfigs();
+  const presetsQuery = useProviderPresets();
+  const updateMutation = useUpdateAiModelConfig();
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
-  const [presets, setPresets] = useState<ProviderPresets>({});
 
-  const loadConfigs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const configs = configsQuery.data ?? [];
+  const presets = presetsQuery.data ?? {};
+  const loading = configsQuery.isLoading || presetsQuery.isLoading;
+  const error =
+    configsQuery.isError || presetsQuery.isError
+      ? "Failed to load AI model configurations."
+      : null;
+
+  const handleSave = async (
+    purpose: string,
+    update: Partial<AiModelConfig>,
+  ): Promise<boolean> => {
     try {
-      const [data, presetData] = await Promise.all([
-        fetchAiModelConfigs(),
-        fetchProviderPresets(),
-      ]);
-      setConfigs(data);
-      setPresets(presetData);
+      const result = await updateMutation.mutateAsync({ purpose, update });
+      const ok = !!result;
+      setToast({
+        message: ok
+          ? `${purpose} configuration saved.`
+          : `Failed to save ${purpose} configuration.`,
+        type: ok ? "success" : "error",
+      });
+      setTimeout(() => setToast(null), 4000);
+      return ok;
     } catch (err) {
-      setError("Failed to load AI model configurations.");
-      console.error("Error loading AI model configs:", err);
-    } finally {
-      setLoading(false);
+      console.error(`Error saving ${purpose} config:`, err);
+      setToast({
+        message: `Error saving ${purpose} configuration.`,
+        type: "error",
+      });
+      setTimeout(() => setToast(null), 4000);
+      return false;
     }
-  }, []);
-
-  useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
-
-  const handleSave = useCallback(
-    async (
-      purpose: string,
-      update: Partial<AiModelConfig>,
-    ): Promise<boolean> => {
-      try {
-        const result = await updateAiModelConfig(purpose, update);
-        if (result) {
-          // Update local state with the saved config
-          setConfigs((prev) =>
-            prev.map((c) => (c.purpose === purpose ? { ...c, ...result } : c)),
-          );
-          setToast({
-            message: `${purpose} configuration saved.`,
-            type: "success",
-          });
-          setTimeout(() => setToast(null), 4000);
-          return true;
-        }
-        setToast({
-          message: `Failed to save ${purpose} configuration.`,
-          type: "error",
-        });
-        setTimeout(() => setToast(null), 4000);
-        return false;
-      } catch (err) {
-        console.error(`Error saving ${purpose} config:`, err);
-        setToast({
-          message: `Error saving ${purpose} configuration.`,
-          type: "error",
-        });
-        setTimeout(() => setToast(null), 4000);
-        return false;
-      }
-    },
-    [],
-  );
+  };
 
   return (
     <div className="min-h-screen bg-surface">
@@ -113,11 +85,11 @@ export default function AiModelConfigPage() {
                 Evaluation Lab →
               </Link>
               <button
-                onClick={loadConfigs}
-                disabled={loading}
+                onClick={() => configsQuery.refetch()}
+                disabled={configsQuery.isFetching}
                 className="px-4 py-2 text-sm font-medium rounded-full bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50 transition-colors duration-200"
               >
-                {loading ? "Loading..." : "Refresh"}
+                {configsQuery.isFetching ? "Loading..." : "Refresh"}
               </button>
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-tertiary-container text-on-tertiary-container">
                 Admin Access
@@ -165,7 +137,7 @@ export default function AiModelConfigPage() {
               may not have been ready yet.
             </p>
             <button
-              onClick={loadConfigs}
+              onClick={() => configsQuery.refetch()}
               className="mt-4 px-5 py-2 text-sm font-medium rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200"
             >
               Retry
