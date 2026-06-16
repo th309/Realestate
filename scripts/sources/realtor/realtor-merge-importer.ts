@@ -24,33 +24,26 @@ import {
 } from "./realtor-config";
 
 /**
- * Keep only rows within the last `months` months of the most recent month in
- * the data. The Realtor hotness files are full HISTORY (millions of rows), but
- * the core files are current-month, so we only need a recent hotness window to
- * merge. Filtering BEFORE building the in-memory map keeps memory bounded as the
- * history grows — this is what the import is meant to do ("only the last N
- * months"), and it prevents the JS-heap OOM (exit 134) the full-history load hit.
+ * Window hotness rows to those on/after `isoCutoff` BEFORE building the in-memory
+ * map. The Realtor hotness files are full multi-year HISTORY (millions of rows);
+ * an INCREMENTAL import only needs rows back to the cutoff to merge with the
+ * current-month core, and building the map over the entire history OOMs (exit
+ * 134 / JS heap). This does NOT touch the years of history already in the DB —
+ * it only bounds what the live merge holds in memory. Callers pass `undefined`
+ * for a `--full` backfill so the whole file is loaded untouched.
  * `monthField` values are YYYYMM strings, which sort lexically.
  */
-function filterToRecentMonths(
+function windowHotnessByCutoff(
   rows: Record<string, string>[],
   monthField: string,
-  months: number,
+  isoCutoff: string | undefined,
 ): Record<string, string>[] {
-  let maxYm = "";
-  for (const r of rows) {
-    const ym = r[monthField];
-    if (ym && ym > maxYm) maxYm = ym;
-  }
-  if (maxYm.length !== 6) return rows; // unknown format — don't risk dropping data
-  const year = Number(maxYm.slice(0, 4));
-  const mon = Number(maxYm.slice(4, 6));
-  const d = new Date(Date.UTC(year, mon - 1, 1));
-  d.setUTCMonth(d.getUTCMonth() - (months - 1));
-  const cutoff = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  if (!isoCutoff) return rows; // full backfill — keep the entire history
+  const cutoffYm = isoCutoff.slice(0, 7).replace("-", ""); // 2026-03-15 -> 202603
+  if (cutoffYm.length !== 6) return rows;
   return rows.filter((r) => {
     const ym = r[monthField];
-    return !ym || ym >= cutoff;
+    return !ym || ym >= cutoffYm;
   });
 }
 
@@ -166,12 +159,15 @@ export async function importMergeGeography(
     );
 
     const hotnessMap = buildHotnessMap(
-      filterToRecentMonths(hotnessData.rows, "month_date_yyyymm", 12),
+      windowHotnessByCutoff(hotnessData.rows, "month_date_yyyymm", dateCutoff),
       spec.regionKeyField,
       spec.hotnessIncludesExtras,
     );
     console.log(
-      `  Hotness map entries: ${hotnessMap.size} (windowed to last 12 mo from ${hotnessData.rowCount} rows)`,
+      `  Hotness map entries: ${hotnessMap.size}` +
+        (dateCutoff
+          ? ` (windowed >= ${dateCutoff} from ${hotnessData.rowCount} rows)`
+          : ` (full history: ${hotnessData.rowCount} rows)`),
     );
 
     let mergedRecords = mergeCoreAndHotness(
