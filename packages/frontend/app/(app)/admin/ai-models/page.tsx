@@ -14,8 +14,10 @@ import {
   fetchAiModelConfigs,
   updateAiModelConfig,
   fetchTestRunId,
+  fetchProviderPresets,
   setTestRunId as setTestRunIdApi,
   type AiModelConfig,
+  type ProviderPresets,
 } from "@/lib/data/fetchers/ai-models";
 import { ModelConfigCard } from "./components/ModelConfigCard";
 import { TestRunner } from "./components/TestRunner";
@@ -31,18 +33,21 @@ export default function AiModelConfigPage() {
   } | null>(null);
   const [testRunId, setTestRunId] = useState("");
   const [testRunSaving, setTestRunSaving] = useState(false);
+  const [presets, setPresets] = useState<ProviderPresets>({});
   const dashboardRefreshRef = useRef<() => void>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [data, runId] = await Promise.all([
+      const [data, runId, presetData] = await Promise.all([
         fetchAiModelConfigs(),
         fetchTestRunId(),
+        fetchProviderPresets(),
       ]);
       setConfigs(data);
       setTestRunId(runId || "");
+      setPresets(presetData);
     } catch (err) {
       setError("Failed to load AI model configurations.");
       console.error("Error loading AI model configs:", err);
@@ -214,6 +219,7 @@ export default function AiModelConfigPage() {
               <ModelConfigCard
                 key={config.purpose}
                 config={config}
+                presets={presets}
                 onSave={handleSave}
               />
             ))}

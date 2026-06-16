@@ -11,7 +11,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { AiModelConfig } from "@/lib/data/fetchers/ai-models";
+import type {
+  AiModelConfig,
+  ProviderPresets,
+} from "@/lib/data/fetchers/ai-models";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -25,75 +28,6 @@ const PROVIDERS = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "custom", label: "Custom" },
 ] as const;
-
-/** Available models per provider — shown as dropdown options in admin UI. */
-const PROVIDER_MODELS: Record<
-  string,
-  Array<{ id: string; label: string; context?: string }>
-> = {
-  deepseek: [
-    { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", context: "128K" },
-  ],
-  anthropic: [
-    { id: "claude-opus-4-6", label: "Claude Opus 4.6", context: "1M" },
-    { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", context: "200K" },
-    { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", context: "200K" },
-    { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", context: "200K" },
-  ],
-  openai: [
-    { id: "gpt-5.4", label: "GPT-5.4", context: "200K" },
-    { id: "gpt-5.4-pro", label: "GPT-5.4 Pro", context: "200K" },
-    { id: "gpt-5.3-codex", label: "GPT-5.3 Codex", context: "200K" },
-    { id: "gpt-4.1", label: "GPT-4.1", context: "1M" },
-    { id: "gpt-4.1-mini", label: "GPT-4.1 Mini", context: "1M" },
-    { id: "gpt-4.1-nano", label: "GPT-4.1 Nano", context: "1M" },
-    { id: "o3", label: "o3 (Reasoning)", context: "200K" },
-    { id: "o3-pro", label: "o3 Pro (Reasoning)", context: "200K" },
-    { id: "o4-mini", label: "o4-mini (Reasoning)", context: "200K" },
-    { id: "gpt-4o", label: "GPT-4o (Legacy)", context: "128K" },
-  ],
-  google: [
-    {
-      id: "gemini-3.1-pro-preview",
-      label: "Gemini 3.1 Pro Preview",
-      context: "1M",
-    },
-    {
-      id: "gemini-3.1-flash-lite-preview",
-      label: "Gemini 3.1 Flash Lite Preview",
-      context: "1M",
-    },
-    { id: "gemini-3-flash", label: "Gemini 3 Flash", context: "1M" },
-    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", context: "1M" },
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", context: "1M" },
-    {
-      id: "gemini-2.5-flash-lite",
-      label: "Gemini 2.5 Flash Lite",
-      context: "1M",
-    },
-  ],
-  openrouter: [
-    {
-      id: "anthropic/claude-opus-4-6",
-      label: "Claude Opus 4.6",
-      context: "1M",
-    },
-    {
-      id: "anthropic/claude-sonnet-4-6",
-      label: "Claude Sonnet 4.6",
-      context: "200K",
-    },
-    { id: "openai/gpt-5.4", label: "GPT-5.4", context: "200K" },
-    { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", context: "1M" },
-    { id: "google/gemini-3-flash", label: "Gemini 3 Flash", context: "1M" },
-    {
-      id: "deepseek/deepseek-v4-pro",
-      label: "DeepSeek V4 Pro",
-      context: "128K",
-    },
-  ],
-  custom: [],
-};
 
 /** Human-readable description of what each purpose does in the pipeline. */
 const PURPOSE_DESCRIPTIONS: Record<string, string> = {
@@ -111,21 +45,13 @@ const PURPOSE_DESCRIPTIONS: Record<string, string> = {
     "Fetches local news, economic indicators, and market signals for a geography. Results are cached 24 hours. 2 calls per report (local + national).",
 };
 
-const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
-  deepseek: "deepseek-v4-pro",
-  anthropic: "claude-sonnet-4-6",
-  openai: "gpt-5.4",
-  google: "gemini-2.5-pro",
-  openrouter: "anthropic/claude-sonnet-4-6",
-  custom: "",
-};
-
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface ModelConfigCardProps {
   config: AiModelConfig;
+  presets: ProviderPresets;
   onSave: (purpose: string, update: Partial<AiModelConfig>) => Promise<boolean>;
 }
 
@@ -133,7 +59,11 @@ interface ModelConfigCardProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
+export function ModelConfigCard({
+  config,
+  presets,
+  onSave,
+}: ModelConfigCardProps) {
   const [provider, setProvider] = useState(config.provider);
   const [model, setModel] = useState(config.model);
   const [temperature, setTemperature] = useState(config.temperature);
@@ -143,6 +73,10 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle",
   );
+
+  // Model options come from the backend preset for the selected provider —
+  // single source of truth, no hardcoded lists.
+  const modelOptions = presets[provider]?.availableModels ?? [];
 
   const isDirty =
     provider !== config.provider ||
@@ -156,7 +90,7 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
       setProvider(newProvider);
       // Auto-fill default model when switching providers
       if (newProvider !== provider) {
-        setModel(PROVIDER_DEFAULT_MODELS[newProvider] || "");
+        setModel(presets[newProvider]?.defaultModel ?? "");
       }
       // Clear base URL when switching away from custom
       if (newProvider !== "custom") {
@@ -164,7 +98,7 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
       }
       setSaveStatus("idle");
     },
-    [provider],
+    [provider, presets],
   );
 
   const handleSave = useCallback(async () => {
@@ -247,11 +181,11 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
           <label className="block text-sm font-medium text-on-surface mb-1.5">
             Model
           </label>
-          {(PROVIDER_MODELS[provider]?.length ?? 0) > 0 ? (
+          {modelOptions.length > 0 ? (
             <>
               <select
                 value={
-                  PROVIDER_MODELS[provider]?.some((m) => m.id === model)
+                  modelOptions.some((m) => m.id === model)
                     ? model
                     : "__custom__"
                 }
@@ -266,7 +200,7 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
                 }}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {PROVIDER_MODELS[provider].map((m) => (
+                {modelOptions.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
                     {m.context ? ` (${m.context})` : ""}
@@ -274,7 +208,7 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
                 ))}
                 <option value="__custom__">Custom model ID...</option>
               </select>
-              {!PROVIDER_MODELS[provider]?.some((m) => m.id === model) && (
+              {!modelOptions.some((m) => m.id === model) && (
                 <input
                   type="text"
                   value={model}
