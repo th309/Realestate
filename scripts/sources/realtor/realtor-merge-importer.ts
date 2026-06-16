@@ -23,6 +23,37 @@ import {
   REALTOR_TABLES,
 } from "./realtor-config";
 
+/**
+ * Keep only rows within the last `months` months of the most recent month in
+ * the data. The Realtor hotness files are full HISTORY (millions of rows), but
+ * the core files are current-month, so we only need a recent hotness window to
+ * merge. Filtering BEFORE building the in-memory map keeps memory bounded as the
+ * history grows — this is what the import is meant to do ("only the last N
+ * months"), and it prevents the JS-heap OOM (exit 134) the full-history load hit.
+ * `monthField` values are YYYYMM strings, which sort lexically.
+ */
+function filterToRecentMonths(
+  rows: Record<string, string>[],
+  monthField: string,
+  months: number,
+): Record<string, string>[] {
+  let maxYm = "";
+  for (const r of rows) {
+    const ym = r[monthField];
+    if (ym && ym > maxYm) maxYm = ym;
+  }
+  if (maxYm.length !== 6) return rows; // unknown format — don't risk dropping data
+  const year = Number(maxYm.slice(0, 4));
+  const mon = Number(maxYm.slice(4, 6));
+  const d = new Date(Date.UTC(year, mon - 1, 1));
+  d.setUTCMonth(d.getUTCMonth() - (months - 1));
+  const cutoff = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  return rows.filter((r) => {
+    const ym = r[monthField];
+    return !ym || ym >= cutoff;
+  });
+}
+
 export interface MergeGeographySpec {
   id: string;
   tableName: string;
@@ -135,11 +166,13 @@ export async function importMergeGeography(
     );
 
     const hotnessMap = buildHotnessMap(
-      hotnessData.rows,
+      filterToRecentMonths(hotnessData.rows, "month_date_yyyymm", 12),
       spec.regionKeyField,
       spec.hotnessIncludesExtras,
     );
-    console.log(`  Hotness map entries: ${hotnessMap.size}`);
+    console.log(
+      `  Hotness map entries: ${hotnessMap.size} (windowed to last 12 mo from ${hotnessData.rowCount} rows)`,
+    );
 
     let mergedRecords = mergeCoreAndHotness(
       coreRecords,
