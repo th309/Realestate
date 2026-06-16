@@ -34,10 +34,19 @@ jobs:
     env:
       SOURCE: ${{ github.event.inputs.source || 'all' }}
       FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
+      # The realtor zip core+hotness merge loads a ~340MB / 1.3M-row hotness
+      # HISTORY file into memory; the default Node heap OOMs (exit 134 / SIGABRT).
+      NODE_OPTIONS: --max-old-space-size=6144
       SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
       NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+      # Census/Economic/QCEW imports need these; the old per-source workflows set
+      # them and the new pipeline must too (else they fast-fail "KEY not set").
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
