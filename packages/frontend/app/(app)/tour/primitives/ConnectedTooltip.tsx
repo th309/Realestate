@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, useId } from "react";
-import type { OnboardingStep } from "./onboarding-steps";
+import type { OnboardingStep } from "./types";
 
 interface ConnectedTooltipProps {
   step: OnboardingStep;

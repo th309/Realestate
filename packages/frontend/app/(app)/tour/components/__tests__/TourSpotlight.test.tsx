@@ -23,12 +23,12 @@ vi.mock("../../hooks/useTourFromUrl", () => ({
 }));
 
 // Stub out the heavy onboarding primitives so we can assert composition cheaply
-vi.mock("@/app/onboarding/BreathingSpotlight", () => ({
+vi.mock("../../primitives/BreathingSpotlight", () => ({
   BreathingSpotlight: (props: any) => (
     <div data-testid="breathing-spotlight" data-target={props.targetSelector} />
   ),
 }));
-vi.mock("@/app/onboarding/ConnectedTooltip", () => ({
+vi.mock("../../primitives/ConnectedTooltip", () => ({
   ConnectedTooltip: (props: any) => (
     <div
       data-testid="connected-tooltip"

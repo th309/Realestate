@@ -8,7 +8,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -167,13 +166,11 @@ export function Providers({
         <QueryCacheCleaner />
 
         <ToastProvider>
-          <TourProvider>
-            <EntitlementsProvider>
-              <OnboardingBeaconProvider>
-                <PaywallProvider>{children}</PaywallProvider>
-              </OnboardingBeaconProvider>
-            </EntitlementsProvider>
-          </TourProvider>
+          <EntitlementsProvider>
+            <OnboardingBeaconProvider>
+              <PaywallProvider>{children}</PaywallProvider>
+            </OnboardingBeaconProvider>
+          </EntitlementsProvider>
           <ExitIntentModal />
         </ToastProvider>
       </AuthProvider>

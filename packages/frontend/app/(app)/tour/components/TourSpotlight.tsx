@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BreathingSpotlight } from "@/app/onboarding/BreathingSpotlight";
-import { ConnectedTooltip } from "@/app/onboarding/ConnectedTooltip";
-import type { OnboardingStep } from "@/app/onboarding/onboarding-steps";
+import { BreathingSpotlight } from "../primitives/BreathingSpotlight";
+import { ConnectedTooltip } from "../primitives/ConnectedTooltip";
+import type { OnboardingStep } from "../primitives/types";
 import { useTourFromUrl } from "../hooks/useTourFromUrl";
 import {
   getStepContent,
