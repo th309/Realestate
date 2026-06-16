@@ -55,6 +55,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Grep|Glob|Bash|Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/parallel-agents-nudge.js\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
