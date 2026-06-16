@@ -2,6 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TourBottomSheet } from "../TourBottomSheet";
 
+vi.mock("../../primitives/BreathingSpotlight", () => ({
+  BreathingSpotlight: (props: any) => (
+    <div data-testid="bs" data-target={props.targetSelector} />
+  ),
+}));
+
 describe("TourBottomSheet", () => {
   const defaultProps = {
     title: "Tour Step Title",
@@ -55,5 +61,23 @@ describe("TourBottomSheet", () => {
     render(<TourBottomSheet {...defaultProps} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("renders a real spotlight over the target instead of a full-screen blur", () => {
+    render(
+      <TourBottomSheet
+        title="t"
+        body="b"
+        progress={0.5}
+        onContinue={() => {}}
+        onDismiss={() => {}}
+        targetSelector='[data-tour="propertyiq-score"]'
+      />,
+    );
+    expect(screen.getByTestId("bs")).toHaveAttribute(
+      "data-target",
+      '[data-tour="propertyiq-score"]',
+    );
+    expect(screen.queryByTestId("bottom-sheet-fullscreen-blur")).toBeNull();
   });
 });
