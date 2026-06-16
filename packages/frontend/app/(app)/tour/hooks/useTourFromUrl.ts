@@ -10,6 +10,8 @@ import {
 } from "../step-content";
 import { parseMarket } from "../lib/parseMarket";
 
+const ACTIVE_TOUR_STORAGE_KEY = "piq.activeTour";
+
 export interface ActiveTour {
   stepId: SandboxStepId;
   persona: Persona | null;
@@ -22,7 +24,6 @@ export function useTourFromUrl() {
   const router = useRouter();
 
   const active = useMemo<ActiveTour | null>(() => {
-    const STORAGE_KEY = "piq.activeTour";
     const stepId = sp?.get("tour") as SandboxStepId | null;
 
     if (stepId && SANDBOX_STEP_ORDER.includes(stepId)) {
@@ -36,7 +37,10 @@ export function useTourFromUrl() {
           sessionId,
         };
         if (typeof window !== "undefined") {
-          window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tour));
+          window.sessionStorage.setItem(
+            ACTIVE_TOUR_STORAGE_KEY,
+            JSON.stringify(tour),
+          );
         }
         return tour;
       }
@@ -44,7 +48,7 @@ export function useTourFromUrl() {
 
     // URL has no tour params — try to rehydrate one that was interrupted.
     if (typeof window !== "undefined") {
-      const raw = window.sessionStorage.getItem(STORAGE_KEY);
+      const raw = window.sessionStorage.getItem(ACTIVE_TOUR_STORAGE_KEY);
       if (raw) {
         try {
           const saved = JSON.parse(raw) as ActiveTour;
@@ -89,7 +93,7 @@ export function useTourFromUrl() {
 
   function dismiss() {
     if (typeof window !== "undefined")
-      window.sessionStorage.removeItem("piq.activeTour");
+      window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
     router.push("/dashboard"); // exit the tour INTO the app, not the marketing home
   }
 
@@ -101,7 +105,7 @@ export function useTourFromUrl() {
     params.set("sessionId", active.sessionId);
     params.set("phase", "step4");
     if (typeof window !== "undefined")
-      window.sessionStorage.removeItem("piq.activeTour");
+      window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
     router.push(`/tour?${params}`);
   }
 

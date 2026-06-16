@@ -112,4 +112,34 @@ describe("useTourFromUrl", () => {
     const { result } = renderHook(() => useTourFromUrl());
     expect(result.current.active?.stepId).toBe("step2");
   });
+
+  it("prefers the URL tour over a different stored tour", () => {
+    window.sessionStorage.setItem(
+      "piq.activeTour",
+      JSON.stringify({
+        stepId: "step2",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise" },
+        sessionId: "abc",
+      }),
+    );
+    currentParams = "tour=step1&persona=agent&market=metro-39580&sessionId=abc";
+    const { result } = renderHook(() => useTourFromUrl());
+    expect(result.current.active?.stepId).toBe("step1");
+  });
+
+  it("ignores corrupt sessionStorage JSON and returns null", () => {
+    window.sessionStorage.setItem("piq.activeTour", "{not valid json");
+    currentParams = "";
+    const { result } = renderHook(() => useTourFromUrl());
+    expect(result.current.active).toBe(null);
+  });
+
+  it("dismiss() clears the stored tour and routes into /dashboard", () => {
+    currentParams = "tour=step1&persona=agent&market=metro-39580&sessionId=abc";
+    const { result } = renderHook(() => useTourFromUrl());
+    act(() => result.current.dismiss());
+    expect(window.sessionStorage.getItem("piq.activeTour")).toBe(null);
+    expect(pushSpy).toHaveBeenCalledWith("/dashboard");
+  });
 });
