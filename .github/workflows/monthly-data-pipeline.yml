@@ -1,15 +1,17 @@
-name: Weekly Data Pipeline
+name: Monthly Data Pipeline
 
-# Single weekly poll that replaces the old per-source monthly import crons
-# (which silently no-op'd from Feb–Jun 2026 by calling deleted scripts).
-# Imports run idempotently; the heavy post-import refresh/scoring fires ONLY when
-# a new data period actually lands. A quiet week is a green no-op, not a failure.
+# Replaces the old per-source monthly import crons (which silently no-op'd from
+# Feb–Jun 2026 by calling deleted scripts). Runs once a month, AFTER both source
+# releases land (Realtor on the 11th, Zillow on the 16th). Imports run
+# idempotently; the heavy post-import refresh/scoring fires ONLY when a new data
+# period actually lands — a quiet run is a green no-op, not a failure.
 
 on:
   schedule:
-    # Tuesdays 04:00 UTC — finishes before the Tue ~10–11am ET "scores updated"
-    # send (Tuesday = peak B2B email open/click).
-    - cron: "0 4 * * 2"
+    # 17th at 09:00 UTC (= 04:00 EST / 05:00 EDT). The 17th is the first day both
+    # Realtor (11th) and Zillow (16th) are guaranteed published. GitHub cron is
+    # fixed-UTC and does NOT shift for DST.
+    - cron: "0 9 17 * *"
 
   workflow_dispatch:
     inputs:
@@ -34,10 +36,20 @@ jobs:
     env:
       SOURCE: ${{ github.event.inputs.source || 'all' }}
       FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
+      # Realtor merge windows the _History files (Zip core ~770MB + hotness ~340MB)
+      # in memory; bump the Node heap so the parse doesn't OOM (exit 134 / SIGABRT).
+      # Runner has 16GB, so 8GB heap is safe headroom for the ~3-4GB parse peak.
+      NODE_OPTIONS: --max-old-space-size=8192
       SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
       NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+      # Census/Economic/QCEW imports need these; the old per-source workflows set
+      # them and the new pipeline must too (else they fast-fail "KEY not set").
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,14 +67,20 @@ jobs:
           echo "BEFORE: $P"
           echo "periods=$P" >> "$GITHUB_OUTPUT"
 
+      # continue-on-error: a few deprecated Zillow dataset URLs (404) or one
+      # flaky source must NOT block the others or scoring. The AFTER freshness
+      # probe gates the refresh on whether data ACTUALLY advanced, so a failed
+      # source simply doesn't advance its tables. Failures surface as warnings.
       - name: Import Zillow
         if: ${{ env.SOURCE == 'all' || env.SOURCE == 'zillow' }}
+        continue-on-error: true
         run: |
           set -euo pipefail
           npx tsx scripts/sources/zillow/import-zillow.ts
 
       - name: Import non-Zillow (selected sources)
         if: ${{ env.SOURCE != 'zillow' }}
+        continue-on-error: true
         run: |
           set -euo pipefail
           case "$SOURCE" in
@@ -105,12 +123,26 @@ jobs:
           fi
 
   # Heavy recompute (calculated metrics + PIQ scoring + validation + calibration).
-  # Runs only when the import job saw a period advance. workflow_call = synchronous
-  # and failure-surfacing, on the SAME ref as this orchestrator.
+  # Dispatches post-import-refresh.yml only when the import job saw a period
+  # advance. Uses createWorkflowDispatch (the proven pattern the old import
+  # workflows used) rather than a reusable `uses:` call.
   refresh:
     needs: import
     if: ${{ needs.import.outputs.has_new_data == 'true' }}
-    uses: ./.github/workflows/post-import-refresh.yml
-    secrets: inherit
-    with:
-      trigger_source: weekly-data-pipeline
+    runs-on: ubuntu-latest
+    # createWorkflowDispatch needs actions:write; the default token is read-only
+    # (the 403 "Resource not accessible by integration" that failed the dispatch).
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'post-import-refresh.yml',
+              ref: 'main',
+              inputs: { trigger_source: 'monthly-data-pipeline' }
+            });
+            console.log('Dispatched post-import-refresh (new data detected).');
