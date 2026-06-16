@@ -54,6 +54,54 @@ describe("useTourSession", () => {
     expect(result.current.session.market).toBeNull();
   });
 
+  it("backfills the stored name when a bare-URL market matches the stored one", () => {
+    // Tour was in progress with the real name persisted from the picker.
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-1",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise City, ID" },
+        phase: "step1",
+        reportId: null,
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-1; path=/";
+
+    // Hard nav to a bare-URL market (parseMarket yields name: "").
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+    const { result } = renderHook(() => useTourSession());
+
+    expect(result.current.session.market?.geoId).toBe("39580");
+    // The empty URL name must NOT clobber the stored real name.
+    expect(result.current.session.market?.name).toBe("Boise City, ID");
+  });
+
+  it("does NOT backfill when the stored market is a different geography", () => {
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-2",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "16980", name: "Chicago, IL" },
+        phase: "step1",
+        reportId: null,
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-2; path=/";
+
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+    const { result } = renderHook(() => useTourSession());
+
+    // URL market wins (different geoId); name stays empty, not Chicago's.
+    expect(result.current.session.market?.geoId).toBe("39580");
+    expect(result.current.session.market?.name).toBe("");
+  });
+
   it("sets secure flag on cookie write when location is https", () => {
     const cookieWrites: string[] = [];
     const originalDescriptor = Object.getOwnPropertyDescriptor(

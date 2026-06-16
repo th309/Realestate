@@ -39,16 +39,26 @@ const authFile = path.join(__dirname, "../fixtures/.auth/enterprise-user.json");
 // listing-presentation), so allow generous time for the round-trip + render.
 test.setTimeout(60_000);
 
-// SKIPPED until the finale is drivable standalone in a test. Two backend blockers,
-// both out of P1's tour scope — the finale works for REAL users (the market picker
-// supplies market.name, and a fresh visitor isn't rate-limited):
-//   1. The anon report DTO (MarketRefDto.name @MinLength(1)) 400s because a bare-URL
-//      entry leaves market.name empty (parseMarket("metro-39580") => name: ""). Fix:
-//      backfill the name in Step4Aha/useTourSession from the data layer, or relax DTO.
-//   2. AnonRateLimitGuard allows 1 report/IP/24h => 429 on repeat runs. Fix: a test-IP
-//      allowlist / Redis flush in the setup project, or use the authed report endpoint.
-// The finale's authed behavior (no "Demo report" watermark + springboard) is unit-
-// covered in Step4Aha.test.tsx meanwhile. Un-skip once a blocker fix lands.
+// The authed finale now drives the report through the JWT-guarded
+// `/api/anonymous/listing-presentation/authenticated` endpoint: NO anon
+// rate-limit (so repeat runs don't 429), NO bot-UA block (so Playwright's UA
+// passes), and the market name is resolved server-side from (geoLevel, geoId)
+// — so a bare-URL market like `metro-39580` no longer 400s the report DTO.
+// VERIFIED: the endpoint returns 201 with a full 10-section report (curl + the
+// Playwright trace both confirm the fetch succeeds).
+//
+// STILL SKIPPED — separate, pre-existing blocker discovered while un-skipping:
+// the report RENDER crashes on the real backend data shape. The backend's
+// section `data` payloads do not match what the `listing-sections/*` components
+// expect: `ExecutiveSummary` needs `thesisParagraphs: string[]` + a mapped
+// `score` but the backend sends `{ score: <raw ScoreResult>, thesis: <string> }`
+// (→ `Cannot read properties of undefined (reading 'map')` at
+// ExecutiveSummary.tsx:64). 9 of the 10 section components hard-crash this way,
+// and 4 backend sections (trajectory/forecast/affordability/validation) emit
+// `data: {}` with `limitedData:false`, so their guards don't even fire. The
+// fetch/auth wiring is DONE; making the report RENDER end-to-end is a separate
+// task (a backend→frontend section adapter, or graceful-degradation guards on
+// all 9 components). Un-skip once that lands.
 test.describe.skip("Tour aha finale", () => {
   test.use({ storageState: authFile });
 

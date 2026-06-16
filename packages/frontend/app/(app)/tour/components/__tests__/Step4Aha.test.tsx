@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Step4Aha } from "../Step4Aha";
 
 const mutateSpy = vi.fn();
+const authedMutateSpy = vi.fn();
 let mockMutationState: any = {
   isIdle: true,
   isPending: false,
@@ -13,8 +14,15 @@ let mockMutationState: any = {
   mutate: mutateSpy,
 };
 
+// Both hooks share the same lifecycle state object (so the loading/error/
+// success render assertions hold on either path), but each carries its own
+// `mutate` spy so tests can assert WHICH endpoint a given auth state fires.
 vi.mock("@/lib/data", () => ({
   useAnonymousListingPresentation: () => mockMutationState,
+  useAuthenticatedListingPresentation: () => ({
+    ...mockMutationState,
+    mutate: authedMutateSpy,
+  }),
   TourRateLimitError: class TourRateLimitError extends Error {},
 }));
 
@@ -67,6 +75,7 @@ vi.mock("../InlineSignupForm", () => ({
 describe("Step4Aha", () => {
   beforeEach(() => {
     mutateSpy.mockClear();
+    authedMutateSpy.mockClear();
     triggerConfettiSpy.mockClear();
     mockAuthState = { user: null, loading: false };
     mockMutationState = {
@@ -98,13 +107,44 @@ describe("Step4Aha", () => {
     expect(screen.getByText(/pick a persona and market/i)).toBeInTheDocument();
   });
 
-  it("fires mutation.mutate on mount when idle and persona+market are set", () => {
+  it("anonymous: fires the ANON mutation on mount (not the authed one)", () => {
     render(<Step4Aha />);
     expect(mutateSpy).toHaveBeenCalledWith({
       sessionId: "sess-abc",
       persona: "agent",
       market: { geoLevel: "metro", geoId: "39580", name: "Charlotte" },
     });
+    expect(authedMutateSpy).not.toHaveBeenCalled();
+  });
+
+  it("authenticated: fires the AUTHED mutation on mount (not the anon one)", () => {
+    mockAuthState = { user: { id: "u1" }, loading: false };
+    render(<Step4Aha />);
+    expect(authedMutateSpy).toHaveBeenCalledWith({
+      sessionId: "sess-abc",
+      persona: "agent",
+      market: { geoLevel: "metro", geoId: "39580", name: "Charlotte" },
+    });
+    expect(mutateSpy).not.toHaveBeenCalled();
+  });
+
+  it("authenticated with empty market name: still fires authed mutation, header falls back", () => {
+    mockAuthState = { user: { id: "u1" }, loading: false };
+    mockSession = {
+      ...mockSession,
+      market: { geoLevel: "metro", geoId: "39580", name: "" },
+    };
+    mockMutationState = {
+      ...mockMutationState,
+      isIdle: false,
+      isSuccess: true,
+      data: { report: { sections: [] } },
+    };
+    render(<Step4Aha />);
+    // Empty client-side name must not blank the header — neutral fallback.
+    expect(
+      screen.getByTestId("listing-presentation").getAttribute("data-market"),
+    ).toBe("your market");
   });
 
   it("renders Loading when isPending", () => {

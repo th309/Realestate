@@ -84,6 +84,23 @@ export function useTourSession() {
     const marketParam = parseMarketParam(searchParams?.get("market") ?? null);
     const phaseParam = (searchParams?.get("phase") as TourPhase | null) ?? null;
 
+    // The `<geoLevel>-<geoId>` URL param carries no display name, so
+    // parseMarket yields `name: ""`. When that same market was already chosen
+    // (with its real name) via the picker and persisted, backfill the stored
+    // name so a hard nav to a bare-URL market (e.g. ?market=metro-39580) keeps
+    // the name instead of clobbering it with an empty string — which otherwise
+    // 400s the report DTO and blanks the finale header.
+    if (
+      marketParam &&
+      !marketParam.name &&
+      stored.market &&
+      stored.market.geoLevel === marketParam.geoLevel &&
+      stored.market.geoId === marketParam.geoId &&
+      stored.market.name
+    ) {
+      marketParam.name = stored.market.name;
+    }
+
     const next: TourSession = {
       sessionId,
       persona: personaParam ?? stored.persona ?? null,

@@ -7,12 +7,14 @@ import { ListingPresentationClaimService } from '../listing-presentation-claim.s
 import { AnonRateLimitGuard } from '../anon-rate-limit.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { MarketsService } from '../../markets/markets.service';
 
 describe('AnonymousController', () => {
   let controller: AnonymousController;
   let listing: jest.Mocked<ListingPresentationService>;
   let cache: jest.Mocked<RedisTourCacheService>;
   let claimService: jest.Mocked<ListingPresentationClaimService>;
+  let markets: { getMarketCore: jest.Mock };
   let supabaseAdmin: {
     auth: { admin: { createUser: jest.Mock; generateLink: jest.Mock } };
   };
@@ -26,6 +28,8 @@ describe('AnonymousController', () => {
         },
       },
     };
+
+    markets = { getMarketCore: jest.fn() };
 
     const module = await Test.createTestingModule({
       controllers: [AnonymousController],
@@ -54,6 +58,10 @@ describe('AnonymousController', () => {
         {
           provide: SupabaseService,
           useValue: { getClient: () => supabaseAdmin },
+        },
+        {
+          provide: MarketsService,
+          useValue: markets,
         },
       ],
     })
@@ -111,6 +119,85 @@ describe('AnonymousController', () => {
     await controller.generate(validDto);
     const call = cache.set.mock.calls[0][0];
     expect(call.claimedBy).toBeNull();
+  });
+
+  describe('POST /listing-presentation/authenticated', () => {
+    it('resolves the display name from MarketsService when the DTO name is empty', async () => {
+      markets.getMarketCore.mockResolvedValue({
+        score: 62,
+        parentMetroCbsa: null,
+        householdCount: 250000,
+        name: 'Boise City, ID',
+      });
+
+      const result = await controller.generateAuthenticated({
+        sessionId: 'sess-authed-12345',
+        persona: 'investor',
+        market: { geoLevel: 'metro', geoId: '39580' },
+      });
+
+      // Name resolved from MarketsService, not the (empty) DTO name.
+      expect(markets.getMarketCore).toHaveBeenCalledWith({
+        geoLevel: 'metro',
+        geoId: '39580',
+      });
+      expect(listing.generate).toHaveBeenCalledWith({
+        sessionId: 'sess-authed-12345',
+        persona: 'investor',
+        market: { geoLevel: 'metro', geoId: '39580', name: 'Boise City, ID' },
+      });
+      expect(result.reportId).toBe('anon-rpt-test');
+      // Authed path must NOT touch the anon rate-limit cache.
+      expect(cache.set).not.toHaveBeenCalled();
+    });
+
+    it('honors a provided name and does not call MarketsService', async () => {
+      await controller.generateAuthenticated({
+        sessionId: 'sess-authed-12345',
+        persona: 'agent',
+        market: { geoLevel: 'city', geoId: 'cary-nc', name: 'Cary, NC' },
+      });
+
+      expect(markets.getMarketCore).not.toHaveBeenCalled();
+      expect(listing.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          market: { geoLevel: 'city', geoId: 'cary-nc', name: 'Cary, NC' },
+        }),
+      );
+    });
+
+    it('falls back to the geoId when the market is unknown (getMarketCore null)', async () => {
+      markets.getMarketCore.mockResolvedValue(null);
+
+      await controller.generateAuthenticated({
+        sessionId: 'sess-authed-12345',
+        persona: 'homebuyer',
+        market: { geoLevel: 'zip', geoId: '83702' },
+      });
+
+      expect(listing.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          market: { geoLevel: 'zip', geoId: '83702', name: '83702' },
+        }),
+      );
+    });
+
+    it('falls back to the geoId when MarketsService throws', async () => {
+      markets.getMarketCore.mockRejectedValue(new Error('supabase down'));
+
+      const result = await controller.generateAuthenticated({
+        sessionId: 'sess-authed-12345',
+        persona: 'investor',
+        market: { geoLevel: 'metro', geoId: '39580' },
+      });
+
+      expect(listing.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          market: { geoLevel: 'metro', geoId: '39580', name: '39580' },
+        }),
+      );
+      expect(result.reportId).toBe('anon-rpt-test');
+    });
   });
 
   describe('POST /sign-up-with-tour', () => {

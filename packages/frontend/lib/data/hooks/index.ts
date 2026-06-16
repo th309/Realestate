@@ -123,6 +123,12 @@ export {
   type UseAnonymousListingPresentationVariables,
 } from "./useAnonymousListingPresentation";
 
+// Authenticated listing presentation (tour aha-finale, signed-in path)
+export {
+  useAuthenticatedListingPresentation,
+  type UseAuthenticatedListingPresentationVariables,
+} from "./useAuthenticatedListingPresentation";
+
 // Tour signup (anonymous → claimed user conversion)
 export { useTourSignup } from "./useTourSignup";
 

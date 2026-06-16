@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAnonymousListingPresentation } from "@/lib/data";
+import {
+  useAnonymousListingPresentation,
+  useAuthenticatedListingPresentation,
+} from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useTour } from "../TourStateProvider";
 import { triggerConfetti } from "../primitives/celebrations";
@@ -12,7 +15,7 @@ import { InlineSignupForm } from "./InlineSignupForm";
 import { PersonaSpringboard } from "./PersonaSpringboard";
 
 /**
- * Step4Aha — drives the anonymous listing-presentation lifecycle.
+ * Step4Aha — drives the listing-presentation lifecycle for the tour finale.
  *
  * Lifecycle: Idle → Pending → Success(report) | Error.
  * - Fires the mutation once on mount when persona+market are set and the
@@ -20,11 +23,21 @@ import { PersonaSpringboard } from "./PersonaSpringboard";
  * - useEffect deps are narrowed to the values that actually matter (isIdle
  *   flag + persona/geoId) to avoid re-firing when React Query produces a new
  *   `mutation` object identity (Phase 03 review pattern).
+ *
+ * Authed vs anonymous: signed-in users drive the report through the
+ * JWT-guarded authenticated endpoint (no 1/IP/24h rate limit, no bot-UA block,
+ * market name resolved server-side). Anonymous visitors keep the anon endpoint.
+ * Both hooks are always instantiated (Rules of Hooks); we select the active one
+ * by auth state. The success/error/loading render is shared.
  */
 export function Step4Aha() {
   const { session } = useTour();
   const { user } = useAuth();
-  const mutation = useAnonymousListingPresentation();
+  const authed = !!user?.id;
+
+  const anonMutation = useAnonymousListingPresentation();
+  const authedMutation = useAuthenticatedListingPresentation();
+  const mutation = authed ? authedMutation : anonMutation;
 
   useEffect(() => {
     if (mutation.isIdle && session.persona && session.market) {
@@ -35,9 +48,10 @@ export function Step4Aha() {
       });
     }
     // Hardened deps: avoid mutation identity churn; only re-fire when the
-    // idle flag flips or the user picks a different persona/market.
+    // idle flag flips or the user picks a different persona/market. `authed`
+    // is included so the correct mutation fires once auth state resolves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mutation.isIdle, session.persona, session.market?.geoId]);
+  }, [mutation.isIdle, authed, session.persona, session.market?.geoId]);
 
   // Authenticated users land the report as the "Pro unlocked" finale — fire
   // confetti once the report resolves for them.
@@ -82,7 +96,11 @@ export function Step4Aha() {
   }
 
   if (mutation.isSuccess && mutation.data) {
-    const authed = !!user?.id;
+    // On a bare-URL entry (e.g. /tour?...&market=metro-39580) the client-side
+    // market name is empty — the authed endpoint resolved it server-side for
+    // the narrative, but the header prop still needs a value. Fall back to the
+    // same neutral label the loading state uses so the header is never blank.
+    const displayName = session.market.name || "your market";
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
         {authed && (
@@ -97,8 +115,8 @@ export function Step4Aha() {
         )}
         <ListingPresentation
           report={mutation.data}
-          marketName={session.market.name}
-          geographyDescription={session.market.name}
+          marketName={displayName}
+          geographyDescription={displayName}
           showWatermark={!authed}
         />
         {authed ? (
