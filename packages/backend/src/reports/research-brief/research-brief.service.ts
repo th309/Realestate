@@ -78,12 +78,15 @@ export class ResearchBriefService {
       ? `User question: "${userQuestion}"\nUser context: ${userContext}`
       : `User question: "${userQuestion}"`;
 
-    const response = await this.aiProvider.complete('research_clarifying', {
-      systemPrompt: CLARIFYING_QUESTIONS_PROMPT,
-      userPrompt: prompt,
-      maxTokens: 1024,
-      responseFormat: 'json',
-    });
+    const response = await this.aiProvider.complete(
+      AI_PURPOSES.RESEARCH_CLARIFYING,
+      {
+        systemPrompt: CLARIFYING_QUESTIONS_PROMPT,
+        userPrompt: prompt,
+        maxTokens: 1024,
+        responseFormat: 'json',
+      },
+    );
 
     try {
       const parsed = extractJson(response.content);

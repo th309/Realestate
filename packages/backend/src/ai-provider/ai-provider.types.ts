@@ -258,6 +258,7 @@ export const AI_PURPOSES = {
   REPORT_OUTLINE: 'report_outline',
   CUSTOM_REPORT: 'custom_report',
   RESEARCH_AGENT: 'research_agent',
+  RESEARCH_CLARIFYING: 'research_clarifying',
   RESEARCH_NARRATIVE: 'research_narrative',
   NEWS_SCOUT: 'news_scout',
   CONVERSATION: 'conversation',

@@ -1,9 +1,8 @@
 /**
  * V2 Routing Helpers for the Reports Orchestrator
  *
- * Determines whether to use the v2 two-pass generation pipeline by checking
- * ai_model_config for a prompt_version flag, and maps report templates to
- * the v2 report type identifiers.
+ * All reports use the v2 two-pass generation pipeline. Maps report templates
+ * to the v2 report type identifiers.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
