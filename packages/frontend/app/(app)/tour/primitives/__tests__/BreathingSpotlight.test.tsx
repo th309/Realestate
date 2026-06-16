@@ -39,4 +39,24 @@ describe("BreathingSpotlight", () => {
     // No panel is the target itself; the hole has no covering element.
     expect(screen.queryByTestId("spotlight-fullscreen-blur")).toBeNull();
   });
+
+  it("calls onTargetMissing (and renders nothing) when the target never appears", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "querySelector").mockReturnValue(null); // target never found
+    const onTargetMissing = vi.fn();
+    const { container } = render(
+      <BreathingSpotlight
+        targetSelector="#missing"
+        visible
+        onTargetMissing={onTargetMissing}
+      />,
+    );
+    // Exhaust the poll (the guard fires once attempts > 20, i.e. the 21st tick).
+    await vi.advanceTimersByTimeAsync(21 * 200 + 50);
+    expect(onTargetMissing).toHaveBeenCalledTimes(1);
+    expect(
+      container.querySelector('[data-testid="spotlight-dim-top"]'),
+    ).toBeNull();
+    vi.useRealTimers();
+  });
 });

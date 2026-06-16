@@ -6,6 +6,7 @@ interface BreathingSpotlightProps {
   targetSelector: string | null;
   visible: boolean;
   onClick?: () => void;
+  onTargetMissing?: () => void;
 }
 
 const PADDING = 12;
@@ -22,6 +23,7 @@ export function BreathingSpotlight({
   targetSelector,
   visible,
   onClick,
+  onTargetMissing,
 }: BreathingSpotlightProps) {
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
 
@@ -62,7 +64,11 @@ export function BreathingSpotlight({
         attempts++;
         const el = document.querySelector(targetSelector);
         if (el || attempts > 20) {
-          if (el) measureTarget();
+          if (el) {
+            measureTarget();
+          } else {
+            onTargetMissing?.();
+          }
           if (pollInterval) clearInterval(pollInterval);
         }
       }, 200);
@@ -74,7 +80,7 @@ export function BreathingSpotlight({
       window.removeEventListener("scroll", measureTarget, true);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [visible, targetSelector, measureTarget]);
+  }, [visible, targetSelector, measureTarget, onTargetMissing]);
 
   if (!visible) return null;
 

@@ -71,6 +71,7 @@ export function TourSpotlight({ stepId }: Props) {
         targetSelector={content.targetSelector}
         visible
         onClick={onContinue}
+        onTargetMissing={onContinue}
       />
       <ConnectedTooltip
         step={stepForTooltip}
