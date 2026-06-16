@@ -79,7 +79,6 @@ const CATEGORY_METRICS: Record<string, string[]> = {
     "pending_ratio",
     "new_listings_yoy",
     "hotness_score",
-    "sale_to_list",
   ],
   pricing_deals: [
     "home_value_yoy",
@@ -136,7 +135,6 @@ const CATEGORY_METRICS: Record<string, string[]> = {
     "sf_mf_ratio",
     "permit_value_per_unit",
     "new_construction_sales",
-    "new_construction_price",
     "new_construction_ppsf",
   ],
   scores: ["propertyiq_score"],

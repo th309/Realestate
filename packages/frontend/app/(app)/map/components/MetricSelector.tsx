@@ -56,7 +56,6 @@ function getMetricCategory(metricId: string): string {
       "inventory_yoy",
       "new_listings_yoy",
       "pending_ratio",
-      "sale_to_list",
       "home_value_mom",
       "price_cut_pct",
       "price_increase_pct",
@@ -93,7 +92,6 @@ function getMetricCategory(metricId: string): string {
       "sf_mf_ratio",
       "permit_value_per_unit",
       "new_construction_sales",
-      "new_construction_price",
       "new_construction_ppsf",
     ].includes(metricId)
   ) {

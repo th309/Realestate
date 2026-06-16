@@ -19,18 +19,6 @@ export const CONSTRUCTION_METRICS: Record<string, MetricConfig> = {
     favorableDirection: "higher",
   },
 
-  new_construction_price: {
-    id: "new_construction_price",
-    title: "New Construction Price",
-    format: "currency",
-    dataSource: "zillow",
-    apiEndpoint: "/api/zillow/new-construction/{geo}",
-    keyField: "auto",
-    supportedGeos: ["metro"],
-    valueField: "median_sale_price",
-    favorableDirection: "higher",
-  },
-
   new_construction_ppsf: {
     id: "new_construction_ppsf",
     title: "New Construction $/SqFt",

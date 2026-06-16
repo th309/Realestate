@@ -123,16 +123,4 @@ export const MARKET_ACTIVITY_METRICS: Record<string, MetricConfig> = {
     asPercent: true,
     favorableDirection: "lower",
   },
-
-  sale_to_list: {
-    id: "sale_to_list",
-    title: "Sale-to-List Ratio",
-    format: "percent_abs",
-    dataSource: "zillow",
-    apiEndpoint: "/api/zillow/sale-to-list/{geo}",
-    keyField: "auto",
-    supportedGeos: ["metro"],
-    asPercent: true,
-    favorableDirection: "higher",
-  },
 };
