@@ -17,7 +17,9 @@ const PROJECT_ROOT = join(__dirname, "../..");
 const DATA_DIR = join(PROJECT_ROOT, "data");
 
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 min per attempt — accommodates large files (200MB+) on slow links
-const MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024; // 500 MB
+// Realtor Zip core-History is ~770MB (10yr of monthly zip rows) and grows; the
+// in-memory download path must accommodate it. Windowing happens after parse.
+const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 const DEFAULT_MAX_RETRIES = 3;
 // Browser-like UA: government / vendor WAFs (e.g. HUD) reject generic SDK UAs with 202+empty.
 const DEFAULT_USER_AGENT =
