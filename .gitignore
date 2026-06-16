@@ -153,6 +153,8 @@ NUL
 
 # Claude Code per-session scratch (stop-validators)
 .claude/.touched-files
+# Claude Code per-session scratch (parallel-agents-nudge streak counter)
+.claude/.parallel-nudge.json
 
 # PIQ morning-triage loop (loop-engineering v0.1) — ephemeral outputs
 tasks/triage/*.md
