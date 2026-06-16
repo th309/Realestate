@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Download, Lock } from "lucide-react";
 import { useScreener, type ScreenerQuery, type ScreenerRow } from "@/lib/data";
 import type { ScreenerGeoLevel } from "@/lib/data";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { useEntitlements } from "@/lib/entitlements";
 import { GeoLockCard } from "@/components/entitlements/GeoLockCard";
 import { downloadCsv } from "@/lib/export";
@@ -164,6 +165,7 @@ export function ScreenerPageInner() {
   }, []);
 
   const handleFilterChange = useCallback((patch: Partial<ScreenerQuery>) => {
+    trackEvent("feature.screener_filter", { keys: Object.keys(patch) });
     setFiltersState((prev) => ({ ...prev, ...patch }));
     setActivePreset(null);
     setPageState(0);
