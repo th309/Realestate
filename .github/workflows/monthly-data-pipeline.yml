@@ -1,22 +1,17 @@
-name: Weekly Data Pipeline
+name: Monthly Data Pipeline
 
 # Replaces the old per-source monthly import crons (which silently no-op'd from
-# Feb–Jun 2026 by calling deleted scripts). Polls all sources once a WEEK and
-# imports idempotently; the heavy post-import refresh/scoring fires ONLY when a
-# new data period actually lands (Realtor ~11th, Zillow ~16th of the month), so
-# most weeks are a green no-op, not a failure. Weekly polling catches the monthly
-# release on the first run after it publishes — scores refresh promptly instead
-# of waiting for a fixed calendar date.
+# Feb–Jun 2026 by calling deleted scripts). Runs once a month, AFTER both source
+# releases land (Realtor on the 11th, Zillow on the 16th). Imports run
+# idempotently; the heavy post-import refresh/scoring fires ONLY when a new data
+# period actually lands — a quiet run is a green no-op, not a failure.
 
 on:
   schedule:
-    # Weekly, Tuesdays at 04:00 UTC. Tuesday is the highest-engagement day for
-    # email open/click rates, so the "scores updated" email that follows a real
-    # refresh lands on a Tuesday. The 04:00 UTC start gives the heavy
-    # import+refresh+scoring chain (~6-9h, only on the once-a-month week new data
-    # lands) time to finish before the US Tuesday-morning send window. GitHub
-    # cron is fixed-UTC and does NOT shift for DST.
-    - cron: "0 4 * * 2"
+    # 17th at 09:00 UTC (= 04:00 EST / 05:00 EDT). The 17th is the first day both
+    # Realtor (11th) and Zillow (16th) are guaranteed published. GitHub cron is
+    # fixed-UTC and does NOT shift for DST.
+    - cron: "0 9 17 * *"
 
   workflow_dispatch:
     inputs:
