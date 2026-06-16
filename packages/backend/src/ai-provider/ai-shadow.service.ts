@@ -22,7 +22,7 @@ import type {
   AiCompletionResponse,
   AiProviderType,
 } from './ai-provider.types';
-import { PROVIDER_PRESETS } from './ai-provider.types';
+import { PROVIDER_PRESETS, AI_PURPOSES } from './ai-provider.types';
 import { estimateCostUsd } from './cost-estimator';
 
 const SHADOW_CONFIG_CACHE_MS = 30_000;
@@ -173,7 +173,7 @@ export class AiShadowService {
     // Tool-use replay: research_agent must not issue new tool calls — the
     // shadow generates its final assistant turn from the same evidence the
     // primary collected. Suppression syntax differs by provider.
-    const isResearchAgent = ctx.purpose === 'research_agent';
+    const isResearchAgent = ctx.purpose === AI_PURPOSES.RESEARCH_AGENT;
     const toolChoice = isResearchAgent
       ? provider === 'anthropic'
         ? ({ type: 'none' } as unknown)

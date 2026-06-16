@@ -10,6 +10,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { GeoLevel } from '../metric-resolution/metric-resolution.types';
 import {
@@ -141,13 +142,16 @@ export class ReportFollowUpService {
       )
       .join('\n');
 
-    const response = await this.aiProvider.complete('report_follow_up', {
-      systemPrompt:
-        "You are a concise market analyst. Summarize the key market changes since the report was generated. Focus on what matters for the reader's decision-making. Keep it to 2-3 sentences.",
-      userPrompt: `Market changes since report generation:\n${changesText}`,
-      maxTokens: 300,
-      temperature: 0.3,
-    });
+    const response = await this.aiProvider.complete(
+      AI_PURPOSES.REPORT_FOLLOW_UP,
+      {
+        systemPrompt:
+          "You are a concise market analyst. Summarize the key market changes since the report was generated. Focus on what matters for the reader's decision-making. Keep it to 2-3 sentences.",
+        userPrompt: `Market changes since report generation:\n${changesText}`,
+        maxTokens: 300,
+        temperature: 0.3,
+      },
+    );
 
     return response.content;
   }

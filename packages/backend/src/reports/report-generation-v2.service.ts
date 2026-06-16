@@ -11,6 +11,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import {
   HOMEREADY_V2_SECTIONS,
   HOMEREADY_V2_SECTION_ORDER,
@@ -100,7 +101,7 @@ export class ReportGenerationV2Service {
     try {
       const response = await retryWithBackoff(
         () =>
-          this.aiProvider.complete('report_outline', {
+          this.aiProvider.complete(AI_PURPOSES.REPORT_OUTLINE, {
             systemPrompt,
             userPrompt,
             maxTokens: 500,
@@ -227,13 +228,16 @@ This outline will be shared with each section writer to ensure narrative coheren
     // Append news context if available
     userPrompt = appendNewsContext(userPrompt, context);
 
-    const response = await this.aiProvider.complete('report_narrative', {
-      systemPrompt,
-      userPrompt,
-      maxTokens: config.max_tokens,
-      responseFormat:
-        config.output_format === 'json_object' ? 'json' : undefined,
-    });
+    const response = await this.aiProvider.complete(
+      AI_PURPOSES.REPORT_NARRATIVE,
+      {
+        systemPrompt,
+        userPrompt,
+        maxTokens: config.max_tokens,
+        responseFormat:
+          config.output_format === 'json_object' ? 'json' : undefined,
+      },
+    );
 
     // Track last model used for provenance metadata
     this.lastModelUsed = response.model;

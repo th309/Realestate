@@ -7,6 +7,7 @@
 
 import { Logger } from '@nestjs/common';
 import type { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import type { NationalContext, NewsScoutResult } from './news-scout.types';
 import { parseResponse } from './news-scout-parser';
 import {
@@ -17,7 +18,7 @@ import {
 // Re-export prompt builders so existing consumers can import from one place
 export { buildScoutPrompt, buildNationalContextPrompt };
 
-const NEWS_SCOUT_PURPOSE = 'news_scout';
+const NEWS_SCOUT_PURPOSE = AI_PURPOSES.NEWS_SCOUT;
 
 // -----------------------------------------------------------------------------
 // SCOUTING

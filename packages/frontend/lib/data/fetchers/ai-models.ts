@@ -21,7 +21,6 @@ export interface AiModelConfig {
   model: string;
   base_url: string | null;
   temperature: number;
-  max_tokens_override: number | null;
   is_active: boolean;
   notes: string | null;
   shadow_provider: string | null;

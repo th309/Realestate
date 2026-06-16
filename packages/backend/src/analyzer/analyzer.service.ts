@@ -9,6 +9,7 @@ import { ScoringService } from '../scoring/scoring.service';
 import type { GeographyLevel } from '../scoring/formula-weights';
 import { RentcastService } from '../rentcast/rentcast.service';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import type {
   AnalyzerGeoLevel,
   MarketContextDto,
@@ -284,7 +285,7 @@ export class AnalyzerService {
       throw new Error('payload too large');
     }
 
-    yield* this.aiProvider.stream('analyzer_header_verdict', {
+    yield* this.aiProvider.stream(AI_PURPOSES.ANALYZER_HEADER_VERDICT, {
       systemPrompt:
         'You are a precise, numerate real-estate analyst. Output ONLY valid JSON.',
       userPrompt: this.buildVerdictPrompt(payload),
