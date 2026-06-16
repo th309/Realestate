@@ -15,6 +15,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AiInsightsCache, CachedInsight } from './ai-insights.cache';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import {
   getSectionPrompt,
   buildBatchedSectionTasks,
@@ -88,8 +89,8 @@ export class AiInsightsService {
     const userPrompt = assemblePrompt(payload, getSectionPrompt(sectionId));
     const purpose =
       sectionId === 'header_verdict'
-        ? 'analyzer_header_verdict'
-        : 'analyzer_section_annotation';
+        ? AI_PURPOSES.ANALYZER_HEADER_VERDICT
+        : AI_PURPOSES.ANALYZER_SECTION_ANNOTATION;
 
     const response = await this.provider.complete(purpose, {
       systemPrompt: SYSTEM_PROMPT,
@@ -130,7 +131,7 @@ export class AiInsightsService {
     // out all six sections at once. The prompt instructs JSON-only output
     // and parseBatchedJson() handles fence-stripping and graceful failure.
     const response = await this.provider.complete(
-      'analyzer_section_annotation',
+      AI_PURPOSES.ANALYZER_SECTION_ANNOTATION,
       { systemPrompt: SYSTEM_PROMPT, userPrompt, maxTokens: BATCH_MAX_TOKENS },
     );
 
@@ -157,7 +158,7 @@ export class AiInsightsService {
       payload,
       getSectionPrompt('header_verdict'),
     );
-    yield* this.provider.stream('analyzer_header_verdict', {
+    yield* this.provider.stream(AI_PURPOSES.ANALYZER_HEADER_VERDICT, {
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
       maxTokens: 200,

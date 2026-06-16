@@ -13,6 +13,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AiProviderService } from '../../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../../ai-provider/ai-provider.types';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { TimeSeriesService } from '../../timeseries/timeseries.service';
@@ -102,8 +103,9 @@ export class ResearchBriefService {
     clarifyingAnswers?: Record<string, string>,
     userContext?: string,
   ): Promise<ResearchResult> {
-    const { client, model } =
-      await this.aiProvider.getClientForPurpose('research_agent');
+    const { client, model } = await this.aiProvider.getClientForPurpose(
+      AI_PURPOSES.RESEARCH_AGENT,
+    );
 
     const startTime = Date.now();
     let userPrompt = `Research question: "${userQuestion}"`;

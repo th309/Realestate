@@ -13,6 +13,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import {
   buildConversationSystemPrompt,
   buildConversationMessages,
@@ -46,7 +47,7 @@ export class ReportAiService {
 
     try {
       const response = await this.aiProvider.completeWithMessages(
-        'conversation',
+        AI_PURPOSES.CONVERSATION,
         [{ role: 'system', content: systemPrompt }, ...messages],
         4096,
       );
@@ -74,10 +75,13 @@ export class ReportAiService {
       newsContext,
     );
     try {
-      const response = await this.aiProvider.complete('report_narrative', {
-        userPrompt: prompt,
-        maxTokens: 2000,
-      });
+      const response = await this.aiProvider.complete(
+        AI_PURPOSES.REPORT_NARRATIVE,
+        {
+          userPrompt: prompt,
+          maxTokens: 2000,
+        },
+      );
       return response.content;
     } catch (error) {
       this.logger.error('Investment analysis failed:', error);
@@ -87,10 +91,13 @@ export class ReportAiService {
 
   /** Generate a single completion from a prompt (public wrapper) */
   async complete(prompt: string, maxTokens: number): Promise<string> {
-    const response = await this.aiProvider.complete('report_narrative', {
-      userPrompt: prompt,
-      maxTokens,
-    });
+    const response = await this.aiProvider.complete(
+      AI_PURPOSES.REPORT_NARRATIVE,
+      {
+        userPrompt: prompt,
+        maxTokens,
+      },
+    );
     return response.content;
   }
 
@@ -111,10 +118,13 @@ export class ReportAiService {
 
     const prompt = buildWhyWinnerWonPrompt(context);
     try {
-      const response = await this.aiProvider.complete('report_narrative', {
-        userPrompt: prompt,
-        maxTokens: 800,
-      });
+      const response = await this.aiProvider.complete(
+        AI_PURPOSES.REPORT_NARRATIVE,
+        {
+          userPrompt: prompt,
+          maxTokens: 800,
+        },
+      );
       const parsed = JSON.parse(response.content);
       if (Array.isArray(parsed) && parsed.length >= 3) {
         return parsed.slice(0, 3);
@@ -141,10 +151,13 @@ export class ReportAiService {
   }): Promise<string> {
     const prompt = buildFinalRecommendationPrompt(context);
     try {
-      const response = await this.aiProvider.complete('report_narrative', {
-        userPrompt: prompt,
-        maxTokens: 2000,
-      });
+      const response = await this.aiProvider.complete(
+        AI_PURPOSES.REPORT_NARRATIVE,
+        {
+          userPrompt: prompt,
+          maxTokens: 2000,
+        },
+      );
       return response.content;
     } catch (error) {
       this.logger.error('Failed to generate final recommendation:', error);

@@ -10,6 +10,7 @@
 
 import { Logger } from '@nestjs/common';
 import { AiProviderService } from '../../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../../ai-provider/ai-provider.types';
 import { buildNarrativePrompt } from './research-prompts';
 
 const logger = new Logger('ResearchNarrativeGenerator');
@@ -64,7 +65,7 @@ export async function generateNarrative(
   logger.log(`Research data keys: ${Object.keys(researchData).join(', ')}`);
 
   try {
-    const response = await aiProvider.complete('research_narrative', {
+    const response = await aiProvider.complete(AI_PURPOSES.RESEARCH_NARRATIVE, {
       userPrompt: prompt,
       maxTokens: 8192,
     });

@@ -14,17 +14,15 @@ import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
-  AiProviderConfig,
   AiCompletionRequest,
+  AiProviderConfig,
   AiCompletionResponse,
   PROVIDER_PRESETS,
-  modelRejectsSamplingParams,
-  providerSupportsJsonObjectFormat,
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
 import { AiShadowService } from './ai-shadow.service';
-import { logUsage } from './ai-usage-logger';
 import { executeStream } from './ai-stream-executor';
+import { executeCompletion } from './ai-completion-executor';
 
 @Injectable()
 export class AiProviderService {
@@ -72,13 +70,23 @@ export class AiProviderService {
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
-    const response = await this.executeCompletion(purpose, config, messages, {
-      maxTokens: request.maxTokens,
-      temperature,
-      responseFormat: request.responseFormat,
-      testRunId: request.testRunId,
-      reportId: request.reportId,
-      sectionId: request.sectionId,
+    const client = this.getOrCreateClient(config);
+    const response = await executeCompletion({
+      client,
+      supabase: this.supabase,
+      logger: this.logger,
+      purpose,
+      config,
+      messages,
+      activeTestRunId: this.activeTestRunId,
+      options: {
+        maxTokens: request.maxTokens,
+        temperature,
+        responseFormat: request.responseFormat,
+        testRunId: request.testRunId,
+        reportId: request.reportId,
+        sectionId: request.sectionId,
+      },
     });
 
     void this.shadow.runShadow({
@@ -111,8 +119,16 @@ export class AiProviderService {
   ): Promise<AiCompletionResponse> {
     const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    const response = await this.executeCompletion(purpose, config, messages, {
-      maxTokens,
+    const client = this.getOrCreateClient(config);
+    const response = await executeCompletion({
+      client,
+      supabase: this.supabase,
+      logger: this.logger,
+      purpose,
+      config,
+      messages,
+      activeTestRunId: this.activeTestRunId,
+      options: { maxTokens },
     });
 
     void this.shadow.runShadow({
@@ -222,100 +238,6 @@ export class AiProviderService {
     // Always clear client cache — API keys or base URLs may have changed.
     this.clientCache.clear();
     this.logger.log(`Cache invalidated: ${purpose || 'all'}`);
-  }
-
-  /**
-   * Shared completion executor used by both complete() and completeWithMessages().
-   */
-  private async executeCompletion(
-    purpose: string,
-    config: AiProviderConfig,
-    messages: OpenAI.ChatCompletionMessageParam[],
-    options: {
-      maxTokens: number;
-      temperature?: number;
-      responseFormat?: 'text' | 'json';
-      testRunId?: string;
-      reportId?: string;
-      sectionId?: string;
-    },
-  ): Promise<AiCompletionResponse> {
-    const client = this.getOrCreateClient(config);
-    const startTime = Date.now();
-    const temperature =
-      options.temperature ??
-      config.temperature ??
-      PROVIDER_PRESETS[config.provider].defaultTemperature;
-
-    try {
-      const rejectsSampling = modelRejectsSamplingParams(
-        config.provider,
-        config.model,
-      );
-      const response = await client.chat.completions.create({
-        model: config.model,
-        messages,
-        max_tokens: options.maxTokens,
-        ...(rejectsSampling ? {} : { temperature }),
-        ...(options.responseFormat === 'json' &&
-          providerSupportsJsonObjectFormat(config.provider) && {
-            response_format: { type: 'json_object' },
-          }),
-      });
-
-      const durationMs = Date.now() - startTime;
-      const content = response.choices[0]?.message?.content || '';
-
-      this.logger.log(
-        `[${purpose}] ${config.provider}/${config.model} completed in ${durationMs}ms` +
-          (response.usage ? ` (${response.usage.total_tokens} tokens)` : ''),
-      );
-
-      logUsage(this.supabase, {
-        purpose,
-        provider: config.provider,
-        model: config.model,
-        promptTokens: response.usage?.prompt_tokens,
-        completionTokens: response.usage?.completion_tokens,
-        totalTokens: response.usage?.total_tokens,
-        durationMs,
-        success: true,
-        testRunId: options.testRunId || this.activeTestRunId || undefined,
-        reportId: options.reportId,
-        sectionId: options.sectionId,
-      });
-
-      return {
-        content,
-        model: config.model,
-        provider: config.provider,
-        usage: response.usage
-          ? {
-              promptTokens: response.usage.prompt_tokens,
-              completionTokens: response.usage.completion_tokens,
-              totalTokens: response.usage.total_tokens,
-            }
-          : undefined,
-        durationMs,
-      };
-    } catch (error: any) {
-      const durationMs = Date.now() - startTime;
-      this.logger.error(
-        `[${purpose}] ${config.provider}/${config.model} failed after ${durationMs}ms: ${error.message}`,
-      );
-      logUsage(this.supabase, {
-        purpose,
-        provider: config.provider,
-        model: config.model,
-        durationMs,
-        success: false,
-        errorMessage: error.message,
-        testRunId: options.testRunId || this.activeTestRunId || undefined,
-        reportId: options.reportId,
-        sectionId: options.sectionId,
-      });
-      throw error;
-    }
   }
 
   /**

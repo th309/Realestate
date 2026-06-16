@@ -247,3 +247,23 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
     availableModels: [],
   },
 };
+
+/**
+ * Canonical AI purpose keys. Each maps to a row in `ai_model_config`.
+ * Use these constants instead of string literals so a typo is a compile error,
+ * not a silent fall-through to the env-var fallback config.
+ */
+export const AI_PURPOSES = {
+  REPORT_NARRATIVE: 'report_narrative',
+  REPORT_OUTLINE: 'report_outline',
+  CUSTOM_REPORT: 'custom_report',
+  RESEARCH_AGENT: 'research_agent',
+  RESEARCH_NARRATIVE: 'research_narrative',
+  NEWS_SCOUT: 'news_scout',
+  CONVERSATION: 'conversation',
+  ANALYZER_HEADER_VERDICT: 'analyzer_header_verdict',
+  ANALYZER_SECTION_ANNOTATION: 'analyzer_section_annotation',
+  REPORT_FOLLOW_UP: 'report_follow_up',
+} as const;
+
+export type AiPurpose = (typeof AI_PURPOSES)[keyof typeof AI_PURPOSES];
