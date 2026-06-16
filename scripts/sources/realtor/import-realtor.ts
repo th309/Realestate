@@ -67,10 +67,15 @@ async function main(): Promise<void> {
   );
   console.log(`Filter:  ${geoFilter || "all geographies"}`);
 
-  // Default to monthly incremental; pass `--full` for a backfill.
+  // Rolling 12-month window: re-upsert the last 12 months each run so Realtor's
+  // revisions to recent months are captured. `--recent=N` overrides; `--full`
+  // disables windowing (full backfill).
   const dateCutoff =
-    getIncrementalCutoff({ frequency: "monthly", ...incrementalFlags }) ??
-    undefined;
+    getIncrementalCutoff({
+      frequency: "monthly",
+      ...incrementalFlags,
+      lookbackMonthsOverride: incrementalFlags.lookbackMonthsOverride ?? 12,
+    }) ?? undefined;
   console.log(
     `Mode:    ${incrementalFlags.fullLoad ? "FULL backfill" : `incremental (cutoff: ${dateCutoff})`}`,
   );

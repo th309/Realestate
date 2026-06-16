@@ -22,30 +22,7 @@ import {
   REALTOR_HISTORY_FILES,
   REALTOR_TABLES,
 } from "./realtor-config";
-
-/**
- * Window hotness rows to those on/after `isoCutoff` BEFORE building the in-memory
- * map. The Realtor hotness files are full multi-year HISTORY (millions of rows);
- * an INCREMENTAL import only needs rows back to the cutoff to merge with the
- * current-month core, and building the map over the entire history OOMs (exit
- * 134 / JS heap). This does NOT touch the years of history already in the DB —
- * it only bounds what the live merge holds in memory. Callers pass `undefined`
- * for a `--full` backfill so the whole file is loaded untouched.
- * `monthField` values are YYYYMM strings, which sort lexically.
- */
-function windowHotnessByCutoff(
-  rows: Record<string, string>[],
-  monthField: string,
-  isoCutoff: string | undefined,
-): Record<string, string>[] {
-  if (!isoCutoff) return rows; // full backfill — keep the entire history
-  const cutoffYm = isoCutoff.slice(0, 7).replace("-", ""); // 2026-03-15 -> 202603
-  if (cutoffYm.length !== 6) return rows;
-  return rows.filter((r) => {
-    const ym = r[monthField];
-    return !ym || ym >= cutoffYm;
-  });
-}
+import { windowRowsByCutoff } from "./realtor-row-window";
 
 export interface MergeGeographySpec {
   id: string;
@@ -135,7 +112,15 @@ export async function importMergeGeography(
       localPath: useHistory ? spec.coreLocalPath : undefined,
       format: "csv",
     });
-    console.log(`  Core rows loaded: ${coreData.rowCount}`);
+    const coreRows = windowRowsByCutoff(
+      coreData.rows,
+      "month_date_yyyymm",
+      dateCutoff,
+    );
+    console.log(
+      `  Core rows loaded: ${coreData.rowCount}` +
+        (dateCutoff ? ` (windowed to ${coreRows.length})` : ""),
+    );
 
     const hotnessData = await loadDataFile({
       url: spec.hotnessUrl,
@@ -146,7 +131,7 @@ export async function importMergeGeography(
 
     const coreRecords: Record<string, unknown>[] = [];
     let rowsSkippedByMapping = 0;
-    for (const row of coreData.rows) {
+    for (const row of coreRows) {
       const mapped = spec.coreColumnMap(row);
       if (mapped !== null) {
         coreRecords.push(mapped);
@@ -159,7 +144,7 @@ export async function importMergeGeography(
     );
 
     const hotnessMap = buildHotnessMap(
-      windowHotnessByCutoff(hotnessData.rows, "month_date_yyyymm", dateCutoff),
+      windowRowsByCutoff(hotnessData.rows, "month_date_yyyymm", dateCutoff),
       spec.regionKeyField,
       spec.hotnessIncludesExtras,
     );

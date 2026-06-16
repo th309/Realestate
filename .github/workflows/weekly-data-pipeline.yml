@@ -34,9 +34,10 @@ jobs:
     env:
       SOURCE: ${{ github.event.inputs.source || 'all' }}
       FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
-      # The realtor zip core+hotness merge loads a ~340MB / 1.3M-row hotness
-      # HISTORY file into memory; the default Node heap OOMs (exit 134 / SIGABRT).
-      NODE_OPTIONS: --max-old-space-size=6144
+      # Realtor merge windows the _History files (Zip core ~770MB + hotness ~340MB)
+      # in memory; bump the Node heap so the parse doesn't OOM (exit 134 / SIGABRT).
+      # Runner has 16GB, so 8GB heap is safe headroom for the ~3-4GB parse peak.
+      NODE_OPTIONS: --max-old-space-size=8192
       SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
       NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
