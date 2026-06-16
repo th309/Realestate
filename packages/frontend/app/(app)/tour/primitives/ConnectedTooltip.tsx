@@ -142,9 +142,15 @@ export function ConnectedTooltip({
       "top-1/2 -translate-y-1/2 -right-2 border-l-surface-container-high border-t-transparent border-b-transparent border-r-transparent",
   };
 
-  const springTransform = show
-    ? "scale(1) translateY(0)"
-    : "scale(0.95) translateY(8px)";
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  const springTransform = prefersReducedMotion
+    ? "none"
+    : show
+      ? "scale(1) translateY(0)"
+      : "scale(0.95) translateY(8px)";
 
   const content = (
     <div className="relative">
