@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { requireSupabase } from "./supabase";
+import { config } from "../config";
 
 // ── In-memory token cache (avoids Supabase round-trip on every request) ──
 const TOKEN_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
@@ -54,6 +55,11 @@ export async function createTokens(
     throw new Error(`Token creation failed: ${error.message}`);
   }
 
+  // Best-effort coverage signal — fire-and-forget, NEVER block token issuance.
+  // Lands a `feature.mcp_connected` row in `user_events` (same ingest endpoint
+  // the frontend tracker uses) so the return-surface/drip can react immediately.
+  await emitMcpConnectedEvent(clientId, userId);
+
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
@@ -61,6 +67,45 @@ export async function createTokens(
     expires_in: 3600,
     scope: "mcp",
   };
+}
+
+/**
+ * Posts a one-time `feature.mcp_connected` coverage event to the backend usage
+ * ingest endpoint. Wrapped so any failure (network, timeout, non-2xx) is
+ * swallowed — token issuance must never depend on this telemetry call.
+ */
+async function emitMcpConnectedEvent(
+  clientId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), config.timeout);
+    try {
+      await fetch(`${config.apiUrl}/api/usage/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          events: [
+            {
+              visitor_id: userId,
+              session_id: `mcp-${clientId}`,
+              user_id: userId,
+              event_category: "feature",
+              event_action: "mcp_connected",
+              properties: { client_id: clientId },
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    /* best-effort: ignore telemetry failures */
+  }
 }
 
 export async function lookupAccessToken(
