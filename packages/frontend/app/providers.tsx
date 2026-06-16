@@ -154,9 +154,13 @@ function OnboardingBeaconProvider({ children }: { children: React.ReactNode }) {
 export function Providers({
   children,
   initialUserId,
+  initialEntitlementState,
 }: {
   children: React.ReactNode;
   initialUserId: string | null;
+  initialEntitlementState?:
+    | import("@/lib/entitlements/types").EntitlementsState
+    | null;
 }) {
   const queryClient = getQueryClient();
 
@@ -166,7 +170,7 @@ export function Providers({
         <QueryCacheCleaner />
 
         <ToastProvider>
-          <EntitlementsProvider>
+          <EntitlementsProvider initialState={initialEntitlementState}>
             <OnboardingBeaconProvider>
               <PaywallProvider>{children}</PaywallProvider>
             </OnboardingBeaconProvider>
