@@ -155,7 +155,6 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
     metric("home_sales_yoy"),
     metric("hotness_score"),
     metric("market_heat"),
-    metric("sale_to_list"),
     metric("supply_score"),
     metric("demand_score"),
   ],
@@ -227,7 +226,6 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
     metric("new_listings_yoy"),
     metric("home_sales"),
     metric("hotness_score"),
-    metric("sale_to_list"),
     metric("market_heat"),
     metric("supply_score"),
     metric("demand_score"),
@@ -288,7 +286,6 @@ const NEW_CONSTRUCTION: MetricCategory = {
     metric("permit_value_per_unit"),
     // New Construction Sales (Zillow - metro only)
     metric("new_construction_sales"),
-    metric("new_construction_price"),
     metric("new_construction_ppsf"),
   ],
 };

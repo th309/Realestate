@@ -36,7 +36,6 @@ const METRIC_GROUPS: { label: string; metrics: string[] }[] = [
       "price_per_sqft",
       "days_on_market",
       "price_cut_pct",
-      "sale_to_list",
     ],
   },
   {

@@ -204,14 +204,6 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     sourceUrl: "https://www.realtor.com/research/data/",
     relatedMetrics: ["for_sale_inventory", "inventory_yoy"],
   },
-  days_to_close: {
-    id: "days_to_close",
-    name: "Days to Close",
-    description:
-      "Median number of days from pending status to closing. Reflects escrow and financing timelines in the market.",
-    dataSource: "Zillow",
-    updateFrequency: "Monthly",
-  },
   home_sales: {
     id: "home_sales",
     name: "Home Sales",
@@ -234,29 +226,12 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     updateFrequency: "Monthly",
     sourceUrl: "https://www.realtor.com/research/data/",
   },
-  sale_to_list: {
-    id: "sale_to_list",
-    name: "Sale-to-List Ratio",
-    description:
-      "Ratio of final sale price to original list price. Values over 100% indicate homes selling above asking; under 100% indicate discounts.",
-    formula: "(Sale Price / List Price) × 100",
-    dataSource: "Zillow",
-    updateFrequency: "Monthly",
-    sourceUrl: "https://www.zillow.com/research/data/",
-  },
   price_cut_amount: {
     id: "price_cut_amount",
     name: "Median Price Cut ($)",
     description:
       "Median dollar amount of price reductions on listings with price cuts.",
     dataSource: "Zillow",
-    updateFrequency: "Monthly",
-  },
-  list_price: {
-    id: "list_price",
-    name: "Median List Price",
-    description: "Median asking price of all active listings on the market.",
-    dataSource: "Realtor.com",
     updateFrequency: "Monthly",
   },
   sale_price: {
@@ -276,17 +251,6 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     updateFrequency: "Monthly",
     notes:
       "Count of newly built home sales reported by Zillow. Coverage varies by geography.",
-    sourceUrl: "https://www.zillow.com/research/data/",
-  },
-  new_construction_price: {
-    id: "new_construction_price",
-    name: "New Construction Price",
-    description: "Median sale price of newly constructed homes.",
-    formula: "Median sale price of newly built homes",
-    dataSource: "Zillow",
-    updateFrequency: "Monthly",
-    notes:
-      "Based on Zillow observed sale prices for new construction. Coverage varies by geography.",
     sourceUrl: "https://www.zillow.com/research/data/",
   },
   new_construction_ppsf: {
