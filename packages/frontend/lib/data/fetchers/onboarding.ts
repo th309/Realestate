@@ -7,6 +7,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { API_URL } from "./base";
+import { withRequestLimit } from "./concurrency-limit";
 
 export interface OnboardingState {
   onboarding_completed_at: string | null;
@@ -107,6 +108,8 @@ export async function startOnboardingTrial(): Promise<void> {
   // token for the guard plus x-user-id for the controller. keepalive: this is
   // fired post-signup right before a client-side navigation (router.push), so
   // without it the in-flight request is canceled on unload.
+  // NOT wrapped in withRequestLimit on purpose: queueing this behind the
+  // concurrency cap could delay it past unload and drop the trial grant.
   await fetch(`${API_URL}/api/onboarding/start-trial`, {
     method: "POST",
     headers: {
@@ -128,14 +131,16 @@ export async function saveOnboardingMarketSelection(market: {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await fetch(`${API_URL}/api/onboarding/save-market`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": user.id,
-    },
-    body: JSON.stringify(market),
-  });
+  await withRequestLimit(() =>
+    fetch(`${API_URL}/api/onboarding/save-market`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": user.id,
+      },
+      body: JSON.stringify(market),
+    }),
+  );
 }
 
 export async function updateChecklistTask(taskId: string): Promise<void> {
@@ -145,10 +150,12 @@ export async function updateChecklistTask(taskId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await fetch(`${API_URL}/api/onboarding/checklist/${taskId}`, {
-    method: "POST",
-    headers: { "x-user-id": user.id },
-  });
+  await withRequestLimit(() =>
+    fetch(`${API_URL}/api/onboarding/checklist/${taskId}`, {
+      method: "POST",
+      headers: { "x-user-id": user.id },
+    }),
+  );
 }
 
 export async function incrementUsageStat(
@@ -160,10 +167,12 @@ export async function incrementUsageStat(
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await fetch(`${API_URL}/api/onboarding/usage/${stat}`, {
-    method: "POST",
-    headers: { "x-user-id": user.id },
-  });
+  await withRequestLimit(() =>
+    fetch(`${API_URL}/api/onboarding/usage/${stat}`, {
+      method: "POST",
+      headers: { "x-user-id": user.id },
+    }),
+  );
 }
 
 export async function dismissBeaconTask(beaconId: string): Promise<void> {
@@ -173,8 +182,10 @@ export async function dismissBeaconTask(beaconId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await fetch(`${API_URL}/api/onboarding/beacon/${beaconId}/dismiss`, {
-    method: "POST",
-    headers: { "x-user-id": user.id },
-  });
+  await withRequestLimit(() =>
+    fetch(`${API_URL}/api/onboarding/beacon/${beaconId}/dismiss`, {
+      method: "POST",
+      headers: { "x-user-id": user.id },
+    }),
+  );
 }

@@ -146,3 +146,10 @@ export {
   type UseScreenerOptions,
   type UseScreenerResult,
 } from "./useScreener";
+
+// Admin AI model configuration (config cards + provider presets)
+export {
+  useAiModelConfigs,
+  useProviderPresets,
+  useUpdateAiModelConfig,
+} from "./useAiModelConfig";

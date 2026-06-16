@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
+import { RedisService } from '../redis/redis.service';
 import { normalizeZipKey } from '../common/zip';
 import {
   normalizeStateRegionId,
@@ -134,13 +135,73 @@ const PERMITS_COLUMN_MAP: Record<string, string> = {
 export class MarketSnapshotService {
   private readonly logger = new Logger(MarketSnapshotService.name);
 
+  /**
+   * Read-through cache TTL for market snapshots. Market data refreshes monthly,
+   * so multi-hour staleness is invisible to users; 6h matches the codebase's
+   * `metric_snapshot` TTL convention (see redis-ttl-config.ts).
+   */
+  private static readonly SNAPSHOT_CACHE_TTL_SECONDS = 6 * 60 * 60;
+
+  /**
+   * De-dupes concurrent cold-cache builds for the same key, so a burst of
+   * requests for one region triggers a single 7-source fan-out, not N. This is
+   * the thundering-herd guard that matters after a deploy when caches are cold.
+   */
+  private readonly inflightSnapshots = new Map<
+    string,
+    Promise<MarketSnapshotResponse>
+  >();
+
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly scoringService: ScoringService,
     private readonly metricResolution: MetricResolutionService,
+    private readonly redis: RedisService,
   ) {}
 
+  /**
+   * Public entry point: a Redis read-through cache around the expensive
+   * 7-source snapshot build. Degrades gracefully when Redis is absent
+   * (getByKey returns null, setByKey is a no-op — see RedisService), so local
+   * dev without Redis behaves exactly as before, just uncached.
+   */
   async getSnapshot(
+    geoType: GeoType,
+    geoId: string,
+    state?: string,
+  ): Promise<MarketSnapshotResponse> {
+    const cacheKey = `snapshot:v1:${geoType}:${geoId}${
+      state ? `:${state.toUpperCase()}` : ''
+    }`;
+
+    const cached = (await this.redis.getByKey(
+      cacheKey,
+    )) as MarketSnapshotResponse | null;
+    if (cached) return cached;
+
+    // Coalesce concurrent misses for the same key (cold-cache thundering herd).
+    const inflight = this.inflightSnapshots.get(cacheKey);
+    if (inflight) return inflight;
+
+    const build = (async () => {
+      const result = await this.buildSnapshot(geoType, geoId, state);
+      await this.redis.setByKey(
+        cacheKey,
+        result,
+        MarketSnapshotService.SNAPSHOT_CACHE_TTL_SECONDS,
+      );
+      return result;
+    })();
+
+    this.inflightSnapshots.set(cacheKey, build);
+    try {
+      return await build;
+    } finally {
+      this.inflightSnapshots.delete(cacheKey);
+    }
+  }
+
+  private async buildSnapshot(
     geoType: GeoType,
     geoId: string,
     state?: string,

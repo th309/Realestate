@@ -85,6 +85,13 @@ function makeQueryClient() {
         // above 0 to avoid refetching immediately on the client
         staleTime: 60 * 1000, // 1 minute
         refetchOnWindowFocus: false,
+        // Market data is monthly; staleTime governs freshness on the next user
+        // interaction. Auto-refetching on reconnect has no value here and is
+        // actively harmful: the tab-lifetime cache accumulates many per-region
+        // queries, so a backend reconnect (Railway redeploy, flaky wifi) would
+        // refetch them all at once — a self-inflicted 429 storm. (Concurrency is
+        // also capped in the data layer; see lib/data/fetchers/concurrency-limit.)
+        refetchOnReconnect: false,
         retry: shouldRetryQuery,
         retryDelay,
       },

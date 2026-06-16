@@ -24,8 +24,30 @@ export interface AiModelConfig {
   max_tokens_override: number | null;
   is_active: boolean;
   notes: string | null;
+  shadow_provider: string | null;
+  shadow_model: string | null;
+  shadow_sample_rate: number | null;
   updated_at: string;
 }
+
+/** One model option shown in the admin provider dropdown. */
+export interface ProviderModelOption {
+  id: string;
+  label: string;
+  context?: string;
+}
+
+/** Mirrors backend ProviderPreset (ai-provider.types.ts). */
+export interface ProviderPreset {
+  baseUrl: string;
+  defaultModel: string;
+  defaultTemperature: number;
+  envKeyName: string;
+  supportsSystemPrompt: boolean;
+  availableModels: ProviderModelOption[];
+}
+
+export type ProviderPresets = Record<string, ProviderPreset>;
 
 // ---------------------------------------------------------------------------
 // Fetchers
@@ -94,11 +116,11 @@ export async function setTestRunId(
 }
 
 /**
- * Fetch provider presets (default models per provider).
+ * Fetch provider presets (base URLs, default models, available model lists).
+ * The single source of truth for the admin model dropdown — mirrors the
+ * backend PROVIDER_PRESETS so the frontend never hardcodes model IDs.
  */
-export async function fetchProviderPresets(): Promise<
-  Record<string, { defaultModel: string; models: string[] }>
-> {
+export async function fetchProviderPresets(): Promise<ProviderPresets> {
   const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw("/api/admin/ai-models/presets", {
     headers: authHeaders,

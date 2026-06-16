@@ -9,89 +9,58 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import {
-  fetchAiModelConfigs,
-  updateAiModelConfig,
-  fetchTestRunId,
-  setTestRunId as setTestRunIdApi,
-  type AiModelConfig,
-} from "@/lib/data/fetchers/ai-models";
+  useAiModelConfigs,
+  useProviderPresets,
+  useUpdateAiModelConfig,
+} from "@/lib/data/hooks";
+import type { AiModelConfig } from "@/lib/data/fetchers/ai-models";
 import { ModelConfigCard } from "./components/ModelConfigCard";
-import { TestRunner } from "./components/TestRunner";
-import { EvaluationDashboard } from "./components/EvaluationDashboard";
 
 export default function AiModelConfigPage() {
-  const [configs, setConfigs] = useState<AiModelConfig[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const configsQuery = useAiModelConfigs();
+  const presetsQuery = useProviderPresets();
+  const updateMutation = useUpdateAiModelConfig();
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
-  const [testRunId, setTestRunId] = useState("");
-  const [testRunSaving, setTestRunSaving] = useState(false);
-  const dashboardRefreshRef = useRef<() => void>(null);
 
-  const loadConfigs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const configs = configsQuery.data ?? [];
+  const presets = presetsQuery.data ?? {};
+  const loading = configsQuery.isLoading || presetsQuery.isLoading;
+  const error =
+    configsQuery.isError || presetsQuery.isError
+      ? "Failed to load AI model configurations."
+      : null;
+
+  const handleSave = async (
+    purpose: string,
+    update: Partial<AiModelConfig>,
+  ): Promise<boolean> => {
     try {
-      const [data, runId] = await Promise.all([
-        fetchAiModelConfigs(),
-        fetchTestRunId(),
-      ]);
-      setConfigs(data);
-      setTestRunId(runId || "");
+      const result = await updateMutation.mutateAsync({ purpose, update });
+      const ok = !!result;
+      setToast({
+        message: ok
+          ? `${purpose} configuration saved.`
+          : `Failed to save ${purpose} configuration.`,
+        type: ok ? "success" : "error",
+      });
+      setTimeout(() => setToast(null), 4000);
+      return ok;
     } catch (err) {
-      setError("Failed to load AI model configurations.");
-      console.error("Error loading AI model configs:", err);
-    } finally {
-      setLoading(false);
+      console.error(`Error saving ${purpose} config:`, err);
+      setToast({
+        message: `Error saving ${purpose} configuration.`,
+        type: "error",
+      });
+      setTimeout(() => setToast(null), 4000);
+      return false;
     }
-  }, []);
-
-  useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
-
-  const handleSave = useCallback(
-    async (
-      purpose: string,
-      update: Partial<AiModelConfig>,
-    ): Promise<boolean> => {
-      try {
-        const result = await updateAiModelConfig(purpose, update);
-        if (result) {
-          // Update local state with the saved config
-          setConfigs((prev) =>
-            prev.map((c) => (c.purpose === purpose ? { ...c, ...result } : c)),
-          );
-          setToast({
-            message: `${purpose} configuration saved.`,
-            type: "success",
-          });
-          setTimeout(() => setToast(null), 4000);
-          return true;
-        }
-        setToast({
-          message: `Failed to save ${purpose} configuration.`,
-          type: "error",
-        });
-        setTimeout(() => setToast(null), 4000);
-        return false;
-      } catch (err) {
-        console.error(`Error saving ${purpose} config:`, err);
-        setToast({
-          message: `Error saving ${purpose} configuration.`,
-          type: "error",
-        });
-        setTimeout(() => setToast(null), 4000);
-        return false;
-      }
-    },
-    [],
-  );
+  };
 
   return (
     <div className="min-h-screen bg-surface">
@@ -109,12 +78,18 @@ export default function AiModelConfigPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                href="/admin/ai-models/evaluation"
+                className="px-4 py-2 text-sm font-medium rounded-full bg-secondary-container text-on-secondary-container hover:bg-secondary-container/80 transition-colors duration-200"
+              >
+                Evaluation Lab →
+              </Link>
               <button
-                onClick={loadConfigs}
-                disabled={loading}
+                onClick={() => configsQuery.refetch()}
+                disabled={configsQuery.isFetching}
                 className="px-4 py-2 text-sm font-medium rounded-full bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50 transition-colors duration-200"
               >
-                {loading ? "Loading..." : "Refresh"}
+                {configsQuery.isFetching ? "Loading..." : "Refresh"}
               </button>
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-tertiary-container text-on-tertiary-container">
                 Admin Access
@@ -126,43 +101,6 @@ export default function AiModelConfigPage() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Test Run ID */}
-        <div className="mb-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant flex items-center gap-4">
-          <label
-            htmlFor="test-run-id"
-            className="text-sm font-medium text-on-surface whitespace-nowrap"
-          >
-            Test Run ID
-          </label>
-          <input
-            id="test-run-id"
-            type="text"
-            value={testRunId}
-            onChange={(e) => setTestRunId(e.target.value)}
-            placeholder="e.g. p1-sonnet46-tampa (empty = no tagging)"
-            className="flex-1 px-3 py-2 text-sm rounded-lg bg-surface border border-outline-variant text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-          <button
-            onClick={async () => {
-              setTestRunSaving(true);
-              const result = await setTestRunIdApi(testRunId || null);
-              setTestRunId(result || "");
-              setToast({
-                message: testRunId
-                  ? `Test run ID set: ${testRunId}`
-                  : "Test run ID cleared.",
-                type: "success",
-              });
-              setTimeout(() => setToast(null), 4000);
-              setTestRunSaving(false);
-            }}
-            disabled={testRunSaving}
-            className="px-4 py-2 text-sm font-medium rounded-full bg-tertiary text-on-tertiary hover:bg-tertiary/90 disabled:opacity-50 transition-colors duration-200"
-          >
-            {testRunSaving ? "Saving..." : testRunId ? "Set" : "Clear"}
-          </button>
-        </div>
-
         {/* Error state */}
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-error-container text-on-error-container text-sm">
@@ -199,7 +137,7 @@ export default function AiModelConfigPage() {
               may not have been ready yet.
             </p>
             <button
-              onClick={loadConfigs}
+              onClick={() => configsQuery.refetch()}
               className="mt-4 px-5 py-2 text-sm font-medium rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200"
             >
               Retry
@@ -214,17 +152,12 @@ export default function AiModelConfigPage() {
               <ModelConfigCard
                 key={config.purpose}
                 config={config}
+                presets={presets}
                 onSave={handleSave}
               />
             ))}
           </div>
         )}
-
-        {/* Test Runner */}
-        <TestRunner onBatchComplete={() => dashboardRefreshRef.current?.()} />
-
-        {/* Evaluation Dashboard */}
-        <EvaluationDashboard onRefreshRef={dashboardRefreshRef} />
       </main>
 
       {/* Toast notification */}
