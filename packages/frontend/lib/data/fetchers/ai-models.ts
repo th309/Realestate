@@ -24,6 +24,9 @@ export interface AiModelConfig {
   max_tokens_override: number | null;
   is_active: boolean;
   notes: string | null;
+  shadow_provider: string | null;
+  shadow_model: string | null;
+  shadow_sample_rate: number | null;
   updated_at: string;
 }
 

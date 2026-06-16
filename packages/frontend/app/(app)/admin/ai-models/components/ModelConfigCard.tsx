@@ -15,6 +15,7 @@ import type {
   AiModelConfig,
   ProviderPresets,
 } from "@/lib/data/fetchers/ai-models";
+import { ShadowConfigFields } from "./ShadowConfigFields";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -69,6 +70,15 @@ export function ModelConfigCard({
   const [temperature, setTemperature] = useState(config.temperature);
   const [baseUrl, setBaseUrl] = useState(config.base_url || "");
   const [notes, setNotes] = useState(config.notes || "");
+  const [shadowProvider, setShadowProvider] = useState<string | null>(
+    config.shadow_provider,
+  );
+  const [shadowModel, setShadowModel] = useState<string | null>(
+    config.shadow_model,
+  );
+  const [shadowSampleRate, setShadowSampleRate] = useState<number>(
+    config.shadow_sample_rate ?? 0,
+  );
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle",
@@ -83,7 +93,10 @@ export function ModelConfigCard({
     model !== config.model ||
     temperature !== config.temperature ||
     baseUrl !== (config.base_url || "") ||
-    notes !== (config.notes || "");
+    notes !== (config.notes || "") ||
+    shadowProvider !== config.shadow_provider ||
+    shadowModel !== config.shadow_model ||
+    shadowSampleRate !== (config.shadow_sample_rate ?? 0);
 
   const handleProviderChange = useCallback(
     (newProvider: string) => {
@@ -111,6 +124,9 @@ export function ModelConfigCard({
       temperature,
       base_url: provider === "custom" ? baseUrl || null : null,
       notes: notes || null,
+      shadow_provider: shadowProvider,
+      shadow_model: shadowModel,
+      shadow_sample_rate: shadowSampleRate,
     };
 
     const success = await onSave(config.purpose, update);
@@ -120,7 +136,18 @@ export function ModelConfigCard({
     if (success) {
       setTimeout(() => setSaveStatus("idle"), 3000);
     }
-  }, [provider, model, temperature, baseUrl, notes, config.purpose, onSave]);
+  }, [
+    provider,
+    model,
+    temperature,
+    baseUrl,
+    notes,
+    shadowProvider,
+    shadowModel,
+    shadowSampleRate,
+    config.purpose,
+    onSave,
+  ]);
 
   const formattedDate = config.updated_at
     ? new Date(config.updated_at).toLocaleString()
@@ -294,6 +321,23 @@ export function ModelConfigCard({
             className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
+
+        {/* Shadow A/B */}
+        <ShadowConfigFields
+          presets={presets}
+          shadowProvider={shadowProvider}
+          shadowModel={shadowModel}
+          shadowSampleRate={shadowSampleRate}
+          onChange={(patch) => {
+            if (patch.shadowProvider !== undefined)
+              setShadowProvider(patch.shadowProvider);
+            if (patch.shadowModel !== undefined)
+              setShadowModel(patch.shadowModel);
+            if (patch.shadowSampleRate !== undefined)
+              setShadowSampleRate(patch.shadowSampleRate);
+            setSaveStatus("idle");
+          }}
+        />
       </div>
 
       {/* Footer */}
