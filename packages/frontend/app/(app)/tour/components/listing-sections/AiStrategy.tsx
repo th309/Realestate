@@ -32,7 +32,7 @@ export function AiStrategy({
         subtitle="PropertyIQ's AI synthesizes the data above into a positioning playbook."
       >
         <p className="text-sm text-on-surface-variant">
-          AI-generated strategy unavailable for this market — the structured
+          AI-generated strategy unavailable for this market. The structured
           signals above remain accurate.
         </p>
       </Section>
