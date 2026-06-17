@@ -32,22 +32,23 @@ export class ListingPresentationNarrativeService {
     try {
       // Route through AiProviderService so this respects the configured default
       // provider (DeepSeek) via ai_model_config / env, with usage logging and
-      // shadow A/B — instead of hardcoding Anthropic. `json` response format
-      // yields clean JSON on providers that support it (DeepSeek/OpenAI).
+      // shadow A/B — instead of hardcoding Anthropic.
       const response = await this.aiProvider.complete(
         AI_PURPOSES.LISTING_PRESENTATION_NARRATIVE,
         {
           systemPrompt: SYSTEM_PROMPT,
           userPrompt,
-          // deepseek-v4-pro is verbose; the 3-paragraph strategy needs ~2.2k
-          // tokens. 1500 truncated mid-JSON (finish_reason=length) → parse
-          // failure → fallback on longer markets. 3000 gives comfortable margin.
-          maxTokens: 3000,
-          responseFormat: 'json',
+          // deepseek-v4-pro is verbose and the 3-paragraph strategy is long, so
+          // the old 3000 cap still truncated mid-JSON on busier markets
+          // (finish_reason=length) → parse failure → fallback. Match the proven
+          // reports/market-analysis pattern: do NOT force response_format
+          // json_object (extractJsonObject already unwraps fenced/plain JSON);
+          // give a generous 6000-token budget so the full payload completes.
+          maxTokens: 6000,
         },
       );
-      // Defense in depth: even with json mode, some providers still wrap the
-      // JSON in a markdown fence — extractJsonObject unwraps before parsing.
+      // The model may wrap the JSON in a markdown fence or lead with prose —
+      // extractJsonObject locates and unwraps the JSON object before parsing.
       const parsed = extractJsonObject<{
         thesis?: string;
         strategy?: string;
