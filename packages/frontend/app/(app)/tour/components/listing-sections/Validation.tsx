@@ -16,6 +16,7 @@ interface Props {
   /** sanctioned reliability statement */
   hitRateStatement: string;
   limitedData: boolean;
+  num?: string;
 }
 
 function fmt(n: number) {
@@ -23,9 +24,10 @@ function fmt(n: number) {
 }
 
 export function Validation(p: Props) {
+  const num = p.num ?? "09";
   if (p.limitedData) {
     return (
-      <Section num="09" title="PropertyIQ's validated track record">
+      <Section num={num} title="PropertyIQ's validated track record">
         <p className="text-sm text-on-surface-variant">
           Validation data unavailable.
         </p>
@@ -34,11 +36,12 @@ export function Validation(p: Props) {
   }
   return (
     <Section
-      num="09"
+      num={num}
+      tone="feature"
       title="PropertyIQ's validated track record"
       subtitle="How well has the PropertyIQ Score predicted market outperformance historically?"
     >
-      <div className="rounded-2xl border border-tertiary/30 bg-tertiary-container/40 p-6">
+      <div className="rounded-2xl bg-surface p-6 shadow-lg ring-1 ring-tertiary/20">
         <div className="flex items-start gap-5">
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-tertiary text-3xl text-on-tertiary">
             ✓

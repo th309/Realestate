@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import type { AnonReportResponse } from "@/lib/data";
 import { CBSA_TO_METRO } from "@/lib/data";
 import { ReportHero } from "./ReportHero";
@@ -46,6 +47,123 @@ export function ListingPresentation({
     ? (CBSA_TO_METRO.get(rawName)?.shortName ?? rawName)
     : rawName;
 
+  // THE single source of truth for the body's section order, visibility, and
+  // numbering. Per the no-empty-sections rule, any section the adapter flagged
+  // `limitedData` is DROPPED entirely (never rendered as a "Limited data" stub),
+  // and the survivors are renumbered 01..N so the reader never sees a gap like
+  // "01 … 03 … 07". The adapter's `limitedData` is a faithful proxy for "this
+  // component will render content," so this filter never strands a blank number.
+  const isLimited = (p: Record<string, unknown>) => p.limitedData === true;
+  const orderedSections: {
+    key: string;
+    limited: boolean;
+    render: (num: string) => React.ReactElement;
+  }[] = [
+    {
+      key: "exec",
+      limited: isLimited(s.exec),
+      render: (num) => (
+        <ExecutiveSummary
+          {...(s.exec as unknown as React.ComponentProps<
+            typeof ExecutiveSummary
+          >)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "market",
+      limited: isLimited(s.market),
+      render: (num) => (
+        <MarketNow
+          {...(s.market as unknown as React.ComponentProps<typeof MarketNow>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "traj",
+      limited: isLimited(s.traj),
+      render: (num) => (
+        <Trajectory
+          {...(s.traj as unknown as React.ComponentProps<typeof Trajectory>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "fc",
+      limited: isLimited(s.fc),
+      render: (num) => (
+        <Forecast
+          {...(s.fc as unknown as React.ComponentProps<typeof Forecast>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "peers",
+      limited: isLimited(s.peers),
+      render: (num) => (
+        <Peers
+          {...(s.peers as unknown as React.ComponentProps<typeof Peers>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "mig",
+      limited: isLimited(s.mig),
+      render: (num) => (
+        <Migration
+          {...(s.mig as unknown as React.ComponentProps<typeof Migration>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "aff",
+      limited: isLimited(s.aff),
+      render: (num) => (
+        <Affordability
+          {...(s.aff as unknown as React.ComponentProps<typeof Affordability>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "emp",
+      limited: isLimited(s.emp),
+      render: (num) => (
+        <Employment
+          {...(s.emp as unknown as React.ComponentProps<typeof Employment>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "val",
+      limited: isLimited(s.val),
+      render: (num) => (
+        <Validation
+          {...(s.val as unknown as React.ComponentProps<typeof Validation>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "ai",
+      limited: isLimited(s.ai),
+      render: (num) => (
+        <AiStrategy
+          {...(s.ai as unknown as React.ComponentProps<typeof AiStrategy>)}
+          num={num}
+        />
+      ),
+    },
+  ];
+  const visibleSections = orderedSections.filter((sec) => !sec.limited);
+
   return (
     <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-surface shadow-[0_12px_40px_rgba(57,73,171,0.18)] ring-1 ring-primary-container">
       <ReportHero
@@ -74,36 +192,11 @@ export function ListingPresentation({
         </div>
       )}
 
-      <ExecutiveSummary
-        {...(s.exec as unknown as React.ComponentProps<
-          typeof ExecutiveSummary
-        >)}
-      />
-      <MarketNow
-        {...(s.market as unknown as React.ComponentProps<typeof MarketNow>)}
-      />
-      <Trajectory
-        {...(s.traj as unknown as React.ComponentProps<typeof Trajectory>)}
-      />
-      <Forecast
-        {...(s.fc as unknown as React.ComponentProps<typeof Forecast>)}
-      />
-      <Peers {...(s.peers as unknown as React.ComponentProps<typeof Peers>)} />
-      <Migration
-        {...(s.mig as unknown as React.ComponentProps<typeof Migration>)}
-      />
-      <Affordability
-        {...(s.aff as unknown as React.ComponentProps<typeof Affordability>)}
-      />
-      <Employment
-        {...(s.emp as unknown as React.ComponentProps<typeof Employment>)}
-      />
-      <Validation
-        {...(s.val as unknown as React.ComponentProps<typeof Validation>)}
-      />
-      <AiStrategy
-        {...(s.ai as unknown as React.ComponentProps<typeof AiStrategy>)}
-      />
+      {visibleSections.map((sec, i) => (
+        <Fragment key={sec.key}>
+          {sec.render(String(i + 1).padStart(2, "0"))}
+        </Fragment>
+      ))}
 
       <footer className="border-t border-outline-variant/40 bg-surface-container px-12 py-6">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">

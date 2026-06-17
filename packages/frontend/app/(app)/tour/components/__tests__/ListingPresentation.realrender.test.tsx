@@ -153,8 +153,9 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
 
   it("renders the now-populated trajectory/forecast/affordability/validation sections", () => {
     render(<ListingPresentation {...props} />);
-    // forecast: projected price + change derived from the real shapes
-    expect(screen.getByText("$466K")).toBeInTheDocument();
+    // forecast: projected price (now shown in BOTH the chart endpoint chip and
+    // the summary card) + change derived from the real shapes
+    expect(screen.getAllByText("$466K").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("+3.5% vs today")).toBeInTheDocument();
     // affordability: price-to-rent gauge value
     expect(screen.getByText("18.5×")).toBeInTheDocument();

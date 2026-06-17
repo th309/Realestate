@@ -7,58 +7,102 @@ vi.mock("../ReportHero", () => ({
 }));
 vi.mock("../listing-sections/ExecutiveSummary", () => ({
   ExecutiveSummary: (p: any) => (
-    <div data-testid="exec" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="exec"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/MarketNow", () => ({
   MarketNow: (p: any) => (
-    <div data-testid="market-now" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="market-now"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Trajectory", () => ({
   Trajectory: (p: any) => (
-    <div data-testid="trajectory" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="trajectory"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Forecast", () => ({
   Forecast: (p: any) => (
-    <div data-testid="forecast" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="forecast"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Peers", () => ({
   Peers: (p: any) => (
-    <div data-testid="peers" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="peers"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Migration", () => ({
   Migration: (p: any) => (
-    <div data-testid="migration" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="migration"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Affordability", () => ({
   Affordability: (p: any) => (
-    <div data-testid="affordability" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="affordability"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Employment", () => ({
   Employment: (p: any) => (
-    <div data-testid="employment" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="employment"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/Validation", () => ({
   Validation: (p: any) => (
-    <div data-testid="validation" data-limited={String(p.limitedData)} />
+    <div
+      data-testid="validation"
+      data-limited={String(p.limitedData)}
+      data-num={p.num}
+    />
   ),
 }));
 vi.mock("../listing-sections/AiStrategy", () => ({
   AiStrategy: (p: any) => (
-    <div data-testid="ai-strategy" data-fallback={String(p.fallbackUsed)} />
+    <div
+      data-testid="ai-strategy"
+      data-fallback={String(p.fallbackUsed)}
+      data-num={p.num}
+    />
   ),
 }));
 
 // REAL backend section shapes (as ListingPresentationService.generate emits),
 // fed through the adapter — NOT the fabricated ideal shapes that masked the
 // contract crash. See tasks/lessons.md.
+//
+// trajectory/forecast/affordability/validation carry `data: {}` here, so the
+// adapter flags them `limitedData` — they are DROPPED by the no-empty-sections
+// rule. `makeFullReport()` below exercises the all-populated path.
 function makeReport(opts?: { execLimited?: boolean }) {
   return {
     report: {
@@ -123,6 +167,50 @@ function makeReport(opts?: { execLimited?: boolean }) {
   };
 }
 
+// Every section populated with data the adapter keeps → all 10 render, 01..10.
+function makeFullReport() {
+  const r = makeReport();
+  const set = (id: string, data: unknown) => {
+    const sec = r.report.sections.find((x) => x.id === id)!;
+    sec.data = data as never;
+  };
+  set("trajectory-12mo", {
+    series: [
+      { label: "Boise", values: [100, 103, 107], yoy: 7.0 },
+      { label: "Idaho", values: [100, 102, 104], yoy: 4.0 },
+    ],
+  });
+  set("forecast", {
+    historic: [440000, 445000, 450000],
+    forecast: [452000, 455000, 460000],
+    ciLow: [448000, 449000, 451000],
+    ciHigh: [456000, 461000, 469000],
+    projectedValue: 466000,
+    ciLow12: 455000,
+    ciHigh12: 477000,
+    forecast12mPct: 3.5,
+  });
+  set("affordability", {
+    affordabilityIndex: 64,
+    priceToIncome: 4.2,
+    affordabilityMarker: 64,
+    priceToRent: 18.5,
+    priceToRentMarker: 57,
+    hasPriceToRent: true,
+  });
+  set("validation", {
+    metrosValidated: 865,
+    countiesValidated: 3061,
+    zipsValidated: 25783,
+    backtestYears: 22,
+    dollarAlpha: "$7,247",
+    icStatement: "IC 0.27.",
+    outperformanceStatement: "Top band outperforms.",
+    hitRateStatement: "positive in 100% of validated years",
+  });
+  return r;
+}
+
 const baseProps = {
   report: makeReport() as any,
   marketName: "Charlotte",
@@ -141,36 +229,60 @@ describe("ListingPresentation", () => {
     );
   });
 
-  it("renders all 10 sections by testid", () => {
+  it("drops limitedData sections and renumbers the survivors sequentially", () => {
     render(<ListingPresentation {...baseProps} />);
-    [
-      "exec",
-      "market-now",
-      "trajectory",
-      "forecast",
-      "peers",
-      "migration",
-      "affordability",
-      "employment",
-      "validation",
-      "ai-strategy",
-    ].forEach((id) => {
-      expect(screen.getByTestId(id)).toBeInTheDocument();
+    // trajectory/forecast/affordability/validation have empty data → dropped.
+    ["trajectory", "forecast", "affordability", "validation"].forEach((id) => {
+      expect(screen.queryByTestId(id)).toBeNull();
+    });
+    // Survivors are renumbered 01..06 in document order, with no gaps.
+    expect(screen.getByTestId("exec").getAttribute("data-num")).toBe("01");
+    expect(screen.getByTestId("market-now").getAttribute("data-num")).toBe(
+      "02",
+    );
+    expect(screen.getByTestId("peers").getAttribute("data-num")).toBe("03");
+    expect(screen.getByTestId("migration").getAttribute("data-num")).toBe("04");
+    expect(screen.getByTestId("employment").getAttribute("data-num")).toBe(
+      "05",
+    );
+    expect(screen.getByTestId("ai-strategy").getAttribute("data-num")).toBe(
+      "06",
+    );
+  });
+
+  it("renders all 10 sections numbered 01..10 when every section has data", () => {
+    render(
+      <ListingPresentation {...baseProps} report={makeFullReport() as any} />,
+    );
+    const expected: [string, string][] = [
+      ["exec", "01"],
+      ["market-now", "02"],
+      ["trajectory", "03"],
+      ["forecast", "04"],
+      ["peers", "05"],
+      ["migration", "06"],
+      ["affordability", "07"],
+      ["employment", "08"],
+      ["validation", "09"],
+      ["ai-strategy", "10"],
+    ];
+    expected.forEach(([id, num]) => {
+      expect(screen.getByTestId(id).getAttribute("data-num")).toBe(num);
     });
   });
 
-  it("propagates limitedData from report.sections to each section", () => {
+  it("drops a section the report flags limitedData and renumbers the rest", () => {
     render(
       <ListingPresentation
         {...baseProps}
         report={makeReport({ execLimited: true }) as any}
       />,
     );
-    expect(screen.getByTestId("exec").getAttribute("data-limited")).toBe(
-      "true",
-    );
-    expect(screen.getByTestId("market-now").getAttribute("data-limited")).toBe(
-      "false",
+    // Executive summary is flagged limited → dropped entirely (no stub).
+    expect(screen.queryByTestId("exec")).toBeNull();
+    // The next survivor becomes 01.
+    expect(screen.getByTestId("market-now").getAttribute("data-num")).toBe(
+      "01",
     );
   });
 

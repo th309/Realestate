@@ -6,6 +6,7 @@
  */
 
 import { API_URL } from "./base";
+import { getAuthHeaders } from "./auth-headers";
 
 export interface MarketAnalysisSection {
   title: string;
@@ -35,10 +36,14 @@ export async function fetchMarketAnalysis(
   },
 ): Promise<MarketAnalysisResult> {
   const url = `${API_URL}/api/markets/${geoType}/${geoId}/ai-analysis`;
+  // The backend route is guarded by JwtAuthGuard — it needs the Supabase JWT in
+  // an Authorization: Bearer header (cookies alone are not honored), same as
+  // every other authed fetcher. Omitting this 401'd the call for ALL users.
+  const authHeaders = await getAuthHeaders();
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders, "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
       geoName: payload.geoName,

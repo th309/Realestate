@@ -14,6 +14,7 @@ interface TrajectorySeries {
 interface Props {
   series: TrajectorySeries[];
   limitedData: boolean;
+  num?: string;
 }
 
 const SERIES_COLORS = [
@@ -26,10 +27,10 @@ function formatYoy(yoy: number) {
   return `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}%`;
 }
 
-export function Trajectory({ series, limitedData }: Props) {
+export function Trajectory({ series, limitedData, num = "03" }: Props) {
   if (limitedData || series.length === 0) {
     return (
-      <Section num="03" title="12-month trajectory">
+      <Section num={num} title="12-month trajectory">
         <p className="text-sm text-on-surface-variant">
           Trajectory unavailable for this market.
         </p>
@@ -39,7 +40,7 @@ export function Trajectory({ series, limitedData }: Props) {
 
   return (
     <Section
-      num="03"
+      num={num}
       title="12-month trajectory"
       subtitle="How home values have moved over the past year, indexed against the market's broader benchmarks."
     >

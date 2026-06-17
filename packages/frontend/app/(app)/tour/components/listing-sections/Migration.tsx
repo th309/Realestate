@@ -16,12 +16,18 @@ interface Props {
   inflows: Inflow[];
   demographics: DemoRow[];
   limitedData: boolean;
+  num?: string;
 }
 
-export function Migration({ inflows, demographics, limitedData }: Props) {
+export function Migration({
+  inflows,
+  demographics,
+  limitedData,
+  num = "06",
+}: Props) {
   if (limitedData) {
     return (
-      <Section num="06" title="Who lives here · who's moving here">
+      <Section num={num} title="Who lives here · who's moving here">
         <p className="text-sm text-on-surface-variant">
           Migration data is limited for this market. Try a larger metro or
           county.
@@ -31,7 +37,7 @@ export function Migration({ inflows, demographics, limitedData }: Props) {
   }
   return (
     <Section
-      num="06"
+      num={num}
       title="Who lives here · who's moving here"
       subtitle="Demographics + migration patterns. Where buyers come from, what they earn, what they want."
     >

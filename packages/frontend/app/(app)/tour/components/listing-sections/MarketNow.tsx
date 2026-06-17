@@ -12,12 +12,13 @@ interface Stat {
 interface Props {
   stats: Stat[];
   limitedData: boolean;
+  num?: string;
 }
 
-export function MarketNow({ stats, limitedData }: Props) {
+export function MarketNow({ stats, limitedData, num = "02" }: Props) {
   if (limitedData || stats.length === 0) {
     return (
-      <Section num="02" title="The market right now">
+      <Section num={num} title="The market right now">
         <p className="text-sm text-on-surface-variant">
           Limited data available for this market. Try a nearby metro for richer
           signals.
@@ -27,7 +28,7 @@ export function MarketNow({ stats, limitedData }: Props) {
   }
   return (
     <Section
-      num="02"
+      num={num}
       title="The market right now"
       subtitle="Where this market stands as of today, with one-quarter momentum."
     >

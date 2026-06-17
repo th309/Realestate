@@ -1,14 +1,13 @@
 "use client";
 
+import { useId } from "react";
+
 /**
- * TrajectoryChart — multi-series SVG line chart (Phase 04 Task 2).
+ * TrajectoryChart — multi-series indexed line chart with a gradient area fill
+ * under the lead series, end-point markers, and a legend. Pure SVG.
  *
- * Auto-scales y-axis to the min/max across all series, draws three dashed
- * gridlines at 25/50/75% of height, and renders a legend below the chart.
- *
- * Color tokens: callers should pass M3 semantic colors as CSS-variable
- * strings (e.g. `var(--md-primary)`, `var(--md-tertiary)`), NOT raw hex
- * values. Gridlines use `var(--md-outline-variant)` from globals.css.
+ * Color tokens: callers pass M3 semantic colors as CSS-variable strings
+ * (e.g. `var(--md-primary)`), NOT raw hex. Gridlines use `--md-outline-variant`.
  */
 interface Series {
   label: string;
@@ -21,7 +20,10 @@ interface Props {
   height?: number;
 }
 
-export function TrajectoryChart({ series, height = 140 }: Props) {
+export function TrajectoryChart({ series, height = 170 }: Props) {
+  const rawId = useId();
+  const gradId = `traj-${rawId.replace(/:/g, "")}`;
+
   if (series.length === 0 || series[0].values.length === 0) {
     return (
       <p className="text-xs text-on-surface-variant">
@@ -35,25 +37,39 @@ export function TrajectoryChart({ series, height = 140 }: Props) {
   const max = Math.max(...all);
   const span = Math.max(1, max - min);
   const w = 800;
+  const padX = 22;
+  const padTop = 18;
+  const padBot = 16;
+  const baseline = height - padBot;
 
-  const points = (s: Series) =>
-    s.values
-      .map((v, i) => {
-        // For a single point, place it at the left edge to avoid divide-by-zero.
-        const denom = s.values.length > 1 ? s.values.length - 1 : 1;
-        const x = (i / denom) * (w - 40) + 20;
-        const y = height - 10 - ((v - min) / span) * (height - 30);
-        return `${x},${y}`;
-      })
-      .join(" ");
+  const coords = (s: Series) =>
+    s.values.map((v, i) => {
+      const denom = s.values.length > 1 ? s.values.length - 1 : 1;
+      const x = (i / denom) * (w - padX * 2) + padX;
+      const y =
+        height - padBot - ((v - min) / span) * (height - padTop - padBot);
+      return { x, y };
+    });
+
+  const lead = coords(series[0]);
+  const areaPath =
+    `M${lead[0].x.toFixed(1)},${baseline} ` +
+    lead.map((p) => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") +
+    ` L${lead[lead.length - 1].x.toFixed(1)},${baseline} Z`;
 
   return (
-    <div className="rounded-2xl bg-surface-container px-6 py-5">
+    <div className="rounded-2xl border border-outline-variant/40 bg-surface-container px-6 py-5 shadow-sm">
       <svg
         viewBox={`0 0 ${w} ${height}`}
         preserveAspectRatio="none"
-        className="h-[140px] w-full"
+        className="h-[170px] w-full"
       >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={series[0].color} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={series[0].color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
         {[0.25, 0.5, 0.75].map((g) => (
           <line
             key={g}
@@ -62,21 +78,41 @@ export function TrajectoryChart({ series, height = 140 }: Props) {
             y1={height * g}
             y2={height * g}
             stroke="var(--md-outline-variant)"
-            strokeDasharray="3,3"
-            strokeWidth={0.5}
+            strokeDasharray="2,5"
+            strokeWidth={0.75}
           />
         ))}
-        {series.map((s) => (
-          <polyline
-            key={s.label}
-            points={points(s)}
-            fill="none"
-            stroke={s.color}
-            strokeWidth={2.5}
-          />
-        ))}
+        <path d={areaPath} fill={`url(#${gradId})`} />
+        {series.map((s, idx) => {
+          const pts = coords(s);
+          const isLead = idx === 0;
+          const last = pts[pts.length - 1];
+          return (
+            <g key={s.label}>
+              <polyline
+                points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={isLead ? 3 : 2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                opacity={isLead ? 1 : 0.65}
+              />
+              <circle
+                cx={last.x}
+                cy={last.y}
+                r={isLead ? 4 : 3}
+                fill={s.color}
+                stroke="var(--md-surface-container)"
+                strokeWidth={1.5}
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+          );
+        })}
       </svg>
-      <div className="mt-2 flex flex-wrap gap-4 text-xs text-on-surface-variant">
+      <div className="mt-3 flex flex-wrap gap-4 text-xs text-on-surface-variant">
         {series.map((s) => (
           <span key={s.label} className="flex items-center gap-1.5">
             <span

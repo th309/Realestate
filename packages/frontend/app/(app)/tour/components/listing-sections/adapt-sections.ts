@@ -95,6 +95,15 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
 
   const sNum = scoreNumber(execData.score);
   const confPct = scoreConfidencePct(execData.score);
+  // ExecutiveSummary renders the thesis narrative (the score lives in the hero),
+  // so its emptiness — and therefore whether the parent drops it — keys off the
+  // thesis, matching the component's own null-render condition.
+  const execThesis = splitParagraphs(execData.thesis);
+
+  // ai-strategy: the only section the backend never flags; emptiness = no
+  // narrative at all (mirrors AiStrategy's internal `hasContent`).
+  const aiThesis = typeof aiData.thesis === "string" ? aiData.thesis : "";
+  const aiStrategyParagraphs = splitParagraphs(aiData.strategy);
 
   const recommendation = (() => {
     const a0 = asRecord(asArray(aiData.actions)[0]);
@@ -155,9 +164,9 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
               confidencePercent: confPct,
             }
           : undefined,
-      thesisParagraphs: splitParagraphs(execData.thesis),
+      thesisParagraphs: execThesis,
       recommendation,
-      limitedData: limited("executive-summary") || sNum == null,
+      limitedData: limited("executive-summary") || execThesis.length === 0,
     },
     market: {
       stats: marketStats,
@@ -220,10 +229,11 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
       limitedData: limited("validation") || metrosValidated == null,
     },
     ai: {
-      thesis: typeof aiData.thesis === "string" ? aiData.thesis : "",
-      strategyParagraphs: splitParagraphs(aiData.strategy),
+      thesis: aiThesis,
+      strategyParagraphs: aiStrategyParagraphs,
       actions: asArray(aiData.actions),
       fallbackUsed: !!aiData.fallbackUsed,
+      limitedData: !aiThesis && aiStrategyParagraphs.length === 0,
     },
   };
 }

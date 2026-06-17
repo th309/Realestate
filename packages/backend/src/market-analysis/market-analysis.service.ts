@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ReportAiService } from '../reports/report-ai.service';
 import { RedisService } from '../redis/redis.service';
+import { extractJsonObject } from '../ai/extract-json';
 
 interface MetricValue {
   value: number | null;
@@ -46,7 +47,8 @@ export class MarketAnalysisService {
   async generateAnalysis(
     request: AnalysisRequest,
   ): Promise<MarketAnalysisResult> {
-    const cacheKey = `piq:market-analysis:v3:${request.geoType}:${request.geoId}`;
+    // v4: bust the v3 cache that captured truncated/"Analysis unavailable." results.
+    const cacheKey = `piq:market-analysis:v4:${request.geoType}:${request.geoId}`;
 
     const cached = await this.redisService.getByKey(cacheKey);
     if (cached) {
@@ -108,7 +110,15 @@ export class MarketAnalysisService {
     const prompt = this.buildPrompt(request);
 
     try {
-      const response = await this.reportAiService.complete(prompt, 1400);
+      // Same knowhow as the reports pipeline: ask the provider for a JSON object
+      // (DeepSeek/OpenAI honor response_format; Anthropic is skipped safely) and
+      // give it room. 6 paragraphs of JSON truncated at 1400 tokens is exactly
+      // what produced "Analysis unavailable.".
+      const response = await this.reportAiService.complete(
+        prompt,
+        3000,
+        'json',
+      );
       return this.parseResponse(response);
     } catch (error) {
       this.logger.error(
@@ -170,80 +180,33 @@ Respond in this exact JSON format:
     homebuyer: AnalysisSection[];
     investor: AnalysisSection[];
   } {
-    const defaultHomebuyer = [
-      'Affordability',
-      'Market Pace',
-      'Price Direction',
-    ];
-    const defaultInvestor = [
-      'Cash Flow Potential',
-      'Value Growth',
-      'Liquidity & Demand',
-    ];
+    // Parse through the shared fence-aware extractor (same helper the reports
+    // pipeline uses). It throws on empty/unparseable output, and we throw on a
+    // wrong-shaped object — so the caller's catch falls back to the
+    // deterministic data-driven template, never the "Analysis unavailable."
+    // placeholder that used to get cached.
+    const parsed = extractJsonObject<{
+      homebuyer?: AnalysisSection[];
+      investor?: AnalysisSection[];
+      sections?: AnalysisSection[];
+    }>(response);
 
-    // Try JSON parse first
-    try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (
-          parsed.homebuyer &&
-          Array.isArray(parsed.homebuyer) &&
-          parsed.investor &&
-          Array.isArray(parsed.investor)
-        ) {
-          return {
-            homebuyer: parsed.homebuyer.slice(0, 3),
-            investor: parsed.investor.slice(0, 3),
-          };
-        }
-        // Maybe it's the old flat format — try to split
-        if (
-          parsed.sections &&
-          Array.isArray(parsed.sections) &&
-          parsed.sections.length >= 6
-        ) {
-          return {
-            homebuyer: parsed.sections.slice(0, 3),
-            investor: parsed.sections.slice(3, 6),
-          };
-        }
-      }
-    } catch {
-      this.logger.warn(
-        '[MarketAnalysis] JSON parse failed, attempting text extraction',
-      );
+    if (Array.isArray(parsed.homebuyer) && Array.isArray(parsed.investor)) {
+      return {
+        homebuyer: parsed.homebuyer.slice(0, 3),
+        investor: parsed.investor.slice(0, 3),
+      };
     }
-
-    // Fallback: split numbered sections
-    const parts = response.split(/\d+\.\s+/);
-    const homebuyer: AnalysisSection[] = [];
-    const investor: AnalysisSection[] = [];
-
-    for (let i = 0; i < 6; i++) {
-      const text = parts[i + 1]?.trim();
-      const titles = i < 3 ? defaultHomebuyer : defaultInvestor;
-      const target = i < 3 ? homebuyer : investor;
-      if (text) {
-        target.push({ title: titles[i % 3], analysis: text });
-      }
+    // Tolerate the older flat {sections:[...6]} shape.
+    if (Array.isArray(parsed.sections) && parsed.sections.length >= 6) {
+      return {
+        homebuyer: parsed.sections.slice(0, 3),
+        investor: parsed.sections.slice(3, 6),
+      };
     }
-
-    if (homebuyer.length === 3 && investor.length === 3) {
-      return { homebuyer, investor };
-    }
-
-    // Last resort: return empty so fallback kicks in at caller
-    return {
-      homebuyer: defaultHomebuyer.map((t) => ({
-        title: t,
-        analysis: 'Analysis unavailable.',
-      })),
-      investor: defaultInvestor.map((t) => ({
-        title: t,
-        analysis: 'Analysis unavailable.',
-      })),
-    };
+    throw new Error(
+      'MarketAnalysis: AI response missing homebuyer/investor arrays',
+    );
   }
 
   private generateFallback(

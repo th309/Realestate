@@ -12,12 +12,14 @@ interface Props {
   priceToRentMarker: number;
   hasPriceToRent: boolean;
   limitedData: boolean;
+  num?: string;
 }
 
 export function Affordability(p: Props) {
+  const num = p.num ?? "07";
   if (p.limitedData) {
     return (
-      <Section num="07" title="Affordability snapshot">
+      <Section num={num} title="Affordability snapshot">
         <p className="text-sm text-on-surface-variant">
           Affordability data unavailable.
         </p>
@@ -26,7 +28,7 @@ export function Affordability(p: Props) {
   }
   return (
     <Section
-      num="07"
+      num={num}
       title="Affordability snapshot"
       subtitle="How affordable is this market for a typical buyer, and how does buying compare with renting?"
     >

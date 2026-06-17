@@ -14,7 +14,7 @@ import { PersonaCards } from "./components/PersonaCards";
 import { MarketPickerStep } from "./components/MarketPickerStep";
 import { Step4Aha } from "./components/Step4Aha";
 import { PostSignupCelebrate } from "./components/PostSignupCelebrate";
-import type { MarketRef, Persona } from "./types";
+import type { MarketRef, Persona, TourPhase } from "./types";
 import "./print.css";
 
 export default function TourPage() {
@@ -37,11 +37,26 @@ function TourPhaseSwitch() {
   const { session } = useTour();
   useTourSideEffects(session.persona, session.market);
 
+  // Self-heal orphan states so the user is NEVER stranded on a frozen
+  // "Loading your market…" screen (spec §5.2: never dead-end the tour). The
+  // step phases redirect into the product on a chosen market; reaching one
+  // without a market — a stale URL/localStorage, a refresh mid-flow, or a
+  // hand-edited link — falls back to collecting what's missing instead of
+  // hanging. Computed at render only (no state mutation), so it's idempotent:
+  // once the user picks a market, setMarket re-enters step1 with it.
+  const STEP_PHASES: TourPhase[] = ["step1", "step2", "step3", "step4"];
+  const phase: TourPhase =
+    STEP_PHASES.includes(session.phase) && !session.market
+      ? session.persona
+        ? "market"
+        : "persona"
+      : session.phase;
+
   // TODO(phase-03/04): consume `searchParams.get('next')` to drive the
   // post-tour redirect after celebrate. The legacy /get-started page used
   // `next` as the final router.push destination; here it currently rides
   // along on the URL but is not yet honored past the market step.
-  switch (session.phase) {
+  switch (phase) {
     case "persona":
       return <PersonaCards />;
     case "market":

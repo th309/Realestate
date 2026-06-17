@@ -90,12 +90,17 @@ export class ReportAiService {
   }
 
   /** Generate a single completion from a prompt (public wrapper) */
-  async complete(prompt: string, maxTokens: number): Promise<string> {
+  async complete(
+    prompt: string,
+    maxTokens: number,
+    responseFormat?: 'text' | 'json',
+  ): Promise<string> {
     const response = await this.aiProvider.complete(
       AI_PURPOSES.REPORT_NARRATIVE,
       {
         userPrompt: prompt,
         maxTokens,
+        ...(responseFormat ? { responseFormat } : {}),
       },
     );
     return response.content;

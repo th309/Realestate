@@ -15,12 +15,13 @@ interface Peer {
 interface Props {
   peers: Peer[];
   limitedData: boolean;
+  num?: string;
 }
 
-export function Peers({ peers, limitedData }: Props) {
+export function Peers({ peers, limitedData, num = "05" }: Props) {
   if (limitedData || peers.length === 0) {
     return (
-      <Section num="05" title="Where this market sits vs. its peers">
+      <Section num={num} title="Where this market sits vs. its peers">
         <p className="text-sm text-on-surface-variant">
           No comparable peer markets available.
         </p>
@@ -29,7 +30,7 @@ export function Peers({ peers, limitedData }: Props) {
   }
   return (
     <Section
-      num="05"
+      num={num}
       title="Where this market sits vs. its peers"
       subtitle="PropertyIQ-matched comparables — same metro tier, similar demographics + size."
     >
