@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { AiStrategy } from "../AiStrategy";
 
 const baseProps = {
-  thesis: "This market is a 12-month appreciation play.",
   strategyParagraphs: [
     "Lead with the trajectory data — buyers are paying for growth, not the cap rate.",
     "Anchor on the peer set; do not let comps drag the conversation to nominal price.",
@@ -26,21 +25,11 @@ const baseProps = {
 };
 
 describe("AiStrategy", () => {
-  it("renders unavailable message when no thesis and no paragraphs (limited-data branch)", () => {
+  it("renders unavailable message when no paragraphs and no actions (limited-data branch)", () => {
     render(
-      <AiStrategy
-        thesis=""
-        strategyParagraphs={[]}
-        actions={[]}
-        fallbackUsed={false}
-      />,
+      <AiStrategy strategyParagraphs={[]} actions={[]} fallbackUsed={false} />,
     );
     expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
-  });
-
-  it("renders thesis on happy path", () => {
-    render(<AiStrategy {...baseProps} />);
-    expect(screen.getByText(baseProps.thesis)).toBeInTheDocument();
   });
 
   it("renders all strategy paragraphs", () => {

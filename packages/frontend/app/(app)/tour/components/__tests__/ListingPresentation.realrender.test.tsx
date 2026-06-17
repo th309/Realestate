@@ -20,7 +20,10 @@ function realBackendReport() {
           id: "executive-summary",
           data: {
             score: { scores: { propertyiq: { score: 72, confidence: 85 } } },
-            thesis: "Boise scores 72 — strong demand on tight supply.",
+            verdict:
+              "Boise is a seller's market: 72 out of 100 on tight supply.",
+            executiveSummary:
+              "Boise's 72 out of 100 PropertyIQ Score sits well above its state average, signaling durable buyer demand.\n\nWith only 2.5 months of supply and homes selling in 25 days, sellers hold clear leverage heading into the next two quarters.",
           },
           limitedData: false,
         },
@@ -108,7 +111,6 @@ function realBackendReport() {
         {
           id: "ai-strategy",
           data: {
-            thesis: "Position aggressively; demand outpaces supply.",
             strategy: "Price at market.\n\nStage for speed.",
             actions: [{ title: "Price to demand", desc: "List at value." }],
             fallbackUsed: false,
@@ -146,9 +148,12 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
     expect(screen.getByText(/Sold above list/i)).toBeInTheDocument();
   });
 
-  it("maps the AI narrative → the strategy thesis", () => {
+  it("maps the AI narrative → distinct strategy section + hero verdict (no repeat)", () => {
     render(<ListingPresentation {...props} />);
-    expect(screen.getByText(/Position aggressively/i)).toBeInTheDocument();
+    // Strategy prose renders in the AI strategy section...
+    expect(screen.getByText(/Price at market/i)).toBeInTheDocument();
+    // ...and the one-line verdict renders (in the hero), not duplicated as a thesis.
+    expect(screen.getByText(/seller's market/i)).toBeInTheDocument();
   });
 
   it("renders the now-populated trajectory/forecast/affordability/validation sections", () => {
