@@ -49,7 +49,17 @@ export default function SignInPage() {
 
 function SignInPageContent() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/map";
+  // Open-redirect guard: only honor same-origin relative paths. Reject absolute
+  // URLs, protocol-relative ("//evil.com") and backslash ("/\\evil.com") tricks
+  // so a crafted ?redirect= can't bounce a signed-in user off-site. Applied at
+  // the source so every downstream use (auto-forward, password, OAuth) is safe.
+  const rawRedirect = searchParams.get("redirect") ?? "/map";
+  const redirectTo =
+    rawRedirect.startsWith("/") &&
+    !rawRedirect.startsWith("//") &&
+    !rawRedirect.startsWith("/\\")
+      ? rawRedirect
+      : "/map";
   const callbackError = searchParams.get("error");
 
   const {
