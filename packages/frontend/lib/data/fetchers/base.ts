@@ -9,6 +9,24 @@ import { getAuthHeaders } from "./auth-headers";
 import { withRequestLimit } from "./concurrency-limit";
 
 /**
+ * Structured HTTP error carrying the response status, so callers can treat
+ * expected statuses (e.g. a 404 "no data for this geography") differently from
+ * real failures (5xx, network) instead of string-parsing the message.
+ *
+ * The message is kept identical to the legacy `API error: <status>` form so
+ * existing message-based catches keep working.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`API error: ${status}`);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+/**
  * Default API origin when NEXT_PUBLIC_API_URL was not set at build time.
  * Production builds must still set NEXT_PUBLIC_API_URL explicitly when the API host changes.
  *
@@ -70,7 +88,7 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
       }
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new ApiError(response.status);
       }
       return response.json();
     } catch (error) {
@@ -134,7 +152,7 @@ export async function fetchAPIWithParams<T>(
       }
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new ApiError(response.status);
       }
       return response.json();
     } catch (error) {

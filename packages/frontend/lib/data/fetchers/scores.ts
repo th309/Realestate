@@ -6,7 +6,18 @@
  */
 
 import type { ScoreResponse, BatchScoreResponse } from "../types";
-import { fetchAPI, fetchAPIWithParams } from "./base";
+import { ApiError, fetchAPI, fetchAPIWithParams } from "./base";
+
+/**
+ * A 404 from the scores endpoint means "no PropertyIQ score for this
+ * geography" — an expected outcome for the ~5,376 ZIPs / 87 counties that
+ * exist in search but aren't scored. Callers render "—" for these, so it is
+ * not error-worthy: logging it pops Next's dev "Console Error" overlay during
+ * the tour. Treat it as a normal empty result and stay silent.
+ */
+function isNoScore(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
 
 // ============================================================================
 // TOP MARKETS TYPES
@@ -77,6 +88,7 @@ export async function fetchScore(
     );
     return response;
   } catch (error) {
+    if (isNoScore(error)) return null;
     console.error("Failed to fetch score:", error);
     return null;
   }
@@ -132,6 +144,7 @@ export async function fetchScoreExpanded(
 
     return await fetchAPI<ScoreResponse>(endpoint);
   } catch (error) {
+    if (isNoScore(error)) return null;
     console.error("Failed to fetch expanded score:", error);
     return null;
   }
