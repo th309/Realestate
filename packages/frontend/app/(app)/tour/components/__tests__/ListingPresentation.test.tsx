@@ -58,6 +58,9 @@ vi.mock("../listing-sections/AiStrategy", () => ({
   ),
 }));
 
+// REAL backend section shapes (as ListingPresentationService.generate emits),
+// fed through the adapter — NOT the fabricated ideal shapes that masked the
+// contract crash. See tasks/lessons.md.
 function makeReport(opts?: { execLimited?: boolean }) {
   return {
     report: {
@@ -65,28 +68,56 @@ function makeReport(opts?: { execLimited?: boolean }) {
         {
           id: "executive-summary",
           data: {
-            score: {
-              score: 70,
-              label: "GOOD",
-              confidenceLetter: "B",
-              confidencePercent: 70,
-            },
-            thesisParagraphs: ["t"],
-            recommendation: "r",
+            score: { scores: { propertyiq: { score: 72, confidence: 85 } } },
+            thesis: "Boise scores 72 — strong demand on tight supply.",
           },
           limitedData: opts?.execLimited ?? false,
         },
-        { id: "market-now", data: { stats: [] }, limitedData: false },
+        {
+          id: "market-now",
+          data: {
+            home_value: 450000,
+            rent_index: 1800,
+            dom_median: 25,
+            months_supply: 2.5,
+            pct_sold_above_list: 0.35,
+            sale_to_list_ratio: 1.01,
+            price_per_sqft: 220,
+            household_income_median: 78000,
+            pct_bachelors_or_higher: 0.42,
+          },
+          limitedData: false,
+        },
         { id: "trajectory-12mo", data: {}, limitedData: false },
         { id: "forecast", data: {}, limitedData: false },
-        { id: "peers", data: {}, limitedData: false },
-        { id: "migration", data: {}, limitedData: false },
+        {
+          id: "peers",
+          data: [{ name: "Spokane", score: 64 }],
+          limitedData: false,
+        },
+        {
+          id: "migration",
+          data: [{ origin: "California", netFlow: 5000 }],
+          limitedData: false,
+        },
         { id: "affordability", data: {}, limitedData: false },
-        { id: "employment", data: {}, limitedData: false },
+        {
+          id: "employment",
+          data: {
+            sectors: [{ label: "Tech", value: 0.18 }],
+            totalEmployment: 250000,
+          },
+          limitedData: false,
+        },
         { id: "validation", data: {}, limitedData: false },
         {
           id: "ai-strategy",
-          data: { fallbackUsed: false },
+          data: {
+            thesis: "Position aggressively; demand outpaces supply.",
+            strategy: "Price at market.\n\nStage for speed.",
+            actions: [{ title: "Price to demand", desc: "List at value." }],
+            fallbackUsed: false,
+          },
           limitedData: false,
         },
       ],

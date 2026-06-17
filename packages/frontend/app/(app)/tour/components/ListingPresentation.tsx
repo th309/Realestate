@@ -12,6 +12,10 @@ import { Affordability } from "./listing-sections/Affordability";
 import { Employment } from "./listing-sections/Employment";
 import { Validation } from "./listing-sections/Validation";
 import { AiStrategy } from "./listing-sections/AiStrategy";
+import {
+  adaptReportSections,
+  type RawSection,
+} from "./listing-sections/adapt-sections";
 
 interface Props {
   report: AnonReportResponse;
@@ -21,23 +25,6 @@ interface Props {
   showWatermark: boolean;
 }
 
-interface SectionLike {
-  id: string;
-  data: unknown;
-  limitedData: boolean;
-}
-
-function pickSection(
-  sections: SectionLike[],
-  id: string,
-): SectionLike | undefined {
-  return sections.find((s) => s.id === id);
-}
-
-function dataOf(section: SectionLike | undefined): unknown {
-  return section?.data ?? {};
-}
-
 export function ListingPresentation({
   report,
   marketName,
@@ -45,27 +32,10 @@ export function ListingPresentation({
   households,
   showWatermark,
 }: Props) {
-  const sections = report.report.sections as SectionLike[];
-
-  // Each section component reads its own slice. The orchestration here just
-  // unpacks the API response into props the sections expect. Mapping logic
-  // for shape transforms (e.g., raw Redfin metric → display label) lives in
-  // the section component, NOT here, to keep this assembly file thin.
-  const exec = pickSection(sections, "executive-summary");
-  const market = pickSection(sections, "market-now");
-  const traj = pickSection(sections, "trajectory-12mo");
-  const fc = pickSection(sections, "forecast");
-  const peers = pickSection(sections, "peers");
-  const mig = pickSection(sections, "migration");
-  const aff = pickSection(sections, "affordability");
-  const emp = pickSection(sections, "employment");
-  const val = pickSection(sections, "validation");
-  const ai = pickSection(sections, "ai-strategy");
-
-  const aiData = dataOf(ai);
-  const aiFallbackUsed = Boolean(
-    (aiData as { fallbackUsed?: unknown } | null | undefined)?.fallbackUsed,
-  );
+  // The backend emits a different `data` shape per section than the components
+  // consume; `adaptReportSections` reconciles the contract DEFENSIVELY (any
+  // empty/mismatched section degrades to limitedData instead of crashing).
+  const s = adaptReportSections(report.report.sections as RawSection[]);
 
   return (
     <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-surface shadow-[0_12px_40px_rgba(57,73,171,0.18)] ring-1 ring-primary-container">
@@ -95,44 +65,34 @@ export function ListingPresentation({
       )}
 
       <ExecutiveSummary
-        {...(dataOf(exec) as React.ComponentProps<typeof ExecutiveSummary>)}
-        limitedData={!!exec?.limitedData}
+        {...(s.exec as unknown as React.ComponentProps<
+          typeof ExecutiveSummary
+        >)}
       />
       <MarketNow
-        {...(dataOf(market) as React.ComponentProps<typeof MarketNow>)}
-        limitedData={!!market?.limitedData}
+        {...(s.market as unknown as React.ComponentProps<typeof MarketNow>)}
       />
       <Trajectory
-        {...(dataOf(traj) as React.ComponentProps<typeof Trajectory>)}
-        limitedData={!!traj?.limitedData}
+        {...(s.traj as unknown as React.ComponentProps<typeof Trajectory>)}
       />
       <Forecast
-        {...(dataOf(fc) as React.ComponentProps<typeof Forecast>)}
-        limitedData={!!fc?.limitedData}
+        {...(s.fc as unknown as React.ComponentProps<typeof Forecast>)}
       />
-      <Peers
-        {...(dataOf(peers) as React.ComponentProps<typeof Peers>)}
-        limitedData={!!peers?.limitedData}
-      />
+      <Peers {...(s.peers as unknown as React.ComponentProps<typeof Peers>)} />
       <Migration
-        {...(dataOf(mig) as React.ComponentProps<typeof Migration>)}
-        limitedData={!!mig?.limitedData}
+        {...(s.mig as unknown as React.ComponentProps<typeof Migration>)}
       />
       <Affordability
-        {...(dataOf(aff) as React.ComponentProps<typeof Affordability>)}
-        limitedData={!!aff?.limitedData}
+        {...(s.aff as unknown as React.ComponentProps<typeof Affordability>)}
       />
       <Employment
-        {...(dataOf(emp) as React.ComponentProps<typeof Employment>)}
-        limitedData={!!emp?.limitedData}
+        {...(s.emp as unknown as React.ComponentProps<typeof Employment>)}
       />
       <Validation
-        {...(dataOf(val) as React.ComponentProps<typeof Validation>)}
-        limitedData={!!val?.limitedData}
+        {...(s.val as unknown as React.ComponentProps<typeof Validation>)}
       />
       <AiStrategy
-        {...(aiData as React.ComponentProps<typeof AiStrategy>)}
-        fallbackUsed={aiFallbackUsed}
+        {...(s.ai as unknown as React.ComponentProps<typeof AiStrategy>)}
       />
 
       <footer className="border-t border-outline-variant/40 bg-surface-container px-12 py-6">

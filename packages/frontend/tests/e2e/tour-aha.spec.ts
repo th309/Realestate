@@ -47,19 +47,12 @@ test.setTimeout(60_000);
 // VERIFIED: the endpoint returns 201 with a full 10-section report (curl + the
 // Playwright trace both confirm the fetch succeeds).
 //
-// STILL SKIPPED — separate, pre-existing blocker discovered while un-skipping:
-// the report RENDER crashes on the real backend data shape. The backend's
-// section `data` payloads do not match what the `listing-sections/*` components
-// expect: `ExecutiveSummary` needs `thesisParagraphs: string[]` + a mapped
-// `score` but the backend sends `{ score: <raw ScoreResult>, thesis: <string> }`
-// (→ `Cannot read properties of undefined (reading 'map')` at
-// ExecutiveSummary.tsx:64). 9 of the 10 section components hard-crash this way,
-// and 4 backend sections (trajectory/forecast/affordability/validation) emit
-// `data: {}` with `limitedData:false`, so their guards don't even fire. The
-// fetch/auth wiring is DONE; making the report RENDER end-to-end is a separate
-// task (a backend→frontend section adapter, or graceful-degradation guards on
-// all 9 components). Un-skip once that lands.
-test.describe.skip("Tour aha finale", () => {
+// The report-render contract is now fixed: `ListingPresentation` runs each
+// backend section's `data` through `listing-sections/adapt-sections.ts`, which
+// maps the real shapes → component props and degrades empty/mismatched sections
+// to limitedData instead of crashing. Covered at the unit level by
+// ListingPresentation.realrender.test.tsx (real components against real shapes).
+test.describe("Tour aha finale", () => {
   test.use({ storageState: authFile });
 
   // Boise metro (CBSA 39580) — a market with real PropertyIQ data.
