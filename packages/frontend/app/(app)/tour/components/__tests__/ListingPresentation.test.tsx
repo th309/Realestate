@@ -188,8 +188,8 @@ describe("ListingPresentation", () => {
   it("renders the data sources footer", () => {
     render(<ListingPresentation {...baseProps} />);
     expect(screen.getByText(/Data sources/i)).toBeInTheDocument();
-    expect(screen.getByText(/Zillow/i)).toBeInTheDocument();
-    expect(screen.getByText(/Redfin/i)).toBeInTheDocument();
+    expect(screen.getByText(/Zillow ZHVI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Realtor\.com/i)).toBeInTheDocument();
   });
 
   it("renders the #signup-cta anchor target for Phase 05", () => {

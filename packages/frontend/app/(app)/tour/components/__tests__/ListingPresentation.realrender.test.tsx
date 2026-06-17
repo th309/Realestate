@@ -39,19 +39,72 @@ function realBackendReport() {
           },
           limitedData: false,
         },
-        // Backend currently emits these four as empty stubs (limitedData:false).
-        { id: "trajectory-12mo", data: {}, limitedData: false },
-        { id: "forecast", data: {}, limitedData: false },
+        // Real populated shapes from ListingPresentationSectionsService.
+        {
+          id: "trajectory-12mo",
+          data: {
+            series: [
+              { label: "Boise", values: [100, 103, 107], yoy: 7.0 },
+              { label: "Idaho", values: [100, 102, 104], yoy: 4.0 },
+            ],
+            limitedData: false,
+          },
+          limitedData: false,
+        },
+        {
+          id: "forecast",
+          data: {
+            historic: [440000, 445000, 450000],
+            forecast: [452000, 455000, 460000],
+            ciLow: [448000, 449000, 451000],
+            ciHigh: [456000, 461000, 469000],
+            currentValue: 450000,
+            projectedValue: 466000,
+            ciLow12: 455000,
+            ciHigh12: 477000,
+            forecast12mPct: 3.5,
+            limitedData: false,
+          },
+          limitedData: false,
+        },
         // Peers/migration/employment limited for metros (no county FIPS).
         { id: "peers", data: [], limitedData: true },
         { id: "migration", data: [], limitedData: true },
-        { id: "affordability", data: {}, limitedData: false },
+        {
+          id: "affordability",
+          data: {
+            affordabilityIndex: 64,
+            priceToIncome: 4.2,
+            affordabilityMarker: 64,
+            priceToRent: 18.5,
+            priceToRentMarker: 57,
+            hasPriceToRent: true,
+            limitedData: false,
+          },
+          limitedData: false,
+        },
         {
           id: "employment",
           data: { sectors: [], totalEmployment: 0 },
           limitedData: true,
         },
-        { id: "validation", data: {}, limitedData: false },
+        {
+          id: "validation",
+          data: {
+            metrosValidated: 865,
+            countiesValidated: 3061,
+            zipsValidated: 25783,
+            backtestYears: 22,
+            dollarAlpha: "$7,247",
+            icStatement:
+              "Out-of-sample information coefficient of 0.27 across 865 metros, positive in every validated year (2001-2023).",
+            outperformanceStatement:
+              "Top-band markets have outperformed bottom-band markets in the same state by about 1.7 percentage points per year.",
+            hitRateStatement: "positive in 100% of validated years",
+            geoLevel: "metro",
+          },
+          limitedData: false,
+        },
         {
           id: "ai-strategy",
           data: {
@@ -94,6 +147,17 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
   it("maps the AI narrative → the strategy thesis", () => {
     render(<ListingPresentation {...props} />);
     expect(screen.getByText(/Position aggressively/i)).toBeInTheDocument();
+  });
+
+  it("renders the now-populated trajectory/forecast/affordability/validation sections", () => {
+    render(<ListingPresentation {...props} />);
+    // forecast: projected price + change derived from the real shapes
+    expect(screen.getByText("$466K")).toBeInTheDocument();
+    expect(screen.getByText("+3.5% vs today")).toBeInTheDocument();
+    // affordability: price-to-rent gauge value
+    expect(screen.getByText("18.5×")).toBeInTheDocument();
+    // validation: geo-level counts (not a per-market claim)
+    expect(screen.getByText(/3,061 counties/)).toBeInTheDocument();
   });
 
   it("does not leak 'undefined' or 'NaN' into the rendered report", () => {

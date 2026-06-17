@@ -50,6 +50,20 @@ function splitParagraphs(t: unknown): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+/** Compact USD: $468K / $1.23M. */
+function formatUsdK(n: number): string {
+  if (!Number.isFinite(n)) return "";
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  return `$${Math.round(n / 1000)}K`;
+}
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+function numArray(v: unknown): number[] {
+  return asArray(v)
+    .map((n) => num(n))
+    .filter((n): n is number => n != null);
+}
 /** Confidence % → A/B/C/F letter (CLAUDE.md §9 thresholds). */
 function confidenceLetter(pct: number): "A" | "B" | "C" | "F" {
   if (pct >= 80) return "A";
@@ -149,6 +163,38 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
   const inflows = asArray(by("migration")?.data);
   const empSectors = asArray(asRecord(by("employment")?.data).sectors);
 
+  // --- trajectory: { series: [{ label, values, yoy }] } ---
+  const trajData = asRecord(by("trajectory-12mo")?.data);
+  const trajSeries = asArray(trajData.series)
+    .map((s) => {
+      const r = asRecord(s);
+      return {
+        label: str(r.label),
+        values: numArray(r.values),
+        yoy: num(r.yoy) ?? 0,
+      };
+    })
+    .filter((s) => s.values.length >= 2);
+
+  // --- forecast: numeric arrays for the chart + formatted summary cards ---
+  const fcData = asRecord(by("forecast")?.data);
+  const fcForecast = numArray(fcData.forecast);
+  const projectedValue = num(fcData.projectedValue);
+  const ciLow12 = num(fcData.ciLow12);
+  const ciHigh12 = num(fcData.ciHigh12);
+  const f12 = num(fcData.forecast12mPct);
+
+  // --- affordability ---
+  const affData = asRecord(by("affordability")?.data);
+  const affIndex = num(affData.affordabilityIndex);
+  const pti = num(affData.priceToIncome);
+  const ptr = num(affData.priceToRent);
+  const hasPtr = !!affData.hasPriceToRent && ptr != null && ptr > 0;
+
+  // --- validation (sanctioned geo-type-level stats) ---
+  const valData = asRecord(by("validation")?.data);
+  const metrosValidated = num(valData.metrosValidated);
+
   return {
     exec: {
       score:
@@ -168,30 +214,26 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
       stats: marketStats,
       limitedData: limited("market-now") || marketStats.length < 4,
     },
-    // Backend currently emits these four as empty stubs → render limited, never crash.
     traj: {
-      marketName: "",
-      parentMetroName: "",
-      stateName: "",
-      marketSeries: [],
-      parentSeries: [],
-      stateSeries: [],
-      marketYoy: 0,
-      parentYoy: 0,
-      stateYoy: 0,
-      limitedData: true,
+      series: trajSeries,
+      limitedData: limited("trajectory-12mo") || trajSeries.length === 0,
     },
     fc: {
-      historic: [],
-      forecast: [],
-      ciLow: [],
-      ciHigh: [],
-      projectedPrice: "",
-      projectedRange: "",
-      projectedRent: "",
-      projectedRentChange: "",
-      riskFactor: "",
-      limitedData: true,
+      historic: numArray(fcData.historic),
+      forecast: fcForecast,
+      ciLow: numArray(fcData.ciLow),
+      ciHigh: numArray(fcData.ciHigh),
+      projectedPrice: projectedValue != null ? formatUsdK(projectedValue) : "",
+      projectedRange:
+        ciLow12 != null && ciHigh12 != null
+          ? `${formatUsdK(ciLow12)} – ${formatUsdK(ciHigh12)} · 80% modeled interval`
+          : "",
+      projectedChange:
+        f12 != null ? `${f12 >= 0 ? "+" : ""}${f12.toFixed(1)}% vs today` : "",
+      limitedData:
+        limited("forecast") ||
+        fcForecast.length === 0 ||
+        projectedValue == null,
     },
     peers: { peers, limitedData: limited("peers") || peers.length === 0 },
     mig: {
@@ -200,13 +242,17 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
       limitedData: limited("migration") || inflows.length === 0,
     },
     aff: {
-      affordabilityIndex: 0,
-      affordabilityMeta: "",
-      affordabilityMarker: 0,
-      rentVsBuyYears: 0,
-      rentVsBuyMeta: "",
-      rentVsBuyMarker: 0,
-      limitedData: true,
+      affordabilityIndex: affIndex ?? 0,
+      affordabilityMeta:
+        pti != null ? `Median home ≈ ${pti.toFixed(1)}× median income` : "",
+      affordabilityMarker: num(affData.affordabilityMarker) ?? 0,
+      priceToRent: ptr ?? 0,
+      priceToRentMeta: hasPtr
+        ? `Median home ≈ ${(ptr as number).toFixed(1)}× annual rent`
+        : "",
+      priceToRentMarker: num(affData.priceToRentMarker) ?? 0,
+      hasPriceToRent: hasPtr,
+      limitedData: limited("affordability") || affIndex == null || pti == null,
     },
     emp: {
       sectors: empSectors,
@@ -214,12 +260,15 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
       limitedData: limited("employment") || empSectors.length === 0,
     },
     val: {
-      directionalAccuracy: 0,
-      observations: 0,
-      excessReturn3y: 0,
-      vsLabel: "",
-      averageOutperformance: 0,
-      limitedData: true,
+      metrosValidated: metrosValidated ?? 0,
+      countiesValidated: num(valData.countiesValidated) ?? 0,
+      zipsValidated: num(valData.zipsValidated) ?? 0,
+      backtestYears: num(valData.backtestYears) ?? 0,
+      dollarAlpha: str(valData.dollarAlpha),
+      icStatement: str(valData.icStatement),
+      outperformanceStatement: str(valData.outperformanceStatement),
+      hitRateStatement: str(valData.hitRateStatement),
+      limitedData: limited("validation") || metrosValidated == null,
     },
     ai: {
       thesis: typeof aiData.thesis === "string" ? aiData.thesis : "",

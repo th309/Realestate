@@ -9,6 +9,7 @@ import { MarketsService } from '../markets/markets.service';
 import { MigrationService } from '../migration/migration.service';
 import { EmploymentSectorsService } from '../employment-sectors/employment-sectors.service';
 import { ListingPresentationNarrativeService } from './listing-presentation-narrative.service';
+import { ListingPresentationSectionsService } from './listing-presentation-sections.service';
 
 export type GeoLevel =
   | 'metro'
@@ -70,6 +71,7 @@ export class ListingPresentationService {
     private migration: MigrationService,
     private sectors: EmploymentSectorsService,
     private narrative: ListingPresentationNarrativeService,
+    private sections: ListingPresentationSectionsService,
   ) {}
 
   async generate(input: GenerateInput): Promise<GeneratedReport> {
@@ -106,47 +108,54 @@ export class ListingPresentationService {
     // -------- Wave 2: data fetches in parallel using real source values --------
     const metricGeoLevel = toMetricGeoLevel(market.geoLevel);
 
-    const [metricsBatch, peersList, migrationFlows, sectorMix] =
-      await Promise.all([
-        metricGeoLevel
-          ? this.metrics
-              .resolveMetricBatch(
-                [
-                  'home_value',
-                  'rent_index',
-                  'dom_median',
-                  'pct_sold_above_list',
-                  'months_supply',
-                  'sale_to_list_ratio',
-                  'price_per_sqft',
-                  'household_income_median',
-                  'pct_bachelors_or_higher',
-                ],
-                metricGeoLevel,
-                market.geoId,
-              )
-              .catch(() => ({}) as Record<string, unknown>)
-          : Promise.resolve({} as Record<string, unknown>),
-        this.peers
-          .findPeers({
-            geoLevel: market.geoLevel,
-            geoId: market.geoId,
-            score: sourceScore,
-            parentMetro,
-            householdCount,
-          })
-          .catch(() => []),
-        resolvedCountyFips
-          ? this.migration
-              .getTopInflows({ countyFips: resolvedCountyFips, limit: 5 })
-              .catch(() => [])
-          : Promise.resolve([]),
-        resolvedCountyFips
-          ? this.sectors
-              .getTopSectors({ countyFips: resolvedCountyFips, topN: 5 })
-              .catch(() => ({ sectors: [], totalEmployment: 0 }))
-          : Promise.resolve({ sectors: [], totalEmployment: 0 }),
-      ]);
+    const [
+      metricsBatch,
+      peersList,
+      migrationFlows,
+      sectorMix,
+      marketSeriesRaw,
+    ] = await Promise.all([
+      metricGeoLevel
+        ? this.metrics
+            .resolveMetricBatch(
+              [
+                'home_value',
+                'rent_index',
+                'dom_median',
+                'pct_sold_above_list',
+                'months_supply',
+                'sale_to_list_ratio',
+                'price_per_sqft',
+                'median_income',
+                'household_income_median',
+                'pct_bachelors_or_higher',
+              ],
+              metricGeoLevel,
+              market.geoId,
+            )
+            .catch(() => ({}) as Record<string, unknown>)
+        : Promise.resolve({} as Record<string, unknown>),
+      this.peers
+        .findPeers({
+          geoLevel: market.geoLevel,
+          geoId: market.geoId,
+          score: sourceScore,
+          parentMetro,
+          householdCount,
+        })
+        .catch(() => []),
+      resolvedCountyFips
+        ? this.migration
+            .getTopInflows({ countyFips: resolvedCountyFips, limit: 5 })
+            .catch(() => [])
+        : Promise.resolve([]),
+      resolvedCountyFips
+        ? this.sectors
+            .getTopSectors({ countyFips: resolvedCountyFips, topN: 5 })
+            .catch(() => ({ sectors: [], totalEmployment: 0 }))
+        : Promise.resolve({ sectors: [], totalEmployment: 0 }),
+      this.sections.fetchMarketSeries(market.geoLevel, market.geoId),
+    ]);
 
     const structuredFacts = {
       score: flattenedScore,
@@ -159,6 +168,17 @@ export class ListingPresentationService {
       persona: input.persona,
       structuredFacts,
     });
+
+    // -------- Wave 3: derived sections (trajectory + forecast need more fetches) --------
+    const [trajectory, forecast] = await Promise.all([
+      this.sections.buildTrajectory(
+        { ...market, name: marketCore?.name || market.name },
+        marketSeriesRaw,
+      ),
+      this.sections.buildForecast(market, marketSeriesRaw),
+    ]);
+    const affordability = this.sections.buildAffordability(metricsBatch);
+    const validation = this.sections.buildValidation(market.geoLevel);
 
     const sections: ReportSection[] = [
       {
@@ -176,14 +196,14 @@ export class ListingPresentationService {
       {
         id: 'trajectory-12mo',
         title: '12-month trajectory',
-        data: {},
-        limitedData: false,
+        data: trajectory,
+        limitedData: trajectory.limitedData,
       },
       {
         id: 'forecast',
         title: 'Forecast',
-        data: {},
-        limitedData: false,
+        data: forecast,
+        limitedData: forecast.limitedData,
       },
       {
         id: 'peers',
@@ -200,8 +220,8 @@ export class ListingPresentationService {
       {
         id: 'affordability',
         title: 'Affordability',
-        data: {},
-        limitedData: false,
+        data: affordability,
+        limitedData: affordability.limitedData,
       },
       {
         id: 'employment',
@@ -212,7 +232,7 @@ export class ListingPresentationService {
       {
         id: 'validation',
         title: 'Validated track record',
-        data: {},
+        data: validation,
         limitedData: false,
       },
       {

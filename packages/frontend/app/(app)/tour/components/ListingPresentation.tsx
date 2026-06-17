@@ -100,18 +100,19 @@ export function ListingPresentation({
           Data sources &amp; methodology
         </p>
         <p className="mt-1.5 text-[11px] leading-[1.7] text-on-surface-variant">
-          <strong className="text-on-surface">Zillow ZHVI</strong>,{" "}
-          <strong className="text-on-surface">Redfin Market Tracker</strong>,{" "}
+          <strong className="text-on-surface">Zillow ZHVI &amp; ZHVF</strong>,{" "}
+          <strong className="text-on-surface">Realtor.com</strong>,{" "}
           <strong className="text-on-surface">U.S. Census ACS 5-Year</strong>,{" "}
           <strong className="text-on-surface">FRED / BEA</strong>,{" "}
           <strong className="text-on-surface">BLS QCEW</strong>,{" "}
           <strong className="text-on-surface">
             IRS Statistics of Income migration data
           </strong>
-          , <strong className="text-on-surface">PropertyIQ Score v4</strong>{" "}
-          (proprietary, validated quarterly). Forecasts use PropertyIQ's
-          time-series model with 80% confidence intervals. Validation
-          methodology at /scores/accuracy.
+          , <strong className="text-on-surface">PropertyIQ Score</strong>{" "}
+          (proprietary, validated out-of-sample). Forecasts use Zillow&apos;s
+          home-value forecast with a modeled 80% interval derived from each
+          market&apos;s historical volatility. Validation methodology at
+          /scores/accuracy.
         </p>
       </footer>
     </article>
