@@ -48,8 +48,9 @@ export class MarketAnalysisService {
   async generateAnalysis(
     request: AnalysisRequest,
   ): Promise<MarketAnalysisResult> {
-    // v5: bust the v4 cache that captured raw markdown ("**takeaway**") in the prose.
-    const cacheKey = `piq:market-analysis:v5:${request.geoType}:${request.geoId}`;
+    // v6: bust the v5 cache that captured deterministic-template fallbacks
+    // (the AI JSON was truncating at the old 3000-token cap and failing to parse).
+    const cacheKey = `piq:market-analysis:v6:${request.geoType}:${request.geoId}`;
 
     const cached = await this.redisService.getByKey(cacheKey);
     if (cached) {
@@ -111,15 +112,14 @@ export class MarketAnalysisService {
     const prompt = this.buildPrompt(request);
 
     try {
-      // Same knowhow as the reports pipeline: ask the provider for a JSON object
-      // (DeepSeek/OpenAI honor response_format; Anthropic is skipped safely) and
-      // give it room. 6 paragraphs of JSON truncated at 1400 tokens is exactly
-      // what produced "Analysis unavailable.".
-      const response = await this.reportAiService.complete(
-        prompt,
-        3000,
-        'json',
-      );
+      // Match the proven reports/ai-insights pipeline: DON'T force
+      // response_format:json_object (the working report narratives never do;
+      // extractJsonObject parses JSON out of a plain or fenced response), and
+      // give the model real headroom. The 6-section JSON was hitting the old
+      // 3000-token cap (finish_reason=length) → truncated, unparseable JSON →
+      // silent fallback to the deterministic template on every market. 6000
+      // leaves comfortable margin for the full payload.
+      const response = await this.reportAiService.complete(prompt, 6000);
       return this.parseResponse(response);
     } catch (error) {
       this.logger.error(
