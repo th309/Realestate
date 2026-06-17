@@ -195,6 +195,8 @@
   /* M3 Typography - Roboto */
   --font-sans: var(--font-roboto);
   --font-mono: var(--font-roboto-mono);
+  /* Editorial serif for report narratives (brand spec §8.3) */
+  --font-serif: var(--font-source-serif);
 
   /* M3 Motion Easing */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);

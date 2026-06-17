@@ -1,4 +1,17 @@
 import { getScoreLabel } from "@/app/components/scoring/ScoreDisplay";
+import {
+  asRecord,
+  asArray,
+  num,
+  str,
+  numArray,
+  splitParagraphs,
+  formatUsdK,
+  confidenceLetter,
+  scoreNumber,
+  scoreConfidencePct,
+} from "./adapt-utils";
+import { buildHero, type HeroBundle } from "./adapt-hero";
 
 /**
  * Adapter: maps the backend listing-presentation `report.sections[].data` shapes
@@ -19,72 +32,6 @@ export interface RawSection {
   id: string;
   data: unknown;
   limitedData: boolean;
-}
-
-// ---- small safe extractors ----
-function asRecord(d: unknown): Record<string, unknown> {
-  return d && typeof d === "object" && !Array.isArray(d)
-    ? (d as Record<string, unknown>)
-    : {};
-}
-function asArray(d: unknown): unknown[] {
-  return Array.isArray(d) ? d : [];
-}
-/** A finite number from a raw value or a `{ value }` wrapper, else null. */
-function num(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (
-    v &&
-    typeof v === "object" &&
-    typeof (v as { value?: unknown }).value === "number"
-  ) {
-    const n = (v as { value: number }).value;
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}
-function splitParagraphs(t: unknown): string[] {
-  if (typeof t !== "string" || !t.trim()) return [];
-  return t
-    .split(/\n{2,}|\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-/** Compact USD: $468K / $1.23M. */
-function formatUsdK(n: number): string {
-  if (!Number.isFinite(n)) return "";
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  return `$${Math.round(n / 1000)}K`;
-}
-function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-function numArray(v: unknown): number[] {
-  return asArray(v)
-    .map((n) => num(n))
-    .filter((n): n is number => n != null);
-}
-/** Confidence % → A/B/C/F letter (CLAUDE.md §9 thresholds). */
-function confidenceLetter(pct: number): "A" | "B" | "C" | "F" {
-  if (pct >= 80) return "A";
-  if (pct >= 65) return "B";
-  if (pct >= 45) return "C";
-  return "F";
-}
-/** PropertyIQ score number out of a raw ScoreResult (tolerates flat `{score}`). */
-function scoreNumber(raw: unknown): number | null {
-  const r = asRecord(raw);
-  const flat = num(r.score);
-  if (flat != null) return flat;
-  const piq = asRecord(asRecord(r.scores).propertyiq);
-  return num(piq.score);
-}
-function scoreConfidencePct(raw: unknown): number {
-  const r = asRecord(raw);
-  const piq = asRecord(asRecord(r.scores).propertyiq);
-  const c = num(piq.confidence) ?? num(r.confidence);
-  if (c == null) return 70; // sensible default when the source omits confidence
-  return Math.round(c <= 1 ? c * 100 : c);
 }
 
 // ---- market-now: metricsBatch (Record) → Stat[] ----
@@ -126,6 +73,7 @@ function marketNowStats(data: unknown): { lbl: string; val: string }[] {
 
 // ---- the adapted prop bundles (typed loosely; components own the real types) ----
 export interface AdaptedSections {
+  hero: HeroBundle;
   exec: Record<string, unknown>;
   market: Record<string, unknown>;
   traj: Record<string, unknown>;
@@ -196,6 +144,7 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
   const metrosValidated = num(valData.metrosValidated);
 
   return {
+    hero: buildHero(sections),
     exec: {
       score:
         sNum != null

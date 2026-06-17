@@ -141,7 +141,9 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
 
   it("maps the metricsBatch Record → market-now stats", () => {
     render(<ListingPresentation {...props} />);
-    expect(screen.getByText(/Days on market/i)).toBeInTheDocument();
+    // "Sold above list" is unique to the MarketNow section (not a hero KPI),
+    // so it unambiguously proves the metricsBatch → stats mapping rendered.
+    expect(screen.getByText(/Sold above list/i)).toBeInTheDocument();
   });
 
   it("maps the AI narrative → the strategy thesis", () => {

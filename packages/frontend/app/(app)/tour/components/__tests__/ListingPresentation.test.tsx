@@ -2,10 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ListingPresentation } from "../ListingPresentation";
 
-vi.mock("../ListingPresentationCover", () => ({
-  ListingPresentationCover: (p: any) => (
-    <div data-testid="cover" data-market={p.marketName} />
-  ),
+vi.mock("../ReportHero", () => ({
+  ReportHero: (p: any) => <div data-testid="hero" data-market={p.marketName} />,
 }));
 vi.mock("../listing-sections/ExecutiveSummary", () => ({
   ExecutiveSummary: (p: any) => (
@@ -134,9 +132,11 @@ const baseProps = {
 };
 
 describe("ListingPresentation", () => {
-  it("renders the Cover with marketName", () => {
+  it("renders the hero with the resolved marketName", () => {
     render(<ListingPresentation {...baseProps} />);
-    expect(screen.getByTestId("cover").getAttribute("data-market")).toBe(
+    // Trajectory is empty in this fixture, so the resolved name falls back to
+    // the marketName prop.
+    expect(screen.getByTestId("hero").getAttribute("data-market")).toBe(
       "Charlotte",
     );
   });

@@ -1,7 +1,9 @@
 "use client";
 
 import type { AnonReportResponse } from "@/lib/data";
-import { ListingPresentationCover } from "./ListingPresentationCover";
+import { CBSA_TO_METRO } from "@/lib/data";
+import { ReportHero } from "./ReportHero";
+import type { HeroBundle } from "./listing-sections/adapt-hero";
 import { ExecutiveSummary } from "./listing-sections/ExecutiveSummary";
 import { MarketNow } from "./listing-sections/MarketNow";
 import { Trajectory } from "./listing-sections/Trajectory";
@@ -28,21 +30,29 @@ interface Props {
 export function ListingPresentation({
   report,
   marketName,
-  geographyDescription,
-  households,
   showWatermark,
 }: Props) {
   // The backend emits a different `data` shape per section than the components
   // consume; `adaptReportSections` reconciles the contract DEFENSIVELY (any
   // empty/mismatched section degrades to limitedData instead of crashing).
   const s = adaptReportSections(report.report.sections as RawSection[]);
+  const hero = s.hero as unknown as HeroBundle;
+  // Prefer the server-resolved market name (from the report data); fall back to
+  // the client-passed name. If that is still a bare CBSA geoId (bare-URL / anon
+  // entry), resolve it to a real metro name from the bundled crosswalk so the
+  // hero never shows a number.
+  const rawName = hero.marketName || marketName;
+  const resolvedName = /^\d{5}$/.test(rawName)
+    ? (CBSA_TO_METRO.get(rawName)?.shortName ?? rawName)
+    : rawName;
 
   return (
     <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-surface shadow-[0_12px_40px_rgba(57,73,171,0.18)] ring-1 ring-primary-container">
-      <ListingPresentationCover
-        marketName={marketName}
-        geographyDescription={geographyDescription}
-        households={households}
+      <ReportHero
+        marketName={resolvedName}
+        score={hero.score}
+        verdict={hero.verdict}
+        kpis={hero.kpis}
         generatedAt={new Date().toISOString()}
       />
 
