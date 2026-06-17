@@ -7,16 +7,19 @@ interface Props {
   affordabilityIndex: number;
   affordabilityMeta: string;
   affordabilityMarker: number;
-  rentVsBuyYears: number;
-  rentVsBuyMeta: string;
-  rentVsBuyMarker: number;
+  priceToRent: number;
+  priceToRentMeta: string;
+  priceToRentMarker: number;
+  hasPriceToRent: boolean;
   limitedData: boolean;
+  num?: string;
 }
 
 export function Affordability(p: Props) {
+  const num = p.num ?? "07";
   if (p.limitedData) {
     return (
-      <Section num="07" title="Affordability snapshot">
+      <Section num={num} title="Affordability snapshot">
         <p className="text-sm text-on-surface-variant">
           Affordability data unavailable.
         </p>
@@ -25,11 +28,15 @@ export function Affordability(p: Props) {
   }
   return (
     <Section
-      num="07"
+      num={num}
       title="Affordability snapshot"
-      subtitle="How affordable is this market for the typical buyer at today's rates?"
+      subtitle="How affordable is this market for a typical buyer, and how does buying compare with renting?"
     >
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div
+        className={`grid grid-cols-1 gap-5 ${
+          p.hasPriceToRent ? "md:grid-cols-2" : ""
+        }`}
+      >
         <Gauge
           title="Affordability index"
           value={String(p.affordabilityIndex)}
@@ -37,13 +44,15 @@ export function Affordability(p: Props) {
           markerPercent={p.affordabilityMarker}
           scale={["Unaffordable", "Stretched", "Affordable"]}
         />
-        <Gauge
-          title="Rent-vs-buy break-even"
-          value={`${p.rentVsBuyYears.toFixed(1)} yrs`}
-          meta={p.rentVsBuyMeta}
-          markerPercent={p.rentVsBuyMarker}
-          scale={["2 yrs", "5 yrs", "10+ yrs"]}
-        />
+        {p.hasPriceToRent && (
+          <Gauge
+            title="Price-to-rent ratio"
+            value={`${p.priceToRent.toFixed(1)}×`}
+            meta={p.priceToRentMeta}
+            markerPercent={p.priceToRentMarker}
+            scale={["Buy (<15)", "Balanced", "Rent (21+)"]}
+          />
+        )}
       </div>
     </Section>
   );

@@ -1,4 +1,5 @@
 import { API_URL } from "./base";
+import { getAuthHeaders } from "./auth-headers";
 
 export type Persona = "agent" | "investor" | "homebuyer";
 
@@ -57,6 +58,47 @@ export async function generateAnonymousListingPresentation(input: {
     const detail = body?.error ? ` (${body.error})` : "";
     const err = new Error(
       `Anon listing presentation failed: ${res.status}${detail}`,
+    );
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/** Authed report market ref — `name` is optional (resolved server-side). */
+export interface AuthedMarketRef {
+  geoLevel: "metro" | "county" | "city" | "zip";
+  geoId: string;
+  name?: string;
+}
+
+/**
+ * Authenticated listing-presentation generation. Posts to the JWT-guarded
+ * `/listing-presentation/authenticated` endpoint with the user's Bearer token.
+ * Unlike the anonymous variant this is NOT rate-limited (1/IP/24h) and the
+ * market name may be omitted — the backend resolves it from (geoLevel, geoId).
+ * Used by the tour aha-finale for signed-in users.
+ */
+export async function generateAuthenticatedListingPresentation(input: {
+  sessionId: string;
+  persona: Persona;
+  market: AuthedMarketRef;
+}): Promise<AnonReportResponse> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(
+    `${API_URL}/api/anonymous/listing-presentation/authenticated`,
+    {
+      method: "POST",
+      headers: { ...authHeaders, "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const detail = body?.error ? ` (${body.error})` : "";
+    const err = new Error(
+      `Authed listing presentation failed: ${res.status}${detail}`,
     );
     (err as Error & { status?: number }).status = res.status;
     throw err;

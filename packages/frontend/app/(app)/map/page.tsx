@@ -10,7 +10,6 @@ import type { GeoLevel, SearchResult, MapData } from "./types";
 import { Sidebar, RightDetailPanel, MapContextMenu } from "./components";
 import { MapToolbar } from "./MapToolbar";
 import { MapCanvas } from "./MapCanvas";
-import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
 import { useMapData, useMapSearch, useMapLayers } from "./hooks";
 import { useScoreData } from "./hooks/useScoreData";
@@ -375,9 +374,6 @@ function MapPageInner() {
           }
         />
       </div>
-
-      {/* Sandbox tour spotlight — renders null unless URL has ?tour=step1 */}
-      <TourSpotlight stepId="step1" />
     </div>
   );
 }

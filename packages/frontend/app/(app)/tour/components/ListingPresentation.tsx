@@ -1,7 +1,10 @@
 "use client";
 
+import { Fragment } from "react";
 import type { AnonReportResponse } from "@/lib/data";
-import { ListingPresentationCover } from "./ListingPresentationCover";
+import { CBSA_TO_METRO } from "@/lib/data";
+import { ReportHero } from "./ReportHero";
+import type { HeroBundle } from "./listing-sections/adapt-hero";
 import { ExecutiveSummary } from "./listing-sections/ExecutiveSummary";
 import { MarketNow } from "./listing-sections/MarketNow";
 import { Trajectory } from "./listing-sections/Trajectory";
@@ -12,6 +15,10 @@ import { Affordability } from "./listing-sections/Affordability";
 import { Employment } from "./listing-sections/Employment";
 import { Validation } from "./listing-sections/Validation";
 import { AiStrategy } from "./listing-sections/AiStrategy";
+import {
+  adaptReportSections,
+  type RawSection,
+} from "./listing-sections/adapt-sections";
 
 interface Props {
   report: AnonReportResponse;
@@ -21,58 +28,149 @@ interface Props {
   showWatermark: boolean;
 }
 
-interface SectionLike {
-  id: string;
-  data: unknown;
-  limitedData: boolean;
-}
-
-function pickSection(
-  sections: SectionLike[],
-  id: string,
-): SectionLike | undefined {
-  return sections.find((s) => s.id === id);
-}
-
-function dataOf(section: SectionLike | undefined): unknown {
-  return section?.data ?? {};
-}
-
 export function ListingPresentation({
   report,
   marketName,
-  geographyDescription,
-  households,
   showWatermark,
 }: Props) {
-  const sections = report.report.sections as SectionLike[];
+  // The backend emits a different `data` shape per section than the components
+  // consume; `adaptReportSections` reconciles the contract DEFENSIVELY (any
+  // empty/mismatched section degrades to limitedData instead of crashing).
+  const s = adaptReportSections(report.report.sections as RawSection[]);
+  const hero = s.hero as unknown as HeroBundle;
+  // Prefer the server-resolved market name (from the report data); fall back to
+  // the client-passed name. If that is still a bare CBSA geoId (bare-URL / anon
+  // entry), resolve it to a real metro name from the bundled crosswalk so the
+  // hero never shows a number.
+  const rawName = hero.marketName || marketName;
+  const resolvedName = /^\d{5}$/.test(rawName)
+    ? (CBSA_TO_METRO.get(rawName)?.shortName ?? rawName)
+    : rawName;
 
-  // Each section component reads its own slice. The orchestration here just
-  // unpacks the API response into props the sections expect. Mapping logic
-  // for shape transforms (e.g., raw Redfin metric → display label) lives in
-  // the section component, NOT here, to keep this assembly file thin.
-  const exec = pickSection(sections, "executive-summary");
-  const market = pickSection(sections, "market-now");
-  const traj = pickSection(sections, "trajectory-12mo");
-  const fc = pickSection(sections, "forecast");
-  const peers = pickSection(sections, "peers");
-  const mig = pickSection(sections, "migration");
-  const aff = pickSection(sections, "affordability");
-  const emp = pickSection(sections, "employment");
-  const val = pickSection(sections, "validation");
-  const ai = pickSection(sections, "ai-strategy");
-
-  const aiData = dataOf(ai);
-  const aiFallbackUsed = Boolean(
-    (aiData as { fallbackUsed?: unknown } | null | undefined)?.fallbackUsed,
-  );
+  // THE single source of truth for the body's section order, visibility, and
+  // numbering. Per the no-empty-sections rule, any section the adapter flagged
+  // `limitedData` is DROPPED entirely (never rendered as a "Limited data" stub),
+  // and the survivors are renumbered 01..N so the reader never sees a gap like
+  // "01 … 03 … 07". The adapter's `limitedData` is a faithful proxy for "this
+  // component will render content," so this filter never strands a blank number.
+  const isLimited = (p: Record<string, unknown>) => p.limitedData === true;
+  const orderedSections: {
+    key: string;
+    limited: boolean;
+    render: (num: string) => React.ReactElement;
+  }[] = [
+    {
+      key: "exec",
+      limited: isLimited(s.exec),
+      render: (num) => (
+        <ExecutiveSummary
+          {...(s.exec as unknown as React.ComponentProps<
+            typeof ExecutiveSummary
+          >)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "market",
+      limited: isLimited(s.market),
+      render: (num) => (
+        <MarketNow
+          {...(s.market as unknown as React.ComponentProps<typeof MarketNow>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "traj",
+      limited: isLimited(s.traj),
+      render: (num) => (
+        <Trajectory
+          {...(s.traj as unknown as React.ComponentProps<typeof Trajectory>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "fc",
+      limited: isLimited(s.fc),
+      render: (num) => (
+        <Forecast
+          {...(s.fc as unknown as React.ComponentProps<typeof Forecast>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "peers",
+      limited: isLimited(s.peers),
+      render: (num) => (
+        <Peers
+          {...(s.peers as unknown as React.ComponentProps<typeof Peers>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "mig",
+      limited: isLimited(s.mig),
+      render: (num) => (
+        <Migration
+          {...(s.mig as unknown as React.ComponentProps<typeof Migration>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "aff",
+      limited: isLimited(s.aff),
+      render: (num) => (
+        <Affordability
+          {...(s.aff as unknown as React.ComponentProps<typeof Affordability>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "emp",
+      limited: isLimited(s.emp),
+      render: (num) => (
+        <Employment
+          {...(s.emp as unknown as React.ComponentProps<typeof Employment>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "val",
+      limited: isLimited(s.val),
+      render: (num) => (
+        <Validation
+          {...(s.val as unknown as React.ComponentProps<typeof Validation>)}
+          num={num}
+        />
+      ),
+    },
+    {
+      key: "ai",
+      limited: isLimited(s.ai),
+      render: (num) => (
+        <AiStrategy
+          {...(s.ai as unknown as React.ComponentProps<typeof AiStrategy>)}
+          num={num}
+        />
+      ),
+    },
+  ];
+  const visibleSections = orderedSections.filter((sec) => !sec.limited);
 
   return (
     <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-surface shadow-[0_12px_40px_rgba(57,73,171,0.18)] ring-1 ring-primary-container">
-      <ListingPresentationCover
-        marketName={marketName}
-        geographyDescription={geographyDescription}
-        households={households}
+      <ReportHero
+        marketName={resolvedName}
+        score={hero.score}
+        verdict={hero.verdict}
+        kpis={hero.kpis}
         generatedAt={new Date().toISOString()}
       />
 
@@ -94,64 +192,30 @@ export function ListingPresentation({
         </div>
       )}
 
-      <ExecutiveSummary
-        {...(dataOf(exec) as React.ComponentProps<typeof ExecutiveSummary>)}
-        limitedData={!!exec?.limitedData}
-      />
-      <MarketNow
-        {...(dataOf(market) as React.ComponentProps<typeof MarketNow>)}
-        limitedData={!!market?.limitedData}
-      />
-      <Trajectory
-        {...(dataOf(traj) as React.ComponentProps<typeof Trajectory>)}
-        limitedData={!!traj?.limitedData}
-      />
-      <Forecast
-        {...(dataOf(fc) as React.ComponentProps<typeof Forecast>)}
-        limitedData={!!fc?.limitedData}
-      />
-      <Peers
-        {...(dataOf(peers) as React.ComponentProps<typeof Peers>)}
-        limitedData={!!peers?.limitedData}
-      />
-      <Migration
-        {...(dataOf(mig) as React.ComponentProps<typeof Migration>)}
-        limitedData={!!mig?.limitedData}
-      />
-      <Affordability
-        {...(dataOf(aff) as React.ComponentProps<typeof Affordability>)}
-        limitedData={!!aff?.limitedData}
-      />
-      <Employment
-        {...(dataOf(emp) as React.ComponentProps<typeof Employment>)}
-        limitedData={!!emp?.limitedData}
-      />
-      <Validation
-        {...(dataOf(val) as React.ComponentProps<typeof Validation>)}
-        limitedData={!!val?.limitedData}
-      />
-      <AiStrategy
-        {...(aiData as React.ComponentProps<typeof AiStrategy>)}
-        fallbackUsed={aiFallbackUsed}
-      />
+      {visibleSections.map((sec, i) => (
+        <Fragment key={sec.key}>
+          {sec.render(String(i + 1).padStart(2, "0"))}
+        </Fragment>
+      ))}
 
       <footer className="border-t border-outline-variant/40 bg-surface-container px-12 py-6">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
           Data sources &amp; methodology
         </p>
         <p className="mt-1.5 text-[11px] leading-[1.7] text-on-surface-variant">
-          <strong className="text-on-surface">Zillow ZHVI</strong>,{" "}
-          <strong className="text-on-surface">Redfin Market Tracker</strong>,{" "}
+          <strong className="text-on-surface">Zillow ZHVI &amp; ZHVF</strong>,{" "}
+          <strong className="text-on-surface">Realtor.com</strong>,{" "}
           <strong className="text-on-surface">U.S. Census ACS 5-Year</strong>,{" "}
           <strong className="text-on-surface">FRED / BEA</strong>,{" "}
           <strong className="text-on-surface">BLS QCEW</strong>,{" "}
           <strong className="text-on-surface">
             IRS Statistics of Income migration data
           </strong>
-          , <strong className="text-on-surface">PropertyIQ Score v4</strong>{" "}
-          (proprietary, validated quarterly). Forecasts use PropertyIQ's
-          time-series model with 80% confidence intervals. Validation
-          methodology at /scores/accuracy.
+          , <strong className="text-on-surface">PropertyIQ Score</strong>{" "}
+          (proprietary, validated out-of-sample). Forecasts use Zillow&apos;s
+          home-value forecast with a modeled 80% interval derived from each
+          market&apos;s historical volatility. Validation methodology at
+          /scores/accuracy.
         </p>
       </footer>
     </article>

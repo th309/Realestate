@@ -20,7 +20,7 @@ export function EmploymentBars({ rows }: Props) {
     );
   }
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2.5">
       {rows.map((r) => {
         const pct =
           r.max > 0 ? Math.max(0, Math.min(100, (r.value / r.max) * 100)) : 0;
@@ -29,13 +29,13 @@ export function EmploymentBars({ rows }: Props) {
             <span className="w-24 truncate text-on-surface-variant">
               {r.label}
             </span>
-            <span className="h-2 flex-1 overflow-hidden rounded-full bg-primary-container">
+            <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-primary-container">
               <span
-                className="block h-full rounded-full bg-gradient-to-r from-primary to-on-primary-container"
+                className="block h-full rounded-full bg-gradient-to-r from-secondary to-primary"
                 style={{ width: `${pct}%` }}
               />
             </span>
-            <span className="w-12 text-right font-mono font-medium text-on-surface">
+            <span className="w-12 text-right font-mono font-semibold text-on-surface">
               {r.value}
               {r.suffix ?? "%"}
             </span>

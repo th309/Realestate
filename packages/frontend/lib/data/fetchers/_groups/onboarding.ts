@@ -82,3 +82,6 @@ export {
   type SignUpWithTourInput,
   type SignUpWithTourResult,
 } from "../tour-signup";
+
+// Feature-coverage signal (used features + MCP-connected)
+export { fetchUsageCoverage, type UsageCoverage } from "../usage-coverage";

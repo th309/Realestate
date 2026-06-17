@@ -4,12 +4,13 @@ import { Affordability } from "../Affordability";
 
 describe("Affordability", () => {
   const props = {
-    affordabilityIndex: 82,
-    affordabilityMeta: "vs national 100",
-    affordabilityMarker: 35,
-    rentVsBuyYears: 4.2,
-    rentVsBuyMeta: "shorter is better",
-    rentVsBuyMarker: 45,
+    affordabilityIndex: 64,
+    affordabilityMeta: "Median home ≈ 4.2× median income",
+    affordabilityMarker: 64,
+    priceToRent: 18.5,
+    priceToRentMeta: "Median home ≈ 18.5× annual rent",
+    priceToRentMarker: 57,
+    hasPriceToRent: true,
     limitedData: false,
   };
 
@@ -20,15 +21,17 @@ describe("Affordability", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders both gauges with their titles", () => {
+  it("renders both gauges when price-to-rent is available", () => {
     render(<Affordability {...props} />);
     expect(screen.getByText("Affordability index")).toBeInTheDocument();
-    expect(screen.getByText("Rent-vs-buy break-even")).toBeInTheDocument();
+    expect(screen.getByText("Price-to-rent ratio")).toBeInTheDocument();
+    expect(screen.getByText("18.5×")).toBeInTheDocument();
   });
 
-  it("formats rent-vs-buy years to one decimal place", () => {
-    render(<Affordability {...props} rentVsBuyYears={3} />);
-    expect(screen.getByText("3.0 yrs")).toBeInTheDocument();
+  it("hides the price-to-rent gauge when rent data is missing", () => {
+    render(<Affordability {...props} hasPriceToRent={false} />);
+    expect(screen.getByText("Affordability index")).toBeInTheDocument();
+    expect(screen.queryByText("Price-to-rent ratio")).not.toBeInTheDocument();
   });
 
   it("does not hardcode hex colors", () => {

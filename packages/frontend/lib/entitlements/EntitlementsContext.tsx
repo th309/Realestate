@@ -36,15 +36,23 @@ const EntitlementsContext = createContext<EntitlementsContextValue | null>(
 interface EntitlementsProviderProps {
   children: React.ReactNode;
   initialResources?: string[];
+  /**
+   * Server-resolved entitlements used to seed the very first paint (SSR), so no
+   * surface flashes the default `free` tier before the client refresh lands.
+   * Resolved by `fetchEntitlementsServer` in the AppShell Server Component.
+   * Falls back to DEFAULT_ENTITLEMENTS_STATE for anonymous users / SSR misses.
+   */
+  initialState?: EntitlementsState | null;
 }
 
 export function EntitlementsProvider({
   children,
   initialResources,
+  initialState,
 }: EntitlementsProviderProps) {
   const { user, session, loading: authLoading } = useAuth();
   const [state, setState] = useState<EntitlementsState>(
-    DEFAULT_ENTITLEMENTS_STATE,
+    initialState ?? DEFAULT_ENTITLEMENTS_STATE,
   );
   // Initialize from sessionStorage to persist across navigations
   const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() =>

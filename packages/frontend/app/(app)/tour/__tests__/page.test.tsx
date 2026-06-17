@@ -141,7 +141,7 @@ describe("TourPage", () => {
     expect(fetchers.incrementUsageStat).toHaveBeenCalledWith("markets_viewed");
   });
 
-  it("redirects to /map?tour=step1 when session.phase is step1 and market+persona are set", async () => {
+  it("redirects to /market/<geoId>?tour=step1 when session.phase is step1 and market+persona are set", async () => {
     mockSession = {
       sessionId: "abc",
       persona: "agent",
@@ -153,7 +153,7 @@ describe("TourPage", () => {
     render(<TourPage />);
     await waitFor(() =>
       expect(replaceSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/map\?.*tour=step1/),
+        expect.stringMatching(/^\/market\/39580\?.*tour=step1/),
       ),
     );
     const calledWith = replaceSpy.mock.calls[0][0] as string;
@@ -175,7 +175,10 @@ describe("TourPage", () => {
     expect(screen.getByTestId("step4-aha")).toBeInTheDocument();
   });
 
-  it("renders Loading… placeholder and skips router.replace when market is null on step1", () => {
+  it("self-heals to the market picker when phase is step1 but market is missing (never dead-ends)", () => {
+    // Orphan state (stale URL/localStorage, refresh mid-flow): phase says step1
+    // but no market was chosen. The old behavior froze on "Loading your market…"
+    // forever; now it falls back to the picker instead of stranding the user.
     mockSession = {
       sessionId: "abc",
       persona: "agent",
@@ -185,7 +188,22 @@ describe("TourPage", () => {
       startedAt: 0,
     };
     render(<TourPage />);
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    expect(screen.getByTestId("market-picker")).toBeInTheDocument();
+    expect(screen.queryByText(/Loading your market/i)).not.toBeInTheDocument();
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it("self-heals to persona when phase is step1 but BOTH persona and market are missing", () => {
+    mockSession = {
+      sessionId: "abc",
+      persona: null,
+      market: null,
+      phase: "step1",
+      reportId: null,
+      startedAt: 0,
+    };
+    render(<TourPage />);
+    expect(screen.getByTestId("persona-cards")).toBeInTheDocument();
     expect(replaceSpy).not.toHaveBeenCalled();
   });
 });

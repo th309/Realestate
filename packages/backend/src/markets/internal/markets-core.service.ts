@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
-import { GEOGRAPHIES_WITH_SCORES_VIEW } from '../constants';
 
 /**
  * Internal service handling core market lookups and platform-wide stats.
@@ -14,15 +13,14 @@ export class MarketsCoreService {
   ) {}
 
   /**
-   * Look up the core summary fields for one market: score, parent metro CBSA,
-   * household count, name. Returns null if the geography is unknown.
+   * Look up the core summary fields for one market: name, parent metro CBSA,
+   * size. Returns null if the geography is unknown.
    *
-   * Used by the peers endpoint to seed `PeersService.findPeers`. Score may be
-   * null for markets that haven't been scored yet (newly ingested geographies);
-   * callers must handle the null case before passing to peer ranking.
-   *
-   * TODO(phase-01-task-13): see GEOGRAPHIES_WITH_SCORES_VIEW comment for the
-   * view-shape reconciliation.
+   * Reads the `geographies` table directly. (The previous `geographies_with_scores`
+   * view was never created, so this silently returned null for EVERY market —
+   * which is why reports showed the bare geoId instead of the market name and
+   * peer comparison came up empty.) Score is sourced from the scoring service by
+   * callers; this lookup is for identity + peer-seeding.
    */
   async getMarketCore(input: { geoLevel: string; geoId: string }): Promise<{
     score: number | null;
@@ -32,27 +30,27 @@ export class MarketsCoreService {
   } | null> {
     try {
       const { data, error } = await this.supabase
-        .from(GEOGRAPHIES_WITH_SCORES_VIEW)
-        .select('geo_id, name, score, household_count, parent_metro_cbsa')
-        .eq('geo_level', input.geoLevel)
-        .eq('geo_id', input.geoId)
+        .from('geographies')
+        .select('name, cbsa_code, population')
+        .eq('geography_type', input.geoLevel)
+        .eq('geography_id', input.geoId)
         .maybeSingle();
 
       if (error) {
-        // Likely missing view/table — degrade gracefully (Phase 01 Task 13).
-        console.warn(
-          'getMarketCore: geographies_with_scores lookup failed',
-          error.message,
-        );
+        console.warn('getMarketCore: geographies lookup failed', error.message);
         return null;
       }
 
-      if (!data) return null;
+      if (!data || !data.name) return null;
 
       return {
-        score: data.score ?? null,
-        parentMetroCbsa: data.parent_metro_cbsa ?? null,
-        householdCount: data.household_count ?? 0,
+        score: null,
+        // cbsa_code is the geo's own CBSA for metros and the containing metro's
+        // CBSA for counties/zips — the seed PeersService needs.
+        parentMetroCbsa: data.cbsa_code ?? null,
+        // `geographies` has no household_count; population is the size proxy
+        // used for peer size-distance ranking.
+        householdCount: data.population ?? 0,
         name: data.name,
       };
     } catch (err) {

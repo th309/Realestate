@@ -8,7 +8,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -155,9 +154,13 @@ function OnboardingBeaconProvider({ children }: { children: React.ReactNode }) {
 export function Providers({
   children,
   initialUserId,
+  initialEntitlementState,
 }: {
   children: React.ReactNode;
   initialUserId: string | null;
+  initialEntitlementState?:
+    | import("@/lib/entitlements/types").EntitlementsState
+    | null;
 }) {
   const queryClient = getQueryClient();
 
@@ -167,13 +170,11 @@ export function Providers({
         <QueryCacheCleaner />
 
         <ToastProvider>
-          <TourProvider>
-            <EntitlementsProvider>
-              <OnboardingBeaconProvider>
-                <PaywallProvider>{children}</PaywallProvider>
-              </OnboardingBeaconProvider>
-            </EntitlementsProvider>
-          </TourProvider>
+          <EntitlementsProvider initialState={initialEntitlementState}>
+            <OnboardingBeaconProvider>
+              <PaywallProvider>{children}</PaywallProvider>
+            </OnboardingBeaconProvider>
+          </EntitlementsProvider>
           <ExitIntentModal />
         </ToastProvider>
       </AuthProvider>

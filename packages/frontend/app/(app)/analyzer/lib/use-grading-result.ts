@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { useGradeBrrrrDeal, useGradeDeal, useGradeFlipDeal } from "@/lib/data";
 import type { BrrrrGradeRequest, FixAndFlipGradeRequest } from "@/lib/data";
 import type {
@@ -18,6 +20,18 @@ export function toEngineStrategy(
   s: AnalyzerStrategy,
 ): EngineStrategy | undefined {
   return STRATEGY_MAP[s];
+}
+
+/**
+ * Feature-coverage signal: fired once when the analyzer first has gradable
+ * input. Side-effect-only — lands a `feature.analyzer_grade` row in
+ * `user_events` so the coverage signal can see the analyzer was used.
+ */
+export function emitGradeCoverageEvent(props: {
+  strategy: string;
+  hasRent: boolean;
+}) {
+  trackEvent("feature.analyzer_grade", props);
 }
 
 export interface UseGradingResultArgs {
@@ -66,6 +80,18 @@ export function useGradingResult({
   rehabMonths,
 }: UseGradingResultArgs) {
   const strategy = STRATEGY_MAP[activeStrategy];
+
+  // Coverage signal: emit once when gradable input first appears.
+  const gradeCoverageFiredRef = useRef(false);
+  useEffect(() => {
+    if (hasGradableInput && !gradeCoverageFiredRef.current) {
+      gradeCoverageFiredRef.current = true;
+      emitGradeCoverageEvent({
+        strategy: String(activeStrategy),
+        hasRent: (input.rentMonthly ?? 0) > 0,
+      });
+    }
+  }, [hasGradableInput, activeStrategy, input.rentMonthly]);
 
   // B&H — committed call shape preserved.
   const bnhResult = useGradeDeal(

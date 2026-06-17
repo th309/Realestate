@@ -18,6 +18,7 @@ import {
 } from "../../hooks/useRegionTimeSeriesData";
 import { useTimeSeriesData, getMetricTitle, getMetricFormat } from "@/lib/data";
 import type { GeoLevel, ScoreType } from "@/lib/data";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { MarketSearchBar } from "../MarketSearchBar";
 import { MetricPicker } from "../MetricPicker";
 import { AnimatedTimeSeriesChart } from "../AnimatedTimeSeriesChart";
@@ -601,6 +602,9 @@ export function GraphsPageV2() {
                       raceFrames={raceMode ? scatterRaceData.frames : undefined}
                       autoPlay={raceMode}
                       onPointClick={(point) => {
+                        trackEvent("feature.graphs_view", {
+                          chart_type: chartType,
+                        });
                         selectMarket({
                           id: point.id,
                           name: point.label,

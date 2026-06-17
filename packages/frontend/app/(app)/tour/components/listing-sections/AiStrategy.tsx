@@ -12,6 +12,9 @@ interface Props {
   strategyParagraphs: string[];
   actions: Action[];
   fallbackUsed: boolean;
+  /** Set by the adapter; consumed by the parent's drop-empty filter. */
+  limitedData?: boolean;
+  num?: string;
 }
 
 export function AiStrategy({
@@ -19,13 +22,14 @@ export function AiStrategy({
   strategyParagraphs,
   actions,
   fallbackUsed,
+  num = "10",
 }: Props) {
   const hasContent = Boolean(thesis) || strategyParagraphs.length > 0;
 
   if (!hasContent) {
     return (
       <Section
-        num="10"
+        num={num}
         title="Recommended seller strategy"
         subtitle="PropertyIQ's AI synthesizes the data above into a positioning playbook."
       >
@@ -39,7 +43,7 @@ export function AiStrategy({
 
   return (
     <Section
-      num="10"
+      num={num}
       title="Recommended seller strategy"
       subtitle="PropertyIQ's AI synthesizes the data above into a positioning playbook."
     >

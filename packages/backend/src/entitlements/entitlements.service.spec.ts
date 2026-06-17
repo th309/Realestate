@@ -53,7 +53,9 @@ describe('EntitlementsService — org-tier inheritance (P2-Y)', () => {
       } else if (table === 'organization_members') {
         chain.maybeSingle.mockResolvedValue({ data: orgMembership });
       } else if (table === 'admin_users') {
-        chain.single.mockResolvedValue({ data: adminRow });
+        // Resolver now uses .maybeSingle() and is resolved first/authoritative.
+        chain.maybeSingle.mockResolvedValue({ data: adminRow, error: null });
+        chain.single.mockResolvedValue({ data: adminRow, error: null });
       } else {
         // feature_definitions, tier_features, subscription_tiers, paywall_events
         chain.single.mockResolvedValue({ data: null });
@@ -147,19 +149,20 @@ describe('EntitlementsService — org-tier inheritance (P2-Y)', () => {
     expect(res.tier).toBe('admin');
   });
 
-  it('admin_users is skipped when org membership already granted enterprise', async () => {
+  it('admin is authoritative over an enterprise org membership', async () => {
     stubSupabaseReads(
       { subscription_tier: 'free' },
       null,
       { organizations: { tier: 'enterprise', billing_status: 'active' } },
-      { role: 'admin' }, // would bump to admin if fallback ran
+      { role: 'admin' },
     );
     userFeatures.getUserFeatures.mockImplementation(
       (_id: string, tier: string) => featuresFor(tier),
     );
     const res = await runCheck('u1');
-    // Fallback must NOT run — enterprise already beats free, so tier stays enterprise.
-    expect(res.tier).toBe('enterprise');
+    // admin_users is resolved first and is authoritative — an admin is always
+    // admin tier regardless of any org/trial/subscription.
+    expect(res.tier).toBe('admin');
   });
 
   it('pending membership does NOT grant enterprise (query returns null)', async () => {

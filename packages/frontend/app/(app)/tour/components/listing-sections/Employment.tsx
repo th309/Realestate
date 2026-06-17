@@ -14,12 +14,18 @@ interface Props {
   sectors: Bar[];
   signals: Bar[];
   limitedData: boolean;
+  num?: string;
 }
 
-export function Employment({ sectors, signals, limitedData }: Props) {
+export function Employment({
+  sectors,
+  signals,
+  limitedData,
+  num = "08",
+}: Props) {
   if (limitedData) {
     return (
-      <Section num="08" title="Economic drivers">
+      <Section num={num} title="Economic drivers">
         <p className="text-sm text-on-surface-variant">
           Sector breakdown unavailable for this market.
         </p>
@@ -28,7 +34,7 @@ export function Employment({ sectors, signals, limitedData }: Props) {
   }
   return (
     <Section
-      num="08"
+      num={num}
       title="Economic drivers"
       subtitle="The job market, wage growth, and structural employer mix that anchor demand."
     >

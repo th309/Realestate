@@ -7,7 +7,10 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { GeneratePresentationDto } from './dto/generate-presentation.dto';
+import {
+  AuthedGeneratePresentationDto,
+  GeneratePresentationDto,
+} from './dto/generate-presentation.dto';
 import { SignUpWithTourDto, ClaimDto } from './dto/sign-up-with-tour.dto';
 import {
   ListingPresentationService,
@@ -18,6 +21,7 @@ import { ListingPresentationClaimService } from './listing-presentation-claim.se
 import { AnonRateLimitGuard } from './anon-rate-limit.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MarketsService } from '../markets/markets.service';
 
 @Controller('api/anonymous')
 export class AnonymousController {
@@ -28,6 +32,7 @@ export class AnonymousController {
     private cache: RedisTourCacheService,
     private claimService: ListingPresentationClaimService,
     private supabaseService: SupabaseService,
+    private markets: MarketsService,
   ) {}
 
   // NOTE: A parallel agent is editing listing-presentation.service.ts (T9
@@ -72,6 +77,51 @@ export class AnonymousController {
     }
 
     return result;
+  }
+
+  /**
+   * Authenticated report generation — same 10-section listing presentation, but
+   * for a signed-in user. Differs from the anonymous endpoint on three counts
+   * that all break authed callers (e.g. the tour aha-finale on a hard nav):
+   *
+   *   1. No `AnonRateLimitGuard` — authed users own their report; the 1/IP/24h
+   *      anon limit (and its bot-UA block) must not apply.
+   *   2. The DTO `name` is OPTIONAL. A bare-URL market (`metro-39580`) carries
+   *      an empty name, so we resolve the display name server-side from
+   *      `MarketsService.getMarketCore(geoLevel, geoId)`.
+   *   3. No best-effort Redis cache write — the report is rendered client-side
+   *      for the authed user and (when they claim) persisted via the claim flow.
+   *
+   * `JwtAuthGuard` sets `request.userId`; the guard already rejects missing /
+   * invalid Bearer tokens, so reaching the handler implies an authenticated user.
+   */
+  @Post('listing-presentation/authenticated')
+  @UseGuards(JwtAuthGuard)
+  async generateAuthenticated(@Body() dto: AuthedGeneratePresentationDto) {
+    // Resolve the display name server-side when the client didn't supply one
+    // (bare-URL market entries leave it empty). getMarketCore returns null for
+    // unknown geographies — fall back to a readable id-based label so the
+    // report header is never blank.
+    let name = dto.market.name?.trim() ?? '';
+    if (!name) {
+      const core = await this.markets
+        .getMarketCore({
+          geoLevel: dto.market.geoLevel,
+          geoId: dto.market.geoId,
+        })
+        .catch(() => null);
+      name = core?.name?.trim() || dto.market.geoId;
+    }
+
+    return this.listing.generate({
+      sessionId: dto.sessionId,
+      persona: dto.persona,
+      market: {
+        geoLevel: dto.market.geoLevel as GeoLevel,
+        geoId: dto.market.geoId,
+        name,
+      },
+    });
   }
 
   /**

@@ -14,7 +14,7 @@ import { PersonaCards } from "./components/PersonaCards";
 import { MarketPickerStep } from "./components/MarketPickerStep";
 import { Step4Aha } from "./components/Step4Aha";
 import { PostSignupCelebrate } from "./components/PostSignupCelebrate";
-import type { MarketRef, Persona } from "./types";
+import type { MarketRef, Persona, TourPhase } from "./types";
 import "./print.css";
 
 export default function TourPage() {
@@ -37,26 +37,48 @@ function TourPhaseSwitch() {
   const { session } = useTour();
   useTourSideEffects(session.persona, session.market);
 
+  // Self-heal orphan states so the user is NEVER stranded on a frozen
+  // "Loading your market…" screen (spec §5.2: never dead-end the tour). The
+  // step phases redirect into the product on a chosen market; reaching one
+  // without a market — a stale URL/localStorage, a refresh mid-flow, or a
+  // hand-edited link — falls back to collecting what's missing instead of
+  // hanging. Computed at render only (no state mutation), so it's idempotent:
+  // once the user picks a market, setMarket re-enters step1 with it.
+  const STEP_PHASES: TourPhase[] = ["step1", "step2", "step3", "step4"];
+  const phase: TourPhase =
+    STEP_PHASES.includes(session.phase) && !session.market
+      ? session.persona
+        ? "market"
+        : "persona"
+      : session.phase;
+
   // TODO(phase-03/04): consume `searchParams.get('next')` to drive the
   // post-tour redirect after celebrate. The legacy /get-started page used
   // `next` as the final router.push destination; here it currently rides
   // along on the URL but is not yet honored past the market step.
-  switch (session.phase) {
+  switch (phase) {
     case "persona":
       return <PersonaCards />;
     case "market":
       return <MarketPickerStep />;
     case "step1":
-      // The tour body renders on /map. Redirect there with the tour params
-      // attached. The spotlight on /map reads ?tour=step1 to render itself.
-      return <RedirectToStep step="step1" route="/map" />;
+      // The tour body now renders on the market-detail page: step1 (the score)
+      // and step2 (the AI assessment) both live on /market/<geoId>. Redirect
+      // there with the tour params so the spotlight can mount over the score.
+      return (
+        <RedirectToStep
+          step="step1"
+          route={`/market/${session.market?.geoId ?? ""}`}
+        />
+      );
     case "step4":
       return <Step4Aha />;
     case "step2":
     case "step3":
-      // step2/step3 spotlights mount on /map and /market pages, not /tour.
-      // This placeholder is unreachable in normal navigation; kept as a
-      // visible safety net if the user lands here directly via a stale URL.
+      // The value-arc spotlights (step1 + step2) mount on the market-detail
+      // page, not /tour; step3 is a vestigial phase. This placeholder is
+      // unreachable in normal navigation; kept as a visible safety net if the
+      // user lands here directly via a stale URL.
       return (
         <div className="mx-auto max-w-xl px-4 py-12 text-center">
           <p className="text-sm uppercase tracking-wide text-on-surface-variant">
@@ -80,10 +102,10 @@ function TourPhaseSwitch() {
 
 /**
  * Redirects from /tour to the in-app surface that renders a given tour step
- * (currently /map for step1). The /tour page is the entry point for the
- * onboarding flow; once we've collected persona + market we hand control
- * back to /map with the tour params attached so the spotlight can mount
- * over the real product surface.
+ * (the market-detail page /market/<geoId> for step1). The /tour page is the
+ * entry point for the onboarding flow; once we've collected persona + market
+ * we hand control back to the market page with the tour params attached so the
+ * spotlight can mount over the real product surface.
  */
 function RedirectToStep({ step, route }: { step: "step1"; route: string }) {
   const router = useRouter();

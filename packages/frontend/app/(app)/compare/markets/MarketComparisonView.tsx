@@ -9,7 +9,6 @@ import {
   type PeerCandidate,
 } from "@/lib/data";
 import { getScoreLabel } from "@/app/components/scoring/ScoreDisplay";
-import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
 function parseMarket(
   raw: string | null,
@@ -63,10 +62,7 @@ export function MarketComparisonView() {
         </p>
       </header>
 
-      <div
-        data-tour="compare-grid"
-        className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_1fr]"
-      >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_1fr]">
         <ComparisonSide geoLevel={a.geoLevel} geoId={a.geoId} winner />
         <div className="flex items-center justify-center text-sm font-semibold text-on-surface-variant">
           VS
@@ -79,8 +75,6 @@ export function MarketComparisonView() {
           </div>
         )}
       </div>
-
-      <TourSpotlight stepId="step3" />
     </div>
   );
 }

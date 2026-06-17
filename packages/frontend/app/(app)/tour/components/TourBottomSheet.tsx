@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BreathingSpotlight } from "../primitives/BreathingSpotlight";
 
 interface Props {
   title: string;
@@ -33,10 +34,11 @@ export function TourBottomSheet({
 
   return (
     <>
-      {/* Dim layer; lets the spotlit element receive a soft glow without an SVG mask */}
-      <div
-        className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-[1px]"
-        aria-hidden="true"
+      {/* Real cutout highlight on mobile (was a full-screen blur). */}
+      <BreathingSpotlight
+        targetSelector={targetSelector}
+        visible
+        onClick={onContinue}
       />
 
       {/* Bottom sheet */}

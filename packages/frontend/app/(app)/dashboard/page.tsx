@@ -22,6 +22,9 @@ import { WatchlistUpdates } from "./components/WatchlistUpdates";
 import { ProgressChecklist } from "./components/ProgressChecklist";
 import { SampleReportCard } from "./components/SampleReportCard";
 import { TrialExpirationBanner } from "./components/TrialExpirationBanner";
+import { NextBestActionCard } from "./components/NextBestActionCard";
+import { useFeatureCoverage } from "@/lib/feature-coverage/useFeatureCoverage";
+import { normalizePersona } from "@/lib/feature-coverage/feature-coverage";
 
 // ---------------------------------------------------------------------------
 // Onboarding banner (shown when quiz not completed)
@@ -79,6 +82,10 @@ export default function DashboardPage() {
     staleTime: 1000 * 60 * 60 * 2, // 2 hours
   });
 
+  const coverage = useFeatureCoverage(
+    normalizePersona(onboardingState?.user_type),
+  );
+
   const isLoading = authLoading || prefsLoading;
   const quizCompleted = !!preferences?.quiz_completed_at;
   const completedTasks = onboardingState?.onboarding_checklist ?? [];
@@ -109,6 +116,14 @@ export default function DashboardPage() {
       <TrialExpirationBanner
         usageStats={onboardingState?.usage_stats ?? null}
       />
+
+      {/* Return-visit surface: the single highest-value next move for this user */}
+      {coverage && (
+        <NextBestActionCard
+          recommended={coverage.recommendedNext}
+          whatsNew={null}
+        />
+      )}
 
       {/* Getting-started checklist (hides itself when all done or dismissed) */}
       <ProgressChecklist completedTasks={completedTasks} />

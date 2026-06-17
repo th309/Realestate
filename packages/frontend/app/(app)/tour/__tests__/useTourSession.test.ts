@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { createElement } from "react";
+import { renderHook, act, render } from "@testing-library/react";
 import { useTourSession } from "../hooks/useTourSession";
 
 const setSearchParams = vi.fn();
@@ -52,6 +53,89 @@ describe("useTourSession", () => {
     const { result } = renderHook(() => useTourSession());
     expect(result.current.session.persona).toBe("agent");
     expect(result.current.session.market).toBeNull();
+  });
+
+  it("backfills the stored name when a bare-URL market matches the stored one", () => {
+    // Tour was in progress with the real name persisted from the picker.
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-1",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise City, ID" },
+        phase: "step1",
+        reportId: null,
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-1; path=/";
+
+    // Hard nav to a bare-URL market (parseMarket yields name: "").
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+    const { result } = renderHook(() => useTourSession());
+
+    expect(result.current.session.market?.geoId).toBe("39580");
+    // The empty URL name must NOT clobber the stored real name.
+    expect(result.current.session.market?.name).toBe("Boise City, ID");
+  });
+
+  it("does NOT read the stored market name during the first (SSR-matching) render", () => {
+    // Regression for the finale hydration mismatch: the server has no
+    // localStorage, so it renders an empty market name ("your market"). The
+    // client's FIRST render must therefore also be empty — the stored name may
+    // only be restored AFTER mount, never in the render-phase initializer.
+    // (renderHook hides this because it reports the post-effect value.)
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-1",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise City, ID" },
+        phase: "step4",
+        reportId: null,
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-1; path=/";
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+
+    const seenNames: (string | undefined)[] = [];
+    function Probe() {
+      const { session } = useTourSession();
+      seenNames.push(session.market?.name);
+      return null;
+    }
+    render(createElement(Probe));
+
+    // First render must match SSR output (no localStorage) → empty name.
+    expect(seenNames[0]).toBe("");
+    // After mount, the stored name is restored, so resume still works.
+    expect(seenNames[seenNames.length - 1]).toBe("Boise City, ID");
+  });
+
+  it("does NOT backfill when the stored market is a different geography", () => {
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-2",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "16980", name: "Chicago, IL" },
+        phase: "step1",
+        reportId: null,
+        startedAt: 100,
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-2; path=/";
+
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+    const { result } = renderHook(() => useTourSession());
+
+    // URL market wins (different geoId); name stays empty, not Chicago's.
+    expect(result.current.session.market?.geoId).toBe("39580");
+    expect(result.current.session.market?.name).toBe("");
   });
 
   it("sets secure flag on cookie write when location is https", () => {

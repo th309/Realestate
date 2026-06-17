@@ -4,11 +4,16 @@ import { Validation } from "../Validation";
 
 describe("Validation", () => {
   const props = {
-    directionalAccuracy: 78,
-    observations: 412,
-    excessReturn3y: 6.3,
-    vsLabel: "state median",
-    averageOutperformance: 2.4,
+    metrosValidated: 865,
+    countiesValidated: 3061,
+    zipsValidated: 25783,
+    backtestYears: 22,
+    dollarAlpha: "$7,247",
+    icStatement:
+      "Out-of-sample information coefficient of 0.27 across 865 metros, positive in every validated year (2001-2023).",
+    outperformanceStatement:
+      "Top-band PropertyIQ markets have outperformed bottom-band markets in the same state by about 1.7 percentage points per year over the following 3 years (out-of-sample, excess vs state).",
+    hitRateStatement: "positive in 100% of validated years",
     limitedData: false,
   };
 
@@ -19,24 +24,23 @@ describe("Validation", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the directional accuracy and observation count", () => {
+  it("renders geo-level validated counts, not a per-market claim", () => {
     render(<Validation {...props} />);
-    expect(screen.getByText(/78%/)).toBeInTheDocument();
-    expect(screen.getByText(/412 observations/)).toBeInTheDocument();
+    expect(screen.getByText(/3,061 counties/)).toBeInTheDocument();
+    expect(screen.getByText(/25,783 ZIPs/)).toBeInTheDocument();
   });
 
-  it("formats positive 3-year excess return with leading +", () => {
-    render(<Validation {...props} excessReturn3y={6.3} />);
+  it("renders the sanctioned IC and dollar-alpha statements", () => {
+    render(<Validation {...props} />);
     expect(
-      screen.getByText(/3-year excess return: \+6\.3%/),
+      screen.getByText(/information coefficient of 0\.27/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/\$7,247/)).toBeInTheDocument();
   });
 
-  it("formats negative 3-year excess return without artificial +", () => {
-    render(<Validation {...props} excessReturn3y={-2.5} />);
-    expect(
-      screen.getByText(/3-year excess return: -2\.5%/),
-    ).toBeInTheDocument();
+  it("never claims accuracy 'in this metro'", () => {
+    const { container } = render(<Validation {...props} />);
+    expect(container.textContent ?? "").not.toMatch(/in this metro/i);
   });
 
   it("does not hardcode hex colors", () => {

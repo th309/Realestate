@@ -10,6 +10,8 @@ import {
 } from "../step-content";
 import { parseMarket } from "../lib/parseMarket";
 
+const ACTIVE_TOUR_STORAGE_KEY = "piq.activeTour";
+
 export interface ActiveTour {
   stepId: SandboxStepId;
   persona: Persona | null;
@@ -23,16 +25,47 @@ export function useTourFromUrl() {
 
   const active = useMemo<ActiveTour | null>(() => {
     const stepId = sp?.get("tour") as SandboxStepId | null;
-    if (!stepId || !SANDBOX_STEP_ORDER.includes(stepId)) return null;
-    const market = parseMarket(sp?.get("market") ?? null);
-    const sessionId = sp?.get("sessionId") ?? null;
-    if (!market || !sessionId) return null;
-    return {
-      stepId,
-      persona: (sp?.get("persona") as Persona | null) ?? null,
-      market,
-      sessionId,
-    };
+
+    if (stepId && SANDBOX_STEP_ORDER.includes(stepId)) {
+      const market = parseMarket(sp?.get("market") ?? null);
+      const sessionId = sp?.get("sessionId") ?? null;
+      if (market && sessionId) {
+        const tour: ActiveTour = {
+          stepId,
+          persona: (sp?.get("persona") as Persona | null) ?? null,
+          market,
+          sessionId,
+        };
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(
+            ACTIVE_TOUR_STORAGE_KEY,
+            JSON.stringify(tour),
+          );
+        }
+        return tour;
+      }
+    }
+
+    // URL has no tour params — try to rehydrate one that was interrupted.
+    if (typeof window !== "undefined") {
+      const raw = window.sessionStorage.getItem(ACTIVE_TOUR_STORAGE_KEY);
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw) as ActiveTour;
+          if (
+            saved?.stepId &&
+            SANDBOX_STEP_ORDER.includes(saved.stepId) &&
+            saved.market &&
+            saved.sessionId
+          ) {
+            return saved;
+          }
+        } catch {
+          /* ignore corrupt storage */
+        }
+      }
+    }
+    return null;
   }, [sp]);
 
   function buildStepUrl(target: SandboxStepId, route: string): string {
@@ -48,18 +81,15 @@ export function useTourFromUrl() {
   function advance() {
     if (!active) return;
     const next = nextSandboxStep(active.stepId);
-    if (!next) return;
-    const route =
-      next === "step2"
-        ? `/market/${active.market.geoId}`
-        : next === "step3"
-          ? `/compare/markets`
-          : "/map";
-    router.push(buildStepUrl(next, route));
+    if (!next) return; // step2 is last → caller uses advanceToStep4
+    // step2 lives on the same market page as step1.
+    router.push(buildStepUrl(next, `/market/${active.market.geoId}`));
   }
 
   function dismiss() {
-    router.push("/"); // exit tour back to homepage
+    if (typeof window !== "undefined")
+      window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
+    router.push("/dashboard"); // exit the tour INTO the app, not the marketing home
   }
 
   function advanceToStep4() {
@@ -69,6 +99,8 @@ export function useTourFromUrl() {
     params.set("market", `${active.market.geoLevel}-${active.market.geoId}`);
     params.set("sessionId", active.sessionId);
     params.set("phase", "step4");
+    if (typeof window !== "undefined")
+      window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
     router.push(`/tour?${params}`);
   }
 

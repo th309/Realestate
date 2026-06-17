@@ -10,7 +10,10 @@ import {
 } from "@/app/components/scoring/ScoreDisplay";
 import { useTour } from "../TourStateProvider";
 
-const VALID_TOUR_GEOS = ["metro", "county", "city", "zip"] as const;
+// The tour picker offers only the geographies the PropertyIQ score endpoint
+// supports — metro, county, zip. (Search also emits state/national, which are
+// excluded here; it never emits "city".)
+const VALID_TOUR_GEOS = ["metro", "county", "zip"] as const;
 type TourGeoLevel = (typeof VALID_TOUR_GEOS)[number];
 
 const FALLBACK_MARKETS: MarketRef[] = [

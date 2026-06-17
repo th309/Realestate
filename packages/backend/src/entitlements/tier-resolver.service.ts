@@ -14,10 +14,11 @@ export interface ResolvedTier {
  *
  * Resolution order (highest wins):
  *  1. tierOverride (caller-supplied, skips all DB lookups)
- *  2. Active trial
- *  3. Personal subscription (user_profiles)
- *  4. Org-tier inheritance — max(personal, org) where org has active billing
- *  5. admin_users fallback (only when still 'free' after the above)
+ *  2. admin_users — an admin/super_admin is ALWAYS admin tier, authoritative
+ *     over any trial/subscription/org. (admin is the highest TIER_ORDER rank.)
+ *  3. Active trial
+ *  4. Personal subscription (user_profiles)
+ *  5. Org-tier inheritance — max(personal, org) where org has active billing
  */
 @Injectable()
 export class TierResolverService {
@@ -50,6 +51,38 @@ export class TierResolverService {
     }
 
     const client = this.supabase.getClient();
+
+    // ── 0. Admin override (authoritative, highest priority) ──────────
+    // An admin/super_admin is ALWAYS the admin tier, regardless of any
+    // trial, subscription, or org membership. Resolved FIRST so an
+    // auto-granted trial (reverse-trial-on-signup) can never mask admin
+    // status. `.maybeSingle()` so "no admin row" is data:null (not an error);
+    // a genuine lookup error is logged and we fall through to normal
+    // resolution rather than silently downgrading.
+    const { data: adminRow, error: adminError } = await client
+      .from('admin_users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (adminError) {
+      this.logger.error(
+        `[Entitlements] admin_users lookup failed for ${userId.substring(0, 8)}...: ${adminError.message}`,
+      );
+    } else if (
+      adminRow &&
+      (adminRow.role === 'admin' || adminRow.role === 'super_admin')
+    ) {
+      this.logger.debug(
+        `[Entitlements] User ${userId.substring(0, 8)}... is ${adminRow.role} — granting admin tier`,
+      );
+      return {
+        tier: 'admin',
+        trial: null,
+        baselineTierWithoutTrial: null,
+        needsPerUserQuery: false,
+      };
+    }
 
     // ── 1. Active trial ──────────────────────────────────────────────
     const { data: trialData } = await client
@@ -127,25 +160,6 @@ export class TierResolverService {
       TierResolverService.tierRank(orgTier) > TierResolverService.tierRank(tier)
     ) {
       tier = orgTier;
-    }
-
-    // ── 4. admin_users fallback ──────────────────────────────────────
-    if (tier === 'free') {
-      const { data: adminRow } = await client
-        .from('admin_users')
-        .select('role')
-        .eq('id', userId)
-        .single();
-
-      if (
-        adminRow &&
-        (adminRow.role === 'admin' || adminRow.role === 'super_admin')
-      ) {
-        tier = 'admin';
-        this.logger.debug(
-          `[Entitlements] User ${userId.substring(0, 8)}... is ${adminRow.role} — granting admin tier`,
-        );
-      }
     }
 
     return {

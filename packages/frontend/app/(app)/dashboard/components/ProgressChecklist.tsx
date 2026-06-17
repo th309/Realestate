@@ -4,18 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 
 const CHECKLIST_ITEMS = [
-  { id: "create_account", label: "Create account", href: null },
+  { id: "view_score", label: "See your PropertyIQ Score", href: "/market" },
   {
-    id: "search_market",
-    label: "Search your first market",
-    href: "/tour",
+    id: "read_report",
+    label: "Read your full market report",
+    href: "/tour?resume=fresh",
   },
-  { id: "view_score", label: "View a PropertyIQ Score", href: "/market" },
-  { id: "compare_markets", label: "Compare two markets", href: "/market" },
   {
-    id: "generate_report",
-    label: "Generate a market report",
-    href: "/reports",
+    id: "connect_claude",
+    label: "Connect PropertyIQ to Claude ⚡",
+    href: "/docs/mcp",
+  },
+  {
+    id: "compare_markets",
+    label: "Compare your market to a peer",
+    href: "/compare/markets",
+  },
+  {
+    id: "screen_markets",
+    label: "Screen markets by your criteria",
+    href: "/screener",
+  },
+  { id: "analyze_property", label: "Analyze a property", href: "/analyzer" },
+  {
+    id: "add_watchlist",
+    label: "Save a market to your watchlist",
+    href: "/market",
   },
 ] as const;
 
@@ -26,7 +40,7 @@ interface ProgressChecklistProps {
 export function ProgressChecklist({ completedTasks }: ProgressChecklistProps) {
   const [dismissed, setDismissed] = useState(false);
 
-  const completed = new Set([...completedTasks, "create_account"]);
+  const completed = new Set([...completedTasks]);
   const totalDone = completed.size;
   const total = CHECKLIST_ITEMS.length;
   const progress = (totalDone / total) * 100;

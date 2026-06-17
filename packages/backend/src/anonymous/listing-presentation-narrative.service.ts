@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AnthropicService } from '../ai/anthropic.service';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
+import { extractJsonObject } from '../ai/extract-json';
 
 export interface NarrativeInput {
   market: { geoLevel: string; geoId: string; name: string };
@@ -16,25 +18,41 @@ export interface NarrativeOutput {
 
 const SYSTEM_PROMPT = `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific listing-presentation narrative for a real estate agent. Output STRICT JSON only with shape:
 { "thesis": "<3 sentences referencing specific data>", "strategy": "<3 paragraphs with pricing/positioning/timing>", "actions": [ { "title": "<6 words>", "desc": "<1 sentence>" } x 3 ] }
+The PropertyIQ Score (propertyiqScore) is on a 0–100 scale where higher means stronger demand and ~50 is the market's state average; ALWAYS describe it out of 100 (e.g. "scores 9/100"), never out of 10.
 Tone: confident, data-grounded, not generic. Cite exact numbers from the facts.`;
 
 @Injectable()
 export class ListingPresentationNarrativeService {
   private logger = new Logger(ListingPresentationNarrativeService.name);
 
-  constructor(private anthropic: AnthropicService) {}
+  constructor(private aiProvider: AiProviderService) {}
 
   async generate(input: NarrativeInput): Promise<NarrativeOutput> {
-    const userMessage = `Market: ${input.market.name}\nPersona: ${input.persona}\nFacts: ${JSON.stringify(input.structuredFacts, null, 2)}\n\nProduce the narrative JSON now.`;
+    const userPrompt = `Market: ${input.market.name}\nPersona: ${input.persona}\nFacts: ${JSON.stringify(input.structuredFacts, null, 2)}\n\nProduce the narrative JSON now.`;
     try {
-      const response = await this.anthropic.messages({
-        model: 'claude-haiku-4-5',
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      });
-      const text = response.content?.[0]?.text ?? '';
-      const parsed = JSON.parse(text);
+      // Route through AiProviderService so this respects the configured default
+      // provider (DeepSeek) via ai_model_config / env, with usage logging and
+      // shadow A/B — instead of hardcoding Anthropic. `json` response format
+      // yields clean JSON on providers that support it (DeepSeek/OpenAI).
+      const response = await this.aiProvider.complete(
+        AI_PURPOSES.LISTING_PRESENTATION_NARRATIVE,
+        {
+          systemPrompt: SYSTEM_PROMPT,
+          userPrompt,
+          // deepseek-v4-pro is verbose; the 3-paragraph strategy needs ~2.2k
+          // tokens. 1500 truncated mid-JSON (finish_reason=length) → parse
+          // failure → fallback on longer markets. 3000 gives comfortable margin.
+          maxTokens: 3000,
+          responseFormat: 'json',
+        },
+      );
+      // Defense in depth: even with json mode, some providers still wrap the
+      // JSON in a markdown fence — extractJsonObject unwraps before parsing.
+      const parsed = extractJsonObject<{
+        thesis?: string;
+        strategy?: string;
+        actions?: Array<{ title: string; desc: string }>;
+      }>(response.content);
       return {
         thesis: parsed.thesis ?? '',
         strategy: parsed.strategy ?? '',

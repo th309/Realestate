@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, FormEvent } from "react";
+import { Suspense, useState, useEffect, FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Building2, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
@@ -49,11 +49,26 @@ export default function SignInPage() {
 
 function SignInPageContent() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/map";
+  // Open-redirect guard: only honor same-origin relative paths. Reject absolute
+  // URLs, protocol-relative ("//evil.com") and backslash ("/\\evil.com") tricks
+  // so a crafted ?redirect= can't bounce a signed-in user off-site. Applied at
+  // the source so every downstream use (auto-forward, password, OAuth) is safe.
+  const rawRedirect = searchParams.get("redirect") ?? "/map";
+  const redirectTo =
+    rawRedirect.startsWith("/") &&
+    !rawRedirect.startsWith("//") &&
+    !rawRedirect.startsWith("/\\")
+      ? rawRedirect
+      : "/map";
   const callbackError = searchParams.get("error");
 
-  const { signInWithPassword, signInWithMagicLink, signInWithOAuth } =
-    useAuth();
+  const {
+    user,
+    loading: authLoading,
+    signInWithPassword,
+    signInWithMagicLink,
+    signInWithOAuth,
+  } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("password");
   const [email, setEmail] = useState("");
@@ -65,6 +80,19 @@ function SignInPageContent() {
       : null,
   );
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // Auto-forward an already-authenticated visitor straight to their
+  // destination. Welcome/marketing emails link here because a stateless email
+  // link can't carry a session; a visitor whose session is still live in this
+  // browser should skip the form entirely instead of being asked to sign in
+  // again. A genuinely-anonymous visitor (no live session) falls through to the
+  // form below. Full-page nav (not router.push) matches handlePasswordSignIn —
+  // see its comment about the refresh/push race leaving map data unfetched.
+  useEffect(() => {
+    if (!authLoading && user) {
+      window.location.href = redirectTo;
+    }
+  }, [authLoading, user, redirectTo]);
 
   const handlePasswordSignIn = async (e: FormEvent) => {
     e.preventDefault();

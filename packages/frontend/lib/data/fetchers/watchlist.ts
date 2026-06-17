@@ -5,6 +5,7 @@
  */
 
 import { getAuthHeaders } from "./auth-headers";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,6 +80,9 @@ export async function addToWatchlist(
       errorData.message || `Failed to add to watchlist: ${response.status}`,
     );
   }
+
+  // Coverage signal: a successful add proves the watchlist feature was used.
+  trackEvent("feature.watchlist_add", { geography_type: dto.geography_type });
 
   return response.json();
 }
