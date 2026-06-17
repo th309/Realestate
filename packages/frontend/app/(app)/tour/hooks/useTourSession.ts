@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { MarketRef, Persona, TourPhase, TourSession } from "../types";
 import { parseMarket as parseMarketParam } from "../lib/parseMarket";
@@ -66,6 +66,8 @@ export function useTourSession() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const hydratedRef = useRef(false);
+
   const [session, setSession] = useState<TourSession>(() => {
     const resumeMode = searchParams?.get("resume");
     if (resumeMode === "fresh" && typeof window !== "undefined") {
@@ -79,41 +81,77 @@ export function useTourSession() {
     const sessionId = cookieId ?? stored.sessionId ?? mintSessionId();
     if (!cookieId) writeCookie(COOKIE_NAME, sessionId);
 
+    // RENDERED fields (persona/market/phase) derive from URL params ONLY so the
+    // server and the client's first render produce identical DOM. Browser-only
+    // sources (localStorage) are merged AFTER mount in the hydration effect
+    // below — reading them here caused a hydration mismatch on the finale
+    // market name (server has no localStorage → "your market"; the client
+    // backfilled the persisted real name → divergent text). sessionId /
+    // reportId / startedAt are never rendered, so resolving them from
+    // cookie/storage here stays hydration-safe.
     const personaParam =
       (searchParams?.get("persona") as Persona | null) ?? null;
     const marketParam = parseMarketParam(searchParams?.get("market") ?? null);
     const phaseParam = (searchParams?.get("phase") as TourPhase | null) ?? null;
 
-    // The `<geoLevel>-<geoId>` URL param carries no display name, so
-    // parseMarket yields `name: ""`. When that same market was already chosen
-    // (with its real name) via the picker and persisted, backfill the stored
-    // name so a hard nav to a bare-URL market (e.g. ?market=metro-39580) keeps
-    // the name instead of clobbering it with an empty string — which otherwise
-    // 400s the report DTO and blanks the finale header.
-    if (
-      marketParam &&
-      !marketParam.name &&
-      stored.market &&
-      stored.market.geoLevel === marketParam.geoLevel &&
-      stored.market.geoId === marketParam.geoId &&
-      stored.market.name
-    ) {
-      marketParam.name = stored.market.name;
-    }
-
-    const next: TourSession = {
+    return {
       sessionId,
-      persona: personaParam ?? stored.persona ?? null,
-      market: marketParam ?? stored.market ?? null,
+      persona: personaParam,
+      market: marketParam,
       phase:
         phaseParam ??
         (personaParam ? (marketParam ? "step1" : "market") : "persona"),
       reportId: stored.reportId ?? null,
       startedAt: stored.startedAt ?? Date.now(),
     };
-    saveToStorage(next);
-    return next;
   });
+
+  // Hydration merge: restore persona/market/phase from localStorage AFTER mount.
+  // Kept out of the render-phase initializer above so SSR and the first client
+  // render match (no hydration mismatch); see the note there. Runs once. URL
+  // params always win over stored values; a stored display name backfills a
+  // bare `?market=<level>-<id>` so the finale header/DTO keep the real name.
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    if (searchParams?.get("resume") === "fresh") return;
+
+    const stored = loadFromStorage();
+    if (!stored.persona && !stored.market && stored.phase == null) return;
+
+    setSession((prev) => {
+      const persona = prev.persona ?? stored.persona ?? null;
+
+      let market = prev.market ?? stored.market ?? null;
+      if (
+        market &&
+        !market.name &&
+        stored.market &&
+        stored.market.geoLevel === market.geoLevel &&
+        stored.market.geoId === market.geoId &&
+        stored.market.name
+      ) {
+        market = { ...market, name: stored.market.name };
+      }
+
+      const urlHadPhase = searchParams?.get("phase") != null;
+      const phase: TourPhase = urlHadPhase
+        ? prev.phase
+        : (stored.phase ??
+          (persona ? (market ? "step1" : "market") : "persona"));
+
+      if (
+        persona === prev.persona &&
+        market === prev.market &&
+        phase === prev.phase
+      ) {
+        return prev;
+      }
+      return { ...prev, persona, market, phase };
+    });
+    // Mount-only; the lazy initializer + this effect together resolve state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     saveToStorage(session);
