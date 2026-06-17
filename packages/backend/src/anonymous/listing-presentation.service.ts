@@ -104,6 +104,10 @@ export class ListingPresentationService {
     const sourceScore = flattenedScore ?? marketCore?.score ?? 0;
     const parentMetro = marketCore?.parentMetroCbsa ?? null;
     const householdCount = marketCore?.householdCount ?? 0;
+    // Resolve the display name once (real name from `geographies` via
+    // marketCore, falling back to the client-passed name which may be the bare
+    // geoId). Used by the AI narrative AND the trajectory section.
+    const resolvedMarket = { ...market, name: marketCore?.name || market.name };
 
     // -------- Wave 2: data fetches in parallel using real source values --------
     const metricGeoLevel = toMetricGeoLevel(market.geoLevel);
@@ -158,23 +162,21 @@ export class ListingPresentationService {
     ]);
 
     const structuredFacts = {
-      score: flattenedScore,
+      // Named for the scale so the model never reads it as "out of 10".
+      propertyiqScore: flattenedScore,
       ...metricsBatch,
       peerCount: peersList.length,
       migrationCount: migrationFlows.length,
     };
     const ai = await this.narrative.generate({
-      market,
+      market: resolvedMarket,
       persona: input.persona,
       structuredFacts,
     });
 
     // -------- Wave 3: derived sections (trajectory + forecast need more fetches) --------
     const [trajectory, forecast] = await Promise.all([
-      this.sections.buildTrajectory(
-        { ...market, name: marketCore?.name || market.name },
-        marketSeriesRaw,
-      ),
+      this.sections.buildTrajectory(resolvedMarket, marketSeriesRaw),
       this.sections.buildForecast(market, marketSeriesRaw),
     ]);
     const affordability = this.sections.buildAffordability(metricsBatch);

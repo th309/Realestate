@@ -4,7 +4,10 @@ import { ZillowService } from '../zillow/zillow.service';
 import { ForecastData } from '../zillow/types';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
 import { MarketsService } from '../markets/markets.service';
-import { GeoLevel as ChainGeoLevel } from '../metric-resolution/metric-resolution.types';
+import {
+  GeoLevel as ChainGeoLevel,
+  GeoChainStep,
+} from '../metric-resolution/metric-resolution.types';
 import { normalizeStateRegionId } from '../common/geo';
 import { computeForecastBand } from './forecast-band';
 import { computeAffordability, AffordabilityData } from './affordability';
@@ -216,7 +219,7 @@ export class ListingPresentationSectionsService {
       return row && Number.isFinite(row.value) ? row.value : null;
     }
     if (market.geoLevel === 'zip') {
-      const chain = await this.geoChain
+      const chain: GeoChainStep[] = await this.geoChain
         .getInheritanceChain('zip', market.geoId)
         .catch(() => []);
       const stateStep = chain.find((c) => c.level === 'state');
