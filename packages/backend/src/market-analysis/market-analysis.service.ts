@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ReportAiService } from '../reports/report-ai.service';
 import { RedisService } from '../redis/redis.service';
 import { extractJsonObject } from '../ai/extract-json';
+import { generateFallback } from './market-analysis-fallback';
 
 interface MetricValue {
   value: number | null;
@@ -9,7 +10,7 @@ interface MetricValue {
   change: number | null;
 }
 
-interface AnalysisRequest {
+export interface AnalysisRequest {
   geoType: string;
   geoId: string;
   geoName: string;
@@ -47,8 +48,8 @@ export class MarketAnalysisService {
   async generateAnalysis(
     request: AnalysisRequest,
   ): Promise<MarketAnalysisResult> {
-    // v4: bust the v3 cache that captured truncated/"Analysis unavailable." results.
-    const cacheKey = `piq:market-analysis:v4:${request.geoType}:${request.geoId}`;
+    // v5: bust the v4 cache that captured raw markdown ("**takeaway**") in the prose.
+    const cacheKey = `piq:market-analysis:v5:${request.geoType}:${request.geoId}`;
 
     const cached = await this.redisService.getByKey(cacheKey);
     if (cached) {
@@ -88,13 +89,13 @@ export class MarketAnalysisService {
       this.logger.warn(
         '[MarketAnalysis] AI unavailable, using template fallback',
       );
-      homebuyer = this.generateFallback(request, 'homebuyer');
-      investor = this.generateFallback(request, 'investor');
+      homebuyer = generateFallback(request, 'homebuyer');
+      investor = generateFallback(request, 'investor');
     }
 
     const result: MarketAnalysisResult = {
-      homebuyer,
-      investor,
+      homebuyer: this.sanitizeSections(homebuyer),
+      investor: this.sanitizeSections(investor),
       generatedAt: new Date().toISOString(),
       cached: false,
     };
@@ -125,8 +126,8 @@ export class MarketAnalysisService {
         `[MarketAnalysis] AI generation failed: ${error.message}`,
       );
       return {
-        homebuyer: this.generateFallback(request, 'homebuyer'),
-        investor: this.generateFallback(request, 'investor'),
+        homebuyer: generateFallback(request, 'homebuyer'),
+        investor: generateFallback(request, 'investor'),
       };
     }
   }
@@ -145,7 +146,7 @@ export class MarketAnalysisService {
       })
       .join('\n');
 
-    return `You are a sharp, experienced real estate market analyst. Analyze the data below for ${geoName} and write 6 short analytical paragraphs — 3 for a homebuyer audience and 3 for an investor audience.
+    return `You are a sharp, experienced real estate market analyst. Analyze the data below for ${geoName} and write 6 short analytical paragraphs: 3 for a homebuyer audience and 3 for an investor audience.
 
 Market Data for ${geoName}:
 ${metricsBlock}
@@ -153,24 +154,30 @@ ${metricsBlock}
 Scores:
 - PropertyIQ Score: ${scores.propertyiq.score}/100 (Grade: ${scores.propertyiq.grade})
 
-Write exactly 6 sections — 3 for homebuyers and 3 for investors. Use natural, informative titles.
+Write exactly 6 sections, 3 for homebuyers and 3 for investors. Use natural, informative titles.
 
 HOMEBUYER SECTIONS:
-1. AFFORDABILITY — Can a typical buyer afford this market? Reference income requirements, median prices, price per sqft, and how long it takes to save.
-2. MARKET PACE — Is this market moving fast or slow? Reference days on market, inventory trends, pending ratios. Should a buyer be aggressive or patient?
-3. PRICE TRAJECTORY — Where are prices headed? Reference YoY/MoM changes, 5-year trends, price cuts. Is now a good or bad time to buy?
+1. AFFORDABILITY: Can a typical buyer afford this market? Reference income requirements, median prices, price per sqft, and how long it takes to save.
+2. MARKET PACE: Is this market moving fast or slow? Reference days on market, inventory trends, pending ratios. Should a buyer be aggressive or patient?
+3. PRICE TRAJECTORY: Where are prices headed? Reference YoY/MoM changes, 5-year trends, price cuts. Is now a good or bad time to buy?
 
 INVESTOR SECTIONS:
-4. CASH FLOW POTENTIAL — Will a rental property cash flow here? Reference cap rates, gross yield, rent levels, GRM. Cash-flow market or appreciation play?
-5. VALUE GROWTH — Will property values appreciate? Reference YoY and 5-year growth, population/job growth, overvalued indicators.
-6. LIQUIDITY & DEMAND — Can you rent it out easily? Can you sell when you want? Reference days on market, inventory, rental demand, absorption.
+4. CASH FLOW POTENTIAL: Will a rental property cash flow here? Reference cap rates, gross yield, rent levels, GRM. Cash-flow market or appreciation play?
+5. VALUE GROWTH: Will property values appreciate? Reference YoY and 5-year growth, population and job growth, overvalued indicators.
+6. LIQUIDITY AND DEMAND: Can you rent it out easily? Can you sell when you want? Reference days on market, inventory, rental demand, absorption.
 
-Rules:
-- Reference specific numbers from the data (say "prices are up 4.2% year-over-year to $385K", not just "prices are rising")
-- Be honest and balanced — if the data is mixed, say so
-- Each paragraph should be 60-100 words, conversational but analytical
-- If a metric is missing, work with what you have — don't mention missing data
-- End each section with a practical takeaway
+Content rules:
+- Reference specific numbers from the data (say "prices are up 4.2% year-over-year to $385K", not just "prices are rising").
+- Be honest and balanced. If the data is mixed, say so.
+- Each paragraph should be 60-100 words, conversational but analytical.
+- If a metric is missing, work with what you have. Do not mention missing data.
+- Close each paragraph with a plain, practical takeaway sentence. Do NOT add a "Takeaway" label, a heading, a colon prefix, or any emphasis around it.
+
+Style rules (strict):
+- Write plain conversational prose. NO markdown formatting at all: no asterisks for bold, no underscores around words, no backticks, no headings, no bullet points inside the analysis.
+- No em-dashes. Use commas, periods, or the word "and" instead.
+- Do not output raw data field names. Translate code-style identifiers into plain English ("days_on_market" becomes "days on market", "price_cut_pct" becomes "the share of listings with price cuts").
+- Each "analysis" value must be one single plain-text paragraph with no special formatting characters.
 
 Respond in this exact JSON format:
 {"homebuyer":[{"title":"...","analysis":"..."},{"title":"...","analysis":"..."},{"title":"...","analysis":"..."}],"investor":[{"title":"...","analysis":"..."},{"title":"...","analysis":"..."},{"title":"...","analysis":"..."}]}`;
@@ -209,150 +216,28 @@ Respond in this exact JSON format:
     );
   }
 
-  private generateFallback(
-    request: AnalysisRequest,
-    viewType: 'homebuyer' | 'investor',
-  ): AnalysisSection[] {
-    const { geoName, metrics, scores } = request;
+  private sanitizeSections(sections: AnalysisSection[]): AnalysisSection[] {
+    return sections.map((s) => ({
+      title: this.stripMarkdown(s.title ?? ''),
+      analysis: this.stripMarkdown(s.analysis ?? ''),
+    }));
+  }
 
-    const val = (key: string) => metrics[key]?.value ?? null;
-    const fmt = (key: string) => metrics[key]?.formatted ?? null;
-    const chg = (key: string) => metrics[key]?.change ?? null;
-
-    if (viewType === 'homebuyer') {
-      const hs = scores.propertyiq;
-      const scoreDesc =
-        hs.score >= 70
-          ? 'favorable'
-          : hs.score >= 50
-            ? 'moderate'
-            : 'challenging';
-
-      const affordParts = [
-        `${geoName} shows ${scoreDesc} conditions for homebuyers (PropertyIQ score: ${hs.score}).`,
-      ];
-      if (fmt('listing_price'))
-        affordParts.push(
-          `The median listing price is ${fmt('listing_price')}.`,
-        );
-      if (fmt('income_to_buy'))
-        affordParts.push(
-          `You'd need roughly ${fmt('income_to_buy')} in annual income to afford a home here.`,
-        );
-      const yts = val('years_to_save');
-      if (yts != null)
-        affordParts.push(
-          `At current savings rates, expect about ${yts.toFixed(1)} years to save for a down payment.`,
-        );
-
-      const speedParts: string[] = [];
-      const dom = val('days_on_market');
-      if (dom != null)
-        speedParts.push(
-          `Homes in ${geoName} average ${Math.round(dom)} days on market.`,
-        );
-      const invChg = chg('for_sale_inventory');
-      if (invChg != null)
-        speedParts.push(
-          `Inventory is ${invChg > 0 ? 'up' : 'down'} ${Math.abs(invChg).toFixed(1)}% year-over-year.`,
-        );
-      const pr = val('pending_ratio');
-      if (pr != null)
-        speedParts.push(
-          `The pending ratio sits at ${(pr * 100).toFixed(0)}%, indicating ${pr > 0.4 ? 'strong' : 'moderate'} buyer activity.`,
-        );
-      if (speedParts.length === 0)
-        speedParts.push(
-          `Market pace data for ${geoName} is currently limited.`,
-        );
-
-      const priceParts: string[] = [];
-      if (fmt('home_value'))
-        priceParts.push(`Current median home value: ${fmt('home_value')}.`);
-      const hvYoy = val('home_value_yoy');
-      if (hvYoy != null)
-        priceParts.push(
-          `Values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
-        );
-      const hv5yr = val('home_value_5yr');
-      if (hv5yr != null)
-        priceParts.push(
-          `The 5-year annualized growth rate is ${hv5yr.toFixed(1)}%.`,
-        );
-      const pcPct = val('price_cut_pct');
-      if (pcPct != null)
-        priceParts.push(
-          `${pcPct.toFixed(0)}% of listings have price reductions.`,
-        );
-      if (priceParts.length === 0)
-        priceParts.push(
-          `Price trend data for ${geoName} is currently limited.`,
-        );
-
-      return [
-        { title: 'Affordability', analysis: affordParts.join(' ') },
-        { title: 'Market Speed', analysis: speedParts.join(' ') },
-        { title: 'Price Trajectory', analysis: priceParts.join(' ') },
-      ];
-    }
-
-    // Investor fallback
-    const is = scores.propertyiq;
-    const scoreDesc =
-      is.score >= 70 ? 'strong' : is.score >= 50 ? 'moderate' : 'limited';
-
-    const cfParts = [
-      `${geoName} shows ${scoreDesc} investment potential (PropertyIQ score: ${is.score}).`,
-    ];
-    const cr = val('cap_rate');
-    if (cr != null)
-      cfParts.push(
-        `Cap rates are around ${cr.toFixed(1)}%, indicating ${cr >= 6 ? 'solid cash flow' : cr >= 4 ? 'moderate returns' : 'appreciation-focused'} potential.`,
-      );
-    if (fmt('rent_index'))
-      cfParts.push(`Median rents at ${fmt('rent_index')}/month.`);
-    const gy = val('gross_yield');
-    if (gy != null) cfParts.push(`Gross yield: ${gy.toFixed(1)}%.`);
-
-    const growParts: string[] = [];
-    const hvYoy = val('home_value_yoy');
-    if (hvYoy != null)
-      growParts.push(
-        `Property values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
-      );
-    const hv5yr = val('home_value_5yr');
-    if (hv5yr != null)
-      growParts.push(`5-year annualized growth: ${hv5yr.toFixed(1)}%.`);
-    const popG = val('population_growth');
-    if (popG != null)
-      growParts.push(
-        `Population growth of ${popG.toFixed(1)}% supports demand.`,
-      );
-    const jobG = val('job_growth');
-    if (jobG != null) growParts.push(`Job growth: ${jobG.toFixed(1)}%.`);
-    if (growParts.length === 0)
-      growParts.push(`Growth data for ${geoName} is currently limited.`);
-
-    const liqParts: string[] = [];
-    const dom = val('days_on_market');
-    if (dom != null)
-      liqParts.push(`Homes sell in an average of ${Math.round(dom)} days.`);
-    const invChg = chg('for_sale_inventory');
-    if (invChg != null)
-      liqParts.push(
-        `Inventory ${invChg > 0 ? 'rising' : 'falling'} at ${Math.abs(invChg).toFixed(1)}% YoY.`,
-      );
-    const pr = val('pending_ratio');
-    if (pr != null)
-      liqParts.push(
-        `Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? 'healthy' : 'softer'} demand.`,
-      );
-    liqParts.push(`PropertyIQ score: ${scores.propertyiq.score}/100.`);
-
-    return [
-      { title: 'Cash Flow Potential', analysis: cfParts.join(' ') },
-      { title: 'Value Growth', analysis: growParts.join(' ') },
-      { title: 'Liquidity & Demand', analysis: liqParts.join(' ') },
-    ];
+  /**
+   * Defensive strip of markdown the model may emit despite the prompt's style
+   * rules (e.g. "**takeaway**"). Belt-and-suspenders so raw markdown never
+   * reaches the UI, which renders the analysis text verbatim.
+   */
+  private stripMarkdown(text: string): string {
+    if (!text) return text;
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // **bold**
+      .replace(/__([^_]+)__/g, '$1') // __bold__
+      .replace(/\*([^*\n]+)\*/g, '$1') // *italic*
+      .replace(/`([^`]+)`/g, '$1') // `code`
+      .replace(/^\s{0,3}#{1,6}\s+/gm, '') // # headings
+      .replace(/\*\*/g, '') // any stray bold markers
+      .replace(/[ \t]{2,}/g, ' ') // collapse doubled spaces left behind
+      .trim();
   }
 }
