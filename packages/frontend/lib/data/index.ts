@@ -225,6 +225,10 @@ export {
   useAnonymousListingPresentation,
   type UseAnonymousListingPresentationVariables,
 
+  // Authenticated listing presentation (tour aha-finale, signed-in path)
+  useAuthenticatedListingPresentation,
+  type UseAuthenticatedListingPresentationVariables,
+
   // Tour signup mutation (anonymous → claimed user conversion)
   useTourSignup,
 

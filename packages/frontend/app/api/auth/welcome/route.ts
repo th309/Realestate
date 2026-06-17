@@ -30,10 +30,14 @@ export async function POST(request: NextRequest) {
     ? `${forwardedProto}://${forwardedHost}`
     : request.nextUrl.origin;
 
+  // A stateless email link can't carry a session, so point it at the sign-in
+  // gate (which forwards to ?redirect= after login, or instantly forwards a
+  // user whose session is still live) rather than deep-linking into /map and
+  // rendering the anonymous map for a user who appears logged out.
   const result = await sendWelcomeEmail({
     to: user.email,
     name,
-    loginUrl: `${origin}/map`,
+    loginUrl: `${origin}/auth/sign-in?redirect=/map`,
   });
 
   return NextResponse.json(result);

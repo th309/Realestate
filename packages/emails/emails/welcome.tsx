@@ -23,7 +23,7 @@ export default function WelcomeEmail({ name, loginUrl }: WelcomeEmailProps) {
         Jump in and explore your first market:
       </Text>
       <Section className="text-center mb-6">
-        <BrandedButton href={loginUrl}>Go to Dashboard</BrandedButton>
+        <BrandedButton href={loginUrl}>Go to Map</BrandedButton>
       </Section>
       <Text className="text-sm text-gray-500 leading-5 m-0">
         If the button doesn&apos;t work, copy this link:{" "}
@@ -37,5 +37,5 @@ export default function WelcomeEmail({ name, loginUrl }: WelcomeEmailProps) {
 
 WelcomeEmail.PreviewProps = {
   name: "Troy",
-  loginUrl: "https://propertyiq.app/dashboard",
+  loginUrl: "https://propertyiq.app/auth/sign-in?redirect=/map",
 } satisfies WelcomeEmailProps;
