@@ -265,6 +265,7 @@ export const AI_PURPOSES = {
   ANALYZER_HEADER_VERDICT: 'analyzer_header_verdict',
   ANALYZER_SECTION_ANNOTATION: 'analyzer_section_annotation',
   REPORT_FOLLOW_UP: 'report_follow_up',
+  LISTING_PRESENTATION_NARRATIVE: 'listing_presentation_narrative',
 } as const;
 
 export type AiPurpose = (typeof AI_PURPOSES)[keyof typeof AI_PURPOSES];

@@ -12,7 +12,6 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 import { MarketsModule } from '../markets/markets.module';
 import { MigrationModule } from '../migration/migration.module';
 import { EmploymentSectorsModule } from '../employment-sectors/employment-sectors.module';
-import { AiModule } from '../ai/ai.module';
 import { TimeSeriesModule } from '../timeseries/timeseries.module';
 import { ZillowModule } from '../zillow/zillow.module';
 
@@ -24,7 +23,6 @@ import { ZillowModule } from '../zillow/zillow.module';
     MarketsModule,
     MigrationModule,
     EmploymentSectorsModule,
-    AiModule,
     TimeSeriesModule,
     ZillowModule,
   ],
