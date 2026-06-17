@@ -107,9 +107,7 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
   const recommendation = (() => {
     const a0 = asRecord(asArray(aiData.actions)[0]);
     if (typeof a0.title === "string") {
-      return typeof a0.desc === "string"
-        ? `${a0.title} — ${a0.desc}`
-        : a0.title;
+      return typeof a0.desc === "string" ? `${a0.title}. ${a0.desc}` : a0.title;
     }
     return splitParagraphs(aiData.strategy)[0] ?? "";
   })();

@@ -32,7 +32,7 @@ export function Peers({ peers, limitedData, num = "05" }: Props) {
     <Section
       num={num}
       title="Where this market sits vs. its peers"
-      subtitle="PropertyIQ-matched comparables — same metro tier, similar demographics + size."
+      subtitle="PropertyIQ-matched comparables, same metro tier, similar demographics and size."
     >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {peers.map((p) => (
