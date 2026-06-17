@@ -95,14 +95,13 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
 
   const sNum = scoreNumber(execData.score);
   const confPct = scoreConfidencePct(execData.score);
-  // ExecutiveSummary renders the thesis narrative (the score lives in the hero),
-  // so its emptiness — and therefore whether the parent drops it — keys off the
-  // thesis, matching the component's own null-render condition.
-  const execThesis = splitParagraphs(execData.thesis);
+  // ExecutiveSummary renders the executive-summary prose (the score and the
+  // one-line verdict live in the hero), so its emptiness — and whether the
+  // parent drops it — keys off that prose, matching the component's null-render.
+  const execThesis = splitParagraphs(execData.executiveSummary);
 
-  // ai-strategy: the only section the backend never flags; emptiness = no
-  // narrative at all (mirrors AiStrategy's internal `hasContent`).
-  const aiThesis = typeof aiData.thesis === "string" ? aiData.thesis : "";
+  // ai-strategy now carries only the distinct strategy prose + actions; the
+  // verdict/thesis is no longer repeated here (it lives solely in the hero).
   const aiStrategyParagraphs = splitParagraphs(aiData.strategy);
 
   const recommendation = (() => {
@@ -229,11 +228,12 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
       limitedData: limited("validation") || metrosValidated == null,
     },
     ai: {
-      thesis: aiThesis,
       strategyParagraphs: aiStrategyParagraphs,
       actions: asArray(aiData.actions),
       fallbackUsed: !!aiData.fallbackUsed,
-      limitedData: !aiThesis && aiStrategyParagraphs.length === 0,
+      limitedData:
+        aiStrategyParagraphs.length === 0 &&
+        asArray(aiData.actions).length === 0,
     },
   };
 }

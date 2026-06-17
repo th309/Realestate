@@ -186,7 +186,11 @@ export class ListingPresentationService {
       {
         id: 'executive-summary',
         title: 'Executive summary',
-        data: { score, thesis: ai.thesis },
+        data: {
+          score,
+          verdict: ai.verdict,
+          executiveSummary: ai.executiveSummary,
+        },
         limitedData: !score,
       },
       {
@@ -240,7 +244,13 @@ export class ListingPresentationService {
       {
         id: 'ai-strategy',
         title: 'Recommended seller strategy',
-        data: ai,
+        // verdict + executiveSummary live in the executive-summary section; the
+        // strategy section carries only the distinct strategy prose + actions.
+        data: {
+          strategy: ai.strategy,
+          actions: ai.actions,
+          fallbackUsed: ai.fallbackUsed,
+        },
         limitedData: ai.fallbackUsed,
       },
     ];

@@ -10,16 +10,18 @@ export interface NarrativeInput {
 }
 
 export interface NarrativeOutput {
-  thesis: string;
+  verdict: string;
+  executiveSummary: string;
   strategy: string;
   actions: Array<{ title: string; desc: string }>;
   fallbackUsed: boolean;
 }
 
 const SYSTEM_PROMPT = `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific listing-presentation narrative for a real estate agent. Output STRICT JSON only with shape:
-{ "thesis": "<3 sentences referencing specific data>", "strategy": "<3 paragraphs with pricing/positioning/timing>", "actions": [ { "title": "<6 words>", "desc": "<1 sentence>" } x 3 ] }
-The PropertyIQ Score (propertyiqScore) is on a 0–100 scale where higher means stronger demand and ~50 is the market's state average; ALWAYS describe it out of 100 (e.g. "scores 9/100"), never out of 10.
-Tone: confident, data-grounded, not generic. Cite exact numbers from the facts.`;
+{ "verdict": "<ONE punchy headline sentence the agent leads with>", "executiveSummary": "<2 to 3 short paragraphs telling the fuller market story; expand on the verdict with DIFFERENT specifics, never repeat it>", "strategy": "<3 paragraphs covering pricing, positioning, and timing>", "actions": [ { "title": "<6 words>", "desc": "<1 sentence>" } x 3 ] }
+verdict, executiveSummary, and strategy must each be DISTINCT: do not reuse the same sentence across them.
+The PropertyIQ Score (propertyiqScore) is on a 0-100 scale where higher means stronger demand and ~50 is the market's state average; ALWAYS describe it out of 100 (e.g. "scores 9/100"), never out of 10.
+Tone: confident, data-grounded, not generic. Cite exact numbers from the facts. Plain prose only: no markdown, no asterisks, no em-dashes.`;
 
 @Injectable()
 export class ListingPresentationNarrativeService {
@@ -50,12 +52,14 @@ export class ListingPresentationNarrativeService {
       // The model may wrap the JSON in a markdown fence or lead with prose —
       // extractJsonObject locates and unwraps the JSON object before parsing.
       const parsed = extractJsonObject<{
-        thesis?: string;
+        verdict?: string;
+        executiveSummary?: string;
         strategy?: string;
         actions?: Array<{ title: string; desc: string }>;
       }>(response.content);
       return {
-        thesis: parsed.thesis ?? '',
+        verdict: parsed.verdict ?? '',
+        executiveSummary: parsed.executiveSummary ?? '',
         strategy: parsed.strategy ?? '',
         actions: Array.isArray(parsed.actions)
           ? parsed.actions.slice(0, 3)
@@ -72,7 +76,9 @@ export class ListingPresentationNarrativeService {
 
   private fallback(input: NarrativeInput): NarrativeOutput {
     return {
-      thesis: `Market analysis for ${input.market.name} is available. Strategic synthesis is temporarily unavailable; the structured data sections below remain accurate.`,
+      verdict: `Strategic synthesis for ${input.market.name} is temporarily unavailable; the structured signals below remain accurate.`,
+      executiveSummary:
+        'A full AI-synthesized summary is temporarily unavailable. The structured signals (PropertyIQ Score, market metrics, peer comparison, demographics, employment) remain authoritative for this report.',
       strategy:
         'A full AI-synthesized strategy is temporarily unavailable. The structured signals (PropertyIQ Score, market metrics, peer comparison, demographics, employment) remain authoritative for this report.',
       actions: [

@@ -67,15 +67,16 @@ export function buildHero(sections: RawSection[]): HeroBundle {
   const trajValues = numArray(trajFirst.values);
   const trajYoy = num(trajFirst.yoy);
 
-  // Verdict: lead with the AI thesis; fall back to the top recommended action.
+  // Verdict: the narrative's punchy one-line headline. Fall back to the exec
+  // summary's lead paragraph, then the top action, then the strategy lead.
   const verdict = (() => {
-    const thesisLead = splitParagraphs(execData.thesis)[0];
-    if (thesisLead) return thesisLead;
+    const v = str(execData.verdict);
+    if (v) return v;
+    const summaryLead = splitParagraphs(execData.executiveSummary)[0];
+    if (summaryLead) return summaryLead;
     const a0 = asRecord(asArray(aiData.actions)[0]);
     if (typeof a0.title === "string") {
-      return typeof a0.desc === "string"
-        ? `${a0.title} — ${a0.desc}`
-        : a0.title;
+      return typeof a0.desc === "string" ? `${a0.title}. ${a0.desc}` : a0.title;
     }
     return splitParagraphs(aiData.strategy)[0] ?? "";
   })();

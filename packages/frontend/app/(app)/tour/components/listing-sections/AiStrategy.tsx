@@ -8,7 +8,6 @@ interface Action {
 }
 
 interface Props {
-  thesis: string;
   strategyParagraphs: string[];
   actions: Action[];
   fallbackUsed: boolean;
@@ -18,13 +17,12 @@ interface Props {
 }
 
 export function AiStrategy({
-  thesis,
   strategyParagraphs,
   actions,
   fallbackUsed,
   num = "10",
 }: Props) {
-  const hasContent = Boolean(thesis) || strategyParagraphs.length > 0;
+  const hasContent = strategyParagraphs.length > 0 || actions.length > 0;
 
   if (!hasContent) {
     return (
@@ -52,13 +50,6 @@ export function AiStrategy({
           {"✦"} AI Strategy{fallbackUsed && " (fallback)"}
         </span>
         <div className="font-serif text-[14px] leading-[1.75] text-on-surface">
-          {thesis && (
-            <p className="mb-3.5">
-              <strong className="font-semibold text-on-primary-container">
-                {thesis}
-              </strong>
-            </p>
-          )}
           {strategyParagraphs.map((p, i) => (
             <p key={i} className="mb-3.5 last:mb-0">
               {p}

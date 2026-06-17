@@ -111,7 +111,10 @@ function makeReport(opts?: { execLimited?: boolean }) {
           id: "executive-summary",
           data: {
             score: { scores: { propertyiq: { score: 72, confidence: 85 } } },
-            thesis: "Boise scores 72 — strong demand on tight supply.",
+            verdict:
+              "Boise is a seller's market: 72 out of 100 on tight supply.",
+            executiveSummary:
+              "Boise's 72 out of 100 score sits above its state average on durable demand.\n\nWith 2.5 months of supply and 25 days on market, sellers hold leverage.",
           },
           limitedData: opts?.execLimited ?? false,
         },
@@ -155,7 +158,6 @@ function makeReport(opts?: { execLimited?: boolean }) {
         {
           id: "ai-strategy",
           data: {
-            thesis: "Position aggressively; demand outpaces supply.",
             strategy: "Price at market.\n\nStage for speed.",
             actions: [{ title: "Price to demand", desc: "List at value." }],
             fallbackUsed: false,
