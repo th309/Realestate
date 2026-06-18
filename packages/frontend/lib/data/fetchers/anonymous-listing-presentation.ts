@@ -45,6 +45,8 @@ export async function generateAnonymousListingPresentation(input: {
     headers: { "content-type": "application/json" },
     credentials: "include",
     body: JSON.stringify(input),
+    // Safety net: never let the finale spin forever if the backend hangs.
+    signal: AbortSignal.timeout(55_000),
   });
   if (res.status === 429) {
     const body = await res.json().catch(() => ({}));
@@ -92,6 +94,8 @@ export async function generateAuthenticatedListingPresentation(input: {
       headers: { ...authHeaders, "content-type": "application/json" },
       credentials: "include",
       body: JSON.stringify(input),
+      // Safety net: never let the finale spin forever if the backend hangs.
+      signal: AbortSignal.timeout(55_000),
     },
   );
   if (!res.ok) {
