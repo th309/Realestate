@@ -28,6 +28,7 @@ import { PreferencesService } from '../preferences/preferences.service';
 import { MarketMatchService } from '../preferences/market-match.service';
 import { formatBudgetRange } from './monthly-digest.types';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { getEmailLinkBaseUrl } from './email-link-base';
 
 @Injectable()
 export class MonthlyDigestService {
@@ -43,8 +44,7 @@ export class MonthlyDigestService {
     private readonly config: ConfigService,
     private readonly redis: RedisLockService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
   }
 
   @Cron('0 12 1 * *')

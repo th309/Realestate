@@ -17,6 +17,8 @@ import {
   buildTrialDay13Email,
   buildTrialExpiredEmail,
 } from './behavioral-trigger-emails';
+import { getEmailLinkBaseUrl } from './email-link-base';
+import { getMarketingOptOutIds } from './email-recipients.util';
 
 @Injectable()
 export class BehavioralTriggerService {
@@ -30,8 +32,7 @@ export class BehavioralTriggerService {
     private readonly lockService: RedisLockService,
     private readonly engagementTriggers: EngagementTriggerService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') ?? 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
   }
 
   @Cron('0 * * * *') // Every hour
@@ -78,19 +79,6 @@ export class BehavioralTriggerService {
     await this.supabase
       .from('email_triggers')
       .insert({ user_id: userId, trigger_name: triggerName, metadata: {} });
-  }
-
-  private async getMarketingOptOutIds(userIds: string[]): Promise<Set<string>> {
-    const optedOutIds = new Set<string>();
-    const { data } = await this.supabase
-      .from('email_preferences')
-      .select('user_id')
-      .in('user_id', userIds)
-      .eq('marketing', false);
-    if (data) {
-      for (const row of data) optedOutIds.add(row.user_id);
-    }
-    return optedOutIds;
   }
 
   // ─── Shared send loop for subscription-based triggers ───────────────────────
@@ -153,7 +141,8 @@ export class BehavioralTriggerService {
         id: p.id,
         email: p.email,
       }));
-    const optedOutIds = await this.getMarketingOptOutIds(
+    const optedOutIds = await getMarketingOptOutIds(
+      this.supabase,
       users.map((u) => u.id),
     );
     const unsubscribeUrl = `${this.appUrl}/account/notifications`;
@@ -223,7 +212,7 @@ export class BehavioralTriggerService {
     const activeUserIds = new Set<string>(
       (sessions ?? []).map((s: { user_id: string }) => s.user_id),
     );
-    const optedOutIds = await this.getMarketingOptOutIds(userIds);
+    const optedOutIds = await getMarketingOptOutIds(this.supabase, userIds);
     const unsubscribeUrl = `${this.appUrl}/account/notifications`;
 
     let sent = 0;

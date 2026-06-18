@@ -18,6 +18,7 @@ import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { getEmailLinkBaseUrl } from './email-link-base';
 
 interface DripDayConfig {
   day: number;
@@ -92,8 +93,7 @@ export class DripService {
     private readonly config: ConfigService,
     private readonly redis: RedisLockService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
     this.replyTo =
       this.config.get<string>('EMAIL_REPLY_TO') || 'hello@propertyiq.app';
   }
@@ -387,9 +387,7 @@ export class DripService {
         return;
       }
 
-      const frontendUrl =
-        this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
-      const surveyBaseUrl = `${frontendUrl}/survey`;
+      const surveyBaseUrl = `${getEmailLinkBaseUrl(this.config)}/survey`;
 
       this.logger.log('Starting NPS day-30 drip processing...');
 

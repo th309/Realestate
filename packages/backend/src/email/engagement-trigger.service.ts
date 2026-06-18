@@ -15,6 +15,7 @@ import {
   buildPaywallHitEmail,
   buildPostTrial7dEmail,
 } from './behavioral-trigger-emails';
+import { getEmailLinkBaseUrl } from './email-link-base';
 
 @Injectable()
 export class EngagementTriggerService {
@@ -26,8 +27,7 @@ export class EngagementTriggerService {
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') ?? 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
   }
 
   async processAll(): Promise<void> {
