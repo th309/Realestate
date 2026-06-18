@@ -34,6 +34,18 @@ Standards: production-ready, no workarounds; verify LIVE in browser (no mocks).
 
 Build (affected packages) + live browser check against running stack (no mocks): tour fresh signup → persona picker; entitlements show Pro for active trial; unsubscribe one-click sets `email_preferences.marketing=false` without login; emails render correct links.
 
-## Review
+## Review — SHIPPED on develop (all verified; not pushed)
 
-(to be filled in after execution)
+- `c78319eb` **B2** email day-3/5 → `/screener`; day-7 trial-aware.
+- `8540a515` **B1b** standalone signup → `/tour?resume=fresh`.
+- `9598848a` **B1a** tour state user-scoped. Live: `/tour?resume=fresh` renders the persona picker (not a stale finale).
+- `ac64633c` **B3** entitlements cold-load retry (4 attempts, fail-closed, aborts not retried). 63 frontend tests pass; backend returns Pro for active trial.
+- `bf8b2bed` **Unsubscribe (full compliant)** — HMAC token + public one-click controller + `List-Unsubscribe`/`-Post` headers on all lifecycle/marketing senders + CAN-SPAM footer address. Stream-aware. Live: POST upserts `email_preferences.weekly_digest=false` with NO login; GET renders branded page. `/backend` proxy GET+POST + public reachability confirmed.
+
+Verification: backend+frontend `tsc` clean; 11 backend + 63 frontend tests pass; unsubscribe + tour verified live. §1.6 reviews clean; two findings folded in (token-length cap, stream-aware opt-out). Non-blocking: `engagement-trigger.ts` 301 lines (1 over).
+
+## Remaining
+
+- [ ] **D2 feature-discovery nudges** — lightweight, via existing onboarding checklist (frontend-design skill).
+- [ ] **Movers feature (deferred)** — design spec committed by user (`f0305b40`).
+- [ ] Push / release `develop`→`main` per CLAUDE.md §2.6 — user's call.
