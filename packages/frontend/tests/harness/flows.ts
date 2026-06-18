@@ -1,4 +1,4 @@
-import { Page, expect } from "@playwright/test";
+import { Page } from "@playwright/test";
 import { waitForOtp } from "./gmailOtp";
 
 export async function signupAndConfirm(
