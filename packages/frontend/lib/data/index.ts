@@ -253,6 +253,11 @@ export {
   type UseScreenerOptions,
   type UseScreenerResult,
 
+  // Screener movers hook
+  useScreenerMovers,
+  type UseScreenerMoversOptions,
+  type UseScreenerMoversResult,
+
   // Admin AI model configuration hooks
   useAiModelConfigs,
   useProviderPresets,
