@@ -10,13 +10,20 @@ export const admin = createClient(url, key, {
 });
 
 export async function getUserIdByEmail(email: string): Promise<string> {
-  const { data, error } = await admin
-    .from("user_profiles")
-    .select("id")
-    .eq("email", email)
-    .single();
-  if (error) throw new Error(`user not found: ${email} (${error.message})`);
-  return data.id;
+  // Newest row (defensive against a stray duplicate) + short retry for the
+  // post-signup trigger that creates the user_profiles row.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data, error } = await admin
+      .from("user_profiles")
+      .select("id, created_at")
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(`query failed for ${email}: ${error.message}`);
+    if (data && data.length > 0) return data[0].id;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error(`user not found after retries: ${email}`);
 }
 
 export async function getActiveTrial(userId: string) {
