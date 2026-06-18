@@ -32,10 +32,16 @@ function SignUpContent() {
   const searchParams = useSearchParams();
   // New signups flow through /tour by default. If the user arrived with an explicit
   // ?redirect=..., preserve it via /tour?next=... so onboarding can forward them on.
+  // `resume=fresh` wipes any stale piq_tour state left in this browser by a PRIOR
+  // account (useTourSession honors it by clearing localStorage + cookie), so a brand-new
+  // signup always starts at the persona picker instead of resuming someone else's
+  // finished tour (e.g. a leftover Bloomington/step4). The pre-signup anonymous-tour
+  // resume is a SEPARATE path (auth/callback ?phase=celebrate) and is intentionally
+  // left untouched so those users keep the market they already picked.
   const explicitRedirect = searchParams.get("redirect");
   const redirectTo = explicitRedirect
-    ? `/tour?next=${encodeURIComponent(explicitRedirect)}`
-    : "/tour";
+    ? `/tour?next=${encodeURIComponent(explicitRedirect)}&resume=fresh`
+    : "/tour?resume=fresh";
 
   const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [awaitingOtp, setAwaitingOtp] = useState(false);
