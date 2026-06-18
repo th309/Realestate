@@ -14,7 +14,7 @@
 - **Score history is read-only:** never re-score or backfill historical months. This feature only _reads_ `propertyiq_scores_v2`.
 - **Write/read split:** scores write to `propertyiq_scores_v2`; reads may use the `propertyiq_scores` view or the base table. The snapshot RPC already reads the view for current scores; baselines read the base table.
 - **Migrations:** live in `supabase/migrations/`, named `YYYYMMDDhhmmss_<desc>.sql`. Use a timestamp **greater than the current max** in `schema_migrations` (verify via Supabase MCP). Make DDL idempotent (`ADD COLUMN IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`) so applying now via MCP and again on deploy is harmless. Supabase silently skips out-of-order versions — never backdate.
-- **Colors:** Δ uses M3 semantic tokens only (`text-accent`/green token, `text-error`, `text-on-surface-variant`). No hardcoded hex. Flat threshold — no magnitude grading.
+- **Colors:** Δ uses M3 semantic tokens only — positive `text-tertiary` (brand green #00C853, the same token `ScreenerTable`'s Overvalued cell uses for "good"), negative `text-error`, zero/null `text-on-surface-variant`. No hardcoded hex. Flat threshold — no magnitude grading.
 - **File-size limits:** components ≤400 lines, logic files ≤300. One exported component per file.
 - **Prod DB:** query/apply via the authed Supabase MCP (`mcp__plugin_supabase_supabase__execute_sql` / `apply_migration`), project `pysflbhpnqwoczyuaaif`. Never echo secrets.
 - **Branch:** work on `develop`. Do not push without explicit user ask.
@@ -1093,7 +1093,7 @@ import {
 
 describe("score-change helpers", () => {
   it("colors gains green, losses red, zero/null neutral (flat threshold)", () => {
-    expect(getScoreChangeColor(5)).toContain("accent");
+    expect(getScoreChangeColor(5)).toContain("tertiary");
     expect(getScoreChangeColor(40)).toBe(getScoreChangeColor(5)); // flat — no grading
     expect(getScoreChangeColor(-3)).toContain("error");
     expect(getScoreChangeColor(0)).toContain("on-surface-variant");
@@ -1165,7 +1165,7 @@ export const WINDOW_TO_COLUMN: Record<MoverWindow, SortBy> = {
 /** Flat threshold color class for a Δ value. */
 export function getScoreChangeColor(delta: number | null): string {
   if (delta === null || delta === 0) return "text-on-surface-variant";
-  return delta > 0 ? "text-accent" : "text-error";
+  return delta > 0 ? "text-tertiary" : "text-error";
 }
 
 /** Signed integer with a real minus sign (U+2212); em-dash for missing. */
@@ -1176,7 +1176,7 @@ export function formatScoreChange(delta: number | null): string {
 }
 ```
 
-> Note: confirm `text-accent` is the green semantic token in `globals.css`; if the green token is named differently (e.g. `text-tertiary` is used for positive elsewhere in `ScreenerTable`), use that exact token instead and update the test's `toContain("accent")` to match. The Overvalued column uses `text-error`/`text-tertiary`; reuse the project's green token for consistency.
+> Confirmed: `globals.css` maps brand green (#00C853) to `--color-tertiary`, i.e. the Tailwind class `text-tertiary`. There is NO `text-accent` token. `ScreenerTable`'s Overvalued cell already uses `text-tertiary` for "good", so positive Δ → `text-tertiary` is consistent. Do not introduce a new token.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
