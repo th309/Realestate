@@ -98,6 +98,15 @@ export class DripService {
       this.config.get<string>('EMAIL_REPLY_TO') || 'hello@propertyiq.app';
   }
 
+  /** Dev/test entry: run a single drip day deterministically (no cron lock). */
+  async runDripDay(day: number) {
+    const config = DRIP_DAY_CONFIGS.find((c) => c.day === day);
+    if (!config) {
+      throw new Error(`No drip config for day ${day}`);
+    }
+    return this.processDripDay(config);
+  }
+
   @Cron('0 9 * * *')
   async processOnboardingDrip() {
     const locked = await this.redis.acquireLock('cron:onboarding-drip', 300);
@@ -182,19 +191,22 @@ export class DripService {
         continue;
       }
 
-      // Skip users with active reverse trial — they get behavioral emails instead
-      const { data: activeTrial } = await this.supabase
-        .from('user_trials')
-        .select('id')
-        .eq('user_id', user.id)
-        .is('converted_at', null)
-        .is('cancelled_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
-
-      if (activeTrial) {
-        skipped++;
-        continue;
+      // Reverse-trial users now receive the nurture drip (days 0/1/3/5/7).
+      // Suppress only the end-of-trial pushes (day 10 & 14) — the countdown
+      // emails (trial_day_10 / trial_day_13 / trial_expired) own that window.
+      if (dayConfig.day === 10 || dayConfig.day === 14) {
+        const { data: activeTrial } = await this.supabase
+          .from('user_trials')
+          .select('id')
+          .eq('user_id', user.id)
+          .is('converted_at', null)
+          .is('cancelled_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+        if (activeTrial) {
+          skipped++;
+          continue;
+        }
       }
 
       try {
