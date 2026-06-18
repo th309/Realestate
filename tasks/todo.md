@@ -46,6 +46,7 @@ Verification: backend+frontend `tsc` clean; 11 backend + 63 frontend tests pass;
 
 ## Remaining
 
-- [ ] **D2 feature-discovery nudges** — lightweight, via existing onboarding checklist (frontend-design skill).
+- [x] **D2 feature-discovery nudge** — `6dbd12f1` (NOT pushed). Dismissible M3 sidebar card surfacing un-tried Pro features for trial/pro users, computed from existing `usage_stats`+`onboarding_checklist`, dismissal persisted via `dismissed_beacons`. tsc clean; 6 unit tests pass; live-confirmed inputs (test5 active-trial → "Generate report" + "Screen markets"). Discovery: the beacon coachmark system is dormant (no `data-beacon` anchors exist anywhere).
 - [ ] **Movers feature (deferred)** — design spec committed by user (`f0305b40`).
-- [ ] Push / release `develop`→`main` per CLAUDE.md §2.6 — user's call.
+- [ ] Push — D2 (`6dbd12f1`) is committed but unpushed; prior batch already pushed.
+- [ ] Release `develop`→`main` per CLAUDE.md §2.6 — user's call.
