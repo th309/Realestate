@@ -211,6 +211,10 @@ jobs:
       - name: Refresh screener_snapshot (post-scoring)
         id: screener
         env:
+          # Direct Postgres connection — the refresh runs >60s and the PostgREST
+          # gateway caps HTTP requests at ~60s, so we call the RPC over pg, not
+          # supabase-js. DATABASE_URL is the same secret the recalibrate job uses.
+          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
           SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
           SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
           NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
