@@ -19,6 +19,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
 import { getEmailLinkBaseUrl } from './email-link-base';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 interface DripDayConfig {
   day: number;
@@ -214,7 +215,9 @@ export class DripService {
 
       try {
         const displayName = user.email.split('@')[0];
-        const unsubscribeUrl = `${this.appUrl}/account/notifications`;
+        const unsub = buildUnsubscribe(this.config, user.id);
+        const unsubscribeUrl =
+          unsub?.url ?? `${this.appUrl}/account/notifications`;
         const react = React.createElement(dayConfig.template, {
           name: displayName,
           loginUrl: this.appUrl,
@@ -228,6 +231,7 @@ export class DripService {
           userId: user.id,
           emailType: dayConfig.emailType,
           replyTo: this.replyTo,
+          headers: unsub?.headers,
         });
 
         if (success) {
@@ -343,9 +347,12 @@ export class DripService {
 
         try {
           const displayName = user.email.split('@')[0];
+          const unsub = buildUnsubscribe(this.config, user.id);
           const react = React.createElement(WinbackDay14, {
             name: displayName,
             loginUrl: this.appUrl,
+            unsubscribeUrl:
+              unsub?.url ?? `${this.appUrl}/account/notifications`,
           });
 
           const success = await this.emailService.sendEmail({
@@ -354,6 +361,7 @@ export class DripService {
             react,
             userId: user.id,
             emailType: 'winback_day14',
+            headers: unsub?.headers,
           });
 
           if (success) sent++;
@@ -433,10 +441,14 @@ export class DripService {
         try {
           const token = signNpsToken(user.id, 'nps_day30', jwtSecret);
           const displayName = user.email.split('@')[0];
+          const unsub = buildUnsubscribe(this.config, user.id);
           const react = React.createElement(NpsDay30, {
             name: displayName,
             surveyBaseUrl,
             token,
+            unsubscribeUrl:
+              unsub?.url ??
+              `${getEmailLinkBaseUrl(this.config)}/account/notifications`,
           });
 
           const success = await this.emailService.sendEmail({
@@ -445,6 +457,7 @@ export class DripService {
             react,
             userId: user.id,
             emailType: 'nps_day30',
+            headers: unsub?.headers,
           });
 
           if (success) sent++;

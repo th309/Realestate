@@ -6,13 +6,22 @@ export interface NpsDay30Props {
   name: string;
   surveyBaseUrl: string;
   token: string;
+  unsubscribeUrl?: string;
 }
 
 const SCORES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function NpsDay30({ name, surveyBaseUrl, token }: NpsDay30Props) {
+export default function NpsDay30({
+  name,
+  surveyBaseUrl,
+  token,
+  unsubscribeUrl,
+}: NpsDay30Props) {
   return (
-    <Layout preview="How likely are you to recommend PropertyIQ? (30 seconds)">
+    <Layout
+      preview="How likely are you to recommend PropertyIQ? (30 seconds)"
+      unsubscribeUrl={unsubscribeUrl}
+    >
       <EmailHeading>How are we doing?</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         Hey {name},
@@ -38,7 +47,8 @@ export default function NpsDay30({ name, surveyBaseUrl, token }: NpsDay30Props) 
                 href={`${surveyBaseUrl}?token=${token}&score=${score}`}
                 className="inline-block w-9 h-9 leading-9 rounded-full text-sm font-medium text-white no-underline"
                 style={{
-                  backgroundColor: score <= 6 ? "#ef4444" : score <= 8 ? "#f59e0b" : "#22c55e",
+                  backgroundColor:
+                    score <= 6 ? "#ef4444" : score <= 8 ? "#f59e0b" : "#22c55e",
                   textDecoration: "none",
                 }}
               >

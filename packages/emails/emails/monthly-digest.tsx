@@ -22,6 +22,7 @@ export interface MonthlyDigestProps {
   }>;
   marketToWatch: { name: string; reason: string } | null;
   dashboardUrl: string;
+  unsubscribeUrl?: string;
 }
 
 const GOAL_LABELS: Record<string, string> = {
@@ -62,6 +63,7 @@ export default function MonthlyDigest({
   watchlistMovers,
   marketToWatch,
   dashboardUrl,
+  unsubscribeUrl,
 }: MonthlyDigestProps) {
   const goalLabel = GOAL_LABELS[goal] || goal;
   const monthName = new Date().toLocaleString("en-US", { month: "long" });
@@ -69,7 +71,10 @@ export default function MonthlyDigest({
   return (
     <Layout
       preview={`Your ${monthName} market digest — ${topMarkets.length} top matches`}
-      unsubscribeUrl={`${dashboardUrl.replace("/dashboard", "")}/account/notifications`}
+      unsubscribeUrl={
+        unsubscribeUrl ??
+        `${dashboardUrl.replace("/dashboard", "")}/account/notifications`
+      }
     >
       <Text className="text-sm font-medium text-brand m-0 mb-1">
         Monthly Market Digest

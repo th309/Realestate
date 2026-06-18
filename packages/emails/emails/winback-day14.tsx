@@ -7,14 +7,19 @@ import { WINBACK_DAY14 } from "../copy/email-copy";
 export interface WinbackDay14Props {
   name: string;
   loginUrl: string;
+  unsubscribeUrl?: string;
 }
 
-export default function WinbackDay14({ name, loginUrl }: WinbackDay14Props) {
+export default function WinbackDay14({
+  name,
+  loginUrl,
+  unsubscribeUrl,
+}: WinbackDay14Props) {
   const mapUrl = `${loginUrl}/map`;
   const marketsUrl = `${loginUrl}/markets`;
 
   return (
-    <Layout preview={WINBACK_DAY14.preview}>
+    <Layout preview={WINBACK_DAY14.preview} unsubscribeUrl={unsubscribeUrl}>
       <EmailHeading>{WINBACK_DAY14.heading}</EmailHeading>
       <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
         {WINBACK_DAY14.greeting(name)}

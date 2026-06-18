@@ -19,6 +19,7 @@ import {
 } from './behavioral-trigger-emails';
 import { getEmailLinkBaseUrl } from './email-link-base';
 import { getMarketingOptOutIds } from './email-recipients.util';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 @Injectable()
 export class BehavioralTriggerService {
@@ -145,7 +146,6 @@ export class BehavioralTriggerService {
       this.supabase,
       users.map((u) => u.id),
     );
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
 
     let sent = 0;
     for (const user of users) {
@@ -153,10 +153,11 @@ export class BehavioralTriggerService {
       if (optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, triggerName)) continue;
 
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildHtml(
         user.email.split('@')[0],
         `${this.appUrl}${actionPath}`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
 
       const success = await this.emailService.sendEmail({
@@ -165,6 +166,7 @@ export class BehavioralTriggerService {
         html,
         userId: user.id,
         emailType: triggerName,
+        headers: unsub?.headers,
       });
 
       if (success) {
@@ -213,7 +215,6 @@ export class BehavioralTriggerService {
       (sessions ?? []).map((s: { user_id: string }) => s.user_id),
     );
     const optedOutIds = await getMarketingOptOutIds(this.supabase, userIds);
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
 
     let sent = 0;
     for (const user of candidates as EligibleUser[]) {
@@ -222,10 +223,11 @@ export class BehavioralTriggerService {
       if (optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, 'inactive_24h')) continue;
 
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildInactive24hEmail(
         user.email.split('@')[0],
         `${this.appUrl}/graphs`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
       const success = await this.emailService.sendEmail({
         to: user.email,
@@ -233,6 +235,7 @@ export class BehavioralTriggerService {
         html,
         userId: user.id,
         emailType: 'inactive_24h',
+        headers: unsub?.headers,
       });
       if (success) {
         await this.markFired(user.id, 'inactive_24h');

@@ -16,6 +16,7 @@ import {
   buildPostTrial7dEmail,
 } from './behavioral-trigger-emails';
 import { getEmailLinkBaseUrl } from './email-link-base';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 @Injectable()
 export class EngagementTriggerService {
@@ -83,15 +84,15 @@ export class EngagementTriggerService {
     const optedOutIds = await this.getMarketingOptOutIds(
       users.map((u) => u.id),
     );
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
     let sent = 0;
     for (const user of users) {
       if (!user.email || optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, triggerName)) continue;
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildHtml(
         user.email.split('@')[0],
         `${this.appUrl}${actionPath}`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
       const ok = await this.emailService.sendEmail({
         to: user.email,
@@ -99,6 +100,7 @@ export class EngagementTriggerService {
         html,
         userId: user.id,
         emailType: triggerName,
+        headers: unsub?.headers,
       });
       if (ok) {
         await this.markFired(user.id, triggerName);
@@ -207,7 +209,6 @@ export class EngagementTriggerService {
       this.logger.error(`paywall_hit: query failed: ${error.message}`);
       return;
     }
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
     const optedOutIds = await this.getMarketingOptOutIds(
       (data ?? []).map((r: any) => r.user_id),
     );
@@ -219,11 +220,12 @@ export class EngagementTriggerService {
       if (!profile?.email || optedOutIds.has(row.user_id)) continue;
       if (await this.hasFired(row.user_id, 'paywall_hit')) continue;
       const featureName = row.resource_type ?? 'this Pro feature';
+      const unsub = buildUnsubscribe(this.config, row.user_id);
       const html = buildPaywallHitEmail(
         profile.email.split('@')[0],
         featureName,
         `${this.appUrl}/pricing`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
       const ok = await this.emailService.sendEmail({
         to: profile.email,
@@ -231,6 +233,7 @@ export class EngagementTriggerService {
         html,
         userId: row.user_id,
         emailType: 'paywall_hit',
+        headers: unsub?.headers,
       });
       if (ok) {
         await this.markFired(row.user_id, 'paywall_hit');
@@ -265,7 +268,6 @@ export class EngagementTriggerService {
         user_profiles: r.user_profiles,
       })),
     );
-    const unsubUrl = `${this.appUrl}/account/notifications`;
     const optedOutIds = await this.getMarketingOptOutIds(
       users.map((u) => u.id),
     );
@@ -273,11 +275,12 @@ export class EngagementTriggerService {
     for (const user of users) {
       if (!user.email || optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, 'post_trial_7d')) continue;
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildPostTrial7dEmail(
         user.email.split('@')[0],
         `${this.appUrl}/reports`,
         `${this.appUrl}/pricing`,
-        unsubUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
       const ok = await this.emailService.sendEmail({
         to: user.email,
@@ -285,6 +288,7 @@ export class EngagementTriggerService {
         html,
         userId: user.id,
         emailType: 'post_trial_7d',
+        headers: unsub?.headers,
       });
       if (ok) {
         await this.markFired(user.id, 'post_trial_7d');
