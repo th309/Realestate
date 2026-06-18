@@ -3,8 +3,11 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import {
   ScreenerQueryDto,
+  ScreenerMoversQueryDto,
   SORTABLE_COLUMNS,
   SortableColumn,
+  WINDOW_TO_COLUMN,
+  MoverWindow,
 } from './screener.dto';
 
 export interface ScreenerRow {
@@ -24,6 +27,12 @@ export interface ScreenerRow {
   grm: number | null;
   months_of_supply: number | null;
   overvalued_pct: number | null;
+  score_chg_1m: number | null;
+  score_chg_3m: number | null;
+  score_chg_6m: number | null;
+  score_chg_1y: number | null;
+  score_chg_3y: number | null;
+  score_chg_5y: number | null;
   as_of: string | null;
   refreshed_at: string | null;
 }
@@ -34,6 +43,12 @@ export interface ScreenerResult {
   page: number;
   pageSize: number;
   hasMore: boolean;
+}
+
+export interface ScreenerMoversResult {
+  window: string;
+  gainers: ScreenerRow[];
+  losers: ScreenerRow[];
 }
 
 const DEFAULT_SORT_BY: SortableColumn = 'score';
@@ -119,6 +134,16 @@ export class ScreenerService {
     if (opts.medianPriceMax != null)
       query = query.lte('median_price', opts.medianPriceMax);
 
+    // Score-movers Δ filter — applies to the active window's precomputed column.
+    if (
+      opts.changeWindow &&
+      (opts.changeMin != null || opts.changeMax != null)
+    ) {
+      const col = WINDOW_TO_COLUMN[opts.changeWindow];
+      if (opts.changeMin != null) query = query.gte(col, opts.changeMin);
+      if (opts.changeMax != null) query = query.lte(col, opts.changeMax);
+    }
+
     // Sorting and pagination
     const {
       data: rows,
@@ -140,6 +165,61 @@ export class ScreenerService {
       page,
       pageSize,
       hasMore: (page + 1) * pageSize < total,
+    };
+  }
+
+  /**
+   * Top gainers + losers for a score window. Two ordered reads of the same
+   * snapshot on the precomputed Δ column, NULL deltas excluded from both lists.
+   */
+  async queryMovers(
+    geoLevel: 'metro' | 'county' | 'zip',
+    dto: ScreenerMoversQueryDto,
+  ): Promise<ScreenerMoversResult> {
+    const window: MoverWindow = dto.window;
+    const col = WINDOW_TO_COLUMN[window];
+    const limit = Math.min(dto.limit ?? 25, 100);
+
+    const baseQuery = () => {
+      let q = this.supabase
+        .from('screener_snapshot')
+        .select('*')
+        .eq('geo_level', geoLevel)
+        .not(col, 'is', null);
+      if (dto.state) q = q.eq('state_code', dto.state.toUpperCase());
+      return q;
+    };
+
+    // Primary sort on the Δ column; tie-break by current score desc then name
+    // (spec §7) so equal-delta rows order deterministically across reloads.
+    const [gainersRes, losersRes] = await Promise.all([
+      baseQuery()
+        .order(col, { ascending: false, nullsFirst: false })
+        .order('score', { ascending: false, nullsFirst: false })
+        .order('region_name', { ascending: true })
+        .limit(limit),
+      baseQuery()
+        .order(col, { ascending: true, nullsFirst: false })
+        .order('score', { ascending: false, nullsFirst: false })
+        .order('region_name', { ascending: true })
+        .limit(limit),
+    ]);
+
+    if (gainersRes.error) {
+      throw new Error(
+        `screener movers (gainers) failed: ${gainersRes.error.message}`,
+      );
+    }
+    if (losersRes.error) {
+      throw new Error(
+        `screener movers (losers) failed: ${losersRes.error.message}`,
+      );
+    }
+
+    return {
+      window,
+      gainers: (gainersRes.data ?? []) as ScreenerRow[],
+      losers: (losersRes.data ?? []) as ScreenerRow[],
     };
   }
 }

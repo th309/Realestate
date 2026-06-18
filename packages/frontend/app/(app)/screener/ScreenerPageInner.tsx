@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Download, Lock } from "lucide-react";
 import { useScreener, type ScreenerQuery, type ScreenerRow } from "@/lib/data";
-import type { ScreenerGeoLevel } from "@/lib/data";
+import type { ScreenerGeoLevel, MoverWindow } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
 import { useEntitlements } from "@/lib/entitlements";
 import { GeoLockCard } from "@/components/entitlements/GeoLockCard";
@@ -16,6 +16,9 @@ import { FilterRail } from "./components/FilterRail";
 import { ScreenerTable } from "./components/ScreenerTable";
 import { Pagination } from "./components/Pagination";
 import { StateSelect } from "./components/StateSelect";
+import { ScreenerTabs } from "./components/ScreenerTabs";
+import { MoversTab } from "./components/MoversTab";
+import { WindowSelector } from "./components/WindowSelector";
 import {
   readGeo,
   readState,
@@ -24,10 +27,14 @@ import {
   readSortOrder,
   readPage,
   readFilters,
+  readTab,
+  readWindow,
   buildScreenerUrl,
   type SortBy,
+  type ScreenerTab,
 } from "./lib/screener-url-state";
 import { summarizeScreenerFilters } from "./lib/screener-filter-summary";
+import { WINDOW_TO_COLUMN, WINDOW_META } from "./lib/score-change";
 
 // ---------------------------------------------------------------------------
 // URL ↔ state serialisation helpers
@@ -36,24 +43,6 @@ import { summarizeScreenerFilters } from "./lib/screener-filter-summary";
 const PAGE_SIZE = 50;
 
 // URL <-> state helpers live in ./lib/screener-url-state
-
-// ---------------------------------------------------------------------------
-// CSV column definitions
-// ---------------------------------------------------------------------------
-
-const CSV_COLUMNS = [
-  { key: "region_name", label: "Market" },
-  { key: "state_code", label: "State" },
-  { key: "score", label: "PIQ Score" },
-  { key: "grade", label: "Grade" },
-  { key: "median_price", label: "Median Price" },
-  { key: "rent", label: "Rent (ZORI)" },
-  { key: "cap_rate", label: "Cap Rate %" },
-  { key: "gross_yield", label: "Gross Yield %" },
-  { key: "months_of_supply", label: "Months of Supply" },
-  { key: "overvalued_pct", label: "Overvalued %" },
-  { key: "as_of", label: "As Of" },
-];
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -79,6 +68,10 @@ export function ScreenerPageInner() {
     readSortOrder(params),
   );
   const [page, setPageState] = useState(() => readPage(params));
+  const [tab, setTabState] = useState<ScreenerTab>(() => readTab(params));
+  const [changeWindow, setChangeWindowState] = useState<MoverWindow>(() =>
+    readWindow(params),
+  );
 
   // Entitlements
   const { canAccess } = useEntitlements();
@@ -92,12 +85,13 @@ export function ScreenerPageInner() {
     state: stateFilter || undefined,
     sortBy,
     sortOrder,
+    changeWindow,
     page,
     pageSize: PAGE_SIZE,
   };
 
   const { data, isFetching } = useScreener(geo, query, {
-    enabled: !isZipLocked,
+    enabled: !isZipLocked && tab === "screener",
   });
 
   const rows = data?.data ?? [];
@@ -118,6 +112,8 @@ export function ScreenerPageInner() {
       nextSortBy: SortBy,
       nextSortOrder: "asc" | "desc",
       nextPage: number,
+      nextTab: ScreenerTab,
+      nextWindow: MoverWindow,
     ) => {
       const qs = buildScreenerUrl(
         nextGeo,
@@ -127,6 +123,8 @@ export function ScreenerPageInner() {
         nextSortBy,
         nextSortOrder,
         nextPage,
+        nextTab,
+        nextWindow,
       );
       router.replace(`/screener?${qs}`, { scroll: false });
     },
@@ -135,9 +133,29 @@ export function ScreenerPageInner() {
 
   // Sync state → URL whenever anything changes
   useEffect(() => {
-    pushUrl(geo, stateFilter, activePreset, filters, sortBy, sortOrder, page);
+    pushUrl(
+      geo,
+      stateFilter,
+      activePreset,
+      filters,
+      sortBy,
+      sortOrder,
+      page,
+      tab,
+      changeWindow,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geo, stateFilter, activePreset, filters, sortBy, sortOrder, page]);
+  }, [
+    geo,
+    stateFilter,
+    activePreset,
+    filters,
+    sortBy,
+    sortOrder,
+    page,
+    tab,
+    changeWindow,
+  ]);
 
   // --- Handlers ---
 
@@ -151,18 +169,39 @@ export function ScreenerPageInner() {
     setPageState(0);
   }, []);
 
-  const handlePresetSelect = useCallback((preset: Preset) => {
-    setActivePreset(preset.id);
-    const {
-      sortBy: pSortBy,
-      sortOrder: pSortOrder,
-      ...pFilters
-    } = preset.query;
-    if (pSortBy) setSortByState(pSortBy);
-    if (pSortOrder) setSortOrderState(pSortOrder);
-    setFiltersState(pFilters);
-    setPageState(0);
-  }, []);
+  const handlePresetSelect = useCallback(
+    (preset: Preset) => {
+      setActivePreset(preset.id);
+      if (preset.windowSorted) {
+        // Gainers/Losers: sort by the ACTIVE window's Δ column.
+        setSortByState(WINDOW_TO_COLUMN[changeWindow]);
+        setSortOrderState(preset.windowSorted);
+        setFiltersState({});
+      } else {
+        const {
+          sortBy: pSortBy,
+          sortOrder: pSortOrder,
+          ...pFilters
+        } = preset.query;
+        if (pSortBy) setSortByState(pSortBy);
+        if (pSortOrder) setSortOrderState(pSortOrder);
+        setFiltersState(pFilters);
+      }
+      setPageState(0);
+    },
+    [changeWindow],
+  );
+
+  const handleWindowChange = useCallback(
+    (next: MoverWindow) => {
+      setChangeWindowState(next);
+      setPageState(0);
+      if (activePreset === "gainers" || activePreset === "losers") {
+        setSortByState(WINDOW_TO_COLUMN[next]);
+      }
+    },
+    [activePreset],
+  );
 
   const handleFilterChange = useCallback((patch: Partial<ScreenerQuery>) => {
     trackEvent("feature.screener_filter", { keys: Object.keys(patch) });
@@ -198,12 +237,27 @@ export function ScreenerPageInner() {
 
   const handleExport = useCallback(() => {
     if (!canExport || rows.length === 0) return;
+    const changeCol = WINDOW_TO_COLUMN[changeWindow];
+    const columns = [
+      { key: "region_name", label: "Market" },
+      { key: "state_code", label: "State" },
+      { key: "score", label: "PIQ Score" },
+      { key: "grade", label: "Grade" },
+      { key: changeCol, label: `Score Δ (${WINDOW_META[changeWindow].label})` },
+      { key: "median_price", label: "Median Price" },
+      { key: "rent", label: "Rent (ZORI)" },
+      { key: "cap_rate", label: "Cap Rate %" },
+      { key: "gross_yield", label: "Gross Yield %" },
+      { key: "months_of_supply", label: "Months of Supply" },
+      { key: "overvalued_pct", label: "Overvalued %" },
+      { key: "as_of", label: "As Of" },
+    ];
     downloadCsv(
       rows as unknown as Record<string, unknown>[],
-      CSV_COLUMNS,
+      columns,
       `screener-${geo}`,
     );
-  }, [canExport, rows, geo]);
+  }, [canExport, rows, geo, changeWindow]);
 
   // Default to "Hottest Markets" preset if nothing in URL on first load
   useEffect(() => {
@@ -270,22 +324,23 @@ export function ScreenerPageInner() {
         </div>
       </div>
 
-      {/* ── Geo selector + Preset chips ── */}
+      {/* ── Tabs + window selector ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <ScreenerTabs tab={tab} onChange={setTabState} />
+        <WindowSelector value={changeWindow} onChange={handleWindowChange} />
+      </div>
+
+      {/* ── Geo selector + (screener-only) preset chips ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <GeoSegmentedControl value={geo} onChange={handleGeoChange} />
         <StateSelect value={stateFilter} onChange={handleStateChange} />
-        <PresetChips
-          activePreset={activePreset}
-          onSelect={handlePresetSelect}
-        />
+        {tab === "screener" && (
+          <PresetChips
+            activePreset={activePreset}
+            onSelect={handlePresetSelect}
+          />
+        )}
       </div>
-
-      {/* ── Filter rail ── */}
-      <FilterRail
-        filters={filters}
-        onChange={handleFilterChange}
-        onReset={handleFilterReset}
-      />
 
       {/* ── ZIP lock gate ── */}
       {isZipLocked ? (
@@ -294,9 +349,21 @@ export function ScreenerPageInner() {
           geoLevel="zip"
           className="max-w-md mx-auto mt-8"
         />
+      ) : tab === "movers" ? (
+        <MoversTab
+          geo={geo}
+          moverWindow={changeWindow}
+          stateFilter={stateFilter}
+          enabled={!isZipLocked}
+        />
       ) : (
         <>
-          {/* ── Table ── */}
+          <FilterRail
+            filters={filters}
+            changeWindow={changeWindow}
+            onChange={handleFilterChange}
+            onReset={handleFilterReset}
+          />
           <ScreenerTable
             rows={rows}
             sortBy={sortBy}
@@ -305,11 +372,10 @@ export function ScreenerPageInner() {
             pageSize={PAGE_SIZE}
             isFetching={isFetching}
             onSort={handleSort}
+            changeWindow={changeWindow}
             activeFilters={activeFilters}
             onClearFilters={handleFilterReset}
           />
-
-          {/* ── Pagination ── */}
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}

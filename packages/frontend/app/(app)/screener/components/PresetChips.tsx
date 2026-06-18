@@ -3,12 +3,19 @@
 import React from "react";
 import type { ScreenerQuery } from "@/lib/data";
 
-export type PresetId = "hottest" | "undervalued" | "cashflow";
+export type PresetId =
+  | "hottest"
+  | "undervalued"
+  | "cashflow"
+  | "gainers"
+  | "losers";
 
 export interface Preset {
   id: PresetId;
   label: string;
   query: Partial<ScreenerQuery>;
+  /** Sort key depends on the active window — resolved by the page, not here. */
+  windowSorted?: "desc" | "asc";
 }
 
 export const PRESETS: Preset[] = [
@@ -38,6 +45,18 @@ export const PRESETS: Preset[] = [
       sortBy: "cap_rate",
       sortOrder: "desc",
     },
+  },
+  {
+    id: "gainers",
+    label: "Biggest Gainers",
+    query: {},
+    windowSorted: "desc",
+  },
+  {
+    id: "losers",
+    label: "Biggest Losers",
+    query: {},
+    windowSorted: "asc",
   },
 ];
 

@@ -2,13 +2,19 @@
 
 import React from "react";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
-import type { ScreenerRow, ScreenerQuery } from "@/lib/data";
+import type { ScreenerRow, ScreenerQuery, MoverWindow } from "@/lib/data";
 import { formatMetricValue } from "@/lib/data";
 import {
   getScoreColor,
   getLetterGrade,
   getGradeColor,
 } from "@/app/components/scoring/ScoreDisplay";
+import {
+  WINDOW_TO_COLUMN,
+  WINDOW_META,
+  getScoreChangeColor,
+  formatScoreChange,
+} from "../lib/score-change";
 
 type SortableCol = NonNullable<ScreenerQuery["sortBy"]>;
 
@@ -18,17 +24,6 @@ interface ColumnDef {
   align: "left" | "right";
 }
 
-const COLUMNS: ColumnDef[] = [
-  { key: null, label: "#", align: "right" },
-  { key: "region_name", label: "Market", align: "left" },
-  { key: "score", label: "Score", align: "right" },
-  { key: "median_price", label: "Median Price", align: "right" },
-  { key: null, label: "Rent", align: "right" },
-  { key: "cap_rate", label: "Cap Rate", align: "right" },
-  { key: "months_of_supply", label: "MoS", align: "right" },
-  { key: "overvalued_pct", label: "Overvalued %", align: "right" },
-];
-
 interface ScreenerTableProps {
   rows: ScreenerRow[];
   sortBy: SortableCol;
@@ -37,6 +32,8 @@ interface ScreenerTableProps {
   pageSize: number;
   isFetching: boolean;
   onSort: (col: SortableCol) => void;
+  /** Active score-change window; drives the Δ column's value + sort key. */
+  changeWindow?: MoverWindow;
   /** Human-readable active filters, shown in the empty state for context. */
   activeFilters?: string[];
   /** Resets every active filter (state, score/price, preset) to defaults. */
@@ -106,10 +103,27 @@ export function ScreenerTable({
   pageSize,
   isFetching,
   onSort,
+  changeWindow = "3m",
   activeFilters = [],
   onClearFilters,
 }: ScreenerTableProps) {
   const baseRank = page * pageSize + 1;
+  const changeCol = WINDOW_TO_COLUMN[changeWindow];
+  const columns: ColumnDef[] = [
+    { key: null, label: "#", align: "right" },
+    { key: "region_name", label: "Market", align: "left" },
+    { key: "score", label: "Score", align: "right" },
+    {
+      key: changeCol,
+      label: `Δ ${WINDOW_META[changeWindow].label}`,
+      align: "right",
+    },
+    { key: "median_price", label: "Median Price", align: "right" },
+    { key: null, label: "Rent", align: "right" },
+    { key: "cap_rate", label: "Cap Rate", align: "right" },
+    { key: "months_of_supply", label: "MoS", align: "right" },
+    { key: "overvalued_pct", label: "Overvalued %", align: "right" },
+  ];
 
   return (
     <div
@@ -123,7 +137,7 @@ export function ScreenerTable({
         <table className="w-full text-sm" aria-label="Market screener results">
           <thead>
             <tr className="bg-surface-container border-b border-outline-variant">
-              {COLUMNS.map((col) => (
+              {columns.map((col) => (
                 <th
                   key={col.label}
                   scope="col"
@@ -168,7 +182,7 @@ export function ScreenerTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={COLUMNS.length} className="px-4 py-12">
+                <td colSpan={columns.length} className="px-4 py-12">
                   <div className="flex flex-col items-center gap-3 text-center">
                     <p className="text-on-surface font-medium">
                       No markets match your current filters.
@@ -241,6 +255,20 @@ export function ScreenerTable({
                   {/* Score */}
                   <td className="px-4 py-3 text-right">
                     <ScoreCell score={row.score} grade={row.grade} />
+                  </td>
+
+                  {/* Δ Score (active window) */}
+                  <td
+                    className={`px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] ${getScoreChangeColor(
+                      row[changeCol] as number | null,
+                    )}`}
+                  >
+                    {(() => {
+                      const d = row[changeCol] as number | null;
+                      if (d === null) return "—";
+                      const arrow = d > 0 ? "▲ " : d < 0 ? "▼ " : "";
+                      return `${arrow}${formatScoreChange(d)}`;
+                    })()}
                   </td>
 
                   {/* Median Price */}

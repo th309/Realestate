@@ -186,6 +186,65 @@ jobs:
     outputs:
       scoring_status: ${{ steps.scoring.outputs.scoring_status }}
 
+  refresh-screener-after-scoring:
+    needs: run-scoring-pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace libs for NestJS bootstrap
+        run: npm run build:libs
+
+      - name: Refresh screener_snapshot (post-scoring)
+        id: screener
+        env:
+          # Direct Postgres connection — the refresh runs >60s and the PostgREST
+          # gateway caps HTTP requests at ~60s, so we call the RPC over pg, not
+          # supabase-js. DATABASE_URL is the same secret the recalibrate job uses.
+          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          echo "=============================================="
+          echo "Refreshing screener_snapshot (post-scoring) - $(date)"
+          echo "=============================================="
+          npx ts-node -P packages/backend/tsconfig.json \
+            packages/backend/src/scripts/refresh-screener-snapshot-only.ts \
+            2>&1 | tee screener-output.txt
+          code=${PIPESTATUS[0]}
+          if [ "$code" -eq 0 ] && grep -q "TOTAL:" screener-output.txt && ! grep -q "\[FATAL\]" screener-output.txt; then
+            echo "screener_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "screener_status=error" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Upload Screener Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screener-refresh-log-${{ github.run_id }}
+          path: screener-output.txt
+          retention-days: 30
+
+    outputs:
+      screener_status: ${{ steps.screener.outputs.screener_status }}
+
   validate-scores:
     needs: run-scoring-pipeline
     runs-on: ubuntu-latest
@@ -322,6 +381,7 @@ jobs:
       [
         refresh-calculated-metrics,
         run-scoring-pipeline,
+        refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,
       ]
@@ -389,6 +449,7 @@ jobs:
       [
         refresh-calculated-metrics,
         run-scoring-pipeline,
+        refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,
       ]

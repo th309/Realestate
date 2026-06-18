@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { ScreenerQuery } from "@/lib/data";
+import type { ScreenerQuery, MoverWindow } from "@/lib/data";
+import { WINDOW_META } from "../lib/score-change";
 
 type FilterKey =
   | "scoreMin"
@@ -14,7 +15,9 @@ type FilterKey =
   | "monthsOfSupplyMin"
   | "monthsOfSupplyMax"
   | "overvaluedMin"
-  | "overvaluedMax";
+  | "overvaluedMax"
+  | "changeMin"
+  | "changeMax";
 
 interface FilterField {
   label: string;
@@ -76,6 +79,7 @@ const FILTER_FIELDS: FilterField[] = [
 
 interface FilterRailProps {
   filters: Partial<ScreenerQuery>;
+  changeWindow?: MoverWindow;
   onChange: (patch: Partial<ScreenerQuery>) => void;
   onReset: () => void;
 }
@@ -85,10 +89,28 @@ function parseNumeric(raw: string): number | undefined {
   return isNaN(n) ? undefined : n;
 }
 
-export function FilterRail({ filters, onChange, onReset }: FilterRailProps) {
+export function FilterRail({
+  filters,
+  changeWindow = "3m",
+  onChange,
+  onReset,
+}: FilterRailProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const activeCount = FILTER_FIELDS.reduce((n, f) => {
+  const fields: FilterField[] = [
+    ...FILTER_FIELDS,
+    {
+      label: `Score Δ (${WINDOW_META[changeWindow].label})`,
+      minKey: "changeMin",
+      maxKey: "changeMax",
+      minPlaceholder: "-20",
+      maxPlaceholder: "20",
+      step: 1,
+      hint: "pts",
+    },
+  ];
+
+  const activeCount = fields.reduce((n, f) => {
     const hasMin = filters[f.minKey] !== undefined;
     const hasMax = filters[f.maxKey] !== undefined;
     return n + (hasMin || hasMax ? 1 : 0);
@@ -123,8 +145,8 @@ export function FilterRail({ filters, onChange, onReset }: FilterRailProps) {
       {/* Filter fields */}
       {expanded && (
         <div className="px-5 pb-5 pt-2 border-t border-outline-variant">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-3">
-            {FILTER_FIELDS.map((field) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mt-3">
+            {fields.map((field) => (
               <div key={field.label} className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-on-surface-variant">
                   {field.label}

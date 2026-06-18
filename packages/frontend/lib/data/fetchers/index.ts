@@ -33,8 +33,12 @@ export {
 // Market screener
 export {
   fetchScreener,
+  fetchScreenerMovers,
   type ScreenerGeoLevel,
+  type MoverWindow,
   type ScreenerQuery,
   type ScreenerRow,
   type ScreenerResult,
+  type ScreenerMoversQuery,
+  type ScreenerMoversResult,
 } from "./screener";

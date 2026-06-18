@@ -2,8 +2,11 @@
 // page component stays focused (and under the file-size limit). The screener's
 // full view (geo, state, preset, filters, sort, page) round-trips through the
 // query string so preset/state URLs are shareable.
-import type { ScreenerQuery, ScreenerGeoLevel } from "@/lib/data";
+import type { ScreenerQuery, ScreenerGeoLevel, MoverWindow } from "@/lib/data";
 import type { PresetId } from "../components/PresetChips";
+import { MOVER_WINDOWS, DEFAULT_WINDOW } from "./score-change";
+
+export type ScreenerTab = "screener" | "movers";
 
 export type SortBy = NonNullable<ScreenerQuery["sortBy"]>;
 
@@ -17,6 +20,12 @@ const VALID_SORT: SortBy[] = [
   "months_of_supply",
   "overvalued_pct",
   "region_name",
+  "score_chg_1m",
+  "score_chg_3m",
+  "score_chg_6m",
+  "score_chg_1y",
+  "score_chg_3y",
+  "score_chg_5y",
 ];
 
 const FILTER_KEYS: (keyof ScreenerQuery)[] = [
@@ -30,6 +39,8 @@ const FILTER_KEYS: (keyof ScreenerQuery)[] = [
   "monthsOfSupplyMax",
   "overvaluedMin",
   "overvaluedMax",
+  "changeMin",
+  "changeMax",
 ];
 
 export function readGeo(params: URLSearchParams): ScreenerGeoLevel {
@@ -44,8 +55,24 @@ export function readState(params: URLSearchParams): string {
 
 export function readPreset(params: URLSearchParams): PresetId | null {
   const v = params.get("preset");
-  if (v === "hottest" || v === "undervalued" || v === "cashflow") return v;
+  if (
+    v === "hottest" ||
+    v === "undervalued" ||
+    v === "cashflow" ||
+    v === "gainers" ||
+    v === "losers"
+  )
+    return v;
   return null;
+}
+
+export function readTab(params: URLSearchParams): ScreenerTab {
+  return params.get("tab") === "movers" ? "movers" : "screener";
+}
+
+export function readWindow(params: URLSearchParams): MoverWindow {
+  const v = params.get("window") as MoverWindow | null;
+  return v && MOVER_WINDOWS.includes(v) ? v : DEFAULT_WINDOW;
 }
 
 function readNum(params: URLSearchParams, key: string): number | undefined {
@@ -86,9 +113,13 @@ export function buildScreenerUrl(
   sortBy: SortBy,
   sortOrder: "asc" | "desc",
   page: number,
+  tab: ScreenerTab = "screener",
+  moverWindow: MoverWindow = DEFAULT_WINDOW,
 ): string {
   const p = new URLSearchParams();
   p.set("geo", geo);
+  if (tab !== "screener") p.set("tab", tab);
+  if (moverWindow !== DEFAULT_WINDOW) p.set("window", moverWindow);
   if (stateFilter) p.set("state", stateFilter);
   if (preset) p.set("preset", preset);
   if (sortBy !== "score") p.set("sortBy", sortBy);

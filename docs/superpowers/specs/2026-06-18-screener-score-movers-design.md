@@ -171,11 +171,16 @@ metrics (job 1) and fresh scores (job 2) exist, so every delta reflects the late
 - **Tab switch** `Screener | Movers` (URL state via existing `screener-url-state.ts`).
 - **Window selector** (`1M · 3M · 6M · 1Y · 3Y · 5Y`, labels show `90d`/`180d` tooltips),
   shared by both tabs; URL-persisted. New component `components/WindowSelector.tsx`.
+  **Default window = `3m` (90d)** on first load (when no URL param is present).
 
 ### 6.3 Integrated tab
 
 - New **Δ Score** column in `ScreenerTable.tsx` bound to the active window's `score_chg_*`
-  value: `▲ +N` green / `▼ −N` red / `—` neutral (`text-on-surface-variant`). Sortable.
+  value: `▲ +N` / `▼ −N` / `—` neutral. Sortable. **Color is a flat green/red threshold**
+  (no magnitude grading): `Δ > 0` → green (M3 accent, semantic `text-accent`/green token),
+  `Δ < 0` → red (M3 error, semantic `text-error`), `Δ == 0` or `NULL` → neutral
+  (`text-on-surface-variant`). Driven by a shared `getScoreChangeColor(delta)` helper so the
+  table, CSV legend, and Movers tab stay consistent.
 - Two new presets in `PresetChips.tsx`: **Biggest Gainers**
   (`sortBy: score_chg_<window>, sortOrder: desc`) and **Biggest Losers** (`… asc`).
 - Δ range filter (min/max) for the active window in `FilterRail.tsx`.
@@ -184,8 +189,9 @@ metrics (job 1) and fresh scores (job 2) exist, so every delta reflects the late
 ### 6.4 Movers tab
 
 - New `components/MoversTab.tsx`: Top Gainers + Top Losers leaderboards side-by-side for the
-  active window + geo + state, each row = rank · market · `▲/▼ ±N` · current score. Uses
-  `useScreenerMovers`.
+  active window + geo + state, **top 25 each side**, each row = rank · market · `▲/▼ ±N`
+  (flat green/red, same `getScoreChangeColor` helper) · current score. Uses
+  `useScreenerMovers` (default `limit=25`).
 
 ### 6.5 File-size compliance
 
@@ -236,8 +242,9 @@ No new paywalls. Movers tab honors the same ZIP gate.
 
 ---
 
-## 10. Open choices deferred to implementation
+## 10. Resolved choices (confirmed by th309, 2026-06-18)
 
-- Exact Δ color thresholds (flat green/red vs. magnitude-graded intensity).
-- Default window on first load (proposed: **1Y**).
-- Leaderboard length on the Movers tab (proposed: top **25** each side).
+- **Default window:** `3m` (90 days) on first load.
+- **Leaderboard length:** top **25** each side (Gainers / Losers).
+- **Δ color:** **flat green/red threshold** — `Δ > 0` green, `Δ < 0` red, `Δ == 0`/`NULL`
+  neutral, via a shared `getScoreChangeColor(delta)` helper (§6.3). No magnitude grading.
