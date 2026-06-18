@@ -18,6 +18,7 @@ import {
   TrendDirection,
 } from "./sidebar-components";
 import { GeoLevelPills } from "./GeoLevelPills";
+import { FeatureDiscoveryNudge } from "./sidebar-components/FeatureDiscoveryNudge";
 
 interface ScoreInfo {
   score?: number;
@@ -207,6 +208,9 @@ export function Sidebar({
             </svg>
           </button>
         </div>
+
+        {/* Feature-discovery nudge: surfaces un-tried Pro features (trial/pro only) */}
+        <FeatureDiscoveryNudge />
 
         {/* Mobile-only: Geo Level Pills */}
         <div className="md:hidden mb-4 pb-4 border-b border-outline-variant">
