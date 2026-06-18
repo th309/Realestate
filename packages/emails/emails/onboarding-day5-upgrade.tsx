@@ -17,7 +17,7 @@ export default function OnboardingDay5Upgrade({
   loginUrl,
   unsubscribeUrl,
 }: OnboardingDay5UpgradeProps) {
-  const mapUrl = `${loginUrl}/map`;
+  const screenerUrl = `${loginUrl}/screener?sortBy=score&sortOrder=desc`;
 
   return (
     <Layout preview={ONBOARDING_DAY5.preview} unsubscribeUrl={unsubscribeUrl}>
@@ -37,18 +37,18 @@ export default function OnboardingDay5Upgrade({
           {ONBOARDING_DAY5.moversBody}
         </Text>
         <Text className="text-sm text-gray-500 leading-5 m-0 mt-3">
-          <Link href={mapUrl} className="text-brand underline">
+          <Link href={screenerUrl} className="text-brand underline">
             {ONBOARDING_DAY5.moversLink}
           </Link>
         </Text>
       </Section>
       <Section className="text-center mb-5">
-        <BrandedButton href={mapUrl}>{ONBOARDING_DAY5.cta}</BrandedButton>
+        <BrandedButton href={screenerUrl}>{ONBOARDING_DAY5.cta}</BrandedButton>
       </Section>
       <Text className="text-sm text-gray-500 leading-5 m-0">
         {BUTTON_FALLBACK_PREFIX}{" "}
-        <Link href={mapUrl} className="text-brand underline">
-          {mapUrl}
+        <Link href={screenerUrl} className="text-brand underline">
+          {screenerUrl}
         </Link>
       </Text>
     </Layout>

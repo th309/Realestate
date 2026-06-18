@@ -1,43 +1,39 @@
-# Purge Quinn (analytics-chat assistant) — for good, for now
+# Trial Walkthrough — Feedback Fixes (2026-06-18)
 
-Root cause of "keeps coming back": Quinn saturates the repo's _discoverable surface_ (live code, agent-instruction files, ~30 docs, lessons.md, memory), so every Claude/Cursor session re-surfaces it. Fix = remove the surface, not just runtime files. Scope: everything incl. white-label. Land: commit on `develop`.
+Source: user's manual 14-day trial walk. Branch: `develop` (commit locally; never push without ask).
+Standards: production-ready, no workarounds; verify LIVE in browser (no mocks).
 
-## Pre-flight (done)
+## Decisions (locked)
 
-- [x] Map all 163 matches -> delete/edit/keep manifest (3 Explore agents)
-- [x] Verify `useWatchlist` is a SURVIVING feature (5 importers) -- extract, don't delete
-- [x] Verify briefing generation survives (Quinn->market-intelligence, not reverse)
-- [x] Verify `TTL_MAP.default` must stay; `CacheRefreshJob` only registered in app.module
+- **D1 Score movers** → quick repoint now (emails → `/screener` current-score sort); full movers feature DEFERRED to a follow-up phase.
+- **D2 Feature guidance** → lightweight checklist nudges (reuse `updateChecklistTask` / onboarding checklist); keep anti-haunting fix intact.
+- **D3 Day-7 reframe** → trial-aware framing (what your Pro trial unlocks + what reverts to free).
+- **Unsubscribe** → build FULL compliant flow now (public one-click + List-Unsubscribe headers + physical address).
+- **T1 dev email escape** → skip.
+- **Physical address (from ToS):** `Republic Registered Agent LLC, 20 S Charles St, Ste 403, Baltimore, MD 21201`.
 
-## 1. Extract surviving code
+## DONE (verified compile; ready to commit)
 
-- [ ] Create `lib/data/hooks/useWatchlist.ts` (hook + inlined `WatchlistItem` type), behavior identical
-- [ ] Repoint 5 importers: account/SubscriptionTab, account/ActivityTab, app/account/page, dashboard/WatchlistUpdates, map/RightDetailPanel/QuickActions
+- [x] **B2a** day-3 copy: "filter on the map" → Screener (`scoreMin=70`); template CTA + fallback → `screenerUrl`.
+- [x] **B2b** day-5 movers links → `/screener?sortBy=score&sortOrder=desc`; copy reworded to "Open the Screener / current rankings".
+- [x] **B2c** day-7 reframed trial-aware: new heading/intro, `trialNote`, CTA "Keep Pro Access", benefit emoji 🔒→✓.
+- [x] **B1 (part b)** standalone signup redirect → `/tour?resume=fresh` (wipes stale `piq_tour`; callback `?phase=celebrate` left untouched). Emails package `tsc --noEmit` = clean.
 
-## 2. Delete whole-file Quinn artifacts (git rm)
+## IN PROGRESS (parallel implementation)
 
-Backend: `src/analytics-chat/`, `QUINN_AI_PROVIDERS.md`, `market-intelligence/integration-quinn-prompt-gate.spec.ts`, `jobs/cache-refresh.job.ts`
-Frontend: `app/components/quinn/`, `components/analytics-assistant/`, `app/api/analytics/chat/`, `graphs/.../QuinnInsight.tsx`, `org/.../branding/QuinnCustomizationSection.tsx`, `app/dev/test/components/AnalyticsAssistantSection.tsx`
-Agent/docs/root: `.cursor/rules/quinn-iterative-test.mdc`, `.cursor/skills/quinn-optimizer.md`, `.agent/skills/quinn-optimizer.md`, `.agent/skills/quinn_deepseek_optimization/`, root `*QUINN*`/`*Quinn*` md + `opt-output.txt`, `docs/QUINN-*`, `docs/quinn-*`, `docs/plans/2026-02-22-quinn-v2-*`, `experiments/quinn-widget/`, `scripts/quinn-test/`
+- [ ] **Unsubscribe vertical (full compliant)** — backend token util + public GET/POST controller; `email.service` `headers` support + `List-Unsubscribe`/`List-Unsubscribe-Post`; wire lifecycle/marketing senders; register controller; frontend public `/unsubscribed` confirmation page; `layout.tsx` footer = unsubscribe link (tokenized) + physical address.
+- [ ] **B3 entitlement cold-load retry** — `api.ts` + `EntitlementsContext.tsx`: bounded backoff retry on transient fetch failure so an authed user is never stranded on `free`. (Backend proven correct: returns `pro` for active trial, cache-bypassed.)
+- [ ] **B1 (part a)** tour user-scoping — `useTourSession.ts`: tag stored session with userId; clear/reset when authed user differs (robust beyond the signup-redirect fix).
 
-## 3. Surgical edits (remove Quinn refs, keep the file)
+## TODO (next phase)
 
-Backend: app.module.ts, org-branding dto+service, redis-ttl-config.ts (6 tool TTLs), redis-cache-key.ts + redis.service.ts (quinn: prefix), .env.example, scripts/backfill-historical-scores.ts, surveys/milestones.controller.ts, admin/analytics/site-context.ts, ai/anthropic.service.ts (comment)
-Frontend: layout.tsx, ExplorationSidebar index+tsx, org branding page+useBrandingForm, lib/data/fetchers/org-branding.ts, lib/hooks/useMilestone.ts, admin/intelligence (3 files), dev/test/page.tsx, reports AIRecommendation.tsx
-Meta: package.json (quinn:test), tasks/lessons.md (quinn-widget Railway section), docs/environment-variables.md, docs/data-lineage.md
+- [ ] **D2 feature-discovery nudges** — frontend-design skill; dismissible nudges for un-tried Pro features via existing onboarding checklist.
+- [ ] **Movers feature (deferred)** — Screener score-delta over 1mo/90d/120d/180d/1yr/3yr (up & down). Separate phase.
 
-## 4. Verify (gate before commit) -- DONE
+## Verification gate (per task, before commit)
 
-- [x] Backend typecheck: Quinn changes clean (0 errors). Only errors = pre-existing merge-conflict markers in content-pipeline.controller.ts (UU, NOT Quinn).
-- [x] Frontend typecheck: Quinn changes clean (0 errors). 4 pre-existing errors in untouched files (DirectionalBarsTooltip, newsletter/page, embeds/page, app/page unused @ts-expect-error).
+Build (affected packages) + live browser check against running stack (no mocks): tour fresh signup → persona picker; entitlements show Pro for active trial; unsubscribe one-click sets `email_preferences.marketing=false` without login; emails render correct links.
 
-## 5. Commit on develop + memory -- BLOCKED, awaiting user
+## Review
 
-- [ ] BLOCKED: content-pipeline.controller.ts unresolved merge conflict (UU) from a mid-session pull blocks `git commit`. User resolves it first, then I commit ONLY Quinn-purge files (excluding shadow-mode WIP).
-- [ ] After commit: update memory quinn-not-live -> purged; update lessons.md
-
-## Deferred -- flag to user (NOT auto-edited)
-
-- Marketing/legal copy naming "Quinn": 4 blog `.mdx`, 2 lifecycle emails, `about/terms/TermsSectionsIntro.tsx` (legal ToS). Product/legal decision, doesn't cause resurfacing.
-- Leave `QUINN_*` env reads in `market-intelligence-cron.ts` (configure surviving briefings).
-- DB columns `org_branding.quinn_*` + analytics_chat tables left in place (non-destructive; "for now").
+(to be filled in after execution)
