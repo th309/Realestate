@@ -28,6 +28,8 @@ import { PreferencesService } from '../preferences/preferences.service';
 import { MarketMatchService } from '../preferences/market-match.service';
 import { formatBudgetRange } from './monthly-digest.types';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { getEmailLinkBaseUrl } from './email-link-base';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 @Injectable()
 export class MonthlyDigestService {
@@ -43,8 +45,7 @@ export class MonthlyDigestService {
     private readonly config: ConfigService,
     private readonly redis: RedisLockService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
   }
 
   @Cron('0 12 1 * *')
@@ -153,6 +154,7 @@ export class MonthlyDigestService {
     const displayName = email.split('@')[0];
     const monthName = new Date().toLocaleString('en-US', { month: 'long' });
 
+    const unsub = buildUnsubscribe(this.config, userId);
     const react = React.createElement(MonthlyDigest, {
       name: displayName,
       goal: prefs.goal,
@@ -162,6 +164,7 @@ export class MonthlyDigestService {
       watchlistMovers,
       marketToWatch,
       dashboardUrl: `${this.appUrl}/dashboard`,
+      unsubscribeUrl: unsub?.url,
     });
 
     return this.emailService.sendEmail({
@@ -170,6 +173,7 @@ export class MonthlyDigestService {
       react,
       userId,
       emailType: 'monthly_digest',
+      headers: unsub?.headers,
       metadata: {
         topMatchCount: topMarkets.length,
         watchlistMoverCount: watchlistMovers.length,

@@ -13,6 +13,23 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/tour",
 }));
 
+// The hook scopes persisted tour state to the authenticated user via useAuth().
+// Drive the current user id through a global so individual tests can set it.
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    user: (globalThis as unknown as { __userId__?: string | null }).__userId__
+      ? {
+          id: (globalThis as unknown as { __userId__?: string | null })
+            .__userId__,
+        }
+      : null,
+  }),
+}));
+
+function setCurrentUserId(id: string | null) {
+  (globalThis as unknown as { __userId__?: string | null }).__userId__ = id;
+}
+
 describe("useTourSession", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -20,6 +37,7 @@ describe("useTourSession", () => {
       "piq_tour_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
     setSearchParams.mockReset();
     (globalThis as unknown as { __params__?: string }).__params__ = "";
+    setCurrentUserId(null);
   });
 
   it("mints a sessionId on first call and stores it in cookie + localStorage", () => {
@@ -253,5 +271,93 @@ describe("useTourSession", () => {
     expect(setSearchParams).toHaveBeenCalledWith(
       expect.not.stringContaining("resume=fresh"),
     );
+  });
+
+  it("resets to persona/null when a different user's tour is persisted", () => {
+    // User A finished a Bloomington tour at step4 on this browser.
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-a",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "14010", name: "Bloomington, IL" },
+        phase: "step4",
+        reportId: "report-a",
+        startedAt: 100,
+        userId: "user-A",
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-a; path=/";
+
+    // User B is now the authenticated user — must NOT resume A's tour.
+    setCurrentUserId("user-B");
+    const { result } = renderHook(() => useTourSession());
+
+    expect(result.current.session.phase).toBe("persona");
+    expect(result.current.session.persona).toBeNull();
+    expect(result.current.session.market).toBeNull();
+    // The freshly minted session is owned by B and persisted as such.
+    expect(result.current.session.userId).toBe("user-B");
+    expect(result.current.session.sessionId).not.toBe("uuid-a");
+    expect(JSON.parse(localStorage.getItem("piq_tour") ?? "{}").userId).toBe(
+      "user-B",
+    );
+  });
+
+  it("preserves a legacy/anonymous (userId-null) tour for any signed-in user", () => {
+    // Pre-signup tour: market picked before the account existed, no userId tag.
+    // The auth/callback ?phase=celebrate flow depends on this surviving sign-in.
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-anon",
+        persona: "investor",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise City, ID" },
+        phase: "step4",
+        reportId: null,
+        startedAt: 100,
+        // no userId
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-anon; path=/";
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=investor&market=metro-39580&phase=step4";
+
+    setCurrentUserId("user-C");
+    const { result } = renderHook(() => useTourSession());
+
+    // Tour is preserved (not reset to persona) and now claimed by the user.
+    expect(result.current.session.persona).toBe("investor");
+    expect(result.current.session.market?.geoId).toBe("39580");
+    expect(result.current.session.phase).toBe("step4");
+    expect(result.current.session.sessionId).toBe("uuid-anon");
+    expect(result.current.session.userId).toBe("user-C");
+  });
+
+  it("preserves the tour when the stored userId matches the current user", () => {
+    localStorage.setItem(
+      "piq_tour",
+      JSON.stringify({
+        sessionId: "uuid-d",
+        persona: "agent",
+        market: { geoLevel: "metro", geoId: "39580", name: "Boise City, ID" },
+        phase: "step3",
+        reportId: "report-d",
+        startedAt: 100,
+        userId: "user-D",
+      }),
+    );
+    document.cookie = "piq_tour_session=uuid-d; path=/";
+    (globalThis as unknown as { __params__?: string }).__params__ =
+      "persona=agent&market=metro-39580&phase=step3";
+
+    setCurrentUserId("user-D");
+    const { result } = renderHook(() => useTourSession());
+
+    expect(result.current.session.persona).toBe("agent");
+    expect(result.current.session.market?.geoId).toBe("39580");
+    expect(result.current.session.phase).toBe("step3");
+    expect(result.current.session.sessionId).toBe("uuid-d");
+    expect(result.current.session.userId).toBe("user-D");
   });
 });

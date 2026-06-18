@@ -1,21 +1,28 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { WeeklyDigest } from '@propertyiq/emails';
 import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { getEmailLinkBaseUrl } from './email-link-base';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 @Injectable()
 export class DigestService {
   private readonly logger = new Logger(DigestService.name);
+  private readonly appUrl: string;
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
     private readonly redis: RedisLockService,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.appUrl = getEmailLinkBaseUrl(this.config);
+  }
 
   @Cron('0 8 * * MON')
   async sendWeeklyDigests() {
@@ -69,6 +76,9 @@ export class DigestService {
         const digestData = await this.buildDigestData(user.id);
         if (!digestData.hasContent) continue;
 
+        // Weekly digest is gated on the `weekly_digest` preference, so its
+        // one-click unsubscribe must flip THAT stream (not `marketing`).
+        const unsub = buildUnsubscribe(this.config, user.id, 'weekly_digest');
         const react = React.createElement(WeeklyDigest, {
           name: user.email.split('@')[0],
           watchlist: digestData.watchlist.map((m) => ({
@@ -83,8 +93,8 @@ export class DigestService {
             threshold: a.alert?.threshold || 0,
             currentValue: a.metric_value || 0,
           })),
-          dashboardUrl: 'https://propertyiq.app/dashboard',
-          preferencesUrl: 'https://propertyiq.app/account/notifications',
+          dashboardUrl: `${this.appUrl}/dashboard`,
+          preferencesUrl: unsub?.url ?? `${this.appUrl}/account/notifications`,
         });
 
         const success = await this.emailService.sendEmail({
@@ -93,6 +103,7 @@ export class DigestService {
           react,
           userId: user.id,
           emailType: 'digest',
+          headers: unsub?.headers,
           metadata: {
             watchlistCount: digestData.watchlistCount,
             alertCount: digestData.alertCount,

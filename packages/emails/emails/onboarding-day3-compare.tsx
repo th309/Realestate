@@ -15,7 +15,7 @@ export default function OnboardingDay3Compare({
   loginUrl,
   unsubscribeUrl,
 }: OnboardingDay3CompareProps) {
-  const mapUrl = `${loginUrl}/map`;
+  const screenerUrl = `${loginUrl}/screener?scoreMin=70`;
   const pricingUrl = `${loginUrl}/pricing?from=email_day3`;
 
   return (
@@ -43,7 +43,7 @@ export default function OnboardingDay3Compare({
         {ONBOARDING_DAY3.closing}
       </Text>
       <Section className="text-center mb-5">
-        <BrandedButton href={mapUrl}>{ONBOARDING_DAY3.cta}</BrandedButton>
+        <BrandedButton href={screenerUrl}>{ONBOARDING_DAY3.cta}</BrandedButton>
       </Section>
       <Section className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <Text className="text-sm font-semibold text-blue-900 leading-5 m-0 mb-1">
@@ -61,8 +61,8 @@ export default function OnboardingDay3Compare({
       </Section>
       <Text className="text-sm text-gray-500 leading-5 m-0">
         {BUTTON_FALLBACK_PREFIX}{" "}
-        <Link href={mapUrl} className="text-brand underline">
-          {mapUrl}
+        <Link href={screenerUrl} className="text-brand underline">
+          {screenerUrl}
         </Link>
       </Text>
     </Layout>

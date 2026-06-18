@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import type { MarketRef, Persona, TourPhase, TourSession } from "../types";
 import { parseMarket as parseMarketParam } from "../lib/parseMarket";
 
@@ -65,6 +66,8 @@ export function useTourSession() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? null;
 
   const hydratedRef = useRef(false);
 
@@ -153,6 +156,52 @@ export function useTourSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cross-account guard: scope persisted tour state to the authenticated user.
+  // If the STORED session belongs to a DIFFERENT account than the one now
+  // signed in (e.g. a finished Bloomington/step4 run by user A, then user B
+  // logs in on the same browser), treat it as fresh so B starts at the persona
+  // picker instead of resuming A's tour. When the current user is known and the
+  // session is unowned or already theirs, we tag the live session with the id
+  // so the existing saveToStorage effect persists ownership.
+  //
+  // Keyed on `currentUserId`, so it also fires on a live sign-in/out within the
+  // same mount, not just the initial settle. It re-reads storage each run, so
+  // no previous-id ref is needed to detect the mismatch.
+  //
+  // HYDRATION SAFETY: this runs ONLY in a post-mount effect — never in the
+  // render-phase initializer — so SSR and the first client render stay
+  // identical (see the lazy-initializer note above). Mirrors the user-change
+  // guard in lib/entitlements/EntitlementsContext.tsx.
+  //
+  // Legacy / anonymous PRE-SIGNUP tours have userId null/undefined and must
+  // still resume — the auth/callback `?phase=celebrate` flow depends on the
+  // pre-signup market surviving sign-in — so we never clear on a null stored id.
+  useEffect(() => {
+    // No authenticated user (anonymous / signed out): nothing to scope.
+    if (currentUserId == null) return;
+    // ?resume=fresh already cleared and re-minted state; don't fight it.
+    if (searchParams?.get("resume") === "fresh") return;
+
+    const stored = loadFromStorage();
+    const storedUserId = stored.userId ?? null;
+
+    if (storedUserId != null && storedUserId !== currentUserId) {
+      // A different account's tour is persisted — start this user clean.
+      reset();
+    } else if (session.userId !== currentUserId) {
+      // Same owner, or an unowned (legacy/pre-signup) session being claimed —
+      // tag it so the saveToStorage effect persists the current user's id.
+      setSession((prev) =>
+        prev.userId === currentUserId
+          ? prev
+          : { ...prev, userId: currentUserId },
+      );
+    }
+    // Keyed on the authenticated user id; reset is stable per that id and the
+    // searchParams/session reads are intentionally point-in-time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
+
   useEffect(() => {
     saveToStorage(session);
   }, [session]);
@@ -222,8 +271,9 @@ export function useTourSession() {
       phase: "persona",
       reportId: null,
       startedAt: Date.now(),
+      userId: currentUserId,
     });
-  }, []);
+  }, [currentUserId]);
 
   return useMemo(
     () => ({ session, setPersona, setMarket, advanceTo, reset }),

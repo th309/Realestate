@@ -121,6 +121,12 @@ export {
 // re-exported through `./fetchers/index.ts`.
 export * from "./fetchers";
 
+// NOTE: `API_URL` is already part of this public API via the export chain
+// (./fetchers → _groups/core → base → api-url). Browser code MUST import it
+// from "@/lib/data" — it resolves to the same-origin `/backend` proxy so ad
+// blockers don't reject the request — instead of building a URL from
+// `process.env.NEXT_PUBLIC_API_URL`.
+
 // ============================================================================
 // VALIDATION CLAIMS (PropertyIQ v4 validation stats)
 // ============================================================================

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { MarketRef, Persona } from "@/lib/data";
 import {
   type SandboxStepId,
@@ -22,6 +22,7 @@ export interface ActiveTour {
 export function useTourFromUrl() {
   const sp = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
 
   const active = useMemo<ActiveTour | null>(() => {
     const stepId = sp?.get("tour") as SandboxStepId | null;
@@ -46,7 +47,10 @@ export function useTourFromUrl() {
       }
     }
 
-    // URL has no tour params — try to rehydrate one that was interrupted.
+    // URL has no tour params. Only RESUME a saved tour if we're still on the
+    // tour's own market page (e.g. a mid-tour refresh that dropped the query
+    // params). On any other route the user has left the guided flow — clear the
+    // stale state so the coach-mark never appears on pages outside the tour.
     if (typeof window !== "undefined") {
       const raw = window.sessionStorage.getItem(ACTIVE_TOUR_STORAGE_KEY);
       if (raw) {
@@ -56,17 +60,20 @@ export function useTourFromUrl() {
             saved?.stepId &&
             SANDBOX_STEP_ORDER.includes(saved.stepId) &&
             saved.market &&
-            saved.sessionId
+            saved.sessionId &&
+            pathname === `/market/${saved.market.geoId}`
           ) {
             return saved;
           }
+          // Saved tour belongs to a different page → the user navigated away.
+          window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
         } catch {
-          /* ignore corrupt storage */
+          window.sessionStorage.removeItem(ACTIVE_TOUR_STORAGE_KEY);
         }
       }
     }
     return null;
-  }, [sp]);
+  }, [sp, pathname]);
 
   function buildStepUrl(target: SandboxStepId, route: string): string {
     if (!active) return route;

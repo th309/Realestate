@@ -5,8 +5,12 @@
  * Automatically includes Supabase JWT auth headers when available.
  */
 
+import { API_URL } from "./api-url";
 import { getAuthHeaders } from "./auth-headers";
 import { withRequestLimit } from "./concurrency-limit";
+
+// Re-exported so existing `import { API_URL } from "./base"` call sites keep working.
+export { API_URL } from "./api-url";
 
 /**
  * Structured HTTP error carrying the response status, so callers can treat
@@ -25,30 +29,6 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
-
-/**
- * Default API origin when NEXT_PUBLIC_API_URL was not set at build time.
- * Production builds must still set NEXT_PUBLIC_API_URL explicitly when the API host changes.
- *
- * Without this, the client bundle falls back to localhost — which breaks deployed sites
- * (browser tries each user's own machine, producing "Failed to fetch").
- */
-const DEFAULT_PRODUCTION_API_URL =
-  "https://backend-production-ee4d.up.railway.app";
-
-function resolveApiUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  if (process.env.NODE_ENV === "production") {
-    return DEFAULT_PRODUCTION_API_URL;
-  }
-  return "http://localhost:3001";
-}
-
-/**
- * API base URL — uses NEXT_PUBLIC_API_URL, then production default, then localhost (dev).
- */
-export const API_URL = resolveApiUrl();
 
 /**
  * Content-pipeline admin calls must share one routing strategy (CLAUDE §1.0): either

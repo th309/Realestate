@@ -38,11 +38,14 @@ export default function OnboardingDay7Profile({
                 : "text-sm text-gray-700 leading-5 m-0 mb-2"
             }
           >
-            🔒 <strong>{benefit.label}</strong>
+            ✓ <strong>{benefit.label}</strong>
             {benefit.body}
           </Text>
         ))}
       </Section>
+      <Text className="text-sm text-gray-700 leading-6 m-0 mb-5">
+        {ONBOARDING_DAY7.trialNote}
+      </Text>
       <Section className="text-center mb-5">
         <BrandedButton href={pricingUrl}>{ONBOARDING_DAY7.cta}</BrandedButton>
       </Section>

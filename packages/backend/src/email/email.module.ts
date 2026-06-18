@@ -4,6 +4,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { PreferencesModule } from '../preferences/preferences.module';
 import { EmailService } from './email.service';
 import { EmailController } from './email.controller';
+import { UnsubscribeController } from './unsubscribe.controller';
 import { DigestService } from './digest.service';
 import { DripService } from './drip.service';
 import { MonthlyDigestService } from './monthly-digest.service';
@@ -13,7 +14,7 @@ import { EngagementTriggerService } from './engagement-trigger.service';
 
 @Module({
   imports: [SupabaseModule, ConfigModule, PreferencesModule],
-  controllers: [EmailController],
+  controllers: [EmailController, UnsubscribeController],
   providers: [
     EmailService,
     DigestService,
@@ -23,6 +24,11 @@ import { EngagementTriggerService } from './engagement-trigger.service';
     BehavioralTriggerService,
     EngagementTriggerService,
   ],
-  exports: [EmailService],
+  exports: [
+    EmailService,
+    DripService,
+    BehavioralTriggerService,
+    EngagementTriggerService,
+  ],
 })
 export class EmailModule {}

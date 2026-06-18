@@ -24,6 +24,11 @@ export interface SendEmailOptions {
   emailType: string;
   metadata?: Record<string, unknown>;
   replyTo?: string;
+  /**
+   * Extra SMTP headers passed through to Resend (e.g. `List-Unsubscribe` /
+   * `List-Unsubscribe-Post` for one-click opt-out on lifecycle emails).
+   */
+  headers?: Record<string, string>;
   attachments?: Array<{
     filename: string;
     // Resend requires one of:
@@ -66,6 +71,9 @@ export class EmailService {
         };
         if (options.attachments && options.attachments.length > 0) {
           payload.attachments = options.attachments;
+        }
+        if (options.headers) {
+          payload.headers = options.headers;
         }
         const { error } = await this.resend.emails.send(
           payload as unknown as Parameters<typeof this.resend.emails.send>[0],

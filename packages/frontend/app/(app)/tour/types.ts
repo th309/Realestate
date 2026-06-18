@@ -16,6 +16,13 @@ export interface TourSession {
   phase: TourPhase;
   reportId: string | null;
   startedAt: number;
+  /**
+   * The authenticated user this tour state belongs to. Used to scope persisted
+   * state per account so a DIFFERENT user signing in on the same browser does
+   * NOT resume the prior account's persona/market/phase. `null`/`undefined`
+   * means a legacy or anonymous (pre-signup) tour — those must still resume.
+   */
+  userId?: string | null;
 }
 
 export const STEP_ORDER: TourPhase[] = [

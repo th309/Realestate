@@ -10,7 +10,6 @@ import {
   EligibleUser,
   getFutureDayBoundaries,
   getPastDayBoundaries,
-  extractUsersFromSubscriptions,
 } from './behavioral-trigger.utils';
 import {
   buildInactive24hEmail,
@@ -18,6 +17,9 @@ import {
   buildTrialDay13Email,
   buildTrialExpiredEmail,
 } from './behavioral-trigger-emails';
+import { getEmailLinkBaseUrl } from './email-link-base';
+import { getMarketingOptOutIds } from './email-recipients.util';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 @Injectable()
 export class BehavioralTriggerService {
@@ -31,8 +33,7 @@ export class BehavioralTriggerService {
     private readonly lockService: RedisLockService,
     private readonly engagementTriggers: EngagementTriggerService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') ?? 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
   }
 
   @Cron('0 * * * *') // Every hour
@@ -81,19 +82,6 @@ export class BehavioralTriggerService {
       .insert({ user_id: userId, trigger_name: triggerName, metadata: {} });
   }
 
-  private async getMarketingOptOutIds(userIds: string[]): Promise<Set<string>> {
-    const optedOutIds = new Set<string>();
-    const { data } = await this.supabase
-      .from('email_preferences')
-      .select('user_id')
-      .in('user_id', userIds)
-      .eq('marketing', false);
-    if (data) {
-      for (const row of data) optedOutIds.add(row.user_id);
-    }
-    return optedOutIds;
-  }
-
   // ─── Shared send loop for subscription-based triggers ───────────────────────
 
   private async sendToTrialingUsers(opts: {
@@ -107,6 +95,7 @@ export class BehavioralTriggerService {
       unsubscribeUrl: string,
     ) => string;
     actionPath: string;
+    onlyUserId?: string;
   }): Promise<void> {
     const {
       triggerName,
@@ -115,26 +104,48 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml,
       actionPath,
+      onlyUserId,
     } = opts;
 
-    const { data: candidates, error } = await this.supabase
-      .from('user_subscriptions')
-      .select('user_id, trial_ends_at, user_profiles(id, email)')
-      .eq('status', 'trialing')
-      .gte('trial_ends_at', rangeStart)
-      .lt('trial_ends_at', rangeEnd);
+    let query = this.supabase
+      .from('user_trials')
+      .select('user_id, expires_at')
+      .is('converted_at', null)
+      .is('cancelled_at', null)
+      .gte('expires_at', rangeStart)
+      .lt('expires_at', rangeEnd);
+    if (onlyUserId) query = query.eq('user_id', onlyUserId);
+    const { data: trials, error } = await query;
 
     if (error) {
       this.logger.error(`${triggerName}: query failed: ${error.message}`);
       return;
     }
-    if (!candidates?.length) return;
+    if (!trials?.length) return;
 
-    const users = extractUsersFromSubscriptions(candidates);
-    const optedOutIds = await this.getMarketingOptOutIds(
+    // user_trials has no FK to user_profiles (both reference auth.users), so a
+    // PostgREST embed cannot resolve — fetch emails in a second query.
+    const userIds = trials.map((t: { user_id: string }) => t.user_id);
+    const { data: profiles, error: profileError } = await this.supabase
+      .from('user_profiles')
+      .select('id, email')
+      .in('id', userIds);
+    if (profileError) {
+      this.logger.error(
+        `${triggerName}: profile lookup failed: ${profileError.message}`,
+      );
+      return;
+    }
+    const users: EligibleUser[] = (profiles ?? [])
+      .filter((p: { id: string; email: string | null }) => !!p.email)
+      .map((p: { id: string; email: string }) => ({
+        id: p.id,
+        email: p.email,
+      }));
+    const optedOutIds = await getMarketingOptOutIds(
+      this.supabase,
       users.map((u) => u.id),
     );
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
 
     let sent = 0;
     for (const user of users) {
@@ -142,10 +153,11 @@ export class BehavioralTriggerService {
       if (optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, triggerName)) continue;
 
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildHtml(
         user.email.split('@')[0],
         `${this.appUrl}${actionPath}`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
 
       const success = await this.emailService.sendEmail({
@@ -154,6 +166,7 @@ export class BehavioralTriggerService {
         html,
         userId: user.id,
         emailType: triggerName,
+        headers: unsub?.headers,
       });
 
       if (success) {
@@ -201,8 +214,7 @@ export class BehavioralTriggerService {
     const activeUserIds = new Set<string>(
       (sessions ?? []).map((s: { user_id: string }) => s.user_id),
     );
-    const optedOutIds = await this.getMarketingOptOutIds(userIds);
-    const unsubscribeUrl = `${this.appUrl}/account/notifications`;
+    const optedOutIds = await getMarketingOptOutIds(this.supabase, userIds);
 
     let sent = 0;
     for (const user of candidates as EligibleUser[]) {
@@ -211,10 +223,11 @@ export class BehavioralTriggerService {
       if (optedOutIds.has(user.id)) continue;
       if (await this.hasFired(user.id, 'inactive_24h')) continue;
 
+      const unsub = buildUnsubscribe(this.config, user.id);
       const html = buildInactive24hEmail(
         user.email.split('@')[0],
         `${this.appUrl}/graphs`,
-        unsubscribeUrl,
+        unsub?.url ?? `${this.appUrl}/account/notifications`,
       );
       const success = await this.emailService.sendEmail({
         to: user.email,
@@ -222,6 +235,7 @@ export class BehavioralTriggerService {
         html,
         userId: user.id,
         emailType: 'inactive_24h',
+        headers: unsub?.headers,
       });
       if (success) {
         await this.markFired(user.id, 'inactive_24h');
@@ -235,7 +249,7 @@ export class BehavioralTriggerService {
   // ─── Triggers: trial lifecycle ───────────────────────────────────────────────
 
   /** Users whose trial expires in exactly 4 days. */
-  private fireTrialDay10() {
+  public fireTrialDay10(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(4);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_10',
@@ -244,11 +258,12 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialDay10Email,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 
   /** Users whose trial expires tomorrow. */
-  private fireTrialDay13() {
+  public fireTrialDay13(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_13',
@@ -257,11 +272,12 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialDay13Email,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 
   /** Users whose trial expired yesterday and have not converted to paid. */
-  private fireTrialExpired() {
+  public fireTrialExpired(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getPastDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_expired',
@@ -270,6 +286,7 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialExpiredEmail,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 }

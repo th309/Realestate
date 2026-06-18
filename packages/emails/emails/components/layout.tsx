@@ -96,6 +96,10 @@ export default function Layout({
                 &copy; {new Date().getFullYear()} PropertyIQ. All rights
                 reserved.
               </Text>
+              <Text className="text-xs text-gray-400 m-0 mt-1 leading-5">
+                Republic Registered Agent LLC &middot; 20 S Charles St, Ste 403
+                &middot; Baltimore, MD 21201
+              </Text>
             </Section>
           </Container>
         </Body>

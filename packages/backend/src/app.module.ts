@@ -8,6 +8,7 @@ import {
 import { ConfigModule } from '@nestjs/config';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { cronScheduleImports } from './config/cron-schedule.imports';
+import { devWalkthroughImports } from './admin/dev-walkthrough/dev-walkthrough.imports';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -83,6 +84,7 @@ import { UsageModule } from './usage/usage.module';
       envFilePath: ['.env.local', '.env'],
     }),
     ...cronScheduleImports(),
+    ...devWalkthroughImports(),
     ThrottlerModule.forRoot({
       throttlers: [
         { name: 'short', ttl: 1000, limit: 20 },

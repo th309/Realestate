@@ -139,11 +139,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://api.mapbox.com" />
-        <link
-          rel="preconnect"
-          href="https://backend-production-ee4d.up.railway.app"
-          crossOrigin="anonymous"
-        />
+        {/*
+          No backend preconnect: the browser never talks to the backend host
+          directly. All data requests are same-origin (`/backend/*`, proxied
+          server-side) so ad blockers don't reject them as third-party. See
+          lib/data/fetchers/api-url.ts and app/backend/[[...path]]/route.ts.
+        */}
       </head>
       <body
         className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-surface text-on-surface`}

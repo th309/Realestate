@@ -194,7 +194,12 @@ export const config = {
      * Match all request paths except static files and images.
      * This ensures the non-www → www redirect fires on every page,
      * while auth/admin checks only apply to their specific prefixes.
+     *
+     * `backend` is excluded: it is the same-origin proxy prefix forwarded to the
+     * backend by app/backend/[[...path]]/route.ts (see lib/data/fetchers/api-url.ts).
+     * Running the Supabase session refresh on every proxied data request would
+     * add a getUser() round-trip per call for no benefit.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
+    "/((?!backend/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
   ],
 };

@@ -18,6 +18,8 @@ import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { getEmailLinkBaseUrl } from './email-link-base';
+import { buildUnsubscribe } from './unsubscribe-link.util';
 
 interface DripDayConfig {
   day: number;
@@ -92,10 +94,18 @@ export class DripService {
     private readonly config: ConfigService,
     private readonly redis: RedisLockService,
   ) {
-    this.appUrl =
-      this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
+    this.appUrl = getEmailLinkBaseUrl(this.config);
     this.replyTo =
       this.config.get<string>('EMAIL_REPLY_TO') || 'hello@propertyiq.app';
+  }
+
+  /** Dev/test entry: run a single drip day deterministically (no cron lock). */
+  async runDripDay(day: number, onlyUserId?: string) {
+    const config = DRIP_DAY_CONFIGS.find((c) => c.day === day);
+    if (!config) {
+      throw new Error(`No drip config for day ${day}`);
+    }
+    return this.processDripDay(config, onlyUserId);
   }
 
   @Cron('0 9 * * *')
@@ -132,6 +142,7 @@ export class DripService {
 
   private async processDripDay(
     dayConfig: DripDayConfig,
+    onlyUserId?: string,
   ): Promise<{ sent: number; skipped: number; failed: number }> {
     let sent = 0;
     let skipped = 0;
@@ -139,11 +150,13 @@ export class DripService {
 
     const { startOfDay, endOfDay } = this.getDayBoundariesUTC(dayConfig.day);
 
-    const { data: eligibleUsers, error: queryError } = await this.supabase
+    let eligibleQuery = this.supabase
       .from('user_profiles')
       .select('id, email')
       .gte('created_at', startOfDay)
       .lt('created_at', endOfDay);
+    if (onlyUserId) eligibleQuery = eligibleQuery.eq('id', onlyUserId);
+    const { data: eligibleUsers, error: queryError } = await eligibleQuery;
 
     if (queryError) {
       this.logger.error(
@@ -182,24 +195,29 @@ export class DripService {
         continue;
       }
 
-      // Skip users with active reverse trial — they get behavioral emails instead
-      const { data: activeTrial } = await this.supabase
-        .from('user_trials')
-        .select('id')
-        .eq('user_id', user.id)
-        .is('converted_at', null)
-        .is('cancelled_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
-
-      if (activeTrial) {
-        skipped++;
-        continue;
+      // Reverse-trial users now receive the nurture drip (days 0/1/3/5/7).
+      // Suppress only the end-of-trial pushes (day 10 & 14) — the countdown
+      // emails (trial_day_10 / trial_day_13 / trial_expired) own that window.
+      if (dayConfig.day === 10 || dayConfig.day === 14) {
+        const { data: activeTrial } = await this.supabase
+          .from('user_trials')
+          .select('id')
+          .eq('user_id', user.id)
+          .is('converted_at', null)
+          .is('cancelled_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+        if (activeTrial) {
+          skipped++;
+          continue;
+        }
       }
 
       try {
         const displayName = user.email.split('@')[0];
-        const unsubscribeUrl = `${this.appUrl}/account/notifications`;
+        const unsub = buildUnsubscribe(this.config, user.id);
+        const unsubscribeUrl =
+          unsub?.url ?? `${this.appUrl}/account/notifications`;
         const react = React.createElement(dayConfig.template, {
           name: displayName,
           loginUrl: this.appUrl,
@@ -213,6 +231,7 @@ export class DripService {
           userId: user.id,
           emailType: dayConfig.emailType,
           replyTo: this.replyTo,
+          headers: unsub?.headers,
         });
 
         if (success) {
@@ -328,9 +347,12 @@ export class DripService {
 
         try {
           const displayName = user.email.split('@')[0];
+          const unsub = buildUnsubscribe(this.config, user.id);
           const react = React.createElement(WinbackDay14, {
             name: displayName,
             loginUrl: this.appUrl,
+            unsubscribeUrl:
+              unsub?.url ?? `${this.appUrl}/account/notifications`,
           });
 
           const success = await this.emailService.sendEmail({
@@ -339,6 +361,7 @@ export class DripService {
             react,
             userId: user.id,
             emailType: 'winback_day14',
+            headers: unsub?.headers,
           });
 
           if (success) sent++;
@@ -372,9 +395,7 @@ export class DripService {
         return;
       }
 
-      const frontendUrl =
-        this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
-      const surveyBaseUrl = `${frontendUrl}/survey`;
+      const surveyBaseUrl = `${getEmailLinkBaseUrl(this.config)}/survey`;
 
       this.logger.log('Starting NPS day-30 drip processing...');
 
@@ -420,10 +441,14 @@ export class DripService {
         try {
           const token = signNpsToken(user.id, 'nps_day30', jwtSecret);
           const displayName = user.email.split('@')[0];
+          const unsub = buildUnsubscribe(this.config, user.id);
           const react = React.createElement(NpsDay30, {
             name: displayName,
             surveyBaseUrl,
             token,
+            unsubscribeUrl:
+              unsub?.url ??
+              `${getEmailLinkBaseUrl(this.config)}/account/notifications`,
           });
 
           const success = await this.emailService.sendEmail({
@@ -432,6 +457,7 @@ export class DripService {
             react,
             userId: user.id,
             emailType: 'nps_day30',
+            headers: unsub?.headers,
           });
 
           if (success) sent++;

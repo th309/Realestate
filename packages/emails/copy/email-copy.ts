@@ -41,10 +41,10 @@ export const ONBOARDING_DAY3 = {
     "Here's how a typical PropertyIQ session goes for an investor looking for their next market:",
   step1Label: "Step 1:",
   step1Body:
-    " Open the map and filter by PropertyIQ Score > 70. This removes markets with weak fundamentals immediately.",
+    " Open the Screener and set the minimum PropertyIQ Score to 70. That instantly drops every market with weak fundamentals.",
   step2Label: "Step 2:",
   step2Body:
-    " Sort by rent-to-price ratio or score momentum to surface markets gaining ground fast.",
+    " Layer on the filters that matter to you — median price, cap rate, or months of supply — to narrow to markets that fit your strategy.",
   step3Label: "Step 3:",
   step3Body:
     " Drop 2–3 finalists into the comparison view. Side-by-side metrics, trends, and demographics. Pick the one.",
@@ -63,20 +63,21 @@ export const ONBOARDING_DAY5 = {
   greeting: (name: string) => `Hey ${name},`,
   body: "PropertyIQ scores update monthly. Here are the markets that saw the biggest score movement this month — markets gaining ground fast are worth watching before the rest of the market catches on.",
   moversHeading: "Top movers this month",
-  moversLeadIn: "Check the platform",
+  moversLeadIn: "Open the Screener",
   moversBody:
-    " for this month's live rankings — scores update each month and the top movers change.",
-  moversLink: "See current rankings →",
-  cta: "View Live Market Scores",
+    " to see this month's current rankings — scores update monthly, so the top markets shift over time.",
+  moversLink: "See the current rankings →",
+  cta: "See the Rankings",
 } as const;
 
 /** onboarding-day7-profile.tsx */
 export const ONBOARDING_DAY7 = {
-  heading: "Ready to Go Further?",
-  preview: "What Pro users see that free users miss",
+  heading: "You're halfway through your Pro trial",
+  preview:
+    "What your Pro trial unlocks — and what reverts to free when it ends",
   greeting: (name: string) => `Hey ${name},`,
   intro:
-    "You've had a week to explore PropertyIQ. Here's what free users can't see yet:",
+    "You're a week into your PropertyIQ Pro trial. Here's everything you have full access to right now — and what reverts to the free plan once the trial ends:",
   benefits: [
     {
       label: "Score breakdowns",
@@ -92,7 +93,9 @@ export const ONBOARDING_DAY7 = {
     },
     { label: "Unlimited markets", body: " — no 5-market cap" },
   ],
-  cta: "Unlock Pro Access",
+  trialNote:
+    "When your trial ends, your account stays active on the free plan, but these features lock. Upgrade any time to keep them — your saved markets and history stay exactly where they are.",
+  cta: "Keep Pro Access",
   profilePrompt:
     "Or, if you haven't set up your preferences yet, take 60 seconds to tell us your goals and we'll surface markets matched to you:",
   profileLink: "Complete your profile",

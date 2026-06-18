@@ -35,9 +35,13 @@ export class ListingPresentationNarrativeService {
       // Route through AiProviderService so this respects the configured default
       // provider (DeepSeek) via ai_model_config / env, with usage logging and
       // shadow A/B — instead of hardcoding Anthropic.
-      const response = await this.aiProvider.complete(
-        AI_PURPOSES.LISTING_PRESENTATION_NARRATIVE,
-        {
+      // The tour finale renders the moment this resolves, so a hung AI call
+      // would spin "Loading your market…" until the platform's request timeout
+      // (~60s) — never sending a response. Cap the call; on timeout the catch
+      // below falls through to the deterministic fallback so the finale ALWAYS
+      // resolves quickly.
+      const response = await this.withAiTimeout(
+        this.aiProvider.complete(AI_PURPOSES.LISTING_PRESENTATION_NARRATIVE, {
           systemPrompt: SYSTEM_PROMPT,
           userPrompt,
           // deepseek-v4-pro is verbose and the 3-paragraph strategy is long, so
@@ -47,7 +51,7 @@ export class ListingPresentationNarrativeService {
           // json_object (extractJsonObject already unwraps fenced/plain JSON);
           // give a generous 6000-token budget so the full payload completes.
           maxTokens: 6000,
-        },
+        }),
       );
       // The model may wrap the JSON in a markdown fence or lead with prose —
       // extractJsonObject locates and unwraps the JSON object before parsing.
@@ -72,6 +76,25 @@ export class ListingPresentationNarrativeService {
       );
       return this.fallback(input);
     }
+  }
+
+  private static readonly AI_TIMEOUT_MS = 40_000;
+
+  /** Race an AI call against a timeout so a hang surfaces as an error (→ fallback). */
+  private withAiTimeout<T>(p: Promise<T>): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `narrative AI timed out after ${ListingPresentationNarrativeService.AI_TIMEOUT_MS}ms`,
+            ),
+          ),
+        ListingPresentationNarrativeService.AI_TIMEOUT_MS,
+      );
+    });
+    return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
   }
 
   private fallback(input: NarrativeInput): NarrativeOutput {
