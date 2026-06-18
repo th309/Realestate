@@ -10,7 +10,7 @@ import {
   EligibleUser,
   getFutureDayBoundaries,
   getPastDayBoundaries,
-  extractUsersFromSubscriptions,
+  extractUsersFromTrials,
 } from './behavioral-trigger.utils';
 import {
   buildInactive24hEmail,
@@ -118,11 +118,12 @@ export class BehavioralTriggerService {
     } = opts;
 
     const { data: candidates, error } = await this.supabase
-      .from('user_subscriptions')
-      .select('user_id, trial_ends_at, user_profiles(id, email)')
-      .eq('status', 'trialing')
-      .gte('trial_ends_at', rangeStart)
-      .lt('trial_ends_at', rangeEnd);
+      .from('user_trials')
+      .select('user_id, expires_at, user_profiles(id, email)')
+      .is('converted_at', null)
+      .is('cancelled_at', null)
+      .gte('expires_at', rangeStart)
+      .lt('expires_at', rangeEnd);
 
     if (error) {
       this.logger.error(`${triggerName}: query failed: ${error.message}`);
@@ -130,7 +131,7 @@ export class BehavioralTriggerService {
     }
     if (!candidates?.length) return;
 
-    const users = extractUsersFromSubscriptions(candidates);
+    const users = extractUsersFromTrials(candidates);
     const optedOutIds = await this.getMarketingOptOutIds(
       users.map((u) => u.id),
     );
@@ -235,7 +236,7 @@ export class BehavioralTriggerService {
   // ─── Triggers: trial lifecycle ───────────────────────────────────────────────
 
   /** Users whose trial expires in exactly 4 days. */
-  private fireTrialDay10() {
+  public fireTrialDay10() {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(4);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_10',
@@ -248,7 +249,7 @@ export class BehavioralTriggerService {
   }
 
   /** Users whose trial expires tomorrow. */
-  private fireTrialDay13() {
+  public fireTrialDay13() {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_13',
@@ -261,7 +262,7 @@ export class BehavioralTriggerService {
   }
 
   /** Users whose trial expired yesterday and have not converted to paid. */
-  private fireTrialExpired() {
+  public fireTrialExpired() {
     const { rangeStart, rangeEnd } = getPastDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_expired',
