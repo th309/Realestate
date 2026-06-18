@@ -29,14 +29,15 @@ export interface UseScreenerMoversResult {
 
 export function useScreenerMovers(
   geoLevel: ScreenerGeoLevel,
-  window: MoverWindow,
+  moverWindow: MoverWindow,
   options: UseScreenerMoversOptions = {},
 ): UseScreenerMoversResult {
   const { state, limit = 25, enabled = true } = options;
 
   const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ["screener-movers", geoLevel, window, state ?? null, limit],
-    queryFn: () => fetchScreenerMovers(geoLevel, { window, state, limit }),
+    queryKey: ["screener-movers", geoLevel, moverWindow, state ?? null, limit],
+    queryFn: () =>
+      fetchScreenerMovers(geoLevel, { window: moverWindow, state, limit }),
     enabled,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,

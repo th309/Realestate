@@ -11,24 +11,24 @@ import {
 
 interface MoversTabProps {
   geo: ScreenerGeoLevel;
-  window: MoverWindow;
+  moverWindow: MoverWindow;
   stateFilter: string;
   enabled: boolean;
 }
 
-function moverDelta(row: ScreenerRow, window: MoverWindow): number | null {
-  const key = `score_chg_${window}` as keyof ScreenerRow;
+function moverDelta(row: ScreenerRow, moverWindow: MoverWindow): number | null {
+  const key = `score_chg_${moverWindow}` as keyof ScreenerRow;
   return row[key] as number | null;
 }
 
 function Leaderboard({
   title,
   rows,
-  window,
+  moverWindow,
 }: {
   title: string;
   rows: ScreenerRow[];
-  window: MoverWindow;
+  moverWindow: MoverWindow;
 }) {
   return (
     <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
@@ -42,7 +42,7 @@ function Leaderboard({
           </li>
         ) : (
           rows.map((row, i) => {
-            const d = moverDelta(row, window);
+            const d = moverDelta(row, moverWindow);
             return (
               <li
                 key={`${row.geo_level}-${row.region_id}`}
@@ -79,11 +79,11 @@ function Leaderboard({
 
 export function MoversTab({
   geo,
-  window,
+  moverWindow,
   stateFilter,
   enabled,
 }: MoversTabProps) {
-  const { data, isFetching } = useScreenerMovers(geo, window, {
+  const { data, isFetching } = useScreenerMovers(geo, moverWindow, {
     state: stateFilter || undefined,
     limit: 25,
     enabled,
@@ -99,14 +99,14 @@ export function MoversTab({
       }`}
     >
       <Leaderboard
-        title={`Top Gainers — ${WINDOW_META[window].label}`}
+        title={`Top Gainers — ${WINDOW_META[moverWindow].label}`}
         rows={gainers}
-        window={window}
+        moverWindow={moverWindow}
       />
       <Leaderboard
-        title={`Top Losers — ${WINDOW_META[window].label}`}
+        title={`Top Losers — ${WINDOW_META[moverWindow].label}`}
         rows={losers}
-        window={window}
+        moverWindow={moverWindow}
       />
     </div>
   );

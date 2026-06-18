@@ -114,12 +114,12 @@ export function buildScreenerUrl(
   sortOrder: "asc" | "desc",
   page: number,
   tab: ScreenerTab = "screener",
-  window: MoverWindow = DEFAULT_WINDOW,
+  moverWindow: MoverWindow = DEFAULT_WINDOW,
 ): string {
   const p = new URLSearchParams();
   p.set("geo", geo);
   if (tab !== "screener") p.set("tab", tab);
-  if (window !== DEFAULT_WINDOW) p.set("window", window);
+  if (moverWindow !== DEFAULT_WINDOW) p.set("window", moverWindow);
   if (stateFilter) p.set("state", stateFilter);
   if (preset) p.set("preset", preset);
   if (sortBy !== "score") p.set("sortBy", sortBy);

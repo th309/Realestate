@@ -34,7 +34,7 @@ import {
   type ScreenerTab,
 } from "./lib/screener-url-state";
 import { summarizeScreenerFilters } from "./lib/screener-filter-summary";
-import { WINDOW_TO_COLUMN } from "./lib/score-change";
+import { WINDOW_TO_COLUMN, WINDOW_META } from "./lib/score-change";
 
 // ---------------------------------------------------------------------------
 // URL ↔ state serialisation helpers
@@ -43,24 +43,6 @@ import { WINDOW_TO_COLUMN } from "./lib/score-change";
 const PAGE_SIZE = 50;
 
 // URL <-> state helpers live in ./lib/screener-url-state
-
-// ---------------------------------------------------------------------------
-// CSV column definitions
-// ---------------------------------------------------------------------------
-
-const CSV_COLUMNS = [
-  { key: "region_name", label: "Market" },
-  { key: "state_code", label: "State" },
-  { key: "score", label: "PIQ Score" },
-  { key: "grade", label: "Grade" },
-  { key: "median_price", label: "Median Price" },
-  { key: "rent", label: "Rent (ZORI)" },
-  { key: "cap_rate", label: "Cap Rate %" },
-  { key: "gross_yield", label: "Gross Yield %" },
-  { key: "months_of_supply", label: "Months of Supply" },
-  { key: "overvalued_pct", label: "Overvalued %" },
-  { key: "as_of", label: "As Of" },
-];
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -255,12 +237,27 @@ export function ScreenerPageInner() {
 
   const handleExport = useCallback(() => {
     if (!canExport || rows.length === 0) return;
+    const changeCol = WINDOW_TO_COLUMN[changeWindow];
+    const columns = [
+      { key: "region_name", label: "Market" },
+      { key: "state_code", label: "State" },
+      { key: "score", label: "PIQ Score" },
+      { key: "grade", label: "Grade" },
+      { key: changeCol, label: `Score Δ (${WINDOW_META[changeWindow].label})` },
+      { key: "median_price", label: "Median Price" },
+      { key: "rent", label: "Rent (ZORI)" },
+      { key: "cap_rate", label: "Cap Rate %" },
+      { key: "gross_yield", label: "Gross Yield %" },
+      { key: "months_of_supply", label: "Months of Supply" },
+      { key: "overvalued_pct", label: "Overvalued %" },
+      { key: "as_of", label: "As Of" },
+    ];
     downloadCsv(
       rows as unknown as Record<string, unknown>[],
-      CSV_COLUMNS,
+      columns,
       `screener-${geo}`,
     );
-  }, [canExport, rows, geo]);
+  }, [canExport, rows, geo, changeWindow]);
 
   // Default to "Hottest Markets" preset if nothing in URL on first load
   useEffect(() => {
@@ -355,7 +352,7 @@ export function ScreenerPageInner() {
       ) : tab === "movers" ? (
         <MoversTab
           geo={geo}
-          window={changeWindow}
+          moverWindow={changeWindow}
           stateFilter={stateFilter}
           enabled={!isZipLocked}
         />
