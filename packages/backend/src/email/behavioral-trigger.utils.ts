@@ -60,3 +60,26 @@ export function extractUsersFromSubscriptions(
   }
   return users;
 }
+
+export interface TrialRow {
+  user_id: string;
+  expires_at: string;
+  user_profiles:
+    | { id: string; email: string }
+    | { id: string; email: string }[]
+    | null;
+}
+
+export function extractUsersFromTrials(rows: TrialRow[]): EligibleUser[] {
+  const users: EligibleUser[] = [];
+  for (const row of rows) {
+    if (!row.user_profiles) continue;
+    const profile = Array.isArray(row.user_profiles)
+      ? row.user_profiles[0]
+      : row.user_profiles;
+    if (profile?.id && profile?.email) {
+      users.push({ id: profile.id, email: profile.email });
+    }
+  }
+  return users;
+}
