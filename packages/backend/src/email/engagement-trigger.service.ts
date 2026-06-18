@@ -111,7 +111,7 @@ export class EngagementTriggerService {
   // ─── Trigger: welcome ────────────────────────────────────────────────────────
 
   /** Users who signed up in the last hour and haven't received a welcome email. */
-  private async fireWelcome(): Promise<void> {
+  async fireWelcome(): Promise<void> {
     const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data, error } = await this.supabase
       .from('user_profiles')

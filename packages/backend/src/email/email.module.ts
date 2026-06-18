@@ -23,6 +23,11 @@ import { EngagementTriggerService } from './engagement-trigger.service';
     BehavioralTriggerService,
     EngagementTriggerService,
   ],
-  exports: [EmailService],
+  exports: [
+    EmailService,
+    DripService,
+    BehavioralTriggerService,
+    EngagementTriggerService,
+  ],
 })
 export class EmailModule {}
