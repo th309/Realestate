@@ -5,6 +5,7 @@ import {
   ScreenerQueryDto,
   SORTABLE_COLUMNS,
   SortableColumn,
+  WINDOW_TO_COLUMN,
 } from './screener.dto';
 
 export interface ScreenerRow {
@@ -24,6 +25,12 @@ export interface ScreenerRow {
   grm: number | null;
   months_of_supply: number | null;
   overvalued_pct: number | null;
+  score_chg_1m: number | null;
+  score_chg_3m: number | null;
+  score_chg_6m: number | null;
+  score_chg_1y: number | null;
+  score_chg_3y: number | null;
+  score_chg_5y: number | null;
   as_of: string | null;
   refreshed_at: string | null;
 }
@@ -118,6 +125,16 @@ export class ScreenerService {
       query = query.gte('median_price', opts.medianPriceMin);
     if (opts.medianPriceMax != null)
       query = query.lte('median_price', opts.medianPriceMax);
+
+    // Score-movers Δ filter — applies to the active window's precomputed column.
+    if (
+      opts.changeWindow &&
+      (opts.changeMin != null || opts.changeMax != null)
+    ) {
+      const col = WINDOW_TO_COLUMN[opts.changeWindow];
+      if (opts.changeMin != null) query = query.gte(col, opts.changeMin);
+      if (opts.changeMax != null) query = query.lte(col, opts.changeMax);
+    }
 
     // Sorting and pagination
     const {

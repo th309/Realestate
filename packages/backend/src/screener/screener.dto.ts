@@ -21,9 +21,27 @@ export const SORTABLE_COLUMNS = [
   'months_of_supply',
   'overvalued_pct',
   'region_name',
+  'score_chg_1m',
+  'score_chg_3m',
+  'score_chg_6m',
+  'score_chg_1y',
+  'score_chg_3y',
+  'score_chg_5y',
 ] as const;
 
 export type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
+
+export const MOVER_WINDOWS = ['1m', '3m', '6m', '1y', '3y', '5y'] as const;
+export type MoverWindow = (typeof MOVER_WINDOWS)[number];
+
+export const WINDOW_TO_COLUMN: Record<MoverWindow, SortableColumn> = {
+  '1m': 'score_chg_1m',
+  '3m': 'score_chg_3m',
+  '6m': 'score_chg_6m',
+  '1y': 'score_chg_1y',
+  '3y': 'score_chg_3y',
+  '5y': 'score_chg_5y',
+};
 
 export class ScreenerQueryDto {
   @IsOptional()
@@ -83,6 +101,20 @@ export class ScreenerQueryDto {
   @Type(() => Number)
   @IsNumber()
   medianPriceMax?: number;
+
+  @IsOptional()
+  @IsIn(MOVER_WINDOWS)
+  changeWindow?: MoverWindow;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  changeMin?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  changeMax?: number;
 
   @IsOptional()
   @IsIn(SORTABLE_COLUMNS)
