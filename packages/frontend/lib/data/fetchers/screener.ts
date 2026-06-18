@@ -9,6 +9,7 @@
 import { fetchAPIWithParams } from "./base";
 
 export type ScreenerGeoLevel = "metro" | "county" | "zip";
+export type MoverWindow = "1m" | "3m" | "6m" | "1y" | "3y" | "5y";
 
 export interface ScreenerQuery {
   state?: string;
@@ -31,8 +32,17 @@ export interface ScreenerQuery {
     | "grm"
     | "months_of_supply"
     | "overvalued_pct"
-    | "region_name";
+    | "region_name"
+    | "score_chg_1m"
+    | "score_chg_3m"
+    | "score_chg_6m"
+    | "score_chg_1y"
+    | "score_chg_3y"
+    | "score_chg_5y";
   sortOrder?: "asc" | "desc";
+  changeWindow?: MoverWindow;
+  changeMin?: number;
+  changeMax?: number;
   page?: number;
   pageSize?: number;
 }
@@ -54,6 +64,12 @@ export interface ScreenerRow {
   grm: number | null;
   months_of_supply: number | null;
   overvalued_pct: number | null;
+  score_chg_1m: number | null;
+  score_chg_3m: number | null;
+  score_chg_6m: number | null;
+  score_chg_1y: number | null;
+  score_chg_3y: number | null;
+  score_chg_5y: number | null;
   as_of: string | null;
   refreshed_at: string | null;
 }
@@ -85,12 +101,42 @@ export async function fetchScreener(
     medianPriceMax: query.medianPriceMax,
     sortBy: query.sortBy,
     sortOrder: query.sortOrder,
+    changeWindow: query.changeWindow,
+    changeMin: query.changeMin,
+    changeMax: query.changeMax,
     page: query.page,
     pageSize: query.pageSize,
   };
 
   return fetchAPIWithParams<ScreenerResult>(
     `/api/screener/${geoLevel}`,
+    params,
+  );
+}
+
+export interface ScreenerMoversResult {
+  window: MoverWindow;
+  gainers: ScreenerRow[];
+  losers: ScreenerRow[];
+}
+
+export interface ScreenerMoversQuery {
+  window: MoverWindow;
+  state?: string;
+  limit?: number;
+}
+
+export async function fetchScreenerMovers(
+  geoLevel: ScreenerGeoLevel,
+  query: ScreenerMoversQuery,
+): Promise<ScreenerMoversResult> {
+  const params: Record<string, string | number | undefined> = {
+    window: query.window,
+    state: query.state,
+    limit: query.limit,
+  };
+  return fetchAPIWithParams<ScreenerMoversResult>(
+    `/api/screener/${geoLevel}/movers`,
     params,
   );
 }

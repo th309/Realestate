@@ -152,6 +152,11 @@ export {
   type UseScreenerOptions,
   type UseScreenerResult,
 } from "./useScreener";
+export {
+  useScreenerMovers,
+  type UseScreenerMoversOptions,
+  type UseScreenerMoversResult,
+} from "./useScreenerMovers";
 
 // Admin AI model configuration (config cards + provider presets)
 export {
