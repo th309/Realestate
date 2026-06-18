@@ -106,7 +106,7 @@ async function waitForOtpViaBridge(timeoutMs: number): Promise<string> {
 }
 
 export async function waitForOtp(toAddress: string): Promise<string> {
-  if (bridgeDir) return waitForOtpViaBridge(300_000);
+  if (bridgeDir) return waitForOtpViaBridge(600_000);
 
   const body = await waitForEmail(
     toAddress,
