@@ -10,7 +10,6 @@ import {
   EligibleUser,
   getFutureDayBoundaries,
   getPastDayBoundaries,
-  extractUsersFromTrials,
 } from './behavioral-trigger.utils';
 import {
   buildInactive24hEmail,
@@ -121,21 +120,39 @@ export class BehavioralTriggerService {
 
     let query = this.supabase
       .from('user_trials')
-      .select('user_id, expires_at, user_profiles(id, email)')
+      .select('user_id, expires_at')
       .is('converted_at', null)
       .is('cancelled_at', null)
       .gte('expires_at', rangeStart)
       .lt('expires_at', rangeEnd);
     if (onlyUserId) query = query.eq('user_id', onlyUserId);
-    const { data: candidates, error } = await query;
+    const { data: trials, error } = await query;
 
     if (error) {
       this.logger.error(`${triggerName}: query failed: ${error.message}`);
       return;
     }
-    if (!candidates?.length) return;
+    if (!trials?.length) return;
 
-    const users = extractUsersFromTrials(candidates);
+    // user_trials has no FK to user_profiles (both reference auth.users), so a
+    // PostgREST embed cannot resolve — fetch emails in a second query.
+    const userIds = trials.map((t: { user_id: string }) => t.user_id);
+    const { data: profiles, error: profileError } = await this.supabase
+      .from('user_profiles')
+      .select('id, email')
+      .in('id', userIds);
+    if (profileError) {
+      this.logger.error(
+        `${triggerName}: profile lookup failed: ${profileError.message}`,
+      );
+      return;
+    }
+    const users: EligibleUser[] = (profiles ?? [])
+      .filter((p: { id: string; email: string | null }) => !!p.email)
+      .map((p: { id: string; email: string }) => ({
+        id: p.id,
+        email: p.email,
+      }));
     const optedOutIds = await this.getMarketingOptOutIds(
       users.map((u) => u.id),
     );
