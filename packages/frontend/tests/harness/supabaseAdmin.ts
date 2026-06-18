@@ -48,11 +48,18 @@ export async function emailWasLogged(
   userId: string,
   emailType: string,
 ): Promise<boolean> {
-  const { data } = await admin
-    .from("email_log")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("email_type", emailType)
-    .maybeSingle();
-  return !!data;
+  // email_log has no `id` column; select a real column. May have >1 row, so no
+  // .single(). Short retry covers any read-after-write lag.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data, error } = await admin
+      .from("email_log")
+      .select("email_type")
+      .eq("user_id", userId)
+      .eq("email_type", emailType)
+      .limit(1);
+    if (error) throw new Error(`email_log query failed: ${error.message}`);
+    if ((data?.length ?? 0) > 0) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
 }

@@ -65,32 +65,19 @@ export async function walkTour(page: Page) {
   // finale: authed users see the Pro confirmation. Best-effort — if the tour
   // stalls on a slow market/score load, proceed into the app rather than
   // hard-failing the whole walkthrough on a tangential onboarding step.
+  // finale: with the backend narrative timeout fix it now resolves (real
+  // content or deterministic fallback). Best-effort wait, then move into the app.
   try {
     await page
       .getByText(/You're set with Pro|14 days of full access/i)
       .waitFor({ timeout: 60_000 });
     console.log("[walkTour] reached finale");
   } catch {
-    console.log(
-      "[walkTour] finale not reached within 60s (tour stalled on market load); ending tour and continuing",
-    );
+    console.log("[walkTour] finale not reached within 60s; continuing");
   }
-  // End the tour session. It persists in localStorage('piq_tour') and
-  // sessionStorage('piq.activeTour') and the market/feature pages REHYDRATE
-  // the active tour from there even on clean URLs — so without this the
-  // coach-mark spotlight re-appears on every feature page and blocks clicks.
-  await page.evaluate(() => {
-    try {
-      localStorage.removeItem("piq_tour");
-    } catch {
-      /* ignore */
-    }
-    try {
-      sessionStorage.removeItem("piq.activeTour");
-    } catch {
-      /* ignore */
-    }
-  });
+  // Leave the tour by navigating into the app. No manual storage clearing:
+  // the production fix (useTourFromUrl) clears the saved tour on any route that
+  // isn't the tour's own market page, so the coach-mark won't follow us.
   await page.goto("/dashboard", { waitUntil: "load" });
   await dismissOverlays(page);
 }

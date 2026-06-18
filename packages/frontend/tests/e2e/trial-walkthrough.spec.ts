@@ -4,6 +4,7 @@ import {
   getUserIdByEmail,
   getActiveTrial,
   getUsageStats,
+  emailWasLogged,
 } from "../harness/supabaseAdmin";
 import { devHook } from "../harness/devHook";
 import { waitForEmail } from "../harness/gmailOtp";
@@ -68,20 +69,9 @@ const PLAN = [
 test("full 14-day trial walkthrough", async ({ page }) => {
   test.setTimeout(30 * 60 * 1000);
 
-  // Suppress the product-tour coach-mark on every page load. The market/feature
-  // pages render the spotlight only when useTourFromUrl() finds an active tour,
-  // which on a clean URL comes solely from sessionStorage['piq.activeTour'].
-  // Clearing it pre-load on every navigation keeps clean feature pages
-  // spotlight-free; the tour walk itself still works because URL ?tour= params
-  // take priority over storage. (Does not affect NextBestActionCard.)
-  await page.addInitScript(() => {
-    try {
-      sessionStorage.removeItem("piq.activeTour");
-      localStorage.removeItem("piq_tour");
-    } catch {
-      /* ignore */
-    }
-  });
+  // No tour suppression here: the production fix (useTourFromUrl only resumes a
+  // saved tour on the tour's own market page and clears it otherwise) means the
+  // coach-mark never haunts feature pages on its own.
 
   // ── Day 0: signup → OTP → tour → first feature ──
   await signupAndConfirm(page, EMAIL, PASSWORD);
@@ -99,10 +89,9 @@ test("full 14-day trial walkthrough", async ({ page }) => {
     await devHook.advance(userId, stage.day);
     await devHook.fire(stage.job, userId);
     await waitForEmail(EMAIL, stage.subject);
-    // Email delivery is verified authoritatively via Resend out-of-band (the
-    // email_log table isn't readable with the harness key). fire() completing
-    // means the user-scoped send ran for this day's email.
-    console.log(`   email fired for day ${stage.day}: ${stage.type}`);
+    // email_log is readable now (service_role grant fixed) — assert the
+    // user-scoped send was logged for this day's email.
+    expect(await emailWasLogged(userId, stage.type)).toBeTruthy();
 
     await login(page, EMAIL, PASSWORD);
     const stats = await getUsageStats(userId);
