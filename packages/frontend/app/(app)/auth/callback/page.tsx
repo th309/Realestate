@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
-import { startOnboardingTrial } from "@/lib/data";
+import { startOnboardingTrial, API_URL } from "@/lib/data";
 
 /**
  * Auth callback page — handles session establishment after email
@@ -134,17 +134,14 @@ function CallbackHandler() {
           const tourSessionId = getCookie("piq_tour_session");
           if (tourSessionId) {
             try {
-              const claimRes = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/anonymous/claim`,
-                {
-                  method: "POST",
-                  headers: {
-                    "content-type": "application/json",
-                    Authorization: `Bearer ${session.access_token}`,
-                  },
-                  body: JSON.stringify({ tourSessionId }),
+              const claimRes = await fetch(`${API_URL}/api/anonymous/claim`, {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
                 },
-              );
+                body: JSON.stringify({ tourSessionId }),
+              });
               if (claimRes.ok) {
                 const body = (await claimRes.json()) as {
                   claimed?: boolean;
@@ -277,7 +274,7 @@ async function handlePostSignup(
   // Referral attribution
   const refCode = getCookie("piq_ref");
   if (refCode) {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/referrals/apply-code`, {
+    fetch(`${API_URL}/api/referrals/apply-code`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

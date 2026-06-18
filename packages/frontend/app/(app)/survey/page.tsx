@@ -2,9 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Same-origin in the browser (→ `/backend`) so ad blockers don't block it.
+import { API_URL } from "@/lib/data";
 
 function SurveyContent() {
   const searchParams = useSearchParams();
@@ -22,7 +21,12 @@ function SurveyContent() {
 
   // Auto-submit if score came from the email link click (no comment needed)
   useEffect(() => {
-    if (preselectedScore !== null && token && score !== null && status === "idle") {
+    if (
+      preselectedScore !== null &&
+      token &&
+      score !== null &&
+      status === "idle"
+    ) {
       // Don't auto-submit — let user optionally add comment
     }
   }, [preselectedScore, token, score, status]);
@@ -130,7 +134,10 @@ function SurveyContent() {
               htmlFor="nps-comment"
               className="block text-sm font-medium text-on-surface mb-1"
             >
-              Any comments? <span className="text-on-surface-variant font-normal">(optional)</span>
+              Any comments?{" "}
+              <span className="text-on-surface-variant font-normal">
+                (optional)
+              </span>
             </label>
             <textarea
               id="nps-comment"

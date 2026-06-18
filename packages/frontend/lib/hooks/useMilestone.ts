@@ -3,8 +3,8 @@
 import { useCallback, useRef } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Same-origin in the browser (→ `/backend`) so ad blockers don't block it.
+import { API_URL } from "@/lib/data";
 
 type MilestoneKey =
   | "first_market_viewed"

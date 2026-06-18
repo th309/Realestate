@@ -2,7 +2,7 @@ import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush, setUserId } from "@/lib/analytics/tracker";
 import { readAttributionCookie } from "./helpers";
-import { startOnboardingTrial } from "@/lib/data";
+import { startOnboardingTrial, API_URL } from "@/lib/data";
 
 /**
  * Runs every post-signup side-effect once a session exists (autoconfirm OR
@@ -44,8 +44,7 @@ export async function completeSignup(
   // Fire-and-forget content-pipeline attribution forward
   const attributionCookie = readAttributionCookie();
   if (attributionCookie) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-    fetch(`${apiUrl}/api/auth-hooks/on-user-created`, {
+    fetch(`${API_URL}/api/auth-hooks/on-user-created`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

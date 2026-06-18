@@ -3,8 +3,8 @@
 import type { EntitlementsState, ResourceType } from "./types";
 import { getAnonymousSessionId } from "./session";
 import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// Same-origin in the browser (→ `/backend`) so ad blockers don't block it.
+import { API_URL } from "@/lib/data/fetchers/api-url";
 
 export async function fetchEntitlements(
   resources: string[],
