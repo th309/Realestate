@@ -24,8 +24,8 @@ export class DevWalkthroughController {
   }
 
   @Post('fire')
-  async fire(@Body() body: { job: string }) {
-    await this.svc.fireJob(body.job);
+  async fire(@Body() body: { job: string; userId: string }) {
+    await this.svc.fireJob(body.job, body.userId);
     return { success: true };
   }
 

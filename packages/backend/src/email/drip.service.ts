@@ -99,12 +99,12 @@ export class DripService {
   }
 
   /** Dev/test entry: run a single drip day deterministically (no cron lock). */
-  async runDripDay(day: number) {
+  async runDripDay(day: number, onlyUserId?: string) {
     const config = DRIP_DAY_CONFIGS.find((c) => c.day === day);
     if (!config) {
       throw new Error(`No drip config for day ${day}`);
     }
-    return this.processDripDay(config);
+    return this.processDripDay(config, onlyUserId);
   }
 
   @Cron('0 9 * * *')
@@ -141,6 +141,7 @@ export class DripService {
 
   private async processDripDay(
     dayConfig: DripDayConfig,
+    onlyUserId?: string,
   ): Promise<{ sent: number; skipped: number; failed: number }> {
     let sent = 0;
     let skipped = 0;
@@ -148,11 +149,13 @@ export class DripService {
 
     const { startOfDay, endOfDay } = this.getDayBoundariesUTC(dayConfig.day);
 
-    const { data: eligibleUsers, error: queryError } = await this.supabase
+    let eligibleQuery = this.supabase
       .from('user_profiles')
       .select('id, email')
       .gte('created_at', startOfDay)
       .lt('created_at', endOfDay);
+    if (onlyUserId) eligibleQuery = eligibleQuery.eq('id', onlyUserId);
+    const { data: eligibleUsers, error: queryError } = await eligibleQuery;
 
     if (queryError) {
       this.logger.error(

@@ -19,6 +19,6 @@ async function call(path: string, method: string, body?: unknown) {
 export const devHook = {
   advance: (userId: string, toDay: number) =>
     call("/advance", "POST", { userId, toDay }),
-  fire: (job: string) => call("/fire", "POST", { job }),
+  fire: (job: string, userId: string) => call("/fire", "POST", { job, userId }),
   teardown: (userId: string) => call(`/user/${userId}`, "DELETE"),
 };

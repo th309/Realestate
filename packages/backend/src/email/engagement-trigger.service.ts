@@ -111,12 +111,14 @@ export class EngagementTriggerService {
   // ─── Trigger: welcome ────────────────────────────────────────────────────────
 
   /** Users who signed up in the last hour and haven't received a welcome email. */
-  async fireWelcome(): Promise<void> {
+  async fireWelcome(onlyUserId?: string): Promise<void> {
     const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from('user_profiles')
       .select('id, email')
       .gte('created_at', cutoff);
+    if (onlyUserId) query = query.eq('id', onlyUserId);
+    const { data, error } = await query;
     if (error) {
       this.logger.error(`welcome: query failed: ${error.message}`);
       return;

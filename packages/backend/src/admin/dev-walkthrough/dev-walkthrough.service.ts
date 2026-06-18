@@ -67,16 +67,17 @@ export class DevWalkthroughService {
     };
   }
 
-  async fireJob(job: string): Promise<void> {
-    if (job === 'welcome') return void (await this.engagement.fireWelcome());
+  async fireJob(job: string, userId: string): Promise<void> {
+    if (job === 'welcome')
+      return void (await this.engagement.fireWelcome(userId));
     if (job.startsWith('drip'))
-      return void (await this.drip.runDripDay(Number(job.slice(4))));
+      return void (await this.drip.runDripDay(Number(job.slice(4)), userId));
     if (job === 'trial_day_10')
-      return void (await this.behavioral.fireTrialDay10());
+      return void (await this.behavioral.fireTrialDay10(userId));
     if (job === 'trial_day_13')
-      return void (await this.behavioral.fireTrialDay13());
+      return void (await this.behavioral.fireTrialDay13(userId));
     if (job === 'trial_expired')
-      return void (await this.behavioral.fireTrialExpired());
+      return void (await this.behavioral.fireTrialExpired(userId));
     throw new Error(`Unknown job: ${job}`);
   }
 

@@ -107,6 +107,7 @@ export class BehavioralTriggerService {
       unsubscribeUrl: string,
     ) => string;
     actionPath: string;
+    onlyUserId?: string;
   }): Promise<void> {
     const {
       triggerName,
@@ -115,15 +116,18 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml,
       actionPath,
+      onlyUserId,
     } = opts;
 
-    const { data: candidates, error } = await this.supabase
+    let query = this.supabase
       .from('user_trials')
       .select('user_id, expires_at, user_profiles(id, email)')
       .is('converted_at', null)
       .is('cancelled_at', null)
       .gte('expires_at', rangeStart)
       .lt('expires_at', rangeEnd);
+    if (onlyUserId) query = query.eq('user_id', onlyUserId);
+    const { data: candidates, error } = await query;
 
     if (error) {
       this.logger.error(`${triggerName}: query failed: ${error.message}`);
@@ -236,7 +240,7 @@ export class BehavioralTriggerService {
   // ─── Triggers: trial lifecycle ───────────────────────────────────────────────
 
   /** Users whose trial expires in exactly 4 days. */
-  public fireTrialDay10() {
+  public fireTrialDay10(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(4);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_10',
@@ -245,11 +249,12 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialDay10Email,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 
   /** Users whose trial expires tomorrow. */
-  public fireTrialDay13() {
+  public fireTrialDay13(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getFutureDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_day_13',
@@ -258,11 +263,12 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialDay13Email,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 
   /** Users whose trial expired yesterday and have not converted to paid. */
-  public fireTrialExpired() {
+  public fireTrialExpired(onlyUserId?: string) {
     const { rangeStart, rangeEnd } = getPastDayBoundaries(1);
     return this.sendToTrialingUsers({
       triggerName: 'trial_expired',
@@ -271,6 +277,7 @@ export class BehavioralTriggerService {
       rangeEnd,
       buildHtml: buildTrialExpiredEmail,
       actionPath: '/pricing',
+      onlyUserId,
     });
   }
 }

@@ -83,7 +83,7 @@ test("full 14-day trial walkthrough", async ({ page }) => {
   // ── Each email day: advance → fire → assert email → login → assert persistence+suggestion → feature → logout ──
   for (const stage of PLAN) {
     await devHook.advance(userId, stage.day);
-    await devHook.fire(stage.job);
+    await devHook.fire(stage.job, userId);
     await waitForEmail(EMAIL, stage.subject);
     expect(await emailWasLogged(userId, stage.type)).toBeTruthy();
 
@@ -102,7 +102,7 @@ test("full 14-day trial walkthrough", async ({ page }) => {
 
   // ── Day 15: expiry ──
   await devHook.advance(userId, 15);
-  await devHook.fire("trial_expired");
+  await devHook.fire("trial_expired", userId);
   await waitForEmail(EMAIL, /trial has ended/i);
   const expired = await getActiveTrial(userId);
   expect(new Date(expired!.expires_at).getTime()).toBeLessThan(Date.now());
