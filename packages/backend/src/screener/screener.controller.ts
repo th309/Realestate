@@ -14,7 +14,11 @@ import {
   ScreenerResult,
   ScreenerMoversResult,
 } from './screener.service';
-import { ScreenerQueryDto, ScreenerMoversQueryDto } from './screener.dto';
+import {
+  ScreenerQueryDto,
+  ScreenerMoversQueryDto,
+  MOVER_WINDOWS,
+} from './screener.dto';
 
 const VALID_GEO_LEVELS = ['metro', 'county', 'zip'] as const;
 type GeoLevel = (typeof VALID_GEO_LEVELS)[number];
@@ -35,7 +39,7 @@ export class ScreenerController {
     summary: 'Top score gainers and losers for a geography level',
   })
   @ApiParam({ name: 'geo', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'window', enum: ['1m', '3m', '6m', '1y', '3y', '5y'] })
+  @ApiQuery({ name: 'window', enum: [...MOVER_WINDOWS] })
   @ApiQuery({ name: 'state', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async queryMovers(

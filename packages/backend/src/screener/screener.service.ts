@@ -190,12 +190,18 @@ export class ScreenerService {
       return q;
     };
 
+    // Primary sort on the Δ column; tie-break by current score desc then name
+    // (spec §7) so equal-delta rows order deterministically across reloads.
     const [gainersRes, losersRes] = await Promise.all([
       baseQuery()
         .order(col, { ascending: false, nullsFirst: false })
+        .order('score', { ascending: false, nullsFirst: false })
+        .order('region_name', { ascending: true })
         .limit(limit),
       baseQuery()
         .order(col, { ascending: true, nullsFirst: false })
+        .order('score', { ascending: false, nullsFirst: false })
+        .order('region_name', { ascending: true })
         .limit(limit),
     ]);
 
