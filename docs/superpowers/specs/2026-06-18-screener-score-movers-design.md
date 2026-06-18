@@ -176,12 +176,11 @@ metrics (job 1) and fresh scores (job 2) exist, so every delta reflects the late
 ### 6.3 Integrated tab
 
 - New **Δ Score** column in `ScreenerTable.tsx` bound to the active window's `score_chg_*`
-  value: `▲ +N` (gains, green family) / `▼ −N` (losses, red family) / `—` neutral
-  (`text-on-surface-variant`). Sortable. **Color is magnitude-graded** — intensity scales
-  with |Δ| via tonal steps of the M3 green/red palettes (small move = lighter tone, large
-  move = deeper tone), driven by a shared `getScoreChangeTone(delta)` helper so the table,
-  CSV legend, and Movers tab stay consistent. Banding (illustrative, tune in implementation):
-  `|Δ| < 3` faint · `3–7` medium · `8–14` strong · `≥ 15` deepest.
+  value: `▲ +N` / `▼ −N` / `—` neutral. Sortable. **Color is a flat green/red threshold**
+  (no magnitude grading): `Δ > 0` → green (M3 accent, semantic `text-accent`/green token),
+  `Δ < 0` → red (M3 error, semantic `text-error`), `Δ == 0` or `NULL` → neutral
+  (`text-on-surface-variant`). Driven by a shared `getScoreChangeColor(delta)` helper so the
+  table, CSV legend, and Movers tab stay consistent.
 - Two new presets in `PresetChips.tsx`: **Biggest Gainers**
   (`sortBy: score_chg_<window>, sortOrder: desc`) and **Biggest Losers** (`… asc`).
 - Δ range filter (min/max) for the active window in `FilterRail.tsx`.
@@ -191,7 +190,7 @@ metrics (job 1) and fresh scores (job 2) exist, so every delta reflects the late
 
 - New `components/MoversTab.tsx`: Top Gainers + Top Losers leaderboards side-by-side for the
   active window + geo + state, **top 25 each side**, each row = rank · market · `▲/▼ ±N`
-  (magnitude-graded, same `getScoreChangeTone` helper) · current score. Uses
+  (flat green/red, same `getScoreChangeColor` helper) · current score. Uses
   `useScreenerMovers` (default `limit=25`).
 
 ### 6.5 File-size compliance
@@ -247,5 +246,5 @@ No new paywalls. Movers tab honors the same ZIP gate.
 
 - **Default window:** `3m` (90 days) on first load.
 - **Leaderboard length:** top **25** each side (Gainers / Losers).
-- **Δ color:** **magnitude-graded** — intensity scales with |Δ| via a shared
-  `getScoreChangeTone(delta)` helper (banding in §6.3).
+- **Δ color:** **flat green/red threshold** — `Δ > 0` green, `Δ < 0` red, `Δ == 0`/`NULL`
+  neutral, via a shared `getScoreChangeColor(delta)` helper (§6.3). No magnitude grading.
