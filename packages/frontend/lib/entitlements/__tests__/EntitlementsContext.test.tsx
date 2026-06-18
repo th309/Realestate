@@ -3,9 +3,12 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { EntitlementsProvider, useEntitlements } from "../EntitlementsContext";
 
-// Mock the API module
+// Mock the API module. The context refreshes via fetchEntitlementsWithRetry,
+// so the retry wrapper is the mock the provider actually calls. We still mock
+// fetchEntitlements (other call sites may reference it) for completeness.
 vi.mock("../api", () => ({
   fetchEntitlements: vi.fn(),
+  fetchEntitlementsWithRetry: vi.fn(),
   trackPaywallEvent: vi.fn(),
 }));
 
@@ -29,9 +32,11 @@ vi.mock("@/lib/data", () => ({
   getAllMetricIds: () => ["home_value", "rent_index", "cap_rate"],
 }));
 
-import { fetchEntitlements } from "../api";
+import { fetchEntitlementsWithRetry } from "../api";
 
-const mockedFetch = vi.mocked(fetchEntitlements);
+// The provider's refresh() drives entitlement loads through the retry wrapper,
+// so that is what the existing tests must stub.
+const mockedFetch = vi.mocked(fetchEntitlementsWithRetry);
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -290,6 +295,52 @@ describe("EntitlementsContext", () => {
 
       // Should not throw, should remain on free tier
       expect(result.current.tier).toBe("free");
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  describe("cold-load retry self-heal", () => {
+    it("settles on the recovered pro payload, not the free default", async () => {
+      // The retry wrapper absorbs the transient blips internally and resolves
+      // with the eventual success — the provider must adopt it.
+      mockedFetch.mockResolvedValueOnce({
+        tier: "pro",
+        access: { "metric:home_value": { level: "full" } },
+        trial: { active: true, daysRemaining: 7, tier: "pro" },
+        loading: false,
+        error: null,
+      });
+
+      const { result } = renderHook(() => useEntitlements(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.tier).toBe("pro");
+      expect(result.current.canAccess("metric", "home_value")).toBe(true);
+    });
+
+    it("preserves prior state after the retry wrapper exhausts and re-throws", async () => {
+      // First refresh succeeds (pro). A later refresh fails persistently — the
+      // wrapper re-throws, and the provider must keep the prior pro state
+      // rather than falling back to free.
+      mockedFetch.mockResolvedValueOnce({
+        tier: "pro",
+        access: { "metric:home_value": { level: "full" } },
+        trial: null,
+        loading: false,
+        error: null,
+      });
+
+      const { result } = renderHook(() => useEntitlements(), { wrapper });
+      await waitFor(() => expect(result.current.tier).toBe("pro"));
+
+      mockedFetch.mockRejectedValueOnce(new Error("Backend unreachable"));
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      // Prior pro state preserved; never reverts to the free default.
+      expect(result.current.tier).toBe("pro");
+      expect(result.current.canAccess("metric", "home_value")).toBe(true);
       expect(result.current.error).toBeNull();
     });
   });

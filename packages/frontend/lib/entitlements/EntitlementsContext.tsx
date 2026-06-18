@@ -17,7 +17,7 @@ import type {
   AccessInfo,
   FeatureUsage,
 } from "./types";
-import { fetchEntitlements, trackPaywallEvent } from "./api";
+import { fetchEntitlementsWithRetry, trackPaywallEvent } from "./api";
 import { useRealtimeTierSync } from "./useRealtimeTierSync";
 import { useAuth } from "@/lib/auth";
 import {
@@ -140,7 +140,8 @@ export function EntitlementsProvider({
     const seq = ++refreshSeqRef.current;
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchEntitlements(
+      // Retries transient cold-load failures; see fetchEntitlementsWithRetry.
+      const data = await fetchEntitlementsWithRetry(
         resources,
         currentTier,
         currentUserId,

@@ -65,6 +65,60 @@ export async function fetchEntitlements(
   };
 }
 
+// Backoff schedule (ms) between retries on transient cold-load failures.
+// 3 retries → ~3.9s total worst-case before the caller settles on prior state.
+const ENTITLEMENT_RETRY_DELAYS_MS = [400, 1000, 2500];
+
+/**
+ * An aborted request (HMR rebuild, navigation, unmount) is intentional, not a
+ * failure — `fetchEntitlements` surfaces it as "Request aborted". Those must
+ * NOT be retried; only genuine transient errors ("Backend unreachable" or a
+ * non-ok 5xx) self-heal via retry.
+ */
+export function isAbortedEntitlementsError(error: unknown): boolean {
+  return error instanceof Error && error.message === "Request aborted";
+}
+
+/**
+ * Wraps `fetchEntitlements` with bounded retry + backoff so a single transient
+ * blip right after cold load / login (proxy not yet warm, cookie not yet
+ * propagated, a flaky 5xx) does not strand an authenticated Pro/trial user on
+ * the `free` default for up to the 30-minute refresh interval.
+ *
+ * Fail-open is NOT performed here: on exhaustion the final error is re-thrown so
+ * the caller preserves its prior state. Aborts are never retried.
+ */
+export async function fetchEntitlementsWithRetry(
+  resources: string[],
+  tierOverride?: string | null,
+  userId?: string | null,
+): Promise<EntitlementsState> {
+  let lastError: unknown;
+  // 1 initial attempt + ENTITLEMENT_RETRY_DELAYS_MS.length retries.
+  for (
+    let attempt = 0;
+    attempt <= ENTITLEMENT_RETRY_DELAYS_MS.length;
+    attempt++
+  ) {
+    try {
+      return await fetchEntitlements(resources, tierOverride, userId);
+    } catch (error) {
+      lastError = error;
+      // Aborts are intentional (unmount / navigation / HMR) — do not retry.
+      if (isAbortedEntitlementsError(error)) {
+        throw error;
+      }
+      const delay = ENTITLEMENT_RETRY_DELAYS_MS[attempt];
+      // No delay slot left means we've exhausted retries; re-throw below.
+      if (delay === undefined) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+}
+
 export async function trackPaywallEvent(
   resourceType: ResourceType,
   resourceId: string,
