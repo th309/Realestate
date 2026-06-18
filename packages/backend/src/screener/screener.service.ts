@@ -3,9 +3,11 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import {
   ScreenerQueryDto,
+  ScreenerMoversQueryDto,
   SORTABLE_COLUMNS,
   SortableColumn,
   WINDOW_TO_COLUMN,
+  MoverWindow,
 } from './screener.dto';
 
 export interface ScreenerRow {
@@ -41,6 +43,12 @@ export interface ScreenerResult {
   page: number;
   pageSize: number;
   hasMore: boolean;
+}
+
+export interface ScreenerMoversResult {
+  window: string;
+  gainers: ScreenerRow[];
+  losers: ScreenerRow[];
 }
 
 const DEFAULT_SORT_BY: SortableColumn = 'score';
@@ -157,6 +165,55 @@ export class ScreenerService {
       page,
       pageSize,
       hasMore: (page + 1) * pageSize < total,
+    };
+  }
+
+  /**
+   * Top gainers + losers for a score window. Two ordered reads of the same
+   * snapshot on the precomputed Δ column, NULL deltas excluded from both lists.
+   */
+  async queryMovers(
+    geoLevel: 'metro' | 'county' | 'zip',
+    dto: ScreenerMoversQueryDto,
+  ): Promise<ScreenerMoversResult> {
+    const window: MoverWindow = dto.window;
+    const col = WINDOW_TO_COLUMN[window];
+    const limit = Math.min(dto.limit ?? 25, 100);
+
+    const baseQuery = () => {
+      let q = this.supabase
+        .from('screener_snapshot')
+        .select('*')
+        .eq('geo_level', geoLevel)
+        .not(col, 'is', null);
+      if (dto.state) q = q.eq('state_code', dto.state.toUpperCase());
+      return q;
+    };
+
+    const [gainersRes, losersRes] = await Promise.all([
+      baseQuery()
+        .order(col, { ascending: false, nullsFirst: false })
+        .limit(limit),
+      baseQuery()
+        .order(col, { ascending: true, nullsFirst: false })
+        .limit(limit),
+    ]);
+
+    if (gainersRes.error) {
+      throw new Error(
+        `screener movers (gainers) failed: ${gainersRes.error.message}`,
+      );
+    }
+    if (losersRes.error) {
+      throw new Error(
+        `screener movers (losers) failed: ${losersRes.error.message}`,
+      );
+    }
+
+    return {
+      window,
+      gainers: (gainersRes.data ?? []) as ScreenerRow[],
+      losers: (losersRes.data ?? []) as ScreenerRow[],
     };
   }
 }

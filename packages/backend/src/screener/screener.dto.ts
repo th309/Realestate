@@ -137,3 +137,23 @@ export class ScreenerQueryDto {
   @Max(100)
   pageSize?: number;
 }
+
+export class ScreenerMoversQueryDto {
+  @IsIn(MOVER_WINDOWS)
+  window!: MoverWindow;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  @Matches(/^[A-Z]{2}$/i, {
+    message: 'state must be a 2-letter code (e.g. TX)',
+  })
+  state?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}

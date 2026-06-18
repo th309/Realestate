@@ -9,8 +9,12 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { ScreenerService, ScreenerResult } from './screener.service';
-import { ScreenerQueryDto } from './screener.dto';
+import {
+  ScreenerService,
+  ScreenerResult,
+  ScreenerMoversResult,
+} from './screener.service';
+import { ScreenerQueryDto, ScreenerMoversQueryDto } from './screener.dto';
 
 const VALID_GEO_LEVELS = ['metro', 'county', 'zip'] as const;
 type GeoLevel = (typeof VALID_GEO_LEVELS)[number];
@@ -20,6 +24,33 @@ type GeoLevel = (typeof VALID_GEO_LEVELS)[number];
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ScreenerController {
   constructor(private readonly screenerService: ScreenerService) {}
+
+  /**
+   * GET /api/screener/:geo/movers
+   *
+   * Top gainers + losers by PropertyIQ Score change over `window`.
+   */
+  @Get(':geo/movers')
+  @ApiOperation({
+    summary: 'Top score gainers and losers for a geography level',
+  })
+  @ApiParam({ name: 'geo', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'window', enum: ['1m', '3m', '6m', '1y', '3y', '5y'] })
+  @ApiQuery({ name: 'state', required: false })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async queryMovers(
+    @Param('geo') geo: string,
+    @Query() dto: ScreenerMoversQueryDto,
+  ): Promise<ScreenerMoversResult> {
+    const lower = geo.toLowerCase();
+    if (!(VALID_GEO_LEVELS as readonly string[]).includes(lower)) {
+      throw new HttpException(
+        `Invalid geo: ${geo}. Valid values: ${VALID_GEO_LEVELS.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return this.screenerService.queryMovers(lower as GeoLevel, dto);
+  }
 
   /**
    * GET /api/screener/:geo
@@ -57,9 +88,22 @@ export class ScreenerController {
       'months_of_supply',
       'overvalued_pct',
       'region_name',
+      'score_chg_1m',
+      'score_chg_3m',
+      'score_chg_6m',
+      'score_chg_1y',
+      'score_chg_3y',
+      'score_chg_5y',
     ],
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({
+    name: 'changeWindow',
+    required: false,
+    enum: ['1m', '3m', '6m', '1y', '3y', '5y'],
+  })
+  @ApiQuery({ name: 'changeMin', required: false, type: Number })
+  @ApiQuery({ name: 'changeMax', required: false, type: Number })
   @ApiQuery({
     name: 'page',
     required: false,
