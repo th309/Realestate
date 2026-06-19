@@ -1,4 +1,6 @@
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
+import type { MarketStatsData } from "@/lib/data";
+import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -118,6 +120,8 @@ const CLOSING_TEMPLATES = [
 ];
 
 export interface CountySeoContent {
+  /** Real per-geo numbers in prose — the data-distinct lead paragraph. */
+  dataSummary: string | null;
   opening: string;
   regional: string;
   middle: string;
@@ -126,6 +130,7 @@ export interface CountySeoContent {
 
 export function generateCountySeoContent(
   county: CountySlugEntry,
+  stats: MarketStatsData | null = null,
 ): CountySeoContent {
   const hash = hashString(county.fips + county.slug);
   const region = STATE_REGIONS[county.state] || "United States";
@@ -136,6 +141,7 @@ export function generateCountySeoContent(
   const closingIdx = (hash >> 6) % CLOSING_TEMPLATES.length;
 
   return {
+    dataSummary: buildMarketDataSummary(county.shortName, stats),
     opening: OPENING_TEMPLATES[openingIdx](county.name, county.state),
     regional: regionContext,
     middle: MIDDLE_TEMPLATES[middleIdx](county.shortName),

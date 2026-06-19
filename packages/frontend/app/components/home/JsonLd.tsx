@@ -4,7 +4,7 @@
  * Implements Schema.org markup for:
  * - Organization (PropertyIQ company info)
  * - SoftwareApplication (the platform)
- * - WebSite (search action)
+ * - WebSite (name/url/publisher)
  * - Product offerings
  */
 
@@ -25,9 +25,11 @@ const organizationSchema = {
   description:
     "PropertyIQ provides AI-powered real estate market intelligence for homebuyers, renters, investors, and real estate professionals.",
   foundingDate: "2024",
+  // Only verified, owned profiles (M2). No X/Twitter account exists, so it is
+  // omitted rather than claimed — an unowned sameAs is an accuracy violation.
   sameAs: [
-    "https://twitter.com/propertyiq",
-    "https://linkedin.com/company/propertyiq",
+    "https://www.linkedin.com/company/property-iq",
+    "https://www.youtube.com/@PropertyIQ_app",
   ],
   contactPoint: {
     "@type": "ContactPoint",
@@ -93,7 +95,9 @@ const softwareSchema = {
   },
 };
 
-// WebSite schema with search action for sitelinks
+// WebSite schema. The SearchAction / sitelinks-searchbox rich result was
+// retired by Google (Nov 2024), so we keep a bare WebSite{name,url,publisher}
+// and drop the inert potentialAction (L2).
 const websiteSchema = {
   "@type": "WebSite",
   "@id": "https://www.propertyiq.app/#website",
@@ -101,14 +105,6 @@ const websiteSchema = {
   name: "PropertyIQ",
   description: "AI-powered real estate market intelligence platform",
   publisher: { "@id": "https://www.propertyiq.app/#organization" },
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: "https://www.propertyiq.app/map?q={search_term_string}",
-    },
-    "query-input": "required name=search_term_string",
-  },
 };
 
 // Main WebPage schema

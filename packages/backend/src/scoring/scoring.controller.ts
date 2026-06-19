@@ -635,6 +635,60 @@ export class ScoringController {
     }
   }
 
+  /**
+   * List all scored location IDs for a geography (latest period).
+   *
+   * GET /api/scores/ids/zip?score_type=propertyiq
+   *
+   * Lean ID-only payload that powers SEO sitemap filtering and per-page
+   * noindex: a ZIP/county/metro is only indexable when it has a score.
+   *
+   * NOTE: must be declared BEFORE @Get(':geography/:locationId') so "ids" is
+   * not swallowed as a geography path param.
+   */
+  @Get('ids/:geography')
+  @Header('Cache-Control', 'public, max-age=21600')
+  @ApiOperation({ summary: 'List all scored location IDs for a geography' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    description: 'propertyiq (default)',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
+  async getScoredIds(
+    @Param('geography') geography: string,
+    @Query('score_type') scoreType?: string,
+    @Query('date') date?: string,
+  ): Promise<{
+    geography: string;
+    score_type: string;
+    date: string | null;
+    count: number;
+    ids: string[];
+  }> {
+    const geoLevel = this.validateGeography(geography);
+    const validScoreType = this.validateScoreType(scoreType || 'propertyiq');
+    const { date: scoredDate, ids } =
+      await this.scoringService.getScoredLocationIds(
+        geoLevel,
+        validScoreType,
+        date,
+      );
+    return {
+      geography: geoLevel,
+      score_type: validScoreType,
+      // Real per-geo refresh date — powers honest sitemap <lastmod> (H4).
+      date: scoredDate,
+      count: ids.length,
+      ids,
+    };
+  }
+
   private parseScoreTypes(scoreType: string): ScoreType[] {
     if (!scoreType) {
       throw new HttpException(

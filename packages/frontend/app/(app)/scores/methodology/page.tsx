@@ -86,11 +86,15 @@ const KEY_FINDINGS = [
 ];
 
 function resolveReportPath() {
+  // NOTE: the "(app)" route-group segment IS part of the on-disk path (it is
+  // only hidden from the URL). Omitting it (pre-route-group-split paths) made
+  // both candidates miss → fs.readFileSync ENOENT → 500 on this page.
   const candidates = [
     // Co-located file (works in Docker/Vercel where docs/ isn't available)
     path.join(
       process.cwd(),
       "app",
+      "(app)",
       "scores",
       "methodology",
       "validation-report.md",
@@ -101,6 +105,7 @@ function resolveReportPath() {
       "packages",
       "frontend",
       "app",
+      "(app)",
       "scores",
       "methodology",
       "validation-report.md",

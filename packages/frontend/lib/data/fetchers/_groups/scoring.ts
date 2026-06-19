@@ -10,6 +10,8 @@ export {
   fetchBatchScores,
   fetchScoreExpanded,
   fetchTopMarkets,
+  fetchScoredLocationData,
+  fetchScoredLocationIds,
   type TopMarketsGeo,
   type TopMarketsScoreType,
   type TopMarketEntry,

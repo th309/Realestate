@@ -1,4 +1,6 @@
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
+import type { MarketStatsData } from "@/lib/data";
+import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -120,13 +122,18 @@ const CLOSING_TEMPLATES = [
 ];
 
 export interface ZipSeoContent {
+  /** Real per-geo numbers in prose — the data-distinct lead paragraph. */
+  dataSummary: string | null;
   opening: string;
   regional: string;
   middle: string;
   closing: string;
 }
 
-export function generateZipSeoContent(zip: ZipSlugEntry): ZipSeoContent {
+export function generateZipSeoContent(
+  zip: ZipSlugEntry,
+  stats: MarketStatsData | null = null,
+): ZipSeoContent {
   const hash = hashString(zip.zip + zip.slug);
   const region = STATE_REGIONS[zip.state] || "United States";
   const regionContext = REGIONAL_CONTEXT[region] || REGIONAL_CONTEXT["Midwest"];
@@ -136,6 +143,7 @@ export function generateZipSeoContent(zip: ZipSlugEntry): ZipSeoContent {
   const closingIdx = (hash >> 6) % CLOSING_TEMPLATES.length;
 
   return {
+    dataSummary: buildMarketDataSummary(`ZIP code ${zip.zip}`, stats),
     opening: OPENING_TEMPLATES[openingIdx](zip.shortName, zip.zip, zip.state),
     regional: regionContext,
     middle: MIDDLE_TEMPLATES[middleIdx](zip.shortName),

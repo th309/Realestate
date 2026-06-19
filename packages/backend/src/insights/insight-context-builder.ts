@@ -106,14 +106,24 @@ function extractScoreComponents(
 ): InsightContext['score_components'] {
   const components: InsightContext['score_components'] = {};
 
-  for (const scoreType of ['propertyiq'] as const) {
-    const singleScore = scoreResult?.scores?.[scoreType];
-    if (Array.isArray(singleScore?.components)) {
-      for (const comp of singleScore.components) {
-        components[comp.component] = {
-          status: comp.status,
-          value: comp.score,
-        };
+  // Legacy multi-component scores (pre-v4 history) expose a components array.
+  const legacy = scoreResult?.scores?.propertyiq?.components;
+  if (Array.isArray(legacy) && legacy.length > 0) {
+    for (const comp of legacy) {
+      if (comp?.component) {
+        components[comp.component] = { status: comp.status, value: comp.score };
+      }
+    }
+    return components;
+  }
+
+  // PropertyIQ v4: the four formula inputs (zhvi_yoy, zhvi_mom_3m,
+  // median_days_on_market, price_reduced_share) live on z_scores as raw values.
+  const z = scoreResult?.z_scores;
+  if (z && typeof z === 'object') {
+    for (const [key, raw] of Object.entries(z)) {
+      if (typeof raw === 'number') {
+        components[key] = { status: '', value: raw };
       }
     }
   }

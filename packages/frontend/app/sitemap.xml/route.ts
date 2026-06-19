@@ -1,13 +1,11 @@
-import {
-  buildIndexEntries,
-  renderSitemapIndex,
-} from "@/lib/seo/sitemap-builder";
+import { buildIndexEntries } from "@/lib/seo/sitemap-builder";
+import { renderSitemapIndex } from "@/lib/seo/sitemap-xml";
 
 // Cache for 1 hour at the edge; revalidate on next request after that.
 export const revalidate = 3600;
 
-export function GET() {
-  const xml = renderSitemapIndex(buildIndexEntries());
+export async function GET() {
+  const xml = renderSitemapIndex(await buildIndexEntries());
   return new Response(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",

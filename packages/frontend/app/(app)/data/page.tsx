@@ -166,106 +166,82 @@ export default function DataPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
+          // WebPage + BreadcrumbList are emitted once by <WebPageJsonLd> above;
+          // this inline block carries only the unique DataCatalog (L3 de-dup).
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@graph": [
+            "@type": "DataCatalog",
+            name: "PropertyIQ Real Estate Data",
+            description:
+              "90+ real estate and economic metrics from 7 trusted data sources, updated monthly.",
+            dataset: [
               {
-                "@type": "WebPage",
-                name: "PropertyIQ Data Sources",
-                url: "https://www.propertyiq.app/data",
-              },
-              {
-                "@type": "DataCatalog",
-                name: "PropertyIQ Real Estate Data",
+                "@type": "Dataset",
+                name: "Zillow Housing Data",
                 description:
-                  "90+ real estate and economic metrics from 7 trusted data sources, updated monthly.",
-                dataset: [
-                  {
-                    "@type": "Dataset",
-                    name: "Zillow Housing Data",
-                    description:
-                      "Home values (ZHVI), rent indices (ZORI), inventory, and market heat metrics",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Zillow",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "Realtor.com Market Data",
-                    description:
-                      "Active listings, median list prices, days on market, and price reductions",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Realtor.com",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "Redfin Market Data",
-                    description:
-                      "Sale prices, price drops, new listings, and market competition metrics",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Redfin",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "U.S. Census Bureau Data",
-                    description:
-                      "Population, income, housing units, and demographic indicators from ACS",
-                    creator: {
-                      "@type": "Organization",
-                      name: "U.S. Census Bureau",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "Federal Reserve Economic Data",
-                    description:
-                      "Mortgage rates, GDP, and macroeconomic indicators from FRED",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Federal Reserve Bank of St. Louis",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "Bureau of Labor Statistics Data",
-                    description: "Unemployment rates and employment statistics",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Bureau of Labor Statistics",
-                    },
-                  },
-                  {
-                    "@type": "Dataset",
-                    name: "Bureau of Economic Analysis Data",
-                    description: "Regional GDP and personal income data",
-                    creator: {
-                      "@type": "Organization",
-                      name: "Bureau of Economic Analysis",
-                    },
-                  },
-                ],
+                  "Home values (ZHVI), rent indices (ZORI), inventory, and market heat metrics",
+                creator: {
+                  "@type": "Organization",
+                  name: "Zillow",
+                },
               },
               {
-                "@type": "BreadcrumbList",
-                itemListElement: [
-                  {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: "https://www.propertyiq.app",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Data Sources",
-                    item: "https://www.propertyiq.app/data",
-                  },
-                ],
+                "@type": "Dataset",
+                name: "Realtor.com Market Data",
+                description:
+                  "Active listings, median list prices, days on market, and price reductions",
+                creator: {
+                  "@type": "Organization",
+                  name: "Realtor.com",
+                },
+              },
+              {
+                "@type": "Dataset",
+                name: "Redfin Market Data",
+                description:
+                  "Sale prices, price drops, new listings, and market competition metrics",
+                creator: {
+                  "@type": "Organization",
+                  name: "Redfin",
+                },
+              },
+              {
+                "@type": "Dataset",
+                name: "U.S. Census Bureau Data",
+                description:
+                  "Population, income, housing units, and demographic indicators from ACS",
+                creator: {
+                  "@type": "Organization",
+                  name: "U.S. Census Bureau",
+                },
+              },
+              {
+                "@type": "Dataset",
+                name: "Federal Reserve Economic Data",
+                description:
+                  "Mortgage rates, GDP, and macroeconomic indicators from FRED",
+                creator: {
+                  "@type": "Organization",
+                  name: "Federal Reserve Bank of St. Louis",
+                },
+              },
+              {
+                "@type": "Dataset",
+                name: "Bureau of Labor Statistics Data",
+                description: "Unemployment rates and employment statistics",
+                creator: {
+                  "@type": "Organization",
+                  name: "Bureau of Labor Statistics",
+                },
+              },
+              {
+                "@type": "Dataset",
+                name: "Bureau of Economic Analysis Data",
+                description: "Regional GDP and personal income data",
+                creator: {
+                  "@type": "Organization",
+                  name: "Bureau of Economic Analysis",
+                },
               },
             ],
           }),

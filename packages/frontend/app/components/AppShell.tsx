@@ -2,6 +2,8 @@ import { Header } from "@/src/components/layout/Header";
 import { Providers } from "@/app/providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
 import { GoogleAnalytics } from "@/app/components/analytics/GoogleAnalytics";
+import { WebVitals } from "@/app/components/analytics/WebVitals";
+import { OrganizationJsonLd } from "@/app/components/seo/OrganizationJsonLd";
 import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "@/app/components/AppFooter";
 import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
@@ -37,6 +39,9 @@ export async function AppShell({
   return (
     <>
       <GoogleAnalytics />
+      <WebVitals />
+      {/* Sitewide publisher entity (E-E-A-T) — present on every page, not just home. */}
+      <OrganizationJsonLd />
       <Providers
         initialUserId={initialUserId}
         initialEntitlementState={initialEntitlementState}

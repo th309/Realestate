@@ -145,6 +145,34 @@ export function assembleMarketStats(
   };
 }
 
+/**
+ * Max age (days) before SEO market data is treated as absent (C2).
+ *
+ * A stale row must never render as "current" on a YMYL page — e.g. ZIP 35201,
+ * dropped from current scoring, otherwise serves a 2024 score labeled "Data
+ * through Jan 2026". The monthly pipeline lands data ~30-45 days behind real
+ * time, so 120 days tolerates a late/missed refresh while still suppressing
+ * genuinely stale (multi-month-to-year-old) rows. Pairs with C1: a geo with no
+ * current score is already `noindex`'d; this also stops its stale score from
+ * rendering to a direct visitor.
+ */
+const STALE_AFTER_DAYS = 120;
+
+/**
+ * True when the freshest dated signal is older than the staleness ceiling.
+ * `now` is injectable for testing. A null/unparseable date is NOT treated as
+ * stale (we only suppress on positive evidence of age).
+ */
+export function isMarketDataStale(
+  latestDate: string | null,
+  now: number = Date.now(),
+): boolean {
+  if (!latestDate) return false;
+  const d = new Date(latestDate);
+  if (Number.isNaN(d.getTime())) return false;
+  return (now - d.getTime()) / 86_400_000 > STALE_AFTER_DAYS;
+}
+
 /** Cache tag used across all SEO market-page fetches. */
 export const SEO_MARKET_CACHE_TAG = "piq-market-data";
 
@@ -174,7 +202,10 @@ export async function fetchSeoMarketStats(
       ).catch(() => null),
     ]);
     if (!snapshot?.success) return null;
-    return assembleMarketStats(snapshot, timeseries);
+    const result = assembleMarketStats(snapshot, timeseries);
+    // C2: a stale row must never render as current on a YMYL page.
+    if (isMarketDataStale(result.latestDate)) return null;
+    return result;
   } catch {
     return null;
   }

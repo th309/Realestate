@@ -15,27 +15,112 @@ const DATA_GROUNDING_RULE =
 const PLAIN_PROSE_RULE =
   'Write plain prose only: no markdown or formatting (no bold, italics, headers, bullets, or backticks), no em-dashes (use a comma, period, or "and"), and no code-style identifiers (write field names in plain English). Keep all numbers exact.';
 
+// ---------------------------------------------------------------------------
+// Display helpers — keep raw keys and units out of the prompt so the model gets
+// clean, plain-English, well-formatted numbers.
+// ---------------------------------------------------------------------------
+
+/** Plain-English labels for raw metric keys. */
+const METRIC_LABELS: Record<string, string> = {
+  home_value: 'median home value',
+  rent_index: 'rent index',
+  unemployment_rate: 'unemployment rate',
+  median_income: 'median household income',
+  days_on_market: 'days on market',
+  for_sale_inventory: 'homes for sale',
+  home_value_yoy: 'home value year over year',
+  population_growth: 'population growth',
+};
+
+function labelFor(name: string): string {
+  return METRIC_LABELS[name] ?? name.replace(/_/g, ' ');
+}
+
+/** Format a metric value: currency gets $ and commas; large counts get commas. */
+function formatMetricValue(name: string, value: number | null): string {
+  if (value == null) return 'N/A';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  const lower = name.toLowerCase();
+  if (
+    lower.includes('value') ||
+    lower.includes('income') ||
+    lower.includes('price') ||
+    lower.includes('rent')
+  ) {
+    return `$${Math.round(n).toLocaleString('en-US')}`;
+  }
+  if (Math.abs(n) >= 1000) return Math.round(n).toLocaleString('en-US');
+  return String(Math.round(n * 100) / 100);
+}
+
 /**
- * Format score components sorted by value descending, returning
- * the top N entries as a human-readable string.
+ * The four PropertyIQ formula inputs live on the score's z_scores as raw values
+ * (momentum/share are fractions, DOM is a count). Render each with a plain label
+ * and correct units.
+ */
+const COMPONENT_ORDER = [
+  'zhvi_yoy',
+  'zhvi_mom_3m',
+  'median_days_on_market',
+  'price_reduced_share',
+] as const;
+const COMPONENT_META: Record<
+  string,
+  { label: string; fmt: (v: number) => string }
+> = {
+  zhvi_yoy: {
+    label: 'home value momentum (12 month)',
+    fmt: (v) => `${(v * 100).toFixed(2)}%`,
+  },
+  zhvi_mom_3m: {
+    label: 'home value momentum (3 month)',
+    fmt: (v) => `${(v * 100).toFixed(2)}%`,
+  },
+  median_days_on_market: {
+    label: 'median days on market',
+    fmt: (v) => `${Math.round(v)} days`,
+  },
+  price_reduced_share: {
+    label: 'share of listings with a price cut',
+    fmt: (v) => `${(v * 100).toFixed(1)}%`,
+  },
+};
+
+/**
+ * Format the top N score drivers as "label (formatted value)". Known PropertyIQ
+ * inputs come first in a fixed order; any legacy/unknown components fall through.
  */
 function formatTopComponents(
   components: InsightContext['score_components'],
   limit: number,
 ): string {
-  return Object.entries(components)
-    .sort(([, a], [, b]) => b.value - a.value)
-    .slice(0, limit)
-    .map(([name, { status, value }]) => `${name}: ${status} (${value})`)
-    .join(', ');
+  const out: string[] = [];
+  for (const key of COMPONENT_ORDER) {
+    const comp = components[key];
+    if (!comp || typeof comp.value !== 'number') continue;
+    out.push(
+      `${COMPONENT_META[key].label} (${COMPONENT_META[key].fmt(comp.value)})`,
+    );
+    if (out.length >= limit) return out.join(', ');
+  }
+  for (const [name, comp] of Object.entries(components)) {
+    if (COMPONENT_META[name]) continue;
+    out.push(`${labelFor(name)} (${comp.value})`);
+    if (out.length >= limit) break;
+  }
+  return out.join(', ');
 }
 
 /**
- * Format key metrics as a compact single-line list.
+ * Format key metrics as a compact single-line list with plain labels + values.
  */
 function formatKeyMetrics(metrics: InsightContext['key_metrics']): string {
   return Object.entries(metrics)
-    .map(([name, { value }]) => `${name}: ${value ?? 'N/A'}`)
+    .map(
+      ([name, { value }]) =>
+        `${labelFor(name)}: ${formatMetricValue(name, value)}`,
+    )
     .join(', ');
 }
 
@@ -44,19 +129,19 @@ function formatKeyMetrics(metrics: InsightContext['key_metrics']): string {
  */
 function formatBenchmarks(benchmarks: InsightContext['benchmarks']): string {
   const parts: string[] = [];
+  const render = (entries: [string, number][]) =>
+    entries
+      .map(([k, v]) => `${labelFor(k)} ${formatMetricValue(k, v)}`)
+      .join(', ');
 
   const stateEntries = Object.entries(benchmarks.state_avg);
   if (stateEntries.length > 0) {
-    parts.push(
-      `State averages: ${stateEntries.map(([k, v]) => `${k}: ${v}`).join(', ')}`,
-    );
+    parts.push(`State averages: ${render(stateEntries)}`);
   }
 
   const nationalEntries = Object.entries(benchmarks.national_avg);
   if (nationalEntries.length > 0) {
-    parts.push(
-      `National averages: ${nationalEntries.map(([k, v]) => `${k}: ${v}`).join(', ')}`,
-    );
+    parts.push(`National averages: ${render(nationalEntries)}`);
   }
 
   return parts.length > 0 ? parts.join('\n') : 'Benchmark data not available.';

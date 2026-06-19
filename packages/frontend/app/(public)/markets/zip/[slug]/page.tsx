@@ -5,6 +5,11 @@ import { ZIP_SLUG_DATA, SLUG_TO_ZIP } from "@/lib/data/zip-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { FIPS_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import { isLocationIndexable } from "@/lib/seo/scored-locations";
+import {
+  buildMarketTitle,
+  buildMarketDescription,
+} from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { ZipPageContent } from "./ZipPageContent";
@@ -28,15 +33,28 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/zip/${zip.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(zip.shortName)}`;
 
+  // Scoreless ZIPs render a bare "—" and read as thin content — keep them out
+  // of the index (still crawlable via follow so internal links pass equity).
+  // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
+  // data-interpolated title + description so each page is data-distinct.
+  const name = `${zip.zip} ${cityState}`;
+  const [indexable, stats] = await Promise.all([
+    isLocationIndexable("zip", zip.zip),
+    fetchSeoMarketStats("zip", zip.zip, zip.state),
+  ]);
+  const title = buildMarketTitle(name, stats);
+  const description = buildMarketDescription(name, stats);
+
   return {
-    title: `${zip.zip} ${cityState} Housing Market — 2026 Analysis`,
-    description: `${zip.shortName} housing market data — home prices, PropertyIQ demand score, investment analysis, and rental trends at the ZIP code level. Updated 2026.`,
+    title,
+    description,
     alternates: { canonical: pageUrl },
+    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,
-      title: `${zip.zip} ${cityState} Housing Market — 2026 Analysis | PropertyIQ`,
-      description: `${zip.shortName} housing market data — home prices, demand scores, investment analysis. Updated 2026.`,
+      title: `${title} | PropertyIQ`,
+      description,
       siteName: "PropertyIQ",
       images: [
         {
@@ -49,8 +67,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${zip.zip} ${cityState} Housing Market — 2026 Analysis`,
-      description: `${zip.shortName} housing market data — demand scores, home prices, investment analysis. Updated 2026.`,
+      title,
+      description,
       images: [ogImageUrl],
     },
   };
@@ -117,9 +135,8 @@ export default async function ZipPage({
     ],
   };
 
-  const seoContent = generateZipSeoContent(zip);
-
   const stats = await fetchSeoMarketStats("zip", zip.zip, zip.state);
+  const seoContent = generateZipSeoContent(zip, stats);
 
   return (
     <>
@@ -159,6 +176,11 @@ export default async function ZipPage({
         </h2>
 
         <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
+          {seoContent.dataSummary && (
+            <p className="text-on-surface font-medium">
+              {seoContent.dataSummary}
+            </p>
+          )}
           <p>{seoContent.opening}</p>
           <p>{seoContent.regional}</p>
           <p>{seoContent.middle}</p>

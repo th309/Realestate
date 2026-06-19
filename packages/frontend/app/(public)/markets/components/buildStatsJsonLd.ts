@@ -31,6 +31,17 @@ export function buildStatsJsonLd(
     description: `Median price, rent, days on market, year-over-year change, and the PropertyIQ Score inputs for ${geoName}.`,
     url,
     ...(data.latestDate ? { dateModified: data.latestDate } : {}),
+    // L4: strengthen Google Dataset Search eligibility for a market-data site.
+    spatialCoverage: { "@type": "Place", name: geoName },
+    ...(data.latestDate ? { temporalCoverage: data.latestDate } : {}),
+    isAccessibleForFree: true,
+    keywords: [
+      "real estate",
+      "housing market",
+      "home prices",
+      "PropertyIQ Score",
+      geoName,
+    ],
     creator: { "@type": "Organization", name: "PropertyIQ" },
     license: `${origin}/terms`,
     variableMeasured: vars,
