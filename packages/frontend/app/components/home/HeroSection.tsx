@@ -41,21 +41,17 @@ export function HeroSection() {
           <span className="text-[#00C853]">Scored.</span>
         </h1>
 
-        {/* Subhead — CMO copy */}
-        <p
-          className="text-lg md:text-xl text-[#C5CAE9] mb-8 max-w-2xl mx-auto leading-relaxed"
-          style={fadeUp(inView, "0.1s")}
-        >
+        {/* Subhead — rendered full-opacity in SSR: Lighthouse identifies this
+            paragraph as the homepage LCP element, so opacity:0-until-hydration
+            was pinning LCP to ~3.5s. Static paint fixes it (completes H6). */}
+        <p className="text-lg md:text-xl text-[#C5CAE9] mb-8 max-w-2xl mx-auto leading-relaxed">
           PropertyIQ gives every metro, county, and ZIP code a 0–100 score —
           updated monthly. Know which markets are heating up, cooling off, or
           flying under the radar before you commit capital.
         </p>
 
-        {/* Trust signals — above the fold */}
-        <div
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-10"
-          style={fadeUp(inView, "0.15s")}
-        >
+        {/* Trust signals — above the fold; full-opacity in SSR (no LCP gating). */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-10">
           {TRUST_SIGNALS.map((signal) => (
             <div
               key={signal}
