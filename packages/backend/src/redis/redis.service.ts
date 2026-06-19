@@ -44,6 +44,11 @@ export class RedisService implements OnModuleInit {
     try {
       this.logger.log(`[Redis] Connecting to Redis...`);
       this.client = new Redis(redisUrl, {
+        // Railway's private network is IPv6-only. family: 0 lets Node resolve
+        // both A and AAAA records, so cold-connects over redis.railway.internal
+        // don't intermittently time out (connect ETIMEDOUT). Harmless on
+        // public/IPv4 endpoints, which still resolve normally.
+        family: 0,
         maxRetriesPerRequest: 3,
         retryStrategy: (times) => {
           if (times > 3) {
