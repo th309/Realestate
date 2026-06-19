@@ -203,6 +203,33 @@ export function normalizeStateToName(regionId: string): string {
   return n ? n.stateName : regionId.trim();
 }
 
+/**
+ * Resolve a human-readable region name for user-facing copy (AI insights,
+ * narratives, fallbacks). Prefers an explicit name; for states without one,
+ * resolves the FIPS code to the full state name (so "35" -> "New Mexico"
+ * instead of leaking "state 35"); otherwise returns a generic label rather
+ * than exposing a raw id.
+ */
+export function resolveRegionDisplayName(
+  geoLevel: string,
+  regionId: string,
+  locationName?: string | null,
+): string {
+  const name = locationName?.trim();
+  if (name) return name;
+  if (geoLevel === 'state') {
+    // Only trust the resolved name when a genuine state matched: an unknown id
+    // (e.g. "99") echoes back through normalizeStateRegionId, so require a valid
+    // 2-letter code rather than leaking the raw id.
+    const resolved = normalizeStateRegionId(regionId);
+    if (resolved && STATE_CODE_TO_FIPS[resolved.stateCode]) {
+      return resolved.stateName;
+    }
+  }
+  if (geoLevel === 'national') return 'The national market';
+  return 'This market';
+}
+
 // ---------------------------------------------------------------------------
 // County: 5-digit FIPS (state 2 + county 3); pad when numeric
 // ---------------------------------------------------------------------------

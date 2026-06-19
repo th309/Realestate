@@ -90,7 +90,8 @@ export function AlphaCallout() {
               Alpha (What PropertyIQ Predicts)
             </span>
             <p className="mt-2 text-sm font-semibold text-white">
-              &ldquo;Tampa will beat other FL metros by 2.3pp&rdquo;
+              &ldquo;Tampa will beat other FL metros by{" "}
+              {`${V4_CLAIMS.alpha3Y_pp}pp`}&rdquo;
             </p>
             <p className="mt-1 text-xs text-[#00C853] flex items-center gap-1">
               <span aria-hidden="true">&rarr;</span> This is the{" "}

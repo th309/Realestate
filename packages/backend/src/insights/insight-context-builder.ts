@@ -10,6 +10,7 @@ import { ScoringService } from '../scoring/scoring.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
 import { GeoLevel } from '../metric-resolution/metric-resolution.types';
+import { resolveRegionDisplayName } from '../common/geo';
 import { InsightContext } from './insights.types';
 
 /** Metrics fetched for insight context */
@@ -74,7 +75,11 @@ export async function buildInsightContext(
   );
 
   return {
-    region_name: scoreResult?.location_name ?? `${geoLevel} ${regionId}`,
+    region_name: resolveRegionDisplayName(
+      geoLevel,
+      regionId,
+      scoreResult?.location_name,
+    ),
     region_id: regionId,
     geo_level: geo as InsightContext['geo_level'],
     scores,

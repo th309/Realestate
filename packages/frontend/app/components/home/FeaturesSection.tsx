@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { useInView } from "./hooks/useInView";
+import { V4_CLAIMS } from "@/lib/data/validation-claims";
 
 interface FeatureCardProps {
   icon: ReactNode;
@@ -146,8 +147,7 @@ const FEATURES = [
   {
     icon: <Icons.Score />,
     title: "PropertyIQ Score",
-    description:
-      "The PropertyIQ Score ranks every metro, county, and ZIP by predicted market performance. One score, validated across 746 metros and 13 years of data.",
+    description: `The PropertyIQ Score ranks every metro, county, and ZIP by predicted market performance. One score, validated across ${V4_CLAIMS.metrosValidated} metros and ${V4_CLAIMS.backtestYears} years of data.`,
   },
   {
     icon: <Icons.Map />,
@@ -164,8 +164,7 @@ const FEATURES = [
   {
     icon: <Icons.Data />,
     title: "Comprehensive Real Estate Data",
-    description:
-      "Access Census demographics, employment data, Zillow home values, rental estimates, and economic indicators. All normalized across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.",
+    description: `Access Census demographics, employment data, Zillow home values, rental estimates, and economic indicators. All normalized across ${V4_CLAIMS.metrosScored} US metros, ${V4_CLAIMS.countiesScored.toLocaleString()} counties, and ${V4_CLAIMS.zipsScored.toLocaleString()} ZIP codes.`,
   },
   {
     icon: <Icons.Trend />,

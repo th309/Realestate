@@ -11,10 +11,10 @@
  */
 
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { AI_PURPOSES } from '../ai-provider/ai-provider.types';
 import { getTopMarkets, getScoreDates } from '../scoring/scoring-queries';
 import type { ScoreType } from '../scoring/formula-weights';
 import {
@@ -36,44 +36,17 @@ export interface GeneratedBlogPost {
 @Injectable()
 export class BlogGeneratorService {
   private readonly logger = new Logger(BlogGeneratorService.name);
-  private aiClient: OpenAI | null = null;
-  private readonly aiModel: string;
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-    private readonly configService: ConfigService,
-  ) {
-    const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
-    this.aiModel =
-      this.configService.get<string>('AI_MODEL') || 'deepseek-v4-pro';
-
-    if (deepseekKey) {
-      this.aiClient = new OpenAI({
-        apiKey: deepseekKey,
-        baseURL:
-          this.configService.get<string>('AI_BASE_URL') ||
-          'https://api.deepseek.com/v1',
-      });
-      this.logger.log(
-        `DeepSeek initialized for blog generation (model: ${this.aiModel})`,
-      );
-    } else {
-      this.logger.warn(
-        'DEEPSEEK_API_KEY not configured — blog generation disabled',
-      );
-    }
-  }
+    private readonly aiProvider: AiProviderService,
+  ) {}
 
   /**
    * Generate all three monthly blog post types and return their MDX content.
    * Admin reviews the output before publishing.
    */
   async generateMonthlyPosts(): Promise<GeneratedBlogPost[]> {
-    if (!this.aiClient) {
-      this.logger.warn('AI client not available — skipping blog generation');
-      return [];
-    }
-
     const posts: GeneratedBlogPost[] = [];
 
     const [homebuyerPost, investorPost, moversPost] = await Promise.allSettled([
@@ -116,40 +89,45 @@ export class BlogGeneratorService {
   async generatePostByType(
     type: BlogPostType,
   ): Promise<GeneratedBlogPost | null> {
-    if (!this.aiClient) return null;
-
-    switch (type) {
-      case 'top_homebuyer_markets':
-        return this.generateHomebuyerPost();
-      case 'top_investor_markets':
-        return this.generateInvestorPost();
-      case 'biggest_score_movers':
-        return this.generateScoreMoversPost();
-      default:
-        this.logger.warn(`Unknown blog post type: ${type}`);
-        return null;
+    try {
+      switch (type) {
+        case 'top_homebuyer_markets':
+          return await this.generateHomebuyerPost();
+        case 'top_investor_markets':
+          return await this.generateInvestorPost();
+        case 'biggest_score_movers':
+          return await this.generateScoreMoversPost();
+        default:
+          this.logger.warn(`Unknown blog post type: ${type}`);
+          return null;
+      }
+    } catch (err) {
+      this.logger.error(
+        `Blog generation failed for ${type}: ${(err as Error).message}`,
+      );
+      return null;
     }
   }
 
   private async generateHomebuyerPost(): Promise<GeneratedBlogPost> {
     const markets = await this.fetchTopRankedMarkets('propertyiq');
     const prompt = buildTopHomebuyerMarketsPrompt(markets);
-    const mdx = await this.callDeepSeek(prompt);
-    return this.buildResult('top_homebuyer_markets', mdx);
+    const { mdx, model } = await this.generate(prompt);
+    return this.buildResult('top_homebuyer_markets', mdx, model);
   }
 
   private async generateInvestorPost(): Promise<GeneratedBlogPost> {
     const markets = await this.fetchTopRankedMarkets('propertyiq');
     const prompt = buildTopInvestorMarketsPrompt(markets);
-    const mdx = await this.callDeepSeek(prompt);
-    return this.buildResult('top_investor_markets', mdx);
+    const { mdx, model } = await this.generate(prompt);
+    return this.buildResult('top_investor_markets', mdx, model);
   }
 
   private async generateScoreMoversPost(): Promise<GeneratedBlogPost> {
     const { risers, fallers } = await this.fetchBiggestScoreMovers();
     const prompt = buildBiggestScoreMoversPrompt(risers, fallers);
-    const mdx = await this.callDeepSeek(prompt);
-    return this.buildResult('biggest_score_movers', mdx);
+    const { mdx, model } = await this.generate(prompt);
+    return this.buildResult('biggest_score_movers', mdx, model);
   }
 
   /**
@@ -193,13 +171,15 @@ export class BlogGeneratorService {
           .select('location_id, location_name, score')
           .eq('geography', 'metro')
           .eq('score_type', 'propertyiq')
-          .eq('score_date', currentDate),
+          .eq('score_date', currentDate)
+          .limit(1000),
         this.supabase
           .from('propertyiq_scores')
           .select('location_id, score')
           .eq('geography', 'metro')
           .eq('score_type', 'propertyiq')
-          .eq('score_date', previousDate),
+          .eq('score_date', previousDate)
+          .limit(1000),
       ]);
 
     if (!currentScores?.length || !previousScores?.length) {
@@ -237,24 +217,30 @@ export class BlogGeneratorService {
     return { risers, fallers };
   }
 
-  private async callDeepSeek(prompt: string): Promise<string> {
-    if (!this.aiClient) return '';
-
-    const response = await this.aiClient.chat.completions.create({
-      model: this.aiModel,
-      max_tokens: 2500,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    return response.choices[0]?.message?.content || '';
+  /**
+   * Generate MDX via the centralized AI provider. Model is selectable for the
+   * `blog_generation` purpose in ai_model_config (default DeepSeek).
+   */
+  private async generate(
+    prompt: string,
+  ): Promise<{ mdx: string; model: string }> {
+    const response = await this.aiProvider.complete(
+      AI_PURPOSES.BLOG_GENERATION,
+      { userPrompt: prompt, maxTokens: 2500 },
+    );
+    return { mdx: response.content, model: response.model };
   }
 
-  private buildResult(type: BlogPostType, mdx: string): GeneratedBlogPost {
+  private buildResult(
+    type: BlogPostType,
+    mdx: string,
+    model: string,
+  ): GeneratedBlogPost {
     return {
       type,
       mdx,
       generated_at: new Date().toISOString(),
-      model: this.aiModel,
+      model,
     };
   }
 }

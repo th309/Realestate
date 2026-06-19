@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Roboto, Roboto_Mono, Source_Serif_4, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { V4_CLAIMS } from "@/lib/data/validation-claims";
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -39,8 +40,7 @@ export const metadata: Metadata = {
     default: "PropertyIQ - AI-Powered Real Estate Market Intelligence Platform",
     template: "%s | PropertyIQ",
   },
-  description:
-    "PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, market scores, rental demand data, and investment ROI projections across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.",
+  description: `PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, market scores, rental demand data, and investment ROI projections across ${V4_CLAIMS.metrosScored} US metros, ${V4_CLAIMS.countiesScored.toLocaleString()} counties, and ${V4_CLAIMS.zipsScored.toLocaleString()} ZIP codes.`,
   keywords: [
     // Primary audiences
     "real estate market analysis",

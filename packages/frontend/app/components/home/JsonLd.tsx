@@ -8,6 +8,8 @@
  * - Product offerings
  */
 
+import { V4_CLAIMS } from "@/lib/data/validation-claims";
+
 // Organization schema - tells search engines about the company
 const organizationSchema = {
   "@type": "Organization",
@@ -70,12 +72,12 @@ const softwareSchema = {
   ],
   featureList: [
     "AI-powered market analysis",
-    "PropertyIQ Score — predicts market performance with 100% year hit rate across 746 metros",
+    `PropertyIQ Score — predicts market performance with 100% year hit rate across ${V4_CLAIMS.metrosValidated} metros`,
     "Rental demand analysis for landlords",
     "Market quality metrics",
     "Interactive market heat maps",
     "AI-generated market reports",
-    "925 US metros, 3,100+ counties, and 33,000+ ZIP codes",
+    `${V4_CLAIMS.metrosScored} US metros, ${V4_CLAIMS.countiesScored.toLocaleString()} counties, and ${V4_CLAIMS.zipsScored.toLocaleString()} ZIP codes`,
     "Census and economic data integration",
   ],
   audience: {

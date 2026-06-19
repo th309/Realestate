@@ -136,6 +136,7 @@ export {
   formatDollarClaim,
   formatDollarClaimShort,
   formatObservations,
+  formatMarketsScored,
 } from "./validation-claims";
 
 // ============================================================================

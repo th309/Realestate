@@ -266,6 +266,13 @@ export const AI_PURPOSES = {
   ANALYZER_SECTION_ANNOTATION: 'analyzer_section_annotation',
   REPORT_FOLLOW_UP: 'report_follow_up',
   LISTING_PRESENTATION_NARRATIVE: 'listing_presentation_narrative',
+  // Map/Explore market insights (the "AI Insight" panel + SEO market overviews)
+  MARKET_TAKE: 'market_take',
+  SCORE_EXPLANATION: 'score_explanation',
+  TREND_INTERPRETATION: 'trend_interpretation',
+  MARKET_OVERVIEW: 'market_overview',
+  // Monthly blog posts (top markets, score movers)
+  BLOG_GENERATION: 'blog_generation',
 } as const;
 
 export type AiPurpose = (typeof AI_PURPOSES)[keyof typeof AI_PURPOSES];

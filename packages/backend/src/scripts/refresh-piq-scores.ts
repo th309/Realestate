@@ -52,6 +52,9 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 import { ScoringService } from '../scoring/scoring.service';
 import { CalibrationService } from '../scoring/calibration/calibration.service';
 import { GeographyLevel } from '../scoring/formula-weights';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { invalidateMarketInsightsCache } from '../insights/insights-invalidation';
 
 /**
  * Minimal context for the scoring CLI. ScoringService needs only the Supabase
@@ -116,6 +119,18 @@ async function main() {
         `[WARN] ${failures.length} geo level(s) failed but ${total} scores stored overall:`,
       );
       for (const f of failures) console.warn(`  - ${f}`);
+    }
+
+    // Scores moved this run — invalidate cached AI narratives so they regenerate
+    // against the new scores (lazy, on next view). Best-effort: a failure here
+    // must not fail the scoring run.
+    try {
+      const supabase = app.get<SupabaseClient>(SUPABASE_CLIENT);
+      const { invalidated } = await invalidateMarketInsightsCache(supabase);
+      console.log(`  market_insights cache invalidated: ${invalidated} rows`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[WARN] market_insights invalidation skipped: ${msg}`);
     }
 
     console.log(

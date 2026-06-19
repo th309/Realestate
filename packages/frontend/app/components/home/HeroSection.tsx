@@ -3,6 +3,7 @@
 import { useInView } from "./hooks/useInView";
 import { HeroSearchBar } from "./HeroSearchBar";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { formatMarketsScored } from "@/lib/data/validation-claims";
 
 function fadeUp(inView: boolean, delay: string) {
   return {
@@ -14,7 +15,7 @@ function fadeUp(inView: boolean, delay: string) {
 }
 
 const TRUST_SIGNALS = [
-  "400+ markets scored",
+  `${formatMarketsScored()} markets scored`,
   "Updated monthly with Zillow, Census, Realtor.com data",
   "Used by investors, agents, and syndicators",
 ];
@@ -35,7 +36,7 @@ export function HeroSection() {
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1] font-[family-name:var(--font-source-serif)]"
           style={fadeUp(inView, "0s")}
         >
-          23,600+ U.S. Real Estate Markets.{" "}
+          {formatMarketsScored()} U.S. Real Estate Markets.{" "}
           <span className="text-[#00C853]">Scored.</span>
         </h1>
 

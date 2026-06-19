@@ -359,7 +359,6 @@ function EmbedMapFullInner() {
             setRightPanelOpen(false);
             setSelectedGeography(null);
           }}
-          viewMode="homebuyer"
           geography={selectedGeography}
           geoLevel={geoLevel}
         />

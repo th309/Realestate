@@ -359,11 +359,8 @@ function MapPageInner() {
             setRightPanelOpen(false);
             setSelectedGeography(null);
           }}
-          viewMode={viewMode}
           geography={selectedGeography}
           geoLevel={geoLevel}
-          scoreData={scoreResponse}
-          scoresLoading={scoresLoading}
           matchScore={
             selectedMatch
               ? {

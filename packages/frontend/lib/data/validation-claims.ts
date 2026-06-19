@@ -63,6 +63,14 @@ export const V4_CLAIMS = {
   metrosValidated: 865,
   countiesValidated: 3_073,
   zipsValidated: 26_307,
+  /** Live scored coverage at the latest period (2026-05-31), queried 2026-06-18 from
+   *  propertyiq_scores (distinct location_id per geography). Refresh monthly alongside
+   *  the validation claims:
+   *    select geography, count(distinct location_id) from propertyiq_scores
+   *    where score_type='propertyiq' and score_date = <latest> group by geography; */
+  metrosScored: 935,
+  countiesScored: 3_137,
+  zipsScored: 29_417,
   /** Total scored region-month rows across all three levels.
    *  Source: sum of {level}.coverage.n_scored_rows (94,019 + 328,862 + 2,706,066) */
   totalObservations: 3_128_947,
@@ -113,4 +121,13 @@ export function formatDollarClaimShort(value: number): string {
 /** Format observation count: "828,000+" */
 export function formatObservations(count: number): string {
   return Math.round(count / 1_000).toLocaleString("en-US") + "K+";
+}
+
+/** Total live scored markets across all three geo levels, floored to a clean
+ *  marketing figure (33,489 -> "33,000+"). Single source for the hero count. */
+export function formatMarketsScored(): string {
+  const total =
+    V4_CLAIMS.metrosScored + V4_CLAIMS.countiesScored + V4_CLAIMS.zipsScored;
+  const floored = Math.floor(total / 1_000) * 1_000;
+  return `${floored.toLocaleString("en-US")}+`;
 }
