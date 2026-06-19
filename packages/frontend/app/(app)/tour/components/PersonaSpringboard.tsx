@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import type { Persona, MarketRef } from "@/lib/data";
 
 interface Card {
   label: string;
@@ -17,49 +16,33 @@ const MCP_HERO: Card = {
   hero: true,
 };
 
-function personaCards(persona: Persona | null, market: MarketRef): Card[] {
-  const cmp: Card = {
-    label: "Compare markets",
-    sub: `${market.name} vs. its closest peer, side by side.`,
-    href: "/compare/markets",
-  };
-  const analyze: Card = {
-    label: "Analyze a deal",
-    sub: "Cap rate + cashflow on any address in seconds.",
-    href: "/analyzer",
-  };
-  const screen: Card = {
+// A fixed launcher — the four core workflows, identical for every persona, laid
+// out under the hero as two rows of two (1 / 2 / 2 with the grid below).
+const LAUNCH_CARDS: Card[] = [
+  {
+    label: "Search the map",
+    sub: "Explore any metric across the country, market by market.",
+    href: "/map",
+  },
+  {
     label: "Screen markets",
     sub: "Rank every market by your criteria.",
     href: "/screener",
-  };
-  switch (persona) {
-    case "agent":
-      return [
-        cmp,
-        screen,
-        {
-          label: "Build a report",
-          sub: "A client-ready PDF for any market.",
-          href: "/reports",
-        },
-      ];
-    case "homebuyer":
-      return [analyze, cmp, screen];
-    case "investor":
-    default:
-      return [analyze, screen, cmp];
-  }
-}
+  },
+  {
+    label: "Analyze a deal",
+    sub: "Cap rate + cashflow on any address in seconds.",
+    href: "/analyzer",
+  },
+  {
+    label: "Build a report",
+    sub: "A client-ready PDF for any market.",
+    href: "/reports",
+  },
+];
 
-export function PersonaSpringboard({
-  persona,
-  market,
-}: {
-  persona: Persona | null;
-  market: MarketRef;
-}) {
-  const cards = [MCP_HERO, ...personaCards(persona, market)];
+export function PersonaSpringboard() {
+  const cards = [MCP_HERO, ...LAUNCH_CARDS];
   return (
     <section
       data-testid="persona-springboard"

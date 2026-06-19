@@ -51,9 +51,7 @@ vi.mock("../ListingPresentation", () => ({
   ),
 }));
 vi.mock("../PersonaSpringboard", () => ({
-  PersonaSpringboard: (p: any) => (
-    <div data-testid="persona-springboard" data-persona={p.persona} />
-  ),
+  PersonaSpringboard: () => <div data-testid="persona-springboard" />,
 }));
 vi.mock("../ListingPresentationLoading", () => ({
   ListingPresentationLoading: (p: any) => (
