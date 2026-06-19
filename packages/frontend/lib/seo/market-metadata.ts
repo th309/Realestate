@@ -159,3 +159,29 @@ export function buildMarketDataSummary(
 
   return sentences.join(" ");
 }
+
+/**
+ * Make the regional-context paragraph geo-distinct.
+ *
+ * The base region blurb is a shared per-region bucket (genuine regional
+ * economics, but byte-identical across every market in the bucket — a residual
+ * scaled-content fingerprint Google can cluster). This appends one sentence
+ * built from THIS market's own score + region, so each page's paragraph differs
+ * in substance. Returns the base blurb unchanged when no score is available.
+ */
+export function buildRegionalContext(
+  regionContext: string,
+  region: string,
+  name: string,
+  stats: MarketStatsData | null,
+): string {
+  if (!hasData(stats) || stats.score === null) return regionContext;
+  const s = stats.score;
+  const stance =
+    s >= 60
+      ? `ranks among the ${region}'s stronger demand signals`
+      : s >= 50
+        ? `tracks near the ${region} norm`
+        : `runs below the ${region} norm`;
+  return `${regionContext} Within the ${region}, ${name}'s PropertyIQ Score of ${s} ${stance}.`;
+}

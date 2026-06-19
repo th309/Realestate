@@ -1,6 +1,9 @@
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
 import type { MarketStatsData } from "@/lib/data";
-import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
+import {
+  buildMarketDataSummary,
+  buildRegionalContext,
+} from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -143,7 +146,12 @@ export function generateCountySeoContent(
   return {
     dataSummary: buildMarketDataSummary(county.shortName, stats),
     opening: OPENING_TEMPLATES[openingIdx](county.name, county.state),
-    regional: regionContext,
+    regional: buildRegionalContext(
+      regionContext,
+      region,
+      county.shortName,
+      stats,
+    ),
     middle: MIDDLE_TEMPLATES[middleIdx](county.shortName),
     closing: CLOSING_TEMPLATES[closingIdx](county.shortName),
   };
