@@ -32,7 +32,14 @@ export function buildStatsJsonLd(
     url,
     ...(data.latestDate ? { dateModified: data.latestDate } : {}),
     // L4: strengthen Google Dataset Search eligibility for a market-data site.
-    spatialCoverage: { "@type": "Place", name: geoName },
+    // Carries the same @id as the page's standalone Place node so the two
+    // describe one identity rather than two disconnected entities.
+    spatialCoverage: {
+      "@type": "Place",
+      "@id": `${url}#place`,
+      name: geoName,
+      containedInPlace: { "@type": "Country", name: "United States" },
+    },
     ...(data.latestDate ? { temporalCoverage: data.latestDate } : {}),
     isAccessibleForFree: true,
     keywords: [

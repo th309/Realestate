@@ -1,42 +1,18 @@
 /**
- * JSON-LD Structured Data for SEO and AI Search
+ * JSON-LD Structured Data for the homepage (SEO + AI Search).
  *
- * Implements Schema.org markup for:
- * - Organization (PropertyIQ company info)
+ * Schema.org markup for:
  * - SoftwareApplication (the platform)
  * - WebSite (name/url/publisher)
- * - Product offerings
+ * - WebPage
+ *
+ * NOTE: the Organization node is emitted SITEWIDE by OrganizationJsonLd (in
+ * AppShell), so it is intentionally NOT duplicated in this homepage graph —
+ * two nodes sharing @id #organization on one page was an entity collision. The
+ * publisher/provider @id refs below resolve to that sitewide Organization.
  */
 
 import { V4_CLAIMS } from "@/lib/data/validation-claims";
-
-// Organization schema - tells search engines about the company
-const organizationSchema = {
-  "@type": "Organization",
-  "@id": "https://www.propertyiq.app/#organization",
-  name: "PropertyIQ",
-  url: "https://www.propertyiq.app",
-  logo: {
-    "@type": "ImageObject",
-    url: "https://www.propertyiq.app/logo.png",
-    width: 512,
-    height: 512,
-  },
-  description:
-    "PropertyIQ provides AI-powered real estate market intelligence for homebuyers, renters, investors, and real estate professionals.",
-  foundingDate: "2024",
-  // Only verified, owned profiles (M2). No X/Twitter account exists, so it is
-  // omitted rather than claimed — an unowned sameAs is an accuracy violation.
-  sameAs: [
-    "https://www.linkedin.com/company/property-iq",
-    "https://www.youtube.com/@PropertyIQ_app",
-  ],
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "customer support",
-    email: "support@propertyiq.app",
-  },
-};
 
 // SoftwareApplication schema - describes the platform
 const softwareSchema = {
@@ -51,6 +27,8 @@ const softwareSchema = {
       name: "Free",
       price: "0",
       priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: "https://www.propertyiq.app/pricing",
       description:
         "5 property lookups per month, basic scores, metro-level data",
     },
@@ -59,7 +37,17 @@ const softwareSchema = {
       name: "Pro",
       price: "39",
       priceCurrency: "USD",
-      billingIncrement: "P1M",
+      availability: "https://schema.org/InStock",
+      url: "https://www.propertyiq.app/pricing",
+      // P1M monthly recurring expressed via a real schema.org price spec
+      // (`billingIncrement` is not a schema.org property).
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "39",
+        priceCurrency: "USD",
+        billingDuration: "P1M",
+        unitText: "MONTH",
+      },
       description:
         "Unlimited lookups, full score breakdown, AI-generated reports",
     },
@@ -68,13 +56,21 @@ const softwareSchema = {
       name: "Team",
       price: "99",
       priceCurrency: "USD",
-      billingIncrement: "P1M",
+      availability: "https://schema.org/InStock",
+      url: "https://www.propertyiq.app/pricing",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "99",
+        priceCurrency: "USD",
+        billingDuration: "P1M",
+        unitText: "MONTH",
+      },
       description: "Everything in Pro plus team collaboration and API access",
     },
   ],
   featureList: [
     "AI-powered market analysis",
-    `PropertyIQ Score — predicts market performance with 100% year hit rate across ${V4_CLAIMS.metrosValidated} metros`,
+    "PropertyIQ Score — a market demand signal, out-of-sample validated across two decades of housing data",
     "Rental demand analysis for landlords",
     "Market quality metrics",
     "Interactive market heat maps",
@@ -118,16 +114,12 @@ const webPageSchema = {
   isPartOf: { "@id": "https://www.propertyiq.app/#website" },
   about: { "@id": "https://www.propertyiq.app/#software" },
   provider: { "@id": "https://www.propertyiq.app/#organization" },
-  speakable: {
-    "@type": "SpeakableSpecification",
-    cssSelector: ["h1", ".hero-description", ".feature-title"],
-  },
 };
 
 // Combined schema graph
 const jsonLdData = {
   "@context": "https://schema.org",
-  "@graph": [organizationSchema, softwareSchema, websiteSchema, webPageSchema],
+  "@graph": [softwareSchema, websiteSchema, webPageSchema],
 };
 
 export function JsonLd() {

@@ -133,6 +133,7 @@ export default function MethodologyPage() {
                 headline: "How PropertyIQ Scores Predict Market Performance",
                 description:
                   "Out-of-sample validated across more than two decades of market data. Technical methodology behind the PropertyIQ Score.",
+                image: ["https://www.propertyiq.app/og-image.png"],
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {
