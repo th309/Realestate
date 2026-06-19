@@ -120,10 +120,7 @@ export function Step4Aha() {
           showWatermark={!authed}
         />
         {authed ? (
-          <PersonaSpringboard
-            persona={session.persona}
-            market={session.market}
-          />
+          <PersonaSpringboard />
         ) : (
           <div data-print-hide="true">
             <InlineSignupForm />

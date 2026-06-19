@@ -3,8 +3,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MarketComparisonView } from "../MarketComparisonView";
 
 let currentParams = "";
+const pushSpy = vi.fn();
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(currentParams),
+  useRouter: () => ({ push: pushSpy }),
+}));
+
+// Stub the search box so this test doesn't pull in the live universal-search hook.
+vi.mock("../PeerSearchBox", () => ({
+  PeerSearchBox: ({ placeholder }: { placeholder: string }) => (
+    <div data-testid="peer-search">{placeholder}</div>
+  ),
 }));
 
 vi.mock("@/lib/data", () => ({
@@ -43,10 +52,11 @@ vi.mock("@/lib/data", () => ({
 }));
 
 describe("MarketComparisonView", () => {
-  it("renders 'Pick a market first' when no market query param", () => {
+  it("offers a market picker instead of dead-ending when no market query param", () => {
     currentParams = "";
     render(<MarketComparisonView />);
-    expect(screen.getByText(/pick a market/i)).toBeInTheDocument();
+    expect(screen.getByText(/compare markets/i)).toBeInTheDocument();
+    expect(screen.getByTestId("peer-search")).toBeInTheDocument();
   });
 
   it("fetches peers and renders the comparison grid", async () => {
@@ -65,9 +75,11 @@ describe("MarketComparisonView", () => {
     expect(screen.getAllByText(/PropertyIQ 65 · FAIR/i).length).toBeGreaterThan(
       0,
     );
+    // The peer-override search is offered alongside the grid.
+    expect(screen.getByTestId("peer-search")).toBeInTheDocument();
   });
 
-  it("renders 'one-of-a-kind' when no peers", async () => {
+  it("shows a search fallback (not a dead-end) when no peer is found", async () => {
     const { fetchPeers } = await import("@/lib/data");
     (fetchPeers as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       source: {
@@ -81,7 +93,7 @@ describe("MarketComparisonView", () => {
     currentParams = "market=metro-39580";
     render(<MarketComparisonView />);
     await waitFor(() => {
-      expect(screen.getByText(/one-of-a-kind/i)).toBeInTheDocument();
+      expect(screen.getByText(/no peer found nearby/i)).toBeInTheDocument();
     });
   });
 });

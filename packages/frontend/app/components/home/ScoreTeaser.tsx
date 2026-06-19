@@ -1,4 +1,5 @@
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
+import { V4_CLAIMS } from "@/lib/data/validation-claims";
 import { ScoreTeaserRow } from "./ScoreTeaserRow";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -120,7 +121,7 @@ export async function ScoreTeaser() {
             href="/markets"
             className="inline-flex items-center gap-1 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors group"
           >
-            See all 925 metros
+            See all {V4_CLAIMS.metrosScored} metros
             <span
               className="transition-transform group-hover:translate-x-1"
               aria-hidden="true"

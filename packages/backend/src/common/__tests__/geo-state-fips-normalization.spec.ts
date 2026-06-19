@@ -17,6 +17,7 @@ import {
   normalizeStateToName,
   normalizeCountyFips,
   normalizeCbsaCode,
+  resolveRegionDisplayName,
   STATE_FIPS_TO_CODE,
   STATE_CODE_TO_FIPS,
 } from '../geo';
@@ -188,6 +189,48 @@ describe('normalizeStateToName', () => {
 
   it('returns full name from code "NY"', () => {
     expect(normalizeStateToName('NY')).toBe('New York');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveRegionDisplayName — user-facing region label (no raw-id leaks)
+// ---------------------------------------------------------------------------
+
+describe('resolveRegionDisplayName', () => {
+  it('prefers an explicit location name when present', () => {
+    expect(resolveRegionDisplayName('metro', '19740', 'Denver, CO')).toBe(
+      'Denver, CO',
+    );
+  });
+
+  it('trims an explicit location name', () => {
+    expect(resolveRegionDisplayName('metro', '19740', '  Denver, CO  ')).toBe(
+      'Denver, CO',
+    );
+  });
+
+  it('resolves a state FIPS to its name instead of leaking "state 35"', () => {
+    // Regression: the AI insight rendered "state 35 does not have enough data".
+    expect(resolveRegionDisplayName('state', '35', null)).toBe('New Mexico');
+    expect(resolveRegionDisplayName('state', '35', '')).toBe('New Mexico');
+    expect(resolveRegionDisplayName('state', '35', '   ')).toBe('New Mexico');
+  });
+
+  it('returns a generic label for non-state geos without a name', () => {
+    expect(resolveRegionDisplayName('zip', '90210', null)).toBe('This market');
+    expect(resolveRegionDisplayName('county', '06037', undefined)).toBe(
+      'This market',
+    );
+  });
+
+  it('returns a national label for the national geo without a name', () => {
+    expect(resolveRegionDisplayName('national', 'national', null)).toBe(
+      'The national market',
+    );
+  });
+
+  it('falls back to a generic label for an unrecognized state id', () => {
+    expect(resolveRegionDisplayName('state', '99', null)).toBe('This market');
   });
 });
 

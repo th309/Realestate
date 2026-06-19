@@ -18,8 +18,10 @@ describe('MarketsController GET /peers', () => {
           useValue: { getMarketCore: jest.fn() },
         },
         {
+          // getMarketCore returns identity only; the controller now loads the
+          // score via PeersService.getScore, so the mock must stub both.
           provide: PeersService,
-          useValue: { findPeers: jest.fn() },
+          useValue: { getScore: jest.fn(), findPeers: jest.fn() },
         },
       ],
     }).compile();
@@ -28,13 +30,14 @@ describe('MarketsController GET /peers', () => {
     marketsService = module.get(MarketsService);
   });
 
-  it('returns top-3 peers for the given geography', async () => {
+  it('loads the score and returns ranked peers for the given geography', async () => {
     marketsService.getMarketCore.mockResolvedValue({
-      score: 87,
+      score: null,
       parentMetroCbsa: '39580',
       householdCount: 62000,
       name: 'Cary, NC',
     });
+    peers.getScore.mockResolvedValue(87);
     peers.findPeers.mockResolvedValue([
       {
         geoLevel: 'city',
@@ -48,12 +51,14 @@ describe('MarketsController GET /peers', () => {
     const result = await controller.getPeers('city', 'cary-nc');
 
     expect(result.peers).toHaveLength(1);
+    // Source score comes from getScore (not the identity lookup) and is attached.
     expect(result.source).toEqual({
       score: 87,
       parentMetroCbsa: '39580',
       householdCount: 62000,
       name: 'Cary, NC',
     });
+    expect(peers.getScore).toHaveBeenCalledWith('city', 'cary-nc');
     expect(peers.findPeers).toHaveBeenCalledWith(
       expect.objectContaining({
         geoLevel: 'city',
@@ -71,20 +76,28 @@ describe('MarketsController GET /peers', () => {
     await expect(controller.getPeers('city', 'unknown-xx')).rejects.toThrow(
       BadRequestException,
     );
+    expect(peers.getScore).not.toHaveBeenCalled();
     expect(peers.findPeers).not.toHaveBeenCalled();
   });
 
-  it('returns empty peers when source has null score (unscored market)', async () => {
+  it('returns empty peers when the market is unscored (null score)', async () => {
     marketsService.getMarketCore.mockResolvedValue({
       score: null,
       parentMetroCbsa: null,
       householdCount: 0,
       name: 'Test Market',
     });
+    peers.getScore.mockResolvedValue(null);
 
     const result = await controller.getPeers('city', 'unscored-market');
 
     expect(result.peers).toEqual([]);
+    expect(result.source).toEqual({
+      score: null,
+      parentMetroCbsa: null,
+      householdCount: 0,
+      name: 'Test Market',
+    });
     expect(peers.findPeers).not.toHaveBeenCalled();
   });
 });

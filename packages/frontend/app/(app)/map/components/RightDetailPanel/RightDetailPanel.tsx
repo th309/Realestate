@@ -5,7 +5,7 @@
  * Layout:
  * - Market Snapshot (key stats)
  * - Quick Actions (save, details, report)
- * - Insight Carousel (AI insights)
+ * - AI Insight (backend-generated, market-specific)
  * - Market Factors grid (trend data with sparklines)
  */
 
@@ -16,10 +16,8 @@ import { X } from "lucide-react";
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from "../Icons";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
-import type { ViewMode, SelectedGeography, GeoLevel } from "../../types";
+import type { SelectedGeography, GeoLevel } from "../../types";
 import { useMarketFactorsData } from "../../hooks/useMarketFactorsData";
-import type { AllScoresResponse, ScoreType } from "../../hooks/useScoreData";
-import { InsightCarousel } from "./InsightCarousel";
 import { AmbientInsight } from "./AmbientInsight";
 import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
@@ -33,12 +31,8 @@ interface MatchScoreInfo {
 interface RightDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  viewMode: ViewMode;
   geography: SelectedGeography | null;
   geoLevel: GeoLevel;
-  /** Score data passed through from page for InsightCarousel only */
-  scoreData?: AllScoresResponse | null;
-  scoresLoading?: boolean;
   /** Personalized match score for the selected region */
   matchScore?: MatchScoreInfo | null;
 }
@@ -48,8 +42,6 @@ interface MarketFactor {
   label: string;
   metricId: string;
 }
-
-type ScoreCardLike = { score?: number | null };
 
 // Default market factors: all free-tier metrics with good coverage across geo levels
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
@@ -74,10 +66,8 @@ function loadMarketFactors(): MarketFactor[] {
 export function RightDetailPanel({
   isOpen,
   onClose,
-  viewMode,
   geography,
   geoLevel,
-  scoreData: scoreDataProp,
   matchScore,
 }: RightDetailPanelProps) {
   const [marketFactors, setMarketFactors] =
@@ -103,21 +93,6 @@ export function RightDetailPanel({
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(factors));
     }
-  };
-
-  // Extract PropertyIQ score value for InsightCarousel
-  const getPropertyIQScore = (): number | null => {
-    if (!scoreDataProp) return null;
-    const scoreObj = scoreDataProp.propertyiq;
-    if (
-      typeof scoreObj === "object" &&
-      scoreObj !== null &&
-      "score" in scoreObj
-    ) {
-      const value = (scoreObj as ScoreCardLike).score;
-      return typeof value === "number" ? value : null;
-    }
-    return null;
   };
 
   if (!isOpen || !geography) return null;
@@ -190,14 +165,7 @@ export function RightDetailPanel({
           {/* Quick Actions */}
           <QuickActions geography={geography} geoLevel={geoLevel} />
 
-          {/* AI Insight */}
-          <InsightCarousel
-            geographyName={geography.name}
-            propertyIQScore={getPropertyIQScore()}
-            viewMode={viewMode === "investor" ? "investor" : "homebuyer"}
-          />
-
-          {/* Ambient AI Insight (backend-generated) */}
+          {/* AI Insight (backend-generated, market-specific) */}
           <AmbientInsight geoLevel={geoLevel} regionId={geography.id} />
 
           {/* Market Factors Section */}

@@ -80,6 +80,9 @@ export function useTourFromUrl() {
     const params = new URLSearchParams();
     params.set("tour", target);
     params.set("persona", active.persona ?? "agent");
+    // `type` drives the market page's data fetch (defaults to "metro" if absent,
+    // breaking zip/county); `market` is parsed back by this hook for the spotlight.
+    params.set("type", active.market.geoLevel);
     params.set("market", `${active.market.geoLevel}-${active.market.geoId}`);
     params.set("sessionId", active.sessionId);
     return `${route}?${params}`;

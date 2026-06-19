@@ -2,16 +2,17 @@
  * Insights Module
  *
  * Provides AI-generated market insights (market takes, score explanations,
- * trend interpretations, market overviews). Uses DeepSeek via the OpenAI
- * SDK for text generation, and pulls context from ScoringService and
- * MetricResolutionService.
+ * trend interpretations, market overviews) and monthly blog posts. AI text
+ * generation goes through the centralized AiProviderService (model selectable
+ * per purpose via ai_model_config, default DeepSeek). Pulls context from
+ * ScoringService and MetricResolutionService.
  */
 
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
+import { AiProviderModule } from '../ai-provider/ai-provider.module';
 import { InsightsController } from './insights.controller';
 import { InsightsService } from './insights.service';
 import { BlogGeneratorService } from './blog-generator.service';
@@ -19,9 +20,9 @@ import { BlogGeneratorService } from './blog-generator.service';
 @Module({
   imports: [
     SupabaseModule,
-    ConfigModule,
     ScoringModule,
     MetricResolutionModule,
+    AiProviderModule,
   ],
   controllers: [InsightsController],
   providers: [InsightsService, BlogGeneratorService],

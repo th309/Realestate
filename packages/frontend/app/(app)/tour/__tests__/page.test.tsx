@@ -160,6 +160,32 @@ describe("TourPage", () => {
     expect(calledWith).toContain("persona=agent");
     expect(calledWith).toContain("market=metro-39580");
     expect(calledWith).toContain("sessionId=abc");
+    // The market page reads geoLevel from ?type=, NOT ?market=. Omitting it
+    // silently defaulted every pick to "metro".
+    expect(calledWith).toContain("type=metro");
+  });
+
+  it("passes the picked geoLevel as ?type= so zip/county picks aren't queried as metro", async () => {
+    // Regression: the redirect used to emit only market=zip-78701; the market
+    // page reads ?type= (default "metro"), so a zip pick rendered an empty
+    // "Metro 78701" dashboard. The geoLevel must ride on ?type= too.
+    mockSession = {
+      sessionId: "abc",
+      persona: "investor",
+      market: { geoLevel: "zip", geoId: "78701", name: "Austin, TX 78701" },
+      phase: "step1",
+      reportId: null,
+      startedAt: 0,
+    };
+    render(<TourPage />);
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/market\/78701\?/),
+      ),
+    );
+    const calledWith = replaceSpy.mock.calls[0][0] as string;
+    expect(calledWith).toContain("type=zip");
+    expect(calledWith).toContain("market=zip-78701");
   });
 
   it("renders Step4Aha when session.phase is step4", () => {

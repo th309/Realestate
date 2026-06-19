@@ -9,6 +9,7 @@ import {
   Clock,
   Star,
   ChevronRight,
+  Scale,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
@@ -21,6 +22,11 @@ import {
   addRecentMarket,
   type RecentMarket,
 } from "./recent-markets";
+import { MarketComparison } from "../compare/markets/MarketComparison";
+import {
+  PeerSearchBox,
+  type PickedMarket,
+} from "../compare/markets/PeerSearchBox";
 
 // Popular metros to display as quick links
 const POPULAR_METROS = [
@@ -45,6 +51,7 @@ const POPULAR_METROS = [
 export function MarketLanding() {
   const router = useRouter();
   const [recentMarkets, setRecentMarkets] = useState<RecentMarket[]>([]);
+  const [compareSource, setCompareSource] = useState<PickedMarket | null>(null);
 
   const {
     searchQuery,
@@ -147,6 +154,33 @@ export function MarketLanding() {
             </div>
           </div>
         )}
+
+        {/* Compare Markets — pick a market and see it beside its closest peer,
+            or search a second market to override the suggested peer. */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-on-surface-variant mb-4">
+            <Scale className="w-5 h-5" />
+            <h2 className="text-lg font-medium text-on-surface">
+              Compare Markets
+            </h2>
+          </div>
+          <div className="bg-surface-container rounded-2xl border border-outline-variant p-6">
+            <p className="text-sm text-on-surface-variant mb-4 text-center">
+              Pick a market to see it side by side with its closest peer.
+            </p>
+            <div className="max-w-md mx-auto">
+              <PeerSearchBox
+                placeholder="🔍  Search a metro, county, or zip to compare"
+                onPick={setCompareSource}
+              />
+            </div>
+            {compareSource && (
+              <div className="mt-6">
+                <MarketComparison source={compareSource} />
+              </div>
+            )}
+          </div>
+        </div>
 
         <TopMarketsSection />
 

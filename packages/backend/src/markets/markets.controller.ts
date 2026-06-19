@@ -32,18 +32,22 @@ export class MarketsController {
     if (!source) {
       throw new BadRequestException(`Unknown market ${geoLevel}/${geoId}`);
     }
-    if (source.score == null) {
+    // getMarketCore returns identity only; load the PropertyIQ score here so the
+    // null-check and peer ranking have a real value (the score lives in
+    // propertyiq_scores, not the geographies table).
+    const score = await this.peersService.getScore(geoLevel, geoId);
+    if (score == null) {
       // Market exists but isn't scored yet — peers can't be ranked meaningfully.
-      return { source, peers: [] };
+      return { source: { ...source, score: null }, peers: [] };
     }
     const peers = await this.peersService.findPeers({
       geoLevel,
       geoId,
-      score: source.score,
+      score,
       parentMetro: source.parentMetroCbsa,
       householdCount: source.householdCount,
     });
-    return { source, peers };
+    return { source: { ...source, score }, peers };
   }
 
   @Get('stats')

@@ -7,6 +7,7 @@
 
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { AiCompletionResponse } from '../ai-provider/ai-provider.types';
 import { InsightContext, InsightType } from './insights.types';
 
 /** Concurrency limit for parallel AI calls during batch generation */
@@ -29,12 +30,11 @@ const logger = new Logger('InsightBatchGenerator');
 export async function generateBatchInsights(
   geoLevel: string,
   supabase: SupabaseClient,
-  aiModel: string,
   buildContext: (regionId: string, geoLevel: string) => Promise<InsightContext>,
   generateInsight: (
     context: InsightContext,
     insightType: InsightType,
-  ) => Promise<string>,
+  ) => Promise<AiCompletionResponse | null>,
 ): Promise<{ generated: number; failed: number; duration_ms: number }> {
   const start = Date.now();
 
@@ -68,15 +68,19 @@ export async function generateBatchInsights(
       try {
         const context = await buildContext(region, geoLevel);
         for (const type of BATCH_INSIGHT_TYPES) {
-          const content = await generateInsight(context, type);
+          const result = await generateInsight(context, type);
+          if (!result || !result.content) {
+            failed++;
+            continue;
+          }
           await supabase.from('market_insights').upsert(
             {
               region_id: region,
               geo_level: geoLevel,
               insight_type: type,
               archetype_id: '__none__',
-              content,
-              model: aiModel,
+              content: result.content,
+              model: result.model,
               generated_at: new Date().toISOString(),
               expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
             },

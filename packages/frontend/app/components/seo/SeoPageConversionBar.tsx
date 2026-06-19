@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { formatMarketsScored } from "@/lib/data/validation-claims";
 
 const DISMISS_KEY = "piq_seo_bar_dismissed";
 const DISMISS_TTL_MS = 7 * 86_400_000; // 7 days
@@ -121,7 +122,7 @@ export function SeoPageConversionBar({
   const headline =
     context === "market" && marketName
       ? `Get the full score breakdown for ${marketName} — free`
-      : "See live scores for 23,600+ markets — free";
+      : `See live scores for ${formatMarketsScored()} markets — free`;
 
   const newsletterCtaLabel =
     context === "blog" ? "Weekly market pulse" : "Weekly updates";
