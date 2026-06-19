@@ -116,6 +116,13 @@ function RedirectToStep({ step, route }: { step: "step1"; route: string }) {
     const params = new URLSearchParams();
     params.set("tour", step);
     params.set("persona", persona);
+    // Two params carry the geography on purpose, do NOT drop either:
+    //   `type`   — the market page (/market/[id]) reads this for its data fetch;
+    //              without it geographyType defaults to "metro", so a zip/county
+    //              pick loads an empty "Metro <id>" dashboard.
+    //   `market` — the tour spotlight (useTourFromUrl) parses "<geoLevel>-<geoId>"
+    //              to know which market the coach-marks belong to.
+    params.set("type", market.geoLevel);
     params.set("market", `${market.geoLevel}-${market.geoId}`);
     params.set("sessionId", sessionId);
     router.replace(`${route}?${params}`);
