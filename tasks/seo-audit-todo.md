@@ -17,10 +17,14 @@ Standards: production-ready, no workarounds; verify LIVE (no mocks); all data vi
 - [x] **M1** no hardcoded `2026` — year derived from `latestDate` (folded into market-metadata).
 - [x] **L1** dropped `changefreq`/`priority` from `sitemap-xml.ts` (Google ignores; ~2.5MB saved).
 
-## TODO — UI tier (needs frontend-design skill + live browser verify)
+## DONE — UI tier (live-verified)
 
-- [ ] **H5** public methodology page (E-E-A-T) — public crawlable route; link from market pages (near score) + footer; sitewide `Organization` JSON-LD; visible byline + "data as-of". (Note: `next.config` already redirects `/methodology` → `/scores/methodology`, which is auth-gated — must reconcile.)
-- [ ] **H6** hero LCP — `HeroSection` H1 full opacity in server HTML; `web-vitals` RUM beacon → GA4.
+- [x] **H5** public methodology page (E-E-A-T). ROOT CAUSE was not auth-gating — `(app)/scores/methodology/page.tsx` `fs.readFileSync` used a path missing the `(app)` route-group segment → ENOENT → **500 on every hit** (broke at the route-group refactor). Fixed path + `outputFileTracingIncludes` (prod standalone). Page now 200. Added sitewide `Organization` JSON-LD (`OrganizationJsonLd` in `AppShell`) + footer Methodology/Data/About links. Deferred: per-market-page "near the score" byline (footer link already covers market pages).
+- [x] **H6** hero LCP — `HeroSection` H1 renders full-opacity in SSR (removed `inView` opacity gating on the LCP element); `WebVitals` component (Next `useReportWebVitals`, no new dep) → GA4 via gtag, mounted in `AppShell`.
+
+## COMMITTED
+
+- `5b5d40a8` on `develop` (local, NOT pushed) — 31 files, +990/-341. All 14 audit items (C1, C2, H1-H7, M1-M2, L1-L4; L5 no-op) implemented + live-verified.
 
 ## DONE — structured-data backlog (typecheck-clean)
 
