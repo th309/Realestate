@@ -1,7 +1,13 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import { fileURLToPath } from 'node:url';
 
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
+
+// Absolute path to the bounded in-memory cache handler (see cache-handler.cjs).
+const cacheHandlerPath = fileURLToPath(
+  new URL('./cache-handler.cjs', import.meta.url),
+);
 
 // In development, allow fetch to the local backend (port 3001).
 // In production the backend is on *.railway.app which is already listed.
@@ -15,9 +21,22 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   output: 'standalone',
   poweredByHeader: false,
-  // Generate unique build ID to bust cache
+  // Bounded in-memory server cache (ISR, route handlers, optimized images) in
+  // production. Replaces Next's default disk cache, whose unbounded files
+  // crashed the Railway container on the ephemeral-storage file-count limit
+  // (see cache-handler.cjs). cacheMaxMemorySize:0 disables the default in-memory
+  // layer so our handler is the sole cache. Left off in dev so HMR is untouched.
+  ...(process.env.NODE_ENV === 'production'
+    ? { cacheHandler: cacheHandlerPath, cacheMaxMemorySize: 0 }
+    : {}),
+  // Stable build ID (git commit) so restarts/instances agree on cache keys and
+  // asset URLs; falls back to a timestamp if the commit isn't exposed at build.
   generateBuildId: async () => {
-    return `build-${Date.now()}`;
+    return (
+      process.env.RAILWAY_GIT_COMMIT_SHA ||
+      process.env.GIT_HASH ||
+      `build-${Date.now()}`
+    );
   },
   typescript: {
     ignoreBuildErrors: true,

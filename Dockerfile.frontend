@@ -34,12 +34,15 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_MAPBOX_TOKEN
+# Railway exposes the deployed commit SHA; used for a stable Next.js build ID
+ARG RAILWAY_GIT_COMMIT_SHA
 
 # Convert ARGs to ENVs so Next.js can see them during build
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
+ENV RAILWAY_GIT_COMMIT_SHA=$RAILWAY_GIT_COMMIT_SHA
 
 COPY . .
 
@@ -52,6 +55,9 @@ RUN npm run build:frontend
 # 4. Next.js standalone doesn't include public/ or .next/static/ — copy them manually
 RUN cp -r packages/frontend/public packages/frontend/.next/standalone/packages/frontend/public
 RUN cp -r packages/frontend/.next/static packages/frontend/.next/standalone/packages/frontend/.next/static
+# Ensure the custom cache handler ships next to the standalone server, in case
+# output-file-tracing doesn't pick up the config-resolved path.
+RUN cp packages/frontend/cache-handler.cjs packages/frontend/.next/standalone/packages/frontend/cache-handler.cjs
 
 # 5. Start Next.js standalone server
 # Railway injects PORT dynamically; Next.js standalone respects it via hostname/port env
