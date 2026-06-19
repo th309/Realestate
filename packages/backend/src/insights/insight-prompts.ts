@@ -79,7 +79,7 @@ Data for ${ctx.region_name}:
 ${formatBenchmarks(ctx.benchmarks)}
 
 Rules:
-- Write exactly 2 sentences
+- Keep it to about 50 words (1-2 short sentences)
 - Reference the score and at least one specific driver
 - Compare to a benchmark if data is available
 - ${DATA_GROUNDING_RULE}
@@ -100,7 +100,7 @@ Data for ${ctx.region_name}:
 - Top 2 score components: ${topComponents}
 
 Rules:
-- Write exactly 1 sentence
+- Keep it to about 40 words (one or two short sentences)
 - Reference the top 2 components and their status
 - ${DATA_GROUNDING_RULE}
 - Be concise and informative`;
@@ -119,7 +119,7 @@ Data for ${ctx.region_name}:
 ${formatBenchmarks(ctx.benchmarks)}
 
 Rules:
-- Write 1-2 sentences
+- Keep it to about 50 words (1-2 sentences)
 - Interpret the metric values compared to state and national averages
 - Highlight whether the market is above or below benchmarks and what that implies
 - ${DATA_GROUNDING_RULE}

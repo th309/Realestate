@@ -213,7 +213,11 @@ export class InsightsService {
   ): Promise<AiCompletionResponse | null> {
     const buildPrompt = PROMPT_BUILDERS[insightType];
     const prompt = buildPrompt(context);
-    const maxTokens = insightType === 'market_overview' ? 1200 : 200;
+    // deepseek-v4 models reason before answering, so a tight budget gets consumed
+    // by the hidden reasoning and the answer truncates to empty. Be generous — the
+    // PROMPT keeps the visible output short (~50 words for the quick insights); this
+    // is just headroom so the model actually reaches the answer.
+    const maxTokens = insightType === 'market_overview' ? 4000 : 1500;
     const purpose = INSIGHT_PURPOSES[insightType] ?? AI_PURPOSES.MARKET_TAKE;
 
     try {
