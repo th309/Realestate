@@ -11,6 +11,10 @@ import { InsightContext } from './insights.types';
 const DATA_GROUNDING_RULE =
   'Use ONLY the data provided below. Do not fabricate or assume any numbers. If data is missing, say so.';
 
+/** Plain-text prose style for the quick insights rendered directly in the UI. */
+const PLAIN_PROSE_RULE =
+  'Write plain prose only: no markdown or formatting (no bold, italics, headers, bullets, or backticks), no em-dashes (use a comma, period, or "and"), and no code-style identifiers (write field names in plain English). Keep all numbers exact.';
+
 /**
  * Format score components sorted by value descending, returning
  * the top N entries as a human-readable string.
@@ -83,6 +87,7 @@ Rules:
 - Reference the score and at least one specific driver
 - Compare to a benchmark if data is available
 - ${DATA_GROUNDING_RULE}
+- ${PLAIN_PROSE_RULE}
 - Be conversational but data-grounded`;
 }
 
@@ -103,6 +108,7 @@ Rules:
 - Keep it to about 40 words (one or two short sentences)
 - Reference the top 2 components and their status
 - ${DATA_GROUNDING_RULE}
+- ${PLAIN_PROSE_RULE}
 - Be concise and informative`;
 }
 
@@ -123,6 +129,7 @@ Rules:
 - Interpret the metric values compared to state and national averages
 - Highlight whether the market is above or below benchmarks and what that implies
 - ${DATA_GROUNDING_RULE}
+- ${PLAIN_PROSE_RULE}
 - Be conversational but data-grounded`;
 }
 
