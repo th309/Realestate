@@ -38,6 +38,23 @@ export default function AboutPage() {
           { name: "About", url: "https://www.propertyiq.app/about" },
         ]}
       />
+      {/* Named author entity (E-E-A-T) — referenced by the methodology Article's
+          author. Establishes who is responsible for the YMYL analysis. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "@id": "https://www.propertyiq.app/about#troy-h",
+            name: "Troy H",
+            honorificSuffix: "MBA",
+            jobTitle: "Founder",
+            url: "https://www.propertyiq.app/about",
+            worksFor: { "@id": "https://www.propertyiq.app/#organization" },
+          }),
+        }}
+      />
       <div className="min-h-screen bg-surface">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <PageHeaderWithBreadcrumbs
@@ -138,6 +155,9 @@ export default function AboutPage() {
                   next investment, you deserve access to clear, trustworthy
                   insights without needing a data science degree to understand
                   them.
+                </p>
+                <p className="font-medium text-on-surface">
+                  — Troy H, MBA · Founder, PropertyIQ
                 </p>
               </div>
             </section>
