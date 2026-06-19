@@ -48,6 +48,14 @@ const nextConfig = {
       './public/geojson/**',
     ],
   },
+  // The methodology page reads this .md at request time via fs.readFileSync.
+  // Dynamic reads aren't auto-traced into the standalone build, so include it
+  // explicitly or the page 500s in production (H5).
+  outputFileTracingIncludes: {
+    '/scores/methodology': [
+      './app/(app)/scores/methodology/validation-report.md',
+    ],
+  },
   // Exclude 1.3GB of static GeoJSON from Turbopack/webpack watching in dev
   // These files are served as-is from /public and rarely change
   webpack: (config, { dev }) => {
@@ -77,6 +85,17 @@ const nextConfig = {
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'propertyiq.app' }],
+        destination: 'https://www.propertyiq.app/:path*',
+        permanent: true,
+      },
+      // ── Railway deploy alias → www canonical (H3) ────────────────
+      // propertyiq.up.railway.app serves byte-identical copies of every page.
+      // Config-level (not just middleware) so it also catches .xml/.txt, which
+      // the middleware matcher skips. Exact host only — preview/staging deploys
+      // on other *.up.railway.app subdomains are intentionally left alone.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'propertyiq.up.railway.app' }],
         destination: 'https://www.propertyiq.app/:path*',
         permanent: true,
       },

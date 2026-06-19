@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import { isLocationIndexable } from "@/lib/seo/scored-locations";
+import {
+  buildMarketTitle,
+  buildMarketDescription,
+} from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { MetroPageContent } from "./MetroPageContent";
@@ -25,17 +30,30 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/${metro.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(metro.shortName)}`;
 
+  // Scoreless metros render a bare "—" and read as thin content — keep them out
+  // of the index (still crawlable via follow so internal links pass equity).
+  // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
+  // data-interpolated title + description so each page is data-distinct, not
+  // micro-boilerplate Google would rewrite.
+  const [indexable, stats] = await Promise.all([
+    isLocationIndexable("metro", metro.cbsaCode),
+    fetchSeoMarketStats("metro", metro.cbsaCode, metro.state),
+  ]);
+  const title = buildMarketTitle(metro.shortName, stats);
+  const description = buildMarketDescription(metro.shortName, stats);
+
   return {
-    title: `${metro.shortName} Housing Market — 2026 Analysis`,
-    description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
+    title,
+    description,
     alternates: {
       canonical: pageUrl,
     },
+    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,
-      title: `${metro.shortName} Housing Market — 2026 Analysis`,
-      description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
+      title: `${title} | PropertyIQ`,
+      description,
       siteName: "PropertyIQ",
       images: [
         {
@@ -48,8 +66,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${metro.shortName} Housing Market — 2026 Analysis`,
-      description: `See the latest ${metro.shortName} housing market data — median home prices, AI-powered forecasts, investor scores, and rental trends. Updated 2026.`,
+      title,
+      description,
       images: [ogImageUrl],
     },
   };
@@ -92,9 +110,8 @@ export default async function MetroPage({
     ],
   };
 
-  const seoContent = generateMarketSeoContent(metro);
-
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
+  const seoContent = generateMarketSeoContent(metro, stats);
 
   // Related metros: same-state ranked by PropertyIQ score (server-rendered).
   const metroRank = await fetchRankings("propertyiq", "metro", {
@@ -138,6 +155,11 @@ export default async function MetroPage({
         </h2>
 
         <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
+          {seoContent.dataSummary && (
+            <p className="text-on-surface font-medium">
+              {seoContent.dataSummary}
+            </p>
+          )}
           <p>{seoContent.opening}</p>
           <p>{seoContent.regional}</p>
           {seoContent.stateContext && <p>{seoContent.stateContext}</p>}

@@ -57,13 +57,23 @@ function checkShortLinkRate(ip: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // Non-www → www redirect (301 permanent)
+  // Canonical-host redirects — consolidate duplicate hosts onto
+  // www.propertyiq.app so Google never indexes the bare apex or the Railway
+  // deploy alias (H3; the alias serves byte-identical copies of every page).
+  // Railway's own healthcheck uses Host: healthcheck.railway.app, which does
+  // NOT match, so this never interferes with deploys.
   const host = request.headers.get("host") || "";
   if (host === "propertyiq.app") {
     const url = request.nextUrl.clone();
     url.host = "www.propertyiq.app";
     url.port = "";
     return NextResponse.redirect(url, 301);
+  }
+  if (host === "propertyiq.up.railway.app") {
+    const url = request.nextUrl.clone();
+    url.host = "www.propertyiq.app";
+    url.port = "";
+    return NextResponse.redirect(url, 308);
   }
 
   // Short-link rate limit: 60 req/min per IP on the /go/ prefix.

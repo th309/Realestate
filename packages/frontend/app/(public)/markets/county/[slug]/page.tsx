@@ -4,6 +4,11 @@ import Link from "next/link";
 import { COUNTY_SLUG_DATA, SLUG_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import { isLocationIndexable } from "@/lib/seo/scored-locations";
+import {
+  buildMarketTitle,
+  buildMarketDescription,
+} from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { CountyPageContent } from "./CountyPageContent";
@@ -28,15 +33,27 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/county/${county.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(county.shortName)}`;
 
+  // Scoreless counties render a bare "—" and read as thin content — keep them
+  // out of the index (still crawlable via follow so internal links pass equity).
+  // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
+  // data-interpolated title + description so each page is data-distinct.
+  const [indexable, stats] = await Promise.all([
+    isLocationIndexable("county", county.fips),
+    fetchSeoMarketStats("county", county.fips, county.state),
+  ]);
+  const title = buildMarketTitle(county.shortName, stats);
+  const description = buildMarketDescription(county.shortName, stats);
+
   return {
-    title: `${county.shortName} Housing Market — 2026 Analysis`,
-    description: `${county.shortName} housing market data — home prices, PropertyIQ demand score, investment analysis, and rental trends. Updated 2026.`,
+    title,
+    description,
     alternates: { canonical: pageUrl },
+    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,
-      title: `${county.shortName} Housing Market — 2026 Analysis | PropertyIQ`,
-      description: `${county.shortName} housing market data — home prices, demand scores, investment analysis. Updated 2026.`,
+      title: `${title} | PropertyIQ`,
+      description,
       siteName: "PropertyIQ",
       images: [
         {
@@ -49,8 +66,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${county.shortName} Housing Market — 2026 Analysis`,
-      description: `${county.shortName} housing market data — demand scores, home prices, investment analysis. Updated 2026.`,
+      title,
+      description,
       images: [ogImageUrl],
     },
   };
@@ -114,9 +131,8 @@ export default async function CountyPage({
     ],
   };
 
-  const seoContent = generateCountySeoContent(county);
-
   const stats = await fetchSeoMarketStats("county", county.fips, county.state);
+  const seoContent = generateCountySeoContent(county, stats);
 
   return (
     <>
@@ -155,6 +171,11 @@ export default async function CountyPage({
         </h2>
 
         <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
+          {seoContent.dataSummary && (
+            <p className="text-on-surface font-medium">
+              {seoContent.dataSummary}
+            </p>
+          )}
           <p>{seoContent.opening}</p>
           <p>{seoContent.regional}</p>
           <p>{seoContent.middle}</p>

@@ -30,11 +30,12 @@ export function HeroSection() {
       aria-labelledby="hero-heading"
     >
       <div className="relative max-w-5xl mx-auto text-center z-10">
-        {/* H1 — CMO headline */}
+        {/* H1 — CMO headline. LCP element: always full-opacity in the initial
+            SSR HTML (no inView/opacity:0 gating) so the largest text paints
+            immediately, not after hydration + IntersectionObserver (H6). */}
         <h1
           id="hero-heading"
           className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1] font-[family-name:var(--font-source-serif)]"
-          style={fadeUp(inView, "0s")}
         >
           {formatMarketsScored()} U.S. Real Estate Markets.{" "}
           <span className="text-[#00C853]">Scored.</span>

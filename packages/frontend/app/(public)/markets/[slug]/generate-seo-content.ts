@@ -1,4 +1,6 @@
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
+import type { MarketStatsData } from "@/lib/data";
+import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -144,6 +146,8 @@ const CLOSING_TEMPLATES = [
 ];
 
 export interface MarketSeoContent {
+  /** Real per-geo numbers in prose — the data-distinct lead paragraph. */
+  dataSummary: string | null;
   opening: string;
   regional: string;
   stateContext: string | null;
@@ -158,6 +162,7 @@ export interface MarketSeoContent {
  */
 export function generateMarketSeoContent(
   metro: MetroSlugEntry,
+  stats: MarketStatsData | null = null,
 ): MarketSeoContent {
   const hash = hashString(metro.cbsaCode + metro.slug);
   const region = STATE_REGIONS[metro.state] || "United States";
@@ -168,6 +173,7 @@ export function generateMarketSeoContent(
   const closingIdx = (hash >> 6) % CLOSING_TEMPLATES.length;
 
   return {
+    dataSummary: buildMarketDataSummary(metro.shortName, stats),
     opening: OPENING_TEMPLATES[openingIdx](metro.shortName, metro.state),
     regional: regionContext,
     stateContext: STATE_CONTEXT[metro.state] || null,

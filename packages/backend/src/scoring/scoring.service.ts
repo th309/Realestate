@@ -40,6 +40,7 @@ import { getLatestRedfinDate, fetchAllMetrics } from './scoring-data-fetcher';
 import {
   getTopMarkets as queryTopMarkets,
   searchMarkets as querySearchMarkets,
+  getScoredLocationIds as queryScoredLocationIds,
 } from './scoring-queries';
 import {
   getScoreDistribution as queryScoreDistribution,
@@ -179,6 +180,23 @@ export class ScoringService {
     limit: number = 20,
   ) {
     return querySearchMarkets(this.supabase, query, geography, limit);
+  }
+
+  /**
+   * List every scored location_id for a geography (latest period by default).
+   * Lean payload for SEO sitemap filtering + per-page noindex.
+   */
+  async getScoredLocationIds(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+  ): Promise<{ date: string | null; ids: string[] }> {
+    return queryScoredLocationIds(
+      this.supabase,
+      geography,
+      scoreType,
+      periodDate,
+    );
   }
 
   async getAllScoresForGeography(

@@ -5,6 +5,12 @@
  * `generateSitemaps()` produces URLs at `/sitemap/[id].xml` and does NOT
  * generate a sitemap index at `/sitemap.xml`. Search engines expect a single
  * `/sitemap.xml` entry point. We control everything explicitly here.
+ *
+ * `<lastmod>` honesty (H4): data-page URLs carry the geo's REAL latest score
+ * period. Google disregards `<lastmod>` site-wide if it's a fake per-request
+ * timestamp, so static/state pages omit it rather than ship a fabricated one,
+ * and blog posts use their real frontmatter date. `<changefreq>`/`<priority>`
+ * are not emitted at all (L1) — Google ignores them.
  */
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
@@ -12,6 +18,8 @@ import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
 import { STATE_SLUG_DATA } from "@/lib/data/state-slug-data";
 import { getAllPosts } from "@/lib/blog";
 import { COMPARISONS } from "@/lib/data/comparisons";
+import { fetchScoredLocationData } from "@/lib/data";
+import type { SitemapUrl } from "./sitemap-xml";
 
 export const BASE_URL = "https://www.propertyiq.app";
 
@@ -26,233 +34,162 @@ const VALID_ZIP_DATA = ZIP_SLUG_DATA.filter((entry) =>
   /^\d{5}$/.test(entry.zip),
 );
 
-export const ZIP_SITEMAP_COUNT = Math.ceil(
-  VALID_ZIP_DATA.length / ZIPS_PER_SITEMAP,
-);
-
-export interface SitemapUrl {
-  loc: string;
-  lastmod?: string;
-  changefreq?:
-    | "always"
-    | "hourly"
-    | "daily"
-    | "weekly"
-    | "monthly"
-    | "yearly"
-    | "never";
-  priority?: number;
+/** ISO datetime for a YYYY-MM-DD score date, or undefined when absent/invalid. */
+function isoOrUndefined(date: string | null): string | undefined {
+  if (!date) return undefined;
+  const d = new Date(date);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
-const XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
-const URLSET_OPEN =
-  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-const SITEMAPINDEX_OPEN =
-  '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+/**
+ * Keep only slug entries that have a PropertyIQ score (scoreless pages render a
+ * bare "—" and read as thin content), and surface the geo's real refresh date
+ * for honest `<lastmod>`. FAIL OPEN: if the scored-id lookup is empty (backend
+ * error / cold cache) keep the full list — a transient outage must never wipe
+ * the sitemap. `idOf` must yield the score `location_id` format: padded ZIP,
+ * FIPS, or CBSA.
+ */
+async function scoredEntries<T>(
+  geo: "metro" | "county" | "zip",
+  entries: T[],
+  idOf: (entry: T) => string,
+): Promise<{ lastmod: string | undefined; entries: T[] }> {
+  const { date, ids } = await fetchScoredLocationData(geo);
+  const lastmod = isoOrUndefined(date);
+  if (!ids.length) return { lastmod, entries }; // fail open
+  const scored = new Set(ids);
+  return {
+    lastmod,
+    entries: entries.filter((entry) => scored.has(idOf(entry))),
+  };
 }
 
-export function renderUrlset(urls: SitemapUrl[]): string {
-  const items = urls
-    .map((u) => {
-      const parts = [`  <url>`, `    <loc>${escapeXml(u.loc)}</loc>`];
-      if (u.lastmod) parts.push(`    <lastmod>${u.lastmod}</lastmod>`);
-      if (u.changefreq)
-        parts.push(`    <changefreq>${u.changefreq}</changefreq>`);
-      if (u.priority !== undefined)
-        parts.push(`    <priority>${u.priority}</priority>`);
-      parts.push(`  </url>`);
-      return parts.join("\n");
-    })
-    .join("\n");
-  return `${XML_HEADER}\n${URLSET_OPEN}\n${items}\n</urlset>`;
+/** Scored, sitemap-eligible ZIP entries + refresh date. */
+async function getScoredZipData(): Promise<{
+  lastmod: string | undefined;
+  entries: typeof VALID_ZIP_DATA;
+}> {
+  return scoredEntries("zip", VALID_ZIP_DATA, (zip) => zip.zip);
 }
 
-export function renderSitemapIndex(
-  entries: { loc: string; lastmod?: string }[],
-): string {
-  const items = entries
-    .map((e) => {
-      const parts = [`  <sitemap>`, `    <loc>${escapeXml(e.loc)}</loc>`];
-      if (e.lastmod) parts.push(`    <lastmod>${e.lastmod}</lastmod>`);
-      parts.push(`  </sitemap>`);
-      return parts.join("\n");
-    })
-    .join("\n");
-  return `${XML_HEADER}\n${SITEMAPINDEX_OPEN}\n${items}\n</sitemapindex>`;
+/** Number of ZIP sitemap chunks after scoreless ZIPs are dropped. */
+export async function getZipSitemapCount(): Promise<number> {
+  const { entries } = await getScoredZipData();
+  return Math.ceil(entries.length / ZIPS_PER_SITEMAP);
 }
 
 export function buildMainUrls(): SitemapUrl[] {
-  const now = new Date().toISOString();
-
+  // Static routes: no honest single date, so <lastmod> is omitted (better than
+  // a fabricated per-request timestamp — see file header).
   const staticRoutes: SitemapUrl[] = [
-    { loc: BASE_URL, lastmod: now, changefreq: "weekly", priority: 1.0 },
-    {
-      loc: `${BASE_URL}/markets`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.9,
-    },
-    {
-      loc: `${BASE_URL}/blog`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.8,
-    },
-    {
-      loc: `${BASE_URL}/map`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.8,
-    },
-    {
-      loc: `${BASE_URL}/scores`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.7,
-    },
-    {
-      loc: `${BASE_URL}/scores/methodology`,
-      lastmod: now,
-      changefreq: "monthly",
-      priority: 0.6,
-    },
-    {
-      loc: `${BASE_URL}/market`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.6,
-    },
-    {
-      loc: `${BASE_URL}/graphs`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.6,
-    },
-    {
-      loc: `${BASE_URL}/pricing`,
-      lastmod: now,
-      changefreq: "monthly",
-      priority: 0.6,
-    },
-    {
-      loc: `${BASE_URL}/data`,
-      lastmod: now,
-      changefreq: "monthly",
-      priority: 0.5,
-    },
-    {
-      loc: `${BASE_URL}/about`,
-      lastmod: now,
-      changefreq: "monthly",
-      priority: 0.5,
-    },
-    {
-      loc: `${BASE_URL}/contact`,
-      lastmod: now,
-      changefreq: "monthly",
-      priority: 0.4,
-    },
-    {
-      loc: `${BASE_URL}/about/terms`,
-      lastmod: now,
-      changefreq: "yearly",
-      priority: 0.2,
-    },
+    { loc: BASE_URL },
+    { loc: `${BASE_URL}/markets` },
+    { loc: `${BASE_URL}/blog` },
+    { loc: `${BASE_URL}/map` },
+    { loc: `${BASE_URL}/scores` },
+    { loc: `${BASE_URL}/scores/methodology` },
+    { loc: `${BASE_URL}/market` },
+    { loc: `${BASE_URL}/graphs` },
+    { loc: `${BASE_URL}/pricing` },
+    { loc: `${BASE_URL}/data` },
+    { loc: `${BASE_URL}/about` },
+    { loc: `${BASE_URL}/contact` },
+    { loc: `${BASE_URL}/about/terms` },
   ];
 
+  // Blog posts carry a real, verifiable publish date.
   const blogRoutes: SitemapUrl[] = getAllPosts().map((post) => ({
     loc: `${BASE_URL}/blog/${post.slug}`,
-    lastmod: new Date(post.frontmatter.date).toISOString(),
-    changefreq: "monthly" as const,
-    priority: 0.7,
+    lastmod: isoOrUndefined(post.frontmatter.date),
   }));
 
   const comparisonRoutes: SitemapUrl[] = COMPARISONS.map((c) => ({
     loc: `${BASE_URL}/compare/${c.slug}`,
-    lastmod: now,
-    changefreq: "monthly" as const,
-    priority: 0.5,
   }));
 
   return [...staticRoutes, ...blogRoutes, ...comparisonRoutes];
 }
 
 export function buildStatesUrls(): SitemapUrl[] {
-  const now = new Date().toISOString();
   return [
-    {
-      loc: `${BASE_URL}/markets/state`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: 0.8,
-    },
+    { loc: `${BASE_URL}/markets/state` },
     ...STATE_SLUG_DATA.map((s) => ({
       loc: `${BASE_URL}/markets/state/${s.slug}`,
-      lastmod: now,
-      changefreq: "weekly" as const,
-      priority: 0.8,
     })),
   ];
 }
 
-export function buildMetrosUrls(): SitemapUrl[] {
-  const now = new Date().toISOString();
-  return METRO_SLUG_DATA.map((metro) => ({
+export async function buildMetrosUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "metro",
+    METRO_SLUG_DATA,
+    (metro) => metro.cbsaCode,
+  );
+  return entries.map((metro) => ({
     loc: `${BASE_URL}/markets/${metro.slug}`,
-    lastmod: now,
-    changefreq: "weekly" as const,
-    priority: 0.7,
+    lastmod,
   }));
 }
 
-export function buildCountiesUrls(): SitemapUrl[] {
-  const now = new Date().toISOString();
-  return COUNTY_SLUG_DATA.map((county) => ({
+export async function buildCountiesUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "county",
+    COUNTY_SLUG_DATA,
+    (county) => county.fips,
+  );
+  return entries.map((county) => ({
     loc: `${BASE_URL}/markets/county/${county.slug}`,
-    lastmod: now,
-    changefreq: "weekly" as const,
-    priority: 0.5,
+    lastmod,
   }));
 }
 
-export function buildZipChunkUrls(chunkIndex: number): SitemapUrl[] {
-  const now = new Date().toISOString();
+export async function buildZipChunkUrls(
+  chunkIndex: number,
+): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await getScoredZipData();
   const start = chunkIndex * ZIPS_PER_SITEMAP;
   const end = start + ZIPS_PER_SITEMAP;
-  return VALID_ZIP_DATA.slice(start, end).map((zip) => ({
+  return entries.slice(start, end).map((zip) => ({
     loc: `${BASE_URL}/markets/zip/${zip.slug}`,
-    lastmod: now,
-    changefreq: "monthly" as const,
-    priority: 0.4,
+    lastmod,
   }));
 }
 
-export function buildIndexEntries(): { loc: string; lastmod: string }[] {
-  const now = new Date().toISOString();
-  const entries = [
-    { loc: `${BASE_URL}/sitemaps/main`, lastmod: now },
-    { loc: `${BASE_URL}/sitemaps/states`, lastmod: now },
-    { loc: `${BASE_URL}/sitemaps/metros`, lastmod: now },
-    { loc: `${BASE_URL}/sitemaps/counties`, lastmod: now },
+export async function buildIndexEntries(): Promise<
+  { loc: string; lastmod?: string }[]
+> {
+  // Each sub-sitemap's <lastmod> reflects its own content's real refresh date.
+  // (Same-endpoint fetches dedupe in the Next data cache.)
+  const [metro, county, zip, zipChunks] = await Promise.all([
+    fetchScoredLocationData("metro"),
+    fetchScoredLocationData("county"),
+    fetchScoredLocationData("zip"),
+    getZipSitemapCount(),
+  ]);
+
+  const entries: { loc: string; lastmod?: string }[] = [
+    { loc: `${BASE_URL}/sitemaps/main` },
+    { loc: `${BASE_URL}/sitemaps/states` },
+    { loc: `${BASE_URL}/sitemaps/metros`, lastmod: isoOrUndefined(metro.date) },
+    {
+      loc: `${BASE_URL}/sitemaps/counties`,
+      lastmod: isoOrUndefined(county.date),
+    },
   ];
-  for (let i = 0; i < ZIP_SITEMAP_COUNT; i++) {
+
+  const zipLastmod = isoOrUndefined(zip.date);
+  for (let i = 0; i < zipChunks; i++) {
     entries.push({
       loc: `${BASE_URL}/sitemaps/zips-${i + 1}`,
-      lastmod: now,
+      lastmod: zipLastmod,
     });
   }
   return entries;
 }
 
-export function buildSitemapById(id: string): SitemapUrl[] | null {
+export async function buildSitemapById(
+  id: string,
+): Promise<SitemapUrl[] | null> {
   if (id === "main") return buildMainUrls();
   if (id === "states") return buildStatesUrls();
   if (id === "metros") return buildMetrosUrls();
@@ -262,7 +199,8 @@ export function buildSitemapById(id: string): SitemapUrl[] | null {
   if (zipMatch) {
     const chunkNumber = parseInt(zipMatch[1], 10);
     const chunkIndex = chunkNumber - 1;
-    if (chunkIndex < 0 || chunkIndex >= ZIP_SITEMAP_COUNT) return null;
+    const zipChunks = await getZipSitemapCount();
+    if (chunkIndex < 0 || chunkIndex >= zipChunks) return null;
     return buildZipChunkUrls(chunkIndex);
   }
 

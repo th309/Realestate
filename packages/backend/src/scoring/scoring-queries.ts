@@ -65,6 +65,56 @@ export async function getLatestScoreDate(
 }
 
 /**
+ * List every scored location_id for a geography at the latest (or given) date.
+ *
+ * Lean projection (location_id only, deduped) so SEO callers — sitemap
+ * filtering and per-page noindex — can pull the full set (~29k ZIPs) in a
+ * small, cacheable payload instead of the multi-MB /scores/all response.
+ * Paginated to clear Supabase's 1000-row cap.
+ */
+export async function getScoredLocationIds(
+  supabase: SupabaseClient,
+  geography: GeographyLevel,
+  scoreType: ScoreType,
+  date?: string,
+): Promise<{ date: string | null; ids: string[] }> {
+  const targetDate =
+    date || (await getLatestScoreDate(supabase, geography, scoreType));
+  if (!targetDate) return { date: null, ids: [] };
+
+  const pageSize = 1000;
+  const ids = new Set<string>();
+  let page = 0;
+
+  while (true) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from('propertyiq_scores')
+      .select('location_id')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', targetDate)
+      // Stable order is REQUIRED for correct range pagination — without it
+      // Postgres may reorder rows between pages, skipping some location_ids.
+      .order('location_id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch scored location ids: ${error.message}`);
+    }
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      if (row.location_id) ids.add(row.location_id);
+    }
+    if (data.length < pageSize) break;
+    page += 1;
+  }
+
+  return { date: targetDate, ids: [...ids] };
+}
+
+/**
  * Get distinct score dates for a specific location, ordered newest first.
  */
 export async function getScoreDatesForLocation(

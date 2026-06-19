@@ -6,7 +6,8 @@
  */
 
 import type { ScoreResponse, BatchScoreResponse } from "../types";
-import { ApiError, fetchAPI, fetchAPIWithParams } from "./base";
+import { ApiError, fetchAPI, fetchAPICached, fetchAPIWithParams } from "./base";
+import { SEO_MARKET_CACHE_TAG } from "./market-stats";
 
 /**
  * A 404 from the scores endpoint means "no PropertyIQ score for this
@@ -69,6 +70,41 @@ export async function fetchTopMarkets(
     console.error("Failed to fetch top markets:", error);
     return [];
   }
+}
+
+/**
+ * Fetch the scored location IDs + their refresh date for a geography level.
+ *
+ * Backs SEO sitemap filtering + per-page noindex (a ZIP/county/metro is only
+ * indexable when it has a PropertyIQ score) and honest sitemap `<lastmod>`
+ * (`date` = the geo's real latest score period). Hits the lean ID-only endpoint
+ * (small, cacheable payload — unlike /scores/all). Returns empty/null on
+ * failure so callers can fail OPEN (keep the full slug list / leave pages
+ * indexable rather than emptying the sitemap on a transient backend blip).
+ */
+export async function fetchScoredLocationData(
+  geography: "metro" | "county" | "zip",
+): Promise<{ date: string | null; ids: string[] }> {
+  try {
+    const res = await fetchAPICached<{ date?: string | null; ids?: string[] }>(
+      `/api/scores/ids/${geography}`,
+      { score_type: "propertyiq" },
+      { revalidate: 86400, tags: [SEO_MARKET_CACHE_TAG] },
+    );
+    return {
+      date: res?.date ?? null,
+      ids: Array.isArray(res?.ids) ? res.ids : [],
+    };
+  } catch {
+    return { date: null, ids: [] };
+  }
+}
+
+/** Scored location IDs only (the indexability gate doesn't need the date). */
+export async function fetchScoredLocationIds(
+  geography: "metro" | "county" | "zip",
+): Promise<string[]> {
+  return (await fetchScoredLocationData(geography)).ids;
 }
 
 /**
