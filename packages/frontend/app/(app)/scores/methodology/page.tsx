@@ -133,12 +133,15 @@ export default function MethodologyPage() {
                 headline: "How PropertyIQ Scores Predict Market Performance",
                 description:
                   "Out-of-sample validated across more than two decades of market data. Technical methodology behind the PropertyIQ Score.",
+                image: ["https://www.propertyiq.app/og-image.png"],
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {
-                  "@type": "Organization",
-                  name: "PropertyIQ",
-                  url: "https://www.propertyiq.app",
+                  "@type": "Person",
+                  "@id": "https://www.propertyiq.app/about#troy-h",
+                  name: "Troy H",
+                  honorificSuffix: "MBA",
+                  url: "https://www.propertyiq.app/about",
                 },
                 publisher: {
                   "@id": "https://www.propertyiq.app/#organization",
@@ -184,6 +187,17 @@ export default function MethodologyPage() {
           description="Out-of-sample validated across more than two decades of market data"
           icon={<Target className="w-5 h-5" />}
         />
+        {/* Author byline — E-E-A-T: who is responsible for this YMYL analysis. */}
+        <p className="mt-3 text-sm text-on-surface-variant">
+          Analysis by{" "}
+          <a
+            href="/about"
+            className="font-medium text-on-surface underline-offset-2 hover:underline"
+          >
+            Troy H, MBA
+          </a>{" "}
+          · PropertyIQ research. Updated with each monthly data refresh.
+        </p>
       </section>
 
       {/* Marketing Stats */}

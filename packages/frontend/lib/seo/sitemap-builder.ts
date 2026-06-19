@@ -110,11 +110,17 @@ export function buildMainUrls(): SitemapUrl[] {
   return [...staticRoutes, ...blogRoutes, ...comparisonRoutes];
 }
 
-export function buildStatesUrls(): SitemapUrl[] {
+export async function buildStatesUrls(): Promise<SitemapUrl[]> {
+  // State pages are score-backed; reuse the monthly refresh date (uniform
+  // across geo levels — one pipeline run) so the states tier carries the same
+  // honest <lastmod> as metros/counties/zips instead of none.
+  const { date } = await fetchScoredLocationData("metro");
+  const lastmod = isoOrUndefined(date);
   return [
-    { loc: `${BASE_URL}/markets/state` },
+    { loc: `${BASE_URL}/markets/state`, lastmod },
     ...STATE_SLUG_DATA.map((s) => ({
       loc: `${BASE_URL}/markets/state/${s.slug}`,
+      lastmod,
     })),
   ];
 }
@@ -169,7 +175,8 @@ export async function buildIndexEntries(): Promise<
 
   const entries: { loc: string; lastmod?: string }[] = [
     { loc: `${BASE_URL}/sitemaps/main` },
-    { loc: `${BASE_URL}/sitemaps/states` },
+    // States share the same monthly refresh date as the other geo tiers.
+    { loc: `${BASE_URL}/sitemaps/states`, lastmod: isoOrUndefined(metro.date) },
     { loc: `${BASE_URL}/sitemaps/metros`, lastmod: isoOrUndefined(metro.date) },
     {
       loc: `${BASE_URL}/sitemaps/counties`,

@@ -171,6 +171,8 @@ export default function DataPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "DataCatalog",
+            "@id": "https://www.propertyiq.app/data#catalog",
+            url: "https://www.propertyiq.app/data",
             name: "PropertyIQ Real Estate Data",
             description:
               "90+ real estate and economic metrics from 7 trusted data sources, updated monthly.",

@@ -1,6 +1,9 @@
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
 import type { MarketStatsData } from "@/lib/data";
-import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
+import {
+  buildMarketDataSummary,
+  buildRegionalContext,
+} from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -175,7 +178,12 @@ export function generateMarketSeoContent(
   return {
     dataSummary: buildMarketDataSummary(metro.shortName, stats),
     opening: OPENING_TEMPLATES[openingIdx](metro.shortName, metro.state),
-    regional: regionContext,
+    regional: buildRegionalContext(
+      regionContext,
+      region,
+      metro.shortName,
+      stats,
+    ),
     stateContext: STATE_CONTEXT[metro.state] || null,
     middle: MIDDLE_TEMPLATES[middleIdx](metro.shortName),
     closing: CLOSING_TEMPLATES[closingIdx](metro.shortName),

@@ -4,7 +4,8 @@ export const metadata: Metadata = {
   title: "Real Estate Market Reports — PropertyIQ",
   description:
     "Generate AI-powered market reports for any US metro, county, or ZIP code. Get personalized analysis for homebuyers and investors with PropertyIQ.",
-  alternates: { canonical: "https://www.propertyiq.app/reports" },
+  // No self-canonical: this page is noindex, so a canonical would be a
+  // contradictory signal to crawlers. Robots noindex is the authoritative directive.
   robots: { index: false, follow: false },
   openGraph: {
     title: "Real Estate Market Reports — PropertyIQ",

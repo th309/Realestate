@@ -9,7 +9,7 @@
 **Validation Sample:** 865 metros / 3,061 counties / 25,783 ZIPs with observed 3-year forward outcomes (2001–2023 scoring vintages)
 **Methodology:** Cross-sectional percentile rank re-centered so the zero-crossing maps to 50; per-month Spearman rank correlation of score vs forward excess return, aggregated by calendar year; permutation significance vs shuffled-target null; full-period and era-split robustness.
 
-> Every number in this report is computed from observed price changes (Zillow ZHVI) following each scoring date. No value is estimated or fabricated. Sources are the committed backtest artifacts: `scripts/analysis/monolithic-discovery/data/{metro,county,zip}_score_backtest.json`, `claims_stats.json`, and `validation_rank2.json`, summarized in `docs/superpowers/results/2026-06-12-*`.
+> Every number in this report is computed from observed price changes (Zillow ZHVI) following each scoring date. No value is estimated or fabricated. Sources are our committed backtest artifacts — the per-geography score backtests, the claims-statistics summary, and the walk-forward validation battery — produced by our internal validation runs.
 
 ---
 
@@ -25,7 +25,7 @@ The PropertyIQ Score predicts 3-year excess appreciation vs each market's state.
 
 **Score semantics:** 50 = predicted to match the state average. Higher predicts outperformance, lower predicts underperformance. The score band → excess-return mapping is monotonic across all five bands (Section 4).
 
-**Dollar impact (3-year, excess vs state, within-state comparison):** Choosing a top-band market (score 95–99) over a bottom-band market (score 1–5) in the same state corresponds to a historical excess gain of approximately **$21,700** (metro, median home $251,629), **$17,800** (county, $230,458), and **$22,900** (ZIP, $284,081) over 3 years. Source: `claims_stats.json` `within_state` (top-band vs bottom-band annualized excess compounded over 3 years on a 4%/yr state base), median home values from Zillow ZHVI (Apr 2026).
+**Dollar impact (3-year, excess vs state, within-state comparison):** Choosing a top-band market (score 95–99) over a bottom-band market (score 1–5) in the same state corresponds to a historical excess gain of approximately **$21,700** (metro, median home $251,629), **$17,800** (county, $230,458), and **$22,900** (ZIP, $284,081) over 3 years. Source: our within-state claims statistics (top-band vs bottom-band annualized excess compounded over 3 years on a 4%/yr state base), with median home values from Zillow ZHVI (Apr 2026).
 
 **Limitations (detailed in Section 9):**
 
@@ -44,7 +44,7 @@ The four inputs combine price momentum (markets that have been appreciating tend
 
 ### 2.1 Score Band → 3-Year Excess Return
 
-Mean annualized 3-year excess return vs state, by score band. Source: `claims_stats.json` `quintile_mean_excess_3y_pp` (2016+ full-formula era).
+Mean annualized 3-year excess return vs state, by score band. Source: our quintile excess-return statistics (2016+ full-formula era).
 
 | Score Band | Metro (pp/yr) | County (pp/yr) | ZIP (pp/yr) |
 | ---------- | ------------: | -------------: | ----------: |
@@ -58,7 +58,7 @@ The mapping is strictly monotonic at every level: higher bands realize higher ex
 
 ### 2.2 The Cost of Choosing Wrong (3-year excess dollars)
 
-On the level's median home, the excess-return gap between the top band (95–99) and the bottom band (1–5), within the same state, over 3 years. Source: `claims_stats.json` `within_state.dollar_delta`.
+On the level's median home, the excess-return gap between the top band (95–99) and the bottom band (1–5), within the same state, over 3 years. Source: our within-state dollar-delta statistics.
 
 | Geography | Median Home (ZHVI Apr 2026) | Within-state 3Y excess gap |
 | --------- | --------------------------: | -------------------------: |
@@ -76,7 +76,7 @@ Each score is evaluated only against price changes that occurred **after** the s
 
 ### 3.1 IC by Year, Full-Formula Era (2016–2023)
 
-Source: `validation_rank2.json` (the shipped formula's walk-forward battery).
+Source: the shipped formula's walk-forward validation battery.
 
 | Year       |   Metro IC |  County IC |     ZIP IC |
 | ---------- | ---------: | ---------: | ---------: |
@@ -94,7 +94,7 @@ Every year is positive at every level. The 2019–2020 trough is the momentum so
 
 ### 3.2 Improvement vs the Prior Formula
 
-The retired demand-signal formula (3 Redfin metrics) replicated on the identical validation panel, same method. Source: `validation_rank2.json` `baseline_v4`.
+The retired demand-signal formula (3 Redfin metrics) replicated on the identical validation panel, same method. Source: the prior-formula baseline in our walk-forward validation battery.
 
 | Geography | Prior formula IC (same panel) | PropertyIQ IC | Change |
 | --------- | ----------------------------: | ------------: | -----: |
@@ -112,7 +112,7 @@ See Section 2.2. Dollar values are derived from 3-year excess-return band spread
 
 ## 4. Full-Period Metrics (2001–2023)
 
-Backfilled momentum allows validation across two full housing cycles. Pre-2016 vintages use price momentum only (C confidence). Source: `{metro,county,zip}_score_backtest.json`.
+Backfilled momentum allows validation across two full housing cycles. Pre-2016 vintages use price momentum only (C confidence). Source: our per-geography score backtests.
 
 | Geography | Vintages          | Validated rows | Median yearly IC (full) | Positive IC years | Decile spread (annualized) |
 | --------- | ----------------- | -------------: | ----------------------: | ----------------: | -------------------------: |
@@ -126,7 +126,7 @@ Only 2007 (metro, −0.02) was negative across 69 geography-years. County and ZI
 
 ## 5. Within-State Validation
 
-The score trains and is reported on a **state** benchmark (excess vs state median). Score 50 is calibrated to state-average performance: markets scoring 45–55 realized a mean 3-year excess return of −0.20 pp/yr (metro), −0.23 pp/yr (county), and +0.01 pp/yr (ZIP) — within a fifth of a point of zero at every level. Source: `*_score_backtest.json` `calibration_score_45_55_mean_excess_pp`.
+The score trains and is reported on a **state** benchmark (excess vs state median). Score 50 is calibrated to state-average performance: markets scoring 45–55 realized a mean 3-year excess return of −0.20 pp/yr (metro), −0.23 pp/yr (county), and +0.01 pp/yr (ZIP) — within a fifth of a point of zero at every level. Source: the midpoint-calibration statistics in our per-geography score backtests.
 
 The empirical zero-crossing percentile (where the signal equals zero) is 49.7 (metro), 49.3 (county), and 50.3 (ZIP) — a single ≈50 re-centering constant serves all three levels, unlike the prior formula's per-geography constants.
 
@@ -147,7 +147,7 @@ Equal weights with signs set by economic logic; no parameters were fit to return
 
 ### 6.2 IC by Era
 
-Source: `*_score_backtest.json` `eras` (median IC; share of months with positive IC).
+Source: the era-split statistics in our per-geography score backtests (median IC; share of months with positive IC).
 
 | Era                         | Inputs available |           Metro |          County |              ZIP |
 | --------------------------- | ---------------- | --------------: | --------------: | ---------------: |
@@ -204,11 +204,11 @@ Interpretation: a score is a relative, mean-reverting ranking of current market 
 
 **Construction.** For each geography level and month: z-score each input cross-sectionally (population standard deviation), sum with fixed signs (requiring ≥2 of 4 inputs), percentile-rank the signal, re-center so the zero-crossing maps to 50, clamp to 1–99. Confidence = inputs present / 4 → A (4/4), B (3/4), C (2/4).
 
-**Source files.**
+**Source artifacts.**
 
-- `scripts/analysis/monolithic-discovery/data/{metro,county,zip}_score_backtest.json` — full-period and era IC, quintiles, decile spread, calibration, zero-crossing.
-- `scripts/analysis/monolithic-discovery/data/claims_stats.json` — 1Y/3Y IC, decile spread, quintile excess, dollar examples, coverage (2016+ window).
-- `scripts/analysis/monolithic-discovery/data/validation_rank2.json` — shipped-formula walk-forward IC by year, permutation significance, prior-formula baseline.
-- `docs/superpowers/results/2026-06-12-monolithic-feature-discovery.md` and the metro/county/ZIP score-backtest results.
+- Per-geography score backtests (metro, county, ZIP) — full-period and era IC, quintiles, decile spread, calibration, zero-crossing.
+- Claims-statistics summary — 1Y/3Y IC, decile spread, quintile excess, dollar examples, coverage (2016+ window).
+- Walk-forward validation battery — shipped-formula IC by year, permutation significance, prior-formula baseline.
+- Our internal feature-discovery and score-backtest validation runs across metro, county, and ZIP levels.
 
 **Methodology notes.** Information Coefficient (IC) is the Spearman rank correlation between score and forward excess-vs-state return, computed per month and aggregated as the median of calendar-year medians. Permutation significance compares the actual median IC to a null distribution from shuffling the forward-return vector within each month. Excess return is the geography's own forward return minus its state's forward return over the same window.

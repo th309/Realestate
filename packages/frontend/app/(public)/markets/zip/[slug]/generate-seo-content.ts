@@ -1,6 +1,9 @@
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 import type { MarketStatsData } from "@/lib/data";
-import { buildMarketDataSummary } from "@/lib/seo/market-metadata";
+import {
+  buildMarketDataSummary,
+  buildRegionalContext,
+} from "@/lib/seo/market-metadata";
 
 /**
  * State-to-region mapping for content variation.
@@ -145,7 +148,12 @@ export function generateZipSeoContent(
   return {
     dataSummary: buildMarketDataSummary(`ZIP code ${zip.zip}`, stats),
     opening: OPENING_TEMPLATES[openingIdx](zip.shortName, zip.zip, zip.state),
-    regional: regionContext,
+    regional: buildRegionalContext(
+      regionContext,
+      region,
+      `ZIP code ${zip.zip}`,
+      stats,
+    ),
     middle: MIDDLE_TEMPLATES[middleIdx](zip.shortName),
     closing: CLOSING_TEMPLATES[closingIdx](zip.shortName),
   };

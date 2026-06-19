@@ -123,6 +123,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Place",
+            "@id": `https://www.propertyiq.app/markets/${metro.slug}#place`,
             name: metro.name,
             url: `https://www.propertyiq.app/markets/${metro.slug}`,
             containedInPlace: {
