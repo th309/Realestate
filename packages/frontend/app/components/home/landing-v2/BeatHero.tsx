@@ -134,7 +134,7 @@ export function BeatHero({ contrast }: { contrast: HeroContrast | null }) {
     >
       <div className="mx-auto w-full max-w-6xl">
         {contrast ? (
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
             <HeroCopy contrast={contrast} />
             <div className="flex flex-col gap-3">
               <ContrastCard market={contrast.cooler} role="cooler" />
