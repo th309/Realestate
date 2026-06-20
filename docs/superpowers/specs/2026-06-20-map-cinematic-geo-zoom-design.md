@@ -30,13 +30,15 @@ Mapbox GL primitives we already ship — no three.js, no GSAP, no WebGL we hand-
 - The drama scales by geo level (ZIP = full cinematic, metro = restrained).
 - Zero regression to first-load Core Web Vitals; satellite tiles load lazily on interaction.
 - Respects `prefers-reduced-motion`.
+- **Fully reversible** via an env kill switch (default OFF); additive and behavior-preserving when off (§7.5).
 
 **Non-Goals**
 
 - No GSAP / three.js / custom WebGL. (That is the Hubtown approach we are explicitly rejecting.)
 - No persistent "satellite mode" toggle in this spec (could be a later addition; here satellite is part of the selection moment only).
-- No change to how metric choropleths, the legend, or search currently behave.
+- No change to how metric choropleths, the legend, or search currently behave **when the flag is off**.
 - No change to data fetching or the data layer.
+- Search-result selection is **not** routed through the cinematic path in this version (kept on its existing `fitBounds`); unifying it is a follow-up.
 
 ## 3. Why This Is Feasible (codebase grounding)
 
@@ -191,10 +193,39 @@ first load pay nothing. If ZIP performance disappoints on low-end mobile, buildi
 ### 5.6 Coexistence with existing camera control
 
 `useMapCamera` already flies on geoLevel/state change, and `useMapSearch` flies on search
-selection. The new hook must not fight them. Rule: a _feature selection_ fly (this spec)
-takes precedence over the geoLevel-change fly; search-result selection should route through
-the same cinematic path so behavior is consistent. Define one ownership order so two
-`flyTo`s never run at once.
+selection. The new hook must not fight them. Selecting a region does **not** change
+`geoLevel`/`selectedState`, so `useMapCamera` does not fire on selection — no conflict in the
+common path. As a backstop, the cinematic hook stamps `searchNavigatedRef.current = Date.now()`
+before its `fitBounds` so any incidental geoLevel-change fly is suppressed for the brief
+window. Search-result selection keeps its existing `fitBounds` (not routed through cinematic
+in this version — see Non-Goals).
+
+### 5.7 Reversibility — env kill switch (default OFF)
+
+The entire feature is gated behind a build-time env flag, **`NEXT_PUBLIC_CINEMATIC_ZOOM`**,
+which is **OFF by default**. This is the rollback mechanism: if the cinematic behavior
+misbehaves in production, set the flag off and redeploy — the map returns to exactly today's
+behavior, with no code revert.
+
+Two properties make this safe:
+
+1. **Additive, not replacing.** The feature adds one new hook (`useSelectedGeoCinematic`) and
+   new map layers/sources that fire on selection. It does **not** modify the behavior of
+   `useMapCamera`, `useMapSelection`, `useMapLayers`, or the existing selection→panel flow.
+2. **Behavior-preserving edits.** The few edits to existing files are inert when the flag is
+   off:
+   - `useMapLayers` populates a `geoDataRef` (stores a reference only — no behavior change).
+   - `extractFeatureId` gains an `export` (no behavior change).
+   - `constants.ts` gains additive constants.
+   - `page.tsx` calls the new hook, which **early-returns immediately when the flag is off**
+     (no layers added, no camera change, no listeners).
+
+**Hard requirement:** with `NEXT_PUBLIC_CINEMATIC_ZOOM` unset/false, the map is
+byte-for-byte behavior-identical to today. The flag is read once (e.g. a
+`isCinematicZoomEnabled()` helper) and checked at the top of the hook. Because it is a
+`NEXT_PUBLIC_` var, flipping it requires a redeploy (Next.js inlines it at build) — that is
+the accepted trade-off for a simple, dependency-free kill switch. Ship it **off**, enable it
+in an env when ready to test, flip it off to roll back.
 
 ## 6. Motion & Accessibility
 
@@ -245,6 +276,9 @@ settles as the cost of the premium feel.
 
 ## 9. Acceptance Criteria
 
+- [ ] With `NEXT_PUBLIC_CINEMATIC_ZOOM` off/unset, the map behaves identically to today (no satellite, no mask, no camera change on selection — panel still opens).
+- [ ] The feature is gated by the flag; flipping it off + redeploy is a complete rollback with no code revert.
+- [ ] Edits to existing files (`geoDataRef` wiring, `extractFeatureId` export, constants) are behavior-preserving when the flag is off.
 - [ ] Selecting a metro/county/ZIP (the existing selection event) centers it via a single premium fly-to; no separate affordance.
 - [ ] Satellite imagery fades in beneath existing layers with no full-style-swap flash.
 - [ ] Choropleth metric fill is dropped inside the selected region (clean satellite, no tint); metric shows in the panel.
