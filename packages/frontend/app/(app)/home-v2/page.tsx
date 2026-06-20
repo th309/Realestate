@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { fetchHeroContrast } from "@/lib/data";
 import { JsonLd } from "@/app/components/home/JsonLd";
 import { VariantStamp } from "@/app/components/home/landing-v2/VariantStamp";
+import { BeatHero } from "@/app/components/home/landing-v2/BeatHero";
 
 /**
  * Variant B homepage — the 8-beat narrative funnel.
@@ -21,14 +23,18 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://www.propertyiq.app" },
 };
 
-export default function HomeV2Page() {
+export default async function HomeV2Page() {
+  // Cached (ISR) — the hero's live momentum contrast. Null-safe: BeatHero falls
+  // back to a static headline if the data is briefly unavailable.
+  const contrast = await fetchHeroContrast();
+
   return (
     <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
       <JsonLd />
       <VariantStamp variant="B" />
-      <main id="landing-v2" className="min-h-screen">
-        {/* Phase 2 beats mount here, in order 1 → 8. */}
-        <p className="sr-only">PropertyIQ landing (variant B)</p>
+      <main id="landing-v2">
+        <BeatHero contrast={contrast} />
+        {/* Beats 2 → 8 mount here. */}
       </main>
     </div>
   );
