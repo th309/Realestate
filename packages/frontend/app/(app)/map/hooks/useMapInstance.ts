@@ -21,6 +21,16 @@ export function useMapInstance() {
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
+    // Mapbox aborts in-flight tile/style/worker requests on camera moves, resize,
+    // satellite layer loads, and teardown; those reject ASYNCHRONOUSLY as a benign
+    // "signal is aborted without reason" (AbortError). Swallow them for the map's
+    // whole lifetime (runtime + teardown) where they actually land.
+    const swallowMapboxAbort = (event: PromiseRejectionEvent) => {
+      const reason = event.reason as { name?: string } | undefined;
+      if (reason?.name === "AbortError") event.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", swallowMapboxAbort);
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",
@@ -55,35 +65,20 @@ export function useMapInstance() {
 
     return () => {
       ro.disconnect();
-      if (!map.current) return;
-
-      // map.remove() aborts in-flight tile/style/worker requests. Those aborts
-      // reject ASYNCHRONOUSLY, so the synchronous try/catch below never sees
-      // them — they escape as an unhandled "signal is aborted without reason"
-      // (AbortError) rejection. React StrictMode / Fast Refresh trigger this
-      // constantly by remounting the map mid-initialization. Swallow that
-      // benign teardown abort where it actually lands: unhandledrejection.
-      const swallowTeardownAbort = (event: PromiseRejectionEvent) => {
-        const reason = event.reason as { name?: string } | undefined;
-        if (reason?.name === "AbortError") event.preventDefault();
-      };
-      window.addEventListener("unhandledrejection", swallowTeardownAbort);
-
-      try {
-        map.current.remove();
-      } catch {
-        // Some teardown aborts throw synchronously instead — also benign.
+      if (map.current) {
+        try {
+          map.current.remove();
+        } catch {
+          // Some teardown aborts throw synchronously instead — also benign.
+        }
+        map.current = null;
       }
-      map.current = null;
 
-      // Keep the guard up through the microtask flush where the abort rejects,
-      // then detach so we never suppress unrelated AbortErrors.
+      // Keep swallowing through the microtask flush where the teardown abort
+      // rejects, then detach so we never suppress unrelated AbortErrors.
       setTimeout(
         () =>
-          window.removeEventListener(
-            "unhandledrejection",
-            swallowTeardownAbort,
-          ),
+          window.removeEventListener("unhandledrejection", swallowMapboxAbort),
         0,
       );
     };

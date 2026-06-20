@@ -16,10 +16,10 @@ const CONFIG_BY_LEVEL: Record<GeoLevel, CinematicConfig> = {
   national: { pitch: 0, padding: 80, enable3D: false },
   state: { pitch: 0, padding: 80, enable3D: false },
   metro: { pitch: 0, padding: 80, enable3D: false },
-  county: { pitch: 10, padding: 80, enable3D: false },
-  city: { pitch: 20, padding: 70, enable3D: false },
-  zip: { pitch: 55, padding: 60, enable3D: true },
-  tract: { pitch: 55, padding: 60, enable3D: true },
+  county: { pitch: 5, padding: 80, enable3D: false },
+  city: { pitch: 10, padding: 70, enable3D: false },
+  zip: { pitch: 28, padding: 60, enable3D: true },
+  tract: { pitch: 28, padding: 60, enable3D: true },
 };
 
 export function getCinematicConfig(geoLevel: GeoLevel): CinematicConfig {
