@@ -11,6 +11,8 @@ import { useTour } from "../TourStateProvider";
 import { triggerConfetti } from "../primitives/celebrations";
 import { readReportCache, writeReportCache } from "../lib/reportCache";
 import { ListingPresentation } from "./ListingPresentation";
+import { HomebuyerFinale } from "./finale/HomebuyerFinale";
+import { InvestorFinale } from "./finale/InvestorFinale";
 import { ListingPresentationLoading } from "./ListingPresentationLoading";
 import { ListingPresentationError } from "./ListingPresentationError";
 import { InlineSignupForm } from "./InlineSignupForm";
@@ -126,6 +128,14 @@ export function Step4Aha() {
     // the narrative, but the header prop still needs a value. Fall back to the
     // same neutral label the loading state uses so the header is never blank.
     const displayName = session.market.name || "your market";
+    // The finale is persona-specific (#2): a homebuyer gets a buyer briefing and
+    // an investor gets an investment briefing — never the agent listing dossier.
+    const Finale =
+      session.persona === "homebuyer"
+        ? HomebuyerFinale
+        : session.persona === "investor"
+          ? InvestorFinale
+          : ListingPresentation;
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
         {authed && (
@@ -138,7 +148,7 @@ export function Step4Aha() {
             </h2>
           </div>
         )}
-        <ListingPresentation
+        <Finale
           report={report}
           marketName={displayName}
           geographyDescription={displayName}

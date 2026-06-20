@@ -14,6 +14,9 @@ interface Props {
   /** Set by the adapter; consumed by the parent's drop-empty filter. */
   limitedData?: boolean;
   num?: string;
+  /** Persona-specific framing; defaults to the agent (listing-presentation) copy. */
+  title?: string;
+  subtitle?: string;
 }
 
 export function AiStrategy({
@@ -21,16 +24,14 @@ export function AiStrategy({
   actions,
   fallbackUsed,
   num = "10",
+  title = "Recommended seller strategy",
+  subtitle = "PropertyIQ's AI synthesizes the data above into a positioning playbook.",
 }: Props) {
   const hasContent = strategyParagraphs.length > 0 || actions.length > 0;
 
   if (!hasContent) {
     return (
-      <Section
-        num={num}
-        title="Recommended seller strategy"
-        subtitle="PropertyIQ's AI synthesizes the data above into a positioning playbook."
-      >
+      <Section num={num} title={title} subtitle={subtitle}>
         <p className="text-sm text-on-surface-variant">
           AI-generated strategy unavailable for this market. The structured
           signals above remain accurate.
@@ -40,11 +41,7 @@ export function AiStrategy({
   }
 
   return (
-    <Section
-      num={num}
-      title="Recommended seller strategy"
-      subtitle="PropertyIQ's AI synthesizes the data above into a positioning playbook."
-    >
+    <Section num={num} title={title} subtitle={subtitle}>
       <div className="relative rounded-2xl border border-primary-container bg-gradient-to-b from-surface-container-lowest to-surface px-7 py-6">
         <span className="absolute -top-2.5 left-6 bg-surface px-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
           {"✦"} AI Strategy{fallbackUsed && " (fallback)"}
