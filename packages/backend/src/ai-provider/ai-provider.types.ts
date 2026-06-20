@@ -273,6 +273,8 @@ export const AI_PURPOSES = {
   MARKET_OVERVIEW: 'market_overview',
   // Monthly blog posts (top markets, score movers)
   BLOG_GENERATION: 'blog_generation',
+  // Landing hero: predictive, news-aware market outlook (<100 words)
+  MARKET_OUTLOOK: 'market_outlook',
 } as const;
 
 export type AiPurpose = (typeof AI_PURPOSES)[keyof typeof AI_PURPOSES];

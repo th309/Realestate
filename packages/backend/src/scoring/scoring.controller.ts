@@ -716,6 +716,91 @@ export class ScoringController {
     return unique;
   }
 
+  /**
+   * Get scores for multiple locations (batch)
+   *
+   * GET /api/scores/batch/:geography?ids=id1,id2,id3
+   *
+   * NOTE: must be declared BEFORE @Get(':geography/:locationId') so "batch" is
+   * not swallowed as a geography path param (Express matches in declaration
+   * order). Previously declared after it, which made every call 400 with
+   * "Invalid geography: batch".
+   */
+  @Get('batch/:geography')
+  @Header('Cache-Control', 'public, max-age=21600')
+  @ApiOperation({ summary: 'Get scores for multiple locations' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({
+    name: 'ids',
+    required: true,
+    description: 'Comma-separated location IDs',
+  })
+  @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({
+    name: 'historyMonths',
+    required: false,
+    description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history per location`,
+  })
+  async getBatchScores(
+    @Param('geography') geography: string,
+    @Query('ids') ids: string,
+    @Query('date') date?: string,
+    @Query('historyMonths') historyMonths?: string,
+    @Req() request?: any,
+  ): Promise<{
+    geography: string;
+    scores: (ScoreResult | { location_id: string; error: string })[];
+  }> {
+    if (!ids) {
+      throw new HttpException(
+        'ids query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const geoLevel = this.validateGeography(geography);
+    const locationIds = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id);
+    const options =
+      historyMonths != null
+        ? { historyMonths: parseHistoryMonths(historyMonths) }
+        : undefined;
+
+    if (locationIds.length === 0) {
+      throw new HttpException(
+        'At least one location ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (locationIds.length > 100) {
+      throw new HttpException(
+        'Maximum 100 locations per batch',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const scores = await Promise.all(
+      locationIds.map(async (id) => {
+        try {
+          const score = await this.scoringService.getScore(
+            id,
+            geoLevel,
+            date,
+            options,
+          );
+          if (!score) return { location_id: id, error: 'Score not found' };
+          return await this.stripBreakdownIfNeeded(score, request);
+        } catch {
+          return { location_id: id, error: 'Failed to retrieve score' };
+        }
+      }),
+    );
+
+    return { geography, scores };
+  }
+
   // ============================================================================
   // Legacy Compatibility Endpoints
   // ============================================================================
@@ -804,86 +889,6 @@ export class ScoringController {
     }
 
     return await this.stripBreakdownIfNeeded(score, request);
-  }
-
-  /**
-   * Get scores for multiple locations (batch)
-   *
-   * GET /api/scores/batch/:geography?ids=id1,id2,id3
-   */
-  @Get('batch/:geography')
-  @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Get scores for multiple locations' })
-  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({
-    name: 'ids',
-    required: true,
-    description: 'Comma-separated location IDs',
-  })
-  @ApiQuery({ name: 'date', required: false })
-  @ApiQuery({
-    name: 'historyMonths',
-    required: false,
-    description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history per location`,
-  })
-  async getBatchScores(
-    @Param('geography') geography: string,
-    @Query('ids') ids: string,
-    @Query('date') date?: string,
-    @Query('historyMonths') historyMonths?: string,
-    @Req() request?: any,
-  ): Promise<{
-    geography: string;
-    scores: (ScoreResult | { location_id: string; error: string })[];
-  }> {
-    if (!ids) {
-      throw new HttpException(
-        'ids query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = this.validateGeography(geography);
-    const locationIds = ids
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id) => id);
-    const options =
-      historyMonths != null
-        ? { historyMonths: parseHistoryMonths(historyMonths) }
-        : undefined;
-
-    if (locationIds.length === 0) {
-      throw new HttpException(
-        'At least one location ID is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (locationIds.length > 100) {
-      throw new HttpException(
-        'Maximum 100 locations per batch',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const scores = await Promise.all(
-      locationIds.map(async (id) => {
-        try {
-          const score = await this.scoringService.getScore(
-            id,
-            geoLevel,
-            date,
-            options,
-          );
-          if (!score) return { location_id: id, error: 'Score not found' };
-          return await this.stripBreakdownIfNeeded(score, request);
-        } catch {
-          return { location_id: id, error: 'Failed to retrieve score' };
-        }
-      }),
-    );
-
-    return { geography, scores };
   }
 
   // ============================================================================

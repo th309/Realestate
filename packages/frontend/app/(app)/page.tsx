@@ -17,35 +17,12 @@ import {
   JsonLd,
   StickyScoreBar,
 } from "@/app/components/home";
+import { landingMetadata } from "@/app/components/home/landing-metadata";
+import { VariantStamp } from "@/app/components/home/landing-v2/VariantStamp";
 
-export const metadata: Metadata = {
-  title: {
-    absolute:
-      "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
-  },
-  // keep in sync with formatMarketsScored()
-  description:
-    "Analyze 33,000+ real estate markets with AI-powered scores, rent data, and investment insights. Free market maps, reports & forecasts by metro, county, and ZIP code.",
-  alternates: { canonical: "https://www.propertyiq.app" },
-  openGraph: {
-    title:
-      "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
-    type: "website",
-    description:
-      // keep in sync with formatMarketsScored()
-      "Analyze 33,000+ real estate markets with AI-powered scores, rent data, and investment insights. Free maps, reports & forecasts by metro, county, and ZIP code.",
-    url: "https://www.propertyiq.app",
-    siteName: "PropertyIQ",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "PropertyIQ real estate market analysis dashboard",
-      },
-    ],
-  },
-};
+// Shared canonical homepage metadata — identical object for control A + the
+// variant-B rewrite, so B (served at `/`) carries SEO over unchanged.
+export const metadata: Metadata = landingMetadata;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -96,6 +73,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd />
+      <VariantStamp variant="A" />
       <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
         <BrandBanner />
         <HeroSection />

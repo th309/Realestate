@@ -46,6 +46,25 @@ let initialized = false;
 let sessionContextAttached = false;
 let currentUserId: string | null = null;
 let trackingExcluded = false;
+let currentVariant: string | null = null;
+
+/**
+ * Set the landing A/B variant ('A' | 'B') to auto-stamp onto every event's
+ * `properties` JSONB. No-op until set, so this is inert outside the homepage.
+ * The per-variant conversion readout filters on `properties->>'variant'`.
+ */
+export function setVariant(variant: string | null): void {
+  currentVariant = variant;
+}
+
+let variantCookieCache: string | null | undefined; // undefined = not yet read
+function readVariantCookie(): string | null {
+  if (variantCookieCache !== undefined) return variantCookieCache;
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|; )piq-variant=([^;]*)/);
+  variantCookieCache = match ? decodeURIComponent(match[1]) : null;
+  return variantCookieCache;
+}
 
 function getSessionId(): string {
   return getAnonymousSessionId();
@@ -85,6 +104,15 @@ export function trackEvent(
     const ctx = getSessionContext();
     enrichedProperties = { ...enrichedProperties, ...ctx };
     sessionContextAttached = true;
+  }
+
+  // Stamp the landing A/B variant on every event so the funnel readout can group
+  // by variant (properties->>'variant'). Falls back to the sticky piq-variant
+  // cookie so events fired AFTER the visitor leaves `/` (e.g. signup_completed
+  // on /auth/*) still carry the assignment. Inert for visitors with no cookie.
+  const variant = currentVariant ?? readVariantCookie();
+  if (variant && enrichedProperties.variant == null) {
+    enrichedProperties = { ...enrichedProperties, variant };
   }
 
   const event: AnalyticsEvent = {

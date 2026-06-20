@@ -2,8 +2,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { X, Sparkles } from "lucide-react";
+import { X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackPaywallEvent } from "@/lib/entitlements/api";
 import { useDismissable } from "@/lib/entitlements/useDismissable";
@@ -95,8 +96,15 @@ export function AnonCaptureModal({
           <X className="h-5 w-5" />
         </button>
 
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Sparkles className="h-6 w-6 text-primary" />
+        <div className="mx-auto mb-5 flex justify-center">
+          <Image
+            src="/brand/piq-avatar-400x400.png"
+            alt="PropertyIQ"
+            width={56}
+            height={56}
+            className="rounded-2xl"
+            priority
+          />
         </div>
 
         <h2

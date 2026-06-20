@@ -1,12 +1,14 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements";
 import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { InputPanel } from "./components/InputPanel/InputPanel";
-import { EditInputsFab } from "./components/chrome/EditInputsFab";
+import { MobileInputSheet } from "./components/chrome/MobileInputSheet";
+import { EmptyStateCta } from "./components/chrome/EmptyStateCta";
+import { EditInputsBar } from "./components/chrome/EditInputsBar";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import { deriveVerdict } from "./lib/format-helpers";
@@ -90,6 +92,24 @@ export default function AnalyzerClient({
 
   const displayAddress =
     rentcastData?.resolved_address ?? (address.trim() || null);
+
+  // Single entry point for property input on mobile: open the sheet. The focus
+  // move lives in the effect below so its timer is cleaned up on unmount.
+  const openInputs = () => setInputsOpenMobile(true);
+
+  // When the input layer opens, move focus to whichever address field is on
+  // screen — the sticky sidebar copy on desktop, or the freshly-mounted sheet
+  // copy on mobile. The hidden copy has a null offsetParent, so it is skipped.
+  useEffect(() => {
+    if (!inputsOpenMobile) return;
+    const timer = setTimeout(() => {
+      const fields = Array.from(
+        document.querySelectorAll<HTMLInputElement>("[data-address-input]"),
+      );
+      fields.find((el) => el.offsetParent !== null)?.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [inputsOpenMobile]);
 
   const pickStrategy = (s: Strategy) => {
     setFocusedStrategy(s);
@@ -244,19 +264,10 @@ export default function AnalyzerClient({
           </div>
 
           <div className="space-y-6 min-w-0">
-            {!address.trim() && !rentcastData && (
-              <div
-                data-empty-cta
-                className="rounded-xl border-2 border-dashed border-primary bg-primary-container text-on-primary-container px-5 py-4"
-              >
-                <div className="font-semibold mb-1">
-                  ← Enter a property address to get started
-                </div>
-                <p className="text-sm text-on-surface-variant">
-                  2-minute analysis, zero spreadsheet — enter an address and
-                  we'll fill in the market data.
-                </p>
-              </div>
+            {!address.trim() && !rentcastData ? (
+              <EmptyStateCta onClick={openInputs} />
+            ) : (
+              <EditInputsBar onClick={openInputs} />
             )}
 
             {analysisMode === "compare" && (
@@ -366,12 +377,12 @@ export default function AnalyzerClient({
         </div>
       </div>
 
-      <EditInputsFab
+      <MobileInputSheet
         open={inputsOpenMobile}
-        onToggle={() => setInputsOpenMobile((v) => !v)}
+        onClose={() => setInputsOpenMobile(false)}
       >
         {inputPanel}
-      </EditInputsFab>
+      </MobileInputSheet>
 
       <CustomizeThresholdsDrawer
         open={drawerOpen}

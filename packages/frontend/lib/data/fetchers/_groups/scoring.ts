@@ -17,6 +17,14 @@ export {
   type TopMarketEntry,
 } from "../scores";
 
+// Landing hero: dynamic momentum contrast (cooler vs. riser) over a curated pool
+export {
+  fetchHeroContrast,
+  selectContrast,
+  type HeroContrast,
+  type HeroMarket,
+} from "../hero-contrast";
+
 // Scoring validation & report templates
 export {
   fetchQuintilePerformance,

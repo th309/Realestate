@@ -9,12 +9,12 @@
  *
  * Notes:
  *  - The /analyzer page renders a responsive layout: the InputPanel lives in a
- *    sticky <aside> on desktop, and inside the `EditInputsFab` drawer on mobile.
- *    Both copies may be in the DOM; selectors that could match both must use
- *    `.first()` to avoid Playwright strict-mode violations.
- *  - These tests target desktop chromium only — the mobile-chrome viewport's
- *    open FAB drawer intercepts pointer events on action buttons. Add separate
- *    mobile coverage if needed.
+ *    sticky <aside> on desktop, and inside the `MobileInputSheet` (opened from
+ *    the empty-state CTA / "Edit inputs" bar) on mobile. The sheet renders null
+ *    when closed, so on desktop there is a single InputPanel copy; selectors
+ *    that could still match twice use `.first()`.
+ *  - These tests target desktop chromium only. Add separate mobile coverage for
+ *    the input sheet if needed.
  */
 
 import { test, expect } from "@playwright/test";
