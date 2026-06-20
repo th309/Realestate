@@ -29,6 +29,7 @@ import { useMapSelection } from "./hooks/useMapSelection";
 import { useSidebarScoreData } from "./hooks/useSidebarScoreData";
 import { useMapCamera } from "./hooks/useMapCamera";
 import { useMapDeepLinkNav } from "./hooks/useMapDeepLinkNav";
+import { useSelectedGeoCinematic } from "./hooks/useSelectedGeoCinematic";
 
 import { NAV_ITEMS, MAPBOX_ACCESS_TOKEN } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
@@ -230,6 +231,15 @@ function MapPageInner() {
     selectedState,
     searchNavigatedRef,
     setContextMenu,
+  });
+
+  useSelectedGeoCinematic({
+    mapRef: map,
+    mapLoaded,
+    geoLevel,
+    selectedGeography,
+    geoDataRef,
+    searchNavigatedRef,
   });
 
   // Fetch data immediately on mount and when parameters change (don't wait for map)
