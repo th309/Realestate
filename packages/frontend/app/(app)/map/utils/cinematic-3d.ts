@@ -39,8 +39,11 @@ export function enable3D(map: MapboxMap): void {
 }
 
 export function disable3D(map: MapboxMap): void {
-  map.setTerrain(null);
+  if (map.getTerrain()) map.setTerrain(null);
   if (map.getLayer(BUILDINGS_LAYER)) {
     map.removeLayer(BUILDINGS_LAYER);
+  }
+  if (map.getSource(DEM_SOURCE)) {
+    map.removeSource(DEM_SOURCE);
   }
 }

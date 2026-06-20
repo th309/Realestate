@@ -88,6 +88,8 @@ export function useSelectedGeoCinematic({
     else disable3D(map);
 
     // Backstop so an incidental geoLevel-change fly can't fight this one.
+    // NOTE: this shares useMapCamera's ~3s suppression window, so a geoLevel
+    // change within ~3s of a selection will have its camera fly suppressed.
     searchNavigatedRef.current = Date.now();
 
     map.fitBounds(
@@ -101,6 +103,15 @@ export function useSelectedGeoCinematic({
         duration: reduced ? 0 : CINEMATIC.FLY_DURATION,
       },
     );
+    return () => {
+      if (!isCinematicZoomEnabled()) return;
+      const m = mapRef.current;
+      if (!m) return;
+      fadeSatellite(m, false);
+      setChoroplethDimmed(m, false);
+      clearSelectedFeature(m);
+      disable3D(m);
+    };
   }, [
     selectedGeography,
     mapLoaded,

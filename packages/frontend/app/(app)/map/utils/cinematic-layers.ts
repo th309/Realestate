@@ -15,6 +15,11 @@ const EMPTY_FC: FeatureCollection = { type: "FeatureCollection", features: [] };
 /** Idempotently add satellite (beneath choropleth), mask + outline (on top).
  *  Only called from the flag-gated hook, after a region click (so geo-fills exists). */
 export function ensureCinematicLayers(map: MapboxMap): void {
+  // The satellite layer must sit beneath "geo-fills". If geo-fills isn't
+  // present yet (e.g. a deep-link selection before geo-data finishes loading),
+  // skip setup this run rather than inverting the layer stack.
+  if (!map.getLayer("geo-fills")) return;
+
   if (!map.getSource(SAT_SOURCE)) {
     map.addSource(SAT_SOURCE, {
       type: "raster",
