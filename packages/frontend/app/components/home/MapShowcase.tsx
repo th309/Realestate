@@ -6,6 +6,7 @@ import type mapboxgl from "mapbox-gl";
 import { useInView } from "./hooks/useInView";
 import { useMapData, useMapLayers } from "@/app/map/hooks";
 import { useSelectedGeoCinematic } from "@/app/map/hooks/useSelectedGeoCinematic";
+import { installMapboxAbortSwallow } from "@/app/map/utils/mapbox-abort";
 import { Legend, GeoLevelPills } from "@/app/map/components";
 import { MAPBOX_ACCESS_TOKEN } from "@/app/map/config";
 import { GEO_ZOOM_LEVELS, STATE_CENTERS } from "@/app/map/types";
@@ -87,6 +88,10 @@ export function MapShowcase() {
     if (!inView || mapInitRef.current || !mapContainer.current) return;
     mapInitRef.current = true;
 
+    // Swallow Mapbox's benign async AbortErrors (camera moves, satellite +
+    // cinematic-zoom loads, teardown) so they don't surface as a runtime overlay.
+    const detachAbort = installMapboxAbortSwallow();
+
     let ro: ResizeObserver | undefined;
     const containerEl = mapContainer.current;
 
@@ -121,6 +126,7 @@ export function MapShowcase() {
 
     return () => {
       ro?.disconnect();
+      detachAbort();
     };
   }, [inView]);
 

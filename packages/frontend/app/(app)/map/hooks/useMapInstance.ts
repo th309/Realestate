@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { DEFAULT_MAP_VIEW } from "../types";
+import { installMapboxAbortSwallow } from "../utils/mapbox-abort";
 
 /**
  * Creates and tears down the Mapbox map instance and exposes its refs plus
@@ -21,15 +22,9 @@ export function useMapInstance() {
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    // Mapbox aborts in-flight tile/style/worker requests on camera moves, resize,
-    // satellite layer loads, and teardown; those reject ASYNCHRONOUSLY as a benign
-    // "signal is aborted without reason" (AbortError). Swallow them for the map's
-    // whole lifetime (runtime + teardown) where they actually land.
-    const swallowMapboxAbort = (event: PromiseRejectionEvent) => {
-      const reason = event.reason as { name?: string } | undefined;
-      if (reason?.name === "AbortError") event.preventDefault();
-    };
-    window.addEventListener("unhandledrejection", swallowMapboxAbort);
+    // Swallow Mapbox's benign async AbortErrors for the map's whole lifetime
+    // (camera moves, resize, satellite loads, teardown). Shared with MapShowcase.
+    const detachAbort = installMapboxAbortSwallow();
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -74,13 +69,7 @@ export function useMapInstance() {
         map.current = null;
       }
 
-      // Keep swallowing through the microtask flush where the teardown abort
-      // rejects, then detach so we never suppress unrelated AbortErrors.
-      setTimeout(
-        () =>
-          window.removeEventListener("unhandledrejection", swallowMapboxAbort),
-        0,
-      );
+      detachAbort();
     };
   }, []);
 
