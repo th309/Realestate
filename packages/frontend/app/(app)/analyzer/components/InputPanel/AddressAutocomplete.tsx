@@ -44,6 +44,7 @@ export function AddressAutocomplete({
       <input
         type="text"
         aria-label="Address search"
+        data-address-input
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
