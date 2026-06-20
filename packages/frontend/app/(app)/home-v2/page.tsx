@@ -12,6 +12,7 @@ import { BeatPersona } from "@/app/components/home/landing-v2/BeatPersona";
 import { BeatDataDepth } from "@/app/components/home/landing-v2/BeatDataDepth";
 import { BeatClose } from "@/app/components/home/landing-v2/BeatClose";
 import { PricingSection } from "@/app/components/home/PricingSection";
+import { landingMetadata } from "@/app/components/home/landing-metadata";
 
 /**
  * Variant B homepage — the 8-beat narrative funnel.
@@ -22,15 +23,8 @@ import { PricingSection } from "@/app/components/home/PricingSection";
  * metadata identical to control A — never a static `noindex`, or promoting the
  * flag to `on` would deindex the live homepage. Preview/draft hits are made
  * noindex by middleware via the `X-Robots-Tag` response header instead.
- *
- * NOTE: this is the Phase-0 skeleton. Phase 3 (Task 3.2) swaps the placeholder
- * metadata below for the shared object extracted from the A page so SEO carries
- * over verbatim, and Phase 2 mounts the 8 beats inside <main>.
  */
-export const metadata: Metadata = {
-  title: "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
-  alternates: { canonical: "https://www.propertyiq.app" },
-};
+export const metadata: Metadata = landingMetadata;
 
 export default async function HomeV2Page() {
   // Cached (ISR) — the hero's live momentum contrast. Null-safe: BeatHero falls

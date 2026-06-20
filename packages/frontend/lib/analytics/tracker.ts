@@ -57,6 +57,15 @@ export function setVariant(variant: string | null): void {
   currentVariant = variant;
 }
 
+let variantCookieCache: string | null | undefined; // undefined = not yet read
+function readVariantCookie(): string | null {
+  if (variantCookieCache !== undefined) return variantCookieCache;
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|; )piq-variant=([^;]*)/);
+  variantCookieCache = match ? decodeURIComponent(match[1]) : null;
+  return variantCookieCache;
+}
+
 function getSessionId(): string {
   return getAnonymousSessionId();
 }
@@ -98,9 +107,12 @@ export function trackEvent(
   }
 
   // Stamp the landing A/B variant on every event so the funnel readout can group
-  // by variant (properties->>'variant'). Inert when unset (non-homepage traffic).
-  if (currentVariant && enrichedProperties.variant == null) {
-    enrichedProperties = { ...enrichedProperties, variant: currentVariant };
+  // by variant (properties->>'variant'). Falls back to the sticky piq-variant
+  // cookie so events fired AFTER the visitor leaves `/` (e.g. signup_completed
+  // on /auth/*) still carry the assignment. Inert for visitors with no cookie.
+  const variant = currentVariant ?? readVariantCookie();
+  if (variant && enrichedProperties.variant == null) {
+    enrichedProperties = { ...enrichedProperties, variant };
   }
 
   const event: AnalyticsEvent = {
