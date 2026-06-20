@@ -60,17 +60,37 @@ export function useMapInstance(initialGeoLevel: GeoLevel) {
 
     return () => {
       ro.disconnect();
-      if (map.current) {
-        try {
-          map.current.remove();
-        } catch {
-          // map.remove() aborts in-flight tile/style requests during teardown.
-          // When the map is torn down mid-initialization (dev StrictMode /
-          // Fast Refresh remounts), that abort can throw "signal is aborted
-          // without reason". Teardown errors are benign — swallow them.
-        }
-        map.current = null;
+      if (!map.current) return;
+
+      // map.remove() aborts in-flight tile/style/worker requests. Those aborts
+      // reject ASYNCHRONOUSLY, so the synchronous try/catch below never sees
+      // them — they escape as an unhandled "signal is aborted without reason"
+      // (AbortError) rejection. React StrictMode / Fast Refresh trigger this
+      // constantly by remounting the map mid-initialization. Swallow that
+      // benign teardown abort where it actually lands: unhandledrejection.
+      const swallowTeardownAbort = (event: PromiseRejectionEvent) => {
+        const reason = event.reason as { name?: string } | undefined;
+        if (reason?.name === "AbortError") event.preventDefault();
+      };
+      window.addEventListener("unhandledrejection", swallowTeardownAbort);
+
+      try {
+        map.current.remove();
+      } catch {
+        // Some teardown aborts throw synchronously instead — also benign.
       }
+      map.current = null;
+
+      // Keep the guard up through the microtask flush where the abort rejects,
+      // then detach so we never suppress unrelated AbortErrors.
+      setTimeout(
+        () =>
+          window.removeEventListener(
+            "unhandledrejection",
+            swallowTeardownAbort,
+          ),
+        0,
+      );
     };
   }, []);
 
