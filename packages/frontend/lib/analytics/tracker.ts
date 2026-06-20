@@ -46,6 +46,16 @@ let initialized = false;
 let sessionContextAttached = false;
 let currentUserId: string | null = null;
 let trackingExcluded = false;
+let currentVariant: string | null = null;
+
+/**
+ * Set the landing A/B variant ('A' | 'B') to auto-stamp onto every event's
+ * `properties` JSONB. No-op until set, so this is inert outside the homepage.
+ * The per-variant conversion readout filters on `properties->>'variant'`.
+ */
+export function setVariant(variant: string | null): void {
+  currentVariant = variant;
+}
 
 function getSessionId(): string {
   return getAnonymousSessionId();
@@ -85,6 +95,12 @@ export function trackEvent(
     const ctx = getSessionContext();
     enrichedProperties = { ...enrichedProperties, ...ctx };
     sessionContextAttached = true;
+  }
+
+  // Stamp the landing A/B variant on every event so the funnel readout can group
+  // by variant (properties->>'variant'). Inert when unset (non-homepage traffic).
+  if (currentVariant && enrichedProperties.variant == null) {
+    enrichedProperties = { ...enrichedProperties, variant: currentVariant };
   }
 
   const event: AnalyticsEvent = {

@@ -1,5 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  parseLandingMode,
+  resolveVariant,
+  LANDING_VARIANT_COOKIE,
+  LANDING_PREVIEW_PARAM,
+  LANDING_PREVIEW_VALUE,
+  type LandingVariant,
+} from "@/lib/experiments/landing-variant";
 
 /**
  * Next.js Middleware
@@ -134,6 +142,64 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  // Landing-page A/B: assign a sticky variant on the homepage and rewrite to the
+  // B route when assigned. Additive — with LANDING_EXPERIMENT unset/off, every
+  // visitor resolves to A and `/` renders exactly today's page.tsx unchanged.
+  if (pathname === "/") {
+    const mode = parseLandingMode(process.env.LANDING_EXPERIMENT);
+    const existing = request.cookies.get(LANDING_VARIANT_COOKIE)?.value;
+    const existingCookie: LandingVariant | undefined =
+      existing === "A" || existing === "B" ? existing : undefined;
+    const previewOverride =
+      request.nextUrl.searchParams.get(LANDING_PREVIEW_PARAM) ===
+      LANDING_PREVIEW_VALUE;
+    // Anonymous visitors have no user.id; seed the first coin-flip from a random
+    // UUID, then persist the RESULT in the cookie so it is sticky thereafter.
+    const splitSeed = user?.id ?? existing ?? crypto.randomUUID();
+    const variant = resolveVariant(mode, {
+      existingCookie,
+      previewOverride,
+      splitSeed,
+    });
+
+    // Persist the sticky cookie for real assignments only; the ?landing=v2
+    // preview override stays non-sticky so reviewers can toggle A/B freely.
+    if (!previewOverride) {
+      supabaseResponse.cookies.set(LANDING_VARIANT_COOKIE, variant, {
+        path: "/",
+        httpOnly: false, // client reads it to stamp analytics events
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30, // 30 days — sticky per visitor
+      });
+    }
+
+    if (variant === "B") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/home-v2";
+      const rewrite = NextResponse.rewrite(url, { request });
+      // Preview hits (?landing=v2) are noindex via response header so the draft
+      // is never crawled; real ab/on traffic served at `/` stays indexable
+      // (it IS the homepage, canonical `/`). No <meta noindex> in the route, so
+      // B renders statically and `/` is never accidentally deindexed.
+      if (previewOverride) {
+        rewrite.headers.set("X-Robots-Tag", "noindex, nofollow");
+      }
+      // Carry forward Supabase session cookies (with their options) + the
+      // variant cookie, or the auth session breaks on the rewritten response.
+      supabaseResponse.cookies
+        .getAll()
+        .forEach((cookie) => rewrite.cookies.set(cookie));
+      return rewrite;
+    }
+  }
+
+  // Direct external hits to the B route (preview/testing only) are never
+  // indexable; real users reach B via the `/` rewrite above, which keeps `/`.
+  if (pathname === "/home-v2") {
+    supabaseResponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
 
   // Permanent redirect: /get-started → /tour, preserving query params.
   if (pathname === "/get-started" || pathname.startsWith("/get-started/")) {
