@@ -222,3 +222,10 @@ export const STATE_CENTERS: Record<string, { lat: number; lng: number; zoom: num
 
 // Zoom levels - re-exported from central config
 export { GEO_ZOOM_LEVELS, getDefaultZoom } from '@/lib/data';
+
+// Default country/state landing view (single source for the initial map camera
+// and the geo-level-change camera reset).
+export const DEFAULT_MAP_VIEW: { center: [number, number]; zoom: number } = {
+  center: [-97.333, 37.543],
+  zoom: 3.72,
+};

@@ -26,8 +26,8 @@ export const CURRENCY_SCALES = {
  * Used to exclude outliers when determining value ranges.
  */
 export const PERCENTILE_BOUNDS = {
-  MIN: 0.05,  // 5th percentile
-  MAX: 0.95,  // 95th percentile
+  MIN: 0.05, // 5th percentile
+  MAX: 0.95, // 95th percentile
 } as const;
 
 // ============================================================================
@@ -56,9 +56,9 @@ export const DEFAULT_VALUE_RANGES = {
  * Animation timing constants following M3 motion guidelines
  */
 export const ANIMATION_DURATIONS = {
-  SHORT: 200,   // Icons, selection
-  MEDIUM: 400,  // Sheets, dialogs
-  LONG: 600,    // Page transitions
+  SHORT: 200, // Icons, selection
+  MEDIUM: 400, // Sheets, dialogs
+  LONG: 600, // Page transitions
   MAP_FLY: 1000, // Map camera transitions
 } as const;
 
@@ -66,11 +66,28 @@ export const ANIMATION_DURATIONS = {
 // API & EXTERNAL SERVICES
 // ============================================================================
 
-export const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+export const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 /**
  * Default padding for map bounds
  */
 export const MAP_PADDING = {
   FLY_TO: 50,
+} as const;
+
+// ============================================================================
+// CINEMATIC GEO ZOOM (flag-gated; see utils/cinematic-config.ts)
+// ============================================================================
+
+export const CINEMATIC = {
+  FLY_DURATION: 1600, // premium/cinematic; longer than MAP_FLY
+  SATELLITE_FADE_MS: 600,
+  MASK_OPACITY: 0.55,
+  MASK_COLOR: "#0b1020",
+  OUTLINE_COLOR: "#ffffff",
+  OUTLINE_GLOW_COLOR: "#3949AB", // brand indigo
+  OUTLINE_WIDTH: 3,
+  CHOROPLETH_DEFAULT_OPACITY: 0.6, // matches geo-fills default
+  BUILDINGS_MIN_ZOOM: 15,
+  TERRAIN_EXAGGERATION: 1.3,
 } as const;

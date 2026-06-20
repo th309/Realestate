@@ -4,15 +4,14 @@
  * Each entry defines a slug-based comparison with feature rows,
  * pricing rows, and a summary paragraph.
  *
- * Raw data lives in ./comparisons/comparison-data.ts to stay within
- * file size limits (CLAUDE.md Section 1.3).
+ * Raw data lives in ./comparisons/<competitor>.ts (one file per competitor)
+ * to stay within file size limits (CLAUDE.md Section 1.3).
  */
 
-import {
-  MASHVISOR_COMPARISON,
-  NEIGHBORHOODSCOUT_COMPARISON,
-  REVENTURE_COMPARISON,
-} from "./comparisons/comparison-data";
+import { REVENTURE_COMPARISON } from "./comparisons/reventure";
+import { BIGGERPOCKETS_COMPARISON } from "./comparisons/biggerpockets";
+import { MASHVISOR_COMPARISON } from "./comparisons/mashvisor";
+import { NEIGHBORHOODSCOUT_COMPARISON } from "./comparisons/neighborhoodscout";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,9 +55,18 @@ export interface ComparisonData {
 
 export const COMPARISONS: ComparisonData[] = [
   REVENTURE_COMPARISON,
+  BIGGERPOCKETS_COMPARISON,
   MASHVISOR_COMPARISON,
   NEIGHBORHOODSCOUT_COMPARISON,
 ];
+
+/**
+ * Date the comparison pages (head-to-heads + the /compare hub) were last
+ * reviewed/updated. Drives an honest sitemap <lastmod>. Bump this whenever
+ * competitor facts, pricing, copy, or the ranking change — a fabricated
+ * per-request timestamp is disregarded by Google site-wide (SEO audit H4).
+ */
+export const COMPARISONS_LAST_UPDATED = "2026-06-20";
 
 // ---------------------------------------------------------------------------
 // Helpers

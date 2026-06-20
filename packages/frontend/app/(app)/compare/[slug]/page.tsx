@@ -226,6 +226,34 @@ function FAQSection({ faqs }: { faqs: ComparisonData["faqs"] }) {
   );
 }
 
+function RelatedComparisons({ currentSlug }: { currentSlug: string }) {
+  const others = COMPARISONS.filter((c) => c.slug !== currentSlug);
+  return (
+    <section className="mt-12 border-t border-outline-variant pt-8">
+      <h2 className="text-lg font-medium text-on-surface mb-3">
+        More comparisons
+      </h2>
+      <ul className="space-y-2 text-sm">
+        {others.map((c) => (
+          <li key={c.slug}>
+            <Link
+              href={`/compare/${c.slug}`}
+              className="text-primary hover:underline"
+            >
+              PropertyIQ vs {c.competitorName}
+            </Link>
+          </li>
+        ))}
+        <li>
+          <Link href="/compare" className="text-primary hover:underline">
+            Best real estate market analysis tools, ranked &rarr;
+          </Link>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 function CallToAction() {
   return (
     <section className="mt-12 text-center">
@@ -334,6 +362,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       <PricingComparisonTable comparison={comparison} />
       <SummarySection summary={comparison.summary} />
       <FAQSection faqs={comparison.faqs} />
+      <RelatedComparisons currentSlug={slug} />
       <CallToAction />
     </>
   );

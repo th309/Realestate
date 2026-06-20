@@ -2,16 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import type { GeoLevel } from "../types";
-import { GEO_ZOOM_LEVELS } from "../types";
+import { DEFAULT_MAP_VIEW } from "../types";
 
 /**
  * Creates and tears down the Mapbox map instance and exposes its refs plus
- * load/error state. The init effect runs once on mount; `initialGeoLevel` is
- * read at mount time only (for the starting zoom), matching the original
- * empty-dependency effect.
+ * load/error state. The init effect runs once on mount and starts at the
+ * shared DEFAULT_MAP_VIEW.
  */
-export function useMapInstance(initialGeoLevel: GeoLevel) {
+export function useMapInstance() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
@@ -19,18 +17,25 @@ export function useMapInstance(initialGeoLevel: GeoLevel) {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Keep the latest geoLevel for the mount-only init effect without retriggering it.
-  const initialGeoLevelRef = useRef(initialGeoLevel);
-
   // Initialize map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
+    // Mapbox aborts in-flight tile/style/worker requests on camera moves, resize,
+    // satellite layer loads, and teardown; those reject ASYNCHRONOUSLY as a benign
+    // "signal is aborted without reason" (AbortError). Swallow them for the map's
+    // whole lifetime (runtime + teardown) where they actually land.
+    const swallowMapboxAbort = (event: PromiseRejectionEvent) => {
+      const reason = event.reason as { name?: string } | undefined;
+      if (reason?.name === "AbortError") event.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", swallowMapboxAbort);
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",
-      center: [-96, 37.8],
-      zoom: GEO_ZOOM_LEVELS[initialGeoLevelRef.current],
+      center: DEFAULT_MAP_VIEW.center,
+      zoom: DEFAULT_MAP_VIEW.zoom,
       projection: "mercator",
     });
 
@@ -64,13 +69,18 @@ export function useMapInstance(initialGeoLevel: GeoLevel) {
         try {
           map.current.remove();
         } catch {
-          // map.remove() aborts in-flight tile/style requests during teardown.
-          // When the map is torn down mid-initialization (dev StrictMode /
-          // Fast Refresh remounts), that abort can throw "signal is aborted
-          // without reason". Teardown errors are benign — swallow them.
+          // Some teardown aborts throw synchronously instead — also benign.
         }
         map.current = null;
       }
+
+      // Keep swallowing through the microtask flush where the teardown abort
+      // rejects, then detach so we never suppress unrelated AbortErrors.
+      setTimeout(
+        () =>
+          window.removeEventListener("unhandledrejection", swallowMapboxAbort),
+        0,
+      );
     };
   }, []);
 

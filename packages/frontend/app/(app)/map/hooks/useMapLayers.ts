@@ -53,6 +53,9 @@ interface UseMapLayersProps {
     x: number;
     y: number;
   }) => void;
+  geoDataRef: import("react").MutableRefObject<
+    import("geojson").FeatureCollection | null
+  >;
 }
 
 export function useMapLayers({
@@ -68,6 +71,7 @@ export function useMapLayers({
   highlightedFeature,
   onFeatureClick,
   onFeatureContextMenu,
+  geoDataRef,
 }: UseMapLayersProps) {
   const { formattedDate: selectedMetricFreshnessDate } = useMetricFreshness(
     selectedMetric,
@@ -148,6 +152,9 @@ export function useMapLayers({
 
       // Remove source again right before adding (handles race condition)
       removeAllManagedLayers(map.current!);
+
+      // Store the loaded FeatureCollection for consumers (e.g. cinematic zoom hook)
+      geoDataRef.current = geojson as import("geojson").FeatureCollection;
 
       // Add source
       map.current!.addSource("geo-data", { type: "geojson", data: geojson });

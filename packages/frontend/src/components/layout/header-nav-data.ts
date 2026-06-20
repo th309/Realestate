@@ -13,6 +13,7 @@ import {
   MarketsIcon,
   ChartIcon,
   ScreenerIcon,
+  StarIcon,
 } from "@/src/components/common/Icons";
 
 /* ─── Types ─── */
@@ -54,6 +55,7 @@ export const NAV: NavEntry[] = [
   {
     name: "More",
     items: [
+      { name: "Compare", href: "/compare", icon: StarIcon },
       { name: "Blog", href: "/blog", icon: BookIcon },
       { name: "API Docs", href: "/docs/api", icon: DataIcon },
       { name: "MCP Integration", href: "/docs/mcp", icon: IntegrationIcon },
