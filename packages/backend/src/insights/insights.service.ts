@@ -230,7 +230,13 @@ export class InsightsService {
     // by the hidden reasoning and the answer truncates to empty. Be generous — the
     // PROMPT keeps the visible output short (~50 words for the quick insights); this
     // is just headroom so the model actually reaches the answer.
-    const maxTokens = insightType === 'market_overview' ? 4000 : 1500;
+    // deepseek-v4 reasons before answering; a tight budget gets eaten by the
+    // hidden reasoning and truncates the answer mid-sentence. market_outlook's
+    // ~80-word answer needs the same generous headroom as market_overview.
+    const maxTokens =
+      insightType === 'market_overview' || insightType === 'market_outlook'
+        ? 4000
+        : 1500;
     const purpose = INSIGHT_PURPOSES[insightType] ?? AI_PURPOSES.MARKET_TAKE;
 
     try {

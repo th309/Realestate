@@ -46,7 +46,7 @@ function ContrastCard({
   market: HeroMarket;
   role: "cooler" | "riser";
 }) {
-  const kicker = role === "cooler" ? "Flagged to lag" : "Flagged to lead";
+  const kicker = role === "cooler" ? "Flagged to lag" : "Strongest outlook";
   const kickerColor = role === "cooler" ? "text-red-700" : "text-green-700";
   const narrative =
     market.narrative ??
