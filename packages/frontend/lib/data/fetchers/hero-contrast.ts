@@ -1,15 +1,18 @@
 /**
  * HERO CONTRAST FETCHER
  *
- * Powers the landing hero's dynamic "famous cooler vs. surprising riser"
- * verdict. One cached batch call over the curated recognizable-metro pool
- * (FEATURED_METRO_POOL) returns each market's current score + 3-month trend;
- * momentum selection picks the biggest faller (cooler) and biggest riser.
+ * Powers the landing hero's "famous cooler vs. surprising leader" verdict. One
+ * cached batch call over the curated recognizable-metro pool returns each
+ * market's score, 3-month trend, and the raw demand drivers (days on market,
+ * price-cut share, YoY value change) used to narrate each side.
  *
- * Cost: ~0 per visitor (ISR-cached). Auto-refreshes each month as scores update
- * — no hardcoded numbers, no manual edits, no per-visit regeneration. Returns
- * null on any failure so the hero can fall back to static copy (never blocks
- * the LCP element on data).
+ *   cooler = the biggest 3-month faller (the cooldown story).
+ *   riser  = the highest-scoring market (a genuinely-hot leader). NOT the biggest
+ *            mover: when the market is broadly cooling the biggest positive mover
+ *            is often a trivial +N that doesn't read as "hot".
+ *
+ * Cost: ~0 per visitor (ISR-cached). Auto-refreshes monthly. Returns null on any
+ * failure so the hero falls back to static copy (never blocks the LCP element).
  */
 
 import { fetchAPICached } from "./base";
@@ -19,10 +22,20 @@ export type HeroMarket = {
   cbsa: string;
   name: string;
   score: number;
-  /** 3-month change in score; negative = cooling, positive = heating up. */
+  /** 3-month change in score; negative = cooling. */
   delta: number;
   direction: "up" | "down";
   confidenceLevel: string;
+  /** Demand drivers for the narrative (null when unavailable). */
+  dom: number | null; // median days on market
+  priceCutPct: number | null; // % of listings cutting price
+  valueYoyPct: number | null; // home-value % change YoY
+  /**
+   * AI-written, future-framed ad copy for this market (DeepSeek, generated
+   * server-side and cached per market+score-date — never per visitor). Undefined
+   * when unavailable, in which case the hero uses a deterministic fallback.
+   */
+  narrative?: string | null;
 };
 
 export type PoolRow = HeroMarket & { asOf: string };
@@ -41,12 +54,15 @@ const toMarket = (r: PoolRow): HeroMarket => ({
   delta: r.delta,
   direction: r.direction,
   confidenceLevel: r.confidenceLevel,
+  dom: r.dom,
+  priceCutPct: r.priceCutPct,
+  valueYoyPct: r.valueYoyPct,
+  narrative: r.narrative ?? null,
 });
 
 /**
- * Pure momentum selection. Cooler = biggest 3-month faller, riser = biggest
- * riser; ties break by absolute score then cbsa (deterministic). Requires ≥2
- * valid rows and always returns two distinct markets, else null.
+ * cooler = biggest faller; riser = highest score. Ties break by score then
+ * cbsa (deterministic). Requires ≥2 valid rows; always two distinct markets.
  */
 export function selectContrast(rows: PoolRow[]): HeroContrast | null {
   if (rows.length < 2) return null;
@@ -54,12 +70,12 @@ export function selectContrast(rows: PoolRow[]): HeroContrast | null {
     (a, b) =>
       a.delta - b.delta || a.score - b.score || a.cbsa.localeCompare(b.cbsa),
   );
-  const byRise = [...rows].sort(
+  const byScore = [...rows].sort(
     (a, b) =>
-      b.delta - a.delta || b.score - a.score || a.cbsa.localeCompare(b.cbsa),
+      b.score - a.score || b.delta - a.delta || a.cbsa.localeCompare(b.cbsa),
   );
   const cooler = byFall[0];
-  const riser = byRise[0].cbsa === cooler.cbsa ? byRise[1] : byRise[0];
+  const riser = byScore[0].cbsa === cooler.cbsa ? byScore[1] : byScore[0];
   if (!riser || riser.cbsa === cooler.cbsa) return null;
   return {
     cooler: toMarket(cooler),
@@ -73,6 +89,11 @@ type BatchScoreRow = {
   location_name?: string;
   score_date?: string;
   error?: string;
+  z_scores?: {
+    median_days_on_market?: number;
+    price_reduced_share?: number;
+    zhvi_yoy?: number;
+  };
   scores?: {
     propertyiq?: {
       score?: number;
@@ -104,8 +125,6 @@ export async function fetchHeroContrast(): Promise<HeroContrast | null> {
       if (!piq || typeof piq.score !== "number") continue;
 
       const hist = piq.history?.data;
-      // Prefer the backend's own 3-month delta; fall back to computing it from
-      // the (latest-first) history array, gap-robust.
       const delta =
         typeof piq.trend_change === "number"
           ? piq.trend_change
@@ -114,12 +133,11 @@ export async function fetchHeroContrast(): Promise<HeroContrast | null> {
             : null;
       if (delta == null) continue;
 
-      const confidenceLevel =
-        piq.confidence_level ??
-        (typeof piq.confidence === "object"
-          ? piq.confidence?.level
-          : undefined) ??
-        "A";
+      const z = s.z_scores;
+      const pctFrom = (v: number | undefined, dp = 0): number | null =>
+        typeof v === "number"
+          ? Math.round(v * 100 * 10 ** dp) / 10 ** dp
+          : null;
 
       rows.push({
         cbsa: s.location_id,
@@ -127,7 +145,18 @@ export async function fetchHeroContrast(): Promise<HeroContrast | null> {
         score: piq.score,
         delta,
         direction: delta >= 0 ? "up" : "down",
-        confidenceLevel,
+        confidenceLevel:
+          piq.confidence_level ??
+          (typeof piq.confidence === "object"
+            ? piq.confidence?.level
+            : undefined) ??
+          "A",
+        dom:
+          typeof z?.median_days_on_market === "number"
+            ? Math.round(z.median_days_on_market)
+            : null,
+        priceCutPct: pctFrom(z?.price_reduced_share, 0),
+        valueYoyPct: pctFrom(z?.zhvi_yoy, 1),
         asOf: s.score_date ?? hist?.[0]?.date ?? "",
       });
     }
