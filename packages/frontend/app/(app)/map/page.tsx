@@ -1,6 +1,14 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { FeatureCollection } from "geojson";
 import { usePathname } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -75,6 +83,10 @@ function MapPageInner() {
 
   const { mapContainer, map, popup, mapLoaded, mapError } =
     useMapInstance(geoLevel);
+
+  // Shared ref: populated by useMapLayers whenever geo-data loads; consumed by
+  // the cinematic zoom hook (wired in a later task) to look up feature polygons.
+  const geoDataRef = useRef<FeatureCollection | null>(null);
 
   const {
     selectedGeography,
@@ -166,6 +178,7 @@ function MapPageInner() {
     highlightedFeature,
     onFeatureClick: handleFeatureClick,
     onFeatureContextMenu: handleFeatureContextMenu,
+    geoDataRef,
   });
 
   // Single fetch through data binding layer: scores with 3-month trend for sidebar + right panel
