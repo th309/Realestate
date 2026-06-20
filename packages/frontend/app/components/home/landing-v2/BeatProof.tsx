@@ -190,7 +190,6 @@ export function BeatProof() {
       <Reveal delayMs={420} className="mt-12">
         <div className="flex flex-col gap-4 border-t border-outline/30 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            {/* TODO(author): real named author + headshot for E-E-A-T — confirm with owner */}
             <p className="text-sm font-medium text-on-surface">
               PropertyIQ Research
             </p>
