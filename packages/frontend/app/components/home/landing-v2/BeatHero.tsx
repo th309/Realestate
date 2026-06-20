@@ -130,7 +130,7 @@ export function BeatHero({ contrast }: { contrast: HeroContrast | null }) {
   return (
     <section
       id="beat-hero"
-      className="px-5 pb-10 pt-1 text-on-primary md:pb-14 md:pt-2"
+      className="px-5 pb-10 pt-12 text-on-primary md:pb-14 md:pt-14"
     >
       <div className="mx-auto w-full max-w-6xl">
         {contrast ? (
