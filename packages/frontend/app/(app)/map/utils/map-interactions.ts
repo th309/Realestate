@@ -41,7 +41,7 @@ function extractStateAbbr(
  * Extract geography ID from GeoJSON feature properties.
  * Handles enriched properties and raw GeoJSON properties as fallbacks.
  */
-function extractFeatureId(
+export function extractFeatureId(
   props: Record<string, any>,
   featureId: string | number | undefined,
 ): string {
