@@ -105,7 +105,7 @@ function HeroCopy({ contrast }: { contrast: HeroContrast | null }) {
       </p>
 
       <div className="mt-8">
-        <PrimaryCta source="hero" />
+        <PrimaryCta source="hero" tone="onDark" />
         <a
           href="#beat-score"
           className="mt-5 inline-block text-sm font-medium text-primary-light underline-offset-4 hover:underline"

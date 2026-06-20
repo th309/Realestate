@@ -15,14 +15,19 @@ export function PrimaryCta({
   source,
   label = "Start free — no credit card",
   subtext = "Every account starts on Pro. Cancel anytime.",
+  tone = "onLight",
   className = "",
 }: {
   source: string;
   label?: string;
   subtext?: string | null;
+  /** Background the CTA sits on — controls the subtext color for contrast. */
+  tone?: "onLight" | "onDark";
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const subtextColor =
+    tone === "onDark" ? "text-primary-light" : "text-on-surface-variant";
   return (
     <div className={className}>
       <button
@@ -35,9 +40,7 @@ export function PrimaryCta({
       >
         {label}
       </button>
-      {subtext && (
-        <p className="mt-2 text-xs text-on-surface-variant">{subtext}</p>
-      )}
+      {subtext && <p className={`mt-2 text-xs ${subtextColor}`}>{subtext}</p>}
       {open && (
         <AnonCaptureModal
           featureName="PropertyIQ Pro"
