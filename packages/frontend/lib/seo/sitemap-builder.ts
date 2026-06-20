@@ -17,7 +17,7 @@ import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
 import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
 import { STATE_SLUG_DATA } from "@/lib/data/state-slug-data";
 import { getAllPosts } from "@/lib/blog";
-import { COMPARISONS } from "@/lib/data/comparisons";
+import { COMPARISONS, COMPARISONS_LAST_UPDATED } from "@/lib/data/comparisons";
 import { fetchScoredLocationData } from "@/lib/data";
 import type { SitemapUrl } from "./sitemap-xml";
 
@@ -88,7 +88,9 @@ export function buildMainUrls(): SitemapUrl[] {
     { loc: `${BASE_URL}/map` },
     { loc: `${BASE_URL}/scores` },
     { loc: `${BASE_URL}/scores/methodology` },
+    { loc: `${BASE_URL}/scores/accuracy` },
     { loc: `${BASE_URL}/market` },
+    { loc: `${BASE_URL}/screener` },
     { loc: `${BASE_URL}/graphs` },
     { loc: `${BASE_URL}/pricing` },
     { loc: `${BASE_URL}/data` },
@@ -103,9 +105,16 @@ export function buildMainUrls(): SitemapUrl[] {
     lastmod: isoOrUndefined(post.frontmatter.date),
   }));
 
-  const comparisonRoutes: SitemapUrl[] = COMPARISONS.map((c) => ({
-    loc: `${BASE_URL}/compare/${c.slug}`,
-  }));
+  // Comparison hub + head-to-heads carry a real content-review date (bumped in
+  // COMPARISONS_LAST_UPDATED), not a fabricated per-request timestamp.
+  const comparisonLastmod = isoOrUndefined(COMPARISONS_LAST_UPDATED);
+  const comparisonRoutes: SitemapUrl[] = [
+    { loc: `${BASE_URL}/compare`, lastmod: comparisonLastmod },
+    ...COMPARISONS.map((c) => ({
+      loc: `${BASE_URL}/compare/${c.slug}`,
+      lastmod: comparisonLastmod,
+    })),
+  ];
 
   return [...staticRoutes, ...blogRoutes, ...comparisonRoutes];
 }
