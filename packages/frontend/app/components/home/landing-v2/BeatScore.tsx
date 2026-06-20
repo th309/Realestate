@@ -66,7 +66,7 @@ export function BeatScore({
             {PANELS.map((panel, i) => (
               <div
                 key={panel.title}
-                className="flex min-h-[55vh] items-center md:min-h-[60vh]"
+                className="flex items-center py-10 md:min-h-[44vh] md:py-0"
               >
                 <Reveal>
                   <h3 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">
