@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import type mapboxgl from "mapbox-gl";
 import type { GeoLevel } from "../types";
-import { STATE_CENTERS, GEO_ZOOM_LEVELS } from "../types";
+import { STATE_CENTERS, DEFAULT_MAP_VIEW } from "../types";
 import type { MapContextMenuState } from "./useMapSelection";
 
 interface UseMapCameraOptions {
@@ -68,9 +68,10 @@ export function useMapCamera({
       return;
     }
 
+    // Default country view (single source: DEFAULT_MAP_VIEW).
     mapRef.current.flyTo({
-      center: [-96, 37.8],
-      zoom: GEO_ZOOM_LEVELS[geoLevel],
+      center: DEFAULT_MAP_VIEW.center,
+      zoom: DEFAULT_MAP_VIEW.zoom,
       duration: 500,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -2,25 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import type { GeoLevel } from "../types";
-import { GEO_ZOOM_LEVELS } from "../types";
+import { DEFAULT_MAP_VIEW } from "../types";
 
 /**
  * Creates and tears down the Mapbox map instance and exposes its refs plus
- * load/error state. The init effect runs once on mount; `initialGeoLevel` is
- * read at mount time only (for the starting zoom), matching the original
- * empty-dependency effect.
+ * load/error state. The init effect runs once on mount and starts at the
+ * shared DEFAULT_MAP_VIEW.
  */
-export function useMapInstance(initialGeoLevel: GeoLevel) {
+export function useMapInstance() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-
-  // Keep the latest geoLevel for the mount-only init effect without retriggering it.
-  const initialGeoLevelRef = useRef(initialGeoLevel);
 
   // Initialize map
   useEffect(() => {
@@ -29,8 +24,8 @@ export function useMapInstance(initialGeoLevel: GeoLevel) {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",
-      center: [-96, 37.8],
-      zoom: GEO_ZOOM_LEVELS[initialGeoLevelRef.current],
+      center: DEFAULT_MAP_VIEW.center,
+      zoom: DEFAULT_MAP_VIEW.zoom,
       projection: "mercator",
     });
 

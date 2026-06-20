@@ -82,8 +82,7 @@ function MapPageInner() {
     handleMouseDown,
   } = useSidebarLayout();
 
-  const { mapContainer, map, popup, mapLoaded, mapError } =
-    useMapInstance(geoLevel);
+  const { mapContainer, map, popup, mapLoaded, mapError } = useMapInstance();
 
   // Shared ref: populated by useMapLayers whenever geo-data loads; consumed by
   // the cinematic zoom hook (wired in a later task) to look up feature polygons.
