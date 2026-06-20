@@ -10,7 +10,8 @@ export type InsightType =
   | 'score_explanation'
   | 'trend_interpretation'
   | 'market_overview'
-  | 'archetype_match';
+  | 'archetype_match'
+  | 'market_outlook';
 
 export type GeoLevel = 'state' | 'metro' | 'county' | 'zip';
 

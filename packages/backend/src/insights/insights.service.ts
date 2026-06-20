@@ -19,6 +19,7 @@ import { ScoringService } from '../scoring/scoring.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
+import { NewsScoutService } from '../reports/news-scout.service';
 import {
   AI_PURPOSES,
   AiCompletionResponse,
@@ -37,6 +38,7 @@ import {
   buildScoreExplanationPrompt,
   buildTrendInterpretationPrompt,
   buildMarketOverviewPrompt,
+  buildMarketOutlookPrompt,
 } from './insight-prompts';
 
 /** Maps insight type to its prompt builder function */
@@ -46,6 +48,8 @@ const PROMPT_BUILDERS: Record<InsightType, (ctx: InsightContext) => string> = {
   trend_interpretation: buildTrendInterpretationPrompt,
   market_overview: buildMarketOverviewPrompt,
   archetype_match: buildMarketOverviewPrompt,
+  // No-news fallback; the news-aware variant is built in generateSingleInsight.
+  market_outlook: (ctx) => buildMarketOutlookPrompt(ctx),
 };
 
 /**
@@ -58,6 +62,7 @@ const INSIGHT_PURPOSES: Record<InsightType, string> = {
   trend_interpretation: AI_PURPOSES.TREND_INTERPRETATION,
   market_overview: AI_PURPOSES.MARKET_OVERVIEW,
   archetype_match: AI_PURPOSES.MARKET_OVERVIEW,
+  market_outlook: AI_PURPOSES.MARKET_OUTLOOK,
 };
 
 @Injectable()
@@ -70,6 +75,7 @@ export class InsightsService {
     private readonly metricResolution: MetricResolutionService,
     private readonly geoChain: GeographyChainService,
     private readonly aiProvider: AiProviderService,
+    private readonly newsScout: NewsScoutService,
   ) {}
 
   /**
@@ -211,8 +217,15 @@ export class InsightsService {
     context: InsightContext,
     insightType: InsightType,
   ): Promise<AiCompletionResponse | null> {
-    const buildPrompt = PROMPT_BUILDERS[insightType];
-    const prompt = buildPrompt(context);
+    // market_outlook weaves in live local news (Gemini news scout) — fetched
+    // here because it is async while the prompt builders are sync.
+    const prompt =
+      insightType === 'market_outlook'
+        ? buildMarketOutlookPrompt(
+            context,
+            await this.buildNewsContext(context),
+          )
+        : PROMPT_BUILDERS[insightType](context);
     // deepseek-v4 models reason before answering, so a tight budget gets consumed
     // by the hidden reasoning and the answer truncates to empty. Be generous — the
     // PROMPT keeps the visible output short (~50 words for the quick insights); this
@@ -231,6 +244,36 @@ export class InsightsService {
         `Insight generation failed for ${context.region_id}/${insightType} (purpose=${purpose}): ${(err as Error).message}`,
       );
       return null;
+    }
+  }
+
+  /**
+   * Fetch + format recent local real-estate/economic news for the prompt via the
+   * Gemini-backed news scout. 90-day lookback to match the Score's 3-month
+   * momentum window. The scout caches results 24h in report_news_cache.
+   */
+  private async buildNewsContext(context: InsightContext): Promise<string> {
+    try {
+      const [name, state] = context.region_name.split(',').map((s) => s.trim());
+      const result = await this.newsScout.getOrScoutNews(
+        context.region_id,
+        context.geo_level,
+        name || context.region_name,
+        state || '',
+        { maxNewsItems: 6, lookbackDays: 90, includeNationalContext: false },
+      );
+      if (!result) return '';
+      return this.newsScout.formatNewsForPrompt(result, {
+        maxNewsItems: 6,
+        includeIndicators: true,
+        includeSignals: true,
+        includeNational: false,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `News scout failed for ${context.region_id}: ${(err as Error).message}`,
+      );
+      return '';
     }
   }
 }

@@ -1,6 +1,7 @@
 import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import type { HeroContrast, HeroMarket } from "@/lib/data";
 import { PrimaryCta } from "./PrimaryCta";
+import { OutlookNarrative } from "./OutlookNarrative";
 
 /**
  * Beat 1 — the verdict, first.
@@ -69,9 +70,11 @@ function ContrastCard({
           {kicker}
         </p>
         <p className="text-lg font-semibold text-on-surface">{market.name}</p>
-        <p className="mt-1.5 text-sm leading-snug text-on-surface-variant">
-          {narrative}
-        </p>
+        <OutlookNarrative
+          cbsa={market.cbsa}
+          fallback={narrative}
+          className="mt-1.5 text-sm leading-snug text-on-surface-variant"
+        />
       </div>
     </div>
   );

@@ -252,3 +252,41 @@ Rules:
 - Do NOT use bullet points — write in flowing paragraphs
 - Do NOT include a title or introduction before the first ## header`;
 }
+
+/**
+ * Market Outlook — the landing hero's predictive, news-aware narrative.
+ *
+ * The prompt is intentionally detailed (score, drivers, benchmarks, and recent
+ * local news), but the OUTPUT is a single persuasive paragraph UNDER 100 words
+ * that frames the market's FUTURE performance vs. its state — not today's
+ * conditions. `newsContext` is the formatted output of NewsScoutService.
+ */
+export function buildMarketOutlookPrompt(
+  ctx: InsightContext,
+  newsContext = '',
+): string {
+  const topComponents = formatTopComponents(ctx.score_components, 4);
+  const news = newsContext.trim()
+    ? newsContext.trim()
+    : 'No recent local items retrieved; rely on the score, drivers, and metrics.';
+
+  return `You are writing a short, persuasive market outlook for the PropertyIQ homepage hero.
+
+Market: ${ctx.region_name}
+PropertyIQ Score: ${ctx.scores.propertyiq ?? 'N/A'}/99
+What the Score means: it is a FORWARD-LOOKING signal. 50 equals this market's own state average. Above 50 predicts the market will OUTPERFORM its state over the coming years; below 50 predicts it will LAG. It is validated against decades of outcomes — a prediction about future performance, not a description of today's conditions.
+Score drivers: ${topComponents}
+Key metrics: ${formatKeyMetrics(ctx.key_metrics)}
+Benchmarks:
+${formatBenchmarks(ctx.benchmarks)}
+Recent local real estate and economic news:
+${news}
+
+Write ONE tight, scannable paragraph for a landing page (aim for about 70 to 100 words — concise beats long here) that:
+- Leads with what the Score predicts for this market's FUTURE performance versus its state (not today's weather).
+- Weaves in ONE specific, recent local news or economic item above to show current, on-the-ground context.
+- Reads like confident, specific website ad copy that makes the reader want to dig in — persuasive, never hype.
+- ${DATA_GROUNDING_RULE}
+- ${PLAIN_PROSE_RULE}
+- Output ONLY the paragraph. No title, no preamble, no label.`;
+}

@@ -16,6 +16,9 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
 import { InsightsController } from './insights.controller';
 import { InsightsService } from './insights.service';
 import { BlogGeneratorService } from './blog-generator.service';
+// Gemini-backed local news scout (deps: SupabaseService + global AiProviderService),
+// reused here to give the market_outlook narrative recent local-news context.
+import { NewsScoutService } from '../reports/news-scout.service';
 
 @Module({
   imports: [
@@ -25,7 +28,7 @@ import { BlogGeneratorService } from './blog-generator.service';
     AiProviderModule,
   ],
   controllers: [InsightsController],
-  providers: [InsightsService, BlogGeneratorService],
+  providers: [InsightsService, BlogGeneratorService, NewsScoutService],
   exports: [InsightsService, BlogGeneratorService],
 })
 export class InsightsModule {}
