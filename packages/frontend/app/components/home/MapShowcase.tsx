@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import type { FeatureCollection } from "geojson";
 import type mapboxgl from "mapbox-gl";
 import { useInView } from "./hooks/useInView";
 import { useMapData, useMapLayers } from "@/app/map/hooks";
+import { useSelectedGeoCinematic } from "@/app/map/hooks/useSelectedGeoCinematic";
 import { Legend, GeoLevelPills } from "@/app/map/components";
 import { MAPBOX_ACCESS_TOKEN } from "@/app/map/config";
 import { GEO_ZOOM_LEVELS, STATE_CENTERS } from "@/app/map/types";
@@ -27,11 +29,19 @@ export function MapShowcase() {
   // Data hooks — same ones the full map page uses
   const { mapData, dataLoading, fetchMapData } = useMapData();
 
-  const handleFeatureClick = useCallback(
-    (_geo: SelectedGeography | null) => {},
-    [],
-  );
+  // Cinematic geo zoom (flag-gated by NEXT_PUBLIC_CINEMATIC_ZOOM, default off):
+  // selecting a geo flies the camera with satellite + spotlight + (at ZIP) 3D.
+  // Inert when the flag is unset — the hook early-returns and the selection
+  // state below drives nothing else here, so the map behaves exactly as today.
+  const [selectedGeography, setSelectedGeography] =
+    useState<SelectedGeography | null>(null);
+  const searchNavigatedRef = useRef(0);
 
+  const handleFeatureClick = useCallback((geo: SelectedGeography | null) => {
+    setSelectedGeography(geo);
+  }, []);
+
+  const geoDataRef = useRef<FeatureCollection | null>(null);
   useMapLayers({
     map,
     popup,
@@ -44,6 +54,18 @@ export function MapShowcase() {
     dataLoading,
     highlightedFeature: null,
     onFeatureClick: handleFeatureClick,
+    geoDataRef,
+  });
+
+  // Drive the cinematic camera off the current selection (flag-gated; no-op when
+  // NEXT_PUBLIC_CINEMATIC_ZOOM is unset). Same hook the full /map page uses.
+  useSelectedGeoCinematic({
+    mapRef: map,
+    mapLoaded,
+    geoLevel,
+    selectedGeography,
+    geoDataRef,
+    searchNavigatedRef,
   });
 
   // Fetch data — city/zip/tract require a state selection
