@@ -3,6 +3,11 @@ import { fetchHeroContrast } from "@/lib/data";
 import { JsonLd } from "@/app/components/home/JsonLd";
 import { VariantStamp } from "@/app/components/home/landing-v2/VariantStamp";
 import { BeatHero } from "@/app/components/home/landing-v2/BeatHero";
+import { BeatTension } from "@/app/components/home/landing-v2/BeatTension";
+import { BeatFoundation } from "@/app/components/home/landing-v2/BeatFoundation";
+import { BeatScore } from "@/app/components/home/landing-v2/BeatScore";
+import { BeatDataDepth } from "@/app/components/home/landing-v2/BeatDataDepth";
+import { BeatClose } from "@/app/components/home/landing-v2/BeatClose";
 
 /**
  * Variant B homepage — the 8-beat narrative funnel.
@@ -34,7 +39,16 @@ export default async function HomeV2Page() {
       <VariantStamp variant="B" />
       <main id="landing-v2">
         <BeatHero contrast={contrast} />
-        {/* Beats 2 → 8 mount here. */}
+        <BeatTension />
+        <BeatFoundation />
+        <BeatScore
+          coolerCbsa={contrast?.cooler.cbsa ?? "12420"}
+          coolerName={contrast?.cooler.name ?? "Austin, TX"}
+        />
+        {/* Beat 5 (map) + Beat 6 (proof) + Beat 7 (persona) mount here. */}
+        <BeatDataDepth />
+        {/* Pricing slot mounts here. */}
+        <BeatClose />
       </main>
     </div>
   );
