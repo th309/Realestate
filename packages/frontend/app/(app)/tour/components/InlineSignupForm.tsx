@@ -98,7 +98,7 @@ export function InlineSignupForm() {
           placeholder="you@brokerage.com"
           required
           autoComplete="email"
-          className="min-w-[220px] flex-1 rounded-full border border-outline-variant bg-surface px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="min-w-[220px] flex-1 rounded-full border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <input
           type="password"
@@ -108,7 +108,7 @@ export function InlineSignupForm() {
           required
           autoComplete="new-password"
           minLength={8}
-          className="min-w-[180px] flex-1 rounded-full border border-outline-variant bg-surface px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="min-w-[180px] flex-1 rounded-full border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <button
           type="submit"

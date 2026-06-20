@@ -10,6 +10,7 @@ import { MigrationService } from '../migration/migration.service';
 import { EmploymentSectorsService } from '../employment-sectors/employment-sectors.service';
 import { ListingPresentationNarrativeService } from './listing-presentation-narrative.service';
 import { ListingPresentationSectionsService } from './listing-presentation-sections.service';
+import { ListingPresentationPeersService } from './listing-presentation-peers.service';
 
 export type GeoLevel =
   | 'metro'
@@ -72,6 +73,7 @@ export class ListingPresentationService {
     private sectors: EmploymentSectorsService,
     private narrative: ListingPresentationNarrativeService,
     private sections: ListingPresentationSectionsService,
+    private peersSection: ListingPresentationPeersService,
   ) {}
 
   async generate(input: GenerateInput): Promise<GeneratedReport> {
@@ -125,10 +127,9 @@ export class ListingPresentationService {
               [
                 'home_value',
                 'rent_index',
-                'dom_median',
-                'pct_sold_above_list',
+                'days_on_market',
                 'months_supply',
-                'sale_to_list_ratio',
+                'sale_to_list',
                 'price_per_sqft',
                 'median_income',
                 'household_income_median',
@@ -168,11 +169,17 @@ export class ListingPresentationService {
       peerCount: peersList.length,
       migrationCount: migrationFlows.length,
     };
-    const ai = await this.narrative.generate({
-      market: resolvedMarket,
-      persona: input.persona,
-      structuredFacts,
-    });
+    // Generate the AI narrative and enrich the peer cards with display metrics
+    // in parallel — peer enrichment (extra metric fetches) hides under the AI
+    // call, which is the long pole, so the finale doesn't get slower.
+    const [ai, enrichedPeers] = await Promise.all([
+      this.narrative.generate({
+        market: resolvedMarket,
+        persona: input.persona,
+        structuredFacts,
+      }),
+      this.peersSection.buildPeers(peersList),
+    ]);
 
     // -------- Wave 3: derived sections (trajectory + forecast need more fetches) --------
     const [trajectory, forecast] = await Promise.all([
@@ -214,8 +221,8 @@ export class ListingPresentationService {
       {
         id: 'peers',
         title: 'Comparable peers',
-        data: peersList,
-        limitedData: peersList.length === 0,
+        data: enrichedPeers,
+        limitedData: enrichedPeers.length === 0,
       },
       {
         id: 'migration',

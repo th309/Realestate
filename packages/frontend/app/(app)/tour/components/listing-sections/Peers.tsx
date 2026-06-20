@@ -8,7 +8,7 @@ interface Peer {
   medianPrice: string;
   yoyGrowth: string;
   dom: string;
-  soldAboveList: string;
+  saleToList: string;
   isSource?: boolean;
 }
 
@@ -54,7 +54,7 @@ export function Peers({ peers, limitedData, num = "05" }: Props) {
               <Row lbl="Median price" val={p.medianPrice} />
               <Row lbl="12-mo growth" val={p.yoyGrowth} />
               <Row lbl="Days on market" val={p.dom} />
-              <Row lbl="Sold above list" val={p.soldAboveList} />
+              <Row lbl="Sale-to-list" val={p.saleToList} />
             </dl>
           </div>
         ))}

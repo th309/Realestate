@@ -6,17 +6,16 @@ import { PersonaCard } from "./PersonaCard";
 export function PersonaCards() {
   const { setPersona } = useTour();
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <header className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold text-on-surface md:text-3xl">
+    <div className="mx-auto max-w-5xl px-4 py-6 md:py-10">
+      <header className="mb-5 text-center md:mb-8">
+        <h1 className="text-xl font-semibold text-on-surface sm:text-2xl md:text-3xl">
           What brings you to PropertyIQ?
         </h1>
-        <p className="mt-2 text-sm text-on-surface-variant">
-          Pick the closest match. Your tour is tailored to what you&apos;re
-          trying to do.
+        <p className="mt-1.5 text-sm text-on-surface-variant md:mt-2">
+          Pick the one that fits you best. Your tour is tailored to it.
         </p>
       </header>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
         <PersonaCard
           persona="agent"
           icon="🏠"
@@ -27,7 +26,6 @@ export function PersonaCards() {
             "Side-by-side market comparisons",
             "Shareable score cards for clients",
           ]}
-          priority
           onSelect={setPersona}
         />
         <PersonaCard

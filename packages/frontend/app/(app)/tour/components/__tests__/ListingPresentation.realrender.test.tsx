@@ -32,10 +32,9 @@ function realBackendReport() {
           data: {
             home_value: 450000,
             rent_index: 1800,
-            dom_median: 25,
+            days_on_market: 25,
             months_supply: 2.5,
-            pct_sold_above_list: 0.35,
-            sale_to_list_ratio: 1.01,
+            sale_to_list: 1.01,
             price_per_sqft: 220,
             household_income_median: 78000,
             pct_bachelors_or_higher: 0.42,
@@ -143,9 +142,10 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
 
   it("maps the metricsBatch Record → market-now stats", () => {
     render(<ListingPresentation {...props} />);
-    // "Sold above list" is unique to the MarketNow section (not a hero KPI),
-    // so it unambiguously proves the metricsBatch → stats mapping rendered.
-    expect(screen.getByText(/Sold above list/i)).toBeInTheDocument();
+    // "Sale-to-list" is unique to the MarketNow section here (the peers section
+    // is limited in this fixture), so it unambiguously proves the metricsBatch →
+    // stats mapping rendered with the corrected metric key (sale_to_list).
+    expect(screen.getByText(/Sale-to-list/i)).toBeInTheDocument();
   });
 
   it("maps the AI narrative → distinct strategy section + hero verdict (no repeat)", () => {

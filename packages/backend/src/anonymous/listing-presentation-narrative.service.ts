@@ -17,11 +17,24 @@ export interface NarrativeOutput {
   fallbackUsed: boolean;
 }
 
-const SYSTEM_PROMPT = `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific listing-presentation narrative for a real estate agent. Output STRICT JSON only with shape:
-{ "verdict": "<ONE punchy headline sentence the agent leads with>", "executiveSummary": "<2 to 3 short paragraphs telling the fuller market story; expand on the verdict with DIFFERENT specifics, never repeat it>", "strategy": "<3 paragraphs covering pricing, positioning, and timing>", "actions": [ { "title": "<6 words>", "desc": "<1 sentence>" } x 3 ] }
+// Shared output contract + tone, identical for every persona. Only the AUDIENCE
+// framing (PERSONA_INTRO) changes — that is what makes a homebuyer stop getting
+// an agent "listing presentation / farming" narrative (bug #2).
+const SHARED_RULES = `Output STRICT JSON only with shape:
+{ "verdict": "<ONE punchy headline sentence>", "executiveSummary": "<2 to 3 short paragraphs telling the fuller story; expand on the verdict with DIFFERENT specifics, never repeat it>", "strategy": "<3 short paragraphs>", "actions": [ { "title": "<6 words>", "desc": "<1 sentence>" } x 3 ] }
 verdict, executiveSummary, and strategy must each be DISTINCT: do not reuse the same sentence across them.
 The PropertyIQ Score (propertyiqScore) is on a 0-100 scale where higher means stronger demand and ~50 is the market's state average; ALWAYS describe it out of 100 (e.g. "scores 9/100"), never out of 10.
 Tone: confident, data-grounded, not generic. Cite exact numbers from the facts. Plain prose only: no markdown, no asterisks, no em-dashes.`;
+
+const PERSONA_INTRO: Record<'agent' | 'investor' | 'homebuyer', string> = {
+  agent: `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific listing-presentation narrative for a REAL ESTATE AGENT. The verdict is the headline the agent leads a seller with. The strategy covers pricing, positioning, and timing to win and sell the listing. The actions are the agent's next steps.`,
+  homebuyer: `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific market briefing for a HOMEBUYER deciding whether to buy here. Address the buyer as "you". The verdict answers "is this a good place and time to buy?" in one sentence. The executive summary covers affordability, what your money buys, where prices are headed (your future equity), and how competitive the market is. The strategy covers budgeting and the monthly cost reality, timing, and how to compete for the right home. The actions are concrete buyer next steps (get pre-approved, target the right areas, set a timeline). NEVER use agent or seller framing: no "listing", no "farming", no "pricing your listing", no "sell".`,
+  investor: `You are PropertyIQ's market-strategy synthesizer. Given structured market facts, write a tight, specific investment briefing for a REAL ESTATE INVESTOR evaluating this market. The verdict answers "is this a good market to invest in?" in one sentence. The executive summary covers rent versus price (cash-flow potential), the appreciation outlook, and the demand drivers (migration, jobs). The strategy covers cash flow versus appreciation, financing posture, and which submarkets or timing to target. The actions are concrete investor next steps (run the numbers on specific properties, line up financing, target submarkets). NEVER use agent or seller listing framing.`,
+};
+
+function systemPromptFor(persona: 'agent' | 'investor' | 'homebuyer'): string {
+  return `${PERSONA_INTRO[persona]}\n${SHARED_RULES}`;
+}
 
 @Injectable()
 export class ListingPresentationNarrativeService {
@@ -42,7 +55,7 @@ export class ListingPresentationNarrativeService {
       // resolves quickly.
       const response = await this.withAiTimeout(
         this.aiProvider.complete(AI_PURPOSES.LISTING_PRESENTATION_NARRATIVE, {
-          systemPrompt: SYSTEM_PROMPT,
+          systemPrompt: systemPromptFor(input.persona),
           userPrompt,
           // deepseek-v4-pro is verbose and the 3-paragraph strategy is long, so
           // the old 3000 cap still truncated mid-JSON on busier markets
@@ -107,15 +120,15 @@ export class ListingPresentationNarrativeService {
       actions: [
         {
           title: 'Review the structured signals',
-          desc: 'Use the Market Right Now and Forecast sections to inform pricing.',
+          desc: 'The Market Right Now and Forecast sections below carry the key numbers.',
         },
         {
           title: 'Compare against peer markets',
-          desc: 'Section 5 surfaces three comparable markets for positioning.',
+          desc: 'The peers section surfaces three comparable markets for context.',
         },
         {
-          title: 'Validate with local closed sales',
-          desc: 'Cross-check the auto-generated forecast against your most recent comparable closes.',
+          title: 'Validate with local data',
+          desc: 'Cross-check the auto-generated forecast against recent comparable activity.',
         },
       ],
       fallbackUsed: true,
