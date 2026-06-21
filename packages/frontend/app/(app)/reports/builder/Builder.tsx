@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -12,11 +12,8 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
+} from "@dnd-kit/core";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   FileText,
   Save,
@@ -29,13 +26,17 @@ import {
   Home,
   TrendingUp,
   Sparkles,
-} from 'lucide-react';
-import { Breadcrumbs } from '@/components/navigation';
-import { useBuilderState, SECTION_TEMPLATES, type BuilderSection } from './hooks/useBuilderState';
-import { SectionLibrary } from './components/SectionLibrary';
-import { Canvas } from './components/Canvas';
-import { PropertyPanel } from './components/PropertyPanel';
-import type { SectionType } from '../types';
+} from "lucide-react";
+import { Breadcrumbs } from "@/components/navigation";
+import {
+  useBuilderState,
+  SECTION_TEMPLATES,
+  type BuilderSection,
+} from "./hooks/useBuilderState";
+import { SectionLibrary } from "./components/SectionLibrary";
+import { Canvas } from "./components/Canvas";
+import { PropertyPanel } from "./components/PropertyPanel";
+import type { SectionType } from "../types";
 
 export const Builder: React.FC = () => {
   const builderState = useBuilderState();
@@ -69,7 +70,7 @@ export const Builder: React.FC = () => {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // DnD handlers
@@ -85,7 +86,7 @@ export const Builder: React.FC = () => {
       if (!over) return;
 
       // Check if dragging from library
-      const isFromLibrary = (active.id as string).startsWith('library-');
+      const isFromLibrary = (active.id as string).startsWith("library-");
 
       if (isFromLibrary) {
         // Add new section from library
@@ -102,13 +103,13 @@ export const Builder: React.FC = () => {
           const newOrder = arrayMove(
             sections.map((s) => s.id),
             oldIndex,
-            newIndex
+            newIndex,
           );
           reorderSections(newOrder);
         }
       }
     },
-    [sections, addSection, reorderSections]
+    [sections, addSection, reorderSections],
   );
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -119,8 +120,8 @@ export const Builder: React.FC = () => {
   const getActiveDragItem = () => {
     if (!activeId) return null;
 
-    if (activeId.startsWith('library-')) {
-      const type = activeId.replace('library-', '') as SectionType;
+    if (activeId.startsWith("library-")) {
+      const type = activeId.replace("library-", "") as SectionType;
       const template = SECTION_TEMPLATES[type];
       return {
         id: activeId,
@@ -143,15 +144,15 @@ export const Builder: React.FC = () => {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-screen flex flex-col bg-surface overflow-hidden">
+      <div className="h-dvh flex flex-col bg-surface overflow-hidden">
         {/* Top Bar */}
         <header className="flex items-center justify-between gap-4 px-4 py-3 bg-surface-container border-b border-outline-variant">
           {/* Left: Breadcrumbs + Title */}
           <div className="flex items-center gap-4">
             <Breadcrumbs
               items={[
-                { label: 'Reports', href: '/reports' },
-                { label: 'Builder' },
+                { label: "Reports", href: "/reports" },
+                { label: "Builder" },
               ]}
               className="text-sm"
             />
@@ -176,22 +177,22 @@ export const Builder: React.FC = () => {
           {/* Center: User Type Toggle */}
           <div className="flex items-center bg-surface-container-high rounded-xl p-1">
             <button
-              onClick={() => setUserType('homebuyer')}
+              onClick={() => setUserType("homebuyer")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                userType === 'homebuyer'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:text-on-surface'
+                userType === "homebuyer"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               <Home className="w-4 h-4" />
               Homebuyer
             </button>
             <button
-              onClick={() => setUserType('investor')}
+              onClick={() => setUserType("investor")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                userType === 'investor'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:text-on-surface'
+                userType === "investor"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               <TrendingUp className="w-4 h-4" />
@@ -261,10 +262,13 @@ export const Builder: React.FC = () => {
           {activeItem && (
             <div className="px-4 py-3 bg-primary-container border-2 border-primary rounded-xl shadow-2xl">
               <div className="text-sm font-medium text-on-primary-container">
-                {activeItem.name || SECTION_TEMPLATES[activeItem.type as SectionType]?.name}
+                {activeItem.name ||
+                  SECTION_TEMPLATES[activeItem.type as SectionType]?.name}
               </div>
               <div className="text-xs text-on-primary-container/70">
-                {activeItem.description || SECTION_TEMPLATES[activeItem.type as SectionType]?.description}
+                {activeItem.description ||
+                  SECTION_TEMPLATES[activeItem.type as SectionType]
+                    ?.description}
               </div>
             </div>
           )}

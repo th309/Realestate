@@ -29,6 +29,7 @@ export function SeoPageConversionBar({
   const [submitted, setSubmitted] = useState(false);
   const triggerRef = useRef<"scroll" | "timer" | null>(null);
   const shownFiredRef = useRef(false);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(DISMISS_KEY);
@@ -67,6 +68,23 @@ export function SeoPageConversionBar({
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
+
+  // While the bar is shown, reserve exactly its height at the bottom of the page
+  // so the last content can scroll clear of it (and is released when dismissed).
+  useEffect(() => {
+    if (dismissed || !visible) return;
+    const bar = barRef.current;
+    if (!bar) return;
+    const applyPadding = () => {
+      document.body.style.paddingBottom = `${bar.offsetHeight}px`;
+    };
+    applyPadding();
+    window.addEventListener("resize", applyPadding);
+    return () => {
+      window.removeEventListener("resize", applyPadding);
+      document.body.style.paddingBottom = "";
+    };
+  }, [dismissed, visible]);
 
   useEffect(() => {
     if (!visible || shownFiredRef.current) return;
@@ -128,7 +146,10 @@ export function SeoPageConversionBar({
     context === "blog" ? "Weekly market pulse" : "Weekly updates";
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-surface-container border-t border-outline-variant shadow-lg">
+    <div
+      ref={barRef}
+      className="fixed bottom-0 inset-x-0 z-40 bg-surface-container border-t border-outline-variant shadow-lg pb-safe"
+    >
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap">
         <div className="flex-1 flex items-center gap-3 min-w-0">
           <p className="text-sm font-medium text-on-surface truncate">

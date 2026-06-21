@@ -41,7 +41,14 @@ export function ConversationPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Defer to after paint so streaming message updates don't scroll mid-layout
+    // (which caused the view to jump while a reply was still rendering).
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    });
   };
 
   useEffect(() => {

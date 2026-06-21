@@ -4,19 +4,11 @@
 export {
   Breadcrumbs,
   CollapsibleBreadcrumbs,
-  PageHeaderWithBreadcrumbs
-} from './Breadcrumbs';
+  PageHeaderWithBreadcrumbs,
+} from "./Breadcrumbs";
 
-// Mobile Navigation
-export {
-  MobileNav,
-  NavigationRail,
-  BottomSheetNav,
-  SafeAreaSpacer
-} from './MobileNav';
+// Global breadcrumbs (auto-derived, rendered once in AppShell)
+export { GlobalBreadcrumbs } from "./GlobalBreadcrumbs";
 
 // Command Palette
-export {
-  CommandPalette,
-  useCommandPalette
-} from './CommandPalette';
+export { CommandPalette, useCommandPalette } from "./CommandPalette";

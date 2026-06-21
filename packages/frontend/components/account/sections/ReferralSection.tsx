@@ -73,7 +73,7 @@ export function ReferralSection() {
           <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
         ) : referralData ? (
           <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono truncate">
+            <div className="min-w-0 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono truncate">
               {referralData.url}
             </div>
             <button

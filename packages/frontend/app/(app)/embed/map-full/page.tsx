@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import type { FeatureCollection } from "geojson";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -37,7 +38,7 @@ mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 export default function EmbedMapFullPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-surface" />}>
+    <Suspense fallback={<div className="h-dvh w-full bg-surface" />}>
       <EmbedMapFullInner />
     </Suspense>
   );
@@ -116,6 +117,7 @@ function EmbedMapFullInner() {
   // -----------------------------------------------------------------------
   // Map layers hook
   // -----------------------------------------------------------------------
+  const geoDataRef = useRef<FeatureCollection | null>(null);
   const { updateMapLayers } = useMapLayers({
     map,
     popup,
@@ -128,6 +130,7 @@ function EmbedMapFullInner() {
     dataLoading,
     highlightedFeature,
     onFeatureClick: handleFeatureClick,
+    geoDataRef,
   });
 
   // -----------------------------------------------------------------------
@@ -264,7 +267,7 @@ function EmbedMapFullInner() {
   // Render
   // -----------------------------------------------------------------------
   return (
-    <div className="flex h-screen w-full bg-surface overflow-hidden">
+    <div className="flex h-dvh w-full bg-surface overflow-hidden">
       {/* Optional sidebar */}
       {config.showSidebar && (
         <Sidebar

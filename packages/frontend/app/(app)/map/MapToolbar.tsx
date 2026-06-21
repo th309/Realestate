@@ -114,25 +114,27 @@ export function MapToolbar({
           )}
         </div>
 
-        {/* Mobile Geo Pills + Match Toggle (Stacked) */}
-        <div className="md:hidden w-full overflow-x-auto pb-1">
-          <div className="flex justify-center items-center gap-2 min-w-max px-2">
-            <GeoLevelPills
-              geoLevel={geoLevel}
-              selectedMetric={selectedMetric}
-              selectedState={selectedState}
-              onGeoLevelChange={onGeoLevelChange}
-              onStateChange={onStateChange}
-            />
-            {quizCompleted && (
-              <EntitlementGate type="feature" id="market_match">
-                <ScoreTypeToggle
-                  activeMode={scoreViewMode}
-                  onChange={onScoreViewModeChange}
-                />
-              </EntitlementGate>
-            )}
-          </div>
+        {/* Mobile Geo Pills + Match Toggle — wrap, never scroll horizontally.
+            isMobile makes GeoLevelPills wrap its own chips (flex-wrap + compact
+            sizing); the match toggle stacks below. */}
+        <div className="md:hidden w-full space-y-2 px-2 pb-1">
+          <GeoLevelPills
+            isMobile
+            excludeLevels={["city"]}
+            geoLevel={geoLevel}
+            selectedMetric={selectedMetric}
+            selectedState={selectedState}
+            onGeoLevelChange={onGeoLevelChange}
+            onStateChange={onStateChange}
+          />
+          {quizCompleted && (
+            <EntitlementGate type="feature" id="market_match">
+              <ScoreTypeToggle
+                activeMode={scoreViewMode}
+                onChange={onScoreViewModeChange}
+              />
+            </EntitlementGate>
+          )}
         </div>
       </div>
     </div>

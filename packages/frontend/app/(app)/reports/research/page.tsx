@@ -17,7 +17,6 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
-import { Breadcrumbs } from "@/components/navigation";
 import {
   fetchClarifyingQuestions,
   generateResearchBrief,
@@ -42,14 +41,6 @@ export default function ResearchBriefPage() {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <Breadcrumbs
-          items={[
-            { label: "Reports", href: "/reports" },
-            { label: "Custom Research" },
-          ]}
-          className="mb-6"
-        />
-
         <EntitlementGate
           type="feature"
           id="custom_research"

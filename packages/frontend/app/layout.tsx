@@ -123,6 +123,9 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  // Required for env(safe-area-inset-*) to resolve to non-zero on notched
+  // devices — fixed bottom bars and sheets pad against the home indicator.
+  viewportFit: "cover",
 };
 
 // The root layout intentionally does NOT read cookies. Reading `cookies()` here
@@ -147,7 +150,7 @@ export default function RootLayout({
         */}
       </head>
       <body
-        className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-surface text-on-surface`}
+        className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-dvh flex flex-col bg-surface text-on-surface`}
       >
         <a
           href="#main-content"

@@ -18,6 +18,8 @@ interface GeoLevelPillsProps {
   isMobile?: boolean;
   /** Geo levels to hide (e.g. ['city'] to remove the City pill) */
   excludeLevels?: string[];
+  /** When false, keep all chips on one line (no flex-wrap). Default true. */
+  wrap?: boolean;
 }
 
 // Map geo levels to entitlement resource IDs
@@ -38,6 +40,7 @@ export function GeoLevelPills({
   onStateChange,
   isMobile = false,
   excludeLevels = [],
+  wrap = true,
 }: GeoLevelPillsProps) {
   const allLevels = [
     "National",
@@ -78,7 +81,7 @@ export function GeoLevelPills({
 
   return (
     <div
-      className={`flex gap-2 ${isMobile ? "flex-wrap" : "items-center"} relative`}
+      className={`flex gap-1.5 ${isMobile ? (wrap ? "flex-wrap" : "items-center") : "items-center"} relative`}
     >
       {levels.map((level) => {
         const levelKey = level.toLowerCase() as GeoLevel;
@@ -98,8 +101,8 @@ export function GeoLevelPills({
             onClick={() => !isMetricDisabled && handleGeoClick(levelKey)}
             disabled={isMetricDisabled}
             className={`
-              ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"} rounded-lg font-medium transition-all duration-200
-              flex items-center gap-1.5
+              ${isMobile ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm"} rounded-lg font-medium transition-all duration-200
+              flex items-center gap-1
               ${
                 isActive
                   ? "bg-primary text-on-primary elevation-1"
