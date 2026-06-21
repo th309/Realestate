@@ -83,6 +83,13 @@ function MarketSelector({
 }: MarketSelectorProps) {
   const [showSearch, setShowSearch] = useState(false);
 
+  // Like-geo restriction: the first market picked locks the geo level so a
+  // comparison never mixes metros with ZIPs (the report compares like-for-like).
+  // Enforced in three places: the backend search filter, the dropdown filter,
+  // and the add handler (belt-and-suspenders).
+  const lockedGeoLevel = markets.length > 0 ? markets[0].type : undefined;
+  const geoLabel = (t: string) => (t === "zip" ? "ZIP" : t);
+
   const {
     searchQuery,
     searchResults,
@@ -92,10 +99,16 @@ function MarketSelector({
     handleSearch,
     clearSearch,
     setShowSearchResults,
-  } = useUniversalSearch({});
+  } = useUniversalSearch({ filterByGeoLevel: lockedGeoLevel });
 
   const handleSelectResult = useCallback(
     (result: SearchResult) => {
+      // Reject a mismatched geo level (the dropdown is already filtered, but a
+      // stale result could slip through) so all compared markets stay same-level.
+      if (markets.length > 0 && result.type !== markets[0].type) {
+        return;
+      }
+
       const market: Market = {
         id: result.id,
         name: result.name,
@@ -217,7 +230,9 @@ function MarketSelector({
               <SearchWidget
                 searchQuery={searchQuery}
                 searchResults={searchResults.filter(
-                  (r) => !markets.find((m) => m.id === r.id),
+                  (r) =>
+                    !markets.find((m) => m.id === r.id) &&
+                    (lockedGeoLevel == null || r.type === lockedGeoLevel),
                 )}
                 searchLoading={searchLoading}
                 showSearchResults={showSearchResults}

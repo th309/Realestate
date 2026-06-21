@@ -230,12 +230,28 @@ export function buildNarrativeTemplateVars(
     winner_name: priorityWeightedWinner?.winnerName || null,
     winner_reasons: priorityWeightedWinner?.reasons || [],
     comparison_markets:
-      dto.comparison_geographies?.map((g) => ({
-        id: g.id,
-        name: g.name,
-        metrics: comparisons[g.id]?.current,
-        scores: comparisons[g.id]?.scores,
-      })) || [],
+      dto.comparison_geographies?.map((g) => {
+        const compData = comparisons[g.id];
+        const metricsFlat = compData?.current || {};
+        const piq = compData?.scores?.scores?.propertyiq || {};
+        const roundedScore =
+          typeof piq.score === 'number' ? Math.round(piq.score) : 'N/A';
+        return {
+          id: g.id,
+          name: g.name,
+          // Flatten this market's metrics so prompt templates can reference
+          // individual fields ({{zhvi}}, {{zhvi_yoy}}, …). Passing nested objects
+          // made interpolateTemplate JSON-stringify them, which the model read as
+          // opaque/duplicate blobs ("the comparison repeats the primary").
+          ...metricsFlat,
+          overall_score: roundedScore,
+          propertyiq_score: roundedScore,
+          propertyiq_grade: piq.grade || 'N/A',
+          // Keep nested refs for backward compatibility.
+          metrics: metricsFlat,
+          scores: { overall: roundedScore, propertyiq: piq },
+        };
+      }) || [],
 
     // User onboarding profile (for tone/depth personalization)
     user_name: userProfile?.full_name || null,

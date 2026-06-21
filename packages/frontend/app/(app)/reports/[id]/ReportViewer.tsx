@@ -241,7 +241,11 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
     report.comparison_geographies &&
     report.comparison_geographies.length > 0
   ) {
-    templateType = useV2 ? "comparison_v2" : "comparison";
+    // All comparison reports (v2 or legacy narrative) use the rebuilt comparison
+    // view: a summary across all markets + per-market deep-dive tabs, reading the
+    // live PropertyIQ score. The old comparison/comparison_v2 section templates
+    // are retired for new renders.
+    templateType = "comparison";
   } else if (isAgentReport) {
     templateType =
       agentViewMode === "prep"

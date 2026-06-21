@@ -27,13 +27,58 @@ Source Serif 4. Verify each LIVE at mobile viewport 375×812 (no mocks).
 - **InvestorFinale** — "Is {market} a good investment?" Hero: demand signal + investor verdict + cash-flow/appreciation snapshot. Sections: Cash flow (yield) · Appreciation forecast · Rent trends · Comparable cashflow markets · Demand drivers (migration/employment) · Deal analyzer. CTA: analyze an address / top cashflow markets / save.
 - Backend: per-persona narrative SYSTEM_PROMPT. Frontend: route `Step4Aha` → finale by `session.persona`.
 
+## T6 redesign (user spec 2026-06-20, REVISED after live review)
+
+FINAL requirements (user was clear after seeing v1 fall short):
+
+1. Like-geo restriction — DONE + verified live (first pick locks metro/county/zip).
+2. SUMMARY at top must SYNTHESIZE the comparison in PROSE (AI: "Denver leads on
+   momentum, Austin is most affordable, Phoenix…") — NOT a wall of metric cards.
+3. Each market's TAB = a FULL report, as deep as an individual single-market
+   report. Requires BACKEND change: fetch full data set + generate an AI narrative
+   for EVERY comparison market (today comp markets only get score+metrics+history
+   → shallow). Reversal of the earlier "data-driven, no backend" choice; user
+   accepts longer/costlier generation (N full reports + 1 synthesis per report).
+4. TABS: frozen/sticky (don't scroll away so switching is easy); SHORT labels
+   (lead city, e.g. "Austin-Round Rock-San Marcos, TX" → "Austin") — NO overflow.
+5. Mobile AND web (v1 was shallow on both).
+
+STATUS 2026-06-21: Per-market FULL reports WORK (user confirmed full reports for
+both Chicago + Austin in the tabs; Market Pulse shows news from both). Frontend
+(synthetic per-market report → single-market template) + backend fork (per-market
+narrative + data + per-comparison news) = DONE, tsc clean, NOT committed.
+REMAINING = the cross-market SYNTHESIS only (report.ai_narrative): it's fed the
+PRIMARY's data for the comparison slot, so the AI says "only one market / metrics
+repeat the primary" and can't actually compare; news/indicators primary-only;
+verdict_and_actions empty. Diagnosing now (agent), then fix + regenerate.
+
+SYNTHESIS-QUALITY fixes (user, after seeing the rendered synthesis): 6. Head-to-head + economic indicators in the synthesis use ONLY the primary geo's
+news/indicators → must incorporate ALL markets' news + economic indicators
+(backend now fetches per-comparison news, so feed all markets into the
+comparison narrative template vars + prompt). 7. The comparison "Verdict & actions" section must NEVER render "insufficient
+data" — always produce a real verdict + actions (robust generation + a
+deterministic non-stub fallback).
+(These live in the comparison narrative path — buildNarrativeTemplateVars + the
+comparison prompt + V2 verdict/actions section. Handle in the backend pass AFTER
+the fork lands; do not edit that code in parallel with the fork.)
+
+v1 (shipped to working tree, NOT committed): ComparisonReportV3 + summary cards +
+thin data-driven deep-dive + marketBundles defensive score accessor. The score
+accessor + geo-restriction + routing/wiring are KEEPERS; the summary + deep-dive
+get rebuilt for depth + synthesis. Backend (reports-orchestrator/narrative) must
+generate per-comparison-market full data+narrative + a comparison-summary.
+Investigations running: frontend section reuse + data gaps; backend gen flow.
+
 ## Tasks (sequence: quick wins → big builds)
 
 - [x] **T1** #1 Persona cards — DONE + verified @375: "For you" badge removed; mobile-compact horizontal cards (3 fit one screen, no scroll); bold high-contrast titles + chevron affordance; richer desktop card preserved; fixed pre-existing "Continue as an" grammar bug.
 - [x] **T3** #3 Inputs — DONE + verified @375 (typed "Austin, TX" renders dark): `text-on-surface` added to InlineSignupForm ×2 + MarketPickerStep; MarketPicker `bg-white`→`bg-surface`. Both onboarding inputs already correct.
 - [x] **T5** #5 Finale persistence — DONE + verified. New `tour/lib/reportCache.ts` (sessionStorage, keyed persona+geoId); `Step4Aha` restores on mount + persists on success, gated so it never races/re-fires; cache cleared on `?resume=fresh`/reset. 22 tour tests pass incl. new persistence test. Live: seeded cache → finale renders from cache, ZERO network POST. NOTE: live full-generation blocked by anon 1/IP/24h 429; restore mechanism verified live, write-on-success unit-tested.
 - [x] **T4** #4 Peer numbers — DONE + verified live. New `ListingPresentationPeersService.buildPeers` enriches peers via MetricResolutionService; `adaptPeers` formats them; peer cards show name + scoreLabel + median price + 12-mo growth + days-on-market + sale-to-list. ROOT CAUSE also found+fixed: orchestrator used unregistered IDs `dom_median`/`pct_sold_above_list`/`sale_to_list_ratio` (always null) → corrected to `days_on_market`/`sale_to_list` in both peers AND source market-now (+ adapter METRIC_FORMAT + Peers "Sale-to-list" relabel). Added ref-guard in Step4Aha so the generation fires once (dev StrictMode was double-firing → 429). Backend tsc clean; 86 frontend tests pass. Live (Phoenix): all 4 peer metrics + market-now DOM/sale-to-list render real numbers.
-- [ ] **T6** #6 Comparison — SCOPE CLARIFIED via investigation. The active `comparison` template uses `ComparisonHero` (already handles N markets) — `ComparisonHeroShowdown`'s `.slice(0,2)` is DEAD CODE (not in any template; red herring). REAL root cause: ALL comparison sections (ComparisonHero, HeadToHeadScoreStory, ComponentShowdown, MarketStrengths, ComparisonVerdict) read DEAD legacy scores `report.homeready_score`/`investoredge_score` + `comp.scores.homeready/investoredge` → every market shows "No Score" (looks like only-first-market). LIVE score = `report.propertyiq_score` + `comparisons[geoId].scores.propertyiq.score`. FIX = migrate those reads to PropertyIQ + mobile-readability pass on the comparison sections (tables/gauges). Then verify @375 with 2 & 3 markets.
+- [~] **T6** #6 Comparison — BUILT + typechecks + logic-tested; authed LIVE render pending. (1) Like-geo restriction live in `MarketSelector` (page.tsx): first market locks the level via `filterByGeoLevel` + dropdown filter + add guard. (2) New comparison view replaces the dead-legacy-score sections: `ComparisonReportV3` = `ComparisonSummaryV3` (all markets compared, live PropertyIQ score + metrics + winner, mobile-first cards) + per-market `PillTabs` -> `MarketDeepDivePanel` (score + 3 drivers + trajectory sparkline + metrics grid). `marketBundles.ts` defensively reads the live score from BOTH nestings (primary `scores.propertyiq` cleaned vs comparison `scores.scores.propertyiq` raw) so no market shows "No Score". Wired via templates/index.ts (`comparison` template = single ComparisonReportV3) + ReportViewer routes all comparisons there. Frontend tsc clean (only pre-existing .next-verify artifact error); 4 ComparisonReportV3 tests pass (both nestings resolve, winner, tabs, fallback). PENDING: authed live /reports render @375 with 2 & 3 markets — blocked by Playwright profile lock (headed mobile-preview window) + auth. Pre-existing file-size debt noted: page.tsx 1104 / ReportViewer 477 (both over 400; not split here).
+
+  (original scope notes:) SCOPE CLARIFIED via investigation. The active `comparison` template uses `ComparisonHero` (already handles N markets) — `ComparisonHeroShowdown`'s `.slice(0,2)` is DEAD CODE (not in any template; red herring). REAL root cause: ALL comparison sections (ComparisonHero, HeadToHeadScoreStory, ComponentShowdown, MarketStrengths, ComparisonVerdict) read DEAD legacy scores `report.homeready_score`/`investoredge_score` + `comp.scores.homeready/investoredge` → every market shows "No Score" (looks like only-first-market). LIVE score = `report.propertyiq_score` + `comparisons[geoId].scores.propertyiq.score`. FIX = migrate those reads to PropertyIQ + mobile-readability pass on the comparison sections (tables/gauges). Then verify @375 with 2 & 3 markets.
+
 - [x] **T2** #2 Three distinct persona finales — DONE + verified live (Phoenix, all 3 personas, single 201 each). Shared `finale/FinaleScaffold.tsx` (config-driven: section order + hero eyebrow/label + AI-strategy voice); `ListingPresentation` refactored to a thin Agent config (tests still pass); new `HomebuyerFinale` (affordability/forecast-forward, "For Homebuyers", "Your buying strategy") + `InvestorFinale` (cash-flow/appreciation-forward, "For Investors", "Your investment strategy"); `ReportHero`/`AiStrategy` got optional persona props; `Step4Aha` routes by `session.persona`. Backend persona narrative confirmed: buyer verdict is buyer-voiced, investor verdict investor-voiced, NO agent/farming framing. 53 finale tests pass. NOTE: InlineSignupForm CTA copy ("share with your client") is still agent-leaning — minor follow-up, separate from the finale.
 
 ## Verification
