@@ -1,4 +1,5 @@
 import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import type { BlogPost } from "@/lib/blog/types";
 import { mdxComponents } from "./mdx-components";
@@ -61,7 +62,11 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
 
       {/* MDX Content */}
       <div className="prose prose-lg max-w-none">
-        <MDXRemote source={post.content} components={mdxComponents} />
+        <MDXRemote
+          source={post.content}
+          components={mdxComponents}
+          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+        />
       </div>
 
       {/* Product CTA -- links to market page */}
