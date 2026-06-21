@@ -3,6 +3,7 @@ import { AnonymousController } from './anonymous.controller';
 import { ListingPresentationService } from './listing-presentation.service';
 import { ListingPresentationNarrativeService } from './listing-presentation-narrative.service';
 import { ListingPresentationSectionsService } from './listing-presentation-sections.service';
+import { ListingPresentationPeersService } from './listing-presentation-peers.service';
 import { ListingPresentationClaimService } from './listing-presentation-claim.service';
 import { RedisTourCacheService } from './redis-tour-cache.service';
 import { AnonRateLimitGuard } from './anon-rate-limit.guard';
@@ -31,6 +32,7 @@ import { ZillowModule } from '../zillow/zillow.module';
     ListingPresentationService,
     ListingPresentationNarrativeService,
     ListingPresentationSectionsService,
+    ListingPresentationPeersService,
     ListingPresentationClaimService,
     RedisTourCacheService,
     AnonRateLimitGuard,

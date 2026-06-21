@@ -23,6 +23,7 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
   const [website, setWebsite] = useState(""); // honeypot
   const shownFiredRef = useRef(false);
   const triggerRef = useRef<"timer" | "scroll" | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem("piq_sticky_dismissed")) {
@@ -65,6 +66,23 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
     });
   }, [visible]);
 
+  // Reserve the bar's height at the bottom of the page while shown so the last
+  // content (and footer) can scroll clear of it; released on dismiss/unmount.
+  useEffect(() => {
+    if (dismissed || !visible) return;
+    const bar = barRef.current;
+    if (!bar) return;
+    const applyPadding = () => {
+      document.body.style.paddingBottom = `${bar.offsetHeight}px`;
+    };
+    applyPadding();
+    window.addEventListener("resize", applyPadding);
+    return () => {
+      window.removeEventListener("resize", applyPadding);
+      document.body.style.paddingBottom = "";
+    };
+  }, [dismissed, visible]);
+
   function handleDismiss() {
     trackEvent("home.sticky_bar_dismissed", {});
     setDismissed(true);
@@ -96,7 +114,10 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
   if (dismissed || !visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 bg-[#1A237E]/95 backdrop-blur-sm border-t border-white/10 shadow-lg">
+    <div
+      ref={barRef}
+      className="fixed bottom-0 inset-x-0 z-50 bg-[#1A237E]/95 backdrop-blur-sm border-t border-white/10 shadow-lg pb-safe"
+    >
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Score ticker + link */}
         <div className="flex items-center gap-2 text-sm text-white/90 flex-wrap justify-center">

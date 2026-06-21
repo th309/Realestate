@@ -21,7 +21,7 @@ User type: {{user_type}}
 
 ## Comparison Markets
 {{#each comparison_markets}}
-- {{name}}: Score {{scores.overall}}/100 | ZHVI {{metrics.zhvi}} | YoY {{metrics.zhvi_yoy}}%
+- {{name}}: PropertyIQ {{propertyiq_score}}/100 ({{propertyiq_grade}}) | ZHVI {{zhvi}} | YoY {{zhvi_yoy}}%
 {{/each}}
 
 {{#if winner_name}}
@@ -75,8 +75,12 @@ User type: {{user_type}}
 ## Comparison Markets
 {{#each comparison_markets}}
 ### {{name}}
-- Scores: {{scores}}
-- Metrics: {{metrics}}
+- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- ZHVI: {{zhvi}} | YoY: {{zhvi_yoy}}% | 3Y CAGR: {{zhvi_3y_cagr}}%
+- ZORI: {{zori}} | YoY: {{zori_yoy}}%
+- Days on market: {{days_on_market}}
+- Median income: {{median_household_income}} | Unemployment: {{unemployment_rate}}%
+- Population growth: {{population_growth_yoy}}%
 {{/each}}
 
 ## Reader Priorities
@@ -129,8 +133,9 @@ Primary market: {{geography_name}}
 ## Comparison Markets
 {{#each comparison_markets}}
 ### {{name}}
-- Metrics: {{metrics}}
-- Scores: {{scores}}
+- PropertyIQ Score: {{propertyiq_score}}/100
+- ZHVI YoY: {{zhvi_yoy}}% | ZORI YoY: {{zori_yoy}}%
+- Days on market: {{days_on_market}}
 {{/each}}
 
 For each market (primary + comparisons), write 1-2 paragraphs covering:
@@ -163,10 +168,14 @@ Reader priorities: {{priorities_formatted}}
 User type: {{user_type}}
 
 ## Markets Compared
-- {{geography_name}}: Score {{overall_score}}/100, Phase {{market_phase}}
+- {{geography_name}}: PropertyIQ {{propertyiq_score}}/100 | ZHVI {{zhvi}} | Rent {{zori}}
 {{#each comparison_markets}}
-- {{name}}: Score {{scores.overall}}/100
+- {{name}}: PropertyIQ {{propertyiq_score}}/100 | ZHVI {{zhvi}} | Rent {{zori}}
 {{/each}}
+
+You ALWAYS have enough to decide: every market above has a PropertyIQ score and
+core metrics. NEVER say the data is insufficient or that there is "only one
+market" — compare exactly the markets listed above.
 
 Write in TWO parts:
 

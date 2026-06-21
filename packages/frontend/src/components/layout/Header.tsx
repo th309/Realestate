@@ -247,6 +247,9 @@ export function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+              aria-haspopup="true"
               className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               {isMenuOpen ? (
@@ -264,6 +267,8 @@ export function Header() {
         <MobileMenu
           user={user}
           loading={loading}
+          tier={tier}
+          orgSlug={org?.slug}
           onClose={() => setIsMenuOpen(false)}
           onSignOut={async () => {
             await signOut();

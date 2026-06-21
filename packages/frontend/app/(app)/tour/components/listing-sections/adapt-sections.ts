@@ -41,13 +41,12 @@ const METRIC_FORMAT: Record<
 > = {
   home_value: { lbl: "Median value", fmt: (n) => `$${Math.round(n / 1000)}K` },
   rent_index: { lbl: "Rent index", fmt: (n) => `$${Math.round(n)}` },
-  dom_median: { lbl: "Days on market", fmt: (n) => `${Math.round(n)} days` },
-  pct_sold_above_list: {
-    lbl: "Sold above list",
-    fmt: (n) => `${(n <= 1 ? n * 100 : n).toFixed(0)}%`,
+  days_on_market: {
+    lbl: "Days on market",
+    fmt: (n) => `${Math.round(n)} days`,
   },
   months_supply: { lbl: "Months supply", fmt: (n) => `${n.toFixed(1)} mo` },
-  sale_to_list_ratio: {
+  sale_to_list: {
     lbl: "Sale-to-list",
     fmt: (n) => `${(n <= 2 ? n * 100 : n).toFixed(1)}%`,
   },
@@ -69,6 +68,41 @@ function marketNowStats(data: unknown): { lbl: string; val: string }[] {
     if (n != null) stats.push({ lbl: f.lbl, val: f.fmt(n) });
   }
   return stats;
+}
+
+// ---- peers: enriched raw peer rows → formatted Peers component props ----
+// The backend (ListingPresentationPeersService) sends flat raw numbers per peer;
+// the Peers component wants pre-formatted strings. A missing metric → "—".
+function adaptPeers(data: unknown): {
+  name: string;
+  scoreLabel: string;
+  medianPrice: string;
+  yoyGrowth: string;
+  dom: string;
+  saleToList: string;
+}[] {
+  return asArray(data).map((p) => {
+    const r = asRecord(p);
+    const score = num(r.score);
+    const price = num(r.home_value);
+    const yoy = num(r.home_value_yoy);
+    const dom = num(r.days_on_market);
+    const saleToList = num(r.sale_to_list);
+    return {
+      name: str(r.name),
+      scoreLabel:
+        score != null
+          ? `PropertyIQ ${Math.round(score)} · ${getScoreLabel(score)}`
+          : "",
+      medianPrice: price != null ? formatUsdK(price) : "—",
+      yoyGrowth: yoy != null ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}%` : "—",
+      dom: dom != null ? `${Math.round(dom)}` : "—",
+      saleToList:
+        saleToList != null
+          ? `${(saleToList <= 2 ? saleToList * 100 : saleToList).toFixed(0)}%`
+          : "—",
+    };
+  });
 }
 
 // ---- the adapted prop bundles (typed loosely; components own the real types) ----
@@ -113,7 +147,7 @@ export function adaptReportSections(sections: RawSection[]): AdaptedSections {
   })();
 
   const marketStats = marketNowStats(by("market-now")?.data);
-  const peers = asArray(by("peers")?.data);
+  const peers = adaptPeers(by("peers")?.data);
   const inflows = asArray(by("migration")?.data);
   const empSectors = asArray(asRecord(by("employment")?.data).sectors);
 

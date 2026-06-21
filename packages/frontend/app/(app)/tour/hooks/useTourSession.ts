@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import type { MarketRef, Persona, TourPhase, TourSession } from "../types";
 import { parseMarket as parseMarketParam } from "../lib/parseMarket";
+import { clearAllReportCache } from "../lib/reportCache";
 
 const COOKIE_NAME = "piq_tour_session";
 const STORAGE_KEY = "piq_tour";
@@ -77,6 +78,7 @@ export function useTourSession() {
       if (typeof localStorage !== "undefined")
         localStorage.removeItem(STORAGE_KEY);
       deleteCookie(COOKIE_NAME);
+      clearAllReportCache();
     }
 
     const stored = resumeMode === "fresh" ? {} : loadFromStorage();
@@ -264,6 +266,7 @@ export function useTourSession() {
     if (typeof localStorage !== "undefined")
       localStorage.removeItem(STORAGE_KEY);
     deleteCookie(COOKIE_NAME);
+    clearAllReportCache();
     setSession({
       sessionId: mintSessionId(),
       persona: null,

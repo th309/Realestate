@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import type { Persona } from "@/lib/data";
 
 interface Props {
@@ -26,25 +27,38 @@ export function PersonaCard({
       type="button"
       onClick={() => onSelect(persona)}
       className={[
-        "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all",
+        // Mobile: compact horizontal row so all three options fit one screen
+        // without scrolling. Desktop (md+): rich vertical card with bullets + CTA.
+        "group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all",
+        "md:flex-col md:items-start md:gap-3 md:p-5",
         "hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(57,73,171,0.12)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         priority
           ? "border-primary bg-gradient-to-b from-white to-primary-container/30"
           : "border-outline-variant bg-white hover:border-primary/60",
       ].join(" ")}
       aria-label={`Continue tour as ${title}`}
     >
-      {priority && (
-        <span className="absolute right-3 top-3 rounded-md bg-tertiary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-on-tertiary">
-          For you
-        </span>
-      )}
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-container text-2xl">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-container text-2xl md:h-11 md:w-11">
         {icon}
       </span>
-      <span className="text-base font-semibold text-on-surface">{title}</span>
-      <span className="text-xs text-on-surface-variant">{tag}</span>
-      <ul className="space-y-1 text-xs text-on-surface-variant">
+
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 md:gap-1">
+        <span className="text-[17px] font-semibold leading-tight text-on-surface md:text-base">
+          {title}
+        </span>
+        <span className="text-[13px] font-medium leading-snug text-on-surface-variant md:text-xs md:font-normal">
+          {tag}
+        </span>
+      </span>
+
+      {/* Mobile-only affordance signalling these are tap-to-select */}
+      <ChevronRight
+        className="h-5 w-5 shrink-0 text-primary md:hidden"
+        aria-hidden="true"
+      />
+
+      <ul className="hidden space-y-1 text-xs text-on-surface-variant md:block">
         {bullets.map((b) => (
           <li
             key={b}
@@ -54,8 +68,8 @@ export function PersonaCard({
           </li>
         ))}
       </ul>
-      <span className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-medium text-on-primary group-hover:bg-primary-dark">
-        Continue as {title.split(" ")[1] ?? persona} →
+      <span className="mt-2 hidden w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-medium text-on-primary group-hover:bg-primary-dark md:inline-flex">
+        Continue as {title.replace(/^I'm an? /i, "")} →
       </span>
     </button>
   );

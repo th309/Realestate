@@ -17,6 +17,7 @@ import {
   AiProviderConfig,
   AiCompletionRequest,
   modelRejectsSamplingParams,
+  resolveMaxTokens,
 } from './ai-provider.types';
 import { logUsage } from './ai-usage-logger';
 
@@ -63,7 +64,13 @@ export async function* executeStream(
     const stream = (await client.chat.completions.create({
       model: config.model,
       messages,
-      max_tokens: request.maxTokens,
+      // Reasoning models bill reasoning_content as completion tokens; add
+      // headroom so a small answer budget isn't starved to an empty response.
+      max_tokens: resolveMaxTokens(
+        config.provider,
+        config.model,
+        request.maxTokens,
+      ),
       ...(rejectsSampling ? {} : { temperature }),
       stream: true,
     } as any)) as any;

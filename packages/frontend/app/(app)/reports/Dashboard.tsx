@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FileText, Plus, History, Sparkles, ArrowRight, Clock, TrendingUp } from 'lucide-react';
-import { WizardContainer } from './components/wizard/WizardContainer';
-import { PreviewPanel } from './components/preview/PreviewPanel';
-import { ReportHistoryRefined } from './components/ReportHistoryRefined';
-import { useWizardState } from './hooks/useWizardState';
-import { useReportGeneration } from './hooks/useReportGeneration';
-import { Breadcrumbs } from '@/components/navigation';
-import './styles/report-theme.css';
+import React from "react";
+import {
+  FileText,
+  Plus,
+  History,
+  Sparkles,
+  ArrowRight,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
+import { WizardContainer } from "./components/wizard/WizardContainer";
+import { PreviewPanel } from "./components/preview/PreviewPanel";
+import { ReportHistoryRefined } from "./components/ReportHistoryRefined";
+import { useWizardState } from "./hooks/useWizardState";
+import { useReportGeneration } from "./hooks/useReportGeneration";
+import "./styles/report-theme.css";
 
 export const Dashboard: React.FC = () => {
   const wizardState = useWizardState();
@@ -21,13 +28,11 @@ export const Dashboard: React.FC = () => {
         className="fixed inset-0 pointer-events-none opacity-30"
         style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, rgba(27, 46, 74, 0.03) 1px, transparent 0)`,
-          backgroundSize: '32px 32px',
+          backgroundSize: "32px 32px",
         }}
       />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-8 lg:py-12">
-        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-6" />
-
         {/* Header Section */}
         <header className="mb-12 report-animate-in">
           <div className="flex items-center gap-3 mb-4">
@@ -40,8 +45,8 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <p className="report-body max-w-2xl">
-            Generate AI-powered market analysis with deep data insights,
-            custom comparisons, and exportable formats tailored to your needs.
+            Generate AI-powered market analysis with deep data insights, custom
+            comparisons, and exportable formats tailored to your needs.
           </p>
         </header>
 
@@ -78,10 +83,15 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="report-heading-sm">Create New Report</h2>
-                  <p className="report-body-sm">Select a location and customize your analysis</p>
+                  <p className="report-body-sm">
+                    Select a location and customize your analysis
+                  </p>
                 </div>
               </div>
-              <WizardContainer wizardState={wizardState} reportGeneration={reportGeneration} />
+              <WizardContainer
+                wizardState={wizardState}
+                reportGeneration={reportGeneration}
+              />
             </div>
           </div>
 
@@ -102,7 +112,9 @@ export const Dashboard: React.FC = () => {
               </div>
               <div>
                 <h2 className="report-heading-sm">Recent Reports</h2>
-                <p className="report-body-sm">View and manage your generated reports</p>
+                <p className="report-body-sm">
+                  View and manage your generated reports
+                </p>
               </div>
             </div>
             <button className="report-btn-ghost">
@@ -116,7 +128,8 @@ export const Dashboard: React.FC = () => {
         <footer className="mt-16 pt-8 border-t border-[rgba(27,46,74,0.06)]">
           <div className="flex items-center justify-between">
             <p className="report-body-sm">
-              © {new Date().getFullYear()} PropertyIQ. AI-powered real estate analytics.
+              © {new Date().getFullYear()} PropertyIQ. AI-powered real estate
+              analytics.
             </p>
             <div className="flex items-center gap-1 text-[var(--report-stone-light)]">
               <Sparkles className="w-3.5 h-3.5" />

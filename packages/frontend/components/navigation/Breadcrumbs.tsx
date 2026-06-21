@@ -168,7 +168,8 @@ export const CollapsibleBreadcrumbs: React.FC<CollapsibleBreadcrumbsProps> = ({
 
 // Page header with breadcrumbs
 interface PageHeaderWithBreadcrumbsProps {
-  breadcrumbs: BreadcrumbItem[];
+  /** Deprecated: breadcrumbs are now rendered globally (GlobalBreadcrumbs). Ignored. */
+  breadcrumbs?: BreadcrumbItem[];
   title: string;
   description?: string;
   icon?: React.ReactNode;
@@ -178,11 +179,12 @@ interface PageHeaderWithBreadcrumbsProps {
 
 export const PageHeaderWithBreadcrumbs: React.FC<
   PageHeaderWithBreadcrumbsProps
-> = ({ breadcrumbs, title, description, icon, actions, className = "" }) => {
+> = ({ title, description, icon, actions, className = "" }) => {
+  // Breadcrumbs are rendered once globally (GlobalBreadcrumbs in AppShell), so
+  // this header no longer renders its own. The `breadcrumbs` prop is kept for
+  // backward compatibility with existing callers but is intentionally ignored.
   return (
     <div className={`space-y-3 ${className}`}>
-      <Breadcrumbs items={breadcrumbs} />
-
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

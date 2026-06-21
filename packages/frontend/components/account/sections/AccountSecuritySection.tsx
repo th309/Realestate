@@ -114,6 +114,9 @@ export function AccountSecuritySection({ user }: AccountSecuritySectionProps) {
 
       {/* Delete Account */}
       <div className="pt-4 border-t border-outline-variant">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-error">
+          Danger Zone
+        </p>
         <button
           type="button"
           onClick={() => setShowDeleteModal(true)}

@@ -39,6 +39,7 @@ import type { TimeSeriesService } from '../timeseries/timeseries.service';
 import type { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import type { ReportGenerationV2Service } from './report-generation-v2.service';
 import { resolveReportType } from './reports-orchestrator-v2-routing';
+import { generatePerMarketNarratives } from './reports-per-market-narratives';
 
 /**
  * Update the report row with a generation stage for real-time progress tracking.
@@ -172,12 +173,18 @@ export async function generateReportAsync(
     );
 
     // ── 2. Fetch comparison geography data (parallel per-geography) ────
+    // Comparison reports fetch the FULL per-market data set (metrics + historical
+    // + scores + news + score contexts) so each market can later get its own full
+    // single-market narrative — i.e. every tab reads like an individual report.
     const comparisons: Record<string, any> = {};
+    // Raw news per comparison geo, kept locally for per-market narrative
+    // generation (the trimmed `realtime` shape is what gets stored on the report).
+    const compNewsRaw: Record<string, any> = {};
     if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
       const compResults = await Promise.all(
         dto.comparison_geographies.map(async (compGeo) => {
           const compGeoType = compGeo.type as 'metro' | 'county' | 'zip';
-          const [compMetricsResult, compHistorical, compScores] =
+          const [compMetricsResult, compHistorical, compScores, compNews] =
             await Promise.all([
               fetchMarketMetrics(
                 supabase,
@@ -195,6 +202,25 @@ export async function generateReportAsync(
               deps.scoringService.getScore(compGeo.id, compGeoType, undefined, {
                 components: true,
               }),
+              newsTimeout(
+                deps.newsScoutService.getOrScoutNews(
+                  compGeo.id,
+                  compGeoType,
+                  compGeo.name,
+                  compGeo.state || '',
+                  {
+                    includeNationalContext: false,
+                    maxNewsItems: 8,
+                    lookbackDays: 90,
+                  },
+                ),
+                60_000,
+              ).catch((err: any) => {
+                logger.warn(
+                  `News scouting failed/timed out for comparison ${compGeo.name}: ${err?.message || err}`,
+                );
+                return null;
+              }),
             ]);
           return {
             id: compGeo.id,
@@ -203,17 +229,75 @@ export async function generateReportAsync(
             currentProvenance: compMetricsResult.provenance,
             historical: compHistorical,
             scores: compScores,
+            news: compNews,
           };
         }),
       );
       for (const comp of compResults) {
+        const compScoreContexts = comp.scores
+          ? generateAllScoreContexts(
+              { propertyiq: comp.scores.scores?.propertyiq ?? undefined },
+              {
+                geography_type: comp.geography.type as
+                  | 'metro'
+                  | 'county'
+                  | 'zip',
+                median_price:
+                  comp.current.median_listing_price || comp.current.zhvi,
+              },
+            )
+          : null;
+        const compSignalSummary = comp.news
+          ? deps.newsScoutService.summarizeSignals(comp.news)
+          : null;
+        compNewsRaw[comp.id] = comp.news;
         comparisons[comp.id] = {
           geography: comp.geography,
           current: comp.current,
           metric_provenance: comp.currentProvenance,
           historical: comp.historical,
           scores: comp.scores,
+          score_contexts: compScoreContexts,
+          realtime: comp.news
+            ? {
+                news: comp.news.local_news,
+                indicators: comp.news.economic_indicators,
+                signals: comp.news.market_signals,
+                national_context: comp.news.national_context,
+                signal_summary: compSignalSummary,
+                fetched_at: comp.news.scout_metadata?.search_timestamp,
+              }
+            : null,
         };
+
+        // Build a COMPLETE, standalone-shaped populated_data for THIS market via
+        // the SAME assemblePopulatedData path a 1-geo report uses, so every
+        // comparison tab renders like an individual report: cleaned
+        // scores.propertyiq.score (not the raw double-nested getScore shape),
+        // `current` with display aliases (home_value, median_rent, …),
+        // historical + realtime. The frontend reads this slice directly — no
+        // overlaying the primary, no shape-patching. (`scores` above is kept raw
+        // because the priority-weighted-winner calc still reads it.)
+        const compDataCoverage = await assessDataCoverage(
+          supabase,
+          comp.current,
+          comp.geography.type,
+          { ...dto, primary_geography: comp.geography } as GenerateReportDto,
+        );
+        const compPopulatedData = assemblePopulatedData(
+          comp.current,
+          comp.historical,
+          comp.scores,
+          compScoreContexts,
+          comp.news,
+          compSignalSummary,
+          {},
+          compDataCoverage,
+        );
+        if (Object.keys(comp.currentProvenance || {}).length > 0) {
+          (compPopulatedData as any).metric_provenance = comp.currentProvenance;
+        }
+        comparisons[comp.id].populated_data = compPopulatedData;
       }
     }
 
@@ -396,14 +480,18 @@ export async function generateReportAsync(
     try {
       const { data: briefing } = await supabase
         .from('market_briefings')
-        .select('market_stance, stance_signals, risk_flags, narrative_summary, news_snapshot')
+        .select(
+          'market_stance, stance_signals, risk_flags, narrative_summary, news_snapshot',
+        )
         .eq('geography_id', dto.primary_geography.id)
         .eq('is_latest', true)
         .single();
 
       if (briefing) {
         briefingContext = briefing;
-        logger.log(`Using market briefing for ${dto.primary_geography.name} (stance: ${briefing.market_stance})`);
+        logger.log(
+          `Using market briefing for ${dto.primary_geography.name} (stance: ${briefing.market_stance})`,
+        );
       }
     } catch {
       // No briefing available — generate report with original narrative flow.
@@ -442,6 +530,39 @@ export async function generateReportAsync(
           })
         : 'No recent news available for this market.';
 
+      // Synthesis news context = primary + EACH comparison market's news +
+      // economic indicators. The cross-market synthesis was previously fed only
+      // the primary's news, so head-to-head + indicators couldn't speak to the
+      // other markets. (Single-market reports have no comparison_geographies, so
+      // this is just the primary's news — unchanged.)
+      let synthesisNewsContext = newsContext;
+      if (dto.comparison_geographies?.length) {
+        const compBlocks: string[] = [];
+        for (const compGeo of dto.comparison_geographies) {
+          const compNews = compNewsRaw[compGeo.id];
+          if (!compNews) continue;
+          const formatted = deps.newsScoutService.formatNewsForPrompt(
+            compNews,
+            {
+              maxNewsItems: 3,
+              includeIndicators: true,
+              includeSignals: false,
+              includeNational: false,
+            },
+          );
+          if (formatted) compBlocks.push(`### ${compGeo.name}\n${formatted}`);
+        }
+        if (compBlocks.length) {
+          const primaryBlock =
+            newsResult && !newsContext.startsWith('No recent news')
+              ? `### ${dto.primary_geography.name}\n${newsContext}`
+              : '';
+          synthesisNewsContext = [primaryBlock, ...compBlocks]
+            .filter(Boolean)
+            .join('\n\n');
+        }
+      }
+
       // Fetch user onboarding profile for personalized narratives
       const { data: userProfile } = await supabase
         .from('user_profiles')
@@ -456,7 +577,7 @@ export async function generateReportAsync(
         scores,
         scoreContexts,
         marketMetrics,
-        newsContext,
+        synthesisNewsContext,
         signalSummary,
         priorities,
         priorityWeightedWinner,
@@ -479,6 +600,65 @@ export async function generateReportAsync(
           reportType,
           narrativeTemplateVars,
         );
+      }
+
+      // ── 9b. Per-market full single-market narratives (comparison reports) ─
+      // report.ai_narrative above is the cross-market SYNTHESIS (used by the
+      // summary). Here we ALSO generate a full single-market narrative for the
+      // primary AND each comparison market so every market's tab renders the
+      // REAL single-market report. Additive + fully guarded: any failure leaves
+      // that market's narrative null and the report still completes.
+      if (
+        reportType === 'comparison' &&
+        dto.comparison_geographies &&
+        dto.comparison_geographies.length > 0
+      ) {
+        try {
+          await updateGenerationStage(
+            supabase,
+            reportId,
+            'generating_analysis',
+            'Writing a full report for each market...',
+          );
+          const perMarket = await generatePerMarketNarratives({
+            deps: {
+              reportGenerationV2: deps.reportGenerationV2,
+              newsScoutService: deps.newsScoutService,
+              logger,
+            },
+            dto,
+            primary: {
+              geo: dto.primary_geography,
+              scores,
+              scoreContexts,
+              metrics: marketMetrics,
+              news: newsResult,
+            },
+            comparisons: dto.comparison_geographies.map((g) => ({
+              geo: g,
+              scores: comparisons[g.id]?.scores,
+              scoreContexts: comparisons[g.id]?.score_contexts,
+              metrics: comparisons[g.id]?.current || {},
+              news: compNewsRaw[g.id],
+            })),
+            userProfile,
+            benchmarks: populatedData.benchmarks,
+          });
+          // populatedData.comparisons IS the same `comparisons` object, so these
+          // mutations land in the single persistence write below.
+          if (perMarket.primary) {
+            (populatedData as any).primary_market_narrative = perMarket.primary;
+          }
+          for (const [geoId, narrative] of Object.entries(perMarket.byGeoId)) {
+            if (comparisons[geoId]) {
+              comparisons[geoId].ai_narrative = narrative;
+            }
+          }
+        } catch (perMarketError: any) {
+          logger.warn(
+            `Per-market narrative block failed, continuing with synthesis only: ${perMarketError?.message || perMarketError}`,
+          );
+        }
       }
     }
 

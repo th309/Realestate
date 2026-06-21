@@ -54,18 +54,9 @@ import {
   PrepNewsSignals,
 } from "../sections/agent";
 
-// Shared sections
-import { MarketPulse as SharedMarketPulse } from "../sections/shared";
-
-// Comparison sections (redesigned)
-import {
-  ComparisonHero,
-  HeadToHeadScoreStory,
-  ComponentShowdown,
-  PriorityWeightedAnalysis,
-  MarketStrengths,
-  ComparisonVerdict,
-} from "../sections/comparison";
+// Comparison report (summary comparing all markets + per-market deep-dive tabs).
+// Replaces the old bespoke comparison sections that read dead legacy scores.
+import { ComparisonReportV3 } from "../sections/comparison/ComparisonReportV3";
 
 // V2 template definitions (report prompting v2 — kept in separate file for size)
 import { V2_REPORT_TEMPLATES } from "./v2Templates";
@@ -143,16 +134,8 @@ export const REPORT_TEMPLATES: Record<
   },
   comparison: {
     name: "Market Comparison",
-    description: "Score-driven side-by-side market comparison",
-    sections: [
-      { component: ComparisonHero, id: "comparison-hero" },
-      { component: HeadToHeadScoreStory, id: "head-to-head" },
-      { component: ComponentShowdown, id: "component-showdown" },
-      { component: PriorityWeightedAnalysis, id: "priority-analysis" },
-      { component: MarketStrengths, id: "market-strengths" },
-      { component: ComparisonVerdict, id: "comparison-verdict" },
-      { component: SharedMarketPulse, id: "market-pulse" },
-    ],
+    description: "Summary comparing all markets + per-market deep-dive tabs",
+    sections: [{ component: ComparisonReportV3, id: "comparison" }],
   },
 };
 

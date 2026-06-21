@@ -72,6 +72,9 @@ vi.mock("../InlineSignupForm", () => ({
 
 describe("Step4Aha", () => {
   beforeEach(() => {
+    // The finale report cache (#5) is backed by sessionStorage; clear it so a
+    // report persisted by one test doesn't leak into the next test's lifecycle.
+    sessionStorage.clear();
     mutateSpy.mockClear();
     authedMutateSpy.mockClear();
     triggerConfettiSpy.mockClear();
@@ -212,6 +215,20 @@ describe("Step4Aha", () => {
     expect(container.querySelector("#signup-cta")).toBeTruthy();
     expect(screen.queryByTestId("persona-springboard")).toBeNull();
     expect(triggerConfettiSpy).not.toHaveBeenCalled();
+  });
+
+  it("restores a cached report on mount and does NOT re-fetch (finale persists on Back)", () => {
+    // Simulate a report generated earlier this session (same persona+market).
+    sessionStorage.setItem(
+      "piq_tour_report:agent:metro-39580",
+      JSON.stringify({ report: { sections: [] } }),
+    );
+    render(<Step4Aha />);
+    // The finale renders straight from cache…
+    expect(screen.getByTestId("listing-presentation")).toBeInTheDocument();
+    // …and neither endpoint is hit, so Back→forward no longer regenerates it.
+    expect(mutateSpy).not.toHaveBeenCalled();
+    expect(authedMutateSpy).not.toHaveBeenCalled();
   });
 
   it("authenticated success: no demo watermark, no signup form, shows the springboard + confetti", () => {

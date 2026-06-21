@@ -213,6 +213,23 @@ body {
   font-family: var(--font-roboto), "Roboto", system-ui, sans-serif;
 }
 
+/* =============================================================================
+   MOBILE SAFE-AREA UTILITIES
+   env(safe-area-inset-*) only resolves to non-zero when viewport-fit=cover is
+   set (see app/layout.tsx viewport export). Use .pb-safe on fixed bottom bars
+   and mobile sheets so their content clears the home indicator, and combine
+   with an arbitrary pb-[calc(<bar-height> + env(safe-area-inset-bottom))] on a
+   page's scroll container so content can clear a fixed bottom bar. dvh height
+   utilities (h-dvh / min-h-dvh / max-h-[NNdvh]) are built into Tailwind v4 and
+   are the mobile standard — avoid bare vh, which counts the address bar.
+   ============================================================================= */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* Sidebar width utility - fixed on mobile, dynamic on desktop */
 .sidebar-panel {
   width: 256px;

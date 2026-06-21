@@ -22,10 +22,22 @@ import { AmbientInsight } from "./AmbientInsight";
 import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
 import { QuickActions } from "./QuickActions";
+import { SidebarScoreCard } from "../sidebar-components";
 
 interface MatchScoreInfo {
   matchScore: number;
   budgetMatch: boolean;
+}
+
+interface PanelScoreData {
+  propertyiq?: {
+    score?: number;
+    trend?: number;
+    access: "full" | "teaser";
+    gated?: boolean;
+    tierRequired?: string;
+  };
+  isLoading?: boolean;
 }
 
 interface RightDetailPanelProps {
@@ -35,6 +47,8 @@ interface RightDetailPanelProps {
   geoLevel: GeoLevel;
   /** Personalized match score for the selected region */
   matchScore?: MatchScoreInfo | null;
+  /** PropertyIQ score for the selected region (from useSidebarScoreData) */
+  scoreData?: PanelScoreData | null;
 }
 
 interface MarketFactor {
@@ -69,6 +83,7 @@ export function RightDetailPanel({
   geography,
   geoLevel,
   matchScore,
+  scoreData,
 }: RightDetailPanelProps) {
   const [marketFactors, setMarketFactors] =
     useState<MarketFactor[]>(loadMarketFactors);
@@ -134,6 +149,21 @@ export function RightDetailPanel({
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto overflow-x-hidden">
+          {/* PropertyIQ Score — surfaced here for MOBILE only. On desktop the
+              left sidebar shows it; on mobile this full-width panel covers the
+              sidebar, so without this the score is unreachable after selecting.
+              Only render when there's a score (or it's loading) so geos without
+              a PropertyIQ score (e.g. state) don't show a blank card. */}
+          {(scoreData?.isLoading || scoreData?.propertyiq) && (
+            <div className="md:hidden">
+              <SidebarScoreCard
+                score={scoreData?.propertyiq}
+                isLoading={scoreData?.isLoading}
+                onUpgradeClick={() => (window.location.href = "/pricing")}
+              />
+            </div>
+          )}
+
           {/* Market Snapshot */}
           <MarketSnapshot
             geoLevel={geoLevel}

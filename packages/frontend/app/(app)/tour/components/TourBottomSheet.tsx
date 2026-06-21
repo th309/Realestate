@@ -23,12 +23,11 @@ export function TourBottomSheet({
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    // Slide the sheet up after mount. Scrolling the target into view is owned
+    // solely by BreathingSpotlight (scrollBlock="center" below) so there is one
+    // deterministic scroll per step instead of two competing scrollIntoView
+    // calls fighting each other.
     const t = setTimeout(() => setShow(true), 80);
-    const el =
-      typeof document !== "undefined"
-        ? document.querySelector(targetSelector)
-        : null;
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
     return () => clearTimeout(t);
   }, [targetSelector]);
 
@@ -39,6 +38,7 @@ export function TourBottomSheet({
         targetSelector={targetSelector}
         visible
         onClick={onContinue}
+        scrollBlock="center"
       />
 
       {/* Bottom sheet */}

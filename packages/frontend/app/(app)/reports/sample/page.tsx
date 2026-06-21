@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { Suspense } from 'react';
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
-import { ReportViewer } from '../[id]/ReportViewer';
-import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
+import React, { Suspense } from "react";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { ReportViewer } from "../[id]/ReportViewer";
+import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 
-const SAMPLE_REPORT_ID = 'f4b04e7c-34cc-4e38-bdac-541fff06de1e';
+const SAMPLE_REPORT_ID = "f4b04e7c-34cc-4e38-bdac-541fff06de1e";
 
 function LoadingFallback() {
   return (
@@ -21,7 +21,7 @@ function LoadingFallback() {
 
 function SampleBanner() {
   const { getAccess } = useEntitlements();
-  const hasReports = getAccess('feature', 'reports').level === 'full';
+  const hasReports = getAccess("feature", "reports").level === "full";
 
   // Don't show the banner/CTA for users who already have reports access
   if (hasReports) return null;
@@ -44,7 +44,7 @@ function SampleBanner() {
       </div>
 
       {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline-variant shadow-lg">
+      <div className="fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline-variant shadow-lg pb-safe">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-on-surface truncate">

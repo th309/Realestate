@@ -383,6 +383,7 @@ function MapPageInner() {
           }}
           geography={selectedGeography}
           geoLevel={geoLevel}
+          scoreData={sidebarScoreData}
           matchScore={
             selectedMatch
               ? {

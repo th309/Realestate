@@ -10,7 +10,7 @@ describe("Peers", () => {
       medianPrice: "$465K",
       yoyGrowth: "+4.8%",
       dom: "26",
-      soldAboveList: "31%",
+      saleToList: "31%",
       isSource: true,
     },
     {
@@ -19,7 +19,7 @@ describe("Peers", () => {
       medianPrice: "$520K",
       yoyGrowth: "+3.2%",
       dom: "29",
-      soldAboveList: "26%",
+      saleToList: "26%",
     },
     {
       name: "Spokane, WA",
@@ -27,7 +27,7 @@ describe("Peers", () => {
       medianPrice: "$410K",
       yoyGrowth: "+3.7%",
       dom: "31",
-      soldAboveList: "24%",
+      saleToList: "24%",
     },
   ];
 

@@ -10,6 +10,9 @@ interface Props {
   verdict: string;
   kpis: HeroKpi[];
   generatedAt: string;
+  /** Persona framing; defaults to the agent (market-intelligence) copy. */
+  eyebrow?: string;
+  reportLabel?: string;
 }
 
 /**
@@ -24,6 +27,8 @@ export function ReportHero({
   verdict,
   kpis,
   generatedAt,
+  eyebrow = "PropertyIQ · Market Intelligence",
+  reportLabel = "Market Intelligence Report",
 }: Props) {
   const monthYear = new Date(generatedAt).toLocaleString("en-US", {
     month: "long",
@@ -53,13 +58,13 @@ export function ReportHero({
         />
         <div className="relative">
           <p className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-white/75">
-            PropertyIQ · Market Intelligence
+            {eyebrow}
           </p>
           <h1 className="mt-3 font-serif text-[32px] font-semibold leading-[1.05] tracking-tight md:text-[44px]">
             {marketName}
           </h1>
           <p className="mt-2 text-[14px] text-white/80 md:text-[15px]">
-            Market Intelligence Report · {monthYear}
+            {reportLabel} · {monthYear}
           </p>
           <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm">
             <span

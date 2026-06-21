@@ -70,7 +70,7 @@ export function MarketPickerStep() {
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
         placeholder="🔍  Cary, NC"
-        className="w-full rounded-full border-2 border-outline-variant bg-white px-5 py-3.5 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+        className="w-full rounded-full border-2 border-outline-variant bg-surface px-5 py-3.5 text-base text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
         aria-label="Search markets"
       />
 

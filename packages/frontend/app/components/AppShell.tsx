@@ -1,4 +1,5 @@
 import { Header } from "@/src/components/layout/Header";
+import { GlobalBreadcrumbs } from "@/components/navigation";
 import { Providers } from "@/app/providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
 import { GoogleAnalytics } from "@/app/components/analytics/GoogleAnalytics";
@@ -47,12 +48,13 @@ export async function AppShell({
         initialEntitlementState={initialEntitlementState}
       >
         <Header />
+        <GlobalBreadcrumbs />
         <EnterpriseGraceBanner />
         <EnterpriseOnboardingGate>
           <AnalyticsProvider>
             <main
               id="main-content"
-              className="flex-1 min-h-0 flex flex-col relative"
+              className="flex-1 min-h-0 flex flex-col relative overflow-x-clip"
             >
               {children}
             </main>

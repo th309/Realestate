@@ -10,7 +10,7 @@ vi.mock("../../TourStateProvider", () => ({
 describe("PersonaCards", () => {
   beforeEach(() => setPersona.mockReset());
 
-  it("renders three persona cards (agent priority)", () => {
+  it("renders three persona cards", () => {
     render(<PersonaCards />);
     expect(screen.getByRole("button", { name: /agent/i })).toBeInTheDocument();
     expect(
@@ -39,16 +39,11 @@ describe("PersonaCards", () => {
     expect(setPersona).toHaveBeenCalledWith("homebuyer");
   });
 
-  it("priority badge uses semantic tertiary tokens, not hardcoded hex", () => {
-    const { container } = render(<PersonaCards />);
-    const badge = container.querySelector("span.absolute.right-3.top-3");
-    expect(badge).not.toBeNull();
-    const cls = badge!.className;
-    expect(cls).toContain("bg-tertiary");
-    expect(cls).toContain("text-on-tertiary");
-    // Guard against regression to hardcoded hex.
-    expect(cls).not.toContain("#00C853");
-    expect(cls).not.toContain("bg-[#");
+  it("does not render a 'For you' priority badge (all personas are equal choices)", () => {
+    render(<PersonaCards />);
+    // The agent card previously carried a "For you" badge that made the choice
+    // feel pre-made; it was removed so all three personas read as equal options.
+    expect(screen.queryByText(/for you/i)).toBeNull();
   });
 
   it("persona bullet items are positioned (relative) so before:absolute anchors correctly", () => {

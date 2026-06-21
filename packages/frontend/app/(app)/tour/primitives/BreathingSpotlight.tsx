@@ -7,6 +7,12 @@ interface BreathingSpotlightProps {
   visible: boolean;
   onClick?: () => void;
   onTargetMissing?: () => void;
+  /**
+   * Where to align the target when it is first scrolled into view. "center"
+   * on mobile (so the bottom sheet never covers it), "nearest" on desktop
+   * (minimal movement beneath the connected tooltip). Default "nearest".
+   */
+  scrollBlock?: ScrollLogicalPosition;
 }
 
 const PADDING = 12;
@@ -24,8 +30,13 @@ export function BreathingSpotlight({
   visible,
   onClick,
   onTargetMissing,
+  scrollBlock = "nearest",
 }: BreathingSpotlightProps) {
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
+
+  // Tracks which target we have already scrolled to, so the auto-scroll fires
+  // exactly once per target instead of on every measure tick.
+  const scrolledForRef = useRef<string | null>(null);
 
   // The parent's onTargetMissing (= onContinue) is NOT memoized in
   // useTourFromUrl, so its identity changes on every parent render. Keep it in
@@ -57,8 +68,23 @@ export function BreathingSpotlight({
       height: rect.height + PADDING * 2,
       borderRadius: br + 4,
     });
-    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [targetSelector]);
+    // Scroll the target into view ONCE per target. measureTarget runs on every
+    // rAF / scroll / resize / poll tick to keep the spotlight rect aligned with
+    // a moving target; calling scrollIntoView here unconditionally made the
+    // viewport oscillate ("the scrollbar keeps moving like there's more to
+    // see"). Guard so the scroll happens a single time when a new target first
+    // resolves, after layout has settled (double rAF).
+    if (scrolledForRef.current !== targetSelector) {
+      scrolledForRef.current = targetSelector;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          document
+            .querySelector(targetSelector)
+            ?.scrollIntoView({ behavior: "smooth", block: scrollBlock });
+        }),
+      );
+    }
+  }, [targetSelector, scrollBlock]);
 
   useEffect(() => {
     if (!visible) return;

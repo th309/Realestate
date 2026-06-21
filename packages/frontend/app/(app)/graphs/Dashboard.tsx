@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { Loader2, TrendingUp, LineChart, Sparkles } from "lucide-react";
-import { Breadcrumbs } from "@/components/navigation";
 import { getMetricDescription } from "./constants";
 import { getMetricTitle } from "@/lib/data";
 import { getInsights } from "./services/geminiService";
@@ -104,7 +103,6 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Breadcrumbs */}
-        <Breadcrumbs items={[{ label: "Analytics" }]} className="mb-4" />
 
         {/* Page Header */}
         <div className="mb-6">

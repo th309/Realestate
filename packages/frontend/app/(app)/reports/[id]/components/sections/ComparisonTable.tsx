@@ -1,17 +1,24 @@
-'use client';
+"use client";
 
-import React from 'react';
-import type { ReportInstance } from '../../../types';
-import { formatMetricValue, getMetricFormat } from '@/lib/data';
-import { MetricTitle } from '@/app/components/MetricTitle';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
+import React from "react";
+import type { ReportInstance } from "../../../types";
+import { formatMetricValue, getMetricFormat } from "@/lib/data";
+import { MetricTitle } from "@/app/components/MetricTitle";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
 interface ComparisonTableProps {
   report: ReportInstance;
 }
 
 // Default metrics to compare when no config provided
-const DEFAULT_METRICS = ['home_value', 'days_on_market', 'for_sale_inventory', 'hotness_score', 'median_income', 'cap_rate'];
+const DEFAULT_METRICS = [
+  "home_value",
+  "days_on_market",
+  "for_sale_inventory",
+  "hotness_score",
+  "median_income",
+  "cap_rate",
+];
 
 interface Geography {
   id: string;
@@ -40,7 +47,7 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
   };
 
   // Determine winner for each metric (higher is better for most, lower for some)
-  const lowerIsBetter = ['days_on_market', 'vacancy_rate', 'unemployment_rate'];
+  const lowerIsBetter = ["days_on_market", "vacancy_rate", "unemployment_rate"];
 
   function getWinner(metric: string, values: (number | null)[]): number {
     const validValues = values.filter((v): v is number => v !== null);
@@ -57,7 +64,9 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
   if (!hasData) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">Comparison Table</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-4">
+          Comparison Table
+        </h3>
         <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
           <AlertTriangle className="w-5 h-5" />
           <span>Comparison data not available</span>
@@ -66,41 +75,100 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
     );
   }
 
+  // Precompute each metric row once so the mobile card layout and the desktop
+  // table render identical values / winner highlighting.
+  const rows = metrics.map((metric) => {
+    const values = geographies.map((geo) => getValue(geo, metric));
+    return { metric, values, winner: getWinner(metric, values) };
+  });
+
   return (
     <div className="bg-surface-container rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Mobile: one card per metric \u2014 geographies stack, never scrolls sideways */}
+      <div className="divide-y divide-outline-variant md:hidden">
+        {rows.map(({ metric, values, winner }) => (
+          <div key={metric} className="p-4">
+            <div className="mb-2 text-sm font-semibold text-on-surface">
+              <MetricTitle metricId={metric} />
+            </div>
+            <div className="space-y-1.5">
+              {geographies.map((geo, index) => (
+                <div
+                  key={geo.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span
+                    className={`min-w-0 truncate text-sm ${index === 0 ? "font-medium text-primary" : "text-on-surface-variant"}`}
+                  >
+                    {geo.name}
+                  </span>
+                  <span className="flex flex-shrink-0 items-center gap-1">
+                    <span
+                      className={`text-sm font-medium ${index === winner ? "text-green-600" : "text-on-surface"}`}
+                    >
+                      {values[index] != null
+                        ? formatMetricValue(
+                            values[index] as number,
+                            getMetricFormat(metric),
+                          )
+                        : "\u2014"}
+                    </span>
+                    {index === winner && (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: comparison table */}
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-outline-variant">
-              <th className="text-left p-4 text-on-surface font-semibold">Metric</th>
+              <th className="text-left p-4 text-on-surface font-semibold">
+                Metric
+              </th>
               {geographies.map((geo, index) => (
-                <th key={geo.id} className={`text-center p-4 font-semibold ${index === 0 ? 'text-primary' : 'text-on-surface'}`}>
+                <th
+                  key={geo.id}
+                  className={`text-center p-4 font-semibold ${index === 0 ? "text-primary" : "text-on-surface"}`}
+                >
                   {geo.name}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {metrics.map((metric: string) => {
-              const values = geographies.map((geo) => getValue(geo, metric));
-              const winner = getWinner(metric, values);
-
-              return (
-                <tr key={metric} className="border-b border-outline-variant last:border-0">
-                  <td className="p-4 text-on-surface"><MetricTitle metricId={metric} /></td>
-                  {values.map((value, index) => (
-                    <td key={index} className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className={`font-medium ${index === winner ? 'text-green-600' : 'text-on-surface'}`}>
-                          {value != null ? formatMetricValue(value, getMetricFormat(metric)) : '\u2014'}
-                        </span>
-                        {index === winner && <CheckCircle className="w-4 h-4 text-green-600" />}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
+            {rows.map(({ metric, values, winner }) => (
+              <tr
+                key={metric}
+                className="border-b border-outline-variant last:border-0"
+              >
+                <td className="p-4 text-on-surface">
+                  <MetricTitle metricId={metric} />
+                </td>
+                {values.map((value, index) => (
+                  <td key={index} className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <span
+                        className={`font-medium ${index === winner ? "text-green-600" : "text-on-surface"}`}
+                      >
+                        {value != null
+                          ? formatMetricValue(value, getMetricFormat(metric))
+                          : "\u2014"}
+                      </span>
+                      {index === winner && (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      )}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

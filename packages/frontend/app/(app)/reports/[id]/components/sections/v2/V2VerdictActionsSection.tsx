@@ -6,11 +6,7 @@ import { Target, Clock } from "lucide-react";
 import { SectionCard, AIAnalysisBlock, VerdictBadge } from "../core";
 import type { VerdictType } from "../core";
 import type { ReportInstance } from "../../../../types";
-import {
-  getV2JsonSection,
-  type V2VerdictAndActions,
-  type V2ActionItem,
-} from "./narrativeVersionDetector";
+import { getV2Section } from "./narrativeVersionDetector";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -70,14 +66,41 @@ export function V2VerdictActionsSection({
   scoreType = "homebuyer",
   className = "",
 }: V2VerdictActionsSectionProps): React.ReactElement | null {
-  const data = getV2JsonSection<V2VerdictAndActions>(report, sectionId);
+  // The backend stores verdict_and_actions as { narrative, action_items } (the
+  // ACTION_ITEMS_JSON parse) or, when no actions were emitted, a plain STRING —
+  // NOT { verdict, actions }. Read every shape so the section is never blank or
+  // dropped (the prior getV2JsonSection<{verdict,actions}> read produced empty
+  // prose for objects and null — dropping the section — for strings).
+  const raw = getV2Section(report, sectionId);
+  let verdictText = "";
+  let actions: Array<Record<string, string | undefined>> = [];
+  if (typeof raw === "string") {
+    verdictText = raw;
+  } else if (raw && typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    verdictText = (
+      (o.narrative as string) ??
+      (o.verdict as string) ??
+      ""
+    ).trim();
+    const list = (o.action_items ?? o.actions) as unknown;
+    if (Array.isArray(list))
+      actions = list as Array<Record<string, string | undefined>>;
+  }
 
-  if (!data) return null;
+  if (!verdictText && actions.length === 0) return null;
 
-  const verdictText = data.verdict;
-  const actions = data.actions ?? [];
+  // The verdict badge reads the LIVE PropertyIQ score — the legacy
+  // homeready/investoredge fields are retired (null), which is what produced the
+  // "Insufficient Data" badge.
+  const piqScore = (
+    report.populated_data as {
+      scores?: { propertyiq?: { score?: number } };
+    } | null
+  )?.scores?.propertyiq?.score;
   const resolvedScore =
     score ??
+    (typeof piqScore === "number" ? piqScore : null) ??
     (scoreType === "investor"
       ? report.investoredge_score
       : report.homeready_score);
@@ -111,59 +134,67 @@ export function V2VerdictActionsSection({
             Recommended Actions
           </h3>
           <div className="space-y-3">
-            {actions.map((item: V2ActionItem, idx: number) => (
-              <div
-                key={idx}
-                className="rounded-[var(--report-radius-md)] p-[var(--report-space-md)]"
-                style={{
-                  backgroundColor: "white",
-                  border: "1px solid rgba(27, 46, 74, 0.08)",
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-                    style={{
-                      backgroundColor: "var(--report-navy)",
-                      color: "white",
-                      fontFamily: "var(--report-font-display)",
-                    }}
-                  >
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-[0.9375rem] font-medium leading-snug mb-1"
-                      style={{ color: "var(--report-navy)" }}
+            {actions.map((item, idx: number) => {
+              // Action items arrive with varying keys depending on the prompt:
+              // {action, rationale, timeframe} OR {action|title, detail, urgency}.
+              const actionLabel = item.action ?? item.title ?? "";
+              const rationale = item.rationale ?? item.detail ?? "";
+              const timeframe = item.timeframe ?? item.urgency ?? "";
+              if (!actionLabel) return null;
+              return (
+                <div
+                  key={idx}
+                  className="rounded-[var(--report-radius-md)] p-[var(--report-space-md)]"
+                  style={{
+                    backgroundColor: "white",
+                    border: "1px solid rgba(27, 46, 74, 0.08)",
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                      style={{
+                        backgroundColor: "var(--report-navy)",
+                        color: "white",
+                        fontFamily: "var(--report-font-display)",
+                      }}
                     >
-                      {item.action}
-                    </p>
-                    {item.rationale && (
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <p
-                        className="text-sm leading-relaxed mb-1.5"
-                        style={{ color: "var(--report-stone)" }}
+                        className="text-[0.9375rem] font-medium leading-snug mb-1"
+                        style={{ color: "var(--report-navy)" }}
                       >
-                        {item.rationale}
+                        {actionLabel}
                       </p>
-                    )}
-                    {item.timeframe && (
-                      <div className="flex items-center gap-1.5">
-                        <Clock
-                          className="w-3.5 h-3.5 flex-shrink-0"
-                          style={{ color: "var(--report-navy-light)" }}
-                        />
-                        <span
-                          className="text-xs font-medium"
-                          style={{ color: "var(--report-navy-light)" }}
+                      {rationale && (
+                        <p
+                          className="text-sm leading-relaxed mb-1.5"
+                          style={{ color: "var(--report-stone)" }}
                         >
-                          {item.timeframe}
-                        </span>
-                      </div>
-                    )}
+                          {rationale}
+                        </p>
+                      )}
+                      {timeframe && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock
+                            className="w-3.5 h-3.5 flex-shrink-0"
+                            style={{ color: "var(--report-navy-light)" }}
+                          />
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: "var(--report-navy-light)" }}
+                          >
+                            {timeframe}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
