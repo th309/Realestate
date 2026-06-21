@@ -9,6 +9,7 @@ import { SectionErrorBoundary } from "../../SectionErrorBoundary";
 import { BrandingProvider } from "../../BrandingProvider";
 import { buildMarketBundles, shortMarketName } from "./marketBundles";
 import { ComparisonSummaryV3 } from "./ComparisonSummaryV3";
+import { ComparisonNews } from "./ComparisonNews";
 import { MarketDeepDivePanel } from "./MarketDeepDivePanel";
 
 /**
@@ -38,7 +39,11 @@ export function ComparisonReportV3({ report }: Pick<SectionProps, "report">) {
 
   const active = bundles.find((b) => b.id === activeId) ?? bundles[0];
   // The summary = the comparison synthesis sections (read report.ai_narrative).
-  const synthesisSections = getTemplate("comparison_v2")?.sections ?? [];
+  // Drop the single-market "market-pulse" — it shows ONLY the primary's news;
+  // ComparisonNews below shows every market's news instead.
+  const synthesisSections = (
+    getTemplate("comparison_v2")?.sections ?? []
+  ).filter((s) => s.id !== "market-pulse");
 
   return (
     <div>
@@ -55,6 +60,9 @@ export function ComparisonReportV3({ report }: Pick<SectionProps, "report">) {
           </section>
         ))}
       </BrandingProvider>
+
+      {/* News for EVERY market (replaces the primary-only Market Pulse) */}
+      <ComparisonNews markets={bundles} />
 
       {/* 3. Each market in depth — frozen tabs + full single-market report */}
       <div className="mt-6">
