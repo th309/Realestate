@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,10 +23,20 @@
       }
     ],
     "paths": {
-      "@/app/*": ["./app/(app)/*", "./app/(public)/*", "./app/*"],
-      "@/*": ["./*"],
-      "@propertyiq/emails": ["../emails/dist/index.d.ts"],
-      "@propertyiq/emails/*": ["../emails/dist/*"]
+      "@/app/*": [
+        "./app/(app)/*",
+        "./app/(public)/*",
+        "./app/*"
+      ],
+      "@/*": [
+        "./*"
+      ],
+      "@propertyiq/emails": [
+        "../emails/dist/index.d.ts"
+      ],
+      "@propertyiq/emails/*": [
+        "../emails/dist/*"
+      ]
     }
   },
   "include": [
@@ -35,7 +49,11 @@
     ".next-test/types/**/*.ts",
     ".next-test/dev/types/**/*.ts",
     ".next-verify/types/**/*.ts",
-    ".next-verify/dev/types/**/*.ts"
+    ".next-verify/dev/types/**/*.ts",
+    ".next-mobile/types/**/*.ts",
+    ".next-mobile/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
