@@ -28,11 +28,9 @@ import {
   parseAiResponse,
   extractTitleAndSubtitle,
   extractActionItems,
+  buildOutlinePrompt,
 } from './report-generation-v2-helpers';
-import {
-  buildCustomOutlinePrompt,
-  buildCustomSectionsFromOutline,
-} from './report-generation-v2-custom';
+import { buildCustomSectionsFromOutline } from './report-generation-v2-custom';
 import { retryWithBackoff } from './report-ai-text-helpers';
 
 type ReportType =
@@ -96,7 +94,7 @@ export class ReportGenerationV2Service {
     context: Record<string, any>,
     reportType: ReportType,
   ): Promise<string> {
-    const userPrompt = this.buildOutlinePrompt(context, reportType);
+    const userPrompt = buildOutlinePrompt(context, reportType);
 
     try {
       const response = await retryWithBackoff(
@@ -118,45 +116,6 @@ export class ReportGenerationV2Service {
       this.logger.error(`[v2] Outline generation failed: ${error.message}`);
       return ''; // Sections can still generate without an outline
     }
-  }
-
-  private buildOutlinePrompt(
-    context: Record<string, any>,
-    reportType: ReportType,
-  ): string {
-    if (reportType === 'custom') {
-      return buildCustomOutlinePrompt(context);
-    }
-
-    const audienceLabel =
-      reportType === 'investoredge'
-        ? 'real estate investor'
-        : 'market participant (homebuyer or general audience)';
-    const score = context['propertyiq_score'] ?? 'N/A';
-
-    return `You are planning a ${reportType} market report for ${context.geography_name || 'a market'}.
-
-Key inputs:
-- Audience: ${audienceLabel}
-- Overall score: ${score}/100
-- Strongest component: ${context.strongest_component || 'N/A'} (${context.strongest_score || 'N/A'}/100)
-- Weakest component: ${context.weakest_component || 'N/A'} (${context.weakest_score || 'N/A'}/100)
-- Key tension: ${context.key_tension || 'N/A'}
-- User goal: ${context.user_goal_summary || context.user_type || 'N/A'}
-- Median price: ${context.median_listing_price || context.zhvi || 'N/A'}
-- Market signal summary: ${context.market_signal_summary || 'None available'}
-
-Also generate the following (place these BEFORE the outline body):
-TITLE: A compelling, insight-driven report title (max 20 words) that captures the key finding. Not "PropertyIQ Report: Tampa, FL" — something that tells the reader what they'll learn.
-SUBTITLE: One sentence expanding on the title.
-
-Then produce a 150-200 word analytical outline for this report. Include:
-1. The headline story arc (what is the ONE thing this report should make the reader understand?)
-2. Which sections should receive the most emphasis and why
-3. Key cross-references between sections (e.g., "affordability section should reference the growth tension")
-4. Any contrarian or non-obvious insight the data suggests
-
-This outline will be shared with each section writer to ensure narrative coherence. Be specific and analytical, not generic.`;
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -241,6 +200,12 @@ This outline will be shared with each section writer to ensure narrative coheren
 
     // Track last model used for provenance metadata
     this.lastModelUsed = response.model;
+
+    // Empty completion = failure (reasoning model starved its answer budget);
+    // retry instead of storing a blank section. resolveMaxTokens is the root fix.
+    if (!response.content || response.content.trim().length === 0) {
+      throw new Error(`Empty completion for section ${sectionId}`);
+    }
 
     const parsed = parseAiResponse(
       response.content,

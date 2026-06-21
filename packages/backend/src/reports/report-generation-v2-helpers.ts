@@ -9,8 +9,53 @@
 
 import { Logger } from '@nestjs/common';
 import type { NarrativePromptConfig } from './narrative-prompt-shared';
+import { buildCustomOutlinePrompt } from './report-generation-v2-custom';
 
 const logger = new Logger('ReportGenerationV2Helpers');
+
+/**
+ * Build the Pass-1 outline prompt for a report type. Custom reports delegate to
+ * the custom outline builder; all others get the standard planning prompt seeded
+ * with the report's key analytical inputs.
+ */
+export function buildOutlinePrompt(
+  context: Record<string, any>,
+  reportType: string,
+): string {
+  if (reportType === 'custom') {
+    return buildCustomOutlinePrompt(context);
+  }
+
+  const audienceLabel =
+    reportType === 'investoredge'
+      ? 'real estate investor'
+      : 'market participant (homebuyer or general audience)';
+  const score = context['propertyiq_score'] ?? 'N/A';
+
+  return `You are planning a ${reportType} market report for ${context.geography_name || 'a market'}.
+
+Key inputs:
+- Audience: ${audienceLabel}
+- Overall score: ${score}/100
+- Strongest component: ${context.strongest_component || 'N/A'} (${context.strongest_score || 'N/A'}/100)
+- Weakest component: ${context.weakest_component || 'N/A'} (${context.weakest_score || 'N/A'}/100)
+- Key tension: ${context.key_tension || 'N/A'}
+- User goal: ${context.user_goal_summary || context.user_type || 'N/A'}
+- Median price: ${context.median_listing_price || context.zhvi || 'N/A'}
+- Market signal summary: ${context.market_signal_summary || 'None available'}
+
+Also generate the following (place these BEFORE the outline body):
+TITLE: A compelling, insight-driven report title (max 20 words) that captures the key finding. Not "PropertyIQ Report: Tampa, FL" — something that tells the reader what they'll learn.
+SUBTITLE: One sentence expanding on the title.
+
+Then produce a 150-200 word analytical outline for this report. Include:
+1. The headline story arc (what is the ONE thing this report should make the reader understand?)
+2. Which sections should receive the most emphasis and why
+3. Key cross-references between sections (e.g., "affordability section should reference the growth tension")
+4. Any contrarian or non-obvious insight the data suggests
+
+This outline will be shared with each section writer to ensure narrative coherence. Be specific and analytical, not generic.`;
+}
 
 /**
  * Interpolate template variables and conditional blocks.

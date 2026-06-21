@@ -46,11 +46,13 @@ ALTER TABLE referral_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_events ENABLE ROW LEVEL SECURITY;
 
 -- referral_codes: users can read their own code
+DROP POLICY IF EXISTS "Users can read own referral code" ON referral_codes;
 CREATE POLICY "Users can read own referral code"
   ON referral_codes FOR SELECT
   USING (auth.uid() = user_id);
 
 -- referral_events: users can read events where they are the referrer
+DROP POLICY IF EXISTS "Users can read own referral events" ON referral_events;
 CREATE POLICY "Users can read own referral events"
   ON referral_events FOR SELECT
   USING (auth.uid() = referrer_id);
@@ -72,6 +74,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_referral_events_updated_at ON referral_events;
 CREATE TRIGGER set_referral_events_updated_at
   BEFORE UPDATE ON referral_events
   FOR EACH ROW

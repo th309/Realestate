@@ -269,6 +269,35 @@ export async function generateReportAsync(
               }
             : null,
         };
+
+        // Build a COMPLETE, standalone-shaped populated_data for THIS market via
+        // the SAME assemblePopulatedData path a 1-geo report uses, so every
+        // comparison tab renders like an individual report: cleaned
+        // scores.propertyiq.score (not the raw double-nested getScore shape),
+        // `current` with display aliases (home_value, median_rent, …),
+        // historical + realtime. The frontend reads this slice directly — no
+        // overlaying the primary, no shape-patching. (`scores` above is kept raw
+        // because the priority-weighted-winner calc still reads it.)
+        const compDataCoverage = await assessDataCoverage(
+          supabase,
+          comp.current,
+          comp.geography.type,
+          { ...dto, primary_geography: comp.geography } as GenerateReportDto,
+        );
+        const compPopulatedData = assemblePopulatedData(
+          comp.current,
+          comp.historical,
+          comp.scores,
+          compScoreContexts,
+          comp.news,
+          compSignalSummary,
+          {},
+          compDataCoverage,
+        );
+        if (Object.keys(comp.currentProvenance || {}).length > 0) {
+          (compPopulatedData as any).metric_provenance = comp.currentProvenance;
+        }
+        comparisons[comp.id].populated_data = compPopulatedData;
       }
     }
 

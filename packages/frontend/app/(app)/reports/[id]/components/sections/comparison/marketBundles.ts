@@ -2,14 +2,17 @@
  * marketBundles — normalizes a comparison report into one uniform per-market
  * shape, so the summary and the deep-dive tabs read every market the same way.
  *
- * WHY THIS EXISTS: the comparison report previously read DEAD legacy scores
- * (homeready/investoredge) so every comparison market showed "No Score". The
- * live score is PropertyIQ, but it sits at DIFFERENT nesting for the primary vs
- * comparison markets: the backend assembly CLEANS the primary into
- * `populated_data.scores.propertyiq.{score,grade,components}` while each
- * comparison market keeps the RAW `getScore()` result at
- * `comparisons[id].scores.scores.propertyiq`. `readPiq` handles both (plus a
- * flat-number legacy fallback) so a market can never silently show "No Score".
+ * Each market in a comparison now carries its OWN complete, standalone-shaped
+ * `populated_data` (the backend runs the same assemblePopulatedData path a 1-geo
+ * report uses for the primary AND every comparison market). So the primary and
+ * every comparison market are read IDENTICALLY — cleaned
+ * `populated_data.scores.propertyiq.{score,grade,components}`, `current` with
+ * display aliases, historical + realtime. No overlaying the primary, no
+ * shape-patching: each deep-dive tab is fed that market's own full payload.
+ *
+ * `readPiq` still tolerates the raw double-nested `scores.scores.propertyiq`
+ * shape so OLDER comparison reports (generated before per-market populated_data)
+ * keep rendering via the back-compat branch in `buildMarketBundles`.
  */
 
 import type { ReportInstance } from "../../../../types";
@@ -36,6 +39,12 @@ export interface MarketBundle {
   current: Record<string, unknown>;
   historical: Record<string, unknown> | null;
   isPrimary: boolean;
+  /**
+   * This market's COMPLETE, standalone-shaped populated_data. Fed verbatim to
+   * the single-market template in the deep-dive tab so it renders exactly like
+   * an individual report for this market.
+   */
+  populatedData: Record<string, unknown>;
 }
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -99,6 +108,34 @@ function readPiq(scores: unknown): {
   };
 }
 
+/** Build one bundle from a market's complete, standalone-shaped populated_data. */
+function bundleFromPopulatedData(
+  pd: Record<string, unknown>,
+  meta: {
+    id: string;
+    name: string;
+    geoLevel: string;
+    isPrimary: boolean;
+    narrative: Record<string, unknown> | null;
+  },
+): MarketBundle {
+  const piq = readPiq(pd.scores);
+  return {
+    id: meta.id,
+    name: meta.name,
+    geoLevel: meta.geoLevel,
+    score: piq.score,
+    grade: piq.grade,
+    components: piq.components,
+    narrative: meta.narrative,
+    realtime: pd.realtime ?? null,
+    current: asRecord(pd.current),
+    historical: pd.historical ? asRecord(pd.historical) : null,
+    isPrimary: meta.isPrimary,
+    populatedData: pd,
+  };
+}
+
 /** Build the ordered market list: primary first, then comparisons in selection order. */
 export function buildMarketBundles(report: unknown): MarketBundle[] {
   const r = report as Record<string, unknown>;
@@ -107,88 +144,94 @@ export function buildMarketBundles(report: unknown): MarketBundle[] {
 
   const bundles: MarketBundle[] = [];
 
-  const primaryPiq = readPiq(pd.scores);
-  bundles.push({
-    id: String(r.primary_geography_id ?? "primary"),
-    name: String(r.primary_geography_name ?? "Primary market"),
-    geoLevel: String(r.primary_geography_type ?? ""),
-    score: primaryPiq.score,
-    grade: primaryPiq.grade,
-    components: primaryPiq.components,
-    // Primary's single-market narrative lives in a dedicated field because
-    // report.ai_narrative holds the comparison SYNTHESIS (used by the summary).
-    narrative: (pd.primary_market_narrative as Record<string, unknown>) ?? null,
-    realtime: pd.realtime ?? null,
-    current: asRecord(pd.current),
-    historical: pd.historical ? asRecord(pd.historical) : null,
-    isPrimary: true,
-  });
+  // Primary: its complete slice IS the report's populated_data. Its single-market
+  // narrative lives in primary_market_narrative because report.ai_narrative holds
+  // the comparison SYNTHESIS (used by the summary).
+  bundles.push(
+    bundleFromPopulatedData(pd, {
+      id: String(r.primary_geography_id ?? "primary"),
+      name: String(r.primary_geography_name ?? "Primary market"),
+      geoLevel: String(r.primary_geography_type ?? ""),
+      isPrimary: true,
+      narrative:
+        (pd.primary_market_narrative as Record<string, unknown>) ?? null,
+    }),
+  );
 
   const compGeos = Array.isArray(r.comparison_geographies)
     ? (r.comparison_geographies as Array<Record<string, unknown>>)
     : [];
   for (const geo of compGeos) {
     const comp = asRecord(comparisons[String(geo.id)]);
-    const piq = readPiq(comp.scores);
     const geography = asRecord(comp.geography);
-    bundles.push({
+    const meta = {
       id: String(geo.id),
       name: String(geography.name ?? geo.name ?? "Market"),
       geoLevel: String(geo.type ?? ""),
-      score: piq.score,
-      grade: piq.grade,
-      components: piq.components,
-      narrative: (comp.ai_narrative as Record<string, unknown>) ?? null,
-      realtime: comp.realtime ?? null,
-      current: asRecord(comp.current),
-      historical: comp.historical ? asRecord(comp.historical) : null,
       isPrimary: false,
-    });
+      narrative: (comp.ai_narrative as Record<string, unknown>) ?? null,
+    };
+
+    // NEW reports: this market carries its OWN complete, cleaned populated_data —
+    // read it exactly like the primary.
+    const compPd = comp.populated_data ? asRecord(comp.populated_data) : null;
+    if (compPd) {
+      bundles.push(bundleFromPopulatedData(compPd, meta));
+      continue;
+    }
+
+    // BACK-COMPAT: older comparison reports stored only raw `current` + raw
+    // (double-nested) scores. Synthesize a minimal standalone-shaped slice so the
+    // tab still renders through the same path.
+    const piq = readPiq(comp.scores);
+    const legacyPd: Record<string, unknown> = {
+      current: asRecord(comp.current),
+      historical: comp.historical ? asRecord(comp.historical) : {},
+      scores: {
+        propertyiq: {
+          score: piq.score ?? undefined,
+          grade: piq.grade ?? undefined,
+          components: piq.components ?? undefined,
+        },
+      },
+      realtime: comp.realtime ?? null,
+    };
+    bundles.push(bundleFromPopulatedData(legacyPd, meta));
   }
 
   return bundles;
 }
 
 /**
- * A shallow ReportInstance clone whose `populated_data` is ONE market's bundle,
- * so report-coupled section components (ChartSingle, ForecastDisplay, …) render
- * that market's data without modification. This is the key to reusing the real
- * single-market visualizations for every market in a comparison.
+ * A shallow ReportInstance clone whose `populated_data` IS this market's own
+ * complete, standalone-shaped slice — so the single-market template renders the
+ * exact full report this market would get on its own. No primary overlay, no
+ * shape-patching: comparison-only keys are stripped so it reads as a 1-geo report.
  */
 export function syntheticMarketReport(
   report: ReportInstance,
   bundle: MarketBundle,
 ): ReportInstance {
   const base = report as unknown as Record<string, unknown>;
-  const basePd = asRecord(base.populated_data);
-  const scores = {
-    propertyiq: {
-      score: bundle.score ?? undefined,
-      grade: bundle.grade ?? undefined,
-      components: bundle.components ?? undefined,
-    },
-  };
+  // Strip comparison-only keys so this looks like a standalone single-market report.
+  const {
+    comparisons: _comparisons,
+    primary_market_narrative: _primaryNarrative,
+    ...cleanPd
+  } = bundle.populatedData;
   return {
     ...(report as object),
     primary_geography_id: bundle.id,
     primary_geography_name: bundle.name,
     primary_geography_type: bundle.geoLevel,
-    homeready_score: bundle.score ?? undefined,
-    investoredge_score: bundle.score ?? undefined,
-    scores_snapshot: scores,
-    // The market's OWN single-market narrative drives the single-market template
-    // sections in its deep-dive tab.
+    // Legacy score fields are retired and would otherwise BLEED the primary's
+    // value into this tab; the verdict badge reads populated_data.scores.propertyiq.
+    homeready_score: undefined,
+    investoredge_score: undefined,
+    scores_snapshot: (cleanPd.scores as unknown) ?? base.scores_snapshot,
+    // The market's OWN single-market narrative drives the template sections.
     ai_narrative: bundle.narrative ?? base.ai_narrative,
-    populated_data: {
-      ...basePd,
-      current: bundle.current,
-      historical: bundle.historical ?? {},
-      scores,
-      // Each market's deep-dive must show ITS own news, not the primary's.
-      realtime: bundle.realtime ?? basePd.realtime,
-      // A synthetic single-market report must not look like a comparison.
-      comparisons: undefined,
-    },
+    populated_data: { ...cleanPd, comparisons: undefined },
   } as unknown as ReportInstance;
 }
 

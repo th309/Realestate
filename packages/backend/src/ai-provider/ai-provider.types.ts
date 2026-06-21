@@ -63,35 +63,17 @@ export interface ProviderPreset {
 }
 
 /**
- * Models that reject sampling parameters (`temperature`, `top_p`, `top_k`).
- * Sending them yields HTTP 400. Add new model IDs here as Anthropic releases them.
- * See: shared/model-migration.md → Migrating to Opus 4.7.
+ * Per-model behavioral predicates (sampling-param rejection, json_object
+ * support, reasoning-token budgeting) live in ai-model-capabilities.ts and are
+ * re-exported here so existing `from './ai-provider.types'` imports keep working.
  */
-const ANTHROPIC_NO_SAMPLING_MODELS = new Set<string>(['claude-opus-4-7']);
-
-export function modelRejectsSamplingParams(
-  provider: AiProviderType,
-  model: string,
-): boolean {
-  if (provider !== 'anthropic' && provider !== 'openrouter') return false;
-  const bareId = model.startsWith('anthropic/') ? model.slice(10) : model;
-  return ANTHROPIC_NO_SAMPLING_MODELS.has(bareId);
-}
-
-/**
- * Whether a provider accepts OpenAI-style `response_format: { type: 'json_object' }`.
- *
- * Anthropic's OpenAI-compatible endpoint rejects `json_object` — it only accepts
- * `'json_schema'` (which requires a full schema we do not supply per narrative
- * section), returning `400 response_format.type: Input should be 'json_schema'`.
- * For Anthropic we omit response_format and rely on the prompt's JSON instructions
- * plus downstream parsing. DeepSeek / OpenAI support json_object natively.
- */
-export function providerSupportsJsonObjectFormat(
-  provider: AiProviderType,
-): boolean {
-  return provider !== 'anthropic';
-}
+export {
+  modelRejectsSamplingParams,
+  providerSupportsJsonObjectFormat,
+  modelUsesReasoningTokens,
+  resolveMaxTokens,
+  REASONING_TOKEN_HEADROOM,
+} from './ai-model-capabilities';
 
 /**
  * Per-model pricing in USD per 1M tokens.
