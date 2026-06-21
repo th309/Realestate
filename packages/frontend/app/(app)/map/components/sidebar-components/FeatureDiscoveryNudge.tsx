@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, X, ArrowRight } from "lucide-react";
+import { X, ArrowRight } from "lucide-react";
 import { fetchOnboardingState, dismissBeaconTask } from "@/lib/data";
 import { useEntitlements } from "@/lib/entitlements";
 
@@ -109,12 +109,9 @@ export function FeatureDiscoveryNudge() {
   return (
     <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Sparkles className="h-4 w-4 flex-shrink-0 text-primary" />
-          <h3 className="truncate text-sm font-medium text-on-surface">
-            {heading}
-          </h3>
-        </div>
+        <h3 className="min-w-0 text-sm font-medium leading-snug text-on-surface">
+          {heading}
+        </h3>
         <button
           onClick={handleDismiss}
           className="-mr-1 -mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-on-surface-variant/60 transition-colors hover:bg-on-surface/8 hover:text-on-surface-variant"
@@ -132,10 +129,10 @@ export function FeatureDiscoveryNudge() {
           <Link
             key={feature.id}
             href={feature.href}
-            className="group -mx-1 flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface transition-colors duration-200 hover:bg-primary/10"
+            className="group -mx-1 flex items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface transition-colors duration-200 hover:bg-primary/10"
           >
-            <span className="truncate">{feature.label}</span>
-            <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 -translate-x-1 text-primary opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+            <span className="leading-snug">{feature.label}</span>
+            <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 -translate-x-1 text-primary opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
           </Link>
         ))}
       </div>
