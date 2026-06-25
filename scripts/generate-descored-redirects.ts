@@ -74,12 +74,22 @@ function readCurrentJson<T>(filename: string): T[] {
  * Returns [] if the file didn't exist at HEAD (first ever run).
  */
 function readHeadJson<T>(relPath: string): T[] {
-  // spawnSync with argument array — no shell, no injection surface
+  // spawnSync with argument array — no shell, no injection surface.
+  // maxBuffer MUST exceed the largest slug JSON (zip is ~8MB): the 1MB default
+  // silently overflows (ENOBUFS) on `git show`, which would return a false-empty
+  // old set and drop every ZIP redirect. 256MB is ample headroom.
   const result = spawnSync("git", ["show", `HEAD:${relPath}`], {
     encoding: "utf-8",
+    maxBuffer: 256 * 1024 * 1024,
   });
+  if (result.error) {
+    // A real spawn failure (buffer overflow, git missing, …) must FAIL LOUD —
+    // never be masked as "file absent" (that would silently drop redirects).
+    throw result.error;
+  }
   if (result.status !== 0) {
-    // File absent at HEAD (first-ever run) — treat as empty
+    // File absent at HEAD (first-ever run): git exits non-zero with a
+    // "does not exist in HEAD" stderr and no spawn error. Treat as empty.
     return [];
   }
   return JSON.parse(result.stdout) as T[];
