@@ -20,13 +20,16 @@ export async function fetchScoredByPeriod(
   if (!periods.length)
     throw new Error(`fail-closed: no score periods returned for ${geo}`);
 
-  const scoredByPeriod = new Map<string, Set<string>>();
-  for (const date of periods) {
-    const { ids } = await getJson<{ ids: string[] }>(
-      `${apiBase}/api/scores/ids/${geo}?score_type=propertyiq&date=${date}`,
-    );
-    scoredByPeriod.set(date, new Set(ids));
-  }
+  const idSets = await Promise.all(
+    periods.map((date) =>
+      getJson<{ ids: string[] }>(
+        `${apiBase}/api/scores/ids/${geo}?score_type=propertyiq&date=${date}`,
+      ).then(({ ids }) => ({ date, ids })),
+    ),
+  );
+  const scoredByPeriod = new Map<string, Set<string>>(
+    idSets.map(({ date, ids }) => [date, new Set(ids)]),
+  );
   const latest = scoredByPeriod.get(periods[0]);
   if (!latest || latest.size === 0) {
     throw new Error(
