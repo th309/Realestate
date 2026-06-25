@@ -15,6 +15,7 @@ import {
   authorizationServerMetadata,
   resolveResourceUrl,
 } from "../lib/oauth/metadata";
+import { buildServerCard } from "../lib/mcp-server-card";
 
 function serverUrlFromRequest(req: Request): string {
   return resolveResourceUrl(
@@ -38,5 +39,13 @@ export function mountOAuthDiscoveryRoutes(app: Express): void {
       `[OAuth] GET /.well-known/oauth-authorization-server | server=${serverUrl}`,
     );
     res.json(authorizationServerMetadata(serverUrl));
+  });
+
+  app.get("/.well-known/mcp/server-card.json", (req, res) => {
+    const serverUrl = serverUrlFromRequest(req);
+    console.log(
+      `[MCP] GET /.well-known/mcp/server-card.json | server=${serverUrl}`,
+    );
+    res.json(buildServerCard(serverUrl));
   });
 }
