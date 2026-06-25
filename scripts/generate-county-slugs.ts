@@ -3,8 +3,16 @@
 // Fetches all counties from the backend API and the geography_crosswalk table
 // to generate packages/frontend/lib/data/county-slug-data.json.
 // The TypeScript wrapper (county-slug-data.ts) imports this JSON and exports typed maps.
+// Only counties that appear in the published score window are emitted (fail-closed gate).
 
-const API_URL = process.env.API_URL || "http://localhost:3001";
+import {
+  pickWindows,
+  computePublishedIds,
+  assertNonEmpty,
+} from "./lib/published-set";
+import { fetchScoredByPeriod } from "./lib/scored-set-client";
+
+const API_BASE = process.env.API_URL || "http://localhost:3001";
 
 // Use Supabase directly to get the full crosswalk data including cbsa_code
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,7 +43,7 @@ function generateSlug(countyName: string, state: string): string {
 
 async function main() {
   // Approach 1: Try backend API
-  const endpoint = `${API_URL}/api/markets/counties`;
+  const endpoint = `${API_BASE}/api/markets/counties`;
   console.log(`Fetching counties from ${endpoint}...`);
 
   const res = await fetch(endpoint);
@@ -45,6 +53,15 @@ async function main() {
 
   const counties: CountyRow[] = await res.json();
   console.log(`Fetched ${counties.length} counties.`);
+
+  // Fetch the published score window and compute the set of county FIPS to emit
+  const { periods, scoredByPeriod } = await fetchScoredByPeriod(
+    API_BASE,
+    "county",
+  );
+  const { publish } = pickWindows(periods);
+  const publishedFips = computePublishedIds(scoredByPeriod, publish);
+  assertNonEmpty("county", publishedFips);
 
   // Try to get crosswalk data for CBSA codes
   let crosswalkMap = new Map<string, string | null>();
@@ -71,14 +88,25 @@ async function main() {
     }
   }
 
-  const entries = counties.map((c) => ({
-    fips: c.fips,
-    slug: generateSlug(c.name, c.state),
-    name: `${c.name} County`,
-    shortName: `${c.name} County, ${c.state}`,
-    state: c.state,
-    cbsaCode: crosswalkMap.get(c.fips) || null,
-  }));
+  const entries = counties
+    .map((c) => ({
+      fips: c.fips,
+      slug: generateSlug(c.name, c.state),
+      name: `${c.name} County`,
+      shortName: `${c.name} County, ${c.state}`,
+      state: c.state,
+      cbsaCode: crosswalkMap.get(c.fips) || null,
+    }))
+    .filter((e) => publishedFips.has(e.fips));
+
+  console.log(
+    `Published counties: ${entries.length} / ${counties.length} tracked (window: ${publish.join(", ")})`,
+  );
+  if (entries.length === 0) {
+    throw new Error(
+      "fail-closed: 0 published county entries after filtering — not overwriting JSON",
+    );
+  }
 
   // Check for duplicate slugs
   const slugMap = new Map<string, string>();
