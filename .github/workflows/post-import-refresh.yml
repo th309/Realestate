@@ -163,6 +163,45 @@ jobs:
             exit 1
           fi
 
+      # ── SEO slug rebuild ─────────────────────────────────────────────────────
+      # Regenerates the score-gated metro/county/zip slug data files and the
+      # descored-redirect map using fresh scores just written by the step above.
+      # set -euo pipefail + assertNonEmpty throws in each generator mean the job
+      # ABORTS before any git add if a fetch returns empty/errors (fail-closed).
+      #
+      # NOTE: promotion to production requires a human release (`npm run release:main`).
+      # The monthly job intentionally commits to develop only — deploy is from main
+      # per CLAUDE.md §2.6 (never auto-merge develop→main).
+      - name: Rebuild SEO slug data (score-gated)
+        if: steps.scoring.outcome == 'success'
+        env:
+          API_URL: https://backend-production-ee4d.up.railway.app
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run seo:rebuild-slugs
+
+      - name: Commit regenerated slug data
+        if: steps.scoring.outcome == 'success'
+        run: |
+          set -euo pipefail
+          git config user.name "propertyiq-bot"
+          git config user.email "bot@propertyiq.app"
+          git add packages/frontend/lib/data/metro-slug-data.json \
+                  packages/frontend/lib/data/county-slug-data.json \
+                  packages/frontend/lib/data/zip-slug-data.json \
+                  packages/frontend/lib/data/descored-redirects.json
+          if git diff --cached --quiet; then
+            echo "No slug changes this month — skipping commit."
+          else
+            git commit -m "chore(seo): monthly score-gated slug + redirect rebuild [skip ci]"
+            git push origin HEAD:develop
+          fi
+
+      # ── End SEO slug rebuild ──────────────────────────────────────────────────
+
       - name: Update PropertyIQ Rankings
         env:
           SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
