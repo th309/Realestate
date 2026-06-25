@@ -42,26 +42,23 @@ function isoOrUndefined(date: string | null): string | undefined {
 }
 
 /**
- * Keep only slug entries that have a PropertyIQ score (scoreless pages render a
- * bare "—" and read as thin content), and surface the geo's real refresh date
- * for honest `<lastmod>`. FAIL OPEN: if the scored-id lookup is empty (backend
- * error / cold cache) keep the full list — a transient outage must never wipe
- * the sitemap. `idOf` must yield the score `location_id` format: padded ZIP,
- * FIPS, or CBSA.
+ * Surface the geo's real refresh date for honest `<lastmod>` and return all
+ * slug entries unfiltered. Slug data is already score-gated at generation time,
+ * so re-filtering here to the *latest* scored set would wrongly drop
+ * grace-window pages (scored in month M-1, not yet in month M). The endpoint
+ * is hit purely to obtain an honest date; the `_idOf` parameter is retained for
+ * call-site compatibility but is intentionally unused.
  */
 async function scoredEntries<T>(
   geo: "metro" | "county" | "zip",
   entries: T[],
-  idOf: (entry: T) => string,
+  _idOf: (entry: T) => string,
 ): Promise<{ lastmod: string | undefined; entries: T[] }> {
-  const { date, ids } = await fetchScoredLocationData(geo);
-  const lastmod = isoOrUndefined(date);
-  if (!ids.length) return { lastmod, entries }; // fail open
-  const scored = new Set(ids);
-  return {
-    lastmod,
-    entries: entries.filter((entry) => scored.has(idOf(entry))),
-  };
+  // Slug data is already score-gated at generation time — do NOT re-filter.
+  // Re-filtering to the latest-only scored set would drop grace-window pages.
+  // We still hit the endpoint purely for the honest <lastmod> date.
+  const { date } = await fetchScoredLocationData(geo);
+  return { lastmod: isoOrUndefined(date), entries };
 }
 
 /** Scored, sitemap-eligible ZIP entries + refresh date. */
