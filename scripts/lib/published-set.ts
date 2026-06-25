@@ -53,3 +53,31 @@ export function assertNonEmpty(label: string, ids: Set<string>): void {
     );
   }
 }
+
+/** Keys used to walk the ancestor hierarchy for a geo that lost its score. */
+export interface AncestorKeys {
+  countyFips?: string | null;
+  cbsaCode?: string | null;
+  state: string;
+}
+
+/**
+ * Given a de-scored geo entry, return the nearest published ancestor path.
+ * Priority: county page → metro page → state page → null.
+ * County entries pass `countyFips: undefined`; metro entries pass both undefined.
+ */
+export function resolveAncestorRedirect(
+  entry: AncestorKeys,
+  publishedCountySlugByFips: Map<string, string>,
+  publishedMetroSlugByCbsa: Map<string, string>,
+  stateSlugOf: (state: string) => string,
+): string | null {
+  if (entry.countyFips && publishedCountySlugByFips.has(entry.countyFips)) {
+    return `/markets/county/${publishedCountySlugByFips.get(entry.countyFips)}`;
+  }
+  if (entry.cbsaCode && publishedMetroSlugByCbsa.has(entry.cbsaCode)) {
+    return `/markets/${publishedMetroSlugByCbsa.get(entry.cbsaCode)}`;
+  }
+  if (entry.state) return `/markets/state/${stateSlugOf(entry.state)}`;
+  return null;
+}

@@ -3,6 +3,7 @@ import {
   computePublishedIds,
   computeRedirectIds,
   assertNonEmpty,
+  resolveAncestorRedirect,
   PUBLISH_WINDOW_MONTHS,
   REDIRECT_LOOKBACK_MONTHS,
 } from "./published-set";
@@ -63,5 +64,61 @@ describe("assertNonEmpty", () => {
   });
   it("does not throw on a populated set", () => {
     expect(() => assertNonEmpty("zip", new Set(["a"]))).not.toThrow();
+  });
+});
+
+describe("resolveAncestorRedirect (zip)", () => {
+  const publishedCounties = new Map([["17031", "cook-county-il"]]);
+  const publishedMetros = new Map([["16980", "chicago-il"]]);
+  const stateSlugOf = (s: string) =>
+    s.toLowerCase() === "il" ? "illinois" : s.toLowerCase();
+
+  it("redirects to county when county is published", () => {
+    const zip = {
+      zip: "60601",
+      countyFips: "17031",
+      cbsaCode: "16980",
+      state: "IL",
+    };
+    expect(
+      resolveAncestorRedirect(
+        zip,
+        publishedCounties,
+        publishedMetros,
+        stateSlugOf,
+      ),
+    ).toBe("/markets/county/cook-county-il");
+  });
+  it("falls back to metro when county is not published", () => {
+    const zip = {
+      zip: "60601",
+      countyFips: "99999",
+      cbsaCode: "16980",
+      state: "IL",
+    };
+    expect(
+      resolveAncestorRedirect(
+        zip,
+        publishedCounties,
+        publishedMetros,
+        stateSlugOf,
+      ),
+    ).toBe("/markets/chicago-il");
+  });
+  it("falls back to state when neither parent is published", () => {
+    const zip = {
+      zip: "60601",
+      countyFips: "99999",
+      cbsaCode: "00000",
+      state: "IL",
+    };
+    expect(
+      resolveAncestorRedirect(
+        zip,
+        publishedCounties,
+        publishedMetros,
+        stateSlugOf,
+      ),
+    ).toBe("/markets/state/illinois");
   });
 });
