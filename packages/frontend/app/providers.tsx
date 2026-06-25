@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AccountLinkedToast } from "@/components/auth/AccountLinkedToast";
 import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
 import { fetchOnboardingState } from "@/lib/data";
 
@@ -176,6 +177,7 @@ export function Providers({
             </OnboardingBeaconProvider>
           </EntitlementsProvider>
           <ExitIntentModal />
+          <AccountLinkedToast />
         </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>

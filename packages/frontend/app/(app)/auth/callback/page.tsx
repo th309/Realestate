@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
+import { decideNeedsOnboarding } from "./onboarding-routing";
 
 /**
  * Auth callback page — handles session establishment after email
@@ -118,6 +119,39 @@ function CallbackHandler() {
           return;
         }
 
+        // Detect a freshly-linked OAuth identity on a pre-existing (email)
+        // account so the destination page can show a one-time toast. Safe
+        // here: completeSignIn runs off the onAuthStateChange callback, so
+        // getUserIdentities does not re-enter the auth lock. Best-effort —
+        // failure/timeout simply shows no toast and never blocks auth.
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const identityResult: any = await withTimeout(
+            supabase.auth.getUserIdentities(),
+          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const identities: any[] = identityResult?.data?.identities ?? [];
+          const oauthIdentity = identities.find((i) => i.provider !== "email");
+          const hasPassword = identities.some((i) => i.provider === "email");
+          const linkedAtMs = oauthIdentity?.created_at
+            ? new Date(oauthIdentity.created_at).getTime()
+            : null;
+          const justLinked =
+            hasPassword &&
+            !!oauthIdentity &&
+            linkedAtMs !== null &&
+            Date.now() - linkedAtMs < 60_000;
+          if (justLinked) {
+            sessionStorage.setItem(
+              "piq_account_linked",
+              oauthIdentity.provider,
+            );
+            debugLog("account_linked", { provider: oauthIdentity.provider });
+          }
+        } catch (err) {
+          debugLog("account_link_check_failed", { error: String(err) });
+        }
+
         // Reuse a tour session if the user signed up via the inline form
         // before confirming their email. The piq_tour_session cookie
         // carries the sessionId. Best-effort — failure logs but does not
@@ -166,12 +200,17 @@ function CallbackHandler() {
           const profileResult: any = await withTimeout(
             supabase
               .from("user_profiles")
-              .select("created_at, onboarding_market")
+              .select("created_at, onboarding_completed_at")
               .eq("id", session.user.id)
               .maybeSingle(),
           );
           const profile = profileResult?.data;
-          needsOnboarding = !!profile && profile.onboarding_market === null;
+          needsOnboarding = decideNeedsOnboarding({
+            accountCreatedAt: session.user.created_at,
+            type,
+            onboardingCompletedAt: profile?.onboarding_completed_at ?? null,
+            now: Date.now(),
+          });
           // Fire signup_complete on first activation. Two triggers:
           //  - Email confirmation: the Supabase confirm link carries
           //    type=signup; the click can happen minutes/hours after signup,
