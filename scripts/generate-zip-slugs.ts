@@ -75,7 +75,7 @@ async function fetchCrosswalkMaps(): Promise<{
 
   console.log("Fetching ZIP crosswalk data (county_fips + cbsa_code)...");
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code`,
+    `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code&limit=100000`,
     {
       headers: {
         apikey: SUPABASE_KEY,
