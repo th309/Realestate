@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { DATA_DISCLAIMER } from "./lib/disclaimer";
+import { SERVER_INFO } from "./lib/server-info";
 import { coreTools } from "./tools/core";
 import { contentSeoTools } from "./tools/content-seo";
 import { agentTools } from "./tools/agents";
@@ -22,10 +23,7 @@ export const ALL_TOOLS = [
 ];
 
 export function createServer(): McpServer {
-  const server = new McpServer({
-    name: "propertyiq",
-    version: "0.2.0",
-  });
+  const server = new McpServer(SERVER_INFO);
 
   // Register each tool. The `as any` on `register` avoids TS2589 ("type
   // instantiation is excessively deep") caused by the union of 35+ distinct

@@ -12,6 +12,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { ALL_TOOLS } from "../server";
 import { extractAuth } from "../lib/auth-http";
 import { authStore } from "../lib/session-context";
+import { SERVER_INFO } from "../lib/server-info";
 
 const MCP_BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
 
@@ -48,7 +49,7 @@ function buildOpenApiSpec() {
       title: "PropertyIQ API",
       description:
         "Real estate market intelligence API. Call invoke_tool with a tool_name and arguments to query PropertyIQ scores, market snapshots, home values, rents, demographics, and more for any US market. GET /api/tools for the full tool catalog.",
-      version: "0.2.0",
+      version: SERVER_INFO.version,
     },
     servers: [{ url: MCP_BASE_URL }],
     paths: {

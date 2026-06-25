@@ -16,6 +16,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "./server";
 import { authStore } from "./lib/session-context";
 import { extractAuth } from "./lib/auth-http";
+import { SERVER_INFO } from "./lib/server-info";
 import { mountOAuthRoutes } from "./routes/oauth-routes";
 import { mountApiRoutes } from "./routes/api-routes";
 import { mountInternalRoutes } from "./routes/internal-routes";
@@ -228,8 +229,7 @@ app.get(MCP_PATHS, async (req: Request, res: Response) => {
     res.json({
       jsonrpc: "2.0",
       result: {
-        name: "propertyiq",
-        version: "0.2.0",
+        ...SERVER_INFO,
         transport: "streamable-http",
         auth: "oauth2.1",
       },
