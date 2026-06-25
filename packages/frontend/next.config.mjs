@@ -155,6 +155,21 @@ const nextConfig = {
       },
     ];
   },
+  // Serve agent-discovery documents at their canonical well-known paths. Next's
+  // App Router can't route dot-prefixed folders, so the real handlers live under
+  // /api/agent-discovery/* and we rewrite the public paths to them.
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/mcp/server-card.json',
+        destination: '/api/agent-discovery/server-card',
+      },
+      {
+        source: '/.well-known/api-catalog',
+        destination: '/api/agent-discovery/api-catalog',
+      },
+    ];
+  },
   // Custom response headers
   async headers() {
     return [
@@ -167,6 +182,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Link', value: '</.well-known/api-catalog>; rel="api-catalog", </docs/mcp>; rel="service-doc"' },
           { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com https://*.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self'${devConnectSrc} https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.railway.app https://*.supabase.co wss://*.supabase.co https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.ingest.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';` },
         ],
       },
