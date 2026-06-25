@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
-import { isLocationIndexable } from "@/lib/seo/scored-locations";
 import {
   buildMarketTitle,
   buildMarketDescription,
@@ -30,15 +29,10 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/${metro.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(metro.shortName)}`;
 
-  // Scoreless metros render a bare "—" and read as thin content — keep them out
-  // of the index (still crawlable via follow so internal links pass equity).
   // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
   // data-interpolated title + description so each page is data-distinct, not
   // micro-boilerplate Google would rewrite.
-  const [indexable, stats] = await Promise.all([
-    isLocationIndexable("metro", metro.cbsaCode),
-    fetchSeoMarketStats("metro", metro.cbsaCode, metro.state),
-  ]);
+  const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const title = buildMarketTitle(metro.shortName, stats);
   const description = buildMarketDescription(metro.shortName, stats);
 
@@ -48,7 +42,6 @@ export async function generateMetadata({
     alternates: {
       canonical: pageUrl,
     },
-    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,

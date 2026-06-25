@@ -5,7 +5,6 @@ import { ZIP_SLUG_DATA, SLUG_TO_ZIP } from "@/lib/data/zip-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { FIPS_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
-import { isLocationIndexable } from "@/lib/seo/scored-locations";
 import {
   buildMarketTitle,
   buildMarketDescription,
@@ -33,15 +32,10 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/zip/${zip.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(zip.shortName)}`;
 
-  // Scoreless ZIPs render a bare "—" and read as thin content — keep them out
-  // of the index (still crawlable via follow so internal links pass equity).
   // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
   // data-interpolated title + description so each page is data-distinct.
   const name = `${zip.zip} ${cityState}`;
-  const [indexable, stats] = await Promise.all([
-    isLocationIndexable("zip", zip.zip),
-    fetchSeoMarketStats("zip", zip.zip, zip.state),
-  ]);
+  const stats = await fetchSeoMarketStats("zip", zip.zip, zip.state);
   const title = buildMarketTitle(name, stats);
   const description = buildMarketDescription(name, stats);
 
@@ -49,7 +43,6 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: pageUrl },
-    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,
