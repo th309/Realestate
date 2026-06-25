@@ -74,38 +74,54 @@ async function fetchCrosswalkMaps(): Promise<{
   }
 
   console.log("Fetching ZIP crosswalk data (county_fips + cbsa_code)...");
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code&limit=100000`,
-    {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-      },
-    },
-  );
-
-  if (!res.ok) {
-    console.warn(
-      `Could not fetch ZIP crosswalk (${res.status}) — countyFips and cbsaCode will be null.`,
-    );
-    return { zipToCountyFips: new Map(), zipToCbsaCode: new Map() };
-  }
-
-  const rows: {
-    zip_code: string;
-    county_fips: string | null;
-    cbsa_code: string | null;
-  }[] = await res.json();
+  // Paginate with Range headers to bypass Supabase's max-rows cap regardless of project setting.
+  const PAGE_SIZE = 1000;
+  let offset = 0;
+  let totalRawRows = 0;
+  let fetchError = false;
 
   const zipToCountyFips = new Map<string, string | null>();
   const zipToCbsaCode = new Map<string, string | null>();
-  for (const row of rows) {
-    if (row.zip_code) {
-      zipToCountyFips.set(row.zip_code, row.county_fips ?? null);
-      zipToCbsaCode.set(row.zip_code, row.cbsa_code ?? null);
+
+  while (true) {
+    const pageRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          Range: `${offset}-${offset + PAGE_SIZE - 1}`,
+          "Range-Unit": "items",
+        },
+      },
+    );
+    if (!pageRes.ok) {
+      console.warn(
+        `Could not fetch ZIP crosswalk page at offset ${offset} (${pageRes.status}) — countyFips and cbsaCode may be null.`,
+      );
+      fetchError = true;
+      break;
     }
+    const page: {
+      zip_code: string;
+      county_fips: string | null;
+      cbsa_code: string | null;
+    }[] = await pageRes.json();
+    totalRawRows += page.length;
+    for (const row of page) {
+      if (row.zip_code) {
+        zipToCountyFips.set(row.zip_code, row.county_fips ?? null);
+        zipToCbsaCode.set(row.zip_code, row.cbsa_code ?? null);
+      }
+    }
+    if (page.length < PAGE_SIZE) break; // last page
+    offset += PAGE_SIZE;
   }
-  console.log(`Loaded ${rows.length} crosswalk entries.`);
+
+  if (!fetchError) {
+    console.log(`Crosswalk raw row count: ${totalRawRows}`);
+    console.log(`Loaded ${zipToCountyFips.size} crosswalk entries.`);
+  }
   return { zipToCountyFips, zipToCbsaCode };
 }
 
