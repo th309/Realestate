@@ -82,13 +82,144 @@ function CallbackHandler() {
     const supabase = createSupabaseBrowserClient();
     let timeoutId: ReturnType<typeof setTimeout>;
 
+    // Runs AFTER the onAuthStateChange callback returns (deferred via
+    // setTimeout below). CRITICAL: Supabase fires onAuthStateChange while
+    // holding its auth lock. Awaiting setSession() — or any lock-acquiring
+    // auth method, including .from() queries — synchronously inside that
+    // callback re-enters the non-reentrant serializingAuthLock
+    // (lib/supabase/client.ts) and deadlocks: the await never resolves and
+    // the page hangs forever on "Completing sign-in...". Deferring this work
+    // off the callback stack lets the lock release first.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const completeSignIn = async (session: any) => {
+      try {
+        // Ensure the session is persisted in the cookie-based client
+        // so RLS-authenticated queries work
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+
+        setStatus("Setting up your account...");
+
+        // Use Promise.race with timeout to prevent hanging queries
+        const withTimeout = <T,>(p: Promise<T>, ms = 5000): Promise<T> =>
+          Promise.race([
+            p,
+            new Promise<never>((_, rej) =>
+              setTimeout(() => rej(new Error("timeout")), ms),
+            ),
+          ]);
+
+        await withTimeout(handlePostSignup(supabase, session, tosFromParam));
+
+        if (type === "recovery") {
+          router.replace("/account?reset=true");
+          return;
+        }
+
+        // Reuse a tour session if the user signed up via the inline form
+        // before confirming their email. The piq_tour_session cookie
+        // carries the sessionId. Best-effort — failure logs but does not
+        // break the callback.
+        let claimedReportId: string | null = null;
+        let claimedTourSessionId: string | null = null;
+        const tourSessionId = getCookie("piq_tour_session");
+        if (tourSessionId) {
+          try {
+            const claimRes = await fetch(`${API_URL}/api/anonymous/claim`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ tourSessionId }),
+            });
+            if (claimRes.ok) {
+              const body = (await claimRes.json()) as {
+                claimed?: boolean;
+                reportId?: string | null;
+              };
+              if (body.claimed && body.reportId) {
+                claimedReportId = body.reportId;
+                claimedTourSessionId = tourSessionId;
+                debugLog("tour_claim", {
+                  tourSessionId,
+                  reportId: claimedReportId,
+                });
+              }
+            }
+          } catch (err) {
+            debugLog("tour_claim_failed", { error: String(err) });
+          }
+        }
+
+        // Decide where to send the user. Two independent signals:
+        //  - needsOnboarding: deterministic — has the user picked an
+        //    onboarding_market yet? Robust to email-confirmation delays
+        //    that the old "profile age < 60s" window failed.
+        //  - isFreshSignup: only used to fire the conversion analytics
+        //    event once, near profile creation.
+        let needsOnboarding = false;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const profileResult: any = await withTimeout(
+            supabase
+              .from("user_profiles")
+              .select("created_at, onboarding_market")
+              .eq("id", session.user.id)
+              .maybeSingle(),
+          );
+          const profile = profileResult?.data;
+          needsOnboarding = !!profile && profile.onboarding_market === null;
+          // Fire signup_complete on first activation. Two triggers:
+          //  - Email confirmation: the Supabase confirm link carries
+          //    type=signup; the click can happen minutes/hours after signup,
+          //    so the 60s window below would miss it.
+          //  - OAuth: fast, so the freshly-created-profile window catches it.
+          const isEmailConfirm = type === "signup";
+          const isFreshSignup =
+            !!profile &&
+            Date.now() - new Date(profile.created_at).getTime() < 60_000;
+          if (isEmailConfirm || isFreshSignup) {
+            trackEvent("conversion.signup_complete", {
+              method: isEmailConfirm ? "email" : "oauth",
+            });
+            flush();
+          }
+        } catch (err) {
+          // Analytics must never break auth. Swallow and continue.
+          console.error("OAuth signup event tracking failed", err);
+        }
+
+        // Tour claim takes priority over the generic onboarding redirect:
+        // a successful claim means the user just generated a report and
+        // should land on the celebrate screen with their saved report.
+        // Anyone else without an onboarding_market goes through /tour so
+        // the persona+market picker → spotlight tour fires.
+        const destination = claimedTourSessionId
+          ? `/tour?phase=celebrate&sessionId=${encodeURIComponent(claimedTourSessionId)}`
+          : needsOnboarding
+            ? explicitNext
+              ? `/tour?next=${encodeURIComponent(explicitNext)}`
+              : "/tour"
+            : next;
+        debugLog("3_redirect", { to: destination, needsOnboarding });
+        router.replace(destination);
+      } catch (err) {
+        debugLog("post_signup_error", { error: String(err) });
+        // Auth succeeded even if post-signup tasks failed — redirect
+        router.replace(next);
+      }
+    };
+
     // Listen for session establishment. Works for both implicit flow
     // (tokens in hash) and PKCE (code auto-exchanged by the client).
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      async (event: string, session: any) => {
+      (event: string, session: any) => {
         if (event !== "SIGNED_IN" || !session) return;
 
         clearTimeout(timeoutId);
@@ -99,125 +230,11 @@ function CallbackHandler() {
           email: session.user.email,
         });
 
-        // Ensure the session is persisted in the cookie-based client
-        // so RLS-authenticated queries work
-        await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        });
-
-        try {
-          setStatus("Setting up your account...");
-
-          // Use Promise.race with timeout to prevent hanging queries
-          const withTimeout = <T,>(p: Promise<T>, ms = 5000): Promise<T> =>
-            Promise.race([
-              p,
-              new Promise<never>((_, rej) =>
-                setTimeout(() => rej(new Error("timeout")), ms),
-              ),
-            ]);
-
-          await withTimeout(handlePostSignup(supabase, session, tosFromParam));
-
-          if (type === "recovery") {
-            router.replace("/account?reset=true");
-            return;
-          }
-
-          // Reuse a tour session if the user signed up via the inline form
-          // before confirming their email. The piq_tour_session cookie
-          // carries the sessionId. Best-effort — failure logs but does not
-          // break the callback.
-          let claimedReportId: string | null = null;
-          let claimedTourSessionId: string | null = null;
-          const tourSessionId = getCookie("piq_tour_session");
-          if (tourSessionId) {
-            try {
-              const claimRes = await fetch(`${API_URL}/api/anonymous/claim`, {
-                method: "POST",
-                headers: {
-                  "content-type": "application/json",
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ tourSessionId }),
-              });
-              if (claimRes.ok) {
-                const body = (await claimRes.json()) as {
-                  claimed?: boolean;
-                  reportId?: string | null;
-                };
-                if (body.claimed && body.reportId) {
-                  claimedReportId = body.reportId;
-                  claimedTourSessionId = tourSessionId;
-                  debugLog("tour_claim", {
-                    tourSessionId,
-                    reportId: claimedReportId,
-                  });
-                }
-              }
-            } catch (err) {
-              debugLog("tour_claim_failed", { error: String(err) });
-            }
-          }
-
-          // Decide where to send the user. Two independent signals:
-          //  - needsOnboarding: deterministic — has the user picked an
-          //    onboarding_market yet? Robust to email-confirmation delays
-          //    that the old "profile age < 60s" window failed.
-          //  - isFreshSignup: only used to fire the conversion analytics
-          //    event once, near profile creation.
-          let needsOnboarding = false;
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const profileResult: any = await withTimeout(
-              supabase
-                .from("user_profiles")
-                .select("created_at, onboarding_market")
-                .eq("id", session.user.id)
-                .maybeSingle(),
-            );
-            const profile = profileResult?.data;
-            needsOnboarding = !!profile && profile.onboarding_market === null;
-            // Fire signup_complete on first activation. Two triggers:
-            //  - Email confirmation: the Supabase confirm link carries
-            //    type=signup; the click can happen minutes/hours after signup,
-            //    so the 60s window below would miss it.
-            //  - OAuth: fast, so the freshly-created-profile window catches it.
-            const isEmailConfirm = type === "signup";
-            const isFreshSignup =
-              !!profile &&
-              Date.now() - new Date(profile.created_at).getTime() < 60_000;
-            if (isEmailConfirm || isFreshSignup) {
-              trackEvent("conversion.signup_complete", {
-                method: isEmailConfirm ? "email" : "oauth",
-              });
-              flush();
-            }
-          } catch (err) {
-            // Analytics must never break auth. Swallow and continue.
-            console.error("OAuth signup event tracking failed", err);
-          }
-
-          // Tour claim takes priority over the generic onboarding redirect:
-          // a successful claim means the user just generated a report and
-          // should land on the celebrate screen with their saved report.
-          // Anyone else without an onboarding_market goes through /tour so
-          // the persona+market picker → spotlight tour fires.
-          const destination = claimedTourSessionId
-            ? `/tour?phase=celebrate&sessionId=${encodeURIComponent(claimedTourSessionId)}`
-            : needsOnboarding
-              ? explicitNext
-                ? `/tour?next=${encodeURIComponent(explicitNext)}`
-                : "/tour"
-              : next;
-          debugLog("3_redirect", { to: destination, needsOnboarding });
-          router.replace(destination);
-        } catch (err) {
-          debugLog("post_signup_error", { error: String(err) });
-          // Auth succeeded even if post-signup tasks failed — redirect
-          router.replace(next);
-        }
+        // Defer the session work OUT of this callback. Supabase fires this
+        // handler while holding the auth lock; doing lock-acquiring auth work
+        // here would deadlock (see completeSignIn). setTimeout(0) runs it on
+        // the next macrotask, after the lock has been released.
+        setTimeout(() => void completeSignIn(session), 0);
       },
     );
 
