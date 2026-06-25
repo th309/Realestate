@@ -2,7 +2,8 @@
 
 - **Date:** 2026-06-25
 - **Status:** Approved (brainstorming) — pending implementation plan
-- **Scope:** Frontend only (`packages/frontend`). No backend or MCP-server changes.
+- **Revised:** 2026-06-25 — server card placement B (www + MCP host); Link header on all routes.
+- **Scope:** Frontend (`packages/frontend`) + one additive discovery route in `packages/mcp-server`. No backend changes.
 - **Owner:** th309
 
 ## 1. Context & Motivation
@@ -13,14 +14,19 @@ OAuth discovery metadata, Content Signals, etc.). Many flags are false negatives
 scanned only the apex web domain, while PropertyIQ already runs the relevant infrastructure
 on the **MCP subdomain**.
 
-**Already in place (do not rebuild):**
+**Already in place (do not rebuild) — verified live 2026-06-25:**
 
 - MCP server at `https://mcp.propertyiq.app` (package `propertyiq` v`0.2.0`, streamable-HTTP,
   47 tools, OAuth 2.1 + PKCE) **already serves** `/.well-known/oauth-protected-resource`
-  (RFC 9728) and `/.well-known/oauth-authorization-server` (RFC 8414), plus dynamic client
-  registration (RFC 7591) and an OpenAPI 3.1 REST wrapper at `/api/openapi.json`.
+  (RFC 9728, confirmed `200`) and `/.well-known/oauth-authorization-server` (RFC 8414), plus
+  dynamic client registration (RFC 7591), a healthy `/health`, and an OpenAPI 3.1 REST wrapper
+  at `/api/openapi.json`.
 - Frontend already serves `public/.well-known/security.txt`, `public/llms.txt`,
   `public/llms-full.txt`, and a `robots.ts` that allow-lists every AI crawler by name.
+
+**Confirmed NOT in place (this is the gap):** the SEP-1649 MCP **server card** —
+`/.well-known/mcp/server-card.json` returns `404` on `mcp.propertyiq.app` and the generic app
+HTML on `www`. It exists nowhere today.
 
 Because OAuth discovery metadata is already RFC-correct on the resource server (the MCP
 subdomain), this work does **not** duplicate it onto `www`. Instead, `www` becomes
@@ -28,11 +34,13 @@ _discoverable_ and _points agents at_ the existing infrastructure.
 
 ## 2. Goals
 
-Ship four agent-discovery surfaces on `www.propertyiq.app`:
+Ship four agent-discovery surfaces:
 
-1. **MCP Server Card** at `/.well-known/mcp/server-card.json` (SEP-1649 shape).
-2. **API catalog** at `/.well-known/api-catalog` (`application/linkset+json`, RFC 9727).
-3. **Link response headers** on the homepage (RFC 8288) pointing at the catalog + docs.
+1. **MCP Server Card** at `/.well-known/mcp/server-card.json` (SEP-1649 shape), served on
+   **both** `www.propertyiq.app` (audit + brand-domain discovery) and `mcp.propertyiq.app`
+   (the canonical home an MCP client actually probes).
+2. **API catalog** at `www/.well-known/api-catalog` (`application/linkset+json`, RFC 9727).
+3. **Link response headers** on **all** page routes (RFC 8288) pointing at the catalog + docs.
 4. **Content Signals** in `robots.txt` (`search=yes, ai-input=yes, ai-train=no`).
 
 ## 3. Non-Goals (explicitly out of scope)
@@ -46,19 +54,25 @@ Ship four agent-discovery surfaces on `www.propertyiq.app`:
   publishing an infra URL in a public catalog is brittle/poor form. The MCP REST wrapper
   already exposes the agent-relevant data surface. Add a backend anchor later only if a
   clean custom domain (or a `www.propertyiq.app/backend/*` proxy path) is confirmed.
+- **Any change to existing MCP server behavior:** the `packages/mcp-server` work is purely
+  additive (one new unauthenticated GET route). No existing route, auth path, tool, or
+  response is touched.
 
 ## 4. Locked Decisions
 
-| #   | Decision               | Choice                                                                                                                                                                          |
-| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Scope                  | Tier 1 only (the four surfaces above)                                                                                                                                           |
-| 2   | Content-Signal stance  | `search=yes, ai-input=yes, ai-train=no`                                                                                                                                         |
-| 3   | Serving mechanism      | **Option Y** — uniform route handlers + `next.config` rewrites + one shared manifest                                                                                            |
-| 4   | Link header scope      | Homepage (`source: '/'`) only                                                                                                                                                   |
-| 5   | API catalog v1 anchors | MCP service only                                                                                                                                                                |
-| 6   | robots train policy    | **Decouple** — keep crawl access for all bots (incl. training bots); declare `ai-train=no` as a usage-license preference; rewrite the comment so access vs. license is coherent |
+| #   | Decision                | Choice                                                                                                                                                                          |
+| --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Scope                   | Tier 1 only (the four surfaces above)                                                                                                                                           |
+| 2   | Content-Signal stance   | `search=yes, ai-input=yes, ai-train=no`                                                                                                                                         |
+| 3   | Serving mechanism (www) | **Option Y** — uniform route handlers + `next.config` rewrites + one shared manifest                                                                                            |
+| 4   | Link header scope       | **All page routes** — folded into the existing global header block in `next.config.mjs`                                                                                         |
+| 5   | API catalog v1 anchors  | MCP service only                                                                                                                                                                |
+| 6   | robots train policy     | **Decouple** — keep crawl access for all bots (incl. training bots); declare `ai-train=no` as a usage-license preference; rewrite the comment so access vs. license is coherent |
+| 7   | Server card placement   | **B — both hosts:** `www` (frontend route handler + rewrite) **and** `mcp.propertyiq.app` (additive route in the MCP server's existing well-known handler)                      |
 
-## 5. Architecture / Serving Mechanism (Option Y)
+## 5. Architecture / Serving Mechanism
+
+### 5.1 `www` surfaces (Option Y)
 
 Next.js App Router ignores dot-prefixed folders, so `app/.well-known/` does not route (this
 is why `security.txt` is a static `public/` file today). The two JSON documents need dynamic
@@ -77,9 +91,18 @@ This must be **confirmed** in the first implementation step (curl the rewritten 
 running server) rather than assumed; if middleware interferes, add `.well-known` to the
 matcher's negative lookahead.
 
+### 5.2 `mcp.propertyiq.app` surface (additive)
+
+The MCP server already serves `/.well-known/oauth-protected-resource` and
+`/.well-known/oauth-authorization-server` as unauthenticated discovery routes. Add a
+sibling **unauthenticated** `GET /.well-known/mcp/server-card.json` next to them, mirroring
+that pattern. The card body is generated from the MCP server's own constants (its `McpServer`
+name/version and `MCP_BASE_URL`) — no hardcoded duplication on this side. The exact file
+where the oauth well-known routes are registered is pinpointed in the plan (see §10).
+
 ## 6. Deliverables (exact shapes)
 
-### 6.1 `lib/agent-discovery/manifest.ts` (single source of truth)
+### 6.1 `lib/agent-discovery/manifest.ts` (single source of truth, `www` side)
 
 Hardcoded public canonical values (these are public URLs, not secrets — consistent with how
 `robots.ts` hardcodes the sitemap URL). The MCP `version` carries a
@@ -103,13 +126,19 @@ export const AGENT_DISCOVERY = {
 } as const;
 ```
 
-### 6.2 MCP Server Card — `/.well-known/mcp/server-card.json`
+### 6.2 MCP Server Card — `/.well-known/mcp/server-card.json` (BOTH hosts)
 
-- Handler: `app/api/agent-discovery/server-card/route.ts`
-- `Content-Type: application/json`; `Cache-Control: public, max-age=3600, s-maxage=3600`.
-- Declares the tools _capability_ (presence), not a count, so it cannot go stale.
-- SEP-1649 is not finalized; fields are kept conservative and aligned to MCP's known
-  `serverInfo`/`Implementation` shape:
+Identical document shape on both hosts; each host generates it from its own source of truth
+(the `www` handler from `manifest.ts`; the MCP-server handler from its own server constants).
+SEP-1649 is not finalized, so fields are kept conservative and aligned to MCP's known
+`serverInfo`/`Implementation` shape. The tools _capability_ is declared by presence (`{}`),
+not a count, so it cannot go stale.
+
+- `www` handler: `app/api/agent-discovery/server-card/route.ts` (served at the well-known path
+  via the §5.1 rewrite). `Content-Type: application/json`;
+  `Cache-Control: public, max-age=3600, s-maxage=3600`.
+- MCP-server handler: additive `GET /.well-known/mcp/server-card.json` (§5.2),
+  `Content-Type: application/json`.
 
 ```json
 {
@@ -127,7 +156,7 @@ export const AGENT_DISCOVERY = {
 }
 ```
 
-### 6.3 API Catalog — `/.well-known/api-catalog`
+### 6.3 API Catalog — `www/.well-known/api-catalog`
 
 - Handler: `app/api/agent-discovery/api-catalog/route.ts`
 - `Content-Type: application/linkset+json`; same cache header.
@@ -158,10 +187,16 @@ export const AGENT_DISCOVERY = {
 }
 ```
 
-### 6.4 Link Response Headers — homepage only
+### 6.4 Link Response Headers — all page routes
 
-Added to the existing `headers()` array in `next.config.mjs`, `source: "/"`. Both relation
-types are IANA-registered (the audit's complaint was "no agent-useful relation types"):
+Folded into the **existing global header block** in `next.config.mjs` (the one that already
+returns security headers for all routes) — not a new homepage-only block. Rationale: agents
+and crawlers enter wherever search/citations send them, which for PropertyIQ is
+overwhelmingly _deep_ SEO pages, not `/` (the activation-funnel work found ~94% of traffic
+hits SEO pages, not the homepage). A homepage-only Link header would miss almost every real
+agent entry point. Cost is an ~80-byte constant header per response — negligible — and there
+is nothing to maintain as routes change. Both relation types are IANA-registered (the audit's
+complaint was "no agent-useful relation types"):
 
 ```
 Link: </.well-known/api-catalog>; rel="api-catalog", </docs/mcp>; rel="service-doc"
@@ -190,6 +225,9 @@ Link: </.well-known/api-catalog>; rel="api-catalog", </docs/mcp>; rel="service-d
 - Handlers are pure JSON/text generation — no external calls, no user input, no failure
   modes, no validation surface. Always 200 with correct `Content-Type` + 1h cache.
 - No secrets involved; all values are public canonical URLs.
+- The `mcp.propertyiq.app` card route is **additive and unauthenticated**, mirroring the
+  existing oauth well-known discovery routes. It must not alter any existing route, auth
+  path, tool registration, or response (project rule: MCP changes preserve behavior).
 - Static-vs-dynamic: `server-card.json` and `api-catalog` are dynamic only to share the
   manifest and (for the catalog) set the `linkset+json` media type — not because they vary
   per request.
@@ -197,17 +235,29 @@ Link: </.well-known/api-catalog>; rel="api-catalog", </docs/mcp>; rel="service-d
 ## 8. Verification Plan (live, not mocked)
 
 Per the standing "live data only" rule, verify against a production preview build, not dev
-(dev cold-compile is unreliable for this):
+(dev cold-compile is unreliable for this).
 
-1. Build to an isolated dist dir (`NEXT_DIST_DIR=.next-verify`), `next start -p 3100`.
-2. Confirm middleware passthrough + each surface:
+**Frontend (`.next-verify` build, `next start -p 3100`):**
+
+1. Confirm middleware passthrough + each surface:
    - `curl -sI http://localhost:3100/ | grep -i '^link'` → shows both rel types.
+   - `curl -sI http://localhost:3100/<a-deep-market-or-blog-page> | grep -i '^link'` →
+     **also** shows the Link header (proves all-routes coverage, not just `/`).
    - `curl -si http://localhost:3100/.well-known/api-catalog` → `200`,
      `Content-Type: application/linkset+json`, body is valid linkset JSON.
    - `curl -si http://localhost:3100/.well-known/mcp/server-card.json` → `200`,
      `application/json`, valid JSON.
    - `curl -s http://localhost:3100/robots.txt` → shows the `Content-Signal` line **and**
      the existing allow/disallow + AI-bot rules + `Sitemap:` intact.
+
+**MCP server (after its deploy):**
+
+2. `curl -si https://mcp.propertyiq.app/.well-known/mcp/server-card.json` → `200`,
+   `application/json`, valid JSON; and confirm the existing oauth well-known routes + `/health`
+   - a tool call still behave exactly as before (no regression).
+
+**End-to-end:**
+
 3. After deploy, re-run isitagentready.com and confirm the four checks flip to pass.
 
 ## 9. Files Touched
@@ -218,10 +268,14 @@ Per the standing "live data only" rule, verify against a production preview buil
 - `packages/frontend/app/api/agent-discovery/server-card/route.ts`
 - `packages/frontend/app/api/agent-discovery/api-catalog/route.ts`
 - `packages/frontend/app/robots.txt/route.ts`
+- `packages/mcp-server/...` — additive `GET /.well-known/mcp/server-card.json` route
+  (exact file pinpointed in the plan; registered alongside the existing oauth well-known
+  routes)
 
 **Modified**
 
-- `packages/frontend/next.config.mjs` (two `rewrites()` entries + one homepage `Link` header)
+- `packages/frontend/next.config.mjs` (two `rewrites()` entries + a global `Link` header
+  added to the existing all-routes header block)
 
 **Deleted**
 
@@ -232,3 +286,5 @@ Per the standing "live data only" rule, verify against a production preview buil
 1. Confirm `middleware.ts` passes `/.well-known/*` through (step 1 of verification). If not,
    add `.well-known` to the matcher's negative lookahead.
 2. Confirm no module imports from `app/robots.ts` before deleting it.
+3. Pinpoint the exact `packages/mcp-server` file/registration point for the existing
+   `/.well-known/oauth-*` routes, and add the server-card route there (additive, unauth).
