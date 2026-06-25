@@ -416,4 +416,26 @@ describe('ScoringService', () => {
       // This would result in 'stable' trend
     });
   });
+
+  // ===========================================================================
+  // Score Periods Tests
+  // ===========================================================================
+  describe('getScorePeriods', () => {
+    it('returns distinct score_dates newest-first, capped at limit', async () => {
+      // Arrange: mock supabase to return rows with score_dates incl. duplicates
+      const rows = [
+        { score_date: '2026-05-31' },
+        { score_date: '2026-05-31' },
+        { score_date: '2026-04-30' },
+        { score_date: '2026-03-31' },
+      ];
+      jest
+        .spyOn(service as any, 'queryScorePeriodRows')
+        .mockResolvedValue(rows);
+
+      const out = await service.getScorePeriods('zip', 'propertyiq', 2);
+
+      expect(out).toEqual(['2026-05-31', '2026-04-30']);
+    });
+  });
 });

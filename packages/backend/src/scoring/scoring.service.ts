@@ -199,6 +199,47 @@ export class ScoringService {
     );
   }
 
+  /**
+   * Raw score_date rows for a geography — over-fetches so getScorePeriods can
+   * deduplicate and cap in-memory. Private seam makes the logic unit-testable.
+   */
+  private async queryScorePeriodRows(
+    geography: GeographyLevel,
+  ): Promise<Array<{ score_date: string }>> {
+    const { data, error } = await this.supabase
+      .from('propertyiq_scores')
+      .select('score_date')
+      .eq('geography', geography)
+      .eq('score_type', 'propertyiq')
+      .order('score_date', { ascending: false })
+      .limit(5000);
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  /**
+   * Distinct score_dates for a geography, newest-first, capped at `limit`.
+   * Used by the monthly SEO slug rebuild to enumerate publish/redirect windows.
+   */
+  async getScorePeriods(
+    geoLevel: 'metro' | 'county' | 'zip',
+    scoreType: string,
+    limit: number,
+  ): Promise<string[]> {
+    const rows = await this.queryScorePeriodRows(geoLevel);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const row of rows) {
+      const d = row.score_date;
+      if (!seen.has(d)) {
+        seen.add(d);
+        out.push(d);
+      }
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
   async getAllScoresForGeography(
     geography: GeographyLevel,
     scoreType: ScoreType,

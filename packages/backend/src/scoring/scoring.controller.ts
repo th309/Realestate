@@ -689,6 +689,46 @@ export class ScoringController {
     };
   }
 
+  /**
+   * List recent distinct score_dates for a geography.
+   *
+   * GET /api/scores/ids/:geography/periods?score_type=propertyiq&limit=6
+   *
+   * Gives the monthly SEO slug-rebuild script the publish/redirect windows
+   * it needs to enumerate per-period scored IDs without a full table scan.
+   *
+   * NOTE: declared BEFORE @Get(':geography/:locationId') via its sibling
+   * @Get('ids/:geography') — no additional ordering concern here.
+   */
+  @Get('ids/:geography/periods')
+  @Header('Cache-Control', 'public, max-age=21600')
+  @ApiOperation({ summary: 'List recent distinct score_dates for a geography' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    description: 'propertyiq (default)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max periods returned (default 6, max 24)',
+  })
+  async getScorePeriods(
+    @Param('geography') geography: string,
+    @Query('score_type') scoreType = 'propertyiq',
+    @Query('limit') limit = '6',
+  ): Promise<{ geography: string; score_type: string; periods: string[] }> {
+    const geoLevel = this.validateGeography(geography);
+    const validScoreType = this.validateScoreType(scoreType);
+    const periods = await this.scoringService.getScorePeriods(
+      geoLevel,
+      validScoreType,
+      Math.min(Math.max(parseInt(limit, 10) || 6, 1), 24),
+    );
+    return { geography: geoLevel, score_type: validScoreType, periods };
+  }
+
   private parseScoreTypes(scoreType: string): ScoreType[] {
     if (!scoreType) {
       throw new HttpException(
