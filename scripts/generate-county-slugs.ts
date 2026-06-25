@@ -67,24 +67,42 @@ async function main() {
   let crosswalkMap = new Map<string, string | null>();
   if (SUPABASE_URL && SUPABASE_KEY) {
     console.log("Fetching crosswalk data for CBSA codes...");
-    const crosswalkRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=county_fips,cbsa_code`,
-      {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
+    // Paginate to bypass Supabase's 1000-row REST cap (project max-rows setting).
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    let totalRawRows = 0;
+    let fetchError = false;
+    while (true) {
+      const crosswalkRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=county_fips,cbsa_code`,
+        {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            Range: `${offset}-${offset + PAGE_SIZE - 1}`,
+            "Range-Unit": "items",
+          },
         },
-      },
-    );
-    if (crosswalkRes.ok) {
-      const crosswalk: { county_fips: string; cbsa_code: string | null }[] =
+      );
+      if (!crosswalkRes.ok) {
+        console.warn(
+          `Could not fetch crosswalk page at offset ${offset} (${crosswalkRes.status}) — CBSA codes may be null.`,
+        );
+        fetchError = true;
+        break;
+      }
+      const page: { county_fips: string; cbsa_code: string | null }[] =
         await crosswalkRes.json();
-      for (const row of crosswalk) {
+      totalRawRows += page.length;
+      for (const row of page) {
         crosswalkMap.set(row.county_fips, row.cbsa_code);
       }
+      if (page.length < PAGE_SIZE) break; // last page
+      offset += PAGE_SIZE;
+    }
+    if (!fetchError) {
+      console.log(`Crosswalk raw row count: ${totalRawRows}`);
       console.log(`Loaded ${crosswalkMap.size} crosswalk entries.`);
-    } else {
-      console.warn("Could not fetch crosswalk data, CBSA codes will be null.");
     }
   }
 
