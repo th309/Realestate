@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
+import { decideNeedsOnboarding } from "./onboarding-routing";
 
 /**
  * Auth callback page — handles session establishment after email
@@ -166,12 +167,17 @@ function CallbackHandler() {
           const profileResult: any = await withTimeout(
             supabase
               .from("user_profiles")
-              .select("created_at, onboarding_market")
+              .select("created_at, onboarding_completed_at")
               .eq("id", session.user.id)
               .maybeSingle(),
           );
           const profile = profileResult?.data;
-          needsOnboarding = !!profile && profile.onboarding_market === null;
+          needsOnboarding = decideNeedsOnboarding({
+            accountCreatedAt: session.user.created_at,
+            type,
+            onboardingCompletedAt: profile?.onboarding_completed_at ?? null,
+            now: Date.now(),
+          });
           // Fire signup_complete on first activation. Two triggers:
           //  - Email confirmation: the Supabase confirm link carries
           //    type=signup; the click can happen minutes/hours after signup,
