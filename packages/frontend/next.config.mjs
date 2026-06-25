@@ -1,5 +1,15 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+// De-scored market pages: generated monthly by scripts/generate-descored-redirects.ts.
+// Seed is [] so this is a no-op until the first generation run.
+const descoredRedirects = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL('./lib/data/descored-redirects.json', import.meta.url)),
+    'utf8',
+  ),
+);
 
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
@@ -153,6 +163,10 @@ const nextConfig = {
         destination: '/scores/methodology',
         permanent: true,
       },
+      // ── De-scored market pages → ancestor geography ───────────────
+      // Generated monthly by scripts/generate-descored-redirects.ts.
+      // Seed is [] (no-op) until first generation run.
+      ...descoredRedirects,
     ];
   },
   // Serve agent-discovery documents at their canonical well-known paths. Next's
