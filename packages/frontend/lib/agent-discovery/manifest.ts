@@ -14,5 +14,7 @@ export const AGENT_DISCOVERY = {
     docs: "https://www.propertyiq.app/docs/mcp",
     oauthProtectedResource:
       "https://mcp.propertyiq.app/.well-known/oauth-protected-resource",
+    oauthAuthorizationServer:
+      "https://mcp.propertyiq.app/.well-known/oauth-authorization-server",
   },
 } as const;

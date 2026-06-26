@@ -46,5 +46,10 @@ export function authorizationServerMetadata(serverUrl?: string) {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
+    agent_auth: {
+      register_uri: `${url}/register`,
+      identity_types_supported: ["dynamic_client"],
+      credential_types_supported: ["oauth2_access_token", "api_key"],
+    },
   };
 }
