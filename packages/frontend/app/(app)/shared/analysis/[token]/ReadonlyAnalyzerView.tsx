@@ -42,6 +42,11 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
     (snap.bestStrategy as "buyAndHold" | "flip" | "brrrr" | undefined) ??
     inferBestStrategy(rental, flip, brrrr);
 
+  // Notes are only surfaced on the public share link when the owner ticked
+  // "Share with client". Private notes (shareNotes false) stay out of the
+  // shared payload render even though they live in the same snapshot blob.
+  const sharedNotes = snap.shareNotes && snap.notes?.trim() ? snap.notes : null;
+
   const preparedDate = (row.created_at ?? "").slice(0, 10) || "—";
   const disclaimer =
     branding?.report_disclaimer ??
@@ -94,6 +99,7 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
         }
         salesComps={snap.comps?.salesComps ?? []}
         aiNarratives={ai}
+        sharedNotes={sharedNotes}
         disclaimer={disclaimer}
       />
     </>

@@ -39,53 +39,78 @@ interface ParsedZip {
   state: string; // upper-cased 2-letter abbrev, e.g. "CA"
 }
 
-function parseZipRow(row: ZipApiRow): ParsedZip {
+/** Title-case a (possibly multi-word) place name. */
+function titleCase(raw: string): string {
+  return raw
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Parse the `/api/markets/zips` row into {city, state}.
+ *
+ * The endpoint's `name` is `row.zip_name || row.postal_code` — when the upstream
+ * `realtor_zip.zip_name` is NULL (≈553 ZIPs) the `name` is just the bare ZIP with
+ * no `", ST"` suffix. Detecting "no comma" alone is insufficient because that
+ * case also produces `cityName === zip` (e.g. "01093"), which previously yielded
+ * the malformed `01093-01093` slug. We mark such rows as missing a city so the
+ * caller can backfill from geography_crosswalk; if even that has no city, the row
+ * is skipped rather than emitting a broken page.
+ */
+function parseZipRow(row: ZipApiRow): ParsedZip & { hasCity: boolean } {
   // name format: "city name, st" (always a trailing ", XX" state abbrev)
   const commaIdx = row.name.lastIndexOf(",");
   const cityRaw =
     commaIdx >= 0 ? row.name.slice(0, commaIdx).trim() : row.name.trim();
   const stateRaw = commaIdx >= 0 ? row.name.slice(commaIdx + 1).trim() : "";
 
-  // Title-case the city (handles multi-word names)
-  const cityName = cityRaw
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  // A real city is present only when we parsed a non-empty city that isn't just
+  // the ZIP echoed back AND a 2-letter state abbreviation.
+  const hasCity =
+    cityRaw.length > 0 && cityRaw !== row.code && stateRaw.length > 0;
 
   return {
     zip: row.code,
-    cityName,
+    cityName: titleCase(cityRaw),
     state: stateRaw.toUpperCase(),
+    hasCity,
   };
 }
 
-async function fetchCrosswalkMaps(): Promise<{
-  zipToCountyFips: Map<string, string | null>;
-  zipToCbsaCode: Map<string, string | null>;
-}> {
+/** Crosswalk-derived per-ZIP enrichment used both for parent links and as the
+ *  authoritative city/state fallback when the /api/markets/zips `name` lacks a
+ *  city (geography_crosswalk has zip_default_city/state for every tracked ZIP). */
+interface CrosswalkEntry {
+  countyFips: string | null;
+  cbsaCode: string | null;
+  defaultCity: string | null;
+  defaultState: string | null;
+}
+
+async function fetchCrosswalkMaps(): Promise<Map<string, CrosswalkEntry>> {
+  const crosswalk = new Map<string, CrosswalkEntry>();
+
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.warn(
-      "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — countyFips and cbsaCode will be null.",
+      "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — countyFips, cbsaCode, and city fallback will be unavailable.",
     );
-    return {
-      zipToCountyFips: new Map(),
-      zipToCbsaCode: new Map(),
-    };
+    return crosswalk;
   }
 
-  console.log("Fetching ZIP crosswalk data (county_fips + cbsa_code)...");
+  console.log(
+    "Fetching ZIP crosswalk data (county_fips + cbsa_code + default city/state)...",
+  );
   // Paginate with Range headers to bypass Supabase's max-rows cap regardless of project setting.
   const PAGE_SIZE = 1000;
   let offset = 0;
   let totalRawRows = 0;
   let fetchError = false;
 
-  const zipToCountyFips = new Map<string, string | null>();
-  const zipToCbsaCode = new Map<string, string | null>();
-
   while (true) {
     const pageRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code`,
+      `${SUPABASE_URL}/rest/v1/geography_crosswalk?select=zip_code,county_fips,cbsa_code,zip_default_city,zip_default_state`,
       {
         headers: {
           apikey: SUPABASE_KEY,
@@ -97,7 +122,7 @@ async function fetchCrosswalkMaps(): Promise<{
     );
     if (!pageRes.ok) {
       console.warn(
-        `Could not fetch ZIP crosswalk page at offset ${offset} (${pageRes.status}) — countyFips and cbsaCode may be null.`,
+        `Could not fetch ZIP crosswalk page at offset ${offset} (${pageRes.status}) — countyFips, cbsaCode, and city fallback may be unavailable.`,
       );
       fetchError = true;
       break;
@@ -106,12 +131,18 @@ async function fetchCrosswalkMaps(): Promise<{
       zip_code: string;
       county_fips: string | null;
       cbsa_code: string | null;
+      zip_default_city: string | null;
+      zip_default_state: string | null;
     }[] = await pageRes.json();
     totalRawRows += page.length;
     for (const row of page) {
       if (row.zip_code) {
-        zipToCountyFips.set(row.zip_code, row.county_fips ?? null);
-        zipToCbsaCode.set(row.zip_code, row.cbsa_code ?? null);
+        crosswalk.set(row.zip_code, {
+          countyFips: row.county_fips ?? null,
+          cbsaCode: row.cbsa_code ?? null,
+          defaultCity: row.zip_default_city?.trim() || null,
+          defaultState: row.zip_default_state?.trim() || null,
+        });
       }
     }
     if (page.length < PAGE_SIZE) break; // last page
@@ -120,9 +151,9 @@ async function fetchCrosswalkMaps(): Promise<{
 
   if (!fetchError) {
     console.log(`Crosswalk raw row count: ${totalRawRows}`);
-    console.log(`Loaded ${zipToCountyFips.size} crosswalk entries.`);
+    console.log(`Loaded ${crosswalk.size} crosswalk entries.`);
   }
-  return { zipToCountyFips, zipToCbsaCode };
+  return crosswalk;
 }
 
 async function main() {
@@ -146,26 +177,53 @@ async function main() {
   const publishedZips = computePublishedIds(scoredByPeriod, publish);
   assertNonEmpty("zip", publishedZips); // fail-closed before any write
 
-  // Optional enrichment from geography_crosswalk
-  const { zipToCountyFips, zipToCbsaCode } = await fetchCrosswalkMaps();
+  // Enrichment from geography_crosswalk: county/cbsa parents AND the
+  // authoritative city/state fallback when the API `name` lacks a city.
+  const crosswalk = await fetchCrosswalkMaps();
+
+  let backfilledCity = 0;
+  let skippedNoCity = 0;
 
   const entries = apiRows
     .filter((row) => publishedZips.has(row.code))
     .map((row) => {
-      const { zip, cityName, state } = parseZipRow(row);
+      const parsed = parseZipRow(row);
+      const cw = crosswalk.get(parsed.zip);
+
+      // Resolve city/state, backfilling from geography_crosswalk when the API
+      // row had no city (the ≈553 "01093-01093" malformed cases).
+      let { cityName, state } = parsed;
+      if (!parsed.hasCity) {
+        if (cw?.defaultCity && cw?.defaultState) {
+          cityName = titleCase(cw.defaultCity);
+          state = cw.defaultState.toUpperCase();
+          backfilledCity++;
+        } else {
+          // No city anywhere — exclude rather than emit a broken "<zip>-<zip>"
+          // page (skipped from both static params AND the sitemap, which read
+          // this same JSON).
+          skippedNoCity++;
+          return null;
+        }
+      }
+
       return {
-        zip,
-        slug: generateZipSlug(zip, cityName, state),
-        name: `${zip} (${cityName})`,
-        shortName: `${zip}, ${cityName}, ${state}`,
+        zip: parsed.zip,
+        slug: generateZipSlug(parsed.zip, cityName, state),
+        name: `${parsed.zip} (${cityName})`,
+        shortName: `${parsed.zip}, ${cityName}, ${state}`,
         state,
-        countyFips: zipToCountyFips.get(zip) ?? null,
-        cbsaCode: zipToCbsaCode.get(zip) ?? null,
+        countyFips: cw?.countyFips ?? null,
+        cbsaCode: cw?.cbsaCode ?? null,
       };
-    });
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   console.log(
     `Published ZIPs: ${entries.length} / ${apiRows.length} tracked (window: ${publish.join(", ")})`,
+  );
+  console.log(
+    `City backfilled from crosswalk: ${backfilledCity}; excluded (no city anywhere): ${skippedNoCity}`,
   );
 
   if (entries.length === 0) {

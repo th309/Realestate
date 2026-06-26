@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements";
 import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
@@ -22,6 +22,8 @@ import { PropertyHeader } from "./components/PropertyHeader";
 import { PropertyRecordCard } from "./components/PropertyRecordCard";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { useSelectedGoal } from "./lib/use-selected-goal";
+import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
+import { useMobileInputFocus } from "./lib/use-mobile-input-focus";
 import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { deriveCashflowSummary } from "./lib/cashflow-summary";
@@ -61,6 +63,7 @@ export default function AnalyzerClient({
   const { rental, flip, brrrr } = analyzer;
 
   const [inputsOpenMobile, setInputsOpenMobile] = useState(false);
+  const notesState = useAnalyzerNotes();
 
   const verdict = deriveVerdict({
     capRatePct: rental.capRatePct,
@@ -93,23 +96,10 @@ export default function AnalyzerClient({
   const displayAddress =
     rentcastData?.resolved_address ?? (address.trim() || null);
 
-  // Single entry point for property input on mobile: open the sheet. The focus
-  // move lives in the effect below so its timer is cleaned up on unmount.
+  // Single entry point for property input on mobile: open the sheet. Focus
+  // management on open lives in useMobileInputFocus.
   const openInputs = () => setInputsOpenMobile(true);
-
-  // When the input layer opens, move focus to whichever address field is on
-  // screen — the sticky sidebar copy on desktop, or the freshly-mounted sheet
-  // copy on mobile. The hidden copy has a null offsetParent, so it is skipped.
-  useEffect(() => {
-    if (!inputsOpenMobile) return;
-    const timer = setTimeout(() => {
-      const fields = Array.from(
-        document.querySelectorAll<HTMLInputElement>("[data-address-input]"),
-      );
-      fields.find((el) => el.offsetParent !== null)?.focus();
-    }, 80);
-    return () => clearTimeout(timer);
-  }, [inputsOpenMobile]);
+  useMobileInputFocus(inputsOpenMobile);
 
   const pickStrategy = (s: Strategy) => {
     setFocusedStrategy(s);
@@ -247,6 +237,9 @@ export default function AnalyzerClient({
           selectedGoal={selectedGoal ?? null}
           displayAddress={displayAddress}
           paramZip={params.zip}
+          notes={notesState.notes}
+          shareNotes={notesState.shareNotes}
+          onRegisterSave={notesState.registerSave}
         />
 
         {displayAddress && (
@@ -372,6 +365,10 @@ export default function AnalyzerClient({
                 },
                 aiEnabled: isPro && hasGradableInput,
               }}
+              notes={notesState.notes}
+              shareNotes={notesState.shareNotes}
+              onNotesChange={notesState.onNotesChange}
+              onSaveNotes={notesState.saveNotes}
             />
           </div>
         </div>

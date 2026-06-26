@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ShareButton } from "./ShareButton";
 import { PdfButton } from "./PdfButton";
 import { ShareAnalysisModal } from "./ShareAnalysisModal";
@@ -28,6 +28,13 @@ interface Props {
   aiPayload?: AiInsightPayload | null;
   /** Used for the PDF filename and the modal heading. */
   headingLabel: string;
+  /**
+   * Publishes a "save now" function up to the parent so the NotesSection
+   * "Save" button (which lives in a different subtree) can persist the
+   * current snapshot — notes included — without re-implementing the save
+   * flow. Called with `null` on unmount to clear the reference.
+   */
+  onRegisterSave?: (saveNow: (() => Promise<void>) | null) => void;
 }
 
 /**
@@ -50,6 +57,7 @@ export function AnalyzerHeaderActions({
   extras,
   aiPayload,
   headingLabel,
+  onRegisterSave,
 }: Props) {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,8 +76,10 @@ export function AnalyzerHeaderActions({
   const aiPayloadRef = useRef<AiInsightPayload | null | undefined>(aiPayload);
   aiPayloadRef.current = aiPayload;
 
-  const ensureToken = useCallback(async (): Promise<string | null> => {
-    if (shareToken) return shareToken;
+  // Builds the snapshot (pre-awaiting AI narratives) and persists it, returning
+  // the fresh share token. Always writes a new row — callers decide whether to
+  // reuse an existing token (Share/PDF) or force a re-save (notes edit).
+  const saveSnapshot = useCallback(async (): Promise<string | null> => {
     setSaveInProgress(true);
     setSaveError(null);
     try {
@@ -111,7 +121,24 @@ export function AnalyzerHeaderActions({
     } finally {
       setSaveInProgress(false);
     }
-  }, [shareToken]);
+  }, []);
+
+  // Share/PDF reuse an existing token (same link) once one exists.
+  const ensureToken = useCallback(async (): Promise<string | null> => {
+    if (shareToken) return shareToken;
+    return saveSnapshot();
+  }, [shareToken, saveSnapshot]);
+
+  // Publish a "save now" handle so the NotesSection Save button (different
+  // subtree) can persist the current snapshot — notes included. It always
+  // re-saves so freshly typed notes land even after a share link was created.
+  useEffect(() => {
+    if (!onRegisterSave) return;
+    onRegisterSave(async () => {
+      await saveSnapshot();
+    });
+    return () => onRegisterSave(null);
+  }, [onRegisterSave, saveSnapshot]);
 
   const handleShareClick = useCallback(async () => {
     emitAnalyzerEvent("analyzer_share_button_clicked", { is_signed_in: isPro });

@@ -81,7 +81,7 @@ export function ScoreWidget({
   onScoreLoad,
   size = 100,
   strokeWidth = 6,
-  showGrade = true,
+  showGrade = false,
   showLabel = true,
   className = "",
 }: ScoreWidgetProps) {

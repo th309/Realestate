@@ -65,6 +65,10 @@ export interface AnalyzerSnapshotExtras {
     subjectLon?: number | null;
   };
   aiNarratives?: RichResultSnapshot["aiNarratives"];
+  /** Free-text owner notes from the "My Notes" section. */
+  notes?: string;
+  /** Whether `notes` is visible on the public share link / PDF. */
+  shareNotes?: boolean;
 }
 
 /**
@@ -100,6 +104,8 @@ export function buildAnalyzerSnapshot(
     bestStrategy: extras.bestStrategy,
     comps: extras.comps,
     aiNarratives: extras.aiNarratives,
+    notes: extras.notes,
+    shareNotes: extras.shareNotes,
   };
 
   return {

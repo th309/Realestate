@@ -34,10 +34,13 @@ export default function SavedClient({ id }: { id: string }) {
     rental?: Partial<RentalResult>;
     flip?: FlipResult | null;
     brrrr?: BrrrrResult | null;
+    notes?: string;
+    shareNotes?: boolean;
   };
   const rental = (result.rental ?? {}) as Partial<RentalResult>;
   const flip = result.flip ?? null;
   const brrrr = result.brrrr ?? null;
+  const notes = result.notes?.trim() ? result.notes : null;
 
   const piqScore =
     (row.market_context as { piq_score?: { value?: number | null } } | null)
@@ -66,6 +69,21 @@ export default function SavedClient({ id }: { id: string }) {
           <Hero verdict={verdict} kpiTiles={kpiTiles} />
           <ThreeStrategyGrid strategies={strategyCards} />
           {row.market_context && <MarketContextSection {...marketProps} />}
+          {notes && (
+            <section className="rounded-xl bg-surface border border-outline-variant p-4 space-y-2">
+              <h3 className="text-sm font-semibold text-on-surface">
+                My Notes
+              </h3>
+              <p className="text-sm text-on-surface whitespace-pre-wrap">
+                {notes}
+              </p>
+              {result.shareNotes && (
+                <p className="text-xs text-on-surface-variant">
+                  Shared with client (visible in the share link).
+                </p>
+              )}
+            </section>
+          )}
         </div>
 
         <div className="mt-8 text-center">

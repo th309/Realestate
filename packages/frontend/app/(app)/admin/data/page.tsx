@@ -7,17 +7,17 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
-import { StatusBanner } from './components/StatusBanner';
-import { DataCardsTab } from './components/DataCardsTab';
-import { DataSourcesTab } from './components/DataSourcesTab';
-import { PipelineRunsTab } from './components/PipelineRunsTab';
-import { DataAlertsTab } from './components/DataAlertsTab';
+import { useState, useEffect, useCallback } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { StatusBanner } from "./components/StatusBanner";
+import { DataCardsTab } from "./components/DataCardsTab";
+import { DataSourcesTab } from "./components/DataSourcesTab";
+import { PipelineRunsTab } from "./components/PipelineRunsTab";
+import { DataAlertsTab } from "./components/DataAlertsTab";
 
-type TabId = 'data-cards' | 'data-sources' | 'pipeline-runs' | 'alerts';
+type TabId = "data-cards" | "data-sources" | "pipeline-runs" | "alerts";
 
 interface Tab {
   id: TabId;
@@ -26,14 +26,26 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { id: 'data-cards', label: 'Data Cards', description: 'Metric display health and coverage' },
-  { id: 'data-sources', label: 'Data Sources', description: 'Source availability and freshness' },
-  { id: 'pipeline-runs', label: 'Pipeline Runs', description: 'ETL pipeline status' },
-  { id: 'alerts', label: 'Alerts', description: 'Active data alerts' },
+  {
+    id: "data-cards",
+    label: "Data Cards",
+    description: "Metric display health and coverage",
+  },
+  {
+    id: "data-sources",
+    label: "Data Sources",
+    description: "Source availability and freshness",
+  },
+  {
+    id: "pipeline-runs",
+    label: "Pipeline Runs",
+    description: "ETL pipeline status",
+  },
+  { id: "alerts", label: "Alerts", description: "Active data alerts" },
 ];
 
 interface HealthSummary {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   cardsTotal: number;
   cardsHealthy: number;
   sourcesTotal: number;
@@ -44,8 +56,10 @@ interface HealthSummary {
 }
 
 export default function DataAdminPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('data-cards');
-  const [healthSummary, setHealthSummary] = useState<HealthSummary | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("data-cards");
+  const [healthSummary, setHealthSummary] = useState<HealthSummary | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -53,38 +67,24 @@ export default function DataAdminPage() {
     setLoading(true);
     try {
       const response = await fetchAPIRaw(`/api/health/data-summary`, {
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
         setHealthSummary(data);
       } else {
-        // Mock data for development
-        setHealthSummary({
-          status: 'healthy',
-          cardsTotal: 48,
-          cardsHealthy: 46,
-          sourcesTotal: 6,
-          sourcesAvailable: 6,
-          pipelinesTotal: 10,
-          pipelinesHealthy: 9,
-          lastCheck: new Date().toISOString(),
-        });
+        // Surface the real failure instead of faking a "healthy" status.
+        // A null summary renders the StatusBanner error state.
+        console.error(
+          `Health summary request failed: ${response.status} ${response.statusText}`,
+        );
+        setHealthSummary(null);
       }
     } catch (error) {
-      console.error('Error fetching health summary:', error);
-      // Mock data for development
-      setHealthSummary({
-        status: 'healthy',
-        cardsTotal: 48,
-        cardsHealthy: 46,
-        sourcesTotal: 6,
-        sourcesAvailable: 6,
-        pipelinesTotal: 10,
-        pipelinesHealthy: 9,
-        lastCheck: new Date().toISOString(),
-      });
+      console.error("Error fetching health summary:", error);
+      // Surface the real failure instead of faking a "healthy" status.
+      setHealthSummary(null);
     } finally {
       setLoading(false);
       setLastRefresh(new Date());
@@ -105,13 +105,13 @@ export default function DataAdminPage() {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'data-cards':
+      case "data-cards":
         return <DataCardsTab />;
-      case 'data-sources':
+      case "data-sources":
         return <DataSourcesTab />;
-      case 'pipeline-runs':
+      case "pipeline-runs":
         return <PipelineRunsTab />;
-      case 'alerts':
+      case "alerts":
         return <DataAlertsTab />;
       default:
         return null;
@@ -139,7 +139,7 @@ export default function DataAdminPage() {
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50"
                 data-testid="refresh-button"
               >
-                {loading ? 'Refreshing...' : 'Refresh'}
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-tertiary-container text-on-tertiary-container">
                 Admin Access
@@ -176,8 +176,8 @@ export default function DataAdminPage() {
                   border-b-2 transition-colors
                   ${
                     activeTab === tab.id
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
+                      ? "border-primary text-primary"
+                      : "border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline"
                   }
                 `}
                 title={tab.description}

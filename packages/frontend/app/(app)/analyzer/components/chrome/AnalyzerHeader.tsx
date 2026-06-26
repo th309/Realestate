@@ -19,6 +19,12 @@ interface Props {
   selectedGoal: string | null;
   displayAddress: string | null;
   paramZip: string | undefined;
+  /** Owner "My Notes" free-text — saved into the snapshot. */
+  notes: string;
+  /** Whether notes are shared on the public link / PDF. */
+  shareNotes: boolean;
+  /** Receives a "save now" handle so the NotesSection button can persist. */
+  onRegisterSave?: (saveNow: (() => Promise<void>) | null) => void;
 }
 
 /**
@@ -64,6 +70,8 @@ export function AnalyzerHeader(p: Props) {
       yourPricePerSqft: cv.yourPricePerSqft,
       subjectPrice: cv.subjectPrice,
     },
+    notes: p.notes,
+    shareNotes: p.shareNotes,
   });
 
   return (
@@ -74,6 +82,7 @@ export function AnalyzerHeader(p: Props) {
       <AnalyzerHeaderActions
         isPro={p.isPro}
         headingLabel={p.headingLabel}
+        onRegisterSave={p.onRegisterSave}
         {...bundle}
       />
     </header>

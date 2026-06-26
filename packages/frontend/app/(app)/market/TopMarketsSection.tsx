@@ -21,16 +21,6 @@ const SCORE_TABS: { value: TopMarketsScoreType; label: string }[] = [
 
 const LIMIT_OPTIONS = [10, 25, 50, 100] as const;
 
-function getGradeColor(grade: string): string {
-  if (!grade) return "text-on-surface-variant";
-  const g = grade.toUpperCase();
-  if (g.startsWith("A")) return "text-green-600 dark:text-green-400";
-  if (g.startsWith("B")) return "text-blue-600 dark:text-blue-400";
-  if (g.startsWith("C")) return "text-amber-600 dark:text-amber-400";
-  if (g.startsWith("D")) return "text-orange-600 dark:text-orange-400";
-  return "text-red-600 dark:text-red-400";
-}
-
 function getScoreBgColor(score: number): string {
   if (score >= 80) return "bg-green-500/10";
   if (score >= 60) return "bg-blue-500/10";
@@ -183,11 +173,6 @@ export function TopMarketsSection() {
                   className={`px-2.5 py-1 rounded-lg text-sm font-semibold tabular-nums ${getScoreBgColor(market.score)} ${getScoreTextColor(market.score)}`}
                 >
                   {market.score.toFixed(1)}
-                </div>
-                <div
-                  className={`text-sm font-bold w-8 text-center ${getGradeColor(market.grade)}`}
-                >
-                  {market.grade}
                 </div>
                 <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-primary transition-colors shrink-0" />
               </Link>

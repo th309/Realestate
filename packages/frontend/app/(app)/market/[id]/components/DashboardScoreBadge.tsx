@@ -24,13 +24,7 @@ export function DashboardScoreBadge({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <ScoreDisplay
-        value={score}
-        size={60}
-        strokeWidth={5}
-        showGrade={true}
-        showLabel={false}
-      />
+      <ScoreDisplay value={score} size={60} strokeWidth={5} showLabel={false} />
       <div className="flex-1">
         <div className="text-sm font-medium text-on-surface">{label}</div>
         <div className="text-xs text-on-surface-variant">

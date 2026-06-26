@@ -2,10 +2,7 @@
 
 import React from "react";
 
-import {
-  ScoreDisplay,
-  getLetterGrade,
-} from "@/app/components/scoring/ScoreDisplay";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import { AIAnalysisBlock } from "../core";
 import type { ReportInstance } from "../../../../types";
 
@@ -66,10 +63,6 @@ export function ClientOverview({
     (report as any).markethealth_score ??
     null;
 
-  const grade =
-    (report.scores_snapshot as any)?.markethealth_grade ??
-    (score !== null ? getLetterGrade(score) : null);
-
   const verdict = score !== null ? getQuickVerdict(score) : null;
 
   const aiSummary =
@@ -128,22 +121,6 @@ export function ClientOverview({
             showGrade={false}
             showLabel={false}
           />
-
-          {/* Grade Badge */}
-          {grade && (
-            <div className="flex items-center gap-2 mt-3">
-              <span
-                className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold"
-                style={{
-                  backgroundColor: "var(--report-cream-dark)",
-                  color: "var(--report-navy)",
-                  fontFamily: "var(--report-font-display)",
-                }}
-              >
-                Grade: {grade}
-              </span>
-            </div>
-          )}
 
           {/* PropertyIQ Score Label */}
           <p

@@ -73,6 +73,15 @@ export interface RichResultSnapshot {
   // ─── market context echo (alternate location) ───────
   marketContext?: MarketContext | Record<string, unknown> | null;
 
+  // ─── user notes ──────────────────────────────────────
+  // `notes` is the free-text the owner typed in the "My Notes" section.
+  // `shareNotes` gates whether those notes are surfaced on the public
+  // share link / PDF (the "Share with client" checkbox). Private notes are
+  // still stored either way (so they reload on the owner's saved page); the
+  // readonly share view only renders them when `shareNotes === true`.
+  notes?: string;
+  shareNotes?: boolean;
+
   // ─── AI narratives (pre-awaited before save) ────────
   aiNarratives?: {
     recommendation_analysis?: string | null;

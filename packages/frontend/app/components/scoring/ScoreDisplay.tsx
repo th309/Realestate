@@ -33,7 +33,16 @@ export interface ScoreDisplayProps {
   strokeWidth?: number;
   /** Background color for the ring (default: #e5e7eb) */
   backgroundColor?: string;
-  /** Whether to show the letter grade badge (default: true) */
+  /**
+   * Whether to show the percentile letter-grade badge (A+/A/.../F) inside the
+   * ring (default: false). The PropertyIQ Score is a momentum/timing signal, so
+   * the harsh quality-grade "F" undercuts the momentum reframe — the score
+   * number + momentum label/arrow tell the whole story. Kept as an opt-in prop
+   * for any legacy surface that genuinely needs it; new surfaces should not.
+   * NOTE: this is the SCORE percentile grade, NOT the data-quality CONFIDENCE
+   * badge (A/B/C/F) rendered by ScoreWidget/ConfidenceDisplay — those are
+   * unrelated and stay visible.
+   */
   showGrade?: boolean;
   /** Whether to show the label (EXCELLENT, etc.) (default: true) */
   showLabel?: boolean;
@@ -181,7 +190,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   size = 100,
   strokeWidth = 6,
   backgroundColor = "var(--color-gray-200, #e5e7eb)",
-  showGrade = true,
+  showGrade = false,
   showLabel = true,
   className = "",
 }) => {

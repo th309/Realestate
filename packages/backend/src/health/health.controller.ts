@@ -3,6 +3,7 @@
  *
  * Exposes API endpoints for monitoring data health:
  * - GET /api/health - Simple healthcheck for Railway
+ * - GET /api/health/data-summary - Aggregate cards/sources/pipelines health for admin dashboard
  * - GET /api/health/data-cards - Check all 54 data card metrics
  * - GET /api/health/data-sources - Check data source availability
  * - GET /api/health/data-freshness - Get latest data freshness dates
@@ -76,6 +77,67 @@ export class HealthController {
     }
 
     return response;
+  }
+
+  @Get('data-summary')
+  @ApiOperation({
+    summary: 'Aggregate data health summary for the admin dashboard',
+    description:
+      'Composes the data-cards, data-sources, and pipeline-run health ' +
+      'services into the flat counts the /admin/data status banner renders. ' +
+      'Pipelines are mapped to data-source freshness (one ingestion pipeline ' +
+      'per source); a pipeline is "healthy" when its source data is fresh.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Flat health summary: status + cards/sources/pipelines totals & healthy counts',
+  })
+  async getDataSummary() {
+    const [cards, sources] = await Promise.all([
+      this.dataCardsHealth.checkAllMetrics(),
+      this.dataSourcesHealth.checkAllSources(),
+    ]);
+
+    const cardsTotal = cards.summary.total;
+    const cardsHealthy = cards.summary.healthy;
+    const sourcesTotal = sources.summary.total;
+    const sourcesAvailable = sources.summary.available;
+
+    // Each data source corresponds to an ingestion pipeline. A pipeline is
+    // "healthy" when its source data is fresh (recent enough for its cadence).
+    const pipelinesTotal = sources.summary.total;
+    const pipelinesHealthy = sources.summary.fresh;
+
+    // Derive overall status from the real component states. Unhealthy if any
+    // source is unavailable or many cards are broken; degraded if anything is
+    // stale or partially missing; otherwise healthy.
+    let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    if (
+      sourcesAvailable < sourcesTotal ||
+      cards.status === 'unhealthy' ||
+      sources.status === 'unhealthy'
+    ) {
+      status = 'unhealthy';
+    } else if (
+      pipelinesHealthy < pipelinesTotal ||
+      cardsHealthy < cardsTotal ||
+      cards.status === 'degraded' ||
+      sources.status === 'degraded'
+    ) {
+      status = 'degraded';
+    }
+
+    return {
+      status,
+      cardsTotal,
+      cardsHealthy,
+      sourcesTotal,
+      sourcesAvailable,
+      pipelinesTotal,
+      pipelinesHealthy,
+      lastCheck: new Date().toISOString(),
+    };
   }
 
   @Get('data-cards')
