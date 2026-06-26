@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { readMethodologyReport } from "@/lib/scores/methodology-report";
 import {
   DollarSign,
   Briefcase,
@@ -85,40 +84,8 @@ const KEY_FINDINGS = [
   },
 ];
 
-function resolveReportPath() {
-  // NOTE: the "(app)" route-group segment IS part of the on-disk path (it is
-  // only hidden from the URL). Omitting it (pre-route-group-split paths) made
-  // both candidates miss → fs.readFileSync ENOENT → 500 on this page.
-  const candidates = [
-    // Co-located file (works in Docker/Vercel where docs/ isn't available)
-    path.join(
-      process.cwd(),
-      "app",
-      "(app)",
-      "scores",
-      "methodology",
-      "validation-report.md",
-    ),
-    // Workspace root (Turbopack dev: cwd = workspace root)
-    path.join(
-      process.cwd(),
-      "packages",
-      "frontend",
-      "app",
-      "(app)",
-      "scores",
-      "methodology",
-      "validation-report.md",
-    ),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return candidates[0];
-}
-
 export default function MethodologyPage() {
-  const reportContent = fs.readFileSync(resolveReportPath(), "utf-8");
+  const reportContent = readMethodologyReport();
 
   return (
     <div className="mt-12 space-y-16">
