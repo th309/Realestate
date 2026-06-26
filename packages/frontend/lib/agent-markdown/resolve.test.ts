@@ -1,8 +1,10 @@
-import fs from "fs";
 import { resolveMarkdown } from "./resolve";
 import { getAllSlugs } from "@/lib/blog";
+import * as methodologyReport from "@/lib/scores/methodology-report";
 
 describe("resolveMarkdown", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("returns markdown for a real blog post, prefixed with its title", () => {
     const slug = getAllSlugs()[0];
     expect(slug).toBeTruthy();
@@ -24,10 +26,11 @@ describe("resolveMarkdown", () => {
   });
 
   it("returns null when the methodology report read fails", () => {
-    const spy = vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
-      throw new Error("ENOENT");
-    });
+    vi.spyOn(methodologyReport, "readMethodologyReport").mockImplementationOnce(
+      () => {
+        throw new Error("ENOENT");
+      },
+    );
     expect(resolveMarkdown("/scores/methodology")).toBeNull();
-    spy.mockRestore();
   });
 });
