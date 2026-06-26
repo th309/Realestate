@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 const PAGE_URL = "https://www.propertyiq.app/reports/q2-2026-by-state";
@@ -72,54 +73,221 @@ interface MarketRow {
 }
 
 const REPORT_DATA: MarketRow[] = [
-  { rank: 1, state: "California", metro: "San Francisco, CA", score: 99, grade: "A+" },
-  { rank: 2, state: "Nebraska", metro: "North Platte, NE", score: 99, grade: "A+" },
-  { rank: 3, state: "New York", metro: "Rochester, NY", score: 99, grade: "A+" },
-  { rank: 4, state: "Connecticut", metro: "Norwich, CT", score: 98, grade: "A+" },
-  { rank: 5, state: "New Hampshire", metro: "Manchester, NH", score: 98, grade: "A+" },
-  { rank: 6, state: "Washington", metro: "Oak Harbor, WA", score: 98, grade: "A+" },
-  { rank: 7, state: "Massachusetts", metro: "Springfield, MA", score: 97, grade: "A+" },
-  { rank: 8, state: "New Mexico", metro: "Los Alamos, NM", score: 97, grade: "A+" },
-  { rank: 9, state: "Pennsylvania", metro: "Lancaster, PA", score: 97, grade: "A+" },
-  { rank: 10, state: "New Jersey", metro: "Allentown-Bethlehem-Easton, PA-NJ", score: 96, grade: "A", crossState: true },
-  { rank: 11, state: "Rhode Island", metro: "Providence, RI", score: 96, grade: "A" },
+  {
+    rank: 1,
+    state: "California",
+    metro: "San Francisco, CA",
+    score: 99,
+    grade: "A+",
+  },
+  {
+    rank: 2,
+    state: "Nebraska",
+    metro: "North Platte, NE",
+    score: 99,
+    grade: "A+",
+  },
+  {
+    rank: 3,
+    state: "New York",
+    metro: "Rochester, NY",
+    score: 99,
+    grade: "A+",
+  },
+  {
+    rank: 4,
+    state: "Connecticut",
+    metro: "Norwich, CT",
+    score: 98,
+    grade: "A+",
+  },
+  {
+    rank: 5,
+    state: "New Hampshire",
+    metro: "Manchester, NH",
+    score: 98,
+    grade: "A+",
+  },
+  {
+    rank: 6,
+    state: "Washington",
+    metro: "Oak Harbor, WA",
+    score: 98,
+    grade: "A+",
+  },
+  {
+    rank: 7,
+    state: "Massachusetts",
+    metro: "Springfield, MA",
+    score: 97,
+    grade: "A+",
+  },
+  {
+    rank: 8,
+    state: "New Mexico",
+    metro: "Los Alamos, NM",
+    score: 97,
+    grade: "A+",
+  },
+  {
+    rank: 9,
+    state: "Pennsylvania",
+    metro: "Lancaster, PA",
+    score: 97,
+    grade: "A+",
+  },
+  {
+    rank: 10,
+    state: "New Jersey",
+    metro: "Allentown-Bethlehem-Easton, PA-NJ",
+    score: 96,
+    grade: "A",
+    crossState: true,
+  },
+  {
+    rank: 11,
+    state: "Rhode Island",
+    metro: "Providence, RI",
+    score: 96,
+    grade: "A",
+  },
   { rank: 12, state: "Iowa", metro: "Spencer, IA", score: 95, grade: "A" },
   { rank: 13, state: "Kansas", metro: "Ottawa, KS", score: 95, grade: "A" },
-  { rank: 14, state: "Wisconsin", metro: "Milwaukee, WI", score: 95, grade: "A" },
+  {
+    rank: 14,
+    state: "Wisconsin",
+    metro: "Milwaukee, WI",
+    score: 95,
+    grade: "A",
+  },
   { rank: 15, state: "Illinois", metro: "Lincoln, IL", score: 94, grade: "A" },
   { rank: 16, state: "Maine", metro: "Lewiston, ME", score: 94, grade: "A" },
-  { rank: 17, state: "Minnesota", metro: "La Crosse-Onalaska, WI-MN", score: 94, grade: "A", crossState: true },
-  { rank: 18, state: "Michigan", metro: "Grand Rapids, MI", score: 93, grade: "A" },
+  {
+    rank: 17,
+    state: "Minnesota",
+    metro: "La Crosse-Onalaska, WI-MN",
+    score: 94,
+    grade: "A",
+    crossState: true,
+  },
+  {
+    rank: 18,
+    state: "Michigan",
+    metro: "Grand Rapids, MI",
+    score: 93,
+    grade: "A",
+  },
   { rank: 19, state: "Ohio", metro: "Portsmouth, OH", score: 93, grade: "A" },
   { rank: 20, state: "Virginia", metro: "Richmond, VA", score: 93, grade: "A" },
-  { rank: 21, state: "West Virginia", metro: "Fairmont, WV", score: 93, grade: "A" },
-  { rank: 22, state: "Oklahoma", metro: "Muskogee, OK", score: 92, grade: "A-" },
-  { rank: 23, state: "Maryland", metro: "Baltimore, MD", score: 91, grade: "A-" },
-  { rank: 24, state: "Missouri", metro: "St. Louis, MO", score: 91, grade: "A-" },
-  { rank: 25, state: "North Carolina", metro: "Virginia Beach-Norfolk-Newport News, VA-NC", score: 91, grade: "A-", crossState: true },
+  {
+    rank: 21,
+    state: "West Virginia",
+    metro: "Fairmont, WV",
+    score: 93,
+    grade: "A",
+  },
+  {
+    rank: 22,
+    state: "Oklahoma",
+    metro: "Muskogee, OK",
+    score: 92,
+    grade: "A-",
+  },
+  {
+    rank: 23,
+    state: "Maryland",
+    metro: "Baltimore, MD",
+    score: 91,
+    grade: "A-",
+  },
+  {
+    rank: 24,
+    state: "Missouri",
+    metro: "St. Louis, MO",
+    score: 91,
+    grade: "A-",
+  },
+  {
+    rank: 25,
+    state: "North Carolina",
+    metro: "Virginia Beach-Norfolk-Newport News, VA-NC",
+    score: 91,
+    grade: "A-",
+    crossState: true,
+  },
   { rank: 26, state: "Indiana", metro: "Decatur, IN", score: 90, grade: "A-" },
-  { rank: 27, state: "South Dakota", metro: "Sioux City, IA-NE-SD", score: 89, grade: "B+", crossState: true },
-  { rank: 28, state: "Nevada", metro: "Carson City, NV", score: 85, grade: "B" },
+  {
+    rank: 27,
+    state: "South Dakota",
+    metro: "Sioux City, IA-NE-SD",
+    score: 89,
+    grade: "B+",
+    crossState: true,
+  },
+  {
+    rank: 28,
+    state: "Nevada",
+    metro: "Carson City, NV",
+    score: 85,
+    grade: "B",
+  },
   { rank: 29, state: "Alabama", metro: "Gadsden, AL", score: 82, grade: "B-" },
   { rank: 30, state: "Utah", metro: "Vernal, UT", score: 82, grade: "B-" },
   { rank: 31, state: "Georgia", metro: "Jesup, GA", score: 81, grade: "B-" },
   { rank: 32, state: "Oregon", metro: "Portland, OR", score: 81, grade: "B-" },
   { rank: 33, state: "Delaware", metro: "Dover, DE", score: 80, grade: "B-" },
-  { rank: 34, state: "Mississippi", metro: "McComb, MS", score: 79, grade: "C+" },
+  {
+    rank: 34,
+    state: "Mississippi",
+    metro: "McComb, MS",
+    score: 79,
+    grade: "C+",
+  },
   { rank: 35, state: "Texas", metro: "Abilene, TX", score: 79, grade: "C+" },
   { rank: 36, state: "Alaska", metro: "Anchorage, AK", score: 77, grade: "C+" },
   { rank: 37, state: "Colorado", metro: "Denver, CO", score: 76, grade: "C" },
-  { rank: 38, state: "Kentucky", metro: "Cincinnati, OH-KY-IN", score: 73, grade: "C", crossState: true },
+  {
+    rank: 38,
+    state: "Kentucky",
+    metro: "Cincinnati, OH-KY-IN",
+    score: 73,
+    grade: "C",
+    crossState: true,
+  },
   { rank: 39, state: "Idaho", metro: "Moscow, ID", score: 72, grade: "C-" },
   { rank: 40, state: "Tennessee", metro: "Athens, TN", score: 70, grade: "C-" },
   { rank: 41, state: "Vermont", metro: "Barre, VT", score: 66, grade: "D" },
   { rank: 42, state: "Wyoming", metro: "Casper, WY", score: 64, grade: "D" },
-  { rank: 43, state: "Louisiana", metro: "Alexandria, LA", score: 60, grade: "D-" },
-  { rank: 44, state: "Arkansas", metro: "Russellville, AR", score: 56, grade: "F" },
-  { rank: 45, state: "South Carolina", metro: "Gaffney, SC", score: 53, grade: "F" },
+  {
+    rank: 43,
+    state: "Louisiana",
+    metro: "Alexandria, LA",
+    score: 60,
+    grade: "D-",
+  },
+  {
+    rank: 44,
+    state: "Arkansas",
+    metro: "Russellville, AR",
+    score: 56,
+    grade: "F",
+  },
+  {
+    rank: 45,
+    state: "South Carolina",
+    metro: "Gaffney, SC",
+    score: 53,
+    grade: "F",
+  },
   { rank: 46, state: "Florida", metro: "Lakeland, FL", score: 50, grade: "F" },
   { rank: 47, state: "Arizona", metro: "Phoenix, AZ", score: 45, grade: "F" },
-  { rank: 48, state: "North Dakota", metro: "Minot, ND", score: 42, grade: "F" },
+  {
+    rank: 48,
+    state: "North Dakota",
+    metro: "Minot, ND",
+    score: 42,
+    grade: "F",
+  },
   { rank: 49, state: "Hawaii", metro: "Honolulu, HI", score: 33, grade: "F" },
   { rank: 50, state: "Montana", metro: "Butte, MT", score: 17, grade: "F" },
 ];
@@ -180,7 +348,6 @@ export default function Q2StateReportPage() {
 
       <div className="min-h-screen bg-surface">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-
           {/* Breadcrumb */}
           <nav
             className="text-sm text-on-surface-variant mb-6"
@@ -365,9 +532,7 @@ export default function Q2StateReportPage() {
                     <th className="px-4 py-3 text-left font-semibold w-12">
                       #
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold">
-                      State
-                    </th>
+                    <th className="px-4 py-3 text-left font-semibold">State</th>
                     <th className="px-4 py-3 text-left font-semibold">
                       Top Metro
                     </th>
@@ -384,17 +549,13 @@ export default function Q2StateReportPage() {
                     <tr
                       key={row.rank}
                       className={`transition-colors hover:bg-surface-container/50 ${
-                        i % 2 === 0
-                          ? "bg-surface"
-                          : "bg-surface-container/20"
+                        i % 2 === 0 ? "bg-surface" : "bg-surface-container/20"
                       }`}
                     >
                       <td className="px-4 py-3 text-on-surface-variant font-mono text-xs">
                         {row.rank}
                       </td>
-                      <td className="px-4 py-3 text-on-surface">
-                        {row.state}
-                      </td>
+                      <td className="px-4 py-3 text-on-surface">{row.state}</td>
                       <td className="px-4 py-3">
                         <MetroCell
                           metro={row.metro}
@@ -496,9 +657,10 @@ export default function Q2StateReportPage() {
               Explore Any Market &mdash; Free
             </h2>
             <p className="text-on-surface-variant max-w-xl mx-auto mb-6 leading-relaxed">
-              PropertyIQ tracks 925 metro areas and 33,000+ ZIP codes. Get full
-              score breakdowns, home value trends, rent data, and AI-powered
-              market analysis &mdash; no credit card required.
+              PropertyIQ tracks {COVERAGE_COPY.metros} metro areas and{" "}
+              {COVERAGE_COPY.zips} ZIP codes. Get full score breakdowns, home
+              value trends, rent data, and AI-powered market analysis &mdash; no
+              credit card required.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
@@ -553,10 +715,7 @@ export default function Q2StateReportPage() {
             >
               Scores
             </Link>
-            <Link
-              href="/blog"
-              className="hover:text-primary transition-colors"
-            >
+            <Link href="/blog" className="hover:text-primary transition-colors">
               Blog
             </Link>
             <Link

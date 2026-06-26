@@ -18,6 +18,8 @@ export interface UseScreenerMoversOptions {
   state?: string;
   limit?: number;
   enabled?: boolean;
+  /** Market-size floor (de-noise). Rows with NULL population pass through. */
+  populationMin?: number;
 }
 
 export interface UseScreenerMoversResult {
@@ -32,12 +34,24 @@ export function useScreenerMovers(
   moverWindow: MoverWindow,
   options: UseScreenerMoversOptions = {},
 ): UseScreenerMoversResult {
-  const { state, limit = 25, enabled = true } = options;
+  const { state, limit = 25, enabled = true, populationMin } = options;
 
   const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ["screener-movers", geoLevel, moverWindow, state ?? null, limit],
+    queryKey: [
+      "screener-movers",
+      geoLevel,
+      moverWindow,
+      state ?? null,
+      limit,
+      populationMin ?? null,
+    ],
     queryFn: () =>
-      fetchScreenerMovers(geoLevel, { window: moverWindow, state, limit }),
+      fetchScreenerMovers(geoLevel, {
+        window: moverWindow,
+        state,
+        limit,
+        populationMin,
+      }),
     enabled,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,

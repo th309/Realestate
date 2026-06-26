@@ -17,6 +17,7 @@ import {
   Inject,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
@@ -25,6 +26,7 @@ import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiThrottleGuard } from '../api-throttle.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 
 const TABLE_MAP: Record<string, string> = {
@@ -40,6 +42,7 @@ const VALID_GEO_LEVELS = Object.keys(TABLE_MAP);
 const MAX_TIMESERIES_ROWS = 1000;
 
 @Controller('api/v1/timeseries')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class TimeseriesV1Controller {

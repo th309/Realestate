@@ -88,6 +88,36 @@ export const V4_CLAIMS = {
   bottomQuintile3YExcess: -1.29,
 } as const;
 
+/**
+ * Headline coverage copy — single source of truth for ALL unlabeled marketing
+ * coverage claims (homepage, /data, /scores, /about, /help, metadata, llms.txt).
+ *
+ * Values are rounded DOWN from the live scored counts (935 / 3,137 / 29,417 at
+ * 2026-05-31, see V4_CLAIMS.{metros,counties,zips}Scored) to conservative round
+ * thresholds, so the copy stays true as the monthly rescore adds/drops a few
+ * regions. NEVER write a raw "935 / 3,150 / 34,000 / 925 / 33,000+" coverage
+ * string anywhere — import these tokens instead.
+ *
+ * Labeled denominators (e.g. "865 metros, full-formula era" / "380 metros,
+ * backtest sample") are NOT headline coverage and keep their own explicit numbers.
+ */
+export const COVERAGE_COPY = {
+  /** "900+" (live: 935) */
+  metros: "900+",
+  /** "3,000+" (live: 3,137) */
+  counties: "3,000+",
+  /** "29,000+" (live: 29,417) */
+  zips: "29,000+",
+  /** Numeric floor values — for animated count-up tiles that render N + "+"
+   *  (toLocaleString gives "900" / "3,000" / "29,000"). Keep in step with the
+   *  string tokens above. */
+  metrosNum: 900,
+  countiesNum: 3_000,
+  zipsNum: 29_000,
+  /** Canonical sentence: "900+ US metros, 3,000+ counties, and 29,000+ ZIP codes" */
+  sentence: "900+ US metros, 3,000+ counties, and 29,000+ ZIP codes",
+} as const;
+
 /** Returns formatted claims for homepage hero section */
 export function getV4HomepageClaims() {
   return {

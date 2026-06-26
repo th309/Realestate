@@ -5,7 +5,7 @@
 **Inputs:** 12-month and 3-month Zillow ZHVI price momentum; Realtor.com median days on market and share of listings with price cuts. No Redfin data.
 **Training Target:** 3-year forward excess return vs state median appreciation
 **Benchmark:** State median appreciation (controls for statewide market cycles)
-**Scored Coverage:** ~935 metros, ~3,150 counties, ~34,000 ZIP codes; monthly history backfilled to January 2001
+**Scored Coverage:** 900+ metros, 3,000+ counties, 29,000+ ZIP codes; monthly history backfilled to January 2001
 **Validation Sample:** 865 metros / 3,061 counties / 25,783 ZIPs with observed 3-year forward outcomes (2001–2023 scoring vintages)
 **Methodology:** Cross-sectional percentile rank re-centered so the zero-crossing maps to 50; per-month Spearman rank correlation of score vs forward excess return, aggregated by calendar year; permutation significance vs shuffled-target null; full-period and era-split robustness.
 
@@ -193,7 +193,7 @@ Interpretation: a score is a relative, mean-reverting ranking of current market 
 
 ## 10. Appendix
 
-**Coverage.** Scored monthly at metro (~935), county (~3,150), and ZIP (~34,000) levels, January 2001 through the latest available month. Validation requires an observed 3-year forward outcome, limiting the validation sample to 2001–2023 scoring vintages (865 metros / 3,061 counties / 25,783 ZIPs).
+**Coverage.** Scored monthly at metro (900+), county (3,000+), and ZIP (29,000+) levels, January 2001 through the latest available month. Validation requires an observed 3-year forward outcome, limiting the validation sample to 2001–2023 scoring vintages (865 metros / 3,061 counties / 25,783 ZIPs).
 
 **Data sources.**
 

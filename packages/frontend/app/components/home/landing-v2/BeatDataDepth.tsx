@@ -1,3 +1,4 @@
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 
@@ -16,9 +17,9 @@ import { Reveal } from "./Reveal";
  */
 
 const COVERAGE_STATS: { value: string; label: string }[] = [
-  { value: "935", label: "metros" },
-  { value: "3,150", label: "counties" },
-  { value: "34,000", label: "ZIP codes" },
+  { value: COVERAGE_COPY.metros, label: "metros" },
+  { value: COVERAGE_COPY.counties, label: "counties" },
+  { value: COVERAGE_COPY.zips, label: "ZIP codes" },
 ];
 
 const SOURCES = ["Zillow", "Realtor.com", "Census", "FRED", "BLS"];
@@ -42,11 +43,17 @@ export function BeatDataDepth() {
 
       <Reveal delayMs={140} className="mt-3">
         <p className="max-w-2xl text-base leading-relaxed text-on-surface-variant sm:text-lg">
-          <span className="font-mono font-medium text-on-surface">~935</span>{" "}
+          <span className="font-mono font-medium text-on-surface">
+            {COVERAGE_COPY.metros}
+          </span>{" "}
           metros,{" "}
-          <span className="font-mono font-medium text-on-surface">3,150</span>{" "}
+          <span className="font-mono font-medium text-on-surface">
+            {COVERAGE_COPY.counties}
+          </span>{" "}
           counties, and{" "}
-          <span className="font-mono font-medium text-on-surface">34,000</span>{" "}
+          <span className="font-mono font-medium text-on-surface">
+            {COVERAGE_COPY.zips}
+          </span>{" "}
           ZIPs scored every month from {SOURCES.join(", ")}.
         </p>
       </Reveal>

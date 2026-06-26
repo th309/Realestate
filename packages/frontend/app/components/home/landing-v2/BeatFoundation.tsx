@@ -1,4 +1,5 @@
 import { AnimatedCounter } from "@/app/components/home/AnimatedCounter";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 
@@ -31,9 +32,9 @@ interface FoundationStat {
 }
 
 const FOUNDATION_STATS: FoundationStat[] = [
-  { end: 935, label: "metros" },
-  { end: 3150, label: "counties" },
-  { end: 34000, label: "ZIP codes" },
+  { end: COVERAGE_COPY.metrosNum, suffix: "+", label: "metros" },
+  { end: COVERAGE_COPY.countiesNum, suffix: "+", label: "counties" },
+  { end: COVERAGE_COPY.zipsNum, suffix: "+", label: "ZIP codes" },
   { staticValue: "2001", label: "history since" },
 ];
 

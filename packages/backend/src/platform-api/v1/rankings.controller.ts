@@ -18,6 +18,7 @@ import {
   Inject,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   BadRequestException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -25,6 +26,7 @@ import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiThrottleGuard } from '../api-throttle.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 import type { GeographyLevel, ScoreType } from '../../scoring/formula-weights';
 
@@ -42,6 +44,7 @@ const DEFAULT_RANKING_LIMIT = 25;
 const MAX_RANKING_LIMIT = 100;
 
 @Controller('api/v1/rankings')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class RankingsV1Controller {

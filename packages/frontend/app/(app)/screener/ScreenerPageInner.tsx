@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, Lock } from "lucide-react";
 import { useScreener, type ScreenerQuery, type ScreenerRow } from "@/lib/data";
 import type { ScreenerGeoLevel, MoverWindow } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
@@ -17,8 +16,11 @@ import { ScreenerTable } from "./components/ScreenerTable";
 import { Pagination } from "./components/Pagination";
 import { StateSelect } from "./components/StateSelect";
 import { ScreenerTabs } from "./components/ScreenerTabs";
+import { ScreenerHeader } from "./components/ScreenerHeader";
 import { MoversTab } from "./components/MoversTab";
 import { WindowSelector } from "./components/WindowSelector";
+import { MarketSizeToggle } from "./components/MarketSizeToggle";
+import { populationFloorFor } from "./lib/market-size";
 import {
   readGeo,
   readState,
@@ -29,6 +31,7 @@ import {
   readFilters,
   readTab,
   readWindow,
+  readHideSmallMarkets,
   buildScreenerUrl,
   type SortBy,
   type ScreenerTab,
@@ -72,6 +75,12 @@ export function ScreenerPageInner() {
   const [changeWindow, setChangeWindowState] = useState<MoverWindow>(() =>
     readWindow(params),
   );
+  // De-noise (#26/#29): hide micro-markets by default; user-clearable. Resolves to
+  // a geo-appropriate population floor sent to both the screener and movers queries.
+  const [hideSmallMarkets, setHideSmallMarketsState] = useState<boolean>(() =>
+    readHideSmallMarkets(params),
+  );
+  const populationMin = populationFloorFor(geo, hideSmallMarkets);
 
   // Entitlements
   const { canAccess } = useEntitlements();
@@ -83,6 +92,7 @@ export function ScreenerPageInner() {
   const query: ScreenerQuery = {
     ...filters,
     state: stateFilter || undefined,
+    populationMin,
     sortBy,
     sortOrder,
     changeWindow,
@@ -97,6 +107,9 @@ export function ScreenerPageInner() {
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
   const hasMore = data?.hasMore ?? false;
+  // Snapshot freshness: rows share one monthly as_of date. Surface it so users
+  // can see how current the screener is (previously only the CSV carried it).
+  const dataAsOf = rows[0]?.as_of ?? null;
 
   // Plain-English list of active constraints, surfaced in the empty state so a
   // no-results view reads as "filters are narrow", not "the screener is broken".
@@ -114,6 +127,7 @@ export function ScreenerPageInner() {
       nextPage: number,
       nextTab: ScreenerTab,
       nextWindow: MoverWindow,
+      nextHideSmall: boolean,
     ) => {
       const qs = buildScreenerUrl(
         nextGeo,
@@ -125,6 +139,7 @@ export function ScreenerPageInner() {
         nextPage,
         nextTab,
         nextWindow,
+        nextHideSmall,
       );
       router.replace(`/screener?${qs}`, { scroll: false });
     },
@@ -143,6 +158,7 @@ export function ScreenerPageInner() {
       page,
       tab,
       changeWindow,
+      hideSmallMarkets,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -155,6 +171,7 @@ export function ScreenerPageInner() {
     page,
     tab,
     changeWindow,
+    hideSmallMarkets,
   ]);
 
   // --- Handlers ---
@@ -166,6 +183,12 @@ export function ScreenerPageInner() {
 
   const handleStateChange = useCallback((next: string) => {
     setStateFilterState(next);
+    setPageState(0);
+  }, []);
+
+  const handleHideSmallMarketsChange = useCallback((next: boolean) => {
+    trackEvent("feature.screener_market_size", { hideSmall: next });
+    setHideSmallMarketsState(next);
     setPageState(0);
   }, []);
 
@@ -277,52 +300,12 @@ export function ScreenerPageInner() {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* ── Page header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-            Market Intelligence
-          </p>
-          <h1 className="text-3xl font-bold text-on-surface mt-1 tracking-tight">
-            Market Screener
-          </h1>
-          <p className="text-on-surface-variant mt-1 text-sm">
-            Screen and rank markets by score, price, cash-flow, and supply.
-          </p>
-        </div>
-
-        {/* Export button */}
-        <div className="flex-shrink-0">
-          {canExport ? (
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={rows.length === 0}
-              className="
-                inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium
-                border border-outline transition-all duration-200
-                text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/20
-                disabled:opacity-40 disabled:cursor-not-allowed
-              "
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              title="Upgrade to Pro to export"
-              className="
-                inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium
-                border border-outline-variant text-on-surface-variant/50 cursor-not-allowed
-              "
-            >
-              <Lock className="w-4 h-4" />
-              Export CSV
-            </button>
-          )}
-        </div>
-      </div>
+      <ScreenerHeader
+        dataAsOf={dataAsOf}
+        canExport={canExport}
+        exportDisabled={rows.length === 0}
+        onExport={handleExport}
+      />
 
       {/* ── Tabs + window selector ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -334,6 +317,11 @@ export function ScreenerPageInner() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <GeoSegmentedControl value={geo} onChange={handleGeoChange} />
         <StateSelect value={stateFilter} onChange={handleStateChange} />
+        <MarketSizeToggle
+          geo={geo}
+          hideSmallMarkets={hideSmallMarkets}
+          onChange={handleHideSmallMarketsChange}
+        />
         {tab === "screener" && (
           <PresetChips
             activePreset={activePreset}
@@ -355,6 +343,7 @@ export function ScreenerPageInner() {
           moverWindow={changeWindow}
           stateFilter={stateFilter}
           enabled={!isZipLocked}
+          populationMin={populationMin}
         />
       ) : (
         <>

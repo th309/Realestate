@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTour } from "../TourStateProvider";
 
 export function PostSignupCelebrate() {
   const { session, reset } = useTour();
   const marketShort = session.market?.name?.split(",")[0] ?? "your market";
+
+  // Honor a deep-linked `?next=` (return-to-context) as the primary destination
+  // once the tour completes — e.g. /tour?next=/reports sends the user to /reports.
+  // Only same-origin relative paths are allowed (no "//" → no open redirect).
+  const nextParam = useSearchParams().get("next");
+  const safeNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : null;
+  const primaryHref = safeNext ?? "/dashboard?openReport=latest";
 
   return (
     <div className="mx-auto max-w-xl px-4 py-12">
@@ -45,10 +56,10 @@ export function PostSignupCelebrate() {
 
         <div className="relative mt-5 flex flex-wrap justify-center gap-2.5">
           <Link
-            href="/dashboard?openReport=latest"
+            href={primaryHref}
             className="rounded-full bg-tertiary px-5 py-2.5 text-sm font-medium text-on-tertiary"
           >
-            Open my report →
+            {safeNext ? "Continue →" : "Open my report →"}
           </Link>
           <Link
             href="/tour?resume=fresh"

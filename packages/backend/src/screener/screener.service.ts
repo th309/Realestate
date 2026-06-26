@@ -33,6 +33,7 @@ export interface ScreenerRow {
   score_chg_1y: number | null;
   score_chg_3y: number | null;
   score_chg_5y: number | null;
+  population: number | null;
   as_of: string | null;
   refreshed_at: string | null;
 }
@@ -62,6 +63,21 @@ export class ScreenerService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
+
+  /**
+   * Market-size floor (de-noise, beta backlog #26/#29). Rows whose population is
+   * >= populationMin OR NULL pass — "size unknown" is never hidden, so legitimate
+   * unmatched metros (e.g. territories) still appear. NO score is touched; this
+   * only changes which rows are returned. population in screener_snapshot is the
+   * region's own value for metro/county and the parent county's for ZIP.
+   */
+  private applyPopulationFloor<T extends { or(filters: string): T }>(
+    query: T,
+    populationMin?: number,
+  ): T {
+    if (populationMin == null) return query;
+    return query.or(`population.is.null,population.gte.${populationMin}`);
+  }
 
   /**
    * Rebuilds the screener_snapshot table via the Postgres function.
@@ -134,6 +150,9 @@ export class ScreenerService {
     if (opts.medianPriceMax != null)
       query = query.lte('median_price', opts.medianPriceMax);
 
+    // Market-size floor (de-noise) — NULL population passes through.
+    query = this.applyPopulationFloor(query, opts.populationMin);
+
     // Score-movers Δ filter — applies to the active window's precomputed column.
     if (
       opts.changeWindow &&
@@ -187,6 +206,8 @@ export class ScreenerService {
         .eq('geo_level', geoLevel)
         .not(col, 'is', null);
       if (dto.state) q = q.eq('state_code', dto.state.toUpperCase());
+      // Market-size floor (de-noise) — keeps micro-markets out of movers lists.
+      q = this.applyPopulationFloor(q, dto.populationMin);
       return q;
     };
 

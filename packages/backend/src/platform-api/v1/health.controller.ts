@@ -7,7 +7,11 @@
  * Endpoint:
  *   GET /api/v1/health
  *
- * No ApiThrottleGuard — this endpoint is intentionally free for debugging.
+ * AUTH REQUIRED (by design): this is a "verify my key" probe, not an anonymous
+ * liveness check — it returns the caller's org/user identity and active scopes,
+ * so it must authenticate (401 without a valid key). It is NOT rate-throttled.
+ * If a truly public, key-less liveness/ping is ever needed, add a separate
+ * unauthenticated endpoint rather than weakening this one.
  */
 
 import {
@@ -16,14 +20,17 @@ import {
   Req,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   Inject,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 
 @Controller('api/v1/health')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class HealthV1Controller {

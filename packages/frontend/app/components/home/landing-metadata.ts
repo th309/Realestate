@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatMarketsScored } from "@/lib/data/validation-claims";
 
 /**
  * Canonical homepage metadata — the single source of truth shared by BOTH the
@@ -14,17 +15,15 @@ export const landingMetadata: Metadata = {
     absolute:
       "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
   },
-  // keep in sync with formatMarketsScored()
-  description:
-    "Analyze 33,000+ real estate markets with AI-powered scores, rent data, and investment insights. Free market maps, reports & forecasts by metro, county, and ZIP code.",
+  // markets total derives from formatMarketsScored() — single source of truth
+  description: `Analyze ${formatMarketsScored()} real estate markets with AI-powered scores, rent data, and investment insights. Free market maps, reports & forecasts by metro, county, and ZIP code.`,
   alternates: { canonical: "https://www.propertyiq.app" },
   openGraph: {
     title:
       "PropertyIQ — Real Estate Market Data & Investment Scores by ZIP Code",
     type: "website",
-    description:
-      // keep in sync with formatMarketsScored()
-      "Analyze 33,000+ real estate markets with AI-powered scores, rent data, and investment insights. Free maps, reports & forecasts by metro, county, and ZIP code.",
+    // markets total derives from formatMarketsScored() — single source of truth
+    description: `Analyze ${formatMarketsScored()} real estate markets with AI-powered scores, rent data, and investment insights. Free maps, reports & forecasts by metro, county, and ZIP code.`,
     url: "https://www.propertyiq.app",
     siteName: "PropertyIQ",
     images: [

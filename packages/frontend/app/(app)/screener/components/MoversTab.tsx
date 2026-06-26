@@ -14,6 +14,8 @@ interface MoversTabProps {
   moverWindow: MoverWindow;
   stateFilter: string;
   enabled: boolean;
+  /** Market-size floor (de-noise) — excludes micro-markets from the leaderboards. */
+  populationMin?: number;
 }
 
 function moverDelta(row: ScreenerRow, moverWindow: MoverWindow): number | null {
@@ -82,11 +84,13 @@ export function MoversTab({
   moverWindow,
   stateFilter,
   enabled,
+  populationMin,
 }: MoversTabProps) {
   const { data, isFetching } = useScreenerMovers(geo, moverWindow, {
     state: stateFilter || undefined,
     limit: 25,
     enabled,
+    populationMin,
   });
 
   const gainers = data?.gainers ?? [];

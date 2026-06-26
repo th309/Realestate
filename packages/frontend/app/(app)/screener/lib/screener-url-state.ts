@@ -75,6 +75,12 @@ export function readWindow(params: URLSearchParams): MoverWindow {
   return v && MOVER_WINDOWS.includes(v) ? v : DEFAULT_WINDOW;
 }
 
+// Market-size floor (de-noise) is ON by default; the URL only records the
+// opt-out (allmarkets=1) so shared default links stay clean.
+export function readHideSmallMarkets(params: URLSearchParams): boolean {
+  return params.get("allmarkets") !== "1";
+}
+
 function readNum(params: URLSearchParams, key: string): number | undefined {
   const v = params.get(key);
   if (!v) return undefined;
@@ -115,11 +121,13 @@ export function buildScreenerUrl(
   page: number,
   tab: ScreenerTab = "screener",
   moverWindow: MoverWindow = DEFAULT_WINDOW,
+  hideSmallMarkets: boolean = true,
 ): string {
   const p = new URLSearchParams();
   p.set("geo", geo);
   if (tab !== "screener") p.set("tab", tab);
   if (moverWindow !== DEFAULT_WINDOW) p.set("window", moverWindow);
+  if (!hideSmallMarkets) p.set("allmarkets", "1");
   if (stateFilter) p.set("state", stateFilter);
   if (preset) p.set("preset", preset);
   if (sortBy !== "score") p.set("sortBy", sortBy);

@@ -9,23 +9,22 @@ import {
 } from "./ScoresContentSections";
 import { METRO_DECILE_3Y } from "./decile-data";
 import type { DecileRow } from "./decile-data";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 export const metadata: Metadata = {
   title: "PropertyIQ Score — Predict Real Estate Market Performance",
-  description:
-    "One number that predicts market performance. Validated across 935 metros and more than two decades of data, positive in every year. See the methodology and proof.",
+  description: `One number that predicts market performance. Validated across ${COVERAGE_COPY.metros} metros and more than two decades of data, positive in every year. See the methodology and proof.`,
   alternates: { canonical: "https://www.propertyiq.app/scores" },
   openGraph: {
     title: "PropertyIQ Score — Predict Real Estate Market Performance",
-    description:
-      "One number that predicts real estate market performance. Validated across 935 metros, positive in every year.",
+    description: `One number that predicts real estate market performance. Validated across ${COVERAGE_COPY.metros} metros, positive in every year.`,
     url: "https://www.propertyiq.app/scores",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
 };
 
 const STAT_PILLS = [
-  { label: "935 metros", icon: BarChart3 },
+  { label: `${COVERAGE_COPY.metros} metros`, icon: BarChart3 },
   { label: "20+ years validated", icon: TrendingUp },
   { label: "Positive every year", icon: Percent },
 ];

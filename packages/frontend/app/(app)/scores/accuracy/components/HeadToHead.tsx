@@ -7,6 +7,7 @@
 
 import { CheckCircle, X } from "lucide-react";
 import { fetchPricingSummary } from "@/lib/data/fetchers/pricing";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 interface ComparisonRow {
   dimension: string;
@@ -31,7 +32,7 @@ function buildRows(proPrice: string): ComparisonRow[] {
     },
     {
       dimension: "Geography coverage",
-      propertyiq: "935 metros + 3,150 counties + 34,000 ZIPs",
+      propertyiq: `${COVERAGE_COPY.metros} metros + ${COVERAGE_COPY.counties} counties + ${COVERAGE_COPY.zips} ZIPs`,
       competitor: "~380 metros",
       winner: "propertyiq",
     },

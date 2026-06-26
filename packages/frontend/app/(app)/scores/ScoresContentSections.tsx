@@ -1,4 +1,5 @@
 import { TrendingUp, ShieldCheck, BarChart3 } from "lucide-react";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 /** "How to Use the PropertyIQ Score" section — interpreting scores and confidence. */
 export function HowToUseScoresSection() {
@@ -83,9 +84,10 @@ export function MethodologyOverviewSection() {
           Each signal is z-score normalized within its geography level for its
           time period, removing scale differences. The combined signal is then
           mapped to a 1-99 percentile where 50 equals the state average. This
-          approach is transparent, reproducible, and validated across 935 metros
-          over more than two decades of data, positive in every validated year —
-          higher-scored metros outperformed lower-scored metros on average.
+          approach is transparent, reproducible, and validated across{" "}
+          {COVERAGE_COPY.metros} metros over more than two decades of data,
+          positive in every validated year — higher-scored metros outperformed
+          lower-scored metros on average.
         </p>
         <div className="flex flex-wrap gap-4">
           <a
