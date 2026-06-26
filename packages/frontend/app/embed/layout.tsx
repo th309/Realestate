@@ -1,16 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
 import { Suspense } from "react";
-import "@/app/globals.css";
 import { EmbedProviders } from "./providers";
 import { EmbedShell } from "./components";
-
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "PropertyIQ Embed Widget",
@@ -28,6 +19,13 @@ export const viewport: Viewport = {
  * Minimal layout for embeddable widgets — no header, footer, sidebar, or nav.
  * Designed to be rendered inside an iframe on third-party sites.
  *
+ * This is a NESTED layout under the root layout (app/layout.tsx), which is the
+ * single source of <html>/<body>, fonts, and globals.css. A nested layout MUST
+ * NOT render its own <html>/<body> — doing so produces invalid nested document
+ * elements and a hydration mismatch (root body bg-surface vs embed body
+ * bg-transparent). Instead we wrap the widget in a transparent, full-height
+ * container so the host page's background shows through the iframe.
+ *
  * Wraps all embed pages with:
  * 1. EmbedProviders — QueryClient, Auth, Entitlements
  * 2. EmbedShell — Reads ?token= from URL, fetches org branding, renders
@@ -42,14 +40,12 @@ export default function EmbedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${roboto.variable} antialiased bg-transparent`}>
-        <EmbedProviders>
-          <Suspense>
-            <EmbedShell>{children}</EmbedShell>
-          </Suspense>
-        </EmbedProviders>
-      </body>
-    </html>
+    <div className="min-h-dvh bg-transparent">
+      <EmbedProviders>
+        <Suspense>
+          <EmbedShell>{children}</EmbedShell>
+        </Suspense>
+      </EmbedProviders>
+    </div>
   );
 }

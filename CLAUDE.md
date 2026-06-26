@@ -466,14 +466,16 @@ signal = z(zhvi_yoy) + z(zhvi_mom_3m) - z(median_days_on_market) - z(price_reduc
 - **No version numbers** — the formula IS the PropertyIQ score; do not introduce v4/v5 naming.
 - Discovery + validation: `docs/superpowers/results/2026-06-12-monolithic-feature-discovery.md` and the metro/county/zip score-backtests; productionized per `docs/superpowers/plans/2026-06-12-piq-score-production-wiring.md`.
 
-### Score Labels
+### Score Labels (momentum/timing — NOT quality grades)
 
-| Score | Label     | Score | Label     |
-| ----- | --------- | ----- | --------- |
-| 90+   | EXCELLENT | 50-59 | AVERAGE   |
-| 80-89 | GREAT     | 40-49 | BELOW AVG |
-| 70-79 | GOOD      | 20-39 | POOR      |
-| 60-69 | FAIR      | <20   | VERY POOR |
+Labels describe the market's demand **momentum / timing** (where it's heading **now**), NOT whether it's a "good" or "bad" market. A low score = **cooling momentum**, not a poor-quality market. `50 = STEADY = the market's state average`. **Never reintroduce quality words** (EXCELLENT/GOOD/POOR/etc.) — they make a momentum signal read as a quality verdict (e.g. "Charlotte: VERY POOR"). Canonical: `getScoreLabel()` + `getScoreMomentumArrow()` + `SCORE_MOMENTUM_DESCRIPTOR` in `app/components/scoring/ScoreDisplay.tsx`.
+
+| Score | Label       | Dir | Score | Label     | Dir |
+| ----- | ----------- | --- | ----- | --------- | --- |
+| 90+   | VERY STRONG | ↑   | 50-59 | STEADY    | →   |
+| 80-89 | STRONG      | ↑   | 40-49 | EASING    | ↘   |
+| 70-79 | RISING      | ↑   | 20-39 | WEAK      | ↓   |
+| 60-69 | FIRMING     | ↑   | <20   | VERY WEAK | ↓   |
 
 ### Confidence (A/B/C/F Letter Badge)
 

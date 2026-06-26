@@ -40,14 +40,14 @@ function getScoreColor(value: number): string {
 }
 
 function getScoreLabel(score: number): string {
-  if (score >= 90) return "EXCELLENT";
-  if (score >= 80) return "GREAT";
-  if (score >= 70) return "GOOD";
-  if (score >= 60) return "FAIR";
-  if (score >= 50) return "AVERAGE";
-  if (score >= 40) return "BELOW AVG";
-  if (score >= 20) return "POOR";
-  return "VERY POOR";
+  if (score >= 90) return "VERY STRONG";
+  if (score >= 80) return "STRONG";
+  if (score >= 70) return "RISING";
+  if (score >= 60) return "FIRMING";
+  if (score >= 50) return "STEADY";
+  if (score >= 40) return "EASING";
+  if (score >= 20) return "WEAK";
+  return "VERY WEAK";
 }
 
 // ---------------------------------------------------------------------------

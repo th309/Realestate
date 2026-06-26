@@ -127,16 +127,19 @@ export async function saveOnboardingMarketSelection(market: {
 }): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return;
 
+  // JwtAuthGuard on /api/onboarding/* REQUIRES a Bearer token; x-user-id alone
+  // 401s (the same-origin /backend proxy strips cookies). See startOnboardingTrial.
   await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/save-market`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-user-id": user.id,
+        "x-user-id": session.user.id,
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify(market),
     }),
@@ -146,14 +149,17 @@ export async function saveOnboardingMarketSelection(market: {
 export async function updateChecklistTask(taskId: string): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return;
 
   await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/checklist/${taskId}`, {
       method: "POST",
-      headers: { "x-user-id": user.id },
+      headers: {
+        "x-user-id": session.user.id,
+        Authorization: `Bearer ${session.access_token}`,
+      },
     }),
   );
 }
@@ -163,14 +169,17 @@ export async function incrementUsageStat(
 ): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return;
 
   await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/usage/${stat}`, {
       method: "POST",
-      headers: { "x-user-id": user.id },
+      headers: {
+        "x-user-id": session.user.id,
+        Authorization: `Bearer ${session.access_token}`,
+      },
     }),
   );
 }
@@ -178,14 +187,17 @@ export async function incrementUsageStat(
 export async function dismissBeaconTask(beaconId: string): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return;
 
   await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/beacon/${beaconId}/dismiss`, {
       method: "POST",
-      headers: { "x-user-id": user.id },
+      headers: {
+        "x-user-id": session.user.id,
+        Authorization: `Bearer ${session.access_token}`,
+      },
     }),
   );
 }

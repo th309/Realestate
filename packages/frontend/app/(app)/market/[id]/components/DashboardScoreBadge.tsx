@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import {
   ScoreDisplay,
   getScoreLabel,
+  getScoreMomentumArrow,
+  SCORE_MOMENTUM_DESCRIPTOR,
 } from "@/app/components/scoring/ScoreDisplay";
 
 interface DashboardScoreBadgeProps {
@@ -32,7 +34,11 @@ export function DashboardScoreBadge({
       <div className="flex-1">
         <div className="text-sm font-medium text-on-surface">{label}</div>
         <div className="text-xs text-on-surface-variant">
-          {getScoreLabel(score)}
+          {getScoreLabel(score)}{" "}
+          <span aria-hidden="true">{getScoreMomentumArrow(score)}</span>
+        </div>
+        <div className="text-[10px] leading-tight text-on-surface-variant/70 mt-0.5">
+          {SCORE_MOMENTUM_DESCRIPTOR}
         </div>
       </div>
     </motion.div>

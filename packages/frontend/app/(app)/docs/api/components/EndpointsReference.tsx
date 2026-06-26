@@ -79,7 +79,7 @@ export function EndpointsReference() {
         responseExample={`{
   "data": {
     "score": 82,
-    "label": "GREAT",
+    "label": "STRONG",
     "confidence": { "level": "A", "percentage": 91, "metrics_available": 11, "metrics_total": 12 },
     "components": {
       "affordability": 78,
