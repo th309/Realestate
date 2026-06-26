@@ -78,7 +78,12 @@ function readHeadJson<T>(relPath: string): T[] {
   // maxBuffer MUST exceed the largest slug JSON (zip is ~8MB): the 1MB default
   // silently overflows (ENOBUFS) on `git show`, which would return a false-empty
   // old set and drop every ZIP redirect. 256MB is ample headroom.
-  const result = spawnSync("git", ["show", `HEAD:${relPath}`], {
+  // Baseline defaults to HEAD (steady-state monthly: diff last month's committed
+  // gated data vs this month's). The FIRST-ever gated run overrides this to the
+  // pre-gating commit (REDIRECT_BASELINE_REF) so old-vs-new diffs the *ungated*
+  // universe and the initial de-scored backlog redirects correctly.
+  const baselineRef = process.env.REDIRECT_BASELINE_REF || "HEAD";
+  const result = spawnSync("git", ["show", `${baselineRef}:${relPath}`], {
     encoding: "utf-8",
     maxBuffer: 256 * 1024 * 1024,
   });
