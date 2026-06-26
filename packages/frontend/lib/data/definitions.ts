@@ -3,6 +3,8 @@
  * Contains descriptions, formulas, and data sources for all metrics
  */
 
+import { COVERAGE_COPY } from "./validation-claims";
+
 export interface MetricDefinition {
   id: string;
   name: string;
@@ -325,8 +327,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: "(Monthly Rent × 12) / Home Value × 100",
     dataSource: "Calculated from Zillow ZORI and ZHVI",
     updateFrequency: "Monthly",
-    notes:
-      "Inverse of price-to-rent ratio; higher is better for investors. Available for 900+ metros, 3,100+ counties, and 29,000+ ZIP codes.",
+    notes: `Inverse of price-to-rent ratio; higher is better for investors. Available for ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes.`,
     relatedMetrics: ["cap_rate", "gross_yield", "grm"],
   },
   vacancy_rate: {
@@ -367,8 +368,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource:
       "Calculated from Zillow ZORI (rent) and Zillow ZHVI (home value)",
     updateFrequency: "Monthly",
-    notes:
-      "Does not account for operating expenses, vacancy, or financing costs. Available for 900+ metros, 3,100+ counties, and 29,000+ ZIP codes.",
+    notes: `Does not account for operating expenses, vacancy, or financing costs. Available for ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes.`,
     relatedMetrics: ["cap_rate", "grm", "rent_to_price_ratio"],
   },
   grm: {
@@ -442,8 +442,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource:
       "Calculated from Realtor.com (listing prices) and FRED/Freddie Mac (mortgage rates)",
     updateFrequency: "Monthly",
-    notes:
-      "Assumes 20% down payment, 30-year fixed mortgage at current FRED rate (or 7% default), 1.1% property tax, 0.35% insurance. Available for National, 51 States, 900+ Metros, 3,100+ Counties, 28,000+ ZIP codes with 114 months of historical data.",
+    notes: `Assumes 20% down payment, 30-year fixed mortgage at current FRED rate (or 7% default), 1.1% property tax, 0.35% insurance. Available for National, 51 States, ${COVERAGE_COPY.metros} Metros, ${COVERAGE_COPY.counties} Counties, ${COVERAGE_COPY.zips} ZIP codes with 114 months of historical data.`,
   },
   income_to_rent: {
     id: "income_to_rent",
@@ -466,8 +465,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource:
       "Calculated from Census ACS (median household income) and FRED/Freddie Mac (mortgage rates)",
     updateFrequency: "Annually (Census ACS) + Monthly (rates)",
-    notes:
-      "Assumes 20% down payment, 30-year fixed mortgage at current FRED rate (or 7% default), 1.1% property tax, 0.35% insurance, 28% DTI. Available for National, 52 States, 1,000+ Metros, 3,100+ Counties, 33,700+ ZIP codes.",
+    notes: `Assumes 20% down payment, 30-year fixed mortgage at current FRED rate (or 7% default), 1.1% property tax, 0.35% insurance, 28% DTI. Available for National, 52 States, ${COVERAGE_COPY.metros} Metros, ${COVERAGE_COPY.counties} Counties, ${COVERAGE_COPY.zips} ZIP codes.`,
   },
   years_to_save: {
     id: "years_to_save",
@@ -479,8 +477,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource:
       "Calculated from Realtor.com (listing prices) and Census ACS (median household income)",
     updateFrequency: "Monthly",
-    notes:
-      "Assumes 10% annual savings rate. Available for National, 51 States, 900+ Metros, 3,100+ Counties, and 28,000+ ZIP codes.",
+    notes: `Assumes 10% annual savings rate. Available for National, 51 States, ${COVERAGE_COPY.metros} Metros, ${COVERAGE_COPY.counties} Counties, and ${COVERAGE_COPY.zips} ZIP codes.`,
   },
   homeowner_affordability: {
     id: "homeowner_affordability",

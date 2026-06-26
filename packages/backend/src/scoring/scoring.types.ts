@@ -153,13 +153,13 @@ export interface ScoreResult {
   median_price: number | null;
   score_date: string;
   scores: {
-    /** Primary score — v4 demand-signal PropertyIQ Score */
+    /** Primary score — the PropertyIQ demand-signal Score */
     propertyiq: SingleScoreResult | null;
-    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    /** @deprecated Legacy score — only populated when reading historical data */
     homeready?: SingleScoreResult | null;
-    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    /** @deprecated Legacy score — only populated when reading historical data */
     investoredge?: SingleScoreResult | null;
-    /** @deprecated Legacy v3 score — only populated when reading historical data */
+    /** @deprecated Legacy score — only populated when reading historical data */
     markethealth?: SingleScoreResult | null;
   };
   /** Per-metric z-scores for this location (shared across all score types) */

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
-import { ZIP_SLUG_DATA, SLUG_TO_ZIP } from "@/lib/data/zip-slug-data";
+import {
+  ZIP_SLUG_DATA,
+  SLUG_TO_ZIP,
+  ZIP_TO_ENTRY,
+} from "@/lib/data/zip-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { FIPS_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
@@ -103,7 +107,18 @@ export default async function ZipPage({
 }) {
   const { slug } = await params;
   const zip = SLUG_TO_ZIP.get(slug);
-  if (!zip) notFound();
+  if (!zip) {
+    // A bare 5-digit ZIP (e.g. "28202") is the most natural URL a person types,
+    // but the canonical page lives at the city-state slug ("28202-charlotte-nc").
+    // The ZIP alone is unambiguous, so 308-redirect to canonical instead of 404.
+    if (/^\d{5}$/.test(slug)) {
+      const canonical = ZIP_TO_ENTRY.get(slug);
+      if (canonical && !isMissingCity(canonical) && canonical.slug !== slug) {
+        permanentRedirect(`/markets/zip/${canonical.slug}`);
+      }
+    }
+    notFound();
+  }
 
   // Clean, city-aware label (never "<zip>, <zip>, ") for all visible copy.
   const displayName = zipDisplayName(zip);

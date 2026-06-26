@@ -953,7 +953,7 @@ export class ScoringController {
    *     "predictions_validated": 367
    *   },
    *   "status": "healthy",
-   *   "formula_version": "v3.0",
+   *   "formula_version": "PropertyIQ demand signal",
    *   "last_validated": "2025-01-15"
    * }
    */

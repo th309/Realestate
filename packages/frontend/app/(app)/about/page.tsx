@@ -3,16 +3,15 @@ import { Info, Users, Target, Shield, Database, Scale } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 export const metadata: Metadata = {
   title: "About PropertyIQ — Our Mission, Team & Data Sources",
-  description:
-    "Learn how PropertyIQ uses machine learning to analyze 935 US metros and 33,000+ ZIP codes, helping homebuyers, investors, and agents.",
+  description: `Learn how PropertyIQ uses machine learning to analyze ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes, helping homebuyers, investors, and agents.`,
   alternates: { canonical: "https://www.propertyiq.app/about" },
   openGraph: {
     title: "About PropertyIQ | AI Real Estate Intelligence",
-    description:
-      "How PropertyIQ uses machine learning to analyze 935 US metros and 33,000+ ZIP codes.",
+    description: `How PropertyIQ uses machine learning to analyze ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes.`,
     url: "https://www.propertyiq.app/about",
     siteName: "PropertyIQ",
     images: [
@@ -76,8 +75,9 @@ export default function AboutPage() {
                 everyone, from first-time homebuyers to seasoned investors,
                 deserves access to the same market intelligence that was once
                 reserved for institutional players. Our AI-powered platform
-                analyzes millions of data points across 935 US metros, 3,100+
-                counties, and 33,000+ ZIP codes to deliver actionable insights.
+                analyzes millions of data points across {COVERAGE_COPY.metros}{" "}
+                US metros, {COVERAGE_COPY.counties} counties, and{" "}
+                {COVERAGE_COPY.zips} ZIP codes to deliver actionable insights.
               </p>
             </section>
 
@@ -208,8 +208,7 @@ export default function AboutPage() {
                   },
                   {
                     date: "Early 2025",
-                    event:
-                      "First scoring models trained and validated on more than two decades of historical price data across 900+ metros",
+                    event: `First scoring models trained and validated on more than two decades of historical price data across ${COVERAGE_COPY.metros} metros`,
                   },
                   {
                     date: "Mid 2025",
@@ -218,8 +217,7 @@ export default function AboutPage() {
                   },
                   {
                     date: "Late 2025",
-                    event:
-                      "Platform expanded to cover 33,000+ ZIP codes and 3,100+ counties",
+                    event: `Platform expanded to cover ${COVERAGE_COPY.zips} ZIP codes and ${COVERAGE_COPY.counties} counties`,
                   },
                   {
                     date: "2026",
@@ -270,9 +268,10 @@ export default function AboutPage() {
                     Comprehensive Coverage
                   </h3>
                   <p className="text-sm text-on-surface-variant">
-                    935 metros, 3,100+ counties, 33,000+ ZIP codes. From major
-                    cities to small towns, PropertyIQ covers every corner of the
-                    US housing market.
+                    {COVERAGE_COPY.metros} metros, {COVERAGE_COPY.counties}{" "}
+                    counties, {COVERAGE_COPY.zips} ZIP codes. From major cities
+                    to small towns, PropertyIQ covers every corner of the US
+                    housing market.
                   </p>
                 </div>
                 <div className="p-6 rounded-xl bg-surface-container-low">

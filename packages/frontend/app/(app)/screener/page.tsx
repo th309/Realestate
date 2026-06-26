@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { ScreenerPageInner } from "./ScreenerPageInner";
 
 export const metadata: Metadata = {
   title: "Market Screener — PropertyIQ",
-  description:
-    "Screen and rank real estate markets by PropertyIQ Score, cap rate, price, months of supply, and overvaluation. Filter across 935+ metros, 3,150+ counties, and 34,000+ ZIPs.",
+  description: `Screen and rank real estate markets by PropertyIQ Score, cap rate, price, months of supply, and overvaluation. Filter across ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIPs.`,
   alternates: { canonical: "https://www.propertyiq.app/screener" },
 };
 

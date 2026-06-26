@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 // Sample data for mini chart
 const MINI_CHART_DATA = [
@@ -32,7 +33,7 @@ const FEATURES = [
   {
     id: "map",
     title: "Interactive Market Maps",
-    description: "Explore 925 metros with color-coded market data",
+    description: `Explore ${COVERAGE_COPY.metros} metros with color-coded market data`,
     icon: Map,
     href: "/map",
     preview: "map",

@@ -3,6 +3,7 @@
 import { ScoreGauge } from "./charts/ScoreGauge";
 import { Sparkline } from "./charts/Sparkline";
 import type { HeroKpi, HeroScore } from "./listing-sections/adapt-hero";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 interface Props {
   marketName: string;
@@ -71,7 +72,8 @@ export function ReportHero({
               aria-hidden="true"
               className="inline-block h-1.5 w-1.5 rounded-full bg-tertiary"
             />
-            PropertyIQ Score · validated out-of-sample across 925 metros
+            PropertyIQ Score · validated out-of-sample across{" "}
+            {COVERAGE_COPY.metros} metros
           </p>
         </div>
       </header>

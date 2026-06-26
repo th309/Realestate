@@ -22,6 +22,7 @@ import {
   Inject,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   HttpException,
   HttpStatus,
   ForbiddenException,
@@ -32,6 +33,7 @@ import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 import { ApiThrottleGuard } from '../api-throttle.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import { ReportsService } from '../../reports/reports.service';
 import {
@@ -74,6 +76,7 @@ async function getOrgOwnerId(
 // ── Controller ───────────────────────────────────────────────────────────
 
 @Controller('api/v1/reports')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class PlatformReportsController {

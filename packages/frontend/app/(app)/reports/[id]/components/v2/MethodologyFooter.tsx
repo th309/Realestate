@@ -2,6 +2,7 @@
 
 import React from "react";
 import { FileText, ExternalLink, Database, ShieldCheck } from "lucide-react";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 interface MethodologyFooterProps {
   /** 'homebuyer' | 'investor' — determines which methodology summary to show */
@@ -132,7 +133,7 @@ export function MethodologyFooter({
             <ShieldCheck className="w-4 h-4 text-on-surface-variant mt-0.5" />
             <div>
               <p className="text-sm font-medium text-on-surface">
-                Validated Across 924 Metros
+                Validated Across {COVERAGE_COPY.metros} Metros
               </p>
               <p className="text-xs text-on-surface-variant">
                 {userType === "investor"

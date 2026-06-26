@@ -10,6 +10,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import { formatMarketsScored } from "@/lib/data/validation-claims";
 import { CollapsibleFeature } from "./CollapsibleFeature";
 
 /** Free vs Pro tier badge used in feature comparison cards. */
@@ -144,7 +145,7 @@ export function ScoresSection() {
       id="scores"
       icon={<Target className="w-5 h-5 text-primary" />}
       title="PropertyIQ Score"
-      subtitle="34,000+ markets scored"
+      subtitle={`${formatMarketsScored()} markets scored`}
       summary="A single score that predicts how a market will perform versus its state over the next 3 years."
     >
       <div className="mb-8">
@@ -162,8 +163,8 @@ export function ScoresSection() {
             Realtor.com flow signals.
           </li>
           <li className="text-on-surface font-medium">
-            Every metro, county, and ZIP in the country — 34,000+ markets
-            scored.
+            Every metro, county, and ZIP in the country —{" "}
+            {formatMarketsScored()} markets scored.
           </li>
         </ul>
       </div>
@@ -245,7 +246,7 @@ export function ScoresSection() {
             <div className="flex items-center gap-3 text-sm">
               <Check className="w-4 h-4 text-green-600 shrink-0" />
               <span className="text-on-surface">
-                34,000+ markets scored — metro, county, ZIP
+                {formatMarketsScored()} markets scored — metro, county, ZIP
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm">

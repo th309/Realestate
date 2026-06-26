@@ -11,6 +11,8 @@
 //     /api/pricing/tiers) — we describe the tiers and point to /pricing.
 //   • Score validation numbers are published on /scores/methodology (already
 //     served as markdown) — we summarize and link there.
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+
 export const STATIC_MARKDOWN_PAGES: Record<string, string> = {
   "/": `# PropertyIQ — The IQ Behind Every Market
 
@@ -18,7 +20,7 @@ PropertyIQ scores every U.S. real estate market — metro, county, and ZIP code 
 
 ## What PropertyIQ does
 
-- **Market rankings** — Surfaces the markets that beat the average, ranked by the PropertyIQ Score across ~935 metros, ~3,100 counties, and ~29,000 ZIP codes.
+- **Market rankings** — Surfaces the markets that beat the average, ranked by the PropertyIQ Score across ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes.
 - **PropertyIQ Score** — A single 1–99 score that predicts market performance, validated across 20+ years of data and positive in every backtested year. See /scores and /scores/methodology.
 - **AI market reports** — Personalized written analysis for a specific market.
 - **Interactive map** — Explore scored markets visually across dozens of metrics.
@@ -117,7 +119,7 @@ Every score carries an A/B/C/F confidence grade reflecting how many of the four 
 
 ## Coverage
 
-Scored monthly across ~935 metros, ~3,137 counties, and ~29,417 ZIP codes, with history backfilled to 2001.
+Scored monthly across ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes, with history backfilled to 2001.
 
 ## Proof
 

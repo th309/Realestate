@@ -638,9 +638,11 @@ export const SCORE_CALIBRATION: Record<AnyScoreType, CalibrationEntry[]> = {
 };
 
 /**
- * Current formula version identifier.
+ * Non-versioned formula identifier. Per CLAUDE.md §9 the formula IS the
+ * PropertyIQ Score — there are no version numbers (no v3/v4/v5). Emitted in
+ * performance payloads as a stable, human-readable label.
  */
-export const FORMULA_VERSION = 'v3.0';
+export const FORMULA_VERSION = 'PropertyIQ demand signal';
 
 // ============================================================================
 // PropertyIQ Demand Signal Formula (Zillow + Realtor.com)

@@ -25,6 +25,7 @@ import { PlatformWatchlistController } from './v1/watchlist.controller';
 // Shared providers
 import { ApiResponseInterceptor } from './api-response.interceptor';
 import { ApiThrottleGuard } from './api-throttle.guard';
+import { PlatformApiExceptionFilter } from './platform-api-exception.filter';
 
 @Module({
   imports: [OrgApiKeysModule, ScoringModule, ReportsModule],
@@ -37,6 +38,10 @@ import { ApiThrottleGuard } from './api-throttle.guard';
     PlatformReportsController,
     PlatformWatchlistController,
   ],
-  providers: [ApiResponseInterceptor, ApiThrottleGuard],
+  providers: [
+    ApiResponseInterceptor,
+    ApiThrottleGuard,
+    PlatformApiExceptionFilter,
+  ],
 })
 export class PlatformApiModule {}

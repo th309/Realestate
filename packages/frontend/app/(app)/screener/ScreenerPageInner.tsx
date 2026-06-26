@@ -97,6 +97,9 @@ export function ScreenerPageInner() {
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
   const hasMore = data?.hasMore ?? false;
+  // Snapshot freshness: rows share one monthly as_of date. Surface it so users
+  // can see how current the screener is (previously only the CSV carried it).
+  const dataAsOf = rows[0]?.as_of ?? null;
 
   // Plain-English list of active constraints, surfaced in the empty state so a
   // no-results view reads as "filters are narrow", not "the screener is broken".
@@ -288,6 +291,15 @@ export function ScreenerPageInner() {
           <p className="text-on-surface-variant mt-1 text-sm">
             Screen and rank markets by score, price, cash-flow, and supply.
           </p>
+          {dataAsOf && (
+            <p className="mt-1 text-xs text-on-surface-variant/70">
+              Data as of{" "}
+              {new Date(`${dataAsOf.slice(0, 10)}T00:00:00`).toLocaleDateString(
+                "en-US",
+                { year: "numeric", month: "short", day: "numeric" },
+              )}
+            </p>
+          )}
         </div>
 
         {/* Export button */}

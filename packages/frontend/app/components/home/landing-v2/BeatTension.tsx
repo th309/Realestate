@@ -1,3 +1,4 @@
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 
@@ -21,8 +22,8 @@ const AGITATE_POINTS: {
   sublabel: string;
 }[] = [
   {
-    monoLead: "935",
-    lead: "metros. 3,150 counties. 34,000 ZIPs.",
+    monoLead: COVERAGE_COPY.metros,
+    lead: `metros. ${COVERAGE_COPY.counties} counties. ${COVERAGE_COPY.zips} ZIPs.`,
     sublabel: "More markets than anyone can track by feel.",
   },
   {

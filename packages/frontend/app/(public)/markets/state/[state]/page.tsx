@@ -59,6 +59,44 @@ export async function generateMetadata({
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
 
+// Cap inline ZIP links per metro/county. Large metros carry hundreds of ZIPs;
+// rendering every one (twice — under its metro AND its county) is what made these
+// pages 3MB / 3,000+ links. Show the first N and link to the parent for the rest.
+const ZIP_DISPLAY_CAP = 12;
+
+function ZipLinks({
+  zips,
+  parentHref,
+}: {
+  zips: ZipSlugEntry[];
+  parentHref: string;
+}) {
+  if (zips.length === 0) return null;
+  const shown = zips.slice(0, ZIP_DISPLAY_CAP);
+  const remaining = zips.length - shown.length;
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+      {shown.map((zip) => (
+        <a
+          key={zip.zip}
+          href={`/markets/zip/${zip.slug}`}
+          className="text-xs text-primary/80 hover:text-primary underline underline-offset-2"
+        >
+          {zip.zip}
+        </a>
+      ))}
+      {remaining > 0 && (
+        <a
+          href={parentHref}
+          className="text-xs text-on-surface-variant hover:text-primary underline underline-offset-2"
+        >
+          +{remaining} more ZIP{remaining === 1 ? "" : "s"} →
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default async function StatePage({
   params,
 }: {
@@ -211,19 +249,10 @@ export default async function StatePage({
                     >
                       {metro.shortName}
                     </a>
-                    {metroZips.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
-                        {metroZips.map((zip) => (
-                          <a
-                            key={zip.zip}
-                            href={`/markets/zip/${zip.slug}`}
-                            className="text-xs text-primary/80 hover:text-primary underline underline-offset-2"
-                          >
-                            {zip.zip}
-                          </a>
-                        ))}
-                      </div>
-                    )}
+                    <ZipLinks
+                      zips={metroZips}
+                      parentHref={`/markets/${metro.slug}`}
+                    />
                   </div>
                 );
               })}
@@ -248,19 +277,10 @@ export default async function StatePage({
                     >
                       {county.shortName}
                     </a>
-                    {countyZips.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
-                        {countyZips.map((zip) => (
-                          <a
-                            key={zip.zip}
-                            href={`/markets/zip/${zip.slug}`}
-                            className="text-xs text-primary/80 hover:text-primary underline underline-offset-2"
-                          >
-                            {zip.zip}
-                          </a>
-                        ))}
-                      </div>
-                    )}
+                    <ZipLinks
+                      zips={countyZips}
+                      parentHref={`/markets/county/${county.slug}`}
+                    />
                   </div>
                 );
               })}

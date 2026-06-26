@@ -18,12 +18,14 @@ import {
   Req,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiThrottleGuard } from '../api-throttle.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import type { GeographyLevel, ScoreType } from '../../scoring/formula-weights';
@@ -57,6 +59,7 @@ function scoreToLabel(score: number): string {
 }
 
 @Controller('api/v1/scores')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class ScoresV1Controller {

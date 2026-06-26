@@ -2,7 +2,8 @@
  * REPORTS LIST FETCHER
  *
  * Fetches the current user's recent reports for the account page.
- * GET /api/reports?limit=5 — returns { success, data: ReportSummary[] }
+ * GET /api/reports/history?limit=5 — backend returns ReportSummary[] directly
+ * (there is NO bare GET /api/reports route).
  */
 
 import { fetchAPIRaw } from "./base";

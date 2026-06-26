@@ -7,8 +7,17 @@ import {
   BarChart3,
 } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { RestartTutorialSection } from "./RestartTutorialSection";
+
+export const metadata: Metadata = {
+  title: "Help & FAQ — PropertyIQ",
+  description:
+    "Answers to common PropertyIQ questions — data sources, PropertyIQ Scores, pricing plans, account management, and getting the most out of the platform.",
+  alternates: { canonical: "https://www.propertyiq.app/help" },
+};
 
 interface FaqItem {
   question: string;
@@ -18,8 +27,7 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is PropertyIQ?",
-    answer:
-      "PropertyIQ is an AI-powered real estate analytics platform that helps buyers, investors, and professionals make smarter decisions using data from 925+ metros, 3,100+ counties, and 33,000+ ZIP codes across the US.",
+    answer: `PropertyIQ is an AI-powered real estate analytics platform that helps buyers, investors, and professionals make smarter decisions using data from ${COVERAGE_COPY.metros} metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes across the US.`,
   },
   {
     question: "Where does the data come from?",

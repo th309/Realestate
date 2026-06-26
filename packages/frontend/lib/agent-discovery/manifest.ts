@@ -5,7 +5,11 @@ export const AGENT_DISCOVERY = {
   siteOrigin: "https://www.propertyiq.app",
   mcp: {
     name: "propertyiq",
-    version: "0.2.0", // keep in sync with packages/mcp-server/src/server.ts
+    // SINGLE SOURCE OF TRUTH for the MCP version is packages/mcp-server/src/lib/
+    // server-info.ts (SERVER_INFO.version). This served server-card value MUST
+    // equal it — bump both together. (TODO: a cross-package build/test assertion
+    // would prevent silent drift; tracked in the beta backlog.)
+    version: "0.2.0",
     endpoint: "https://mcp.propertyiq.app/mcp",
     transport: "streamable-http",
     auth: "oauth2.1",

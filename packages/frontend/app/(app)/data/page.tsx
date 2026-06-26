@@ -8,12 +8,12 @@ import {
   METRIC_DEFINITIONS,
   getDataSourceAnchor,
 } from "@/lib/data";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
   title: "90+ Real Estate Data Sources — Zillow, Census, FRED & More",
-  description:
-    "PropertyIQ integrates data from Zillow, Realtor.com, Redfin, U.S. Census Bureau, FRED, BLS, and BEA. 90+ metrics updated monthly across 925 US metros.",
+  description: `PropertyIQ integrates data from Zillow, Realtor.com, Redfin, U.S. Census Bureau, FRED, BLS, and BEA. 90+ metrics updated monthly across ${COVERAGE_COPY.metros} US metros.`,
   alternates: { canonical: "https://www.propertyiq.app/data" },
   openGraph: {
     title: "90+ Real Estate Data Sources — Zillow, Census, FRED & More",

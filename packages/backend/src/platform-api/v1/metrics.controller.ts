@@ -18,6 +18,7 @@ import {
   Inject,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
@@ -26,6 +27,7 @@ import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import { ApiKeyAuthGuard } from '../../org-api-keys/api-key-auth.guard';
 import { ApiThrottleGuard } from '../api-throttle.guard';
 import { ApiResponseInterceptor } from '../api-response.interceptor';
+import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 
 const TABLE_MAP: Record<string, string> = {
@@ -42,6 +44,7 @@ const MAX_PAGE_LIMIT = 500;
 const DEFAULT_PAGE_LIMIT = 100;
 
 @Controller('api/v1/metrics')
+@UseFilters(PlatformApiExceptionFilter)
 @UseGuards(ApiKeyAuthGuard, ApiThrottleGuard)
 @UseInterceptors(ApiResponseInterceptor)
 export class MetricsV1Controller {

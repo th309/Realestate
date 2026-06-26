@@ -52,10 +52,9 @@ function TourPhaseSwitch() {
         : "persona"
       : session.phase;
 
-  // TODO(phase-03/04): consume `searchParams.get('next')` to drive the
-  // post-tour redirect after celebrate. The legacy /get-started page used
-  // `next` as the final router.push destination; here it currently rides
-  // along on the URL but is not yet honored past the market step.
+  // `?next=` (return-to-context) rides along on the URL through the flow and is
+  // consumed at the `celebrate` phase: PostSignupCelebrate routes the primary
+  // CTA to a safe same-origin `next` when present (falls back to the dashboard).
   switch (phase) {
     case "persona":
       return <PersonaCards />;

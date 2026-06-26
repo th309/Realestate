@@ -4,11 +4,11 @@ import { AccuracyPageShell } from "./components/AccuracyPageShell";
 import { HeadToHead } from "./components/HeadToHead";
 import { CTABanner } from "./components/CTABanner";
 import type { Metadata } from "next";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 export const metadata: Metadata = {
   title: "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
-  description:
-    "OOS IC = 0.27, validated across 935 metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.",
+  description: `OOS IC = 0.27, validated across ${COVERAGE_COPY.metros} metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.`,
   alternates: { canonical: "https://www.propertyiq.app/scores/accuracy" },
   openGraph: {
     title: "Forecast Accuracy — PropertyIQ",
@@ -32,8 +32,7 @@ export default function AccuracyPage() {
                 "@type": "Article",
                 headline:
                   "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
-                description:
-                  "OOS IC = 0.27, validated across 935 metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.",
+                description: `OOS IC = 0.27, validated across ${COVERAGE_COPY.metros} metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.`,
                 datePublished: "2026-02-10",
                 dateModified: new Date().toISOString().split("T")[0],
                 author: {

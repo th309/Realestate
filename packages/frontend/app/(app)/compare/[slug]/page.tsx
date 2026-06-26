@@ -41,6 +41,14 @@ export async function generateMetadata({
       description: comparison.description,
       url: `https://www.propertyiq.app/compare/${slug}`,
       siteName: "PropertyIQ",
+      images: [
+        {
+          url: `/api/og?title=${encodeURIComponent(comparison.title)}`,
+          width: 1200,
+          height: 630,
+          alt: comparison.title,
+        },
+      ],
     },
   };
 }

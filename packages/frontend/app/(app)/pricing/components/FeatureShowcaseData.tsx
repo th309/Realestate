@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { CollapsibleFeature } from "./CollapsibleFeature";
 import type { PricingTier } from "@/lib/data/fetchers/pricing";
+import {
+  COVERAGE_COPY,
+  formatMarketsScored,
+} from "@/lib/data/validation-claims";
 
 function TierBadge({ tier }: { tier: "free" | "pro" }) {
   if (tier === "free") {
@@ -195,7 +199,7 @@ export function GeoDataSection() {
       id="data-depth"
       icon={<MapPin className="w-5 h-5 text-primary" />}
       title="County & ZIP Code Data"
-      subtitle="33,000+ additional markets unlocked"
+      subtitle={`${formatMarketsScored()} additional markets unlocked`}
       summary="Drill from metro to county to ZIP -- where the real deals are."
     >
       <div className="mb-8">
@@ -211,8 +215,9 @@ export function GeoDataSection() {
             </strong>
           </li>
           <li>
-            You&apos;d never see that without drilling down. Pro unlocks 3,000+
-            counties and 30,000+ ZIP codes.
+            You&apos;d never see that without drilling down. Pro unlocks{" "}
+            {COVERAGE_COPY.counties} counties and {COVERAGE_COPY.zips} ZIP
+            codes.
           </li>
         </ul>
       </div>
@@ -289,12 +294,14 @@ export function GeoDataSection() {
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Check className="w-4 h-4 text-green-600 shrink-0" />
-              <span className="text-on-surface">3,000+ county dashboards</span>
+              <span className="text-on-surface">
+                {COVERAGE_COPY.counties} county dashboards
+              </span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Check className="w-4 h-4 text-green-600 shrink-0" />
               <span className="text-on-surface">
-                30,000+ ZIP code dashboards
+                {COVERAGE_COPY.zips} ZIP code dashboards
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm">

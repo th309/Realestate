@@ -4,6 +4,7 @@ import {
   buildMarketDataSummary,
   buildRegionalContext,
 } from "@/lib/seo/market-metadata";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 /**
  * State-to-region mapping for content variation.
@@ -125,7 +126,7 @@ const OPENING_TEMPLATES = [
   (name: string, state: string) =>
     `Whether you're considering buying a home, investing in rental property, or weighing entry timing in the ${name} area, the PropertyIQ Score gives you a single, data-first read on relative market strength. It is validated against actual market outcomes from 2001 to 2023, with a positive score-to-return relationship in every validated year across ${state} and every other US state.`,
   (name: string, _state: string) =>
-    `The ${name} metro area is one of roughly 935 US metropolitan markets that PropertyIQ scores each month. A single PropertyIQ Score blends Zillow price momentum with Realtor.com market-flow signals to estimate 3-year excess appreciation versus the market's state — showing not just where prices stand today, but how the market is positioned relative to its peers.`,
+    `The ${name} metro area is one of ${COVERAGE_COPY.metros} US metropolitan markets that PropertyIQ scores each month. A single PropertyIQ Score blends Zillow price momentum with Realtor.com market-flow signals to estimate 3-year excess appreciation versus the market's state — showing not just where prices stand today, but how the market is positioned relative to its peers.`,
   (name: string, state: string) =>
     `PropertyIQ tracks the ${name} housing market through two complementary lenses: price momentum from Zillow home-value trends over 3 and 12 months, and demand pressure from how quickly homes sell and how often sellers cut prices, drawn from Realtor.com. The PropertyIQ Score distills these into one number that predicts how this ${state} market is set to perform against its state benchmark.`,
 ];

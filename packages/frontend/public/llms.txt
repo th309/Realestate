@@ -1,6 +1,6 @@
 # PropertyIQ
 
-> AI-powered real estate market intelligence platform that ranks 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.
+> AI-powered real estate market intelligence platform that ranks 900+ US metros, 3,000+ counties, and 29,000+ ZIP codes.
 
 ## Overview
 
@@ -26,7 +26,7 @@ PropertyIQ generates a single **PropertyIQ Score** (1-99) for every geography:
 - Built from 4 demand-signal inputs: Zillow ZHVI 12-month momentum (positive), Zillow ZHVI 3-month momentum (positive), Realtor.com median days on market (negative), and the share of listings with price cuts (negative)
 - Formula: `z(zhvi_yoy) + z(zhvi_mom_3m) − z(median_days_on_market) − z(price_reduced_share)`, equal weights, no fitted parameters
 - Each input is converted to a cross-sectional z-score across all markets at a geography level each month (national basis), summed, percentile-ranked, re-centered so the zero-crossing maps to 50, and clamped 1-99
-- Coverage: ~935 metros, ~3,150 counties, ~34,000 ZIPs; monthly history backfilled to 2001
+- Coverage: 900+ metros, 3,000+ counties, 29,000+ ZIPs; monthly history backfilled to 2001
 
 ### Validation Results
 
@@ -50,9 +50,9 @@ Validated out-of-sample across 2001-2023 scoring vintages (20+ years, two full h
 
 ## Coverage
 
-- 925 metropolitan statistical areas (MSAs)
-- 3,100+ counties
-- 33,000+ ZIP codes
+- 900+ metropolitan statistical areas (MSAs)
+- 3,000+ counties
+- 29,000+ ZIP codes
 - 2,400,000+ properties analyzed
 - 64+ data points per market
 - Monthly data updates
@@ -66,7 +66,7 @@ Validated out-of-sample across 2001-2023 scoring vintages (20+ years, two full h
 ## Competitors
 
 PropertyIQ differentiates from competitors through validated predictive scores:
-- vs Mashvisor: 4.6x more market coverage (925 vs ~200 metros), monthly updates vs quarterly
+- vs Mashvisor: 4.6x more market coverage (900+ vs ~200 metros), monthly updates vs quarterly
 - vs NeighborhoodScout: AI-powered predictive scores vs descriptive analytics
 - vs Reventure: Granular ZIP-level data vs metro-level only
 
