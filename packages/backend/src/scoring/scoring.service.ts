@@ -199,6 +199,36 @@ export class ScoringService {
     );
   }
 
+  /**
+   * Distinct score_dates for a geography, newest-first, capped at `limit`.
+   * Used by the monthly SEO slug rebuild to enumerate publish/redirect windows.
+   *
+   * Delegates to the `get_recent_score_periods` SQL function so Postgres
+   * handles DISTINCT + ORDER + LIMIT server-side. A client-side .limit(5000)
+   * approach fails at ZIP scale (~29 k rows/period) because the ordered slice
+   * never leaves the most-recent month, returning only 1 distinct period.
+   */
+  async getScorePeriods(
+    geoLevel: 'metro' | 'county' | 'zip',
+    scoreType: string,
+    limit: number,
+  ): Promise<string[]> {
+    const { data, error } = await this.supabase.rpc(
+      'get_recent_score_periods',
+      {
+        p_geography: geoLevel,
+        p_score_type: scoreType,
+        p_limit: limit,
+      },
+    );
+    if (error) throw error;
+    return (data ?? []).map((d: unknown) =>
+      typeof d === 'string'
+        ? d.slice(0, 10)
+        : new Date(d as string).toISOString().slice(0, 10),
+    );
+  }
+
   async getAllScoresForGeography(
     geography: GeographyLevel,
     scoreType: ScoreType,

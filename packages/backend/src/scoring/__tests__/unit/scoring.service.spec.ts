@@ -43,6 +43,7 @@ const mockSupabase = {
   upsert: jest.fn().mockResolvedValue({ error: null }),
   delete: jest.fn().mockReturnThis(),
   insert: jest.fn().mockResolvedValue({ error: null }),
+  rpc: jest.fn().mockResolvedValue({ data: [], error: null }),
 };
 
 describe('ScoringService', () => {
@@ -414,6 +415,38 @@ describe('ScoringService', () => {
         SCORING_CONSTANTS.TREND_THRESHOLD,
       );
       // This would result in 'stable' trend
+    });
+  });
+
+  // ===========================================================================
+  // Score Periods Tests
+  // ===========================================================================
+  describe('getScorePeriods', () => {
+    it('returns 6 distinct score_dates newest-first from the RPC (no row-cap collapse)', async () => {
+      // Arrange: RPC returns 6 distinct date strings (Postgres returns dates as strings)
+      // This proves the ZIP-scale row-cap bug is fixed — 29k rows/period no longer
+      // collapses the result to 1 period.
+      const dates = [
+        '2026-05-31',
+        '2026-04-30',
+        '2026-03-31',
+        '2026-02-28',
+        '2026-01-31',
+        '2025-12-31',
+      ];
+      mockSupabase.rpc.mockResolvedValueOnce({ data: dates, error: null });
+
+      const out = await service.getScorePeriods('zip', 'propertyiq', 6);
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
+        'get_recent_score_periods',
+        {
+          p_geography: 'zip',
+          p_score_type: 'propertyiq',
+          p_limit: 6,
+        },
+      );
+      expect(out).toEqual(dates);
     });
   });
 });

@@ -9,6 +9,6 @@ module.exports = {
   testEnvironment: "node",
   rootDir: __dirname,
   roots: ["<rootDir>"],
-  testMatch: ["**/__tests__/**/*.spec.ts"],
+  testMatch: ["**/__tests__/**/*.spec.ts", "**/*.test.ts"],
   testPathIgnorePatterns: ["/node_modules/"],
 };

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { COUNTY_SLUG_DATA, SLUG_TO_COUNTY } from "@/lib/data/county-slug-data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
-import { isLocationIndexable } from "@/lib/seo/scored-locations";
 import {
   buildMarketTitle,
   buildMarketDescription,
@@ -33,14 +32,9 @@ export async function generateMetadata({
   const pageUrl = `https://www.propertyiq.app/markets/county/${county.slug}`;
   const ogImageUrl = `/api/og?title=${encodeURIComponent(county.shortName)}`;
 
-  // Scoreless counties render a bare "—" and read as thin content — keep them
-  // out of the index (still crawlable via follow so internal links pass equity).
   // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
   // data-interpolated title + description so each page is data-distinct.
-  const [indexable, stats] = await Promise.all([
-    isLocationIndexable("county", county.fips),
-    fetchSeoMarketStats("county", county.fips, county.state),
-  ]);
+  const stats = await fetchSeoMarketStats("county", county.fips, county.state);
   const title = buildMarketTitle(county.shortName, stats);
   const description = buildMarketDescription(county.shortName, stats);
 
@@ -48,7 +42,6 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: pageUrl },
-    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,
