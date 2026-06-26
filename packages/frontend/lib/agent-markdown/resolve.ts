@@ -11,7 +11,11 @@ export function resolveMarkdown(pathname: string): string | null {
     return `# ${post.frontmatter.title}\n\n${post.content}`;
   }
   if (pathname === "/scores/methodology") {
-    return readMethodologyReport();
+    try {
+      return readMethodologyReport();
+    } catch {
+      return null;
+    }
   }
   return null;
 }

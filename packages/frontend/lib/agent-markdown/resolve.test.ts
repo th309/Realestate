@@ -1,7 +1,10 @@
 import { resolveMarkdown } from "./resolve";
 import { getAllSlugs } from "@/lib/blog";
+import * as methodologyReport from "@/lib/scores/methodology-report";
 
 describe("resolveMarkdown", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("returns markdown for a real blog post, prefixed with its title", () => {
     const slug = getAllSlugs()[0];
     expect(slug).toBeTruthy();
@@ -20,5 +23,14 @@ describe("resolveMarkdown", () => {
     expect(resolveMarkdown("/blog")).toBeNull();
     expect(resolveMarkdown("/docs/mcp")).toBeNull();
     expect(resolveMarkdown("/blog/this-slug-does-not-exist-xyz")).toBeNull();
+  });
+
+  it("returns null when the methodology report read fails", () => {
+    vi.spyOn(methodologyReport, "readMethodologyReport").mockImplementationOnce(
+      () => {
+        throw new Error("ENOENT");
+      },
+    );
+    expect(resolveMarkdown("/scores/methodology")).toBeNull();
   });
 });

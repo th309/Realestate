@@ -8,6 +8,7 @@ import {
   LANDING_PREVIEW_VALUE,
   type LandingVariant,
 } from "@/lib/experiments/landing-variant";
+import { markdownNegotiationRewrite } from "@/lib/agent-markdown/negotiate";
 
 /**
  * Next.js Middleware
@@ -83,6 +84,12 @@ export async function middleware(request: NextRequest) {
     url.port = "";
     return NextResponse.redirect(url, 308);
   }
+
+  // Markdown for Agents: serve the markdown SOURCE to agents that ask for it via
+  // `Accept: text/markdown`; browsers fall through to HTML. Runs before the
+  // Supabase session refresh — markdown content is public.
+  const markdownRewrite = markdownNegotiationRewrite(request);
+  if (markdownRewrite) return markdownRewrite;
 
   // Short-link rate limit: 60 req/min per IP on the /go/ prefix.
   // Runs before Supabase session work so hot paths stay cheap.

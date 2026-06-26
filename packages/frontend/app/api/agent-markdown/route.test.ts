@@ -2,9 +2,9 @@ import { GET } from "./route";
 import { getAllSlugs } from "@/lib/blog";
 
 function req(path: string): Request {
-  return new Request(
-    `http://localhost/api/agent-markdown?path=${encodeURIComponent(path)}`,
-  );
+  return new Request("http://localhost/api/agent-markdown", {
+    headers: { "x-md-pathname": path },
+  });
 }
 
 describe("agent-markdown route", () => {
