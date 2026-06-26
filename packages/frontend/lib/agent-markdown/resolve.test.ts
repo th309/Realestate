@@ -1,3 +1,4 @@
+import fs from "fs";
 import { resolveMarkdown } from "./resolve";
 import { getAllSlugs } from "@/lib/blog";
 
@@ -20,5 +21,13 @@ describe("resolveMarkdown", () => {
     expect(resolveMarkdown("/blog")).toBeNull();
     expect(resolveMarkdown("/docs/mcp")).toBeNull();
     expect(resolveMarkdown("/blog/this-slug-does-not-exist-xyz")).toBeNull();
+  });
+
+  it("returns null when the methodology report read fails", () => {
+    const spy = vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
+      throw new Error("ENOENT");
+    });
+    expect(resolveMarkdown("/scores/methodology")).toBeNull();
+    spy.mockRestore();
   });
 });
