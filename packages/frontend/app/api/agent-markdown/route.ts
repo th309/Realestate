@@ -1,10 +1,12 @@
 import { resolveMarkdown } from "@/lib/agent-markdown/resolve";
 
 // Markdown representation endpoint. middleware.ts rewrites content requests that
-// carry `Accept: text/markdown` here, forwarding the original path as ?path=.
+// carry `Accept: text/markdown` here, forwarding the original path via the
+// `x-md-pathname` request header (a rewrite's query params don't reach here —
+// request.url stays the original URL).
 export async function GET(request: Request): Promise<Response> {
-  const path = new URL(request.url).searchParams.get("path") ?? "";
-  const markdown = resolveMarkdown(path);
+  const pathname = request.headers.get("x-md-pathname") ?? "";
+  const markdown = resolveMarkdown(pathname);
   if (markdown === null) {
     return new Response("Not found", {
       status: 404,

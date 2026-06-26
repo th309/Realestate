@@ -65,6 +65,12 @@ const nextConfig = {
     '/scores/methodology': [
       './app/(app)/scores/methodology/validation-report.md',
     ],
+    // The /api/agent-markdown route reads blog .mdx + the methodology .md at
+    // request time; trace them into its standalone bundle or it 500s in prod.
+    '/api/agent-markdown': [
+      './content/blog/**',
+      './app/(app)/scores/methodology/validation-report.md',
+    ],
   },
   // Exclude 1.3GB of static GeoJSON from Turbopack/webpack watching in dev
   // These files are served as-is from /public and rarely change
