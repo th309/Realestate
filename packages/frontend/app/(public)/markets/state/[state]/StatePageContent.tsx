@@ -1,5 +1,7 @@
-"use client";
-
+// Server Component (no "use client"): rendered entirely on the server so the full
+// metros[]/counties[] arrays are NOT serialized into the RSC flight payload — only
+// the 12 rendered links per section become static HTML. The component uses no hooks
+// or event handlers, so it has no client-side dependency. (beta backlog #5)
 import Link from "next/link";
 import type { StateSlugEntry } from "@/lib/data/state-slug-data";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
