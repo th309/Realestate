@@ -23,6 +23,8 @@ export interface ScreenerQuery {
   overvaluedMax?: number;
   medianPriceMin?: number;
   medianPriceMax?: number;
+  /** Market-size floor (de-noise). Rows with NULL population pass through. */
+  populationMin?: number;
   sortBy?:
     | "score"
     | "median_price"
@@ -70,6 +72,7 @@ export interface ScreenerRow {
   score_chg_1y: number | null;
   score_chg_3y: number | null;
   score_chg_5y: number | null;
+  population: number | null;
   as_of: string | null;
   refreshed_at: string | null;
 }
@@ -99,6 +102,7 @@ export async function fetchScreener(
     overvaluedMax: query.overvaluedMax,
     medianPriceMin: query.medianPriceMin,
     medianPriceMax: query.medianPriceMax,
+    populationMin: query.populationMin,
     sortBy: query.sortBy,
     sortOrder: query.sortOrder,
     changeWindow: query.changeWindow,
@@ -124,6 +128,8 @@ export interface ScreenerMoversQuery {
   window: MoverWindow;
   state?: string;
   limit?: number;
+  /** Market-size floor (de-noise). Rows with NULL population pass through. */
+  populationMin?: number;
 }
 
 export async function fetchScreenerMovers(
@@ -134,6 +140,7 @@ export async function fetchScreenerMovers(
     window: query.window,
     state: query.state,
     limit: query.limit,
+    populationMin: query.populationMin,
   };
   return fetchAPIWithParams<ScreenerMoversResult>(
     `/api/screener/${geoLevel}/movers`,
