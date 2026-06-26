@@ -19,6 +19,15 @@ describe("resolveMarkdown", () => {
     expect(md!.length).toBeGreaterThan(100);
   });
 
+  it("returns curated markdown for the static marketing pages", () => {
+    for (const path of ["/", "/markets", "/pricing", "/scores"]) {
+      const md = resolveMarkdown(path);
+      expect(md).not.toBeNull();
+      expect(md!.startsWith("# ")).toBe(true);
+      expect(md!.length).toBeGreaterThan(100);
+    }
+  });
+
   it("returns null for the blog index, a docs path, and a missing slug", () => {
     expect(resolveMarkdown("/blog")).toBeNull();
     expect(resolveMarkdown("/docs/mcp")).toBeNull();

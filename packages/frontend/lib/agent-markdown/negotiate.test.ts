@@ -9,9 +9,15 @@ describe("markdown negotiation", () => {
   it("recognizes the supported content routes only", () => {
     expect(isMarkdownContentRoute("/blog/some-post")).toBe(true);
     expect(isMarkdownContentRoute("/scores/methodology")).toBe(true);
+    expect(isMarkdownContentRoute("/")).toBe(true);
+    expect(isMarkdownContentRoute("/markets")).toBe(true);
+    expect(isMarkdownContentRoute("/pricing")).toBe(true);
+    expect(isMarkdownContentRoute("/scores")).toBe(true);
     expect(isMarkdownContentRoute("/blog")).toBe(false);
     expect(isMarkdownContentRoute("/docs/mcp")).toBe(false);
     expect(isMarkdownContentRoute("/blog/a/b")).toBe(false);
+    // Exact-match only — a sub-path of a static page is not itself covered.
+    expect(isMarkdownContentRoute("/markets/austin-tx")).toBe(false);
   });
 
   it("detects a markdown Accept header", () => {

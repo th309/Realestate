@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { STATIC_MARKDOWN_PAGES } from "@/lib/agent-markdown/static-pages";
 
 // Markdown-for-Agents content negotiation. Extracted from middleware.ts so the
 // decision logic is unit-testable and middleware stays within the file-size
@@ -7,7 +8,11 @@ import { type NextRequest, NextResponse } from "next/server";
 const BLOG_POST = /^\/blog\/[^/]+$/;
 
 export function isMarkdownContentRoute(pathname: string): boolean {
-  return BLOG_POST.test(pathname) || pathname === "/scores/methodology";
+  return (
+    BLOG_POST.test(pathname) ||
+    pathname === "/scores/methodology" ||
+    pathname in STATIC_MARKDOWN_PAGES
+  );
 }
 
 export function wantsMarkdown(acceptHeader: string | null): boolean {

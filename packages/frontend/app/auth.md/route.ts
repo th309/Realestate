@@ -5,7 +5,7 @@ import { AGENT_DISCOVERY } from "@/lib/agent-discovery/manifest";
 export async function GET(): Promise<Response> {
   const { siteOrigin, mcp } = AGENT_DISCOVERY;
   const mcpOrigin = new URL(mcp.endpoint).origin;
-  const body = `# PropertyIQ — Agent Authentication
+  const body = `# PropertyIQ auth.md — Agent Authentication
 
 PropertyIQ exposes its real-estate analytics to agents two ways.
 

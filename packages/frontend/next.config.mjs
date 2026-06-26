@@ -188,6 +188,14 @@ const nextConfig = {
         source: '/.well-known/api-catalog',
         destination: '/api/agent-discovery/api-catalog',
       },
+      {
+        source: '/.well-known/oauth-protected-resource',
+        destination: '/api/agent-discovery/oauth-protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-authorization-server',
+        destination: '/api/agent-discovery/oauth-authorization-server',
+      },
     ];
   },
   // Custom response headers

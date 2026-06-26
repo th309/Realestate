@@ -1,5 +1,10 @@
 const BASE_URL = process.env.MCP_BASE_URL || "https://mcp.propertyiq.app";
 
+// Public agent-auth recipe (WorkOS auth.md convention). It lives on the marketing
+// site, not the MCP host, so it's an absolute cross-origin pointer regardless of
+// which host served this metadata.
+const AUTH_MD_URL = "https://www.propertyiq.app/auth.md";
+
 /**
  * Derive the server URL from the incoming request's host headers.
  *
@@ -31,6 +36,7 @@ export function protectedResourceMetadata(serverUrl?: string) {
   return {
     resource: url,
     authorization_servers: [url],
+    scopes_supported: ["mcp"],
     bearer_methods_supported: ["header"],
   };
 }
@@ -47,6 +53,7 @@ export function authorizationServerMetadata(serverUrl?: string) {
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
     agent_auth: {
+      skill: AUTH_MD_URL,
       register_uri: `${url}/register`,
       identity_types_supported: ["dynamic_client"],
       credential_types_supported: ["oauth2_access_token", "api_key"],
