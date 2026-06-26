@@ -48,6 +48,8 @@ Validated out-of-sample across 2001-2023 scoring vintages (20+ years, two full h
 | BLS | Unemployment rates, employment statistics | Monthly |
 | BEA | Regional GDP, personal income | Quarterly |
 
+Note: The PropertyIQ Score itself uses only four inputs — Zillow ZHVI 12-month and 3-month momentum, and Realtor.com median days on market and price-cut share. Redfin (and Census/FRED/BLS/BEA) power other parts of the platform but are not inputs to the score.
+
 ## Coverage
 
 - 900+ metropolitan statistical areas (MSAs)
