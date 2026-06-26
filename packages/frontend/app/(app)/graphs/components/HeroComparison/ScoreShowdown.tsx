@@ -99,7 +99,6 @@ function MarketScoreCard({
             value={market.score}
             size={140}
             strokeWidth={10}
-            showGrade={true}
             showLabel={false}
           />
         ) : (

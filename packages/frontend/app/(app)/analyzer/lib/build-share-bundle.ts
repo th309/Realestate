@@ -66,6 +66,10 @@ interface BuildArgs {
     yourPricePerSqft?: number;
     subjectPrice?: number;
   };
+  /** Owner "My Notes" free-text. */
+  notes?: string;
+  /** Whether notes are visible on the public share link / PDF. */
+  shareNotes?: boolean;
 }
 
 export interface ShareBundle {
@@ -125,6 +129,8 @@ export function buildShareBundle(a: BuildArgs): ShareBundle {
       subjectLat: a.subjectLat,
       subjectLon: a.subjectLon,
     },
+    notes: a.notes,
+    shareNotes: a.shareNotes,
   };
 
   const aiPayload: AiInsightPayload | null =

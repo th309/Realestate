@@ -45,7 +45,6 @@ export function ScoreColumn({
               value={primaryScore.score}
               size={160}
               strokeWidth={10}
-              showGrade={true}
               showLabel={true}
             />
           ) : (

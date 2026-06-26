@@ -58,6 +58,8 @@ interface Props {
   marginalTaxRate?: number | null;
   salesComps?: Array<{ distance?: number }>;
   aiNarratives?: SectionAiNarratives;
+  /** Owner notes, present only when "Share with client" was enabled. */
+  sharedNotes?: string | null;
   disclaimer: string;
 }
 
@@ -137,6 +139,20 @@ export function ReadonlyAnalyticsPage(p: Props) {
           fallbackNetMigration={marketProps.fallbackNetMigration}
           {...staticAi(ai.market_context)}
         />
+      )}
+
+      {p.sharedNotes && (
+        <div data-shared-notes>
+          <p
+            className="type-eyebrow"
+            style={{ color: "var(--pdf-ink-faint)", marginBottom: 4 }}
+          >
+            Notes
+          </p>
+          <p className="type-foot" style={{ whiteSpace: "pre-wrap" }}>
+            {p.sharedNotes}
+          </p>
+        </div>
       )}
 
       <div>

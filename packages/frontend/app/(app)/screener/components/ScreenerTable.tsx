@@ -4,11 +4,7 @@ import React from "react";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { ScreenerRow, ScreenerQuery, MoverWindow } from "@/lib/data";
 import { formatMetricValue } from "@/lib/data";
-import {
-  getScoreColor,
-  getLetterGrade,
-  getGradeColor,
-} from "@/app/components/scoring/ScoreDisplay";
+import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
 import {
   WINDOW_TO_COLUMN,
   WINDOW_META,
@@ -40,13 +36,7 @@ interface ScreenerTableProps {
   onClearFilters?: () => void;
 }
 
-function ScoreCell({
-  score,
-  grade,
-}: {
-  score: number | null;
-  grade: string | null;
-}) {
+function ScoreCell({ score }: { score: number | null }) {
   if (score === null) {
     return (
       <span className="font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
@@ -56,22 +46,16 @@ function ScoreCell({
   }
 
   const color = getScoreColor(score);
-  const displayGrade = grade ?? getLetterGrade(score);
-  const gradeColors = getGradeColor(displayGrade);
 
+  // No percentile letter-grade badge here: the PropertyIQ Score is a momentum
+  // signal, so a harsh "F"-style grade undercuts the reframe. Show the number
+  // only. (This is NOT the data-quality confidence badge, which is unrelated.)
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="font-[family-name:var(--font-roboto-mono)] font-semibold text-sm"
-        style={{ color }}
-      >
-        {score}
-      </span>
-      <span
-        className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-bold ${gradeColors.bg} ${gradeColors.text}`}
-      >
-        {displayGrade}
-      </span>
+    <span
+      className="font-[family-name:var(--font-roboto-mono)] font-semibold text-sm"
+      style={{ color }}
+    >
+      {score}
     </span>
   );
 }
@@ -254,7 +238,7 @@ export function ScreenerTable({
 
                   {/* Score */}
                   <td className="px-4 py-3 text-right">
-                    <ScoreCell score={row.score} grade={row.grade} />
+                    <ScoreCell score={row.score} />
                   </td>
 
                   {/* Δ Score (active window) */}

@@ -4,7 +4,7 @@
 
 ## Overview
 
-PropertyIQ uses machine learning to predict real estate market performance. The platform generates a single PropertyIQ Score (1-99) that predicts market performance using 3 Redfin demand-signal metrics (% Sold Above List, Median DOM, Months of Supply). Validated across 13 years of data with a 100% year hit rate — top-scored markets outperformed bottom-scored markets in every single test window.
+PropertyIQ generates a single PropertyIQ Score (1-99) that predicts a market's 3-year performance relative to its state. The score is built from four monthly market signals — Zillow home-value momentum (12-month and 3-month) plus Realtor.com median days on market and the share of listings with price cuts. It is a transparent, equal-weight formula with no fitted parameters or black-box model. Validated across 20+ years of out-of-sample data (2001-2023 scoring vintages), the score-to-return relationship is positive in every backtested year at every geography level.
 
 ## Key Pages
 
@@ -22,18 +22,19 @@ PropertyIQ uses machine learning to predict real estate market performance. The 
 
 PropertyIQ generates a single **PropertyIQ Score** (1-99) for every geography:
 
-- **50 = state average** — higher means outperformance relative to the state
-- Built from 3 Redfin demand-signal metrics: % Sold Above List (positive), Median Days on Market (negative), Months of Supply (negative)
-- Each metric is z-scored within the state, combined into a signal, then percentile-ranked and re-centered at 55.6, clamped 1-99
-- Coverage: 746 metros, 2,983 counties, 19,880 ZIPs
+- **50 = state average** — higher predicts outperformance relative to the market's state over the next 3 years
+- Built from 4 demand-signal inputs: Zillow ZHVI 12-month momentum (positive), Zillow ZHVI 3-month momentum (positive), Realtor.com median days on market (negative), and the share of listings with price cuts (negative)
+- Formula: `z(zhvi_yoy) + z(zhvi_mom_3m) − z(median_days_on_market) − z(price_reduced_share)`, equal weights, no fitted parameters
+- Each input is converted to a cross-sectional z-score across all markets at a geography level each month (national basis), summed, percentile-ranked, re-centered so the zero-crossing maps to 50, and clamped 1-99
+- Coverage: ~935 metros, ~3,150 counties, ~34,000 ZIPs; monthly history backfilled to 2001
 
 ### Validation Results
 
-Validated across 13 years of walk-forward data (2012-2025):
-- 100% year hit rate: top-quintile markets outperformed bottom-quintile in every single test window
-- Top-scored markets delivered +3.05% excess return vs state average over 3 years
-- Bottom-scored markets delivered -3.34% excess return vs state average over 3 years
-- Monotonic quintile separation: performance increases consistently from Q1 to Q5
+Validated out-of-sample across 2001-2023 scoring vintages (20+ years, two full housing cycles):
+- The score-to-return relationship is positive in every validated calendar year at metro, county, and ZIP levels
+- 2016-onward out-of-sample information coefficient (3-year forward excess return vs state): +0.27 metro, +0.20 county, +0.20 ZIP
+- Monotonic score-band separation: higher score bands realize higher 3-year excess returns vs state with no adjacent inversions
+- Permutation tests place the signal far above a shuffled-target null at every geography level
 
 ## Data Sources
 
@@ -73,30 +74,31 @@ PropertyIQ differentiates from competitors through validated predictive scores:
 
 ### PropertyIQ Score Formula
 
-The PropertyIQ Score measures relative market demand signal within each state:
+The PropertyIQ Score predicts a market's 3-year excess return relative to its state, built from four monthly demand-signal inputs:
 
-1. Three Redfin demand-signal metrics are collected: % Sold Above List Price (positive signal), Median Days on Market (negative signal), and Months of Supply (negative signal).
-2. Each metric is z-scored within the state to normalize across different market scales.
-3. The signal is computed as: `z(sold_above_list) - z(median_dom) - z(months_of_supply)`.
-4. The raw signal is converted to a percentile rank within the state, re-centered at 55.6, and clamped to the 1-99 range.
-5. A score of 50 represents the state average. Higher scores indicate stronger demand relative to other markets in the same state.
+1. Four inputs are collected: Zillow ZHVI 12-month price momentum (positive signal), Zillow ZHVI 3-month price momentum (positive signal), Realtor.com median days on market (negative signal), and the share of listings with price cuts (negative signal). The two momentum inputs come from Zillow; the two flow inputs come from Realtor.com. No Redfin data is used in the score.
+2. Each input is converted to a cross-sectional z-score across all markets at the same geography level for that month — a national basis, not partitioned by state.
+3. The signal is computed as: `z(zhvi_yoy) + z(zhvi_mom_3m) − z(median_days_on_market) − z(price_reduced_share)`, with equal weights and no fitted parameters.
+4. The raw signal is converted to a cross-sectional percentile rank, re-centered so the zero-crossing maps to 50 at every geography level, and clamped to the 1-99 range.
+5. A score of 50 corresponds to the state average. The scale is calibrated and empirically validated so that 50 equals a market's state-average 3-year performance: higher scores predict outperformance, and lower scores predict underperformance, relative to the market's own state. (The computation is national-basis; the prediction target is within-state.)
 
-This formula is transparent, reproducible, and uses only three publicly available Redfin metrics. There is no black-box ML model — the score is a direct function of observable market conditions.
+This formula is transparent, reproducible, and uses only observable market signals. There is no black-box ML model — the score is a direct, equal-weight function of measurable market conditions. Engine requires at least 2 of the 4 inputs; a per-score A/B/C/F confidence grade reflects how many inputs were available and fresh, independent of the score value.
 
 ### Walk-Forward Validation Process
 
-The PropertyIQ Score has been validated across 13 years of walk-forward data (2012-2025). For each test window, scores are computed using only data available at scoring time, then compared against actual home price appreciation over the subsequent 1-year and 3-year periods.
+The PropertyIQ Score has been validated out-of-sample across 2001-2023 scoring vintages (20+ years spanning two full housing cycles). For each scoring date, the score is computed using only data available at that time, then evaluated against actual home price changes (Zillow ZHVI) over the subsequent 3-year period. All results are out-of-sample in time.
 
 Key validation results:
-- 100% year hit rate: the top-quintile (highest-scored) markets outperformed the bottom-quintile in every single year tested.
-- Monotonic quintile separation: average excess returns increase consistently from Q1 (-3.34%) through Q5 (+3.05%) relative to the state average over 3 years.
-- Performance is consistent across market regimes including the 2020-2021 pandemic surge and the 2022-2023 rate-shock correction.
+- The score-to-return relationship is positive in every validated calendar year at metro, county, and ZIP levels.
+- 2016-onward out-of-sample information coefficient (per-month Spearman correlation of score vs 3-year forward excess-vs-state return): approximately +0.27 metro, +0.20 county, +0.20 ZIP. The signal is strongest from 2016 onward, when all four inputs are present; pre-2016 vintages use price momentum only and carry lower confidence.
+- Monotonic score-band separation: average 3-year excess returns vs state increase consistently from the lowest score band to the highest, with no adjacent inversions.
+- Permutation tests place the signal many standard deviations above a shuffled-target null at every geography level.
 
 ### Data Sources
 
-The score uses Redfin data exclusively for its three input metrics. Missing values are handled through the MetricResolutionService's geographic inheritance system, which walks up the geography hierarchy (ZIP to county to metro to state) when primary data is unavailable.
+The score uses Zillow ZHVI for its two price-momentum inputs and Realtor.com for its two listing-flow inputs (median days on market and price-cut share). Missing values are handled through the MetricResolutionService's geographic inheritance system, which walks up the geography hierarchy (ZIP to county to metro to state) when primary data is unavailable.
 
-Scores are recomputed monthly as new Redfin data arrives. Coverage spans 746 metros, 2,983 counties, and 19,880 ZIP codes.
+Scores are recomputed monthly as new data arrives. Coverage spans ~935 metros, ~3,150 counties, and ~34,000 ZIP codes, with monthly history backfilled to 2001.
 
 ## Citation
 

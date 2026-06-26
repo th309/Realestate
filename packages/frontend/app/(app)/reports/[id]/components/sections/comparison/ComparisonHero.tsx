@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Trophy, MapPin } from 'lucide-react';
+import React from "react";
+import { Trophy, MapPin } from "lucide-react";
 
-import type { ReportInstance } from '../../../../types';
-import type { ScoreComponentBreakdown } from '@/lib/data';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-import { AIAnalysisBlock } from '../core';
-import { formatComponentLabel } from '../../utils/scoreHelpers';
+import type { ReportInstance } from "../../../../types";
+import type { ScoreComponentBreakdown } from "@/lib/data";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
+import { AIAnalysisBlock } from "../core";
+import { formatComponentLabel } from "../../utils/scoreHelpers";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -33,17 +33,24 @@ interface MarketCard {
 // ComparisonHero Component
 // ---------------------------------------------------------------------------
 
-export function ComparisonHero({ report, className = '' }: ComparisonHeroProps): React.ReactElement {
-  const isInvestor = report.user_type === 'investor';
-  const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = 'PropertyIQ Score';
+export function ComparisonHero({
+  report,
+  className = "",
+}: ComparisonHeroProps): React.ReactElement {
+  const isInvestor = report.user_type === "investor";
+  const scoreType = isInvestor ? "investoredge" : "homeready";
+  const scoreLabel = "PropertyIQ Score";
 
   // -----------------------------------------------------------------------
   // Primary market score
   // -----------------------------------------------------------------------
   const primaryScore = isInvestor
-    ? (report.investoredge_score ?? report.scores_snapshot?.investoredge_score ?? null)
-    : (report.homeready_score ?? report.scores_snapshot?.homeready_score ?? null);
+    ? (report.investoredge_score ??
+      report.scores_snapshot?.investoredge_score ??
+      null)
+    : (report.homeready_score ??
+      report.scores_snapshot?.homeready_score ??
+      null);
 
   // -----------------------------------------------------------------------
   // Comparison markets (use comparisons record keyed by geo ID)
@@ -101,8 +108,8 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
   // -----------------------------------------------------------------------
   const gridCols =
     markets.length >= 3
-      ? 'grid-cols-1 md:grid-cols-3'
-      : 'grid-cols-1 md:grid-cols-2';
+      ? "grid-cols-1 md:grid-cols-3"
+      : "grid-cols-1 md:grid-cols-2";
 
   // -----------------------------------------------------------------------
   // Empty state
@@ -111,11 +118,17 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
     return (
       <section
         className={`report-animate-in rounded-[var(--report-radius-xl)] p-[var(--report-space-xl)] md:p-[var(--report-space-2xl)] text-center ${className}`.trim()}
-        style={{ backgroundColor: 'white', border: '1px solid rgba(27, 46, 74, 0.04)' }}
+        style={{
+          backgroundColor: "white",
+          border: "1px solid rgba(27, 46, 74, 0.04)",
+        }}
       >
         <p
           className="text-[0.9375rem]"
-          style={{ color: 'var(--report-stone-light)', fontFamily: 'var(--report-font-body)' }}
+          style={{
+            color: "var(--report-stone-light)",
+            fontFamily: "var(--report-font-body)",
+          }}
         >
           Add a comparison market to see the head-to-head showdown.
         </p>
@@ -127,9 +140,10 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
     <section
       className={`report-animate-in rounded-[var(--report-radius-xl)] overflow-hidden ${className}`.trim()}
       style={{
-        background: 'linear-gradient(180deg, var(--report-cream) 0%, white 100%)',
-        border: '1px solid rgba(27, 46, 74, 0.06)',
-        boxShadow: 'var(--report-shadow-md)',
+        background:
+          "linear-gradient(180deg, var(--report-cream) 0%, white 100%)",
+        border: "1px solid rgba(27, 46, 74, 0.06)",
+        boxShadow: "var(--report-shadow-md)",
       }}
       aria-label="Comparison Hero"
     >
@@ -141,17 +155,17 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
           <h2
             className="text-2xl md:text-3xl font-bold leading-tight flex flex-wrap items-center justify-center gap-3"
             style={{
-              fontFamily: 'var(--report-font-display)',
-              color: 'var(--report-navy)',
+              fontFamily: "var(--report-font-display)",
+              color: "var(--report-navy)",
             }}
           >
             <span>{markets[0].name}</span>
             <span
               className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide"
               style={{
-                backgroundColor: 'var(--report-cream-dark)',
-                color: 'var(--report-stone)',
-                fontFamily: 'var(--report-font-body)',
+                backgroundColor: "var(--report-cream-dark)",
+                color: "var(--report-stone)",
+                fontFamily: "var(--report-font-body)",
               }}
             >
               vs
@@ -162,9 +176,9 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
                 <span
                   className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide"
                   style={{
-                    backgroundColor: 'var(--report-cream-dark)',
-                    color: 'var(--report-stone)',
-                    fontFamily: 'var(--report-font-body)',
+                    backgroundColor: "var(--report-cream-dark)",
+                    color: "var(--report-stone)",
+                    fontFamily: "var(--report-font-body)",
                   }}
                 >
                   vs
@@ -178,7 +192,9 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
         {/* ------------------------------------------------------------- */}
         {/* Score Gauges Grid                                              */}
         {/* ------------------------------------------------------------- */}
-        <div className={`grid ${gridCols} gap-[var(--report-space-lg)] mb-[var(--report-space-xl)]`}>
+        <div
+          className={`grid ${gridCols} gap-[var(--report-space-lg)] mb-[var(--report-space-xl)]`}
+        >
           {markets.map((market, idx) => (
             <div
               key={market.id}
@@ -187,11 +203,15 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
                 report-animate-in report-animate-in-delay-${Math.min(idx + 1, 5)}
               `.trim()}
               style={{
-                backgroundColor: market.isWinner ? 'var(--report-success-bg)' : 'white',
+                backgroundColor: market.isWinner
+                  ? "var(--report-success-bg)"
+                  : "white",
                 border: market.isWinner
-                  ? '2px solid var(--report-success)'
-                  : '1px solid rgba(27, 46, 74, 0.06)',
-                boxShadow: market.isWinner ? '0 4px 24px rgba(34, 139, 34, 0.1)' : undefined,
+                  ? "2px solid var(--report-success)"
+                  : "1px solid rgba(27, 46, 74, 0.06)",
+                boxShadow: market.isWinner
+                  ? "0 4px 24px rgba(34, 139, 34, 0.1)"
+                  : undefined,
               }}
             >
               {/* Winner Badge */}
@@ -199,9 +219,9 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
                 <div
                   className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
                   style={{
-                    backgroundColor: 'var(--report-success)',
-                    color: 'white',
-                    fontFamily: 'var(--report-font-body)',
+                    backgroundColor: "var(--report-success)",
+                    color: "white",
+                    fontFamily: "var(--report-font-body)",
                   }}
                 >
                   <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
@@ -213,14 +233,16 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
               <div className="flex items-center gap-1.5 mb-[var(--report-space-md)]">
                 <MapPin
                   className="w-3.5 h-3.5"
-                  style={{ color: 'var(--report-stone-light)' }}
+                  style={{ color: "var(--report-stone-light)" }}
                   aria-hidden="true"
                 />
                 <h3
                   className="text-lg font-semibold"
                   style={{
-                    fontFamily: 'var(--report-font-display)',
-                    color: market.isWinner ? 'var(--report-success)' : 'var(--report-navy)',
+                    fontFamily: "var(--report-font-display)",
+                    color: market.isWinner
+                      ? "var(--report-success)"
+                      : "var(--report-navy)",
                   }}
                 >
                   {market.name}
@@ -233,7 +255,6 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
                   value={market.score}
                   size={120}
                   strokeWidth={8}
-                  showGrade
                   showLabel
                 />
               ) : (
@@ -242,14 +263,14 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
                   style={{
                     width: 120,
                     height: 120,
-                    backgroundColor: 'var(--report-cream-dark)',
+                    backgroundColor: "var(--report-cream-dark)",
                   }}
                 >
                   <span
                     className="text-sm font-medium"
                     style={{
-                      color: 'var(--report-stone-light)',
-                      fontFamily: 'var(--report-font-body)',
+                      color: "var(--report-stone-light)",
+                      fontFamily: "var(--report-font-body)",
                     }}
                   >
                     No Score
@@ -261,8 +282,8 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
               <p
                 className="mt-[var(--report-space-sm)] text-sm font-medium"
                 style={{
-                  color: 'var(--report-stone)',
-                  fontFamily: 'var(--report-font-body)',
+                  color: "var(--report-stone)",
+                  fontFamily: "var(--report-font-body)",
                 }}
               >
                 {scoreLabel}
@@ -278,51 +299,54 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
           <div
             className="text-center p-[var(--report-space-md)] rounded-[var(--report-radius-md)] mb-[var(--report-space-lg)] report-animate-in report-animate-in-delay-2"
             style={{
-              backgroundColor: 'var(--report-success-bg)',
-              border: '1px solid rgba(34, 139, 34, 0.15)',
+              backgroundColor: "var(--report-success-bg)",
+              border: "1px solid rgba(34, 139, 34, 0.15)",
             }}
           >
             <p
               className="text-base font-semibold flex items-center justify-center gap-2"
               style={{
-                color: 'var(--report-success)',
-                fontFamily: 'var(--report-font-display)',
+                color: "var(--report-success)",
+                fontFamily: "var(--report-font-display)",
               }}
             >
               <Trophy className="w-5 h-5" aria-hidden="true" />
               {priorityWinner.winnerName} wins based on your priorities
             </p>
-            {priorityWinner.priorityScores && priorityWinner.priorityScores.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2 mt-[var(--report-space-sm)]">
-                {priorityWinner.priorityScores.slice(0, 3).map((ps) => (
-                  <span
-                    key={ps.priority}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor: 'white',
-                      color: 'var(--report-stone)',
-                      fontFamily: 'var(--report-font-body)',
-                    }}
-                  >
-                    {formatComponentLabel(ps.priority)}
-                  </span>
-                ))}
-              </div>
-            )}
+            {priorityWinner.priorityScores &&
+              priorityWinner.priorityScores.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-2 mt-[var(--report-space-sm)]">
+                  {priorityWinner.priorityScores.slice(0, 3).map((ps) => (
+                    <span
+                      key={ps.priority}
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: "white",
+                        color: "var(--report-stone)",
+                        fontFamily: "var(--report-font-body)",
+                      }}
+                    >
+                      {formatComponentLabel(ps.priority)}
+                    </span>
+                  ))}
+                </div>
+              )}
           </div>
         )}
 
         {/* ------------------------------------------------------------- */}
         {/* AI Verdict                                                     */}
         {/* ------------------------------------------------------------- */}
-        {aiVerdict && typeof aiVerdict === 'string' && aiVerdict.trim() !== '' && (
-          <AIAnalysisBlock
-            content={aiVerdict}
-            title="Comparison Verdict"
-            variant="recommendation"
-            className="report-animate-in report-animate-in-delay-3"
-          />
-        )}
+        {aiVerdict &&
+          typeof aiVerdict === "string" &&
+          aiVerdict.trim() !== "" && (
+            <AIAnalysisBlock
+              content={aiVerdict}
+              title="Comparison Verdict"
+              variant="recommendation"
+              className="report-animate-in report-animate-in-delay-3"
+            />
+          )}
       </div>
     </section>
   );

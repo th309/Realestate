@@ -11,11 +11,11 @@ function getScoreColor(score: number): string {
 }
 
 function getScoreLabel(score: number): string {
-  if (score >= 80) return "Excellent";
-  if (score >= 70) return "Good";
-  if (score >= 50) return "Moderate";
-  if (score >= 30) return "Below Average";
-  return "Poor";
+  if (score >= 80) return "Strong";
+  if (score >= 70) return "Rising";
+  if (score >= 50) return "Steady";
+  if (score >= 30) return "Easing";
+  return "Very Weak";
 }
 
 function getStrokeColor(score: number): string {

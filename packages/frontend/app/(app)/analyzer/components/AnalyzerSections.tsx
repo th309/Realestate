@@ -83,6 +83,11 @@ interface AnalyzerSectionsProps {
   sectionAi: SectionAiBundle;
   // AI plumbing for the per-geo Market Context fetches
   marketContextAi: MarketContextAi;
+  // My Notes — controlled by the parent so they ride along on save.
+  notes: string;
+  shareNotes: boolean;
+  onNotesChange: (notes: string, shareNotes: boolean) => void;
+  onSaveNotes: () => void;
 }
 
 export function AnalyzerSections({
@@ -112,6 +117,10 @@ export function AnalyzerSections({
   marketContext,
   sectionAi,
   marketContextAi,
+  notes,
+  shareNotes,
+  onNotesChange,
+  onSaveNotes,
 }: AnalyzerSectionsProps) {
   return (
     <>
@@ -168,7 +177,15 @@ export function AnalyzerSections({
         marginalTaxRate={marginalTaxRate}
         {...sectionAi.after_tax}
       />
-      <NotesSection />
+      <NotesSection
+        initialNotes={notes}
+        initialShare={shareNotes}
+        onChange={onNotesChange}
+        onSave={({ notes: n, shareWithClient }) => {
+          onNotesChange(n, shareWithClient);
+          onSaveNotes();
+        }}
+      />
     </>
   );
 }

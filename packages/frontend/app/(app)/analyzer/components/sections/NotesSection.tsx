@@ -5,12 +5,20 @@ interface NotesSectionProps {
   initialNotes?: string;
   initialShare?: boolean;
   onSave?: (payload: { notes: string; shareWithClient: boolean }) => void;
+  /**
+   * Fires on every edit so a parent can keep controlled state in sync — this
+   * is what lets notes ride along on the header Share/PDF save, not just the
+   * NotesSection "Save" button. Optional so the component still works
+   * standalone (uncontrolled) in tests / isolation.
+   */
+  onChange?: (notes: string, shareWithClient: boolean) => void;
 }
 
 export function NotesSection({
   initialNotes = "",
   initialShare = false,
   onSave,
+  onChange,
 }: NotesSectionProps) {
   const [notes, setNotes] = useState(initialNotes);
   const [shareWithClient, setShareWithClient] = useState(initialShare);
@@ -25,8 +33,10 @@ export function NotesSection({
         data-notes-textarea
         value={notes}
         onChange={(e) => {
-          setNotes(e.currentTarget.value);
+          const next = e.currentTarget.value;
+          setNotes(next);
           setSaved(false);
+          onChange?.(next, shareWithClient);
         }}
         placeholder="Add personal observations, follow-up tasks, comp prices…"
         className="w-full min-h-[120px] p-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface text-sm"
@@ -38,8 +48,10 @@ export function NotesSection({
             type="checkbox"
             checked={shareWithClient}
             onChange={(e) => {
-              setShareWithClient(e.currentTarget.checked);
+              const next = e.currentTarget.checked;
+              setShareWithClient(next);
               setSaved(false);
+              onChange?.(notes, next);
             }}
           />
           Share with client (visible in shared link)

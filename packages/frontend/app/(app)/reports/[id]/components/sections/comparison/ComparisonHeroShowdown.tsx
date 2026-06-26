@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Trophy } from 'lucide-react';
-import { SectionProps } from '../../types';
-import { SectionCard } from '../core/SectionCard';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import React from "react";
+import { Trophy } from "lucide-react";
+import { SectionProps } from "../../types";
+import { SectionCard } from "../core/SectionCard";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 
 interface MarketScore {
   id: string;
@@ -20,9 +20,9 @@ interface MarketScore {
  * Shows both markets' PropertyIQ scores with visual gauges and winner badge.
  */
 export function ComparisonHeroShowdown({ section, report }: SectionProps) {
-  const isInvestor = report.user_type === 'investor';
-  const scoreType = isInvestor ? 'investoredge' : 'homeready';
-  const scoreLabel = 'PropertyIQ';
+  const isInvestor = report.user_type === "investor";
+  const scoreType = isInvestor ? "investoredge" : "homeready";
+  const scoreLabel = "PropertyIQ";
 
   // Get primary market score
   const primaryScore = isInvestor
@@ -32,24 +32,26 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
   // Get comparison markets with scores (use comparisons record keyed by geo ID)
   const comparisons = report.populated_data?.comparisons;
   const comparisonGeos = report.comparison_geographies ?? [];
-  const priorities = report.user_inputs?.priorities as string[] || [];
+  const priorities = (report.user_inputs?.priorities as string[]) || [];
 
   // Get priority-weighted winner from report data (set by backend)
-  const priorityWinner = report.populated_data?.priority_weighted_winner as {
-    winnerId: string;
-    winnerName: string;
-    totalScore: number;
-    priorityScores: Array<{
-      priority: string;
-      winnerId: string;
-      winnerName: string;
-      weight: number;
-      keyMetric: string;
-      winnerValue: number | null;
-      loserValue: number | null;
-      reason: string;
-    }>;
-  } | undefined;
+  const priorityWinner = report.populated_data?.priority_weighted_winner as
+    | {
+        winnerId: string;
+        winnerName: string;
+        totalScore: number;
+        priorityScores: Array<{
+          priority: string;
+          winnerId: string;
+          winnerName: string;
+          weight: number;
+          keyMetric: string;
+          winnerValue: number | null;
+          loserValue: number | null;
+          reason: string;
+        }>;
+      }
+    | undefined;
 
   // Build market list
   const markets: MarketScore[] = [
@@ -59,7 +61,7 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
       score: primaryScore,
       isWinner: priorityWinner?.winnerId === report.primary_geography_id,
     },
-    ...comparisonGeos.map(geo => {
+    ...comparisonGeos.map((geo) => {
       const comp = comparisons?.[geo.id];
       return {
         id: geo.id,
@@ -72,13 +74,15 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
 
   // Fallback: if no priority winner, use highest score
   if (!priorityWinner && markets.length >= 2) {
-    const highestScore = Math.max(...markets.filter(m => m.score !== null).map(m => m.score!));
-    markets.forEach(m => {
+    const highestScore = Math.max(
+      ...markets.filter((m) => m.score !== null).map((m) => m.score!),
+    );
+    markets.forEach((m) => {
       m.isWinner = m.score === highestScore;
     });
   }
 
-  const winner = markets.find(m => m.isWinner);
+  const winner = markets.find((m) => m.isWinner);
 
   if (markets.length < 2) {
     return (
@@ -110,9 +114,10 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
             key={market.id}
             className={`
               relative p-6 rounded-2xl transition-all
-              ${market.isWinner
-                ? 'bg-primary/10 border-2 border-primary shadow-lg shadow-primary/10'
-                : 'bg-surface-container border border-outline-variant'
+              ${
+                market.isWinner
+                  ? "bg-primary/10 border-2 border-primary shadow-lg shadow-primary/10"
+                  : "bg-surface-container border border-outline-variant"
               }
             `}
           >
@@ -128,7 +133,9 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
 
             <div className="flex flex-col items-center">
               {/* Market Name */}
-              <h3 className={`text-lg font-semibold mb-4 ${market.isWinner ? 'text-primary' : 'text-on-surface'}`}>
+              <h3
+                className={`text-lg font-semibold mb-4 ${market.isWinner ? "text-primary" : "text-on-surface"}`}
+              >
                 {market.name}
               </h3>
 
@@ -138,12 +145,13 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
                   value={market.score}
                   size={140}
                   strokeWidth={10}
-                  showGrade={true}
                   showLabel={true}
                 />
               ) : (
                 <div className="w-[140px] h-[140px] flex items-center justify-center bg-surface-container-high rounded-full">
-                  <span className="text-on-surface-variant text-sm">No Score</span>
+                  <span className="text-on-surface-variant text-sm">
+                    No Score
+                  </span>
                 </div>
               )}
 
@@ -164,10 +172,11 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
             {winner.name} wins for your priorities
           </p>
           <p className="text-sm text-on-surface-variant">
-            Based on: {priorities.slice(0, 3).map((p, i) => (
+            Based on:{" "}
+            {priorities.slice(0, 3).map((p, i) => (
               <span key={p}>
                 {i + 1}) {formatPriorityLabel(p)}
-                {i < Math.min(priorities.length, 3) - 1 ? '  ' : ''}
+                {i < Math.min(priorities.length, 3) - 1 ? "  " : ""}
               </span>
             ))}
           </p>
@@ -180,15 +189,15 @@ export function ComparisonHeroShowdown({ section, report }: SectionProps) {
 /** Format priority ID to display label */
 function formatPriorityLabel(priority: string): string {
   const labels: Record<string, string> = {
-    affordability: 'Affordability',
-    appreciation: 'Appreciation',
-    job_market: 'Job Market',
-    market_timing: 'Market Timing',
-    lifestyle: 'Lifestyle',
-    cash_flow: 'Cash Flow',
-    tenant_demand: 'Tenant Demand',
-    entry_price: 'Entry Price',
-    stability: 'Stability',
+    affordability: "Affordability",
+    appreciation: "Appreciation",
+    job_market: "Job Market",
+    market_timing: "Market Timing",
+    lifestyle: "Lifestyle",
+    cash_flow: "Cash Flow",
+    tenant_demand: "Tenant Demand",
+    entry_price: "Entry Price",
+    stability: "Stability",
   };
   return labels[priority] || priority;
 }

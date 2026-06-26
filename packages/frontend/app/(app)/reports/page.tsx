@@ -487,12 +487,23 @@ function ReportCreationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { simulatedTier, tier } = useEntitlements();
+  const {
+    simulatedTier,
+    tier,
+    getAccess,
+    loading: entitlementsLoading,
+  } = useEntitlements();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  // Hard paywall gate for the GENERATE action. When a user without `reports`
+  // entitlement clicks Generate, we surface the EXISTING PaywallCard and never
+  // POST to /api/reports/generate — so an AI generation is never burned on a
+  // report the user can't view (the view gate would otherwise reject it after
+  // the fact). This is the same `feature:reports` check the report VIEW uses.
+  const [showReportsPaywall, setShowReportsPaywall] = useState(false);
   const urlPrefillApplied = useRef(false);
 
   // Read prefill data from URL params (e.g. from "Generate Report" on market page)
@@ -538,10 +549,28 @@ function ReportCreationPage() {
 
   const canGenerate = markets.length > 0;
 
+  // Reports entitlement gate. `feature:reports` is a single boolean in the
+  // entitlement system (free = no access; pro/enterprise/admin = full) — it
+  // governs BOTH single-market and multi-market comparison reports, so there is
+  // no "single is free" carve-out at this layer. We only treat the user as
+  // blocked once entitlements have resolved, to avoid blocking during the
+  // initial loading flash.
+  const reportsAccess = getAccess("feature", "reports");
+  const reportsLocked = !entitlementsLoading && reportsAccess.level === "none";
+
   const handleGenerate = async () => {
     if (isGenerating) return;
     if (markets.length === 0) {
       setError("Please select at least one market");
+      return;
+    }
+
+    // Hard-block generation for users without the `reports` entitlement BEFORE
+    // hitting the API. Reuses the existing PaywallCard (same component the
+    // /reports/[id] view shows) instead of generating-then-paywalling. Dismiss
+    // does not re-enable generation — the card stays until the user upgrades.
+    if (reportsLocked) {
+      setShowReportsPaywall(true);
       return;
     }
 
@@ -739,6 +768,20 @@ function ReportCreationPage() {
                 </>
               )}
             </motion.button>
+
+            {showReportsPaywall && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <PaywallCard
+                  type="feature"
+                  id="reports"
+                  title="Market Reports"
+                  description="Generate AI-powered market reports with executive summaries, investment theses, and risk assessments. Upgrade to start generating reports."
+                />
+              </motion.div>
+            )}
 
             {showSignupPrompt && markets[0] && (
               <motion.div

@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 
@@ -70,13 +70,19 @@ export class MarketsCoreService {
   }
 
   async getMarketById(id: string) {
+    // maybeSingle (not single): single() raises a PostgREST error on 0 rows.
+    // A malformed id (wrong type/format vs the table's region_id keys) also makes
+    // PostgREST error rather than return 0 rows. Treat error-or-empty as "not
+    // found" so any bad/unknown id yields a clean 404 instead of a 500.
     const { data, error } = await this.supabase
       .from('markets')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
+    if (error || !data) {
+      throw new NotFoundException(`Market not found: ${id}`);
+    }
     return data;
   }
 

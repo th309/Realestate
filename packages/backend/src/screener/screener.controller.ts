@@ -3,11 +3,15 @@ import {
   Get,
   Param,
   Query,
+  Req,
   HttpException,
   HttpStatus,
+  ForbiddenException,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import {
   ScreenerService,
@@ -19,15 +23,43 @@ import {
   ScreenerMoversQueryDto,
   MOVER_WINDOWS,
 } from './screener.dto';
+import { OptionalJwtAuthGuard } from '../common/guards';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 const VALID_GEO_LEVELS = ['metro', 'county', 'zip'] as const;
 type GeoLevel = (typeof VALID_GEO_LEVELS)[number];
 
+// ZIP-level screener data is a Pro feature (matches the UI GeoLockCard + the
+// map's ZIP gating); enforced server-side so it can't be pulled via the API.
+const PRO_TIERS = ['pro', 'enterprise', 'admin'];
+
 @ApiTags('screener')
 @Controller('api/screener')
+@UseGuards(OptionalJwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ScreenerController {
-  constructor(private readonly screenerService: ScreenerService) {}
+  constructor(
+    private readonly screenerService: ScreenerService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
+
+  /**
+   * ZIP-level data requires Pro/Enterprise. OptionalJwtAuthGuard sets
+   * `req.userId` from the Bearer token (anonymous => undefined => treated free).
+   */
+  private async assertGeoAllowed(
+    geo: GeoLevel,
+    userId: string | undefined,
+  ): Promise<void> {
+    if (geo !== 'zip') return;
+    const tier =
+      (userId ? await this.entitlements.getUserTier(userId) : null) ?? 'free';
+    if (!PRO_TIERS.includes(tier)) {
+      throw new ForbiddenException(
+        'ZIP-level market screening requires a Pro or Enterprise subscription.',
+      );
+    }
+  }
 
   /**
    * GET /api/screener/:geo/movers
@@ -45,6 +77,7 @@ export class ScreenerController {
   async queryMovers(
     @Param('geo') geo: string,
     @Query() dto: ScreenerMoversQueryDto,
+    @Req() req: Request & { userId?: string },
   ): Promise<ScreenerMoversResult> {
     const lower = geo.toLowerCase();
     if (!(VALID_GEO_LEVELS as readonly string[]).includes(lower)) {
@@ -53,6 +86,7 @@ export class ScreenerController {
         HttpStatus.BAD_REQUEST,
       );
     }
+    await this.assertGeoAllowed(lower as GeoLevel, req.userId);
     return this.screenerService.queryMovers(lower as GeoLevel, dto);
   }
 
@@ -123,6 +157,7 @@ export class ScreenerController {
   async queryScreener(
     @Param('geo') geo: string,
     @Query() dto: ScreenerQueryDto,
+    @Req() req: Request & { userId?: string },
   ): Promise<ScreenerResult> {
     const lower = geo.toLowerCase();
     if (!(VALID_GEO_LEVELS as readonly string[]).includes(lower)) {
@@ -132,6 +167,7 @@ export class ScreenerController {
       );
     }
 
+    await this.assertGeoAllowed(lower as GeoLevel, req.userId);
     return this.screenerService.queryScreener(lower as GeoLevel, dto);
   }
 }

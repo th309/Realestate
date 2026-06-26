@@ -115,7 +115,9 @@ export async function fetchReportList<T = unknown>(
   const params = new URLSearchParams();
   if (options.limit) params.set("limit", String(options.limit));
 
-  const response = await fetch(`${API_URL}/api/reports?${params}`, {
+  // The user's report list lives at /api/reports/history — there is NO bare
+  // GET /api/reports (it 404s). Matches the account-page fetcher (reports-list.ts).
+  const response = await fetch(`${API_URL}/api/reports/history?${params}`, {
     headers: { ...authHeaders, "x-user-id": options.userId },
   });
 

@@ -253,7 +253,23 @@ Quick HTTP checks before walking the UI. Failures here usually indicate environm
 - [ ] `curl http://localhost:3001/api/markets/peers/metro/16740` → 200 with JSON `{source, peers: [...]}`
 - [ ] After visiting `/tour`, browser DevTools shows cookie `piq_tour_session` with `HttpOnly`, `samesite=Lax`, `Secure` ONLY on https
 - [ ] Browser DevTools console has no `Cannot update a component while rendering` errors (React 19 violation regression check)
-- [ ] If extensions block requests with `ERR_BLOCKED_BY_CLIENT`, retest in incognito — adblockers commonly kill `/api/analytics/events` and gtag, sometimes anonymous endpoints too
+- [ ] If extensions block requests with `ERR_BLOCKED_BY_CLIENT`, retest in incognito — adblockers commonly kill `/api/usage/*` (renamed from `/api/analytics/*`) and gtag. NOTE: browser→backend now flows through a same-origin `/backend` proxy for ad-blocker resilience.
+- [ ] `curl -s http://localhost:3001/api/screener/metro | head -c 200` → JSON `{data:[...],total,page,pageSize,hasMore}` (screener snapshot populated; empty `data:[]` = stale/never-refreshed snapshot, a P2 first-run gap)
+- [ ] `curl -s http://localhost:3001/api/analyzer/market-context?geo_level=metro&geo_id=16740 | head -c 200` → JSON (anon free-preview; 4th anon call → 402)
+- [ ] `curl -sI -H "Accept: text/markdown" http://localhost:3000/pricing | grep -i "content-type\|vary"` → `text/markdown` + `Vary: Accept` (agent markdown negotiation)
+- [ ] `curl -s http://localhost:3000/.well-known/mcp/server-card.json | head -c 200` → JSON server card (agent discovery rewrite working)
+
+### 0.7b Feature-Flag Awareness (CRITICAL — read before testing landing/map)
+
+Two surfaces are **flag-gated OFF by default**. A tester on a clean env sees the OLD experience and will wrongly report the new ones as "missing":
+
+| Flag | Default | Enables | Where |
+|---|---|---|---|
+| `LANDING_EXPERIMENT` | OFF | 8-beat landing funnel (`/` → `/home-v2` rewrite). `off`\|`preview`\|`ab:<n>`\|`on`. `?landing=v2` forces variant B. | frontend env |
+| `NEXT_PUBLIC_CINEMATIC_ZOOM` | OFF | satellite/3D/spotlight map zoom on geo selection (must equal `"true"`) | frontend env |
+| `RUN_CRONS` | OFF | all scheduled jobs (don't expect drip emails / revalidation locally without it) | backend env |
+
+To test the new landing: set `LANDING_EXPERIMENT=on` (or visit `/home-v2` / `/?landing=v2` directly). To test cinematic zoom: `NEXT_PUBLIC_CINEMATIC_ZOOM=true`. If you can't set env, test variant B at `/home-v2` (always noindex).
 
 ### 0.8 Generate Test Plan Summary
 
@@ -435,7 +451,7 @@ For each step:
   10. **AI strategy** — Source Serif 4 narrative + 3 numbered action cards
 - **Cover** above section 1: indigo gradient with marketName + "Listing Presentation" + geography meta + generated date
 - **Demo banner** below cover (subtle amber `bg-warning-container`): "Demo report — sign up free to save…"
-- **Sources footer** cites: Zillow ZHVI, Redfin Market Tracker, U.S. Census ACS, FRED/BEA, BLS QCEW, IRS migration, PropertyIQ Score v4
+- **Sources footer** cites: Zillow ZHVI, Redfin Market Tracker, U.S. Census ACS, FRED/BEA, BLS QCEW, IRS migration, PropertyIQ Score (NO version number — the score is a single unversioned PropertyIQ Score; flag any "v4"/"v3" naming in the footer as a P1 per Known Issues)
 - All charts are hand-rolled SVG (no chart library)
 - All colors use M3 semantic tokens — no hex literals (regex-asserted in tour tests)
 
@@ -727,17 +743,30 @@ All issues submitted during this test session should appear here. Verify:
 
 ### Navigation
 
-Header links (including Blog), breadcrumbs, browser back, deep links, mobile hamburger.
+Header links (including Blog + the "Compare" link in the More dropdown), browser back, deep links.
+
+**Mobile nav overhaul (since 2026-05-04):**
+- The old bottom tab bar (`MobileNav`) is **deleted**. Mobile nav is now a right slide-out **drawer** (`MobileMenu`, hamburger): verify focus-trap, Esc + scrim close, pinned account/sign-out, drawer covers the score ticker (z-60).
+- **GlobalBreadcrumbs** render once below the header on all non-full-screen routes (excluded: `/map`, `/embed/*`, `/auth/*`, `/tour`, onboarding, `/reports/builder`, `/market/*`, `/home-v2`, `/`). Verify the trail is correct, numeric IDs are skipped, and it's hidden on the excluded routes.
+- **Scroll-lock:** opening the drawer OR the analyzer mobile input sheet locks body scroll; both-open must not prematurely unlock (ref-counted).
+
+### Comparison Report v3 (`/reports/[id]`)
+
+Build a 2–3 market comparison from `/reports` (like-geo restriction filters the dropdown after the first pick; max 5; `>1` → comparison). Verify `ComparisonReportV3`: scoreboard shows **all** markets' live scores (no "—"/"No Score"), winner Trophy correct, synthesis references all markets, verdict badge + actions render (never "insufficient data"), all-market news grouped top-3 each, per-market PillTabs each render a full single-market report.
+
+### Tour Persona Finales
+
+`/tour` final step renders one of three persona finales (agent / investor / homebuyer) with distinct section order + hero label + AI-strategy framing. **Check for persona leakage** (agent finale must not say "cashflow/appreciation"; investor/homebuyer must not say "listing/farming/seller positioning"). Authed → PersonaSpringboard (Connect Claude + 4 workflow cards, unwatermarked report); anon → InlineSignupForm + watermark.
 
 ### Map Transitions
 
-State → Metro → County → ZIP: data, legend, colors update correctly.
+State → Metro → County → ZIP: data, legend, colors update correctly. If `NEXT_PUBLIC_CINEMATIC_ZOOM=true`: per-level pitch escalates, satellite fades in, ZIP shows 3D buildings + terrain, camera restores exactly on panel close; `prefers-reduced-motion` → instant, no 3D. Flag OFF = normal zoom (default).
 
 ---
 
 ## Phase 10: Responsive Design
 
-`browser_resize` at 375x812, 768x1024, 1280x800. Every page readable, navigable, no overflow. Include new pages: `/blog`, `/markets`, `/compare/*`, `/about/terms`.
+`browser_resize` at 375x812, 768x1024, 1280x800. Every page readable, navigable, no overflow. Mobile breakpoint is `md:` (768px). Include new surfaces: `/analyzer` (collapses below 900px → mobile FAB input sheet), `/screener` (table horizontal-scroll / filter rail), `/compare` (RankingMatrix horizontal-scroll), `/home-v2` (8-beat funnel single-column at 375px, two-column desktop), `/blog`, `/markets`, `/compare/*`, `/about/terms`. On `/map` mobile, a region tap must open `RightDetailPanel` with the PropertyIQ score visible (mobile-only; desktop shows it in the left sidebar).
 
 ---
 
@@ -765,13 +794,14 @@ State → Metro → County → ZIP: data, legend, colors update correctly.
   - Newsletter signup
 - Invalid slug returns 404
 
-### 11.3 Competitor Comparison Pages
+### 11.3 Competitor Comparison Pages + Hub
 
-- All 3 slugs load: `propertyiq-vs-reventure`, `propertyiq-vs-mashvisor`, `propertyiq-vs-neighborhoodscout`
-- Feature comparison table highlights winners
+- **`/compare` hub** (NEW): 6 ranked tool cards + horizontal-scroll `RankingMatrix` (11 feature rows × 6 tools, PropertyIQ #1). **MCP/Claude row must show PropertyIQ=yes (green), competitors=no/partial** — this is PIQ's top differentiator; submit P1 if it's buried or missing.
+- All 4 detail slugs load: `propertyiq-vs-biggerpockets`, `propertyiq-vs-mashvisor`, `propertyiq-vs-neighborhoodscout`, `propertyiq-vs-reventure` (static-generated)
+- Feature comparison table highlights winners; MCP mentioned in prose
 - Pricing table shows live DB prices (not hardcoded $39/$149)
 - FAQ section renders correctly
-- CTA button → `/pricing`
+- CTA button → `/pricing`; nav "Compare" link works
 - Invalid slug returns 404
 
 ### 11.4 SEO Artifacts
@@ -1088,6 +1118,162 @@ Personal API keys are distinct from org-level keys (12.3). They live on the user
 
 ---
 
+## Phase 13: Deal Analyzer v2 (NEW — flagship rebuild since 2026-05-04)
+
+The analyzer was **rebuilt from scratch**. Frontend `app/(app)/analyzer/`; shared compute `packages/analyzer-core/`; backend `packages/backend/src/analyzer/`. It is **address/ZIP-driven** — market pages do NOT route into it (memory rule: Geos never enter the Deal Analyzer). There is **no `?piq_market=` param**; the only deep link is `?address=` (set by the analyzer on itself) and `?zip=`.
+
+### 13.1 Routes & Free-Preview Cap
+
+| Route | Auth | Verify |
+|---|---|---|
+| `/analyzer` | optional | Loads anon; free works; Pro unlocks RentCast + AI |
+| `/analyzer?address=<addr>` | optional | Auto-fires RentCast **only if Pro**; free sees prefilled field + must click Fetch (verify empty-state CTA points there) |
+| `/analyzer/saved/[id]` | JWT (NOT Pro) | Read-only saved snapshot |
+| `/shared/analysis/[token]` | public | PII stripped via RPC (no owner, no full address/lat-lon); org branding; `?print=1` = PDF source |
+| `/analyzer/dev/*` | optional | Dev chart playgrounds — **publicly routable in prod (P3)**, flag if reachable |
+
+**Free-preview cap:** anon lifetime **3** on `GET /api/analyzer/market-context` (HMAC `piq_analyzer_uses` cookie). 4th anon call → **HTTP 402** `{error:"free_quota_exceeded"}`. Any authed user (incl. admin) bypasses via `Authorization: Bearer` header. Tampered cookie → resets to 0. **Submit P1 if an authed/Pro/admin user is ever blocked by the quota** (the middleware-runs-before-guards bug class).
+
+### 13.2 Strategies & A–F Grading
+
+- **4 strategies:** Buy&Hold, Fix&Flip, BRRRR, Commercial MF (5+ units → buy&hold only; flip/BRRRR chips hidden).
+- **2 modes** (`StrategyControls`): "I know my strategy" (focused inputs) vs "Help me decide" (compare + GoalPicker + StrategyCompare).
+- **A–F grader:** per-metric letter → GPA → **PIQ market band adjustment** (±0.25/±0.50) → floors + auto-kills. Verify auto-kills fire (B&H: neg CF + DSCR<1.0, break-even >100%; Flip: profit <$5k, hold >24mo; BRRRR: refi can't cover hard-money balloon).
+- **4 goals** (compare mode): cash_flow, long_term_wealth, fast_cash, recycle_capital. Verify:
+  - GoalPicker chips (localStorage-persisted), BestPlayCallout reframes "Best for <goal>".
+  - **"No fit for <goal>" warning** when no strategy scores, and **BEST ★ badge suppressed** (B&H scores 0 on recycle_capital by design).
+  - StrategyCompare 3 view modes (3-up grid / single tab / winner+others).
+  - Presets Conservative/Balanced/Aggressive (+ "Custom" badge when hand-edited + overwrite confirm modal).
+  - Per-metric **upgrade paths** (only when grade ≠ A): smallest single-lever move per failing metric ("Reduce price by $18,500 (hard)"), clicking applies + re-grades.
+
+### 13.3 The 7 Sections
+
+Order: Projection → Expense (waterfall) → Sensitivity (tornado) → Comps (Mapbox + violin) → MarketContext (PIQ ring + geo pills) → AfterTax → Notes.
+
+- **Comps** 3-level graceful degrade: ≥3 sqft comps → $/sqft violin; <3 sqft but ≥3 price → price-only histogram + warning; else empty diagnostic. Map hides when Mapbox token undefined OR coords null (degrade, never crash).
+- **MarketContext** geo pills (Metro/County/ZIP) drop when geo unavailable; per-geo AI.
+- **⚠️ Notes section is NOT persisted** (Known Issue P2): "Save" shows "Saved ✓" but notes + "Share with client" toggle are dead local state. Submit/confirm this.
+- Every chart guards empty/NaN data (violin skips empty KDE; waterfall floors maxVal at 1). Verify no React error on a no-data ZIP.
+
+### 13.4 AI Insights & Verdict
+
+- Page load fires **ONE** `/ai-insights/batch` (all 6 sections), NOT 6 calls (the 429-storm fix). Verify only one request in DevTools.
+- Per-section streaming annotations (blue italic, "Generating insight…", stale + refresh ↻ on cache hit). Gated `isPro && hasGradableInput` — no empty lightbulb shells.
+- Header verdict (serif italic, animated caret, SSE). RefreshAllInsights batches stale.
+- Goal change busts cache (`PROMPT_REVISION=v6`; goal in key for batch + recommendation_analysis).
+- Provider default DeepSeek (`deepseek-v4-pro`), configurable via `ai_model_config`.
+- **PIQ framing (enforce):** AI must say "probability signal / higher-or-lower CHANCE vs state average", and **must NOT cite a specific % outperformance** or treat ZHVI as a subject-property valuation (ZHVI = area index). Spot-check AI prose for violations → P2.
+- **AI-verdict/header SSE status lies:** returns 200 the instant the stream opens; errors arrive as `data:{"error":...}` mid-stream. Don't treat 200 as success — read the stream body.
+
+### 13.5 Prefill & Provenance
+
+- Mapbox address autocomplete (250ms debounce, US-only, shows house number). Select → `/api/analyzer/prefill` → fields populate.
+- **Per-field provenance stamps** (price, rentMonthly, taxAnnual, insuranceAnnual, hoaMonthly, vacancy, appreciation, rentGrowth): source name + "as of YYYY" + confidence grade/% + "inherited" badge when rolled up from a wider geo. Estimates omit the as-of.
+- **Divergence:** field >30% off baseline shows a warning ("1.4× the market value"). RentCast resolved-address-mismatch banner when normalized resolved ≠ typed input. Free-tier ZHVI capped at confidence C.
+
+### 13.6 Export / Share / Modes
+
+- The old **Pro/Present/PDF 3-mode toolbar is GONE** — now two header pills: **PDF** + **Share** (both Pro-only; free → "sign in with Pro" prompt).
+- Share modal: live iframe preview (~40vh), 3 channels (copy `{origin}/shared/analysis/{token}` / email / white-label PDF). Copy says recipients see branding + analysis but NOT the full address.
+- PDF = Puppeteer render of `?print=1` with org branding (`DealAnalysis-<label>.pdf`).
+- Backend caps to verify: ai-verdict payload >4KB → "payload too large" (500); RentCast ~45/mo cap → quota banner; 30d Redis cache.
+
+### 13.7 Backend Endpoint Gating (curl)
+
+- `GET /api/analyzer/property-lookup` / `POST /ai-verdict` / `/ai-insights/*` / `/save` → **Pro** (401/403 for free).
+- `GET /api/analyzer/prefill`, `POST /grade*` → optional-auth (all tiers).
+- `GET /api/analyzer/share/:token{,/branding}`, `POST /pdf/:token` → token, no auth.
+
+---
+
+## Phase 14: Market Screener (NEW since 2026-05-04)
+
+Route `/screener` (in `(app)` group → **auth required**; any signed-in user, free or Pro). It is now a key **activation surface** (email drip Day 3/5 + onboarding checklist land here), so the first-run experience is load-bearing.
+
+### 14.1 Gating (two surgical gates, NOT a full paywall)
+
+- Free = full ranked table, all filters/sort/presets, **movers tab**, Metro + County. Pro adds **ZIP geography** + **CSV export**.
+- **ZIP lock:** free user selecting ZIP → `GeoLockCard` ("ZIP Markets Require Pro"); query disabled.
+- **⚠️ KNOWN P1 — ZIP gate is frontend-only.** `GET /api/screener/zip` is a **public, ungated** endpoint (`screener_snapshot` has `GRANT SELECT TO anon`). A free user can pull ZIP data via direct API / the `/backend` proxy. Verify with `curl http://localhost:3001/api/screener/zip` (returns data with no auth). Decide whether ZIP screener should be Pro-enforced server-side.
+- **CSV export** gated on `export_csv` entitlement — free sees disabled button + Lock; Pro downloads `screener-{geo}.csv` (12 cols incl. active-window `Score Δ`).
+
+### 14.2 Table & Movers
+
+- Columns sortable EXCEPT **Rent** (intentional — document so testers don't file it as a bug). Sort icon cycles, `aria-sort` set, table dims to `opacity-60` while fetching.
+- Presets: hottest (auto-selected first mount), undervalued, cashflow, gainers, losers.
+- Empty-state: 0 rows + active filters → active-filter summary chips + "Clear filters". Test the impossible-filter path (scoreMin 99 + scoreMax 1).
+- **Movers tab:** window selector (1m/3m/6m/1y/3y/5y, default 3m), Top Gainers / Top Losers leaderboards (top 25), Δ with ▲/▼ + color. NULL-Δ regions excluded → verify 1m/3m lists aren't unexpectedly sparse. Reload-stability (deterministic tie-break Δ→score→name).
+
+### 14.3 URL State & Deep-Links
+
+`screener-url-state.ts` persists geo/tab/window/state/preset/sort/page/filter bounds (defaults omitted, `router.replace`). Verify the email deep-links restore: `/screener?scoreMin=70` (Day 3) and `/screener?sortBy=score&sortOrder=desc` (Day 5); test back-button + share-URL round-trips.
+
+### 14.4 Data Freshness
+
+- `screener_snapshot` refreshed monthly AFTER rescoring (each row carries `as_of` + `refreshed_at`). **No UI freshness indicator** beyond the CSV's "As Of" column (P2). If the snapshot is empty/stale, the UI shows a bare empty state with no warning — **the #1 first-run risk** since this is an activation landing. Submit P2 and recommend a "data as of <date>" stamp + a populated-or-fallback guarantee.
+
+### 14.5 Activation Wiring
+
+- `screener` is a coverage feature (`screener_filter` event → `user_events` → `GET /api/usage/coverage`). Dashboard `NextBestActionCard` ("Find your next market" → `/screener`).
+- **⚠️ P3:** onboarding checklist `screen_markets` is NOT auto-completed by `screener_filter` (unlike `compare_markets`); needs a manual `POST /api/onboarding/checklist/screen_markets`. Verify whether using the screener actually checks the box.
+
+---
+
+## Phase 15: Agent-Readiness / Discovery Surface (NEW — zero prior coverage)
+
+Makes PropertyIQ consumable by AI agents (Claude, ChatGPT, MCP clients, crawlers). Two origins: `www.propertyiq.app` (Next.js; frontend well-known paths are `/api/agent-discovery/*` handlers exposed at `/.well-known/*` via `next.config.mjs` rewrites) and `mcp.propertyiq.app` (Express MCP server; canonical, host-aware). **Test against production** (markdown methodology depends on file tracing that can differ from dev). MCP/Claude is PIQ's top differentiator — treat breakage here as high priority.
+
+### 15.1 Well-Known Discovery Docs (both origins)
+
+```bash
+curl -s https://www.propertyiq.app/.well-known/api-catalog            # RFC 9727 linkset, application/linkset+json
+curl -s https://www.propertyiq.app/.well-known/mcp/server-card.json   # SEP-1649 card
+curl -s https://www.propertyiq.app/.well-known/oauth-authorization-server  # RFC 8414 + agent_auth block
+curl -s https://www.propertyiq.app/.well-known/oauth-protected-resource    # RFC 9728
+```
+
+Verify:
+- All four return 200 + correct content-type (the rewrite for dot-prefixed paths works).
+- `server-card.json` on www == on mcp host for `serverInfo`, `transport.endpoint`, `authentication.metadata`.
+- **`agent_auth` block present** in BOTH `oauth-authorization-server` docs (www + mcp), all four sub-fields, `skill` → `https://www.propertyiq.app/auth.md`.
+- On mcp host, `issuer` EXACTLY equals `https://mcp.propertyiq.app` (no trailing slash/port).
+- **⚠️ Version drift (P2):** www card `version` (`manifest.ts`) and mcp `SERVER_INFO.version` (`server-info.ts`) are independently hardcoded `0.2.0` — confirm they match; flag if they've drifted.
+
+### 15.2 `/auth.md` + Link header
+
+```bash
+curl -s https://www.propertyiq.app/auth.md | head -3        # text/markdown; H1 MUST literally contain "auth.md"
+curl -sI https://www.propertyiq.app/ | grep -i ^link        # rel="api-catalog" + rel="service-doc"
+```
+The H1 containing "auth.md" is an audit-checker target — submit P1 if missing.
+
+### 15.3 Markdown Content Negotiation
+
+```bash
+# Should return markdown (starts with "# "):
+curl -s -H "Accept: text/markdown" https://www.propertyiq.app/pricing
+curl -s -H "Accept: text/markdown" https://www.propertyiq.app/scores/methodology   # full validation-report.md
+curl -s -H "Accept: text/markdown" https://www.propertyiq.app/blog/<real-slug>
+# Negative control — NO header → HTML (<!DOCTYPE html>):
+curl -s https://www.propertyiq.app/scores | head -1
+# Headers on markdown responses:
+curl -sI -H "Accept: text/markdown" https://www.propertyiq.app/pricing | grep -iE "content-type|vary|x-markdown-tokens"
+```
+Honored routes: `/blog/[slug]`, `/scores/methodology`, and curated `/`, `/markets`, `/pricing`, `/scores`. Must carry `Vary: Accept`. Test methodology markdown in **prod** (file-tracing dependency → could 404 in prod while HTML still renders).
+
+### 15.4 robots.txt + MCP host
+
+```bash
+curl -s https://www.propertyiq.app/robots.txt | grep -i "content-signal"   # search=yes, ai-input=yes, ai-train=no (in * group only)
+curl -s https://mcp.propertyiq.app/health                                   # {status:"healthy"}
+curl -s https://mcp.propertyiq.app/mcp                                       # unauth JSON-RPC discovery probe
+curl -s https://mcp.propertyiq.app/api/openapi.json | head -c 200           # single invoke_tool + list_tools op
+curl -sI -H "Host: bogus.example" https://mcp.propertyiq.app/api/tools      # expect 421 (host allowlist; /health exempt)
+```
+Also: bare apex `propertyiq.app/...` and the Railway alias should 301/308 → `www`.
+
+---
+
 ## Known Code-Level Issues
 
 **Submit ALL of these as `category: 'bug'` at the start of each testing session if not already tracked.**
@@ -1096,7 +1282,24 @@ Check `.claude/beta-test/change-log.md` for additional issues discovered by the 
 
 ### Security (P0)
 
-All admin controllers now have `@UseGuards(AdminGuard)`. No outstanding P0 security issues.
+No outstanding P0 security issues (verified 2026-06-26). The 4 previously-unguarded admin routes (`ml-workflow`, `scores/validation`, `backtest-runs`, `ml-validation`) all now have `@UseGuards(AdminGuard)`. One endpoint *looks* unguarded but is correct by design — `GET /api/admin/content-pipeline/platforms/:platform/oauth-callback` (OAuth redirect URI, protected by HMAC-signed `verifyState()` with nonce + 10-min TTL); do NOT add a guard there (it would break the flow) and do NOT file it.
+
+### Discovered 2026-06-26 (Analyzer v2 / Screener / Scoring / Agent-Discovery)
+
+| Severity | Issue | Where |
+|---|---|---|
+| P1 | **Screener ZIP gate is frontend-only.** `GET /api/screener/zip` is public/ungated (`screener_snapshot` `GRANT SELECT TO anon`); free/anon can pull ZIP data via direct API or the `/backend` proxy, bypassing the `GeoLockCard`. Decide whether ZIP screener should be Pro-enforced server-side. | `packages/backend/src/screener/screener.controller.ts` |
+| P1 | **Stale scoring version naming** vs the "no version numbers" rule. UI shows one unversioned score, but internals still say v3.0/v4. | `scoring/formula-weights.ts:643` (`FORMULA_VERSION='v3.0'`), `scoring.controller.ts:956`, `scoring.types.ts:156-163` |
+| P2 | **Analyzer NotesSection not persisted** — "Save" shows "Saved ✓" but notes + share toggle are dead local state (no `onSave` wired). | `app/(app)/analyzer/.../AnalyzerSections.tsx` |
+| P2 | **Two file-size hard-limit violations** (reports, pre-existing). | `app/(app)/reports/page.tsx` (1104), `reports/[id]/ReportViewer.tsx` (477) |
+| P2 | **Agent-discovery version drift risk** — www card + MCP server-info both hardcode `0.2.0` independently; www can report a stale MCP version. | `lib/agent-discovery/manifest.ts` + `mcp-server/src/lib/server-info.ts` |
+| P2 | **Screener has no UI freshness indicator**; empty/stale `screener_snapshot` renders a bare empty state on an email/onboarding activation landing. | `app/(app)/screener/*` |
+| P2 | **Tour `?next=` post-signup redirect not honored** past the market step. | `app/(app)/tour/page.tsx:55-58` |
+| P3 | **Analyzer dev playground routes** (`/analyzer/dev/*`) shipped + publicly routable in prod. | `app/(app)/analyzer/dev/*` |
+| P3 | **`screen_markets` checklist not auto-completed** by `screener_filter` (needs manual `POST /api/onboarding/checklist/screen_markets`). | onboarding checklist |
+| P3 | Files near limit: `analyzer.service.ts` 295/300, `InputPanel.tsx` 376/400, `CompsSection.tsx` 392/400, `ScreenerPageInner.tsx` 390/400, `lib/data/index.ts` 281/300 | various |
+
+**Document-don't-file (intentional behaviors that look like bugs):** Screener Rent column is not sortable; analyzer/screener public market endpoints are non-PII by design; AI-verdict/header SSE return 200 before the upstream call (status is not a health signal); robots Content-Signal is only in the `*` group.
 
 ### Data Provenance (P1) — All Resolved
 

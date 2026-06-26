@@ -33,7 +33,16 @@ export interface ScoreDisplayProps {
   strokeWidth?: number;
   /** Background color for the ring (default: #e5e7eb) */
   backgroundColor?: string;
-  /** Whether to show the letter grade badge (default: true) */
+  /**
+   * Whether to show the percentile letter-grade badge (A+/A/.../F) inside the
+   * ring (default: false). The PropertyIQ Score is a momentum/timing signal, so
+   * the harsh quality-grade "F" undercuts the momentum reframe — the score
+   * number + momentum label/arrow tell the whole story. Kept as an opt-in prop
+   * for any legacy surface that genuinely needs it; new surfaces should not.
+   * NOTE: this is the SCORE percentile grade, NOT the data-quality CONFIDENCE
+   * badge (A/B/C/F) rendered by ScoreWidget/ConfidenceDisplay — those are
+   * unrelated and stay visible.
+   */
   showGrade?: boolean;
   /** Whether to show the label (EXCELLENT, etc.) (default: true) */
   showLabel?: boolean;
@@ -95,18 +104,40 @@ export const getGradeColor = (grade: string): { bg: string; text: string } => {
 };
 
 /**
- * Get descriptive label for score
+ * Get descriptive label for score.
+ *
+ * The PropertyIQ Score is a demand-MOMENTUM / timing signal, not a quality
+ * grade — so the labels describe the market's current demand TREND (where it's
+ * heading), not whether it's a "good" or "bad" place. A low score means cooling
+ * momentum, NOT a poor-quality market. 50 = the market's state average ("STEADY").
+ * Keep these words momentum-framed; never reintroduce quality words
+ * (EXCELLENT/POOR/etc.). See CLAUDE.md §9.
  */
 export const getScoreLabel = (score: number): string => {
-  if (score >= 90) return "EXCELLENT";
-  if (score >= 80) return "GREAT";
-  if (score >= 70) return "GOOD";
-  if (score >= 60) return "FAIR";
-  if (score >= 50) return "AVERAGE";
-  if (score >= 40) return "BELOW AVG";
-  if (score >= 20) return "POOR";
-  return "VERY POOR";
+  if (score >= 90) return "VERY STRONG";
+  if (score >= 80) return "STRONG";
+  if (score >= 70) return "RISING";
+  if (score >= 60) return "FIRMING";
+  if (score >= 50) return "STEADY";
+  if (score >= 40) return "EASING";
+  if (score >= 20) return "WEAK";
+  return "VERY WEAK";
 };
+
+/**
+ * Direction arrow for the momentum label (↑ strengthening, → steady, ↓ easing).
+ * Pairs with getScoreLabel to reinforce the timing-signal framing.
+ */
+export const getScoreMomentumArrow = (score: number): string => {
+  if (score >= 60) return "↑";
+  if (score >= 50) return "→";
+  if (score >= 40) return "↘";
+  return "↓";
+};
+
+/** One-line descriptor clarifying the score is a momentum/timing signal. */
+export const SCORE_MOMENTUM_DESCRIPTOR =
+  "Momentum & timing signal — the market's current demand trend, not a quality grade.";
 
 /**
  * ScoreDisplay - The standard score visualization component
@@ -159,7 +190,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   size = 100,
   strokeWidth = 6,
   backgroundColor = "var(--color-gray-200, #e5e7eb)",
-  showGrade = true,
+  showGrade = false,
   showLabel = true,
   className = "",
 }) => {
@@ -179,6 +210,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const grade = getLetterGrade(value);
   const gradeColors = getGradeColor(grade);
   const label = getScoreLabel(value);
+  const momentumArrow = getScoreMomentumArrow(value);
 
   // Scale font sizes based on component size
   const scoreFontSize =
@@ -317,7 +349,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           <span
             className={`mt-0.5 ${labelFontSize} text-on-surface-variant uppercase tracking-wider`}
           >
-            {label}
+            {label} <span aria-hidden="true">{momentumArrow}</span>
           </span>
         )}
       </div>
