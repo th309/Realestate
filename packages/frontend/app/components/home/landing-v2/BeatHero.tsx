@@ -84,7 +84,7 @@ function HeroCopy({ contrast }: { contrast: HeroContrast | null }) {
   return (
     <div>
       <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-primary-light">
-        The verdict, first
+        The forecast, first
       </p>
       {contrast ? (
         <h1 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
@@ -101,10 +101,11 @@ function HeroCopy({ contrast }: { contrast: HeroContrast | null }) {
       )}
 
       <p className="mt-6 max-w-xl text-lg text-primary-light">
-        Two markets, opposite futures. The PropertyIQ Score distills momentum,
-        days on market, and price cuts into one 1&ndash;99 number that predicts
-        how a market will perform against its state &mdash; so you buy where the
-        data is headed, not where the hype is.
+        Two markets, opposite futures. The PropertyIQ Score is a momentum
+        forecast, not a quality grade &mdash; it distills price momentum, days
+        on market, and price cuts into one 1&ndash;99 number that predicts how a
+        market will perform against its state, so you buy where the data is
+        headed, not where the hype is.
       </p>
 
       <div className="mt-8">
