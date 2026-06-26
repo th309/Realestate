@@ -16,5 +16,7 @@ export const AGENT_DISCOVERY = {
       "https://mcp.propertyiq.app/.well-known/oauth-protected-resource",
     oauthAuthorizationServer:
       "https://mcp.propertyiq.app/.well-known/oauth-authorization-server",
+    // OAuth scopes advertised in the apex protected-resource metadata (RFC 9728).
+    scopes: ["mcp"],
   },
 } as const;
