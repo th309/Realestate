@@ -102,6 +102,15 @@ export class ScreenerQueryDto {
   @IsNumber()
   medianPriceMax?: number;
 
+  // Market-size floor (de-noise). Rows with NULL population pass through (size
+  // unknown is never hidden); see ScreenerService.applyPopulationFloor. metro/county
+  // use own population, ZIP inherits its parent county's.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  populationMin?: number;
+
   @IsOptional()
   @IsIn(MOVER_WINDOWS)
   changeWindow?: MoverWindow;
@@ -149,6 +158,14 @@ export class ScreenerMoversQueryDto {
     message: 'state must be a 2-letter code (e.g. TX)',
   })
   state?: string;
+
+  // Market-size floor (de-noise) — keeps micro-markets out of the default movers
+  // lists. NULL population passes through. See ScreenerService.applyPopulationFloor.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  populationMin?: number;
 
   @IsOptional()
   @Type(() => Number)
