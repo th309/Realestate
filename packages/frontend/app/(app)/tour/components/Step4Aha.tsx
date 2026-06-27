@@ -189,7 +189,7 @@ export function Step4Aha() {
   return (
     <div className="flex flex-col items-center">
       <ListingPresentationLoading
-        marketName={session.market.name || "your market"}
+        marketName={session.market.name || "market"}
       />
       <button
         type="button"
