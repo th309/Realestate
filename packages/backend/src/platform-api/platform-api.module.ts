@@ -15,6 +15,7 @@ import { ReportsModule } from '../reports/reports.module';
 
 // v1 controllers
 import { HealthV1Controller } from './v1/health.controller';
+import { HealthLivenessV1Controller } from './v1/health-liveness.controller';
 import { ScoresV1Controller } from './v1/scores.controller';
 import { MetricsV1Controller } from './v1/metrics.controller';
 import { TimeseriesV1Controller } from './v1/timeseries.controller';
@@ -31,6 +32,7 @@ import { PlatformApiExceptionFilter } from './platform-api-exception.filter';
   imports: [OrgApiKeysModule, ScoringModule, ReportsModule],
   controllers: [
     HealthV1Controller,
+    HealthLivenessV1Controller,
     ScoresV1Controller,
     MetricsV1Controller,
     TimeseriesV1Controller,
