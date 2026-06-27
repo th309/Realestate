@@ -2,9 +2,16 @@
  * Helpers, types, and provenance logic for use-analyzer-state.ts.
  * Extracted to keep the main hook under the 300-line hard limit (CLAUDE.md §1.3).
  */
-import type { AnalyzerPrefillBundle, PrefillField } from "@/lib/data";
+import type {
+  AnalyzerPrefillBundle,
+  PrefillField,
+  PropertyLookupResult,
+} from "@/lib/data";
 import type { DealInput } from "@propertyiq/analyzer-core";
-import type { AnalyzerAssumptions } from "./analyzer-assumptions";
+
+/** Insurance has no RentCast source; estimate from price to match the backend
+ *  prefill bundle (backend prefill-estimates.ts INSURANCE_RATE_ANNUAL). */
+const INSURANCE_RATE_ANNUAL = 0.0055;
 
 /**
  * Pull the trailing 5-digit ZIP from a RentCast resolved_address or user-typed
@@ -41,13 +48,21 @@ export function isDivergent(
   return Math.abs(current - baseline) / Math.abs(baseline) > 0.3;
 }
 
-/** Apply a prefill bundle to input + assumptions state setters, returning the new provenance map. */
+/**
+ * Apply a prefill bundle to the DealInput state setter, returning the new
+ * provenance map.
+ *
+ * Prefill fills PROPERTY FACTS only — price, rent, taxes, insurance, HOA,
+ * vacancy. It intentionally does NOT touch Advanced Assumptions
+ * (appreciation, rent-growth): those are long-run, user-controlled
+ * assumptions that keep their stable defaults. The bundle's market
+ * `home_value_yoy` is a single-period listing-price YoY — far too noisy
+ * (often ~0 or negative) to seed a 30-year appreciation rate, and overriding
+ * the default silently flattened the wealth projection.
+ */
 export function buildProvenanceFromBundle(
   bundle: AnalyzerPrefillBundle,
   setInput: (updater: (prev: DealInput) => DealInput) => void,
-  setAssumptions: (
-    updater: (prev: AnalyzerAssumptions) => AnalyzerAssumptions,
-  ) => void,
 ): ProvenanceMap {
   const f = bundle.fields;
   setInput((prev) => ({
@@ -58,14 +73,6 @@ export function buildProvenanceFromBundle(
     insuranceAnnual: f.insuranceAnnual.value ?? prev.insuranceAnnual,
     hoaMonthly: f.hoaMonthly.value ?? prev.hoaMonthly,
     vacancyPctOfRent: f.vacancyPctOfRent.value ?? prev.vacancyPctOfRent,
-  }));
-  setAssumptions((prev) => ({
-    ...prev,
-    appreciationPct:
-      f.appreciationPct.value != null
-        ? f.appreciationPct.value / 100
-        : prev.appreciationPct,
-    rentGrowthPct: f.rentGrowthPct.value ?? prev.rentGrowthPct,
   }));
   return {
     price: { ...f.price, baseline: f.price.value },
@@ -80,10 +87,31 @@ export function buildProvenanceFromBundle(
       ...f.vacancyPctOfRent,
       baseline: f.vacancyPctOfRent.value,
     },
-    appreciationPct: {
-      ...f.appreciationPct,
-      baseline: f.appreciationPct.value,
-    },
-    rentGrowthPct: { ...f.rentGrowthPct, baseline: f.rentGrowthPct.value },
+  };
+}
+
+/**
+ * Merge a RentCast property-lookup result into the DealInput. Used by the
+ * "Fetch property" button, deep-links, and page refresh — every path that
+ * populates rentcastData (the autocomplete dropdown instead fills these fields
+ * via buildProvenanceFromBundle). Price/rent/tax/HOA come straight from the
+ * parcel; insurance is estimated from price since RentCast has no such field.
+ */
+export function mergeRentcastIntoInput(
+  data: PropertyLookupResult,
+  prev: DealInput,
+): DealInput {
+  const price = data.avm?.value ?? null;
+  const latestTax = data.property_record?.propertyTaxes?.[0]?.total;
+  return {
+    ...prev,
+    price: price ?? prev.price,
+    rentMonthly: data.rent?.value ?? prev.rentMonthly,
+    taxAnnual: latestTax ?? prev.taxAnnual,
+    insuranceAnnual:
+      price != null
+        ? Math.round(price * INSURANCE_RATE_ANNUAL)
+        : prev.insuranceAnnual,
+    hoaMonthly: data.property_record?.hoaFee ?? prev.hoaMonthly,
   };
 }

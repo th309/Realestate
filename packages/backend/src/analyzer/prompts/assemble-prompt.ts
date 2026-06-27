@@ -32,6 +32,18 @@ export interface AssemblePromptPayload {
     | 'fast_cash'
     | 'recycle_capital'
     | null;
+  /** Compact 30-year wealth-projection summary. The chart computes this
+   *  deterministically (analyzer-core computeProjection); surfacing it here
+   *  lets the projection section cite the real wealth components instead of
+   *  reporting "no projection supplied". */
+  projection?: {
+    finalEquity: number;
+    totalAppreciation: number;
+    totalPrincipalPaydown: number;
+    totalCashflow: number;
+    equityByHorizon: { y1: number; y10: number; y30: number };
+    irr30: number;
+  } | null;
 }
 
 const GOAL_LABELS: Record<string, string> = {
@@ -100,6 +112,18 @@ export function assemblePrompt(
     'COMPUTED METRICS (analyzer-core, deterministic):',
     JSON.stringify(payload.result, null, 2),
     '',
+    ...(payload.projection
+      ? [
+          '30-YEAR WEALTH PROJECTION (analyzer-core, deterministic — cite these actual figures):',
+          `- Final equity at year 30: $${Math.round(payload.projection.finalEquity)}`,
+          `- Total appreciation gained over 30y: $${Math.round(payload.projection.totalAppreciation)}`,
+          `- Total principal paid down over 30y: $${Math.round(payload.projection.totalPrincipalPaydown)}`,
+          `- Total cumulative cash flow over 30y: $${Math.round(payload.projection.totalCashflow)}`,
+          `- Equity by horizon: Y1 $${Math.round(payload.projection.equityByHorizon.y1)}, Y10 $${Math.round(payload.projection.equityByHorizon.y10)}, Y30 $${Math.round(payload.projection.equityByHorizon.y30)}`,
+          `- 30-year IRR: ${(payload.projection.irr30 * 100).toFixed(1)}%`,
+          '',
+        ]
+      : []),
     ...(grading
       ? [
           'DEAL GRADING:',

@@ -25,6 +25,7 @@ import { derivePropertyClass } from "./derive-property-class";
 import { usePiqByGeo } from "./use-piq-by-geo";
 import {
   buildProvenanceFromBundle,
+  mergeRentcastIntoInput,
   extractZip,
   type AnalyzerStateOptions,
   type FieldProvenance,
@@ -129,13 +130,13 @@ export function useAnalyzerState({
   const applyPrefillBundle = (
     bundle: Parameters<typeof buildProvenanceFromBundle>[0],
   ) => {
-    setProvenance(
-      buildProvenanceFromBundle(bundle, analyzer.setInput, setAssumptionsState),
-    );
+    setProvenance(buildProvenanceFromBundle(bundle, analyzer.setInput));
   };
 
-  // RentCast still seeds ARV for flip/BRRRR; field prefill now flows through
-  // applyPrefillBundle, so price/rent are no longer set here.
+  // The "Fetch property" button, deep-links (?address=), and page refresh all
+  // populate rentcastData via propertyLookup. Prefill the form fields from the
+  // parcel here so every one of those paths fills price/rent/tax/insurance/HOA
+  // (the autocomplete dropdown fills the same fields via applyPrefillBundle).
   const lastSyncedRef = useRef<PropertyLookupResult | null>(null);
   useEffect(() => {
     if (!rentcastData || rentcastData === lastSyncedRef.current) return;
@@ -143,7 +144,8 @@ export function useAnalyzerState({
     if (rentcastData.avm?.value && arvLocal === 0) {
       setArvLocal(Math.round(rentcastData.avm.value * 1.15));
     }
-  }, [rentcastData, arvLocal]);
+    setAnalyzerInput((prev) => mergeRentcastIntoInput(rentcastData, prev));
+  }, [rentcastData, arvLocal, setAnalyzerInput]);
 
   // Auto-fetch on first render when address arrived via ?address= query param,
   // saving the user a click in the common deep-link flow. Note: `mutate` from

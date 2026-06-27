@@ -159,6 +159,7 @@ export default function AnalyzerClient({
     strategy: toEngineStrategy(activeStrategy) ?? null,
     piqByGeo,
     goal: selectedGoal,
+    projection,
   });
 
   const compsView = buildCompsViewProps(
