@@ -52,12 +52,12 @@ export function PeerSearchBox({
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-full border-2 border-outline-variant bg-white px-5 py-3 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+        className="w-full rounded-full border-2 border-outline-variant bg-surface-container-lowest px-5 py-3 text-base text-on-surface placeholder:text-on-surface-variant shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
         aria-label={placeholder}
       />
       {visible.length > 0 && (
         <ul
-          className="mt-2 overflow-hidden rounded-xl border border-outline-variant bg-white"
+          className="mt-2 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest"
           role="listbox"
         >
           {visible.map((r) => (
