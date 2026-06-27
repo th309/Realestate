@@ -76,7 +76,7 @@ export function MarketPickerStep() {
 
       {visible.length > 0 && (
         <ul
-          className="mt-3 overflow-hidden rounded-xl border border-outline-variant bg-white"
+          className="mt-3 overflow-hidden rounded-xl border border-outline-variant bg-surface-container"
           role="listbox"
         >
           {visible.map((r) => (

@@ -194,7 +194,7 @@ function AccountPageContent() {
 
           {/* 2. Plan + Usage (hidden for org members — billing is at org level) */}
           {isOrgMember ? (
-            <section className="bg-white rounded-xl border border-indigo-200/50 p-6">
+            <section className="bg-surface-container rounded-xl border border-outline-variant p-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-tertiary" />
