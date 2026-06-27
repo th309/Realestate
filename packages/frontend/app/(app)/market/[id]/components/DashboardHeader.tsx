@@ -10,6 +10,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/navigation";
+import { formatGeoDisplayName } from "@/lib/data";
 
 interface DashboardHeaderProps {
   geographyId: string;
@@ -112,20 +113,17 @@ function formatGeographyDisplayName(
   type: string,
   id: string,
 ): string {
-  const parts = name.split(",").map((p) => p.trim());
-  const city = parts[0]
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-  const state = parts[1]?.toUpperCase();
-  const cityState = state ? `${city}, ${state}` : city;
+  // Title-case the city and uppercase the state via the shared display helper,
+  // which preserves already-correct mixed-case names (e.g. "DeKalb County").
+  const cityState = formatGeoDisplayName(name);
 
   if (type === "zip") {
-    // If name is just the ZIP code itself (no city/state from backend), show ZIP only once
-    if (cityState === id || !name.includes(",")) {
+    // If the backend gave no usable city/state (empty or just the ZIP itself),
+    // show the ZIP only once.
+    if (!cityState || cityState === id || !name.includes(",")) {
       return id;
     }
     return `${id} \u2014 ${cityState}`;
   }
-  return cityState;
+  return cityState || id;
 }

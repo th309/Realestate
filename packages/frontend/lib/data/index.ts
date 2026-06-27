@@ -279,3 +279,7 @@ export {
   getMetroState,
 } from "./metro-slugs";
 export type { MetroSlugEntry } from "./metro-slugs";
+export {
+  formatGeoDisplayName,
+  titleCaseLocationName,
+} from "./geo-display-name";
