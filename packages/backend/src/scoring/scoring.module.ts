@@ -24,6 +24,7 @@ import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { FeaturesModule } from '../admin/features/features.module';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 // Import backtest services (for performance tracking)
 import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
@@ -63,6 +64,7 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     ConfigModule,
     FeaturesModule,
     MetricResolutionModule,
+    EntitlementsModule,
   ],
   providers: [
     // Core scoring service (simplified z-score formula system)

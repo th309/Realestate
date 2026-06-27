@@ -34,6 +34,7 @@ import {
 } from './performance-tracking.service';
 import { ScoreAccessService } from './scoring.guard';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { GeographyLevel, ScoreType } from './formula-weights';
 import { parseHistoryMonths } from '../common/history.constants';
 import { normalizeStateToCode } from '../common/geo';
@@ -71,7 +72,12 @@ export class ScoringController {
    * }
    */
   @Get()
-  @Header('Cache-Control', 'public, max-age=21600')
+  // Sets `request.userId` from a validated JWT (anonymous allowed) so the
+  // breakdown gate resolves the caller's real tier. `private` cache: the body
+  // varies by tier (paid users get `components`), so shared caches must not
+  // serve one caller's breakdown to another.
+  @UseGuards(OptionalJwtAuthGuard)
+  @Header('Cache-Control', 'private, max-age=21600')
   @ApiOperation({ summary: 'Get PropertyIQ scores for a location' })
   @ApiQuery({
     name: 'geography',
@@ -767,7 +773,9 @@ export class ScoringController {
    * "Invalid geography: batch".
    */
   @Get('batch/:geography')
-  @Header('Cache-Control', 'public, max-age=21600')
+  // Tier-gated breakdown — validate JWT for real tier; `private` cache (see @Get()).
+  @UseGuards(OptionalJwtAuthGuard)
+  @Header('Cache-Control', 'private, max-age=21600')
   @ApiOperation({ summary: 'Get scores for multiple locations' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiQuery({
@@ -856,7 +864,9 @@ export class ScoringController {
    * - includeOutcomes: true to include actual returns and benchmark comparisons
    */
   @Get(':geography/:locationId')
-  @Header('Cache-Control', 'public, max-age=21600')
+  // Tier-gated breakdown — validate JWT for real tier; `private` cache (see @Get()).
+  @UseGuards(OptionalJwtAuthGuard)
+  @Header('Cache-Control', 'private, max-age=21600')
   @ApiOperation({ summary: 'Get scores for a location (path format)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiParam({ name: 'locationId', description: 'Location identifier' })
@@ -1070,7 +1080,7 @@ export class ScoringController {
     result: ScoreResult,
     request: any,
   ): Promise<ScoreResult> {
-    const userTier = this.scoreAccessService.getUserTierFromRequest(request);
+    const userTier = await this.scoreAccessService.resolveUserTier(request);
     const canBreakdown =
       await this.scoreAccessService.canAccessBreakdown(userTier);
 

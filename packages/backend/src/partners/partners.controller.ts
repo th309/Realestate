@@ -2,14 +2,22 @@ import {
   Controller,
   Get,
   Query,
+  Req,
+  UseGuards,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { PartnersService } from './partners.service';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Controller('api/partners')
+@UseGuards(OptionalJwtAuthGuard)
 export class PartnersController {
-  constructor(private readonly partnersService: PartnersService) {}
+  constructor(
+    private readonly partnersService: PartnersService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   /**
    * Get partner recommendations for given context types.
@@ -22,7 +30,7 @@ export class PartnersController {
     @Query('context_types') contextTypesParam?: string,
     @Query('geography_type') geographyType?: string,
     @Query('geography_id') geographyId?: string,
-    @Query('user_tier') userTier?: string,
+    @Req() request?: any,
   ) {
     if (!contextTypesParam) {
       throw new HttpException(
@@ -42,6 +50,16 @@ export class PartnersController {
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    // SECURITY: tier comes from the validated JWT identity (set by
+    // OptionalJwtAuthGuard), never from a client `?user_tier` query. The old
+    // query param let anyone request tier-restricted partner recommendations by
+    // spoofing it — and omitting it skipped the tier filter entirely. Anonymous
+    // callers resolve to `free`.
+    const userId = request?.userId;
+    const userTier = userId
+      ? ((await this.entitlements.getUserTier(userId)) ?? 'free')
+      : 'free';
 
     return this.partnersService.getRecommendationsForReport(contextTypes, {
       geographyType,

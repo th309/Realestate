@@ -22,6 +22,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { AnyScoreType } from './scoring.types';
 import { UserFeaturesService } from '../admin/features/user-features.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 export type ScoreAccess = 'full' | 'teaser';
 export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise' | 'admin';
@@ -55,7 +56,10 @@ export function getUpgradeMessage(scoreType: AnyScoreType): string {
 export class ScoreAccessService {
   private readonly logger = new Logger(ScoreAccessService.name);
 
-  constructor(private readonly userFeatures: UserFeaturesService) {}
+  constructor(
+    private readonly userFeatures: UserFeaturesService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   /**
    * Check if a user's tier can access score component breakdowns.
@@ -102,26 +106,35 @@ export class ScoreAccessService {
   }
 
   /**
-   * Determine user tier from request headers or user object
+   * Resolve the caller's tier for score-access decisions.
+   *
+   * SECURITY: tier is derived ONLY from a server-validated identity — never from
+   * client-supplied input. The scoring endpoints are publicly reachable, so an
+   * `x-user-tier` header or `?userTier` query would be attacker-controllable and
+   * is deliberately NOT read here. (That bug let anyone unlock tier-gated score
+   * breakdowns by setting a header; the same-origin proxy strips it, but a direct
+   * backend request bypassed that.)
+   *
+   * Resolution order:
+   *   1. `request.user.tier` — a tier already validated + attached by a guard.
+   *   2. `request.userId` — set by `OptionalJwtAuthGuard` from a cryptographically
+   *      validated Supabase JWT → authoritative tier via `EntitlementsService`.
+   *   3. Otherwise fail closed to `free` (anonymous / no valid token).
    */
-  getUserTierFromRequest(request: any): UserTier {
-    // 1. From authenticated user object
-    if (request.user?.tier) {
-      return this.validateTier(request.user.tier);
+  async resolveUserTier(request: any): Promise<UserTier> {
+    const serverValidatedTier = request?.user?.tier;
+    if (serverValidatedTier) {
+      return this.validateTier(serverValidatedTier);
     }
 
-    // 2. From x-user-tier header (for testing/internal use)
-    const headerTier = request.headers?.['x-user-tier'];
-    if (headerTier) {
-      return this.validateTier(headerTier);
+    const userId = request?.userId;
+    if (userId) {
+      const tier = await this.entitlements.getUserTier(userId);
+      return this.validateTier(tier ?? 'free');
     }
 
-    // 3. From query parameter (for testing)
-    if (request.query?.userTier) {
-      return this.validateTier(request.query.userTier);
-    }
-
-    // Default to free tier
+    // Fail closed: no validated identity → free. Client-supplied `x-user-tier`
+    // / `?userTier` are NOT trusted (see method docs).
     return 'free';
   }
 

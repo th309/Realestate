@@ -18,6 +18,7 @@ import {
   UserFeaturesService,
   ResolvedFeatures,
 } from '../../../admin/features/user-features.service';
+import { EntitlementsService } from '../../../entitlements/entitlements.service';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -79,6 +80,7 @@ describe('Score Access Control', () => {
   describe('ScoreAccessService', () => {
     let service: ScoreAccessService;
     let userFeaturesMock: jest.Mocked<UserFeaturesService>;
+    let entitlementsMock: jest.Mocked<EntitlementsService>;
 
     beforeEach(async () => {
       userFeaturesMock = {
@@ -90,10 +92,15 @@ describe('Score Access Control', () => {
         getUserOverrides: jest.fn(),
       } as unknown as jest.Mocked<UserFeaturesService>;
 
+      entitlementsMock = {
+        getUserTier: jest.fn(),
+      } as unknown as jest.Mocked<EntitlementsService>;
+
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           ScoreAccessService,
           { provide: UserFeaturesService, useValue: userFeaturesMock },
+          { provide: EntitlementsService, useValue: entitlementsMock },
         ],
       }).compile();
 
@@ -162,58 +169,79 @@ describe('Score Access Control', () => {
       });
     });
 
-    describe('getUserTierFromRequest', () => {
-      it('returns tier from user object', () => {
+    describe('resolveUserTier', () => {
+      it('returns tier from the server-set user object', async () => {
         const request = { user: { tier: 'pro' }, headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('pro');
+        expect(await service.resolveUserTier(request)).toBe('pro');
       });
 
-      it('returns tier from x-user-tier header', () => {
-        const request = { headers: { 'x-user-tier': 'enterprise' } };
-        expect(service.getUserTierFromRequest(request)).toBe('enterprise');
-      });
-
-      it('returns tier from query parameter', () => {
-        const request = { headers: {}, query: { userTier: 'basic' } };
-        expect(service.getUserTierFromRequest(request)).toBe('basic');
-      });
-
-      it('defaults to free when no tier specified', () => {
-        const request = { headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('free');
-      });
-
-      it('normalizes uppercase tier values', () => {
+      it('normalizes uppercase tier values', async () => {
         const request = { user: { tier: 'PRO' }, headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('pro');
+        expect(await service.resolveUserTier(request)).toBe('pro');
       });
 
-      it('returns free for invalid tier value', () => {
+      it('returns free for invalid tier value', async () => {
         const request = { user: { tier: 'invalid_tier' }, headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('free');
+        expect(await service.resolveUserTier(request)).toBe('free');
       });
 
-      it('prioritizes user object over headers', () => {
+      it('returns free for tier with extra whitespace', async () => {
+        const request = { user: { tier: ' pro ' }, headers: {} };
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      it('defaults to free when no tier specified', async () => {
+        const request = { headers: {} };
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      it('handles null user in request', async () => {
+        const request = { user: null, headers: {} };
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      it('handles missing headers object', async () => {
+        const request = {};
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      // --- Authoritative tier from a validated JWT identity ---
+      it('resolves tier from request.userId via EntitlementsService', async () => {
+        entitlementsMock.getUserTier.mockResolvedValue('pro');
+        const request = { userId: 'user-123', headers: {} };
+        expect(await service.resolveUserTier(request)).toBe('pro');
+        expect(entitlementsMock.getUserTier).toHaveBeenCalledWith('user-123');
+      });
+
+      it('falls back to free when EntitlementsService resolves null', async () => {
+        entitlementsMock.getUserTier.mockResolvedValue(null);
+        const request = { userId: 'orphan-user', headers: {} };
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      // --- SECURITY: client-supplied tier must NOT be trusted ---
+      // The scoring endpoints are publicly reachable, so a spoofed header/query
+      // must never unlock tier-gated score breakdowns. The same-origin proxy
+      // strips `x-user-tier`, but a request sent directly to the backend bypasses
+      // that — tier resolution must fail closed.
+      it('IGNORES a spoofed x-user-tier header (no privilege escalation)', async () => {
+        const request = { headers: { 'x-user-tier': 'enterprise' } };
+        expect(await service.resolveUserTier(request)).toBe('free');
+        expect(entitlementsMock.getUserTier).not.toHaveBeenCalled();
+      });
+
+      it('IGNORES a spoofed userTier query parameter', async () => {
+        const request = { headers: {}, query: { userTier: 'enterprise' } };
+        expect(await service.resolveUserTier(request)).toBe('free');
+      });
+
+      it('does not let a spoofed header override the validated identity', async () => {
+        entitlementsMock.getUserTier.mockResolvedValue('free');
         const request = {
-          user: { tier: 'pro' },
+          userId: 'user-123',
           headers: { 'x-user-tier': 'enterprise' },
         };
-        expect(service.getUserTierFromRequest(request)).toBe('pro');
-      });
-
-      it('handles null user in request', () => {
-        const request = { user: null, headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('free');
-      });
-
-      it('handles missing headers object', () => {
-        const request = {};
-        expect(service.getUserTierFromRequest(request)).toBe('free');
-      });
-
-      it('returns free for tier with extra whitespace', () => {
-        const request = { user: { tier: ' pro ' }, headers: {} };
-        expect(service.getUserTierFromRequest(request)).toBe('free');
+        expect(await service.resolveUserTier(request)).toBe('free');
       });
     });
   });
@@ -232,6 +260,10 @@ describe('Score Access Control', () => {
           ScoreAccessService,
           Reflector,
           { provide: UserFeaturesService, useValue: userFeaturesMock },
+          {
+            provide: EntitlementsService,
+            useValue: { getUserTier: jest.fn() },
+          },
         ],
       }).compile();
 
