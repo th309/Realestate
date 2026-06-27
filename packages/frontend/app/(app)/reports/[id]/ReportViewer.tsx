@@ -20,6 +20,12 @@ import { AgentViewModeToggle } from "./components/AgentViewModeToggle";
 import { ReportFooter } from "./components/ReportFooter";
 import { normalizeReport } from "./components/utils/normalizeReport";
 import { fetchReport as fetchReportAPI, fetchSampleReport } from "@/lib/data";
+import {
+  decideNextStep,
+  DEFAULT_MAX_NETWORK_ERRORS,
+  type FetchOutcome,
+  type ReportStatus,
+} from "./reportLoadPolicy";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics/tracker";
 import "../styles/report-theme.css";
@@ -103,52 +109,77 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
     }
   }, [loading, report, reportId]);
 
-  const pollReport = useCallback(async () => {
-    try {
-      const data = await fetchReportById(reportId, userId, isSample);
-      if (data) {
-        setReport(data);
-        if (data.status === "generating") {
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch report");
-      return false;
-    }
-  }, [reportId]);
-
   useEffect(() => {
-    let pollTimer: NodeJS.Timeout | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    let consecutiveNetworkErrors = 0;
+    let haveReport = false;
 
-    const startPolling = async () => {
-      const data = await fetchReportById(reportId, userId, isSample);
-      setLoading(false);
+    // Single resilient load/poll loop. A transient network throw must NOT wedge
+    // the viewer on "Report not found" — especially during a multi-minute
+    // comparison-report generation. The genuine-404 (null body) path still
+    // resolves to not-found. Policy lives in decideNextStep (unit-tested).
+    const tick = async () => {
+      if (cancelled) return;
 
-      if (data) {
-        setReport(data);
-        if (data.status === "generating") {
-          const poll = async () => {
-            const shouldContinue = await pollReport();
-            if (shouldContinue) {
-              pollTimer = setTimeout(poll, POLL_INTERVAL);
-            }
-          };
-          pollTimer = setTimeout(poll, POLL_INTERVAL);
-        }
+      let data: Awaited<ReturnType<typeof fetchReportById>> = null;
+      let outcome: FetchOutcome;
+      try {
+        data = await fetchReportById(reportId, userId, isSample);
+        consecutiveNetworkErrors = 0;
+        outcome = data
+          ? { kind: "report", status: data.status as ReportStatus }
+          : { kind: "missing" };
+      } catch {
+        consecutiveNetworkErrors += 1;
+        outcome = { kind: "networkError" };
+      }
+      if (cancelled) return;
+
+      const action = decideNextStep(outcome, {
+        consecutiveNetworkErrors,
+        haveReport,
+        maxNetworkErrors: DEFAULT_MAX_NETWORK_ERRORS,
+      });
+
+      switch (action) {
+        case "render":
+          haveReport = true;
+          setReport(data);
+          setError(null);
+          setLoading(false);
+          break;
+        case "poll":
+          if (data) {
+            // We have at least a generating report to show — keep it fresh.
+            haveReport = true;
+            setReport(data);
+            setError(null);
+            setLoading(false);
+          }
+          // Otherwise it was a transient cold-load error: leave the loader up
+          // and retry silently.
+          pollTimer = setTimeout(tick, POLL_INTERVAL);
+          break;
+        case "notFound":
+          setReport(null);
+          setError(null);
+          setLoading(false);
+          break;
+        case "giveUp":
+          setError("Failed to fetch report");
+          setLoading(false);
+          break;
       }
     };
 
-    startPolling().catch((e) => {
-      setError(e instanceof Error ? e.message : "Failed to fetch report");
-      setLoading(false);
-    });
+    tick();
 
     return () => {
+      cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [reportId, pollReport]);
+  }, [reportId, userId, isSample]);
 
   // Loading State
   if (loading) {
