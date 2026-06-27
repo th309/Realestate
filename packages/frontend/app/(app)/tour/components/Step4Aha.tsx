@@ -187,8 +187,40 @@ export function Step4Aha() {
 
   // Idle (pre-fetch), pending, or restore-in-progress → loading.
   return (
-    <ListingPresentationLoading
-      marketName={session.market.name || "your market"}
-    />
+    <div className="flex flex-col items-center">
+      <ListingPresentationLoading
+        marketName={session.market.name || "your market"}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          // Escape hatch for a returning visitor resumed straight onto this
+          // build screen (beta backlog: tour resume dead-ended on the old
+          // market). Full-nav to ?resume=fresh — the same clean-state pattern
+          // the error branch and the external "start over" links use: a fresh
+          // mount clears persisted tour state (storage/cookie/report cache) and
+          // the URL-cleanup effect drops the resumed params, landing the user
+          // back on the persona cards.
+          window.location.href = "/tour?resume=fresh";
+        }}
+        className="-mt-8 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-on-surface-variant transition-colors duration-200 hover:bg-surface-container hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+        Start over
+      </button>
+    </div>
   );
 }

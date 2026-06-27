@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { COUNTY_SLUG_DATA, SLUG_TO_COUNTY } from "@/lib/data/county-slug-data";
+import { resolveCountyAlias } from "@/lib/data/market-slug-aliases";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
 import {
@@ -76,7 +77,14 @@ export default async function CountyPage({
 }) {
   const { slug } = await params;
   const county = SLUG_TO_COUNTY.get(slug);
-  if (!county) notFound();
+  if (!county) {
+    // A natural county slug without the "-county" segment ("mecklenburg-nc")
+    // isn't canonical, but unambiguously points at one county page. 308-redirect
+    // to canonical ("mecklenburg-county-nc") instead of 404.
+    const canonical = resolveCountyAlias(slug);
+    if (canonical) permanentRedirect(`/markets/county/${canonical}`);
+    notFound();
+  }
 
   // Find parent metro for cross-linking
   const parentMetro = county.cbsaCode

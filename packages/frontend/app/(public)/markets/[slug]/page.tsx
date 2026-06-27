@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
+import { resolveMetroAlias } from "@/lib/data/market-slug-aliases";
 import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
 import {
   buildMarketTitle,
@@ -76,7 +77,14 @@ export default async function MetroPage({
 }) {
   const { slug } = await params;
   const metro = SLUG_TO_METRO.get(slug);
-  if (!metro) notFound();
+  if (!metro) {
+    // A natural city-name slug ("charlotte-nc") isn't canonical, but it
+    // unambiguously points at one metro page ("charlotte-concord-gastonia-nc-sc").
+    // 308-redirect to canonical instead of 404, mirroring the bare-ZIP route.
+    const canonical = resolveMetroAlias(slug);
+    if (canonical) permanentRedirect(`/markets/${canonical}`);
+    notFound();
+  }
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
