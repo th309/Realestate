@@ -111,8 +111,10 @@ rm -f "$ROOT_DIR/packages/backend/tsconfig.build.tsbuildinfo"
 rm -f "$ROOT_DIR/packages/backend/.tsbuildinfo"
 
 echo ""
-echo "Wiping frontend .next cache (forces a clean client bundle so restart picks up new code)..."
-rm -rf "$ROOT_DIR/packages/frontend/.next"
+echo "Wiping frontend .next-dev cache (forces a clean client bundle so restart picks up new code)..."
+# Dev server uses .next-dev (see packages/frontend/next.config.mjs) so a stray
+# `next build` writing .next can't clobber it. Wipe the dev dir, not the build dir.
+rm -rf "$ROOT_DIR/packages/frontend/.next-dev"
 
 echo ""
 if [ "$REDIS_AVAILABLE" = true ]; then

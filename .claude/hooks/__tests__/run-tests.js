@@ -79,11 +79,20 @@ try {
     ["reset --hard", "git reset --hard HEAD~1", "ASK"],
     ["checkout -- file", "git checkout -- src/x.ts", "ASK"],
     ["restore --staged (safe)", "git restore --staged src/x.ts", "ALLOW"],
-    ["unsafe frontend build", "npm run build:frontend", "ASK"],
+    // Dev lives in .next-dev (next.config.mjs). Plain builds (-> .next) no longer
+    // clobber dev, but the guard still ASKs (defense-in-depth); a build aimed at
+    // the dev dir is hard-DENIED; an explicit isolated dir is allowed.
+    ["plain build:frontend asks", "npm run build:frontend", "ASK"],
+    ["plain next build asks", "next build", "ASK"],
     [
-      "safe build (NEXT_DIST_DIR)",
+      "build to .next-verify allowed (isolated dir)",
       "NEXT_DIST_DIR=.next-verify npm run build:frontend",
       "ALLOW",
+    ],
+    [
+      "build aimed at dev dir denied (would wedge dev)",
+      "NEXT_DIST_DIR=.next-dev npm run build:frontend",
+      "DENY",
     ],
     ["rm -rf .next (relative)", "rm -rf .next", "ALLOW"],
     [
