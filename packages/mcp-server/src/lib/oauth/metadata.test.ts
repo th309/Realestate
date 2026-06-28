@@ -11,11 +11,11 @@ describe("authorizationServerMetadata", () => {
     expect(md.agent_auth).toEqual({
       skill: "https://www.propertyiq.app/auth.md",
       register_uri: "https://mcp.propertyiq.app/register",
-      identity_endpoint: "https://mcp.propertyiq.app/register",
-      claim_endpoint: "https://mcp.propertyiq.app/authorize",
-      registration_endpoint: "https://mcp.propertyiq.app/register",
-      identity_types_supported: ["service_auth"],
-      credential_types_supported: ["oauth2_access_token", "api_key"],
+      claim_uri: "https://mcp.propertyiq.app/token",
+      identity_types_supported: ["anonymous"],
+      anonymous: {
+        credential_types_supported: ["oauth2_access_token", "api_key"],
+      },
     });
   });
 

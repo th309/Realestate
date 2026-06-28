@@ -32,10 +32,11 @@ OAuth 2.1 + PKCE authorization-code flow to obtain an access token.
   "agent_auth": {
     "skill": "${siteOrigin}/auth.md",
     "register_uri": "${mcpOrigin}/register",
-    "authorization_uri": "${mcpOrigin}/authorize",
-    "token_uri": "${mcpOrigin}/token",
-    "identity_types_supported": ["service_auth"],
-    "credential_types_supported": ["oauth2_access_token", "api_key"]
+    "claim_uri": "${mcpOrigin}/token",
+    "identity_types_supported": ["anonymous"],
+    "anonymous": {
+      "credential_types_supported": ["oauth2_access_token", "api_key"]
+    }
   }
 }
 \`\`\`

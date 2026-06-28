@@ -60,15 +60,17 @@ export function authorizationServerMetadata(serverUrl?: string) {
     // schema's `service_auth` value (machine clients with their own credentials).
     agent_auth: {
       skill: AUTH_MD_URL,
-      // `register_uri` is the field the WorkOS auth.md / isitagentready check
-      // validates: the RFC 7591 dynamic-client-registration endpoint an agent
-      // POSTs to in order to provision its own credentials. Must be absolute https.
+      // agent_auth follows the WorkOS auth.md schema the isitagentready check
+      // validates. PropertyIQ uses open OAuth 2.1 dynamic client registration
+      // (RFC 7591, public clients) — an agent provisions its own credentials
+      // without proving a human identity — which is the recognized "anonymous"
+      // method: register at `register_uri`, then claim a token at `claim_uri`.
       register_uri: `${url}/register`,
-      identity_endpoint: `${url}/register`,
-      claim_endpoint: `${url}/authorize`,
-      registration_endpoint: `${url}/register`,
-      identity_types_supported: ["service_auth"],
-      credential_types_supported: ["oauth2_access_token", "api_key"],
+      claim_uri: `${url}/token`,
+      identity_types_supported: ["anonymous"],
+      anonymous: {
+        credential_types_supported: ["oauth2_access_token", "api_key"],
+      },
     },
   };
 }
