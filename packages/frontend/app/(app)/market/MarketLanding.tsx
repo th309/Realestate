@@ -23,6 +23,7 @@ import {
   type RecentMarket,
 } from "./recent-markets";
 import { MarketComparison } from "../compare/markets/MarketComparison";
+import { titleCaseLocationName } from "@/lib/data";
 import {
   PeerSearchBox,
   type PickedMarket,
@@ -142,7 +143,7 @@ export function MarketLanding() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-on-surface truncate">
-                      {market.name.split(",")[0]}
+                      {titleCaseLocationName(market.name.split(",")[0])}
                     </div>
                     <div className="text-xs text-on-surface-variant capitalize">
                       {market.type}

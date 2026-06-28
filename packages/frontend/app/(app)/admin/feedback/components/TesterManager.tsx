@@ -221,7 +221,7 @@ export function TesterManager({
                   <p className="text-sm text-green-700 mt-1">
                     Share this link with your tester:
                   </p>
-                  <code className="block mt-2 p-2 bg-white rounded text-sm break-all">
+                  <code className="block mt-2 p-2 bg-white rounded text-sm break-all text-gray-900">
                     {newTesterLink}
                   </code>
                 </>

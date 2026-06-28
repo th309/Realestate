@@ -23,6 +23,10 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  * a bump guarantees a fresh regeneration across every user/section without a
  * manual Redis flush.
  *
+ *   v7 (2026-06-27): the prompt now includes a 30-YEAR WEALTH PROJECTION block
+ *                    and the projection section cites the real wealth
+ *                    components (was reporting "no projection supplied"). Bump
+ *                    forces regeneration of all v6 entries that lack it.
  *   v6 (2026-05-20): six section annotations are now generated in a SINGLE
  *                    Anthropic call (see `completeAllSections`) and stored
  *                    under a single composite key (sectionId == 'batch').
@@ -49,7 +53,7 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  *                    Broke the narrative for some prompts — rolled back in v3.
  *   v1 (initial)
  */
-const PROMPT_REVISION = 'v6';
+const PROMPT_REVISION = 'v7';
 
 @Injectable()
 export class AiInsightsCache {
@@ -94,7 +98,15 @@ export class AiInsightsCache {
       sectionId === 'batch' || sectionId === 'recommendation_analysis'
         ? (payload.goal ?? 'none')
         : 'none';
-    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${inputHash}:${rcHash}:${piqHash}`;
+    // The projection section cites the 30-year wealth figures, which move with
+    // appreciation/rent-growth assumptions. Fold rounded final equity into the
+    // key (batch + projection sections) so an assumption edit regenerates the
+    // tip instead of serving the prior projection's narrative.
+    const proj =
+      sectionId === 'batch' || sectionId === 'projection'
+        ? Math.round((payload.projection?.finalEquity ?? 0) / 1000) * 1000
+        : 'none';
+    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${proj}:${inputHash}:${rcHash}:${piqHash}`;
   }
 
   async get(key: string): Promise<CachedInsight | null> {

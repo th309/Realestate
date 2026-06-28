@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchPeers,
+  formatGeoDisplayName,
   useScoreData,
   useDataCard,
   type PeerCandidate,
@@ -119,7 +120,7 @@ function ComparisonSide({
       ].join(" ")}
     >
       <p className="text-sm font-semibold text-on-surface">
-        {score?.location_name ?? `${geoLevel}/${geoId}`}
+        {formatGeoDisplayName(score?.location_name) || `${geoLevel}/${geoId}`}
       </p>
       <p className="text-xs text-on-surface-variant">
         PropertyIQ {scoreValue ?? "—"} · {scoreLabel}

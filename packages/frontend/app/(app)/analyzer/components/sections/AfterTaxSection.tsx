@@ -77,6 +77,9 @@ export function AfterTaxSection({
           return `Year ${yr} · ${BASE_YEAR + yr} · effective tax ${rate}%`;
         }}
         variant="area"
+        showYAxis
+        showXAxis
+        xTickFormatter={(x) => String(BASE_YEAR + Number(x))}
         ranges={[
           { label: "1Y", years: 1 },
           { label: "5Y", years: 5 },

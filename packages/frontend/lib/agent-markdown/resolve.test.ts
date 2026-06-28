@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { resolveMarkdown } from "./resolve";
 import { getAllSlugs } from "@/lib/blog";
 import * as methodologyReport from "@/lib/scores/methodology-report";

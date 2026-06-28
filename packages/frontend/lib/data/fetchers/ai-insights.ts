@@ -53,6 +53,17 @@ export interface AiInsightPayload {
     | "fast_cash"
     | "recycle_capital"
     | null;
+  /** Compact 30-year wealth-projection summary so the projection section AI
+   *  can cite the real computed components instead of "no projection supplied".
+   *  Mirrors the backend AssemblePromptPayload.projection shape. */
+  projection?: {
+    finalEquity: number;
+    totalAppreciation: number;
+    totalPrincipalPaydown: number;
+    totalCashflow: number;
+    equityByHorizon: { y1: number; y10: number; y30: number };
+    irr30: number;
+  } | null;
 }
 
 export interface AIAnnotationResult {

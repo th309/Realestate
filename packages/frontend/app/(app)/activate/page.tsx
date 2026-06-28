@@ -39,7 +39,7 @@ export default function ActivatePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
+      <div className="w-full max-w-md rounded-xl bg-surface-container p-8 shadow-sm">
         <h1 className="mb-2 text-center font-roboto text-2xl font-medium text-on-surface">
           Connect MCP Server
         </h1>

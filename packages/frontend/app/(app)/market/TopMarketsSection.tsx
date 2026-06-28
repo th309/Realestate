@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin, ChevronRight, Trophy, Hash } from "lucide-react";
 import { useTopMarkets } from "@/lib/data/hooks/useTopMarkets";
 import { US_STATES } from "@/app/map/types";
+import { formatGeoDisplayName } from "@/lib/data";
 import type { TopMarketsGeo, TopMarketsScoreType } from "@/lib/data";
 import { addRecentMarket } from "./recent-markets";
 import { ExportTopMarketsButton } from "./components/ExportTopMarketsButton";
@@ -155,7 +156,7 @@ export function TopMarketsSection() {
                 onClick={() =>
                   addRecentMarket({
                     id: market.location_id,
-                    name: market.location_name,
+                    name: formatGeoDisplayName(market.location_name),
                     type: geo,
                   })
                 }
@@ -166,7 +167,7 @@ export function TopMarketsSection() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-on-surface truncate">
-                    {market.location_name}
+                    {formatGeoDisplayName(market.location_name)}
                   </div>
                 </div>
                 <div

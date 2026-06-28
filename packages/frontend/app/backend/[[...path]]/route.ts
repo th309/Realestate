@@ -43,12 +43,12 @@ const SKIP_REQUEST_HEADERS = new Set([
   "content-length",
   "transfer-encoding",
   "cookie",
-  // Client-asserted tier is a spoofing vector for tier-gated routes (e.g. the
-  // scoring guard trusts `x-user-tier` when no JWT is present). The backend
-  // derives the authoritative tier from the JWT; the frontend only sends this
-  // header for paywall analytics, so dropping it here costs nothing functional
-  // and removes the trivial browser-console bypass through this same-origin proxy.
-  // (Defense-in-depth only — the real fix is server-side; see the review note.)
+  // Client-asserted tier is a spoofing vector for tier-gated routes. The backend
+  // derives the authoritative tier server-side; the frontend only sends this
+  // header for paywall analytics, so dropping it here costs nothing functional.
+  // Defense-in-depth: the server-side fix landed 2026-06-27 — `scoring.guard.ts`
+  // no longer trusts `x-user-tier`/`?userTier` and fails closed to `free` — but
+  // we keep stripping it at the proxy so the browser path never carries it.
   "x-user-tier",
 ]);
 

@@ -3,7 +3,7 @@
 import React from "react";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { ScreenerRow, ScreenerQuery, MoverWindow } from "@/lib/data";
-import { formatMetricValue } from "@/lib/data";
+import { formatMetricValue, formatGeoDisplayName } from "@/lib/data";
 import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
 import {
   WINDOW_TO_COLUMN,
@@ -224,16 +224,13 @@ export function ScreenerTable({
                     {baseRank + i}
                   </td>
 
-                  {/* Market name */}
+                  {/* Market name — region_name already carries ", ST"; the
+                      separate state_code is redundant, so fall back to it only
+                      when the name is missing. */}
                   <td className="px-4 py-3 text-left min-w-[180px]">
                     <span className="font-medium text-on-surface">
-                      {row.region_name}
+                      {formatGeoDisplayName(row.region_name) || row.state_code}
                     </span>
-                    {row.state_code && (
-                      <span className="ml-1.5 text-xs text-on-surface-variant">
-                        {row.state_code}
-                      </span>
-                    )}
                   </td>
 
                   {/* Score */}

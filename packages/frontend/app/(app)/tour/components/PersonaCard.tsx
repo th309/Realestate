@@ -34,8 +34,8 @@ export function PersonaCard({
         "hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(57,73,171,0.12)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         priority
-          ? "border-primary bg-gradient-to-b from-white to-primary-container/30"
-          : "border-outline-variant bg-white hover:border-primary/60",
+          ? "border-primary bg-gradient-to-b from-surface-container to-primary-container/30"
+          : "border-outline-variant bg-surface-container hover:border-primary/60",
       ].join(" ")}
       aria-label={`Continue tour as ${title}`}
     >

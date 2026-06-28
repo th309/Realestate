@@ -119,7 +119,7 @@ async function fetchZhviAt(
   return map;
 }
 
-/** Zillow display names (metro "City, ST"; county "X County, ST"; zip = id). */
+/** Display names (metro "City, ST"; county "X County, ST"; zip "City, ST"). */
 async function fetchZillowNames(
   supabase: SupabaseClient,
   geography: GeographyLevel,
@@ -127,7 +127,28 @@ async function fetchZillowNames(
 ): Promise<Map<string, string>> {
   const z = ZILLOW_TABLES[geography];
   const names = new Map<string, string>();
-  if (geography === 'zip') return names; // zip display name is the postal code
+  if (geography === 'zip') {
+    // Realtor's zip_name source is lowercase ("frederick, md"). Source proper-
+    // cased ZIP names from the canonical `geographies` table instead, stripping
+    // the trailing ZIP code so the value matches the metro/county "City, ST"
+    // format ("Frederick, MD 21701" -> "Frederick, MD").
+    const zipRows = await pageAll(supabase, (from, to) =>
+      supabase
+        .from('geographies')
+        .select('geography_id, name')
+        .eq('geography_type', 'zip')
+        .not('name', 'is', null)
+        .order('geography_id', { ascending: true })
+        .range(from, to),
+    );
+    for (const row of zipRows) {
+      const proper = String(row.name)
+        .replace(/\s+\d{5}(-\d{4})?$/, '')
+        .trim();
+      if (proper) names.set(pad5(row.geography_id), proper);
+    }
+    return names;
+  }
   const rows = await pageAll(supabase, (from, to) =>
     supabase
       .from(z.table)

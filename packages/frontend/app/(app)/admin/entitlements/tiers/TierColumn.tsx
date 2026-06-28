@@ -123,7 +123,7 @@ export function TierColumn({
                 value={item}
                 onChange={(e) => updateBullet(i, e.target.value)}
                 placeholder="Bullet text..."
-                className="flex-1 px-2 py-1 bg-white/80 border border-outline-variant/50 rounded text-xs text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="flex-1 px-2 py-1 bg-surface-container-lowest border border-outline-variant/50 rounded text-xs text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-primary/40"
               />
               <button
                 onClick={() => removeBullet(i)}

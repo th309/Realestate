@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useScreenerMovers } from "@/lib/data";
+import { useScreenerMovers, formatGeoDisplayName } from "@/lib/data";
 import type { ScreenerGeoLevel, MoverWindow, ScreenerRow } from "@/lib/data";
 import {
   WINDOW_META,
@@ -54,12 +54,7 @@ function Leaderboard({
                   {i + 1}
                 </span>
                 <span className="flex-1 min-w-0 truncate font-medium text-on-surface">
-                  {row.region_name}
-                  {row.state_code && (
-                    <span className="ml-1.5 text-xs text-on-surface-variant">
-                      {row.state_code}
-                    </span>
-                  )}
+                  {formatGeoDisplayName(row.region_name) || row.state_code}
                 </span>
                 <span
                   className={`font-[family-name:var(--font-roboto-mono)] text-sm font-semibold ${getScoreChangeColor(d)}`}

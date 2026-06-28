@@ -5,12 +5,12 @@
  * Shows cards, sources, and pipeline health at a glance.
  */
 
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 interface HealthSummary {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   cardsTotal: number;
   cardsHealthy: number;
   sourcesTotal: number;
@@ -26,7 +26,11 @@ interface StatusBannerProps {
   lastRefresh: Date;
 }
 
-export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProps) {
+export function StatusBanner({
+  summary,
+  loading,
+  lastRefresh,
+}: StatusBannerProps) {
   if (loading && !summary) {
     return (
       <div
@@ -54,37 +58,37 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'healthy':
+      case "healthy":
         return {
-          bg: 'bg-green-50',
-          border: 'border-green-200',
-          text: 'text-green-800',
-          icon: '✓',
-          label: 'All Systems Operational',
+          bg: "bg-green-50",
+          border: "border-green-200",
+          text: "text-green-800",
+          icon: "✓",
+          label: "All Systems Operational",
         };
-      case 'degraded':
+      case "degraded":
         return {
-          bg: 'bg-amber-50',
-          border: 'border-amber-200',
-          text: 'text-amber-800',
-          icon: '⚠',
-          label: 'Some Issues Detected',
+          bg: "bg-amber-50",
+          border: "border-amber-200",
+          text: "text-amber-800",
+          icon: "⚠",
+          label: "Some Issues Detected",
         };
-      case 'unhealthy':
+      case "unhealthy":
         return {
-          bg: 'bg-red-50',
-          border: 'border-red-200',
-          text: 'text-red-800',
-          icon: '✕',
-          label: 'Critical Issues',
+          bg: "bg-red-50",
+          border: "border-red-200",
+          text: "text-red-800",
+          icon: "✕",
+          label: "Critical Issues",
         };
       default:
         return {
-          bg: 'bg-gray-50',
-          border: 'border-gray-200',
-          text: 'text-gray-800',
-          icon: '?',
-          label: 'Unknown Status',
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          text: "text-gray-800",
+          icon: "?",
+          label: "Unknown Status",
         };
     }
   };
@@ -96,12 +100,12 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins === 1) return '1 min ago';
+    if (diffMins < 1) return "Just now";
+    if (diffMins === 1) return "1 min ago";
     if (diffMins < 60) return `${diffMins} mins ago`;
 
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours === 1) return '1 hour ago';
+    if (diffHours === 1) return "1 hour ago";
     return `${diffHours} hours ago`;
   };
 
@@ -112,12 +116,17 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
     >
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <span className={`text-2xl ${statusConfig.text}`}>{statusConfig.icon}</span>
+          <span className={`text-2xl ${statusConfig.text}`}>
+            {statusConfig.icon}
+          </span>
           <div>
             <h2 className={`text-lg font-semibold ${statusConfig.text}`}>
               {statusConfig.label}
             </h2>
-            <p className="text-sm text-on-surface-variant" data-testid="last-refresh-time">
+            <p
+              className="text-sm text-gray-600"
+              data-testid="last-refresh-time"
+            >
               Last Check: {formatLastRefresh(lastRefresh)}
             </p>
           </div>
@@ -125,24 +134,24 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
 
         <div className="flex items-center gap-6 text-sm">
           <div className="text-center">
-            <div className="font-semibold text-on-surface">
+            <div className="font-semibold text-gray-900">
               {summary.cardsHealthy}/{summary.cardsTotal}
             </div>
-            <div className="text-on-surface-variant">Cards OK</div>
+            <div className="text-gray-600">Cards OK</div>
           </div>
           <div className="w-px h-8 bg-outline-variant" />
           <div className="text-center">
-            <div className="font-semibold text-on-surface">
+            <div className="font-semibold text-gray-900">
               {summary.sourcesAvailable}/{summary.sourcesTotal}
             </div>
-            <div className="text-on-surface-variant">Sources Available</div>
+            <div className="text-gray-600">Sources Available</div>
           </div>
           <div className="w-px h-8 bg-outline-variant" />
           <div className="text-center">
-            <div className="font-semibold text-on-surface">
+            <div className="font-semibold text-gray-900">
               {summary.pipelinesHealthy}/{summary.pipelinesTotal}
             </div>
-            <div className="text-on-surface-variant">Pipelines Healthy</div>
+            <div className="text-gray-600">Pipelines Healthy</div>
           </div>
         </div>
       </div>

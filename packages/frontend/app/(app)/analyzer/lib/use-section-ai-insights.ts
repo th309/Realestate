@@ -22,6 +22,7 @@ import type {
   DealGradingResult,
   DealInput,
   FlipResult,
+  ProjectionResult,
   RentalResult,
 } from "@propertyiq/analyzer-core";
 import {
@@ -48,6 +49,7 @@ export interface UseSectionAiInsightsArgs {
     metro: number | null;
   };
   goal?: InvestorGoal | null;
+  projection?: ProjectionResult | null;
 }
 
 export interface SectionAiProps {
@@ -81,8 +83,31 @@ export function useSectionAiInsights({
   strategy,
   piqByGeo,
   goal,
+  projection,
 }: UseSectionAiInsightsArgs): Record<SectionId, SectionAiProps> {
   const qc = useQueryClient();
+
+  // Compact projection summary: the chart's 30-year computeProjection result
+  // distilled to the wealth components the projection-section prompt cites
+  // (final equity + appreciation vs principal paydown vs cumulative cashflow).
+  const lastYear = projection?.yearly.at(-1) ?? null;
+  const projectionSummary = projection
+    ? {
+        finalEquity: projection.horizons.y30.equity,
+        totalAppreciation: lastYear?.appreciationGain ?? 0,
+        totalPrincipalPaydown: projection.yearly.reduce(
+          (sum, y) => sum + y.principalPaydown,
+          0,
+        ),
+        totalCashflow: lastYear?.cumulativeCashflow ?? 0,
+        equityByHorizon: {
+          y1: projection.horizons.y1.equity,
+          y10: projection.horizons.y10.equity,
+          y30: projection.horizons.y30.equity,
+        },
+        irr30: projection.horizons.y30.irr,
+      }
+    : null;
 
   const payload: AiInsightPayload = {
     input,
@@ -97,6 +122,7 @@ export function useSectionAiInsights({
       metro: piqByGeo.metro,
     },
     goal: goal ?? null,
+    projection: projectionSummary,
   };
 
   // Discriminator mirrors the backend's cache key fields so the two layers
@@ -112,6 +138,9 @@ export function useSectionAiInsights({
     grading?.letter ?? "",
     strategy ?? "",
     goal ?? "",
+    // Re-fetch the projection tip when the wealth projection materially shifts
+    // (e.g., appreciation/rent-growth assumption edits move final equity).
+    Math.round(projectionSummary?.finalEquity ?? 0),
   ].join("|");
 
   // Gate the entire batched call on `enabled` AND grading being present.

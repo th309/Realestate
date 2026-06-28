@@ -14,13 +14,16 @@ import {
 import { piq } from "./piqTokens";
 import { MetricBlock } from "./MetricBlock";
 import { RangePills } from "./RangePills";
-import { GlowEndpoint, ScrubOverlay } from "./SignatureChartLayers";
+import { SignatureChartLegend } from "./SignatureChartLegend";
+import { GlowEndpoint, MultiScrubOverlay } from "./SignatureChartLayers";
 import {
   DEFAULT_RANGES,
   autoColor,
   sliceToRange,
   formatDeltaCompact,
   arrowForDelta,
+  computeAxisTicks,
+  formatYTick,
   type DataPoint,
   type RangeOption,
   type RangeAnchor,
@@ -50,6 +53,12 @@ export type SignatureChartProps = {
   height?: number;
   showBaseline?: boolean;
   rangeAnchor?: RangeAnchor;
+  /** Show value ticks on the right edge of the plot. Default: false. */
+  showYAxis?: boolean;
+  /** Show time/category ticks along the bottom. Default: false. */
+  showXAxis?: boolean;
+  /** Format an x value into a bottom-axis tick label (e.g. year → calendar year). */
+  xTickFormatter?: (x: number | string) => string;
   className?: string;
 };
 
@@ -59,18 +68,8 @@ function readYValue(point: DataPoint | undefined, key: string): number {
   return typeof v === "number" ? v : Number.NaN;
 }
 
-function compactValue(value: number, format: HeadlineFormat): string {
-  if (!Number.isFinite(value)) return "—";
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "−" : "";
-  if (format === "currency") {
-    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
-    return `${sign}$${Math.round(abs)}`;
-  }
-  if (format === "percent") return `${sign}${abs.toFixed(1)}%`;
-  return `${sign}${Math.round(abs).toLocaleString()}`;
-}
+/** Shared style for the optional x/y axis tick labels. */
+const AXIS_TICK = { fontSize: 11, fill: piq.textMuted } as const;
 
 export function SignatureChart({
   data,
@@ -85,6 +84,9 @@ export function SignatureChart({
   height = 320,
   showBaseline = true,
   rangeAnchor = "tail",
+  showYAxis = false,
+  showXAxis = false,
+  xTickFormatter,
   className = "",
 }: SignatureChartProps) {
   const initialRange =
@@ -143,6 +145,15 @@ export function SignatureChart({
     : 0;
   const xIsNumeric = slicedData.every((d) => typeof d.x === "number");
 
+  // Total span of plotted values across all series — drives adaptive y-tick
+  // precision so a narrow range (e.g. flat after-tax cashflow) doesn't render
+  // duplicate rounded labels.
+  const yValues = slicedData
+    .flatMap((d) => resolvedSeries.map((s) => readYValue(d, s.key)))
+    .filter((v) => Number.isFinite(v));
+  const ySpan =
+    yValues.length > 0 ? Math.max(...yValues) - Math.min(...yValues) : 0;
+
   const handleMouseMove = (state: { activeTooltipIndex?: number } | null) => {
     if (state?.activeTooltipIndex != null) {
       setActiveIndex(state.activeTooltipIndex);
@@ -150,21 +161,23 @@ export function SignatureChart({
   };
   const handleMouseLeave = () => setActiveIndex(null);
 
-  // ComposedChart accepts mixed Area + Line children — the right tool for
-  // multi-series rendering. Single-series mode also uses it (no functional
-  // difference vs. AreaChart/LineChart for our case).
+  // ComposedChart accepts mixed Area + Line children for multi-series render.
+  const isMulti = resolvedSeries.length > 1;
 
+  // Scrub puts a dot + value chip on every line at the hovered x. Single-series
+  // resolves to one synthesized series, so it gets one dot + chip too.
   const renderScrub = useCallback(
     (cp: Record<string, unknown>) => (
-      <ScrubOverlay
+      <MultiScrubOverlay
         chartProps={cp}
         data={slicedData}
         activeIndex={activeIndex}
-        color={primaryColor}
-        yKey={primaryKey}
+        series={resolvedSeries}
+        format={headlineFormat}
+        surface={piq.surface}
       />
     ),
-    [slicedData, activeIndex, primaryColor, primaryKey],
+    [slicedData, activeIndex, resolvedSeries, headlineFormat],
   );
   const renderGlow = useCallback(
     (cp: Record<string, unknown>) => (
@@ -178,8 +191,6 @@ export function SignatureChart({
     ),
     [slicedData, primaryColor, primaryKey],
   );
-
-  const isMulti = resolvedSeries.length > 1;
 
   return (
     <div data-signature-chart className={`flex flex-col gap-4 ${className}`}>
@@ -236,7 +247,12 @@ export function SignatureChart({
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={slicedData}
-              margin={{ top: 16, right: 24, bottom: 8, left: 16 }}
+              margin={{
+                top: 16,
+                right: showYAxis ? 4 : 24,
+                bottom: showXAxis ? 0 : 8,
+                left: 16,
+              }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
             >
@@ -244,9 +260,34 @@ export function SignatureChart({
                 dataKey="x"
                 type={xIsNumeric ? "number" : "category"}
                 domain={xIsNumeric ? ["dataMin", "dataMax"] : undefined}
-                hide
+                hide={!showXAxis}
+                height={showXAxis ? 24 : undefined}
+                ticks={
+                  showXAxis && xIsNumeric
+                    ? computeAxisTicks(slicedData)
+                    : undefined
+                }
+                tickFormatter={
+                  xTickFormatter ? (v) => xTickFormatter(v) : undefined
+                }
+                tick={showXAxis ? AXIS_TICK : false}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                interval="preserveStartEnd"
               />
-              <YAxis type="number" domain={["auto", "auto"]} hide />
+              <YAxis
+                type="number"
+                domain={["auto", "auto"]}
+                orientation="right"
+                hide={!showYAxis}
+                width={showYAxis ? 52 : undefined}
+                tickCount={5}
+                tickFormatter={(v) => formatYTick(v, headlineFormat, ySpan)}
+                tick={showYAxis ? AXIS_TICK : false}
+                tickLine={false}
+                axisLine={false}
+              />
               {showBaseline && (
                 <ReferenceLine
                   y={baselineY}
@@ -301,44 +342,11 @@ export function SignatureChart({
 
       {/* Multi-series legend */}
       {isMulti && (
-        <div className="flex flex-wrap gap-x-6 gap-y-2" data-signature-legend>
-          {resolvedSeries.map((s) => {
-            const value = readYValue(activePoint, s.key);
-            return (
-              <div key={s.key} className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: s.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: piq.textMuted,
-                    fontWeight: 500,
-                  }}
-                >
-                  {s.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: "13px",
-                    color: piq.textPrimary,
-                    fontWeight: 600,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {compactValue(value, headlineFormat)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <SignatureChartLegend
+          series={resolvedSeries}
+          activePoint={activePoint}
+          format={headlineFormat}
+        />
       )}
 
       {/* Range pills */}
