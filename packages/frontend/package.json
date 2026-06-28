@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=6144 next dev --webpack",
     "dev:turbo": "next dev",
     "build": "next build --webpack",
     "start": "next start",

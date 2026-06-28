@@ -23,7 +23,6 @@ export async function regenerateNarratives(
   reportId: string,
   userId: string,
   userInputs: Record<string, any>,
-  userTier?: string,
 ): Promise<{ updated_keys: string[]; ai_narrative: Record<string, any> }> {
   // 1. Fetch the report to verify ownership
   const { data: report, error } = await supabaseClient

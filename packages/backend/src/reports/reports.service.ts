@@ -70,7 +70,11 @@ export class ReportsService {
   // Template CRUD
   // ============================================================================
 
-  async getTemplates(tier?: string): Promise<ReportTemplate[]> {
+  // Public catalog: every active, public template, ordered by tier_required.
+  // Intentionally NOT filtered by a caller-supplied tier — a client tier must
+  // never influence what the server returns (tier is resolved server-side for
+  // access decisions, not for catalog visibility).
+  async getTemplates(): Promise<ReportTemplate[]> {
     const client = this.supabase.getClient();
     const query = client
       .from('report_templates')
@@ -110,6 +114,10 @@ export class ReportsService {
   async generateReport(
     userId: string,
     dto: GenerateReportDto,
+    // Trusted, server-derived tier override (e.g. the platform API grants pro/
+    // enterprise by validated API-key type). The user-facing controller passes
+    // nothing → tier resolves from the validated userId. NEVER wire this to a
+    // client-supplied header (that was the privilege-escalation bug).
     userTier?: string,
   ): Promise<string> {
     const client = this.supabase.getClient();
@@ -257,7 +265,6 @@ export class ReportsService {
     reportId: string,
     userId: string,
     content: string,
-    userTier?: string,
   ): Promise<any> {
     return sendConversationMessageFn(
       this.supabase.getClient(),
@@ -270,7 +277,6 @@ export class ReportsService {
       reportId,
       userId,
       content,
-      userTier,
     );
   }
 
@@ -303,7 +309,6 @@ export class ReportsService {
     reportId: string,
     userId: string,
     userInputs: Record<string, any>,
-    userTier?: string,
   ): Promise<{ updated_keys: string[]; ai_narrative: Record<string, any> }> {
     return regenerateNarrativesFn(
       this.supabase.getClient(),
@@ -311,7 +316,6 @@ export class ReportsService {
       reportId,
       userId,
       userInputs,
-      userTier,
     );
   }
 

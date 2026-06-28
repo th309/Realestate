@@ -10,6 +10,7 @@ export async function fetchEntitlements(
   resources: string[],
   tierOverride?: string | null,
   userId?: string | null,
+  signal?: AbortSignal,
 ): Promise<EntitlementsState> {
   const params = new URLSearchParams();
   if (resources.length > 0) {
@@ -18,8 +19,10 @@ export async function fetchEntitlements(
   if (tierOverride) {
     params.set("tier", tierOverride);
   }
-  // Cache bust to ensure fresh data
-  params.set("_t", Date.now().toString());
+  // No `_t` cache-buster: callers go through React Query, which de-duplicates by
+  // a stable query key. A per-call timestamp made every URL unique and defeated
+  // that dedup — the bug that produced bursts of identical entitlement checks.
+  // Freshness is enforced by `cache: "no-store"` below + React Query's staleTime.
 
   const url = `${API_URL}/api/entitlements/check?${params}`;
 
@@ -38,11 +41,16 @@ export async function fetchEntitlements(
       headers,
       credentials: "include",
       cache: "no-store",
+      signal,
     });
   } catch (err) {
-    // Request aborted (HMR rebuild, navigation, unmount) — silently preserve previous state
+    // Let a native AbortError (HMR rebuild, navigation, unmount, or a request
+    // superseded by React Query's `signal`) propagate UNWRAPPED. React Query v5
+    // treats an error named "AbortError" as a benign cancellation and keeps the
+    // prior query state; wrapping it in a plain Error would instead strand the
+    // query in `error` state (retry is disabled).
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new Error("Request aborted");
+      throw err;
     }
     // Network error (backend genuinely unreachable) — throw so the caller preserves previous tier
     console.warn("[Entitlements] Backend unreachable:", err);
@@ -70,13 +78,13 @@ export async function fetchEntitlements(
 const ENTITLEMENT_RETRY_DELAYS_MS = [400, 1000, 2500];
 
 /**
- * An aborted request (HMR rebuild, navigation, unmount) is intentional, not a
- * failure — `fetchEntitlements` surfaces it as "Request aborted". Those must
- * NOT be retried; only genuine transient errors ("Backend unreachable" or a
- * non-ok 5xx) self-heal via retry.
+ * An aborted request (HMR rebuild, navigation, unmount, or a React-Query-
+ * superseded fetch) is intentional, not a failure — the native AbortError
+ * propagates unwrapped. Those must NOT be retried; only genuine transient
+ * errors ("Backend unreachable" or a non-ok 5xx) self-heal via retry.
  */
 export function isAbortedEntitlementsError(error: unknown): boolean {
-  return error instanceof Error && error.message === "Request aborted";
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 /**
@@ -92,6 +100,7 @@ export async function fetchEntitlementsWithRetry(
   resources: string[],
   tierOverride?: string | null,
   userId?: string | null,
+  signal?: AbortSignal,
 ): Promise<EntitlementsState> {
   let lastError: unknown;
   // 1 initial attempt + ENTITLEMENT_RETRY_DELAYS_MS.length retries.
@@ -101,7 +110,7 @@ export async function fetchEntitlementsWithRetry(
     attempt++
   ) {
     try {
-      return await fetchEntitlements(resources, tierOverride, userId);
+      return await fetchEntitlements(resources, tierOverride, userId, signal);
     } catch (error) {
       lastError = error;
       // Aborts are intentional (unmount / navigation / HMR) — do not retry.

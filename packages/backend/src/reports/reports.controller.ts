@@ -13,7 +13,6 @@ import {
   Param,
   Body,
   Query,
-  Headers,
   HttpException,
   HttpStatus,
   UseGuards,
@@ -40,8 +39,10 @@ export class ReportsController {
    * GET /reports/templates
    */
   @Get('templates')
-  async getTemplates(@Query('tier') tier?: string) {
-    return this.reportsService.getTemplates(tier);
+  async getTemplates() {
+    // Public catalog — intentionally not filtered by a client-supplied tier
+    // (the old `?tier=` was dead-plumbing the service already ignored).
+    return this.reportsService.getTemplates();
   }
 
   /**
@@ -100,13 +101,10 @@ export class ReportsController {
   async generateReport(
     @Body() dto: GenerateReportDto,
     @AuthUserId() userId: string,
-    @Headers('x-user-tier') userTier?: string,
   ) {
-    const reportId = await this.reportsService.generateReport(
-      userId,
-      dto,
-      userTier,
-    );
+    // Tier is resolved server-side from the validated userId downstream
+    // (checkAccess → TierResolverService); never trust a client x-user-tier.
+    const reportId = await this.reportsService.generateReport(userId, dto);
     return { report_id: reportId, status: 'generating' };
   }
 
@@ -214,13 +212,11 @@ export class ReportsController {
     @Param('id') id: string,
     @Body() body: { user_inputs: Record<string, any> },
     @AuthUserId() userId: string,
-    @Headers('x-user-tier') userTier?: string,
   ) {
     return this.reportsService.regenerateNarratives(
       id,
       userId,
       body.user_inputs,
-      userTier,
     );
   }
 
@@ -235,13 +231,11 @@ export class ReportsController {
     @Param('id') reportId: string,
     @Body() dto: SendMessageDto,
     @AuthUserId() userId: string,
-    @Headers('x-user-tier') userTier?: string,
   ) {
     return this.reportsService.sendConversationMessage(
       reportId,
       userId,
       dto.content,
-      userTier,
     );
   }
 

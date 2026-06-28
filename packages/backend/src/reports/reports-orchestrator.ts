@@ -506,6 +506,9 @@ export async function generateReportAsync(
       'Generating deep market analysis...',
     );
     let aiNarratives = {};
+    // `userTier` is a TRUSTED server-derived override (e.g. platform API by
+    // validated API-key type); null for the app path → tier resolves from the
+    // validated userId. It is NEVER sourced from a client header (the bug).
     const aiAccess = await deps.entitlementsService.checkAccess(
       userId,
       userTier || null,

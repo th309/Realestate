@@ -68,14 +68,19 @@ export class EntitlementsController {
     },
     @Headers('x-user-id') userId: string,
     @Headers('x-session-id') sessionId: string,
-    @Headers('x-user-tier') userTier: string,
   ) {
+    // Resolve tier server-side from the (claimed) user id — never store a
+    // client-supplied x-user-tier, which would let any caller poison the
+    // paywall/conversion analytics with an arbitrary tier.
+    const resolvedTier = userId
+      ? ((await this.service.getUserTier(userId)) ?? 'free')
+      : 'free';
     await this.service.trackPaywallEvent({
       userId: userId || undefined,
       sessionId: sessionId || undefined,
       resourceType: body.resourceType,
       resourceId: body.resourceId,
-      userTier: userTier || 'free',
+      userTier: resolvedTier,
       pagePath: body.pagePath,
       eventType: body.eventType,
       metadata: body.metadata,
