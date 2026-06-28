@@ -22,8 +22,8 @@ import {
   sliceToRange,
   formatDeltaCompact,
   arrowForDelta,
-  compactValue,
   computeAxisTicks,
+  formatYTick,
   type DataPoint,
   type RangeOption,
   type RangeAnchor,
@@ -144,6 +144,15 @@ export function SignatureChart({
       )
     : 0;
   const xIsNumeric = slicedData.every((d) => typeof d.x === "number");
+
+  // Total span of plotted values across all series — drives adaptive y-tick
+  // precision so a narrow range (e.g. flat after-tax cashflow) doesn't render
+  // duplicate rounded labels.
+  const yValues = slicedData
+    .flatMap((d) => resolvedSeries.map((s) => readYValue(d, s.key)))
+    .filter((v) => Number.isFinite(v));
+  const ySpan =
+    yValues.length > 0 ? Math.max(...yValues) - Math.min(...yValues) : 0;
 
   const handleMouseMove = (state: { activeTooltipIndex?: number } | null) => {
     if (state?.activeTooltipIndex != null) {
@@ -274,7 +283,7 @@ export function SignatureChart({
                 hide={!showYAxis}
                 width={showYAxis ? 52 : undefined}
                 tickCount={5}
-                tickFormatter={(v) => compactValue(v, headlineFormat)}
+                tickFormatter={(v) => formatYTick(v, headlineFormat, ySpan)}
                 tick={showYAxis ? AXIS_TICK : false}
                 tickLine={false}
                 axisLine={false}

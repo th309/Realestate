@@ -115,6 +115,30 @@ export function compactValue(value: number, format: HeadlineFormat): string {
 }
 
 /**
+ * Y-axis tick label. Identical to `compactValue` for normal ranges, but when the
+ * plotted value span is narrow (sub-$20K currency), it switches to one-decimal
+ * "$48.2K" precision so adjacent ticks don't collapse to the same rounded label
+ * (e.g. two gridlines both reading "$48K"). Wide-range charts are unaffected.
+ */
+export function formatYTick(
+  value: number,
+  format: HeadlineFormat,
+  span: number,
+): string {
+  if (
+    format === "currency" &&
+    Number.isFinite(value) &&
+    value !== 0 &&
+    span > 0 &&
+    span < 20_000
+  ) {
+    const sign = value < 0 ? "−" : "";
+    return `${sign}$${(Math.abs(value) / 1000).toFixed(1)}K`;
+  }
+  return compactValue(value, format);
+}
+
+/**
  * Pick up to `maxTicks` evenly-spaced x values from the (already range-sliced)
  * data, always including the first and last point. Returns the actual x values
  * present in the data so axis ticks land on real data points. Numeric x only —
