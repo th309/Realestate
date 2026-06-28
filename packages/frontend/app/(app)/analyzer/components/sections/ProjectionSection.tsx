@@ -169,6 +169,9 @@ export function ProjectionSection({
         headlineFormat="currency"
         subLabel={(p) => `Year ${p.x} · ${BASE_YEAR + Number(p.x)}`}
         variant="area"
+        showYAxis
+        showXAxis
+        xTickFormatter={(x) => String(BASE_YEAR + Number(x))}
         ranges={[
           { label: "1Y", years: 1 },
           { label: "5Y", years: 5 },

@@ -94,3 +94,42 @@ export function arrowForDelta(value: number): string {
   if (value < 0) return "▼";
   return "▶";
 }
+
+/**
+ * Compact, sign-aware value formatter shared by the headline, axis ticks, and
+ * the per-line scrub labels so every number on the chart reads identically
+ * ("$599K", "−$593K", "12.3%"). Unlike `formatDeltaCompact` it does NOT prefix
+ * positives with "+".
+ */
+export function compactValue(value: number, format: HeadlineFormat): string {
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "−" : "";
+  if (format === "currency") {
+    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
+    return `${sign}$${Math.round(abs)}`;
+  }
+  if (format === "percent") return `${sign}${abs.toFixed(1)}%`;
+  return `${sign}${Math.round(abs).toLocaleString()}`;
+}
+
+/**
+ * Pick up to `maxTicks` evenly-spaced x values from the (already range-sliced)
+ * data, always including the first and last point. Returns the actual x values
+ * present in the data so axis ticks land on real data points. Numeric x only —
+ * category axes let Recharts choose. Because it reads the sliced data, the tick
+ * set automatically re-densifies when the range pill (1Y/5Y/10Y/30Y) changes.
+ */
+export function computeAxisTicks(data: DataPoint[], maxTicks = 6): number[] {
+  const xs = data
+    .map((d) => d.x)
+    .filter((x): x is number => typeof x === "number");
+  if (xs.length <= maxTicks) return xs;
+  const step = Math.ceil((xs.length - 1) / (maxTicks - 1));
+  const ticks: number[] = [];
+  for (let i = 0; i < xs.length; i += step) ticks.push(xs[i]);
+  const lastX = xs[xs.length - 1];
+  if (ticks[ticks.length - 1] !== lastX) ticks.push(lastX);
+  return ticks;
+}
