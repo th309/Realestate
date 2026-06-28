@@ -5,9 +5,12 @@ import { useEffect } from "react";
 // WebMCP (navigator.modelContext) — exposes a small set of read-only PropertyIQ
 // market tools to in-browser AI agents on every page. All calls are same-origin
 // (`/backend/*`, the ad-blocker-safe proxy) and anonymous-safe, so the tools work
-// for any visitor without auth. We register declaratively via `provideContext`
-// (the primary WebMCP API) and shim it when a browser has no native support, so a
-// readiness checker that inspects `navigator.modelContext` after load finds the tools.
+// for any visitor without auth. We register each tool via `registerTool` (the
+// primary WebMCP API) and, when a browser has no native support, install a minimal
+// shim that exposes the registered tools on `navigator.modelContext.tools`, so a
+// readiness checker that inspects `navigator.modelContext` on load finds them.
+// Registration runs as the client module evaluates (pre-hydration) and again from
+// the mount effect; both are idempotent.
 
 interface WebMcpToolResult {
   content: Array<{ type: "text"; text: string }>;
@@ -23,9 +26,12 @@ interface WebMcpTool {
 }
 
 interface ModelContext {
-  _tools?: WebMcpTool[];
+  tools?: WebMcpTool[];
   __propertyiqRegistered?: boolean;
-  registerTool?: (tool: WebMcpTool) => unknown;
+  registerTool?: (
+    tool: WebMcpTool,
+    options?: { signal?: AbortSignal },
+  ) => unknown;
   provideContext?: (ctx: { tools?: WebMcpTool[] }) => unknown;
 }
 
@@ -154,35 +160,59 @@ const PROPERTYIQ_TOOLS: WebMcpTool[] = [
 function registerPropertyIqWebMcpTools(): void {
   if (typeof navigator === "undefined") return;
   const nav = navigator as NavigatorWithModelContext;
-  const mc: ModelContext = (nav.modelContext = nav.modelContext ?? {});
 
-  // Idempotent: React StrictMode / re-mounts must not double-register.
+  // Reuse an existing modelContext (a native browser agent or an injected polyfill)
+  // and never clobber it. Otherwise install a minimal WebMCP shim that exposes the
+  // registered tools publicly on `.tools` so a readiness scanner can enumerate them.
+  let mc = nav.modelContext;
+  if (!mc) {
+    const tools: WebMcpTool[] = [];
+    const shim: ModelContext = {
+      tools,
+      registerTool(tool: WebMcpTool, options?: { signal?: AbortSignal }) {
+        tools.push(tool);
+        // Honor AbortController: drop the tool if its registration is aborted.
+        options?.signal?.addEventListener("abort", () => {
+          const index = tools.indexOf(tool);
+          if (index >= 0) tools.splice(index, 1);
+        });
+        return Promise.resolve();
+      },
+      provideContext({ tools: incoming = [] }: { tools?: WebMcpTool[] } = {}) {
+        for (const tool of incoming) shim.registerTool!(tool);
+      },
+    };
+    nav.modelContext = shim;
+    mc = shim;
+  }
+
+  // Idempotent across StrictMode double-invokes and the early + effect calls.
   if (mc.__propertyiqRegistered) return;
   mc.__propertyiqRegistered = true;
-  mc._tools = mc._tools ?? [];
 
-  // Shim the API surface so detection works even without native WebMCP support.
-  if (typeof mc.registerTool !== "function") {
-    mc.registerTool = (tool: WebMcpTool) => {
-      mc._tools!.push(tool);
-      return Promise.resolve();
-    };
+  // registerTool is the primary WebMCP API the readiness check looks for. Register
+  // each tool individually so detectors that wrap registerTool observe every call.
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : undefined;
+  for (const tool of PROPERTYIQ_TOOLS) {
+    mc.registerTool?.(
+      tool,
+      controller ? { signal: controller.signal } : undefined,
+    );
   }
-  if (typeof mc.provideContext !== "function") {
-    mc.provideContext = ({ tools = [] }: { tools?: WebMcpTool[] } = {}) => {
-      for (const tool of tools) mc.registerTool!(tool);
-    };
-  }
+}
 
-  // provideContext is the primary (declarative) WebMCP API the readiness check looks
-  // for; native implementations treat it as the full tool set, so we don't also call
-  // registerTool when it exists (that would double-register).
-  mc.provideContext({ tools: PROPERTYIQ_TOOLS });
+// Register as soon as the client module evaluates — before React hydration — so a
+// readiness scanner that snapshots `navigator.modelContext` on load sees the tools
+// even when hydration is slow. Idempotent with the mount effect below.
+if (typeof window !== "undefined") {
+  registerPropertyIqWebMcpTools();
 }
 
 /**
- * Mounts once in the root layout. Registers PropertyIQ's read-only market tools on
- * `navigator.modelContext` on load. Renders nothing.
+ * Mounts once in the root layout. Ensures PropertyIQ's read-only market tools are
+ * registered on `navigator.modelContext` (an idempotent fallback to the module-level
+ * registration above). Renders nothing.
  */
 export default function WebMcpProvider(): null {
   useEffect(() => {

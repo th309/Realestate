@@ -10,6 +10,7 @@ describe("authorizationServerMetadata", () => {
   it("includes an additive agent_auth block in the WorkOS auth.md shape", () => {
     expect(md.agent_auth).toEqual({
       skill: "https://www.propertyiq.app/auth.md",
+      register_uri: "https://mcp.propertyiq.app/register",
       identity_endpoint: "https://mcp.propertyiq.app/register",
       claim_endpoint: "https://mcp.propertyiq.app/authorize",
       registration_endpoint: "https://mcp.propertyiq.app/register",

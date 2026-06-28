@@ -21,6 +21,9 @@ describe("oauth-authorization-server well-known route", () => {
     expect(body.code_challenge_methods_supported).toEqual(["S256"]);
     // agent_auth uses the WorkOS auth.md schema the isitagentready checker validates.
     expect(body.agent_auth.skill).toBe("https://www.propertyiq.app/auth.md");
+    expect(body.agent_auth.register_uri).toBe(
+      "https://mcp.propertyiq.app/register",
+    );
     expect(body.agent_auth.identity_endpoint).toBe(
       "https://mcp.propertyiq.app/register",
     );

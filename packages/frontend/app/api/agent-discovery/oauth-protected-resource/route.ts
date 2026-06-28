@@ -1,15 +1,19 @@
 import { AGENT_DISCOVERY } from "@/lib/agent-discovery/manifest";
 
 // /.well-known/oauth-protected-resource (RFC 9728). Reachable via a next.config
-// rewrite. The protected resource is the PropertyIQ MCP server, so this apex copy
-// mirrors the canonical document served by packages/mcp-server (oauth/metadata.ts)
-// — letting agents that discover PropertyIQ at the marketing origin still find it.
+// rewrite. Identifies the marketing origin as a protected resource whose access
+// tokens are issued by the PropertyIQ MCP authorization server. RFC 9728 requires
+// the `resource` value to match the origin that served this document, so this copy
+// self-identifies as the marketing origin — strict validators (e.g. isitagentready)
+// reject a cross-origin `resource` as an origin mismatch. The MCP host serves its
+// own origin-matching copy for the protected MCP endpoint itself
+// (packages/mcp-server/src/lib/oauth/metadata.ts).
 export async function GET(): Promise<Response> {
-  const { mcp } = AGENT_DISCOVERY;
-  const resource = new URL(mcp.endpoint).origin;
+  const { mcp, siteOrigin } = AGENT_DISCOVERY;
+  const authServer = new URL(mcp.endpoint).origin;
   const doc = {
-    resource,
-    authorization_servers: [resource],
+    resource: siteOrigin,
+    authorization_servers: [authServer],
     scopes_supported: [...mcp.scopes],
     bearer_methods_supported: ["header"],
   };
