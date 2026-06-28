@@ -7,11 +7,13 @@ import {
 describe("authorizationServerMetadata", () => {
   const md = authorizationServerMetadata("https://mcp.propertyiq.app");
 
-  it("includes an additive agent_auth block with a skill pointer", () => {
+  it("includes an additive agent_auth block in the WorkOS auth.md shape", () => {
     expect(md.agent_auth).toEqual({
       skill: "https://www.propertyiq.app/auth.md",
-      register_uri: "https://mcp.propertyiq.app/register",
-      identity_types_supported: ["dynamic_client"],
+      identity_endpoint: "https://mcp.propertyiq.app/register",
+      claim_endpoint: "https://mcp.propertyiq.app/authorize",
+      registration_endpoint: "https://mcp.propertyiq.app/register",
+      identity_types_supported: ["service_auth"],
       credential_types_supported: ["oauth2_access_token", "api_key"],
     });
   });

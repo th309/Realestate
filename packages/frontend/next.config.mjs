@@ -26,9 +26,15 @@ const devConnectSrc = process.env.NODE_ENV === 'development'
   : '';
 
 const nextConfig = {
-  // Allow parallel dev instances (e.g., beta testing on port 3002)
-  // Usage: NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Dist-dir resolution — keeps `next build` from clobbering a running dev server.
+  //   1. explicit NEXT_DIST_DIR wins (parallel instances: NEXT_DIST_DIR=.next-test npx next dev -p 3002)
+  //   2. `next dev` (NODE_ENV=development) -> `.next-dev`, isolated from any build
+  //   3. `next build` / `next start` (NODE_ENV=production) -> `.next` (what Dockerfile.frontend ships)
+  // So a default `npm run build` writes `.next` while dev lives in `.next-dev` and survives,
+  // no matter who runs the build. Dev wipe + gitignore + tsconfig follow this dir; see scripts/dev-start.sh.
+  distDir:
+    process.env.NEXT_DIST_DIR ||
+    (process.env.NODE_ENV === 'development' ? '.next-dev' : '.next'),
   output: 'standalone',
   poweredByHeader: false,
   // Bounded in-memory server cache (ISR, route handlers, optimized images) in
@@ -195,6 +201,14 @@ const nextConfig = {
       {
         source: '/.well-known/oauth-authorization-server',
         destination: '/api/agent-discovery/oauth-authorization-server',
+      },
+      {
+        source: '/.well-known/agent-skills/index.json',
+        destination: '/api/agent-discovery/agent-skills-index',
+      },
+      {
+        source: '/.well-known/agent-skills/:name/SKILL.md',
+        destination: '/api/agent-discovery/agent-skill/:name',
       },
     ];
   },

@@ -284,6 +284,40 @@ jobs:
     outputs:
       screener_status: ${{ steps.screener.outputs.screener_status }}
 
+  # Force-expire the market-snapshot read-through cache (snapshot:v1:*) now that
+  # fresh scores + calculated metrics are written. Snapshots cache with a
+  # refresh-aligned TTL (MarketSnapshotService.ttlUntilNextRefresh) that expires
+  # on this monthly boundary; flushing here surfaces the new data immediately
+  # instead of waiting out each key's remaining TTL. Best-effort — continue-on-
+  # error so a flush hiccup never fails the refresh (snapshots self-heal at the
+  # TTL boundary regardless).
+  flush-snapshot-cache:
+    needs: run-scoring-pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Flush market-snapshot cache (snapshot:v1:*)
+        # REDIS_URL points at the Redis PUBLIC TCP proxy — the GH runner cannot
+        # reach redis.railway.internal. If the secret is unset the script no-ops.
+        env:
+          REDIS_URL: ${{ secrets.REDIS_PUBLIC_URL }}
+        run: npx tsx scripts/cache/flush-snapshot-cache.ts
+
   validate-scores:
     needs: run-scoring-pipeline
     runs-on: ubuntu-latest

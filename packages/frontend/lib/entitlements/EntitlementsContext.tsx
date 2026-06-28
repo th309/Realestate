@@ -9,6 +9,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   EntitlementsContextValue,
   EntitlementsState,
@@ -33,14 +34,18 @@ const EntitlementsContext = createContext<EntitlementsContextValue | null>(
   null,
 );
 
+// 30-min entitlements TTL (staleTime + refetchInterval; replaces the old
+// setInterval). Stable key root so refresh() can invalidate every variant.
+const ENTITLEMENTS_TTL_MS = 30 * 60 * 1000;
+const ENTITLEMENTS_QUERY_KEY = "entitlements";
+
 interface EntitlementsProviderProps {
   children: React.ReactNode;
   initialResources?: string[];
   /**
-   * Server-resolved entitlements used to seed the very first paint (SSR), so no
-   * surface flashes the default `free` tier before the client refresh lands.
-   * Resolved by `fetchEntitlementsServer` in the AppShell Server Component.
-   * Falls back to DEFAULT_ENTITLEMENTS_STATE for anonymous users / SSR misses.
+   * Server-resolved entitlements seeding the first paint (SSR) so no surface
+   * flashes `free` before the client refresh lands. From `fetchEntitlementsServer`
+   * in the AppShell Server Component; falls back to DEFAULT for anon / SSR misses.
    */
   initialState?: EntitlementsState | null;
 }
@@ -50,10 +55,9 @@ export function EntitlementsProvider({
   initialResources,
   initialState,
 }: EntitlementsProviderProps) {
-  const { user, session, loading: authLoading } = useAuth();
-  const [state, setState] = useState<EntitlementsState>(
-    initialState ?? DEFAULT_ENTITLEMENTS_STATE,
-  );
+  const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+
   // Initialize from sessionStorage to persist across navigations
   const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() =>
     getStoredSimulatedTier(),
@@ -64,7 +68,7 @@ export function EntitlementsProvider({
 
   const [usageCache, setUsageCache] = useState<Record<string, number>>({});
 
-  // Use ref to track the latest simulatedTier for the refresh callback
+  // Use ref to track the latest simulatedTier for the user-change cleanup effect.
   const simulatedTierRef = useRef<UserTier | null>(simulatedTier);
 
   // Wrap setSimulatedTier to persist to sessionStorage
@@ -125,53 +129,53 @@ export function EntitlementsProvider({
     prevUserIdRef.current = currentUserId ?? undefined;
   }, [user?.id, setSimulatedTier, setSimulatedAuth]);
 
-  // Track user ID in ref to avoid stale closures
-  const userIdRef = useRef<string | null>(user?.id ?? null);
-  userIdRef.current = user?.id ?? null;
-
-  // Request sequence counter to prevent stale responses from overwriting fresh ones.
-  // Each refresh() increments the counter; when a response arrives, it's only applied
-  // if no newer request has been launched since.
-  const refreshSeqRef = useRef(0);
-
-  const refresh = useCallback(async () => {
-    const currentTier = simulatedTierRef.current;
-    const currentUserId = userIdRef.current;
-    const seq = ++refreshSeqRef.current;
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      // Retries transient cold-load failures; see fetchEntitlementsWithRetry.
-      const data = await fetchEntitlementsWithRetry(
+  // Entitlements fetch via React Query. Key is [userId, simulatedTier] ONLY —
+  // deliberately NOT the Supabase `session`, whose reference churns on every auth
+  // event (INITIAL_SESSION/SIGNED_IN/TOKEN_REFRESHED/tab-focus) and triggered
+  // bursts of redundant full-resource refetches; the backend authorizes on the
+  // x-user-id cookie, not the JWT. RQ also de-dupes same-key requests and aborts
+  // superseded ones via `signal`. Retry/backoff stays in fetchEntitlementsWithRetry
+  // (RQ retry disabled). `initialDataUpdatedAt: 0` seeds the SSR paint but marks
+  // it stale so a client refetch still confirms it on mount.
+  const query = useQuery({
+    queryKey: [ENTITLEMENTS_QUERY_KEY, user?.id ?? null, simulatedTier],
+    queryFn: ({ signal }) =>
+      fetchEntitlementsWithRetry(
         resources,
-        currentTier,
-        currentUserId,
-      );
-      // Only apply if this is still the latest request
-      if (seq === refreshSeqRef.current) {
-        setState(data);
-      }
-    } catch (error) {
-      console.warn(
-        "[Entitlements] fetch failed, preserving previous state:",
-        error,
-      );
-      if (seq === refreshSeqRef.current) {
-        setState((prev) => ({ ...prev, loading: false, error: null }));
-      }
-    }
-  }, [resources]);
+        simulatedTier,
+        user?.id ?? null,
+        signal,
+      ),
+    enabled: !authLoading,
+    staleTime: ENTITLEMENTS_TTL_MS,
+    refetchInterval: ENTITLEMENTS_TTL_MS,
+    refetchOnWindowFocus: false,
+    retry: false,
+    // No placeholderData: on a user switch (key change) we must not surface the
+    // previous user's cached tier — fall back to free until the new fetch lands.
+    initialData: initialState ?? undefined,
+    initialDataUpdatedAt: 0,
+  });
 
-  // Refresh when simulatedTier or user changes, once auth has resolved.
-  // We intentionally do NOT wait for the full session to hydrate: the
-  // entitlements endpoint authorizes on the `x-user-id` header (derived from
-  // the instantly-available cookie user id), not the JWT. Gating on `session`
-  // here caused the first resolution to fall through as anonymous → a "free"
-  // flash before correcting to the real tier once the session arrived.
-  useEffect(() => {
-    if (!authLoading) {
-      refresh();
-    }
-  }, [simulatedTier, user?.id, session, authLoading, refresh]);
+  // Consumer-facing state. On error RQ retains the last successful `data` (fall
+  // back to it / the free default); never surface the error — fail-open.
+  const state: EntitlementsState = useMemo(() => {
+    const data = query.data ?? DEFAULT_ENTITLEMENTS_STATE;
+    return {
+      tier: data.tier,
+      access: data.access,
+      trial: data.trial,
+      loading: query.isPending,
+      error: null,
+    };
+  }, [query.data, query.isPending]);
+
+  // Force a fresh fetch (Realtime tier-change pushes; post-mutation re-checks).
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: [ENTITLEMENTS_QUERY_KEY],
+    });
+  }, [queryClient]);
 
   // Real-time tier sync: listen for admin tier changes via Supabase Realtime
   const { toastMessage, dismissToast } = useRealtimeTierSync({
@@ -224,13 +228,6 @@ export function EntitlementsProvider({
     },
     [state.loading, getAccess],
   );
-
-  // TTL: re-fetch entitlements every 30 minutes
-  useEffect(() => {
-    const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
-    const interval = setInterval(refresh, REFRESH_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [refresh]);
 
   const trackPaywallView = useCallback(
     (type: ResourceType, id: string, pagePath?: string) => {

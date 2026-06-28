@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { EntitlementsProvider, useEntitlements } from "../EntitlementsContext";
 import type { EntitlementsState } from "../types";
 
@@ -12,8 +14,18 @@ vi.mock("@/lib/auth", () => ({
 // Mock the API module so no real network call is attempted if a refresh fires.
 vi.mock("../api", () => ({
   fetchEntitlements: vi.fn(),
+  fetchEntitlementsWithRetry: vi.fn(),
   trackPaywallEvent: vi.fn(),
 }));
+
+function renderSeeded(ui: ReactNode) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 // Mock Realtime tier sync hook — no real Supabase connection in tests.
 vi.mock("../useRealtimeTierSync", () => ({
@@ -39,7 +51,7 @@ describe("EntitlementsProvider seeding", () => {
       loading: false,
       error: null,
     };
-    render(
+    renderSeeded(
       <EntitlementsProvider initialState={seed}>
         <TierProbe />
       </EntitlementsProvider>,
@@ -48,7 +60,7 @@ describe("EntitlementsProvider seeding", () => {
   });
 
   it("falls back to free when no initialState is provided", () => {
-    render(
+    renderSeeded(
       <EntitlementsProvider>
         <TierProbe />
       </EntitlementsProvider>,

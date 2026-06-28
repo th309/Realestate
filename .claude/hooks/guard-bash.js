@@ -11,7 +11,8 @@
 // Sources for these rules (project memory / tasks/lessons.md):
 //  - "never push without explicit ask" + commit->push develop->merge to main
 //  - force-push / reset --hard / checkout -- discard work (built-in git policy)
-//  - "next build clobbers dev .next -> ENOENT 500s; builds must use NEXT_DIST_DIR"
+//  - dev server is isolated in .next-dev; a default `next build` (-> .next) no
+//    longer clobbers it. Hook still ASKs on plain builds + DENIES .next-dev builds.
 //  - "check untracked files before push" (tracked files import untracked siblings)
 const fs = require("fs");
 const path = require("path");
@@ -165,22 +166,36 @@ const RULES = [
     return null;
   },
 
-  // 5. `next build` / frontend build without NEXT_DIST_DIR: clobbers the dev
-  //    .next dir -> every route 500s. Lesson: builds MUST use .next-verify.
-  function unsafeNextBuild(cmd) {
+  // 5. Frontend build guard. Dev now lives in `.next-dev` (packages/frontend/
+  //    next.config.mjs), so a default build (-> `.next`) no longer clobbers it.
+  //    Defense-in-depth (in case that isolation is ever reverted):
+  //      - a build aimed at `.next-dev` would wedge the dev server -> DENY
+  //      - any other plain build (no NEXT_DIST_DIR) -> ASK to confirm
+  //      - a build to an explicit isolated dir (e.g. .next-verify) -> allow
+  function frontendBuildGuard(cmd) {
     const c = stripQuotes(cmd);
     const isFrontendBuild =
       /\bnext\s+build\b/.test(c) ||
       /\bnpm\s+run\s+build:frontend\b/.test(c) ||
       /\bnpm\s+run\s+build\b(?!:)/.test(c); // root build runs build:frontend
     if (!isFrontendBuild) return null;
-    if (/NEXT_DIST_DIR\s*=/.test(c)) return null; // already safe
+    if (/NEXT_DIST_DIR\s*=\s*\.next-dev\b/.test(c)) {
+      return {
+        action: "deny",
+        reason:
+          "This build targets `.next-dev` — the running dev server's dist dir — and " +
+          "would wedge it (routes hang / 500). Build to `.next` (default, what prod " +
+          "ships) or `.next-verify`, never `.next-dev`.",
+      };
+    }
+    if (/NEXT_DIST_DIR\s*=/.test(c)) return null; // explicit isolated dir -> safe
     return {
       action: "ask",
       reason:
-        "A default `next build` overwrites the running dev server's `.next` dir " +
-        "(removes routes-manifest.json) -> every route returns 500. Per lessons, " +
-        "set NEXT_DIST_DIR=.next-verify for builds, or kill the dev server first.",
+        "Frontend build with no NEXT_DIST_DIR. Dev is isolated in `.next-dev` " +
+        "(next.config.mjs), so this writes `.next` and should NOT clobber a running " +
+        "dev server — confirm you intend a build here. For a throwaway verification " +
+        "build that can't touch dev, use NEXT_DIST_DIR=.next-verify.",
     };
   },
 

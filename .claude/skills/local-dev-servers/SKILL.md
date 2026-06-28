@@ -132,6 +132,8 @@ A port being open, a status code, and a rendered page are three different facts.
 
 ## Frontend 500 "Internal Server Error" — a `next build` clobbered `.next`
 
+> **MOSTLY OBSOLETE since 2026-06-27.** `next dev` now writes to `.next-dev` (NODE_ENV branch in `packages/frontend/next.config.mjs`); a default `next build` writes `.next` and can no longer clobber the running dev server. This section applies only if that isolation is reverted, or if someone builds with `NEXT_DIST_DIR=.next-dev` (the `guard-bash.js` hook DENIES that). The dev dir to wipe is now `.next-dev`.
+
 **Symptom:** every frontend route returns HTTP 500 with a 21-byte "Internal Server Error" body; the `dev:fresh` log repeats:
 
 ```
@@ -143,11 +145,11 @@ Error: ENOENT: no such file or directory, open '…\packages\frontend\.next\dev\
 **Fix:**
 
 1. `Get-Process node | Stop-Process -Force` (PowerShell)
-2. `rm -rf packages/frontend/.next`
-3. `npm run dev:fresh` (regenerates a clean `.next/dev/`)
+2. `rm -rf packages/frontend/.next-dev` (the dev dir; `.next` is the build dir now)
+3. `npm run dev:fresh` (regenerates a clean `.next-dev/dev/`)
 4. Verify `/map` returns 200 across **repeated** hits — a single 200 may be the pre-clobber compile.
 
-**Prevent:** never run `npm run build -w web` while `dev:fresh` is up. For a verification build, isolate the output dir: `NEXT_DIST_DIR=.next-verify npm run build -w web` (that is what the existing `.next-verify/` folder is for).
+**Prevent:** as of 2026-06-27 this is structural — `next dev` uses `.next-dev`, builds use `.next`, so they no longer collide (see `next.config.mjs`). A throwaway verification build can still use an isolated dir: `NEXT_DIST_DIR=.next-verify npm run build -w web`. Never build with `NEXT_DIST_DIR=.next-dev` (it would clobber dev; the guard hook blocks it).
 
 ## Crash Recovery Is Built In — Do NOT Layer External Monitors
 
@@ -182,7 +184,7 @@ The two recovery paths race each other on cold start: the curl probe sees a non-
 | Symptom | Fix |
 | --- | --- |
 | "Port already in use" / EADDRINUSE | Restart Workflow (PowerShell node-kill → confirm 000 → `dev:fresh`); orphans from a prior `TaskStop` are the usual cause |
-| Frontend 500 / "Internal Server Error" on every route; log shows `ENOENT … .next/dev/routes-manifest.json` | A `next build` clobbered the dev `.next`. See **Frontend 500** section: kill node → `rm -rf packages/frontend/.next` → `dev:fresh`. Never `npm run build -w web` while dev is up |
+| Frontend 500 / "Internal Server Error" on every route; log shows `ENOENT … .next-dev/dev/routes-manifest.json` | Rare since dev moved to `.next-dev` (2026-06-27). Means the next.config isolation was reverted or a build targeted `.next-dev`. Fix: kill node → `rm -rf packages/frontend/.next-dev` → `dev:fresh` |
 | Frontend port LISTENING but `curl` returns `000` (even after 45s) | Wedged `next dev` — not dead, not compiling. Nuclear restart. See **Health-Check Semantics** |
 | Backend up (3001→200) but frontend gone (3000→000) after a kill/`TaskStop` | Asymmetric orphan — `nest --watch` resurrected the backend, `next dev` died. Nuclear-kill ALL node, then `dev:fresh`. Don't just start the frontend |
 | SSR shows new code but browser DOM is stale | Orphaned webpack workers locked `.next`. `Get-Process node \| Stop-Process -Force` (PowerShell) then `dev:fresh` (wipes `.next`) |

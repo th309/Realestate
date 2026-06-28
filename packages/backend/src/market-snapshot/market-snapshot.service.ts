@@ -136,11 +136,47 @@ export class MarketSnapshotService {
   private readonly logger = new Logger(MarketSnapshotService.name);
 
   /**
-   * Read-through cache TTL for market snapshots. Market data refreshes monthly,
-   * so multi-hour staleness is invisible to users; 6h matches the codebase's
-   * `metric_snapshot` TTL convention (see redis-ttl-config.ts).
+   * Snapshots are rebuilt only by the monthly data pipeline (GH Actions cron
+   * "0 9 17 * *" → 17th 09:00 UTC; the import job can run up to 6h). Nothing
+   * flushes the `snapshot:v1` keyspace, so this TTL is the sole refresh
+   * mechanism. Rather than a flat window (which made a once-queried region
+   * miss every few hours — ~28% hit rate in prod), we expire each key just
+   * AFTER the next pipeline run lands new data: a region queried once stays
+   * cached for the rest of the ~monthly cycle (high hit rate) while staleness
+   * stays bounded to a few hours past each refresh.
+   *
+   * Anchor: the 17th at 21:00 UTC. Derivation: 09:00 cron start + 6h max import
+   * → data lands by ~15:00; + 6h conservative buffer → 21:00 anchor. The 17th is
+   * DST-stable in fixed UTC, matching the pipeline cron.
+   * See redis-ttl-config.ts `metric_snapshot` for the legacy tool-cache TTL.
    */
-  private static readonly SNAPSHOT_CACHE_TTL_SECONDS = 6 * 60 * 60;
+  private static readonly REFRESH_DAY_OF_MONTH = 17;
+  private static readonly REFRESH_HOUR_UTC = 21;
+  private static readonly MIN_SNAPSHOT_TTL_SECONDS = 3600; // 1h floor
+
+  /**
+   * Seconds until the next monthly-pipeline refresh boundary (see above).
+   * Pure function of `now` so it is unit-testable without faking the clock.
+   */
+  static ttlUntilNextRefresh(now: Date = new Date()): number {
+    const anchor = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        MarketSnapshotService.REFRESH_DAY_OF_MONTH,
+        MarketSnapshotService.REFRESH_HOUR_UTC,
+        0,
+        0,
+      ),
+    );
+    // If this month's boundary has already passed, roll to next month
+    // (setUTCMonth normalizes Dec → Jan of the following year).
+    if (anchor.getTime() <= now.getTime()) {
+      anchor.setUTCMonth(anchor.getUTCMonth() + 1);
+    }
+    const seconds = Math.floor((anchor.getTime() - now.getTime()) / 1000);
+    return Math.max(seconds, MarketSnapshotService.MIN_SNAPSHOT_TTL_SECONDS);
+  }
 
   /**
    * De-dupes concurrent cold-cache builds for the same key, so a burst of
@@ -185,11 +221,19 @@ export class MarketSnapshotService {
 
     const build = (async () => {
       const result = await this.buildSnapshot(geoType, geoId, state);
-      await this.redis.setByKey(
-        cacheKey,
-        result,
-        MarketSnapshotService.SNAPSHOT_CACHE_TTL_SECONDS,
-      );
+      const ttlSeconds = MarketSnapshotService.ttlUntilNextRefresh();
+      const wrote = await this.redis.setByKey(cacheKey, result, ttlSeconds);
+      // Logs only on a cold build (cache miss) AND only when the write actually
+      // landed in Redis — so it never lies when Redis is absent (local/CI) or a
+      // write silently fails. The sole way to confirm the refresh-aligned TTL
+      // in prod, since setByKey is otherwise silent.
+      if (wrote) {
+        this.logger.log(
+          `[Snapshot Cache] SET ${cacheKey} (TTL: ${ttlSeconds}s, expires ${new Date(
+            Date.now() + ttlSeconds * 1000,
+          ).toISOString()})`,
+        );
+      }
       return result;
     })();
 

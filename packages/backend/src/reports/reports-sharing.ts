@@ -44,7 +44,6 @@ export async function sendConversationMessage(
   reportId: string,
   userId: string,
   content: string,
-  userTier?: string,
 ): Promise<any> {
   // Get or create conversation
   let { data: conversation } = await supabase
@@ -92,9 +91,10 @@ export async function sendConversationMessage(
   }
 
   // Check AI entitlement before generating conversation response
+  // Tier resolved server-side from validated userId; never trust client tier.
   const convAiAccess = await deps.entitlementsService.checkAccess(
     userId,
-    userTier || null,
+    null,
     ['feature:ai_insights'],
   );
   if (convAiAccess.access['feature:ai_insights']?.level !== 'full') {

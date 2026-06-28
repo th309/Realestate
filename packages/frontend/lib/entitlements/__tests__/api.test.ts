@@ -153,8 +153,9 @@ describe("fetchEntitlementsWithRetry", () => {
     mockFetch.mockRejectedValueOnce(abortError);
 
     const promise = fetchEntitlementsWithRetry(["metric:home_value"]);
-    // Surface the rejection synchronously to the assertion (no timers needed).
-    await expect(promise).rejects.toThrow("Request aborted");
+    // The native AbortError now propagates unwrapped (React Query recognizes it
+    // as a benign cancellation); it must still NOT be retried.
+    await expect(promise).rejects.toThrow("aborted");
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 

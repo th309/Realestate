@@ -6,6 +6,9 @@
 
 export const TTL_MAP: Record<string, number> = {
   // ── Domain-level TTLs ──
+  // NOTE: the `snapshot:v1` market read-through cache does NOT use this map —
+  // it expires on the monthly-pipeline boundary (see MarketSnapshotService
+  // .ttlUntilNextRefresh). These entries govern the MCP tool-result cache.
   metric_snapshot: 21600, // 6 hours
   time_series: 21600, // 6 hours
   scores: 21600, // 6 hours

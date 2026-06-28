@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { EntitlementsProvider, useEntitlements } from "../EntitlementsContext";
 
 // Mock the API module. The context refreshes via fetchEntitlementsWithRetry,
@@ -38,19 +39,28 @@ import { fetchEntitlementsWithRetry } from "../api";
 // so that is what the existing tests must stub.
 const mockedFetch = vi.mocked(fetchEntitlementsWithRetry);
 
+// A fresh QueryClient per test (retry off, no cache carryover) so the provider's
+// new useQuery-based fetch is isolated between cases.
+let queryClient: QueryClient;
+
 function wrapper({ children }: { children: React.ReactNode }) {
   return (
-    <EntitlementsProvider
-      initialResources={["metric:home_value", "feature:scores"]}
-    >
-      {children}
-    </EntitlementsProvider>
+    <QueryClientProvider client={queryClient}>
+      <EntitlementsProvider
+        initialResources={["metric:home_value", "feature:scores"]}
+      >
+        {children}
+      </EntitlementsProvider>
+    </QueryClientProvider>
   );
 }
 
 describe("EntitlementsContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
   });
 
   describe("canAccess", () => {
