@@ -19,10 +19,18 @@ export async function GET(): Promise<Response> {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
+    // agent_auth profile (WorkOS auth.md convention). PropertyIQ's real agent-auth
+    // model is OAuth 2.1 + PKCE with dynamic client registration (RFC 7591), so the
+    // identity/claim endpoints map to the real, resolving OAuth endpoints: an agent
+    // establishes its identity by registering a client, and a user "claims" (delegates
+    // to) that agent at the authorize endpoint. `identity_types_supported` uses the
+    // schema's `service_auth` value (machine clients with their own credentials).
     agent_auth: {
       skill: `${siteOrigin}/auth.md`,
-      register_uri: `${issuer}/register`,
-      identity_types_supported: ["dynamic_client"],
+      identity_endpoint: `${issuer}/register`,
+      claim_endpoint: `${issuer}/authorize`,
+      registration_endpoint: `${issuer}/register`,
+      identity_types_supported: ["service_auth"],
       credential_types_supported: ["oauth2_access_token", "api_key"],
     },
   };

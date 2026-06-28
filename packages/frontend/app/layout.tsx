@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Roboto, Roboto_Mono, Source_Serif_4, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { V4_CLAIMS } from "@/lib/data/validation-claims";
+import WebMcpProvider from "./components/agent/WebMcpProvider";
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -173,6 +174,7 @@ export default function RootLayout({
             </p>
           </div>
         </noscript>
+        <WebMcpProvider />
         {children}
       </body>
     </html>

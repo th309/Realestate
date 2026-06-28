@@ -202,6 +202,14 @@ const nextConfig = {
         source: '/.well-known/oauth-authorization-server',
         destination: '/api/agent-discovery/oauth-authorization-server',
       },
+      {
+        source: '/.well-known/agent-skills/index.json',
+        destination: '/api/agent-discovery/agent-skills-index',
+      },
+      {
+        source: '/.well-known/agent-skills/:name/SKILL.md',
+        destination: '/api/agent-discovery/agent-skill/:name',
+      },
     ];
   },
   // Custom response headers
