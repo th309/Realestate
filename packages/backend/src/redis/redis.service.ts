@@ -216,18 +216,27 @@ export class RedisService implements OnModuleInit {
   }
 
   /**
-   * Set a raw cached value by key with a specific TTL (seconds)
+   * Set a raw cached value by key with a specific TTL (seconds).
+   * Returns true only if the value was actually written (Redis available and
+   * the write did not throw); false on no-op/failure so callers can avoid
+   * logging a "SET" that never landed.
    */
-  async setByKey(key: string, value: any, ttlSeconds: number): Promise<void> {
+  async setByKey(
+    key: string,
+    value: any,
+    ttlSeconds: number,
+  ): Promise<boolean> {
     if (!this.isAvailable() || !this.client) {
-      return;
+      return false;
     }
 
     try {
       await this.client.setex(key, ttlSeconds, JSON.stringify(value));
       this.stats.sets++;
+      return true;
     } catch (error) {
       this.logger.error(`[Redis Cache] SetByKey error: ${error.message}`);
+      return false;
     }
   }
 
