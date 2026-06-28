@@ -10,6 +10,12 @@ describe("auth.md route", () => {
     // WorkOS auth.md requires the H1 to contain the literal string "auth.md".
     expect(body).toMatch(/^#[^\n]*auth\.md/);
     expect(body).toContain("https://mcp.propertyiq.app/register");
+    // Machine-readable agent_auth block (WorkOS auth.md convention) with the
+    // register_uri the isitagentready checker validates.
+    expect(body).toContain("agent_auth");
+    expect(body).toContain(
+      '"register_uri": "https://mcp.propertyiq.app/register"',
+    );
     expect(body).toContain(
       "https://mcp.propertyiq.app/.well-known/oauth-authorization-server",
     );

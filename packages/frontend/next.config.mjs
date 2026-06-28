@@ -210,6 +210,10 @@ const nextConfig = {
         source: '/.well-known/agent-skills/:name/SKILL.md',
         destination: '/api/agent-discovery/agent-skill/:name',
       },
+      {
+        source: '/.well-known/agent-card.json',
+        destination: '/api/agent-discovery/a2a-agent-card',
+      },
     ];
   },
   // Custom response headers

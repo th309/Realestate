@@ -60,6 +60,10 @@ export function authorizationServerMetadata(serverUrl?: string) {
     // schema's `service_auth` value (machine clients with their own credentials).
     agent_auth: {
       skill: AUTH_MD_URL,
+      // `register_uri` is the field the WorkOS auth.md / isitagentready check
+      // validates: the RFC 7591 dynamic-client-registration endpoint an agent
+      // POSTs to in order to provision its own credentials. Must be absolute https.
+      register_uri: `${url}/register`,
       identity_endpoint: `${url}/register`,
       claim_endpoint: `${url}/authorize`,
       registration_endpoint: `${url}/register`,

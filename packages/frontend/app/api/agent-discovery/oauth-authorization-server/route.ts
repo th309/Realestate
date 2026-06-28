@@ -27,6 +27,10 @@ export async function GET(): Promise<Response> {
     // schema's `service_auth` value (machine clients with their own credentials).
     agent_auth: {
       skill: `${siteOrigin}/auth.md`,
+      // `register_uri` is the field the WorkOS auth.md / isitagentready check
+      // validates: the RFC 7591 dynamic-client-registration endpoint an agent
+      // POSTs to in order to provision its own credentials. Must be absolute https.
+      register_uri: `${issuer}/register`,
       identity_endpoint: `${issuer}/register`,
       claim_endpoint: `${issuer}/authorize`,
       registration_endpoint: `${issuer}/register`,
