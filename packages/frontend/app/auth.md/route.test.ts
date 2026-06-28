@@ -16,6 +16,9 @@ describe("auth.md route", () => {
     expect(body).toContain(
       '"register_uri": "https://mcp.propertyiq.app/register"',
     );
+    // The recognized "anonymous" registration method (open RFC 7591 DCR).
+    expect(body).toContain('"claim_uri": "https://mcp.propertyiq.app/token"');
+    expect(body).toContain('"identity_types_supported": ["anonymous"]');
     expect(body).toContain(
       "https://mcp.propertyiq.app/.well-known/oauth-authorization-server",
     );

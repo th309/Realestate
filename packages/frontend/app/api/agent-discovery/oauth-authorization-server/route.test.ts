@@ -24,12 +24,13 @@ describe("oauth-authorization-server well-known route", () => {
     expect(body.agent_auth.register_uri).toBe(
       "https://mcp.propertyiq.app/register",
     );
-    expect(body.agent_auth.identity_endpoint).toBe(
-      "https://mcp.propertyiq.app/register",
-    );
-    expect(body.agent_auth.claim_endpoint).toBe(
-      "https://mcp.propertyiq.app/authorize",
-    );
-    expect(body.agent_auth.identity_types_supported).toEqual(["service_auth"]);
+    expect(body.agent_auth.claim_uri).toBe("https://mcp.propertyiq.app/token");
+    // "anonymous" is the recognized auth.md registration method for open
+    // (RFC 7591 public-client) dynamic client registration.
+    expect(body.agent_auth.identity_types_supported).toEqual(["anonymous"]);
+    expect(body.agent_auth.anonymous.credential_types_supported).toEqual([
+      "oauth2_access_token",
+      "api_key",
+    ]);
   });
 });
