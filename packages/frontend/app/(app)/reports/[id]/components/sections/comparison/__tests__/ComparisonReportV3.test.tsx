@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { buildMarketBundles } from "../marketBundles";
-import { ComparisonSummaryV3 } from "../ComparisonSummaryV3";
+import { ComparisonVerdictHeader } from "../ComparisonVerdictHeader";
 
 // Real backend nesting: the PRIMARY score is cleaned to scores.propertyiq, but
 // each COMPARISON market keeps the RAW getScore result at scores.scores.propertyiq.
@@ -45,15 +45,21 @@ describe("comparison live-score resolution", () => {
     expect(bundles[0].isPrimary).toBe(true);
   });
 
-  it("scoreboard shows every market's live score — no 'No Score'", () => {
-    render(<ComparisonSummaryV3 markets={buildMarketBundles(report)} />);
+  it("verdict header shows every market's live score side by side", () => {
+    render(<ComparisonVerdictHeader markets={buildMarketBundles(report)} />);
+    // One score card per market — names and live scores all present.
     expect(screen.getByText("Boise")).toBeInTheDocument();
     expect(screen.getByText("Reno")).toBeInTheDocument();
     expect(screen.getByText("Tampa")).toBeInTheDocument();
-    expect(screen.getByText(/PropertyIQ 72/)).toBeInTheDocument();
-    expect(screen.getByText(/PropertyIQ 84/)).toBeInTheDocument();
-    expect(screen.getByText(/PropertyIQ 61/)).toBeInTheDocument();
-    expect(screen.queryByText(/—/)).toBeNull();
+    expect(screen.getByText("72")).toBeInTheDocument();
+    expect(screen.getByText("84")).toBeInTheDocument();
+    expect(screen.getByText("61")).toBeInTheDocument();
+  });
+
+  it("flags the top-scoring market as the leader", () => {
+    render(<ComparisonVerdictHeader markets={buildMarketBundles(report)} />);
+    // Reno (84) is the highest score → the only "Top" badge.
+    expect(screen.getAllByText("Top")).toHaveLength(1);
   });
 
   it("handles a single-market report (no comparisons)", () => {

@@ -245,28 +245,6 @@ export function metricNum(
   return Number.isFinite(n) ? n : null;
 }
 
-/** Format a metric value. Percent values may arrive as a ratio (0.048) or a percent (4.8). */
-export function formatComparisonMetric(
-  n: number | null,
-  format: "currency" | "percent" | "number" | "days",
-): string {
-  if (n == null) return "—";
-  switch (format) {
-    case "currency":
-      return Math.abs(n) >= 1_000_000
-        ? `$${(n / 1_000_000).toFixed(2)}M`
-        : `$${Math.round(n / 1000)}K`;
-    case "percent": {
-      const pct = Math.abs(n) <= 1 ? n * 100 : n;
-      return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
-    }
-    case "days":
-      return `${Math.round(n)} days`;
-    case "number":
-      return `${Math.round(n)}`;
-  }
-}
-
 /** Human label for a score-component key, e.g. "market_timing" → "Market Timing". */
 export function componentLabel(component: string): string {
   return component.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());

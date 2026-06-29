@@ -45,7 +45,36 @@ export class ReportGenerationV2Service {
   private readonly logger = new Logger(ReportGenerationV2Service.name);
   private lastModelUsed = 'unknown';
 
+  // Global cap on concurrent section AI calls (see withSectionSlot).
+  private static readonly MAX_CONCURRENT_SECTIONS = 8;
+  private activeSectionCalls = 0;
+  private readonly sectionWaiters: Array<() => void> = [];
+
   constructor(private readonly aiProvider: AiProviderService) {}
+
+  /**
+   * Run `fn` under a global concurrency cap. Comparison reports generate the
+   * synthesis + every per-market narrative in parallel, each fanning out its own
+   * sections; without a cap a 4-market comparison fires ~30+ provider calls at
+   * once and a single 429 would trigger a synchronized retry wave (which could
+   * even make the orchestrator's empty-narrative guard false-fail). 8-wide keeps
+   * strong parallelism while staying within provider rate limits.
+   */
+  private async withSectionSlot<T>(fn: () => Promise<T>): Promise<T> {
+    if (
+      this.activeSectionCalls >=
+      ReportGenerationV2Service.MAX_CONCURRENT_SECTIONS
+    ) {
+      await new Promise<void>((resolve) => this.sectionWaiters.push(resolve));
+    }
+    this.activeSectionCalls++;
+    try {
+      return await fn();
+    } finally {
+      this.activeSectionCalls--;
+      this.sectionWaiters.shift()?.();
+    }
+  }
 
   /**
    * Generate all AI narratives for a report using the two-pass pipeline.
@@ -55,6 +84,8 @@ export class ReportGenerationV2Service {
   async generateNarratives(
     reportType: ReportType,
     context: Record<string, any>,
+    /** Route section calls to the faster comparison model (deepseek-v4-flash). */
+    useComparisonModel = false,
   ): Promise<Record<string, string | any>> {
     const systemPrompt = getSystemPromptForReportType(reportType);
 
@@ -77,6 +108,7 @@ export class ReportGenerationV2Service {
       systemPrompt,
       context,
       outline,
+      useComparisonModel,
     );
 
     const { title, subtitle } = extractTitleAndSubtitle(outline);
@@ -128,6 +160,7 @@ export class ReportGenerationV2Service {
     systemPrompt: string,
     context: Record<string, any>,
     outline: string,
+    useComparisonModel = false,
   ): Promise<Record<string, any>> {
     const results: Record<string, any> = {};
 
@@ -147,6 +180,7 @@ export class ReportGenerationV2Service {
               systemPrompt,
               context,
               outline,
+              useComparisonModel,
             ),
           `v2:${sectionId}`,
           this.logger,
@@ -176,6 +210,7 @@ export class ReportGenerationV2Service {
     systemPrompt: string,
     context: Record<string, any>,
     outline: string,
+    useComparisonModel = false,
   ): Promise<string | any> {
     let userPrompt = interpolateTemplate(config.prompt_template, context);
 
@@ -187,15 +222,19 @@ export class ReportGenerationV2Service {
     // Append news context if available
     userPrompt = appendNewsContext(userPrompt, context);
 
-    const response = await this.aiProvider.complete(
-      AI_PURPOSES.REPORT_NARRATIVE,
-      {
-        systemPrompt,
-        userPrompt,
-        maxTokens: config.max_tokens,
-        responseFormat:
-          config.output_format === 'json_object' ? 'json' : undefined,
-      },
+    const response = await this.withSectionSlot(() =>
+      this.aiProvider.complete(
+        useComparisonModel
+          ? AI_PURPOSES.REPORT_NARRATIVE_COMPARISON
+          : AI_PURPOSES.REPORT_NARRATIVE,
+        {
+          systemPrompt,
+          userPrompt,
+          maxTokens: config.max_tokens,
+          responseFormat:
+            config.output_format === 'json_object' ? 'json' : undefined,
+        },
+      ),
     );
 
     // Track last model used for provenance metadata
