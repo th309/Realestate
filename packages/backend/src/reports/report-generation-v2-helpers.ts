@@ -174,12 +174,27 @@ export function extractActionItems(text: string): {
   const markerPattern = /\n?\s*ACTION_ITEMS_JSON:\s*\n?/i;
   const match = text.match(markerPattern);
 
-  if (!match || match.index === undefined) {
-    return { narrative: text.trim(), action_items: null };
+  let narrative: string;
+  let jsonPart: string;
+  if (match && match.index !== undefined) {
+    narrative = text.substring(0, match.index).trim();
+    jsonPart = text.substring(match.index + match[0].length).trim();
+  } else {
+    // Some models (e.g. flash) omit the ACTION_ITEMS_JSON: marker and just emit
+    // the array after a "PART 2 …" heading. Fall back to the trailing JSON array
+    // of objects so the items stay structured instead of leaking as raw JSON in
+    // the prose. (Requires `[` then `{`, so prose brackets won't match.)
+    const arrMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (!arrMatch || arrMatch.index === undefined) {
+      return { narrative: text.trim(), action_items: null };
+    }
+    narrative = text
+      .substring(0, arrMatch.index)
+      .replace(/(\*\*\s*)?PART 2:[^\n]*\n?/i, '')
+      .replace(/after the verdict,?\s*output:?\s*$/i, '')
+      .trim();
+    jsonPart = text.substring(arrMatch.index).trim();
   }
-
-  const narrative = text.substring(0, match.index).trim();
-  const jsonPart = text.substring(match.index + match[0].length).trim();
 
   try {
     const cleaned = jsonPart

@@ -48,6 +48,43 @@ function getVerdict(
   return { verdict: "wait", label: "Wait and Watch" };
 }
 
+type ActionItem = Record<string, string | undefined>;
+
+/**
+ * Pull a trailing action-items JSON array out of a verdict narrative — whether or
+ * not the model prefixed it with the `ACTION_ITEMS_JSON:` marker (flash sometimes
+ * omits it, which slips raw JSON past the backend parser). Returns the prose with
+ * the JSON block (and any "PART 2 …" / marker heading) removed, plus the parsed
+ * actions. Even if the array is malformed, the block is stripped so the user never
+ * sees raw JSON — defense at the render layer.
+ */
+function splitVerdictActions(text: string): {
+  narrative: string;
+  actions: ActionItem[];
+} {
+  if (!text) return { narrative: "", actions: [] };
+  // A JSON array of objects (requires `[` then `{`, so prose brackets don't match).
+  const arrMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (!arrMatch || arrMatch.index === undefined) {
+    return { narrative: text.trim(), actions: [] };
+  }
+  let actions: ActionItem[] = [];
+  try {
+    const parsed = JSON.parse(arrMatch[0]);
+    if (Array.isArray(parsed)) actions = parsed as ActionItem[];
+  } catch {
+    // Leave actions empty but still strip the block below so no JSON is shown.
+  }
+  const narrative = text
+    .slice(0, arrMatch.index)
+    .replace(/```(?:json)?\s*$/i, "")
+    .replace(/(\*\*\s*)?PART 2:[^\n]*\n?/i, "")
+    .replace(/ACTION_ITEMS_JSON:\s*/i, "")
+    .replace(/after the verdict,?\s*output:?\s*$/i, "")
+    .trim();
+  return { narrative, actions };
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -73,19 +110,30 @@ export function V2VerdictActionsSection({
   // prose for objects and null — dropping the section — for strings).
   const raw = getV2Section(report, sectionId);
   let verdictText = "";
-  let actions: Array<Record<string, string | undefined>> = [];
+  let actions: ActionItem[] = [];
   if (typeof raw === "string") {
-    verdictText = raw;
+    // Backend stored the raw text (action-items extraction missed the marker) —
+    // split + strip the JSON here so cards render and no raw JSON leaks.
+    const split = splitVerdictActions(raw);
+    verdictText = split.narrative;
+    actions = split.actions;
   } else if (raw && typeof raw === "object") {
     const o = raw as Record<string, unknown>;
-    verdictText = (
+    const narr = (
       (o.narrative as string) ??
       (o.verdict as string) ??
       ""
     ).trim();
     const list = (o.action_items ?? o.actions) as unknown;
-    if (Array.isArray(list))
-      actions = list as Array<Record<string, string | undefined>>;
+    if (Array.isArray(list) && list.length > 0) {
+      verdictText = narr;
+      actions = list as ActionItem[];
+    } else {
+      // No structured actions stored — the narrative may still embed raw JSON.
+      const split = splitVerdictActions(narr);
+      verdictText = split.narrative;
+      actions = split.actions;
+    }
   }
 
   if (!verdictText && actions.length === 0) return null;
@@ -140,6 +188,8 @@ export function V2VerdictActionsSection({
               const actionLabel = item.action ?? item.title ?? "";
               const rationale = item.rationale ?? item.detail ?? "";
               const timeframe = item.timeframe ?? item.urgency ?? "";
+              // Comparison action items are per-market — label which one.
+              const market = item.market ?? item.name ?? "";
               if (!actionLabel) return null;
               return (
                 <div
@@ -162,6 +212,14 @@ export function V2VerdictActionsSection({
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
+                      {market && (
+                        <p
+                          className="text-[0.6875rem] font-semibold uppercase tracking-[0.04em] mb-1"
+                          style={{ color: "var(--report-navy-light)" }}
+                        >
+                          {market}
+                        </p>
+                      )}
                       <p
                         className="text-[0.9375rem] font-medium leading-snug mb-1"
                         style={{ color: "var(--report-navy)" }}
