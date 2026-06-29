@@ -193,7 +193,9 @@ export function extractActionItems(text: string): {
       .replace(/(\*\*\s*)?PART 2:[^\n]*\n?/i, '')
       .replace(/after the verdict,?\s*output:?\s*$/i, '')
       .trim();
-    jsonPart = text.substring(arrMatch.index).trim();
+    // Use the bounded match, not slice-to-end — trailing prose after the array
+    // would otherwise break JSON.parse and force the truncation-recovery path.
+    jsonPart = arrMatch[0].trim();
   }
 
   try {
