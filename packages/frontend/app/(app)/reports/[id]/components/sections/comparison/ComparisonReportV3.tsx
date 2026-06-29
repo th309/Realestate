@@ -1,33 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { PillTabs } from "@/components/ui/Tabs";
 import type { ReportInstance } from "../../../../types";
 import { SectionProps } from "../../types";
 import { getTemplate } from "../../templates";
 import { SectionErrorBoundary } from "../../SectionErrorBoundary";
 import { BrandingProvider } from "../../BrandingProvider";
-import { buildMarketBundles, shortMarketName } from "./marketBundles";
-import { ComparisonSummaryV3 } from "./ComparisonSummaryV3";
+import { buildMarketBundles } from "./marketBundles";
+import {
+  COMPARISON_SECTIONS,
+  SCORE_DRIVER_SECTION,
+} from "./comparisonSections";
+import { ComparisonVerdictHeader } from "./ComparisonVerdictHeader";
+import { ComparisonMetricTable } from "./ComparisonMetricTable";
 import { ComparisonNews } from "./ComparisonNews";
-import { MarketDeepDivePanel } from "./MarketDeepDivePanel";
+import { ComparisonDeepDiveAccordion } from "./ComparisonDeepDiveAccordion";
 
 /**
- * ComparisonReportV3 — the whole comparison report in one section:
- *   1. an at-a-glance scoreboard (live PropertyIQ score per market, winner),
- *   2. the SYNTHESIZED written comparison (the comparison narrative — exec
- *      verdict / head-to-head / scenario analysis), then
- *   3. frozen tabs (one per market) that each render that market's FULL
- *      single-market report in depth (same template + AI narrative it would get
- *      on its own), via a synthetic per-market report.
+ * ComparisonReportV3 — a TRUE side-by-side market comparison (2–4 markets),
+ * structured like the single-market report but comparative throughout:
  *
- * The template registry types section components as ComponentType<{ report }>
- * (no required `section`), so accept just the report slice of SectionProps.
+ *   1. Verdict header — every market's live PropertyIQ score, grade, momentum.
+ *   2. AI head-to-head synthesis — when present (auto-hides if the report was
+ *      generated without ai_insights; the data below stands on its own).
+ *   3. "What's driving the scores" — the four score inputs, side by side.
+ *   4. Report-mirroring metric tables — Price & Value, Market Conditions,
+ *      Economy & Affordability — markets across, leader per row highlighted.
+ *   5. Recent news across every market.
+ *   6. A collapsed drawer with each market's FULL single-market report.
+ *
+ * The comparison is built entirely from data every market already carries
+ * (`current` metrics + live score), so it's complete with or without AI prose.
  */
 export function ComparisonReportV3({ report }: Pick<SectionProps, "report">) {
   const r = report as ReportInstance;
   const bundles = buildMarketBundles(r);
-  const [activeId, setActiveId] = useState(bundles[0]?.id ?? "");
 
   if (bundles.length < 2) {
     return (
@@ -37,20 +43,19 @@ export function ComparisonReportV3({ report }: Pick<SectionProps, "report">) {
     );
   }
 
-  const active = bundles.find((b) => b.id === activeId) ?? bundles[0];
-  // The summary = the comparison synthesis sections (read report.ai_narrative).
-  // Drop the single-market "market-pulse" — it shows ONLY the primary's news;
-  // ComparisonNews below shows every market's news instead.
+  // The written head-to-head synthesis (exec verdict / head-to-head / scenario
+  // analysis). Drops the single-market "market-pulse" — ComparisonNews below
+  // shows every market's news, not just the primary's.
   const synthesisSections = (
     getTemplate("comparison_v2")?.sections ?? []
   ).filter((s) => s.id !== "market-pulse");
 
   return (
     <div>
-      {/* 1. At-a-glance scoreboard */}
-      <ComparisonSummaryV3 markets={bundles} />
+      {/* 1. Verdict header — the score comparison at a glance */}
+      <ComparisonVerdictHeader markets={bundles} />
 
-      {/* 2. Synthesized written comparison */}
+      {/* 2. Written head-to-head synthesis (auto-hides when absent) */}
       <BrandingProvider>
         {synthesisSections.map(({ component: Section, id }) => (
           <section key={id} id={id} className="mb-10">
@@ -61,31 +66,23 @@ export function ComparisonReportV3({ report }: Pick<SectionProps, "report">) {
         ))}
       </BrandingProvider>
 
-      {/* News for EVERY market (replaces the primary-only Market Pulse) */}
+      {/* 3. Why the scores differ — the four PropertyIQ drivers side by side */}
+      <ComparisonMetricTable markets={bundles} section={SCORE_DRIVER_SECTION} />
+
+      {/* 4. Report-mirroring side-by-side metric tables */}
+      {COMPARISON_SECTIONS.map((section) => (
+        <ComparisonMetricTable
+          key={section.id}
+          markets={bundles}
+          section={section}
+        />
+      ))}
+
+      {/* 5. News for every market */}
       <ComparisonNews markets={bundles} />
 
-      {/* 3. Each market in depth — frozen tabs + full single-market report */}
-      <div className="mt-6">
-        <h2 className="report-heading-lg mb-1 text-on-surface">
-          Each market in depth
-        </h2>
-        <p className="mb-3 text-sm text-on-surface-variant">
-          The full report for each market — pick one to read it.
-        </p>
-        <div className="sticky top-0 z-20 -mx-4 border-b border-outline-variant/40 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-          <PillTabs
-            options={bundles.map((b) => ({
-              value: b.id,
-              label: shortMarketName(b.name),
-            }))}
-            value={active.id}
-            onChange={setActiveId}
-          />
-        </div>
-        <div className="mt-6">
-          <MarketDeepDivePanel report={r} bundle={active} />
-        </div>
-      </div>
+      {/* 6. Full per-market reports — demoted to an opt-in drawer */}
+      <ComparisonDeepDiveAccordion report={r} bundles={bundles} />
     </div>
   );
 }

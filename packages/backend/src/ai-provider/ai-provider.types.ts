@@ -237,6 +237,9 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
  */
 export const AI_PURPOSES = {
   REPORT_NARRATIVE: 'report_narrative',
+  // Comparison reports route narratives here so they can use a faster/cheaper
+  // model (deepseek-v4-flash) without changing single-market report quality.
+  REPORT_NARRATIVE_COMPARISON: 'report_narrative_comparison',
   REPORT_OUTLINE: 'report_outline',
   CUSTOM_REPORT: 'custom_report',
   RESEARCH_AGENT: 'research_agent',

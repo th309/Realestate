@@ -8,8 +8,10 @@
  *
  * Each market is generated independently and guarded: a failure for one market
  * (or the whole block) leaves that market's narrative null and the report still
- * completes. Generation is sequential to stay within AI provider rate limits
- * (each single-market narrative already fans out ~8 section calls internally).
+ * completes. The primary + all comparison markets generate CONCURRENTLY (each
+ * narrative's sections already fan out internally); transient provider 429s are
+ * absorbed by the per-section retryWithBackoff. Comparison narratives use the
+ * faster flash model via `isComparisonReport`.
  */
 
 import type { Logger } from '@nestjs/common';
@@ -63,6 +65,8 @@ export async function generatePerMarketNarratives(args: {
   comparisons: MarketNarrativeInput[];
   userProfile: any;
   benchmarks?: Record<string, any>;
+  /** Comparison reports use the faster flash model for per-market narratives. */
+  isComparisonReport?: boolean;
 }): Promise<PerMarketNarrativesResult> {
   const { deps, dto, primary, comparisons, userProfile, benchmarks } = args;
   const singleType = resolveSingleMarketReportType(dto);
@@ -107,30 +111,37 @@ export async function generatePerMarketNarratives(args: {
     const n = await deps.reportGenerationV2.generateNarratives(
       singleType,
       buildVars(m),
+      args.isComparisonReport === true,
     );
     delete (n as any).__model_used;
     return n;
   };
 
-  let primaryNarrative: Record<string, any> | null = null;
-  try {
-    primaryNarrative = await genOne(primary);
-  } catch (e: any) {
-    deps.logger.warn(
-      `Per-market narrative failed for primary ${primary.geo.name}: ${e?.message || e}`,
-    );
-  }
-
-  const byGeoId: Record<string, Record<string, any>> = {};
-  for (const m of comparisons) {
+  // Generate the primary + every comparison market CONCURRENTLY; each is
+  // independently guarded so one market failing leaves only its narrative null.
+  const settle = async (
+    m: MarketNarrativeInput,
+  ): Promise<Record<string, any> | null> => {
     try {
-      byGeoId[m.geo.id] = await genOne(m);
+      return await genOne(m);
     } catch (e: any) {
       deps.logger.warn(
         `Per-market narrative failed for ${m.geo.name}: ${e?.message || e}`,
       );
+      return null;
     }
-  }
+  };
+
+  const [primaryNarrative, ...compNarratives] = await Promise.all([
+    settle(primary),
+    ...comparisons.map(settle),
+  ]);
+
+  const byGeoId: Record<string, Record<string, any>> = {};
+  comparisons.forEach((m, i) => {
+    const n = compNarratives[i];
+    if (n) byGeoId[m.geo.id] = n;
+  });
 
   return { primary: primaryNarrative, byGeoId };
 }

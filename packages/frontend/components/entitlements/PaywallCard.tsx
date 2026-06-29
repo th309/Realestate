@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { useEntitlements, ResourceType, UserTier } from "@/lib/entitlements";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
+import {
+  getPricingCtaVariant,
+  PRICING_CTA_COPY,
+  type PricingCtaVariant,
+} from "@/lib/ab";
 import { trackEvent } from "@/lib/analytics/tracker";
 
 interface PaywallCardProps {
@@ -22,6 +26,12 @@ const TIER_LABELS: Record<UserTier, string> = {
   enterprise: "Enterprise",
   admin: "Admin",
 };
+
+// Stable references for useSyncExternalStore (below). The A/B variant lives in
+// localStorage (client-only); the server snapshot is always "A" so SSR and the
+// initial client render agree, then it resolves to the real variant after hydration.
+const subscribeNoop = () => () => {};
+const variantServerSnapshot = (): PricingCtaVariant => "A";
 
 export function PaywallCard({
   type,
@@ -46,7 +56,15 @@ export function PaywallCard({
       );
   }, []);
 
-  const variant = getPricingCtaVariant();
+  // The A/B variant is client-only (localStorage + Math.random) so it can never
+  // match SSR. useSyncExternalStore renders the SSR-stable "A" through hydration,
+  // then swaps to the real client variant after — no hydration mismatch, and the
+  // assignment/tracking side effect runs on the client snapshot, not in render.
+  const variant = useSyncExternalStore(
+    subscribeNoop,
+    getPricingCtaVariant,
+    variantServerSnapshot,
+  );
 
   const handleUpgradeClick = () => {
     trackUpgradeClick(type, id);

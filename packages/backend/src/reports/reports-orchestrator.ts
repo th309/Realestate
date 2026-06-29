@@ -597,33 +597,32 @@ export async function generateReportAsync(
       );
 
       const reportType = resolveReportType(template, dto);
+      const isComparison =
+        reportType === 'comparison' &&
+        !!dto.comparison_geographies &&
+        dto.comparison_geographies.length > 0;
 
-      if (reportType) {
-        aiNarratives = await deps.reportGenerationV2.generateNarratives(
-          reportType,
-          narrativeTemplateVars,
-        );
-      }
+      // The report's own synthesis narrative and the per-market full
+      // single-market narratives are INDEPENDENT outputs, so generate them
+      // CONCURRENTLY instead of one after the other. Comparison narratives use
+      // the faster flash model (the `reportType === 'comparison'` flag routes
+      // them to AI_PURPOSES.REPORT_NARRATIVE_COMPARISON); single-market reports
+      // keep their normal model.
+      const synthesisPromise: Promise<Record<string, any>> = reportType
+        ? deps.reportGenerationV2.generateNarratives(
+            reportType,
+            narrativeTemplateVars,
+            reportType === 'comparison',
+          )
+        : Promise.resolve({} as Record<string, any>);
 
       // ── 9b. Per-market full single-market narratives (comparison reports) ─
-      // report.ai_narrative above is the cross-market SYNTHESIS (used by the
-      // summary). Here we ALSO generate a full single-market narrative for the
-      // primary AND each comparison market so every market's tab renders the
-      // REAL single-market report. Additive + fully guarded: any failure leaves
-      // that market's narrative null and the report still completes.
-      if (
-        reportType === 'comparison' &&
-        dto.comparison_geographies &&
-        dto.comparison_geographies.length > 0
-      ) {
-        try {
-          await updateGenerationStage(
-            supabase,
-            reportId,
-            'generating_analysis',
-            'Writing a full report for each market...',
-          );
-          const perMarket = await generatePerMarketNarratives({
+      // A full single-market narrative for the primary AND each comparison
+      // market so every market's deep-dive renders its REAL report. Guarded: a
+      // failure leaves that market's narrative null and the report still
+      // completes on the synthesis alone.
+      const perMarketPromise = isComparison
+        ? generatePerMarketNarratives({
             deps: {
               reportGenerationV2: deps.reportGenerationV2,
               newsScoutService: deps.newsScoutService,
@@ -637,7 +636,7 @@ export async function generateReportAsync(
               metrics: marketMetrics,
               news: newsResult,
             },
-            comparisons: dto.comparison_geographies.map((g) => ({
+            comparisons: dto.comparison_geographies!.map((g) => ({
               geo: g,
               scores: comparisons[g.id]?.scores,
               scoreContexts: comparisons[g.id]?.score_contexts,
@@ -646,21 +645,54 @@ export async function generateReportAsync(
             })),
             userProfile,
             benchmarks: populatedData.benchmarks,
-          });
-          // populatedData.comparisons IS the same `comparisons` object, so these
-          // mutations land in the single persistence write below.
-          if (perMarket.primary) {
-            (populatedData as any).primary_market_narrative = perMarket.primary;
-          }
-          for (const [geoId, narrative] of Object.entries(perMarket.byGeoId)) {
-            if (comparisons[geoId]) {
-              comparisons[geoId].ai_narrative = narrative;
-            }
-          }
-        } catch (perMarketError: any) {
-          logger.warn(
-            `Per-market narrative block failed, continuing with synthesis only: ${perMarketError?.message || perMarketError}`,
+            isComparisonReport: true,
+          }).catch((perMarketError: any) => {
+            logger.warn(
+              `Per-market narrative block failed, continuing with synthesis only: ${perMarketError?.message || perMarketError}`,
+            );
+            return null;
+          })
+        : Promise.resolve(null);
+
+      const [synthResult, perMarket] = await Promise.all([
+        synthesisPromise,
+        perMarketPromise,
+      ]);
+      aiNarratives = synthResult;
+
+      // ── Harden: never ship an ai_insights-entitled report with EMPTY
+      // narratives. If every section failed (e.g. AI provider outage / 402),
+      // the result holds only `_meta` — retry once, then throw so the report is
+      // marked `failed` (by the catch below) instead of silently persisted as a
+      // blank `ready` report.
+      const realNarrativeKeys = (n: Record<string, any>) =>
+        Object.keys(n).filter((k) => k !== '_meta' && k !== '__model_used');
+      if (reportType && realNarrativeKeys(aiNarratives).length === 0) {
+        logger.warn(
+          `[Report] ${reportId}: narrative generation returned no sections — retrying once`,
+        );
+        aiNarratives = await deps.reportGenerationV2.generateNarratives(
+          reportType,
+          narrativeTemplateVars,
+          reportType === 'comparison',
+        );
+        if (realNarrativeKeys(aiNarratives).length === 0) {
+          throw new Error(
+            'AI narrative generation produced no sections (provider unavailable); report not saved as ready.',
           );
+        }
+      }
+
+      // populatedData.comparisons IS the same `comparisons` object, so these
+      // mutations land in the single persistence write below.
+      if (perMarket?.primary) {
+        (populatedData as any).primary_market_narrative = perMarket.primary;
+      }
+      if (perMarket) {
+        for (const [geoId, narrative] of Object.entries(perMarket.byGeoId)) {
+          if (comparisons[geoId]) {
+            comparisons[geoId].ai_narrative = narrative;
+          }
         }
       }
     }

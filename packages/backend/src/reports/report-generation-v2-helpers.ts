@@ -62,6 +62,11 @@ This outline will be shared with each section writer to ensure narrative coheren
  *
  * - `{{variable}}` is replaced with `context[variable]`
  * - `{{#if var}}content{{/if}}` renders content only if var is truthy and not 'N/A'
+ * - `{{#each arr}}content{{/each}}` repeats content per array item; inside the
+ *   block each item's own fields are exposed ({{name}}, {{zhvi}}, …) and
+ *   `{{this}}` is the item itself (for arrays of primitives, e.g. winner_reasons).
+ *   Comparison reports depend on this to inject per-market data into the prompt;
+ *   without it the loop leaks verbatim and the model fabricates numbers.
  */
 export function interpolateTemplate(
   template: string,
@@ -76,6 +81,24 @@ export function interpolateTemplate(
         return interpolateTemplate(content, context);
       }
       return '';
+    },
+  );
+
+  // Handle {{#each arr}}content{{/each}} loop blocks
+  result = result.replace(
+    /\{\{#each (\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
+    (_match, key, content) => {
+      const arr = context[key];
+      if (!Array.isArray(arr) || arr.length === 0) return '';
+      return arr
+        .map((item) => {
+          const itemContext =
+            item && typeof item === 'object'
+              ? { ...context, ...item, this: item }
+              : { ...context, this: item };
+          return interpolateTemplate(content, itemContext);
+        })
+        .join('');
     },
   );
 
