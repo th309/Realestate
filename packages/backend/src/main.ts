@@ -1,4 +1,4 @@
-// Build trigger: 2026-03-28
+// Build trigger: 2026-06-29
 import './instrument'; // Sentry — must run before NestJS loads any modules
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
