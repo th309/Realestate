@@ -6,6 +6,7 @@ import {
   TTSSynthesisRequest,
   TTSSynthesisResult,
 } from './tts-driver.interface';
+import { assertAiBudget } from '../../ai-provider/ai-spend-guard.shared';
 
 // OpenAI TTS pricing per 1K characters (verified 2026-04):
 //   tts-1     → $0.015 / 1K chars
@@ -40,6 +41,9 @@ export class OpenAITTSDriver implements TTSDriver {
 
   async synthesize(req: TTSSynthesisRequest): Promise<TTSSynthesisResult> {
     const start = Date.now();
+    // Block-only: TTS is billed per-character, not per-token, so it can't
+    // advance the token-based ledger — but the cap still halts it once tripped.
+    assertAiBudget();
     const response = await this.getClient().audio.speech.create({
       model: 'tts-1-hd',
       voice: req.voiceId as OpenAITTSVoice,

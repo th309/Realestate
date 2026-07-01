@@ -169,3 +169,15 @@
 **Rule (structural fix, now in place):** `next dev` (NODE_ENV=development) writes to `.next-dev`; `next build`/`next start` (production) write to `.next`. So a default `npm run build` can never wedge a running dev server, no matter who runs it or from which terminal (a hook only gates Claude's own commands, not yours). Set in `packages/frontend/next.config.mjs` (`distDir` branches on NODE_ENV); `scripts/dev-start.sh` wipes `.next-dev`; gitignore/tsconfig/eslint follow. The `.claude/hooks/guard-bash.js` build guard is defense-in-depth: still ASKs on plain builds, hard-DENIES any build aimed at `.next-dev`. For a throwaway verification build, `NEXT_DIST_DIR=.next-verify npm run build -w web` still works.
 
 **Rule (diagnostic discipline):** A `Failed to fetch` whose stack top is `chrome-extension://…/injectScriptAdjust.js` wrapping `window.fetch` can be ad-blocker noise OR a real outage the extension is merely surfacing. NEVER dismiss it on sight — curl the endpoint **server-side** (browser bypassed) first. `LISTENING` ≠ healthy: a curl `000` on a live listener = wedged; a `200` with a ~21-byte body, or one that flips to 500 on re-hit, = broken. Re-hit routes 3–5× before declaring green (the first 200 can be a pre-failure/stale compile).
+
+## Never `git stash push -- <pathspec>` with an untracked path, and never blind `git stash pop`
+
+**Date:** 2026-07-01
+**Context:** To confirm a test failure was pre-existing, I ran `git stash push -m msg -- fileA fileB newFile.ts` where `newFile.ts` was **untracked**. Git aborted the whole stash ("pathspec did not match") — so my edits were NOT stashed. I then ran `git stash pop` anyway, which popped the **user's** unrelated stash@{0} onto my tree and left a merge conflict (`scripts/dev-start.sh` UU + a staged `package.json`). Recovery took several careful steps.
+
+**Rule:**
+
+- `git stash push -- <pathspec>` silently aborts if ANY listed path is untracked. To stash new files you must `git add` them first, or don't include them. Verify with `git stash list` that YOUR stash was actually created (check the message) before assuming it worked.
+- NEVER run a bare `git stash pop` in a repo you don't own the stash state of — it pops `stash@{0}`, which may be the user's. Always `git stash list` first and pop by explicit ref only if it's yours.
+- To A/B a pre-existing failure without stash risk: copy the file aside, `git checkout HEAD -- file`, run the test, then restore the copy. Or just reason from the diff (`git diff --stat` proving you never touched the failing code path).
+- Recovery when a stash-pop conflicts on files you didn't touch: the popped stash is KEPT; restore each conflicted/staged file to HEAD (`git restore --staged --worktree <f>` / `git checkout HEAD -- <f>`) — the content stays safe in the stash for its owner to re-apply.

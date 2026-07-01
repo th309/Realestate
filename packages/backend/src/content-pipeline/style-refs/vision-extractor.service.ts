@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { readFileSync } from 'fs';
+import { guardedChat } from '../../ai-provider/ai-spend-guard.shared';
 
 export interface ExtractedStyleAttributes {
   /** Hex palette swatches the Vision model identified, ordered by salience. */
@@ -69,20 +70,25 @@ export class VisionExtractorService {
 
   async extract(imageUrl: string): Promise<ExtractedStyleAttributes> {
     const start = Date.now();
-    const response = await this.getClient().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: PROMPT },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
-          ],
-        },
-      ],
-      max_tokens: 600,
-      temperature: 0.2,
-    });
+    const response = await guardedChat('gpt-4o-mini', () =>
+      this.getClient().chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: PROMPT },
+              {
+                type: 'image_url',
+                image_url: { url: imageUrl, detail: 'low' },
+              },
+            ],
+          },
+        ],
+        max_tokens: 600,
+        temperature: 0.2,
+      }),
+    );
 
     const raw = response.choices[0]?.message?.content?.trim() ?? '';
     const parsed = this.parseResponse(raw);
@@ -125,7 +131,10 @@ Rules:
 
     const content: Array<
       | { type: 'text'; text: string }
-      | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' } }
+      | {
+          type: 'image_url';
+          image_url: { url: string; detail?: 'low' | 'high' };
+        }
     > = [{ type: 'text', text: prompt }];
 
     for (const p of frames) {
@@ -136,12 +145,14 @@ Rules:
       });
     }
 
-    const response = await this.getClient().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content }],
-      max_tokens: 700,
-      temperature: 0.2,
-    });
+    const response = await guardedChat('gpt-4o-mini', () =>
+      this.getClient().chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content }],
+        max_tokens: 700,
+        temperature: 0.2,
+      }),
+    );
 
     const raw = response.choices[0]?.message?.content?.trim() ?? '';
     const cleaned = raw

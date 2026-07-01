@@ -100,6 +100,10 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> =
     'o3-pro': { input: 20.0, output: 80.0 },
     'o4-mini': { input: 1.1, output: 4.4 },
     'gpt-4o': { input: 2.5, output: 10.0 },
+    'gpt-4o-mini': { input: 0.15, output: 0.6 },
+    // Embeddings (input-only; output priced 0 so token metering advances the cap).
+    'text-embedding-3-small': { input: 0.02, output: 0.0 },
+    'text-embedding-3-large': { input: 0.13, output: 0.0 },
     // Google
     'gemini-3.1-pro-preview': { input: 1.25, output: 10.0 },
     'gemini-3.1-flash-lite-preview': { input: 0.02, output: 0.1 },

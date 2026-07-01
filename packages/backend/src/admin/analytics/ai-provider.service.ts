@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { AiProvider, ChatMessage } from './ai-insights.types';
+import { assertAiBudget } from '../../ai-provider/ai-spend-guard.shared';
 
 @Injectable()
 export class AiProviderService {
@@ -70,6 +71,7 @@ export class AiProviderService {
     const model =
       this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-v4-pro';
 
+    assertAiBudget();
     const stream = await this.deepseekClient.chat.completions.create({
       model,
       stream: true,
@@ -106,6 +108,7 @@ export class AiProviderService {
       this.configService.get<string>('CLAUDE_INSIGHTS_MODEL') ||
       'claude-opus-4-7';
 
+    assertAiBudget();
     const stream = await this.anthropicClient.messages.stream({
       model,
       max_tokens: 4096,

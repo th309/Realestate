@@ -4,11 +4,11 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
+import { callBriefingLlm } from './briefing-generator.llm';
 import {
   MarketBriefing,
   MetricSnapshot,
@@ -210,7 +210,7 @@ export class BriefingGeneratorService {
         metricsSnapshot,
         newsHeadlines,
       );
-      return await this.callLlm(prompt);
+      return await callBriefingLlm(this.appConfig, prompt);
     } catch (err) {
       this.logger.warn(
         `LLM narrative failed for ${geographyName}: ${err.message}`,
@@ -225,7 +225,7 @@ export class BriefingGeneratorService {
   ): Promise<string[]> {
     try {
       const prompt = buildSuggestedQuestionsPrompt(geographyName, stance);
-      const raw = await this.callLlm(prompt);
+      const raw = await callBriefingLlm(this.appConfig, prompt);
       return parseSuggestedQuestions(raw);
     } catch (err) {
       this.logger.warn(
@@ -233,39 +233,6 @@ export class BriefingGeneratorService {
       );
       return [];
     }
-  }
-
-  private async callLlm(prompt: string): Promise<string> {
-    const [baseUrl, model, apiKey, timeoutMs, maxTokens, temperatureStr] =
-      await Promise.all([
-        this.appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
-        this.appConfig.get('AI_MODEL', 'deepseek-v4-pro'),
-        this.appConfig.get('DEEPSEEK_API_KEY'),
-        this.appConfig.getNumber('QUINN_LLM_TIMEOUT_MS', 30000),
-        this.appConfig.getNumber('QUINN_LLM_MAX_TOKENS', 500),
-        this.appConfig.get('QUINN_LLM_TEMPERATURE', '0.7'),
-      ]);
-
-    if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
-
-    const client = new OpenAI({ baseURL: baseUrl, apiKey });
-    const temperature = parseFloat(temperatureStr) || 0.7;
-
-    const response = await Promise.race([
-      client.chat.completions.create({
-        model,
-        messages: [{ role: 'system', content: prompt }],
-        max_tokens: maxTokens,
-        temperature,
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('LLM request timed out')), timeoutMs),
-      ),
-    ]);
-
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) throw new Error('LLM returned empty response');
-    return content;
   }
 
   private async storeBriefing(briefing: MarketBriefing): Promise<string> {
