@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { SupabaseService } from '../../supabase/supabase.service';
+import {
+  assertAiBudget,
+  recordAiUsage,
+} from '../../ai-provider/ai-spend-guard.shared';
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 // $0.02 per 1M tokens (OpenAI text-embedding-3-small, verified 2026-04).
@@ -74,11 +78,15 @@ export class ArchetypeClusteringService {
     for (let i = 0; i < toEmbed.length; i += 100) {
       const batch = toEmbed.slice(i, i + 100);
       const inputs = batch.map((r) => r.transcript.slice(0, 8000));
+      assertAiBudget();
       const res = await this.getClient().embeddings.create({
         model: EMBEDDING_MODEL,
         input: inputs,
       });
       totalTokens += res.usage?.total_tokens ?? 0;
+      // Embeddings are input-only; record total_tokens as input so this spend
+      // advances the shared daily cap (text-embedding-3-small is priced).
+      recordAiUsage(EMBEDDING_MODEL, res.usage?.total_tokens ?? 0, 0);
       for (let j = 0; j < batch.length; j++) {
         const v = res.data[j].embedding;
         await client

@@ -5,6 +5,7 @@
 
 import OpenAI from 'openai';
 import { AppConfigService } from '../config/app-config.service';
+import { guardedChat } from '../ai-provider/ai-spend-guard.shared';
 
 /** Parsed LLM classification of an article */
 export interface ArticleClassification {
@@ -45,12 +46,14 @@ async function callLlmForClassification(
   const prompt = buildClassificationPrompt(headline, description);
 
   const response = await Promise.race([
-    client.chat.completions.create({
-      model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: 300,
-      temperature: 0.3,
-    }),
+    guardedChat(model, () =>
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'system', content: prompt }],
+        max_tokens: 300,
+        temperature: 0.3,
+      }),
+    ),
     new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error('LLM request timed out')),

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { createReadStream } from 'fs';
 import { CaptionTimer, CaptionTimingResult } from './caption-timer.interface';
+import { assertAiBudget } from '../../ai-provider/ai-spend-guard.shared';
 
 @Injectable()
 export class OpenAIWhisperTimer implements CaptionTimer {
@@ -13,6 +14,9 @@ export class OpenAIWhisperTimer implements CaptionTimer {
   }
 
   async time(audioPath: string): Promise<CaptionTimingResult> {
+    // Block-only: Whisper is billed per-minute of audio, not per-token, so it
+    // can't advance the token-based ledger — the cap still halts it once tripped.
+    assertAiBudget();
     const response = await this.client.audio.transcriptions.create({
       model: 'whisper-1',
       file: createReadStream(audioPath),

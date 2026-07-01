@@ -107,6 +107,11 @@ export async function retryWithBackoff<T>(
       return await fn();
     } catch (error: any) {
       lastError = error;
+      // Non-retryable errors (e.g. the spend-cap circuit-breaker) can't recover
+      // this run — fail fast instead of burning attempts and backoff delays.
+      if (error?.retryable === false) {
+        throw error;
+      }
       if (attempt < maxRetries) {
         const baseDelay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
         const jitter = Math.random() * 500; // 0-500ms jitter

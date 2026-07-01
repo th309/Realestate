@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { AiProviderService } from '../ai-provider.service';
 import { AiShadowService } from '../ai-shadow.service';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { resolveMaxTokens } from '../ai-provider.types';
+
+// deepseek-v4-pro is a reasoning model, so the executor adds reasoning-token
+// headroom to the requested max_tokens (prevents starving the answer budget).
+// Assert against resolveMaxTokens so these stay correct if the headroom changes.
+const expectedMaxTokens = (requested: number) =>
+  resolveMaxTokens('deepseek', 'deepseek-v4-pro', requested);
 
 // Mock OpenAI at module level (mirrors ai-provider.service.spec.ts pattern).
 // Streaming tests inject a fake client directly via clientCache, so this
@@ -125,7 +132,7 @@ describe('AiProviderService.stream()', () => {
     const callArgs = create.mock.calls[0][0];
     expect(callArgs.stream).toBe(true);
     expect(callArgs.model).toBe('deepseek-v4-pro');
-    expect(callArgs.max_tokens).toBe(100);
+    expect(callArgs.max_tokens).toBe(expectedMaxTokens(100));
     expect(callArgs.messages).toEqual([{ role: 'user', content: 'test' }]);
   });
 
@@ -172,7 +179,7 @@ describe('AiProviderService.stream()', () => {
       { role: 'system', content: 'You are helpful' },
       { role: 'user', content: 'Greet me' },
     ]);
-    expect(callArgs.max_tokens).toBe(200);
+    expect(callArgs.max_tokens).toBe(expectedMaxTokens(200));
     expect(callArgs.stream).toBe(true);
   });
 });

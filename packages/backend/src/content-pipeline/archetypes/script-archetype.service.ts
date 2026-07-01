@@ -7,6 +7,7 @@ import {
   ArchetypeClusteringService,
   type BuiltCluster,
 } from './archetype-clustering.service';
+import { guardedChat } from '../../ai-provider/ai-spend-guard.shared';
 
 const DEFAULT_QUERIES = [
   'real estate market analysis',
@@ -227,12 +228,14 @@ Return ONLY a JSON object:
       prompt_template: string;
     } | null = null;
     try {
-      const res = await this.getSynthesisClient().chat.completions.create({
-        model: PROMPT_SYNTHESIS_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 800,
-        temperature: 0.3,
-      });
+      const res = await guardedChat(PROMPT_SYNTHESIS_MODEL, () =>
+        this.getSynthesisClient().chat.completions.create({
+          model: PROMPT_SYNTHESIS_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 800,
+          temperature: 0.3,
+        }),
+      );
       const raw = res.choices[0]?.message?.content?.trim() ?? '';
       const cleaned = raw
         .replace(/^```(?:json)?\s*/i, '')

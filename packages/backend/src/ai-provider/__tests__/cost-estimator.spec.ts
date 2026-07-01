@@ -20,4 +20,17 @@ describe('estimateCostUsd', () => {
     const full = estimateCostUsd('deepseek-v4-pro', 1_000_000, 1_000_000)!;
     expect(full).toBeCloseTo(half * 2, 5);
   });
+
+  it('prices content-pipeline chat + embedding models so their spend counts', () => {
+    // gpt-4o-mini: 0.15 input + 0.60 output per 1M
+    expect(estimateCostUsd('gpt-4o-mini', 1_000_000, 1_000_000)).toBeCloseTo(
+      0.75,
+      5,
+    );
+    // text-embedding-3-small: 0.02 input, 0 output (embeddings are input-only)
+    expect(estimateCostUsd('text-embedding-3-small', 1_000_000, 0)).toBeCloseTo(
+      0.02,
+      5,
+    );
+  });
 });

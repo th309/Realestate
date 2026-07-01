@@ -14,6 +14,8 @@ import {
   resolveAnthropicFallbackModel,
   type ContentPipelineLlmBackend,
 } from './content-pipeline-llm-client';
+import { guardedAnthropic } from '../../ai-provider/ai-spend-guard.shared';
+import { AiSpendCapExceededError } from '../../ai-provider/ai-spend-guard';
 
 const logger = new Logger('AnthropicMessagesRetry');
 
@@ -70,8 +72,17 @@ export async function anthropicMessagesCreateWithRetry(
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const msg = await client.messages.create(params, requestOptions);
-      return msg as Anthropic.Messages.Message;
+      // Meter every content-pipeline LLM call (DeepSeek-first and Anthropic
+      // fallback both route through here) against the shared daily spend cap.
+      const msg = await guardedAnthropic(
+        String(params.model),
+        () =>
+          client.messages.create(
+            params,
+            requestOptions,
+          ) as Promise<Anthropic.Messages.Message>,
+      );
+      return msg;
     } catch (err) {
       lastErr = err;
       const transient = isTransientAnthropicFailure(err);
@@ -141,6 +152,9 @@ export async function anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback(
       modelUsed: String(params.model),
     };
   } catch (firstErr) {
+    // A spend-cap block is not a provider failure — don't misreport it as a
+    // DeepSeek outage and don't retry on Anthropic (the cap stops ALL calls).
+    if (firstErr instanceof AiSpendCapExceededError) throw firstErr;
     if (disableAnthropicFallback || !process.env.ANTHROPIC_API_KEY?.trim()) {
       throw firstErr;
     }

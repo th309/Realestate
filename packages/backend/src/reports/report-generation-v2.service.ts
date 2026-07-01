@@ -1,12 +1,9 @@
 /**
  * Report Generation V2 Service
  *
- * Two-pass AI narrative generation pipeline:
- *   Pass 1: Generate a structural outline (low temperature) for narrative coherence
- *   Pass 2: Generate all sections in parallel, each receiving the outline as context
- *
- * Uses AiProviderService (model-agnostic) instead of the legacy ReportAiService.
- * Section configs come from prompts-v2/ (per-report-type prompt definitions).
+ * Two-pass AI narrative pipeline: (1) generate a structural outline, (2) generate
+ * all sections in parallel with the outline as shared context. Uses the
+ * model-agnostic AiProviderService; section configs come from prompts-v2/.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -172,6 +169,8 @@ export class ReportGenerationV2Service {
       }
 
       try {
+        // Cap section retries at 1: each retry resends the full section context
+        // (the input-token amplifier behind the cost spike). SDK retries 429/5xx.
         const value = await retryWithBackoff(
           () =>
             this.generateSection(
@@ -184,6 +183,7 @@ export class ReportGenerationV2Service {
             ),
           `v2:${sectionId}`,
           this.logger,
+          1,
         );
         return { id: sectionId, value };
       } catch (error: any) {

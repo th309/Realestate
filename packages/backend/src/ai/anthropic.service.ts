@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
+import { guardedAnthropic } from '../ai-provider/ai-spend-guard.shared';
 
 export interface MessagesParams {
   model: string;
@@ -38,15 +39,17 @@ export class AnthropicService {
   }
 
   async messages(params: MessagesParams): Promise<MessagesResponse> {
-    const response = await this.client.messages.create({
-      model: params.model,
-      max_tokens: params.max_tokens,
-      system: params.system,
-      messages: params.messages,
-      ...(params.temperature !== undefined
-        ? { temperature: params.temperature }
-        : {}),
-    });
+    const response = await guardedAnthropic(params.model, () =>
+      this.client.messages.create({
+        model: params.model,
+        max_tokens: params.max_tokens,
+        system: params.system,
+        messages: params.messages,
+        ...(params.temperature !== undefined
+          ? { temperature: params.temperature }
+          : {}),
+      }),
+    );
     return response as MessagesResponse;
   }
 }

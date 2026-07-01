@@ -14,6 +14,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AiProviderService } from '../../ai-provider/ai-provider.service';
 import { AI_PURPOSES } from '../../ai-provider/ai-provider.types';
+import { guardedChat } from '../../ai-provider/ai-spend-guard.shared';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { TimeSeriesService } from '../../timeseries/timeseries.service';
@@ -128,12 +129,14 @@ export class ResearchBriefService {
     let lastResearchData: Record<string, unknown> = {};
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-      const response = await client.chat.completions.create({
-        model,
-        max_tokens: 4096,
-        tools: RESEARCH_TOOLS,
-        messages,
-      });
+      const response = await guardedChat(model, () =>
+        client.chat.completions.create({
+          model,
+          max_tokens: 4096,
+          tools: RESEARCH_TOOLS,
+          messages,
+        }),
+      );
 
       const choice = response.choices[0];
       if (!choice) break;

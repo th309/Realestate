@@ -15,7 +15,6 @@ import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   AiCompletionRequest,
-  AiProviderConfig,
   AiCompletionResponse,
   PROVIDER_PRESETS,
 } from './ai-provider.types';
@@ -23,6 +22,15 @@ import { AiConfigResolver } from './ai-config-resolver';
 import { AiShadowService } from './ai-shadow.service';
 import { executeStream } from './ai-stream-executor';
 import { executeCompletion } from './ai-completion-executor';
+import { AiCompletionCache } from './ai-completion-cache';
+import { AiSpendGuard } from './ai-spend-guard';
+import { getSharedSpendGuard } from './ai-spend-guard.shared';
+import { runGuardedCompletion, envNumber } from './ai-guarded-completion';
+import {
+  buildMessages,
+  getOrCreateClient,
+  logProviderKeyStatus,
+} from './ai-client-factory';
 
 @Injectable()
 export class AiProviderService {
@@ -32,6 +40,10 @@ export class AiProviderService {
   private readonly supabase: SupabaseService;
   /** Global test run ID applied to all usage logs. Set via admin API. */
   private activeTestRunId: string | null = null;
+  /** Short-TTL cache: identical requests reuse the answer, not re-bill. */
+  private readonly completionCache: AiCompletionCache<AiCompletionResponse>;
+  /** In-memory daily-spend backstop against runaway fan-out/retry loops. */
+  private readonly spendGuard: AiSpendGuard;
 
   constructor(
     supabase: SupabaseService,
@@ -41,17 +53,18 @@ export class AiProviderService {
     this.supabase = supabase;
     this.configResolver = new AiConfigResolver(supabase, configService);
 
-    // Log which provider API keys are available at startup
-    const keys = [
-      'DEEPSEEK_API_KEY',
-      'ANTHROPIC_API_KEY',
-      'OPENAI_API_KEY',
-      'GOOGLE_AI_API_KEY',
-    ];
-    const status = keys
-      .map((k) => `${k}: ${configService.get(k) ? 'SET' : 'MISSING'}`)
-      .join(', ');
-    this.logger.log(`API keys at startup: ${status}`);
+    // Cost controls. Completion cache defaults to 10 min (AI_COMPLETION_CACHE_TTL_MS=0
+    // disables). The spend cap is the SHARED process-wide ledger so direct-client
+    // AI calls count against the same daily cap (see ai-spend-guard.shared).
+    this.completionCache = new AiCompletionCache<AiCompletionResponse>({
+      ttlMs: envNumber(
+        configService.get('AI_COMPLETION_CACHE_TTL_MS'),
+        600_000,
+      ),
+    });
+    this.spendGuard = getSharedSpendGuard();
+
+    logProviderKeyStatus(configService, this.logger);
   }
 
   /**
@@ -64,46 +77,72 @@ export class AiProviderService {
   ): Promise<AiCompletionResponse> {
     const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    const messages = this.buildMessages(config, request);
+    const messages = buildMessages(config, request);
     const temperature =
       request.temperature ??
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
-    const client = this.getOrCreateClient(config);
-    const response = await executeCompletion({
-      client,
-      supabase: this.supabase,
-      logger: this.logger,
+    const client = getOrCreateClient(this.clientCache, config, this.logger);
+    // Cache key must fully determine the output. Do NOT add user/tenant-specific
+    // data to prompts for cached purposes without keying on it (see AiCompletionCache).
+    const cacheKey = this.completionCache.enabled
+      ? this.completionCache.makeKey({
+          provider: config.provider,
+          model: config.model,
+          system: request.systemPrompt ?? '',
+          user: request.userPrompt,
+          maxTokens: request.maxTokens,
+          temperature,
+          responseFormat: request.responseFormat ?? 'text',
+        })
+      : null;
+
+    const { response, fromCache } = await runGuardedCompletion({
       purpose,
-      config,
-      messages,
-      activeTestRunId: this.activeTestRunId,
-      options: {
-        maxTokens: request.maxTokens,
-        temperature,
-        responseFormat: request.responseFormat,
-        testRunId: request.testRunId,
-        reportId: request.reportId,
-        sectionId: request.sectionId,
-      },
+      model: config.model,
+      cacheKey,
+      cache: this.completionCache,
+      spendGuard: this.spendGuard,
+      logger: this.logger,
+      execute: () =>
+        executeCompletion({
+          client,
+          supabase: this.supabase,
+          logger: this.logger,
+          purpose,
+          config,
+          messages,
+          activeTestRunId: this.activeTestRunId,
+          options: {
+            maxTokens: request.maxTokens,
+            temperature,
+            responseFormat: request.responseFormat,
+            testRunId: request.testRunId,
+            reportId: request.reportId,
+            sectionId: request.sectionId,
+          },
+        }),
     });
 
-    void this.shadow.runShadow({
-      purpose,
-      requestId,
-      primaryConfig: config,
-      primaryResult: {
-        content: response.content,
-        usage: response.usage,
-        durationMs: response.durationMs,
-      },
-      callArgs: {
-        messages: messages as Array<{ role: string; content: unknown }>,
-        options: { maxTokens: request.maxTokens, temperature },
-      },
-      primaryFailedOver: false,
-    });
+    // Cache hits have no new primary call to shadow-compare against.
+    if (!fromCache) {
+      void this.shadow.runShadow({
+        purpose,
+        requestId,
+        primaryConfig: config,
+        primaryResult: {
+          content: response.content,
+          usage: response.usage,
+          durationMs: response.durationMs,
+        },
+        callArgs: {
+          messages: messages as Array<{ role: string; content: unknown }>,
+          options: { maxTokens: request.maxTokens, temperature },
+        },
+        primaryFailedOver: false,
+      });
+    }
 
     return response;
   }
@@ -119,16 +158,27 @@ export class AiProviderService {
   ): Promise<AiCompletionResponse> {
     const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    const client = this.getOrCreateClient(config);
-    const response = await executeCompletion({
-      client,
-      supabase: this.supabase,
-      logger: this.logger,
+    const client = getOrCreateClient(this.clientCache, config, this.logger);
+    // Multi-turn conversations are not cached (each turn is unique), but still
+    // pass through the spend backstop.
+    const { response } = await runGuardedCompletion({
       purpose,
-      config,
-      messages,
-      activeTestRunId: this.activeTestRunId,
-      options: { maxTokens },
+      model: config.model,
+      cacheKey: null,
+      cache: this.completionCache,
+      spendGuard: this.spendGuard,
+      logger: this.logger,
+      execute: () =>
+        executeCompletion({
+          client,
+          supabase: this.supabase,
+          logger: this.logger,
+          purpose,
+          config,
+          messages,
+          activeTestRunId: this.activeTestRunId,
+          options: { maxTokens },
+        }),
     });
 
     void this.shadow.runShadow({
@@ -164,8 +214,11 @@ export class AiProviderService {
   ): AsyncGenerator<string> {
     const requestId = randomUUID();
     const config = await this.configResolver.resolve(purpose);
-    const client = this.getOrCreateClient(config);
-    const messages = this.buildMessages(config, request);
+    // Backstop applies to streaming too: spend recorded by prior calls can trip
+    // the cap and halt a runaway stream loop before it dispatches.
+    this.spendGuard.assertUnderCap();
+    const client = getOrCreateClient(this.clientCache, config, this.logger);
+    const messages = buildMessages(config, request);
     const temperature =
       request.temperature ??
       config.temperature ??
@@ -217,7 +270,10 @@ export class AiProviderService {
     purpose: string,
   ): Promise<{ client: OpenAI; model: string; systemPrompt?: string }> {
     const config = await this.configResolver.resolve(purpose);
-    return { client: this.getOrCreateClient(config), model: config.model };
+    return {
+      client: getOrCreateClient(this.clientCache, config, this.logger),
+      model: config.model,
+    };
   }
 
   /**
@@ -238,51 +294,5 @@ export class AiProviderService {
     // Always clear client cache — API keys or base URLs may have changed.
     this.clientCache.clear();
     this.logger.log(`Cache invalidated: ${purpose || 'all'}`);
-  }
-
-  /**
-   * Build the messages array, handling system prompt support per model.
-   * deepseek-reasoner doesn't support system role — prepend to user message.
-   */
-  private buildMessages(
-    config: AiProviderConfig,
-    request: AiCompletionRequest,
-  ): OpenAI.ChatCompletionMessageParam[] {
-    const modelSupportsSystemRole = !config.model.includes('reasoner');
-
-    if (request.systemPrompt && modelSupportsSystemRole) {
-      return [
-        { role: 'system', content: request.systemPrompt },
-        { role: 'user', content: request.userPrompt },
-      ];
-    }
-
-    if (request.systemPrompt && !modelSupportsSystemRole) {
-      const combinedPrompt = `[System Instructions]\n${request.systemPrompt}\n\n[User Request]\n${request.userPrompt}`;
-      return [{ role: 'user', content: combinedPrompt }];
-    }
-
-    return [{ role: 'user', content: request.userPrompt }];
-  }
-
-  /**
-   * Get or create an OpenAI client, cached by provider+baseUrl key.
-   */
-  private getOrCreateClient(config: AiProviderConfig): OpenAI {
-    const cacheKey = `${config.provider}::${config.baseUrl}`;
-    const existing = this.clientCache.get(cacheKey);
-    if (existing) return existing;
-
-    const client = new OpenAI({
-      apiKey: config.apiKey,
-      baseURL: config.baseUrl,
-      maxRetries: config.maxRetries ?? 2,
-    });
-
-    this.clientCache.set(cacheKey, client);
-    this.logger.log(
-      `OpenAI client created for ${config.provider} at ${config.baseUrl}`,
-    );
-    return client;
   }
 }

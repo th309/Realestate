@@ -24,6 +24,7 @@ import type {
 } from './ai-provider.types';
 import { PROVIDER_PRESETS, AI_PURPOSES } from './ai-provider.types';
 import { estimateCostUsd } from './cost-estimator';
+import { guardedChat } from './ai-spend-guard.shared';
 
 const SHADOW_CONFIG_CACHE_MS = 30_000;
 const INPUT_PREVIEW_MAX_LEN = 1024;
@@ -181,12 +182,16 @@ export class AiShadowService {
       : undefined;
 
     const startedAt = Date.now();
-    const completion = await client.chat.completions.create({
-      model,
-      messages: ctx.callArgs.messages as never,
-      ...(toolChoice !== undefined ? { tool_choice: toolChoice as never } : {}),
-      stream: false,
-    });
+    const completion = await guardedChat(model, () =>
+      client.chat.completions.create({
+        model,
+        messages: ctx.callArgs.messages as never,
+        ...(toolChoice !== undefined
+          ? { tool_choice: toolChoice as never }
+          : {}),
+        stream: false,
+      }),
+    );
 
     return {
       content: completion.choices[0]?.message?.content ?? '',
