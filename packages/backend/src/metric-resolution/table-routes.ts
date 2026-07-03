@@ -11,6 +11,10 @@
 import { GeoLevel, DataSource, TableRoute } from './metric-resolution.types';
 import {
   getRedfinDcRoute,
+  getRedfinDcDelistingsRoute,
+  getRedfinDcCancellationsRoute,
+  getRedfinDcInvestorsRoute,
+  getRedfinDcCashLoanRoute,
   getRedfinMigrationRoute,
 } from './table-routes-redfin';
 
@@ -37,6 +41,14 @@ export function getWideTableRoute(
       return getCesRoute(geoLevel);
     case 'redfin_dc':
       return getRedfinDcRoute(geoLevel);
+    case 'redfin_dc_delistings':
+      return getRedfinDcDelistingsRoute(geoLevel);
+    case 'redfin_dc_cancellations':
+      return getRedfinDcCancellationsRoute(geoLevel);
+    case 'redfin_dc_investors':
+      return getRedfinDcInvestorsRoute(geoLevel);
+    case 'redfin_dc_cash_loan':
+      return getRedfinDcCashLoanRoute(geoLevel);
     case 'redfin_migration':
       return getRedfinMigrationRoute(geoLevel);
     case 'irs':

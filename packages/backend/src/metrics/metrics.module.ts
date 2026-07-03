@@ -24,6 +24,8 @@ import { FiveYearGrowthAggregateService } from './pipelines/five-year-growth-agg
 import { FiveYearGrowthGranularService } from './pipelines/five-year-growth-granular.service';
 import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
 import { AffordabilityMetricsService } from './pipelines/affordability-metrics.service';
+import { RedfinDcSnapshotController } from './redfin-dc-snapshot.controller';
+import { RedfinDcSnapshotService } from './redfin-dc-snapshot.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -35,6 +37,7 @@ import { AffordabilityMetricsService } from './pipelines/affordability-metrics.s
     MetricsBatchController,
     MetricsAffordabilityController,
     InventorySurplusController,
+    RedfinDcSnapshotController,
   ],
   providers: [
     CalculatedMetricsService,
@@ -54,6 +57,7 @@ import { AffordabilityMetricsService } from './pipelines/affordability-metrics.s
     FiveYearGrowthGranularService,
     FiveYearGrowthService,
     AffordabilityMetricsService,
+    RedfinDcSnapshotService,
   ],
   exports: [CalculatedMetricsService, InventorySurplusService],
 })

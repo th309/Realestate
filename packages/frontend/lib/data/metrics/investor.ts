@@ -126,4 +126,32 @@ export const INVESTOR_METRICS: Record<string, MetricConfig> = {
     hasTimeSeries: true,
     favorableDirection: "lower",
   },
+
+  investor_market_share: {
+    id: "investor_market_share",
+    title: "Investor Market Share %",
+    format: "percent_abs",
+    dataSource: "redfin",
+    apiEndpoint: "/api/metrics/redfin-dc/investor_market_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro"],
+    hasTimeSeries: false,
+    favorableDirection: "neutral",
+    coverageNote:
+      "Redfin reports investor activity for major metros only, updated quarterly.",
+  },
+
+  all_cash_share: {
+    id: "all_cash_share",
+    title: "All-Cash Purchase %",
+    format: "percent_abs",
+    dataSource: "redfin",
+    apiEndpoint: "/api/metrics/redfin-dc/all_cash_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro"],
+    hasTimeSeries: false,
+    favorableDirection: "neutral",
+    coverageNote:
+      "Redfin reports cash-vs-financed purchase data for major metros only, updated quarterly.",
+  },
 };

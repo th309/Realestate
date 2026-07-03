@@ -110,6 +110,8 @@ export const METRO_ONLY_METRICS = new Set([
   "market_health",
   "market_heat",
   "overvalued_pct",
+  "investor_market_share",
+  "all_cash_share",
 ]);
 
 // ============================================================================

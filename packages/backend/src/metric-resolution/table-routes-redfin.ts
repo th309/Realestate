@@ -97,6 +97,53 @@ export function getRedfinDcRoute(geoLevel: GeoLevel): TableRoute | null {
   }
 }
 
+/**
+ * Additional Redfin Data Center dashboards (redfin_dc_<stem>_<geo>). Same
+ * region_id keying as getRedfinDcRoute (metro=CBSA, county=FIPS, zip=ZIP,
+ * state=FIPS via the source-fetcher's redfin_dc* normalization). full-geo
+ * dashboards cover state/metro/county/zip; metro-only dashboards (investors,
+ * cash_loan) are metro-max upstream — Redfin publishes no county/zip.
+ */
+const DC_FULL_GEOS: GeoLevel[] = ['state', 'metro', 'county', 'zip'];
+const DC_METRO_ONLY: GeoLevel[] = ['metro'];
+
+function dcRoute(
+  stem: string,
+  geoLevel: GeoLevel,
+  geos: GeoLevel[],
+): TableRoute | null {
+  if (!geos.includes(geoLevel)) return null;
+  return {
+    table: `redfin_dc_${stem}_${geoLevel}`,
+    idColumn: 'region_id',
+    dateColumn: 'period_end',
+  };
+}
+
+export function getRedfinDcDelistingsRoute(
+  geoLevel: GeoLevel,
+): TableRoute | null {
+  return dcRoute('delistings_relistings', geoLevel, DC_FULL_GEOS);
+}
+
+export function getRedfinDcCancellationsRoute(
+  geoLevel: GeoLevel,
+): TableRoute | null {
+  return dcRoute('contract_cancellations', geoLevel, DC_FULL_GEOS);
+}
+
+export function getRedfinDcInvestorsRoute(
+  geoLevel: GeoLevel,
+): TableRoute | null {
+  return dcRoute('investors', geoLevel, DC_METRO_ONLY);
+}
+
+export function getRedfinDcCashLoanRoute(
+  geoLevel: GeoLevel,
+): TableRoute | null {
+  return dcRoute('cash_loan', geoLevel, DC_METRO_ONLY);
+}
+
 export function getRedfinMigrationRoute(geoLevel: GeoLevel): TableRoute | null {
   if (geoLevel !== 'metro') return null;
   return {
