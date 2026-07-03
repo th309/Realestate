@@ -20,13 +20,17 @@ export async function fetchScoredByPeriod(
   if (!periods.length)
     throw new Error(`fail-closed: no score periods returned for ${geo}`);
 
-  const idSets = await Promise.all(
-    periods.map((date) =>
-      getJson<{ ids: string[] }>(
-        `${apiBase}/api/scores/ids/${geo}?score_type=propertyiq&date=${date}`,
-      ).then(({ ids }) => ({ date, ids })),
-    ),
-  );
+  // Sequential, NOT Promise.all: for zip each period returns ~29k ids, and firing
+  // all 6 periods concurrently made them contend on the DB pooler (~3.6s each);
+  // right after scoring that tipped one past the statement timeout → 500 → the
+  // whole refresh failed. One at a time keeps each call ~0.1s and never bursts.
+  const idSets: Array<{ date: string; ids: string[] }> = [];
+  for (const date of periods) {
+    const { ids } = await getJson<{ ids: string[] }>(
+      `${apiBase}/api/scores/ids/${geo}?score_type=propertyiq&date=${date}`,
+    );
+    idSets.push({ date, ids });
+  }
   const scoredByPeriod = new Map<string, Set<string>>(
     idSets.map(({ date, ids }) => [date, new Set(ids)]),
   );
