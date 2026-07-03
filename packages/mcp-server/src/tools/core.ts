@@ -213,7 +213,9 @@ export const coreTools = [
     schema: {
       metric: z
         .string()
-        .describe("Metric ID (e.g. home_value, rent_index, unemployment_rate)"),
+        .describe(
+          "Metric ID (e.g. home_value, rent_index, unemployment_rate; Redfin Data Center: sold_above_list_share, listings_delisted_share, pending_cancellation_share, investor_market_share, all_cash_share)",
+        ),
       geography: z
         .enum(["state", "metro", "county", "zip"])
         .describe("Geography level"),

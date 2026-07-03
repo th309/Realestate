@@ -209,7 +209,7 @@ describe('ContentDataService', () => {
     });
     expect(r.history).toHaveLength(12);
     expect(r.score).toBe(72);
-    expect(r.label).toBe('GOOD');
+    expect(r.label).toBe('RISING');
     expect(r.confidence_level).toBe('A');
     expect(scoring.getScore).toHaveBeenCalledWith('35620', 'metro', undefined, {
       historyMonths: 12,
@@ -223,6 +223,7 @@ describe('ContentDataService', () => {
       canonical_name: 'California',
     });
     expect(r.score).toBe(0);
+    expect(r.label).toBe('Unrated');
     expect(r.confidence_level).toBe('F');
     expect(scoring.getScore).not.toHaveBeenCalled();
   });

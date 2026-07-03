@@ -74,6 +74,15 @@ export const PIPELINES: ImportPipeline[] = [
     command: "npx tsx scripts/sources/redfin/import-redfin.ts",
     size: "large",
   },
+  // Redfin Data Center — monthly CSVs: housing market, price drops, contract
+  // cancellations, delistings/relistings, investors, cash/loan, buyers/sellers,
+  // RHPI. The go-forward Redfin source (redfin_* market tracker is frozen).
+  {
+    id: "redfin-data-center",
+    name: "Redfin Data Center",
+    command: "npx tsx scripts/sources/redfin-data-center/import-redfin-dc.ts",
+    size: "large",
+  },
 ];
 
 /** Timeout per size category (ms) */

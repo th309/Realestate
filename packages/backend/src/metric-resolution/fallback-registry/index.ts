@@ -37,6 +37,7 @@ import { briefingAliasMetrics } from './briefing-aliases';
 import { employmentMetrics } from './employment';
 import { permitsAndQcewMetrics } from './permits-qcew';
 import { migrationMetrics } from './migration';
+import { redfinDataCenterMetrics } from './redfin-data-center';
 
 export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   ...priceMetrics,
@@ -53,6 +54,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
   ...employmentMetrics,
   ...permitsAndQcewMetrics,
   ...migrationMetrics,
+  ...redfinDataCenterMetrics,
 };
 
 /** Get a fallback chain for a metric, or null if not registered. */

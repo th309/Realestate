@@ -165,6 +165,27 @@ export async function fetchMarketMetrics(
           metricId: 'demand_score',
           field: 'demand_score',
         });
+      // Inventory/activity metrics the default snapshot column maps don't emit.
+      // These live in Redfin (months_of_supply, avg_sale_to_list, migration
+      // net_inflow) and calculated_metrics, and were previously always null in
+      // the report context — the AI then narrated them as "missing" even though
+      // the data exists in the DB. Redfin is a legitimate report/display source
+      // (only the PIQ score stays Redfin-free), so resolve them via the registry.
+      if (metrics.months_of_supply == null)
+        fallbackTargets.push({
+          metricId: 'months_of_supply',
+          field: 'months_of_supply',
+        });
+      if (metrics.sale_to_list_ratio == null)
+        fallbackTargets.push({
+          metricId: 'sale_to_list',
+          field: 'sale_to_list_ratio',
+        });
+      if (metrics.net_migration == null)
+        fallbackTargets.push({
+          metricId: 'net_migration',
+          field: 'net_migration',
+        });
 
       if (fallbackTargets.length > 0) {
         try {

@@ -12,6 +12,16 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     ],
     "supportsGeoInheritance": false,
   },
+  "all_cash_share": {
+    "metricId": "all_cash_share",
+    "sources": [
+      {
+        "column": "percent_all_cash",
+        "source": "redfin_dc_cash_loan",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
   "appreciation_yoy": {
     "metricId": "appreciation_yoy",
     "sources": [
@@ -464,6 +474,16 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     ],
     "supportsGeoInheritance": false,
   },
+  "investor_market_share": {
+    "metricId": "investor_market_share",
+    "sources": [
+      {
+        "column": "investor_market_share",
+        "source": "redfin_dc_investors",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
   "irs_migration_in_avg_agi": {
     "metricId": "irs_migration_in_avg_agi",
     "sources": [
@@ -558,6 +578,16 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     ],
     "supportsGeoInheritance": false,
   },
+  "listings_delisted_share": {
+    "metricId": "listings_delisted_share",
+    "sources": [
+      {
+        "column": "share_of_listings_delisted",
+        "source": "redfin_dc_delistings",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
   "market_heat": {
     "metricId": "market_heat",
     "sources": [
@@ -606,11 +636,11 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "sources": [
       {
         "column": "months_of_supply",
-        "source": "redfin",
+        "source": "calculated",
       },
       {
         "column": "months_of_supply",
-        "source": "calculated",
+        "source": "redfin",
       },
     ],
     "supportsGeoInheritance": false,
@@ -696,6 +726,16 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
       {
         "column": "overvalued_pct",
         "source": "calculated",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "pending_cancellation_share": {
+    "metricId": "pending_cancellation_share",
+    "sources": [
+      {
+        "column": "percent_of_pending_sales",
+        "source": "redfin_dc_cancellations",
       },
     ],
     "supportsGeoInheritance": false,
@@ -926,6 +966,14 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "sale_to_list",
     "sources": [
       {
+        "column": "average_sale_to_list_ratio",
+        "geoLevels": [
+          "county",
+          "zip",
+        ],
+        "source": "redfin_dc",
+      },
+      {
         "column": "sale_to_list",
         "source": "zillow",
         "transform": [Function],
@@ -933,6 +981,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
       {
         "column": "avg_sale_to_list",
         "source": "redfin",
+        "transform": [Function],
       },
     ],
     "supportsGeoInheritance": false,
@@ -946,6 +995,16 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
           "county",
         ],
         "source": "permits",
+      },
+    ],
+    "supportsGeoInheritance": false,
+  },
+  "sold_above_list_share": {
+    "metricId": "sold_above_list_share",
+    "sources": [
+      {
+        "column": "share_sold_above_original_list",
+        "source": "redfin_dc",
       },
     ],
     "supportsGeoInheritance": false,
@@ -1006,6 +1065,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
 exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set 1`] = `
 [
   "affordable_home_price",
+  "all_cash_share",
   "appreciation_yoy",
   "cap_rate",
   "cost_of_living",
@@ -1042,6 +1102,7 @@ exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set
   "inventory",
   "inventory_surplus",
   "inventory_yoy",
+  "investor_market_share",
   "irs_migration_in_avg_agi",
   "irs_migration_in_exemptions",
   "irs_migration_in_returns",
@@ -1051,6 +1112,7 @@ exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set
   "irs_migration_out_returns",
   "job_growth",
   "listing_price",
+  "listings_delisted_share",
   "market_heat",
   "median_age",
   "median_income",
@@ -1063,6 +1125,7 @@ exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set
   "new_listings",
   "new_listings_yoy",
   "overvalued_pct",
+  "pending_cancellation_share",
   "pending_listings",
   "pending_ratio",
   "permits_growth",
@@ -1084,6 +1147,7 @@ exports[`FALLBACK_REGISTRY characterization matches the registered metric ID set
   "rent_to_price_ratio",
   "sale_to_list",
   "sf_permits",
+  "sold_above_list_share",
   "supply_score",
   "total_permits",
   "unemployment_rate",

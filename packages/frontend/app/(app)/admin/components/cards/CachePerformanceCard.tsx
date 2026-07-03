@@ -38,13 +38,27 @@ export function CachePerformanceCard({
 
   const rows = data ?? [];
   const latest = rows.length > 0 ? rows[rows.length - 1] : null;
-  const hitRateSparkline = rows.map((r) => r.hit_rate * 100);
 
-  const hitRatePct = latest ? (latest.hit_rate * 100).toFixed(1) : "\u2014";
-  const badgeColor = latest
-    ? latest.hit_rate >= 0.9
+  // hit_rate is stored as a fraction (0..1); clamp the derived percentage to
+  // [0,100] as a display safety net against any legacy rows that stored a
+  // 0..100 value.
+  const toPct = (fraction: number) =>
+    Math.min(100, Math.max(0, fraction * 100));
+  const hitRateSparkline = rows.map((r) => toPct(r.hit_rate));
+
+  // A latest row with zero hits AND zero misses means no cache activity was
+  // sampled (Redis unavailable, or a cold process). Reporting "0.0%" there is
+  // misleading \u2014 show a no-data state instead.
+  const hasActivity =
+    latest !== null && latest.hit_count + latest.miss_count > 0;
+
+  const hitRatePct = hasActivity
+    ? toPct(latest!.hit_rate).toFixed(1)
+    : "\u2014";
+  const badgeColor = hasActivity
+    ? latest!.hit_rate >= 0.9
       ? "bg-green-500/10 text-green-700"
-      : latest.hit_rate >= 0.7
+      : latest!.hit_rate >= 0.7
         ? "bg-amber-500/10 text-amber-700"
         : "bg-red-500/10 text-red-700"
     : "bg-surface-container text-on-surface-variant";
@@ -54,13 +68,15 @@ export function CachePerformanceCard({
       title="Cache Performance"
       icon={HardDrive}
       badge={
-        latest ? { text: `${hitRatePct}% hit`, color: badgeColor } : undefined
+        hasActivity
+          ? { text: `${hitRatePct}% hit`, color: badgeColor }
+          : undefined
       }
       loading={isLoading}
       error={error?.message ?? null}
       onClick={onClick}
     >
-      {latest ? (
+      {hasActivity ? (
         <div className="space-y-3">
           <div className="flex items-end justify-between">
             <div>
@@ -79,14 +95,14 @@ export function CachePerformanceCard({
             />
           </div>
           <div className="flex justify-between text-xs text-on-surface-variant">
-            <span>{latest.keys_count.toLocaleString()} keys</span>
-            <span>{formatBytes(latest.memory_used_bytes)}</span>
-            <span>{latest.eviction_count} evictions</span>
+            <span>{latest!.keys_count.toLocaleString()} keys</span>
+            <span>{formatBytes(latest!.memory_used_bytes)}</span>
+            <span>{latest!.eviction_count} evictions</span>
           </div>
         </div>
       ) : (
         <p className="text-xs text-on-surface-variant">
-          No cache metrics recorded
+          No cache activity recorded
         </p>
       )}
     </DashboardCard>

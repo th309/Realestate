@@ -46,7 +46,7 @@ export function HeroStatsRow({ refreshTrigger }: HeroStatsRowProps) {
     new_this_week: 0,
     sparkline: [],
   };
-  const scores = stats.score_health ?? { hit_rate_1y: 0, sparkline: [] };
+  const scores = stats.score_health ?? { hit_rate_1y: null, sparkline: [] };
 
   // System Health
   const uptimeFormatted = `${(health.uptime_pct ?? 0).toFixed(1)}%`;

@@ -64,13 +64,16 @@ export const calculatedMetrics: Record<string, MetricFallbackChain> = {
     supportsGeoInheritance: false,
   },
 
-  // Legacy redfin column first; computed (new-format housing_market ->
-  // calculated_metrics) is the fallback so MoS survives legacy deprecation.
+  // calculated_metrics is the fresh, in-house source (refreshed by the monthly
+  // pipeline, keyed by true CBSA). The legacy redfin_metro table is FROZEN
+  // (Redfin stopped updating it) and its replacement redfin_dc_housing_market_*
+  // has no months_of_supply column, so calculated is primary; redfin stays only
+  // as a last-resort fallback for the handful of metros calculated doesn't cover.
   months_of_supply: {
     metricId: 'months_of_supply',
     sources: [
-      { source: 'redfin', column: 'months_of_supply' },
       { source: 'calculated', column: 'months_of_supply' },
+      { source: 'redfin', column: 'months_of_supply' },
     ],
     supportsGeoInheritance: false,
   },

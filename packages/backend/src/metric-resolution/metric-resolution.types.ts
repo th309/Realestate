@@ -14,6 +14,17 @@ export type DataSource =
   | 'zillow'
   | 'realtor'
   | 'redfin'
+  // Redfin Data Center monthly housing-market tables (redfin_dc_housing_market_*).
+  // The go-forward Redfin source: `redfin` (redfin_*) is frozen and no longer
+  // updated. Keyed by region_id = CBSA (metro) / county FIPS (county) / ZIP (zip).
+  | 'redfin_dc'
+  // Additional Redfin Data Center dashboards (redfin_dc_<dashboard>_*), same
+  // region_id keying as redfin_dc. Full-geo (metro/county/zip): delistings,
+  // contract cancellations. Metro-only upstream: investors, cash/loan.
+  | 'redfin_dc_delistings'
+  | 'redfin_dc_cancellations'
+  | 'redfin_dc_investors'
+  | 'redfin_dc_cash_loan'
   | 'census'
   | 'economic'
   | 'calculated'

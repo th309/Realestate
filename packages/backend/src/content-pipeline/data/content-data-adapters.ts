@@ -4,6 +4,10 @@
  * facade's public content-data.types.ts shapes.
  */
 import type { ScoreResult } from '../../scoring/scoring.types';
+import {
+  getScoreMomentumLabel,
+  NO_SCORE_LABEL,
+} from '../../scoring/score-label.util';
 import type { MarketSnapshotResponse } from '../../market-snapshot/market-snapshot.service';
 import { GeoRef } from '../types';
 import {
@@ -11,21 +15,6 @@ import {
   PropertyIQScoreResult,
   ResolvedMarket,
 } from './content-data.types';
-
-/**
- * Map a numeric PropertyIQ score to its display label.
- * Mirrors the label table in CLAUDE.md section 9.
- */
-export function scoreLabel(score: number): string {
-  if (score >= 90) return 'EXCELLENT';
-  if (score >= 80) return 'GREAT';
-  if (score >= 70) return 'GOOD';
-  if (score >= 60) return 'FAIR';
-  if (score >= 50) return 'AVERAGE';
-  if (score >= 40) return 'BELOW AVG';
-  if (score >= 20) return 'POOR';
-  return 'VERY POOR';
-}
 
 /**
  * Placeholder PropertyIQScoreResult for geos with no score data
@@ -36,7 +25,7 @@ export function emptyPropertyIQScoreResult(geo: GeoRef): PropertyIQScoreResult {
     geo,
     score: 0,
     grade: 'N/A',
-    label: 'VERY POOR',
+    label: NO_SCORE_LABEL,
     confidence_pct: 0,
     confidence_level: 'F',
     history: [],
@@ -77,10 +66,8 @@ function pickLatLng(row: {
   latitude?: number | string | null;
   longitude?: number | string | null;
 }): Pick<ResolvedMarket, 'latitude' | 'longitude'> {
-  const lat =
-    row.latitude != null ? Number(row.latitude) : Number.NaN;
-  const lng =
-    row.longitude != null ? Number(row.longitude) : Number.NaN;
+  const lat = row.latitude != null ? Number(row.latitude) : Number.NaN;
+  const lng = row.longitude != null ? Number(row.longitude) : Number.NaN;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return {};
   }
@@ -209,7 +196,7 @@ export function adaptPropertyIQScore(
     geo,
     score: piq.score,
     grade: piq.grade,
-    label: scoreLabel(piq.score),
+    label: getScoreMomentumLabel(piq.score),
     confidence_pct: piq.confidence,
     confidence_level: piq.confidence_level,
     history,

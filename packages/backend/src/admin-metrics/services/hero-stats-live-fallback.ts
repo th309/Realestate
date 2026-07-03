@@ -181,16 +181,18 @@ export async function fallbackScoreStats(
     .not('excess_vs_state_1y', 'is', null);
 
   if (!outcomes || outcomes.length === 0) {
-    return { hit_rate_1y: 0, sparkline: [] };
+    return { hit_rate_1y: null, sparkline: [] };
   }
 
   const highScores = outcomes.filter((d) => d.score_value >= 70);
+  // hit_rate_1y is a fraction (0..1) — matching admin_score_snapshots and the
+  // hero card's `* 100` display. With no high-score outcomes there is nothing
+  // to measure, so return null (no data) rather than a misleading 0.
   const hit_rate_1y =
     highScores.length > 0
-      ? (highScores.filter((d) => d.excess_vs_state_1y > 0).length /
-          highScores.length) *
-        100
-      : 0;
+      ? highScores.filter((d) => d.excess_vs_state_1y > 0).length /
+        highScores.length
+      : null;
 
   return { hit_rate_1y, sparkline: [] };
 }

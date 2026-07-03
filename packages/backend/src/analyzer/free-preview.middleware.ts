@@ -48,6 +48,31 @@ export class FreePreviewMiddleware implements NestMiddleware {
     return Number.isFinite(n) ? n : null;
   }
 
+  /**
+   * Structural (non-cryptographic) JWT shape check: three non-empty base64url
+   * segments whose payload decodes to JSON carrying a string `sub` claim.
+   *
+   * This is a STRUCTURAL check, NOT signature verification — it rejects the
+   * trivial `Bearer <anything>` bypass but cannot detect a forged-yet-well-
+   * formed token. See `use()` for why full verification is out of scope here.
+   */
+  private looksLikeJwt(token: string): boolean {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const base64UrlSegment = /^[A-Za-z0-9_-]+$/;
+    if (!parts.every((p) => p.length > 0 && base64UrlSegment.test(p))) {
+      return false;
+    }
+    try {
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64url').toString('utf8'),
+      ) as { sub?: unknown };
+      return typeof payload.sub === 'string' && payload.sub.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   use(
     req: Request & { user?: { id: string } },
     res: Response,
@@ -56,16 +81,22 @@ export class FreePreviewMiddleware implements NestMiddleware {
     // NestJS executes middleware BEFORE guards, so `req.user` is never
     // populated here — even for authenticated requests. The frontend always
     // sends `Authorization: Bearer <jwt>` for logged-in users (see
-    // `packages/frontend/lib/data/fetchers/auth-headers.ts`). Treat presence
-    // of that header as "authenticated, skip the quota". The endpoint's
-    // payload is non-sensitive aggregate market data — no real risk in
-    // letting a malformed token bypass the cap (worst case is they still
-    // burn through their own cookie quota on the next anonymous call).
+    // `packages/frontend/lib/data/fetchers/auth-headers.ts`), so we inspect the
+    // Bearer token directly to decide whether to skip the quota.
+    //
+    // We only STRUCTURALLY validate the token (see `looksLikeJwt`), not its
+    // signature. The codebase's real verifier (JwtAuthGuard -> supabase.auth
+    // .getUser) is a network call; putting a Supabase Auth round-trip on every
+    // authenticated market-context request is disproportionate for a soft
+    // growth cap over non-sensitive aggregate market data. This closes the
+    // trivial prefix-only bypass (`Bearer x`) — worst case, a forged-but-well-
+    // formed token still gets unmetered access to public aggregates.
     const authHeader = req.headers.authorization ?? req.headers.Authorization;
-    if (
-      req.user?.id ||
-      (typeof authHeader === 'string' && authHeader.startsWith('Bearer '))
-    ) {
+    const bearerToken =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.slice('Bearer '.length).trim()
+        : null;
+    if (req.user?.id || (bearerToken && this.looksLikeJwt(bearerToken))) {
       return next();
     }
 

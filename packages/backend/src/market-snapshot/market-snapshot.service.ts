@@ -200,9 +200,20 @@ export class MarketSnapshotService {
     geoId: string,
     toMetric: ToMetric,
   ): Promise<void> {
-    const fallbackMetrics = ['home_sales', 'rent_index'].filter(
-      (m) => !acc.metrics[m],
-    );
+    // home_sales/rent_index: fill from the resolution layer when a dedicated
+    // fetcher missed them. The redfin_dc_* display metrics have no dedicated
+    // fetcher, so always resolve them here so the markets cards match the map's
+    // Redfin Data Center metrics. Metro-only ones (investor/all-cash) resolve to
+    // null off-metro and are skipped below.
+    const fallbackMetrics = [
+      'home_sales',
+      'rent_index',
+      'sold_above_list_share',
+      'listings_delisted_share',
+      'pending_cancellation_share',
+      'investor_market_share',
+      'all_cash_share',
+    ].filter((m) => !acc.metrics[m]);
     if (fallbackMetrics.length === 0) return;
     try {
       const resolved = await this.metricResolution.resolveMetricBatch(

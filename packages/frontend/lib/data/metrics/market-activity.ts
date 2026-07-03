@@ -123,4 +123,46 @@ export const MARKET_ACTIVITY_METRICS: Record<string, MetricConfig> = {
     asPercent: true,
     favorableDirection: "lower",
   },
+
+  sold_above_list_share: {
+    id: "sold_above_list_share",
+    title: "Sold Above List %",
+    format: "percent_abs",
+    dataSource: "redfin",
+    apiEndpoint: "/api/metrics/redfin-dc/sold_above_list_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county", "zip"],
+    hasTimeSeries: false,
+    favorableDirection: "neutral",
+    coverageNote:
+      "Redfin Data Center reports metro-level figures for major metros only; county and ZIP coverage is broad.",
+  },
+
+  listings_delisted_share: {
+    id: "listings_delisted_share",
+    title: "Delisting Share %",
+    format: "percent_abs",
+    dataSource: "redfin",
+    apiEndpoint: "/api/metrics/redfin-dc/listings_delisted_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county", "zip"],
+    hasTimeSeries: false,
+    favorableDirection: "neutral",
+    coverageNote:
+      "Redfin Data Center reports metro-level figures for major metros only; county and ZIP coverage is broad.",
+  },
+
+  pending_cancellation_share: {
+    id: "pending_cancellation_share",
+    title: "Sale Cancellation %",
+    format: "percent_abs",
+    dataSource: "redfin",
+    apiEndpoint: "/api/metrics/redfin-dc/pending_cancellation_share/{geo}",
+    keyField: "auto",
+    supportedGeos: ["metro", "county", "zip"],
+    hasTimeSeries: false,
+    favorableDirection: "neutral",
+    coverageNote:
+      "Redfin Data Center reports metro-level figures for major metros only; county and ZIP coverage is broad.",
+  },
 };

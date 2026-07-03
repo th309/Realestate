@@ -67,7 +67,7 @@ export class HeroStatsService {
       score_health:
         scores.status === 'fulfilled'
           ? scores.value
-          : { hit_rate_1y: 0, sparkline: [] },
+          : { hit_rate_1y: null, sparkline: [] },
     };
   }
 
@@ -210,7 +210,10 @@ export class HeroStatsService {
 
     if (!error && data?.length) {
       const latest = data[0];
-      const hit_rate_1y = latest.hit_rate_1y ?? 0;
+      // Preserve null (no validation data for that snapshot) instead of
+      // coercing to 0 — a 0 renders as a misleading "0% hit rate", whereas
+      // null lets the hero card show a no-data state ("—").
+      const hit_rate_1y = latest.hit_rate_1y ?? null;
       const sparkline = buildDailySparkline(
         data as Array<{ timestamp: string; hit_rate_1y: number | null }>,
         (r) => r.hit_rate_1y,

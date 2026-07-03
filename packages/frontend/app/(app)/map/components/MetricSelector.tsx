@@ -33,7 +33,15 @@ function getMetricCategory(metricId: string): string {
     return "AFFORDABILITY";
   }
   // Cash Flow metrics (Investor)
-  if (["cap_rate", "rent_index", "rent_for_houses"].includes(metricId)) {
+  if (
+    [
+      "cap_rate",
+      "rent_index",
+      "rent_for_houses",
+      "investor_market_share",
+      "all_cash_share",
+    ].includes(metricId)
+  ) {
     return "CASH FLOW";
   }
   // Local Economy metrics
@@ -61,6 +69,9 @@ function getMetricCategory(metricId: string): string {
       "price_increase_pct",
       "new_listings",
       "inventory_surplus",
+      "sold_above_list_share",
+      "listings_delisted_share",
+      "pending_cancellation_share",
     ].includes(metricId)
   ) {
     return "MARKET COMPETITION";

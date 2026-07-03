@@ -9,6 +9,18 @@
  */
 
 import { GeoLevel, DataSource, TableRoute } from './metric-resolution.types';
+import {
+  getRedfinDcRoute,
+  getRedfinDcDelistingsRoute,
+  getRedfinDcCancellationsRoute,
+  getRedfinDcInvestorsRoute,
+  getRedfinDcCashLoanRoute,
+  getRedfinMigrationRoute,
+} from './table-routes-redfin';
+
+// Re-exported so existing `import { getRedfinRoute } from './table-routes'`
+// call sites (source-fetcher) keep working after the redfin split.
+export { getRedfinRoute } from './table-routes-redfin';
 
 export function getWideTableRoute(
   source: DataSource,
@@ -27,6 +39,16 @@ export function getWideTableRoute(
       return getQcewRoute(geoLevel);
     case 'ces':
       return getCesRoute(geoLevel);
+    case 'redfin_dc':
+      return getRedfinDcRoute(geoLevel);
+    case 'redfin_dc_delistings':
+      return getRedfinDcDelistingsRoute(geoLevel);
+    case 'redfin_dc_cancellations':
+      return getRedfinDcCancellationsRoute(geoLevel);
+    case 'redfin_dc_investors':
+      return getRedfinDcInvestorsRoute(geoLevel);
+    case 'redfin_dc_cash_loan':
+      return getRedfinDcCashLoanRoute(geoLevel);
     case 'redfin_migration':
       return getRedfinMigrationRoute(geoLevel);
     case 'irs':
@@ -61,43 +83,6 @@ export function getZillowRoute(geoLevel: GeoLevel): TableRoute | null {
         table: 'zillow_state',
         idColumn: 'state_code',
         dateColumn: 'period_date',
-      };
-    default:
-      return null;
-  }
-}
-
-export function getRedfinRoute(geoLevel: GeoLevel): TableRoute | null {
-  switch (geoLevel) {
-    case 'national':
-      return {
-        table: 'redfin_national',
-        idColumn: 'region_name',
-        dateColumn: 'period_end',
-      };
-    case 'state':
-      return {
-        table: 'redfin_state',
-        idColumn: 'state_code',
-        dateColumn: 'period_end',
-      };
-    case 'metro':
-      return {
-        table: 'redfin_metro',
-        idColumn: 'cbsa_code',
-        dateColumn: 'period_end',
-      };
-    case 'county':
-      return {
-        table: 'redfin_county',
-        idColumn: 'fips_code',
-        dateColumn: 'period_end',
-      };
-    case 'zip':
-      return {
-        table: 'redfin_zip',
-        idColumn: 'zip_code',
-        dateColumn: 'period_end',
       };
     default:
       return null;
@@ -258,15 +243,6 @@ export function getCesRoute(geoLevel: GeoLevel): TableRoute | null {
     default:
       return null;
   }
-}
-
-export function getRedfinMigrationRoute(geoLevel: GeoLevel): TableRoute | null {
-  if (geoLevel !== 'metro') return null;
-  return {
-    table: 'redfin_migration_metro',
-    idColumn: 'cbsa_code',
-    dateColumn: 'period_date',
-  };
 }
 
 export function getIrsRoute(geoLevel: GeoLevel): TableRoute | null {
