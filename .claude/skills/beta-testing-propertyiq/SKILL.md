@@ -263,11 +263,11 @@ Quick HTTP checks before walking the UI. Failures here usually indicate environm
 
 Two surfaces are **flag-gated OFF by default**. A tester on a clean env sees the OLD experience and will wrongly report the new ones as "missing":
 
-| Flag | Default | Enables | Where |
-|---|---|---|---|
-| `LANDING_EXPERIMENT` | OFF | 8-beat landing funnel (`/` → `/home-v2` rewrite). `off`\|`preview`\|`ab:<n>`\|`on`. `?landing=v2` forces variant B. | frontend env |
-| `NEXT_PUBLIC_CINEMATIC_ZOOM` | OFF | satellite/3D/spotlight map zoom on geo selection (must equal `"true"`) | frontend env |
-| `RUN_CRONS` | OFF | all scheduled jobs (don't expect drip emails / revalidation locally without it) | backend env |
+| Flag                         | Default | Enables                                                                                                             | Where        |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `LANDING_EXPERIMENT`         | OFF     | 8-beat landing funnel (`/` → `/home-v2` rewrite). `off`\|`preview`\|`ab:<n>`\|`on`. `?landing=v2` forces variant B. | frontend env |
+| `NEXT_PUBLIC_CINEMATIC_ZOOM` | OFF     | satellite/3D/spotlight map zoom on geo selection (must equal `"true"`)                                              | frontend env |
+| `RUN_CRONS`                  | OFF     | all scheduled jobs (don't expect drip emails / revalidation locally without it)                                     | backend env  |
 
 To test the new landing: set `LANDING_EXPERIMENT=on` (or visit `/home-v2` / `/?landing=v2` directly). To test cinematic zoom: `NEXT_PUBLIC_CINEMATIC_ZOOM=true`. If you can't set env, test variant B at `/home-v2` (always noindex).
 
@@ -420,13 +420,14 @@ Test on blog posts and metro pages:
 
 ### 3.5.3 Spotlight Tour (Steps 1-3)
 
-| Step | Lands on | Spotlight target | Continue advances to |
-|---|---|---|---|
-| 1 | `/map?tour=step1&...` | `[data-tour="search-bar"]` | `/market/<geoId>?tour=step2&...` |
-| 2 | `/market/[id]?tour=step2&...` | `[data-tour="propertyiq-score"]` | `/compare/markets?tour=step3&...` |
-| 3 | `/compare/markets?tour=step3&a=...` | `[data-tour="compare-grid"]` | `/tour?phase=step4&...` |
+| Step | Lands on                            | Spotlight target                 | Continue advances to              |
+| ---- | ----------------------------------- | -------------------------------- | --------------------------------- |
+| 1    | `/map?tour=step1&...`               | `[data-tour="search-bar"]`       | `/market/<geoId>?tour=step2&...`  |
+| 2    | `/market/[id]?tour=step2&...`       | `[data-tour="propertyiq-score"]` | `/compare/markets?tour=step3&...` |
+| 3    | `/compare/markets?tour=step3&a=...` | `[data-tour="compare-grid"]`     | `/tour?phase=step4&...`           |
 
 For each step:
+
 - `BreathingSpotlight` overlay with cutout on the target element
 - `ConnectedTooltip` with persona-specific copy (agent/investor/homebuyer)
 - Click target OR Continue button advances; ✕ dismisses tour to `/`
@@ -458,6 +459,7 @@ For each step:
 ### 3.5.5 Limited-Data Resilience
 
 For each section, simulate `limitedData=true` (or fetch a tiny ZIP that has no data):
+
 - Each section's `Section` wrapper still renders title + numbered chip
 - Body shows graceful "Limited data available for this market" message
 - No layout break, no React error
@@ -547,6 +549,7 @@ Key paywall surfaces to check:
 - Map quick actions: Lock icon on Favorite + Report buttons for free users
 - Graphs AI insights: EntitlementGate + InsightsPaywall
 - Score cards: ScorePaywall when scores locked
+- Score breakdown/component view: `ScoreBreakdownGate` (NEW 2026-07 sync) — verify gating on the per-input z-score breakdown
 - Markets to Watch: ContextualUpgradeCTA for recommendations
 - Save Market button: ContextualUpgradeCTA for watchlist limit
 
@@ -746,6 +749,7 @@ All issues submitted during this test session should appear here. Verify:
 Header links (including Blog + the "Compare" link in the More dropdown), browser back, deep links.
 
 **Mobile nav overhaul (since 2026-05-04):**
+
 - The old bottom tab bar (`MobileNav`) is **deleted**. Mobile nav is now a right slide-out **drawer** (`MobileMenu`, hamburger): verify focus-trap, Esc + scrim close, pinned account/sign-out, drawer covers the score ticker (z-60).
 - **GlobalBreadcrumbs** render once below the header on all non-full-screen routes (excluded: `/map`, `/embed/*`, `/auth/*`, `/tour`, onboarding, `/reports/builder`, `/market/*`, `/home-v2`, `/`). Verify the trail is correct, numeric IDs are skipped, and it's hidden on the excluded routes.
 - **Scroll-lock:** opening the drawer OR the analyzer mobile input sheet locks body scroll; both-open must not prematurely unlock (ref-counted).
@@ -753,6 +757,8 @@ Header links (including Blog + the "Compare" link in the More dropdown), browser
 ### Comparison Report v3 (`/reports/[id]`)
 
 Build a 2–3 market comparison from `/reports` (like-geo restriction filters the dropdown after the first pick; max 5; `>1` → comparison). Verify `ComparisonReportV3`: scoreboard shows **all** markets' live scores (no "—"/"No Score"), winner Trophy correct, synthesis references all markets, verdict badge + actions render (never "insufficient data"), all-market news grouped top-3 each, per-market PillTabs each render a full single-market report.
+
+**NEW 2026-07 sync:** the old `ComparisonSummaryV3.tsx` was deleted and replaced by three components — `ComparisonDeepDiveAccordion.tsx`, `ComparisonMetricTable.tsx`, `ComparisonVerdictHeader.tsx` — plus a new parallel "flash" report generation path and a seeded AI purpose `report_narrative_comparison`. Spot-check that the accordion/metric-table/verdict-header render correctly and that flash generation doesn't regress the synthesis quality checks above.
 
 ### Tour Persona Finales
 
@@ -833,15 +839,16 @@ State → Metro → County → ZIP: data, legend, colors update correctly. If `N
 
 Full coverage is impractical. Sample-based smoke covering each route type:
 
-| Slug type | Sample URL | Verify |
-|---|---|---|
-| Metro | `/markets/[slug]` (e.g. `/markets/charlotte-nc`) | SSG renders, ScoreWidget loads, JSON-LD Place valid |
-| County | `/markets/county/[slug]` (e.g. `/markets/county/mecklenburg-nc`) | SSG renders, county-level scores, canonical present |
-| ZIP | `/markets/zip/[slug]` (e.g. `/markets/zip/28202`) | SSG renders, ZIP-level data or graceful fallback |
-| State | `/markets/state/[state]` (e.g. `/markets/state/north-carolina`) | SSG renders, list of metros in that state |
-| State index | `/markets/state` | SSG renders, links to all 50 state pages |
+| Slug type   | Sample URL                                                       | Verify                                              |
+| ----------- | ---------------------------------------------------------------- | --------------------------------------------------- |
+| Metro       | `/markets/[slug]` (e.g. `/markets/charlotte-nc`)                 | SSG renders, ScoreWidget loads, JSON-LD Place valid |
+| County      | `/markets/county/[slug]` (e.g. `/markets/county/mecklenburg-nc`) | SSG renders, county-level scores, canonical present |
+| ZIP         | `/markets/zip/[slug]` (e.g. `/markets/zip/28202`)                | SSG renders, ZIP-level data or graceful fallback    |
+| State       | `/markets/state/[state]` (e.g. `/markets/state/north-carolina`)  | SSG renders, list of metros in that state           |
+| State index | `/markets/state`                                                 | SSG renders, links to all 50 state pages            |
 
 For each sample:
+
 - Page renders without React error / 500
 - `<title>` and `<meta name="description">` populated and unique
 - JSON-LD schema validates (use `https://search.google.com/test/rich-results` or `<script type="application/ld+json">` regex check)
@@ -852,14 +859,14 @@ For each sample:
 
 ### 11.8 Newsletter & Lead-Magnet Pages
 
-| Route | Verify |
-|---|---|
-| `/newsletter` | Signup form, double opt-in flow (currently missing — P2) |
-| `/grade-reveal-signup` | Signup-gated reveal screen renders, CTA works |
-| `/farm-area-audit` | Form renders, submit returns success state |
-| `/movers-report` | Form renders, MCP `monthly_market_update_email` integration |
-| `/top-cashflow-report` | Form renders, list rendering |
-| `/dashboard/magnets` (auth-gated) | Lead-magnet library loads, downloads work |
+| Route                             | Verify                                                      |
+| --------------------------------- | ----------------------------------------------------------- |
+| `/newsletter`                     | Signup form, double opt-in flow (currently missing — P2)    |
+| `/grade-reveal-signup`            | Signup-gated reveal screen renders, CTA works               |
+| `/farm-area-audit`                | Form renders, submit returns success state                  |
+| `/movers-report`                  | Form renders, MCP `monthly_market_update_email` integration |
+| `/top-cashflow-report`            | Form renders, list rendering                                |
+| `/dashboard/magnets` (auth-gated) | Lead-magnet library loads, downloads work                   |
 
 ---
 
@@ -872,6 +879,7 @@ Enterprise features are gated to Enterprise tier (or org-level access). Test wit
 Test the `export_csv` entitlement across all export surfaces. Switch tiers to verify gating.
 
 **Map Table View Export:**
+
 - Navigate to `/map` → select any metric → click "Table View" FAB (bottom-right)
 - Modal shows sortable data table with search
 - **Enterprise/Pro:** Footer shows "Export CSV" button with Download icon → click triggers `.csv` download
@@ -881,6 +889,7 @@ Test the `export_csv` entitlement across all export surfaces. Switch tiers to ve
 - Verify: CSV values match the table display values
 
 **Top Markets Export:**
+
 - Navigate to `/market` → "Top Markets" section
 - **Enterprise/Pro:** Export button appears in section header → click triggers CSV download of current rankings
 - **Free:** Export button shows Lock icon → click opens PaywallCard modal with "Unlock Data Export" title
@@ -890,6 +899,7 @@ Test the `export_csv` entitlement across all export surfaces. Switch tiers to ve
 - Change geo/score/state/limit filters → export reflects current filters
 
 **Market Dashboard Share & Download:**
+
 - Navigate to `/market/{id}` (e.g., `/market/31080?type=metro`)
 - **Share button** (Share2 icon): Click copies current URL to clipboard (all tiers)
 - **Download button:**
@@ -898,6 +908,7 @@ Test the `export_csv` entitlement across all export surfaces. Switch tiers to ve
 - Verify clipboard actually contains the correct URL after Share click
 
 **Reports Share & Export Modal:**
+
 - Navigate to `/reports` → open any report
 - Click Share button (Share2 icon) → ShareReportModal opens
 - **Copy share link:** Creates share token → copies URL → shows "Link copied!" → footer shows shared URL
@@ -912,6 +923,7 @@ Test the `export_csv` entitlement across all export surfaces. Switch tiers to ve
 ### 12.2 Platform API v1
 
 **API Documentation Page:**
+
 - Navigate to `/docs/api` — page loads without errors
 - Endpoint reference section lists all 7 platform API endpoints
 - Code examples section shows valid request/response examples
@@ -941,12 +953,16 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 | `GET /platform-api/v1/watchlist/:userId` | Watchlist items |
 
 **Rate Limiting:**
+
 - Send 25+ rapid requests → should get 429 after rate limit exceeded
 - Response should include rate limit headers
 
 **Response Envelope:**
+
 - All responses wrapped in `{ success: true, data: {...}, meta: {...} }` format
 - Error responses: `{ success: false, error: { code, message } }`
+
+**Score label check (P1 — Known Issue as of 2026-07-02):** Call `GET /platform-api/v1/scores/:geoLevel/:geoId` and inspect the `label` field. It currently returns quality-word labels (EXCELLENT/GREAT/GOOD/FAIR/AVERAGE/BELOW AVG/POOR/VERY POOR) from `scoreToLabel()` instead of the canonical momentum ladder (VERY STRONG/STRONG/RISING/FIRMING/STEADY/EASING/WEAK/VERY WEAK) used everywhere else in the product. This violates CLAUDE.md §9. Re-confirm this is still broken; if fixed, remove this line and the matching Known Issue entry.
 
 ### 12.3 API Key Management
 
@@ -955,6 +971,7 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 **Navigate to:** `/org/{slug}/admin/api-keys`
 
 **Key Lifecycle:**
+
 1. Click "Create API Key" → dialog opens
 2. Enter name, select scopes (metrics, scores, reports, watchlist)
 3. Submit → key displayed ONCE in a copy-able field
@@ -963,15 +980,18 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 6. Key appears in list with name, scopes, created date, last used
 
 **Scope Enforcement:**
+
 - Create key with only "metrics" scope
 - Use key to call `/platform-api/v1/metrics/...` → 200
 - Use key to call `/platform-api/v1/scores/...` → 403 (out of scope)
 
 **Key Revocation:**
+
 - Click revoke on a key → confirm → key removed from list
 - Use revoked key → 401
 
 **Auth Guard:**
+
 - Invalid key format → 401
 - Missing header → 401
 - Expired/revoked key → 401
@@ -981,25 +1001,28 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 **Prerequisites:** Organization with branding configured.
 
 **Embed Token Management (`/org/{slug}/admin/embeds`):**
+
 1. Create embed token → dialog with type selection (score, metric-card, map)
 2. Token created → code snippet shown (copy-able `<iframe>` or `<script>` tag)
 3. Token appears in list with type, creation date, status
 
 **Widget Rendering (test in browser):**
 
-| Widget | URL | Verify |
-|---|---|---|
-| Score | `/embed/score/{geoLevel}/{geoId}?token={token}` | Score ring renders with correct value |
-| Metric Card | `/embed/metric-card/{metricId}/{geoLevel}/{geoId}?token={token}` | Metric value + formatting correct |
-| Mini Map | `/embed/map/{geoLevel}?token={token}` | Mapbox map renders with controls |
+| Widget      | URL                                                              | Verify                                |
+| ----------- | ---------------------------------------------------------------- | ------------------------------------- |
+| Score       | `/embed/score/{geoLevel}/{geoId}?token={token}`                  | Score ring renders with correct value |
+| Metric Card | `/embed/metric-card/{metricId}/{geoLevel}/{geoId}?token={token}` | Metric value + formatting correct     |
+| Mini Map    | `/embed/map/{geoLevel}?token={token}`                            | Mapbox map renders with controls      |
 
 **For each widget:**
+
 - Valid token → widget renders with data
 - Invalid/missing token → error state shown (not a crash)
 - Custom branding applied (logo, accent color from org branding)
 - Widget is self-contained (no navigation links to PropertyIQ app)
 
 **CORS Verification:**
+
 - Widget must be loadable in an `<iframe>` on a different domain
 - Check response headers for `Access-Control-Allow-Origin`
 
@@ -1008,16 +1031,19 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 **Navigate to:** `/org/{slug}/admin/branding`
 
 **Logo Upload:**
+
 - Upload PNG/JPG → preview updates → logo appears in branding preview
 - Upload SVG → should be REJECTED (XSS prevention)
 - Upload oversized file → should show error
 - Delete logo → preview reverts to default
 
 **Accent Color:**
+
 - Select color via picker → preview updates in real-time
 - Color applies to: embed widgets, branded report headers
 
 **Branding on Reports:**
+
 - Generate a report while org branding is configured
 - Report header should show custom logo and accent color
 - Shared report (via token) should also show branding
@@ -1026,28 +1052,31 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 
 **Navigate through each sub-page and verify access control:**
 
-| Page | URL | Auth Required | Verify |
-|---|---|---|---|
-| Dashboard | `/org/{slug}/admin` | Org admin | Loads, shows org overview |
-| Billing | `/org/{slug}/admin/billing` | Org admin | Shows plan, checkout, portal links |
-| Members | `/org/{slug}/admin/members` | Org admin | Lists members, invite button, role change |
-| Branding | `/org/{slug}/admin/branding` | Org admin | Logo + color + preview (see 12.5) |
-| API Keys | `/org/{slug}/admin/api-keys` | Org admin | Key list + create (see 12.3) |
-| Audit | `/org/{slug}/admin/audit` | Org admin | Activity log with timestamps |
-| Embeds | `/org/{slug}/admin/embeds` | Org admin | Token list + create (see 12.4) |
+| Page      | URL                          | Auth Required | Verify                                    |
+| --------- | ---------------------------- | ------------- | ----------------------------------------- |
+| Dashboard | `/org/{slug}/admin`          | Org admin     | Loads, shows org overview                 |
+| Billing   | `/org/{slug}/admin/billing`  | Org admin     | Shows plan, checkout, portal links        |
+| Members   | `/org/{slug}/admin/members`  | Org admin     | Lists members, invite button, role change |
+| Branding  | `/org/{slug}/admin/branding` | Org admin     | Logo + color + preview (see 12.5)         |
+| API Keys  | `/org/{slug}/admin/api-keys` | Org admin     | Key list + create (see 12.3)              |
+| Audit     | `/org/{slug}/admin/audit`    | Org admin     | Activity log with timestamps              |
+| Embeds    | `/org/{slug}/admin/embeds`   | Org admin     | Token list + create (see 12.4)            |
 
 **Access Control Checks:**
+
 - Non-member accessing `/org/{slug}/admin` → should be blocked (403 or redirect)
 - Org member (non-admin) → can view branding but NOT create keys, invite members, or modify billing
 - Org admin → full access to all sub-pages
 
 **Member Management:**
+
 - Invite by email → invitation record created
 - Accept invite at `/org/invite/{token}` → user added to org
 - Change member role (admin ↔ member) → permissions update immediately
 - Remove member → member loses access
 
 **Organization Billing:**
+
 - View current plan
 - Checkout flow → Stripe (same pattern as individual billing)
 - Portal link → Stripe customer portal
@@ -1056,26 +1085,27 @@ curl -s -H "X-API-Key: {key}" http://localhost:3001/platform-api/v1/metrics/home
 
 Verify these features are ONLY available at the correct tiers:
 
-| Feature | Free | Pro | Enterprise |
-|---|---|---|---|
-| CSV Export (map, markets) | Lock icon | Works | Works |
-| Market Dashboard Download | Lock icon | Print dialog | Print dialog |
-| Report Share Link | Works | Works | Works |
-| Report PDF Download | Works | Works | Works |
-| Report CSV Export | Disabled | Shows but disabled* | Shows but disabled* |
-| Platform API v1 | N/A | N/A | Via API keys |
-| API Key Management | N/A | N/A | Via org admin |
-| Embeddable Widgets | N/A | N/A | Via org admin |
-| Organization Branding | N/A | N/A | Via org admin |
-| Organization Admin Portal | N/A | N/A | Via org admin |
+| Feature                   | Free      | Pro                  | Enterprise           |
+| ------------------------- | --------- | -------------------- | -------------------- |
+| CSV Export (map, markets) | Lock icon | Works                | Works                |
+| Market Dashboard Download | Lock icon | Print dialog         | Print dialog         |
+| Report Share Link         | Works     | Works                | Works                |
+| Report PDF Download       | Works     | Works                | Works                |
+| Report CSV Export         | Disabled  | Shows but disabled\* | Shows but disabled\* |
+| Platform API v1           | N/A       | N/A                  | Via API keys         |
+| API Key Management        | N/A       | N/A                  | Via org admin        |
+| Embeddable Widgets        | N/A       | N/A                  | Via org admin        |
+| Organization Branding     | N/A       | N/A                  | Via org admin        |
+| Organization Admin Portal | N/A       | N/A                  | Via org admin        |
 
-*Report CSV disabled in V1 — `reportData` not yet wired. Verify button renders but does nothing.
+\*Report CSV disabled in V1 — `reportData` not yet wired. Verify button renders but does nothing.
 
 ### 12.8 MCP Server + Personal API Keys (Pro tier — NEW since 2026-04)
 
 Personal API keys are distinct from org-level keys (12.3). They live on the user account at `/account/api-keys` and gate access to `/api/v1/*` plus the MCP server.
 
 **Personal API key CRUD (`/account/api-keys`):**
+
 - Free tier: PaywallCard with "Upgrade to Pro" CTA
 - Pro/Enterprise: full key management
 - Create key: dialog appears with scope checkboxes; on submit, key shown ONCE in plaintext (one-time reveal), masked after dismiss
@@ -1084,12 +1114,14 @@ Personal API keys are distinct from org-level keys (12.3). They live on the user
 - List page: shows last-4 of each key + last-used timestamp + scopes
 
 **Two-table validation:**
+
 - `user_api_keys` table for personal Pro keys
 - `org_api_keys` table for org Enterprise keys
 - Both validated against same `/api/v1/*` endpoints; tier check via Redis cache (30s TTL)
 - Submit P0 if a Free user can call `/api/v1/*` with any key
 
 **MCP device-code OAuth flow:**
+
 - User runs MCP client (Claude Desktop, Codex, etc.) → client requests device code
 - `POST /api/auth/device-code/start` returns `device_code` + `user_code` + verification URL
 - User visits `/activate` (UI for entering `user_code`) OR `/auth/mcp-authorize` (consent screen)
@@ -1098,6 +1130,7 @@ Personal API keys are distinct from org-level keys (12.3). They live on the user
 - Verify: device-code expiry — unused codes expire (default 10 min); poll after expiry returns 410
 
 **MCP server smoke (separate process):**
+
 - `packages/mcp-server` runs as standalone process with HTTP transport (Railway-deployed)
 - 12+ tools registered (search_markets, get_propertyiq_score, deal_analyzer, etc.)
 - Free tier: most tools return `tier_required: pro` error
@@ -1105,12 +1138,14 @@ Personal API keys are distinct from org-level keys (12.3). They live on the user
 - Verify: response schema matches MCP spec; tool descriptions accurate
 
 **Routes for this section:**
+
 - `/account/api-keys` (Pro auth-gated)
 - `/activate` (user enters MCP `user_code`)
 - `/auth/mcp-authorize` (consent screen)
 - `/docs/mcp` (public setup docs)
 
 **API endpoints:**
+
 - `POST /api/auth/device-code/start` — anon
 - `POST /api/auth/device-code/poll` — anon (rate-limited)
 - `POST /api/auth/device-code/approve` — auth-gated (consent)
@@ -1124,13 +1159,13 @@ The analyzer was **rebuilt from scratch**. Frontend `app/(app)/analyzer/`; share
 
 ### 13.1 Routes & Free-Preview Cap
 
-| Route | Auth | Verify |
-|---|---|---|
-| `/analyzer` | optional | Loads anon; free works; Pro unlocks RentCast + AI |
-| `/analyzer?address=<addr>` | optional | Auto-fires RentCast **only if Pro**; free sees prefilled field + must click Fetch (verify empty-state CTA points there) |
-| `/analyzer/saved/[id]` | JWT (NOT Pro) | Read-only saved snapshot |
-| `/shared/analysis/[token]` | public | PII stripped via RPC (no owner, no full address/lat-lon); org branding; `?print=1` = PDF source |
-| `/analyzer/dev/*` | optional | Dev chart playgrounds — **publicly routable in prod (P3)**, flag if reachable |
+| Route                      | Auth          | Verify                                                                                                                  |
+| -------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/analyzer`                | optional      | Loads anon; free works; Pro unlocks RentCast + AI                                                                       |
+| `/analyzer?address=<addr>` | optional      | Auto-fires RentCast **only if Pro**; free sees prefilled field + must click Fetch (verify empty-state CTA points there) |
+| `/analyzer/saved/[id]`     | JWT (NOT Pro) | Read-only saved snapshot                                                                                                |
+| `/shared/analysis/[token]` | public        | PII stripped via RPC (no owner, no full address/lat-lon); org branding; `?print=1` = PDF source                         |
+| `/analyzer/dev/*`          | optional      | Dev chart playgrounds — **publicly routable in prod (P3)**, flag if reachable                                           |
 
 **Free-preview cap:** anon lifetime **3** on `GET /api/analyzer/market-context` (HMAC `piq_analyzer_uses` cookie). 4th anon call → **HTTP 402** `{error:"free_quota_exceeded"}`. Any authed user (incl. admin) bypasses via `Authorization: Bearer` header. Tampered cookie → resets to 0. **Submit P1 if an authed/Pro/admin user is ever blocked by the quota** (the middleware-runs-before-guards bug class).
 
@@ -1194,7 +1229,7 @@ Route `/screener` (in `(app)` group → **auth required**; any signed-in user, f
 
 - Free = full ranked table, all filters/sort/presets, **movers tab**, Metro + County. Pro adds **ZIP geography** + **CSV export**.
 - **ZIP lock:** free user selecting ZIP → `GeoLockCard` ("ZIP Markets Require Pro"); query disabled.
-- **⚠️ KNOWN P1 — ZIP gate is frontend-only.** `GET /api/screener/zip` is a **public, ungated** endpoint (`screener_snapshot` has `GRANT SELECT TO anon`). A free user can pull ZIP data via direct API / the `/backend` proxy. Verify with `curl http://localhost:3001/api/screener/zip` (returns data with no auth). Decide whether ZIP screener should be Pro-enforced server-side.
+- **RESOLVED 2026-07-02 — ZIP gate is now Pro-enforced server-side** via `assertGeoAllowed()` + `PRO_TIERS` check in `screener.controller.ts`. Verify `curl http://localhost:3001/api/screener/zip` as a free/anon user now returns 401/403, not data. **Residual to verify live:** the underlying `screener_snapshot` table still has `GRANT SELECT TO anon` (migration `20260615111801`) with no confirmed `CREATE POLICY` despite RLS being enabled — if that grant is ever hit directly (bypassing the controller, e.g. a future direct-Supabase client), it would still leak ZIP data. Confirm with a direct anon-key REST probe against Supabase.
 - **CSV export** gated on `export_csv` entitlement — free sees disabled button + Lock; Pro downloads `screener-{geo}.csv` (12 cols incl. active-window `Score Δ`).
 
 ### 14.2 Table & Movers
@@ -1230,14 +1265,20 @@ curl -s https://www.propertyiq.app/.well-known/api-catalog            # RFC 9727
 curl -s https://www.propertyiq.app/.well-known/mcp/server-card.json   # SEP-1649 card
 curl -s https://www.propertyiq.app/.well-known/oauth-authorization-server  # RFC 8414 + agent_auth block
 curl -s https://www.propertyiq.app/.well-known/oauth-protected-resource    # RFC 9728
+curl -s https://www.propertyiq.app/.well-known/agent-card.json             # NEW 2026-07 sync — A2A card
+curl -s https://www.propertyiq.app/.well-known/agent-skills/index.json    # NEW 2026-07 sync — agent skills index
+curl -s https://www.propertyiq.app/agent-skills/{name}/SKILL.md            # NEW 2026-07 sync — per-skill markdown
 ```
 
 Verify:
-- All four return 200 + correct content-type (the rewrite for dot-prefixed paths works).
+
+- All four original endpoints return 200 + correct content-type (the rewrite for dot-prefixed paths works).
 - `server-card.json` on www == on mcp host for `serverInfo`, `transport.endpoint`, `authentication.metadata`.
-- **`agent_auth` block present** in BOTH `oauth-authorization-server` docs (www + mcp), all four sub-fields, `skill` → `https://www.propertyiq.app/auth.md`.
+- **`agent_auth` block present** in BOTH `oauth-authorization-server` docs (www + mcp), all four sub-fields, `skill` → `https://www.propertyiq.app/auth.md`. The `agent_auth` anonymous method is now WorkOS-backed — verify the flow still resolves.
 - On mcp host, `issuer` EXACTLY equals `https://mcp.propertyiq.app` (no trailing slash/port).
-- **⚠️ Version drift (P2):** www card `version` (`manifest.ts`) and mcp `SERVER_INFO.version` (`server-info.ts`) are independently hardcoded `0.2.0` — confirm they match; flag if they've drifted.
+- **⚠️ Version drift (P2 — mitigated but not eliminated):** www card `version` (`manifest.ts`) and mcp `SERVER_INFO.version` (`server-info.ts`) are independently hardcoded `0.2.0` — confirm they match; flag if they've drifted. A `version-sync.test.ts` now catches divergence locally, but frontend tests aren't in CI, so a live curl check is still worthwhile.
+- **NEW 2026-07 sync:** `/.well-known/agent-card.json` (A2A protocol) and `/.well-known/agent-skills/index.json` + per-skill `/agent-skills/:name/SKILL.md` — verify 200 + correct content-type, and that listed skills resolve.
+- **NEW 2026-07 sync:** client-side `WebMcpProvider` is mounted in the root `layout.tsx` — verify it doesn't throw or block hydration on any page.
 
 ### 15.2 `/auth.md` + Link header
 
@@ -1245,6 +1286,7 @@ Verify:
 curl -s https://www.propertyiq.app/auth.md | head -3        # text/markdown; H1 MUST literally contain "auth.md"
 curl -sI https://www.propertyiq.app/ | grep -i ^link        # rel="api-catalog" + rel="service-doc"
 ```
+
 The H1 containing "auth.md" is an audit-checker target — submit P1 if missing.
 
 ### 15.3 Markdown Content Negotiation
@@ -1259,6 +1301,7 @@ curl -s https://www.propertyiq.app/scores | head -1
 # Headers on markdown responses:
 curl -sI -H "Accept: text/markdown" https://www.propertyiq.app/pricing | grep -iE "content-type|vary|x-markdown-tokens"
 ```
+
 Honored routes: `/blog/[slug]`, `/scores/methodology`, and curated `/`, `/markets`, `/pricing`, `/scores`. Must carry `Vary: Accept`. Test methodology markdown in **prod** (file-tracing dependency → could 404 in prod while HTML still renders).
 
 ### 15.4 robots.txt + MCP host
@@ -1270,6 +1313,7 @@ curl -s https://mcp.propertyiq.app/mcp                                       # u
 curl -s https://mcp.propertyiq.app/api/openapi.json | head -c 200           # single invoke_tool + list_tools op
 curl -sI -H "Host: bogus.example" https://mcp.propertyiq.app/api/tools      # expect 421 (host allowlist; /health exempt)
 ```
+
 Also: bare apex `propertyiq.app/...` and the Railway alias should 301/308 → `www`.
 
 ---
@@ -1282,22 +1326,36 @@ Check `.claude/beta-test/change-log.md` for additional issues discovered by the 
 
 ### Security (P0)
 
-No outstanding P0 security issues (verified 2026-06-26). The 4 previously-unguarded admin routes (`ml-workflow`, `scores/validation`, `backtest-runs`, `ml-validation`) all now have `@UseGuards(AdminGuard)`. One endpoint *looks* unguarded but is correct by design — `GET /api/admin/content-pipeline/platforms/:platform/oauth-callback` (OAuth redirect URI, protected by HMAC-signed `verifyState()` with nonce + 10-min TTL); do NOT add a guard there (it would break the flow) and do NOT file it.
+No outstanding P0 security issues (verified 2026-07-02). The 4 previously-unguarded admin routes (`ml-workflow`, `scores/validation`, `backtest-runs`, `ml-validation`) all now have `@UseGuards(AdminGuard)`. Three endpoints _look_ unguarded but are correct by design — do NOT add a guard to these (it would break the flow) and do NOT file them:
+
+- `GET /api/admin/content-pipeline/platforms/:platform/oauth-callback` (OAuth redirect URI, protected by HMAC-signed `verifyState()` with nonce + 10-min TTL)
+- `GET /api/admin/content-pipeline/platforms/:platform/oauth-callback`'s sibling under the same controller — confirmed same protection
+- `GET /api/internal/short-links/*` (public redirect resolver by design, non-PII)
+
+### Discovered 2026-07-02 (Score Label Consistency — NEW)
+
+| Severity | Issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Where                                                                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1       | **Score labels still show the old quality-word ladder on two live surfaces**, violating CLAUDE.md §9's "never reintroduce quality words" rule. The frontend canonical source (`ScoreDisplay.tsx:116-140`) correctly implements the momentum ladder (VERY STRONG/STRONG/RISING/FIRMING/STEADY/EASING/WEAK/VERY WEAK), but: (1) the public **Platform API v1** `GET /api/v1/scores/:geoLevel/:geoId` returns a `label` field from `scoreToLabel()` using EXCELLENT/GREAT/GOOD/FAIR/AVERAGE/BELOW AVG/POOR/VERY POOR; (2) AI-generated content-pipeline copy uses the same old ladder via `scoreLabel()` (with a `'VERY POOR'` fallback default). Test the actual JSON during Phase 12.2 and spot-check generated content copy. | `packages/backend/src/platform-api/v1/scores.controller.ts:50-58`, `packages/backend/src/content-pipeline/data/content-data-adapters.ts:19-28,39` |
+| P3       | Cosmetic-only, no user impact: `ScoreDisplay-utilities.test.ts:100-138` asserts the old quality-word labels (would fail if the suite ran — frontend tests aren't in CI, so this fails silently); `EmbedScoreRing.tsx:52` has a stale JSDoc comment only (the actual render is correct).                                                                                                                                                                                                                                                                                                                                                                                                                                      | `app/components/scoring/__tests__/ScoreDisplay-utilities.test.ts`, `app/embed/components/EmbedScoreRing.tsx`                                      |
 
 ### Discovered 2026-06-26 (Analyzer v2 / Screener / Scoring / Agent-Discovery)
 
-| Severity | Issue | Where |
-|---|---|---|
-| P1 | **Screener ZIP gate is frontend-only.** `GET /api/screener/zip` is public/ungated (`screener_snapshot` `GRANT SELECT TO anon`); free/anon can pull ZIP data via direct API or the `/backend` proxy, bypassing the `GeoLockCard`. Decide whether ZIP screener should be Pro-enforced server-side. | `packages/backend/src/screener/screener.controller.ts` |
-| P1 | **Stale scoring version naming** vs the "no version numbers" rule. UI shows one unversioned score, but internals still say v3.0/v4. | `scoring/formula-weights.ts:643` (`FORMULA_VERSION='v3.0'`), `scoring.controller.ts:956`, `scoring.types.ts:156-163` |
-| P2 | **Analyzer NotesSection not persisted** — "Save" shows "Saved ✓" but notes + share toggle are dead local state (no `onSave` wired). | `app/(app)/analyzer/.../AnalyzerSections.tsx` |
-| P2 | **Two file-size hard-limit violations** (reports, pre-existing). | `app/(app)/reports/page.tsx` (1104), `reports/[id]/ReportViewer.tsx` (477) |
-| P2 | **Agent-discovery version drift risk** — www card + MCP server-info both hardcode `0.2.0` independently; www can report a stale MCP version. | `lib/agent-discovery/manifest.ts` + `mcp-server/src/lib/server-info.ts` |
-| P2 | **Screener has no UI freshness indicator**; empty/stale `screener_snapshot` renders a bare empty state on an email/onboarding activation landing. | `app/(app)/screener/*` |
-| P2 | **Tour `?next=` post-signup redirect not honored** past the market step. | `app/(app)/tour/page.tsx:55-58` |
-| P3 | **Analyzer dev playground routes** (`/analyzer/dev/*`) shipped + publicly routable in prod. | `app/(app)/analyzer/dev/*` |
-| P3 | **`screen_markets` checklist not auto-completed** by `screener_filter` (needs manual `POST /api/onboarding/checklist/screen_markets`). | onboarding checklist |
-| P3 | Files near limit: `analyzer.service.ts` 295/300, `InputPanel.tsx` 376/400, `CompsSection.tsx` 392/400, `ScreenerPageInner.tsx` 390/400, `lib/data/index.ts` 281/300 | various |
+| Severity | Issue                                                                                                                                        | Where                                                                   | Status                                                                                                                                                                                                                                      |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P2       | **Agent-discovery version drift risk** — www card + MCP server-info both hardcode `0.2.0` independently; www can report a stale MCP version. | `lib/agent-discovery/manifest.ts` + `mcp-server/src/lib/server-info.ts` | Mitigated 2026-07-02: `lib/agent-discovery/version-sync.test.ts` now fails the build if the two diverge — but frontend tests aren't wired into CI, so this is a local safety net, not a hard guarantee. Still worth a periodic manual diff. |
+| P3       | **Analyzer dev playground routes** (`/analyzer/dev/*`) shipped + publicly routable in prod.                                                  | `app/(app)/analyzer/dev/*`                                              | Still open, unchanged.                                                                                                                                                                                                                      |
+| P3       | **`screen_markets` checklist not auto-completed** by `screener_filter` (needs manual `POST /api/onboarding/checklist/screen_markets`).       | onboarding checklist                                                    | Still open, unchanged.                                                                                                                                                                                                                      |
+| P3       | Files near limit: `analyzer.service.ts` 295/300, `InputPanel.tsx` 376/400, `CompsSection.tsx` 392/400, `lib/data/index.ts` 285/300           | various                                                                 | `ScreenerPageInner.tsx` improved 390→379 (dropped off this list); `lib/data/index.ts` grew slightly (281→285), still under hard limit.                                                                                                      |
+
+**Resolved 2026-07-02 (beta-test backlog closeout — verified, no longer needs testing focus):**
+
+- ~~Screener ZIP gate frontend-only~~ — now Pro-enforced server-side via `assertGeoAllowed()` + `PRO_TIERS` in `screener.controller.ts`. **Residual to verify live:** `screener_snapshot` table still has `GRANT SELECT TO anon` from migration `20260615111801` and no `CREATE POLICY` was found despite RLS being enabled — probe with a direct anon-key REST call before closing out entirely.
+- ~~Stale scoring version naming (`FORMULA_VERSION='v3.0'`)~~ — now `FORMULA_VERSION = 'PropertyIQ demand signal'` (`formula-weights.ts:645`); example payload in post-split `scoring-operations.controller.ts:108` also fixed.
+- ~~Analyzer NotesSection not persisted~~ — `onSave` now wired to `onNotesChange()`/`onSaveNotes()` in `AnalyzerSections.tsx:184-187`.
+- ~~Two file-size hard-limit violations (reports)~~ — `reports/page.tsx` 1104→283 lines, `ReportViewer.tsx` 477→336 lines (9 components extracted).
+- ~~Screener has no UI freshness indicator~~ — new `ScreenerHeader.tsx` renders "Data as of {date}".
+- ~~Tour `?next=` post-signup redirect not honored~~ — `PostSignupCelebrate.tsx` now reads and validates `?next=` before routing.
 
 **Document-don't-file (intentional behaviors that look like bugs):** Screener Rent column is not sortable; analyzer/screener public market endpoints are non-PII by design; AI-verdict/header SSE return 200 before the upstream call (status is not a health signal); robots Content-Signal is only in the `*` group.
 
@@ -1315,14 +1373,14 @@ No outstanding P0 security issues (verified 2026-06-26). The 4 previously-unguar
 
 ### Enterprise Features (P2)
 
-| Issue | Where | Status |
-|---|---|---|
-| `CreateApiKeyDialog.tsx` is 382 lines (approaching 400-line hard limit) | `/org/[slug]/admin/api-keys` | Monitor |
-| `CreateEmbedDialog.tsx` is 374 lines (approaching 400-line hard limit) | `/org/[slug]/admin/embeds` | Monitor |
-| `MarketDashboard.tsx` is ~715 lines (over 400-line component limit) | `/market/[id]` | Header extraction deferred |
-| Report CSV export disabled — `reportData={null}` needs data flattening | ShareReportModal | Follow-up task |
-| Report share link expiry UI deferred (backend supports `expiresInDays`) | ShareReportModal | Follow-up task |
-| Platform API v1 rate limit response headers not documented | `/docs/api` | Add docs |
+| Issue                                                                   | Where                        | Status                     |
+| ----------------------------------------------------------------------- | ---------------------------- | -------------------------- |
+| `CreateApiKeyDialog.tsx` is 382 lines (approaching 400-line hard limit) | `/org/[slug]/admin/api-keys` | Monitor                    |
+| `CreateEmbedDialog.tsx` is 374 lines (approaching 400-line hard limit)  | `/org/[slug]/admin/embeds`   | Monitor                    |
+| `MarketDashboard.tsx` is ~715 lines (over 400-line component limit)     | `/market/[id]`               | Header extraction deferred |
+| Report CSV export disabled — `reportData={null}` needs data flattening  | ShareReportModal             | Follow-up task             |
+| Report share link expiry UI deferred (backend supports `expiresInDays`) | ShareReportModal             | Follow-up task             |
+| Platform API v1 rate limit response headers not documented              | `/docs/api`                  | Add docs                   |
 
 ### Data Consistency (P2)
 
@@ -1356,17 +1414,17 @@ No outstanding P0 security issues (verified 2026-06-26). The 4 previously-unguar
 
 ### Activation Tour (P1-P3) — Discovered 2026-05-04
 
-| Severity | Issue | Where |
-|---|---|---|
-| P1 | `primary-dark` Tailwind class undefined; `bg-primary-dark` / `text-primary-dark` silently render no color | `app/globals.css` (missing token) — referenced in CLAUDE.md §8.2 brand spec and many components |
-| P1 | New hooks must be re-exported in BOTH `lib/data/hooks/index.ts` AND top-level `lib/data/index.ts` | `lib/data/index.ts` — caught `useTourSignup` miss in this sync (commit `24477f56`) |
-| P1 | Calling `router.*` from inside a `setState` updater throws React 19 "Cannot update component while rendering" — pattern to forbid | Audit pattern: `setSession((prev) => { router.replace(...); ... })` is a defect — fixed in `ee20ae4e` |
-| P2 | `SeoTourCta` shipped with full test coverage but NOT integrated into blog `/blog/[slug]` MDX layout | `components/tour/SeoTourCta.tsx` + `app/blog/[slug]/BlogPostContent.tsx` — frontmatter schema needs `geoId/geoLevel/marketName` |
-| P2 | `ReportSection.data` is `unknown`-typed; `ListingPresentation` uses `as React.ComponentProps<typeof X>` casts to compile | `lib/data/fetchers/anonymous-listing-presentation.ts` (root) + `app/tour/components/ListingPresentation.tsx` (workaround) |
-| P2 | `?next=` query param is preserved through persona/market steps but NOT consumed past `step1` | `app/tour/page.tsx` — Phase 03/04 TODO comment in code |
-| P3 | Tour migrations applied via direct `psql` against pooler with hardcoded credentials in `scripts/run-backtest-*.sh` | Convention works but credentials are committed; not using Supabase CLI / dashboard |
-| P3 | `lib/data/index.ts` is 242 lines (target 200, hard 300) | Needs split before adding more hooks |
-| P3 | Step4Aha uses `window.location.href` (not `router.push`) for rate-limit signup redirect — intentional (clears RQ cache + cookies) but undocumented for casual readers | `app/tour/components/Step4Aha.tsx:65` |
+| Severity | Issue                                                                                                                                                                 | Where                                                                                                                           |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| P1       | `primary-dark` Tailwind class undefined; `bg-primary-dark` / `text-primary-dark` silently render no color                                                             | `app/globals.css` (missing token) — referenced in CLAUDE.md §8.2 brand spec and many components                                 |
+| P1       | New hooks must be re-exported in BOTH `lib/data/hooks/index.ts` AND top-level `lib/data/index.ts`                                                                     | `lib/data/index.ts` — caught `useTourSignup` miss in this sync (commit `24477f56`)                                              |
+| P1       | Calling `router.*` from inside a `setState` updater throws React 19 "Cannot update component while rendering" — pattern to forbid                                     | Audit pattern: `setSession((prev) => { router.replace(...); ... })` is a defect — fixed in `ee20ae4e`                           |
+| P2       | `SeoTourCta` shipped with full test coverage but NOT integrated into blog `/blog/[slug]` MDX layout                                                                   | `components/tour/SeoTourCta.tsx` + `app/blog/[slug]/BlogPostContent.tsx` — frontmatter schema needs `geoId/geoLevel/marketName` |
+| P2       | `ReportSection.data` is `unknown`-typed; `ListingPresentation` uses `as React.ComponentProps<typeof X>` casts to compile                                              | `lib/data/fetchers/anonymous-listing-presentation.ts` (root) + `app/tour/components/ListingPresentation.tsx` (workaround)       |
+| P2       | `?next=` query param is preserved through persona/market steps but NOT consumed past `step1`                                                                          | `app/tour/page.tsx` — Phase 03/04 TODO comment in code                                                                          |
+| P3       | Tour migrations applied via direct `psql` against pooler with hardcoded credentials in `scripts/run-backtest-*.sh`                                                    | Convention works but credentials are committed; not using Supabase CLI / dashboard                                              |
+| P3       | `lib/data/index.ts` is 242 lines (target 200, hard 300)                                                                                                               | Needs split before adding more hooks                                                                                            |
+| P3       | Step4Aha uses `window.location.href` (not `router.push`) for rate-limit signup redirect — intentional (clears RQ cache + cookies) but undocumented for casual readers | `app/tour/components/Step4Aha.tsx:65`                                                                                           |
 
 ---
 
