@@ -163,6 +163,15 @@ jobs:
             exit 1
           fi
 
+      # Let the DB settle after the scoring pipeline's large score upsert before
+      # the SEO rebuild queries it: the scores/ids endpoint throws a brief 500 in
+      # the second right after that write (DB still settling) and recovers on the
+      # next call. Pausing here avoids the transient window proactively; the
+      # scored-set-client retry is the backstop for anything that still slips.
+      - name: Settle after scoring
+        if: steps.scoring.outcome == 'success'
+        run: sleep 20
+
       # ── SEO slug rebuild ─────────────────────────────────────────────────────
       # Regenerates the score-gated metro/county/zip slug data files and the
       # descored-redirect map using fresh scores just written by the step above.
