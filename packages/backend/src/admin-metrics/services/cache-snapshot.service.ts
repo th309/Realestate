@@ -38,7 +38,11 @@ export class CacheSnapshotService {
     return {
       hit_count: stats.hits,
       miss_count: stats.misses,
-      hit_rate: stats.hitRate,
+      // RedisService.getStats() reports hitRate as a percentage (0..100), but
+      // admin_cache_metrics.hit_rate is stored as a fraction (0..1) — the
+      // contract every reader assumes (alert rule `hit_rate < 0.7`, the admin
+      // card's `hit_rate * 100` display, and the e2e fixtures). Normalize here.
+      hit_rate: stats.hitRate / 100,
       eviction_count: 0, // ioredis does not expose eviction count in-process
       memory_used_bytes: memoryUsedBytes,
       keys_count: keysCount,

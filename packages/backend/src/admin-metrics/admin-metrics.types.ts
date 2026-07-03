@@ -98,5 +98,5 @@ export interface HeroStats {
   };
   data_freshness: { fresh: number; total: number; sparkline: number[] };
   total_users: { count: number; new_this_week: number; sparkline: number[] };
-  score_health: { hit_rate_1y: number; sparkline: number[] };
+  score_health: { hit_rate_1y: number | null; sparkline: number[] };
 }

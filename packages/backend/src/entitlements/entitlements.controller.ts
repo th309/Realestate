@@ -14,6 +14,7 @@ import { EntitlementsService } from './entitlements.service';
 import { EnterpriseGraceService } from './enterprise-grace.service';
 import { OrgBillingService } from '../org-billing/org-billing.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { TrackEventDto } from './dto/track-event.dto';
 
 @Controller('api/entitlements')
 export class EntitlementsController {
@@ -58,14 +59,7 @@ export class EntitlementsController {
 
   @Post('events')
   async trackEvent(
-    @Body()
-    body: {
-      resourceType: string;
-      resourceId: string;
-      eventType: string;
-      pagePath?: string;
-      metadata?: Record<string, unknown>;
-    },
+    @Body() body: TrackEventDto,
     @Headers('x-user-id') userId: string,
     @Headers('x-session-id') sessionId: string,
   ) {

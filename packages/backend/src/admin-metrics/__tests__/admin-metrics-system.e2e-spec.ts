@@ -57,7 +57,13 @@ describe('Hero Stats', () => {
     expect(Array.isArray(d.total_users.sparkline)).toBe(true);
 
     expect(d).toHaveProperty('score_health');
-    expect(typeof d.score_health.hit_rate_1y).toBe('number');
+    // hit_rate_1y is number | null — null is the honest no-data state when there
+    // is no recent score snapshot or qualifying backtest outcome (see
+    // hero-stats-live-fallback.ts). Accept either rather than forcing a number.
+    expect(
+      d.score_health.hit_rate_1y === null ||
+        typeof d.score_health.hit_rate_1y === 'number',
+    ).toBe(true);
     expect(Array.isArray(d.score_health.sparkline)).toBe(true);
   });
 });

@@ -288,7 +288,10 @@ export class DataSourcesHealthService {
 
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
-      return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      // Annual sources are dated to Dec 31 of their `year` (e.g. HUD FMR 2026),
+      // a future date for the current year that yields negative "days since".
+      // Staleness can't be negative — current-period data is 0 days stale.
+      return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
     } catch {
       return null;
     }

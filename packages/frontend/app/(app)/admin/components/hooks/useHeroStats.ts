@@ -27,7 +27,7 @@ export interface HeroStats {
     new_this_week: number;
     sparkline: number[];
   };
-  score_health: { hit_rate_1y: number; sparkline: number[] };
+  score_health: { hit_rate_1y: number | null; sparkline: number[] };
 }
 
 /** Backend envelope: all admin endpoints wrap data in { success, data }. */

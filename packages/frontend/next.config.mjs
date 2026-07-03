@@ -210,6 +210,20 @@ const nextConfig = {
         source: '/.well-known/agent-skills/:name/SKILL.md',
         destination: '/api/agent-discovery/agent-skill/:name',
       },
+      // Short-path aliases for agent-skills. The canonical location is under
+      // /.well-known/, but the shorter /agent-skills/* path is commonly probed
+      // and 404s otherwise. Next's rewrites don't chain, so these target the
+      // same handlers as the /.well-known/agent-skills/* rewrites above rather
+      // than rewriting to the /.well-known/ path (which the App Router can't
+      // serve — it can't route dot-prefixed folders).
+      {
+        source: '/agent-skills/index.json',
+        destination: '/api/agent-discovery/agent-skills-index',
+      },
+      {
+        source: '/agent-skills/:name/SKILL.md',
+        destination: '/api/agent-discovery/agent-skill/:name',
+      },
       {
         source: '/.well-known/agent-card.json',
         destination: '/api/agent-discovery/a2a-agent-card',

@@ -12,7 +12,13 @@ import { FredService } from './sources/fred.service';
 import { ZillowService } from './sources/zillow.service';
 import { RedfinService } from './sources/redfin.service';
 import { RealtorService } from './sources/realtor.service';
-import { CensusGeoLevel } from './types';
+import {
+  ImportCensusDto,
+  ImportFredDto,
+  ImportZillowDto,
+  ImportRedfinDto,
+  ImportRealtorDto,
+} from './dto';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 
 @UseGuards(AdminGuard)
@@ -29,22 +35,14 @@ export class DataIngestionController {
   @Post('census')
   @HttpCode(HttpStatus.OK)
   async importCensus(
-    @Body()
-    body: { datasets?: string[]; year?: number; geoLevel?: CensusGeoLevel },
+    @Body() body: ImportCensusDto,
     @Query('api_key') apiKey?: string,
   ) {
-    const { datasets, year, geoLevel } = body;
-    // Note: frontend passes 'variables' but here we mapped to 'datasets' in the plan?
-    // Let's support both or stick to 'variables' to match frontend usage if easier
-    // Plan said: datasets: string[] // e.g., ["acs5", "population"] which isn't exactly what 'variables' was.
-    // 'variables' were specific metric keys like 'population', 'median_household_income'.
-    // I will use 'variables' to match the frontend implementation details I just ported.
-
-    // Actually, looking at the code I just wrote in CensusService, it accepts 'variables'.
-    // So I will accept 'variables' in the body.
-
+    const { variables, datasets, year, geoLevel } = body;
+    // Newer clients send `variables` (specific metric keys); older callers send
+    // `datasets`. Prefer `variables`, falling back to `datasets`.
     return this.censusService.importCensusData(
-      (body as any).variables || datasets,
+      variables || datasets,
       year,
       geoLevel,
       apiKey,
@@ -54,7 +52,7 @@ export class DataIngestionController {
   @Post('fred')
   @HttpCode(HttpStatus.OK)
   async importFred(
-    @Body() body: { series?: string[]; startDate?: string },
+    @Body() body: ImportFredDto,
     @Query('api_key') apiKey?: string,
   ) {
     return this.fredService.importFREDData(body.series, apiKey);
@@ -62,21 +60,13 @@ export class DataIngestionController {
 
   @Post('zillow')
   @HttpCode(HttpStatus.OK)
-  async importZillow(@Body() body: { metric?: string; limit?: number }) {
+  async importZillow(@Body() body: ImportZillowDto) {
     return this.zillowService.importZillowData(body.metric, body.limit);
   }
 
   @Post('redfin')
   @HttpCode(HttpStatus.OK)
-  async importRedfin(
-    @Body()
-    body: {
-      metric?: string;
-      limit?: number;
-      url?: string;
-      csvContent?: string;
-    },
-  ) {
+  async importRedfin(@Body() body: ImportRedfinDto) {
     return this.redfinService.importRedfinData(
       body.metric,
       body.limit,
@@ -87,7 +77,7 @@ export class DataIngestionController {
 
   @Post('realtor')
   @HttpCode(HttpStatus.OK)
-  async importRealtor(@Body() body: { datasetId?: string; limit?: number }) {
+  async importRealtor(@Body() body: ImportRealtorDto) {
     if (body.datasetId) {
       return this.realtorService.importDataset(body.datasetId, body.limit);
     } else {
