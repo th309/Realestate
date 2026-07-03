@@ -110,8 +110,10 @@ describe('classifyMarketPhase returns correct phase label', () => {
     expect(classifyMarketPhase(3.5, 10, -1.0)).toContain('Transitional');
   });
 
-  it('returns insufficient data when months_of_supply is null', () => {
-    expect(classifyMarketPhase(null, 15, 5.0)).toContain('Insufficient data');
+  it('returns N/A (not a prose "insufficient data" phrase) when months_of_supply is null', () => {
+    // Must be the absent-metric sentinel the narrative layer omits, never a
+    // sentence the model could surface as a "missing data" finding.
+    expect(classifyMarketPhase(null, 15, 5.0)).toBe('N/A');
   });
 });
 

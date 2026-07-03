@@ -606,11 +606,11 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "sources": [
       {
         "column": "months_of_supply",
-        "source": "redfin",
+        "source": "calculated",
       },
       {
         "column": "months_of_supply",
-        "source": "calculated",
+        "source": "redfin",
       },
     ],
     "supportsGeoInheritance": false,
@@ -926,6 +926,14 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "sale_to_list",
     "sources": [
       {
+        "column": "average_sale_to_list_ratio",
+        "geoLevels": [
+          "county",
+          "zip",
+        ],
+        "source": "redfin_dc",
+      },
+      {
         "column": "sale_to_list",
         "source": "zillow",
         "transform": [Function],
@@ -933,6 +941,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
       {
         "column": "avg_sale_to_list",
         "source": "redfin",
+        "transform": [Function],
       },
     ],
     "supportsGeoInheritance": false,

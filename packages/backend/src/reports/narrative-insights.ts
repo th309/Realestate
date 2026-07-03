@@ -118,7 +118,10 @@ function computeAffordability(
  * Based on months of supply thresholds used industry-wide.
  */
 export function classifyMarketType(monthsOfSupply: number | null): string {
-  if (monthsOfSupply === null) return 'Insufficient data';
+  // 'N/A' (not a prose sentence) so the narrative layer treats it as an absent
+  // metric and omits it — the report must never surface "insufficient data" as
+  // a finding (see SCORING_SYSTEM_REFERENCE data-availability rule).
+  if (monthsOfSupply === null) return 'N/A';
   if (monthsOfSupply < 4) return "Seller's Market";
   if (monthsOfSupply <= 6) return 'Balanced Market';
   return "Buyer's Market";
@@ -129,8 +132,9 @@ export function classifyMarketPhase(
   priceCutPct: number | null,
   zhviYoy: number | null,
 ): string {
-  if (monthsOfSupply === null)
-    return 'Insufficient data to classify market phase';
+  // 'N/A' rather than a prose sentence — the narrative layer drops absent
+  // metrics; the model infers balance from other signals per the guardrail.
+  if (monthsOfSupply === null) return 'N/A';
 
   const mos = monthsOfSupply;
   const yoy = zhviYoy ?? 0;

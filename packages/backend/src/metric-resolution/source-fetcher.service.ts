@@ -252,7 +252,10 @@ export class SourceFetcherService {
         if (
           source === 'census' ||
           source === 'economic' ||
-          source === 'permits'
+          source === 'permits' ||
+          // Redfin Data Center state tables key region_id on STATE FIPS ('08'),
+          // not the 2-letter code — covers 'redfin_dc' and every 'redfin_dc_*'.
+          source.startsWith('redfin_dc')
         ) {
           return normalizeStateToFips(geoId);
         }

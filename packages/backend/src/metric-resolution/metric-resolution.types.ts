@@ -14,6 +14,10 @@ export type DataSource =
   | 'zillow'
   | 'realtor'
   | 'redfin'
+  // Redfin Data Center monthly housing-market tables (redfin_dc_housing_market_*).
+  // The go-forward Redfin source: `redfin` (redfin_*) is frozen and no longer
+  // updated. Keyed by region_id = CBSA (metro) / county FIPS (county) / ZIP (zip).
+  | 'redfin_dc'
   | 'census'
   | 'economic'
   | 'calculated'
