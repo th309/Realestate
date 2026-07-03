@@ -96,6 +96,18 @@ export function addRegionFilter(
     );
   }
 
+  // Redfin Data Center wide tables: region_id keyed at every level (FIPS at state).
+  if (source.startsWith('redfin_dc')) {
+    return addRedfinDcFilter(
+      query,
+      level,
+      regionKey,
+      stateKey,
+      countyKey,
+      metroKey,
+    );
+  }
+
   // Standard sources (realtor, zillow, census, economic, permits)
   return addStandardFilter(
     query,
@@ -230,6 +242,31 @@ function addPropertyIQFilter(
 
     default:
       return query.eq('location_id', regionId);
+  }
+}
+
+function addRedfinDcFilter(
+  query: any,
+  level: string,
+  regionKey: string,
+  stateKey: { code: string; fips: string; name: string } | null,
+  countyKey: string,
+  metroKey: string,
+) {
+  // redfin_dc_* tables key region_id on CBSA (metro) / county FIPS (county) /
+  // ZIP (zip) / state FIPS (state). Split-CBSA metro divisions share a
+  // region_id, so a metro series may carry two division rows per period.
+  switch (level) {
+    case 'state':
+      return query.eq('region_id', stateKey ? stateKey.fips : regionKey);
+    case 'metro':
+      return query.eq('region_id', metroKey);
+    case 'county':
+      return query.eq('region_id', countyKey);
+    case 'zip':
+      return query.eq('region_id', regionKey);
+    default:
+      return query.eq('region_id', regionKey);
   }
 }
 
@@ -369,6 +406,25 @@ export function getTableName(source: string, geoLevel: string): string | null {
 
   if (source === 'calculated') return 'calculated_metrics';
   if (source === 'propertyiq') return 'propertyiq_scores';
+
+  // Redfin Data Center wide tables (region_id keyed, period_end dated).
+  const dcStem: Record<string, string> = {
+    redfin_dc: 'housing_market',
+    redfin_dc_delistings: 'delistings_relistings',
+    redfin_dc_cancellations: 'contract_cancellations',
+    redfin_dc_investors: 'investors',
+    redfin_dc_cash_loan: 'cash_loan',
+  };
+  if (dcStem[source]) {
+    const stem = dcStem[source];
+    const metroOnly =
+      source === 'redfin_dc_investors' || source === 'redfin_dc_cash_loan';
+    if (metroOnly) return level === 'metro' ? `redfin_dc_${stem}_metro` : null;
+    if (['state', 'metro', 'county', 'zip'].includes(level)) {
+      return `redfin_dc_${stem}_${level}`;
+    }
+    return null;
+  }
 
   return null;
 }

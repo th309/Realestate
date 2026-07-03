@@ -404,6 +404,36 @@ const METRIC_MAPPINGS: Record<string, MetricMapping> = {
     usesMetricName: true,
     metricNameValue: 'propertyiq',
   },
+
+  // ========================================================================
+  // REDFIN DATA CENTER (redfin_dc_* wide tables; date column period_end,
+  // region keyed on region_id at every level). Display metrics only.
+  // ========================================================================
+  sold_above_list_share: {
+    source: 'redfin_dc',
+    columnName: 'share_sold_above_original_list',
+    usesMetricName: false,
+  },
+  listings_delisted_share: {
+    source: 'redfin_dc_delistings',
+    columnName: 'share_of_listings_delisted',
+    usesMetricName: false,
+  },
+  pending_cancellation_share: {
+    source: 'redfin_dc_cancellations',
+    columnName: 'percent_of_pending_sales',
+    usesMetricName: false,
+  },
+  investor_market_share: {
+    source: 'redfin_dc_investors',
+    columnName: 'investor_market_share',
+    usesMetricName: false,
+  },
+  all_cash_share: {
+    source: 'redfin_dc_cash_loan',
+    columnName: 'percent_all_cash',
+    usesMetricName: false,
+  },
 };
 
 /**

@@ -117,7 +117,9 @@ export class TimeSeriesService {
           ? 'year'
           : mapping.source === 'propertyiq'
             ? 'score_date'
-            : 'period_date';
+            : mapping.source.startsWith('redfin_dc')
+              ? 'period_end'
+              : 'period_date';
 
       // When lastPoints is set we need most recent points: order desc, limit, then reverse
       const useLastPoints =
@@ -132,6 +134,11 @@ export class TimeSeriesService {
 
       // For calculated metrics, filter out null values
       if (mapping.source === 'calculated') {
+        query = query.not(mapping.columnName, 'is', null);
+      }
+
+      // Redfin Data Center: skip periods with no value for this column
+      if (mapping.source.startsWith('redfin_dc')) {
         query = query.not(mapping.columnName, 'is', null);
       }
 
