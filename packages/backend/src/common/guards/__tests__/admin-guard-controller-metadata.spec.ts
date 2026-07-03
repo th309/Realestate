@@ -16,6 +16,7 @@ import { AdminGuard } from '../admin-auth.guard';
 import { DataIngestionController } from '../../../data-ingestion/data-ingestion.controller';
 import { PipelinesController } from '../../../health/pipelines.controller';
 import { ScoringController } from '../../../scoring/scoring.controller';
+import { ScoringOperationsController } from '../../../scoring/scoring-operations.controller';
 import { MLWorkflowController } from '../../../ml-workflow/ml-workflow.controller';
 import { MLValidationController } from '../../../scoring/ml-validation/ml-validation.controller';
 import { BacktestRunsController } from '../../../scoring/backtest-runs/backtest-runs.controller';
@@ -104,11 +105,14 @@ describe('AdminGuard Controller Metadata', () => {
     });
   });
 
-  describe('ScoringController (method-level guards on write endpoints)', () => {
+  describe('ScoringOperationsController (method-level guards on write endpoints)', () => {
+    // calculateScores + validatePredictions (with their AdminGuard) were split
+    // out of ScoringController into ScoringOperationsController for file-size
+    // compliance; the guards moved verbatim with the handlers.
     it('protects POST calculate/:geography with AdminGuard', () => {
       expect(
         hasGuardOnClassOrMethod(
-          ScoringController,
+          ScoringOperationsController,
           AdminGuard,
           'calculateScores',
         ),
@@ -118,7 +122,7 @@ describe('AdminGuard Controller Metadata', () => {
     it('protects POST validate with AdminGuard', () => {
       expect(
         hasGuardOnClassOrMethod(
-          ScoringController,
+          ScoringOperationsController,
           AdminGuard,
           'validatePredictions',
         ),
@@ -126,12 +130,15 @@ describe('AdminGuard Controller Metadata', () => {
     });
 
     it('does NOT have AdminGuard on public GET endpoints', () => {
-      // GET endpoints should NOT require admin access
-      const classGuards = getClassGuards(ScoringController);
-      const classHasAdmin = classGuards.some(
-        (g: any) => g === AdminGuard || g.name === AdminGuard.name,
-      );
-      expect(classHasAdmin).toBe(false);
+      // Neither the read controller nor the operations controller may carry a
+      // class-level AdminGuard — that would lock down their public GET routes
+      // (getScores, performance, alerts, debug/*).
+      for (const cls of [ScoringController, ScoringOperationsController]) {
+        const classHasAdmin = getClassGuards(cls).some(
+          (g: any) => g === AdminGuard || g.name === AdminGuard.name,
+        );
+        expect(classHasAdmin).toBe(false);
+      }
 
       // Verify specific read methods don't have method-level AdminGuard
       const getScoresGuards = getMethodGuards(ScoringController, 'getScores');
