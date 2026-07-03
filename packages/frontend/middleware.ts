@@ -65,6 +65,22 @@ function checkShortLinkRate(ip: string): boolean {
   return entry.count <= SHORT_LINK_RATE_LIMIT;
 }
 
+/**
+ * True if `userId` holds an admin or super_admin role in `admin_users`.
+ * Shared by the page-level `/admin` guard and the `/api/admin` API guard.
+ */
+async function isAdminUser(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("admin_users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  return !!data && ["admin", "super_admin"].includes(data.role);
+}
+
 export async function middleware(request: NextRequest) {
   // Canonical-host redirects — consolidate duplicate hosts onto
   // www.propertyiq.app so Google never indexes the bare apex or the Railway
@@ -249,16 +265,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // Admin routes — require admin or super_admin role
+  // Admin pages — require admin or super_admin role
   if (pathname.startsWith("/admin") && user) {
-    const { data: adminRow } = await supabase
-      .from("admin_users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!adminRow || !["admin", "super_admin"].includes(adminRow.role)) {
+    if (!(await isAdminUser(supabase, user.id))) {
       return NextResponse.redirect(new URL("/map", request.url));
+    }
+  }
+
+  // Admin API routes use the service-role client, so guard them here with JSON
+  // 401/403 (not a redirect a fetch() can't act on). The page-level `/admin`
+  // guard above misses them because the path starts with `/api`, not `/admin`.
+  // Excludes `/api/admin/content-pipeline`, which forwards Authorization to the
+  // backend where its own guard lives (incl. the session-less OAuth callback).
+  if (
+    pathname.startsWith("/api/admin") &&
+    !pathname.startsWith("/api/admin/content-pipeline")
+  ) {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await isAdminUser(supabase, user.id))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
 
@@ -284,5 +311,12 @@ export const config = {
      * add a getUser() round-trip per call for no benefit.
      */
     "/((?!backend/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
+    // Belt-and-suspenders for the admin API guard: the exclusion regex above
+    // drops ANY path ending in a static extension (.json/.txt/.xml/...), which
+    // would otherwise let `/api/admin/<route>/<id>.json` skip middleware — and
+    // thus the admin auth guard — entirely (the [id] segment swallows the
+    // suffix). Matcher entries are OR'd, so this unconditional entry guarantees
+    // the guard runs on every /api/admin/* request regardless of trailing suffix.
+    "/api/admin/:path*",
   ],
 };

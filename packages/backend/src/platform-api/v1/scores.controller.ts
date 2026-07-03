@@ -28,6 +28,7 @@ import { ApiResponseInterceptor } from '../api-response.interceptor';
 import { PlatformApiExceptionFilter } from '../platform-api-exception.filter';
 import { ApiKeyValidatorService } from '../../org-api-keys/api-key-validator.service';
 import { ScoringService } from '../../scoring/scoring.service';
+import { getScoreMomentumLabel } from '../../scoring/score-label.util';
 import type { GeographyLevel, ScoreType } from '../../scoring/formula-weights';
 
 const VALID_GEO_LEVELS: GeographyLevel[] = ['metro', 'county', 'zip'];
@@ -44,18 +45,6 @@ const LEGACY_SCORE_TYPE_MAP: Record<string, ScoreType> = {
 function normalizeScoreType(raw: string): ScoreType | null {
   if (VALID_SCORE_TYPES.includes(raw as ScoreType)) return raw as ScoreType;
   return LEGACY_SCORE_TYPE_MAP[raw] ?? null;
-}
-
-/** Map score number to human-readable label. */
-function scoreToLabel(score: number): string {
-  if (score >= 90) return 'EXCELLENT';
-  if (score >= 80) return 'GREAT';
-  if (score >= 70) return 'GOOD';
-  if (score >= 60) return 'FAIR';
-  if (score >= 50) return 'AVERAGE';
-  if (score >= 40) return 'BELOW AVG';
-  if (score >= 20) return 'POOR';
-  return 'VERY POOR';
 }
 
 @Controller('api/v1/scores')
@@ -196,7 +185,7 @@ export class ScoresV1Controller {
   private formatSingleScore(scoreData: any, scoreDate: string) {
     return {
       value: scoreData.score,
-      label: scoreToLabel(scoreData.score),
+      label: getScoreMomentumLabel(scoreData.score),
       grade: scoreData.grade,
       confidence: {
         level: scoreData.confidence_level,
