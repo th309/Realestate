@@ -28,36 +28,20 @@ export async function getScoredLocationIds(
     date || (await getLatestScoreDate(supabase, geography, scoreType));
   if (!targetDate) return { date: null, ids: [] };
 
-  const pageSize = 1000;
-  const ids = new Set<string>();
-  let page = 0;
-
-  while (true) {
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
-    const { data, error } = await supabase
-      .from('propertyiq_scores')
-      .select('location_id')
-      .eq('geography', geography)
-      .eq('score_type', scoreType)
-      .eq('score_date', targetDate)
-      // Stable order is REQUIRED for correct range pagination — without it
-      // Postgres may reorder rows between pages, skipping some location_ids.
-      .order('location_id', { ascending: true })
-      .range(from, to);
-
-    if (error) {
-      throw new Error(`Failed to fetch scored location ids: ${error.message}`);
-    }
-    if (!data || data.length === 0) break;
-    for (const row of data) {
-      if (row.location_id) ids.add(row.location_id);
-    }
-    if (data.length < pageSize) break;
-    page += 1;
+  // Single aggregate call: the RPC returns a text[] in ONE row, so PostgREST's
+  // 1000-row read cap doesn't apply and ~30k ids come back in one ~90ms call.
+  // Replaces the prior N+1 OFFSET pagination (29 pages/date), which — fired for
+  // 6 dates concurrently by the SEO slug rebuild, under post-scoring DB load —
+  // exceeded the statement timeout and 500'd, failing the whole refresh.
+  const { data, error } = await supabase.rpc('get_scored_location_ids', {
+    p_geography: geography,
+    p_score_type: scoreType,
+    p_score_date: targetDate,
+  });
+  if (error) {
+    throw new Error(`Failed to fetch scored location ids: ${error.message}`);
   }
-
-  return { date: targetDate, ids: [...ids] };
+  return { date: targetDate, ids: (data as string[] | null) ?? [] };
 }
 
 /**
