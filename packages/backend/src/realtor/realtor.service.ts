@@ -6,8 +6,8 @@ import { RealtorBenchmarkService } from './realtor-benchmark.service';
 export type { RealtorDataPoint } from './realtor.types';
 
 /**
- * Public Realtor data facade consumed by RealtorController. Keeps the exact
- * method surface the controller depends on, delegating to the focused services:
+ * Public Realtor data facade consumed by the api/realtor controllers. Keeps the
+ * exact method surface the controllers depend on, delegating to the focused services:
  * - {@link RealtorDataService}: per-metric state/metro/county/zip data
  * - {@link RealtorNationalService}: national values + averages
  * - {@link RealtorBenchmarkService}: state averages + benchmark comparison

@@ -117,21 +117,21 @@ data/zillow/*.csv
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
-# AI tool skill directories
+# AI tool skill directories (this project's own .claude/skills/ IS tracked intentionally — see git history)
 .agent/
 .agents/
-.claude/skills/
 .claude/beta-test/
 .kiro/
 .windsurf/
 .zencoder/
 .playwright-mcp/
 skills-lock.json
-Skills/
+/Skills/
 .superpowers/brainstorm/
 
-# Loose QA artifacts at repo root
-*.png
+# Loose QA artifacts at repo root (scoped to root only — do NOT ignore *.png
+# in packages/*/public, brand assets, etc. — those are real, tracked product assets)
+/*.png
 markets-page-snapshot.md
 
 # ML model files (too large for GitHub, download at runtime)
