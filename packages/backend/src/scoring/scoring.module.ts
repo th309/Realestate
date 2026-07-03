@@ -20,6 +20,8 @@ import { ConfigModule } from '@nestjs/config';
 import { ScoringService } from './scoring.service';
 import { CalibrationService } from './calibration/calibration.service';
 import { ScoringController } from './scoring.controller';
+import { ScoringMarketsController } from './scoring-markets.controller';
+import { ScoringOperationsController } from './scoring-operations.controller';
 import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { FeaturesModule } from '../admin/features/features.module';
@@ -107,11 +109,18 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     ValidationService,
   ],
   controllers: [
-    ScoringController,
+    // Sibling scoring controllers split off ScoringController for file-size
+    // compliance. ScoringController MUST be registered LAST because its
+    // `@Get(':geography/:locationId')` catch-all would otherwise shadow the
+    // 2-segment routes on these siblings (none collide today, but registering
+    // it last makes the split ordering-independent). See scoring.controller.ts.
+    ScoringMarketsController,
+    ScoringOperationsController,
     MLValidationController,
     BacktestRunsController,
     AdminController,
     ValidationController,
+    ScoringController,
   ],
   exports: [
     ScoringService,

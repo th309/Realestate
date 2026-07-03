@@ -1,25 +1,23 @@
 /**
- * PropertyIQ Scoring Controller
+ * PropertyIQ Scoring Controller — route declarations only; handler bodies live
+ * in scoring-score-handlers.helper.ts and scoring-map-handlers.helper.ts.
  *
- * API endpoints for the PropertyIQ scoring system.
- * Implements the simple z-score based scoring methodology.
- *
- * Endpoints:
- * - GET /api/scores?geography=metro&location_id=12420 - Get scores for a location
- * - GET /api/scores/top?geography=metro&score_type=homeready&limit=10 - Top markets
- * - GET /api/scores/search?q=austin&geography=zip - Search markets
- * - POST /api/scores/calculate/:geography - Trigger recalculation
+ * ROUTE-ORDERING HAZARD — READ BEFORE ADDING ROUTES:
+ * `getScoreByPath` (`GET :geography/:locationId`) is a 2-segment CATCH-ALL and
+ * MUST stay declared LAST in this class. Every other 2-segment GET on
+ * `api/scores` (`all/:geography`, `ids/:geography`, `batch/:geography`) is kept
+ * IN THIS SAME CLASS on purpose so their relative declaration order — and thus
+ * NestJS route precedence — is fixed intra-class and immune to controller-array
+ * ordering. This controller MUST be registered LAST in ScoringModule. Non-
+ * colliding routes live in ScoringMarketsController / ScoringOperationsController.
  */
 
 import {
   Controller,
   Get,
-  Post,
   Param,
   Query,
   Header,
-  HttpException,
-  HttpStatus,
   Res,
   Req,
   UseGuards,
@@ -27,25 +25,27 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ScoringService, ScoreResult } from './scoring.service';
-import {
-  PerformanceTrackingService,
-  PerformanceMetrics,
-  AlertResult,
-} from './performance-tracking.service';
 import { ScoreAccessService } from './scoring.guard';
-import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
-import { GeographyLevel, ScoreType } from './formula-weights';
-import { parseHistoryMonths } from '../common/history.constants';
-import { normalizeStateToCode } from '../common/geo';
 import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
+import { AllScoresResponse, ScoredIdsResponse } from './scoring-response.types';
+import {
+  getScoresHandler,
+  getBatchScoresHandler,
+  getScoreByPathHandler,
+} from './scoring-score-handlers.helper';
+import {
+  getAllScoresHandler,
+  streamAllScoresHandler,
+  getScoredIdsHandler,
+  getScorePeriodsHandler,
+} from './scoring-map-handlers.helper';
 
 @ApiTags('scores')
 @Controller('api/scores')
 export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
-    private readonly performanceTrackingService: PerformanceTrackingService,
     private readonly scoreAccessService: ScoreAccessService,
   ) {}
 
@@ -54,22 +54,9 @@ export class ScoringController {
   // ============================================================================
 
   /**
-   * Get scores for a specific location
-   *
+   * Get scores for a specific location.
    * GET /api/scores?geography=metro&location_id=12420
-   *
-   * Response format (from spec):
-   * {
-   *   "location_id": "12420",
-   *   "location_name": "Austin-Round Rock, TX",
-   *   "geography": "metro",
-   *   "median_price": 420644,
-   *   "scores": {
-   *     "homeready": { "score": 13, "grade": "F", "confidence": 86, "confidence_level": "HIGH" },
-   *     "investoredge": { "score": 32, "grade": "F", "confidence": 90, "confidence_level": "HIGH" },
-   *     "markethealth": { "score": 8, "grade": "F", "confidence": 79, "confidence_level": "MEDIUM" }
-   *   }
-   * }
+   * (response shape documented on getScoresHandler)
    */
   @Get()
   // Sets `request.userId` from a validated JWT (anonymous allowed) so the
@@ -106,301 +93,14 @@ export class ScoringController {
     @Query('historyMonths') historyMonths?: string,
     @Req() request?: any,
   ): Promise<ScoreResult> {
-    if (!geography) {
-      throw new HttpException(
-        'geography query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (!locationId) {
-      throw new HttpException(
-        'location_id query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = this.validateGeography(geography);
-    const options =
-      historyMonths != null
-        ? { historyMonths: parseHistoryMonths(historyMonths) }
-        : undefined;
-    const score = await this.scoringService.getScore(
+    return getScoresHandler(
+      this.scoringService,
+      this.scoreAccessService,
+      geography,
       locationId,
-      geoLevel,
       date,
-      options,
-    );
-
-    if (!score) {
-      throw new HttpException(
-        `No scores found for ${geography}/${locationId}. Try triggering a calculation first.`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    return await this.stripBreakdownIfNeeded(score, request);
-  }
-
-  /**
-   * Get top markets by score
-   *
-   * GET /api/scores/top?geography=metro&score_type=homeready&limit=10
-   */
-  @Get('top')
-  @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Get top markets by score' })
-  @ApiQuery({
-    name: 'geography',
-    required: true,
-    enum: ['metro', 'county', 'zip'],
-  })
-  @ApiQuery({
-    name: 'score_type',
-    required: true,
-    enum: ['propertyiq'],
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Number of results (default 10, max 100)',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    description: 'Score date (YYYY-MM-DD), defaults to latest',
-  })
-  @ApiQuery({
-    name: 'state',
-    required: false,
-    description: 'Two-letter state code (e.g. IL) to filter within',
-  })
-  @ApiQuery({
-    name: 'sort',
-    required: false,
-    description: 'Sort order: "asc" or "desc" (default "desc")',
-    enum: ['asc', 'desc'],
-  })
-  async getTopMarkets(
-    @Query('geography') geography: string,
-    @Query('score_type') scoreType: string,
-    @Query('limit') limitStr?: string,
-    @Query('date') date?: string,
-    @Query('state') state?: string,
-    @Query('sort') sort?: string,
-  ): Promise<
-    {
-      location_id: string;
-      location_name: string;
-      score: number;
-      grade: string;
-    }[]
-  > {
-    if (!geography) {
-      throw new HttpException(
-        'geography query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (!scoreType) {
-      throw new HttpException(
-        'score_type query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = this.validateGeography(geography);
-    const validScoreType = this.validateScoreType(scoreType);
-    const limit = Math.min(Math.max(parseInt(limitStr || '10', 10), 1), 100);
-
-    // Normalize state to 2-letter code if provided
-    const normalizedState = state
-      ? normalizeStateToCode(state.trim())
-      : undefined;
-
-    if (sort !== undefined && sort !== 'asc' && sort !== 'desc') {
-      throw new HttpException(
-        'Invalid sort value. Must be "asc" or "desc".',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const ascending = sort === 'asc';
-    return this.scoringService.getTopMarkets(
-      geoLevel,
-      validScoreType,
-      limit,
-      date,
-      normalizedState,
-      ascending,
-    );
-  }
-
-  /**
-   * Search markets by name
-   *
-   * GET /api/scores/search?q=austin&geography=zip
-   */
-  @Get('search')
-  @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Search markets by name' })
-  @ApiQuery({ name: 'q', required: true, description: 'Search query' })
-  @ApiQuery({
-    name: 'geography',
-    required: false,
-    enum: ['metro', 'county', 'zip'],
-    description: 'Filter by geography type',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Number of results (default 20, max 100)',
-  })
-  async searchMarkets(
-    @Query('q') query: string,
-    @Query('geography') geography?: string,
-    @Query('limit') limitStr?: string,
-  ): Promise<
-    { location_id: string; location_name: string; geography: string }[]
-  > {
-    if (!query || query.trim().length < 2) {
-      throw new HttpException(
-        'q query parameter must be at least 2 characters',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = geography ? this.validateGeography(geography) : undefined;
-    const limit = Math.min(Math.max(parseInt(limitStr || '20', 10), 1), 100);
-
-    return this.scoringService.searchMarkets(query.trim(), geoLevel, limit);
-  }
-
-  // ============================================================================
-  // Calculation Endpoints
-  // ============================================================================
-
-  /**
-   * Trigger score calculation for all locations at a geography level
-   *
-   * POST /api/scores/calculate/:geography
-   */
-  @Post('calculate/:geography')
-  @UseGuards(AdminGuard)
-  @ApiOperation({
-    summary: 'Calculate scores for all locations at a geography level',
-  })
-  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    description: 'Period date (YYYY-MM-DD), defaults to latest',
-  })
-  async calculateScores(
-    @Param('geography') geography: string,
-    @Query('date') date?: string,
-  ): Promise<{
-    success: boolean;
-    calculated: number;
-    errors: number;
-    scoreDate: string;
-  }> {
-    const geoLevel = this.validateGeography(geography);
-    const result = await this.scoringService.calculateAllScores(geoLevel, date);
-
-    return {
-      success: result.errors === 0,
-      ...result,
-    };
-  }
-
-  // ============================================================================
-  // Distribution Endpoints (must come before generic routes)
-  // ============================================================================
-
-  /**
-   * Get score distribution for a geography level
-   *
-   * GET /api/scores/distribution?geography=metro&score_type=homeready
-   *
-   * Returns histogram buckets (0-10, 10-20, ..., 90-100) with counts and percentages,
-   * plus statistics (mean, median, std_dev) and grade distribution.
-   */
-  @Get('distribution')
-  @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Get score distribution for a geography level' })
-  @ApiQuery({
-    name: 'geography',
-    required: true,
-    enum: ['metro', 'county', 'zip'],
-  })
-  @ApiQuery({
-    name: 'score_type',
-    required: false,
-    description: 'propertyiq. If omitted, returns all score types.',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    description: 'Score date (YYYY-MM-DD), defaults to latest',
-  })
-  async getScoreDistribution(
-    @Query('geography') geography: string,
-    @Query('score_type') scoreType?: string,
-    @Query('date') date?: string,
-  ): Promise<{
-    geography: string;
-    score_type?: string;
-    score_date: string;
-    total_count?: number;
-    distribution?: Array<{
-      bucket: string;
-      min: number;
-      max: number;
-      count: number;
-      percentage: number;
-    }>;
-    statistics?: {
-      mean: number;
-      median: number;
-      std_dev: number;
-      min: number;
-      max: number;
-    };
-    grade_distribution?: Array<{
-      grade: string;
-      count: number;
-      percentage: number;
-    }>;
-    distributions?: Record<string, any>;
-  }> {
-    if (!geography) {
-      throw new HttpException(
-        'geography query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = this.validateGeography(geography);
-
-    // If no score_type provided, return all distributions
-    if (!scoreType) {
-      const result = await this.scoringService.getAllScoreDistributions(
-        geoLevel,
-        date,
-      );
-      return {
-        geography: result.geography,
-        score_date: result.score_date,
-        distributions: result.distributions,
-      };
-    }
-
-    // Otherwise return specific score type distribution
-    const validScoreType = this.validateScoreType(scoreType);
-    return this.scoringService.getScoreDistribution(
-      geoLevel,
-      validScoreType,
-      date,
+      historyMonths,
+      request,
     );
   }
 
@@ -409,9 +109,7 @@ export class ScoringController {
   // ============================================================================
 
   /**
-   * Get all scores for a geography level (for map display)
-   *
-   * GET /api/scores/all/:geography?score_type=homeready&page=0&page_size=1000
+   * Get all scores for a geography level (for map display).
    *
    * NOTE: This route must come BEFORE @Get(':geography/:locationId') to avoid route conflicts
    */
@@ -461,115 +159,17 @@ export class ScoringController {
     @Query('page_size') pageSize?: string,
     @Query('all') all?: string,
     @Query('concurrency') concurrency?: string,
-  ): Promise<{
-    success: boolean;
-    count: number;
-    data: Array<{
-      region_id: string;
-      region_name: string;
-      value: number;
-      grade: string;
-      confidence: number;
-      confidence_level: string;
-      date?: string;
-      score_type?: string;
-    }>;
-    pagination: {
-      page: number;
-      pageSize: number;
-      total: number;
-      hasMore: boolean;
-    };
-  }> {
-    const geoLevel = this.validateGeography(geography);
-    const requestedTypes = this.parseScoreTypes(scoreType);
-    const wantsAll = all === 'true' || all === '1';
-    // Allow up to 1000 records per page (Supabase limit)
-    const pageSizeNum = pageSize
-      ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000)
-      : 1000;
-    const pageNum = page ? Math.max(0, parseInt(page, 10)) : 0;
-    const concurrencyNum = concurrency
-      ? Math.min(Math.max(parseInt(concurrency, 10), 1), 8)
-      : 4;
-
-    if (wantsAll) {
-      const resultsByType = await Promise.all(
-        requestedTypes.map(async (type) => ({
-          type,
-          result: await this.scoringService.getAllScoresForGeographyAll(
-            geoLevel,
-            type,
-            date,
-            pageSizeNum,
-            concurrencyNum,
-          ),
-        })),
-      );
-
-      const data = resultsByType.flatMap(({ type, result }) =>
-        result.data.map((item) => ({
-          region_id: item.location_id,
-          region_name: item.location_name,
-          value: item.score,
-          grade: item.grade,
-          confidence: item.confidence,
-          confidence_level: item.confidence_level,
-          date: date || undefined,
-          score_type: type,
-        })),
-      );
-
-      const total = resultsByType.reduce((sum, r) => sum + r.result.total, 0);
-
-      return {
-        success: true,
-        count: data.length,
-        data,
-        pagination: {
-          page: 0,
-          pageSize: pageSizeNum,
-          total,
-          hasMore: false,
-        },
-      };
-    }
-
-    if (requestedTypes.length !== 1) {
-      throw new HttpException(
-        'score_type must be a single value unless all=true',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    const validScoreType = requestedTypes[0];
-
-    const result = await this.scoringService.getAllScoresForGeography(
-      geoLevel,
-      validScoreType,
+  ): Promise<AllScoresResponse> {
+    return getAllScoresHandler(
+      this.scoringService,
+      geography,
+      scoreType,
       date,
-      pageNum,
-      pageSizeNum,
+      page,
+      pageSize,
+      all,
+      concurrency,
     );
-
-    return {
-      success: true,
-      count: result.data.length,
-      data: result.data.map((item) => ({
-        region_id: item.location_id,
-        region_name: item.location_name,
-        value: item.score,
-        grade: item.grade,
-        confidence: item.confidence,
-        confidence_level: item.confidence_level,
-        date: (item as any).score_date || date || undefined,
-      })),
-      pagination: {
-        page: result.page,
-        pageSize: result.pageSize,
-        total: result.total,
-        hasMore: result.hasMore,
-      },
-    };
   }
 
   @Get('all/:geography/stream')
@@ -598,56 +198,18 @@ export class ScoringController {
     @Res() res: Response,
     @Query('page_size') pageSize?: string,
   ): Promise<void> {
-    const geoLevel = this.validateGeography(geography);
-    const requestedTypes = this.parseScoreTypes(scoreType);
-    const pageSizeNum = pageSize
-      ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000)
-      : 1000;
-
-    res.setHeader('Content-Type', 'application/x-ndjson');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    try {
-      for (const type of requestedTypes) {
-        for await (const page of this.scoringService.iterateScoresForGeography(
-          geoLevel,
-          type,
-          date,
-          pageSizeNum,
-        )) {
-          for (const item of page) {
-            const line = JSON.stringify({
-              region_id: item.location_id,
-              region_name: item.location_name,
-              value: item.score,
-              grade: item.grade,
-              confidence: item.confidence,
-              confidence_level: item.confidence_level,
-              date: date || undefined,
-              score_type: type,
-            });
-            res.write(`${line}\n`);
-          }
-        }
-      }
-      res.end();
-    } catch (err: any) {
-      res.status(500);
-      res.write(
-        JSON.stringify({ error: err?.message || 'Failed to stream scores' }) +
-          '\n',
-      );
-      res.end();
-    }
+    return streamAllScoresHandler(
+      this.scoringService,
+      geography,
+      scoreType,
+      date,
+      res,
+      pageSize,
+    );
   }
 
   /**
    * List all scored location IDs for a geography (latest period).
-   *
-   * GET /api/scores/ids/zip?score_type=propertyiq
-   *
-   * Lean ID-only payload that powers SEO sitemap filtering and per-page
-   * noindex: a ZIP/county/metro is only indexable when it has a score.
    *
    * NOTE: must be declared BEFORE @Get(':geography/:locationId') so "ids" is
    * not swallowed as a geography path param.
@@ -670,38 +232,12 @@ export class ScoringController {
     @Param('geography') geography: string,
     @Query('score_type') scoreType?: string,
     @Query('date') date?: string,
-  ): Promise<{
-    geography: string;
-    score_type: string;
-    date: string | null;
-    count: number;
-    ids: string[];
-  }> {
-    const geoLevel = this.validateGeography(geography);
-    const validScoreType = this.validateScoreType(scoreType || 'propertyiq');
-    const { date: scoredDate, ids } =
-      await this.scoringService.getScoredLocationIds(
-        geoLevel,
-        validScoreType,
-        date,
-      );
-    return {
-      geography: geoLevel,
-      score_type: validScoreType,
-      // Real per-geo refresh date — powers honest sitemap <lastmod> (H4).
-      date: scoredDate,
-      count: ids.length,
-      ids,
-    };
+  ): Promise<ScoredIdsResponse> {
+    return getScoredIdsHandler(this.scoringService, geography, scoreType, date);
   }
 
   /**
    * List recent distinct score_dates for a geography.
-   *
-   * GET /api/scores/ids/:geography/periods?score_type=propertyiq&limit=6
-   *
-   * Gives the monthly SEO slug-rebuild script the publish/redirect windows
-   * it needs to enumerate per-period scored IDs without a full table scan.
    *
    * NOTE: declared BEFORE @Get(':geography/:locationId') via its sibling
    * @Get('ids/:geography') — no additional ordering concern here.
@@ -725,47 +261,16 @@ export class ScoringController {
     @Query('score_type') scoreType = 'propertyiq',
     @Query('limit') limit = '6',
   ): Promise<{ geography: string; score_type: string; periods: string[] }> {
-    const geoLevel = this.validateGeography(geography);
-    const validScoreType = this.validateScoreType(scoreType);
-    const periods = await this.scoringService.getScorePeriods(
-      geoLevel,
-      validScoreType,
-      Math.min(Math.max(parseInt(limit, 10) || 6, 1), 24),
+    return getScorePeriodsHandler(
+      this.scoringService,
+      geography,
+      scoreType,
+      limit,
     );
-    return { geography: geoLevel, score_type: validScoreType, periods };
-  }
-
-  private parseScoreTypes(scoreType: string): ScoreType[] {
-    if (!scoreType) {
-      throw new HttpException(
-        'score_type query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    const raw = scoreType.toLowerCase();
-    if (raw === 'all') {
-      return ['propertyiq'];
-    }
-    const parts = raw
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean);
-    const valid = parts.map((p) => this.validateScoreType(p));
-    // Deduplicate (legacy types all map to propertyiq)
-    const unique = [...new Set(valid)];
-    if (unique.length === 0) {
-      throw new HttpException(
-        'score_type must be propertyiq (or legacy: homeready, investoredge, markethealth)',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    return unique;
   }
 
   /**
-   * Get scores for multiple locations (batch)
-   *
-   * GET /api/scores/batch/:geography?ids=id1,id2,id3
+   * Get scores for multiple locations (batch).
    *
    * NOTE: must be declared BEFORE @Get(':geography/:locationId') so "batch" is
    * not swallowed as a geography path param (Express matches in declaration
@@ -799,54 +304,15 @@ export class ScoringController {
     geography: string;
     scores: (ScoreResult | { location_id: string; error: string })[];
   }> {
-    if (!ids) {
-      throw new HttpException(
-        'ids query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoLevel = this.validateGeography(geography);
-    const locationIds = ids
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id) => id);
-    const options =
-      historyMonths != null
-        ? { historyMonths: parseHistoryMonths(historyMonths) }
-        : undefined;
-
-    if (locationIds.length === 0) {
-      throw new HttpException(
-        'At least one location ID is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (locationIds.length > 100) {
-      throw new HttpException(
-        'Maximum 100 locations per batch',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const scores = await Promise.all(
-      locationIds.map(async (id) => {
-        try {
-          const score = await this.scoringService.getScore(
-            id,
-            geoLevel,
-            date,
-            options,
-          );
-          if (!score) return { location_id: id, error: 'Score not found' };
-          return await this.stripBreakdownIfNeeded(score, request);
-        } catch {
-          return { location_id: id, error: 'Failed to retrieve score' };
-        }
-      }),
+    return getBatchScoresHandler(
+      this.scoringService,
+      this.scoreAccessService,
+      geography,
+      ids,
+      date,
+      historyMonths,
+      request,
     );
-
-    return { geography, scores };
   }
 
   // ============================================================================
@@ -854,14 +320,10 @@ export class ScoringController {
   // ============================================================================
 
   /**
-   * Get score by path (legacy format)
+   * Get score by path (legacy format).
    *
-   * GET /api/scores/:geography/:locationId
-   *
-   * Query params:
-   * - historyMonths: 0-6 for short-term trend data
-   * - historyYears: 3 or 5 for extended history with outcomes
-   * - includeOutcomes: true to include actual returns and benchmark comparisons
+   * CATCH-ALL — MUST remain the LAST route declared in this class (see the
+   * route-ordering hazard note at the top of the file).
    */
   @Get(':geography/:locationId')
   // Tier-gated breakdown — validate JWT for real tier; `private` cache (see @Get()).
@@ -895,260 +357,16 @@ export class ScoringController {
     @Query('includeOutcomes') includeOutcomes?: string,
     @Req() request?: any,
   ): Promise<ScoreResult> {
-    const geoLevel = this.validateGeography(geography);
-
-    // If extended history requested, use the new method
-    if (historyYears && parseInt(historyYears, 10) > 0) {
-      const years = Math.min(Math.max(parseInt(historyYears, 10), 1), 5);
-      const score = await this.scoringService.getScoreWithExtendedHistory(
-        locationId,
-        geoLevel,
-        {
-          historyYears: years,
-          includeOutcomes: includeOutcomes === 'true',
-        },
-      );
-
-      if (!score) {
-        throw new HttpException(
-          `No scores found for ${geography}/${locationId}`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      return await this.stripBreakdownIfNeeded(score, request);
-    }
-
-    // Otherwise use standard method
-    const options =
-      historyMonths != null
-        ? { historyMonths: parseHistoryMonths(historyMonths) }
-        : undefined;
-    const score = await this.scoringService.getScore(
+    return getScoreByPathHandler(
+      this.scoringService,
+      this.scoreAccessService,
+      geography,
       locationId,
-      geoLevel,
       date,
-      options,
+      historyMonths,
+      historyYears,
+      includeOutcomes,
+      request,
     );
-
-    if (!score) {
-      throw new HttpException(
-        `No scores found for ${geography}/${locationId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    return await this.stripBreakdownIfNeeded(score, request);
-  }
-
-  // ============================================================================
-  // Performance Tracking Endpoints
-  // ============================================================================
-
-  /**
-   * Get performance metrics for a geography and score type
-   *
-   * GET /api/scores/performance?geography=metro&score_type=homeready
-   *
-   * Response format (from spec):
-   * {
-   *   "geography": "metro",
-   *   "score_type": "homeready",
-   *   "validation_period": "2024-01 to 2024-12",
-   *   "metrics": {
-   *     "top_quintile_beat_rate": 89.2,
-   *     "bottom_quintile_beat_rate": 11.8,
-   *     "spread": 4.21,
-   *     "correlation": 0.67,
-   *     "predictions_validated": 367
-   *   },
-   *   "status": "healthy",
-   *   "formula_version": "PropertyIQ demand signal",
-   *   "last_validated": "2025-01-15"
-   * }
-   */
-  @Get('performance')
-  @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Get performance metrics for score validation' })
-  @ApiQuery({
-    name: 'geography',
-    required: false,
-    enum: ['metro', 'county', 'zip'],
-  })
-  @ApiQuery({
-    name: 'score_type',
-    required: false,
-    enum: ['propertyiq'],
-  })
-  async getPerformanceMetrics(
-    @Query('geography') geography?: string,
-    @Query('score_type') scoreType?: string,
-  ): Promise<PerformanceMetrics | PerformanceMetrics[]> {
-    // If both are provided, return single metric
-    if (geography && scoreType) {
-      const geoLevel = this.validateGeography(geography);
-      const validScoreType = this.validateScoreType(scoreType);
-      return this.performanceTrackingService.getPerformanceMetrics(
-        geoLevel,
-        validScoreType,
-      );
-    }
-
-    // Otherwise return all metrics
-    return this.performanceTrackingService.getAllPerformanceMetrics();
-  }
-
-  /**
-   * Get active performance alerts
-   *
-   * GET /api/scores/alerts
-   */
-  @Get('alerts')
-  @ApiOperation({ summary: 'Get active performance alerts' })
-  async getAlerts(): Promise<AlertResult[]> {
-    return this.performanceTrackingService.getActiveAlerts();
-  }
-
-  /**
-   * Trigger validation of predictions from 12 months ago
-   *
-   * POST /api/scores/validate
-   */
-  @Post('validate')
-  @UseGuards(AdminGuard)
-  @ApiOperation({ summary: 'Validate predictions from 12 months ago' })
-  async validatePredictions() {
-    const [result1Y, result3Y] = await Promise.all([
-      this.performanceTrackingService.validatePredictions(),
-      this.performanceTrackingService.validatePredictions3Y(),
-    ]);
-    return {
-      success: result1Y.errors === 0 && result3Y.errors === 0,
-      validated_1y: result1Y.validated,
-      validated_3y: result3Y.validated,
-      errors: result1Y.errors + result3Y.errors,
-      predictionDate_1y: result1Y.predictionDate,
-      predictionDate_3y: result3Y.predictionDate,
-    };
-  }
-
-  // ============================================================================
-  // Debug Endpoints
-  // ============================================================================
-
-  /**
-   * Get latest data date for a geography
-   */
-  @Get('debug/latest-date/:geography')
-  @ApiOperation({ summary: 'Get latest data date for a geography' })
-  async getLatestDate(
-    @Param('geography') geography: string,
-  ): Promise<{ geography: string; latestDate: string | null }> {
-    const geoLevel = this.validateGeography(geography);
-    const latestDate = await this.scoringService.debugGetLatestDate(geoLevel);
-    return { geography, latestDate };
-  }
-
-  /**
-   * Get metric statistics
-   */
-  @Get('debug/metric-stats/:geography/:metric')
-  @ApiOperation({ summary: 'Get statistics for a metric' })
-  async getMetricStats(
-    @Param('geography') geography: string,
-    @Param('metric') metric: string,
-    @Query('date') date?: string,
-  ) {
-    const geoLevel = this.validateGeography(geography);
-    const stats = await this.scoringService.debugGetMetricStats(
-      geoLevel,
-      metric,
-      date,
-    );
-    return { geography, metric, stats };
-  }
-
-  // ============================================================================
-  // Access Control Helpers
-  // ============================================================================
-
-  /**
-   * Strip score component breakdowns from response for users without access.
-   * Scores (number, grade, confidence) are always visible — only `components` is gated.
-   */
-  private async stripBreakdownIfNeeded(
-    result: ScoreResult,
-    request: any,
-  ): Promise<ScoreResult> {
-    const userTier = await this.scoreAccessService.resolveUserTier(request);
-    const canBreakdown =
-      await this.scoreAccessService.canAccessBreakdown(userTier);
-
-    if (canBreakdown) return result;
-
-    // User can't see breakdowns — strip components from all score types
-    const scoreTypeKeys = [
-      'homeready',
-      'investoredge',
-      'markethealth',
-      'propertyiq',
-    ] as const;
-    const hasComponents = scoreTypeKeys.some(
-      (st) => result.scores?.[st]?.components,
-    );
-    if (!hasComponents) return result;
-
-    // Shallow-clone to avoid mutating cached service objects
-    const stripped: ScoreResult = { ...result, scores: { ...result.scores } };
-    for (const scoreType of scoreTypeKeys) {
-      const scoreData = stripped.scores[scoreType];
-      if (scoreData?.components) {
-        stripped.scores[scoreType] = { ...scoreData };
-        delete stripped.scores[scoreType].components;
-      }
-    }
-
-    return stripped;
-  }
-
-  // ============================================================================
-  // Validation Helpers
-  // ============================================================================
-
-  private validateGeography(geography: string): GeographyLevel {
-    const validLevels: GeographyLevel[] = ['metro', 'county', 'zip'];
-    const lower = geography.toLowerCase() as GeographyLevel;
-
-    if (!validLevels.includes(lower)) {
-      throw new HttpException(
-        `Invalid geography: ${geography}. Valid values: ${validLevels.join(', ')}`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    return lower;
-  }
-
-  private validateScoreType(scoreType: string): ScoreType {
-    const lower = scoreType.toLowerCase();
-
-    // Map legacy score type names to propertyiq for backward compat
-    const legacyMapping: Record<string, ScoreType> = {
-      homeready: 'propertyiq',
-      investoredge: 'propertyiq',
-      markethealth: 'propertyiq',
-      market_health: 'propertyiq',
-      propertyiq: 'propertyiq',
-    };
-
-    const mapped = legacyMapping[lower];
-    if (!mapped) {
-      throw new HttpException(
-        `Invalid score_type: ${scoreType}. Valid value: propertyiq`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    return mapped;
   }
 }
