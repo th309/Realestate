@@ -426,8 +426,11 @@ export const COMPONENT_GROUPS: Record<
   },
 
   // -----------------------------------------------------------------------
-  // PropertyIQ (v4): demand_signal — single composite from 3 Redfin metrics
-  // No component groups needed; the score IS the single demand signal.
+  // PropertyIQ: demand_signal — the score IS a single demand signal, so no
+  // component groups are needed. The LIVE formula inputs are ZHVI 12-mo & 3-mo
+  // momentum, median days on market, and price-reduced share (Zillow + Realtor,
+  // NO Redfin), consumed via PROPERTYIQ_FORMULA_METRICS — this legacy grouping
+  // below is display-only scaffolding, not the authoritative input list.
   // -----------------------------------------------------------------------
   propertyiq: {
     metro: {

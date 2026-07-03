@@ -22,6 +22,8 @@ const TABLES: Record<string, string> = {
   realtor_metro: "period_date",
   realtor_county: "period_date",
   realtor_zip: "period_date",
+  redfin_dc_housing_market_county: "period_end", // Redfin Data Center bellwether
+  economic_county: "period_date", // FRED/BLS/BEA economic bellwether
   calculated_metrics: "period_date",
   propertyiq_scores_v2: "score_date",
 };

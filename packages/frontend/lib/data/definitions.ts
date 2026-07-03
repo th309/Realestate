@@ -713,10 +713,10 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     id: "propertyiq_score",
     name: "PropertyIQ Score",
     description:
-      "Predicts market performance vs state average using 3 Redfin demand indicators. Score 50 = state average, higher = outperformance.",
+      "Predicts a market's performance versus its state average from current demand momentum. Score 50 = state average, higher = outperformance.",
     formula:
-      "Monotonic percentile rank of 3 Redfin demand signals (off-market %, pending ratio, DOM acceleration)",
-    dataSource: "PropertyIQ v4 (Redfin)",
+      "Cross-sectional percentile rank of a demand signal — +z(ZHVI 12-mo momentum) +z(ZHVI 3-mo momentum) −z(median days on market) −z(price-reduced share) — recentered so 50 = state average, clamped 1–99.",
+    dataSource: "PropertyIQ (Zillow ZHVI + Realtor.com)",
     updateFrequency: "Monthly",
     notes:
       "Score range 1-99. Backtested against 3-year actual returns. Replaces legacy HomeReady/InvestorEdge/Market Health composite scores.",
@@ -861,7 +861,7 @@ export const DATA_SOURCE_ANCHORS: Record<string, string> = {
     "propertyiq",
   "Calculated from Census BPS": "census",
   "PropertyIQ Calculated": "propertyiq",
-  "PropertyIQ v4 (Redfin)": "propertyiq",
+  "PropertyIQ (Zillow ZHVI + Realtor.com)": "propertyiq",
 };
 
 export function getDataSourceAnchor(metricId: string): string | undefined {
