@@ -2,7 +2,12 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 import { InventorySurplusService } from './inventory-surplus.service';
-import { MetricsController } from './metrics.controller';
+import { MetricsYieldController } from './metrics-yield.controller';
+import { MetricsRentRatiosController } from './metrics-rent-ratios.controller';
+import { MetricsMapPrecalcController } from './metrics-map-precalc.controller';
+import { MetricsGrowthController } from './metrics-growth.controller';
+import { MetricsBatchController } from './metrics-batch.controller';
+import { MetricsAffordabilityController } from './metrics-affordability.controller';
 import { InventorySurplusController } from './inventory-surplus.controller';
 import { RealtorMosInputsService } from './pipelines/realtor-mos-inputs.service';
 import { InvestmentMetricsService } from './pipelines/investment-metrics.service';
@@ -22,7 +27,15 @@ import { AffordabilityMetricsService } from './pipelines/affordability-metrics.s
 
 @Module({
   imports: [SupabaseModule],
-  controllers: [MetricsController, InventorySurplusController],
+  controllers: [
+    MetricsYieldController,
+    MetricsRentRatiosController,
+    MetricsMapPrecalcController,
+    MetricsGrowthController,
+    MetricsBatchController,
+    MetricsAffordabilityController,
+    InventorySurplusController,
+  ],
   providers: [
     CalculatedMetricsService,
     InventorySurplusService,
