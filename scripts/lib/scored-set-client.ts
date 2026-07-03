@@ -3,11 +3,35 @@ import { REDIRECT_LOOKBACK_MONTHS } from "./published-set";
 
 type Geo = "metro" | "county" | "zip";
 
+// Retry transient server-side failures. The scores/ids/zip endpoint is 100%
+// reliable in isolation but throws a brief 500 in the second or two right after
+// the scoring pipeline finishes writing (DB still settling); it recovers on the
+// very next call. Without this, the SEO slug rebuild fail-closed on that one-shot
+// and cascaded the whole post-import refresh to failure. Retry 5xx + network
+// errors with backoff (recovery is sub-second, so the first retry almost always
+// wins; the longer waits cover a slower settle). 4xx is a real error — don't retry.
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok)
-    throw new Error(`GET ${url} → ${res.status}: ${await res.text()}`);
-  return (await res.json()) as T;
+  const backoffMs = [2000, 5000, 10000, 15000];
+  let lastError = "";
+  for (let attempt = 0; attempt <= backoffMs.length; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return (await res.json()) as T;
+      lastError = `${res.status}: ${await res.text()}`;
+      if (res.status < 500) break; // client error — not transient
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+    }
+    if (attempt < backoffMs.length) {
+      console.warn(
+        `  transient failure on ${url} (${lastError.slice(0, 120)}) — retry ${attempt + 1}/${backoffMs.length} in ${backoffMs[attempt] / 1000}s`,
+      );
+      await new Promise((r) => setTimeout(r, backoffMs[attempt]));
+    }
+  }
+  throw new Error(
+    `GET ${url} → ${lastError} (after ${backoffMs.length + 1} attempts)`,
+  );
 }
 
 export async function fetchScoredByPeriod(
