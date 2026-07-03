@@ -35,13 +35,6 @@
     "state": "MI"
   },
   {
-    "cbsaCode": "10380",
-    "slug": "aguadilla-pr",
-    "name": "Aguadilla, PR",
-    "shortName": "Aguadilla, PR",
-    "state": "PR"
-  },
-  {
     "cbsaCode": "10420",
     "slug": "akron-oh",
     "name": "Akron, OH",
@@ -271,13 +264,6 @@
     "name": "Ardmore, OK",
     "shortName": "Ardmore, OK",
     "state": "OK"
-  },
-  {
-    "cbsaCode": "11640",
-    "slug": "arecibo-pr",
-    "name": "Arecibo, PR",
-    "shortName": "Arecibo, PR",
-    "state": "PR"
   },
   {
     "cbsaCode": "11660",
@@ -1230,20 +1216,6 @@
     "name": "Clovis, NM",
     "shortName": "Clovis, NM",
     "state": "NM"
-  },
-  {
-    "cbsaCode": "17620",
-    "slug": "coamo-pr",
-    "name": "Coamo, PR",
-    "shortName": "Coamo, PR",
-    "state": "PR"
-  },
-  {
-    "cbsaCode": "17640",
-    "slug": "coco-pr",
-    "name": "Coco, PR",
-    "shortName": "Coco, PR",
-    "state": "PR"
   },
   {
     "cbsaCode": "17650",
@@ -2457,13 +2429,6 @@
     "state": "MS"
   },
   {
-    "cbsaCode": "25020",
-    "slug": "guayama-pr",
-    "name": "Guayama, PR",
-    "shortName": "Guayama, PR",
-    "state": "PR"
-  },
-  {
     "cbsaCode": "25060",
     "slug": "gulfport-biloxi-ms",
     "name": "Gulfport-Biloxi, MS",
@@ -3248,13 +3213,6 @@
     "state": "TX"
   },
   {
-    "cbsaCode": "29720",
-    "slug": "lares-pr",
-    "name": "Lares, PR",
-    "shortName": "Lares, PR",
-    "state": "PR"
-  },
-  {
     "cbsaCode": "29740",
     "slug": "las-cruces-nm",
     "name": "Las Cruces, NM",
@@ -3708,13 +3666,6 @@
     "name": "Massena-Ogdensburg, NY",
     "shortName": "Massena, NY",
     "state": "NY"
-  },
-  {
-    "cbsaCode": "32420",
-    "slug": "mayaguez-pr",
-    "name": "Mayaguez, PR",
-    "shortName": "Mayaguez, PR",
-    "state": "PR"
   },
   {
     "cbsaCode": "32460",
@@ -4739,13 +4690,6 @@
     "state": "OK"
   },
   {
-    "cbsaCode": "38660",
-    "slug": "ponce-pr",
-    "name": "Ponce, PR",
-    "shortName": "Ponce, PR",
-    "state": "PR"
-  },
-  {
     "cbsaCode": "38700",
     "slug": "pontiac-il",
     "name": "Pontiac, IL",
@@ -5227,13 +5171,6 @@
     "name": "San Jose-Sunnyvale-Santa Clara, CA",
     "shortName": "San Jose, CA",
     "state": "CA"
-  },
-  {
-    "cbsaCode": "41980",
-    "slug": "san-juan-bayamon-caguas-pr",
-    "name": "San Juan-Bayamon-Caguas, PR",
-    "shortName": "San Juan, PR",
-    "state": "PR"
   },
   {
     "cbsaCode": "42020",
@@ -6053,13 +5990,6 @@
     "name": "Utica-Rome, NY",
     "shortName": "Utica, NY",
     "state": "NY"
-  },
-  {
-    "cbsaCode": "46580",
-    "slug": "utuado-pr",
-    "name": "Utuado, PR",
-    "shortName": "Utuado, PR",
-    "state": "PR"
   },
   {
     "cbsaCode": "46620",
