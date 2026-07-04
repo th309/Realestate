@@ -1320,8 +1320,10 @@ curl -s https://www.propertyiq.app/robots.txt | grep -i "content-signal"   # sea
 curl -s https://mcp.propertyiq.app/health                                   # {status:"healthy"}
 curl -s https://mcp.propertyiq.app/mcp                                       # unauth JSON-RPC discovery probe
 curl -s https://mcp.propertyiq.app/api/openapi.json | head -c 200           # single invoke_tool + list_tools op
-curl -sI -H "Host: bogus.example" https://mcp.propertyiq.app/api/tools      # expect 421 (host allowlist; /health exempt)
+curl -sI -H "Host: bogus.example" https://mcp.propertyiq.app/api/tools      # spoofed host rejected: expect 404 (Railway edge, Server: railway-hikari + x-railway-fallback: true) OR 421 (app host allowlist). Either passes; /health exempt.
 ```
+
+Spoofed `Host` is rejected with no data leak either way. In **prod**, Railway's edge (`railway-hikari`) preempts unknown hosts with a **404** _before_ the request reaches Express, so the app's own **421** allowlist guard never fires there — it's defense-in-depth for local / non-Railway deploys and for a direct hit at the app layer. Pass = **404 (edge) OR 421 (app)**; a 200 with tool data would be the real failure.
 
 Also: bare apex `propertyiq.app/...` and the Railway alias should 301/308 → `www`.
 
