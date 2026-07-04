@@ -18,6 +18,8 @@ test-results/
 packages/frontend/test-results/
 packages/frontend/playwright-report/
 screenshots/
+.report-shots/
+/playwright-report/
 
 # Next.js
 .next/
@@ -98,6 +100,14 @@ redfin_downloads/raw_files/*.csv
 *.shx
 *.prj
 
+# Regenerable per-state geojson — derived from TIGER shapefiles via
+# scripts/convert-places-and-tracts-to-geojson.ts + split-zcta-by-state.ts.
+# NOT served at runtime (tract is disabled in geojson-fetch.ts; cities/zips are
+# served from the DB). Purged from history 2026-07-04; keep them out for good.
+/packages/frontend/public/geojson/tract/
+/packages/frontend/public/geojson/place/
+/packages/frontend/public/geojson/zcta/
+
 # Large Redfin data files (exceed GitHub's 100MB limit)
 redfin_downloads/raw_files/housing_market_county.tsv
 redfin_downloads/raw_files/housing_market_metro.tsv
@@ -132,6 +142,8 @@ skills-lock.json
 # Loose QA artifacts at repo root (scoped to root only — do NOT ignore *.png
 # in packages/*/public, brand assets, etc. — those are real, tracked product assets)
 /*.png
+/*.jpeg
+/*.jpg
 markets-page-snapshot.md
 
 # ML model files (too large for GitHub, download at runtime)
@@ -146,6 +158,10 @@ __pycache__/
 data/parquet/
 data/checkpoints/
 scripts/analysis/data/
+scripts/analysis/**/data/
+scripts/analysis/*.out.txt
+# Superpowers audit scratch/working dirs (intermediate agent output, not results)
+docs/superpowers/results/audit-working-*/
 
 # Windows artifacts
 NUL
