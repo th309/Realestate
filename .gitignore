@@ -18,6 +18,8 @@ test-results/
 packages/frontend/test-results/
 packages/frontend/playwright-report/
 screenshots/
+.report-shots/
+/playwright-report/
 
 # Next.js
 .next/
@@ -132,6 +134,8 @@ skills-lock.json
 # Loose QA artifacts at repo root (scoped to root only — do NOT ignore *.png
 # in packages/*/public, brand assets, etc. — those are real, tracked product assets)
 /*.png
+/*.jpeg
+/*.jpg
 markets-page-snapshot.md
 
 # ML model files (too large for GitHub, download at runtime)
@@ -146,6 +150,10 @@ __pycache__/
 data/parquet/
 data/checkpoints/
 scripts/analysis/data/
+scripts/analysis/**/data/
+scripts/analysis/*.out.txt
+# Superpowers audit scratch/working dirs (intermediate agent output, not results)
+docs/superpowers/results/audit-working-*/
 
 # Windows artifacts
 NUL
