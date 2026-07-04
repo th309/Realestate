@@ -51,11 +51,10 @@ export class BillingService {
   ): Promise<string> {
     const client = this.supabase.getClient();
 
-    // Guard: block duplicate subscriptions for the same tier
     const { data: currentProfile } = await client
       .from('user_profiles')
       .select(
-        'email, stripe_customer_id, subscription_tier, subscription_status',
+        'email, stripe_customer_id, stripe_subscription_id, subscription_tier, subscription_status',
       )
       .eq('id', userId)
       .single();
@@ -64,13 +63,22 @@ export class BillingService {
       throw new BadRequestException('User profile not found');
     }
 
+    // Guard: block a NEW checkout for ANY user with a LIVE paid Stripe sub,
+    // REGARDLESS of requested tier — a second concurrent sub double-charges.
+    // Live paid sub = `stripe_subscription_id` populated (set for any real
+    // Stripe sub incl. card-trials; NULLed by the delete webhook on cancel)
+    // AND a non-terminal status (active/past_due/unpaid/trialing). Free users
+    // and app-level no-card trial users (status='trialing') have NO
+    // `stripe_subscription_id`, so they still convert to paid via checkout.
+    // Paid subscribers change tiers via the billing portal, not a new checkout.
+    const LIVE_PAID_STATUSES = ['active', 'past_due', 'unpaid', 'trialing'];
     if (
-      currentProfile.subscription_tier === tier &&
-      (currentProfile.subscription_status === 'active' ||
-        currentProfile.subscription_status === 'trialing')
+      currentProfile.stripe_subscription_id &&
+      LIVE_PAID_STATUSES.includes(currentProfile.subscription_status ?? '')
     ) {
       throw new BadRequestException(
-        `You already have an active ${tier} subscription`,
+        'You already have an active subscription. To change or upgrade your ' +
+          'plan, manage it from the billing portal instead of starting a new checkout.',
       );
     }
 
