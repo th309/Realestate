@@ -100,6 +100,14 @@ redfin_downloads/raw_files/*.csv
 *.shx
 *.prj
 
+# Regenerable per-state geojson — derived from TIGER shapefiles via
+# scripts/convert-places-and-tracts-to-geojson.ts + split-zcta-by-state.ts.
+# NOT served at runtime (tract is disabled in geojson-fetch.ts; cities/zips are
+# served from the DB). Purged from history 2026-07-04; keep them out for good.
+/packages/frontend/public/geojson/tract/
+/packages/frontend/public/geojson/place/
+/packages/frontend/public/geojson/zcta/
+
 # Large Redfin data files (exceed GitHub's 100MB limit)
 redfin_downloads/raw_files/housing_market_county.tsv
 redfin_downloads/raw_files/housing_market_metro.tsv
