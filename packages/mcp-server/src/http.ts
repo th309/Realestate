@@ -95,6 +95,13 @@ app.use((req, res, next) => {
 // Host allowlist guard — 421 Misdirected Request on unknown hostnames.
 // /health is exempted so Railway's platform probe keeps working on the
 // internal hostname. OPTIONS is exempted so CORS preflight works anywhere.
+//
+// Defense-in-depth: in production this runs BEHIND Railway's edge, which
+// already returns 404 (Server: railway-hikari, x-railway-fallback: true) for
+// any Host it doesn't recognize — so this 421 path is effectively unreachable
+// via the public edge and a spoofed-host probe in prod observes 404, not 421.
+// Keep this guard regardless: it's the actual rejection for local dev, direct
+// app-layer hits, and any non-Railway deploy where no edge filters hosts first.
 app.use((req, res, next) => {
   if (req.method === "OPTIONS" || req.path === "/health") {
     next();

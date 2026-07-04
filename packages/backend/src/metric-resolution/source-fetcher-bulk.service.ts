@@ -13,6 +13,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { GeoLevel, DataSource } from './metric-resolution.types';
 import { getWideTableRoute, getZillowRoute } from './table-routes';
+import { MetroRollupGeoService } from './metro-rollup-geo.service';
 
 /** Result row from a bulk fetch */
 export interface BulkFetchedRow {
@@ -28,6 +29,7 @@ export class SourceFetcherBulkService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly metroRollup: MetroRollupGeoService,
   ) {}
 
   /**
@@ -42,6 +44,8 @@ export class SourceFetcherBulkService {
     if (source === 'zillow') return this.fetchZillowBulk(column, geoLevel);
     if (source === 'calculated')
       return this.fetchCalculatedBulk(column, geoLevel);
+    if (source === 'irs_metro_rollup')
+      return this.metroRollup.fetchMetroBulk(column, geoLevel);
     return this.fetchWideTableBulk(source, column, geoLevel);
   }
 

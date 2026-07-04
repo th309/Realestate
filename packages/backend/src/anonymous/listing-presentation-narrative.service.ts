@@ -91,7 +91,11 @@ export class ListingPresentationNarrativeService {
     }
   }
 
-  private static readonly AI_TIMEOUT_MS = 40_000;
+  // 52s: comfortably under the frontend's 55s AbortSignal and the ~60s platform
+  // request timeout, but generous enough that a ~40s DeepSeek completion is not
+  // discarded at the boundary (F7 fix). Paired with an ai_model_config row that
+  // routes this purpose to the faster deepseek-v4-flash model.
+  private static readonly AI_TIMEOUT_MS = 52_000;
 
   /** Race an AI call against a timeout so a hang surfaces as an error (→ fallback). */
   private withAiTimeout<T>(p: Promise<T>): Promise<T> {

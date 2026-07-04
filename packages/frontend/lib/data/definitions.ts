@@ -810,6 +810,68 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     sourceUrl: "https://www.census.gov/construction/bps/",
     relatedMetrics: ["total_permits", "new_construction_price"],
   },
+
+  // Redfin Data Center
+  sold_above_list_share: {
+    id: "sold_above_list_share",
+    name: "Sold Above List %",
+    description:
+      "Share of homes that sold above their original list price. Elevated readings signal competitive, demand-heavy conditions where buyers bid past asking; lower readings point to softer negotiating leverage for sellers.",
+    formula: "(Homes Sold Above Original List Price / Total Homes Sold) × 100",
+    dataSource: "Redfin",
+    updateFrequency: "Monthly",
+    notes:
+      "Sourced from Redfin Data Center (share_sold_above_original_list). Available for metros, counties, and ZIP codes. Display-only indicator; does not feed the PropertyIQ Score.",
+    sourceUrl: "https://www.redfin.com/news/data-center/",
+  },
+  listings_delisted_share: {
+    id: "listings_delisted_share",
+    name: "Delisting Share %",
+    description:
+      "Share of active listings that were delisted or withdrawn from the market without selling. Rising delisting activity can indicate sellers pulling back amid softening demand.",
+    formula: "(Delisted Listings / Active Listings) × 100",
+    dataSource: "Redfin",
+    updateFrequency: "Monthly",
+    notes:
+      "Sourced from Redfin Data Center (share_of_listings_delisted). Available for metros, counties, and ZIP codes. Display-only indicator; does not feed the PropertyIQ Score.",
+    sourceUrl: "https://www.redfin.com/news/data-center/",
+  },
+  pending_cancellation_share: {
+    id: "pending_cancellation_share",
+    name: "Sale Cancellation %",
+    description:
+      "Share of pending home sales that fell through or were cancelled before closing. Higher cancellation rates can reflect buyer hesitation, financing challenges, or inspection-driven fallout.",
+    formula: "(Cancelled Pending Sales / Total Pending Sales) × 100",
+    dataSource: "Redfin",
+    updateFrequency: "Monthly",
+    notes:
+      "Sourced from Redfin Data Center (percent_of_pending_sales). Available for metros, counties, and ZIP codes. Display-only indicator; does not feed the PropertyIQ Score.",
+    sourceUrl: "https://www.redfin.com/news/data-center/",
+  },
+  investor_market_share: {
+    id: "investor_market_share",
+    name: "Investor Market Share %",
+    description:
+      "Share of home purchases made by investors rather than owner-occupant buyers. Higher shares indicate stronger investor demand competing with traditional buyers in the market.",
+    formula: "(Investor Purchases / Total Home Purchases) × 100",
+    dataSource: "Redfin",
+    updateFrequency: "Quarterly",
+    notes:
+      "Sourced from Redfin Data Center (investor purchase share). Available for metro areas only. Display-only indicator; does not feed the PropertyIQ Score.",
+    sourceUrl: "https://www.redfin.com/news/data-center/",
+  },
+  all_cash_share: {
+    id: "all_cash_share",
+    name: "All-Cash Purchase %",
+    description:
+      "Share of home purchases made entirely with cash, without a mortgage. Higher shares often reflect investor activity or competitive markets where cash offers carry an edge over financed bids.",
+    formula: "(All-Cash Purchases / Total Home Purchases) × 100",
+    dataSource: "Redfin",
+    updateFrequency: "Monthly",
+    notes:
+      "Sourced from Redfin Data Center (all-cash purchase share). Available for metro areas only. Display-only indicator; does not feed the PropertyIQ Score.",
+    sourceUrl: "https://www.redfin.com/news/data-center/",
+  },
 };
 
 /**

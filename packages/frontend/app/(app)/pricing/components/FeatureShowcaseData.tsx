@@ -4,7 +4,6 @@ import {
   Sparkles,
   FileText,
   MapPin,
-  BarChart3,
   Check,
   Lock,
   ArrowRight,
@@ -60,19 +59,30 @@ export function ReportsSection({
             a professional analyst.
           </li>
           <li className="text-on-surface font-medium">
-            Institutional investors pay thousands for reports like these. Yours
-            start at{" "}
+            Institutional investors pay thousands for reports like these.{" "}
             {(() => {
-              const pro = plans.find((p) => p.slug === "pro");
-              return pro?.price_monthly ? (
-                `$${Math.round(Number(pro.price_monthly))}/month`
-              ) : plansLoading ? (
-                <span className="inline-block w-16 h-4 bg-surface-container animate-pulse rounded align-middle" />
-              ) : (
-                "$39/month"
+              // Pull the Pro monthly price from the same DB-driven source the
+              // tier cards use. Guard against NaN/0 so a missing or unresolved
+              // price can never render a dangling "Yours start at ." — the
+              // no-price branch is a complete, price-agnostic sentence and we
+              // never hardcode a dollar amount.
+              const proMonthly = Number(
+                plans.find((p) => p.slug === "pro")?.price_monthly,
               );
+              if (Number.isFinite(proMonthly) && proMonthly > 0) {
+                return `Yours start at $${Math.round(proMonthly)}/month.`;
+              }
+              if (plansLoading) {
+                return (
+                  <>
+                    Yours start at{" "}
+                    <span className="inline-block w-16 h-4 bg-surface-container animate-pulse rounded align-middle" />
+                    .
+                  </>
+                );
+              }
+              return "Yours cost a fraction of that.";
             })()}
-            .
           </li>
         </ul>
       </div>

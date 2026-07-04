@@ -33,6 +33,12 @@ export type DataSource =
   | 'ces'
   | 'qcew'
   | 'irs'
+  // Computed source: sums county-level IRS net-migration up to the metro via the
+  // canonical `geographies` county->cbsa mapping. Metro-only. Exists because
+  // Redfin's metro migration dataset is not publicly available (its importer is
+  // a permanent no-op), leaving `net_migration` unresolvable at metro without
+  // this rollup. Not a physical table — handled specially in the fetchers.
+  | 'irs_metro_rollup'
   | 'redfin_migration';
 
 /**

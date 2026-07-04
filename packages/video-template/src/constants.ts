@@ -56,25 +56,29 @@ export function scoreTierColor(score: number): string {
   return COLORS.tierRed;
 }
 
+// PropertyIQ Score labels describe demand MOMENTUM / timing, not quality.
+// These MUST stay the momentum ladder (mirrors getScoreLabel in
+// packages/frontend/app/components/scoring/ScoreDisplay.tsx). Never reintroduce
+// quality words (EXCELLENT/GOOD/POOR/etc.). See CLAUDE.md §9.
 export function scoreTierLabel(score: number): string {
-  if (score >= 90) return "EXCELLENT";
-  if (score >= 80) return "GREAT";
-  if (score >= 70) return "GOOD";
-  if (score >= 60) return "FAIR";
-  if (score >= 50) return "AVERAGE";
-  if (score >= 40) return "BELOW AVG";
-  if (score >= 20) return "POOR";
-  return "VERY POOR";
+  if (score >= 90) return "VERY STRONG";
+  if (score >= 80) return "STRONG";
+  if (score >= 70) return "RISING";
+  if (score >= 60) return "FIRMING";
+  if (score >= 50) return "STEADY";
+  if (score >= 40) return "EASING";
+  if (score >= 20) return "WEAK";
+  return "VERY WEAK";
 }
 
 // ── Scene timing (frames at 30fps) ──────────────────────────────────────────
 export const TIMING = {
-  intro: { start: 0, duration: 60 },           // 0-2s   intro card
-  scoreReveal: { start: 60, duration: 210 },    // 2-9s   animated counter
-  trendChart: { start: 270, duration: 240 },    // 9-17s  trend sparkline
-  statCards: { start: 510, duration: 270 },     // 17-26s stat cards
-  comparison: { start: 780, duration: 300 },    // 26-36s comparison (skipped in single mode)
-  outro: { start: 1080, duration: 210 },        // 36-43s CTA outro (single mode)
+  intro: { start: 0, duration: 60 }, // 0-2s   intro card
+  scoreReveal: { start: 60, duration: 210 }, // 2-9s   animated counter
+  trendChart: { start: 270, duration: 240 }, // 9-17s  trend sparkline
+  statCards: { start: 510, duration: 270 }, // 17-26s stat cards
+  comparison: { start: 780, duration: 300 }, // 26-36s comparison (skipped in single mode)
+  outro: { start: 1080, duration: 210 }, // 36-43s CTA outro (single mode)
   outroComparison: { start: 1080, duration: 210 },
 } as const;
 

@@ -17,6 +17,7 @@ import { MetricResolutionService } from './metric-resolution.service';
 import { SourceFetcherService } from './source-fetcher.service';
 import { SourceFetcherBulkService } from './source-fetcher-bulk.service';
 import { GeographyChainService } from './geography-chain.service';
+import { MetroRollupGeoService } from './metro-rollup-geo.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -25,12 +26,14 @@ import { GeographyChainService } from './geography-chain.service';
     SourceFetcherService,
     SourceFetcherBulkService,
     GeographyChainService,
+    MetroRollupGeoService,
   ],
   exports: [
     MetricResolutionService,
     GeographyChainService,
     SourceFetcherService,
     SourceFetcherBulkService,
+    MetroRollupGeoService,
   ],
 })
 export class MetricResolutionModule {}

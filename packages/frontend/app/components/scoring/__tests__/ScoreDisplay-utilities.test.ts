@@ -97,44 +97,44 @@ describe("getLetterGrade", () => {
 // ---------------------------------------------------------------------------
 
 describe("getScoreLabel", () => {
-  it("returns EXCELLENT for 90+", () => {
-    expect(getScoreLabel(90)).toBe("EXCELLENT");
-    expect(getScoreLabel(100)).toBe("EXCELLENT");
+  it("returns VERY STRONG for 90+", () => {
+    expect(getScoreLabel(90)).toBe("VERY STRONG");
+    expect(getScoreLabel(100)).toBe("VERY STRONG");
   });
 
-  it("returns GREAT for 80-89", () => {
-    expect(getScoreLabel(80)).toBe("GREAT");
-    expect(getScoreLabel(89)).toBe("GREAT");
+  it("returns STRONG for 80-89", () => {
+    expect(getScoreLabel(80)).toBe("STRONG");
+    expect(getScoreLabel(89)).toBe("STRONG");
   });
 
-  it("returns GOOD for 70-79", () => {
-    expect(getScoreLabel(70)).toBe("GOOD");
-    expect(getScoreLabel(79)).toBe("GOOD");
+  it("returns RISING for 70-79", () => {
+    expect(getScoreLabel(70)).toBe("RISING");
+    expect(getScoreLabel(79)).toBe("RISING");
   });
 
-  it("returns FAIR for 60-69", () => {
-    expect(getScoreLabel(60)).toBe("FAIR");
-    expect(getScoreLabel(69)).toBe("FAIR");
+  it("returns FIRMING for 60-69", () => {
+    expect(getScoreLabel(60)).toBe("FIRMING");
+    expect(getScoreLabel(69)).toBe("FIRMING");
   });
 
-  it("returns AVERAGE for 50-59", () => {
-    expect(getScoreLabel(50)).toBe("AVERAGE");
-    expect(getScoreLabel(59)).toBe("AVERAGE");
+  it("returns STEADY for 50-59", () => {
+    expect(getScoreLabel(50)).toBe("STEADY");
+    expect(getScoreLabel(59)).toBe("STEADY");
   });
 
-  it("returns BELOW AVG for 40-49", () => {
-    expect(getScoreLabel(40)).toBe("BELOW AVG");
-    expect(getScoreLabel(49)).toBe("BELOW AVG");
+  it("returns EASING for 40-49", () => {
+    expect(getScoreLabel(40)).toBe("EASING");
+    expect(getScoreLabel(49)).toBe("EASING");
   });
 
-  it("returns POOR for 20-39", () => {
-    expect(getScoreLabel(20)).toBe("POOR");
-    expect(getScoreLabel(39)).toBe("POOR");
+  it("returns WEAK for 20-39", () => {
+    expect(getScoreLabel(20)).toBe("WEAK");
+    expect(getScoreLabel(39)).toBe("WEAK");
   });
 
-  it("returns VERY POOR for < 20", () => {
-    expect(getScoreLabel(19)).toBe("VERY POOR");
-    expect(getScoreLabel(0)).toBe("VERY POOR");
+  it("returns VERY WEAK for < 20", () => {
+    expect(getScoreLabel(19)).toBe("VERY WEAK");
+    expect(getScoreLabel(0)).toBe("VERY WEAK");
   });
 });
 

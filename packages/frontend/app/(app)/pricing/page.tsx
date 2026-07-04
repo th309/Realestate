@@ -13,7 +13,8 @@ import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { useEntitlements } from "@/lib/entitlements";
 import { useAuth } from "@/lib/auth";
 import { fetchPricingSummary, type PricingTier } from "@/lib/data";
-import { startCheckout } from "@/lib/data";
+import { startCheckout, getBillingPortalUrl } from "@/lib/data";
+import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics/tracker";
 import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
 import { PricingCards } from "./components/PricingCards";
@@ -37,6 +38,7 @@ export default function PricingPage() {
 function PricingContent() {
   const { tier, trial, loading, refresh } = useEntitlements();
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -119,6 +121,14 @@ function PricingContent() {
   const effectiveTier = trial?.active ? trial.tier : tier;
   const returnContext = searchParams.get("from") || "/map";
 
+  // A user with a LIVE paid Stripe subscription (Pro/Enterprise, not an app
+  // trial) cannot start a second checkout — the backend rejects it to prevent a
+  // double-charge. Detect that state here (mirrors SubscriptionActions'
+  // `isStripeSubscriber`) so a plan change is routed to the Stripe billing
+  // portal, which handles subscription upgrades/downgrades, instead.
+  const isStripeSubscriber =
+    !trial?.active && (tier === "pro" || tier === "enterprise");
+
   const handleUpgrade = useCallback(
     async (planSlug: string) => {
       trackEvent("conversion.pricing_tier_click", {
@@ -141,6 +151,14 @@ function PricingContent() {
       }
       setCheckoutLoading(planSlug);
       try {
+        // Existing paid subscribers change plans through the Stripe portal,
+        // never a fresh checkout (which the backend blocks to avoid a
+        // double-charge).
+        if (isStripeSubscriber) {
+          const portalUrl = await getBillingPortalUrl();
+          window.location.href = portalUrl;
+          return;
+        }
         const url = await startCheckout(
           planSlug,
           billingInterval,
@@ -148,11 +166,25 @@ function PricingContent() {
         );
         window.location.href = url;
       } catch (err) {
+        // Surface the failure instead of dead-ending silently. The backend
+        // message (e.g. "…manage it from the billing portal…") is actionable.
         console.error("Checkout failed:", err);
+        showToast(
+          err instanceof Error && err.message
+            ? err.message
+            : "Something went wrong. Please try again.",
+        );
         setCheckoutLoading(null);
       }
     },
-    [billingInterval, returnContext, user, router],
+    [
+      billingInterval,
+      returnContext,
+      user,
+      router,
+      isStripeSubscriber,
+      showToast,
+    ],
   );
 
   return (
