@@ -4,10 +4,14 @@
  * geo level via geographic inheritance.
  *
  * Per-geo source split for `net_migration`:
- *   - Metro request → Redfin net_inflow (monthly/quarterly)
+ *   - Metro request → Redfin net_inflow if present, else the `irs_metro_rollup`
+ *     computed source (sum of the metro's county IRS net_returns). Redfin's
+ *     metro migration dataset is not publicly available, so in practice the
+ *     rollup is what resolves — and it is unit-consistent with the county source
+ *     below (same net_returns column), unlike Redfin's user-flow net_inflow.
  *   - County request → IRS net_returns (annual)
  *   - ZIP request → no native source; inherits from county (IRS) first,
- *     then metro (Redfin) via the standard parent chain.
+ *     then metro (rollup) via the standard parent chain.
  */
 
 import { MetricFallbackChain } from '../metric-resolution.types';
@@ -69,13 +73,23 @@ export const migrationMetrics: Record<string, MetricFallbackChain> = {
     supportsGeoInheritance: false,
   },
 
-  // ---- Compound net_migration: Redfin@metro, IRS@county, inherit at ZIP ----
+  // ---- Compound net_migration: metro (Redfin→IRS rollup), IRS@county, inherit at ZIP ----
   net_migration: {
     metricId: 'net_migration',
     sources: [
+      // Kept first for forward-compatibility: if the Redfin migration table is
+      // ever populated it wins at metro. It is empty today (dataset is not
+      // public), so resolution falls through to the rollup below.
       {
         source: 'redfin_migration',
         column: 'net_inflow',
+        geoLevels: ['metro'],
+      },
+      // Metro fallback: sum the metro's county-level IRS net_returns. This is
+      // what actually resolves net_migration at metro level.
+      {
+        source: 'irs_metro_rollup',
+        column: 'net_returns',
         geoLevels: ['metro'],
       },
       { source: 'irs', column: 'net_returns', geoLevels: ['county'] },

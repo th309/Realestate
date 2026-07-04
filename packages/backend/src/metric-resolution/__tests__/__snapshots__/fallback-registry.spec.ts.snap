@@ -658,6 +658,13 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
       {
         "column": "net_returns",
         "geoLevels": [
+          "metro",
+        ],
+        "source": "irs_metro_rollup",
+      },
+      {
+        "column": "net_returns",
+        "geoLevels": [
           "county",
         ],
         "source": "irs",

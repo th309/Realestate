@@ -25,6 +25,7 @@ import {
   getZillowRoute,
   getRedfinRoute,
 } from './table-routes';
+import { MetroRollupGeoService } from './metro-rollup-geo.service';
 
 /** Result from a single-value fetch */
 export interface FetchedValue {
@@ -38,6 +39,7 @@ export class SourceFetcherService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly metroRollup: MetroRollupGeoService,
   ) {}
 
   /**
@@ -57,6 +59,8 @@ export class SourceFetcherService {
       return this.fetchCalculatedMetric(column, geoLevel, geoId);
     if (source === 'redfin')
       return this.fetchRedfinMetric(column, geoLevel, geoId);
+    if (source === 'irs_metro_rollup')
+      return this.metroRollup.fetchMetroValue(column, geoLevel, geoId);
     return this.fetchWideTableMetric(source, column, geoLevel, geoId);
   }
 
