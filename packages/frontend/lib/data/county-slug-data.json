@@ -256,14 +256,6 @@
     "cbsaCode": "18420"
   },
   {
-    "fips": "02013",
-    "slug": "aleutians-east-borough-county-ak",
-    "name": "Aleutians East Borough County",
-    "shortName": "Aleutians East Borough County, AK",
-    "state": "AK",
-    "cbsaCode": null
-  },
-  {
     "fips": "17003",
     "slug": "alexander-county-il",
     "name": "Alexander County",
@@ -918,6 +910,14 @@
     "shortName": "Baker County, FL",
     "state": "FL",
     "cbsaCode": "27260"
+  },
+  {
+    "fips": "13007",
+    "slug": "baker-county-ga",
+    "name": "Baker County",
+    "shortName": "Baker County, GA",
+    "state": "GA",
+    "cbsaCode": null
   },
   {
     "fips": "41001",
@@ -4616,6 +4616,14 @@
     "cbsaCode": "43420"
   },
   {
+    "fips": "48079",
+    "slug": "cochran-county-tx",
+    "name": "Cochran County",
+    "shortName": "Cochran County, TX",
+    "state": "TX",
+    "cbsaCode": "31180"
+  },
+  {
     "fips": "47029",
     "slug": "cocke-county-tn",
     "name": "Cocke County",
@@ -5037,6 +5045,14 @@
     "name": "Copper River Census Area County",
     "shortName": "Copper River Census Area County, AK",
     "state": "AK",
+    "cbsaCode": null
+  },
+  {
+    "fips": "46031",
+    "slug": "corson-county-sd",
+    "name": "Corson County",
+    "shortName": "Corson County, SD",
+    "state": "SD",
     "cbsaCode": null
   },
   {
@@ -7712,20 +7728,20 @@
     "cbsaCode": "34420"
   },
   {
-    "fips": "51620",
-    "slug": "franklin-county-va",
-    "name": "Franklin County",
-    "shortName": "Franklin County, VA",
-    "state": "VA",
-    "cbsaCode": "47260"
-  },
-  {
     "fips": "51067",
     "slug": "franklin-county-va",
     "name": "Franklin County",
     "shortName": "Franklin County, VA",
     "state": "VA",
     "cbsaCode": "40220"
+  },
+  {
+    "fips": "51620",
+    "slug": "franklin-county-va",
+    "name": "Franklin County",
+    "shortName": "Franklin County, VA",
+    "state": "VA",
+    "cbsaCode": "47260"
   },
   {
     "fips": "50011",
@@ -8293,6 +8309,14 @@
     "name": "Glascock County",
     "shortName": "Glascock County, GA",
     "state": "GA",
+    "cbsaCode": null
+  },
+  {
+    "fips": "48173",
+    "slug": "glasscock-county-tx",
+    "name": "Glasscock County",
+    "shortName": "Glasscock County, TX",
+    "state": "TX",
     "cbsaCode": null
   },
   {
@@ -15968,6 +15992,14 @@
     "cbsaCode": "13900"
   },
   {
+    "fips": "48345",
+    "slug": "motley-county-tx",
+    "name": "Motley County",
+    "shortName": "Motley County, TX",
+    "state": "TX",
+    "cbsaCode": null
+  },
+  {
     "fips": "17139",
     "slug": "moultrie-county-il",
     "name": "Moultrie County",
@@ -16557,6 +16589,14 @@
     "name": "Northumberland County",
     "shortName": "Northumberland County, VA",
     "state": "VA",
+    "cbsaCode": null
+  },
+  {
+    "fips": "02188",
+    "slug": "northwest-arctic-borough-county-ak",
+    "name": "Northwest Arctic Borough County",
+    "shortName": "Northwest Arctic Borough County, AK",
+    "state": "AK",
     "cbsaCode": null
   },
   {
@@ -19280,7 +19320,7 @@
     "cbsaCode": "16620"
   },
   {
-    "fips": "51770",
+    "fips": "51161",
     "slug": "roanoke-county-va",
     "name": "Roanoke County",
     "shortName": "Roanoke County, VA",
@@ -19288,7 +19328,7 @@
     "cbsaCode": "40220"
   },
   {
-    "fips": "51161",
+    "fips": "51770",
     "slug": "roanoke-county-va",
     "name": "Roanoke County",
     "shortName": "Roanoke County, VA",
@@ -20712,6 +20752,14 @@
     "cbsaCode": "13900"
   },
   {
+    "fips": "31165",
+    "slug": "sioux-county-ne",
+    "name": "Sioux County",
+    "shortName": "Sioux County, NE",
+    "state": "NE",
+    "cbsaCode": "42420"
+  },
+  {
     "fips": "06093",
     "slug": "siskiyou-county-ca",
     "name": "Siskiyou County",
@@ -21112,7 +21160,7 @@
     "cbsaCode": "20260"
   },
   {
-    "fips": "29189",
+    "fips": "29510",
     "slug": "st-louis-county-mo",
     "name": "St. Louis County",
     "shortName": "St. Louis County, MO",
@@ -21120,7 +21168,7 @@
     "cbsaCode": "41180"
   },
   {
-    "fips": "29510",
+    "fips": "29189",
     "slug": "st-louis-county-mo",
     "name": "St. Louis County",
     "shortName": "St. Louis County, MO",

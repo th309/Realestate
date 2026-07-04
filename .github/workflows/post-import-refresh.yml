@@ -198,16 +198,58 @@ jobs:
           set -euo pipefail
           git config user.name "propertyiq-bot"
           git config user.email "bot@propertyiq.app"
-          git add packages/frontend/lib/data/metro-slug-data.json \
-                  packages/frontend/lib/data/county-slug-data.json \
-                  packages/frontend/lib/data/zip-slug-data.json \
-                  packages/frontend/lib/data/descored-redirects.json
-          if git diff --cached --quiet; then
+
+          SLUG_FILES=(
+            packages/frontend/lib/data/metro-slug-data.json
+            packages/frontend/lib/data/county-slug-data.json
+            packages/frontend/lib/data/zip-slug-data.json
+            packages/frontend/lib/data/descored-redirects.json
+          )
+
+          # Nothing to do if the rebuild produced no changes vs the checkout.
+          if git diff --quiet -- "${SLUG_FILES[@]}"; then
             echo "No slug changes this month — skipping commit."
-          else
-            git commit -m "chore(seo): monthly score-gated slug + redirect rebuild [skip ci]"
-            git push origin HEAD:develop
+            exit 0
           fi
+
+          # This job runs on `main` but must land the regenerated data on `develop`.
+          # Between releases develop is ahead of main, so committing on main's HEAD
+          # and pushing HEAD:develop is a non-fast-forward that gets rejected
+          # ("[rejected] ... (fetch first)" — the failure this replaces). Instead:
+          # snapshot the regenerated files, re-apply them on top of develop's LIVE
+          # tip, and push only those files — retrying if another writer lands on
+          # develop mid-run. Works with the shallow checkout: we only need
+          # develop's tip, which `git fetch origin develop` provides via FETCH_HEAD.
+          SNAPSHOT="$(mktemp -d)"
+          for f in "${SLUG_FILES[@]}"; do
+            mkdir -p "$SNAPSHOT/$(dirname "$f")"
+            cp "$f" "$SNAPSHOT/$f"
+          done
+
+          land_on_develop() {
+            git fetch --no-tags origin develop
+            # Force-checkout develop's tip (discards main's working-tree state;
+            # the regenerated files are safe in $SNAPSHOT).
+            git checkout -f -q -B piq-slug-push FETCH_HEAD
+            for f in "${SLUG_FILES[@]}"; do cp "$SNAPSHOT/$f" "$f"; done
+            git add -- "${SLUG_FILES[@]}"
+            if git diff --cached --quiet; then
+              echo "develop already carries this slug data — nothing to push."
+              return 0
+            fi
+            git commit -q -m "chore(seo): monthly score-gated slug + redirect rebuild [skip ci]"
+            git push origin HEAD:develop
+          }
+
+          for attempt in 1 2 3 4 5; do
+            if land_on_develop; then
+              echo "Slug data landed on develop (attempt $attempt)."
+              exit 0
+            fi
+            echo "Push attempt $attempt failed (develop moved or transient) — re-syncing and retrying."
+          done
+          echo "::error::Failed to push slug data to develop after 5 attempts."
+          exit 1
 
       # ── End SEO slug rebuild ──────────────────────────────────────────────────
 
