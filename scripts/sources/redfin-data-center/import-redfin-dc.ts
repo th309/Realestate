@@ -32,6 +32,7 @@ import {
   type DashboardConfig,
 } from "./redfin-dc-config";
 import { fetchIndex, resolveCsvUrl } from "./redfin-dc-index-fetcher";
+import { validateRedfinDcMetroKeys } from "./redfin-dc-metro-key-validator";
 import { runMonthsOfSupplyHook } from "./redfin-dc-mos-hook";
 import {
   runStreamingPipeline,
@@ -182,6 +183,19 @@ async function main(): Promise<void> {
         `  [redfin-dc] MoS hook failed (non-fatal): ${err instanceof Error ? err.message : err}`,
       );
     }
+  }
+
+  // Fail-loud post-import guard: a metro CBSA mis-key (e.g. "Charlotte, NC"
+  // filed under Charlottesville's CBSA 16820) silently blanks metric cards.
+  // Assert every imported metro's stored state matches its canonical CBSA
+  // state; throwing here propagates to main().catch -> exit 1 -> job fails.
+  const housingMetroImported = geoResults.some(
+    (g) =>
+      g.tableName === "redfin_dc_housing_market_metro" &&
+      (g.status === "success" || g.status === "partial"),
+  );
+  if (housingMetroImported) {
+    await validateRedfinDcMetroKeys(supabase);
   }
 
   const totalInserted = geoResults.reduce((s, g) => s + g.recordsInserted, 0);

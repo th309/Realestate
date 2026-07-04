@@ -14,15 +14,29 @@
  * so "Richmond, VA" -> 51760 (city) while "Richmond County, VA" -> 51159 (county)
  * instead of both colliding on one FIPS.
  *
- * Metro keeps the legacy CBSA resolution by design: Redfin metro DIVISIONS
- * (LA / Anaheim) legitimately share a parent CBSA and are disambiguated
- * downstream by region_name in the metro conflict key.
+ * Metro resolves the Redfin region NAME to a canonical CBSA via a name-based
+ * crosswalk against tiger_cbsa (city token + state token, tiered + unique) —
+ * NOT the legacy fuzzy `%name%` substring match. That substring match ignored
+ * the state and mis-keyed principal cities onto unrelated CBSAs whose name
+ * merely CONTAINED the city as a substring: "Charlotte" -> "Charlottesville,
+ * VA" (16820) instead of "Charlotte-Concord-Gastonia, NC-SC" (16740);
+ * "Kansas City" -> "Arkansas City-Winfield, KS"; "Portland, OR" -> "Portland-
+ * South Portland, ME". Metro DIVISIONS whose city IS a component of the parent
+ * CBSA name still resolve to that parent (e.g. Anaheim -> Los Angeles CBSA),
+ * disambiguated downstream by region_name in the metro conflict key. When no
+ * UNIQUE canonical CBSA matches (a true division with no served CBSA, or an
+ * ambiguous name), the metro is left UNMAPPED (a REDFIN-METRO-… fallback id,
+ * resolved=false) rather than written to a wrong CBSA.
  *
  * `resolved` is false when the final id is a generated REDFIN-… fallback.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveRedfinGeoid } from "../redfin/redfin-geoid-lookup";
+import {
+  resolveMetroCanonicalId,
+  clearMetroCanonCache,
+} from "./redfin-dc-metro-crosswalk";
 
 /** Remove the " metro area" suffix the DC format appends to metro names. */
 export function stripMetroSuffix(name: string): string {
@@ -80,6 +94,7 @@ const countyMapByStateFips = new Map<string, Map<string, string>>(); // '51' -> 
 export function clearDcGeoCaches(): void {
   stateAbbrToFips.clear();
   countyMapByStateFips.clear();
+  clearMetroCanonCache();
 }
 
 async function getStateFips(
@@ -148,10 +163,29 @@ async function resolveCountyExact(
   return null;
 }
 
+/** Parse a Redfin metro region name to a lowercased city for the crosswalk. */
+function metroCityFromRegionName(regionName: string): string {
+  return stripMetroSuffix(regionName)
+    .replace(/,\s*[A-Za-z]{2}$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+/** Stable unmapped fallback id for a metro with no canonical CBSA match.
+ * Matches the legacy REDFIN-METRO-<name> format so re-imports stay idempotent. */
+function metroFallbackId(regionName: string): string {
+  const sanitized = stripMetroSuffix(regionName)
+    .replace(/[^a-zA-Z0-9]/g, "-")
+    .toUpperCase()
+    .substring(0, 30);
+  return `REDFIN-METRO-${sanitized}`;
+}
+
 /**
  * Resolve a (geoLevel, regionName) to a standard geo id.
  * country -> 'US'; census_region -> the region name; state/county -> exact tiger
- * match with legacy fallback; metro/other -> legacy resolveRedfinGeoid.
+ * match with legacy fallback; metro -> canonical CBSA name crosswalk (else
+ * unmapped-skip); other -> legacy resolveRedfinGeoid.
  */
 export async function resolveDcGeo(
   supabase: SupabaseClient,
@@ -171,15 +205,25 @@ export async function resolveDcGeo(
     const exact = await resolveCountyExact(supabase, regionName);
     if (exact) return { regionId: exact, resolved: true };
   }
+  if (geoLevel === "metro") {
+    const stateCode = extractStateCode(regionName);
+    const city = stateCode ? metroCityFromRegionName(regionName) : "";
+    const canonical =
+      stateCode && city
+        ? await resolveMetroCanonicalId(supabase, city, stateCode)
+        : null;
+    if (canonical) return { regionId: canonical, resolved: true };
+    // No UNIQUE canonical CBSA -> leave the metro UNMAPPED rather than fuzzy-
+    // writing a wrong CBSA. Same REDFIN-METRO-<name> id the legacy fallback
+    // produced, so re-imports of true divisions stay idempotent.
+    return { regionId: metroFallbackId(regionName), resolved: false };
+  }
 
   const stateCode = extractStateCode(regionName) ?? undefined;
-  const cleanName =
-    geoLevel === "metro" ? stripMetroSuffix(regionName) : regionName;
-
   const regionId = await resolveRedfinGeoid(
     supabase,
     geoLevel,
-    cleanName,
+    regionName,
     stateCode,
   );
   return { regionId, resolved: !regionId.startsWith("REDFIN-") };

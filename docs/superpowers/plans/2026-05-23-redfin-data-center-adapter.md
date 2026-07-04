@@ -1848,3 +1848,36 @@ No code change in this task. Summarize the E2E results. If the user approves, pr
 1. One generic processor + config instead of 8 hand-written column-maps (DRYer; same behavior).
 2. Bulk MoS fallback in the score fetcher instead of per-region `resolveMetric` (perf; same semantics).
 3. New-dashboard metrics are NOT registered in the fallback registry in P1 (YAGNI — deferred with frontend/MCP exposure).
+
+---
+
+## Postscript: Metro CBSA mis-key bug + fail-loud guard (2026-07-04)
+
+**Symptom.** Some metro metric cards silently blanked. Root cause: the metro
+crosswalk resolved a Redfin metro NAME to a canonical CBSA geoid with a
+**state-blind `%name%` substring match**, so a principal city landed on any CBSA
+whose name merely contained it as a substring — e.g. `"Charlotte, NC"` filed
+under CBSA **16820 = Charlottesville, VA** (also `"Kansas City" -> Arkansas
+City-Winfield, KS`, `"Portland, OR" -> Portland-South Portland, ME`). A mis-key
+does not error; it just points a metro at the wrong region, so downstream cards
+read no data.
+
+**Fix.** `redfin-dc-metro-crosswalk.ts` now matches on a **city token + state
+token** against `tiger_cbsa` (the complete Census CBSA gazetteer — `geographies`
+is missing ~11 CBSAs Redfin uses, including the 3 valid CT metros Bridgeport
+14860 / Hartford 25540 / New Haven 35300). Matching is anchored + state-filtered
+and tiered (full pre-comma name → hyphen components → single words); the first
+tier with a UNIQUE in-state match wins, and an ambiguous/empty result returns
+`null` (emit an unmapped fallback, never guess). This applied a **16-metro
+remap** to the previously mis-keyed principal cities.
+
+**New post-import guard.** `redfin-dc-metro-key-validator.ts` +
+`validateRedfinDcMetroKeys(supabase)`, wired into `import-redfin-dc.ts` after the
+metro upserts + MoS hook. It asserts that every DISTINCT
+`(region_id, region_name)` in `redfin_dc_housing_market_metro` (the metro
+superset) has a stored `region_name` state that agrees with the canonical CBSA
+state for its `region_id`, joined against **`tiger_cbsa`** (NOT `geographies`).
+Any violation (`STATE_MISMATCH` / `NO_CANONICAL_CBSA` / `NON_NUMERIC_KEY`) is
+logged per-row and **throws**, so the monthly pipeline job exits non-zero instead
+of publishing a silently-broken metro. Verified: returns 0 violations against
+live prod. Tests: `__tests__/redfin-dc-metro-key-validator.spec.ts`.
