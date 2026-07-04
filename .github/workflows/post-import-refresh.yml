@@ -30,10 +30,10 @@ on:
         type: string
         default: "workflow_call"
 
-# GITHUB_TOKEN defaults to read-only. The recalibrate job commits calibration
-# tables and the notify job opens issues, so grant the writes they need — this
-# fixes the 403 ("Resource not accessible by integration") that made every
-# monthly failure silent.
+# GITHUB_TOKEN defaults to read-only. The publish-to-develop job commits the
+# regenerated slug + calibration data and the notify job opens issues, so grant the
+# writes they need — this fixes the 403 ("Resource not accessible by integration")
+# that made every monthly failure silent.
 permissions:
   contents: write
   issues: write
@@ -163,95 +163,10 @@ jobs:
             exit 1
           fi
 
-      # Let the DB settle after the scoring pipeline's large score upsert before
-      # the SEO rebuild queries it: the scores/ids endpoint throws a brief 500 in
-      # the second right after that write (DB still settling) and recovers on the
-      # next call. Pausing here avoids the transient window proactively; the
-      # scored-set-client retry is the backstop for anything that still slips.
-      - name: Settle after scoring
-        if: steps.scoring.outcome == 'success'
-        run: sleep 20
-
-      # ── SEO slug rebuild ─────────────────────────────────────────────────────
-      # Regenerates the score-gated metro/county/zip slug data files and the
-      # descored-redirect map using fresh scores just written by the step above.
-      # set -euo pipefail + assertNonEmpty throws in each generator mean the job
-      # ABORTS before any git add if a fetch returns empty/errors (fail-closed).
-      #
-      # NOTE: promotion to production requires a human release (`npm run release:main`).
-      # The monthly job intentionally commits to develop only — deploy is from main
-      # per CLAUDE.md §2.6 (never auto-merge develop→main).
-      - name: Rebuild SEO slug data (score-gated)
-        if: steps.scoring.outcome == 'success'
-        env:
-          API_URL: https://backend-production-ee4d.up.railway.app
-          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
-          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
-        run: |
-          set -euo pipefail
-          npm ci
-          npm run seo:rebuild-slugs
-
-      - name: Commit regenerated slug data
-        if: steps.scoring.outcome == 'success'
-        run: |
-          set -euo pipefail
-          git config user.name "propertyiq-bot"
-          git config user.email "bot@propertyiq.app"
-
-          SLUG_FILES=(
-            packages/frontend/lib/data/metro-slug-data.json
-            packages/frontend/lib/data/county-slug-data.json
-            packages/frontend/lib/data/zip-slug-data.json
-            packages/frontend/lib/data/descored-redirects.json
-          )
-
-          # Nothing to do if the rebuild produced no changes vs the checkout.
-          if git diff --quiet -- "${SLUG_FILES[@]}"; then
-            echo "No slug changes this month — skipping commit."
-            exit 0
-          fi
-
-          # This job runs on `main` but must land the regenerated data on `develop`.
-          # Between releases develop is ahead of main, so committing on main's HEAD
-          # and pushing HEAD:develop is a non-fast-forward that gets rejected
-          # ("[rejected] ... (fetch first)" — the failure this replaces). Instead:
-          # snapshot the regenerated files, re-apply them on top of develop's LIVE
-          # tip, and push only those files — retrying if another writer lands on
-          # develop mid-run. Works with the shallow checkout: we only need
-          # develop's tip, which `git fetch origin develop` provides via FETCH_HEAD.
-          SNAPSHOT="$(mktemp -d)"
-          for f in "${SLUG_FILES[@]}"; do
-            mkdir -p "$SNAPSHOT/$(dirname "$f")"
-            cp "$f" "$SNAPSHOT/$f"
-          done
-
-          land_on_develop() {
-            git fetch --no-tags origin develop
-            # Force-checkout develop's tip (discards main's working-tree state;
-            # the regenerated files are safe in $SNAPSHOT).
-            git checkout -f -q -B piq-slug-push FETCH_HEAD
-            for f in "${SLUG_FILES[@]}"; do cp "$SNAPSHOT/$f" "$f"; done
-            git add -- "${SLUG_FILES[@]}"
-            if git diff --cached --quiet; then
-              echo "develop already carries this slug data — nothing to push."
-              return 0
-            fi
-            git commit -q -m "chore(seo): monthly score-gated slug + redirect rebuild [skip ci]"
-            git push origin HEAD:develop
-          }
-
-          for attempt in 1 2 3 4 5; do
-            if land_on_develop; then
-              echo "Slug data landed on develop (attempt $attempt)."
-              exit 0
-            fi
-            echo "Push attempt $attempt failed (develop moved or transient) — re-syncing and retrying."
-          done
-          echo "::error::Failed to push slug data to develop after 5 attempts."
-          exit 1
-
-      # ── End SEO slug rebuild ──────────────────────────────────────────────────
+      # NOTE: the SEO slug rebuild + the single git commit moved to the dedicated
+      # `publish-to-develop` job below. This job only recomputes scores into Supabase;
+      # it no longer touches git. Scores are in the DB before the publish job's slug
+      # rebuild queries them.
 
       - name: Update PropertyIQ Rankings
         env:
@@ -433,8 +348,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -477,17 +390,18 @@ jobs:
             git diff --stat packages/backend/src/scoring/calibration/calibration-tables.json
           fi
 
-      - name: Commit updated calibration tables
+      # Hand the regenerated table off to the publish-to-develop job instead of
+      # pushing from here. Only uploaded when it actually changed vs this checkout;
+      # the publish job re-checks against develop before committing, so an unchanged
+      # table produces no commit. This replaces the old bare `git push` that landed
+      # calibration straight on main (bypassing develop → §2.6 drift).
+      - name: Upload regenerated calibration tables
         if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/backend/src/scoring/calibration/calibration-tables.json
-          git commit -m "data(scoring): regenerate v3.0 isotonic calibration tables
-
-          Automated monthly recalibration from post-import-refresh pipeline.
-          Trained on latest backtest outcomes for all 9 score combos."
-          git push
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-tables-${{ github.run_id }}
+          path: packages/backend/src/scoring/calibration/calibration-tables.json
+          retention-days: 1
 
       - name: Upload Calibration Log
         if: always()
@@ -500,6 +414,113 @@ jobs:
     outputs:
       calibrate_status: ${{ steps.calibrate.outputs.calibrate_status }}
 
+  # ── Single writer ─────────────────────────────────────────────────────────────
+  # ALL CI-generated files land on develop in ONE commit here. Runs on a `develop`
+  # checkout so the push is a plain fast-forward (no cross-branch dance) and the
+  # redirect generator diffs against develop's own committed slugs. It regenerates
+  # the SEO slug data from the fresh scores (already in the DB) and pulls the
+  # calibration table from the recalibrate job's artifact.
+  #
+  # NOTE: promotion to production requires a human release (`npm run release:main`).
+  # This job intentionally commits to develop ONLY — deploy is from main per
+  # CLAUDE.md §2.6 (never auto-merge develop→main).
+  publish-to-develop:
+    needs: [run-scoring-pipeline, recalibrate-scores]
+    # Runs whenever scoring succeeded — independent of recalibrate's result. The
+    # `!cancelled()` disables the implicit "skip if any need failed" gate, so a
+    # calibration failure can't block the slug publish (calibration is grabbed
+    # best-effort below). It still WAITS for recalibrate to finish so the artifact,
+    # if produced, is available before the commit.
+    if: ${{ !cancelled() && needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          # Full history so `git show HEAD:<slug>.json` (redirect baseline) resolves
+          # and the push/rebase operate on a non-shallow tree.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Let the DB settle after the scoring upsert before the scored-set fetch: the
+      # scores/ids endpoint throws a brief 500 in the second right after that write
+      # and recovers on the next call. The scored-set-client retry is the backstop.
+      - name: Settle after scoring
+        run: sleep 20
+
+      # Regenerate the score-gated metro/county/zip slug data + descored-redirect
+      # map from the fresh scores. On this develop checkout the redirect generator's
+      # baseline (HEAD) is develop's CURRENT slug data — the correct "previous" state.
+      # Each generator is fail-closed (assertNonEmpty throws before writing), so an
+      # empty/errored fetch aborts the job before any commit.
+      - name: Rebuild SEO slug data (score-gated)
+        env:
+          API_URL: https://backend-production-ee4d.up.railway.app
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          set -euo pipefail
+          npm run seo:rebuild-slugs
+
+      # The recalibrate job uploads this artifact ONLY when the table changed, so its
+      # absence is normal — continue-on-error lets the publish proceed with slugs only.
+      - name: Download regenerated calibration tables (if any)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: calibration-tables-${{ github.run_id }}
+          path: packages/backend/src/scoring/calibration
+
+      - name: Commit + push all regenerated data to develop
+        run: |
+          set -euo pipefail
+          git config user.name "propertyiq-bot"
+          git config user.email "bot@propertyiq.app"
+
+          git add packages/frontend/lib/data/metro-slug-data.json \
+                  packages/frontend/lib/data/county-slug-data.json \
+                  packages/frontend/lib/data/zip-slug-data.json \
+                  packages/frontend/lib/data/descored-redirects.json \
+                  packages/backend/src/scoring/calibration/calibration-tables.json
+
+          # Single develop-relative gate: whether or not calibration was downloaded,
+          # commit only if something actually differs from develop's current tip.
+          if git diff --cached --quiet; then
+            echo "No slug or calibration changes this month — nothing to commit."
+            exit 0
+          fi
+
+          git commit -q -m "chore(data): monthly score-gated slug + calibration rebuild [skip ci]"
+
+          # We are on develop, so this is a plain fast-forward. The retry loop only
+          # guards against another writer landing on develop between our checkout and
+          # push: rebase our single data commit onto the new tip and try again.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:develop; then
+              echo "Published regenerated data to develop (attempt $attempt)."
+              exit 0
+            fi
+            echo "Push attempt $attempt rejected — develop moved; rebasing and retrying."
+            git fetch --no-tags origin develop
+            git rebase origin/develop || { git rebase --abort; echo "::error::Rebase onto develop conflicted — aborting."; exit 1; }
+          done
+          echo "::error::Failed to push regenerated data to develop after 5 attempts."
+          exit 1
+
   notify-on-failure:
     needs:
       [
@@ -508,6 +529,7 @@ jobs:
         refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,
+        publish-to-develop,
       ]
     runs-on: ubuntu-latest
     if: failure() || needs.refresh-calculated-metrics.outputs.metrics_status == 'error'
@@ -576,6 +598,7 @@ jobs:
         refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,
+        publish-to-develop,
       ]
     runs-on: ubuntu-latest
     if: success()
