@@ -258,6 +258,20 @@ export const TRIAL_EXPIRED_EMAIL = {
   cta: "Reactivate Pro",
 } as const;
 
+/**
+ * buildTrialWillEndEmail — transactional notice sent ~3 days before a paid
+ * subscription's first charge. The dollar amount and charge date are per-user
+ * and passed into the builder (NOT hardcoded here, per the rule above).
+ */
+export const TRIAL_WILL_END_EMAIL = {
+  heading: (name: string) => `Hi ${name},`,
+  intro:
+    "Heads up — your PropertyIQ Pro trial is ending soon. Your subscription will continue automatically so you keep every Pro feature without a gap.",
+  body: "Nothing to do if you'd like to stay. If Pro isn't for you, cancel anytime before then from your account and you won't be charged.",
+  cta: "Manage subscription",
+  footnote: "Questions about billing? Just reply — we're real people.",
+} as const;
+
 /** buildActiveExplorerEmail (score sentence uses SCORE_DESCRIPTION, kept in builder) */
 export const ACTIVE_EXPLORER_EMAIL = {
   heading: (name: string) => `You're asking the right questions, ${name}.`,
