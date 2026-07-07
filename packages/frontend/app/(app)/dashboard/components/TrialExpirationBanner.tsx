@@ -65,7 +65,7 @@ export function TrialExpirationBanner({
         </div>
 
         <Link
-          href="/upgrade"
+          href="/pricing?from=trial_expiration"
           className="shrink-0 px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-medium hover:bg-primary/90 transition-colors"
         >
           Keep Pro

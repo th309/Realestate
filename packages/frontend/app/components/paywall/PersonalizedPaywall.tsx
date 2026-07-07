@@ -91,7 +91,7 @@ export function PersonalizedPaywall({
 
         <div className="flex flex-col gap-3 mt-6">
           <Link
-            href="/upgrade"
+            href="/pricing?from=personalized_paywall"
             className="w-full text-center py-3 px-6 rounded-full bg-primary text-on-primary font-medium hover:bg-primary/90 transition-colors"
           >
             Upgrade to Pro — $29/mo

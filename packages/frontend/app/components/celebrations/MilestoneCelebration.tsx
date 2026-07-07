@@ -97,7 +97,7 @@ export const MILESTONES: Record<
     title: "Report generated!",
     message: "Your AI market analysis is being created.",
     bridgeLabel: "Explore Pro features",
-    bridgeHref: "/upgrade",
+    bridgeHref: "/pricing?from=milestone",
   },
   compare_markets: {
     title: "Market comparison complete!",
