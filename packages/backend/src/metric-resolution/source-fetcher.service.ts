@@ -89,10 +89,25 @@ export class SourceFetcherService {
     const normalizedId = this.normalizeGeoId(geoLevel, geoId, source);
     const dateCol = route.dateColumn;
 
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from(route.table)
       .select(`${column}, ${dateCol}`)
-      .eq(route.idColumn, normalizedId)
+      .eq(route.idColumn, normalizedId);
+
+    // The economic_* tables are written by multiple importers on different
+    // cadences (monthly unemployment, quarterly QCEW employment, annual CES),
+    // so a column's latest value often sits on a NON-latest-dated row. For
+    // those sources only, anchor on the most recent row where THIS column is
+    // non-null. Every other wide-table source is single-importer-per-table, so
+    // keeping plain latest-row semantics there preserves the fallback-registry
+    // contract: a genuine current-period gap must fall through to the next
+    // source (e.g. realtor -> census) instead of returning a stale historical
+    // value — which matters for score inputs like days_on_market / price_cut.
+    if (source === 'economic' || source === 'qcew' || source === 'ces') {
+      query = query.not(column, 'is', null);
+    }
+
+    const { data, error } = await query
       .order(dateCol, { ascending: false })
       .limit(1)
       .single();
@@ -257,6 +272,9 @@ export class SourceFetcherService {
           source === 'census' ||
           source === 'economic' ||
           source === 'permits' ||
+          // CES writes economic_state.state_fips as FIPS ('06'), so state-level
+          // CES employment must resolve on FIPS, not the 2-letter code.
+          source === 'ces' ||
           // Redfin Data Center state tables key region_id on STATE FIPS ('08'),
           // not the 2-letter code — covers 'redfin_dc' and every 'redfin_dc_*'.
           source.startsWith('redfin_dc')

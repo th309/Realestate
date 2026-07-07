@@ -22,12 +22,11 @@ import {
   addRecentMarket,
   type RecentMarket,
 } from "./recent-markets";
-import { MarketComparison } from "../compare/markets/MarketComparison";
+import { MarketComparison } from "./compare/MarketComparison";
 import { titleCaseLocationName } from "@/lib/data";
-import {
-  PeerSearchBox,
-  type PickedMarket,
-} from "../compare/markets/PeerSearchBox";
+import { PeerSearchBox, type PickedMarket } from "./compare/PeerSearchBox";
+import { useEntitlements } from "@/lib/entitlements";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
 
 // Popular metros to display as quick links
 const POPULAR_METROS = [
@@ -64,6 +63,11 @@ export function MarketLanding() {
     handleSearch,
     clearSearch,
   } = useUniversalSearch({});
+
+  // Market comparison is a Pro feature. Wait for entitlements to resolve so a
+  // Pro user never flashes the paywall (tier is SSR-seeded for logged-in users).
+  const { tier, loading: entitlementsLoading } = useEntitlements();
+  const canCompare = tier !== "free";
 
   useEffect(() => {
     setRecentMarkets(getRecentMarkets());
@@ -165,22 +169,35 @@ export function MarketLanding() {
               Compare Markets
             </h2>
           </div>
-          <div className="bg-surface-container rounded-2xl border border-outline-variant p-6">
-            <p className="text-sm text-on-surface-variant mb-4 text-center">
-              Pick a market to see it side by side with its closest peer.
-            </p>
-            <div className="max-w-md mx-auto">
-              <PeerSearchBox
-                placeholder="🔍  Search a metro, county, or zip to compare"
-                onPick={setCompareSource}
-              />
+          {entitlementsLoading ? (
+            <div className="bg-surface-container rounded-2xl border border-outline-variant p-6 text-center text-sm text-on-surface-variant">
+              Loading…
             </div>
-            {compareSource && (
-              <div className="mt-6">
-                <MarketComparison source={compareSource} />
+          ) : canCompare ? (
+            <div className="bg-surface-container rounded-2xl border border-outline-variant p-6">
+              <p className="text-sm text-on-surface-variant mb-4 text-center">
+                Pick a market to see it side by side with its closest peer.
+              </p>
+              <div className="max-w-md mx-auto">
+                <PeerSearchBox
+                  placeholder="🔍  Search a metro, county, or zip to compare"
+                  onPick={setCompareSource}
+                />
               </div>
-            )}
-          </div>
+              {compareSource && (
+                <div className="mt-6">
+                  <MarketComparison source={compareSource} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <PaywallCard
+              type="feature"
+              id="market_comparison"
+              title="Compare markets side by side"
+              description="Pick any market and see it next to its closest peer: scores, prices, rents, and momentum side by side. Available on Pro."
+            />
+          )}
         </div>
 
         <TopMarketsSection />

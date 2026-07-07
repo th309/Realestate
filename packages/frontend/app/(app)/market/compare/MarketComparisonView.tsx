@@ -1,6 +1,8 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { useEntitlements } from "@/lib/entitlements";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
 import { MarketComparison } from "./MarketComparison";
 import { PeerSearchBox } from "./PeerSearchBox";
 
@@ -15,6 +17,30 @@ function parseMarket(
 export function MarketComparisonView() {
   const sp = useSearchParams();
   const router = useRouter();
+  const { tier, loading } = useEntitlements();
+
+  // Gated feature — Pro and above unlock the side-by-side tool. Wait for the
+  // entitlements resolve first so a Pro user never flashes the paywall.
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-on-surface-variant">
+        Loading…
+      </div>
+    );
+  }
+  if (tier === "free") {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <PaywallCard
+          type="feature"
+          id="market_comparison"
+          title="Compare markets side by side"
+          description="Line up any metro, county, or ZIP against its closest peer: scores, prices, rents, and momentum in one view. Available on Pro."
+        />
+      </div>
+    );
+  }
+
   const a = parseMarket(sp?.get("a") ?? sp?.get("market") ?? null);
 
   // No source market yet → let the user pick one instead of dead-ending.
@@ -32,7 +58,7 @@ export function MarketComparisonView() {
         <PeerSearchBox
           placeholder="🔍  Search a metro, county, or ZIP"
           onPick={(m) =>
-            router.push(`/compare/markets?a=${m.geoLevel}-${m.geoId}`)
+            router.push(`/market/compare?a=${m.geoLevel}-${m.geoId}`)
           }
         />
       </div>

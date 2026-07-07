@@ -5,6 +5,7 @@ import {
   parseQcewSectorRows,
   NAICS_SUPERSECTORS,
   defaultQcewPeriod,
+  findLatestPublishedQuarter,
 } from "../download-qcew-employment";
 
 describe("parseQcewSectorRows", () => {
@@ -124,4 +125,60 @@ describe("defaultQcewPeriod", () => {
       expect(defaultQcewPeriod(new Date(c.iso))).toEqual(c.expected);
     });
   }
+});
+
+describe("findLatestPublishedQuarter", () => {
+  // The self-heal that fixes the silent-0-rows bug: when the nominal quarter
+  // isn't published yet, walk back to the newest one BLS actually has. A stub
+  // `probe` stands in for the BLS network fetch so the branch is covered in CI.
+  const probeFor =
+    (published: Set<string>) =>
+    async (year: number, qtr: number): Promise<string | null> =>
+      published.has(`${year}-${qtr}`) ? "csv-data" : null;
+
+  it("returns the start quarter when it is already published", async () => {
+    const result = await findLatestPublishedQuarter(
+      { year: 2026, qtr: 1 },
+      4,
+      probeFor(new Set(["2026-1"])),
+    );
+    expect(result).toEqual({ year: 2026, qtr: 1 });
+  });
+
+  it("walks back across the year boundary to the newest published quarter", async () => {
+    // 2026Q1 unpublished (the exact bug), 2025Q4 published.
+    const result = await findLatestPublishedQuarter(
+      { year: 2026, qtr: 1 },
+      4,
+      probeFor(new Set(["2025-4"])),
+    );
+    expect(result).toEqual({ year: 2025, qtr: 4 });
+  });
+
+  it("keeps walking back multiple quarters until it finds data", async () => {
+    const result = await findLatestPublishedQuarter(
+      { year: 2026, qtr: 1 },
+      4,
+      probeFor(new Set(["2025-2"])),
+    );
+    expect(result).toEqual({ year: 2025, qtr: 2 });
+  });
+
+  it("returns null when nothing is published within the lookback window", async () => {
+    const result = await findLatestPublishedQuarter(
+      { year: 2026, qtr: 1 },
+      4,
+      probeFor(new Set()),
+    );
+    expect(result).toBeNull();
+  });
+
+  it("probes exactly start + maxLookback quarters before giving up", async () => {
+    let calls = 0;
+    await findLatestPublishedQuarter({ year: 2026, qtr: 1 }, 2, async () => {
+      calls++;
+      return null;
+    });
+    expect(calls).toBe(3); // i = 0, 1, 2
+  });
 });

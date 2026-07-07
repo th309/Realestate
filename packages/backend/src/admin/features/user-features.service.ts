@@ -138,7 +138,7 @@ export class UserFeaturesService {
       let isGrandfathered = false;
       let expiresAt: string | undefined;
 
-      // Priority: override > grandfather > tier > default
+      // Priority: override > grandfather > admin-all-access > tier > default
       if (overrideMap.has(feature.id)) {
         const override = overrideMap.get(feature.id)!;
         value = override.value;
@@ -150,6 +150,19 @@ export class UserFeaturesService {
         source = 'grandfather';
         isGrandfathered = true;
         expiresAt = gf.expires_at;
+      } else if (effectiveTier === 'admin') {
+        // Admin is the authoritative top tier (see TierResolverService) and must
+        // be all-access, independent of tier_features seeding — which silently
+        // drifts whenever a new gated feature is added (mcp_access, api_access,
+        // embed_builder, embeddable_widgets were all missing an admin grant,
+        // 403-ing admins on MCP connect). Placed AFTER override/grandfather so an
+        // explicit admin-scoped override can still revoke a feature.
+        value = this.adminFullAccessValue(
+          feature.value_type,
+          tierFeatureMap.get(feature.id),
+          feature.default_value,
+        );
+        source = 'tier';
       } else if (tierFeatureMap.has(feature.id)) {
         value = tierFeatureMap.get(feature.id);
         source = 'tier';
@@ -321,6 +334,27 @@ export class UserFeaturesService {
       expires_at: d.expires_at,
       created_at: d.created_at,
     }));
+  }
+
+  /**
+   * Full-access value for an admin, by feature type: booleans unlocked, integer
+   * limits unlimited (-1, matching the enterprise seed + the entitlements
+   * access-map's `hasAccess === -1 → 'full'`). For any OTHER value_type, fall
+   * back to the feature's configured tier value (never below tier config), then
+   * its default — and warn, so a newly-introduced type can't silently
+   * under-grant admin the way the original missing-grant bug did.
+   */
+  private adminFullAccessValue(
+    valueType: string,
+    tierValue: unknown,
+    defaultValue: unknown,
+  ): unknown {
+    if (valueType === 'boolean') return true;
+    if (valueType === 'integer') return -1;
+    this.logger.warn(
+      `[Entitlements] admin all-access wildcard: unhandled value_type '${valueType}' — falling back to configured tier/default; verify admin is not under-granted`,
+    );
+    return tierValue !== undefined ? tierValue : defaultValue;
   }
 
   private parseValue(value: unknown, type: string): unknown {

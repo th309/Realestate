@@ -26,9 +26,11 @@ import { FiveYearGrowthService } from './pipelines/five-year-growth.service';
 import { AffordabilityMetricsService } from './pipelines/affordability-metrics.service';
 import { RedfinDcSnapshotController } from './redfin-dc-snapshot.controller';
 import { RedfinDcSnapshotService } from './redfin-dc-snapshot.service';
+import { MetricsResolveController } from './metrics-resolve.controller';
+import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, MetricResolutionModule],
   controllers: [
     MetricsYieldController,
     MetricsRentRatiosController,
@@ -38,6 +40,7 @@ import { RedfinDcSnapshotService } from './redfin-dc-snapshot.service';
     MetricsAffordabilityController,
     InventorySurplusController,
     RedfinDcSnapshotController,
+    MetricsResolveController,
   ],
   providers: [
     CalculatedMetricsService,

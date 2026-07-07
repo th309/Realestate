@@ -45,9 +45,18 @@ export async function handleGetEmploymentBySector(
 
   const results = await Promise.all(
     EMPLOYMENT_SECTOR_METRICS.map((metricId) =>
-      fetchApi(`/api/metrics/${metricId}/${args.geoLevel}/${args.geoId}`).catch(
-        () => null,
-      ),
+      fetchApi(
+        `/api/metrics/resolve/${metricId}/${args.geoLevel}/${args.geoId}`,
+      ).catch((err) => {
+        // The resolve route returns 200 with value:null for genuine no-data, so
+        // a throw here is a real transport/route failure — log it instead of
+        // silently emptying (a swallowed 404 is exactly what hid this bug).
+        console.error(
+          `get_employment_by_sector: failed to fetch ${metricId} for ${args.geoLevel}/${args.geoId}:`,
+          err instanceof Error ? err.message : err,
+        );
+        return null;
+      }),
     ),
   );
 

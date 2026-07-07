@@ -148,9 +148,11 @@ export const brokerageTools = [
           limit: 20,
           state: args.state,
         }).catch(() => []),
-        fetchApi(`/api/v1/rankings/propertyiq/${geo}`, {
+        fetchApi("/api/scores/top", {
+          geography: geo,
+          score_type: "propertyiq",
           limit: 50,
-          order: "desc",
+          sort: "desc",
           state: args.state,
         }).catch(() => []),
       ]);

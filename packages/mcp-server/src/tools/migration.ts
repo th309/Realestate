@@ -73,9 +73,17 @@ export async function handleGetMigrationSummary(
   // 5 IRS aggregate metric calls
   const irsResults = await Promise.all(
     IRS_MIGRATION_AGGREGATE_METRICS.map((metricId) =>
-      fetchApi(`/api/metrics/${metricId}/${args.geoLevel}/${args.geoId}`).catch(
-        () => null,
-      ),
+      fetchApi(
+        `/api/metrics/resolve/${metricId}/${args.geoLevel}/${args.geoId}`,
+      ).catch((err) => {
+        // resolve route returns 200/value:null for no-data; a throw is a real
+        // transport/route error — surface it rather than silently emptying.
+        console.error(
+          `get_migration_summary: failed to fetch ${metricId} for ${args.geoLevel}/${args.geoId}:`,
+          err instanceof Error ? err.message : err,
+        );
+        return null;
+      }),
     ),
   );
 

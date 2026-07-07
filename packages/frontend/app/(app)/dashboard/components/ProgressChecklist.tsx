@@ -18,7 +18,7 @@ const CHECKLIST_ITEMS = [
   {
     id: "compare_markets",
     label: "Compare your market to a peer",
-    href: "/compare/markets",
+    href: "/market/compare",
   },
   {
     id: "screen_markets",
