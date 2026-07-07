@@ -69,7 +69,7 @@ export function SampleReportCard({ onboardingMarket }: SampleReportCardProps) {
             Generate Free Report
           </Link>
           <Link
-            href="/upgrade"
+            href="/pricing?from=sample_report"
             className="py-2.5 px-4 rounded-full border border-primary text-primary text-sm font-medium hover:bg-primary/8 transition-colors"
           >
             Upgrade

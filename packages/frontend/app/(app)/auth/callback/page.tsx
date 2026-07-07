@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { trackEvent, flush, gtagEvent } from "@/lib/analytics/tracker";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
 import { decideNeedsOnboarding } from "./onboarding-routing";
 
@@ -222,6 +222,11 @@ function CallbackHandler() {
             Date.now() - new Date(profile.created_at).getTime() < 60_000;
           if (isEmailConfirm || isFreshSignup) {
             trackEvent("conversion.signup_complete", {
+              method: isEmailConfirm ? "email" : "oauth",
+            });
+            // Mirror to GA4 so the conversion is visible there too (see
+            // gtagEvent); parity with the autoconfirm/OTP path in complete-signup.ts.
+            gtagEvent("sign_up", {
               method: isEmailConfirm ? "email" : "oauth",
             });
             flush();

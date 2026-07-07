@@ -1,6 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent, flush, setUserId } from "@/lib/analytics/tracker";
+import {
+  trackEvent,
+  flush,
+  setUserId,
+  gtagEvent,
+} from "@/lib/analytics/tracker";
 import { readAttributionCookie } from "./helpers";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
 
@@ -23,6 +28,9 @@ export async function completeSignup(
   // with no user_id (unqueryable by user, breaks funnel attribution).
   setUserId(session.user.id);
   trackEvent("conversion.signup_complete", { method: opts.method });
+  // Also surface the conversion in GA4 (internal trackEvent never reaches gtag).
+  // Mark `sign_up` as a Key Event in the GA4 admin to see it as a conversion.
+  gtagEvent("sign_up", { method: opts.method });
   flush(); // send queued events before navigation unmounts the page
 
   const supabase = createSupabaseBrowserClient();

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { Mail, TrendingUp, Megaphone, Loader2, Lock } from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
-import type { UserTier } from '@/lib/entitlements';
-import { useWatchlist } from '@/lib/watchlist/useWatchlist';
-import { useAlerts, useAlertHistory } from '@/lib/alerts/hooks';
-import { WatchlistDashboard } from '@/components/watchlist';
-import { AlertFeed } from '@/components/alerts';
-import { fetchEmailPreferences, updateEmailPreferences } from '@/lib/data';
-import type { EmailPreferences } from '@/lib/data';
-import type { User } from '@supabase/supabase-js';
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Mail, TrendingUp, Megaphone, Loader2, Lock } from "lucide-react";
+import { useEntitlements } from "@/lib/entitlements";
+import type { UserTier } from "@/lib/entitlements";
+import { useWatchlist } from "@/lib/watchlist/useWatchlist";
+import { useAlerts, useAlertHistory } from "@/lib/alerts/hooks";
+import { WatchlistDashboard } from "@/components/watchlist";
+import { AlertFeed } from "@/components/alerts";
+import { fetchEmailPreferences, updateEmailPreferences } from "@/lib/data";
+import type { EmailPreferences } from "@/lib/data";
+import type { User } from "@supabase/supabase-js";
 
-// --- Watchlist limits (mirrors SubscriptionTab) --------------------------------
+// --- Watchlist limits (mirrors PlanUsageSection) -------------------------------
 
 const WATCHLIST_LIMITS: Record<UserTier, number> = {
   free: 3,
@@ -35,7 +35,11 @@ export function ActivityTab({ user }: ActivityTabProps) {
     autoLoad: true,
   });
   const { alerts } = useAlerts();
-  const { entries: alertEntries, isLoading: alertsLoading, markRead } = useAlertHistory();
+  const {
+    entries: alertEntries,
+    isLoading: alertsLoading,
+    markRead,
+  } = useAlertHistory();
 
   const watchlistLimit = WATCHLIST_LIMITS[tier];
 
@@ -47,10 +51,13 @@ export function ActivityTab({ user }: ActivityTabProps) {
           <h3 className="text-sm font-semibold text-on-surface">Favorites</h3>
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-on-surface/10 text-on-surface-variant">
             {watchlistItems.length}
-            {watchlistLimit !== -1 ? ` of ${watchlistLimit}` : ''}
+            {watchlistLimit !== -1 ? ` of ${watchlistLimit}` : ""}
           </span>
         </div>
-        <WatchlistDashboard items={watchlistItems} isLoading={watchlistLoading} />
+        <WatchlistDashboard
+          items={watchlistItems}
+          isLoading={watchlistLoading}
+        />
       </section>
 
       <div className="border-t border-outline-variant my-8" />
@@ -60,13 +67,13 @@ export function ActivityTab({ user }: ActivityTabProps) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-on-surface">Alerts</h3>
-            {tier !== 'free' && (
+            {tier !== "free" && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-on-surface/10 text-on-surface-variant">
                 {alerts.length}
               </span>
             )}
           </div>
-          {tier !== 'free' && (
+          {tier !== "free" && (
             <Link
               href="/alerts"
               className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
@@ -76,14 +83,15 @@ export function ActivityTab({ user }: ActivityTabProps) {
           )}
         </div>
 
-        {tier === 'free' ? (
+        {tier === "free" ? (
           <div className="rounded-xl border border-outline-variant bg-surface-container-low p-6 text-center">
             <Lock className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-on-surface">
               Alerts are a Pro feature
             </p>
             <p className="text-xs text-on-surface-variant mt-1 mb-3">
-              Get notified when market conditions change in the areas you care about.
+              Get notified when market conditions change in the areas you care
+              about.
             </p>
             <Link
               href="/pricing"
@@ -118,21 +126,21 @@ const PREF_TOGGLES: {
   icon: React.ReactNode;
 }[] = [
   {
-    key: 'weekly_digest',
-    label: 'Weekly Digest',
-    description: 'Summary of your saved markets every Monday',
+    key: "weekly_digest",
+    label: "Weekly Digest",
+    description: "Summary of your saved markets every Monday",
     icon: <Mail className="w-4 h-4" />,
   },
   {
-    key: 'alert_emails',
-    label: 'Alert Notifications',
-    description: 'Get notified when alerts trigger',
+    key: "alert_emails",
+    label: "Alert Notifications",
+    description: "Get notified when alerts trigger",
     icon: <TrendingUp className="w-4 h-4" />,
   },
   {
-    key: 'marketing',
-    label: 'Product Updates',
-    description: 'Occasional updates about new features',
+    key: "marketing",
+    label: "Product Updates",
+    description: "Occasional updates about new features",
     icon: <Megaphone className="w-4 h-4" />,
   },
 ];
@@ -154,11 +162,17 @@ function NotificationPreferences() {
       .catch(() => {
         if (!cancelled) {
           // Default to all-off on error
-          setPrefs({ weekly_digest: false, alert_emails: false, marketing: false });
+          setPrefs({
+            weekly_digest: false,
+            alert_emails: false,
+            marketing: false,
+          });
           setLoading(false);
         }
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleToggle = useCallback(
@@ -177,12 +191,14 @@ function NotificationPreferences() {
         setSavingKey(null);
       }
     },
-    [prefs]
+    [prefs],
   );
 
   return (
     <section>
-      <h3 className="text-sm font-semibold text-on-surface mb-4">Email Notifications</h3>
+      <h3 className="text-sm font-semibold text-on-surface mb-4">
+        Email Notifications
+      </h3>
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -202,13 +218,19 @@ function NotificationPreferences() {
                 <div className="flex items-center gap-3">
                   <div className="text-on-surface-variant">{toggle.icon}</div>
                   <div>
-                    <p className="text-sm font-medium text-on-surface">{toggle.label}</p>
-                    <p className="text-xs text-on-surface-variant">{toggle.description}</p>
+                    <p className="text-sm font-medium text-on-surface">
+                      {toggle.label}
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      {toggle.description}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {isSaving && (
-                    <span className="text-xs text-on-surface-variant">Saving...</span>
+                    <span className="text-xs text-on-surface-variant">
+                      Saving...
+                    </span>
                   )}
                   <button
                     type="button"
@@ -216,12 +238,12 @@ function NotificationPreferences() {
                     aria-checked={checked}
                     onClick={() => handleToggle(toggle.key)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                      checked ? 'bg-primary' : 'bg-on-surface/20'
+                      checked ? "bg-primary" : "bg-on-surface/20"
                     }`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        checked ? 'translate-x-6' : 'translate-x-1'
+                        checked ? "translate-x-6" : "translate-x-1"
                       }`}
                     />
                   </button>
