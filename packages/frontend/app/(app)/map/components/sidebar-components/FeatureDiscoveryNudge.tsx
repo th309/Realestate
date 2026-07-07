@@ -61,7 +61,7 @@ const PRO_FEATURES: ProFeature[] = [
   {
     id: "compare_markets",
     label: "Compare two markets side by side",
-    href: "/compare/markets",
+    href: "/market/compare",
     done: (s) => s.onboarding_checklist.includes("compare_markets"),
   },
   {

@@ -9,6 +9,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushSpy }),
 }));
 
+// The view now gates on entitlements; a Pro tier exercises the unlocked tool
+// path these tests assert on (free tier would render the paywall instead).
+vi.mock("@/lib/entitlements", () => ({
+  useEntitlements: () => ({ tier: "pro", loading: false }),
+}));
+
 // Stub the search box so this test doesn't pull in the live universal-search hook.
 vi.mock("../PeerSearchBox", () => ({
   PeerSearchBox: ({ placeholder }: { placeholder: string }) => (
@@ -17,6 +23,7 @@ vi.mock("../PeerSearchBox", () => ({
 }));
 
 vi.mock("@/lib/data", () => ({
+  formatGeoDisplayName: (name?: string) => name ?? "",
   fetchPeers: vi.fn(async () => ({
     source: { geoLevel: "metro", geoId: "39580", name: "Charlotte", score: 65 },
     peers: [
@@ -71,10 +78,10 @@ describe("MarketComparisonView", () => {
     // Verify we render the real ScoreResponse path (location_name, score, label)
     // rather than silently falling back to "metro/16740" + "—".
     expect(screen.getAllByText("Charlotte").length).toBeGreaterThan(0);
-    // getScoreLabel(65) === "FAIR" per CLAUDE.md §9; rendered as "PropertyIQ 65 · FAIR".
-    expect(screen.getAllByText(/PropertyIQ 65 · FAIR/i).length).toBeGreaterThan(
-      0,
-    );
+    // getScoreLabel(65) === "FIRMING" per CLAUDE.md §9; rendered as "PropertyIQ 65 · FIRMING".
+    expect(
+      screen.getAllByText(/PropertyIQ 65 · FIRMING/i).length,
+    ).toBeGreaterThan(0);
     // The peer-override search is offered alongside the grid.
     expect(screen.getByTestId("peer-search")).toBeInTheDocument();
   });

@@ -23,7 +23,7 @@ const COPY: Record<Feature, { title: string; sub: string; href: string }> = {
   compare: {
     title: "Compare to a peer",
     sub: "See your market vs. its closest comparable, side by side.",
-    href: "/compare/markets",
+    href: "/market/compare",
   },
   watchlist: {
     title: "Build your watchlist",

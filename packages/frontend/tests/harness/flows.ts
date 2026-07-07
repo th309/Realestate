@@ -122,7 +122,7 @@ const ROUTES: Record<Feature, { url: string; anchor: RegExp }> = {
     url: "/market/16740",
     anchor: /Market Position|Market Overview|AI Market Analysis/i,
   },
-  compare: { url: "/compare/markets", anchor: /compare|side by side/i },
+  compare: { url: "/market/compare", anchor: /compare|side by side/i },
   graphs: { url: "/graphs", anchor: /Market Explorer/i },
   screener: { url: "/screener", anchor: /select your market|screener/i },
   analyzer: { url: "/analyzer", anchor: /Deal Analyzer|address/i },

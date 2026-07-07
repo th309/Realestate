@@ -38,7 +38,6 @@ export default defineConfig({
         "auth",
         "betatest",
         "blog",
-        "compare",
         "contact",
         "dashboard",
         "data",
@@ -76,6 +75,11 @@ export default defineConfig({
       {
         find: "@/app/markets",
         replacement: path.resolve(__dirname, "app/(public)/markets"),
+      },
+      {
+        // Competitor-comparison SEO pages moved from (app) to (public).
+        find: "@/app/compare",
+        replacement: path.resolve(__dirname, "app/(public)/compare"),
       },
       { find: "@", replacement: path.resolve(__dirname, ".") },
     ],

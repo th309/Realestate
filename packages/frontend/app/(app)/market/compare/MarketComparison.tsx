@@ -19,7 +19,7 @@ export interface CompareSource {
 /**
  * Side-by-side market comparison: the chosen source market against its
  * auto-suggested closest peer, with a search to swap in any other market.
- * Source-agnostic so it can mount on the /compare/markets route (source from
+ * Source-agnostic so it can mount on the /market/compare route (source from
  * the URL) or inline in the Explore Markets page (source picked in-page).
  */
 export function MarketComparison({ source }: { source: CompareSource }) {

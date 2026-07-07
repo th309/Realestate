@@ -175,6 +175,14 @@ const nextConfig = {
         destination: '/scores/methodology',
         permanent: true,
       },
+      // ── Compare tool relocated: /compare/markets → /market/compare ──
+      // The market-comparison tool moved under the authed /market section
+      // (it's a gated app feature, not a public /compare SEO page).
+      {
+        source: '/compare/markets',
+        destination: '/market/compare',
+        permanent: true,
+      },
       // ── De-scored market pages → ancestor geography ───────────────
       // Generated monthly by scripts/generate-descored-redirects.ts.
       // Seed is [] (no-op) until first generation run.
