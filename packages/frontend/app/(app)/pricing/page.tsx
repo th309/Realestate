@@ -123,7 +123,7 @@ function PricingContent() {
 
   // A user with a LIVE paid Stripe subscription (Pro/Enterprise, not an app
   // trial) cannot start a second checkout — the backend rejects it to prevent a
-  // double-charge. Detect that state here (mirrors SubscriptionActions'
+  // double-charge. Detect that state here (mirrors PlanUsageSection's
   // `isStripeSubscriber`) so a plan change is routed to the Stripe billing
   // portal, which handles subscription upgrades/downgrades, instead.
   const isStripeSubscriber =

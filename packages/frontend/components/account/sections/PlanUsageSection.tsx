@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ExternalLink,
   Loader2,
+  ArrowUpDown,
   Home,
   Warehouse,
   Building2,
@@ -320,19 +321,30 @@ export function PlanUsageSection({
 
       <div className="flex items-center gap-3 flex-wrap">
         {isStripeSubscriber ? (
-          <button
-            type="button"
-            onClick={handleManageBilling}
-            disabled={portalLoading}
-            className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-          >
-            {portalLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ExternalLink className="w-4 h-4" />
-            )}
-            Manage Billing
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleManageBilling}
+              disabled={portalLoading}
+              className="px-4 py-2 bg-[#3949AB] text-white rounded-lg text-sm font-medium hover:bg-[#3949AB]/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {portalLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              Manage Billing
+            </button>
+            {/* Change Plan → /pricing, which safely routes existing subscribers
+                to the Stripe portal (no double-charge) and others to checkout. */}
+            <Link
+              href="/pricing?from=account"
+              className="px-4 py-2 border border-[#3949AB] text-[#3949AB] rounded-lg text-sm font-medium hover:bg-[#3949AB]/8 transition-colors inline-flex items-center gap-2"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              Change Plan
+            </Link>
+          </>
         ) : tier !== "admin" ? (
           <Link
             href="/pricing"
