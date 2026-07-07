@@ -5,6 +5,7 @@ import { ReferralCreditService } from '../referrals/referral-credit.service';
 import { TrialConversionService } from './trial-conversion.service';
 import { BillingUserSyncService } from './billing-user-sync.service';
 import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
+import { TrialEndingNotificationService } from './trial-ending-notification.service';
 import Stripe from 'stripe';
 
 /**
@@ -28,6 +29,8 @@ export class BillingWebhookService {
     private readonly orgWebhook?: OrgBillingWebhookService,
     @Optional()
     private readonly referralCredit?: ReferralCreditService,
+    @Optional()
+    private readonly trialEndingNotifier?: TrialEndingNotificationService,
   ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -62,6 +65,10 @@ export class BillingWebhookService {
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         await this.handlePaymentFailed(invoice);
+        break;
+      }
+      case 'customer.subscription.trial_will_end': {
+        await this.trialEndingNotifier?.handleTrialWillEnd(event.data.object);
         break;
       }
       default:

@@ -8,6 +8,7 @@ import {
   TRIAL_DAY10_EMAIL,
   TRIAL_DAY13_EMAIL,
   TRIAL_EXPIRED_EMAIL,
+  TRIAL_WILL_END_EMAIL,
   ACTIVE_EXPLORER_EMAIL,
 } from '@propertyiq/emails';
 
@@ -116,6 +117,35 @@ export function buildTrialDay13Email(
     </a>
     <p style="margin:16px 0 0; font-size:13px; color:#757575;">
       ${TRIAL_DAY13_EMAIL.footnote}
+    </p>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
+export function buildTrialWillEndEmail(
+  name: string,
+  amountLabel: string,
+  chargeDateLabel: string,
+  manageUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">${TRIAL_WILL_END_EMAIL.heading(name)}</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      ${TRIAL_WILL_END_EMAIL.intro}
+    </p>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      On <strong>${chargeDateLabel}</strong>, your card will be charged <strong>${amountLabel}</strong> for PropertyIQ Pro (billed monthly).
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      ${TRIAL_WILL_END_EMAIL.body}
+    </p>
+    <a href="${manageUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      ${TRIAL_WILL_END_EMAIL.cta}
+    </a>
+    <p style="margin:16px 0 0; font-size:13px; color:#757575;">
+      ${TRIAL_WILL_END_EMAIL.footnote}
     </p>
   `;
   return wrapEmail(body, unsubscribeUrl);
