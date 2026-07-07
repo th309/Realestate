@@ -81,6 +81,32 @@ function getUserTier(): string | undefined {
 }
 
 /**
+ * Forward an event to GA4 (gtag) in addition to the internal pipeline.
+ *
+ * The internal `trackEvent` above posts to our own `user_events` store and
+ * never reaches Google Analytics, so GA4 shows 0 conversions even when the
+ * internal funnel is healthy. Use this for events we want visible as GA4 key
+ * events (e.g. `sign_up`). Fire-and-forget; self-gates on `window.gtag`, so it
+ * no-ops during SSR and when GA is unconfigured (NEXT_PUBLIC_GA_MEASUREMENT_ID
+ * unset). Mirrors the guard in components/analytics/WebVitals.tsx.
+ *
+ * Best-effort: no retry or dataLayer buffering, so an event fired before gtag
+ * finishes loading is dropped. Acceptable here because both signup call sites
+ * fire deep in the flow (post-OTP / after async round-trips), well after GA's
+ * afterInteractive load — not at cold page load.
+ */
+export function gtagEvent(
+  name: string,
+  params: Record<string, unknown> = {},
+): void {
+  if (typeof window === "undefined") return;
+  const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void })
+    .gtag;
+  if (typeof gtag !== "function") return;
+  gtag("event", name, params);
+}
+
+/**
  * Track an analytics event
  *
  * @param eventName - Dot-separated name (e.g., 'pageview.view', 'feature.map_filter')
