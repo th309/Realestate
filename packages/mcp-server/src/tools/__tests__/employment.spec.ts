@@ -30,9 +30,9 @@ describe("handleGetEmploymentBySector", () => {
     );
     expect(EMPLOYMENT_SECTOR_METRICS.length).toBe(11);
 
-    // Spot check first metric path
+    // Spot check first metric path (public resolver route)
     expect(mockedFetchApi).toHaveBeenCalledWith(
-      `/api/metrics/${EMPLOYMENT_SECTOR_METRICS[0]}/county/06037`,
+      `/api/metrics/resolve/${EMPLOYMENT_SECTOR_METRICS[0]}/county/06037`,
     );
 
     const parsed = JSON.parse(text);

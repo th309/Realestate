@@ -261,14 +261,15 @@ export const coreTools = [
       state: z.string().optional().describe("2-letter state filter"),
     },
     handler: async (args: any) => {
-      const data = await fetchApi(
-        `/api/v1/rankings/propertyiq/${args.geography}`,
-        {
-          limit: args.limit || 25,
-          order: args.order || "desc",
-          state: args.state,
-        },
-      );
+      // Public /api/scores/top already supports worst-first via sort=asc; the
+      // key-gated /api/v1/rankings surface rejects the MCP's session auth (401).
+      const data = await fetchApi("/api/scores/top", {
+        geography: args.geography,
+        score_type: "propertyiq",
+        limit: args.limit || 25,
+        sort: args.order || "desc",
+        state: args.state,
+      });
       return JSON.stringify(data, null, 2);
     },
   },

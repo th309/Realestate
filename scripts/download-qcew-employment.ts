@@ -467,6 +467,12 @@ interface CliArgs {
   counties: boolean;
   metros: boolean;
   dryRun: boolean;
+  /**
+   * True when --year/--qtr were both omitted, so the quarter was auto-defaulted.
+   * Enables the publication-aware fallback in runSectorIngest so a scheduled
+   * no-flag run self-heals when BLS hasn't released the nominal quarter yet.
+   */
+  autoPeriod: boolean;
 }
 
 /**
@@ -495,6 +501,40 @@ export function defaultQcewPeriod(now: Date = new Date()): {
   return { year, qtr: 2 };
 }
 
+/**
+ * BLS publishes QCEW ~5-6 months after quarter end, and the exact release date
+ * drifts. `defaultQcewPeriod` returns the NOMINAL latest quarter, but if BLS
+ * hasn't published it yet every industry slice 404s and the ingest builds 0
+ * rows — a silent no-op that left the employment_* columns empty for months.
+ *
+ * Probe backward from the nominal quarter until BLS actually has data, so a
+ * scheduled run self-heals across publication-timing drift instead of writing
+ * nothing. Probes only the total-nonfarm slice (industry "10") — the cheapest
+ * published-or-not signal. Returns the newest quarter that exists, or null if
+ * nothing is published within `maxLookback` quarters.
+ */
+export async function findLatestPublishedQuarter(
+  start: { year: number; qtr: number },
+  maxLookback = 4,
+  probe: (year: number, qtr: number) => Promise<string | null> = (year, qtr) =>
+    downloadQcewIndustry(year, qtr, "10"),
+): Promise<{ year: number; qtr: number } | null> {
+  let { year, qtr } = start;
+  for (let i = 0; i <= maxLookback; i++) {
+    const csv = await probe(year, qtr);
+    if (csv) return { year, qtr };
+    console.log(
+      `  ${year}Q${qtr} not yet published by BLS — falling back to prior quarter`,
+    );
+    qtr -= 1;
+    if (qtr < 1) {
+      qtr = 4;
+      year -= 1;
+    }
+  }
+  return null;
+}
+
 function parseCliArgs(argv: string[]): CliArgs {
   const get = (flag: string): string | undefined => {
     const idx = argv.indexOf(flag);
@@ -505,6 +545,7 @@ function parseCliArgs(argv: string[]): CliArgs {
 
   const yearStr = get("--year");
   const qtrStr = get("--qtr");
+  const autoPeriod = !yearStr && !qtrStr;
 
   let year: number;
   let qtr: number;
@@ -541,7 +582,14 @@ function parseCliArgs(argv: string[]): CliArgs {
     metros = true;
   }
 
-  return { year, qtr, counties, metros, dryRun: has("--dry-run") };
+  return {
+    year,
+    qtr,
+    counties,
+    metros,
+    dryRun: has("--dry-run"),
+    autoPeriod,
+  };
 }
 
 /**
@@ -590,17 +638,25 @@ export async function buildQcewSectorRows(
         target.set(classified.areaCode, row);
       }
 
-      const colName =
-        r.sectorKey === "total_nonfarm_employment"
-          ? "total_nonfarm_employment"
-          : `employment_${r.sectorKey}`;
-      row[colName] = r.month3Emplvl;
+      const isTotal = r.sectorKey === "total_nonfarm_employment";
+      const colName = isTotal
+        ? "total_nonfarm_employment"
+        : `employment_${r.sectorKey}`;
 
-      // Wage + establishments are sector-specific in QCEW; we keep the
-      // total-nonfarm pass as the canonical economy-wide value.
-      if (r.sectorKey === "total_nonfarm_employment") {
+      // BLS ships PRELIMINARY MSA-by-supersector (agglvl 43) rows as a literal
+      // 0 with disclosure_code "-" (suppressed / not-yet-finalized). For METROS
+      // a 0 supersector level is no-data, not a real zero, so leave the column
+      // null and let the resolver fall through (metro -> CES) rather than
+      // serving/upsert-stamping a fake 0. County supersectors (agglvl 73) are
+      // finalized and a small county CAN legitimately have 0 jobs in a sector,
+      // so county values are written as-is. total_nonfarm is always written.
+      if (isTotal) {
+        row[colName] = r.month3Emplvl;
+        // Wage + establishments come from the total-nonfarm pass (economy-wide).
         row.qcew_avg_weekly_wage = r.avgWeeklyWage;
         row.qcew_total_establishments = r.qtrlyEstabs;
+      } else if (classified.areaType === "county" || r.month3Emplvl > 0) {
+        row[colName] = r.month3Emplvl;
       }
     }
     await sleep(DELAY_MS);
@@ -613,6 +669,31 @@ export async function buildQcewSectorRows(
 }
 
 async function runSectorIngest(args: CliArgs): Promise<void> {
+  // When the period was auto-defaulted (scheduled no-flag run), BLS may not
+  // have published the nominal quarter yet — QCEW release dates drift. Walk
+  // back to the newest quarter that actually has data so the run self-heals
+  // instead of building 0 rows and silently leaving the columns empty.
+  if (args.autoPeriod) {
+    const published = await findLatestPublishedQuarter({
+      year: args.year,
+      qtr: args.qtr,
+    });
+    if (!published) {
+      throw new Error(
+        `No published QCEW quarter found within lookback of ${args.year}Q${args.qtr}. ` +
+          `BLS may be between releases — retry later or pass explicit --year/--qtr.`,
+      );
+    }
+    if (published.year !== args.year || published.qtr !== args.qtr) {
+      console.log(
+        `Nominal quarter ${args.year}Q${args.qtr} not yet published by BLS; ` +
+          `using latest published quarter ${published.year}Q${published.qtr}`,
+      );
+      args.year = published.year;
+      args.qtr = published.qtr;
+    }
+  }
+
   console.log("=".repeat(60));
   console.log(
     `BLS QCEW Sector Ingest — ${args.year}Q${args.qtr}` +

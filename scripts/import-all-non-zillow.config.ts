@@ -46,6 +46,17 @@ export const PIPELINES: ImportPipeline[] = [
     command: "npx tsx scripts/download-qcew-employment.ts",
     size: "medium",
   },
+  // CES employment (BLS metro + state employment by supersector via SMU/SMS
+  // series). QCEW only supplies COUNTY supersectors for the freshest quarter
+  // (its metro agglvl-43 rows are preliminary zeros), so CES is the source for
+  // metro + state employment_by_sector. Needs BLS_API_KEY.
+  {
+    id: "ces-employment",
+    name: "BLS CES Employment (metro + state)",
+    command:
+      "npx tsx scripts/sources/census-economic/run-ces-import.ts --all-states --all-metros",
+    size: "large",
+  },
   // IRS county-to-county migration flows (annual SOI release)
   {
     id: "irs-migration",

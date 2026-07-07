@@ -85,19 +85,19 @@ describe("handleGetMigrationSummary", () => {
     // 5 IRS metric calls were issued
     const calls = mockedFetchApi.mock.calls.map((c) => c[0]);
     expect(calls).toContain(
-      "/api/metrics/irs_migration_in_returns/county/06037",
+      "/api/metrics/resolve/irs_migration_in_returns/county/06037",
     );
     expect(calls).toContain(
-      "/api/metrics/irs_migration_out_returns/county/06037",
+      "/api/metrics/resolve/irs_migration_out_returns/county/06037",
     );
     expect(calls).toContain(
-      "/api/metrics/irs_migration_net_returns/county/06037",
+      "/api/metrics/resolve/irs_migration_net_returns/county/06037",
     );
     expect(calls).toContain(
-      "/api/metrics/irs_migration_in_avg_agi/county/06037",
+      "/api/metrics/resolve/irs_migration_in_avg_agi/county/06037",
     );
     expect(calls).toContain(
-      "/api/metrics/irs_migration_out_avg_agi/county/06037",
+      "/api/metrics/resolve/irs_migration_out_avg_agi/county/06037",
     );
 
     const parsed = JSON.parse(text);

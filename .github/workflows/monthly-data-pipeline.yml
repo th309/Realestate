@@ -94,14 +94,14 @@ jobs:
         run: |
           set -euo pipefail
           case "$SOURCE" in
-            all)      ONLY="realtor,economic,census,permits,hud,redfin,qcew-employment,irs-migration,redfin-data-center" ;;
+            all)      ONLY="realtor,economic,census,permits,hud,redfin,qcew-employment,ces-employment,irs-migration,redfin-data-center" ;;
             realtor)  ONLY="realtor" ;;
             economic) ONLY="economic,census" ;;
             permits)  ONLY="permits" ;;
             hud)      ONLY="hud" ;;
             redfin)   ONLY="redfin" ;;
             redfin-data-center) ONLY="redfin-data-center" ;;
-            *)        ONLY="realtor,economic,census,permits,hud,redfin,qcew-employment,irs-migration,redfin-data-center" ;;
+            *)        ONLY="realtor,economic,census,permits,hud,redfin,qcew-employment,ces-employment,irs-migration,redfin-data-center" ;;
           esac
           echo ">>> import-all-non-zillow --only=$ONLY"
           npx tsx scripts/import-all-non-zillow.ts --only="$ONLY"

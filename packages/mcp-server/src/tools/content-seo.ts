@@ -181,31 +181,49 @@ export const contentSeoTools = [
         .enum(["rising", "falling", "both"])
         .optional()
         .describe("Score movement direction"),
-      limit: z.number().optional().describe("Number of results (default 10)"),
+      limit: z
+        .number()
+        .optional()
+        .describe("Number of results per direction (default 20)"),
       state: z.string().optional().describe("Filter by state"),
     },
     handler: async (args: any) => {
-      // Fetch top and bottom markets with history to find movers
-      const [top, bottom] = await Promise.all([
-        fetchApi("/api/scores/top", {
-          geography: args.geography,
-          score_type: "propertyiq",
-          limit: args.limit || 20,
-          state: args.state,
-        }).catch(() => []),
-        fetchApi(`/api/v1/rankings/propertyiq/${args.geography}`, {
-          limit: args.limit || 20,
-          order: "asc",
-          state: args.state,
-        }).catch(() => []),
+      const direction = args.direction || "both";
+      const wantRising = direction !== "falling";
+      const wantFalling = direction !== "rising";
+      const limit = args.limit || 20;
+      // Both lists come from the public /api/scores/top endpoint: sort=desc
+      // yields the highest current scores (momentum leaders), sort=asc the
+      // lowest (cooling laggards). The key-gated /api/v1/rankings surface 401s
+      // against the MCP's session auth, which previously left falling always [].
+      // Only fetch the side(s) the caller asked for.
+      const [rising, falling] = await Promise.all([
+        wantRising
+          ? fetchApi("/api/scores/top", {
+              geography: args.geography,
+              score_type: "propertyiq",
+              limit,
+              sort: "desc",
+              state: args.state,
+            }).catch(() => [])
+          : Promise.resolve([]),
+        wantFalling
+          ? fetchApi("/api/scores/top", {
+              geography: args.geography,
+              score_type: "propertyiq",
+              limit,
+              sort: "asc",
+              state: args.state,
+            }).catch(() => [])
+          : Promise.resolve([]),
       ]);
       return JSON.stringify(
         {
-          rising_markets: top,
-          falling_markets: bottom,
-          direction: args.direction || "both",
+          rising_markets: rising,
+          falling_markets: falling,
+          direction,
           instructions:
-            "Identify markets with the most significant score changes. These are newsworthy — frame as emerging opportunities or warning signs.",
+            "rising_markets are the highest current PropertyIQ scores (momentum leaders); falling_markets are the lowest (cooling / at-risk). These reflect current standings, not score deltas — do not claim a specific amount of movement. Frame leaders as strengthening demand and laggards as cooling markets or warning signs.",
         },
         null,
         2,

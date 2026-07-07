@@ -127,17 +127,29 @@ const BLS_BATCH_SIZE = 50;
  * ces_* sector column. Both `period_date` (existing PK) and
  * `ces_period_date` (CES "as-of" tracker) are set to the same value.
  *
- * Returns the count of successful upserts. Rows with `sectorKey='unknown'`
- * (combined supersectors not in CES_SUPERSECTORS) are skipped.
+ * Returns `{ inserted, skipped, failed }`: merged (geography, month) rows
+ * upserted, rows with `sectorKey='unknown'` (combined supersectors not in
+ * CES_SUPERSECTORS) skipped, and upsert errors logged-and-counted without
+ * aborting the run.
  */
 export async function importCes(
   supabase: SupabaseClient,
   seriesIds: string[],
   startYear: number,
   endYear: number,
-): Promise<{ inserted: number; skipped: number }> {
-  let inserted = 0;
+): Promise<{ inserted: number; skipped: number; failed: number }> {
   let skipped = 0;
+
+  // Merge every sector value for a given (table, geography, month) into ONE row
+  // so we issue a single upsert per (geography, month) instead of one per sector
+  // value (~11x fewer round-trips). The old per-sector path relied on ON
+  // CONFLICT to accumulate columns incrementally; merging in memory first is
+  // equivalent and keeps the full --all-metros run (~10k series) well under the
+  // pipeline timeout instead of doing ~150k sequential upserts.
+  const merged = new Map<
+    string,
+    { table: string; onConflict: string; row: Record<string, unknown> }
+  >();
 
   for (let i = 0; i < seriesIds.length; i += BLS_BATCH_SIZE) {
     const batch = seriesIds.slice(i, i + BLS_BATCH_SIZE);
@@ -158,24 +170,41 @@ export async function importCes(
       const idCol = r.level === "metro" ? "cbsa_code" : "state_fips";
       const idVal = r.level === "metro" ? r.areaCode : r.stateFips;
 
-      const row: Record<string, unknown> = {
-        [idCol]: idVal,
-        period_date: r.periodDate,
-        ces_period_date: r.periodDate,
-        [sectorCol]: r.value,
-      };
-      // economic_metro carries an indexed state_fips column; populate it
-      // when we know it so the row is queryable by state.
-      if (r.level === "metro") {
-        row.state_fips = r.stateFips;
+      const key = `${table}|${idVal}|${r.periodDate}`;
+      let entry = merged.get(key);
+      if (!entry) {
+        entry = {
+          table,
+          onConflict: `period_date,${idCol}`,
+          row: {
+            [idCol]: idVal,
+            period_date: r.periodDate,
+            ces_period_date: r.periodDate,
+          },
+        };
+        // economic_metro carries an indexed state_fips column; populate it
+        // when we know it so the row is queryable by state.
+        if (r.level === "metro") entry.row.state_fips = r.stateFips;
+        merged.set(key, entry);
       }
-
-      const { error } = await supabase
-        .from(table)
-        .upsert(row, { onConflict: `period_date,${idCol}` });
-      if (error) throw error;
-      inserted++;
+      entry.row[sectorCol] = r.value;
     }
   }
-  return { inserted, skipped };
+
+  // One upsert per merged (geography, month) row. Isolate failures so a single
+  // transient upsert error doesn't abort the remaining thousands of rows.
+  let inserted = 0;
+  let failed = 0;
+  for (const { table, onConflict, row } of merged.values()) {
+    const { error } = await supabase.from(table).upsert(row, { onConflict });
+    if (error) {
+      console.warn(
+        `  CES upsert failed (${table} @ ${String(row.period_date)}): ${error.message}`,
+      );
+      failed++;
+      continue;
+    }
+    inserted++;
+  }
+  return { inserted, skipped, failed };
 }

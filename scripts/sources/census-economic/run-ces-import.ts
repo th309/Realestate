@@ -21,6 +21,8 @@ interface CliArgs {
   metros: string[];
   startYear: number;
   endYear: number;
+  /** --all-metros: import every CBSA (state derived from geography_crosswalk). */
+  allMetros: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -29,6 +31,7 @@ function parseArgs(argv: string[]): CliArgs {
     metros: [],
     startYear: new Date().getFullYear() - 1,
     endYear: new Date().getFullYear(),
+    allMetros: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
@@ -50,6 +53,8 @@ function parseArgs(argv: string[]): CliArgs {
       args.states = Object.keys(STATE_ABBREV_TO_FIPS).filter(
         (abbrev) => abbrev !== "PR",
       );
+    } else if (flag === "--all-metros") {
+      args.allMetros = true;
     }
   }
   return args;
@@ -94,11 +99,59 @@ async function lookupMetroState(
   return (data?.state_fips as string | undefined) ?? null;
 }
 
+/**
+ * Derive every CBSA's primary state_fips from geography_crosswalk — the
+ * platform's authoritative geo-inheritance crosswalk. economic_metro does NOT
+ * reliably carry state_fips, so this is the source of truth for building CES
+ * SMU series ids across all metros. A CBSA can span states (its ZIPs fall in
+ * different states); BLS publishes one SMU series per metro under a single
+ * primary state, so pick the most frequent state_fips across its crosswalk rows.
+ */
+async function fetchAllMetrosFromCrosswalk(
+  supabase: ReturnType<typeof getSupabaseClient>,
+): Promise<Array<{ cbsa: string; stateFips: string }>> {
+  const counts = new Map<string, Map<string, number>>();
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("geography_crosswalk")
+      .select("cbsa_code, state_fips")
+      .not("cbsa_code", "is", null)
+      .not("state_fips", "is", null)
+      // Deterministic order is required for stable .range() pagination —
+      // without it PostgREST can skip/duplicate rows across pages and skew the
+      // modal state pick. zip_code is the row-unique key of this crosswalk.
+      .order("zip_code")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const r of data as Array<{ cbsa_code: string; state_fips: string }>) {
+      const byState = counts.get(r.cbsa_code) ?? new Map<string, number>();
+      byState.set(r.state_fips, (byState.get(r.state_fips) ?? 0) + 1);
+      counts.set(r.cbsa_code, byState);
+    }
+    if (data.length < PAGE) break;
+  }
+  const metros: Array<{ cbsa: string; stateFips: string }> = [];
+  for (const [cbsa, byState] of counts) {
+    let primaryState = "";
+    let best = -1;
+    for (const [stateFips, n] of byState) {
+      if (n > best) {
+        best = n;
+        primaryState = stateFips;
+      }
+    }
+    metros.push({ cbsa, stateFips: primaryState });
+  }
+  return metros;
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  if (args.states.length === 0 && args.metros.length === 0) {
+  if (args.states.length === 0 && args.metros.length === 0 && !args.allMetros) {
     console.error(
-      "Usage: run-ces-import.ts --states NC[,GA,...] [--metros 39580,...] [--start 2023] [--end 2023]",
+      "Usage: run-ces-import.ts --states NC[,GA,...] [--metros 39580,...] [--all-metros] [--start 2023] [--end 2023]",
     );
     process.exit(1);
   }
@@ -132,8 +185,22 @@ async function main(): Promise<void> {
     seriesIds.push(...buildMetroSeriesIds(metroState, cbsa));
   }
 
+  let allMetrosCount = 0;
+  if (args.allMetros) {
+    const metros = await fetchAllMetrosFromCrosswalk(supabase);
+    allMetrosCount = metros.length;
+    console.log(
+      `  --all-metros: ${metros.length} CBSAs from geography_crosswalk`,
+    );
+    for (const { cbsa, stateFips } of metros) {
+      seriesIds.push(...buildMetroSeriesIds(stateFips, cbsa));
+    }
+  }
+
   console.log(
-    `CES import: ${args.states.length} states, ${args.metros.length} metros, ${seriesIds.length} series, ${args.startYear}-${args.endYear}`,
+    `CES import: ${args.states.length} states, ${
+      args.metros.length + allMetrosCount
+    } metros, ${seriesIds.length} series, ${args.startYear}-${args.endYear}`,
   );
   const result = await importCes(
     supabase,
@@ -141,7 +208,9 @@ async function main(): Promise<void> {
     args.startYear,
     args.endYear,
   );
-  console.log(`  Inserted: ${result.inserted}  Skipped: ${result.skipped}`);
+  console.log(
+    `  Inserted: ${result.inserted}  Skipped: ${result.skipped}  Failed: ${result.failed}`,
+  );
 }
 
 main().catch((err) => {
