@@ -33,11 +33,12 @@
     "release:main": "bash scripts/git/release-to-main.sh",
     "sync:develop": "bash scripts/git/release-to-main.sh --sync-only",
     "postinstall": "node scripts/postinstall-fix-types.js",
-    "seo:rebuild-slugs": "npm run seo:slugs:metro && npm run seo:slugs:county && npm run seo:slugs:zip && npm run seo:redirects",
+    "seo:rebuild-slugs": "npm run seo:slugs:metro && npm run seo:slugs:county && npm run seo:slugs:zip && npm run seo:redirects && npm run seo:generate-llms",
     "seo:slugs:metro": "npx tsx scripts/generate-metro-slugs.ts",
     "seo:slugs:county": "npx tsx scripts/generate-county-slugs.ts",
     "seo:slugs:zip": "npx tsx scripts/generate-zip-slugs.ts",
-    "seo:redirects": "npx tsx scripts/generate-descored-redirects.ts"
+    "seo:redirects": "npx tsx scripts/generate-descored-redirects.ts",
+    "seo:generate-llms": "npx tsx scripts/generate-llms-txt.ts"
   },
   "dependencies": {
     "csv-parse": "^5.6.0",

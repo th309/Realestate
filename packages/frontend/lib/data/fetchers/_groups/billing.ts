@@ -30,9 +30,11 @@ export {
 // Pricing (admin features)
 export {
   fetchPricingSummary,
+  fetchPaidTierOffers,
   type PricingTier,
   type TrialInfo,
   type PricingSummary,
+  type PaidTierOffer,
 } from "../pricing";
 
 // Enterprise grace period

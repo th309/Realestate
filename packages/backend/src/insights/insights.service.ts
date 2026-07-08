@@ -88,19 +88,13 @@ export class InsightsService {
     archetypeId?: string,
   ): Promise<MarketInsight | null> {
     // Check cache first.
-    let query = this.supabase
-      .from('market_insights')
-      .select('*')
-      .eq('region_id', regionId)
-      .eq('geo_level', geoLevel)
-      .eq('insight_type', insightType)
-      .gt('expires_at', new Date().toISOString());
-
-    query = query.eq('archetype_id', archetypeId || '__none__');
-
-    const { data: cached } = await query.limit(1).single();
-
-    if (cached) return cached as MarketInsight;
+    const cached = await this.getCachedInsight(
+      regionId,
+      geoLevel,
+      insightType,
+      archetypeId,
+    );
+    if (cached) return cached;
 
     // Build context (needed for live generation AND the deterministic fallback).
     const context = await this.buildInsightContext(regionId, geoLevel);
@@ -174,6 +168,26 @@ export class InsightsService {
     }
 
     return (upserted as MarketInsight) ?? ({ ...row, id: '' } as MarketInsight);
+  }
+
+  /** Cache-only lookup: stored non-expired insight or null. Never generates. */
+  async getCachedInsight(
+    regionId: string,
+    geoLevel: string,
+    insightType: string,
+    archetypeId?: string,
+  ): Promise<MarketInsight | null> {
+    const { data } = await this.supabase
+      .from('market_insights')
+      .select('*')
+      .eq('region_id', regionId)
+      .eq('geo_level', geoLevel)
+      .eq('insight_type', insightType)
+      .gt('expires_at', new Date().toISOString())
+      .eq('archetype_id', archetypeId || '__none__')
+      .limit(1)
+      .single();
+    return (data as MarketInsight) ?? null;
   }
 
   /**

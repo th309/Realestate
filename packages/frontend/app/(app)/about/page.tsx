@@ -7,11 +7,11 @@ import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 export const metadata: Metadata = {
   title: "About PropertyIQ — Our Mission, Team & Data Sources",
-  description: `Learn how PropertyIQ uses machine learning to analyze ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes, helping homebuyers, investors, and agents.`,
+  description: `Learn how PropertyIQ's transparent, validated scoring formula ranks ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes, helping homebuyers, investors, and agents.`,
   alternates: { canonical: "https://www.propertyiq.app/about" },
   openGraph: {
     title: "About PropertyIQ | AI Real Estate Intelligence",
-    description: `How PropertyIQ uses machine learning to analyze ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes.`,
+    description: `How PropertyIQ's transparent, validated scoring formula ranks ${COVERAGE_COPY.metros} US metros and ${COVERAGE_COPY.zips} ZIP codes.`,
     url: "https://www.propertyiq.app/about",
     siteName: "PropertyIQ",
     images: [
@@ -175,20 +175,20 @@ export default function AboutPage() {
                   <p className="text-on-surface-variant leading-relaxed mb-4">
                     PropertyIQ was founded in 2024 by a team of data scientists
                     and real estate professionals who saw a gap in the market:
-                    plenty of raw data existed, but no platform was using
-                    machine learning to actually predict which markets would
+                    plenty of raw data existed, but no platform offered a
+                    validated, predictive signal for which markets would
                     outperform. The founders combined expertise in quantitative
-                    finance, real estate investment, and machine learning
-                    engineering to build a scoring system that doesn&apos;t just
-                    describe markets — it predicts their future performance.
+                    finance, real estate investment, and data engineering to
+                    build a scoring system that doesn&apos;t just describe
+                    markets — it predicts their future performance.
                   </p>
                   <p className="text-on-surface-variant leading-relaxed">
                     The team&apos;s background spans hedge fund analytics, real
-                    estate portfolio management, and production ML systems. This
-                    cross-disciplinary expertise is why the PropertyIQ Score
-                    achieves a 0.27 out-of-sample Information Coefficient at
-                    metro level — a level of predictive accuracy typically found
-                    only in institutional-grade analytics tools.
+                    estate portfolio management, and production data systems.
+                    This cross-disciplinary expertise is why the PropertyIQ
+                    Score achieves a 0.27 out-of-sample Information Coefficient
+                    at metro level — a level of predictive accuracy typically
+                    found only in institutional-grade analytics tools.
                   </p>
                 </div>
               </div>
@@ -208,7 +208,8 @@ export default function AboutPage() {
                   },
                   {
                     date: "Early 2025",
-                    event: `First scoring models trained and validated on more than two decades of historical price data across ${COVERAGE_COPY.metros} metros`,
+                    event:
+                      "First scoring formula built and validated out-of-sample on more than two decades of historical price data",
                   },
                   {
                     date: "Mid 2025",
@@ -247,9 +248,9 @@ export default function AboutPage() {
                   </h3>
                   <p className="text-sm text-on-surface-variant">
                     Most real estate platforms show you what happened.
-                    PropertyIQ predicts what will happen, using validated
-                    machine learning models that have been tested against actual
-                    market outcomes.
+                    PropertyIQ predicts what will happen, using a transparent,
+                    validated scoring formula tested against actual market
+                    outcomes.
                   </p>
                 </div>
                 <div className="p-6 rounded-xl bg-surface-container-low">

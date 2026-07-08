@@ -11,6 +11,8 @@ import {
 } from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
+import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
+import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
 import { CountyPageContent } from "./CountyPageContent";
 import { generateCountySeoContent } from "./generate-seo-content";
 
@@ -224,6 +226,14 @@ export default async function CountyPage({
           BLS, and BEA. Per-statistic source and date shown above.
         </p>
       </section>
+
+      <MarketFaqSection
+        faqs={buildMarketFaqs({
+          displayName: county.shortName,
+          geoLabel: "county",
+          stats,
+        })}
+      />
     </>
   );
 }

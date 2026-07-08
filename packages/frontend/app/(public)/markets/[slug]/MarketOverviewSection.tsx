@@ -13,6 +13,13 @@ import { useInsight } from "@/lib/data";
 interface MarketOverviewSectionProps {
   metroName: string;
   cbsaCode: string;
+  /**
+   * Server-rendered (cached) narrative. When present, we render from it and
+   * disable the client fetch entirely — so ISR pages ship the narrative + its
+   * Article JSON-LD in the initial HTML, and never trigger a live AI generation.
+   * When absent, the client fetches as before (may generate for real visitors).
+   */
+  initialInsight?: { content: string; generated_at: string } | null;
 }
 
 /**
@@ -60,15 +67,32 @@ function LoadingSkeleton() {
 export function MarketOverviewSection({
   metroName,
   cbsaCode,
+  initialInsight,
 }: MarketOverviewSectionProps) {
-  const { insight, generatedAt, loading, error } = useInsight(
-    "metro",
-    cbsaCode,
+  const hasServerInsight = !!initialInsight?.content;
+
+  // Disable the client fetch when a server narrative is present (null geoLevel
+  // => useInsight's `enabled` is false), so a page that already has content
+  // never kicks off a live generation.
+  const {
+    insight: clientInsight,
+    generatedAt: clientGeneratedAt,
+    loading,
+    error,
+  } = useInsight(
+    hasServerInsight ? null : "metro",
+    hasServerInsight ? null : cbsaCode,
     "market_overview",
   );
 
-  if (loading) return <LoadingSkeleton />;
-  if (error || !insight) return null;
+  const insight = hasServerInsight ? initialInsight!.content : clientInsight;
+  const generatedAt = hasServerInsight
+    ? initialInsight!.generated_at
+    : clientGeneratedAt;
+
+  if (!hasServerInsight && loading) return <LoadingSkeleton />;
+  if (!hasServerInsight && error) return null;
+  if (!insight) return null;
 
   const sections = parseMarkdownSections(insight);
 

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useInView } from "./hooks/useInView";
 import { ArrowRight } from "lucide-react";
 import { useEntitlements } from "@/lib/entitlements";
-import { getV4HomepageClaims, V4_CLAIMS } from "@/lib/data/validation-claims";
+import { getV4HomepageClaims } from "@/lib/data/validation-claims";
 
 /* ─── Individual value-prop row ─── */
 interface ValuePropProps {
@@ -175,7 +175,7 @@ export function ValuePropsSection() {
         <ValueProp
           eyebrow="Proven Score"
           heading="A score that predicts real market performance"
-          body={`The PropertyIQ Score is built from 40+ metrics using machine learning, not opinions. Validated across ${claims.metrosValidated.toLocaleString()} metros and ${claims.backtestYears} years of data. Top-scored markets don\u2019t just correlate with better returns. They deliver them.`}
+          body={`The PropertyIQ Score is a transparent four-signal formula \u2014 Zillow price momentum plus Realtor.com days-on-market and price-cut data \u2014 with no black box and no opinions. Validated across ${claims.metrosValidated.toLocaleString()} metros and ${claims.backtestYears} years of out-of-sample data. Top-scored markets don\u2019t just correlate with better returns. They deliver them.`}
           stat={{
             value: claims.dollarGap,
             label:

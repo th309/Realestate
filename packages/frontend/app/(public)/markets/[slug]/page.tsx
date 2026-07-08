@@ -3,13 +3,19 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { resolveMetroAlias } from "@/lib/data/market-slug-aliases";
-import { fetchSeoMarketStats, fetchRankings } from "@/lib/data";
+import {
+  fetchSeoMarketStats,
+  fetchRankings,
+  fetchCachedInsight,
+} from "@/lib/data";
 import {
   buildMarketTitle,
   buildMarketDescription,
 } from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
+import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
+import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
 import { MetroPageContent } from "./MetroPageContent";
 import { generateMarketSeoContent } from "./generate-seo-content";
 
@@ -114,6 +120,16 @@ export default async function MetroPage({
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const seoContent = generateMarketSeoContent(metro, stats);
 
+  // Cache-only narrative for SSR: surfaces the pre-generated AI market overview
+  // into the initial HTML when one exists, and NEVER triggers a paid generation
+  // during ISR (cachedOnly=1). Null when uncached — the client island then
+  // fetches live for real visitors.
+  const serverInsight = await fetchCachedInsight(
+    "metro",
+    metro.cbsaCode,
+    "market_overview",
+  );
+
   // Related metros: same-state ranked by PropertyIQ score (server-rendered).
   const metroRank = await fetchRankings("propertyiq", "metro", {
     state: metro.state,
@@ -131,7 +147,7 @@ export default async function MetroPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <MetroPageContent metro={metro} />
+      <MetroPageContent metro={metro} initialInsight={serverInsight} />
 
       {stats && <MarketStatsBlock data={stats} geoName={metro.shortName} />}
       {stats && (
@@ -195,6 +211,14 @@ export default async function MetroPage({
           BLS, and BEA. Per-statistic source and date shown above.
         </p>
       </section>
+
+      <MarketFaqSection
+        faqs={buildMarketFaqs({
+          displayName: metro.shortName,
+          geoLabel: "metro area",
+          stats,
+        })}
+      />
     </>
   );
 }

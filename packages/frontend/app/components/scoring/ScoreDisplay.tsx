@@ -1,6 +1,16 @@
 "use client";
 
 import React from "react";
+import {
+  getScoreLabel,
+  getScoreMomentumArrow,
+  SCORE_MOMENTUM_DESCRIPTOR,
+} from "./score-labels";
+
+// Re-exported so existing `@/app/components/scoring/ScoreDisplay` import sites
+// keep working unchanged (these pure momentum utilities now live in the plain,
+// server-importable ./score-labels module — SSOT preserved).
+export { getScoreLabel, getScoreMomentumArrow, SCORE_MOMENTUM_DESCRIPTOR };
 
 /**
  * Standardized Score Display Component
@@ -104,40 +114,10 @@ export const getGradeColor = (grade: string): { bg: string; text: string } => {
 };
 
 /**
- * Get descriptive label for score.
- *
- * The PropertyIQ Score is a demand-MOMENTUM / timing signal, not a quality
- * grade — so the labels describe the market's current demand TREND (where it's
- * heading), not whether it's a "good" or "bad" place. A low score means cooling
- * momentum, NOT a poor-quality market. 50 = the market's state average ("STEADY").
- * Keep these words momentum-framed; never reintroduce quality words
- * (EXCELLENT/POOR/etc.). See CLAUDE.md §9.
+ * getScoreLabel, getScoreMomentumArrow, and SCORE_MOMENTUM_DESCRIPTOR now live
+ * in ./score-labels (a plain, server-importable module) and are imported +
+ * re-exported at the top of this file — see the note there.
  */
-export const getScoreLabel = (score: number): string => {
-  if (score >= 90) return "VERY STRONG";
-  if (score >= 80) return "STRONG";
-  if (score >= 70) return "RISING";
-  if (score >= 60) return "FIRMING";
-  if (score >= 50) return "STEADY";
-  if (score >= 40) return "EASING";
-  if (score >= 20) return "WEAK";
-  return "VERY WEAK";
-};
-
-/**
- * Direction arrow for the momentum label (↑ strengthening, → steady, ↓ easing).
- * Pairs with getScoreLabel to reinforce the timing-signal framing.
- */
-export const getScoreMomentumArrow = (score: number): string => {
-  if (score >= 60) return "↑";
-  if (score >= 50) return "→";
-  if (score >= 40) return "↘";
-  return "↓";
-};
-
-/** One-line descriptor clarifying the score is a momentum/timing signal. */
-export const SCORE_MOMENTUM_DESCRIPTOR =
-  "Momentum & timing signal — the market's current demand trend, not a quality grade.";
 
 /**
  * ScoreDisplay - The standard score visualization component

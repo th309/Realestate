@@ -94,7 +94,7 @@ export function PersonalizedPaywall({
             href="/pricing?from=personalized_paywall"
             className="w-full text-center py-3 px-6 rounded-full bg-primary text-on-primary font-medium hover:bg-primary/90 transition-colors"
           >
-            Upgrade to Pro — $29/mo
+            Upgrade to Pro
           </Link>
           <button
             onClick={onDismiss}
