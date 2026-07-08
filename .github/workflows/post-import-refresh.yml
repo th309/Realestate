@@ -495,6 +495,8 @@ jobs:
                   packages/frontend/lib/data/county-slug-data.json \
                   packages/frontend/lib/data/zip-slug-data.json \
                   packages/frontend/lib/data/descored-redirects.json \
+                  packages/frontend/public/llms.txt \
+                  packages/frontend/public/llms-full.txt \
                   packages/backend/src/scoring/calibration/calibration-tables.json
 
           # Single develop-relative gate: whether or not calibration was downloaded,

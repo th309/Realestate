@@ -12,9 +12,18 @@ import { useMilestone } from "@/lib/hooks/useMilestone";
 
 interface MetroPageContentProps {
   metro: MetroSlugEntry;
+  /**
+   * Pre-generated (cached) AI market overview, fetched server-side for SSR/SEO.
+   * When present, MarketOverviewSection renders it in the initial HTML and skips
+   * the client fetch. Null when uncached — the client fetches live.
+   */
+  initialInsight?: { content: string; generated_at: string } | null;
 }
 
-export function MetroPageContent({ metro }: MetroPageContentProps) {
+export function MetroPageContent({
+  metro,
+  initialInsight,
+}: MetroPageContentProps) {
   const [showLeadMagnet, setShowLeadMagnet] = useState(false);
   const { recordMilestone } = useMilestone();
 
@@ -89,6 +98,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       <MarketOverviewSection
         metroName={metro.shortName}
         cbsaCode={metro.cbsaCode}
+        initialInsight={initialInsight}
       />
 
       {/* CTAs */}

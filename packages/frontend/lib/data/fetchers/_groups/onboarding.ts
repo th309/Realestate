@@ -20,7 +20,11 @@ export {
 export type { OnboardingState } from "../onboarding";
 
 // Insights (AI-generated market narratives)
-export { fetchInsight, type InsightData } from "../insights";
+export {
+  fetchInsight,
+  fetchCachedInsight,
+  type InsightData,
+} from "../insights";
 
 // User quiz preferences
 export {

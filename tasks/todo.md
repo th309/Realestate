@@ -1,3 +1,22 @@
+# GEO Top-5 Fixes — 2026-07-08 (from GEO-ANALYSIS.md)
+
+Branch `develop` (commit locally; never push without ask).
+
+## Plan
+
+- [x] **G1** Claim contradictions FIXED: ValuePropsSection body → transparent 4-signal formula copy; /about ×5 ML-claim rewrites + "production data systems"; milestone "models trained"→"formula built"; JsonLd featureList → COVERAGE_COPY.sentence; layout.tsx root meta description → COVERAGE_COPY.sentence (was raw 935/3,137/29,417).
+- [x] **G2** llms.txt: new `scripts/generate-llms-txt.ts` + `scripts/lib/llms-txt-template.ts` (fail-closed, COVERAGE_COPY-sourced, live pricing); `seo:generate-llms` npm script chained into `seo:rebuild-slugs`; post-import-refresh.yml commits the files; both files regenerated ($39 Pro / $149 Enterprise from live API — "Team $99" never existed in DB). BONUS stale-$29 fixes: PersonalizedPaywall CTA (price dropped), PlanComparisonCards (wired usePricingTiers), account-page e2e assertions. Homepage JsonLd offers now pricing-live via new `fetchPaidTierOffers` (ISR 1h, tag piq-pricing) — omits paid offers on fetch failure.
+- [x] **G3** Market FAQ: `build-market-faqs.ts` (5 momentum-framed Q&As, 128-162 words, null-gated) + `MarketFaqSection.tsx` (FAQPage JSON-LD, ≥3 gate) on metro/county/zip pages; score labels extracted to `score-labels.ts` (re-exported from ScoreDisplay, 33/33 tests pass).
+- [x] **G4** SSR narrative: backend `getCachedInsight` + `cachedOnly` param (never generates — cost guardrail verified by review); frontend `fetchCachedInsight` (ISR, null-safe) → metro page → `initialInsight` prop; client fetch disabled when server-provided. + DTO-audit fixes: geoLevel/type/archetype/blog-type allowlist validation on ALL insights endpoints (2 pre-existing CRITICALs closed).
+- [x] **G5** Entity: sameAs → real LinkedIn (`/company/propertyiq-app/`) + YouTube + Facebook (user-provided); removed uncontrolled `@propertyiq` twitter creator handle; safeJsonLdString escape helper (JsonLd + OrganizationJsonLd). MANUAL follow-ups for user: Wikidata item, Reddit presence, Search Console reindex of stale snippets, claim FB vanity URL.
+- [~] **G6** Verify: backend tsc ✓; frontend tsc ✓ (×2); frontend vitest score-labels ✓; production build: Turbopack (Next 16.1.6) fails locally resolving `@propertyiq/analyzer-core` (Windows/Turbopack quirk — Node resolves it fine, dist rebuilt, Railway Linux builds unaffected); webpack build running as cross-check; then no-JS HTML render check on :3100.
+
+## Review
+
+All 5 GEO issues implemented; ~14 code-review/security/DTO/data-layer validation passes across the surface, all findings fixed (dangling import, raw counts in root meta, ML phrasing, 2 pre-existing controller CRITICALs, JSON-LD `</script>` escape). Coupling note (user to confirm): `seo:generate-llms` appended to `seo:rebuild-slugs` chain means a pricing-API outage fail-closes the monthly slug rebuild step.
+
+---
+
 # Mobile + cross-platform tour/reports fixes — 2026-06-20
 
 Root causes confirmed via parallel Explore agents + direct file reads. Six bugs.

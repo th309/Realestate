@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Check, Crown, Loader2 } from "lucide-react";
+import { usePricingTiers, buildPriceLookup } from "@/lib/data";
 
 interface PlanTier {
   slug: string;
   name: string;
-  price: string;
+  /** Shown verbatim (e.g. "Custom"). When unset, the price is read live from the pricing API. */
+  customPrice?: string;
   description: string;
   features: string[];
   highlighted?: boolean;
@@ -16,7 +18,6 @@ const PLAN_TIERS: PlanTier[] = [
   {
     slug: "free",
     name: "Free",
-    price: "$0",
     description: "For individuals exploring markets",
     features: [
       "1 user",
@@ -28,7 +29,6 @@ const PLAN_TIERS: PlanTier[] = [
   {
     slug: "pro",
     name: "Pro",
-    price: "$29",
     description: "For serious investors and agents",
     features: [
       "1 user",
@@ -42,7 +42,7 @@ const PLAN_TIERS: PlanTier[] = [
   {
     slug: "enterprise",
     name: "Enterprise",
-    price: "Custom",
+    customPrice: "Custom",
     description: "For teams and brokerages",
     features: [
       "Unlimited seats",
@@ -72,6 +72,11 @@ export function PlanComparisonCards({
 }: PlanComparisonCardsProps) {
   const normalizedCurrent = (currentPlanName ?? "").toLowerCase().trim();
 
+  // Prices come from the live pricing API so they never drift from what a
+  // customer actually pays (tiers without a live price fall back to a skeleton).
+  const { tiers } = usePricingTiers();
+  const priceLookup = useMemo(() => buildPriceLookup(tiers), [tiers]);
+
   return (
     <div className="mt-8">
       <h2 className="text-lg font-medium text-on-surface mb-4">
@@ -80,6 +85,12 @@ export function PlanComparisonCards({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {PLAN_TIERS.map((tier) => {
           const isCurrent = normalizedCurrent.includes(tier.slug);
+          const live = priceLookup[tier.slug];
+          const priceText = tier.customPrice
+            ? tier.customPrice
+            : live
+              ? `$${Math.round(live.priceMonthly)}`
+              : null;
 
           return (
             <div
@@ -107,13 +118,19 @@ export function PlanComparisonCards({
                   {tier.description}
                 </p>
                 <p className="mt-3">
-                  <span className="text-2xl font-bold text-on-surface">
-                    {tier.price}
-                  </span>
-                  {tier.price !== "Custom" && (
-                    <span className="text-sm text-on-surface-variant">
-                      /month
-                    </span>
+                  {priceText === null ? (
+                    <span className="inline-block h-8 w-20 rounded-lg bg-surface-container-high animate-pulse align-middle" />
+                  ) : (
+                    <>
+                      <span className="text-2xl font-bold text-on-surface">
+                        {priceText}
+                      </span>
+                      {!tier.customPrice && (
+                        <span className="text-sm text-on-surface-variant">
+                          /month
+                        </span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>

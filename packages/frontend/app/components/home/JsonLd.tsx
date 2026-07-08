@@ -12,62 +12,62 @@
  * publisher/provider @id refs below resolve to that sitewide Organization.
  */
 
-import { V4_CLAIMS } from "@/lib/data/validation-claims";
+import { fetchPaidTierOffers, type PaidTierOffer } from "@/lib/data";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
+
+// Marketing blurbs keyed by tier slug; description is optional in schema.org,
+// so unknown tiers simply omit it rather than inventing copy.
+const OFFER_DESCRIPTIONS: Record<string, string> = {
+  pro: "Unlimited lookups, full score breakdown, AI-generated reports",
+  enterprise: "Everything in Pro plus team collaboration and API access",
+};
+
+function buildOffers(paidTiers: PaidTierOffer[] | null) {
+  const freeOffer = {
+    "@type": "Offer",
+    name: "Free",
+    price: "0",
+    priceCurrency: "USD",
+    availability: "https://schema.org/InStock",
+    url: "https://www.propertyiq.app/pricing",
+    description: "5 property lookups per month, basic scores, metro-level data",
+  };
+
+  // Prices come from the live pricing API (single source of truth) — never
+  // hardcoded here, so schema can't drift from the /pricing page. If the
+  // fetch failed we emit only the Free offer rather than stale numbers.
+  const paidOffers = (paidTiers ?? []).map((tier) => ({
+    "@type": "Offer",
+    name: tier.name,
+    price: String(tier.priceMonthly),
+    priceCurrency: "USD",
+    availability: "https://schema.org/InStock",
+    url: "https://www.propertyiq.app/pricing",
+    // P1M monthly recurring expressed via a real schema.org price spec
+    // (`billingIncrement` is not a schema.org property).
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: String(tier.priceMonthly),
+      priceCurrency: "USD",
+      billingDuration: "P1M",
+      unitText: "MONTH",
+    },
+    ...(OFFER_DESCRIPTIONS[tier.slug]
+      ? { description: OFFER_DESCRIPTIONS[tier.slug] }
+      : {}),
+  }));
+
+  return [freeOffer, ...paidOffers];
+}
 
 // SoftwareApplication schema - describes the platform
-const softwareSchema = {
+const softwareSchemaBase = {
   "@type": "SoftwareApplication",
   "@id": "https://www.propertyiq.app/#software",
   name: "PropertyIQ",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
-  offers: [
-    {
-      "@type": "Offer",
-      name: "Free",
-      price: "0",
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-      url: "https://www.propertyiq.app/pricing",
-      description:
-        "5 property lookups per month, basic scores, metro-level data",
-    },
-    {
-      "@type": "Offer",
-      name: "Pro",
-      price: "39",
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-      url: "https://www.propertyiq.app/pricing",
-      // P1M monthly recurring expressed via a real schema.org price spec
-      // (`billingIncrement` is not a schema.org property).
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        price: "39",
-        priceCurrency: "USD",
-        billingDuration: "P1M",
-        unitText: "MONTH",
-      },
-      description:
-        "Unlimited lookups, full score breakdown, AI-generated reports",
-    },
-    {
-      "@type": "Offer",
-      name: "Team",
-      price: "99",
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-      url: "https://www.propertyiq.app/pricing",
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        price: "99",
-        priceCurrency: "USD",
-        billingDuration: "P1M",
-        unitText: "MONTH",
-      },
-      description: "Everything in Pro plus team collaboration and API access",
-    },
-  ],
   featureList: [
     "AI-powered market analysis",
     "PropertyIQ Score — a market demand signal, out-of-sample validated across two decades of housing data",
@@ -75,7 +75,9 @@ const softwareSchema = {
     "Market quality metrics",
     "Interactive market heat maps",
     "AI-generated market reports",
-    `${V4_CLAIMS.metrosScored} US metros, ${V4_CLAIMS.countiesScored.toLocaleString()} counties, and ${V4_CLAIMS.zipsScored.toLocaleString()} ZIP codes`,
+    // Headline coverage MUST use the conservative COVERAGE_COPY tokens, not raw
+    // live counts — exact counts churn monthly and drift against page copy.
+    COVERAGE_COPY.sentence,
     "Census and economic data integration",
   ],
   audience: {
@@ -116,17 +118,25 @@ const webPageSchema = {
   provider: { "@id": "https://www.propertyiq.app/#organization" },
 };
 
-// Combined schema graph
-const jsonLdData = {
-  "@context": "https://schema.org",
-  "@graph": [softwareSchema, websiteSchema, webPageSchema],
-};
+// Async server component: fetches live paid tiers (ISR-cached, 1h) so the
+// schema.org offers can never drift from the /pricing page. Both homepage
+// variants render <JsonLd /> with no props — the fetch lives here.
+export async function JsonLd() {
+  const paidTiers: PaidTierOffer[] | null = await fetchPaidTierOffers();
 
-export function JsonLd() {
+  const jsonLdData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { ...softwareSchemaBase, offers: buildOffers(paidTiers) },
+      websiteSchema,
+      webPageSchema,
+    ],
+  };
+
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLdData) }}
     />
   );
 }

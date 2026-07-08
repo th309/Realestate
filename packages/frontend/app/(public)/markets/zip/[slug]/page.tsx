@@ -15,6 +15,8 @@ import {
 } from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
+import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
+import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
 import { ZipPageContent } from "./ZipPageContent";
 import { generateZipSeoContent } from "./generate-seo-content";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
@@ -278,6 +280,14 @@ export default async function ZipPage({
           BLS, and BEA. Per-statistic source and date shown above.
         </p>
       </section>
+
+      <MarketFaqSection
+        faqs={buildMarketFaqs({
+          displayName,
+          geoLabel: "ZIP code",
+          stats,
+        })}
+      />
     </>
   );
 }

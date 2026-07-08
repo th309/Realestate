@@ -6,6 +6,8 @@
  * `@id` that other schemas (WebSite/WebPage/Dataset/Article `publisher`)
  * reference by id, so those references resolve on any page.
  */
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
+
 export function OrganizationJsonLd() {
   const organization = {
     "@context": "https://schema.org",
@@ -22,9 +24,13 @@ export function OrganizationJsonLd() {
     description:
       "PropertyIQ provides AI-powered real estate market intelligence for homebuyers, renters, investors, and real estate professionals.",
     foundingDate: "2024",
+    // Only profiles PropertyIQ actually controls. NOTE: linkedin.com/company/
+    // property-iq (no "-app") belongs to an unrelated Las Vegas company
+    // (propertyiq.com) — linking it feeds AI entity confusion.
     sameAs: [
-      "https://www.linkedin.com/company/property-iq",
+      "https://www.linkedin.com/company/propertyiq-app/",
       "https://www.youtube.com/@PropertyIQ_app",
+      "https://www.facebook.com/profile.php?id=61588805272430",
     ],
     contactPoint: {
       "@type": "ContactPoint",
@@ -36,7 +42,7 @@ export function OrganizationJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLdString(organization) }}
     />
   );
 }

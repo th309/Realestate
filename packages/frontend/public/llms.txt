@@ -62,8 +62,8 @@ Note: The PropertyIQ Score itself uses only four inputs — Zillow ZHVI 12-month
 ## Pricing
 
 - **Free**: 5 property lookups/month, basic scores, metro-level data
-- **Pro** ($29/month): Unlimited lookups, full score breakdown, AI-generated reports, ZIP-level data
-- **Team** ($99/month): Everything in Pro plus team collaboration, API access, and custom reports
+- **Pro** ($39/month): Unlimited lookups, full score breakdown, AI-generated reports, ZIP-level data
+- **Enterprise** ($149/month): Everything in Pro plus team collaboration, API access, and custom reports
 
 ## Competitors
 

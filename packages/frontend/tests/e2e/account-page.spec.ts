@@ -234,10 +234,11 @@ test.describe('Account Page - Per Tier', () => {
         page.getByText(/compare plans/i).first()
       ).toBeVisible({ timeout: 15_000 });
 
-      // Three plan cards with prices: Free ($0), Pro ($29), Enterprise ($99)
+      // Three plan cards with live prices from the pricing API:
+      // Free ($0), Pro ($39), Enterprise ($149).
       await expect(page.getByText('$0').first()).toBeVisible();
-      await expect(page.getByText('$29').first()).toBeVisible();
-      await expect(page.getByText('$99').first()).toBeVisible();
+      await expect(page.getByText('$39').first()).toBeVisible();
+      await expect(page.getByText('$149').first()).toBeVisible();
     });
 
     test('current plan is highlighted', async ({ page }) => {
