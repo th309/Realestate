@@ -30,7 +30,8 @@ export function OrganizationJsonLd() {
     sameAs: [
       "https://www.linkedin.com/company/propertyiq-app/",
       "https://www.youtube.com/@PropertyIQ_app",
-      "https://www.facebook.com/profile.php?id=61588805272430",
+      "https://www.facebook.com/propertyiq.us",
+      "https://www.reddit.com/user/propertyiq-app/",
     ],
     contactPoint: {
       "@type": "ContactPoint",
