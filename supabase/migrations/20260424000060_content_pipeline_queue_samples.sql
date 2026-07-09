@@ -9,6 +9,7 @@ CREATE INDEX IF NOT EXISTS idx_queue_samples_queue_time
   ON observability_queue_samples (queue_name, sampled_at DESC);
 
 ALTER TABLE observability_queue_samples ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS service_role_all ON observability_queue_samples;
 CREATE POLICY service_role_all ON observability_queue_samples FOR ALL USING (true);
 GRANT ALL ON observability_queue_samples TO service_role;
 

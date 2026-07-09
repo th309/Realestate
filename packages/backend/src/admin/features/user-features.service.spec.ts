@@ -174,4 +174,24 @@ describe('UserFeaturesService — admin is all-access', () => {
     expect(resolved.features['mcp_access']).toBe(false);
     expect(resolved.features['watchlist_limit']).toBe(3);
   });
+
+  // Regression: anonymous entitlement checks must not emit doomed per-user
+  // queries. EntitlementsService passes `userId || ''`, and `.eq('user_id', '')`
+  // 400s in Postgres with `22P02 invalid input syntax for type uuid: ""` — this
+  // fired continuously in prod on every anonymous check.
+  it('does NOT query the per-user tables for an anonymous (empty) user_id', async () => {
+    wireTables('tier-free');
+    await service.getUserFeatures('', 'free');
+    const tablesQueried = mockFrom.mock.calls.map((c) => c[0]);
+    expect(tablesQueried).not.toContain('user_feature_overrides');
+    expect(tablesQueried).not.toContain('user_grandfathering');
+  });
+
+  it('STILL queries the per-user tables for a real user_id', async () => {
+    wireTables('tier-free');
+    await service.getUserFeatures('u-real', 'free');
+    const tablesQueried = mockFrom.mock.calls.map((c) => c[0]);
+    expect(tablesQueried).toContain('user_feature_overrides');
+    expect(tablesQueried).toContain('user_grandfathering');
+  });
 });

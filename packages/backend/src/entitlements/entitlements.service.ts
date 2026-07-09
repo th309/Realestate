@@ -166,15 +166,27 @@ export class EntitlementsService {
       return 'pro';
     }
 
+    // Lowest-ranked tier that grants this feature. PostgREST embedded ordering
+    // (`order=tier(display_order)`) does NOT resolve against this schema — it
+    // 400s with "column tier_features_tier_1.display_order does not exist"
+    // (tier_features_tier_1 is a generated join alias, not a real column), and
+    // this whole lookup silently fell back to 'pro', so paywalls advertised the
+    // wrong required tier. Fetch the granting tiers with their display_order and
+    // pick the smallest in JS instead.
     const { data } = await client
       .from('tier_features')
-      .select('tier:subscription_tiers(slug)')
+      .select('tier:subscription_tiers(slug, display_order)')
       .eq('feature_id', featureData.id)
-      .eq('value', true)
-      .order('tier(display_order)')
-      .limit(1)
-      .single();
+      .eq('value', true);
 
-    return (data?.tier as any)?.slug || 'pro';
+    const lowestTier = (data ?? [])
+      .map((row: any) => row.tier)
+      .filter((tier: any) => tier?.slug)
+      .sort(
+        (a: any, b: any) =>
+          (a.display_order ?? Infinity) - (b.display_order ?? Infinity),
+      )[0];
+
+    return lowestTier?.slug || 'pro';
   }
 }

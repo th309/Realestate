@@ -186,7 +186,7 @@ export class InsightsService {
       .gt('expires_at', new Date().toISOString())
       .eq('archetype_id', archetypeId || '__none__')
       .limit(1)
-      .single();
+      .maybeSingle(); // not single(): a cache miss (0 rows) is expected — single() 406s on it
     return (data as MarketInsight) ?? null;
   }
 
