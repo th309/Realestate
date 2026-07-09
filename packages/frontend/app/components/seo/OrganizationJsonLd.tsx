@@ -24,9 +24,11 @@ export function OrganizationJsonLd() {
     description:
       "PropertyIQ provides AI-powered real estate market intelligence for homebuyers, renters, investors, and real estate professionals.",
     foundingDate: "2024",
-    // Only profiles PropertyIQ actually controls. NOTE: linkedin.com/company/
-    // property-iq (no "-app") belongs to an unrelated Las Vegas company
-    // (propertyiq.com) — linking it feeds AI entity confusion.
+    // Only entities PropertyIQ controls or has authored: the Wikidata item
+    // (Q140473066) was created by us with referenced statements; the rest are
+    // owned profiles. NOTE: linkedin.com/company/property-iq (no "-app")
+    // belongs to an unrelated Las Vegas company (propertyiq.com) — linking it
+    // feeds AI entity confusion.
     sameAs: [
       "https://www.wikidata.org/wiki/Q140473066",
       "https://www.linkedin.com/company/propertyiq-app/",
