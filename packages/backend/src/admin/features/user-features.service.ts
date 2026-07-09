@@ -77,22 +77,32 @@ export class UserFeaturesService {
         ).data?.id,
       );
 
-    // Get user overrides
-    const { data: overrides } = await client
-      .from('user_feature_overrides')
-      .select('feature_id, value, reason, expires_at')
-      .eq('user_id', userId)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+    // Get user overrides + grandfathering. Both tables are keyed by a UUID
+    // user_id, so skip them entirely for an anonymous caller. EntitlementsService
+    // passes `userId || ''`, and an empty string is NOT a valid UUID — Postgres
+    // rejects `.eq('user_id', '')` with `22P02 invalid input syntax for type
+    // uuid: ""`, a 400 on every anonymous entitlement check. An anonymous user
+    // has no overrides or grandfathering anyway, so an empty result is correct.
+    const nowIso = new Date().toISOString();
 
-    // Get grandfathered features
-    const { data: grandfathered } = await client
-      .from('user_grandfathering')
-      .select(
-        'feature_id, original_feature_value, grandfathered_type, original_tier_snapshot, expires_at',
-      )
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+    const { data: overrides } = userId
+      ? await client
+          .from('user_feature_overrides')
+          .select('feature_id, value, reason, expires_at')
+          .eq('user_id', userId)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      : { data: null };
+
+    const { data: grandfathered } = userId
+      ? await client
+          .from('user_grandfathering')
+          .select(
+            'feature_id, original_feature_value, grandfathered_type, original_tier_snapshot, expires_at',
+          )
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      : { data: null };
 
     // Build feature lookup maps
     const tierFeatureMap = new Map<string, unknown>();

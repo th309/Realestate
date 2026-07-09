@@ -175,3 +175,71 @@ describe('EntitlementsService — org-tier inheritance (P2-Y)', () => {
     expect(res.tier).toBe('free');
   });
 });
+
+/**
+ * Regression: findTierWithFeature must resolve the lowest-ranked granting tier
+ * WITHOUT PostgREST embedded ordering. The old `.order('tier(display_order)')`
+ * 400'd in prod ("column tier_features_tier_1.display_order does not exist") and
+ * silently fell back to 'pro', so paywalls advertised the wrong required tier.
+ * The fix fetches display_order and sorts in JS, so these feed DELIBERATELY
+ * UNSORTED rows and require the correct (lowest) tier to be picked.
+ */
+describe('EntitlementsService.findTierWithFeature — lowest granting tier', () => {
+  const mockFrom = jest.fn();
+  const supabaseService = { getClient: () => ({ from: mockFrom }) } as any;
+  const service = new EntitlementsService(
+    supabaseService,
+    { getUserFeatures: jest.fn() } as any,
+    { getByKey: jest.fn(), setByKey: jest.fn(), getTTL: jest.fn() } as any,
+    { emitForGrantedAccess: jest.fn() } as any,
+    { resolve: jest.fn() } as any,
+  );
+
+  // Chainable + awaitable stub mirroring supabase-js: the tier_features query is
+  // awaited directly (no `.single()`), and feature_definitions uses `.single()`.
+  function tableStub(data: unknown) {
+    const result = { data, error: null };
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      single: () => Promise.resolve(result),
+      then: (resolve: (r: typeof result) => unknown) => resolve(result),
+    };
+    return chain;
+  }
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('picks the tier with the smallest display_order from unsorted rows', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'feature_definitions') return tableStub({ id: 'feat-1' });
+      if (table === 'tier_features')
+        return tableStub([
+          { tier: { slug: 'enterprise', display_order: 3 } },
+          { tier: { slug: 'pro', display_order: 2 } },
+        ]);
+      return tableStub(null);
+    });
+    const tier = await (service as any).findTierWithFeature('some_feature');
+    expect(tier).toBe('pro');
+  });
+
+  it('falls back to pro when no tier grants the feature', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'feature_definitions') return tableStub({ id: 'feat-1' });
+      if (table === 'tier_features') return tableStub([]);
+      return tableStub(null);
+    });
+    const tier = await (service as any).findTierWithFeature('some_feature');
+    expect(tier).toBe('pro');
+  });
+
+  it('falls back to pro when the feature is not defined', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'feature_definitions') return tableStub(null);
+      return tableStub(null);
+    });
+    const tier = await (service as any).findTierWithFeature('unknown_feature');
+    expect(tier).toBe('pro');
+  });
+});
