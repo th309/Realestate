@@ -66,7 +66,20 @@ Notability note: Wikidata's bar is "clearly identifiable entity + serious public
 2. Follow the 90/10 rule (Reddit's own self-promotion guideline): 9 genuinely helpful, no-link contributions for every 1 mention of your product.
 3. Where to contribute value: r/realestateinvesting, r/RealEstate, r/FirstTimeHomeBuyer daily threads — answer "which market" questions WITH DATA (score, DOM, price cuts, YoY) and NO link unless asked. The data itself builds the brand association.
 4. Where links are allowed: r/SideProject, r/roastmystartup, r/dataisbeautiful (an original monthly market-heat visualization with methodology in comments is exactly what that sub rewards and exactly what AI engines cite).
-5. Never post the same content to multiple subs in one day; never use vote manipulation; disclose affiliation every time.
+
+**Communities joined by u/propertyiq-app (2026-07-09), by audience:**
+
+| Audience        | Subreddits                                       | Promo tolerance                                                                                                              |
+| --------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Launch venues   | r/SideProject, r/dataisbeautiful                 | Links OK (SideProject: self-promo allowed; DIB: OC visualizations + source in comments)                                      |
+| Investors       | r/realestateinvesting, r/airbnb_hosts (STR)      | Data-only comments; NO links unless asked                                                                                    |
+| Agents/brokers  | r/realtors, r/RealEstate, r/CommercialRealEstate | STRICTLY no promo — data-only; r/realtors bans vendor pitching                                                               |
+| Buyers          | r/FirstTimeHomeBuyer                             | Data-only, be extra consumer-friendly                                                                                        |
+| Landlords/PMs   | r/Landlord, r/PropertyManagement                 | Data-only                                                                                                                    |
+| Developers/land | r/RealEstateDevelopment, r/Landdevelopment       | Data-only; land-level data is thinner in PIQ — county metrics are the hook                                                   |
+| Market watchers | r/REBubble                                       | High volume, loves charts/data, actively hostile to promo — best karma farm for pure-data comments, worst place for any link |
+
+(r/HousingMarket does not exist — skipped.) 5. Never post the same content to multiple subs in one day; never use vote manipulation; disclose affiliation every time.
 
 **Draft post (r/SideProject or r/roastmystartup — founder-voice, edit to taste):**
 
