@@ -19,12 +19,14 @@ import { GeoLevel, TableRoute } from './metric-resolution.types';
  */
 export function getRedfinRoute(geoLevel: GeoLevel): TableRoute | null {
   switch (geoLevel) {
+    // redfin_national is a single national series with NO region column, so a
+    // region_name (idColumn) filter 400s with 42703 "column ... does not
+    // exist". The source-fetcher already returns null on that error, so leaving
+    // national unrouted is behavior-preserving (same null result, minus the DB
+    // error). Consistent with getRedfinDcRoute, which also leaves national
+    // unrouted.
     case 'national':
-      return {
-        table: 'redfin_national',
-        idColumn: 'region_name',
-        dateColumn: 'period_end',
-      };
+      return null;
     case 'state':
       return {
         table: 'redfin_state',
