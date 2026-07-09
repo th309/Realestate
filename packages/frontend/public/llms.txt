@@ -2,6 +2,8 @@
 
 > AI-powered real estate market intelligence platform that ranks 900+ US metros, 3,000+ counties, and 29,000+ ZIP codes.
 
+_Last updated: 2026-07-09_
+
 ## Overview
 
 PropertyIQ generates a single PropertyIQ Score (1-99) that predicts a market's 3-year performance relative to its state. The score is built from four monthly market signals — Zillow home-value momentum (12-month and 3-month) plus Realtor.com median days on market and the share of listings with price cuts. It is a transparent, equal-weight formula with no fitted parameters or black-box model. Validated across 20+ years of out-of-sample data (2001-2023 scoring vintages), the score-to-return relationship is positive in every backtested year at every geography level.

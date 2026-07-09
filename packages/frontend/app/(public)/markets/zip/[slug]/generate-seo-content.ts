@@ -4,6 +4,7 @@ import {
   buildMarketDataSummary,
   buildRegionalContext,
 } from "@/lib/seo/market-metadata";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 /**
  * State-to-region mapping for content variation.
@@ -97,7 +98,7 @@ function hashString(str: string): number {
 
 const OPENING_TEMPLATES = [
   (shortName: string, zip: string, state: string) =>
-    `${shortName} is one of nearly 20,000 U.S. ZIP codes that PropertyIQ analyzes with AI-powered demand signal scoring. ZIP-level analysis provides the most hyperlocal view of housing market dynamics available, measuring how demand within ${zip} compares to the ${state} state average and identifying outperformance potential before it appears in price data.`,
+    `${shortName} is one of ${COVERAGE_COPY.zips} U.S. ZIP codes that PropertyIQ analyzes with AI-powered demand signal scoring. ZIP-level analysis provides the most hyperlocal view of housing market dynamics available, measuring how demand within ${zip} compares to the ${state} state average and identifying outperformance potential before it appears in price data.`,
   (shortName: string, zip: string, state: string) =>
     `PropertyIQ provides ZIP-code-level market intelligence for ${shortName} — going deeper than metro or county averages to reveal neighborhood-specific demand dynamics. By tracking Zillow home-value momentum alongside Realtor.com market-flow signals — median days on market and the share of listings with price cuts — specifically within ZIP code ${zip}, PropertyIQ predicts which micro-markets within ${state} are positioned to outperform.`,
   (shortName: string, zip: string, state: string) =>

@@ -9,6 +9,7 @@
  */
 
 import { useInsight } from "@/lib/data";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 interface MarketOverviewSectionProps {
   metroName: string;
@@ -46,21 +47,34 @@ function parseMarkdownSections(
   return sections;
 }
 
-function LoadingSkeleton() {
+/**
+ * Cold-cache fallback: shown when no cached narrative exists yet and the live
+ * AI analysis hasn't loaded. Renders a real, crawler-visible paragraph built
+ * only from known-true facts (the geography name + PropertyIQ's methodology and
+ * coverage) so a non-JS crawler never sees a bare shimmer. It is explicitly a
+ * stand-in — it does not claim to be the full AI narrative — with a subtle
+ * shimmer beneath signalling the detailed analysis is on its way.
+ */
+function MarketOverviewFallback({ metroName }: { metroName: string }) {
   return (
-    <div className="bg-surface-container-low rounded-xl p-6 animate-pulse">
-      <div className="h-6 w-48 bg-surface-container-high rounded mb-4" />
-      <div className="space-y-3">
-        <div className="h-4 w-full bg-surface-container-high rounded" />
-        <div className="h-4 w-5/6 bg-surface-container-high rounded" />
-        <div className="h-4 w-4/6 bg-surface-container-high rounded" />
+    <section className="mb-10">
+      <div className="bg-surface-container-low rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-on-surface mb-4">
+          {metroName} Market Analysis
+        </h2>
+        <p className="text-body text-on-surface-variant leading-relaxed">
+          PropertyIQ tracks the {metroName} housing market with its PropertyIQ
+          Score — a demand signal built from Zillow home-value momentum and
+          Realtor.com listing activity, part of coverage spanning{" "}
+          {COVERAGE_COPY.metros} U.S. metros. A detailed, AI-generated analysis
+          of this market is being prepared.
+        </p>
+        <div className="mt-4 space-y-3 animate-pulse" aria-hidden="true">
+          <div className="h-4 w-5/6 bg-surface-container-high rounded" />
+          <div className="h-4 w-4/6 bg-surface-container-high rounded" />
+        </div>
       </div>
-      <div className="h-6 w-36 bg-surface-container-high rounded mt-6 mb-4" />
-      <div className="space-y-3">
-        <div className="h-4 w-full bg-surface-container-high rounded" />
-        <div className="h-4 w-3/4 bg-surface-container-high rounded" />
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -77,7 +91,6 @@ export function MarketOverviewSection({
   const {
     insight: clientInsight,
     generatedAt: clientGeneratedAt,
-    loading,
     error,
   } = useInsight(
     hasServerInsight ? null : "metro",
@@ -90,9 +103,12 @@ export function MarketOverviewSection({
     ? initialInsight!.generated_at
     : clientGeneratedAt;
 
-  if (!hasServerInsight && loading) return <LoadingSkeleton />;
+  // A failed live fetch hides the section (unchanged). Otherwise, whenever there
+  // is no narrative yet — cold-cache SSR or the initial client render before the
+  // live fetch settles — render the crawler-visible fallback instead of a bare
+  // shimmer, so the server HTML always carries real text.
   if (!hasServerInsight && error) return null;
-  if (!insight) return null;
+  if (!insight) return <MarketOverviewFallback metroName={metroName} />;
 
   const sections = parseMarkdownSections(insight);
 

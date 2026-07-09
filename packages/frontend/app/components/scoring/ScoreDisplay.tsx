@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import {
   getScoreLabel,
@@ -134,36 +132,6 @@ export const getGradeColor = (grade: string): { bg: string; text: string } => {
  * // Large hero display
  * <ScoreDisplay value={95} size={150} strokeWidth={10} />
  */
-/**
- * Calculate tick mark positions for market thresholds
- * Returns start and end points for a line at the given percentage around the circle
- */
-const getTickMarkPoints = (
-  percentage: number,
-  cx: number,
-  cy: number,
-  radius: number,
-  tickLength: number,
-): { x1: number; y1: number; x2: number; y2: number } => {
-  // Convert percentage to angle (clockwise from top)
-  const angle = (percentage / 100) * 2 * Math.PI;
-
-  // Calculate direction vector (clockwise from top in SVG coords)
-  const dirX = Math.sin(angle);
-  const dirY = -Math.cos(angle);
-
-  // Inner and outer points
-  const innerRadius = radius - tickLength / 2;
-  const outerRadius = radius + tickLength / 2;
-
-  return {
-    x1: cx + dirX * innerRadius,
-    y1: cy - dirY * innerRadius,
-    x2: cx + dirX * outerRadius,
-    y2: cy - dirY * outerRadius,
-  };
-};
-
 export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   value,
   maxValue = 100,
