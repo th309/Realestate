@@ -147,12 +147,12 @@ const DATA_SOURCES: SourceConfig[] = [
     dateColumn: 'period_end',
     expectedFreshnessDays: 60,
   },
-  // Redfin Rental - Rental market data from S3
+  // Redfin Rental - only redfin_rental_city exists (metro was never created).
   {
     sourceName: 'redfin_rental_s3',
     displayName: 'Redfin Rental',
     sourceType: 's3',
-    tableName: 'redfin_rental_metro',
+    tableName: 'redfin_rental_city',
     dateColumn: 'period_date',
     expectedFreshnessDays: 60,
   },

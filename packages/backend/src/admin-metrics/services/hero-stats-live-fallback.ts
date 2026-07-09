@@ -81,7 +81,8 @@ const FRESHNESS_SOURCES: FreshnessSource[] = [
   },
   {
     name: 'Redfin Rental',
-    table: 'redfin_rental_metro',
+    // Only redfin_rental_city exists; redfin_rental_metro was never created.
+    table: 'redfin_rental_city',
     dateColumn: 'period_date',
     expectedFreshnessDays: 60,
   },

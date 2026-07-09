@@ -96,13 +96,9 @@ export class DataFreshnessService {
       { tableName: 'redfin_state', dateColumn: 'period_end' },
       { tableName: 'redfin_metro', dateColumn: 'period_end' },
       { tableName: 'redfin_county', dateColumn: 'period_end' },
-      // Redfin rentals
-      { tableName: 'redfin_rental_national', dateColumn: 'period_date' },
-      { tableName: 'redfin_rental_state', dateColumn: 'period_date' },
-      { tableName: 'redfin_rental_metro', dateColumn: 'period_date' },
-      { tableName: 'redfin_rental_county', dateColumn: 'period_date' },
+      // Redfin rentals — only the city table exists; national/state/metro/
+      // county/zip were never created, so probing them 404s (log noise).
       { tableName: 'redfin_rental_city', dateColumn: 'period_date' },
-      { tableName: 'redfin_rental_zip', dateColumn: 'period_date' },
       // Census ACS
       { tableName: 'census_national', dateColumn: 'year' },
       { tableName: 'census_state', dateColumn: 'year' },
@@ -171,14 +167,7 @@ export class DataFreshnessService {
         tableDates.redfin_metro,
         tableDates.redfin_county,
       ]),
-      redfin_rental: this.pickMostRecent([
-        tableDates.redfin_rental_national,
-        tableDates.redfin_rental_state,
-        tableDates.redfin_rental_metro,
-        tableDates.redfin_rental_county,
-        tableDates.redfin_rental_city,
-        tableDates.redfin_rental_zip,
-      ]),
+      redfin_rental: this.pickMostRecent([tableDates.redfin_rental_city]),
       census_acs: this.pickMostRecent([
         tableDates.census_national,
         tableDates.census_state,
