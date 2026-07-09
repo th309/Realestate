@@ -34,6 +34,28 @@ export default function MapLayout({ children }: { children: React.ReactNode }) {
           { name: "Map", url: "https://www.propertyiq.app/map" },
         ]}
       />
+      {/*
+        Server-rendered text companion for the interactive map. The map itself is
+        a client-only WebGL canvas (invisible to non-JS AI crawlers), so this
+        describes the tool in general terms for GPTBot/ClaudeBot/PerplexityBot.
+        It sits in the initial HTML at the top of <main>; once the client map
+        hydrates it renders `absolute inset-0` over <main> and covers this block,
+        so it never competes with the tool for sighted users. Intentionally
+        describes the tool in general — NOT the current per-user map state, which
+        is genuinely client-only and unavailable at SSR time.
+      */}
+      <section className="mx-auto max-w-3xl px-6 py-8 text-on-surface-variant">
+        <h1 className="text-lg font-medium text-on-surface mb-2">
+          Interactive US Housing Market Map
+        </h1>
+        <p className="text-sm leading-relaxed">
+          Explore an interactive map of the U.S. housing market covering{" "}
+          {COVERAGE_COPY.sentence}. Visualize the PropertyIQ Score, home values,
+          rents, inventory, days on market, and dozens of other market-trend
+          metrics — from a national overview down to the ZIP-code level. Choose
+          any metric and geography level to compare markets across the country.
+        </p>
+      </section>
       {children}
     </>
   );

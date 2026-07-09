@@ -1,11 +1,14 @@
 // Pure server component — values land in initial HTML for crawler visibility.
-// No 'use client', no hooks, no imports from app/components/scoring/* (those are client).
+// No 'use client', no hooks. ScoreDisplay is a pure presentational SVG (no
+// "use client"), so its score ring server-renders here and is visible to
+// non-JS AI crawlers, unlike the interactive ScoreWidget in the page hero.
 import { formatMetricValue } from "@/lib/data";
 import type {
   MarketStatsData,
   MarketStatField,
   ScoreReceipt,
 } from "@/lib/data";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import { StatSparkline } from "./StatSparkline";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -86,24 +89,31 @@ export function MarketStatsBlock({
     >
       <div className="rounded-xl border border-outline-variant bg-surface-container-low shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 border-b border-outline-variant">
           <h2 className="text-base font-medium text-on-surface">
             {geoName} market data
           </h2>
           {data.score !== null && (
-            <span className="text-sm text-on-surface-variant">
-              PropertyIQ Score{" "}
-              <span className="font-mono font-semibold text-on-surface">
-                {data.score}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-on-surface-variant">
+                PropertyIQ Score
               </span>
+              <ScoreDisplay
+                value={data.score}
+                size={52}
+                strokeWidth={5}
+                showLabel={false}
+              />
               {data.grade && (
                 <span
-                  className={`ml-2 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${gradeClasses(data.grade)}`}
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${gradeClasses(data.grade)}`}
+                  title={`Data confidence: ${data.grade}`}
+                  aria-label={`Data confidence grade: ${data.grade}`}
                 >
                   {data.grade}
                 </span>
               )}
-            </span>
+            </div>
           )}
         </div>
 

@@ -161,6 +161,34 @@ export function buildMarketDataSummary(
 }
 
 /**
+ * Root-relative `/api/og` path for a market page, enriched with the page's real
+ * numbers (score, median price, YoY, days-on-market) so the shared card depicts
+ * THIS market's data instead of a bare title. One builder feeds both the OG/
+ * Twitter meta (resolved against metadataBase) and the visible, alt-bearing
+ * hero <img> + its ImageObject schema — keeping the social card and the
+ * crawler-visible in-page image identical. Callers needing an absolute URL
+ * prefix the site origin.
+ */
+export function buildMarketOgImagePath(
+  name: string,
+  stats: MarketStatsData | null,
+): string {
+  const params = new URLSearchParams({ title: name });
+  if (stats) {
+    if (stats.score !== null) params.set("score", String(stats.score));
+    const price = stats.headline.medianPrice.value;
+    if (price !== null)
+      params.set("homeValue", formatMetricValue(price, "currency"));
+    const yoy = stats.headline.yoy.value;
+    if (yoy !== null)
+      params.set("appreciation", `${yoy > 0 ? "+" : ""}${yoy.toFixed(1)}%`);
+    const dom = stats.headline.daysOnMarket.value;
+    if (dom !== null) params.set("dom", String(Math.round(dom)));
+  }
+  return `/api/og?${params.toString()}`;
+}
+
+/**
  * Make the regional-context paragraph geo-distinct.
  *
  * The base region blurb is a shared per-region bucket (genuine regional

@@ -34,7 +34,7 @@ export default function AccuracyPage() {
                   "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
                 description: `OOS IC = 0.27, validated across ${COVERAGE_COPY.metros} metros and more than two decades, positive in every year. See how PropertyIQ Scores predict real-world returns.`,
                 datePublished: "2026-02-10",
-                dateModified: new Date().toISOString().split("T")[0],
+                dateModified: "2026-06-26",
                 author: {
                   "@type": "Organization",
                   name: "PropertyIQ",

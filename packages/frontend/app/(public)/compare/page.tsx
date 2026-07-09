@@ -253,7 +253,7 @@ export default async function CompareHubPage() {
     description: ROUNDUP_DESCRIPTION,
     image: ["https://www.propertyiq.app/og-image.png"],
     datePublished: "2026-06-20",
-    dateModified: new Date().toISOString().split("T")[0],
+    dateModified: "2026-07-07",
     author: {
       "@type": "Person",
       "@id": "https://www.propertyiq.app/about#troy-h",

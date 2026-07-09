@@ -11,6 +11,7 @@ import {
 import {
   buildMarketTitle,
   buildMarketDescription,
+  buildMarketOgImagePath,
 } from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
@@ -34,7 +35,6 @@ export async function generateMetadata({
   if (!metro) return {};
 
   const pageUrl = `https://www.propertyiq.app/markets/${metro.slug}`;
-  const ogImageUrl = `/api/og?title=${encodeURIComponent(metro.shortName)}`;
 
   // Stats (24h-cached; also used by the page body, so this is a cache hit) feed
   // data-interpolated title + description so each page is data-distinct, not
@@ -42,6 +42,7 @@ export async function generateMetadata({
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const title = buildMarketTitle(metro.shortName, stats);
   const description = buildMarketDescription(metro.shortName, stats);
+  const ogImageUrl = buildMarketOgImagePath(metro.shortName, stats);
 
   return {
     title,
@@ -120,6 +121,13 @@ export default async function MetroPage({
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const seoContent = generateMarketSeoContent(metro, stats);
 
+  // Same OG card the meta tags reference, embedded as a real, alt-bearing image
+  // so non-JS AI crawlers (GPTBot/ClaudeBot/PerplexityBot) see an actual visual
+  // of this market's data — not just a <meta> link. Absolute URL for the schema.
+  const ogImagePath = buildMarketOgImagePath(metro.shortName, stats);
+  const ogImageUrl = `https://www.propertyiq.app${ogImagePath}`;
+  const ogImageAlt = `${metro.shortName} housing market snapshot from PropertyIQ — median home price, year-over-year appreciation, median days on market, and PropertyIQ demand score.`;
+
   // Cache-only narrative for SSR: surfaces the pre-generated AI market overview
   // into the initial HTML when one exists, and NEVER triggers a paid generation
   // during ISR (cachedOnly=1). Null when uncached — the client island then
@@ -164,12 +172,58 @@ export default async function MetroPage({
           }}
         />
       )}
+      {stats && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ImageObject",
+              "@id": `https://www.propertyiq.app/markets/${metro.slug}#primaryimage`,
+              url: ogImageUrl,
+              contentUrl: ogImageUrl,
+              width: 1200,
+              height: 630,
+              encodingFormat: "image/png",
+              caption: ogImageAlt,
+              representativeOfPage: true,
+              creditText: "PropertyIQ",
+              creator: { "@type": "Organization", name: "PropertyIQ" },
+            }),
+          }}
+        />
+      )}
 
       {/* Server-rendered SEO content — visible to crawlers without JS */}
       <section className="max-w-4xl mx-auto px-4 py-12">
         <h2 className="text-xl font-medium text-on-surface mb-6">
           {metro.shortName} Housing Market Overview
         </h2>
+
+        {stats && (
+          <figure className="mb-8">
+            {/* eslint-disable-next-line @next/next/no-img-element -- dynamic edge-generated OG card; not worth routing through the next/image optimizer */}
+            <img
+              src={ogImagePath}
+              alt={ogImageAlt}
+              width={1200}
+              height={630}
+              loading="lazy"
+              className="w-full max-w-2xl mx-auto rounded-xl border border-outline-variant shadow-sm"
+            />
+            <figcaption className="mt-2 text-center text-xs text-on-surface-variant/70">
+              {metro.shortName} market snapshot
+              {stats.latestDate
+                ? ` — data through ${new Date(
+                    stats.latestDate,
+                  ).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}`
+                : ""}
+            </figcaption>
+          </figure>
+        )}
 
         <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
           {seoContent.dataSummary && (

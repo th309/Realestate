@@ -68,25 +68,25 @@ export function ScoresFaqSection() {
           {FAQ_ITEMS.map((faq, i) => (
             <details
               key={i}
-              className="group border border-outline-variant rounded-xl"
+              className="group relative border border-outline-variant rounded-xl"
             >
-              <summary className="flex items-center justify-between p-5 cursor-pointer text-on-surface font-medium">
-                {faq.q}
-                <svg
-                  className="w-5 h-5 text-on-surface-variant group-open:rotate-180 transition-transform"
-                  aria-hidden="true"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+              <summary className="p-5 pr-12 cursor-pointer text-on-surface font-medium list-none [&::-webkit-details-marker]:hidden">
+                <h3 className="text-base font-medium">{faq.q}</h3>
               </summary>
+              <svg
+                className="absolute right-5 top-5 w-5 h-5 text-on-surface-variant group-open:rotate-180 transition-transform pointer-events-none"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
               <p className="px-5 pb-5 text-on-surface-variant leading-relaxed">
                 {faq.a}
               </p>

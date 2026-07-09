@@ -29,6 +29,10 @@ const aiBots = [
   "GPTBot",
   "ClaudeBot",
   "Google-Extended",
+  "CCBot",
+  "anthropic-ai",
+  "Bytespider",
+  "cohere-ai",
 ];
 const SITEMAP = "https://www.propertyiq.app/sitemap.xml";
 const CONTENT_SIGNAL = "search=yes, ai-input=yes, ai-train=no";

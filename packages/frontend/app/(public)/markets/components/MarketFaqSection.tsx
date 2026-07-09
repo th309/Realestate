@@ -2,8 +2,10 @@ import type { MarketFaq } from "./build-market-faqs";
 
 /**
  * Server-rendered FAQ block for market pages (metro / county / ZIP), with
- * FAQPage JSON-LD. Mirrors the compare-page FAQ pattern (dl of rounded-xl
- * bordered dt/dd items + inline JSON-LD) so the two surfaces stay consistent.
+ * FAQPage JSON-LD. Mirrors the compare-page FAQ pattern (rounded-xl bordered
+ * question/answer items — h3 heading + p — with inline JSON-LD) so the two
+ * surfaces stay consistent. Questions render as real <h3> headings (not bare
+ * <dt>) so they enter the page's heading outline for AI/search crawlers.
  *
  * Renders nothing when fewer than 3 FAQs survive data-gating — a thin 1-2 item
  * FAQPage isn't worth the structured-data surface.
@@ -26,21 +28,21 @@ export function MarketFaqSection({ faqs }: { faqs: MarketFaq[] }) {
       <h2 className="text-xl font-medium text-on-surface mb-6">
         Frequently Asked Questions
       </h2>
-      <dl className="space-y-4">
+      <div className="space-y-4">
         {faqs.map((faq) => (
           <div
             key={faq.question}
             className="rounded-xl border border-outline-variant p-5"
           >
-            <dt className="text-base font-medium text-on-surface">
+            <h3 className="text-base font-medium text-on-surface">
               {faq.question}
-            </dt>
-            <dd className="mt-2 text-sm text-on-surface-variant leading-relaxed">
+            </h3>
+            <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">
               {faq.answer}
-            </dd>
+            </p>
           </div>
         ))}
-      </dl>
+      </div>
       {/* Safe: JSON.stringify of a server-built object with no user input */}
       <script
         type="application/ld+json"

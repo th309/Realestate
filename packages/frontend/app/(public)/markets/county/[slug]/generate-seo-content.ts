@@ -4,6 +4,7 @@ import {
   buildMarketDataSummary,
   buildRegionalContext,
 } from "@/lib/seo/market-metadata";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
 /**
  * State-to-region mapping for content variation.
@@ -97,7 +98,7 @@ function hashString(str: string): number {
 
 const OPENING_TEMPLATES = [
   (name: string, state: string) =>
-    `${name}, ${state} is one of over 3,100 U.S. counties that PropertyIQ analyzes with AI-powered demand signal scoring. The PropertyIQ Score for this county measures how local housing demand compares to the state average, helping investors and homebuyers identify outperformance potential before it shows up in price data.`,
+    `${name}, ${state} is one of ${COVERAGE_COPY.counties} U.S. counties that PropertyIQ analyzes with AI-powered demand signal scoring. The PropertyIQ Score for this county measures how local housing demand compares to the state average, helping investors and homebuyers identify outperformance potential before it shows up in price data.`,
   (name: string, state: string) =>
     `PropertyIQ provides county-level market intelligence for ${name}, ${state} — going deeper than metro-area averages to reveal local demand dynamics. By tracking Zillow home-value momentum alongside Realtor.com market-flow signals — median days on market and the share of listings with price cuts — at the county level, PropertyIQ predicts which markets within ${state} are positioned to outperform.`,
   (name: string, state: string) =>
@@ -110,7 +111,7 @@ const MIDDLE_TEMPLATES = [
   (name: string) =>
     `For ${name}, PropertyIQ calculates a demand signal score updated monthly using the latest housing data. A score above 50 means this county's demand dynamics are stronger than the state average. Scores in the 80+ range have historically corresponded with meaningful outperformance in home price appreciation.`,
   (name: string) =>
-    `PropertyIQ's county-level score for ${name} distills three housing metrics into a single 1-99 number. This isn't a generic market health grade — it's a validated predictor of which counties within a state will see the strongest home price growth over the next one to three years.`,
+    `PropertyIQ's county-level score for ${name} distills four housing metrics into a single 1-99 number. This isn't a generic market health grade — it's a validated predictor of which counties within a state will see the strongest home price growth over the next one to three years.`,
 ];
 
 const CLOSING_TEMPLATES = [

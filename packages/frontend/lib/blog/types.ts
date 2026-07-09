@@ -2,6 +2,7 @@ export interface BlogFrontmatter {
   title: string;
   description: string;
   date: string;
+  updated?: string;
   author: string;
   authorTitle?: string;
   category: "market-analysis" | "investment" | "methodology" | "news";

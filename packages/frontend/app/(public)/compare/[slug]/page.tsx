@@ -211,21 +211,21 @@ function FAQSection({ faqs }: { faqs: ComparisonData["faqs"] }) {
       <h2 className="text-2xl font-medium text-on-surface mb-6">
         Frequently Asked Questions
       </h2>
-      <dl className="space-y-4">
+      <div className="space-y-4">
         {faqs.map((faq) => (
           <div
             key={faq.question}
             className="rounded-xl border border-outline-variant p-5"
           >
-            <dt className="text-base font-medium text-on-surface">
+            <h3 className="text-base font-medium text-on-surface">
               {faq.question}
-            </dt>
-            <dd className="mt-2 text-sm text-on-surface-variant leading-relaxed">
+            </h3>
+            <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">
               {faq.answer}
-            </dd>
+            </p>
           </div>
         ))}
-      </dl>
+      </div>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

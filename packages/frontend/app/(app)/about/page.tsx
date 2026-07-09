@@ -51,6 +51,7 @@ export default function AboutPage() {
             jobTitle: "Founder",
             url: "https://www.propertyiq.app/about",
             worksFor: { "@id": "https://www.propertyiq.app/#organization" },
+            sameAs: ["https://www.linkedin.com/company/propertyiq-app/"],
           }),
         }}
       />
