@@ -165,12 +165,11 @@ export class DataSourcesHealthService {
   constructor(private readonly supabase: SupabaseService) {}
 
   async checkAllSources(): Promise<DataSourcesHealthResponse> {
-    const sources: SourceHealth[] = [];
-
-    for (const config of DATA_SOURCES) {
-      const health = await this.checkSourceHealth(config);
-      sources.push(health);
-    }
+    // Probe every source in parallel — each checkSourceHealth is independent and
+    // catches its own errors, so Promise.all never rejects and order is preserved.
+    const sources: SourceHealth[] = await Promise.all(
+      DATA_SOURCES.map((config) => this.checkSourceHealth(config)),
+    );
 
     const summary = {
       total: sources.length,

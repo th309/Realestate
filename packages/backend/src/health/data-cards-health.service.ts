@@ -10,6 +10,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { METRIC_DEFINITIONS, getUniqueTables } from './metric-definitions';
+import {
+  getDateColumn,
+  getExpectedRecords,
+  formatDate,
+  daysSinceDate,
+} from './data-cards-health.metadata';
 
 export interface MetricHealthCheck {
   metricId: string;
@@ -42,8 +48,9 @@ export interface DataCardsHealthResponse {
 interface TableHealthInfo {
   latestDate: string | null; // Formatted for display (e.g., "Dec 2025")
   latestDateRaw: string | null; // Raw for calculations (e.g., "2025-12-15")
-  recordCount: number;
+  recordCount: number; // estimated (planner) for large tables — see checkTableHealth
   coverage: number;
+  hasRows: boolean; // real row presence from the limit-1 probe — authoritative for empty
 }
 
 @Injectable()
@@ -59,21 +66,26 @@ export class DataCardsHealthService {
     // Get unique tables to minimize database queries
     const tables = getUniqueTables();
 
-    // Check each table's health once
-    for (const tableName of tables) {
-      try {
-        const health = await this.checkTableHealth(tableName);
-        this.tableHealthCache.set(tableName, health);
-      } catch (error) {
-        this.logger.error(`Error checking table ${tableName}:`, error);
-        this.tableHealthCache.set(tableName, {
-          latestDate: null,
-          latestDateRaw: null,
-          recordCount: 0,
-          coverage: 0,
-        });
-      }
-    }
+    // Check each table's health once — in parallel. Each probe is an
+    // independent latest-date + estimated-count query, so running them
+    // concurrently turns the cost from sum-of-probes into slowest-probe.
+    await Promise.all(
+      tables.map(async (tableName) => {
+        try {
+          const health = await this.checkTableHealth(tableName);
+          this.tableHealthCache.set(tableName, health);
+        } catch (error) {
+          this.logger.error(`Error checking table ${tableName}:`, error);
+          this.tableHealthCache.set(tableName, {
+            latestDate: null,
+            latestDateRaw: null,
+            recordCount: 0,
+            coverage: 0,
+            hasRows: false,
+          });
+        }
+      }),
+    );
 
     // Check each metric using cached table health
     for (const metric of METRIC_DEFINITIONS) {
@@ -110,9 +122,7 @@ export class DataCardsHealthService {
   private async checkTableHealth(tableName: string): Promise<TableHealthInfo> {
     const client = this.supabase.getClient();
 
-    // Handle different table structures
-    const dateColumn = this.getDateColumn(tableName);
-    const geoColumn = this.getGeoColumn(tableName);
+    const dateColumn = getDateColumn(tableName);
 
     try {
       // count:'estimated' not 'exact': an exact COUNT(*) full-scans the
@@ -132,25 +142,30 @@ export class DataCardsHealthService {
           latestDateRaw: null,
           recordCount: 0,
           coverage: 0,
+          hasRows: false,
         };
       }
 
+      // Row presence comes from the limit-1 probe itself (authoritative), so an
+      // estimated count of 0 on a not-yet-analyzed large table can't false-empty.
+      const hasRows = (data?.length ?? 0) > 0;
       const latestDateRaw =
         dateColumn && data?.[0] ? data[0][dateColumn] : null;
       const recordCount = count || 0;
 
       // Calculate coverage (simplified - just check record count vs expected)
-      const expectedRecords = this.getExpectedRecords(tableName);
+      const expectedRecords = getExpectedRecords(tableName);
       const coverage =
         expectedRecords > 0
           ? Math.min(100, (recordCount / expectedRecords) * 100)
           : 100;
 
       return {
-        latestDate: this.formatDate(latestDateRaw),
+        latestDate: formatDate(latestDateRaw),
         latestDateRaw: latestDateRaw ? String(latestDateRaw) : null,
         recordCount,
         coverage,
+        hasRows,
       };
     } catch (error) {
       this.logger.error(`Error checking table ${tableName}:`, error);
@@ -159,6 +174,7 @@ export class DataCardsHealthService {
         latestDateRaw: null,
         recordCount: 0,
         coverage: 0,
+        hasRows: false,
       };
     }
   }
@@ -178,10 +194,14 @@ export class DataCardsHealthService {
       };
     }
 
-    const { latestDate, latestDateRaw, recordCount, coverage } = tableHealth;
+    const { latestDate, latestDateRaw, recordCount, coverage, hasRows } =
+      tableHealth;
 
-    // Check for empty data
-    if (recordCount === 0) {
+    // Empty check uses actual row presence (the limit-1 probe), NOT the
+    // estimated recordCount — an estimate can read 0 for a freshly-loaded large
+    // table before ANALYZE runs, which would falsely flag a populated metric as
+    // empty.
+    if (!hasRows) {
       return {
         ...this.metricToCheck(metric),
         status: 'empty',
@@ -193,7 +213,7 @@ export class DataCardsHealthService {
     }
 
     // Check for stale data using raw date for accurate comparison
-    const daysSinceUpdate = this.daysSinceDate(latestDateRaw);
+    const daysSinceUpdate = daysSinceDate(latestDateRaw);
     if (
       daysSinceUpdate !== null &&
       daysSinceUpdate > metric.freshnessThresholdDays
@@ -232,80 +252,5 @@ export class DataCardsHealthService {
       isNew: metric.isNew,
       isPro: metric.isPro,
     };
-  }
-
-  private getDateColumn(tableName: string): string | null {
-    const dateColumns: Record<string, string> = {
-      zillow_zip: 'period_date',
-      zillow_county: 'period_date',
-      zillow_metro: 'period_date',
-      zillow_state: 'period_date',
-      realtor_zip: 'period_date',
-      realtor_county: 'period_date',
-      realtor_metro: 'period_date',
-      realtor_state: 'period_date',
-      census_zip: 'year',
-      census_county: 'year',
-      economic_county: 'period_date',
-      economic_metro: 'period_date',
-      permits_county: 'period_date',
-      permits_state: 'period_date',
-      calculated_metrics: 'period_date',
-      propertyiq_scores: 'created_at',
-    };
-    return dateColumns[tableName] || null;
-  }
-
-  private getGeoColumn(tableName: string): string {
-    if (tableName.includes('zip')) return 'zip';
-    if (tableName.includes('county')) return 'county_fips';
-    if (tableName.includes('metro')) return 'cbsa';
-    if (tableName.includes('state')) return 'state_fips';
-    return 'id';
-  }
-
-  private getExpectedRecords(tableName: string): number {
-    // Approximate expected record counts per geography type
-    const expectedCounts: Record<string, number> = {
-      zillow_zip: 33000,
-      zillow_county: 3100,
-      zillow_metro: 400,
-      zillow_state: 51,
-      realtor_zip: 30000,
-      realtor_county: 3000,
-      realtor_metro: 400,
-      realtor_state: 51,
-      census_zip: 33000,
-      census_county: 3143,
-      economic_county: 3143,
-      economic_metro: 384,
-      permits_county: 3143,
-      calculated_metrics: 33000,
-      propertyiq_scores: 30000,
-    };
-    return expectedCounts[tableName] || 1000;
-  }
-
-  private formatDate(date: string | number | null): string | null {
-    if (!date) return null;
-    if (typeof date === 'number') return String(date);
-    try {
-      const d = new Date(date);
-      return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    } catch {
-      return String(date);
-    }
-  }
-
-  private daysSinceDate(dateStr: string | null): number | null {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    } catch {
-      return null;
-    }
   }
 }
