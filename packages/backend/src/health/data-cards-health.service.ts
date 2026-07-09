@@ -115,10 +115,13 @@ export class DataCardsHealthService {
     const geoColumn = this.getGeoColumn(tableName);
 
     try {
-      // Get latest date and count
+      // count:'estimated' not 'exact': an exact COUNT(*) full-scans the
+      // multi-million-row tables this probes (propertyiq_scores ~14M, zillow_zip
+      // ~10M) and blows statement_timeout (the data-summary timeout). Estimated
+      // uses the planner reltuples for big tables (O(1)), exact for small ones.
       const { data, error, count } = await client
         .from(tableName)
-        .select(dateColumn ? `${dateColumn}` : '*', { count: 'exact' })
+        .select(dateColumn ? `${dateColumn}` : '*', { count: 'estimated' })
         .order(dateColumn || 'id', { ascending: false })
         .limit(1);
 
