@@ -28,6 +28,7 @@ export function OrganizationJsonLd() {
     // property-iq (no "-app") belongs to an unrelated Las Vegas company
     // (propertyiq.com) — linking it feeds AI entity confusion.
     sameAs: [
+      "https://www.wikidata.org/wiki/Q140473066",
       "https://www.linkedin.com/company/propertyiq-app/",
       "https://www.youtube.com/@PropertyIQ_app",
       "https://www.facebook.com/propertyiq.us",

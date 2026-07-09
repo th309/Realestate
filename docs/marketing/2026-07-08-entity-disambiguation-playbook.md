@@ -15,11 +15,13 @@ Expect stale snippets ("925 metros", "0.37 IC", "$29 Pro") to wash out of Google
 - `OrganizationJsonLd.tsx` sameAs updated to the vanity URL.
 - Rejected/unavailable: `propertyiq-app` (hyphens invalid on FB), `propertyiq.app`/`propertyiqapp` (taken), `getpropertyiq` (taken). Available but not chosen: `PropertyIQHQ`, `trypropertyiq`, `propertyiqscores`.
 
-## 3. Wikidata item — 📋 READY TO EXECUTE (blocked by VPN + login)
+## 3. Wikidata item — ✅ DONE (2026-07-09): **Q140473066**
 
-**Blockers found:** (a) NordVPN's IP range `37.19.192.0/21` is blocked on ALL Wikimedia wikis until July 2027 (open-proxy block) — disconnect VPN first; (b) creating items requires a logged-in Wikimedia account — create one yourself at wikidata.org (I don't create accounts on your behalf).
+https://www.wikidata.org/wiki/Q140473066 — created under the "PropertyIQ" Wikimedia account (VPN off; NordVPN's Clouvider ranges are Wikimedia-blocked until 2027, so future edits also need VPN off). First PropertyIQ entity on Wikidata — we define the name.
 
-**Good news:** searched Wikidata — NO existing PropertyIQ/Property IQ item exists. First-mover defines the entity.
+Live statements (via UI + Action API `wbcreateclaim`/`wbsetreference`): instance of = web application + business; official website; industry = real estate industry; inception = 2024; country = US (all five referenced to /about + retrieved date); language = English; described at URL = /scores/methodology; official blog URL = /blog; Facebook username = propertyiq.us; LinkedIn = propertyiq-app; Reddit = propertyiq-app; YouTube handle = PropertyIQ_app. sameAs in OrganizationJsonLd.tsx now leads with the Q-id URL.
+
+Remaining nice-to-haves: logo image (requires Wikimedia Commons upload + CC license decision — Troy's call); "different from" statements if/when the AU (propertyiq.com.au) or Las Vegas (propertyiq.com) companies get Wikidata items; confirm the account's email address (banner pending) for recovery.
 
 Once you're logged in (VPN off), I can drive the browser through this, or you can paste it yourself at `Special:NewItem`:
 
