@@ -143,7 +143,7 @@ Both: M3 card (`rounded-xl`, `shadow-sm`, `bg-surface` semantic vars), Roboto Mo
 
 ### 6.5 Interaction & accessibility
 
-- Hover (pointer) / focus (keyboard): tooltip with metro name, current score, momentum label + arrow, and — only when viewing the latest month — the confidence letter. Historical months omit confidence (not in payload; keeps it ~200KB).
+- Hover (pointer): tooltip with metro name, current score, momentum label + arrow, and — only when viewing the latest month — the confidence letter. Dots are pointer-only and `aria-hidden` (935 tab stops would be hostile); the keyboard story is the scrubber (←/→/Home/End), month readout, and summary strip. (Decided 2026-07-11.) Historical months omit confidence (not in payload; keeps it ~200KB).
 - Click / Enter: navigate (Next `Link`-equivalent behavior) to `/markets/[slug]` (the metro market-page route), slug resolved from the precomputed `CBSA_TO_METRO` map in `@/lib/data`. Metros without a live market page are non-clickable but still hoverable.
 - Scrubber keyboard support: ←/→ steps one month, Home/End jump to first/latest.
 - ARIA: widget is `role="figure"` with a live-region month announcement while playing is OFF by default (announce only on manual scrub, to avoid screen-reader spam).
