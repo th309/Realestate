@@ -2,15 +2,14 @@ import type { MarketFaq } from "@/app/markets/components/build-market-faqs";
 import type { MarketStatsData } from "@/lib/data";
 import { formatMetricValue } from "@/lib/data";
 import { forecastDisplayYear } from "@/lib/seo/forecast-year";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
 
 /** Momentum phrasing per CLAUDE.md section 9 labels — never quality verdicts. */
 function momentumPhrase(score: number): string {
-  if (score >= 70) return "rising demand momentum";
-  if (score >= 60) return "firming demand momentum";
-  if (score >= 50)
-    return "steady demand momentum, in line with its state average";
-  if (score >= 40) return "easing demand momentum";
-  return "weak demand momentum";
+  const label = getScoreLabel(score).toLowerCase();
+  return score >= 50 && score < 60
+    ? `${label} demand momentum, in line with its state average`
+    : `${label} demand momentum`;
 }
 
 export function buildForecastFaqs({

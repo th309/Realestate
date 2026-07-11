@@ -35,6 +35,26 @@ describe("buildForecastFaqs answers the crash question from momentum data only",
     }
   });
 
+  it("uses canonical score labels and includes state average clause for STEADY (50-59)", () => {
+    const steadyStats = { ...stats, score: 55 } as unknown as MarketStatsData;
+    const steadyFaqs = buildForecastFaqs({
+      displayName: "Boston, MA",
+      stats: steadyStats,
+    });
+    expect(steadyFaqs[0].answer).toContain(
+      "steady demand momentum, in line with its state average",
+    );
+  });
+
+  it("applies strong label (80+) from canonical getScoreLabel", () => {
+    const strongStats = { ...stats, score: 85 } as unknown as MarketStatsData;
+    const strongFaqs = buildForecastFaqs({
+      displayName: "Miami, FL",
+      stats: strongStats,
+    });
+    expect(strongFaqs[0].answer).toContain("strong demand momentum");
+  });
+
   it("returns empty for missing stats (page renders without FAQ)", () => {
     expect(buildForecastFaqs({ displayName: "X", stats: null })).toEqual([]);
   });
