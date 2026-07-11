@@ -2,38 +2,32 @@
 
 import Link from "next/link";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
+import type { AncestorChain } from "@/lib/data/market-hierarchy";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
+import { MarketBreadcrumbs } from "@/app/markets/components/MarketBreadcrumbs";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface CountyPageContentProps {
   county: CountySlugEntry;
   parentMetroSlug: string | null;
   parentMetroName: string | null;
+  chain: AncestorChain;
 }
 
 export function CountyPageContent({
   county,
   parentMetroSlug,
   parentMetroName,
+  chain,
 }: CountyPageContentProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <nav
-        className="text-sm text-on-surface-variant mb-6"
-        aria-label="Breadcrumb"
-      >
-        <Link href="/" className="hover:text-primary">
-          Home
-        </Link>
-        <span className="mx-2">/</span>
-        <Link href="/markets" className="hover:text-primary">
-          Markets
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-on-surface font-medium">{county.shortName}</span>
-      </nav>
+      <MarketBreadcrumbs
+        chain={chain}
+        currentName={county.shortName}
+        currentHref={`/markets/county/${county.slug}`}
+      />
 
       {/* H1 */}
       <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3">
