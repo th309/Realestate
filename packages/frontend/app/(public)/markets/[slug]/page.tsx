@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { resolveMetroAlias } from "@/lib/data/market-slug-aliases";
 import {
@@ -17,6 +16,16 @@ import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
 import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
+import {
+  MarketRelatedLinks,
+  buildLinkGroup,
+} from "@/app/markets/components/MarketRelatedLinks";
+import {
+  getAncestorChainForMetro,
+  getCountiesForMetro,
+  getZipsForMetro,
+  MARKET_LINKS_DISPLAY_CAP,
+} from "@/lib/data/market-hierarchy";
 import { MetroPageContent } from "./MetroPageContent";
 import { generateMarketSeoContent } from "./generate-seo-content";
 
@@ -93,30 +102,7 @@ export default async function MetroPage({
     notFound();
   }
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: "https://www.propertyiq.app",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Markets",
-        item: "https://www.propertyiq.app/markets",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: metro.shortName,
-        item: `https://www.propertyiq.app/markets/${metro.slug}`,
-      },
-    ],
-  };
+  const chain = getAncestorChainForMetro(metro);
 
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const seoContent = generateMarketSeoContent(metro, stats);
@@ -149,13 +135,48 @@ export default async function MetroPage({
     .map((r) => metroBySlug.get(r.id)!)
     .slice(0, 5);
 
+  // Down-links: every county/ZIP in this metro, capped with a "view all" link
+  // to the dedicated overflow page (only present when the parent exceeds the cap).
+  const counties = getCountiesForMetro(metro.cbsaCode);
+  const zips = getZipsForMetro(metro.cbsaCode);
+  const linkGroups = [
+    buildLinkGroup(
+      `Counties in the ${metro.shortName} metro area`,
+      counties.map((c) => ({
+        key: c.fips,
+        label: c.shortName,
+        href: `/markets/county/${c.slug}`,
+      })),
+      MARKET_LINKS_DISPLAY_CAP,
+      `/markets/${metro.slug}/counties`,
+    ),
+    buildLinkGroup(
+      `ZIP codes in the ${metro.shortName} metro area`,
+      zips.map((z) => ({
+        key: z.zip,
+        label: z.zip,
+        href: `/markets/zip/${z.slug}`,
+      })),
+      MARKET_LINKS_DISPLAY_CAP,
+      `/markets/${metro.slug}/zips`,
+    ),
+    {
+      label: `Top markets in ${metro.state}`,
+      links: relatedMetros.map((m) => ({
+        key: m.cbsaCode,
+        label: m.shortName,
+        href: `/markets/${m.slug}`,
+      })),
+    },
+  ];
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      <MetroPageContent
+        metro={metro}
+        initialInsight={serverInsight}
+        chain={chain}
       />
-      <MetroPageContent metro={metro} initialInsight={serverInsight} />
 
       {stats && <MarketStatsBlock data={stats} geoName={metro.shortName} />}
       {stats && (
@@ -238,24 +259,7 @@ export default async function MetroPage({
           <p>{seoContent.closing}</p>
         </div>
 
-        {relatedMetros.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-base font-medium text-on-surface mb-3">
-              Top markets in {metro.state}
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {relatedMetros.map((m) => (
-                <Link
-                  key={m.cbsaCode}
-                  href={`/markets/${m.slug}`}
-                  className="px-4 py-2 rounded-full bg-surface-container-low text-on-surface text-sm hover:bg-surface-container-high transition-colors"
-                >
-                  {m.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        <MarketRelatedLinks groups={linkGroups} />
 
         <p className="mt-8 text-xs text-on-surface-variant/60">
           {stats?.latestDate
