@@ -8,7 +8,7 @@
 
 import { InsightContext } from './insights.types';
 
-const DATA_GROUNDING_RULE =
+export const DATA_GROUNDING_RULE =
   'Use ONLY the data provided below. Do not fabricate or assume any numbers. If data is missing, say so.';
 
 /** Plain-text prose style for the quick insights rendered directly in the UI. */
@@ -91,7 +91,7 @@ const COMPONENT_META: Record<
  * Format the top N score drivers as "label (formatted value)". Known PropertyIQ
  * inputs come first in a fixed order; any legacy/unknown components fall through.
  */
-function formatTopComponents(
+export function formatTopComponents(
   components: InsightContext['score_components'],
   limit: number,
 ): string {
@@ -115,7 +115,7 @@ function formatTopComponents(
 /**
  * Format key metrics as a compact single-line list with plain labels + values.
  */
-function formatKeyMetrics(metrics: InsightContext['key_metrics']): string {
+export function formatKeyMetrics(metrics: InsightContext['key_metrics']): string {
   return Object.entries(metrics)
     .map(
       ([name, { value }]) =>
@@ -127,7 +127,7 @@ function formatKeyMetrics(metrics: InsightContext['key_metrics']): string {
 /**
  * Format benchmark comparisons when data is available.
  */
-function formatBenchmarks(benchmarks: InsightContext['benchmarks']): string {
+export function formatBenchmarks(benchmarks: InsightContext['benchmarks']): string {
   const parts: string[] = [];
   const render = (entries: [string, number][]) =>
     entries
@@ -291,47 +291,5 @@ Write ONE tight, scannable paragraph for a landing page (aim for about 70 to 100
 - Output ONLY the paragraph. No title, no preamble, no label.`;
 }
 
-/** Hard honesty constraint for forecast-angle content (SEO /forecast pages). */
-const FORECAST_HONESTY_RULE =
-  'This is a momentum outlook, not a price prediction. Never state or imply a specific future price, percentage change, or price target. Never predict a crash or a boom. Answer the crash question only by describing what the current momentum data shows and does not show. Where the data is mixed or missing, say so plainly.';
 
-/**
- * Market Forecast — momentum-based forward outlook for the /forecast SEO pages.
- * Answers the "will home prices crash" question with momentum data only.
- * Uses markdown headers (##) for page-section delineation, like market_overview.
- */
-export function buildMarketForecastPrompt(
-  ctx: InsightContext,
-  displayYear: number,
-): string {
-  const topComponents = formatTopComponents(ctx.score_components, 5);
-  const confidence = ctx.scores.confidence_level ?? 'not available';
-
-  return `You are a real estate analyst writing a forward-looking market outlook for ${displayYear}.
-
-Data for ${ctx.region_name}:
-- PropertyIQ Score: ${ctx.scores.propertyiq ?? 'N/A'}/100 (a demand-momentum signal; 50 equals the market's state average)
-- Confidence: ${confidence}
-- Top score drivers: ${topComponents}
-- Key metrics: ${formatKeyMetrics(ctx.key_metrics)}
-- Benchmarks:
-${formatBenchmarks(ctx.benchmarks)}
-
-Rules:
-- Write 500-800 words total
-- Use these exact markdown section headers in order:
-  ## Will ${ctx.region_name} Home Prices Crash in ${displayYear}?
-  ## Momentum Signals
-  ## How ${ctx.region_name} Compares
-  ## The Bottom Line for ${displayYear}
-- "Will ... Crash": answer the crash question directly and honestly using ONLY the momentum data provided — describe what the data shows and what it does not show
-- "Momentum Signals": interpret the score drivers (price momentum, days on market, price cuts) and what each signals for the year ahead
-- "How ... Compares": compare the market against the state and national benchmarks provided
-- "The Bottom Line for ${displayYear}": a grounded summary of the momentum outlook that names the confidence grade
-- ${FORECAST_HONESTY_RULE}
-- ${DATA_GROUNDING_RULE}
-- Describe momentum with words like rising, firming, steady, easing, or cooling — never quality verdicts like good, bad, excellent, or poor
-- Do NOT use bullet points — write in flowing paragraphs
-- Do NOT use em-dashes
-- Do NOT include a title or introduction before the first ## header`;
-}
+export { buildMarketForecastPrompt } from './insight-prompt-forecast';
