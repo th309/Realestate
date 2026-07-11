@@ -10,6 +10,7 @@
  * Heavy lifting is delegated to:
  * - insight-context-builder.ts  — assembles InsightContext from scores/metrics
  * - insight-batch-generator.ts  — batch generation with concurrency control
+ * - insight-news-context.ts     — news-scout lookup for market_outlook prompts
  */
 
 import { Injectable, Inject, Logger } from '@nestjs/common';
@@ -33,13 +34,16 @@ import {
 import { buildInsightContext } from './insight-context-builder';
 import { buildFallbackInsightContent } from './insights-fallback';
 import { generateBatchInsights, CACHE_TTL_MS } from './insight-batch-generator';
+import { buildNewsContext } from './insight-news-context';
 import {
   buildMarketTakePrompt,
   buildScoreExplanationPrompt,
   buildTrendInterpretationPrompt,
   buildMarketOverviewPrompt,
   buildMarketOutlookPrompt,
+  buildMarketForecastPrompt,
 } from './insight-prompts';
+import { forecastDisplayYear } from './forecast-display-year';
 
 /** Maps insight type to its prompt builder function */
 const PROMPT_BUILDERS: Record<InsightType, (ctx: InsightContext) => string> = {
@@ -50,6 +54,8 @@ const PROMPT_BUILDERS: Record<InsightType, (ctx: InsightContext) => string> = {
   archetype_match: buildMarketOverviewPrompt,
   // No-news fallback; the news-aware variant is built in generateSingleInsight.
   market_outlook: (ctx) => buildMarketOutlookPrompt(ctx),
+  market_forecast: (ctx) =>
+    buildMarketForecastPrompt(ctx, forecastDisplayYear()),
 };
 
 /**
@@ -63,6 +69,7 @@ const INSIGHT_PURPOSES: Record<InsightType, string> = {
   market_overview: AI_PURPOSES.MARKET_OVERVIEW,
   archetype_match: AI_PURPOSES.MARKET_OVERVIEW,
   market_outlook: AI_PURPOSES.MARKET_OUTLOOK,
+  market_forecast: AI_PURPOSES.MARKET_FORECAST,
 };
 
 @Injectable()
@@ -237,7 +244,7 @@ export class InsightsService {
       insightType === 'market_outlook'
         ? buildMarketOutlookPrompt(
             context,
-            await this.buildNewsContext(context),
+            await buildNewsContext(context, this.newsScout),
           )
         : PROMPT_BUILDERS[insightType](context);
     // deepseek-v4 models reason before answering, so a tight budget gets consumed
@@ -248,7 +255,9 @@ export class InsightsService {
     // hidden reasoning and truncates the answer mid-sentence. market_outlook's
     // ~80-word answer needs the same generous headroom as market_overview.
     const maxTokens =
-      insightType === 'market_overview' || insightType === 'market_outlook'
+      insightType === 'market_overview' ||
+      insightType === 'market_outlook' ||
+      insightType === 'market_forecast'
         ? 4000
         : 1500;
     const purpose = INSIGHT_PURPOSES[insightType] ?? AI_PURPOSES.MARKET_TAKE;
@@ -264,36 +273,6 @@ export class InsightsService {
         `Insight generation failed for ${context.region_id}/${insightType} (purpose=${purpose}): ${(err as Error).message}`,
       );
       return null;
-    }
-  }
-
-  /**
-   * Fetch + format recent local real-estate/economic news for the prompt via the
-   * Gemini-backed news scout. 90-day lookback to match the Score's 3-month
-   * momentum window. The scout caches results 24h in report_news_cache.
-   */
-  private async buildNewsContext(context: InsightContext): Promise<string> {
-    try {
-      const [name, state] = context.region_name.split(',').map((s) => s.trim());
-      const result = await this.newsScout.getOrScoutNews(
-        context.region_id,
-        context.geo_level,
-        name || context.region_name,
-        state || '',
-        { maxNewsItems: 6, lookbackDays: 90, includeNationalContext: false },
-      );
-      if (!result) return '';
-      return this.newsScout.formatNewsForPrompt(result, {
-        maxNewsItems: 6,
-        includeIndicators: true,
-        includeSignals: true,
-        includeNational: false,
-      });
-    } catch (err) {
-      this.logger.warn(
-        `News scout failed for ${context.region_id}: ${(err as Error).message}`,
-      );
-      return '';
     }
   }
 }

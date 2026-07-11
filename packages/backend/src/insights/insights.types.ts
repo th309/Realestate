@@ -11,7 +11,8 @@ export type InsightType =
   | 'trend_interpretation'
   | 'market_overview'
   | 'archetype_match'
-  | 'market_outlook';
+  | 'market_outlook'
+  | 'market_forecast';
 
 export type GeoLevel = 'state' | 'metro' | 'county' | 'zip';
 
@@ -38,6 +39,8 @@ export interface InsightContext {
   geo_level: GeoLevel;
   scores: {
     propertyiq: number | null;
+    /** A/B/C/F data-quality grade for the score; null when unavailable. */
+    confidence_level: string | null;
   };
   score_components: Record<string, { status: string; value: number }>;
   key_metrics: Record<

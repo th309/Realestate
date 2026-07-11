@@ -3,7 +3,6 @@
 // Run monthly AFTER the slug generators have regenerated the gated JSONs.
 // Usage: npx tsx scripts/generate-descored-redirects.ts
 
-import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
@@ -13,97 +12,19 @@ import {
   type AncestorKeys,
 } from "./lib/published-set";
 import { fetchScoredByPeriod } from "./lib/scored-set-client";
-import { STATE_SLUG_DATA } from "../packages/frontend/lib/data/state-slug-data";
+import {
+  buildStateSlugMap,
+  DATA_DIR,
+  pushTempRedirects,
+  readCurrentJson,
+  readHeadJson,
+  type CountyEntry,
+  type MetroEntry,
+  type Redirect,
+  type ZipEntry,
+} from "./lib/descored-redirect-io";
 
 const API_BASE = process.env.API_URL ?? "http://localhost:3001";
-
-// ---------------------------------------------------------------------------
-// Entry type definitions matching each gated JSON's shape
-// ---------------------------------------------------------------------------
-
-interface MetroEntry {
-  cbsaCode: string;
-  slug: string;
-  name: string;
-  shortName: string;
-  state: string;
-}
-
-interface CountyEntry {
-  fips: string;
-  slug: string;
-  name: string;
-  shortName: string;
-  state: string;
-  cbsaCode: string | null;
-}
-
-interface ZipEntry {
-  zip: string;
-  slug: string;
-  name: string;
-  shortName: string;
-  state: string;
-  countyFips: string | null;
-  cbsaCode: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Output type matching Next.js redirects config shape
-// ---------------------------------------------------------------------------
-
-interface Redirect {
-  source: string;
-  destination: string;
-  permanent: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const DATA_DIR = path.join(__dirname, "../packages/frontend/lib/data");
-
-function readCurrentJson<T>(filename: string): T[] {
-  const fullPath = path.join(DATA_DIR, filename);
-  return JSON.parse(fs.readFileSync(fullPath, "utf-8")) as T[];
-}
-
-/**
- * Read the committed (HEAD) version of a slug JSON via `git show`.
- * Returns [] if the file didn't exist at HEAD (first ever run).
- */
-function readHeadJson<T>(relPath: string): T[] {
-  // spawnSync with argument array — no shell, no injection surface.
-  // maxBuffer MUST exceed the largest slug JSON (zip is ~8MB): the 1MB default
-  // silently overflows (ENOBUFS) on `git show`, which would return a false-empty
-  // old set and drop every ZIP redirect. 256MB is ample headroom.
-  // Baseline defaults to HEAD (steady-state monthly: diff last month's committed
-  // gated data vs this month's). The FIRST-ever gated run overrides this to the
-  // pre-gating commit (REDIRECT_BASELINE_REF) so old-vs-new diffs the *ungated*
-  // universe and the initial de-scored backlog redirects correctly.
-  const baselineRef = process.env.REDIRECT_BASELINE_REF || "HEAD";
-  const result = spawnSync("git", ["show", `${baselineRef}:${relPath}`], {
-    encoding: "utf-8",
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (result.error) {
-    // A real spawn failure (buffer overflow, git missing, …) must FAIL LOUD —
-    // never be masked as "file absent" (that would silently drop redirects).
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    // File absent at HEAD (first-ever run): git exits non-zero with a
-    // "does not exist in HEAD" stderr and no spawn error. Treat as empty.
-    return [];
-  }
-  return JSON.parse(result.stdout) as T[];
-}
-
-/** Build a code → slug map from STATE_SLUG_DATA (abbrev field). */
-function buildStateSlugMap(): Map<string, string> {
-  return new Map(STATE_SLUG_DATA.map((e) => [e.abbrev, e.slug]));
-}
 
 // ---------------------------------------------------------------------------
 // Main
@@ -159,24 +80,23 @@ async function main(): Promise<void> {
         stateSlugOf,
       );
       if (destination !== null) {
-        allRedirects.push({
-          source: `/markets/${oldEntry.slug}`,
-          destination,
-          permanent: false,
-        });
         // Overflow pages (if this metro ever had >12 counties/zips) must
         // redirect alongside the main page. A rule for an overflow page that
         // never existed is a harmless no-op — it just never matches a request.
-        allRedirects.push({
-          source: `/markets/${oldEntry.slug}/counties`,
+        pushTempRedirects(
+          allRedirects,
           destination,
-          permanent: false,
-        });
-        allRedirects.push({
-          source: `/markets/${oldEntry.slug}/zips`,
-          destination,
-          permanent: false,
-        });
+          `/markets/${oldEntry.slug}`,
+          `/markets/${oldEntry.slug}/counties`,
+          `/markets/${oldEntry.slug}/zips`,
+        );
+        // Forecast pages share the metro slug set; a de-scored metro's
+        // forecast page falls back to the national hub (no forecast ancestor).
+        pushTempRedirects(
+          allRedirects,
+          "/forecast",
+          `/forecast/${oldEntry.slug}`,
+        );
         count++;
       }
     }
@@ -218,18 +138,14 @@ async function main(): Promise<void> {
         stateSlugOf,
       );
       if (destination !== null) {
-        allRedirects.push({
-          source: `/markets/county/${oldEntry.slug}`,
-          destination,
-          permanent: false,
-        });
         // Overflow page (if this county ever had >12 zips) must redirect
         // alongside the main page — same no-op reasoning as the metro block above.
-        allRedirects.push({
-          source: `/markets/county/${oldEntry.slug}/zips`,
+        pushTempRedirects(
+          allRedirects,
           destination,
-          permanent: false,
-        });
+          `/markets/county/${oldEntry.slug}`,
+          `/markets/county/${oldEntry.slug}/zips`,
+        );
         count++;
       }
     }
@@ -274,11 +190,11 @@ async function main(): Promise<void> {
         stateSlugOf,
       );
       if (destination !== null) {
-        allRedirects.push({
-          source: `/markets/zip/${oldEntry.slug}`,
+        pushTempRedirects(
+          allRedirects,
           destination,
-          permanent: false,
-        });
+          `/markets/zip/${oldEntry.slug}`,
+        );
         count++;
       }
     }

@@ -38,6 +38,20 @@ export const getScoreMomentumArrow = (score: number): string => {
   return "↓";
 };
 
+/**
+ * Tailwind text-color class for the momentum label, keyed to direction so the
+ * word reads correctly across the whole range (a green "WEAK ↓" would be wrong).
+ * Bands match getScoreMomentumArrow: ↑ strengthening = accent green, → steady =
+ * neutral, ↘ easing = warning amber, ↓ weakening = error red. Uses semantic
+ * tokens, so it stays correct in dark mode.
+ */
+export const getScoreMomentumColorClass = (score: number): string => {
+  if (score >= 60) return "text-tertiary";
+  if (score >= 50) return "text-on-surface-variant";
+  if (score >= 40) return "text-warning";
+  return "text-error";
+};
+
 /** One-line descriptor clarifying the score is a momentum/timing signal. */
 export const SCORE_MOMENTUM_DESCRIPTOR =
   "Momentum & timing signal — the market's current demand trend, not a quality grade.";
