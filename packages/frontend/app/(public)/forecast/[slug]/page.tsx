@@ -19,7 +19,26 @@ import { buildForecastFaqs } from "../components/build-forecast-faqs";
 import { ForecastNarrativeSection } from "../components/ForecastNarrativeSection";
 import { MomentumSignalsSection } from "../components/MomentumSignalsSection";
 import { ForecastCrossLinks } from "../components/ForecastCrossLinks";
-import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { ScoreGaugeRing } from "@/app/components/scoring/ScoreGaugeRing";
+
+/**
+ * Confidence pill tonal colors by data-quality level. A/B are healthy (accent
+ * green), C is a notable-gaps warning (amber), F is insufficient (error red) —
+ * matching CLAUDE.md §9 confidence semantics. Semantic tokens keep dark mode
+ * correct. Mirrors MarketRail's confidencePillClass (layout branch) so the
+ * forecast hero and market-detail rail share one visual vocabulary.
+ */
+function confidencePillClass(level: string): string {
+  switch (level?.toLowerCase()) {
+    case "a":
+    case "b":
+      return "bg-tertiary-container text-on-tertiary-container";
+    case "c":
+      return "bg-warning-container text-on-warning-container";
+    default:
+      return "bg-error-container text-on-error-container";
+  }
+}
 
 export function generateStaticParams() {
   return METRO_SLUG_DATA.slice(0, 150).map((metro) => ({ slug: metro.slug }));
@@ -100,6 +119,9 @@ export default async function ForecastMetroPage({
   // already fetched above — no client-side fetch needed for the hero.
   const heroScore =
     stats?.score ?? scoreData?.scores?.propertyiq?.score ?? null;
+  const heroGrade =
+    stats?.grade ?? scoreData?.scores?.propertyiq?.confidence_level ?? null;
+  const heroConfidencePct = scoreData?.scores?.propertyiq?.confidence ?? null;
 
   const metroBySlug = new Map(METRO_SLUG_DATA.map((m) => [m.cbsaCode, m]));
   const relatedMetros = metroRank
@@ -149,20 +171,25 @@ export default async function ForecastMetroPage({
         </p>
         {heroScore !== null && (
           <div className="mt-6 flex justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <ScoreWidget
-                geographyType="metro"
-                geographyId={metro.cbsaCode}
-                scoreType="propertyiq"
-                size={120}
-                showConfidence
-              />
-              <span className="text-sm font-medium text-on-surface">
+            <div className="flex flex-col items-center gap-3.5">
+              <ScoreGaugeRing value={heroScore} size={156} showLabel />
+              <p className="text-[13px] font-medium text-on-surface-variant">
                 PropertyIQ Score
-              </span>
-              <p className="text-xs text-on-surface-variant">
-                50 = state average · higher = stronger momentum
               </p>
+              <div className="flex w-full max-w-[240px] flex-col items-center gap-1.5">
+                {heroGrade && (
+                  <span
+                    className={`inline-flex h-6 w-full items-center justify-center rounded-full font-mono text-[11px] font-semibold tracking-[0.05em] ${confidencePillClass(heroGrade)}`}
+                  >
+                    {heroConfidencePct !== null
+                      ? `${heroGrade.toUpperCase()} · ${Math.round(heroConfidencePct)}% CONFIDENCE`
+                      : heroGrade.toUpperCase()}
+                  </span>
+                )}
+                <span className="text-center text-[11px] leading-snug text-on-surface-variant">
+                  50 = state average · higher = stronger momentum
+                </span>
+              </div>
             </div>
           </div>
         )}
