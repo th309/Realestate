@@ -139,6 +139,7 @@ export {
 // ============================================================================
 export {
   V4_CLAIMS,
+  COVERAGE_COPY,
   getV4HomepageClaims,
   formatDollarClaim,
   formatDollarClaimShort,
