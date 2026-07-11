@@ -59,8 +59,8 @@ export default async function MetroCountiesPage({
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <MarketBreadcrumbs
-        chain={getAncestorChainForMetro(metro)}
-        currentName={`${metro.shortName} Counties`}
+        chain={{ ...getAncestorChainForMetro(metro), metro }}
+        currentName="Counties"
         currentHref={`/markets/${metro.slug}/counties`}
       />
 

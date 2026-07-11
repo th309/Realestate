@@ -58,8 +58,8 @@ export default async function MetroZipsPage({
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <MarketBreadcrumbs
-        chain={getAncestorChainForMetro(metro)}
-        currentName={`${metro.shortName} ZIP Codes`}
+        chain={{ ...getAncestorChainForMetro(metro), metro }}
+        currentName="ZIP Codes"
         currentHref={`/markets/${metro.slug}/zips`}
       />
 

@@ -57,8 +57,8 @@ export default async function CountyZipsPage({
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <MarketBreadcrumbs
-        chain={getAncestorChainForCounty(county)}
-        currentName={`${county.shortName} ZIP Codes`}
+        chain={{ ...getAncestorChainForCounty(county), county }}
+        currentName="ZIP Codes"
         currentHref={`/markets/county/${county.slug}/zips`}
       />
 
