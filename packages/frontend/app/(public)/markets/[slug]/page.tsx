@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { resolveMetroAlias } from "@/lib/data/market-slug-aliases";
+import { forecastDisplayYear } from "@/lib/seo/forecast-year";
 import {
   fetchSeoMarketStats,
   fetchRankings,
@@ -120,6 +121,7 @@ export default async function MetroPage({
 
   const stats = await fetchSeoMarketStats("metro", metro.cbsaCode, metro.state);
   const seoContent = generateMarketSeoContent(metro, stats);
+  const forecastYear = forecastDisplayYear(stats?.latestDate ?? null);
 
   // Same OG card the meta tags reference, embedded as a real, alt-bearing image
   // so non-JS AI crawlers (GPTBot/ClaudeBot/PerplexityBot) see an actual visual
@@ -264,6 +266,21 @@ export default async function MetroPage({
           Sourced from Zillow, Realtor.com, Redfin, U.S. Census Bureau, FRED,
           BLS, and BEA. Per-statistic source and date shown above.
         </p>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 py-6">
+        <Link
+          href={`/forecast/${metro.slug}`}
+          className="block rounded-xl border border-outline-variant p-5 hover:bg-surface-container-low"
+        >
+          <span className="text-base font-medium text-on-surface">
+            {metro.shortName} Housing Market Forecast {forecastYear} →
+          </span>
+          <span className="mt-1 block text-sm text-on-surface-variant">
+            Where the momentum data says this market is heading — score,
+            confidence grade, and the signals behind it.
+          </span>
+        </Link>
       </section>
 
       <MarketFaqSection

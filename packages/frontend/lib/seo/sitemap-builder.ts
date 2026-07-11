@@ -143,6 +143,21 @@ export async function buildMetrosUrls(): Promise<SitemapUrl[]> {
   }));
 }
 
+export async function buildForecastUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "metro",
+    METRO_SLUG_DATA,
+    (metro) => metro.cbsaCode,
+  );
+  return [
+    { loc: `${BASE_URL}/forecast`, lastmod },
+    ...entries.map((metro) => ({
+      loc: `${BASE_URL}/forecast/${metro.slug}`,
+      lastmod,
+    })),
+  ];
+}
+
 export async function buildCountiesUrls(): Promise<SitemapUrl[]> {
   const { lastmod, entries } = await scoredEntries(
     "county",
@@ -185,6 +200,10 @@ export async function buildIndexEntries(): Promise<
     { loc: `${BASE_URL}/sitemaps/states`, lastmod: isoOrUndefined(metro.date) },
     { loc: `${BASE_URL}/sitemaps/metros`, lastmod: isoOrUndefined(metro.date) },
     {
+      loc: `${BASE_URL}/sitemaps/forecast`,
+      lastmod: isoOrUndefined(metro.date),
+    },
+    {
       loc: `${BASE_URL}/sitemaps/counties`,
       lastmod: isoOrUndefined(county.date),
     },
@@ -206,6 +225,7 @@ export async function buildSitemapById(
   if (id === "main") return buildMainUrls();
   if (id === "states") return buildStatesUrls();
   if (id === "metros") return buildMetrosUrls();
+  if (id === "forecast") return buildForecastUrls();
   if (id === "counties") return buildCountiesUrls();
 
   const zipMatch = /^zips-(\d+)$/.exec(id);
