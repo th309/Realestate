@@ -3,12 +3,16 @@ import { notFound } from "next/navigation";
 import { STATE_SLUG_DATA, SLUG_TO_STATE } from "@/lib/data/state-slug-data";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
-import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
-import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 import { fetchRankings } from "@/lib/data";
+import {
+  getZipsForMetro,
+  getZipsForCounty,
+  MARKET_LINKS_DISPLAY_CAP,
+} from "@/lib/data/market-hierarchy";
 import { StateTopMarketsTables } from "@/app/markets/components/StateTopMarketsTables";
 import { StatePageContent } from "./StatePageContent";
 import { generateStateSeoContent } from "./generate-seo-content";
+import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 
 export function generateStaticParams() {
   return STATE_SLUG_DATA.map((s) => ({ state: s.slug }));
@@ -59,20 +63,15 @@ export async function generateMetadata({
 
 export const revalidate = 86400; // ISR: revalidate every 24 hours
 
-// Cap inline ZIP links per metro/county. Large metros carry hundreds of ZIPs;
-// rendering every one (twice — under its metro AND its county) is what made these
-// pages 3MB / 3,000+ links. Show the first N and link to the parent for the rest.
-const ZIP_DISPLAY_CAP = 12;
-
 function ZipLinks({
   zips,
-  parentHref,
+  viewAllHref,
 }: {
   zips: ZipSlugEntry[];
-  parentHref: string;
+  viewAllHref: string;
 }) {
   if (zips.length === 0) return null;
-  const shown = zips.slice(0, ZIP_DISPLAY_CAP);
+  const shown = zips.slice(0, MARKET_LINKS_DISPLAY_CAP);
   const remaining = zips.length - shown.length;
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
@@ -87,7 +86,7 @@ function ZipLinks({
       ))}
       {remaining > 0 && (
         <a
-          href={parentHref}
+          href={viewAllHref}
           className="text-xs text-on-surface-variant hover:text-primary underline underline-offset-2"
         >
           +{remaining} more ZIP{remaining === 1 ? "" : "s"} →
@@ -111,25 +110,6 @@ export default async function StatePage({
     (c) => c.state === stateEntry.abbrev,
   );
 
-  // Filter zips to this state and group by cbsaCode and countyFips
-  const stateZips = ZIP_SLUG_DATA.filter((z) => z.state === stateEntry.abbrev);
-
-  const zipsByMetro = new Map<string, ZipSlugEntry[]>();
-  const zipsByCounty = new Map<string, ZipSlugEntry[]>();
-
-  for (const zip of stateZips) {
-    if (zip.cbsaCode) {
-      const group = zipsByMetro.get(zip.cbsaCode) ?? [];
-      group.push(zip);
-      zipsByMetro.set(zip.cbsaCode, group);
-    }
-    if (zip.countyFips) {
-      const group = zipsByCounty.get(zip.countyFips) ?? [];
-      group.push(zip);
-      zipsByCounty.set(zip.countyFips, group);
-    }
-  }
-
   // Top-10 metros and counties in this state, ranked by PropertyIQ score.
   // Rows carry slugs (not raw CBSA/FIPS) so links resolve to /markets/<slug>.
   const [topMetrosRaw, topCountiesRaw] = await Promise.all([
@@ -152,33 +132,6 @@ export default async function StatePage({
   const topCounties = topCountiesRaw
     .filter((r) => countySlugById.has(r.id))
     .map((r) => ({ ...r, id: countySlugById.get(r.id)! }));
-
-  // Safe: JSON.stringify of server-built objects — no user input, consistent with
-  // the same pattern used in /markets/[slug]/page.tsx and /markets/county/[slug]/page.tsx
-  const breadcrumbJsonLd = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: "https://www.propertyiq.app",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Markets",
-        item: "https://www.propertyiq.app/markets",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: stateEntry.name,
-        item: `https://www.propertyiq.app/markets/state/${stateEntry.slug}`,
-      },
-    ],
-  });
 
   const stateSchemaJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -206,10 +159,6 @@ export default async function StatePage({
   return (
     <>
       {/* Safe JSON-LD injection — server-generated from trusted static data only */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: stateSchemaJsonLd }}
@@ -282,23 +231,20 @@ export default async function StatePage({
               {stateEntry.name} Metro Areas and ZIP Codes
             </h3>
             <div className="space-y-6">
-              {metros.map((metro) => {
-                const metroZips = zipsByMetro.get(metro.cbsaCode) ?? [];
-                return (
-                  <div key={metro.cbsaCode}>
-                    <a
-                      href={`/markets/${metro.slug}`}
-                      className="text-sm font-semibold text-on-surface hover:text-primary underline underline-offset-4"
-                    >
-                      {metro.shortName}
-                    </a>
-                    <ZipLinks
-                      zips={metroZips}
-                      parentHref={`/markets/${metro.slug}`}
-                    />
-                  </div>
-                );
-              })}
+              {metros.map((metro) => (
+                <div key={metro.cbsaCode}>
+                  <a
+                    href={`/markets/${metro.slug}`}
+                    className="text-sm font-semibold text-on-surface hover:text-primary underline underline-offset-4"
+                  >
+                    {metro.shortName}
+                  </a>
+                  <ZipLinks
+                    zips={getZipsForMetro(metro.cbsaCode)}
+                    viewAllHref={`/markets/${metro.slug}/zips`}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -310,23 +256,20 @@ export default async function StatePage({
               {stateEntry.name} Counties and ZIP Codes
             </h3>
             <div className="space-y-6">
-              {counties.map((county) => {
-                const countyZips = zipsByCounty.get(county.fips) ?? [];
-                return (
-                  <div key={county.fips}>
-                    <a
-                      href={`/markets/county/${county.slug}`}
-                      className="text-sm font-semibold text-on-surface hover:text-primary underline underline-offset-4"
-                    >
-                      {county.shortName}
-                    </a>
-                    <ZipLinks
-                      zips={countyZips}
-                      parentHref={`/markets/county/${county.slug}`}
-                    />
-                  </div>
-                );
-              })}
+              {counties.map((county) => (
+                <div key={county.fips}>
+                  <a
+                    href={`/markets/county/${county.slug}`}
+                    className="text-sm font-semibold text-on-surface hover:text-primary underline underline-offset-4"
+                  >
+                    {county.shortName}
+                  </a>
+                  <ZipLinks
+                    zips={getZipsForCounty(county.fips)}
+                    viewAllHref={`/markets/county/${county.slug}/zips`}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}

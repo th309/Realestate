@@ -43,7 +43,7 @@ Statements:
 | different from (P1889)  | any existing items for other "PropertyIQ" companies (search propertyiq.com.au's parent, property-iq.ai) — add if/when they exist |
 | described at URL (P973) | https://www.propertyiq.app/about                                                                                                 |
 
-Notability note: Wikidata's bar is "clearly identifiable entity + serious publicly available references." App Store presence, the LinkedIn company page, and press/data citations help; link them as references on statements if challenged.
+Notability note: Wikidata's bar is "clearly identifiable entity + serious publicly available references." The LinkedIn company page and press/data citations help; link them as references on statements if challenged. (Do NOT use the App Store app id6762011177 as a reference — it is a competing product, not ours.)
 
 ## 4. Reddit — 🟡 ACCOUNT LIVE, WARM-UP PHASE (no posts yet)
 
@@ -101,6 +101,8 @@ Target end-state for `OrganizationJsonLd.tsx`:
 
 - LinkedIn `/company/propertyiq-app/` ✅ (live)
 - YouTube `@PropertyIQ_app` ✅ (live)
-- Facebook `/PropertyIQHQ` — swap in after username saves
-- Wikidata item URL — add after creation (strongest entity signal of all)
-- Crunchbase/App Store — add if/when they exist
+- Facebook `/propertyiq.us` ✅ (live)
+- Reddit `/user/propertyiq-app/` ✅ (live in sameAs; account created, not yet posting)
+- Wikidata item URL `Q140473066` ✅ (live — strongest entity signal of all)
+- App Store — DO NOT ADD: `apps.apple.com/us/app/propertyiq/id6762011177` is a COMPETING product, not ours (was added to sameAs 2026-07-11, removed same day). Never link/cite it.
+- Crunchbase — add after profile is created; copy-paste draft ready at `docs/marketing/crunchbase-profile-draft.md`

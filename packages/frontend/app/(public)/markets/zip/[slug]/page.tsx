@@ -18,6 +18,8 @@ import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
 import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
+import { MarketRelatedLinks } from "@/app/markets/components/MarketRelatedLinks";
+import { getAncestorChainForZip } from "@/lib/data/market-hierarchy";
 import { ZipPageContent } from "./ZipPageContent";
 import { generateZipSeoContent } from "./generate-seo-content";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
@@ -134,6 +136,8 @@ export default async function ZipPage({
     ? FIPS_TO_COUNTY.get(zip.countyFips)
     : null;
 
+  const chain = getAncestorChainForZip(zip);
+
   // Nearby ZIPs in the same state, ranked by PropertyIQ score.
   const zipRank = await fetchRankings("propertyiq", "zip", {
     state: zip.state,
@@ -150,31 +154,6 @@ export default async function ZipPage({
         (z) => z.state === zip.state && z.zip !== zip.zip,
       ).slice(0, 6);
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: "https://www.propertyiq.app",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Markets",
-        item: "https://www.propertyiq.app/markets",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: displayName,
-        item: `https://www.propertyiq.app/markets/zip/${zip.slug}`,
-      },
-    ],
-  };
-
   const stats = await fetchSeoMarketStats("zip", zip.zip, zip.state);
   const seoContent = generateZipSeoContent(zip, stats);
 
@@ -185,19 +164,26 @@ export default async function ZipPage({
   const ogImageUrl = `https://www.propertyiq.app${ogImagePath}`;
   const ogImageAlt = `${displayName} housing market snapshot from PropertyIQ — median home price, year-over-year appreciation, median days on market, and PropertyIQ demand score.`;
 
+  const linkGroups = [
+    {
+      label: `Other ${zip.state} ZIP Codes`,
+      links: nearbyZips.map((z) => ({
+        key: z.zip,
+        label: z.shortName,
+        href: `/markets/zip/${z.slug}`,
+      })),
+    },
+  ];
+
   return (
     <>
-      {/* Safe: JSON.stringify of a server-built object with no user input */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
       <ZipPageContent
         zip={zip}
         parentMetroSlug={parentMetro?.slug ?? null}
         parentMetroName={parentMetro?.shortName ?? null}
         parentCountySlug={parentCounty?.slug ?? null}
         parentCountyName={parentCounty?.shortName ?? null}
+        chain={chain}
       />
 
       {stats && <MarketStatsBlock data={stats} geoName={displayName} />}
@@ -280,25 +266,7 @@ export default async function ZipPage({
           <p>{seoContent.closing}</p>
         </div>
 
-        {/* Nearby ZIPs for internal linking */}
-        {nearbyZips.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-base font-medium text-on-surface mb-3">
-              Other {zip.state} ZIP Codes
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {nearbyZips.map((z) => (
-                <Link
-                  key={z.zip}
-                  href={`/markets/zip/${z.slug}`}
-                  className="text-sm text-primary hover:text-primary/80 underline underline-offset-4"
-                >
-                  {z.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        <MarketRelatedLinks groups={linkGroups} />
 
         {parentCounty && (
           <p className="mt-6 text-sm text-on-surface-variant">

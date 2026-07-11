@@ -28,13 +28,16 @@ export function OrganizationJsonLd() {
     // (Q140473066) was created by us with referenced statements; the rest are
     // owned profiles. NOTE: linkedin.com/company/property-iq (no "-app")
     // belongs to an unrelated Las Vegas company (propertyiq.com) — linking it
-    // feeds AI entity confusion.
+    // feeds AI entity confusion. Likewise the App Store app
+    // apps.apple.com/us/app/propertyiq/id6762011177 is a COMPETING product,
+    // NOT ours — never add it here.
     sameAs: [
       "https://www.wikidata.org/wiki/Q140473066",
       "https://www.linkedin.com/company/propertyiq-app/",
       "https://www.youtube.com/@PropertyIQ_app",
       "https://www.facebook.com/propertyiq.us",
       "https://www.reddit.com/user/propertyiq-app/",
+      "https://x.com/PropertyIQ95408",
     ],
     contactPoint: {
       "@type": "ContactPoint",

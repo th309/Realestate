@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
+import type { AncestorChain } from "@/lib/data/market-hierarchy";
 import { ScoreGaugeWidget } from "@/app/components/scoring/ScoreGaugeWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
+import { MarketBreadcrumbs } from "@/app/markets/components/MarketBreadcrumbs";
 import { MarketOverviewSection } from "./MarketOverviewSection";
 import { LeadMagnetModal } from "./components/LeadMagnetModal";
 import MarketReportCTA from "../components/MarketReportCTA";
@@ -18,11 +20,14 @@ interface MetroPageContentProps {
    * the client fetch. Null when uncached — the client fetches live.
    */
   initialInsight?: { content: string; generated_at: string } | null;
+  /** Full ancestor chain for the breadcrumb (state; metro/county are always null here — this IS the metro page). */
+  chain: AncestorChain;
 }
 
 export function MetroPageContent({
   metro,
   initialInsight,
+  chain,
 }: MetroPageContentProps) {
   const [showLeadMagnet, setShowLeadMagnet] = useState(false);
   const { recordMilestone } = useMilestone();
@@ -38,21 +43,11 @@ export function MetroPageContent({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 overflow-x-hidden min-w-0">
-      {/* Breadcrumb */}
-      <nav
-        className="text-sm text-on-surface-variant mb-6"
-        aria-label="Breadcrumb"
-      >
-        <Link href="/" className="hover:text-primary">
-          Home
-        </Link>
-        <span className="mx-2">/</span>
-        <Link href="/markets" className="hover:text-primary">
-          Markets
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-on-surface font-medium">{metro.shortName}</span>
-      </nav>
+      <MarketBreadcrumbs
+        chain={chain}
+        currentName={metro.shortName}
+        currentHref={`/markets/${metro.slug}`}
+      />
 
       {/* H1 */}
       <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3 break-words">
