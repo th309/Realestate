@@ -95,6 +95,7 @@ export async function buildInsightContext(
 function extractScores(scoreResult: any): InsightContext['scores'] {
   return {
     propertyiq: scoreResult?.scores?.propertyiq?.score ?? null,
+    confidence_level: scoreResult?.scores?.propertyiq?.confidence_level ?? null,
   };
 }
 
