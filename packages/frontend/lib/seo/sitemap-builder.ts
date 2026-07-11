@@ -16,6 +16,12 @@ import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { COUNTY_SLUG_DATA } from "@/lib/data/county-slug-data";
 import { ZIP_SLUG_DATA } from "@/lib/data/zip-slug-data";
 import { STATE_SLUG_DATA } from "@/lib/data/state-slug-data";
+import {
+  getCountiesForMetro,
+  getZipsForMetro,
+  getZipsForCounty,
+  MARKET_LINKS_DISPLAY_CAP,
+} from "@/lib/data/market-hierarchy";
 import { getAllPosts } from "@/lib/blog";
 import { COMPARISONS, COMPARISONS_LAST_UPDATED } from "@/lib/data/comparisons";
 import { fetchScoredLocationData } from "@/lib/data";
@@ -155,6 +161,57 @@ export async function buildCountiesUrls(): Promise<SitemapUrl[]> {
   }));
 }
 
+export async function buildMetroCountiesUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "metro",
+    METRO_SLUG_DATA,
+    (metro) => metro.cbsaCode,
+  );
+  return entries
+    .filter(
+      (metro) =>
+        getCountiesForMetro(metro.cbsaCode).length > MARKET_LINKS_DISPLAY_CAP,
+    )
+    .map((metro) => ({
+      loc: `${BASE_URL}/markets/${metro.slug}/counties`,
+      lastmod,
+    }));
+}
+
+export async function buildMetroZipsUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "metro",
+    METRO_SLUG_DATA,
+    (metro) => metro.cbsaCode,
+  );
+  return entries
+    .filter(
+      (metro) =>
+        getZipsForMetro(metro.cbsaCode).length > MARKET_LINKS_DISPLAY_CAP,
+    )
+    .map((metro) => ({
+      loc: `${BASE_URL}/markets/${metro.slug}/zips`,
+      lastmod,
+    }));
+}
+
+export async function buildCountyZipsUrls(): Promise<SitemapUrl[]> {
+  const { lastmod, entries } = await scoredEntries(
+    "county",
+    COUNTY_SLUG_DATA,
+    (county) => county.fips,
+  );
+  return entries
+    .filter(
+      (county) =>
+        getZipsForCounty(county.fips).length > MARKET_LINKS_DISPLAY_CAP,
+    )
+    .map((county) => ({
+      loc: `${BASE_URL}/markets/county/${county.slug}/zips`,
+      lastmod,
+    }));
+}
+
 export async function buildZipChunkUrls(
   chunkIndex: number,
 ): Promise<SitemapUrl[]> {
@@ -188,6 +245,18 @@ export async function buildIndexEntries(): Promise<
       loc: `${BASE_URL}/sitemaps/counties`,
       lastmod: isoOrUndefined(county.date),
     },
+    {
+      loc: `${BASE_URL}/sitemaps/metro-counties`,
+      lastmod: isoOrUndefined(metro.date),
+    },
+    {
+      loc: `${BASE_URL}/sitemaps/metro-zips`,
+      lastmod: isoOrUndefined(metro.date),
+    },
+    {
+      loc: `${BASE_URL}/sitemaps/county-zips`,
+      lastmod: isoOrUndefined(county.date),
+    },
   ];
 
   const zipLastmod = isoOrUndefined(zip.date);
@@ -207,6 +276,9 @@ export async function buildSitemapById(
   if (id === "states") return buildStatesUrls();
   if (id === "metros") return buildMetrosUrls();
   if (id === "counties") return buildCountiesUrls();
+  if (id === "metro-counties") return buildMetroCountiesUrls();
+  if (id === "metro-zips") return buildMetroZipsUrls();
+  if (id === "county-zips") return buildCountyZipsUrls();
 
   const zipMatch = /^zips-(\d+)$/.exec(id);
   if (zipMatch) {
