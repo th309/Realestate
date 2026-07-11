@@ -79,12 +79,21 @@ export function eraForMonth(monthIso: string): MarketEra | null {
   );
 }
 
-/** Scrubber tick positions: the first frame index inside each era. */
+/**
+ * Scrubber tick positions: the first frame index inside each era. When a
+ * truncated months array makes several eras resolve to the same index (all
+ * their starts precede the first month), keep only the latest era's label —
+ * a single collapsed tick beats several stacked, indistinguishable ones.
+ */
 export function eraTickIndices(
   months: string[],
 ): { index: number; label: string }[] {
-  return MARKET_ERAS.map((era) => ({
-    index: months.findIndex((m) => m.slice(0, 7) >= era.from),
-    label: era.label,
-  })).filter((tick) => tick.index >= 0);
+  const byIndex = new Map<number, string>();
+  for (const era of MARKET_ERAS) {
+    const index = months.findIndex((m) => m.slice(0, 7) >= era.from);
+    if (index >= 0) byIndex.set(index, era.label);
+  }
+  return [...byIndex.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([index, label]) => ({ index, label }));
 }

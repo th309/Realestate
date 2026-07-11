@@ -45,4 +45,15 @@ describe("eraTickIndices", () => {
     const ticks = eraTickIndices(months);
     expect(ticks).toHaveLength(1); // only the dot-com era falls in range
   });
+
+  it("collapses colliding eras at the same index, keeping the latest era's label", () => {
+    // Dot-com recession (2001-03) and Housing boom peak (2004-01) both
+    // precede the first month, so both resolve to index 0 — the truncated
+    // array must produce ONE tick there, not two stacked on top of each other.
+    const months = ["2007-11-30", "2007-12-31", "2008-01-31"];
+    const ticks = eraTickIndices(months);
+    const atIndexZero = ticks.filter((t) => t.index === 0);
+    expect(atIndexZero).toHaveLength(1);
+    expect(atIndexZero[0].label).toBe("Housing boom peak");
+  });
 });

@@ -55,6 +55,30 @@ describe("MomentumMapTimeline", () => {
     // months include the GFC start (2007-12) → at least one tick present
     expect(screen.getByTitle("Global financial crisis")).toBeTruthy();
   });
+
+  it("never renders a NaN% tick position for a single-month array", () => {
+    const onSeek = vi.fn();
+    const onTogglePlay = vi.fn();
+    const onFrameMsChange = vi.fn();
+    const { container } = render(
+      <MomentumMapTimeline
+        months={["2026-05-31"]}
+        currentFrame={0}
+        isPlaying={false}
+        frameMs={125}
+        size="hero"
+        onTogglePlay={onTogglePlay}
+        onSeek={onSeek}
+        onFrameMsChange={onFrameMsChange}
+      />,
+    );
+    const tickSpans =
+      container.querySelectorAll<HTMLSpanElement>("span[title]");
+    expect(tickSpans.length).toBeGreaterThan(0);
+    tickSpans.forEach((span) => {
+      expect(span.style.left).toMatch(/^\d+(\.\d+)?%$/);
+    });
+  });
 });
 
 describe("MomentumSummaryStrip", () => {
@@ -66,11 +90,20 @@ describe("MomentumSummaryStrip", () => {
       [30], // easing
     ];
     render(<MomentumSummaryStrip scores={scores} currentFrame={0} />);
-    const strip = screen.getByTestId("momentum-summary-strip");
-    expect(strip.textContent).toContain("25%"); // rising
-    expect(strip.textContent).toContain("50%"); // easing
-    expect(strip.textContent).toContain("Firming or rising momentum");
-    expect(strip.textContent).toContain("Steady, near state average");
-    expect(strip.textContent).toContain("Easing or weak momentum");
+    // Rising and steady both land on 25% here, so a flat toContain("25%")
+    // on the whole strip can't tell the tiles apart — scope each assertion
+    // to its own tile (label + percentage together).
+    const risingTile = screen
+      .getByText("Firming or rising momentum")
+      .closest("div");
+    const steadyTile = screen
+      .getByText("Steady, near state average")
+      .closest("div");
+    const easingTile = screen
+      .getByText("Easing or weak momentum")
+      .closest("div");
+    expect(risingTile?.textContent).toContain("25%");
+    expect(steadyTile?.textContent).toContain("25%");
+    expect(easingTile?.textContent).toContain("50%");
   });
 });

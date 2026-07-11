@@ -41,6 +41,9 @@ export function MomentumMapTimeline({
   if (months.length === 0) return null;
   const maxFrame = months.length - 1;
   const ticks = eraTickIndices(months);
+  // Guards tick left% only — a single-month array (maxFrame 0) must not
+  // divide by zero. The slider's own min/max stay 0..0, which is valid.
+  const tickDenominator = Math.max(1, maxFrame);
 
   return (
     <div className="mt-3 flex items-center gap-3">
@@ -63,7 +66,7 @@ export function MomentumMapTimeline({
               key={tick.label}
               title={tick.label}
               className="absolute h-2 w-[2px] rounded-full bg-outline"
-              style={{ left: `${(tick.index / maxFrame) * 100}%` }}
+              style={{ left: `${(tick.index / tickDenominator) * 100}%` }}
             />
           ))}
         </div>
