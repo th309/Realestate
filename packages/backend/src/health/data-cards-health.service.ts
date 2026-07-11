@@ -56,7 +56,6 @@ interface TableHealthInfo {
 @Injectable()
 export class DataCardsHealthService {
   private readonly logger = new Logger(DataCardsHealthService.name);
-  private tableHealthCache: Map<string, TableHealthInfo> = new Map();
 
   constructor(private readonly supabase: SupabaseService) {}
 
@@ -66,6 +65,10 @@ export class DataCardsHealthService {
     // Get unique tables to minimize database queries
     const tables = getUniqueTables();
 
+    // Per-call cache (a local, not an instance field) so concurrent
+    // data-summary requests never interleave writes into a shared Map.
+    const tableHealthCache = new Map<string, TableHealthInfo>();
+
     // Check each table's health once — in parallel. Each probe is an
     // independent latest-date + estimated-count query, so running them
     // concurrently turns the cost from sum-of-probes into slowest-probe.
@@ -73,10 +76,10 @@ export class DataCardsHealthService {
       tables.map(async (tableName) => {
         try {
           const health = await this.checkTableHealth(tableName);
-          this.tableHealthCache.set(tableName, health);
+          tableHealthCache.set(tableName, health);
         } catch (error) {
           this.logger.error(`Error checking table ${tableName}:`, error);
-          this.tableHealthCache.set(tableName, {
+          tableHealthCache.set(tableName, {
             latestDate: null,
             latestDateRaw: null,
             recordCount: 0,
@@ -89,7 +92,7 @@ export class DataCardsHealthService {
 
     // Check each metric using cached table health
     for (const metric of METRIC_DEFINITIONS) {
-      const tableHealth = this.tableHealthCache.get(metric.tableName);
+      const tableHealth = tableHealthCache.get(metric.tableName);
       const check = this.evaluateMetricHealth(metric, tableHealth);
       checks.push(check);
     }
