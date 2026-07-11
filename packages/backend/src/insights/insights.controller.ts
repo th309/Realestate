@@ -43,6 +43,7 @@ const VALID_INSIGHT_TYPES: readonly InsightType[] = [
   'market_overview',
   'archetype_match',
   'market_outlook',
+  'market_forecast',
 ];
 // Archetype ids are short slugs; bounding charset/length keeps arbitrary
 // strings out of the market_insights cache-key space (archetype_id is part

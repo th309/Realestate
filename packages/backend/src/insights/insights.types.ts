@@ -11,7 +11,8 @@ export type InsightType =
   | 'trend_interpretation'
   | 'market_overview'
   | 'archetype_match'
-  | 'market_outlook';
+  | 'market_outlook'
+  | 'market_forecast';
 
 export type GeoLevel = 'state' | 'metro' | 'county' | 'zip';
 
