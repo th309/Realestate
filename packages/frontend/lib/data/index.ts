@@ -270,6 +270,10 @@ export {
   useAiModelConfigs,
   useProviderPresets,
   useUpdateAiModelConfig,
+
+  // Score heatmap (Market Momentum Map widget)
+  useScoreHeatmap,
+  type UseScoreHeatmapResult,
 } from "./hooks";
 
 // ============================================================================
