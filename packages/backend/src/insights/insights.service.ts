@@ -55,7 +55,7 @@ const PROMPT_BUILDERS: Record<InsightType, (ctx: InsightContext) => string> = {
   // No-news fallback; the news-aware variant is built in generateSingleInsight.
   market_outlook: (ctx) => buildMarketOutlookPrompt(ctx),
   market_forecast: (ctx) =>
-    buildMarketForecastPrompt(ctx, forecastDisplayYear()),
+    buildMarketForecastPrompt(ctx, forecastDisplayYear(ctx.score_date)),
 };
 
 /**

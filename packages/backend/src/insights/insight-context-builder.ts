@@ -82,6 +82,7 @@ export async function buildInsightContext(
     ),
     region_id: regionId,
     geo_level: geo as InsightContext['geo_level'],
+    score_date: scoreResult?.score_date ?? null,
     scores,
     score_components: scoreComponents,
     key_metrics: keyMetrics,

@@ -5,6 +5,7 @@ const ctx: InsightContext = {
   region_name: 'Austin, TX',
   region_id: '12420',
   geo_level: 'metro',
+  score_date: '2026-08-31',
   scores: { propertyiq: 62, confidence_level: 'B' },
   score_components: {
     zhvi_yoy: { status: 'ok', value: 0.031 },

@@ -4,7 +4,9 @@ import { fetchScoreDistribution, fetchRankings } from "@/lib/data";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { forecastDisplayYear } from "@/lib/seo/forecast-year";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
+import type { MarketFaq } from "@/app/markets/components/build-market-faqs";
 import { DistributionSummary } from "./components/DistributionSummary";
+import { distributionPhrase } from "./components/distribution-phrase";
 import { ForecastMarketIndex } from "./components/ForecastMarketIndex";
 
 export const revalidate = 86400;
@@ -55,20 +57,30 @@ export default async function ForecastHubPage() {
     score: number;
   }>;
 
-  const faqs = [
+  const phrase = distribution
+    ? distributionPhrase(distribution.buckets, distribution.total)
+    : "a market moving unevenly, not in one direction";
+
+  const faqs: MarketFaq[] = [
     {
       question: `Will home prices crash in ${year}?`,
-      answer: `No single national answer is honest — housing is local. The live data shows a market cooling unevenly: some metros have weak demand momentum while others are still firming. PropertyIQ tracks the demand signals that historically move before prices (price momentum, days on market, price cuts) across every scored metro, each with a confidence grade. Check your market's forecast page for its specific momentum reading.`,
+      answer: `No single national answer is honest — housing is local. The live data shows ${phrase}: some metros have weak demand momentum while others are still firming. PropertyIQ tracks the demand signals that historically move before prices (price momentum, days on market, price cuts) across every scored metro, each with a confidence grade. Check your market's forecast page for its specific momentum reading.`,
     },
     {
       question: "How does PropertyIQ build these forecasts?",
       answer: `Each market gets a PropertyIQ Score from four measured inputs: 12-month price momentum, 3-month price momentum, median days on market, and the share of listings with price cuts. Scores are calibrated so 50 equals the market's state average, refreshed monthly, and each carries an A-F confidence grade for data quality. PropertyIQ never publishes specific price predictions.`,
     },
-    {
+  ];
+
+  // Only include the "cooling fastest" FAQ when there are actual bottom-ranked
+  // metros to name — an empty rankings fetch would otherwise interpolate to
+  // "...are ." (empty join).
+  if (bottomLinks.length > 0) {
+    faqs.push({
       question: "Which housing markets are cooling fastest?",
       answer: `The lowest-scoring metros right now are ${bottomLinks.map((m) => m.shortName).join(", ")}. A low score means weak demand momentum — days on market stretching and price cuts spreading — not a verdict that a market is bad.`,
-    },
-  ];
+    });
+  }
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
