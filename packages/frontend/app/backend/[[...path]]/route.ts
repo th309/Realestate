@@ -26,9 +26,13 @@
  * per-request Supabase session refresh.
  */
 
+import { gzipSync } from "node:zlib";
+
 import { NextRequest, NextResponse } from "next/server";
 
 import { resolveBackendOrigin } from "@/lib/data/fetchers/api-url";
+
+import { shouldCompressProxyResponse } from "./proxy-compression";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +123,23 @@ async function proxy(request: NextRequest, pathSegments: string[] | undefined) {
   // Everything else: buffer fully so the response is always complete
   // (correct Content-Length, no chunked-stream truncation).
   const body = await upstream.arrayBuffer();
+
+  if (
+    shouldCompressProxyResponse(
+      contentType,
+      request.headers.get("accept-encoding"),
+      body.byteLength,
+    )
+  ) {
+    const compressed = gzipSync(Buffer.from(body));
+    headers.set("content-encoding", "gzip");
+    headers.append("vary", "accept-encoding");
+    return new NextResponse(compressed, {
+      status: upstream.status,
+      headers,
+    });
+  }
+
   return new NextResponse(body, { status: upstream.status, headers });
 }
 
