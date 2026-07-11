@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AncestorChain } from "@/lib/data/market-hierarchy";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
 
 const BASE_URL = "https://www.propertyiq.app";
 
@@ -88,8 +89,9 @@ export function MarketBreadcrumbs({
       </nav>
       <script
         type="application/ld+json"
-        // Safe: JSON.stringify of a server-built object with no user input
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        // Crumb names are data-sourced (geo names, currentName prop); escape via
+        // safeJsonLdString to prevent a literal "</script>" from breaking out of the tag.
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLd) }}
       />
     </>
   );
