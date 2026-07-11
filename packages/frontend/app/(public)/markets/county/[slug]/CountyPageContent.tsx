@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
-import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { ScoreGaugeWidget } from "@/app/components/scoring/ScoreGaugeWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
@@ -67,11 +67,8 @@ export function CountyPageContent({
       </div>
 
       {/* Score */}
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold text-on-surface mb-4">
-          PropertyIQ Score
-        </h2>
-        <ScoreWidget
+      <section className="mb-10 flex justify-center">
+        <ScoreGaugeWidget
           geographyType="county"
           geographyId={county.fips}
           scoreType="propertyiq"

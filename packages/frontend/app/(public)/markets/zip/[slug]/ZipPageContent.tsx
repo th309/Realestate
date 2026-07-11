@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
-import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { ScoreGaugeWidget } from "@/app/components/scoring/ScoreGaugeWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
@@ -84,11 +84,8 @@ export function ZipPageContent({
       </div>
 
       {/* Score */}
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold text-on-surface mb-4">
-          PropertyIQ Score
-        </h2>
-        <ScoreWidget
+      <section className="mb-10 flex justify-center">
+        <ScoreGaugeWidget
           geographyType="zip"
           geographyId={zip.zip}
           scoreType="propertyiq"

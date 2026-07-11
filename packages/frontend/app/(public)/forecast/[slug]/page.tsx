@@ -20,25 +20,7 @@ import { ForecastNarrativeSection } from "../components/ForecastNarrativeSection
 import { MomentumSignalsSection } from "../components/MomentumSignalsSection";
 import { ForecastCrossLinks } from "../components/ForecastCrossLinks";
 import { ScoreGaugeRing } from "@/app/components/scoring/ScoreGaugeRing";
-
-/**
- * Confidence pill tonal colors by data-quality level. A/B are healthy (accent
- * green), C is a notable-gaps warning (amber), F is insufficient (error red) —
- * matching CLAUDE.md §9 confidence semantics. Semantic tokens keep dark mode
- * correct. Mirrors MarketRail's confidencePillClass (layout branch) so the
- * forecast hero and market-detail rail share one visual vocabulary.
- */
-function confidencePillClass(level: string): string {
-  switch (level?.toLowerCase()) {
-    case "a":
-    case "b":
-      return "bg-tertiary-container text-on-tertiary-container";
-    case "c":
-      return "bg-warning-container text-on-warning-container";
-    default:
-      return "bg-error-container text-on-error-container";
-  }
-}
+import { confidencePillClass } from "@/app/components/scoring/confidence-pill";
 
 export function generateStaticParams() {
   return METRO_SLUG_DATA.slice(0, 150).map((metro) => ({ slug: metro.slug }));

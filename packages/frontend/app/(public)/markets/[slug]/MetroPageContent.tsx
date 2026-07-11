@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
-import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { ScoreGaugeWidget } from "@/app/components/scoring/ScoreGaugeWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
 import { MarketOverviewSection } from "./MarketOverviewSection";
 import { LeadMagnetModal } from "./components/LeadMagnetModal";
@@ -81,16 +81,11 @@ export function MetroPageContent({
           PropertyIQ Scores
         </h2>
         <div className="flex justify-center">
-          <div className="flex flex-col items-center gap-2">
-            <ScoreWidget
-              geographyType="metro"
-              geographyId={metro.cbsaCode}
-              scoreType="propertyiq"
-            />
-            <span className="text-sm font-medium text-on-surface">
-              PropertyIQ Score
-            </span>
-          </div>
+          <ScoreGaugeWidget
+            geographyType="metro"
+            geographyId={metro.cbsaCode}
+            scoreType="propertyiq"
+          />
         </div>
       </section>
 
