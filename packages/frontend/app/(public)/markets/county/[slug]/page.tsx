@@ -14,6 +14,15 @@ import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
 import { buildMarketFaqs } from "@/app/markets/components/build-market-faqs";
+import {
+  MarketRelatedLinks,
+  buildLinkGroup,
+} from "@/app/markets/components/MarketRelatedLinks";
+import {
+  getAncestorChainForCounty,
+  getZipsForCounty,
+  MARKET_LINKS_DISPLAY_CAP,
+} from "@/lib/data/market-hierarchy";
 import { CountyPageContent } from "./CountyPageContent";
 import { generateCountySeoContent } from "./generate-seo-content";
 
@@ -94,6 +103,8 @@ export default async function CountyPage({
     ? CBSA_TO_METRO.get(county.cbsaCode)
     : null;
 
+  const chain = getAncestorChainForCounty(county);
+
   // Neighboring counties in the same state, ranked by PropertyIQ score.
   const countyRank = await fetchRankings("propertyiq", "county", {
     state: county.state,
@@ -110,31 +121,6 @@ export default async function CountyPage({
         (c) => c.state === county.state && c.fips !== county.fips,
       ).slice(0, 6);
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: "https://www.propertyiq.app",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Markets",
-        item: "https://www.propertyiq.app/markets",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: county.shortName,
-        item: `https://www.propertyiq.app/markets/county/${county.slug}`,
-      },
-    ],
-  };
-
   const stats = await fetchSeoMarketStats("county", county.fips, county.state);
   const seoContent = generateCountySeoContent(county, stats);
 
@@ -145,18 +131,36 @@ export default async function CountyPage({
   const ogImageUrl = `https://www.propertyiq.app${ogImagePath}`;
   const ogImageAlt = `${county.shortName} housing market snapshot from PropertyIQ — median home price, year-over-year appreciation, median days on market, and PropertyIQ demand score.`;
 
+  // Down-link: every ZIP in this county, capped with a "view all" link.
+  const zips = getZipsForCounty(county.fips);
+  const linkGroups = [
+    buildLinkGroup(
+      `ZIP codes in ${county.shortName}`,
+      zips.map((z) => ({
+        key: z.zip,
+        label: z.zip,
+        href: `/markets/zip/${z.slug}`,
+      })),
+      MARKET_LINKS_DISPLAY_CAP,
+      `/markets/county/${county.slug}/zips`,
+    ),
+    {
+      label: `Other ${county.state} Counties`,
+      links: nearbyCounties.map((c) => ({
+        key: c.fips,
+        label: c.shortName,
+        href: `/markets/county/${c.slug}`,
+      })),
+    },
+  ];
+
   return (
     <>
-      {/* Breadcrumb structured data - server-generated from trusted county data */}
-      <script
-        type="application/ld+json"
-        // Safe: JSON.stringify of a server-built object with no user input
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
       <CountyPageContent
         county={county}
         parentMetroSlug={parentMetro?.slug ?? null}
         parentMetroName={parentMetro?.shortName ?? null}
+        chain={chain}
       />
 
       {stats && <MarketStatsBlock data={stats} geoName={county.shortName} />}
@@ -239,25 +243,7 @@ export default async function CountyPage({
           <p>{seoContent.closing}</p>
         </div>
 
-        {/* Nearby counties for internal linking */}
-        {nearbyCounties.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-base font-medium text-on-surface mb-3">
-              Other {county.state} Counties
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {nearbyCounties.map((c) => (
-                <Link
-                  key={c.fips}
-                  href={`/markets/county/${c.slug}`}
-                  className="text-sm text-primary hover:text-primary/80 underline underline-offset-4"
-                >
-                  {c.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        <MarketRelatedLinks groups={linkGroups} />
 
         {parentMetro && (
           <p className="mt-6 text-sm text-on-surface-variant">

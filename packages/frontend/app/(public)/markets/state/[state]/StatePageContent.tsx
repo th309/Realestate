@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { StateSlugEntry } from "@/lib/data/state-slug-data";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
 import type { CountySlugEntry } from "@/lib/data/county-slugs";
+import { MarketBreadcrumbs } from "../../components/MarketBreadcrumbs";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface StatePageContentProps {
@@ -24,21 +25,11 @@ export function StatePageContent({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <nav
-        className="text-sm text-on-surface-variant mb-6"
-        aria-label="Breadcrumb"
-      >
-        <Link href="/" className="hover:text-primary">
-          Home
-        </Link>
-        <span className="mx-2">/</span>
-        <Link href="/markets" className="hover:text-primary">
-          Markets
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-on-surface font-medium">{state.name}</span>
-      </nav>
+      <MarketBreadcrumbs
+        chain={{ state: null, metro: null, county: null }}
+        currentName={state.name}
+        currentHref={`/markets/state/${state.slug}`}
+      />
 
       {/* H1 */}
       <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3">

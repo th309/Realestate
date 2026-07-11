@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
+import type { AncestorChain } from "@/lib/data/market-hierarchy";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { PersonaCaptureBlock } from "@/app/markets/components/PersonaCaptureBlock";
+import { MarketBreadcrumbs } from "@/app/markets/components/MarketBreadcrumbs";
 import MarketReportCTA from "../../components/MarketReportCTA";
 
 interface ZipPageContentProps {
@@ -12,6 +14,7 @@ interface ZipPageContentProps {
   parentMetroName: string | null;
   parentCountySlug: string | null;
   parentCountyName: string | null;
+  chain: AncestorChain;
 }
 
 export function ZipPageContent({
@@ -20,24 +23,15 @@ export function ZipPageContent({
   parentMetroName,
   parentCountySlug,
   parentCountyName,
+  chain,
 }: ZipPageContentProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <nav
-        className="text-sm text-on-surface-variant mb-6"
-        aria-label="Breadcrumb"
-      >
-        <Link href="/" className="hover:text-primary">
-          Home
-        </Link>
-        <span className="mx-2">/</span>
-        <Link href="/markets" className="hover:text-primary">
-          Markets
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-on-surface font-medium">{zip.shortName}</span>
-      </nav>
+      <MarketBreadcrumbs
+        chain={chain}
+        currentName={zip.shortName}
+        currentHref={`/markets/zip/${zip.slug}`}
+      />
 
       {/* H1 */}
       <h1 className="text-3xl md:text-4xl font-bold text-on-surface mb-3">
