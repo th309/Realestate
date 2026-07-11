@@ -121,6 +121,13 @@ export {
 // re-exported through `./fetchers/index.ts`.
 export * from "./fetchers";
 
+// Score distribution (momentum-band histogram, powers the /forecast hub)
+export {
+  fetchScoreDistribution,
+  type ScoreDistributionData,
+  type ScoreDistributionBucket,
+} from "./fetchers/score-distribution";
+
 // NOTE: `API_URL` is already part of this public API via the export chain
 // (./fetchers → _groups/core → base → api-url). Browser code MUST import it
 // from "@/lib/data" — it resolves to the same-origin `/backend` proxy so ad
