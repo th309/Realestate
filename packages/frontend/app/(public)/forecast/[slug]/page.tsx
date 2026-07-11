@@ -19,7 +19,8 @@ import { buildForecastFaqs } from "../components/build-forecast-faqs";
 import { ForecastNarrativeSection } from "../components/ForecastNarrativeSection";
 import { MomentumSignalsSection } from "../components/MomentumSignalsSection";
 import { ForecastCrossLinks } from "../components/ForecastCrossLinks";
-import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { ScoreRing } from "@/app/components/scoring/ScoreRing";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
 
 export function generateStaticParams() {
   return METRO_SLUG_DATA.slice(0, 150).map((metro) => ({ slug: metro.slug }));
@@ -95,6 +96,14 @@ export default async function ForecastMetroPage({
     stats?.latestDate ?? scoreData?.score_date ?? null,
   );
 
+  // Server-data-driven hero score: prefer the SEO stats assembler (reads the
+  // score's own stored fields), fall back to the raw score fetch. Both are
+  // already fetched above — no client-side fetch needed for the hero.
+  const heroScore =
+    stats?.score ?? scoreData?.scores?.propertyiq?.score ?? null;
+  const heroConfidenceGrade =
+    stats?.grade ?? scoreData?.scores?.propertyiq?.confidence_level ?? null;
+
   const metroBySlug = new Map(METRO_SLUG_DATA.map((m) => [m.cbsaCode, m]));
   const relatedMetros = metroRank
     .filter((r) => r.id !== metro.cbsaCode && metroBySlug.has(r.id))
@@ -141,15 +150,21 @@ export default async function ForecastMetroPage({
           demand score, days on market, and price-cut trends — refreshed
           monthly, with a confidence grade. No speculation, no price targets.
         </p>
-        <div className="mt-6">
-          <ScoreWidget
-            geographyType="metro"
-            geographyId={metro.cbsaCode}
-            scoreType="propertyiq"
-            size={120}
-            showConfidence
-          />
-        </div>
+        {heroScore !== null && (
+          <div className="mt-6 flex items-center gap-4">
+            <ScoreRing score={heroScore} size="lg" />
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-on-surface">
+                {getScoreLabel(heroScore)}
+              </p>
+              {heroConfidenceGrade && (
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Confidence {heroConfidenceGrade}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <ForecastNarrativeSection
