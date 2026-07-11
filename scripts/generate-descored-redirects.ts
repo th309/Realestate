@@ -164,6 +164,13 @@ async function main(): Promise<void> {
           destination,
           permanent: false,
         });
+        // Forecast pages share the metro slug set; a de-scored metro's
+        // forecast page falls back to the national hub (no forecast ancestor).
+        allRedirects.push({
+          source: `/forecast/${oldEntry.slug}`,
+          destination: "/forecast",
+          permanent: false,
+        });
         count++;
       }
     }

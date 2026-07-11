@@ -1,0 +1,752 @@
+[
+  {
+    "source": "/blog/2026-04-11-boise-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/2026-04-11-las-vegas-real-estate-market-2026",
+    "destination": "/forecast/las-vegas-henderson-north-las-vegas-nv",
+    "permanent": true
+  },
+  {
+    "source": "/blog/2026-04-11-norwich-ct-real-estate-market-2026",
+    "destination": "/forecast/norwich-new-london-willimantic-ct",
+    "permanent": true
+  },
+  {
+    "source": "/blog/akron-ohio-real-estate-market-2026",
+    "destination": "/forecast/akron-oh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/albany-ny-real-estate-market-2026",
+    "destination": "/forecast/albany-schenectady-troy-ny",
+    "permanent": true
+  },
+  {
+    "source": "/blog/albuquerque-nm-real-estate-market-2026",
+    "destination": "/forecast/albuquerque-nm",
+    "permanent": true
+  },
+  {
+    "source": "/blog/allentown-pa-real-estate-market-2026",
+    "destination": "/forecast/allentown-bethlehem-easton-pa-nj",
+    "permanent": true
+  },
+  {
+    "source": "/blog/amarillo-tx-real-estate-market-2026",
+    "destination": "/forecast/amarillo-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/ann-arbor-mi-real-estate-market-2026",
+    "destination": "/forecast/ann-arbor-mi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/asheville-nc-real-estate-market-2026",
+    "destination": "/forecast/asheville-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/atlanta-real-estate-market-2026",
+    "destination": "/forecast/atlanta-sandy-springs-roswell-ga",
+    "permanent": true
+  },
+  {
+    "source": "/blog/augusta-ga-real-estate-market-2026",
+    "destination": "/forecast/augusta-richmond-county-ga-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/austin-real-estate-market-2026",
+    "destination": "/forecast/austin-round-rock-san-marcos-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/bakersfield-ca-real-estate-market-2026",
+    "destination": "/forecast/bakersfield-delano-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/baltimore-real-estate-market-2026",
+    "destination": "/forecast/baltimore-columbia-towson-md",
+    "permanent": true
+  },
+  {
+    "source": "/blog/baton-rouge-louisiana-real-estate-market-2026",
+    "destination": "/forecast/baton-rouge-la",
+    "permanent": true
+  },
+  {
+    "source": "/blog/bend-or-real-estate-market-2026",
+    "destination": "/forecast/bend-or",
+    "permanent": true
+  },
+  {
+    "source": "/blog/billings-mt-real-estate-market-2026",
+    "destination": "/forecast/billings-mt",
+    "permanent": true
+  },
+  {
+    "source": "/blog/birmingham-al-real-estate-market-2026",
+    "destination": "/forecast/birmingham-al",
+    "permanent": true
+  },
+  {
+    "source": "/blog/boise-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/boston-real-estate-market-2026",
+    "destination": "/forecast/boston-cambridge-newton-ma-nh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/bozeman-mt-real-estate-market-2026",
+    "destination": "/forecast/bozeman-mt",
+    "permanent": true
+  },
+  {
+    "source": "/blog/bridgeport-ct-real-estate-market-2026",
+    "destination": "/forecast/bridgeport-stamford-danbury-ct",
+    "permanent": true
+  },
+  {
+    "source": "/blog/buffalo-ny-real-estate-market-2026",
+    "destination": "/forecast/buffalo-cheektowaga-ny",
+    "permanent": true
+  },
+  {
+    "source": "/blog/cape-coral-fl-real-estate-market-2026",
+    "destination": "/forecast/cape-coral-fort-myers-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/cedar-rapids-ia-real-estate-market-2026",
+    "destination": "/forecast/cedar-rapids-ia",
+    "permanent": true
+  },
+  {
+    "source": "/blog/charleston-sc-real-estate-market-2026",
+    "destination": "/forecast/charleston-north-charleston-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/charlotte-real-estate-market-2026",
+    "destination": "/forecast/charlotte-concord-gastonia-nc-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/chattanooga-tn-real-estate-market-2026",
+    "destination": "/forecast/chattanooga-tn-ga",
+    "permanent": true
+  },
+  {
+    "source": "/blog/chicago-real-estate-market-2026",
+    "destination": "/forecast/chicago-naperville-elgin-il-in",
+    "permanent": true
+  },
+  {
+    "source": "/blog/cincinnati-real-estate-market-2026",
+    "destination": "/forecast/cincinnati-oh-ky-in",
+    "permanent": true
+  },
+  {
+    "source": "/blog/clarksville-tn-real-estate-market-2026",
+    "destination": "/forecast/clarksville-tn-ky",
+    "permanent": true
+  },
+  {
+    "source": "/blog/cleveland-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/colorado-springs-co-real-estate-market-2026",
+    "destination": "/forecast/colorado-springs-co",
+    "permanent": true
+  },
+  {
+    "source": "/blog/colorado-springs-real-estate-market-2026",
+    "destination": "/forecast/colorado-springs-co",
+    "permanent": true
+  },
+  {
+    "source": "/blog/columbia-sc-real-estate-market-2026",
+    "destination": "/forecast/columbia-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/columbus-ohio-real-estate-market-2026",
+    "destination": "/forecast/columbus-oh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/corpus-christi-tx-real-estate-market-2026",
+    "destination": "/forecast/corpus-christi-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/dallas-fort-worth-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/dayton-ohio-real-estate-market-2026",
+    "destination": "/forecast/dayton-kettering-beavercreek-oh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/denver-real-estate-market-2026",
+    "destination": "/forecast/denver-aurora-centennial-co",
+    "permanent": true
+  },
+  {
+    "source": "/blog/des-moines-ia-real-estate-market-2026",
+    "destination": "/forecast/des-moines-west-des-moines-ia",
+    "permanent": true
+  },
+  {
+    "source": "/blog/detroit-real-estate-market-2026",
+    "destination": "/forecast/detroit-warren-dearborn-mi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/durham-nc-real-estate-market-2026",
+    "destination": "/forecast/durham-chapel-hill-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/el-paso-tx-real-estate-market-2026",
+    "destination": "/forecast/el-paso-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/eugene-or-real-estate-market-2026",
+    "destination": "/forecast/eugene-springfield-or",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fargo-nd-real-estate-market-2026",
+    "destination": "/forecast/fargo-nd-mn",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fayetteville-ar-real-estate-market-2026",
+    "destination": "/forecast/fayetteville-springdale-rogers-ar",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fort-collins-co-real-estate-market-2026",
+    "destination": "/forecast/fort-collins-loveland-co",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fort-lauderdale-fl-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fort-wayne-indiana-real-estate-market-2026",
+    "destination": "/forecast/fort-wayne-in",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fort-worth-tx-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/fresno-ca-real-estate-market-2026",
+    "destination": "/forecast/fresno-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/gainesville-fl-real-estate-market-2026",
+    "destination": "/forecast/gainesville-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/grand-rapids-mi-real-estate-market-2026",
+    "destination": "/forecast/grand-rapids-wyoming-kentwood-mi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/green-bay-wi-real-estate-market-2026",
+    "destination": "/forecast/green-bay-wi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/greensboro-nc-real-estate-market-2026",
+    "destination": "/forecast/greensboro-high-point-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/greenville-sc-real-estate-market-2026",
+    "destination": "/forecast/greenville-anderson-greer-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/harrisburg-pa-real-estate-market-2026",
+    "destination": "/forecast/harrisburg-carlisle-pa",
+    "permanent": true
+  },
+  {
+    "source": "/blog/hartford-ct-real-estate-market-2026",
+    "destination": "/forecast/hartford-west-hartford-east-hartford-ct",
+    "permanent": true
+  },
+  {
+    "source": "/blog/housing-market-forecast-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/houston-real-estate-market-2026",
+    "destination": "/forecast/houston-pasadena-the-woodlands-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/huntsville-al-real-estate-market-2026",
+    "destination": "/forecast/huntsville-al",
+    "permanent": true
+  },
+  {
+    "source": "/blog/indianapolis-real-estate-market-2026",
+    "destination": "/forecast/indianapolis-carmel-greenwood-in",
+    "permanent": true
+  },
+  {
+    "source": "/blog/jackson-ms-real-estate-market-2026",
+    "destination": "/forecast/jackson-ms",
+    "permanent": true
+  },
+  {
+    "source": "/blog/jacksonville-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/jersey-city-nj-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/kansas-city-real-estate-market-2026",
+    "destination": "/forecast/kansas-city-mo-ks",
+    "permanent": true
+  },
+  {
+    "source": "/blog/knoxville-tn-real-estate-market-2026",
+    "destination": "/forecast/knoxville-tn",
+    "permanent": true
+  },
+  {
+    "source": "/blog/lakeland-fl-real-estate-market-2026",
+    "destination": "/forecast/lakeland-winter-haven-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/lansing-mi-real-estate-market-2026",
+    "destination": "/forecast/lansing-east-lansing-mi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/las-vegas-real-estate-market-2026",
+    "destination": "/forecast/las-vegas-henderson-north-las-vegas-nv",
+    "permanent": true
+  },
+  {
+    "source": "/blog/lexington-ky-real-estate-market-2026",
+    "destination": "/forecast/lexington-fayette-ky",
+    "permanent": true
+  },
+  {
+    "source": "/blog/lincoln-ne-real-estate-market-2026",
+    "destination": "/forecast/lincoln-ne",
+    "permanent": true
+  },
+  {
+    "source": "/blog/little-rock-ar-real-estate-market-2026",
+    "destination": "/forecast/little-rock-north-little-rock-conway-ar",
+    "permanent": true
+  },
+  {
+    "source": "/blog/los-angeles-real-estate-market-2026",
+    "destination": "/forecast/los-angeles-long-beach-anaheim-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/louisville-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/lubbock-tx-real-estate-market-2026",
+    "destination": "/forecast/lubbock-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/madison-wi-real-estate-market-2026",
+    "destination": "/forecast/madison-wi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/manchester-nh-real-estate-market-2026",
+    "destination": "/forecast/manchester-nashua-nh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/mcallen-tx-real-estate-market-2026",
+    "destination": "/forecast/mcallen-edinburg-mission-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/memphis-real-estate-market-2026",
+    "destination": "/forecast/memphis-tn-ms-ar",
+    "permanent": true
+  },
+  {
+    "source": "/blog/miami-real-estate-market-2026",
+    "destination": "/forecast/miami-fort-lauderdale-west-palm-beach-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/milwaukee-wi-real-estate-market-2026",
+    "destination": "/forecast/milwaukee-waukesha-wi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/minneapolis-real-estate-market-2026",
+    "destination": "/forecast/minneapolis-st-paul-bloomington-mn-wi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/missoula-mt-real-estate-market-2026",
+    "destination": "/forecast/missoula-mt",
+    "permanent": true
+  },
+  {
+    "source": "/blog/mobile-al-real-estate-market-2026",
+    "destination": "/forecast/mobile-al",
+    "permanent": true
+  },
+  {
+    "source": "/blog/modesto-ca-real-estate-market-2026",
+    "destination": "/forecast/modesto-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/myrtle-beach-sc-real-estate-market-2026",
+    "destination": "/forecast/myrtle-beach-conway-north-myrtle-beach-sc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/nashville-real-estate-market-2026",
+    "destination": "/forecast/nashville-davidson-murfreesboro-franklin-tn",
+    "permanent": true
+  },
+  {
+    "source": "/blog/new-haven-ct-real-estate-market-2026",
+    "destination": "/forecast/new-haven-ct",
+    "permanent": true
+  },
+  {
+    "source": "/blog/new-orleans-real-estate-market-2026",
+    "destination": "/forecast/new-orleans-metairie-la",
+    "permanent": true
+  },
+  {
+    "source": "/blog/new-york-city-real-estate-market-2026",
+    "destination": "/forecast/new-york-newark-jersey-city-ny-nj",
+    "permanent": true
+  },
+  {
+    "source": "/blog/newark-nj-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/oakland-ca-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/ocala-fl-real-estate-market-2026",
+    "destination": "/forecast/ocala-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/ogden-ut-real-estate-market-2026",
+    "destination": "/forecast/ogden-ut",
+    "permanent": true
+  },
+  {
+    "source": "/blog/ohio-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/oklahoma-city-real-estate-market-2026",
+    "destination": "/forecast/oklahoma-city-ok",
+    "permanent": true
+  },
+  {
+    "source": "/blog/omaha-ne-real-estate-market-2026",
+    "destination": "/forecast/omaha-ne-ia",
+    "permanent": true
+  },
+  {
+    "source": "/blog/orlando-fl-real-estate-market-2026",
+    "destination": "/forecast/orlando-kissimmee-sanford-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/pensacola-fl-real-estate-market-2026",
+    "destination": "/forecast/pensacola-ferry-pass-brent-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/peoria-il-real-estate-market-2026",
+    "destination": "/forecast/peoria-il",
+    "permanent": true
+  },
+  {
+    "source": "/blog/philadelphia-real-estate-market-2026",
+    "destination": "/forecast/philadelphia-camden-wilmington-pa-nj-de-md",
+    "permanent": true
+  },
+  {
+    "source": "/blog/phoenix-real-estate-market-2026",
+    "destination": "/forecast/phoenix-mesa-chandler-az",
+    "permanent": true
+  },
+  {
+    "source": "/blog/pittsburgh-real-estate-market-2026",
+    "destination": "/forecast/pittsburgh-pa",
+    "permanent": true
+  },
+  {
+    "source": "/blog/port-st-lucie-fl-real-estate-market-2026",
+    "destination": "/forecast/port-st-lucie-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/portland-real-estate-market-2026",
+    "destination": "/forecast/portland-vancouver-hillsboro-or-wa",
+    "permanent": true
+  },
+  {
+    "source": "/blog/providence-ri-real-estate-market-2026",
+    "destination": "/forecast/providence-warwick-ri-ma",
+    "permanent": true
+  },
+  {
+    "source": "/blog/provo-ut-real-estate-market-2026",
+    "destination": "/forecast/provo-orem-lehi-ut",
+    "permanent": true
+  },
+  {
+    "source": "/blog/raleigh-real-estate-market-2026",
+    "destination": "/forecast/raleigh-cary-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/reno-nv-real-estate-market-2026",
+    "destination": "/forecast/reno-nv",
+    "permanent": true
+  },
+  {
+    "source": "/blog/richmond-va-real-estate-market-2026",
+    "destination": "/forecast/richmond-va",
+    "permanent": true
+  },
+  {
+    "source": "/blog/riverside-ca-real-estate-market-2026",
+    "destination": "/forecast/riverside-san-bernardino-ontario-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/rochester-ny-real-estate-market-2026",
+    "destination": "/forecast/rochester-ny",
+    "permanent": true
+  },
+  {
+    "source": "/blog/sacramento-real-estate-market-2026",
+    "destination": "/forecast/sacramento-roseville-folsom-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/salt-lake-city-real-estate-market-2026",
+    "destination": "/forecast/salt-lake-city-murray-ut",
+    "permanent": true
+  },
+  {
+    "source": "/blog/san-antonio-real-estate-market-2026",
+    "destination": "/forecast/san-antonio-new-braunfels-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/san-diego-real-estate-market-2026",
+    "destination": "/forecast/san-diego-chula-vista-carlsbad-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/san-francisco-real-estate-market-2026",
+    "destination": "/forecast/san-francisco-oakland-fremont-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/san-jose-ca-real-estate-market-2026",
+    "destination": "/forecast/san-jose-sunnyvale-santa-clara-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/sarasota-fl-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/savannah-ga-real-estate-market-2026",
+    "destination": "/forecast/savannah-ga",
+    "permanent": true
+  },
+  {
+    "source": "/blog/scottsdale-az-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/seattle-real-estate-market-2026",
+    "destination": "/forecast/seattle-tacoma-bellevue-wa",
+    "permanent": true
+  },
+  {
+    "source": "/blog/shreveport-la-real-estate-market-2026",
+    "destination": "/forecast/shreveport-bossier-city-la",
+    "permanent": true
+  },
+  {
+    "source": "/blog/sioux-falls-sd-real-estate-market-2026",
+    "destination": "/forecast/sioux-falls-sd-mn",
+    "permanent": true
+  },
+  {
+    "source": "/blog/south-bend-in-real-estate-market-2026",
+    "destination": "/forecast/south-bend-mishawaka-in-mi",
+    "permanent": true
+  },
+  {
+    "source": "/blog/spokane-wa-real-estate-market-2026",
+    "destination": "/forecast/spokane-spokane-valley-wa",
+    "permanent": true
+  },
+  {
+    "source": "/blog/springfield-ma-real-estate-market-2026",
+    "destination": "/forecast/springfield-ma",
+    "permanent": true
+  },
+  {
+    "source": "/blog/springfield-mo-real-estate-market-2026",
+    "destination": "/forecast/springfield-mo",
+    "permanent": true
+  },
+  {
+    "source": "/blog/st-louis-real-estate-market-2026",
+    "destination": "/forecast/st-louis-mo-il",
+    "permanent": true
+  },
+  {
+    "source": "/blog/stockton-ca-real-estate-market-2026",
+    "destination": "/forecast/stockton-lodi-ca",
+    "permanent": true
+  },
+  {
+    "source": "/blog/syracuse-ny-real-estate-market-2026",
+    "destination": "/forecast/syracuse-ny",
+    "permanent": true
+  },
+  {
+    "source": "/blog/tacoma-wa-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/tallahassee-fl-real-estate-market-2026",
+    "destination": "/forecast/tallahassee-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/tampa-real-estate-market-2026",
+    "destination": "/forecast/tampa-st-petersburg-clearwater-fl",
+    "permanent": true
+  },
+  {
+    "source": "/blog/texas-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/toledo-oh-real-estate-market-2026",
+    "destination": "/forecast/toledo-oh",
+    "permanent": true
+  },
+  {
+    "source": "/blog/tucson-az-real-estate-market-2026",
+    "destination": "/forecast/tucson-az",
+    "permanent": true
+  },
+  {
+    "source": "/blog/tulsa-real-estate-market-2026",
+    "destination": "/forecast/tulsa-ok",
+    "permanent": true
+  },
+  {
+    "source": "/blog/virginia-beach-va-real-estate-market-2026",
+    "destination": "/forecast/virginia-beach-chesapeake-norfolk-va-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/waco-tx-real-estate-market-2026",
+    "destination": "/forecast/waco-tx",
+    "permanent": true
+  },
+  {
+    "source": "/blog/washington-dc-real-estate-market-2026",
+    "destination": "/forecast/washington-arlington-alexandria-dc-va-md-wv",
+    "permanent": true
+  },
+  {
+    "source": "/blog/west-palm-beach-fl-real-estate-market-2026",
+    "destination": "/forecast",
+    "permanent": true
+  },
+  {
+    "source": "/blog/wichita-ks-real-estate-market-2026",
+    "destination": "/forecast/wichita-ks",
+    "permanent": true
+  },
+  {
+    "source": "/blog/wilmington-nc-real-estate-market-2026",
+    "destination": "/forecast/wilmington-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/winston-salem-nc-real-estate-market-2026",
+    "destination": "/forecast/winston-salem-nc",
+    "permanent": true
+  },
+  {
+    "source": "/blog/worcester-ma-real-estate-market-2026",
+    "destination": "/forecast/worcester-ma",
+    "permanent": true
+  },
+  {
+    "source": "/blog/youngstown-oh-real-estate-market-2026",
+    "destination": "/forecast/youngstown-warren-oh",
+    "permanent": true
+  }
+]
