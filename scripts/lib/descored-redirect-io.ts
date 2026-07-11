@@ -65,7 +65,10 @@ export function pushTempRedirects(
 // Slug-data readers
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(__dirname, "../../packages/frontend/lib/data");
+export const DATA_DIR = path.join(
+  __dirname,
+  "../../packages/frontend/lib/data",
+);
 
 export function readCurrentJson<T>(filename: string): T[] {
   const fullPath = path.join(DATA_DIR, filename);

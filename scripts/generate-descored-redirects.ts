@@ -14,6 +14,7 @@ import {
 import { fetchScoredByPeriod } from "./lib/scored-set-client";
 import {
   buildStateSlugMap,
+  DATA_DIR,
   pushTempRedirects,
   readCurrentJson,
   readHeadJson,
