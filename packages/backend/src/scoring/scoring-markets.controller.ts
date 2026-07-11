@@ -23,7 +23,7 @@ import {
   validateGeography,
   validateScoreType,
 } from './scoring-request.helpers';
-import { ScoreDistributionResponse } from './scoring-response.types';
+import { ScoreDistribution } from './scoring-queries-distribution';
 
 @ApiTags('scores')
 @Controller('api/scores')
@@ -165,16 +165,14 @@ export class ScoringMarketsController {
   }
 
   /**
-   * Get score distribution for a geography level
+   * GET /api/scores/distribution?geography=metro&score_type=propertyiq
    *
-   * GET /api/scores/distribution?geography=metro&score_type=homeready
-   *
-   * Returns histogram buckets (0-10, 10-20, ..., 90-100) with counts and percentages,
-   * plus statistics (mean, median, std_dev) and grade distribution.
+   * Momentum-band distribution across all scored markets at the latest
+   * period. Public; powers the /forecast national hub.
    */
   @Get('distribution')
   @Header('Cache-Control', 'public, max-age=21600')
-  @ApiOperation({ summary: 'Get score distribution for a geography level' })
+  @ApiOperation({ summary: 'Get score distribution by momentum band' })
   @ApiQuery({
     name: 'geography',
     required: true,
@@ -183,46 +181,20 @@ export class ScoringMarketsController {
   @ApiQuery({
     name: 'score_type',
     required: false,
-    description: 'propertyiq. If omitted, returns all score types.',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    description: 'Score date (YYYY-MM-DD), defaults to latest',
+    description: 'Defaults to propertyiq',
   })
   async getScoreDistribution(
     @Query('geography') geography: string,
-    @Query('score_type') scoreType?: string,
-    @Query('date') date?: string,
-  ): Promise<ScoreDistributionResponse> {
+    @Query('score_type') scoreType: string,
+  ): Promise<ScoreDistribution> {
     if (!geography) {
       throw new HttpException(
         'geography query parameter is required',
         HttpStatus.BAD_REQUEST,
       );
     }
-
     const geoLevel = validateGeography(geography);
-
-    // If no score_type provided, return all distributions
-    if (!scoreType) {
-      const result = await this.scoringService.getAllScoreDistributions(
-        geoLevel,
-        date,
-      );
-      return {
-        geography: result.geography,
-        score_date: result.score_date,
-        distributions: result.distributions,
-      };
-    }
-
-    // Otherwise return specific score type distribution
-    const validScoreType = validateScoreType(scoreType);
-    return this.scoringService.getScoreDistribution(
-      geoLevel,
-      validScoreType,
-      date,
-    );
+    const validScoreType = validateScoreType(scoreType || 'propertyiq');
+    return this.scoringService.getScoreDistribution(geoLevel, validScoreType);
   }
 }

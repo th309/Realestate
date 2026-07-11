@@ -11,6 +11,15 @@ const descoredRedirects = JSON.parse(
   ),
 );
 
+// Superseded 2026 forecast blog posts -> /forecast pages: generated once by
+// scripts/generate-forecast-blog-redirects.ts.
+const forecastBlogRedirects = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL('./lib/data/forecast-blog-redirects.json', import.meta.url)),
+    'utf8',
+  ),
+);
+
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
 
@@ -122,29 +131,32 @@ const nextConfig = {
         permanent: true,
       },
       // ── Blog: duplicate slugs (SEO cannibalization fix) ──────────
+      // Destinations point directly at the /forecast URL their canonical
+      // post now redirects to (via forecastBlogRedirects below) — repointed
+      // so these don't chain through a second 308.
       {
         source: '/blog/huntsville-alabama-real-estate-market-2026',
-        destination: '/blog/huntsville-al-real-estate-market-2026',
+        destination: '/forecast/huntsville-al',
         permanent: true,
       },
       {
         source: '/blog/knoxville-real-estate-market-2026',
-        destination: '/blog/knoxville-tn-real-estate-market-2026',
+        destination: '/forecast/knoxville-tn',
         permanent: true,
       },
       {
         source: '/blog/omaha-real-estate-market-2026',
-        destination: '/blog/omaha-ne-real-estate-market-2026',
+        destination: '/forecast/omaha-ne-ia',
         permanent: true,
       },
       {
         source: '/blog/richmond-virginia-real-estate-market-2026',
-        destination: '/blog/richmond-va-real-estate-market-2026',
+        destination: '/forecast/richmond-va',
         permanent: true,
       },
       {
         source: '/blog/spokane-real-estate-market-2026',
-        destination: '/blog/spokane-wa-real-estate-market-2026',
+        destination: '/forecast/spokane-spokane-valley-wa',
         permanent: true,
       },
       // ── Auth: legacy /auth/login pattern ─────────────────────────
@@ -187,6 +199,9 @@ const nextConfig = {
       // Generated monthly by scripts/generate-descored-redirects.ts.
       // Seed is [] (no-op) until first generation run.
       ...descoredRedirects,
+      // ── Superseded 2026 forecast blog posts → /forecast pages ─────
+      // Generated once by scripts/generate-forecast-blog-redirects.ts.
+      ...forecastBlogRedirects,
     ];
   },
   // Serve agent-discovery documents at their canonical well-known paths. Next's

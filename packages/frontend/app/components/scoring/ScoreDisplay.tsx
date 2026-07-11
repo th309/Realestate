@@ -2,13 +2,19 @@ import React from "react";
 import {
   getScoreLabel,
   getScoreMomentumArrow,
+  getScoreMomentumColorClass,
   SCORE_MOMENTUM_DESCRIPTOR,
 } from "./score-labels";
 
 // Re-exported so existing `@/app/components/scoring/ScoreDisplay` import sites
 // keep working unchanged (these pure momentum utilities now live in the plain,
 // server-importable ./score-labels module — SSOT preserved).
-export { getScoreLabel, getScoreMomentumArrow, SCORE_MOMENTUM_DESCRIPTOR };
+export {
+  getScoreLabel,
+  getScoreMomentumArrow,
+  getScoreMomentumColorClass,
+  SCORE_MOMENTUM_DESCRIPTOR,
+};
 
 /**
  * Standardized Score Display Component

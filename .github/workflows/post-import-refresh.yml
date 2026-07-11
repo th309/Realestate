@@ -191,6 +191,60 @@ jobs:
     outputs:
       scoring_status: ${{ steps.scoring.outputs.scoring_status }}
 
+  # Pre-generates metro market_take / score_explanation / market_forecast
+  # narratives right after rescoring so the /forecast and /markets SEO pages
+  # (which read cachedOnly=1) never wait on live, per-request paid AI
+  # generation. Runs after scoring succeeds since InsightsService's context
+  # builder reads the just-refreshed propertyiq_scores.
+  generate-forecast-insights:
+    # Runs after scoring AND after the SEO slug/marketing pages publish, so
+    # narratives are generated last against the final published market set.
+    # `!cancelled()` mirrors publish-to-develop's own gate: a best-effort
+    # failure upstream of publish must not implicitly skip this job — the
+    # explicit conditions below decide.
+    needs: [run-scoring-pipeline, publish-to-develop]
+    if: ${{ !cancelled() && needs.run-scoring-pipeline.outputs.scoring_status == 'success' && needs.publish-to-develop.result == 'success' }}
+    runs-on: ubuntu-latest
+    # Batch is ~935 metros x 3 insight types (market_take, score_explanation,
+    # market_forecast) at BATCH_CONCURRENCY=5. First-run duration is unmeasured,
+    # so this is sized generously to avoid a mid-run cutoff — tighten once a
+    # real run's duration is known.
+    timeout-minutes: 360
+    env:
+      SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+      SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+      NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+      SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+      DEEPSEEK_API_KEY: "${{ secrets.DEEPSEEK_API_KEY }}"
+      AI_DAILY_SPEND_CAP_USD: "25"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace libs for NestJS bootstrap
+        # This script bootstraps the slim InsightsCliModule (needs
+        # AiProviderService + NewsScoutService, unlike refresh-piq-scores.ts's
+        # slim scoring-only module) — NOT the full AppModule. It still imports
+        # @propertyiq/emails + @propertyiq/analyzer-core, consumed via dist/.
+        # npm ci does not build them, so bootstrap crashes with MODULE_NOT_FOUND
+        # until dist/ exists (same reason as the metrics job).
+        run: npm run build:libs
+
+      - name: Generate metro insights (incl. market_forecast)
+        run: |
+          npx ts-node -P packages/backend/tsconfig.json \
+            packages/backend/src/scripts/generate-forecast-insights.ts
+
   refresh-screener-after-scoring:
     needs: run-scoring-pipeline
     runs-on: ubuntu-latest
@@ -528,6 +582,7 @@ jobs:
       [
         refresh-calculated-metrics,
         run-scoring-pipeline,
+        generate-forecast-insights,
         refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,
@@ -597,6 +652,7 @@ jobs:
       [
         refresh-calculated-metrics,
         run-scoring-pipeline,
+        generate-forecast-insights,
         refresh-screener-after-scoring,
         validate-scores,
         recalibrate-scores,

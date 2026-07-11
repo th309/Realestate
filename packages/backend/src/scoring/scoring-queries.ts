@@ -28,3 +28,12 @@ export {
   fetchAllScoresBatched,
 } from './scoring-queries-pagination';
 export type { ScorePageRow } from './scoring-queries-pagination';
+export {
+  bucketScores,
+  getScoreDistribution,
+  MOMENTUM_BANDS,
+} from './scoring-queries-distribution';
+export type {
+  ScoreDistribution,
+  ScoreDistributionBucket,
+} from './scoring-queries-distribution';

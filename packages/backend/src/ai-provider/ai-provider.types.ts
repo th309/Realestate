@@ -264,6 +264,8 @@ export const AI_PURPOSES = {
   BLOG_GENERATION: 'blog_generation',
   // Landing hero: predictive, news-aware market outlook (<100 words)
   MARKET_OUTLOOK: 'market_outlook',
+  // Forecast-angle SEO narrative for /forecast pages (momentum outlook, no price predictions)
+  MARKET_FORECAST: 'market_forecast',
 } as const;
 
 export type AiPurpose = (typeof AI_PURPOSES)[keyof typeof AI_PURPOSES];

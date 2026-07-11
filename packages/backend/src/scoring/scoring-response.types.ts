@@ -40,30 +40,6 @@ export interface ScoredIdsResponse {
   ids: string[];
 }
 
-/** getScoreDistribution (`GET /api/scores/distribution`) response envelope. */
-export interface ScoreDistributionResponse {
-  geography: string;
-  score_type?: string;
-  score_date: string;
-  total_count?: number;
-  distribution?: Array<{
-    bucket: string;
-    min: number;
-    max: number;
-    count: number;
-    percentage: number;
-  }>;
-  statistics?: {
-    mean: number;
-    median: number;
-    std_dev: number;
-    min: number;
-    max: number;
-  };
-  grade_distribution?: Array<{
-    grade: string;
-    count: number;
-    percentage: number;
-  }>;
-  distributions?: Record<string, any>;
-}
+// getScoreDistribution (`GET /api/scores/distribution`) now returns the
+// momentum-band `ScoreDistribution` shape from scoring-queries-distribution.ts
+// directly — see scoring-markets.controller.ts.

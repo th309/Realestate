@@ -10,6 +10,7 @@
 
 import { useInsight } from "@/lib/data";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { parseMarkdownSections } from "@/lib/insights/parse-markdown-sections";
 
 interface MarketOverviewSectionProps {
   metroName: string;
@@ -21,30 +22,6 @@ interface MarketOverviewSectionProps {
    * When absent, the client fetches as before (may generate for real visitors).
    */
   initialInsight?: { content: string; generated_at: string } | null;
-}
-
-/**
- * Parse markdown-style ## headers into structured HTML sections.
- * Splits content on `## ` lines and renders each as a titled section.
- */
-function parseMarkdownSections(
-  content: string,
-): { title: string; body: string }[] {
-  const sections: { title: string; body: string }[] = [];
-  const parts = content.split(/^## /m).filter(Boolean);
-
-  for (const part of parts) {
-    const newlineIndex = part.indexOf("\n");
-    if (newlineIndex === -1) {
-      sections.push({ title: part.trim(), body: "" });
-    } else {
-      const title = part.slice(0, newlineIndex).trim();
-      const body = part.slice(newlineIndex + 1).trim();
-      sections.push({ title, body });
-    }
-  }
-
-  return sections;
 }
 
 /**

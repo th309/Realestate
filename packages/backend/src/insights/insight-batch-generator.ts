@@ -19,6 +19,17 @@ export const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /** Insight types generated during batch runs */
 const BATCH_INSIGHT_TYPES: InsightType[] = ['market_take', 'score_explanation'];
 
+/**
+ * Batch types per geography. Metros also pre-generate the long-form forecast
+ * narrative so /forecast SEO pages (cachedOnly=1) always have content —
+ * crawlers must never see a narrative-less page waiting on live generation.
+ */
+export function batchInsightTypesFor(geoLevel: string): InsightType[] {
+  return geoLevel === 'metro'
+    ? [...BATCH_INSIGHT_TYPES, 'market_forecast']
+    : BATCH_INSIGHT_TYPES;
+}
+
 const logger = new Logger('InsightBatchGenerator');
 
 /**
@@ -67,7 +78,7 @@ export async function generateBatchInsights(
     (async () => {
       try {
         const context = await buildContext(region, geoLevel);
-        for (const type of BATCH_INSIGHT_TYPES) {
+        for (const type of batchInsightTypesFor(geoLevel)) {
           const result = await generateInsight(context, type);
           if (!result || !result.content) {
             failed++;

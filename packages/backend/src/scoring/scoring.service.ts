@@ -14,9 +14,8 @@
  * Delegates to:
  * - propertyiq-scoring-engine.ts: Demand-signal calculation (z-scores, percentile, re-centering)
  * - propertyiq-data-fetcher.ts: Zillow + Realtor metric assembly
- * - scoring-queries.ts: Score reads from propertyiq_scores table
+ * - scoring-queries.ts: Score reads from propertyiq_scores table (incl. momentum-band distribution)
  * - scoring-persistence.ts: Score writes (upsert with retry)
- * - scoring-distribution.ts: Score distribution analysis
  * - scoring-retrieval.ts: Single-location getScore / extended-history orchestration
  * - scoring-history-assembly.ts: Pure trend/history/stats transforms
  */
@@ -41,11 +40,9 @@ import {
   getTopMarkets as queryTopMarkets,
   searchMarkets as querySearchMarkets,
   getScoredLocationIds as queryScoredLocationIds,
-} from './scoring-queries';
-import {
   getScoreDistribution as queryScoreDistribution,
-  getAllScoreDistributions as queryAllScoreDistributions,
-} from './scoring-distribution';
+  ScoreDistribution,
+} from './scoring-queries';
 import { calculateAndPersistPropertyIqScores } from './scoring-calculation';
 import {
   getScoreForLocation,
@@ -279,27 +276,18 @@ export class ScoringService {
   }
 
   // ============================================================================
-  // Delegates to scoring-distribution.ts
+  // Delegates to scoring-queries-distribution.ts
   // ============================================================================
 
+  /**
+   * Momentum-band distribution across all scored markets at the latest
+   * period. Powers the /forecast national hub.
+   */
   async getScoreDistribution(
     geography: GeographyLevel,
     scoreType: ScoreType,
-    periodDate?: string,
-  ) {
-    return queryScoreDistribution(
-      this.supabase,
-      geography,
-      scoreType,
-      periodDate,
-    );
-  }
-
-  async getAllScoreDistributions(
-    geography: GeographyLevel,
-    periodDate?: string,
-  ) {
-    return queryAllScoreDistributions(this.supabase, geography, periodDate);
+  ): Promise<ScoreDistribution> {
+    return queryScoreDistribution(this.supabase, geography, scoreType);
   }
 
   // ============================================================================

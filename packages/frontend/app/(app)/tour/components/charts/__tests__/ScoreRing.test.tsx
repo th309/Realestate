@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { ScoreRing } from "../ScoreRing";
+import { ScoreRing } from "@/app/components/scoring/ScoreRing";
 
 describe("ScoreRing", () => {
   it("renders the score number", () => {
