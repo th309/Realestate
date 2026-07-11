@@ -27,9 +27,13 @@ test.describe("Market Momentum Map widget", () => {
     await expect(readout).not.toHaveText(latestLabel!);
     await expect(readout).toHaveText(/2001/);
 
-    // Summary strip shows sane percentages
+    // Movers strip names the frame's leading/lagging metros (percentage
+    // tiles were replaced 2026-07-11 — percentile scores make bucket shares
+    // constant every month, movers genuinely vary per frame)
     const strip = hero.getByTestId("momentum-summary-strip");
-    await expect(strip).toContainText("%");
+    await expect(strip.getByTestId("momentum-leading")).toContainText(/,/);
+    await expect(strip.getByTestId("momentum-lagging")).toContainText(/,/);
+    await expect(strip).toContainText("metros scored this month");
 
     // Tooltip appears when hovering a dot
     await hero.locator("circle").first().hover({ force: true });
