@@ -75,11 +75,19 @@ describe("MomentumMapCanvas", () => {
     expect(tooltip.textContent).toContain("RISING");
   });
 
-  it("omits confidence when not on the latest frame, shows it when on it", () => {
-    const { container, rerender, ...rest } = renderCanvas({ currentFrame: 0 });
+  it("omits confidence when not on the latest frame", () => {
+    const { container } = renderCanvas({ currentFrame: 0 });
     fireEvent.mouseEnter(container.querySelectorAll("circle")[0]);
     expect(screen.getByTestId("momentum-tooltip").textContent).not.toContain(
       "Confidence",
+    );
+  });
+
+  it("shows confidence when on the latest frame", () => {
+    const { container } = renderCanvas({ currentFrame: 1 });
+    fireEvent.mouseEnter(container.querySelectorAll("circle")[0]);
+    expect(screen.getByTestId("momentum-tooltip").textContent).toContain(
+      "Confidence A",
     );
   });
 
