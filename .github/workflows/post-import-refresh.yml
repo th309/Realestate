@@ -197,8 +197,13 @@ jobs:
   # generation. Runs after scoring succeeds since InsightsService's context
   # builder reads the just-refreshed propertyiq_scores.
   generate-forecast-insights:
-    needs: [run-scoring-pipeline]
-    if: ${{ needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+    # Runs after scoring AND after the SEO slug/marketing pages publish, so
+    # narratives are generated last against the final published market set.
+    # `!cancelled()` mirrors publish-to-develop's own gate: a best-effort
+    # failure upstream of publish must not implicitly skip this job — the
+    # explicit conditions below decide.
+    needs: [run-scoring-pipeline, publish-to-develop]
+    if: ${{ !cancelled() && needs.run-scoring-pipeline.outputs.scoring_status == 'success' && needs.publish-to-develop.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
