@@ -44,7 +44,11 @@ export class ScoringHeatmapService {
     const { data, error } = await this.supabase.rpc('get_metro_score_heatmap');
     if (error) throw error;
 
-    const payload = data as ScoreHeatmapPayload;
+    if (!this.isValidHeatmapPayload(data)) {
+      throw new Error('get_metro_score_heatmap returned a malformed payload');
+    }
+    const payload = data;
+
     const wrote = await this.redis.setByKey(
       HEATMAP_CACHE_KEY,
       payload,
@@ -56,5 +60,26 @@ export class ScoringHeatmapService {
       );
     }
     return payload;
+  }
+
+  /**
+   * Runtime shape check for the RPC result — mirrors the frontend's
+   * isValidHeatmapPayload (lib/data/fetchers/score-heatmap.ts). A bare type
+   * assertion here would let a malformed result (null data with null error,
+   * or misaligned fields after schema drift) get cached for the full 24h TTL
+   * on a fully public endpoint.
+   */
+  private isValidHeatmapPayload(data: unknown): data is ScoreHeatmapPayload {
+    if (!data || typeof data !== 'object') return false;
+    const payload = data as ScoreHeatmapPayload;
+    return (
+      Array.isArray(payload.months) &&
+      payload.months.length > 0 &&
+      Array.isArray(payload.metros) &&
+      payload.metros.length > 0 &&
+      Array.isArray(payload.scores) &&
+      payload.scores.length === payload.metros.length &&
+      payload.scores.every((row) => row.length === payload.months.length)
+    );
   }
 }

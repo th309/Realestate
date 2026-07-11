@@ -71,4 +71,17 @@ describe('ScoringHeatmapService', () => {
     await expect(service.getMetroHeatmap()).rejects.toThrow('rpc failed');
     expect(mockRedis.setByKey).not.toHaveBeenCalled();
   });
+
+  it('throws and does not cache when the RPC returns a malformed payload', async () => {
+    mockRedis.getByKey.mockResolvedValue(null);
+    mockSupabase.rpc.mockResolvedValue({
+      data: { months: [], metros: [], scores: [] },
+      error: null,
+    });
+
+    await expect(service.getMetroHeatmap()).rejects.toThrow(
+      'get_metro_score_heatmap returned a malformed payload',
+    );
+    expect(mockRedis.setByKey).not.toHaveBeenCalled();
+  });
 });
