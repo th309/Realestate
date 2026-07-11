@@ -205,7 +205,11 @@ jobs:
     needs: [run-scoring-pipeline, publish-to-develop]
     if: ${{ !cancelled() && needs.run-scoring-pipeline.outputs.scoring_status == 'success' && needs.publish-to-develop.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Batch is ~935 metros x 3 insight types (market_take, score_explanation,
+    # market_forecast) at BATCH_CONCURRENCY=5. First-run duration is unmeasured,
+    # so this is sized generously to avoid a mid-run cutoff — tighten once a
+    # real run's duration is known.
+    timeout-minutes: 360
     env:
       SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
       SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
@@ -228,11 +232,12 @@ jobs:
         run: npm ci
 
       - name: Build workspace libs for NestJS bootstrap
-        # This script bootstraps the full AppModule (needs AiProviderService +
-        # NewsScoutService, unlike refresh-piq-scores.ts's slim scoring-only
-        # module), which imports @propertyiq/emails + @propertyiq/analyzer-core
-        # consumed via dist/. npm ci does not build them, so bootstrap crashes
-        # with MODULE_NOT_FOUND until dist/ exists (same reason as the metrics job).
+        # This script bootstraps the slim InsightsCliModule (needs
+        # AiProviderService + NewsScoutService, unlike refresh-piq-scores.ts's
+        # slim scoring-only module) — NOT the full AppModule. It still imports
+        # @propertyiq/emails + @propertyiq/analyzer-core, consumed via dist/.
+        # npm ci does not build them, so bootstrap crashes with MODULE_NOT_FOUND
+        # until dist/ exists (same reason as the metrics job).
         run: npm run build:libs
 
       - name: Generate metro insights (incl. market_forecast)

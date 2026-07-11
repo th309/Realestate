@@ -1,4 +1,10 @@
 import type { ScoreDistributionData } from "@/lib/data";
+import {
+  RISING_LABELS,
+  STEADY_LABELS,
+  EASING_LABELS,
+  distributionPhrase,
+} from "./distribution-phrase";
 
 interface DistributionSummaryProps {
   distribution: ScoreDistributionData;
@@ -11,7 +17,9 @@ function pct(part: number, total: number): number {
 
 /**
  * Deterministic, data-derived answer to the crash question: the live momentum
- * distribution across all scored metros. No AI, no speculation.
+ * distribution across all scored metros. No AI, no speculation. The closing
+ * characterization is derived from the distribution itself (distributionPhrase)
+ * rather than a fixed conclusion, so it can't contradict future data.
  */
 export function DistributionSummary({
   distribution,
@@ -23,9 +31,10 @@ export function DistributionSummary({
       .filter((b) => labels.includes(b.label))
       .reduce((s, b) => s + b.count, 0);
 
-  const rising = count(["VERY STRONG", "STRONG", "RISING", "FIRMING"]);
-  const steady = count(["STEADY"]);
-  const easing = count(["EASING", "WEAK", "VERY WEAK"]);
+  const rising = count(RISING_LABELS);
+  const steady = count(STEADY_LABELS);
+  const easing = count(EASING_LABELS);
+  const phrase = distributionPhrase(buckets, total);
 
   return (
     <section className="max-w-4xl mx-auto px-4 py-8">
@@ -33,8 +42,7 @@ export function DistributionSummary({
         Across {total.toLocaleString()} scored metro markets,{" "}
         {pct(easing, total)}% show easing or weak demand momentum heading into{" "}
         {year}, {pct(steady, total)}% are steady near their state average, and{" "}
-        {pct(rising, total)}% are firming or rising. That is a market that is
-        cooling unevenly — not a nationwide crash.
+        {pct(rising, total)}% are firming or rising. That is {phrase}.
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-outline-variant p-5">
