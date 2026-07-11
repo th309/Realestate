@@ -15,8 +15,12 @@ import { MomentumMapCanvas } from "./MomentumMapCanvas";
 import { MomentumMapTimeline, formatMonthLabel } from "./MomentumMapTimeline";
 import { MomentumSummaryStrip } from "./MomentumSummaryStrip";
 import { eraForMonth } from "./market-eras";
-import { momentumLegendGradient } from "./momentum-map-colors";
+import {
+  momentumLegendGradient,
+  type MomentumColorMode,
+} from "./momentum-map-colors";
 import { projectMetros, type ProjectedMetro } from "./momentum-map-projection";
+import { useMomentumColorMode } from "./useMomentumColorMode";
 import { useMomentumPlayback } from "./useMomentumPlayback";
 import { useUsStatesBasemap } from "./useUsStatesBasemap";
 
@@ -42,6 +46,7 @@ export function MarketMomentumMap({
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useScoreHeatmap();
   const statePaths = useUsStatesBasemap();
+  const colorMode = useMomentumColorMode();
 
   const projected = useMemo(
     () => (data ? projectMetros(data.metros, DOT_RADII) : []),
@@ -111,16 +116,18 @@ export function MarketMomentumMap({
         currentFrame={playback.currentFrame}
         latestFrame={latestFrame}
         animate={!playback.prefersReducedMotion}
+        colorMode={colorMode}
         hrefFor={hrefFor}
         onNavigate={(href) => router.push(href)}
       />
 
-      <MomentumLegend />
+      <MomentumLegend colorMode={colorMode} />
 
       {size === "hero" && (
         <MomentumSummaryStrip
           scores={data.scores}
           currentFrame={playback.currentFrame}
+          metros={data.metros}
         />
       )}
 
@@ -143,12 +150,12 @@ export function MarketMomentumMap({
   );
 }
 
-function MomentumLegend() {
+function MomentumLegend({ colorMode }: { colorMode: MomentumColorMode }) {
   return (
     <div className="mt-3">
       <div
         className="h-2 w-full rounded-full"
-        style={{ background: momentumLegendGradient() }}
+        style={{ background: momentumLegendGradient(colorMode) }}
       />
       <div className="mt-1 flex justify-between font-mono text-[10px] tracking-wide text-on-surface-variant">
         <span>WEAK</span>

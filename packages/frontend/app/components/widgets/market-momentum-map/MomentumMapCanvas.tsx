@@ -12,7 +12,7 @@ import {
   getScoreLabel,
   getScoreMomentumArrow,
 } from "@/app/components/scoring/score-labels";
-import { scoreToColor } from "./momentum-map-colors";
+import { scoreToColor, type MomentumColorMode } from "./momentum-map-colors";
 import {
   MAP_VIEWBOX_HEIGHT,
   MAP_VIEWBOX_WIDTH,
@@ -27,6 +27,8 @@ interface MomentumMapCanvasProps {
   latestFrame: number;
   /** false under prefers-reduced-motion — colors snap instead of tweening */
   animate: boolean;
+  /** selects the light- or dark-validated data color stops */
+  colorMode?: MomentumColorMode;
   hrefFor: (metro: ProjectedMetro) => string | null;
   onNavigate: (href: string) => void;
 }
@@ -38,6 +40,7 @@ export function MomentumMapCanvas({
   currentFrame,
   latestFrame,
   animate,
+  colorMode = "light",
   hrefFor,
   onNavigate,
 }: MomentumMapCanvasProps) {
@@ -77,6 +80,7 @@ export function MomentumMapCanvas({
                 r={metro.r}
                 fill={scoreToColor(
                   scores[metro.matrixIndex]?.[currentFrame] ?? 0,
+                  colorMode,
                 )}
                 fillOpacity={0.85}
                 className="stroke-surface"
@@ -115,12 +119,21 @@ function MetroTooltip({
   score: number;
   showConfidence: boolean;
 }) {
+  // Edge-clamp so tooltips near the map borders stay on-canvas: clamp
+  // horizontally, and flip below the dot when it sits near the top edge.
+  const leftPct = Math.min(
+    88,
+    Math.max(12, (metro.x / MAP_VIEWBOX_WIDTH) * 100),
+  );
+  const nearTop = metro.y / MAP_VIEWBOX_HEIGHT < 0.18;
   return (
     <div
       data-testid="momentum-tooltip"
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 shadow-md"
+      className={`pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 shadow-md ${
+        nearTop ? "translate-y-[14px]" : "-translate-y-[calc(100%+10px)]"
+      }`}
       style={{
-        left: `${(metro.x / MAP_VIEWBOX_WIDTH) * 100}%`,
+        left: `${leftPct}%`,
         top: `${(metro.y / MAP_VIEWBOX_HEIGHT) * 100}%`,
       }}
     >
