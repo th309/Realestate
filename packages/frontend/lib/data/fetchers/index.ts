@@ -42,3 +42,6 @@ export {
   type ScreenerMoversQuery,
   type ScreenerMoversResult,
 } from "./screener";
+
+// Score heatmap (Market Momentum Map widget)
+export * from "./score-heatmap";

@@ -29,6 +29,7 @@
 - 305 months of metro history (2001-01-31 → 2026-05-31), 935 metros latest month.
 - All 935 scored metros join `tiger_cbsa` on `geoid = location_id` (geometry SRID 4326 MULTIPOLYGON); 925 have population; 10 are Puerto Rico (excluded by `geoAlbersUsa`, footnoted).
 - The packing query below was run against production: returns 935 metros × 305-length rows, Des Moines (`19780`) centroid = (41.512, −93.729), total JSON = 1,133 kB.
+- **POST-IMPLEMENTATION CORRECTION (2026-07-11, Task 1):** the raw query worked interactively but HUNG as a SQL function — the planner re-evaluated the `metro_geo` CTE (with `ST_PointOnSurface`) per cross-join row (285,175 GEOS calls). The shipped migration uses `metro_geo AS MATERIALIZED (...)` — zero semantic change, forces single evaluation. Any future county/zip heatmap variant MUST keep `MATERIALIZED` on expensive CTEs referenced inside the cross join.
 
 ---
 

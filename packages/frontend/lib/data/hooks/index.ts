@@ -164,3 +164,6 @@ export {
   useProviderPresets,
   useUpdateAiModelConfig,
 } from "./useAiModelConfig";
+
+// Score heatmap (Market Momentum Map widget)
+export { useScoreHeatmap, type UseScoreHeatmapResult } from "./useScoreHeatmap";

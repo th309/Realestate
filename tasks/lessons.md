@@ -181,3 +181,12 @@
 - NEVER run a bare `git stash pop` in a repo you don't own the stash state of — it pops `stash@{0}`, which may be the user's. Always `git stash list` first and pop by explicit ref only if it's yours.
 - To A/B a pre-existing failure without stash risk: copy the file aside, `git checkout HEAD -- file`, run the test, then restore the copy. Or just reason from the diff (`git diff --stat` proving you never touched the failing code path).
 - Recovery when a stash-pop conflicts on files you didn't touch: the popped stash is KEPT; restore each conflicted/staged file to HEAD (`git restore --staged --worktree <f>` / `git checkout HEAD -- <f>`) — the content stays safe in the stash for its owner to re-apply.
+
+## Interactive SQL Validation Does Not Validate the Same SQL as a Function
+
+**Date:** 2026-07-11
+**Context:** Planned a Postgres RPC (`get_metro_score_heatmap`) by running the packing query interactively against production — it returned in seconds, so the plan declared the SQL "verified." Wrapped in a `LANGUAGE sql` function, the identical query hung indefinitely: the planner re-evaluated an expensive CTE (`ST_PointOnSurface` over 935 geometries) once per cross-join row (285k GEOS calls) instead of once. One `AS MATERIALIZED` keyword fixed it with zero semantic change.
+
+**Rule:** Testing a raw query interactively does NOT validate it as a function/RPC. CTE inlining and plan choices differ inside function bodies and across parameterization. Before declaring RPC SQL "verified," CREATE the function (in a scratch schema if needed) and CALL it. For any CTE containing an expensive per-row function referenced inside a join/cross-join, default to `AS MATERIALIZED`.
+
+**Debugging tip that worked:** a hanging RPC through PostgREST/MCP surfaces as generic `fetch failed`; force `SET statement_timeout = '15s'` first so Postgres returns the REAL error (here: `GEOS InterruptedException` inside `lwgeom_pointonsurface`), which names the guilty function immediately.

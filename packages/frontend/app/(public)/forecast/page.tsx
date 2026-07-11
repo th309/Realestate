@@ -5,6 +5,7 @@ import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { forecastDisplayYear } from "@/lib/seo/forecast-year";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
 import type { MarketFaq } from "@/app/markets/components/build-market-faqs";
+import { MarketMomentumMap } from "@/app/components/widgets/market-momentum-map";
 import { DistributionSummary } from "./components/DistributionSummary";
 import { distributionPhrase } from "./components/distribution-phrase";
 import { ForecastMarketIndex } from "./components/ForecastMarketIndex";
@@ -121,6 +122,10 @@ export default async function ForecastHubPage() {
       {distribution && (
         <DistributionSummary distribution={distribution} year={year} />
       )}
+
+      <section className="max-w-4xl mx-auto px-4 pt-6">
+        <MarketMomentumMap size="hero" />
+      </section>
 
       <section className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-8 sm:grid-cols-2">

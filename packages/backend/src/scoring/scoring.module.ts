@@ -22,6 +22,8 @@ import { CalibrationService } from './calibration/calibration.service';
 import { ScoringController } from './scoring.controller';
 import { ScoringMarketsController } from './scoring-markets.controller';
 import { ScoringOperationsController } from './scoring-operations.controller';
+import { ScoringHeatmapController } from './scoring-heatmap.controller';
+import { ScoringHeatmapService } from './scoring-heatmap.service';
 import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { FeaturesModule } from '../admin/features/features.module';
@@ -72,6 +74,9 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     // Core scoring service (simplified z-score formula system)
     ScoringService,
 
+    // Market Momentum Map heatmap service (packed metro score history)
+    ScoringHeatmapService,
+
     // Score calibration (isotonic)
     CalibrationService,
 
@@ -115,6 +120,7 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     // 2-segment routes on these siblings (none collide today, but registering
     // it last makes the split ordering-independent). See scoring.controller.ts.
     ScoringMarketsController,
+    ScoringHeatmapController,
     ScoringOperationsController,
     MLValidationController,
     BacktestRunsController,

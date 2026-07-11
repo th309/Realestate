@@ -139,6 +139,7 @@ export {
 // ============================================================================
 export {
   V4_CLAIMS,
+  COVERAGE_COPY,
   getV4HomepageClaims,
   formatDollarClaim,
   formatDollarClaimShort,
@@ -270,6 +271,10 @@ export {
   useAiModelConfigs,
   useProviderPresets,
   useUpdateAiModelConfig,
+
+  // Score heatmap (Market Momentum Map widget)
+  useScoreHeatmap,
+  type UseScoreHeatmapResult,
 } from "./hooks";
 
 // ============================================================================

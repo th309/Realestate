@@ -338,6 +338,14 @@ jobs:
           REDIS_URL: ${{ secrets.REDIS_PUBLIC_URL }}
         run: npx tsx scripts/cache/flush-snapshot-cache.ts
 
+      - name: Flush momentum-map heatmap cache (heatmap:v1:*)
+        # The Market Momentum Map widget caches the packed all-months score
+        # payload for 24h (ScoringHeatmapService); flushing after the rescore
+        # makes the new month appear immediately instead of at TTL expiry.
+        env:
+          REDIS_URL: ${{ secrets.REDIS_PUBLIC_URL }}
+        run: npx tsx scripts/cache/flush-heatmap-cache.ts
+
   validate-scores:
     needs: run-scoring-pipeline
     runs-on: ubuntu-latest
