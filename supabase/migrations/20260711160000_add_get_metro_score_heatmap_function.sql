@@ -21,6 +21,10 @@ latest AS (
   WHERE geography = 'metro' AND score_type = 'propertyiq'
   ORDER BY location_id, score_date DESC
 ),
+-- MATERIALIZED is load-bearing: metro_geo is referenced once inside packed's
+-- CROSS JOIN, so without it the planner inlines the CTE and re-evaluates
+-- ST_PointOnSurface per cross-join row (285k GEOS calls -> the function hangs).
+-- Removing this keyword reintroduces the hang. See tasks/lessons.md (2026-07-11).
 metro_geo AS MATERIALIZED (
   SELECT l.location_id, l.location_name, l.confidence_level,
          ROUND(ST_Y(ST_PointOnSurface(t.geometry))::numeric, 3) AS lat,
