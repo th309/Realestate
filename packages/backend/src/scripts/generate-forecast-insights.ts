@@ -6,13 +6,21 @@
  *
  * Usage:
  *   npx ts-node packages/backend/src/scripts/generate-forecast-insights.ts
+ *   npx ts-node packages/backend/src/scripts/generate-forecast-insights.ts --boot-check
  *
- * Boots the full AppModule (unlike refresh-piq-scores.ts's slim
- * ScoringCliModule) because InsightsService needs AiProviderService and
- * NewsScoutService, which live behind AppModule's full DI graph. AppModule
- * also imports the @propertyiq workspace libs (emails, analyzer-core) via
- * dist/, so the CI job running this script MUST `npm run build:libs` first
- * or bootstrap fails with MODULE_NOT_FOUND (see post-import-refresh.yml).
+ * Boots a SLIM module (InsightsCliModule), NOT the full AppModule. AppModule
+ * imports ContentPipelineModule, whose eager CredentialCrypto provider throws
+ * at DI boot when PLATFORM_CREDENTIALS_ENCRYPTION_KEY is unset — the CI job
+ * running this script doesn't set that key, so booting AppModule crashed
+ * before generating anything. InsightsCliModule wires only what
+ * InsightsService actually needs (Supabase, ScoringService +
+ * CalibrationService direct-wired like refresh-piq-scores.ts's
+ * ScoringCliModule, MetricResolutionModule, AiProviderModule, NewsScoutService)
+ * so it boots with just DB + AI credentials.
+ *
+ * `--boot-check`: create the DI context, resolve InsightsService, log
+ * "boot-check OK", and exit 0 WITHOUT generating (no paid AI calls). Use this
+ * to verify the module graph boots in CI/locally without spending money.
  */
 
 // Load .env / .env.local before NestJS bootstrap so ConfigModule picks up
@@ -40,16 +48,60 @@ if (fs.existsSync(envLocalPath)) {
   }
 }
 
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { SupabaseModule } from '../supabase/supabase.module';
+import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
+import { AiProviderModule } from '../ai-provider/ai-provider.module';
+import { ScoringService } from '../scoring/scoring.service';
+import { CalibrationService } from '../scoring/calibration/calibration.service';
+import { NewsScoutService } from '../reports/news-scout.service';
 import { InsightsService } from '../insights/insights.service';
 
+/**
+ * Minimal context for the insights CLI. InsightsService's constructor needs:
+ * SUPABASE_CLIENT (SupabaseModule), ScoringService + CalibrationService
+ * (direct-wired here rather than importing ScoringModule, which drags in
+ * FeaturesModule -> BillingModule -> StripeService / EmailModule — the same
+ * avoidance ScoringCliModule in refresh-piq-scores.ts uses),
+ * MetricResolutionService + GeographyChainService (MetricResolutionModule),
+ * AiProviderService (AiProviderModule, @Global but still imported explicitly
+ * for clarity — mirrors app.module.ts), and NewsScoutService (direct-wired;
+ * only needs SupabaseService + AiProviderService, both already in scope).
+ *
+ * This deliberately does NOT import AppModule or ContentPipelineModule, so
+ * PLATFORM_CREDENTIALS_ENCRYPTION_KEY is never required to boot.
+ */
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    SupabaseModule,
+    MetricResolutionModule,
+    AiProviderModule,
+  ],
+  providers: [
+    InsightsService,
+    ScoringService,
+    CalibrationService,
+    NewsScoutService,
+  ],
+})
+class InsightsCliModule {}
+
 async function main() {
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const bootCheckOnly = process.argv.includes('--boot-check');
+  const app = await NestFactory.createApplicationContext(InsightsCliModule, {
     logger: ['error', 'warn', 'log'],
   });
   try {
     const insights = app.get(InsightsService);
+
+    if (bootCheckOnly) {
+      console.log('[forecast-insights] boot-check OK');
+      return;
+    }
+
     const result = await insights.generateBatchInsights('metro');
     console.log(
       `[forecast-insights] generated=${result.generated} failed=${result.failed} duration_ms=${result.duration_ms}`,
