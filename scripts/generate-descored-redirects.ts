@@ -164,6 +164,19 @@ async function main(): Promise<void> {
           destination,
           permanent: false,
         });
+        // Overflow pages (if this metro ever had >12 counties/zips) must
+        // redirect alongside the main page. A rule for an overflow page that
+        // never existed is a harmless no-op — it just never matches a request.
+        allRedirects.push({
+          source: `/markets/${oldEntry.slug}/counties`,
+          destination,
+          permanent: false,
+        });
+        allRedirects.push({
+          source: `/markets/${oldEntry.slug}/zips`,
+          destination,
+          permanent: false,
+        });
         count++;
       }
     }
@@ -207,6 +220,13 @@ async function main(): Promise<void> {
       if (destination !== null) {
         allRedirects.push({
           source: `/markets/county/${oldEntry.slug}`,
+          destination,
+          permanent: false,
+        });
+        // Overflow page (if this county ever had >12 zips) must redirect
+        // alongside the main page — same no-op reasoning as the metro block above.
+        allRedirects.push({
+          source: `/markets/county/${oldEntry.slug}/zips`,
           destination,
           permanent: false,
         });
