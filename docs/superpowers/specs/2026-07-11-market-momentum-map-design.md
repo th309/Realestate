@@ -130,7 +130,7 @@ Editing eras never requires touching widget logic.
 
 - Header: title ("U.S. Market Momentum"), large Roboto Mono month readout, era caption.
 - Map (fixed aspect ≈ 975:610 viewBox).
-- Live summary strip: % Firming-or-rising / % Steady / % Easing-or-weak, recomputed per frame from the current month's scores (mirrors the forecast-page stat cards; buckets: ≥60 / 50–59 / <50).
+- Per-month movers strip: the frame's Leading and Lagging metros (name, score, momentum label + arrow; ties broken by population) plus the month's scored-metro count. **(Replaced the original firming/steady/easing percentage tiles on 2026-07-11, user decision:** PIQ scores are monthly cross-sectional percentile ranks, so those bucket shares are constant ≈40/10/49 in EVERY month by construction — verified live for 2006-06 through 2026-05 including Mar 2009 and Jun 2021. A "live" percentage strip would never move; do not reintroduce it.)
 - Gradient legend with momentum labels (WEAK ← EASING ← STEADY → FIRMING → STRONG).
 - Playback controls: play/pause, speed (reuse `lib/visualizations/d3/PlaybackControls.tsx` if it fits the M3 chrome; otherwise a thin local wrapper with the same API), scrubber with era ticks.
 - Footnote: "{N} metros scored monthly · Map shows contiguous US, AK & HI · Pre-2016 history is momentum-only data" — **{N} is computed from the payload (`metros.length`), never hardcoded** (CLAUDE.md coverage-copy rule); the loading skeleton uses the `COVERAGE_COPY` floor ("900+ metros") until data arrives.
@@ -161,7 +161,7 @@ Both: M3 card (`rounded-xl`, `shadow-sm`, `bg-surface` semantic vars), Roboto Mo
 
 1. **Backend unit:** payload packing (dense alignment, 0-fill), geography param validation.
 2. **Backend E2E (real DB):** `GET /api/scores/heatmap/metro` returns ≥900 metros, ≥300 months, matrix dimensions consistent, gzipped size within budget (<400KB), spot-check one known metro's latest score against `propertyiq_scores`.
-3. **Frontend unit:** score→color buckets (49 vs 50 vs 60 boundaries), era lookup (boundary months), summary-strip percentages.
+3. **Frontend unit:** score→color buckets (49 vs 50 vs 60 boundaries, light + dark stop sets), era lookup (boundary months), movers-strip leading/lagging selection and no-data exclusion.
 4. **Playwright (live data):** render the demo page against the real backend; assert dots painted, scrub changes month readout + at least one dot color, tooltip appears, click navigates; verify both sizes and dark mode.
 
 ## 9. Verification & demo placement
