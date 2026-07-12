@@ -56,8 +56,10 @@ export function ServiceWorkerManager() {
       // Desktop: nav doesn't render, so float with a small margin.
       // The extra `--piq-install-banner-visible` term (0 or 1, set by
       // InstallBanner) nudges this snackbar above the install banner
-      // whenever both are on screen at once — see InstallBanner.tsx.
-      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom)+16px+(var(--piq-install-banner-visible,0)*72px))] lg:bottom-[calc(16px+(var(--piq-install-banner-visible,0)*72px))] z-[100] flex justify-center px-4 pb-safe pointer-events-none"
+      // whenever both are on screen at once — see InstallBanner.tsx. 84px
+      // clears the banner's tallest (Android/native-prompt) variant, which
+      // measures ~86px against an 88px+16px-base total clearance here.
+      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom)+16px+(var(--piq-install-banner-visible,0)*84px))] lg:bottom-[calc(16px+(var(--piq-install-banner-visible,0)*84px))] z-[100] flex justify-center px-4 pb-safe pointer-events-none"
     >
       <div
         className={`pointer-events-auto flex items-center gap-4 rounded-lg bg-inverse-surface px-4 py-3 shadow-lg transition-all duration-200 ${
