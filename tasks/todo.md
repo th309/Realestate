@@ -1,3 +1,47 @@
+# PWA / Phone-App Build — 2026-07-12
+
+Branch `worktree-PWA` (user-requested worktree). Full analysis + plan: `docs/plans/2026-07-12-propertyiq-phone-app-analysis-and-plan.md`.
+
+## Phase 1 — Standalone correctness core (P0)
+
+- [ ] **1.1** History-API back handling (`lib/pwa/use-modal-history.ts` + wire into MobileMenu, RightDetailPanel, DataTableModal, MobileInputSheet, MapContextMenu, Share modals, paywall modals)
+- [ ] **1.2** Skeleton screens matching final dimensions + count-up pairing (start: h-screen spinner loaders on map/market/graphs)
+- [ ] **1.3** Serwist SW foundation (next.config wrapper, app/sw.ts, NO auto-skipWaiting) + update toast ("New version available, tap to refresh")
+- [ ] **1.4** Branded `/offline` page (M3)
+- [ ] **1.5** Middleware `/sw.js` matcher exclusion
+
+## Phase 2 — Install experience
+
+- [ ] **2.1** Manifest completeness (id, shortcuts, maskable icon, display_override, categories)
+- [ ] **2.2** appleWebApp block + black-translucent status bar + standalone header pt-safe
+- [ ] **2.3** iOS splash screens (pwa-asset-generator)
+- [ ] **2.4** Install prompt UX (use-install-prompt, value-moment trigger, InstallBanner, "Get the app" menu entry)
+
+## Phase 3 — Native feel + navigation
+
+- [ ] **3.1** Bottom tab bar (M3, always on mobile, reuse header-nav-data)
+- [ ] **3.2** Touch CSS resets (touch-action, tap-highlight, user-select, overscroll, :active scale)
+- [ ] **3.3** 44px touch targets · **3.4** safe-area sweep · **3.5** dvh migration
+- [ ] **3.6** Haptics · **3.7** dynamic theme-color · **3.8** View Transitions
+- [ ] **3.9** Hover→touch fallbacks (ConfidenceDisplay, RichTooltip) · **3.10** keyboard occlusion
+
+## Phase 4 — Offline + caching
+
+- [ ] **4.1** SW SWR on /backend GETs (allowlist + sign-out purge) · **4.2** RQ persister (IndexedDB)
+- [ ] **4.3** "Cached data from X ago" indicator · **4.4** GeoJSON/fonts caching
+- [ ] **4.5** useOnlineStatus + OfflineBanner + map honest-failure · **4.6** lazy-load heavy libs + bundle analyzer
+
+## Phase 5 — Auth hardening, capabilities, stores
+
+- [ ] **5.1** OTP password reset · **5.2** magic-link code alternative · **5.3** standalone-aware auth UX
+- [ ] **5.4** Web Share API · **5.5** Push + Badging · **5.6** Play TWA ($25 gate) · **5.7** iOS store (DEFER)
+
+## Review
+
+_(pending)_
+
+---
+
 # GEO Top-5 Fixes — 2026-07-08 (from GEO-ANALYSIS.md)
 
 Branch `develop` (commit locally; never push without ask).
