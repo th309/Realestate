@@ -10,7 +10,7 @@ export interface SkeletonProps {
   animation?: "pulse" | "none";
 }
 
-export const variantStyles = {
+const variantStyles = {
   text: "rounded",
   circular: "rounded-full",
   rectangular: "rounded-none",
