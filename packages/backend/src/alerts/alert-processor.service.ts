@@ -3,6 +3,17 @@
  *
  * Daily cron job that evaluates all active alerts against
  * current metric values and creates history entries when triggered.
+ *
+ * Schema note: `user_alerts`' live DB columns are `metric_name` /
+ * `condition_type` / `threshold_value` (from scripts/migrations/030), NOT
+ * `metric_id` / `condition` / `threshold` as the public DTO/API layer names
+ * them (see AlertsService.CreateAlertDto) — verified directly against the
+ * live table via `information_schema.columns` (2026-07-12), no ALTER
+ * migration or compatibility view exists anywhere in the repo. This file
+ * reads the real columns; the public field names (`metric_id`/`condition`/
+ * `threshold`) are kept only as this file's own internal shape for the
+ * push-notification payload, unchanged so as not to touch the DTO contract
+ * the frontend alert-creation UI already depends on.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -58,7 +69,7 @@ export class AlertProcessorService {
     const uniqueKeys = new Set<string>();
     for (const alert of alerts) {
       uniqueKeys.add(
-        `${alert.metric_id}:${alert.geography_type}:${alert.geography_id}`,
+        `${alert.metric_name}:${alert.geography_type}:${alert.geography_id}`,
       );
     }
 
@@ -98,16 +109,16 @@ export class AlertProcessorService {
 
     for (const alert of alerts) {
       try {
-        const key = `${alert.metric_id}:${alert.geography_type}:${alert.geography_id}`;
+        const key = `${alert.metric_name}:${alert.geography_type}:${alert.geography_id}`;
         const currentValue = metricValues.get(key) ?? null;
 
         if (currentValue == null) continue;
 
         // Check condition
         const isTriggered = this.checkCondition(
-          alert.condition,
+          alert.condition_type,
           currentValue,
-          Number(alert.threshold),
+          Number(alert.threshold_value),
         );
 
         if (!isTriggered) continue;
@@ -133,9 +144,9 @@ export class AlertProcessorService {
           user_id: alert.user_id,
           geography_name: alert.geography_name,
           geography_id: alert.geography_id,
-          metric_id: alert.metric_id,
-          condition: alert.condition,
-          threshold: Number(alert.threshold),
+          metric_id: alert.metric_name,
+          condition: alert.condition_type,
+          threshold: Number(alert.threshold_value),
           metric_value: currentValue,
         });
       } catch (err) {
