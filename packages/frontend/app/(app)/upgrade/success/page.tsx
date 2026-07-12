@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
+import { gtagEvent } from "@/lib/analytics/tracker";
 
 const TIER_LABELS: Record<string, string> = {
   enterprise: "Enterprise",
@@ -24,6 +25,9 @@ function SuccessContent() {
       ? rawReturn
       : "/map";
   const [refreshed, setRefreshed] = useState(false);
+  const purchaseFiredRef = useRef(false);
+  const sessionId = searchParams.get("session_id");
+  const purchaseValue = Number(searchParams.get("value") ?? "0");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,6 +38,20 @@ function SuccessContent() {
   useEffect(() => {
     refresh().then(() => setRefreshed(true));
   }, [refresh]);
+
+  // Fires once per session_id — the useRef guard prevents React StrictMode
+  // double-invoke and refresh double-count; transaction_id = session_id gives
+  // GA server-side dedup as a backstop.
+  useEffect(() => {
+    if (purchaseFiredRef.current || !sessionId) return;
+    purchaseFiredRef.current = true;
+    gtagEvent("purchase", {
+      transaction_id: sessionId,
+      value: Number.isFinite(purchaseValue) ? purchaseValue : 0,
+      currency: "USD",
+      items: [{ item_id: tier }],
+    });
+  }, [sessionId, purchaseValue, tier]);
 
   // Defense-in-depth: show loading while auth resolves, bail out if unauthenticated
   if (authLoading || !user) {

@@ -106,7 +106,7 @@ export class BillingService {
         : 'stripe_price_monthly_id';
     const { data: tierData } = await client
       .from('subscription_tiers')
-      .select(`${priceColumn}`)
+      .select(`${priceColumn}, price_monthly, price_yearly`)
       .eq('slug', tier)
       .single();
 
@@ -116,6 +116,10 @@ export class BillingService {
         `No Stripe price configured for tier: ${tier} (${interval})`,
       );
     }
+    // subscription_tiers price_monthly/price_yearly are dollars (Stripe cents differ).
+    const rawPlanPrice =
+      interval === 'year' ? tierData?.price_yearly : tierData?.price_monthly;
+    const purchaseValue = Number(rawPlanPrice) || 0;
 
     // Check if trial is enabled (enterprise skips trial)
     let trialDays: number | undefined;
@@ -135,7 +139,7 @@ export class BillingService {
     const returnParam = returnContext
       ? `&returnContext=${encodeURIComponent(returnContext)}`
       : '';
-    const successUrl = `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+    const successUrl = `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}&value=${purchaseValue}`;
     const cancelUrl = `${baseUrl}/pricing`;
 
     return this.stripe.createCheckoutSession({
