@@ -29,7 +29,10 @@ export function useUpdateAnalyzerDefaults() {
   const qc = useQueryClient();
   return useMutation<AnalyzerDefaults, Error, AnalyzerDefaults>({
     mutationFn: (body) => updateAnalyzerDefaults(body),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // Seed the cache with the server's echo immediately so consumers don't
+      // compare against stale data while the refetch is in flight.
+      qc.setQueryData(QUERY_KEY, saved);
       qc.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });

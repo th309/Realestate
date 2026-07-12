@@ -52,6 +52,11 @@ export function useMarketContext(
     // the rest of the data layer (CLAUDE.md §5 data-binding hooks guidance).
     staleTime: 2 * 60 * 60 * 1000,
     gcTime: 4 * 60 * 60 * 1000,
+    // Self-heal: while the last fetch failed (network drop, backend 5xx),
+    // retry every 30s so the analyzer recovers without a reload. Off in the
+    // success path — a resolved payload keeps pure 2h-staleTime semantics.
+    refetchInterval: (query) =>
+      query.state.status === "error" ? 30_000 : false,
   });
 
   const raw = query.data ?? null;

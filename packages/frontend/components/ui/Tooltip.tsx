@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
+import { useDismissableOpen } from "@/lib/hooks/use-dismissable-open";
 
-type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
+type TooltipPosition = "top" | "bottom" | "left" | "right";
 
 interface TooltipProps {
   content: React.ReactNode;
@@ -16,13 +17,14 @@ interface TooltipProps {
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
-  position = 'top',
+  position = "top",
   delay = 200,
   disabled = false,
-  className = '',
+  className = "",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>(position);
+  const [tooltipPosition, setTooltipPosition] =
+    useState<TooltipPosition>(position);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -38,14 +40,23 @@ export const Tooltip: React.FC<TooltipProps> = ({
     let newPosition = position;
 
     // Check if tooltip goes off-screen and adjust
-    if (position === 'top' && trigger.top - tooltip.height - padding < 0) {
-      newPosition = 'bottom';
-    } else if (position === 'bottom' && trigger.bottom + tooltip.height + padding > window.innerHeight) {
-      newPosition = 'top';
-    } else if (position === 'left' && trigger.left - tooltip.width - padding < 0) {
-      newPosition = 'right';
-    } else if (position === 'right' && trigger.right + tooltip.width + padding > window.innerWidth) {
-      newPosition = 'left';
+    if (position === "top" && trigger.top - tooltip.height - padding < 0) {
+      newPosition = "bottom";
+    } else if (
+      position === "bottom" &&
+      trigger.bottom + tooltip.height + padding > window.innerHeight
+    ) {
+      newPosition = "top";
+    } else if (
+      position === "left" &&
+      trigger.left - tooltip.width - padding < 0
+    ) {
+      newPosition = "right";
+    } else if (
+      position === "right" &&
+      trigger.right + tooltip.width + padding > window.innerWidth
+    ) {
+      newPosition = "left";
     }
 
     setTooltipPosition(newPosition);
@@ -65,18 +76,31 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setIsVisible(false);
   };
 
+  // Touch devices have no hover — a tap fires click but not mouseenter, so
+  // give the trigger an explicit toggle too. Desktop hover/focus behavior
+  // above is unchanged.
+  const toggleTooltip = () => {
+    if (disabled) return;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsVisible((visible) => !visible);
+  };
+
   const positionStyles: Record<TooltipPosition, string> = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+    left: "right-full top-1/2 -translate-y-1/2 mr-2",
+    right: "left-full top-1/2 -translate-y-1/2 ml-2",
   };
 
   const arrowStyles: Record<TooltipPosition, string> = {
-    top: 'top-full left-1/2 -translate-x-1/2 border-t-inverse-surface border-x-transparent border-b-transparent',
-    bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-inverse-surface border-x-transparent border-t-transparent',
-    left: 'left-full top-1/2 -translate-y-1/2 border-l-inverse-surface border-y-transparent border-r-transparent',
-    right: 'right-full top-1/2 -translate-y-1/2 border-r-inverse-surface border-y-transparent border-l-transparent',
+    top: "top-full left-1/2 -translate-x-1/2 border-t-inverse-surface border-x-transparent border-b-transparent",
+    bottom:
+      "bottom-full left-1/2 -translate-x-1/2 border-b-inverse-surface border-x-transparent border-t-transparent",
+    left: "left-full top-1/2 -translate-y-1/2 border-l-inverse-surface border-y-transparent border-r-transparent",
+    right:
+      "right-full top-1/2 -translate-y-1/2 border-r-inverse-surface border-y-transparent border-l-transparent",
   };
 
   return (
@@ -87,6 +111,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       onMouseLeave={hideTooltip}
       onFocus={showTooltip}
       onBlur={hideTooltip}
+      onClick={toggleTooltip}
     >
       {children}
 
@@ -94,6 +119,10 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           ref={tooltipRef}
           role="tooltip"
+          // Stops the trigger's onClick toggle from also firing when the
+          // tap lands on the tooltip body itself — it's a DOM child of the
+          // trigger, so without this a tap inside the content self-closes it.
+          onClick={(e) => e.stopPropagation()}
           className={`
             absolute z-50 ${positionStyles[tooltipPosition]}
             px-3 py-1.5 text-xs font-medium
@@ -133,15 +162,19 @@ export const RichTooltip: React.FC<RichTooltipProps> = ({
   title,
   content,
   children,
-  position = 'top',
+  position = "top",
   delay = 200,
   maxWidth = 280,
-  className = '',
+  className = "",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const showTooltip = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
@@ -154,24 +187,52 @@ export const RichTooltip: React.FC<RichTooltipProps> = ({
     setIsVisible(false);
   };
 
+  // Touch devices have no hover — a tap fires click but not mouseenter, so
+  // give the trigger an explicit toggle. Desktop hover/focus above unchanged.
+  const toggleTooltip = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsVisible((visible) => !visible);
+  };
+
+  // Escape + outside click/tap close the tooltip once open — mirrors the
+  // Popover pattern below, since touch has no blur/mouseleave to fall back on.
+  useDismissableOpen(containerRef, isVisible, () => setIsVisible(false));
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   const positionStyles: Record<TooltipPosition, string> = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+    left: "right-full top-1/2 -translate-y-1/2 mr-2",
+    right: "left-full top-1/2 -translate-y-1/2 ml-2",
   };
 
   return (
     <div
+      ref={containerRef}
       className="relative inline-flex"
       onMouseEnter={showTooltip}
       onMouseLeave={hideTooltip}
+      onFocus={showTooltip}
+      onBlur={hideTooltip}
+      onClick={toggleTooltip}
+      aria-expanded={isVisible}
     >
       {children}
 
       {isVisible && (
         <div
           role="tooltip"
+          // Stops the trigger's onClick toggle from also firing when the
+          // tap lands on the tooltip body itself — it's a DOM child of the
+          // trigger, so without this a tap inside the content self-closes it.
+          onClick={(e) => e.stopPropagation()}
           className={`
             absolute z-50 ${positionStyles[position]}
             p-3 bg-surface-container-high rounded-xl elevation-2
@@ -205,23 +266,17 @@ interface PopoverProps {
 export const Popover: React.FC<PopoverProps> = ({
   trigger,
   content,
-  position = 'bottom',
-  className = '',
+  position = "bottom",
+  className = "",
   onOpenChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        onOpenChange?.(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onOpenChange]);
+  useDismissableOpen(containerRef, isOpen, () => {
+    setIsOpen(false);
+    onOpenChange?.(false);
+  });
 
   const toggleOpen = () => {
     const newState = !isOpen;
@@ -230,10 +285,10 @@ export const Popover: React.FC<PopoverProps> = ({
   };
 
   const positionStyles: Record<TooltipPosition, string> = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-0 mt-2',
-    left: 'right-full top-0 mr-2',
-    right: 'left-full top-0 ml-2',
+    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+    bottom: "top-full left-0 mt-2",
+    left: "right-full top-0 mr-2",
+    right: "left-full top-0 ml-2",
   };
 
   return (
@@ -263,15 +318,15 @@ export const Popover: React.FC<PopoverProps> = ({
 interface InfoTooltipProps {
   content: string;
   position?: TooltipPosition;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
 }
 
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   content,
-  position = 'top',
-  size = 'sm',
+  position = "top",
+  size = "sm",
 }) => {
-  const sizeClass = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const sizeClass = size === "sm" ? "w-4 h-4" : "w-5 h-5";
 
   return (
     <Tooltip content={content} position={position}>

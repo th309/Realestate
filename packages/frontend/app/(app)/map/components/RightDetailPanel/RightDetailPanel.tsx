@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X } from "lucide-react";
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from "../Icons";
 import { MetricTitle } from "@/app/components/MetricTitle";
@@ -23,6 +23,7 @@ import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
 import { QuickActions } from "./QuickActions";
 import { SidebarScoreCard } from "../sidebar-components";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface MatchScoreInfo {
   matchScore: number;
@@ -67,6 +68,10 @@ const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
 
 const STORAGE_KEY = "rightpanel-market-factors";
 
+// Same breakpoint as this panel's own `md:relative` layout classes below —
+// at/above it the panel is a permanently-docked sidebar, not an overlay.
+const DESKTOP_QUERY = "(min-width: 768px)";
+
 function loadMarketFactors(): MarketFactor[] {
   if (typeof window === "undefined") return DEFAULT_MARKET_FACTORS;
   try {
@@ -75,6 +80,18 @@ function loadMarketFactors(): MarketFactor[] {
   } catch {
     return DEFAULT_MARKET_FACTORS;
   }
+}
+
+// Read synchronously where possible (client render) so the very first
+// render already reflects the real viewport — avoids a mount-time flash
+// where useModalHistory briefly pushes a history entry before a follow-up
+// effect corrects it on desktop.
+function getIsDesktop(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia &&
+    window.matchMedia(DESKTOP_QUERY).matches
+  );
 }
 
 export function RightDetailPanel({
@@ -88,6 +105,18 @@ export function RightDetailPanel({
   const [marketFactors, setMarketFactors] =
     useState<MarketFactor[]>(loadMarketFactors);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(getIsDesktop);
+
+  // Track the breakpoint live (orientation change / window resize), on top
+  // of the synchronous initial read above.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia(DESKTOP_QUERY);
+    setIsDesktop(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
 
   const metricIds = useMemo(
     () => [...new Set(marketFactors.map((f) => f.metricId))],
@@ -109,6 +138,12 @@ export function RightDetailPanel({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(factors));
     }
   };
+
+  // System back button / edge-swipe closes the mobile full-screen panel
+  // instead of navigating away or exiting the installed PWA. Mobile-only:
+  // on desktop the panel is a permanently-docked sidebar (`md:relative`
+  // below), so Back should navigate the page, not close the docked panel.
+  useModalHistory(isOpen, onClose, "right-detail-panel", !isDesktop);
 
   if (!isOpen || !geography) return null;
 

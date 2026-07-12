@@ -12,6 +12,12 @@ import type {
 } from "../shared/types";
 import { grm, opexRatio } from "./metrics";
 import type { GradingContext } from "./types";
+import {
+  AUTOKILL_DEFAULTS,
+  ruleEnabled,
+  ruleValue,
+  type BuyAndHoldAutoKillConfig,
+} from "../shared/autokill-config";
 
 export function formatPercent(decimal: number): string {
   return `${(decimal * 100).toFixed(1)}%`;
@@ -127,23 +133,32 @@ export function buildAdvisories(
   ];
 }
 
+/** "1.00" reads worse than the historical "1.0"; trim ONE trailing zero. */
+function formatFloor(value: number): string {
+  return value.toFixed(2).replace(/0$/, "");
+}
+
 export function collectAutoKills(
   input: DealInput,
   context: GradingContext,
   dscrValue: number,
   annualPretaxCashFlow: number,
+  config?: BuyAndHoldAutoKillConfig,
 ): AutoKillFlag[] {
   const kills: AutoKillFlag[] = [];
+  const D = AUTOKILL_DEFAULTS.BUY_AND_HOLD;
 
-  if (dscrValue < 1.0) {
+  const dscrFloor = ruleValue(config?.dscrFloor, D.dscrFloor);
+  if (ruleEnabled(config?.dscrFloor) && dscrValue < dscrFloor) {
     kills.push({
       code: "DSCR_BELOW_1",
-      message: "DSCR below 1.0 — property cannot service its own debt.",
+      message: `DSCR below ${formatFloor(dscrFloor)} — property cannot service its own debt.`,
     });
   }
 
   const zone = context.floodZone;
   if (
+    ruleEnabled(config?.floodNoInsurance) &&
     (zone === "AE" || zone === "VE" || zone === "A") &&
     !context.floodInsuranceQuoted
   ) {
@@ -155,14 +170,22 @@ export function collectAutoKills(
 
   const rentMonthly = input.rentMonthly ?? 0;
   const taxIns = (input.taxAnnual ?? 0) + (input.insuranceAnnual ?? 0);
-  if (taxIns > 0.4 * rentMonthly * 12) {
+  const taxInsShare = ruleValue(config?.taxInsShareOfRent, D.taxInsShareOfRent);
+  if (
+    ruleEnabled(config?.taxInsShareOfRent) &&
+    taxIns > taxInsShare * rentMonthly * 12
+  ) {
     kills.push({
       code: "TAX_INS_OVER_40",
-      message: "Taxes + insurance exceed 40% of gross annual rent.",
+      message: `Taxes + insurance exceed ${Math.round(taxInsShare * 100)}% of gross annual rent.`,
     });
   }
 
-  if (annualPretaxCashFlow < 0 && !context.appreciationPlayAccepted) {
+  if (
+    ruleEnabled(config?.negativeCashflowNoAck) &&
+    annualPretaxCashFlow < 0 &&
+    !context.appreciationPlayAccepted
+  ) {
     kills.push({
       code: "NEG_CF_NO_APPRECIATION_ACK",
       message:

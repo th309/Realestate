@@ -22,7 +22,7 @@ import "@/app/reports/styles/report-theme.css";
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center">
+    <div className="min-h-dvh bg-surface flex items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-on-surface-variant">Loading shared report...</p>
@@ -76,7 +76,7 @@ function SharedReportViewer() {
 
   if (loading) {
     return (
-      <div className="report-page min-h-screen flex items-center justify-center">
+      <div className="report-page min-h-dvh flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-[var(--report-navy)]/10 flex items-center justify-center">
             <Loader2 className="w-6 h-6 text-[var(--report-navy)] animate-spin" />
@@ -89,7 +89,7 @@ function SharedReportViewer() {
 
   if (error || !report) {
     return (
-      <div className="report-page min-h-screen flex items-center justify-center">
+      <div className="report-page min-h-dvh flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 rounded-2xl bg-[var(--report-error-bg)] flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-[var(--report-error)]" />
@@ -110,7 +110,7 @@ function SharedReportViewer() {
 
   if (report.status !== "ready") {
     return (
-      <div className="report-page min-h-screen flex items-center justify-center">
+      <div className="report-page min-h-dvh flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-amber-600" />
@@ -163,7 +163,7 @@ function SharedReportViewer() {
     : undefined;
 
   return (
-    <div className="report-page min-h-screen">
+    <div className="report-page min-h-dvh">
       {/* Header: branded when org exists, default PropertyIQ otherwise */}
       {orgBranding ? (
         <BrandedReportHeader

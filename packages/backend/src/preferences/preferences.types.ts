@@ -35,6 +35,9 @@ export interface AnalyzerDefaults {
   appreciationPct?: number;
   holdYears?: number;
   closingCostsPct?: number;
+  marginalTaxRatePct?: number;
+  landValueSharePct?: number;
+  expenseGrowthPct?: number;
 }
 
 export interface UserPreferences {

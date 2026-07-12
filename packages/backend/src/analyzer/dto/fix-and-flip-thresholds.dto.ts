@@ -9,6 +9,7 @@
 import { Type } from 'class-transformer';
 import {
   IsNumber,
+  IsOptional,
   Max,
   Min,
   Validate,
@@ -18,6 +19,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { MetricThresholdDto } from './user-thresholds.dto';
+import { FixAndFlipAutoKillsDto } from './auto-kill-config.dto';
 
 const NUM_OPTS = { allowNaN: false, allowInfinity: false } as const;
 
@@ -73,4 +75,9 @@ export class FixAndFlipThresholdsDto {
   @Type(() => FixAndFlipWeightsDto)
   @Validate(FlipWeightsSumToHundredConstraint)
   weights!: FixAndFlipWeightsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FixAndFlipAutoKillsDto)
+  autoKills?: FixAndFlipAutoKillsDto;
 }

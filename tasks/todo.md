@@ -1,3 +1,63 @@
+# PWA / Phone-App Build — 2026-07-12
+
+Branch `worktree-PWA` (user-requested worktree). Full analysis + plan: `docs/plans/2026-07-12-propertyiq-phone-app-analysis-and-plan.md`.
+
+## Phase 1 — Standalone correctness core (P0)
+
+- [x] **1.1** History-API back handling (9 modals/sheets wired, desktop-gated RightDetailPanel) — 9dc8a1ec + dcdf8be9, re-reviewed ✅
+- [x] **1.2** Skeleton screens matching final dimensions (map/market/graphs loaders + MetricCard/StatCard/ScoreWidget) — 27f22bc4, reviewed ✅ (follow-up: GraphsPageV2 internal spinners)
+- [ ] **1.3** Serwist SW foundation (next.config wrapper, app/sw.ts, NO auto-skipWaiting) + update toast ("New version available, tap to refresh")
+- [ ] **1.4** Branded `/offline` page (M3)
+- [ ] **1.5** Middleware `/sw.js` matcher exclusion
+
+## Phase 2 — Install experience
+
+- [x] **2.1** Manifest completeness (id, shortcuts, maskable icon, display_override, categories) — 52e7b686, reviewed ✅
+- [x] **2.2** appleWebApp block + black-translucent status bar — dc9394a0, reviewed ✅ (header `pt-safe-standalone` class = controller integration, pending)
+- [x] **2.3** iOS splash screens (8-device sharp matrix, 759KB) — dc9394a0, reviewed ✅
+- [x] **2.4** Install prompt UX (value-moment banner, iOS instructions, "Get the app", appinstalled→GA) — d376dff5 + 4b7fe98f, re-reviewed ✅ (mount = controller integration, pending)
+
+## Phase 3 — Native feel + navigation
+
+- [x] **3.1** Bottom tab bar (M3, always on mobile, reuse header-nav-data) — 1e773f58, reviewed ✅ (mount = controller integration, pending)
+- [x] **3.2** Touch CSS resets + **3.4** safe-area utils + **3.5** dvh migration (12 pages) — d376dff5, reviewed ✅
+- [ ] **3.3** 44px touch targets · **3.4** safe-area sweep · **3.5** dvh migration
+- [ ] **3.6** Haptics · **3.7** dynamic theme-color · **3.8** View Transitions
+- [x] **3.9** Hover→touch fallbacks (ConfidenceDisplay, RichTooltip, MetricTooltip, base Tooltip) — 911c8334+ceb07881+e2c6a6e6, approved ✅ · **3.10** keyboard occlusion — `interactiveWidget` shipped in 2.2 (dc9394a0)
+
+## Phase 4 — Offline + caching (WAVE 2, merged direct to develop 2026-07-12)
+
+- [x] **4.1** SW SWR on /backend GETs (controller-verified public allowlist + private/no-store backstop + sign-out purge) — 22b40fb2+411e83d2, reviewed ✅ · **4.2** RQ persister (IndexedDB, mutation-dehydration blocked, sign-out purge) — 829a2510+78c4d428, reviewed ✅
+- [x] **4.3** CachedDataBadge (market header + report viewer) · **4.4** GeoJSON CacheFirst — 8ca43300/22b40fb2, reviewed ✅
+- [x] **4.5** useOnlineStatus + OfflineBanner (mounted a70e71aa, z-fix c729c173) + map honest-failure · **4.6** /map first-load −56% (923→405KB gzip) + bundle analyzer — 8ca43300/5e369e78/346a50f9, reviewed ✅
+
+### Wave-2 extras (same day)
+
+- [x] Anon report-generate showed PRO paywall instead of "Sign up free" (conversion bug, pre-existing) — e00d3351, e2e-proven ✅
+- [x] GraphsPageV2 spinners → skeletons — 93e6987c+4858d04f ✅ · SW snackbar dismiss + nav offset — 485bb2bf ✅ · Skeleton.tsx split (skeleton-parts/, case-collision resolved) — 51c45a9f..695a543b ✅ · useDismissableOpen extraction + confidence testids — 556603da ✅
+
+### Follow-up tickets (final wave-2 review, deduped)
+
+**Soon:** star-threshold mismatch (getStarCount 90/80/70/55 vs e2e fixture 90/70/55/40 — 2 e2e asserts can't pass); CI blind to ALL TypeScript errors (`ignoreBuildErrors:true` + eslint-only CI + Linux runners — the skeleton case-collision proved it); Playwright setup-project auth fixtures broken (enterprise + P1-signoff login timeout).
+**Someday:** delete dead report path (ReportViewerRefined/SectionRenderer/orphaned chart sections — recharts lazy-load was a no-op on it; also clears legacy investoredge/homeready refs); remove dead deps docx+pptxgenjs; formatRelativeTimeShort dedup (3 copies); useMapLayers 333>300 split; Tooltip.tsx 4-export split; GraphsPageV2 924-line split; InstallBanner×snackbar bottom overlap; SW snackbar exit-fade; SW score-prefix anchoring; skeleton shim TS1149→TS1261 comment; SR-only race-mode labels.
+
+## Phase 5 — Auth hardening, capabilities, stores
+
+- [x] **5.1** OTP password reset · **5.2** magic-link code alternative · **5.3** standalone-aware auth UX — 80c3a5ad + 84d678c1 (backend hook emails now carry the code; Supabase dashboard edit NOT needed — templates unused), reviewed ✅ (GATES: live signup-chain e2e pre-merge; visual email check post-deploy)
+- [ ] **5.4** Web Share API · **5.5** Push + Badging · **5.6** Play TWA ($25 gate) · **5.7** iOS store (DEFER)
+
+## Review
+
+**FINAL VERDICT: READY-TO-MERGE** (whole-branch review, 2 rounds). 20 commits on `worktree-PWA`. Every task individually spec+quality reviewed (5 fix rounds total across 1.1/1.3/2.4/3.9/final). Verification: prod build green ×3; 14/14 live Playwright chrome checks @390×844; SW offline E2E (real offline nav → branded page, /backend uncached); full vitest 1289 passed, 24 fails all pre-existing (triaged: 54 env-gated files + 5 stale tour mocks — zero wave-caused); collision fixes live-proven.
+
+**Highest-value catches by the review loop:** (1) /offline was never in the SW precache (manifest freezes pre-prerender) — offline fallback was dead until fixed; (2) first-install surprise reload (clientsClaim + ungated controlling); (3) Supabase dashboard templates are a NO-OP — OTP codes now injected in the backend Resend hook (recovery + magic-link); (4) four bottom-bar collisions with the new nav on money pages; (5) tap-inside-tooltip self-close across 4 components.
+
+**Remaining gates (user-visible):** run live `tests/e2e/signup-chain.spec.ts` against the worktree stack pre-merge (auth refactor guard); visual smoke of reset/magic-link emails post-deploy; real-device install checks (Android WebAPK, iPhone A2HS).
+
+**Follow-up tickets:** /graphs breadcrumb+footer residual scroll + /reports/builder header overflow (pre-existing); SW snackbar dismiss + nav overlap; Skeleton.tsx split; middleware.ts over-limit; GraphsPageV2 internal spinners; dead wave animation; orphaned confidence-\* e2e testids; useDismissableOpen extraction; Playwright in CI; StickyScoreBar forced-mount test; confirm landing-v2 intentionally omits sticky bar; landing-experiment code cleanup once LANDING_EXPERIMENT=on bakes.
+
+---
+
 # GEO Top-5 Fixes — 2026-07-08 (from GEO-ANALYSIS.md)
 
 Branch `develop` (commit locally; never push without ask).

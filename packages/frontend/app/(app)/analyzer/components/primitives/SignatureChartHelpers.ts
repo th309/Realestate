@@ -52,6 +52,54 @@ export function autoColor(data: DataPoint[]): string {
   return diff > 0 ? piq.green : piq.red;
 }
 
+/**
+ * Fractional position of y=0 from the TOP of the plotted value range, for a
+ * hard-stop SVG gradient that renders values above zero in the series color
+ * and values below zero in red. Returns null when the data doesn't cross
+ * zero (no gradient needed — a flat color is correct).
+ */
+export function zeroCrossingOffset(
+  data: DataPoint[],
+  key: string,
+): number | null {
+  const values = data
+    .map((p) => p[key])
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (values.length === 0) return null;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  if (min >= 0 || max <= 0) return null;
+  return max / (max - min);
+}
+
+/**
+ * Resolve the primary series' stroke/fill under optional sign coloring:
+ * data crossing zero paints via a hard-stop gradient (url ref), all-negative
+ * data is plain red, otherwise the base series color.
+ */
+export function resolveSignPaint(
+  data: DataPoint[],
+  key: string,
+  baseColor: string,
+  gradientId: string,
+  signColoring: boolean,
+): { color: string; paint: string; zeroOffset: number | null } {
+  const zeroOffset = signColoring ? zeroCrossingOffset(data, key) : null;
+  const allNegative =
+    signColoring &&
+    data.length > 0 &&
+    data.every((p) => {
+      const v = p[key];
+      return typeof v === "number" && v <= 0;
+    });
+  const color = allNegative ? piq.red : baseColor;
+  return {
+    color,
+    paint: zeroOffset != null ? `url(#${gradientId})` : color,
+    zeroOffset,
+  };
+}
+
 export type RangeAnchor = "head" | "tail";
 
 /**

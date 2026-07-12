@@ -7,13 +7,13 @@ export {
   TrendArrow,
   TrendBadge,
   SparklineTrend,
-} from './TrendIndicator';
+} from "./TrendIndicator";
 
 // Stat Cards
-export { StatCard, StatGrid, MiniStat } from './StatCard';
+export { StatCard, StatGrid, MiniStat } from "./StatCard";
 
 // Comparison Table
-export { ComparisonTable, MiniComparison } from './ComparisonTable';
+export { ComparisonTable, MiniComparison } from "./ComparisonTable";
 
 // Insight Cards
 export {
@@ -21,4 +21,7 @@ export {
   CompactInsight,
   InsightCarousel,
   AIInsightBadge,
-} from './InsightCard';
+} from "./InsightCard";
+
+// Cached-data (offline/stale-cache) indicator
+export { CachedDataBadge } from "./CachedDataBadge";

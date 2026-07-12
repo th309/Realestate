@@ -33,6 +33,7 @@ import { ShareButton } from "../ShareButton";
 import { SaveGraphButton } from "../SaveGraphButton";
 import { SaveTemplateModal } from "../SaveTemplateModal";
 import { TemplatePicker } from "../TemplatePicker";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const TIME_FRAMES: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
@@ -94,15 +95,23 @@ function autoScaleType(values: number[]): "linear" | "log" {
 
 // ── Inline helper components ─────────────────────────────────────────────────
 
-function LoadingSpinner({ label }: { label?: string }) {
+// Fills its parent exactly (`w-full h-full`, same footprint as the chart it
+// stands in for) so the swap to real chart content never shifts layout —
+// mirrors the flex-1/no-fixed-height convention used by the route-level
+// GraphsPageSkeleton. `label` is SR-only (aria-label), not rendered visually:
+// the 4 chart types don't share a common header/legend shape (Waterfall and
+// HorizontalBar render neither, Scatter's legend is a conditional corner
+// overlay, Radar's legend count is dynamic), so this stays a single neutral
+// block rather than previewing chrome that may not materialize.
+function ChartSkeleton({ label }: { label?: string }) {
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-on-surface-variant">
-          {label || "Loading data..."}
-        </span>
-      </div>
+    <div
+      className="w-full h-full"
+      role="status"
+      aria-busy="true"
+      aria-label={label || "Loading chart data"}
+    >
+      <Skeleton variant="rounded" className="w-full h-full rounded-3xl" />
     </div>
   );
 }
@@ -494,7 +503,13 @@ export function GraphsPageV2() {
   // ── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden">
+    <div
+      // Desktop: subtract the compact header only. Mobile: also subtract
+      // BottomNavBar (fixed, 64px + safe-area — see BOTTOM_NAV_HEIGHT_PX in
+      // src/components/layout/BottomNavBar.tsx) so there's no dead scroll
+      // above it and the bottom chart controls clear the nav.
+      className="max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden"
+    >
       {/* ── COMPACT HEADER ── */}
       <header className="flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/40 px-4 md:px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center gap-3 flex-wrap">
@@ -565,7 +580,7 @@ export function GraphsPageV2() {
                   {(
                     raceMode ? scatterRaceData.isLoading : scatterData.isLoading
                   ) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building scatter animation..."
@@ -628,7 +643,7 @@ export function GraphsPageV2() {
                       subtitle="Use the search bar or sidebar to add a market"
                     />
                   ) : waterfallData.isLoading ? (
-                    <LoadingSpinner label="Loading waterfall data..." />
+                    <ChartSkeleton label="Loading waterfall data..." />
                   ) : waterfallData.error ? (
                     <ErrorMessage error={waterfallData.error.message} />
                   ) : waterfallData.proGated ? (
@@ -664,7 +679,7 @@ export function GraphsPageV2() {
                   ) : (
                       raceMode ? radarRaceData.isLoading : radarData.isLoading
                     ) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building radar animation..."
@@ -702,7 +717,7 @@ export function GraphsPageV2() {
                   className="w-full h-full"
                 >
                   {(raceMode ? barRaceData.isLoading : barData.isLoading) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building race data..."

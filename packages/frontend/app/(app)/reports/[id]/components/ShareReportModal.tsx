@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   X,
   Link2,
@@ -15,6 +15,7 @@ import {
 import { createReportShareLink } from "@/lib/data";
 import { useEntitlements } from "@/lib/entitlements";
 import { downloadCsv } from "@/lib/export";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface ShareReportModalProps {
   isOpen: boolean;
@@ -48,6 +49,23 @@ export function ShareReportModal({
   );
   const { canAccess } = useEntitlements();
   const canExportCsv = canAccess("feature", "export_csv");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // aria-modal promises assistive tech that focus lives inside the dialog —
+  // move focus in on open and close on Escape (same pattern as LeadMagnetModal).
+  useEffect(() => {
+    if (!isOpen) return;
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
+
+  // System back button / edge-swipe closes this modal instead of navigating
+  // away or exiting the installed PWA.
+  useModalHistory(isOpen, onClose, "share-report-modal");
 
   const handleCopyLink = useCallback(async () => {
     if (sharing) return;
@@ -84,9 +102,18 @@ export function ShareReportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Share and export report"
+    >
       <div className="absolute inset-0 bg-scrim/40" onClick={onClose} />
-      <div className="relative bg-surface-container-lowest rounded-3xl elevation-3 w-full max-w-md overflow-hidden">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="relative bg-surface-container-lowest rounded-3xl elevation-3 w-full max-w-md overflow-hidden outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
           <h2 className="text-lg font-medium text-on-surface">

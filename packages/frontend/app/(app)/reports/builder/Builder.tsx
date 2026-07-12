@@ -144,7 +144,12 @@ export const Builder: React.FC = () => {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-dvh flex flex-col bg-surface overflow-hidden">
+      {/* Mobile: subtract BottomNavBar (fixed, 64px + safe-area — see
+          BOTTOM_NAV_HEIGHT_PX in src/components/layout/BottomNavBar.tsx) so
+          the bottom of the builder clears the nav. Desktop unchanged. Note:
+          this does not fix the pre-existing sticky-header overflow issue
+          here — out of scope for this pass. */}
+      <div className="max-lg:h-[calc(100dvh-64px-env(safe-area-inset-bottom,0px))] lg:h-dvh flex flex-col bg-surface overflow-hidden">
         {/* Top Bar */}
         <header className="flex items-center justify-between gap-4 px-4 py-3 bg-surface-container border-b border-outline-variant">
           {/* Left: Breadcrumbs + Title */}

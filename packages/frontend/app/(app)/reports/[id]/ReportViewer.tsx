@@ -28,6 +28,8 @@ import {
 } from "./reportLoadPolicy";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { recordInstallValueMoment } from "@/lib/pwa/install-value-moment";
+import { CachedDataBadge } from "@/components/data-display";
 import "../styles/report-theme.css";
 
 const POLL_INTERVAL = 2000;
@@ -55,6 +57,12 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConversation, setShowConversation] = useState(false);
+  // Epoch ms of the last successful fetch — this loop polls manually rather
+  // than through React Query, so there's no `dataUpdatedAt` to read; this is
+  // the equivalent, feeding CachedDataBadge (offline/stale-cache indicator).
+  const [dataUpdatedAt, setDataUpdatedAt] = useState<number | undefined>(
+    undefined,
+  );
 
   const [agentViewMode, setAgentViewMode] = useState<"client" | "prep">(
     "client",
@@ -106,6 +114,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
         report_type: report.user_type,
         geography: report.primary_geography_name,
       });
+      recordInstallValueMoment();
     }
   }, [loading, report, reportId]);
 
@@ -146,6 +155,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
         case "render":
           haveReport = true;
           setReport(data);
+          setDataUpdatedAt(Date.now());
           setError(null);
           setLoading(false);
           break;
@@ -154,6 +164,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
             // We have at least a generating report to show — keep it fresh.
             haveReport = true;
             setReport(data);
+            setDataUpdatedAt(Date.now());
             setError(null);
             setLoading(false);
           }
@@ -264,6 +275,13 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
         setShowConversation={setShowConversation}
         formatSectionName={formatSectionName}
       />
+
+      {/* Cached-data indicator — offline/stale-cache awareness. Kept here
+          (not inside ReportHeader) since it renders nothing most of the
+          time and this wrapper carries no vertical padding of its own. */}
+      <div className="max-w-6xl mx-auto px-6 flex justify-end report-no-print">
+        <CachedDataBadge dataUpdatedAt={dataUpdatedAt} className="my-2" />
+      </div>
 
       {/* Personalization Panel - only show for non-agent reports */}
       {!isAgentReport && (

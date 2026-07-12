@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -24,6 +24,7 @@ import {
   arrowForDelta,
   computeAxisTicks,
   formatYTick,
+  resolveSignPaint,
   type DataPoint,
   type RangeOption,
   type RangeAnchor,
@@ -59,6 +60,9 @@ export type SignatureChartProps = {
   showXAxis?: boolean;
   /** Format an x value into a bottom-axis tick label (e.g. year → calendar year). */
   xTickFormatter?: (x: number | string) => string;
+  /** Render values below zero in red (hard-stop gradient at the zero line)
+   *  and color the headline by sign. For series that can go negative. */
+  signColoring?: boolean;
   className?: string;
 };
 
@@ -87,8 +91,12 @@ export function SignatureChart({
   showYAxis = false,
   showXAxis = false,
   xTickFormatter,
+  signColoring = false,
   className = "",
 }: SignatureChartProps) {
+  // Sanitize: useId() emits colons, which break url(#id) gradient refs in
+  // some browsers (same workaround as the tour charts' Sparkline et al).
+  const gradientId = `piq-grad-${useId().replace(/:/g, "")}`;
   const initialRange =
     defaultRange ?? ranges[ranges.length - 1]?.years ?? data.length;
   const [currentRangeYears, setCurrentRangeYears] = useState(initialRange);
@@ -110,12 +118,25 @@ export function SignatureChart({
   const primarySeries =
     resolvedSeries.find((s) => s.isPrimary) ?? resolvedSeries[0];
   const primaryKey = primarySeries.key;
-  const primaryColor = primarySeries.color;
+  const {
+    color: primaryColor,
+    paint: primaryPaint,
+    zeroOffset,
+  } = resolveSignPaint(
+    slicedData,
+    primaryKey,
+    primarySeries.color,
+    gradientId,
+    signColoring,
+  );
 
   const activePoint =
     activeIndex != null
       ? slicedData[activeIndex]
-      : slicedData[slicedData.length - 1];
+      : // Sign-colored forward projections open on TODAY's value (year 1) so
+        // the headline color always agrees with the part of the curve it
+        // describes — a red curve must not open with a green number.
+        slicedData[signColoring ? 0 : slicedData.length - 1];
   const firstPoint = slicedData[0];
 
   const activePrimary = readYValue(activePoint, primaryKey);
@@ -202,7 +223,7 @@ export function SignatureChart({
           format={headlineFormat}
           subLabel={subLabel && activePoint ? subLabel(activePoint) : undefined}
           size="lg"
-          variant="neutral"
+          variant={signColoring ? "directional" : "neutral"}
         />
         {firstPoint && activePoint && firstPoint !== activePoint && (
           <div
@@ -256,6 +277,14 @@ export function SignatureChart({
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
             >
+              {zeroOffset != null && (
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset={zeroOffset} stopColor={primaryColor} />
+                    <stop offset={zeroOffset} stopColor={piq.red} />
+                  </linearGradient>
+                </defs>
+              )}
               <XAxis
                 dataKey="x"
                 type={xIsNumeric ? "number" : "category"}
@@ -298,16 +327,17 @@ export function SignatureChart({
               {resolvedSeries.map((s) => {
                 const isPrimaryLine = s.key === primaryKey;
                 const useArea = variant === "area" && isPrimaryLine;
+                const paint = isPrimaryLine ? primaryPaint : s.color;
                 return useArea ? (
                   <Area
                     key={s.key}
                     type="monotone"
                     dataKey={s.key}
-                    stroke={s.color}
+                    stroke={paint}
                     strokeWidth={1.75}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    fill={s.color}
+                    fill={paint}
                     fillOpacity={0.08}
                     dot={false}
                     activeDot={false}
@@ -320,7 +350,7 @@ export function SignatureChart({
                     key={s.key}
                     type="monotone"
                     dataKey={s.key}
-                    stroke={s.color}
+                    stroke={paint}
                     strokeWidth={isPrimaryLine ? 1.75 : 1.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"

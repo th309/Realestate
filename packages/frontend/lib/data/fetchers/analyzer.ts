@@ -81,6 +81,10 @@ export async function fetchMarketContext(
     headers: { ...authHeaders },
   });
   if (res.status === 402) return { quotaExceeded: true };
+  // 5xx is transient: throw so React Query retries and useMarketContext's
+  // error-state self-heal kicks in, instead of caching null as a success
+  // for the 2h staleTime. 4xx (auth, unknown geo) stays fail-soft null.
+  if (res.status >= 500) throw new Error(`market-context ${res.status}`);
   if (!res.ok) return null;
   return res.json();
 }

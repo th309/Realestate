@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { recordInstallValueMoment } from "@/lib/pwa/install-value-moment";
 import { useGradeBrrrrDeal, useGradeDeal, useGradeFlipDeal } from "@/lib/data";
 import type { BrrrrGradeRequest, FixAndFlipGradeRequest } from "@/lib/data";
 import type {
@@ -32,6 +33,7 @@ export function emitGradeCoverageEvent(props: {
   hasRent: boolean;
 }) {
   trackEvent("feature.analyzer_grade", props);
+  recordInstallValueMoment();
 }
 
 export interface UseGradingResultArgs {

@@ -54,6 +54,15 @@ export interface FallbackSource {
   transform?: (val: number) => number;
   /** Restrict this source to specific geo levels (null = all levels) */
   geoLevels?: GeoLevel[];
+  /**
+   * Anchor on the most recent row where THIS column is non-null instead of
+   * the latest-dated row. For display metrics whose upstream ships some
+   * columns a period late (e.g. Realtor hotness in the monthly file), where
+   * "one month old" beats an em-dash. NEVER set on PIQ score inputs
+   * (days_on_market, price_reduced_share) — those must surface a
+   * current-period gap so the score's confidence degrades honestly.
+   */
+  anchorNonNull?: boolean;
 }
 
 /**

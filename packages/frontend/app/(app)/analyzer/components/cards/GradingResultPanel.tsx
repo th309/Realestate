@@ -60,6 +60,8 @@ interface GradingResultPanelProps {
 
   /** Opens the Customize Thresholds drawer. Renders the chip when provided. */
   onCustomizeClick?: () => void;
+  /** Opens the Auto-Kill tab of the Customize drawer from the banner. */
+  onEditAutoKillCriteria?: () => void;
   /** Display name shown in the customize chip (e.g. "Balanced"). */
   presetLabel?: string;
   /** Per-deal AI analysis from `useSectionAiInsights().recommendation_analysis`.
@@ -88,6 +90,7 @@ export function GradingResultPanel({
   onApplyBrrrrLever,
   onApplyBrrrrCombination,
   onCustomizeClick,
+  onEditAutoKillCriteria,
   presetLabel,
   aiProps,
 }: GradingResultPanelProps) {
@@ -113,7 +116,10 @@ export function GradingResultPanel({
 
   return (
     <div data-grading-result-panel className="space-y-4">
-      <AutoKillBanner autoKills={result.autoKills} />
+      <AutoKillBanner
+        autoKills={result.autoKills}
+        onEditCriteria={onEditAutoKillCriteria}
+      />
       <RecommendationCard
         result={result}
         onCustomizeClick={onCustomizeClick}

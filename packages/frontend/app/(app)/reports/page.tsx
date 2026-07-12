@@ -111,24 +111,23 @@ function ReportHistory() {
 function ReportsContent() {
   return (
     <div className="min-h-screen bg-surface" data-tour="reports-section">
-      {/* Report creation form — direct to market selection, no type picker */}
-      <ReportCreationPage />
-
-      {/* Recent Reports */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8">
-        {/* Recent Reports */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
-              <History className="w-4 h-4 text-on-surface-variant" />
+      {/* Report creation form; recent reports render in its right column so
+          they're visible without scrolling on desktop */}
+      <ReportCreationPage
+        recentReports={
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
+                <History className="w-4 h-4 text-on-surface-variant" />
+              </div>
+              <h2 className="text-lg font-semibold text-on-surface">
+                Recent Reports
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-on-surface">
-              Recent Reports
-            </h2>
-          </div>
-          <ReportHistory />
-        </div>
-      </div>
+            <ReportHistory />
+          </section>
+        }
+      />
     </div>
   );
 }

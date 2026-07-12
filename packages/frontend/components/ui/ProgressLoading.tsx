@@ -6,7 +6,9 @@
  * across features (report generation, AI market analysis, etc.).
  *
  * Two variants:
- *  - "fullscreen": centers in the viewport (a whole page is generating, e.g. reports)
+ *  - "fullscreen": fills the app shell's main column and centers within it —
+ *                  render it as a direct child of a flex column (e.g. the app
+ *                  <main>) so flex-1 can claim the space between header and footer
  *  - "inline":     fits inside a card/panel (a single section is generating)
  */
 
@@ -35,6 +37,8 @@ interface ProgressLoadingProps {
   title: string;
   /** Reassuring subtext shown while in progress (set realistic timing here). */
   subtitle: string;
+  /** Optional reassurance line rendered below the step list while in progress. */
+  footnote?: string;
   completeTitle?: string;
   completeSubtitle?: string;
   errorTitle?: string;
@@ -52,6 +56,7 @@ export function ProgressLoading({
   steps,
   title,
   subtitle,
+  footnote,
   completeTitle = "Done",
   completeSubtitle = "Ready.",
   errorTitle = "Something went wrong",
@@ -96,7 +101,7 @@ export function ProgressLoading({
 
   const wrapperClass = inline
     ? "w-full"
-    : "min-h-screen flex items-center justify-center";
+    : "flex-1 flex items-center justify-center px-4 py-10";
   const innerClass = inline
     ? "w-full text-center"
     : "w-full max-w-lg mx-auto text-center";
@@ -245,6 +250,12 @@ export function ProgressLoading({
             );
           })}
         </div>
+
+        {footnote && !isComplete && (
+          <p className="text-xs text-on-surface-variant mt-4 max-w-sm mx-auto">
+            {footnote}
+          </p>
+        )}
       </div>
     </div>
   );

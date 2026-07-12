@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AssumptionsTab — eight per-user analyzer defaults persisted to
+ * AssumptionsTab — eleven per-user analyzer defaults persisted to
  * `user_preferences.analyzer_defaults` (separate API + cache from
  * thresholds; see `useAnalyzerDefaults`).
  *
@@ -74,11 +74,32 @@ const ROWS: RowConfig[] = [
     hint: "Yearly property value growth",
   },
   {
+    key: "expenseGrowthPct",
+    label: "Expense Growth (annual)",
+    mode: "percent",
+    defaultValue: ASSUMPTION_DEFAULTS.expenseGrowthPct,
+    hint: "Yearly operating-expense growth",
+  },
+  {
     key: "closingCostsPct",
     label: "Closing Costs",
     mode: "percent",
     defaultValue: ASSUMPTION_DEFAULTS.closingCostsPct,
     hint: "Closing costs as % of purchase price",
+  },
+  {
+    key: "marginalTaxRatePct",
+    label: "Marginal Tax Rate",
+    mode: "percent",
+    defaultValue: ASSUMPTION_DEFAULTS.marginalTaxRatePct,
+    hint: "Income tax bracket used for after-tax cashflow",
+  },
+  {
+    key: "landValueSharePct",
+    label: "Land Value Share",
+    mode: "percent",
+    defaultValue: ASSUMPTION_DEFAULTS.landValueSharePct,
+    hint: "Land-vs-building split for depreciation basis",
   },
   {
     key: "holdYears",

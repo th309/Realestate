@@ -1,6 +1,7 @@
-import { Text, Section } from "@react-email/components";
+import { Text } from "@react-email/components";
 import Layout from "./components/layout";
 import EmailHeading from "./components/email-heading";
+import OtpCodeBlock from "./components/otp-code-block";
 
 export interface EmailOtpCodeProps {
   name: string;
@@ -29,11 +30,7 @@ export default function EmailOtpCode({
         Enter this code on the signup screen to activate your PropertyIQ
         account:
       </Text>
-      <Section className="text-center mb-6">
-        <Text className="text-4xl font-bold tracking-[0.4em] text-brand m-0">
-          {code}
-        </Text>
-      </Section>
+      <OtpCodeBlock code={code} />
       <Text className="text-sm text-gray-500 leading-5 m-0">
         This code expires in {expiresIn}. If you didn&apos;t request it, you can
         safely ignore this email.

@@ -22,6 +22,7 @@ import {
   nudgeForRent,
   nudgeForTax,
   nudgeForInsurance,
+  nudgeForHOA,
   nudgeForRate,
   nudgeForArv,
 } from "../../lib/nudges";
@@ -72,6 +73,8 @@ interface InputPanelProps {
   brrrr?: BrrrrResult | null;
   provenance?: ProvenanceMap;
   onAddressSelect?: (s: AddressSuggestion) => void;
+  /** Opens the Customize drawer (Auto-Kill tab) from Advanced Assumptions. */
+  onCustomizeClick?: () => void;
 }
 
 const fmtUsd = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -106,6 +109,7 @@ export function InputPanel({
   brrrr,
   provenance = {},
   onAddressSelect,
+  onCustomizeClick,
 }: InputPanelProps) {
   // Fall back to uncontrolled local state when parent doesn't supply propertyType
   // (keeps existing tests working). When parent passes the prop, that wins.
@@ -145,7 +149,7 @@ export function InputPanel({
     <aside
       data-input-panel
       data-input-panel-sticky
-      className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto"
+      className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4"
     >
       <PropertyTypeToggle
         propertyType={propertyType}
@@ -267,6 +271,24 @@ export function InputPanel({
             )}
           />
         </div>
+        <div>
+          <NumField
+            label="HOA (monthly)"
+            value={input.hoaMonthly ?? 0}
+            onChange={(v) => update({ hoaMonthly: v ?? 0 })}
+            prefix="$"
+            placeholder="0"
+            nudge={nudgeForHOA(input.hoaMonthly ?? 0, input.rentMonthly ?? 0)}
+          />
+          <FieldProvenance
+            data={provenance.hoaMonthly}
+            current={input.hoaMonthly ?? null}
+            divergent={isDivergent(
+              provenance.hoaMonthly?.baseline ?? null,
+              input.hoaMonthly ?? null,
+            )}
+          />
+        </div>
         {showArv && (
           <NumField
             label="ARV (after rehab)"
@@ -361,16 +383,7 @@ export function InputPanel({
         assumptions={assumptions}
       />
 
-      {assumptions && onAssumptionChange && (
-        <AdvancedAssumptions
-          assumptions={assumptions}
-          onChange={onAssumptionChange}
-          input={input}
-          onInputChange={update}
-          onFinancingChange={updateFin}
-          provenance={provenance}
-        />
-      )}
+      <AdvancedAssumptions onCustomizeClick={onCustomizeClick} />
     </aside>
   );
 }

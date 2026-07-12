@@ -29,10 +29,11 @@ const COOKIE_DOMAIN =
 
 export async function GET(
   _request: Request,
-  ctx: { params: Promise<{ slug: string }> | { slug: string } },
+  // Next's generated route stub requires the declared params type to be a
+  // Promise (a union fails its ParamCheck). Runtime still tolerates the
+  // legacy plain-object shape via Promise.resolve() below.
+  ctx: { params: Promise<{ slug: string }> },
 ): Promise<NextResponse> {
-  // Next.js 15+ returns params as a Promise; earlier versions and tests
-  // may pass a plain object. Normalize via Promise.resolve().
   const { slug } = await Promise.resolve(ctx.params);
 
   const res = await fetch(

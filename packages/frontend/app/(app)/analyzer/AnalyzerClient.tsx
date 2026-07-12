@@ -1,11 +1,10 @@
 "use client";
 
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements";
 import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
-import { InputPanel } from "./components/InputPanel/InputPanel";
+import { AnalyzerInputPanel } from "./components/InputPanel/AnalyzerInputPanel";
 import { MobileInputSheet } from "./components/chrome/MobileInputSheet";
 import { EmptyStateCta } from "./components/chrome/EmptyStateCta";
 import { EditInputsBar } from "./components/chrome/EditInputsBar";
@@ -15,6 +14,12 @@ import { deriveVerdict } from "./lib/format-helpers";
 import { GradingResultPanel } from "./components/cards/GradingResultPanel";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
+import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
+import {
+  detectActivePreset,
+  type AnyStrategyThresholds,
+} from "./components/CustomizeThresholdsDrawer/preset-helpers";
+import { useThresholds } from "@/lib/data";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
@@ -54,11 +59,10 @@ export default function AnalyzerClient({
   });
   // prettier-ignore
   const {
-    analyzer, address, setAddress, arvLocal, setArvLocal, rehabBudget,
-    setRehabBudget, assumptions, setAssumption, propertyType, setPropertyType,
-    unitCount, setUnitCount, propertyClass, propertyLookup, rentcastData,
+    analyzer, address, arvLocal, setArvLocal, rehabBudget,
+    setRehabBudget, assumptions, setAssumption, propertyLookup, rentcastData,
     quotaExceeded, projection, sensitivity, afterTax, breakEven, brrrrTimeline,
-    marketContext, piqByGeo, provenance, handleAddressSelect,
+    marketContext, piqByGeo,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -76,7 +80,6 @@ export default function AnalyzerClient({
     (analyzer.input.price ?? 0) > 0 &&
     ((analyzer.input.rentMonthly ?? 0) > 0 || rental.capRatePct != null);
 
-  const router = useRouter();
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
   // prettier-ignore
   const { selectedGoal, setSelectedGoal, bestPlay, noGoalFit } = useSelectedGoal(
@@ -84,6 +87,11 @@ export default function AnalyzerClient({
   );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<ThresholdsTabId>("thresholds");
+  const openDrawer = (tab: ThresholdsTabId) => {
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
 
   useAnalyzerDefaultsPrefill({
     setInput: analyzer.setInput,
@@ -92,6 +100,22 @@ export default function AnalyzerClient({
   });
   const activeStrategy: Strategy =
     analysisMode === "compare" ? bestPlay : focusedStrategy;
+
+  // "Graded against X criteria" must reflect the user's SAVED rubric, not a
+  // hardcoded preset name. GET falls back to the Balanced preset when the
+  // account has no saved row, so detectActivePreset resolves it correctly;
+  // anything off the preset grid reads as Custom.
+  const engineStrategy = toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD";
+  const savedThresholdsQ = useThresholds(engineStrategy);
+  const activePreset = detectActivePreset(
+    engineStrategy,
+    (savedThresholdsQ.data as AnyStrategyThresholds | undefined) ?? null,
+  );
+  const presetLabel = savedThresholdsQ.data
+    ? activePreset
+      ? activePreset.charAt(0).toUpperCase() + activePreset.slice(1)
+      : "Custom"
+    : "Balanced";
 
   const displayAddress =
     rentcastData?.resolved_address ?? (address.trim() || null);
@@ -181,46 +205,14 @@ export default function AnalyzerClient({
     : null;
 
   const inputPanel = (
-    <InputPanel
-      input={analyzer.input}
-      arv={arvLocal}
-      onChange={analyzer.setInput}
-      onArvChange={setArvLocal}
-      rehabBudget={rehabBudget}
-      onRehabBudgetChange={setRehabBudget}
-      assumptions={assumptions}
-      onAssumptionChange={setAssumption}
-      address={address}
-      onAddressChange={setAddress}
+    <AnalyzerInputPanel
+      state={state}
       isPro={isPro}
-      isFetching={propertyLookup.isPending}
-      onFetchProperty={() => {
-        // Persist the address to the URL so a page refresh re-fires the
-        // auto-fetch path in use-analyzer-state.ts. Combined with the 30-day
-        // Redis cache on the backend, refresh becomes ~instant — no second
-        // RentCast roundtrip needed for the same address.
-        const trimmed = address.trim();
-        if (trimmed.length > 0) {
-          const next = `/analyzer?address=${encodeURIComponent(trimmed)}`;
-          router.replace(next);
-        }
-        propertyLookup.mutate({ address });
-      }}
-      rentCastState={rentcastData ? "fresh" : "missing"}
       activeStrategy={activeStrategy}
       analysisMode={analysisMode}
       onAnalysisModeChange={setAnalysisMode}
       onStrategyChange={setFocusedStrategy}
-      propertyType={propertyType}
-      onPropertyTypeChange={setPropertyType}
-      unitCount={unitCount}
-      onUnitCountChange={setUnitCount}
-      propertyClass={propertyClass}
-      rental={rental}
-      flip={flip}
-      brrrr={brrrr}
-      provenance={provenance}
-      onAddressSelect={handleAddressSelect}
+      onCustomizeClick={() => openDrawer("assumptions")}
     />
   );
 
@@ -247,7 +239,7 @@ export default function AnalyzerClient({
           <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] gap-6">
           <div className="hidden md:block">
             <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
               {inputPanel}
@@ -293,8 +285,9 @@ export default function AnalyzerClient({
                 strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
                 onApplyLever={analyzer.setInput}
                 {...upgradeProps}
-                onCustomizeClick={() => setDrawerOpen(true)}
-                presetLabel="Balanced"
+                onCustomizeClick={() => openDrawer("thresholds")}
+                onEditAutoKillCriteria={() => openDrawer("autokill")}
+                presetLabel={presetLabel}
                 aiProps={sectionAi.recommendation_analysis}
               />
             ) : grading.isLoading ? (
@@ -386,6 +379,7 @@ export default function AnalyzerClient({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+        initialTab={drawerTab}
       />
     </main>
   );

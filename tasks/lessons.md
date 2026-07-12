@@ -208,3 +208,32 @@
 - Rank the table's columns by decision value; make the top ones fit the phone viewport (tighter padding, responsive min-widths)
 - Add a scroll affordance for the rest (ScrollShadowContainer pattern: fade + chevron, driven by scrollLeft/scrollWidth)
 - Screenshot at real device widths and read it as a user would before claiming done
+
+## Parallel Agents Sharing One Git Worktree Race on the Index
+
+**Date:** 2026-07-12
+**Context:** Two parallel implementers in the same worktree: agent A ran `git add -- <its files>` then `git commit` as separate commands; between them agent B's staged files entered the shared index and were swept into A's commit (d376dff5 carried two tasks' work). No data loss, but per-task review diffs broke and had to be reconstructed by file subsets.
+
+**Rule:** In a shared worktree with concurrent committers, staging and committing must be atomic per agent: use `git commit -m "..." -- <explicit paths>` as ONE command (pathspec commit ignores other staged entries), never `git add` + bare `git commit` as separate steps. Reviewers must verify each commit's `--stat` matches the task's ownership list.
+
+**Also observed same session:** stop-hooks attribute the user's parallel main-checkout WIP to the session (verify with `git status` on the flagged paths before dispatching validators); piping a long-running dev server through `head` wedges it when the pipe closes (redirect to a file instead).
+
+## Verification and Review Fan Out in Parallel — Even Mid-Fix
+
+**Date:** 2026-07-12
+**Context:** Finishing a handoff's in-flight fix, I ran lint → build → tests → tsc → live curl serially in the main context, one tool call after another. User interrupted: "dude...use multiple agents." The implementation edits were genuinely sequential (each shaped the next), but everything after the last edit — vitest suites, tsc, live render checks, code-reviewer, data-layer-reviewer — was independent and should have been one parallel dispatch.
+
+**Rule:** The moment the last edit lands, STOP running verification serially. Batch all independent checks (test suites, typecheck, live E2E, §1.6 reviewers) into a single multi-Agent dispatch. "I'm almost done, one more quick check" is the tell — that's when to fan out, not grind on.
+
+**Wrong behavior:** edit → run lint → wait → run build → wait → run tests → wait → curl → wait → then dispatch reviewers.
+
+**Correct behavior:** edit → one message dispatching verify-tests, verify-live, code-reviewer, data-layer-reviewer in parallel → integrate results.
+
+## Shared-Trunk Restructures Must Land the Final Safe Shape in the FIRST Commit
+
+**Date:** 2026-07-12
+**Context:** A file-tree split created `components/ui/skeleton/` next to `Skeleton.tsx` — a Windows case-collision landmine (TS1261). It was "temporary" (renamed to `skeleton-parts/` 4.5 minutes later), but within that window a concurrent agent wrote the natural bare import `@/components/ui/skeleton` against it, producing a 31-error typecheck storm. A reviewer watched it happen live.
+
+**Rule:** On a trunk being edited by multiple concurrent agents, an intermediate hazardous state is NOT temporary — someone will build against it within minutes. Any restructure with a known collision risk (case-insensitive dir/file overlap, renamed exports, moved barrels) must land the final safe name/shape in its first commit. Never sequence "create hazardous state → fix → clean up" as separate commits on a live shared branch.
+
+**Related pipeline gap (ticket):** `ignoreBuildErrors: true` in next.config + eslint-only frontend CI + Linux CI runners = NO pipeline stage catches TypeScript errors at all (including case collisions). Only local tsc/IDE does.

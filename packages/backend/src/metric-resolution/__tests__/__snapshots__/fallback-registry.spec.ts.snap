@@ -75,6 +75,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "demand_score",
     "sources": [
       {
+        "anchorNonNull": true,
         "column": "demand_score",
         "source": "realtor",
       },
@@ -400,6 +401,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "hotness_score",
     "sources": [
       {
+        "anchorNonNull": true,
         "column": "hotness_score",
         "source": "realtor",
       },
@@ -592,6 +594,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "market_heat",
     "sources": [
       {
+        "anchorNonNull": true,
         "column": "hotness_score",
         "source": "realtor",
       },
@@ -1020,6 +1023,7 @@ exports[`FALLBACK_REGISTRY characterization matches the full registry shape 1`] 
     "metricId": "supply_score",
     "sources": [
       {
+        "anchorNonNull": true,
         "column": "supply_score",
         "source": "realtor",
       },

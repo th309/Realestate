@@ -47,6 +47,11 @@ export const ASSUMPTION_DEFAULTS = {
   appreciationPct: 0.03,
   holdYears: 10,
   closingCostsPct: 0.03,
+  // Mirrors DEFAULT_ASSUMPTIONS in lib/analyzer-assumptions.ts (marginalTaxRate,
+  // landValuePct, expenseGrowthPct) — the two surfaces must stay in sync.
+  marginalTaxRatePct: 0.24,
+  landValueSharePct: 0.25,
+  expenseGrowthPct: 0.025,
 } as const;
 
 /** B&H-only metric keys — retained for back-compat with tests and unaudited callers. */
@@ -184,9 +189,28 @@ export function weightKeysForStrategy(strategy: Strategy): string[] {
 }
 
 /**
+ * Key-order-insensitive stringify. Postgres JSONB reorders object keys, so a
+ * preset saved and read back never matches the preset constant under plain
+ * JSON.stringify — every server round-trip would misdetect as "Custom".
+ * Exported for the drawer's dirty check, which has the same round-trip problem.
+ */
+export function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
+  return `{${entries.join(",")}}`;
+}
+
+/**
  * Heuristic preset detection: does this thresholds object exactly match one of
  * the three named presets for the strategy? Returns null when the user has
- * customized any value off the preset grid.
+ * customized any value off the preset grid. Comparison is key-order-insensitive
+ * so server round-trips (JSONB) still match.
  */
 export function detectActivePreset(
   strategy: Strategy,
@@ -195,10 +219,15 @@ export function detectActivePreset(
   if (!current) return null;
   const presets = PRESETS_BY_STRATEGY[strategy];
   if (!presets) return null;
+  // autoKills is orthogonal to presets — ignore it for matching.
+  const { autoKills: _ignored, ...rubric } =
+    current as AnyStrategyThresholds & {
+      autoKills?: unknown;
+    };
   const keys: GradingPresetName[] = ["conservative", "balanced", "aggressive"];
-  const currentJson = JSON.stringify(current);
+  const currentJson = stableStringify(rubric);
   for (const name of keys) {
-    if (JSON.stringify(presets[name]) === currentJson) return name;
+    if (stableStringify(presets[name]) === currentJson) return name;
   }
   return null;
 }

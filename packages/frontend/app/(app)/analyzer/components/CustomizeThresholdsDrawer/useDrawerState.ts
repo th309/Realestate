@@ -31,12 +31,23 @@ import {
   type ThresholdErrors,
 } from "./validators";
 import {
+  ASSUMPTION_DEFAULTS,
   detectActivePreset,
   presetForStrategy,
+  stableStringify,
   type AnyStrategyThresholds,
 } from "./preset-helpers";
+import {
+  getAutoKillConfig,
+  hasAnyAutoKillError,
+  validateAutoKills,
+} from "./autokill-rows";
 
-export type ThresholdsTabId = "thresholds" | "weights" | "assumptions";
+export type ThresholdsTabId =
+  | "thresholds"
+  | "weights"
+  | "autokill"
+  | "assumptions";
 
 export interface BannerState {
   kind: "success" | "error";
@@ -87,14 +98,17 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     if (!open) setBanner(null);
   }, [open]);
 
+  // Key-order-insensitive comparison: server round-trips (JSONB) and the PUT
+  // echo reorder object keys, so plain JSON.stringify would report a freshly
+  // saved draft as "dirty" and trip the discard-confirm on close.
   const isDirty = useMemo(() => {
     if (!draftThresholds || !draftDefaults) return false;
     const tDirty =
       thresholdsQ.data &&
-      JSON.stringify(draftThresholds) !== JSON.stringify(thresholdsQ.data);
+      stableStringify(draftThresholds) !== stableStringify(thresholdsQ.data);
     const dDirty =
       defaultsQ.data &&
-      JSON.stringify(draftDefaults) !== JSON.stringify(defaultsQ.data);
+      stableStringify(draftDefaults) !== stableStringify(defaultsQ.data);
     return Boolean(tDirty || dDirty);
   }, [draftThresholds, draftDefaults, thresholdsQ.data, defaultsQ.data]);
 
@@ -119,6 +133,15 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     [draftDefaults],
   );
 
+  const autoKillErrors = useMemo(
+    () =>
+      validateAutoKills(
+        strategy,
+        draftThresholds ? getAutoKillConfig(draftThresholds) : undefined,
+      ),
+    [draftThresholds, strategy],
+  );
+
   const activePreset: GradingPresetName | null = useMemo(
     () => detectActivePreset(strategy, draftThresholds),
     [strategy, draftThresholds],
@@ -130,6 +153,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     Object.values(thresholdErrors).every((e) => e === null) &&
     weightsCheck.valid &&
     !hasAnyAssumptionError(assumptionErrors as never) &&
+    !hasAnyAutoKillError(autoKillErrors) &&
     !updateThresholdsM.isPending &&
     !updateDefaultsM.isPending;
 
@@ -153,7 +177,14 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
 
   const handleResetAll = useCallback(async () => {
     try {
-      await deleteThresholdsM.mutateAsync();
+      // "Reset all" must cover BOTH persisted surfaces: delete the saved
+      // thresholds row (reverts to preset defaults) AND write the canonical
+      // assumption defaults (no DELETE endpoint exists for analyzer-defaults,
+      // so reset = PUT the defaults).
+      await Promise.all([
+        deleteThresholdsM.mutateAsync(),
+        updateDefaultsM.mutateAsync(ASSUMPTION_DEFAULTS),
+      ]);
       // Clear working copies so next server response re-seeds them.
       setDraftThresholds(null);
       setDraftDefaults(null);
@@ -164,11 +195,17 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
         message: e instanceof Error ? e.message : "Reset failed",
       });
     }
-  }, [deleteThresholdsM]);
+  }, [deleteThresholdsM, updateDefaultsM]);
 
   const applyPreset = useCallback(
     (preset: GradingPresetName) => {
-      setDraftThresholds(presetForStrategy(strategy, preset));
+      setDraftThresholds((prev) => {
+        const next = presetForStrategy(strategy, preset);
+        const autoKills = (prev as { autoKills?: unknown } | null)?.autoKills;
+        return autoKills
+          ? ({ ...(next as object), autoKills } as AnyStrategyThresholds)
+          : next;
+      });
     },
     [strategy],
   );
@@ -182,6 +219,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     thresholdErrors,
     weightsCheck,
     assumptionErrors,
+    autoKillErrors,
     canSave,
     isDirty,
     banner,

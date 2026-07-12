@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { TrendIndicator, SparklineTrend } from './TrendIndicator';
-import { SkeletonStatCard } from '../ui/Skeleton';
-import { InfoTooltip } from '../ui/Tooltip';
-import { MetricTitle } from '@/app/components/MetricTitle';
+import React from "react";
+import { TrendIndicator, SparklineTrend } from "./TrendIndicator";
+import { SkeletonStatCard } from "../ui/Skeleton";
+import { InfoTooltip } from "../ui/Tooltip";
+import { MetricTitle } from "@/app/components/MetricTitle";
 
 interface StatCardProps {
   label: string;
@@ -19,7 +19,7 @@ interface StatCardProps {
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
-  variant?: 'default' | 'compact' | 'large';
+  variant?: "default" | "compact" | "large";
   className?: string;
   /** Optional metric ID - when provided, the label becomes a clickable link */
   metricId?: string;
@@ -38,8 +38,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   loading = false,
   error,
   onRetry,
-  variant = 'default',
-  className = '',
+  variant = "default",
+  className = "",
   metricId,
 }) => {
   // Helper to render label - either as MetricTitle (with tooltip) or plain text
@@ -50,7 +50,13 @@ export const StatCard: React.FC<StatCardProps> = ({
     return <span className={labelClassName}>{label}</span>;
   };
   if (loading) {
-    return <SkeletonStatCard className={className} />;
+    return (
+      <SkeletonStatCard
+        variant={variant}
+        hasIcon={!!icon}
+        className={className}
+      />
+    );
   }
 
   if (error) {
@@ -74,7 +80,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     );
   }
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
       <div className={`flex items-center justify-between gap-3 ${className}`}>
         <div className="flex items-center gap-2">
@@ -85,7 +91,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           )}
           <div>
             <div className="text-xs text-on-surface-variant">
-              {renderLabel('text-xs text-on-surface-variant')}
+              {renderLabel("text-xs text-on-surface-variant")}
             </div>
             <div className="text-sm font-medium text-on-surface">{value}</div>
           </div>
@@ -97,7 +103,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     );
   }
 
-  if (variant === 'large') {
+  if (variant === "large") {
     return (
       <div
         className={`
@@ -107,7 +113,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            {renderLabel('text-sm font-medium text-on-surface-variant')}
+            {renderLabel("text-sm font-medium text-on-surface-variant")}
             {tooltip && <InfoTooltip content={tooltip} />}
           </div>
           {icon && (
@@ -156,7 +162,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-1.5">
-          {renderLabel('text-xs font-medium text-on-surface-variant')}
+          {renderLabel("text-xs font-medium text-on-surface-variant")}
           {tooltip && <InfoTooltip content={tooltip} size="sm" />}
         </div>
         {icon && (
@@ -174,10 +180,17 @@ export const StatCard: React.FC<StatCardProps> = ({
             <TrendIndicator value={trend} size="sm" inverted={trendInverted} />
           )}
           {trendLabel && (
-            <span className="text-xs text-on-surface-variant">{trendLabel}</span>
+            <span className="text-xs text-on-surface-variant">
+              {trendLabel}
+            </span>
           )}
           {sparklineData && (
-            <SparklineTrend data={sparklineData} width={48} height={16} showValue={false} />
+            <SparklineTrend
+              data={sparklineData}
+              width={48}
+              height={16}
+              showValue={false}
+            />
           )}
         </div>
       )}
@@ -199,12 +212,12 @@ interface StatGridProps {
 export const StatGrid: React.FC<StatGridProps> = ({
   children,
   columns = 3,
-  className = '',
+  className = "",
 }) => {
   const gridCols = {
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    2: "grid-cols-1 sm:grid-cols-2",
+    3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
   };
 
   return (
@@ -228,7 +241,7 @@ export const MiniStat: React.FC<MiniStatProps> = ({
   value,
   trend,
   trendInverted = false,
-  className = '',
+  className = "",
 }) => {
   return (
     <div className={`text-center ${className}`}>

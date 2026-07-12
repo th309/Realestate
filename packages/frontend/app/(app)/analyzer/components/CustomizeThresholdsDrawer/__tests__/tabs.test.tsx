@@ -175,6 +175,9 @@ describe("AssumptionsTab", () => {
     appreciationPct: null,
     holdYears: null,
     closingCostsPct: null,
+    marginalTaxRatePct: null,
+    landValueSharePct: null,
+    expenseGrowthPct: null,
   };
 
   it("renders inputs reflecting percent-shaped storage as integer %", () => {

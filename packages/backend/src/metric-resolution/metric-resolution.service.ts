@@ -14,7 +14,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   GeoLevel,
   ResolvedMetric,
-  FallbackSource,
   MetricFallbackChain,
 } from './metric-resolution.types';
 import { FALLBACK_REGISTRY } from './fallback-registry';
@@ -184,6 +183,7 @@ export class MetricResolutionService {
             source.column,
             geoStep.level,
             geoStep.id,
+            source.anchorNonNull ?? false,
           );
 
           if (fetched && fetched.value != null) {

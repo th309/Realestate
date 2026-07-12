@@ -135,7 +135,7 @@ export function gradeFixAndFlipDeal(
   }
 
   // 6. Auto-kills always win — force letter to F.
-  const autoKills = collectFlipAutoKills(input, context);
+  const autoKills = collectFlipAutoKills(input, context, thresholds.autoKills);
   if (autoKills.length > 0) {
     letter = "F";
   }

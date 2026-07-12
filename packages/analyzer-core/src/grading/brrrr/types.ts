@@ -114,4 +114,6 @@ export interface BrrrrThresholds {
     post_refi_cash_flow_per_door: number;
     time_to_refinance_months: number;
   };
+  /** Optional per-user auto-kill overrides. Absent = engine defaults. */
+  autoKills?: import("../shared/autokill-config").BrrrrAutoKillConfig;
 }

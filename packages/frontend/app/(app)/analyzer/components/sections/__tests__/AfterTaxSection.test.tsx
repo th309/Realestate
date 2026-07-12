@@ -44,11 +44,12 @@ describe("AfterTaxSection", () => {
     const { container } = render(
       <AfterTaxSection afterTax={afterTax} marginalTaxRate={0.24} />,
     );
-    // Default scrub point is the last data point; year 10, base 2026 → 2036.
+    // Sign-colored forward charts open on TODAY's value (year 1) so the
+    // headline color always matches the curve at the point being read.
     // Effective rate = 1 − (7500/6000) = −25% in this fixture (loss-shielded),
     // but pre-tax > 0 path runs and yields a finite negative number; what
     // matters is the sub-label is present in the document.
-    expect(container.textContent).toContain("Year 10");
+    expect(container.textContent).toContain("Year 1");
     expect(container.textContent).toContain("effective tax");
   });
 });

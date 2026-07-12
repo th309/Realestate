@@ -4,15 +4,28 @@ import type { DealInput, AfterTaxResult } from "./types";
  * Pre-tax cashflow + depreciation deduction + mortgage interest deduction
  * = after-tax cashflow. Pure.
  *
+ * Rent compounds by rentGrowthPct per year (vacancy/maintenance/management
+ * scale with it, being %-of-rent); tax/insurance/HOA compound by
+ * expenseGrowthPct. Depreciation stays flat (fixed basis). Defaults keep the
+ * historical flat behavior (0 growth).
+ *
  * Defaults: marginalTaxRate 0.24, landValuePct 0.25, years 10
  */
 export function computeAfterTax(
   input: DealInput,
-  opts?: { marginalTaxRate?: number; landValuePct?: number; years?: number },
+  opts?: {
+    marginalTaxRate?: number;
+    landValuePct?: number;
+    years?: number;
+    rentGrowthPct?: number;
+    expenseGrowthPct?: number;
+  },
 ): AfterTaxResult {
   const rate = opts?.marginalTaxRate ?? 0.24;
   const landPct = opts?.landValuePct ?? 0.25;
   const years = opts?.years ?? 10;
+  const rentGrowth = opts?.rentGrowthPct ?? 0;
+  const expenseGrowth = opts?.expenseGrowthPct ?? 0;
 
   const buildingBasis = input.price * (1 - landPct);
   const annualDepreciation = buildingBasis / 27.5;
@@ -23,13 +36,14 @@ export function computeAfterTax(
   const monthlyPI = r === 0 ? loan / n : (loan * r) / (1 - Math.pow(1 + r, -n));
 
   const baseRent = (input.rentMonthly ?? 0) * 12;
-  const baseTax = input.taxAnnual ?? 0;
-  const baseIns = input.insuranceAnnual ?? 0;
-  const baseHoa = (input.hoaMonthly ?? 0) * 12;
-  const vacancy = baseRent * (input.vacancyPctOfRent ?? 0.05);
-  const maint = baseRent * (input.maintenancePctOfRent ?? 0.08);
-  const mgmt = baseRent * (input.managementPctOfRent ?? 0.08);
-  const opex = baseTax + baseIns + baseHoa + vacancy + maint + mgmt;
+  const baseFixed =
+    (input.taxAnnual ?? 0) +
+    (input.insuranceAnnual ?? 0) +
+    (input.hoaMonthly ?? 0) * 12;
+  const pctOfRent =
+    (input.vacancyPctOfRent ?? 0.05) +
+    (input.maintenancePctOfRent ?? 0.08) +
+    (input.managementPctOfRent ?? 0.08);
 
   let balance = loan;
   const yearly: AfterTaxResult["yearly"] = [];
@@ -42,9 +56,12 @@ export function computeAfterTax(
       const principal = monthlyPI - interest;
       balance = Math.max(0, balance - principal);
     }
+    const rent = baseRent * Math.pow(1 + rentGrowth, year - 1);
+    const opex =
+      baseFixed * Math.pow(1 + expenseGrowth, year - 1) + rent * pctOfRent;
     const debtService = monthlyPI * 12;
-    const preTaxCashflow = baseRent - opex - debtService;
-    const taxableIncome = baseRent - opex - yearInterest - annualDepreciation;
+    const preTaxCashflow = rent - opex - debtService;
+    const taxableIncome = rent - opex - yearInterest - annualDepreciation;
     const taxOwed = Math.max(0, taxableIncome) * rate;
     // Passive-loss tax benefit when shields drive taxable income negative.
     const taxBenefit = taxableIncome < 0 ? Math.abs(taxableIncome) * rate : 0;

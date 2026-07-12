@@ -92,6 +92,7 @@ export class AuthHooksService {
             name,
             resetUrl: confirmationUrl,
             expiresIn: '1 hour',
+            code,
           }),
         };
 
@@ -113,6 +114,7 @@ export class AuthHooksService {
           react: React.createElement(EmailVerification, {
             name,
             verificationUrl: confirmationUrl,
+            code,
           }),
         };
 

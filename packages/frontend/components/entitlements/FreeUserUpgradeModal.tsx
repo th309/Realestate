@@ -18,6 +18,7 @@ import { trackPaywallEvent } from "@/lib/entitlements/api";
 import { useDismissable } from "@/lib/entitlements/useDismissable";
 import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface FreeUserUpgradeModalProps {
   onDismiss: () => void;
@@ -49,6 +50,11 @@ export function FreeUserUpgradeModal({ onDismiss }: FreeUserUpgradeModalProps) {
   }, []);
 
   const { onScrimClick } = useDismissable({ onDismiss, cardRef });
+
+  // System back button / edge-swipe dismisses this modal instead of
+  // navigating away or exiting the installed PWA. Only mounts while shown
+  // (see PaywallProvider's `{nagVisible && <FreeUserUpgradeModal .../>}`).
+  useModalHistory(true, onDismiss, "free-user-upgrade-modal");
 
   const handleUpgradeClick = useCallback(async () => {
     trackPaywallEvent(

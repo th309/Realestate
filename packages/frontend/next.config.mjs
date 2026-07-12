@@ -1,6 +1,59 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import withSerwistInit from '@serwist/next';
+import withBundleAnalyzerInit from '@next/bundle-analyzer';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+// Bundle size inspector (Phase 4.6 lazy-loading audit). Disabled unless
+// ANALYZE=true so it never runs in normal dev/prod builds. Composed as the
+// outermost wrapper (see `export default` below) so it observes the fully
+// composed webpack config (after Serwist's InjectManifest plugin and
+// Sentry's source-map/tree-shake plugins have already run) rather than
+// racing them for the last word on the plugin list.
+//   ANALYZE=true NEXT_DIST_DIR=.next-verify npx next build --webpack
+const withBundleAnalyzer = withBundleAnalyzerInit({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+// PWA service worker (Serwist InjectManifest). Registration is manual (see
+// lib/pwa/register-service-worker.ts) so the update-toast flow controls when
+// a waiting worker takes over — `register: false` disables Serwist's own
+// auto-registration script.
+//
+// Stable build identifier (git commit, or a per-process timestamp fallback
+// when it isn't exposed at build time). Single source of truth, hoisted so
+// nothing downstream recomputes/duplicates the fallback chain:
+//   - the SW's `/offline` precache revision (immediately below)
+//   - `generateBuildId` (keeps restarts/instances agreeing on cache keys)
+//   - `NEXT_PUBLIC_BUILD_ID` (client-side cache-buster for the React Query
+//     IndexedDB persister — see app/query-persistence.ts)
+const buildId =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.GIT_HASH ||
+  `build-${Date.now()}`;
+
+// `/offline`'s prerendered HTML can't be picked up by Serwist's normal
+// glob-the-build-output precaching: the InjectManifest webpack plugin builds
+// the manifest during the webpack compilation, which runs BEFORE Next's
+// static-export/prerender pass writes offline.html to disk — the file
+// doesn't exist yet when Serwist scans for it (confirmed: without this,
+// only the route's JS chunk ends up in the manifest, never the document
+// itself, so app/sw.ts's `fallbacks` — which resolves via `matchPrecache`
+// against the precache cache — can never find it and silently no-ops).
+// `additionalPrecacheEntries` sidesteps that: it doesn't need the file on
+// disk at build time, since precaching always works by having the browser
+// `fetch()` each manifest URL at SW-install time and store the response —
+// so as long as `/offline` is a live route by the time a user's browser
+// installs the worker (true post-deploy), this works. `revision` is a
+// manual cache-busting tag (shared `buildId` above) so a redeploy always
+// re-fetches the page instead of pinning users to a stale offline copy.
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  register: false,
+  additionalPrecacheEntries: [{ url: '/offline', revision: buildId }],
+});
 
 // De-scored market pages: generated monthly by scripts/generate-descored-redirects.ts.
 // Seed is [] so this is a no-op until the first generation run.
@@ -56,12 +109,13 @@ const nextConfig = {
     : {}),
   // Stable build ID (git commit) so restarts/instances agree on cache keys and
   // asset URLs; falls back to a timestamp if the commit isn't exposed at build.
-  generateBuildId: async () => {
-    return (
-      process.env.RAILWAY_GIT_COMMIT_SHA ||
-      process.env.GIT_HASH ||
-      `build-${Date.now()}`
-    );
+  generateBuildId: async () => buildId,
+  // Exposed to the client as process.env.NEXT_PUBLIC_BUILD_ID — the React
+  // Query IndexedDB persister (app/query-persistence.ts) uses it as its
+  // cache-buster so a redeploy invalidates persisted client caches instead
+  // of rehydrating stale data under a new build.
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -281,7 +335,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default withBundleAnalyzer(withSentryConfig(withSerwist(nextConfig), {
   // Sentry organization and project (set in CI or locally for source map uploads).
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
@@ -295,4 +349,4 @@ export default withSentryConfig(nextConfig, {
   // Tree-shake Sentry debug logging out of production bundles.
   hideSourceMaps: true,
   widenClientFileUpload: true,
-});
+}));

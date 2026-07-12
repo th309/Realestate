@@ -43,8 +43,10 @@ function SampleBanner() {
         </div>
       </div>
 
-      {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline-variant shadow-lg pb-safe">
+      {/* Sticky bottom CTA. Mobile: stack above BottomNavBar (fixed, 64px +
+          safe-area — see BOTTOM_NAV_HEIGHT_PX in
+          src/components/layout/BottomNavBar.tsx). Desktop: flush-bottom. */}
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline-variant shadow-lg pb-safe">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-on-surface truncate">

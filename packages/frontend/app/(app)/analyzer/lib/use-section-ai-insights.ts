@@ -141,6 +141,14 @@ export function useSectionAiInsights({
     // Re-fetch the projection tip when the wealth projection materially shifts
     // (e.g., appreciation/rent-growth assumption edits move final equity).
     Math.round(projectionSummary?.finalEquity ?? 0),
+    // Figures the narrative cites — assumption/criteria edits move these while
+    // price/rent stay identical (mirrors the backend key's figuresHash).
+    Math.round((rental?.cashflowMonthly ?? 0) / 50) * 50,
+    (rental?.dscr ?? 0).toFixed(2),
+    (grading?.finalGpa ?? 0).toFixed(1),
+    (grading?.autoKills ?? []).map((k) => k.code).join(","),
+    Math.round((input.price ?? 0) / 1000),
+    Math.round((input.rentMonthly ?? 0) / 25),
   ].join("|");
 
   // Gate the entire batched call on `enabled` AND grading being present.

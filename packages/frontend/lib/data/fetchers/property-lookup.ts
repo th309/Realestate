@@ -141,6 +141,18 @@ export interface PropertyLookupResult {
   errors?: { property?: string; avm?: string; rent?: string };
 }
 
+/**
+ * Thrown on non-429 HTTP failures, carrying the status code so the mutation
+ * can retry 5xx (transient) but not 4xx (bad address, auth). Message keeps
+ * the legacy `property-lookup <status>` shape callers may display.
+ */
+export class PropertyLookupHttpError extends Error {
+  constructor(public readonly status: number) {
+    super(`property-lookup ${status}`);
+    this.name = "PropertyLookupHttpError";
+  }
+}
+
 export async function fetchPropertyLookup(params: {
   address: string;
 }): Promise<PropertyLookupResult | { quotaExceeded: true }> {
@@ -148,6 +160,6 @@ export async function fetchPropertyLookup(params: {
   const headers = await getAuthHeaders();
   const res = await fetch(url, { credentials: "include", headers });
   if (res.status === 429) return { quotaExceeded: true };
-  if (!res.ok) throw new Error(`property-lookup ${res.status}`);
+  if (!res.ok) throw new PropertyLookupHttpError(res.status);
   return (await res.json()) as PropertyLookupResult;
 }

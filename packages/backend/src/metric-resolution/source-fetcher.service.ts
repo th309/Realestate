@@ -12,14 +12,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeZipKey } from '../common/zip';
-import {
-  normalizeStateToFips,
-  normalizeStateToCode,
-  normalizeCountyFips,
-  normalizeCbsaCode,
-} from '../common/geo';
 import { GeoLevel, DataSource, TableRoute } from './metric-resolution.types';
+import { normalizeGeoId } from './geo-id-normalize';
 import {
   getWideTableRoute,
   getZillowRoute,
@@ -51,6 +45,7 @@ export class SourceFetcherService {
     column: string,
     geoLevel: GeoLevel,
     geoId: string,
+    anchorNonNull = false,
   ): Promise<FetchedValue | null> {
     if (source === 'hud_fmr') return this.fetchHudFmr(column, geoLevel, geoId);
     if (source === 'zillow')
@@ -61,7 +56,13 @@ export class SourceFetcherService {
       return this.fetchRedfinMetric(column, geoLevel, geoId);
     if (source === 'irs_metro_rollup')
       return this.metroRollup.fetchMetroValue(column, geoLevel, geoId);
-    return this.fetchWideTableMetric(source, column, geoLevel, geoId);
+    return this.fetchWideTableMetric(
+      source,
+      column,
+      geoLevel,
+      geoId,
+      anchorNonNull,
+    );
   }
 
   // Public route accessors for SourceFetcherBulkService
@@ -82,11 +83,12 @@ export class SourceFetcherService {
     column: string,
     geoLevel: GeoLevel,
     geoId: string,
+    anchorNonNull = false,
   ): Promise<FetchedValue | null> {
     const route = getWideTableRoute(source, geoLevel);
     if (!route) return null;
 
-    const normalizedId = this.normalizeGeoId(geoLevel, geoId, source);
+    const normalizedId = normalizeGeoId(geoLevel, geoId, source);
     const dateCol = route.dateColumn;
 
     let query = this.supabase
@@ -94,16 +96,19 @@ export class SourceFetcherService {
       .select(`${column}, ${dateCol}`)
       .eq(route.idColumn, normalizedId);
 
-    // The economic_* tables are written by multiple importers on different
-    // cadences (monthly unemployment, quarterly QCEW employment, annual CES),
-    // so a column's latest value often sits on a NON-latest-dated row. For
-    // those sources only, anchor on the most recent row where THIS column is
-    // non-null. Every other wide-table source is single-importer-per-table, so
-    // keeping plain latest-row semantics there preserves the fallback-registry
-    // contract: a genuine current-period gap must fall through to the next
-    // source (e.g. realtor -> census) instead of returning a stale historical
-    // value — which matters for score inputs like days_on_market / price_cut.
-    if (source === 'economic' || source === 'qcew' || source === 'ces') {
+    // Anchor on the most recent row where THIS column is non-null for (a) the
+    // economic_* multi-importer tables, whose columns land on different-dated
+    // rows by cadence, and (b) sources whose registry entry opts in via
+    // anchorNonNull (display metrics the upstream ships a period late, e.g.
+    // Realtor hotness). Everything else keeps latest-row semantics so a
+    // genuine current-period gap falls through to the next source rather than
+    // serving stale data — critical for score inputs like days_on_market.
+    if (
+      anchorNonNull ||
+      source === 'economic' ||
+      source === 'qcew' ||
+      source === 'ces'
+    ) {
       query = query.not(column, 'is', null);
     }
 
@@ -137,7 +142,7 @@ export class SourceFetcherService {
     const route = getZillowRoute(geoLevel);
     if (!route) return null;
 
-    const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'zillow');
+    const normalizedId = normalizeGeoId(geoLevel, geoId, 'zillow');
 
     const { data, error } = await this.supabase
       .from(route.table)
@@ -162,7 +167,7 @@ export class SourceFetcherService {
     geoLevel: GeoLevel,
     geoId: string,
   ): Promise<FetchedValue | null> {
-    const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'calculated');
+    const normalizedId = normalizeGeoId(geoLevel, geoId, 'calculated');
 
     const { data, error } = await this.supabase
       .from('calculated_metrics')
@@ -230,7 +235,7 @@ export class SourceFetcherService {
     const route = getRedfinRoute(geoLevel);
     if (!route) return null;
 
-    const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'redfin');
+    const normalizedId = normalizeGeoId(geoLevel, geoId, 'redfin');
 
     const { data, error } = await this.supabase
       .from(route.table)
@@ -249,44 +254,5 @@ export class SourceFetcherService {
       value: Number(row[column]),
       date: row[route.dateColumn] ? String(row[route.dateColumn]) : null,
     };
-  }
-
-  // ==========================================================================
-  // Geography ID Normalization
-  // ==========================================================================
-
-  private normalizeGeoId(
-    geoLevel: GeoLevel,
-    geoId: string,
-    source: DataSource,
-  ): string {
-    switch (geoLevel) {
-      case 'zip':
-        return normalizeZipKey(geoId);
-      case 'county':
-        return /^\d+$/.test(geoId.trim()) ? normalizeCountyFips(geoId) : geoId;
-      case 'metro':
-        return /^\d+$/.test(geoId.trim()) ? normalizeCbsaCode(geoId) : geoId;
-      case 'state':
-        if (
-          source === 'census' ||
-          source === 'economic' ||
-          source === 'permits' ||
-          // CES writes economic_state.state_fips as FIPS ('06'), so state-level
-          // CES employment must resolve on FIPS, not the 2-letter code.
-          source === 'ces' ||
-          // Redfin Data Center state tables key region_id on STATE FIPS ('08'),
-          // not the 2-letter code — covers 'redfin_dc' and every 'redfin_dc_*'.
-          source.startsWith('redfin_dc')
-        ) {
-          return normalizeStateToFips(geoId);
-        }
-        if (source === 'calculated') {
-          return normalizeStateToCode(geoId);
-        }
-        return normalizeStateToCode(geoId);
-      default:
-        return geoId;
-    }
   }
 }

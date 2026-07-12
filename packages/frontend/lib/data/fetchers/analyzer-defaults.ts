@@ -24,6 +24,9 @@ export interface AnalyzerDefaults {
   appreciationPct?: number;
   holdYears?: number;
   closingCostsPct?: number;
+  marginalTaxRatePct?: number;
+  landValueSharePct?: number;
+  expenseGrowthPct?: number;
 }
 
 const DEFAULTS_URL = () => `${API_URL}/api/preferences/analyzer-defaults`;

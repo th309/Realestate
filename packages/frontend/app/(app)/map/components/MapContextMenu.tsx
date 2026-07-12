@@ -7,6 +7,7 @@ import { BarChart3, LineChart, FileText, Lock } from "lucide-react";
 import type { SelectedGeography } from "../types";
 import { useEntitlements } from "@/lib/entitlements";
 import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface MapContextMenuProps {
   geography: SelectedGeography;
@@ -73,6 +74,14 @@ export function MapContextMenu({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
+
+  // System back button / edge-swipe closes the menu instead of navigating
+  // away or exiting the installed PWA. This component only mounts while
+  // conceptually open (see map/page.tsx's `{contextMenu && <MapContextMenu .../>}`).
+  // handleMarkets/handleGraphs/handleReports call router.push() then onClose()
+  // in the same tick — the hook detects the pathname change and abandons its
+  // entry instead of fighting that navigation with history.back().
+  useModalHistory(true, onClose, "map-context-menu");
 
   const displayName = geography.stateAbbr
     ? `${geography.name}, ${geography.stateAbbr}`

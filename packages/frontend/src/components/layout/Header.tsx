@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { useEntitlements } from "@/lib/entitlements";
 import { useMyOrg } from "@/lib/data";
+import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import {
   MenuIcon,
   CloseIcon,
@@ -22,6 +24,23 @@ import { NAV, isDropdown } from "./header-nav-data";
 import { NavDropdownMenu } from "./NavDropdownMenu";
 import { MobileMenu } from "./MobileMenu";
 import { TrialBadge } from "./TrialBadge";
+import { ShareGlyphIcon } from "@/app/components/pwa/ShareGlyphIcon";
+
+/* ─── "Get the app" icon (local — Header owns its own icon, not Icons.nav.tsx) ─── */
+
+function DownloadIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
+    </svg>
+  );
+}
 
 /* ─── Profile dropdown item ─── */
 
@@ -53,15 +72,27 @@ export function Header() {
   const { user, loading, signOut } = useAuth();
   const { tier } = useEntitlements();
   const { org } = useMyOrg();
+  const { canPromptNatively, promptInstall, isInstalled } = useInstallPrompt();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
 
   // Close menus on navigation
   useEffect(() => {
     setIsProfileOpen(false);
     setIsMenuOpen(false);
+    setShowInstallInstructions(false);
   }, [pathname]);
+
+  async function handleGetAppClick() {
+    trackEvent("pwa.get_app_clicked", {});
+    if (canPromptNatively) {
+      await promptInstall();
+    } else {
+      setShowInstallInstructions(true);
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,7 +104,7 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+      className={`sticky top-0 z-50 w-full pt-safe-standalone transition-all duration-300 ${
         scrolled
           ? "bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-outline-variant"
           : "bg-surface-container-lowest border-b border-transparent"
@@ -151,13 +182,24 @@ export function Header() {
             {loading ? null : !!user ? (
               <>
                 <TrialBadge />
-                <div className="relative">
+                <div
+                  className="relative"
+                  onBlur={(e) => {
+                    // Only close on a genuine click-away: if focus lands on
+                    // another element inside this dropdown (e.g. the "Get
+                    // the app" button, which shows an instructions panel
+                    // rather than navigating away), relatedTarget is still
+                    // contained here and we leave it open.
+                    if (
+                      !e.currentTarget.contains(e.relatedTarget as Node | null)
+                    ) {
+                      setTimeout(() => setIsProfileOpen(false), 200);
+                    }
+                  }}
+                >
                   <button
                     data-testid="user-menu"
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    onBlur={() =>
-                      setTimeout(() => setIsProfileOpen(false), 200)
-                    }
                     className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
                     <PersonIcon className="w-5 h-5" />
@@ -204,6 +246,31 @@ export function Header() {
                         />
                       )}
                       <DropdownItem icon={HelpIcon} label="Help" href="/help" />
+                      {!isInstalled && (
+                        <button
+                          onClick={handleGetAppClick}
+                          className="group w-full flex items-center px-3 py-2 text-sm font-medium text-on-surface-variant rounded-lg hover:bg-surface-container hover:text-primary transition-colors"
+                        >
+                          <DownloadIcon className="w-4 h-4 mr-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+                          Get the app
+                        </button>
+                      )}
+                      {showInstallInstructions && (
+                        <div className="mx-1 mt-1 p-3 rounded-lg bg-surface-container border border-outline-variant text-xs text-on-surface-variant flex items-start gap-2">
+                          <ShareGlyphIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span className="flex-1">
+                            Tap the share icon, then &ldquo;Add to Home
+                            Screen&rdquo; to install PropertyIQ.
+                          </span>
+                          <button
+                            onClick={() => setShowInstallInstructions(false)}
+                            aria-label="Close install instructions"
+                            className="text-on-surface-variant hover:text-on-surface leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
                       {tier === "admin" && (
                         <DropdownItem
                           icon={SettingsIcon}

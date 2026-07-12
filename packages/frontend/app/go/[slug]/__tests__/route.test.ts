@@ -66,8 +66,10 @@ describe("short-link /go/[slug] route", () => {
     }) as unknown as typeof fetch;
 
     const request = new Request("https://piq.sh/go/xyz98765");
+    // Legacy sync shape: the route's declared type is Promise-only (Next 16
+    // ParamCheck), but runtime normalizes via Promise.resolve — keep testing it.
     const response = await GET(request, {
-      params: { slug: "xyz98765" },
+      params: { slug: "xyz98765" } as unknown as Promise<{ slug: string }>,
     });
 
     expect([302, 307]).toContain(response.status);

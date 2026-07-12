@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[

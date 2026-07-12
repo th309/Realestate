@@ -2,7 +2,7 @@
  * Map Layers Hook
  */
 
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import type {
   GeoLevel,
@@ -14,8 +14,6 @@ import type {
 import {
   getMetricFormat,
   calculateValueRange,
-  calculatePolylabel,
-  getGeometryBbox,
   computeScreenSpaceRatios,
   computeCalloutPositions,
   buildLeaderLineGeojson,
@@ -30,6 +28,8 @@ import {
   addValuesToFeatures,
   fetchWithRetry,
   getGeojsonUrl,
+  calculateHighlightFilter,
+  createLabelPoints,
   type LabelFeature,
   type MarkerStore,
 } from "../utils";
@@ -82,6 +82,9 @@ export function useMapLayers({
   const updateIdRef = useRef(0);
   const zoomHandlerRef = useRef<(() => void) | null>(null);
   const markersRef = useRef<MarkerStore>(new Map());
+  // Set when the boundary (GeoJSON) fetch fails outright, so the caller can
+  // render an honest failure state instead of silently showing an empty map.
+  const [boundaryError, setBoundaryError] = useState(false);
 
   useEffect(() => {
     geoLevelRef.current = geoLevel;
@@ -122,6 +125,9 @@ export function useMapLayers({
     // Get GeoJSON URL
     const geojsonUrl = getGeojsonUrl(geoLevel, selectedState);
     if (!geojsonUrl) return;
+
+    // Fresh attempt — clear any error from a previous failed load.
+    setBoundaryError(false);
 
     try {
       // Use retry logic for county and zip (large datasets that can timeout on cold cache)
@@ -268,6 +274,9 @@ export function useMapLayers({
       );
     } catch (err) {
       console.error("Error loading GeoJSON:", err);
+      // Stale request (superseded by a newer geoLevel/state change) — don't
+      // surface an error for a fetch nobody's waiting on anymore.
+      if (updateId === updateIdRef.current) setBoundaryError(true);
     }
   }, [
     geoLevel,
@@ -295,10 +304,12 @@ export function useMapLayers({
 
     const requiresState = ["city", "zip", "tract"].includes(geoLevel);
     if (requiresState && !selectedState) {
-      // Clear layers if state is required but not selected
+      // Clear layers if state is required but not selected — this is an
+      // intentional empty state, not a failure, so clear any stale error.
       if (map.current) {
         removeAllManagedLayers(map.current);
       }
+      setBoundaryError(false);
       return;
     }
 
@@ -310,90 +321,13 @@ export function useMapLayers({
     if (!map.current || !mapLoaded || !map.current.getLayer("geo-highlight"))
       return;
 
-    // Build highlight filter inline — same logic as map-layer-config
-    const filter = buildHighlightFilter(highlightedFeature, geoLevel);
+    // No search result selected — filter matches nothing, same as
+    // addMapLayers' initial (unhighlighted) state.
+    const filter = highlightedFeature
+      ? calculateHighlightFilter(highlightedFeature, geoLevel)
+      : ["==", ["get", "id"], "___none___"];
     map.current.setFilter("geo-highlight", filter);
   }, [highlightedFeature, geoLevel, mapLoaded]);
 
-  return { updateMapLayers };
-}
-
-/**
- * Build highlight filter for instant highlight updates (without full layer rebuild).
- * Mirrors the logic in map-layer-config.ts calculateHighlightFilter.
- */
-function buildHighlightFilter(
-  highlightedFeature: SearchResult | null | undefined,
-  geoLevel: GeoLevel,
-): any[] {
-  if (!highlightedFeature) return ["==", ["get", "id"], "___none___"];
-
-  const searchName = highlightedFeature.name;
-  const searchId = highlightedFeature.id.replace(/.*?\./, ""); // Strip Mapbox prefix
-
-  if (geoLevel === "metro") {
-    return [
-      "any",
-      ["==", ["get", "name"], searchName],
-      ["in", searchName, ["get", "name"]],
-      ["==", ["get", "id"], searchName],
-    ];
-  } else if (geoLevel === "zip") {
-    return ["==", ["get", "id"], searchName];
-  } else {
-    return [
-      "any",
-      ["==", ["get", "name"], searchName],
-      ["==", ["get", "id"], searchName],
-      ["==", ["get", "id"], searchId],
-      ["in", searchName, ["get", "displayName"]],
-    ];
-  }
-}
-
-/**
- * Create point features at the polylabel of each polygon feature for labeling.
- * Stores bbox and polylabel coordinates as properties for screen-space calculations.
- */
-function createLabelPoints(geojson: any, geoLevel: GeoLevel): any {
-  if (geoLevel === "national") {
-    const firstFeature = geojson.features[0];
-    return {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [-98.5795, 39.8283] },
-          properties: firstFeature
-            ? { ...firstFeature.properties }
-            : { name: "United States", value: 0 },
-        },
-      ],
-    };
-  }
-
-  const labelFeatures = geojson.features
-    .map((feature: any) => {
-      const centroid = calculatePolylabel(feature.geometry);
-      if (!centroid) return null;
-
-      const bbox = getGeometryBbox(feature.geometry);
-
-      return {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: centroid },
-        properties: {
-          ...feature.properties,
-          polylabelLng: centroid[0],
-          polylabelLat: centroid[1],
-          bboxMinLng: bbox ? bbox[0] : centroid[0],
-          bboxMinLat: bbox ? bbox[1] : centroid[1],
-          bboxMaxLng: bbox ? bbox[2] : centroid[0],
-          bboxMaxLat: bbox ? bbox[3] : centroid[1],
-        },
-      };
-    })
-    .filter(Boolean);
-
-  return { type: "FeatureCollection", features: labelFeatures };
+  return { updateMapLayers, boundaryError };
 }
