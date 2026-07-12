@@ -201,6 +201,34 @@ describe('PushService.sendToUser', () => {
     expect(result).toEqual({ sent: 1, failed: 0, pruned: 1 });
   });
 
+  it('sends in bounded chunks — never more than 5 concurrent provider requests', async () => {
+    const subCount = 12;
+    dataService.findByUserId.mockResolvedValue(
+      Array.from({ length: subCount }, (_, i) => ({
+        id: `sub-${i}`,
+        endpoint: `https://push.example.com/${i}`,
+        p256dh: 'p',
+        auth: 'a',
+      })),
+    );
+
+    let concurrent = 0;
+    let maxConcurrent = 0;
+    (webpush.sendNotification as jest.Mock).mockImplementation(async () => {
+      concurrent++;
+      maxConcurrent = Math.max(maxConcurrent, concurrent);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      concurrent--;
+      return { statusCode: 201, body: '', headers: {} };
+    });
+
+    const result = await service.sendToUser('user-1', payload);
+
+    expect(result.sent).toBe(subCount);
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(subCount);
+    expect(maxConcurrent).toBeLessThanOrEqual(5);
+  });
+
   it('never throws even if the underlying subscription lookup fails', async () => {
     dataService.findByUserId.mockRejectedValue(new Error('db down'));
 

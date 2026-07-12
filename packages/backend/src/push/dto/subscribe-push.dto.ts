@@ -11,6 +11,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -18,10 +19,12 @@ import { Type } from 'class-transformer';
 export class PushSubscriptionKeysDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(256)
   p256dh: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(256)
   auth: string;
 }
 
@@ -30,6 +33,7 @@ export class SubscribePushDto {
     { protocols: ['https'], require_protocol: true },
     { message: 'endpoint must be a valid https URL' },
   )
+  @MaxLength(2048)
   endpoint: string;
 
   @IsObject()
@@ -39,5 +43,6 @@ export class SubscribePushDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(512)
   userAgent?: string;
 }

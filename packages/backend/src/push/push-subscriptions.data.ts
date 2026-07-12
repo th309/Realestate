@@ -23,6 +23,9 @@ export interface PushSubscriptionRow {
   last_success_at: string | null;
 }
 
+/** Abuse-prevention cap — a legitimate user has a handful of devices/browsers, not dozens. */
+const MAX_SUBSCRIPTIONS_PER_USER = 10;
+
 @Injectable()
 export class PushSubscriptionsDataService {
   private readonly logger = new Logger(PushSubscriptionsDataService.name);
@@ -75,6 +78,48 @@ export class PushSubscriptionsDataService {
     if (error) {
       this.logger.error(`Failed to save push subscription: ${error.message}`);
       throw new Error(error.message);
+    }
+
+    await this.evictOldestBeyondCap(userId);
+  }
+
+  /**
+   * Enforce MAX_SUBSCRIPTIONS_PER_USER by deleting the oldest rows beyond
+   * the cap. Runs right after upsert() so a user can never accumulate
+   * unbounded rows via repeated subscribe calls. Best-effort: a failure here
+   * is logged, not thrown — it must never fail the subscribe request itself.
+   */
+  private async evictOldestBeyondCap(userId: string): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('push_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this.logger.error(
+        `Failed to check push-subscription cap for user: ${error.message}`,
+      );
+      return;
+    }
+
+    const rows = data || [];
+    if (rows.length <= MAX_SUBSCRIPTIONS_PER_USER) return;
+
+    const evictIds = rows.slice(MAX_SUBSCRIPTIONS_PER_USER).map((r) => r.id);
+    const { error: deleteError } = await this.supabase
+      .from('push_subscriptions')
+      .delete()
+      .in('id', evictIds);
+
+    if (deleteError) {
+      this.logger.error(
+        `Failed to evict oldest push subscriptions beyond cap: ${deleteError.message}`,
+      );
+    } else {
+      this.logger.log(
+        `Evicted ${evictIds.length} push subscription(s) beyond the ${MAX_SUBSCRIPTIONS_PER_USER}-per-user cap`,
+      );
     }
   }
 

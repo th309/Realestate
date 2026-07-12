@@ -68,6 +68,54 @@ describe('SubscribePushDto', () => {
     const keysError = errors.find((e) => e.property === 'keys');
     expect(keysError?.children?.some((c) => c.property === 'auth')).toBe(true);
   });
+
+  it('rejects an endpoint longer than 2048 characters', async () => {
+    const errors = await validate(
+      plainToInstance(SubscribePushDto, {
+        ...valid,
+        endpoint: `https://fcm.googleapis.com/fcm/send/${'a'.repeat(2050)}`,
+      }),
+    );
+    const endpointError = errors.find((e) => e.property === 'endpoint');
+    expect(endpointError?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('rejects a p256dh longer than 256 characters', async () => {
+    const errors = await validate(
+      plainToInstance(SubscribePushDto, {
+        ...valid,
+        keys: { p256dh: 'a'.repeat(260), auth: 'auth-value' },
+      }),
+    );
+    const keysError = errors.find((e) => e.property === 'keys');
+    const p256dhError = keysError?.children?.find(
+      (c) => c.property === 'p256dh',
+    );
+    expect(p256dhError?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('rejects an auth longer than 256 characters', async () => {
+    const errors = await validate(
+      plainToInstance(SubscribePushDto, {
+        ...valid,
+        keys: { p256dh: 'p256dh-value', auth: 'a'.repeat(260) },
+      }),
+    );
+    const keysError = errors.find((e) => e.property === 'keys');
+    const authError = keysError?.children?.find((c) => c.property === 'auth');
+    expect(authError?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('rejects a userAgent longer than 512 characters', async () => {
+    const errors = await validate(
+      plainToInstance(SubscribePushDto, {
+        ...valid,
+        userAgent: 'a'.repeat(520),
+      }),
+    );
+    const userAgentError = errors.find((e) => e.property === 'userAgent');
+    expect(userAgentError?.constraints).toHaveProperty('maxLength');
+  });
 });
 
 describe('UnsubscribePushDto', () => {
@@ -83,5 +131,15 @@ describe('UnsubscribePushDto', () => {
   it('rejects a missing endpoint', async () => {
     const errors = await validate(plainToInstance(UnsubscribePushDto, {}));
     expect(errors.some((e) => e.property === 'endpoint')).toBe(true);
+  });
+
+  it('rejects an endpoint longer than 2048 characters', async () => {
+    const errors = await validate(
+      plainToInstance(UnsubscribePushDto, {
+        endpoint: `https://fcm.googleapis.com/fcm/send/${'a'.repeat(2050)}`,
+      }),
+    );
+    const endpointError = errors.find((e) => e.property === 'endpoint');
+    expect(endpointError?.constraints).toHaveProperty('maxLength');
   });
 });
