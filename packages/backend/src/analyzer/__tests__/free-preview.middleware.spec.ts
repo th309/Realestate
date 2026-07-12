@@ -6,6 +6,10 @@ process.env.ANALYZER_PREVIEW_SECRET =
 function makeCtx(cookieVal?: string, authed = false) {
   const req: any = {
     cookies: cookieVal ? { piq_analyzer_uses: cookieVal } : {},
+    // Real Express/Nest requests always populate `req.headers` as an object
+    // (possibly empty), never `undefined` — mirror that here so the
+    // middleware's `req.headers.authorization` read matches production.
+    headers: {},
     user: authed ? { id: 'u1' } : undefined,
   };
   const setCookie = jest.fn();
