@@ -245,6 +245,10 @@ export const RichTooltip: React.FC<RichTooltipProps> = ({
       {isVisible && (
         <div
           role="tooltip"
+          // Stops the trigger's onClick toggle from also firing when the
+          // tap lands on the tooltip body itself — it's a DOM child of the
+          // trigger, so without this a tap inside the content self-closes it.
+          onClick={(e) => e.stopPropagation()}
           className={`
             absolute z-50 ${positionStyles[position]}
             p-3 bg-surface-container-high rounded-xl elevation-2

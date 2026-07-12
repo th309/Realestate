@@ -60,6 +60,10 @@ export function MetricTooltip({ metric, children }: MetricTooltipProps) {
         <span
           role="tooltip"
           data-tooltip-body
+          // The button trigger's own onClick toggle would otherwise also
+          // fire for taps landing inside this tooltip body (a DOM child of
+          // the button), self-closing it before the user can read it.
+          onClick={(e) => e.stopPropagation()}
           className="absolute z-50 left-0 top-full mt-1 w-72 rounded-xl bg-surface-container-high text-on-surface text-xs p-3 shadow-lg border border-outline-variant text-left normal-case"
         >
           <span className="block font-semibold text-sm mb-1">{entry.name}</span>

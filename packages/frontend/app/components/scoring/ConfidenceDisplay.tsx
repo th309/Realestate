@@ -151,15 +151,15 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
   className = "",
 }: ConfidenceDisplayProps) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const containerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [tooltipPosition, setTooltipPosition] = useState<"top" | "bottom">(
     "top",
   );
 
   // Calculate tooltip position
   useEffect(() => {
-    if (showTooltip && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
+    if (showTooltip && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
       setTooltipPosition(rect.top < 100 ? "bottom" : "top");
     }
   }, [showTooltip]);
@@ -177,8 +177,8 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
     }
     function handleOutsideClick(e: MouseEvent) {
       if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
       ) {
         setShowTooltip(false);
       }
@@ -220,7 +220,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
 
   return (
     <button
-      ref={containerRef}
+      ref={triggerRef}
       type="button"
       className={`
         relative inline-flex items-center gap-1.5
@@ -268,6 +268,10 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
             ${tooltipPosition === "top" ? "bottom-full mb-2" : "top-full mt-2"}
           `}
           role="tooltip"
+          // The button trigger's own onClick toggle would otherwise also
+          // fire for taps landing inside this tooltip body (a DOM child of
+          // the button), self-closing it before the user can read it.
+          onClick={(e) => e.stopPropagation()}
         >
           {tooltipContent}
           <span

@@ -79,6 +79,18 @@ describe("RichTooltip — touch fallback", () => {
     expect(container.querySelector('[role="tooltip"]')).toBeFalsy();
   });
 
+  it("clicking inside the open tooltip content does not close it (regression)", () => {
+    const { container, getByRole } = renderRichTooltip();
+    const trigger = getByRole("button", { name: "Trigger" }).parentElement!;
+
+    fireEvent.click(trigger);
+    const tooltipBody = container.querySelector('[role="tooltip"]');
+    expect(tooltipBody).toBeTruthy();
+
+    fireEvent.click(tooltipBody!);
+    expect(container.querySelector('[role="tooltip"]')).toBeTruthy();
+  });
+
   it("Escape closes an open tooltip", () => {
     const { container, getByRole } = renderRichTooltip();
     const trigger = getByRole("button", { name: "Trigger" }).parentElement!;

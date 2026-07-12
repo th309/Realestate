@@ -58,6 +58,16 @@ describe("ConfidenceDisplay — touch fallback", () => {
     expect(screen.queryByRole("tooltip")).toBeFalsy();
   });
 
+  it("clicking inside the open tooltip content does not close it (regression)", () => {
+    render(<ConfidenceDisplay {...baseProps} />);
+    const trigger = screen.getByRole("button", { name: /b confidence: 72%/i });
+
+    fireEvent.click(trigger);
+    const tooltip = screen.getByRole("tooltip");
+    fireEvent.click(tooltip);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+  });
+
   it("Escape closes an open tooltip", () => {
     render(<ConfidenceDisplay {...baseProps} />);
     const trigger = screen.getByRole("button", { name: /b confidence: 72%/i });

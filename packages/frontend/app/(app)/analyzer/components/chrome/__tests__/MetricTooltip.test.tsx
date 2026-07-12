@@ -61,6 +61,16 @@ describe("MetricTooltip", () => {
     expect(container.querySelector("[data-tooltip-body]")).toBeFalsy();
   });
 
+  it("clicking inside the open tooltip content does not close it (regression)", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    fireEvent.click(container.querySelector("[data-metric-tooltip]")!);
+    const tooltipBody = container.querySelector("[data-tooltip-body]");
+    expect(tooltipBody).toBeTruthy();
+
+    fireEvent.click(tooltipBody!);
+    expect(container.querySelector("[data-tooltip-body]")).toBeTruthy();
+  });
+
   it("Escape closes an open tooltip", () => {
     const { container } = render(<MetricTooltip metric="cap_rate" />);
     fireEvent.click(container.querySelector("[data-metric-tooltip]")!);
