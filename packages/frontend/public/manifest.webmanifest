@@ -1,21 +1,58 @@
 {
+  "id": "/",
   "name": "PropertyIQ",
   "short_name": "PropertyIQ",
   "description": "AI-powered real estate market intelligence",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#FAFBFF",
   "theme_color": "#3949AB",
+  "categories": ["business", "finance"],
+  "lang": "en-US",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Analyze a Deal",
+      "short_name": "Analyzer",
+      "url": "/analyzer",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Top Markets",
+      "short_name": "Markets",
+      "url": "/markets",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
