@@ -34,6 +34,17 @@ export type {
   Strategy,
   UserThresholdsGeneric,
 } from "./shared/types";
+export {
+  AUTOKILL_DEFAULTS,
+  ruleEnabled,
+  ruleValue,
+} from "./shared/autokill-config";
+export type {
+  AutoKillRuleConfig,
+  BuyAndHoldAutoKillConfig,
+  BrrrrAutoKillConfig,
+  FixAndFlipAutoKillConfig,
+} from "./shared/autokill-config";
 
 // Buy-and-hold strategy
 export { gradeBuyAndHoldDeal } from "./buy-and-hold/grade";
