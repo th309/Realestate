@@ -145,7 +145,7 @@ export function InputPanel({
     <aside
       data-input-panel
       data-input-panel-sticky
-      className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto"
+      className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4"
     >
       <PropertyTypeToggle
         propertyType={propertyType}

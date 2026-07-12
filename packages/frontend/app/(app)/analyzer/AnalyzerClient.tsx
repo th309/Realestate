@@ -247,7 +247,7 @@ export default function AnalyzerClient({
           <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] gap-6">
           <div className="hidden md:block">
             <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
               {inputPanel}
