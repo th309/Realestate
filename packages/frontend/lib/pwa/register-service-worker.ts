@@ -11,6 +11,18 @@ import { Serwist } from "@serwist/window";
  * `applyUpdate` posts `{ type: "SKIP_WAITING" }` to the waiting worker; once
  * it takes control, the page is reloaded exactly once.
  *
+ * IMPORTANT: `clientsClaim: true` (see app/sw.ts) means a brand-new visitor's
+ * very first-ever activation ALSO fires the browser's `controllerchange`
+ * event — there is no prior update in that case, so it must never trigger a
+ * reload. Two independent guards prevent that: (1) the "controlling"
+ * listener is armed lazily, only from inside `applyUpdate` — i.e. only after
+ * the user has actually asked for an update — never at registration time;
+ * and (2) it's additionally gated on `event.isUpdate`, which Serwist sets to
+ * whether a service worker was ALREADY controlling the page when
+ * `register()` ran (false on a first install, true for every genuine
+ * update). Either guard alone would fix the bug; both are kept for defense
+ * in depth.
+ *
  * No-ops outside production or in browsers without Service Worker support.
  */
 export function registerServiceWorker(
@@ -23,13 +35,14 @@ export function registerServiceWorker(
   let hasReloaded = false;
 
   serwist.addEventListener("waiting", () => {
-    onUpdateWaiting(() => serwist.messageSkipWaiting());
-  });
-
-  serwist.addEventListener("controlling", () => {
-    if (hasReloaded) return;
-    hasReloaded = true;
-    window.location.reload();
+    onUpdateWaiting(() => {
+      serwist.addEventListener("controlling", (event) => {
+        if (!event.isUpdate || hasReloaded) return;
+        hasReloaded = true;
+        window.location.reload();
+      });
+      serwist.messageSkipWaiting();
+    });
   });
 
   serwist.register();

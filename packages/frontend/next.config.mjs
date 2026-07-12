@@ -7,11 +7,34 @@ import { fileURLToPath } from 'node:url';
 // lib/pwa/register-service-worker.ts) so the update-toast flow controls when
 // a waiting worker takes over — `register: false` disables Serwist's own
 // auto-registration script.
+//
+// `/offline`'s prerendered HTML can't be picked up by Serwist's normal
+// glob-the-build-output precaching: the InjectManifest webpack plugin builds
+// the manifest during the webpack compilation, which runs BEFORE Next's
+// static-export/prerender pass writes offline.html to disk — the file
+// doesn't exist yet when Serwist scans for it (confirmed: without this,
+// only the route's JS chunk ends up in the manifest, never the document
+// itself, so app/sw.ts's `fallbacks` — which resolves via `matchPrecache`
+// against the precache cache — can never find it and silently no-ops).
+// `additionalPrecacheEntries` sidesteps that: it doesn't need the file on
+// disk at build time, since precaching always works by having the browser
+// `fetch()` each manifest URL at SW-install time and store the response —
+// so as long as `/offline` is a live route by the time a user's browser
+// installs the worker (true post-deploy), this works. `revision` is a
+// manual cache-busting tag (same git-commit-sha-or-timestamp fallback next
+// config already uses for `generateBuildId` below) so a redeploy always
+// re-fetches the page instead of pinning users to a stale offline copy.
+const offlinePageRevision =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.GIT_HASH ||
+  `build-${Date.now()}`;
+
 const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
   register: false,
+  additionalPrecacheEntries: [{ url: '/offline', revision: offlinePageRevision }],
 });
 
 // De-scored market pages: generated monthly by scripts/generate-descored-redirects.ts.

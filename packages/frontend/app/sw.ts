@@ -17,8 +17,12 @@
  * see tsconfig.json's `exclude` entry for app/sw.ts.
  */
 import { defaultCache } from "@serwist/next/worker";
-import { Serwist } from "serwist";
-import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import { NetworkOnly, Serwist } from "serwist";
+import type {
+  PrecacheEntry,
+  RuntimeCaching,
+  SerwistGlobalConfig,
+} from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -28,14 +32,27 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Phase-4 handoff point: `/backend/*` is this app's same-origin API proxy
+// (app/backend/[[...path]]/route.ts). defaultCache's same-origin "others"
+// NetworkFirst catch-all would otherwise cache its GETs — its own `/api/`
+// guard is a different prefix and doesn't cover this proxy. Force
+// NetworkOnly here (byte-identical to having no service worker at all) until
+// a later task defines the real caching policy for it (SWR allowlist,
+// sign-out purge — see tasks/todo.md Phase 4). MUST stay before `defaultCache`
+// in the array below: Serwist checks runtimeCaching rules in order and uses
+// the first match.
+const backendNetworkOnly: RuntimeCaching = {
+  matcher: ({ url, sameOrigin }) =>
+    sameOrigin && url.pathname.startsWith("/backend/"),
+  method: "GET",
+  handler: new NetworkOnly(),
+};
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   clientsClaim: true,
   navigationPreload: true,
-  // Next.js-aware runtime caching (RSC payloads, static assets, images,
-  // fonts, etc.). Do NOT add /backend API caching here — that policy is
-  // owned by a later task.
-  runtimeCaching: defaultCache,
+  runtimeCaching: [backendNetworkOnly, ...defaultCache],
   fallbacks: {
     entries: [
       {
