@@ -17,8 +17,11 @@ interface PrefillTargets {
 }
 
 /**
- * Pre-fills the analyzer's form from the user's saved `user_preferences.analyzer_defaults`
- * exactly once per session. Fields split across two surfaces:
+ * Applies the user's saved `user_preferences.analyzer_defaults` to the
+ * analyzer form: once on load, and again whenever the saved defaults CHANGE
+ * (i.e. the user saves the Customize drawer) so the open analysis reflects
+ * the new assumptions immediately instead of on the next page load.
+ * Fields split across two surfaces:
  *   - DealInput-owned: vacancyPctOfRent, maintenancePctOfRent, managementPctOfRent, financing.closingCostsPct
  *   - AnalyzerAssumptions-owned: rentGrowthPct, appreciationPct, marginalTaxRate,
  *     landValuePct (from landValueSharePct), expenseGrowthPct
@@ -30,10 +33,14 @@ export function useAnalyzerDefaultsPrefill({
   currentInput,
 }: PrefillTargets) {
   const { data } = useAnalyzerDefaults();
-  const appliedRef = useRef(false);
+  // Snapshot of the defaults we last applied — re-apply only when the saved
+  // content actually changes, never on unrelated re-renders / input edits.
+  const appliedForRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (appliedRef.current || !data) return;
+    if (!data) return;
+    const snapshot = JSON.stringify(data);
+    if (appliedForRef.current === snapshot) return;
 
     const nextInput: DealInput = { ...currentInput };
     let inputChanged = false;
@@ -69,6 +76,6 @@ export function useAnalyzerDefaultsPrefill({
     if (data.expenseGrowthPct != null)
       setAssumption("expenseGrowthPct", data.expenseGrowthPct);
 
-    appliedRef.current = true;
+    appliedForRef.current = snapshot;
   }, [data, setInput, setAssumption, currentInput]);
 }
