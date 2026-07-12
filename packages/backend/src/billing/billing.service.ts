@@ -8,7 +8,12 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { StripeService } from './stripe.service';
 import { BillingWebhookService } from './billing-webhook.service';
-import { resolveTrialDaysForCheckout } from './checkout-guards';
+import { BillingUserSyncService } from './billing-user-sync.service';
+import {
+  guardDriftedCheckout,
+  resolveTrialDaysForCheckout,
+  buildPortalProducts,
+} from './checkout-guards';
 import Stripe from 'stripe';
 
 /**
@@ -25,6 +30,7 @@ export class BillingService {
     private readonly stripe: StripeService,
     private readonly config: ConfigService,
     private readonly webhookService: BillingWebhookService,
+    private readonly userSync: BillingUserSyncService,
   ) {
     const url = this.config.get<string>('FRONTEND_URL');
     if (!url) {
@@ -96,6 +102,17 @@ export class BillingService {
         .eq('id', userId);
     }
 
+    // Guard: DB may have drifted from Stripe (missed webhook) — re-sync and
+    // route to the portal instead of risking a second concurrent subscription.
+    const driftedPortalUrl = await guardDriftedCheckout({
+      stripeCustomerId,
+      userId,
+      stripeService: this.stripe,
+      userSync: this.userSync,
+      getBillingPortalUrl: (id) => this.getBillingPortalUrl(id),
+    });
+    if (driftedPortalUrl) return driftedPortalUrl;
+
     // Look up Stripe price ID from subscription_tiers
     const priceColumn =
       interval === 'year'
@@ -155,11 +172,7 @@ export class BillingService {
     return this.webhookService.handleWebhookEvent(event);
   }
 
-  /**
-   * Cancel the user's subscription at the end of the current billing period.
-   * The user retains full access until the period ends, then Stripe fires
-   * `customer.subscription.deleted` which downgrades to free.
-   */
+  /** Cancels at period end; user keeps access until the delete webhook downgrades to free. */
   async cancelSubscription(
     userId: string,
   ): Promise<{ cancelAt: string; currentPeriodEnd: string }> {
@@ -190,10 +203,7 @@ export class BillingService {
     return { cancelAt: periodEnd, currentPeriodEnd: periodEnd };
   }
 
-  /**
-   * Resume a subscription that was scheduled for cancellation,
-   * so it renews normally at the end of the current billing period.
-   */
+  /** Resumes a subscription scheduled for cancellation so it renews normally. */
   async resumeSubscription(userId: string): Promise<void> {
     const client = this.supabase.getClient();
     const { data: profile } = await client
@@ -213,10 +223,7 @@ export class BillingService {
     this.logger.log(`User ${userId} resumed subscription`);
   }
 
-  /**
-   * Fetch the current subscription status from Stripe, including
-   * whether cancellation is pending and the period end date.
-   */
+  /** Fetches current Stripe subscription status, incl. pending cancellation + period end. */
   async getSubscriptionStatus(userId: string): Promise<{
     status: string;
     cancelAtPeriodEnd: boolean;
@@ -272,15 +279,7 @@ export class BillingService {
       )
       .neq('slug', 'free');
 
-    const products = (tiers ?? [])
-      .filter((t) => t.stripe_product_id)
-      .map((t) => ({
-        productId: t.stripe_product_id as string,
-        priceIds: [t.stripe_price_monthly_id, t.stripe_price_yearly_id].filter(
-          Boolean,
-        ) as string[],
-      }))
-      .filter((p) => p.priceIds.length > 0);
+    const products = buildPortalProducts(tiers ?? []);
 
     let configurationId: string | undefined;
     if (products.length > 0) {

@@ -4,10 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import { BillingService } from './billing.service';
 import { StripeService } from './stripe.service';
 import { BillingWebhookService } from './billing-webhook.service';
+import { BillingUserSyncService } from './billing-user-sync.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /**
- * Tests for BillingService.startCheckout covering:
+ * Tests for BillingService.startCheckout covering three guards:
  *
  *  1. F13 — duplicate paid-subscription guard (pre-existing). Blocks a new
  *     checkout for ANY user with a live paid Stripe sub the DB already knows
@@ -20,53 +21,79 @@ import { SupabaseService } from '../supabase/supabase.service';
  *
  *  2. Task 5 — no second free Stripe trial for users who already have a
  *     `user_trials` row (the app-level reverse trial granted at signup).
+ *
+ *  3. Task 8 — checkout drift guard. When Stripe already has a live
+ *     (active/trialing) subscription for the customer that the DB doesn't
+ *     know about (missed webhook), re-sync the DB via `syncFromCustomerId`
+ *     and route to the billing portal instead of starting a second,
+ *     concurrent Stripe checkout.
  */
 
 const createCheckoutSession = jest.fn();
 const getOrCreateCustomer = jest.fn();
+const listActiveSubscriptionsForCustomer = jest.fn();
+const createBillingPortalSession = jest.fn();
+const getOrCreatePortalConfiguration = jest.fn();
+const syncFromCustomerId = jest.fn();
 
 interface ClientConfig {
   profile: Record<string, unknown> | null;
+  tierRow?: Record<string, unknown> | null;
+  tierList?: Record<string, unknown>[];
   trialConfig?: Record<string, unknown> | null;
   userTrialRow?: Record<string, unknown> | null;
 }
 
 /**
- * Builds a Supabase client mock whose `.single()` resolves per-table:
- *   user_profiles     → the provided profile (drives the F13 guard)
- *   subscription_tiers → a valid price row (allowed path continues)
+ * Builds a Supabase client mock whose `.single()` (or a bare `await`, for
+ * queries that skip `.single()`, e.g. the portal-products list) resolves
+ * per-table:
+ *   user_profiles      → the provided profile
+ *   subscription_tiers → `tierRow` for the `.single()` price lookup,
+ *                         `tierList` for the `.neq()` portal-products list
  *   trial_config       → the provided trial config
- *   user_trials         → the provided user_trials row (or null)
- * A shared chainable builder tracks the last `.from(table)` so `.single()`
- * returns the matching row.
+ *   user_trials        → the provided user_trials row (or null)
+ * A shared chainable builder tracks the last `.from(table)` so responses
+ * resolve per-table regardless of chain shape.
  */
 function buildClient(config: ClientConfig) {
   const {
     profile,
+    tierRow = {
+      stripe_price_monthly_id: 'price_monthly_123',
+      stripe_price_yearly_id: 'price_yearly_123',
+    },
+    tierList = [],
     trialConfig = { is_enabled: false, duration_days: 0 },
     userTrialRow = null,
   } = config;
 
   let currentTable = '';
-  const responses: Record<string, { data: unknown }> = {
+  const singleResponses: Record<string, { data: unknown }> = {
     user_profiles: { data: profile },
-    subscription_tiers: {
-      data: {
-        stripe_price_monthly_id: 'price_monthly_123',
-        stripe_price_yearly_id: 'price_yearly_123',
-      },
-    },
+    subscription_tiers: { data: tierRow },
     trial_config: { data: trialConfig },
     user_trials: { data: userTrialRow },
   };
+  const listResponses: Record<string, { data: unknown }> = {
+    subscription_tiers: { data: tierList },
+  };
+
   const builder: Record<string, jest.Mock> = {
     select: jest.fn(() => builder),
     eq: jest.fn(() => builder),
+    neq: jest.fn(() => builder),
     update: jest.fn(() => builder),
     single: jest.fn(() =>
-      Promise.resolve(responses[currentTable] ?? { data: null }),
+      Promise.resolve(singleResponses[currentTable] ?? { data: null }),
+    ),
+    then: jest.fn((resolve: (v: unknown) => unknown) =>
+      Promise.resolve(listResponses[currentTable] ?? { data: [] }).then(
+        resolve,
+      ),
     ),
   };
+
   return {
     from: jest.fn((table: string) => {
       currentTable = table;
@@ -76,19 +103,36 @@ function buildClient(config: ClientConfig) {
 }
 
 /** Instantiates BillingService with all Stripe/DB calls mocked from `config`. */
-async function makeService(config: ClientConfig): Promise<BillingService> {
+async function makeService(
+  config: ClientConfig & {
+    liveStripeSubscriptions?: Record<string, unknown>[];
+  },
+): Promise<BillingService> {
   jest.clearAllMocks();
   createCheckoutSession.mockResolvedValue('https://stripe.test/checkout');
   getOrCreateCustomer.mockResolvedValue('cus_new');
+  listActiveSubscriptionsForCustomer.mockResolvedValue(
+    config.liveStripeSubscriptions ?? [],
+  );
+  createBillingPortalSession.mockResolvedValue('https://stripe.test/portal');
+  getOrCreatePortalConfiguration.mockResolvedValue('bpc_config');
+  syncFromCustomerId.mockResolvedValue('synced-user-id');
 
   const supabaseMock = { getClient: jest.fn(() => buildClient(config)) };
-  const stripeMock = { createCheckoutSession, getOrCreateCustomer };
+  const stripeMock = {
+    createCheckoutSession,
+    getOrCreateCustomer,
+    listActiveSubscriptionsForCustomer,
+    createBillingPortalSession,
+    getOrCreatePortalConfiguration,
+  };
   const configMock = {
     get: jest.fn((key: string) =>
       key === 'FRONTEND_URL' ? 'https://app.test' : undefined,
     ),
   };
   const webhookMock = { handleWebhookEvent: jest.fn() };
+  const userSyncMock = { syncFromCustomerId };
 
   const moduleRef: TestingModule = await Test.createTestingModule({
     providers: [
@@ -97,6 +141,7 @@ async function makeService(config: ClientConfig): Promise<BillingService> {
       { provide: StripeService, useValue: stripeMock },
       { provide: ConfigService, useValue: configMock },
       { provide: BillingWebhookService, useValue: webhookMock },
+      { provide: BillingUserSyncService, useValue: userSyncMock },
     ],
   }).compile();
 
@@ -232,5 +277,56 @@ describe('BillingService.startCheckout — no second free trial (Task 5)', () =>
     expect(createCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({ trialPeriodDays: 14 }),
     );
+  });
+});
+
+describe('BillingService.startCheckout — checkout drift guard (Task 8)', () => {
+  it('routes to the billing portal and re-syncs the DB when Stripe already has a live sub the DB missed', async () => {
+    const liveSubscription = {
+      id: 'sub_live_drift',
+      status: 'active',
+      items: { data: [] },
+    };
+
+    const service = await makeService({
+      profile: {
+        email: 'drift@test.com',
+        stripe_customer_id: 'cus_drift',
+        // Drift: DB has no stripe_subscription_id even though Stripe has a
+        // live sub for this customer (e.g. a missed webhook).
+        stripe_subscription_id: null,
+        subscription_tier: 'free',
+        subscription_status: 'active',
+      },
+      liveStripeSubscriptions: [liveSubscription],
+    });
+
+    const result = await service.startCheckout('user-h', 'pro', 'month');
+
+    expect(result).toBe('https://stripe.test/portal');
+    expect(syncFromCustomerId).toHaveBeenCalledWith(
+      'cus_drift',
+      liveSubscription,
+    );
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it('proceeds with a normal checkout when Stripe has no live subscription for the customer', async () => {
+    const service = await makeService({
+      profile: {
+        email: 'clean@test.com',
+        stripe_customer_id: 'cus_clean',
+        stripe_subscription_id: null,
+        subscription_tier: 'free',
+        subscription_status: 'active',
+      },
+      liveStripeSubscriptions: [],
+    });
+
+    const url = await service.startCheckout('user-i', 'pro', 'month');
+
+    expect(url).toBe('https://stripe.test/checkout');
+    expect(syncFromCustomerId).not.toHaveBeenCalled();
+    expect(createCheckoutSession).toHaveBeenCalledTimes(1);
   });
 });

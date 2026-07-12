@@ -222,6 +222,26 @@ export class StripeService {
   }
 
   /**
+   * List a customer's live (active or trialing) Stripe subscriptions. Used
+   * by the checkout drift guard to detect a subscription the DB doesn't
+   * know about before starting a second, duplicate checkout.
+   */
+  async listActiveSubscriptionsForCustomer(
+    customerId: string,
+  ): Promise<Stripe.Subscription[]> {
+    const stripe = this.getStripeClient();
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 10,
+    });
+
+    return subscriptions.data.filter(
+      (s) => s.status === 'active' || s.status === 'trialing',
+    );
+  }
+
+  /**
    * Mark a subscription to cancel at the end of the current billing period.
    * The user retains access until `current_period_end`.
    */
