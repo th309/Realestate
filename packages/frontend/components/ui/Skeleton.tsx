@@ -1,30 +1,39 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 interface SkeletonProps {
   className?: string;
-  variant?: 'text' | 'circular' | 'rectangular' | 'rounded';
+  variant?: "text" | "circular" | "rectangular" | "rounded";
   width?: string | number;
   height?: string | number;
-  animation?: 'pulse' | 'wave' | 'none';
+  animation?: "pulse" | "wave" | "none";
 }
 
 const variantStyles = {
-  text: 'rounded',
-  circular: 'rounded-full',
-  rectangular: 'rounded-none',
-  rounded: 'rounded-xl',
+  text: "rounded",
+  circular: "rounded-full",
+  rectangular: "rounded-none",
+  rounded: "rounded-xl",
 };
 
 export const Skeleton: React.FC<SkeletonProps> = ({
-  className = '',
-  variant = 'text',
+  className = "",
+  variant = "text",
   width,
   height,
-  animation = 'pulse',
+  animation = "pulse",
 }) => {
-  const animationClass = animation === 'pulse' ? 'animate-pulse' : animation === 'wave' ? 'animate-shimmer' : '';
+  // M3 "subtle tonal pulse" motion — respects prefers-reduced-motion via
+  // Tailwind's motion-safe:/motion-reduce: variants (no JS media query needed).
+  // Reduced-motion users get the same static tonal block, just without the
+  // opacity pulse loop.
+  const animationClass =
+    animation === "pulse"
+      ? "motion-safe:animate-pulse"
+      : animation === "wave"
+        ? "motion-safe:animate-shimmer"
+        : "";
 
   return (
     <div
@@ -35,8 +44,8 @@ export const Skeleton: React.FC<SkeletonProps> = ({
         ${className}
       `}
       style={{
-        width: typeof width === 'number' ? `${width}px` : width,
-        height: typeof height === 'number' ? `${height}px` : height,
+        width: typeof width === "number" ? `${width}px` : width,
+        height: typeof height === "number" ? `${height}px` : height,
       }}
     />
   );
@@ -46,7 +55,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 export const SkeletonText: React.FC<{
   lines?: number;
   className?: string;
-}> = ({ lines = 3, className = '' }) => {
+}> = ({ lines = 3, className = "" }) => {
   return (
     <div className={`space-y-2 ${className}`}>
       {Array.from({ length: lines }).map((_, i) => (
@@ -54,7 +63,7 @@ export const SkeletonText: React.FC<{
           key={i}
           variant="text"
           height={16}
-          className={i === lines - 1 ? 'w-3/4' : 'w-full'}
+          className={i === lines - 1 ? "w-3/4" : "w-full"}
         />
       ))}
     </div>
@@ -62,9 +71,9 @@ export const SkeletonText: React.FC<{
 };
 
 export const SkeletonAvatar: React.FC<{
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
-}> = ({ size = 'md', className = '' }) => {
+}> = ({ size = "md", className = "" }) => {
   const sizeMap = { sm: 32, md: 40, lg: 56 };
   return (
     <Skeleton
@@ -77,10 +86,10 @@ export const SkeletonAvatar: React.FC<{
 };
 
 export const SkeletonButton: React.FC<{
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   width?: number;
   className?: string;
-}> = ({ size = 'md', width = 100, className = '' }) => {
+}> = ({ size = "md", width = 100, className = "" }) => {
   const heightMap = { sm: 32, md: 40, lg: 48 };
   return (
     <Skeleton
@@ -98,9 +107,11 @@ export const SkeletonCard: React.FC<{
   hasHeader?: boolean;
   lines?: number;
   className?: string;
-}> = ({ hasImage = false, hasHeader = true, lines = 3, className = '' }) => {
+}> = ({ hasImage = false, hasHeader = true, lines = 3, className = "" }) => {
   return (
-    <div className={`bg-surface-container-low rounded-2xl p-4 elevation-1 ${className}`}>
+    <div
+      className={`bg-surface-container-low rounded-2xl p-4 elevation-1 ${className}`}
+    >
       {hasImage && (
         <Skeleton variant="rounded" height={160} className="w-full mb-4" />
       )}
@@ -122,7 +133,7 @@ export const SkeletonCard: React.FC<{
 export const SkeletonTableRow: React.FC<{
   columns?: number;
   className?: string;
-}> = ({ columns = 5, className = '' }) => {
+}> = ({ columns = 5, className = "" }) => {
   return (
     <div className={`flex items-center gap-4 py-3 ${className}`}>
       {Array.from({ length: columns }).map((_, i) => (
@@ -130,7 +141,7 @@ export const SkeletonTableRow: React.FC<{
           key={i}
           variant="text"
           height={16}
-          className={`flex-1 ${i === 0 ? 'max-w-[200px]' : ''}`}
+          className={`flex-1 ${i === 0 ? "max-w-[200px]" : ""}`}
         />
       ))}
     </div>
@@ -139,10 +150,10 @@ export const SkeletonTableRow: React.FC<{
 
 // Chart skeleton
 export const SkeletonChart: React.FC<{
-  type?: 'line' | 'bar' | 'pie';
+  type?: "line" | "bar" | "pie";
   height?: number;
   className?: string;
-}> = ({ type = 'line', height = 300, className = '' }) => {
+}> = ({ type = "line", height = 300, className = "" }) => {
   return (
     <div
       className={`bg-surface-container-low rounded-2xl p-4 ${className}`}
@@ -159,7 +170,7 @@ export const SkeletonChart: React.FC<{
 
       {/* Chart area */}
       <div className="relative flex-1" style={{ height: height - 100 }}>
-        {type === 'bar' ? (
+        {type === "bar" ? (
           <div className="absolute bottom-0 left-0 right-0 flex items-end justify-around gap-2 h-full">
             {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton
@@ -170,13 +181,17 @@ export const SkeletonChart: React.FC<{
               />
             ))}
           </div>
-        ) : type === 'pie' ? (
+        ) : type === "pie" ? (
           <div className="flex items-center justify-center h-full">
             <Skeleton variant="circular" width={200} height={200} />
           </div>
         ) : (
           <div className="h-full flex items-end">
-            <svg className="w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
+            <svg
+              className="w-full h-full"
+              viewBox="0 0 400 200"
+              preserveAspectRatio="none"
+            >
               <path
                 d="M0,150 Q50,100 100,120 T200,80 T300,100 T400,60"
                 fill="none"
@@ -202,17 +217,79 @@ export const SkeletonChart: React.FC<{
   );
 };
 
-// Stat card skeleton
+// Stat card skeleton — mirrors StatCard's three variants exactly (container
+// radius/padding, value line height matched to each variant's text size) so
+// the loading→loaded swap never shifts layout. `hasIcon` lets a caller that
+// knows it won't render an icon skip that placeholder for a tighter match.
 export const SkeletonStatCard: React.FC<{
+  variant?: "default" | "compact" | "large";
+  hasIcon?: boolean;
   className?: string;
-}> = ({ className = '' }) => {
-  return (
-    <div className={`bg-surface-container-low rounded-xl p-4 elevation-1 ${className}`}>
-      <div className="flex items-start justify-between mb-3">
-        <Skeleton variant="text" height={14} width={100} />
-        <Skeleton variant="circular" width={24} height={24} />
+}> = ({ variant = "default", hasIcon = true, className = "" }) => {
+  if (variant === "compact") {
+    return (
+      <div className={`flex items-center justify-between gap-3 ${className}`}>
+        <div className="flex items-center gap-2">
+          {hasIcon && (
+            <Skeleton
+              variant="rounded"
+              width={28}
+              height={28}
+              className="rounded-lg"
+            />
+          )}
+          <div className="space-y-1">
+            <Skeleton variant="text" height={12} width={70} />
+            <Skeleton variant="text" height={14} width={50} />
+          </div>
+        </div>
+        <Skeleton variant="text" height={16} width={40} />
       </div>
-      <Skeleton variant="text" height={32} width={120} className="mb-2" />
+    );
+  }
+
+  if (variant === "large") {
+    return (
+      <div
+        className={`bg-surface-container-low rounded-2xl p-6 elevation-1 ${className}`}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <Skeleton variant="text" height={14} width={120} />
+          {hasIcon && (
+            <Skeleton
+              variant="rounded"
+              width={36}
+              height={36}
+              className="rounded-xl"
+            />
+          )}
+        </div>
+        <Skeleton variant="text" height={36} width={140} className="mb-2" />
+        <div className="flex items-center gap-3">
+          <Skeleton variant="rounded" height={20} width={60} />
+          <Skeleton variant="text" height={12} width={80} />
+        </div>
+      </div>
+    );
+  }
+
+  // default
+  return (
+    <div
+      className={`bg-surface-container-low rounded-xl p-4 elevation-1 ${className}`}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <Skeleton variant="text" height={14} width={100} />
+        {hasIcon && (
+          <Skeleton
+            variant="rounded"
+            width={28}
+            height={28}
+            className="rounded-lg"
+          />
+        )}
+      </div>
+      <Skeleton variant="text" height={28} width={120} className="mb-1" />
       <div className="flex items-center gap-2">
         <Skeleton variant="rounded" height={20} width={60} />
         <Skeleton variant="text" height={12} width={80} />
@@ -223,9 +300,9 @@ export const SkeletonStatCard: React.FC<{
 
 // Score gauge skeleton
 export const SkeletonScoreGauge: React.FC<{
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
-}> = ({ size = 'md', className = '' }) => {
+}> = ({ size = "md", className = "" }) => {
   const sizeMap = { sm: 60, md: 80, lg: 100 };
   const dim = sizeMap[size];
 

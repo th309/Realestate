@@ -88,7 +88,7 @@ describe("ScoreWidget — null score handling", () => {
     expect(screen.getByText("\u2014")).toBeInTheDocument();
   });
 
-  it("shows loading spinner while data is fetching", () => {
+  it("shows a size-matched skeleton (not a spinner) while data is fetching", () => {
     mockUseScoreData.mockReturnValue({
       data: null,
       loading: true,
@@ -100,12 +100,25 @@ describe("ScoreWidget — null score handling", () => {
         geographyType="metro"
         geographyId="31080"
         scoreType="propertyiq"
+        size={100}
       />,
     );
 
-    // Should have the animated spinner (Loader2 component)
-    const spinner = container.querySelector(".animate-spin");
-    expect(spinner).toBeInTheDocument();
+    // No spinner (task 1.2: skeletons replace spinners for perceived performance).
+    expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
+
+    // The loading box itself matches the final ScoreDisplay box exactly (100x100)
+    // so swapping to the real score never shifts layout.
+    const loadingBox = screen.getByLabelText("Loading score");
+    expect(loadingBox).toHaveStyle({ width: "100px", height: "100px" });
+
+    // A tonal skeleton block is present in its place (Skeleton primitive uses
+    // the Tailwind variant class "motion-safe:animate-pulse", hence the
+    // attribute-contains selector rather than a plain class selector).
+    expect(
+      loadingBox.querySelector('[class*="animate-pulse"]'),
+    ).toBeInTheDocument();
+
     // Should NOT show em-dash or a score
     expect(screen.queryByText("\u2014")).not.toBeInTheDocument();
   });

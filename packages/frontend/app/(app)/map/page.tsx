@@ -12,9 +12,7 @@ import type { FeatureCollection } from "geojson";
 import { usePathname } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-
 import type { GeoLevel, SearchResult, MapData } from "./types";
-
 import { Sidebar, RightDetailPanel, MapContextMenu } from "./components";
 import { MapToolbar } from "./MapToolbar";
 import { MapCanvas } from "./MapCanvas";
@@ -32,6 +30,7 @@ import { useMapDeepLinkNav } from "./hooks/useMapDeepLinkNav";
 import { useSelectedGeoCinematic } from "./hooks/useSelectedGeoCinematic";
 
 import { NAV_ITEMS, MAPBOX_ACCESS_TOKEN } from "./config";
+import { MapPageSkeleton } from "./MapPageSkeleton";
 import { useEntitlements } from "@/lib/entitlements";
 import {
   usePreferences,
@@ -44,7 +43,7 @@ mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 export default function MapPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-surface" />}>
+    <Suspense fallback={<MapPageSkeleton />}>
       <MapPageInner />
     </Suspense>
   );

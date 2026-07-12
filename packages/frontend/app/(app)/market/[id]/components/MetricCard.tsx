@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
 import { BenchmarkBadge } from "@/components/benchmarks";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface MetricCardProps {
   metricId: string;
@@ -106,7 +107,8 @@ export function MetricCard({
       )}
       <div className="text-xl font-bold text-on-surface">
         {isLoading ? (
-          <span className="inline-block h-6 w-20 rounded bg-on-surface/10 animate-pulse" />
+          // Height 28px matches text-xl's line-height exactly (no shift on swap).
+          <Skeleton variant="text" width={80} height={28} />
         ) : (
           formattedValue
         )}
