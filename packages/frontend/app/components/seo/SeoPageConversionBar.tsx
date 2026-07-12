@@ -148,7 +148,10 @@ export function SeoPageConversionBar({
   return (
     <div
       ref={barRef}
-      className="fixed bottom-0 inset-x-0 z-40 bg-surface-container border-t border-outline-variant shadow-lg pb-safe"
+      // Mobile: stack above BottomNavBar (fixed, 64px + safe-area — see
+      // BOTTOM_NAV_HEIGHT_PX in src/components/layout/BottomNavBar.tsx).
+      // z-50 (was z-40, tied with the nav) so this wins as the later sibling.
+      className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-0 inset-x-0 z-50 bg-surface-container border-t border-outline-variant shadow-lg pb-safe"
     >
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap">
         <div className="flex-1 flex items-center gap-3 min-w-0">

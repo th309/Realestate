@@ -68,7 +68,12 @@ export function InstallBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 pb-safe px-4 pb-4 pointer-events-none animate-in slide-in-from-bottom-4 duration-200">
+    <div
+      // Mobile: stack above BottomNavBar (fixed, 64px + safe-area — see
+      // BOTTOM_NAV_HEIGHT_PX in src/components/layout/BottomNavBar.tsx).
+      // Desktop: nav doesn't render, so float with a small margin.
+      className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-6 inset-x-0 z-50 pb-safe px-4 pb-4 pointer-events-none animate-in slide-in-from-bottom-4 duration-200"
+    >
       <div
         role="dialog"
         aria-label="Install PropertyIQ"

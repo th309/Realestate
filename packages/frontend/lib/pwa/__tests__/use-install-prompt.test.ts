@@ -149,7 +149,7 @@ describe("useInstallPrompt", () => {
     expect(result.current.installOutcome).toBe(null);
   });
 
-  it("fires pwa_installed and flips isInstalled on the appinstalled event", async () => {
+  it("fires pwa.installed and flips isInstalled on the appinstalled event", async () => {
     const { useInstallPrompt } = await import("../use-install-prompt");
     const { result } = renderHook(() => useInstallPrompt());
 
@@ -159,7 +159,7 @@ describe("useInstallPrompt", () => {
 
     expect(result.current.isInstalled).toBe(true);
     expect(result.current.canPromptNatively).toBe(false);
-    expect(trackEvent).toHaveBeenCalledWith("pwa_installed", expect.anything());
+    expect(trackEvent).toHaveBeenCalledWith("pwa.installed", expect.anything());
   });
 
   it("stashes the prompt event at module scope so a hook mounted afterward still sees it", async () => {

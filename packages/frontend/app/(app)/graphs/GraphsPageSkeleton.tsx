@@ -3,13 +3,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 /**
  * Route-shaped loading state for `/graphs`, shown by the page's Suspense
  * boundary before `GraphsPageV2` mounts. Mirrors `GraphsPageV2`'s own root
- * (`h-[calc(100dvh-64px)] flex flex-col`, same header + sidebar + chart-area
- * regions) so the swap to real content never jumps. No spinner (task 1.2).
+ * (`lg:h-[calc(100dvh-64px)]` desktop / `max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))]`
+ * mobile — the second 64px + inset subtracts BottomNavBar, same header +
+ * sidebar + chart-area regions) so the swap to real content never jumps. No
+ * spinner (task 1.2).
  */
 export function GraphsPageSkeleton() {
   return (
     <div
-      className="h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden"
+      className="max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden"
       role="status"
       aria-busy="true"
       aria-label="Loading Market Explorer"

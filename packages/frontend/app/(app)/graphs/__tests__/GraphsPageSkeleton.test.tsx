@@ -2,8 +2,9 @@
  * GraphsPageSkeleton — the /graphs route's Suspense fallback (task 1.2).
  * Replaces the previous centered-spinner `LoadingFallback`. Confirms: no
  * spinner, and the root height matches GraphsPageV2's own root
- * (`h-[calc(100dvh-64px)]`, not a bare `h-screen`) so there's no jump when
- * the real chart area mounts.
+ * (`lg:h-[calc(100dvh-64px)]` desktop, `max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))]`
+ * mobile — the second 64px + inset subtracts BottomNavBar — not a bare
+ * `h-screen`) so there's no jump when the real chart area mounts.
  */
 
 import { describe, it, expect } from "vitest";
@@ -16,7 +17,10 @@ describe("GraphsPageSkeleton", () => {
     const root = container.firstChild as HTMLElement;
 
     expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
-    expect(root.className).toContain("h-[calc(100dvh-64px)]");
+    expect(root.className).toContain("lg:h-[calc(100dvh-64px)]");
+    expect(root.className).toContain(
+      "max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))]",
+    );
     expect(root.className).not.toContain("h-screen");
   });
 

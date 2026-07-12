@@ -93,7 +93,7 @@ export function BottomNavBar() {
               key={item.href}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className="flex flex-1 min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-0.5 transition-colors duration-200"
+              className="flex flex-1 min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-0.5 transition-transform duration-200 active:scale-[0.97] motion-reduce:active:scale-100"
             >
               <span
                 className={`flex items-center justify-center h-8 px-4 rounded-full transition-colors duration-200 ${

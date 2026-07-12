@@ -58,7 +58,7 @@ export function useInstallPrompt() {
       stashedPrompt = null;
       setCanPromptNatively(false);
       setIsInstalled(true);
-      trackEvent("pwa_installed", {});
+      trackEvent("pwa.installed", {});
     }
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);

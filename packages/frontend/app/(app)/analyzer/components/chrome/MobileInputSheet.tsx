@@ -36,7 +36,10 @@ export function MobileInputSheet({
   return (
     <div className="md:hidden">
       <div
-        className="fixed inset-0 z-30 bg-black/40"
+        // z-50/z-[55] (mirrors MobileMenu's z-[60] convention) so the sheet
+        // covers BottomNavBar (z-40) instead of leaving it tappable through
+        // the open sheet.
+        className="fixed inset-0 z-50 bg-black/40"
         aria-hidden
         onClick={onClose}
       />
@@ -45,7 +48,7 @@ export function MobileInputSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Property details"
-        className="fixed inset-x-0 bottom-0 top-16 z-40 flex max-h-dvh flex-col rounded-t-[28px] border-t border-outline-variant bg-surface shadow-2xl"
+        className="fixed inset-x-0 bottom-0 top-16 z-[55] flex max-h-dvh flex-col rounded-t-[28px] border-t border-outline-variant bg-surface shadow-2xl"
       >
         <div className="flex flex-col items-stretch border-b border-outline-variant px-4 pb-3 pt-2">
           <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-outline-variant" />

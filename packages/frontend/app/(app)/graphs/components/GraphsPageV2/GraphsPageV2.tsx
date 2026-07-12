@@ -494,7 +494,13 @@ export function GraphsPageV2() {
   // ── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden">
+    <div
+      // Desktop: subtract the compact header only. Mobile: also subtract
+      // BottomNavBar (fixed, 64px + safe-area — see BOTTOM_NAV_HEIGHT_PX in
+      // src/components/layout/BottomNavBar.tsx) so there's no dead scroll
+      // above it and the bottom chart controls clear the nav.
+      className="max-lg:h-[calc(100dvh-64px-64px-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden"
+    >
       {/* ── COMPACT HEADER ── */}
       <header className="flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/40 px-4 md:px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center gap-3 flex-wrap">

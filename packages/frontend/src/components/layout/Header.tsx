@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { useEntitlements } from "@/lib/entitlements";
 import { useMyOrg } from "@/lib/data";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
@@ -85,6 +86,7 @@ export function Header() {
   }, [pathname]);
 
   async function handleGetAppClick() {
+    trackEvent("pwa.get_app_clicked", {});
     if (canPromptNatively) {
       await promptInstall();
     } else {
