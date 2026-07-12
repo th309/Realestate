@@ -148,4 +148,20 @@ describe("Tooltip (base) — click-toggle addition", () => {
     expect(container.querySelector('[role="tooltip"]')).toBeFalsy();
     vi.useRealTimers();
   });
+
+  it("clicking inside the open tooltip content does not close it (regression)", () => {
+    const { container, getByText } = render(
+      <Tooltip content="Hello there">
+        <span>Hover me</span>
+      </Tooltip>,
+    );
+    const trigger = getByText("Hover me").parentElement!;
+
+    fireEvent.click(trigger);
+    const tooltipBody = container.querySelector('[role="tooltip"]');
+    expect(tooltipBody).toBeTruthy();
+
+    fireEvent.click(tooltipBody!);
+    expect(container.querySelector('[role="tooltip"]')).toBeTruthy();
+  });
 });

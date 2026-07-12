@@ -118,6 +118,10 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           ref={tooltipRef}
           role="tooltip"
+          // Stops the trigger's onClick toggle from also firing when the
+          // tap lands on the tooltip body itself — it's a DOM child of the
+          // trigger, so without this a tap inside the content self-closes it.
+          onClick={(e) => e.stopPropagation()}
           className={`
             absolute z-50 ${positionStyles[tooltipPosition]}
             px-3 py-1.5 text-xs font-medium
