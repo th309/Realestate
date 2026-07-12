@@ -20,6 +20,18 @@ const withBundleAnalyzer = withBundleAnalyzerInit({
 // a waiting worker takes over — `register: false` disables Serwist's own
 // auto-registration script.
 //
+// Stable build identifier (git commit, or a per-process timestamp fallback
+// when it isn't exposed at build time). Single source of truth, hoisted so
+// nothing downstream recomputes/duplicates the fallback chain:
+//   - the SW's `/offline` precache revision (immediately below)
+//   - `generateBuildId` (keeps restarts/instances agreeing on cache keys)
+//   - `NEXT_PUBLIC_BUILD_ID` (client-side cache-buster for the React Query
+//     IndexedDB persister — see app/query-persistence.ts)
+const buildId =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.GIT_HASH ||
+  `build-${Date.now()}`;
+
 // `/offline`'s prerendered HTML can't be picked up by Serwist's normal
 // glob-the-build-output precaching: the InjectManifest webpack plugin builds
 // the manifest during the webpack compilation, which runs BEFORE Next's
@@ -33,20 +45,14 @@ const withBundleAnalyzer = withBundleAnalyzerInit({
 // `fetch()` each manifest URL at SW-install time and store the response —
 // so as long as `/offline` is a live route by the time a user's browser
 // installs the worker (true post-deploy), this works. `revision` is a
-// manual cache-busting tag (same git-commit-sha-or-timestamp fallback next
-// config already uses for `generateBuildId` below) so a redeploy always
+// manual cache-busting tag (shared `buildId` above) so a redeploy always
 // re-fetches the page instead of pinning users to a stale offline copy.
-const offlinePageRevision =
-  process.env.RAILWAY_GIT_COMMIT_SHA ||
-  process.env.GIT_HASH ||
-  `build-${Date.now()}`;
-
 const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
   register: false,
-  additionalPrecacheEntries: [{ url: '/offline', revision: offlinePageRevision }],
+  additionalPrecacheEntries: [{ url: '/offline', revision: buildId }],
 });
 
 // De-scored market pages: generated monthly by scripts/generate-descored-redirects.ts.
@@ -103,12 +109,13 @@ const nextConfig = {
     : {}),
   // Stable build ID (git commit) so restarts/instances agree on cache keys and
   // asset URLs; falls back to a timestamp if the commit isn't exposed at build.
-  generateBuildId: async () => {
-    return (
-      process.env.RAILWAY_GIT_COMMIT_SHA ||
-      process.env.GIT_HASH ||
-      `build-${Date.now()}`
-    );
+  generateBuildId: async () => buildId,
+  // Exposed to the client as process.env.NEXT_PUBLIC_BUILD_ID — the React
+  // Query IndexedDB persister (app/query-persistence.ts) uses it as its
+  // cache-buster so a redeploy invalidates persisted client caches instead
+  // of rehydrating stale data under a new build.
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
   },
   typescript: {
     ignoreBuildErrors: true,

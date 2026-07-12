@@ -2,7 +2,7 @@
 
 import React from "react";
 import dynamic from "next/dynamic";
-import { SkeletonChart } from "@/components/ui/skeleton-parts";
+import { SkeletonChart } from "@/components/ui/Skeleton";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SectionFallback, SectionError } from "./SectionFallback";
 import { SectionProps, ReportWithTemplate } from "./types";
