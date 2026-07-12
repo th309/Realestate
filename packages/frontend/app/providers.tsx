@@ -11,6 +11,7 @@ import { AccountLinkedToast } from "@/components/auth/AccountLinkedToast";
 import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
 import { fetchOnboardingState } from "@/lib/data";
 import { TrialEndingBanner } from "@/app/components/paywall/TrialEndingBanner";
+import { OfflineBanner } from "@/app/components/pwa/OfflineBanner";
 import { PostTrialPaywallGate } from "@/app/components/paywall/PostTrialPaywallGate";
 import {
   queryPersister,
@@ -211,6 +212,7 @@ export function Providers({
           <EntitlementsProvider initialState={initialEntitlementState}>
             <OnboardingBeaconProvider>
               <PaywallProvider>
+                <OfflineBanner />
                 <TrialEndingBanner />
                 <PostTrialPaywallGate />
                 {children}
