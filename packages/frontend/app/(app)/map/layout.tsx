@@ -44,7 +44,7 @@ export default function MapLayout({ children }: { children: React.ReactNode }) {
         describes the tool in general — NOT the current per-user map state, which
         is genuinely client-only and unavailable at SSR time.
       */}
-      <section className="mx-auto max-w-3xl px-6 py-8 text-on-surface-variant">
+      <section className="w-full mx-auto max-w-3xl px-6 py-8 text-on-surface-variant">
         <h1 className="text-lg font-medium text-on-surface mb-2">
           Interactive US Housing Market Map
         </h1>

@@ -142,7 +142,7 @@ export default async function ForecastMetroPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <section className="max-w-4xl mx-auto px-4 pt-10 pb-6">
+      <section className="w-full max-w-4xl mx-auto px-4 pt-10 pb-6">
         <h1 className="text-3xl font-medium text-on-surface">
           {metro.shortName} Housing Market Forecast {year}
         </h1>

@@ -40,7 +40,7 @@ export default function DashboardMagnetsPage() {
 
   if (isLoading) {
     return (
-      <main className="max-w-4xl mx-auto p-8 space-y-3">
+      <main className="w-full max-w-4xl mx-auto p-8 space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
@@ -54,7 +54,7 @@ export default function DashboardMagnetsPage() {
 
   if (error) {
     return (
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="w-full max-w-4xl mx-auto p-8">
         <div className="rounded-xl bg-error-container text-on-error-container px-4 py-3 text-sm">
           Couldn&apos;t load your magnets.{" "}
           <button
@@ -70,7 +70,7 @@ export default function DashboardMagnetsPage() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto p-8 space-y-6">
+    <main className="w-full max-w-4xl mx-auto p-8 space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-on-surface">
           Your Market Reports

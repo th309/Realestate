@@ -108,7 +108,7 @@ export default async function ForecastHubPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <section className="max-w-4xl mx-auto px-4 pt-10 pb-2">
+      <section className="w-full max-w-4xl mx-auto px-4 pt-10 pb-2">
         <h1 className="text-3xl font-medium text-on-surface">
           Will Home Prices Crash in {year}? What the Data Shows
         </h1>
@@ -123,11 +123,11 @@ export default async function ForecastHubPage() {
         <DistributionSummary distribution={distribution} year={year} />
       )}
 
-      <section className="max-w-4xl mx-auto px-4 pt-6">
+      <section className="w-full max-w-4xl mx-auto px-4 pt-6">
         <MarketMomentumMap size="hero" />
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 py-8">
+      <section className="w-full max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-8 sm:grid-cols-2">
           <div>
             <h2 className="text-xl font-medium text-on-surface mb-4">

@@ -94,7 +94,7 @@ function SurveyContent() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-12">
+    <div className="w-full max-w-lg mx-auto px-4 py-12">
       <h1 className="text-2xl font-bold text-on-surface mb-2 text-center">
         How are we doing?
       </h1>

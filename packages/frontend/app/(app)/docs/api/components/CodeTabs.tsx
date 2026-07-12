@@ -33,12 +33,12 @@ export function CodeTabs({ examples }: CodeTabsProps) {
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-outline-variant mb-0">
+      <div className="flex gap-1 border-b border-outline-variant mb-0 overflow-x-auto">
         {examples.map((ex, i) => (
           <button
             key={ex.label}
             onClick={() => handleSelect(i)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-t-lg whitespace-nowrap transition-colors ${
               i === activeIndex
                 ? "bg-surface-container text-on-surface border-b-2 border-primary"
                 : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"

@@ -58,7 +58,7 @@ export default function ContactPage() {
           }),
         }}
       />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="w-full max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Contact" }]}
           title="Contact Us"

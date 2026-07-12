@@ -42,7 +42,7 @@ export default function TeamSetupPage() {
   const steps = ["Organization", "Team", "Get Started"];
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12">
+    <div className="w-full max-w-xl mx-auto px-4 py-12">
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-2 mb-10">
         {steps.map((label, i) => {

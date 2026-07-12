@@ -95,9 +95,11 @@ export function MapToolbar({
           </div>
         </div>
 
-        {/* Desktop Geo Pills + Match Toggle */}
+        {/* Desktop Geo Pills + Match Toggle — wrap={false} pins the original
+            single-line desktop layout now that GeoLevelPills wraps by default */}
         <div className="hidden md:flex items-center gap-3 flex-shrink-0">
           <GeoLevelPills
+            wrap={false}
             geoLevel={geoLevel}
             selectedMetric={selectedMetric}
             selectedState={selectedState}

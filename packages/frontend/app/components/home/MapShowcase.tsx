@@ -202,8 +202,9 @@ export function MapShowcase() {
             transitionDelay: "0.15s",
           }}
         >
-          {/* Geo level pills overlay */}
-          <div className="absolute top-3 left-3 z-10">
+          {/* Geo level pills overlay — right-3 constrains width so the pill
+              row wraps on phones instead of running past the card edge */}
+          <div className="absolute top-3 left-3 right-3 z-10">
             <GeoLevelPills
               geoLevel={geoLevel}
               selectedMetric={selectedMetric}

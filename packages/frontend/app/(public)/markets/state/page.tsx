@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function MarketsStateIndexPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="w-full max-w-5xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="text-sm text-on-surface-variant mb-6" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-primary">Home</Link>
