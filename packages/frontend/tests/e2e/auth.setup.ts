@@ -52,9 +52,14 @@ const TEST_USERS = {
     email: optionalEnv("TEST_PRO_USER_EMAIL"),
     password: optionalEnv("TEST_PRO_USER_PASSWORD"),
   },
+  // Unlike free/pro/admin (optional — their tests setup.skip() when unset),
+  // the enterprise test always runs, so its credentials are required: a
+  // silent "" password fallback let a missing env var reach the browser as
+  // an empty required field, which blocks native form submission with no
+  // navigation and no error — indistinguishable from a real hang.
   enterprise: {
-    email: process.env.TEST_ENTERPRISE_USER_EMAIL || "troyhouston76@gmail.com",
-    password: process.env.TEST_ENTERPRISE_USER_PASSWORD || "",
+    email: requireEnv("TEST_ENTERPRISE_USER_EMAIL"),
+    password: requireEnv("TEST_ENTERPRISE_USER_PASSWORD"),
   },
   admin: {
     email: optionalEnv("TEST_ADMIN_USER_EMAIL"),
@@ -106,6 +111,13 @@ setup("authenticate as pro user", async ({ page }) => {
 });
 
 setup("authenticate as enterprise user", async ({ page }) => {
+  // Credentials, DOM structure, and the signInWithPassword() call path are
+  // all confirmed intact (see w3-e-report.md) — the prior 15s post-submit
+  // timeout was too tight for a dev server shared with other concurrent
+  // local processes (documented GC-thrash wedge pattern), not a UI/selector
+  // problem. Widen the budget rather than change the wait strategy.
+  setup.setTimeout(60_000);
+
   await page.goto("/auth/sign-in");
 
   await page.getByLabel("Email").fill(TEST_USERS.enterprise.email);
@@ -113,7 +125,7 @@ setup("authenticate as enterprise user", async ({ page }) => {
 
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
 
-  await page.waitForURL(/\/(dashboard|map|home|team)?$/, { timeout: 15000 });
+  await page.waitForURL(/\/(dashboard|map|home|team)?$/, { timeout: 45_000 });
 
   await page.context().storageState({ path: enterpriseUserAuthFile });
 });
