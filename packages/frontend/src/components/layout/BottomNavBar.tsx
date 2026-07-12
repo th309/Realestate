@@ -64,50 +64,61 @@ export function BottomNavBar() {
   if (isHiddenRoute(pathname)) return null;
 
   return (
-    <nav
-      aria-label="Primary"
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around bg-surface-container border-t border-outline-variant pb-safe"
-      style={
-        {
-          height: BOTTOM_NAV_TOTAL_HEIGHT,
-          "--piq-bottom-nav-height": BOTTOM_NAV_TOTAL_HEIGHT,
-        } as React.CSSProperties
-      }
-    >
-      {BOTTOM_NAV_ITEMS.map((item) => {
-        const isActive = isActiveDestination(pathname, item.href);
-        const Icon = item.icon;
+    <>
+      {/* Flow spacer: the nav below is `fixed`, so this reserves the same
+          height at the end of the page flow — content and footer scroll clear
+          of the bar instead of being hidden behind it. Rendered here (not as
+          padding on <main>) so blocklisted routes get neither bar nor gap. */}
+      <div
+        aria-hidden
+        className="lg:hidden w-full shrink-0"
+        style={{ height: BOTTOM_NAV_TOTAL_HEIGHT }}
+      />
+      <nav
+        aria-label="Primary"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around bg-surface-container border-t border-outline-variant pb-safe"
+        style={
+          {
+            height: BOTTOM_NAV_TOTAL_HEIGHT,
+            "--piq-bottom-nav-height": BOTTOM_NAV_TOTAL_HEIGHT,
+          } as React.CSSProperties
+        }
+      >
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          const isActive = isActiveDestination(pathname, item.href);
+          const Icon = item.icon;
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            className="flex flex-1 min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-0.5 transition-colors duration-200"
-          >
-            <span
-              className={`flex items-center justify-center h-8 px-4 rounded-full transition-colors duration-200 ${
-                isActive ? "bg-secondary-container" : "bg-transparent"
-              }`}
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className="flex flex-1 min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-0.5 transition-colors duration-200"
             >
-              <Icon
-                className={`w-6 h-6 ${
-                  isActive
-                    ? "text-on-secondary-container"
-                    : "text-on-surface-variant"
+              <span
+                className={`flex items-center justify-center h-8 px-4 rounded-full transition-colors duration-200 ${
+                  isActive ? "bg-secondary-container" : "bg-transparent"
                 }`}
-              />
-            </span>
-            <span
-              className={`text-[12px] leading-none font-medium ${
-                isActive ? "text-on-surface" : "text-on-surface-variant"
-              }`}
-            >
-              {item.name}
-            </span>
-          </Link>
-        );
-      })}
-    </nav>
+              >
+                <Icon
+                  className={`w-6 h-6 ${
+                    isActive
+                      ? "text-on-secondary-container"
+                      : "text-on-surface-variant"
+                  }`}
+                />
+              </span>
+              <span
+                className={`text-[12px] leading-none font-medium ${
+                  isActive ? "text-on-surface" : "text-on-surface-variant"
+                }`}
+              >
+                {item.name}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

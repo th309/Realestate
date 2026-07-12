@@ -102,7 +102,7 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+      className={`sticky top-0 z-50 w-full pt-safe-standalone transition-all duration-300 ${
         scrolled
           ? "bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-outline-variant"
           : "bg-surface-container-lowest border-b border-transparent"
