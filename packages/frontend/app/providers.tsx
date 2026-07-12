@@ -1,12 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 import { ExitIntentModal } from "@/components/newsletter/ExitIntentModal";
@@ -16,6 +12,12 @@ import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
 import { fetchOnboardingState } from "@/lib/data";
 import { TrialEndingBanner } from "@/app/components/paywall/TrialEndingBanner";
 import { PostTrialPaywallGate } from "@/app/components/paywall/PostTrialPaywallGate";
+import {
+  queryPersister,
+  shouldPersistQuery,
+  PERSISTED_QUERY_CACHE_BUSTER,
+  PERSISTED_QUERY_MAX_AGE,
+} from "@/app/query-persistence";
 
 /**
  * Extract HTTP status code from an error.
@@ -120,7 +122,13 @@ function getQueryClient() {
   }
 }
 
-/** Clears React Query cache when user signs out to prevent data leaking between users. */
+/**
+ * Clears React Query cache when user signs out to prevent data leaking
+ * between users. Also purges the IndexedDB-persisted cache (see
+ * `app/query-persistence.ts`) — on a shared/public device, a stale on-disk
+ * copy of the previous user's cached queries would otherwise survive
+ * sign-out and be readable by the next person to use the browser.
+ */
 function QueryCacheCleaner() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -131,6 +139,14 @@ function QueryCacheCleaner() {
     prevUserIdRef.current = user?.id ?? null;
     if (prev && !user?.id) {
       queryClient.clear();
+      // removeClient() is typed `Promisable<void>` (`void | PromiseLike<void>`),
+      // which doesn't guarantee `.catch` — wrap in Promise.resolve() so a
+      // rejection (e.g. IndexedDB unavailable in private browsing) can't
+      // become an unhandled rejection.
+      void Promise.resolve(queryPersister.removeClient()).catch(() => {
+        // Best-effort purge — if there was nothing persisted to leak in the
+        // first place, a failure here is safe to ignore.
+      });
     }
   }, [user?.id, queryClient]);
 
@@ -168,7 +184,15 @@ export function Providers({
   const queryClient = getQueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        buster: PERSISTED_QUERY_CACHE_BUSTER,
+        maxAge: PERSISTED_QUERY_MAX_AGE,
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+      }}
+    >
       <AuthProvider initialUserId={initialUserId}>
         <QueryCacheCleaner />
 
@@ -186,6 +210,6 @@ export function Providers({
           <AccountLinkedToast />
         </ToastProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
