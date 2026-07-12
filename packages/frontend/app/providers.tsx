@@ -15,6 +15,7 @@ import { AccountLinkedToast } from "@/components/auth/AccountLinkedToast";
 import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
 import { fetchOnboardingState } from "@/lib/data";
 import { TrialEndingBanner } from "@/app/components/paywall/TrialEndingBanner";
+import { PostTrialPaywallGate } from "@/app/components/paywall/PostTrialPaywallGate";
 
 /**
  * Extract HTTP status code from an error.
@@ -176,6 +177,7 @@ export function Providers({
             <OnboardingBeaconProvider>
               <PaywallProvider>
                 <TrialEndingBanner />
+                <PostTrialPaywallGate />
                 {children}
               </PaywallProvider>
             </OnboardingBeaconProvider>
