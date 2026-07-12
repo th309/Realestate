@@ -130,7 +130,7 @@ export function CustomizeThresholdsDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-[60]"
       data-testid="customize-thresholds-drawer"
     >
       <div
@@ -199,7 +199,7 @@ export function CustomizeThresholdsDrawer({
         <div
           id={`tabpanel-${tab}`}
           role="tabpanel"
-          className="flex-1 overflow-y-auto px-5 py-5"
+          className="flex-1 min-h-0 overflow-y-auto px-5 py-5"
         >
           {state.isLoading ? (
             <div className="text-sm text-on-surface-variant">Loading…</div>
