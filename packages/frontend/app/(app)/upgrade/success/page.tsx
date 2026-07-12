@@ -48,11 +48,22 @@ function SuccessContent() {
     const key = `ga_purchase_fired:${sessionId}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
+    const purchaseAmount = Number.isFinite(purchaseValue) ? purchaseValue : 0;
     gtagEvent("purchase", {
       transaction_id: sessionId,
-      value: Number.isFinite(purchaseValue) ? purchaseValue : 0,
+      value: purchaseAmount,
       currency: "USD",
-      items: [{ item_id: tier }],
+      // Top-level `tier` powers the "Tier" GA4 custom dimension on purchases;
+      // items[].item_id below only feeds the item-scoped ecommerce reports.
+      tier,
+      items: [
+        {
+          item_id: tier,
+          item_name: TIER_LABELS[tier] ?? tier,
+          price: purchaseAmount,
+          quantity: 1,
+        },
+      ],
     });
   }, [sessionId, purchaseValue, tier, refreshed]);
 
