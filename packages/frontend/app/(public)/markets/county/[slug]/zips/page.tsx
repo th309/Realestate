@@ -55,7 +55,7 @@ export default async function CountyZipsPage({
   if (zips.length <= MARKET_LINKS_DISPLAY_CAP) notFound();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="w-full max-w-5xl mx-auto px-4 py-8">
       <MarketBreadcrumbs
         chain={{ ...getAncestorChainForCounty(county), county }}
         currentName="ZIP Codes"

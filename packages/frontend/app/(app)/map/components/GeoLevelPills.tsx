@@ -81,7 +81,7 @@ export function GeoLevelPills({
 
   return (
     <div
-      className={`flex gap-1.5 ${isMobile ? (wrap ? "flex-wrap" : "items-center") : "items-center"} relative`}
+      className={`flex gap-1.5 items-center ${wrap ? "flex-wrap" : ""} relative`}
     >
       {levels.map((level) => {
         const levelKey = level.toLowerCase() as GeoLevel;

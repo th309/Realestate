@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 export default function MarketsIndexPage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="w-full max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-on-surface mb-2">
         Housing Market Analysis by City
       </h1>

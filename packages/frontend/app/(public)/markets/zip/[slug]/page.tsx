@@ -224,7 +224,7 @@ export default async function ZipPage({
       )}
 
       {/* Server-rendered SEO content */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
+      <section className="w-full max-w-4xl mx-auto px-4 py-12">
         <h2 className="text-xl font-medium text-on-surface mb-6">
           {displayName} Housing Market Overview
         </h2>

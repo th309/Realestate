@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function GradeRevealSignupPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-2xl mx-auto">
+    <main className="w-full min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-2xl mx-auto">
       <h1 className="text-4xl font-bold text-primary-dark text-center mb-4">
         Get your free Market Snapshot
       </h1>

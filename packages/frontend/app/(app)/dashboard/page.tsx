@@ -57,7 +57,7 @@ function OnboardingBanner() {
 
 function DashboardSkeleton() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 animate-pulse">
+    <div className="w-full max-w-6xl mx-auto px-4 py-8 space-y-6 animate-pulse">
       <div className="h-8 w-48 bg-surface-container-highest rounded" />
       <div className="h-24 bg-surface-container-low rounded-xl" />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -95,7 +95,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="w-full max-w-6xl mx-auto px-4 py-8 space-y-6">
       {/* Page heading */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-medium text-on-surface">

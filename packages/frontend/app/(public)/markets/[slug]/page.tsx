@@ -219,7 +219,7 @@ export default async function MetroPage({
       )}
 
       {/* Server-rendered SEO content — visible to crawlers without JS */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
+      <section className="w-full max-w-4xl mx-auto px-4 py-12">
         <h2 className="text-xl font-medium text-on-surface mb-6">
           {metro.shortName} Housing Market Overview
         </h2>
@@ -273,7 +273,7 @@ export default async function MetroPage({
         </p>
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 py-6">
+      <section className="w-full max-w-4xl mx-auto px-4 py-6">
         <Link
           href={`/forecast/${metro.slug}`}
           className="block rounded-xl border border-outline-variant p-5 hover:bg-surface-container-low"

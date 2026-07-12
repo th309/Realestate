@@ -74,7 +74,7 @@ export function StateTopMarketsTables({
   if (!metros.length && !counties.length) return null;
   return (
     <section
-      className="max-w-4xl mx-auto px-4 py-8"
+      className="w-full max-w-4xl mx-auto px-4 py-8"
       aria-label={`Top ${stateName} markets by PropertyIQ Score`}
     >
       <h2 className="text-xl font-medium text-on-surface mb-4">
