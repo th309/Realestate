@@ -4,7 +4,9 @@ import { Suspense, useState, useEffect, FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Building2, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth";
+import { MagicLinkSentPanel } from "./MagicLinkSentPanel";
 
 type AuthMode = "password" | "magic-link";
 
@@ -68,6 +70,7 @@ function SignInPageContent() {
     signInWithPassword,
     signInWithMagicLink,
     signInWithOAuth,
+    verifyMagicLinkOtp,
   } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("password");
@@ -130,6 +133,12 @@ function SignInPageContent() {
     setLoading(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleMagicLinkOtpVerified = async (_session: Session) => {
+    // Full-page redirect, matching handlePasswordSignIn's race-condition note.
+    window.location.href = redirectTo;
+  };
+
   const handleOAuth = async (provider: "google") => {
     setLoading(true);
     setError(null);
@@ -166,28 +175,16 @@ function SignInPageContent() {
 
         {/* Magic Link Success */}
         {magicLinkSent ? (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-6 h-6 text-primary" />
-            </div>
-            <h2 className="text-lg font-medium text-on-surface mb-2">
-              Check your email
-            </h2>
-            <p className="text-sm text-on-surface-variant mb-6">
-              We sent a magic link to{" "}
-              <span className="font-medium text-on-surface">{email}</span>
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setMagicLinkSent(false);
-                setMode("password");
-              }}
-              className="text-sm text-primary hover:text-primary/80 font-medium"
-            >
-              Back to sign in
-            </button>
-          </div>
+          <MagicLinkSentPanel
+            email={email}
+            verifyMagicLinkOtp={verifyMagicLinkOtp}
+            resendMagicLink={() => signInWithMagicLink(email)}
+            onVerified={handleMagicLinkOtpVerified}
+            onBack={() => {
+              setMagicLinkSent(false);
+              setMode("password");
+            }}
+          />
         ) : (
           <>
             {/* Sign-In Form */}

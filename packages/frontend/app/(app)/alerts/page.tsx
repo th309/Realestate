@@ -20,7 +20,7 @@ export default function AlertsPage() {
 
   if (entitlementsLoading) {
     return (
-      <div className="min-h-screen bg-surface">
+      <div className="min-h-dvh bg-surface">
         <div className="max-w-3xl mx-auto px-6 py-8">
           <div className="h-8 w-48 rounded-lg bg-surface-container-low animate-pulse mb-4" />
           <div className="h-4 w-64 rounded-lg bg-surface-container-low animate-pulse mb-8" />
@@ -38,7 +38,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <div className="max-w-3xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Alerts" }]}

@@ -32,6 +32,14 @@ interface AuthContextValue {
     token: string,
   ) => Promise<{ error: AuthError | null; session: Session | null }>;
   resendSignupOtp: (email: string) => Promise<{ error: AuthError | null }>;
+  verifyRecoveryOtp: (
+    email: string,
+    token: string,
+  ) => Promise<{ error: AuthError | null; session: Session | null }>;
+  verifyMagicLinkOtp: (
+    email: string,
+    token: string,
+  ) => Promise<{ error: AuthError | null; session: Session | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -125,6 +133,40 @@ export function AuthProvider({
     return { error };
   }, []);
 
+  // Mirrors verifySignupOtp — same call shape, "recovery" type — for the
+  // standalone-safe password-reset code path (PWA email links open the
+  // phone's browser, not the installed app, so a typed code is the only
+  // path that works there). Resending is resetPassword(email) again.
+  const verifyRecoveryOtp = useCallback(
+    async (email: string, token: string) => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "recovery",
+      });
+      return { error, session: data?.session ?? null };
+    },
+    [],
+  );
+
+  // Verifies the code from a signInWithOtp (magic link) email — the
+  // standalone-safe alternative to clicking the link. Same call signup
+  // makes (type: "email"); kept as its own named method since it's invoked
+  // from the sign-in flow, not signup.
+  const verifyMagicLinkOtp = useCallback(
+    async (email: string, token: string) => {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "email",
+      });
+      return { error, session: data?.session ?? null };
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
@@ -166,6 +208,8 @@ export function AuthProvider({
       signUp,
       verifySignupOtp,
       resendSignupOtp,
+      verifyRecoveryOtp,
+      verifyMagicLinkOtp,
       signOut,
       resetPassword,
       updatePassword,
@@ -181,6 +225,8 @@ export function AuthProvider({
       signUp,
       verifySignupOtp,
       resendSignupOtp,
+      verifyRecoveryOtp,
+      verifyMagicLinkOtp,
       signOut,
       resetPassword,
       updatePassword,

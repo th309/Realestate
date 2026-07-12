@@ -7,6 +7,7 @@ import {
   sendMarketShareEmail,
   type MarketShareResult,
 } from "@/lib/data";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface ShareMarketModalProps {
   open: boolean;
@@ -123,6 +124,10 @@ export function ShareMarketModal({
       setError(null);
     }
   }, [open]);
+
+  // System back button / edge-swipe closes this modal instead of navigating
+  // away or exiting the installed PWA.
+  useModalHistory(open, onClose, "share-market-modal");
 
   const handleCopyLink = useCallback(async () => {
     if (!share) return;

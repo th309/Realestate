@@ -28,6 +28,7 @@ import {
 } from "./reportLoadPolicy";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { recordInstallValueMoment } from "@/lib/pwa/install-value-moment";
 import "../styles/report-theme.css";
 
 const POLL_INTERVAL = 2000;
@@ -106,6 +107,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
         report_type: report.user_type,
         geography: report.primary_geography_name,
       });
+      recordInstallValueMoment();
     }
   }, [loading, report, reportId]);
 

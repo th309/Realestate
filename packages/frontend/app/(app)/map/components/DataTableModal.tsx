@@ -8,6 +8,7 @@ import { formatMetricValue } from "@/lib/data";
 import { Download, Lock } from "lucide-react";
 import { useEntitlements } from "@/lib/entitlements";
 import { downloadCsv } from "@/lib/export";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface DataTableModalProps {
   isOpen: boolean;
@@ -113,6 +114,10 @@ export function DataTableModal({
 
   // Get geo level display name
   const geoLevelName = geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1);
+
+  // System back button / edge-swipe closes this modal instead of navigating
+  // away or exiting the installed PWA.
+  useModalHistory(isOpen, onClose, "data-table-modal");
 
   if (!isOpen) return null;
 

@@ -7,6 +7,9 @@ import { WebVitals } from "@/app/components/analytics/WebVitals";
 import { OrganizationJsonLd } from "@/app/components/seo/OrganizationJsonLd";
 import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "@/app/components/AppFooter";
+import { BottomNavBar } from "@/src/components/layout/BottomNavBar";
+import { InstallBanner } from "@/app/components/pwa/InstallBanner";
+import { ServiceWorkerManager } from "@/app/components/pwa/ServiceWorkerManager";
 import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
 import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
 import { fetchEntitlementsServer } from "@/lib/entitlements/server";
@@ -60,6 +63,12 @@ export async function AppShell({
             </main>
           </AnalyticsProvider>
           <AppFooter />
+          {/* PWA chrome: bottom tabs render their own flow spacer (blocklisted
+              routes get neither bar nor gap); banner + SW manager are fixed
+              overlays and render null until their own conditions are met. */}
+          <BottomNavBar />
+          <InstallBanner />
+          <ServiceWorkerManager />
           <DevToolbarLoader />
         </EnterpriseOnboardingGate>
       </Providers>

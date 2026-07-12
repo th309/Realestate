@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function NewsletterPage() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
         <p className="text-sm font-semibold text-primary uppercase tracking-wide mb-3">
           Free Weekly Newsletter
@@ -46,8 +46,7 @@ export default function NewsletterPage() {
               400+ Markets Tracked
             </p>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Every MSA in the U.S., scored monthly on a 0–100 PropertyIQ
-              index.
+              Every MSA in the U.S., scored monthly on a 0–100 PropertyIQ index.
             </p>
           </div>
           <div className="bg-surface-container-low rounded-xl p-5">

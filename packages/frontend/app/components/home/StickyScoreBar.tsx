@@ -116,7 +116,10 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
   return (
     <div
       ref={barRef}
-      className="fixed bottom-0 inset-x-0 z-50 bg-[#1A237E]/95 backdrop-blur-sm border-t border-white/10 shadow-lg pb-safe"
+      // Mobile: stack above BottomNavBar (fixed, 64px + safe-area — see
+      // BOTTOM_NAV_HEIGHT_PX in src/components/layout/BottomNavBar.tsx).
+      // Desktop: nav doesn't render, so sit flush at the viewport bottom.
+      className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-0 inset-x-0 z-50 bg-[#1A237E]/95 backdrop-blur-sm border-t border-white/10 shadow-lg pb-safe"
     >
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Score ticker + link */}

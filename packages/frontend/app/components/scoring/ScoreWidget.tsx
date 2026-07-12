@@ -11,8 +11,8 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics/tracker";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { ScoreDisplay, ScoreDisplayProps } from "./ScoreDisplay";
 import {
   useScoreData,
@@ -139,15 +139,24 @@ export function ScoreWidget({
     }
   }, [scoreData, loading, onScoreLoad]);
 
-  // Loading state
+  // Loading state — a circular skeleton at the EXACT ring size (matches
+  // ScoreDisplay's own `size x size` box below) so the swap to the real ring
+  // never shifts layout. No spinner: a size-matched skeleton reads as "the
+  // score is loading" rather than "waiting on a website" (see task 1.2).
   if (loading) {
     return (
       <div
-        className={`flex items-center justify-center ${className}`}
+        className={`relative flex-shrink-0 ${className}`}
         style={{ width: size, height: size }}
         aria-label="Loading score"
+        aria-busy="true"
       >
-        <Loader2 className="w-8 h-8 animate-spin text-on-surface-variant" />
+        <Skeleton variant="circular" width={size} height={size} />
+        {showConfidence && (
+          <div className="absolute -top-1 -right-1 z-10">
+            <Skeleton variant="circular" width={16} height={16} />
+          </div>
+        )}
       </div>
     );
   }

@@ -8,7 +8,7 @@ import { PaywallCard } from "@/components/entitlements/PaywallCard";
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center">
+    <div className="min-h-dvh bg-surface flex items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-on-surface-variant">Loading report...</p>
@@ -28,7 +28,7 @@ export default function ReportPage() {
         id="reports"
         loadingFallback={<LoadingFallback />}
         fallback={
-          <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+          <div className="min-h-dvh bg-surface flex items-center justify-center p-6">
             <PaywallCard
               type="feature"
               id="reports"
