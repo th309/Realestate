@@ -33,6 +33,7 @@ import { ShareButton } from "../ShareButton";
 import { SaveGraphButton } from "../SaveGraphButton";
 import { SaveTemplateModal } from "../SaveTemplateModal";
 import { TemplatePicker } from "../TemplatePicker";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const TIME_FRAMES: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
@@ -94,14 +95,33 @@ function autoScaleType(values: number[]): "linear" | "log" {
 
 // ── Inline helper components ─────────────────────────────────────────────────
 
-function LoadingSpinner({ label }: { label?: string }) {
+// Fills its parent exactly (`w-full h-full`, same footprint as the chart it
+// stands in for) so the swap to real chart content never shifts layout —
+// mirrors the flex-1/no-fixed-height convention used by the route-level
+// GraphsPageSkeleton. `label` is SR-only (aria-label), not rendered visually.
+function ChartSkeleton({ label }: { label?: string }) {
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-on-surface-variant">
-          {label || "Loading data..."}
-        </span>
+    <div
+      className="w-full h-full flex flex-col gap-4"
+      role="status"
+      aria-busy="true"
+      aria-label={label || "Loading chart data"}
+    >
+      <div className="flex items-center justify-between flex-shrink-0">
+        <Skeleton variant="text" height={20} width={160} />
+        <div className="flex gap-2">
+          <Skeleton variant="rounded" height={32} width={80} />
+          <Skeleton variant="rounded" height={32} width={80} />
+        </div>
+      </div>
+      <Skeleton variant="rounded" className="flex-1 w-full" />
+      <div className="flex gap-4 flex-shrink-0">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Skeleton variant="circular" width={12} height={12} />
+            <Skeleton variant="text" height={12} width={60} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -571,7 +591,7 @@ export function GraphsPageV2() {
                   {(
                     raceMode ? scatterRaceData.isLoading : scatterData.isLoading
                   ) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building scatter animation..."
@@ -634,7 +654,7 @@ export function GraphsPageV2() {
                       subtitle="Use the search bar or sidebar to add a market"
                     />
                   ) : waterfallData.isLoading ? (
-                    <LoadingSpinner label="Loading waterfall data..." />
+                    <ChartSkeleton label="Loading waterfall data..." />
                   ) : waterfallData.error ? (
                     <ErrorMessage error={waterfallData.error.message} />
                   ) : waterfallData.proGated ? (
@@ -670,7 +690,7 @@ export function GraphsPageV2() {
                   ) : (
                       raceMode ? radarRaceData.isLoading : radarData.isLoading
                     ) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building radar animation..."
@@ -708,7 +728,7 @@ export function GraphsPageV2() {
                   className="w-full h-full"
                 >
                   {(raceMode ? barRaceData.isLoading : barData.isLoading) ? (
-                    <LoadingSpinner
+                    <ChartSkeleton
                       label={
                         raceMode
                           ? "Building race data..."
