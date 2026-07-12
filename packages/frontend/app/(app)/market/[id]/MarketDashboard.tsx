@@ -238,6 +238,9 @@ export function MarketDashboard({
                         benchmarks={benchmarks}
                         hasBenchmarkAccess={hasBenchmarkAccess}
                         delay={catIndex * 0.1}
+                        geographyType={geographyType}
+                        geographyId={geographyId}
+                        geographyName={geography.name}
                       />
                     </React.Fragment>
                   );

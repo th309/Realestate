@@ -15,6 +15,10 @@ interface MetricCategorySectionProps {
   benchmarks?: import("@/lib/benchmarks/api").BenchmarkResult[];
   hasBenchmarkAccess?: boolean;
   delay?: number;
+  /** Geography context passed through to each MetricCard's alert bell. */
+  geographyType?: string;
+  geographyId?: string;
+  geographyName?: string;
 }
 
 export function MetricCategorySection({
@@ -26,6 +30,9 @@ export function MetricCategorySection({
   benchmarks = [],
   hasBenchmarkAccess = false,
   delay = 0,
+  geographyType,
+  geographyId,
+  geographyName,
 }: MetricCategorySectionProps) {
   return (
     <motion.div
@@ -69,6 +76,7 @@ export function MetricCategorySection({
               key={metricId}
               metricId={metricId}
               formattedValue={datum?.formattedValue ?? "\u2014"}
+              value={datum?.value}
               isLoading={!!datum?.isLoading}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? "stable"}
@@ -78,6 +86,9 @@ export function MetricCategorySection({
               isFallback={datum?.isFallback}
               benchmark={benchmarkProp}
               delay={delay + i * 0.03}
+              geographyType={geographyType}
+              geographyId={geographyId}
+              geographyName={geographyName}
             />
           );
         })}
