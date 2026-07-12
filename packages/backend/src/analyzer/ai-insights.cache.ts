@@ -23,6 +23,10 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  * a bump guarantees a fresh regeneration across every user/section without a
  * manual Redis flush.
  *
+ *   v8 (2026-07-12): recommendation_analysis now reconciles year-one economics
+ *                    with the long-term projection when they diverge (names the
+ *                    growth assumption doing the work). Bump regenerates v7
+ *                    narratives that ignore the trajectory.
  *   v7 (2026-06-27): the prompt now includes a 30-YEAR WEALTH PROJECTION block
  *                    and the projection section cites the real wealth
  *                    components (was reporting "no projection supplied"). Bump
@@ -53,7 +57,7 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  *                    Broke the narrative for some prompts — rolled back in v3.
  *   v1 (initial)
  */
-const PROMPT_REVISION = 'v7';
+const PROMPT_REVISION = 'v8';
 
 @Injectable()
 export class AiInsightsCache {

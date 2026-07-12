@@ -31,6 +31,7 @@ import {
   type ThresholdErrors,
 } from "./validators";
 import {
+  ASSUMPTION_DEFAULTS,
   detectActivePreset,
   presetForStrategy,
   stableStringify,
@@ -176,7 +177,14 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
 
   const handleResetAll = useCallback(async () => {
     try {
-      await deleteThresholdsM.mutateAsync();
+      // "Reset all" must cover BOTH persisted surfaces: delete the saved
+      // thresholds row (reverts to preset defaults) AND write the canonical
+      // assumption defaults (no DELETE endpoint exists for analyzer-defaults,
+      // so reset = PUT the defaults).
+      await Promise.all([
+        deleteThresholdsM.mutateAsync(),
+        updateDefaultsM.mutateAsync(ASSUMPTION_DEFAULTS),
+      ]);
       // Clear working copies so next server response re-seeds them.
       setDraftThresholds(null);
       setDraftDefaults(null);
@@ -187,7 +195,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
         message: e instanceof Error ? e.message : "Reset failed",
       });
     }
-  }, [deleteThresholdsM]);
+  }, [deleteThresholdsM, updateDefaultsM]);
 
   const applyPreset = useCallback(
     (preset: GradingPresetName) => {

@@ -52,6 +52,26 @@ export function autoColor(data: DataPoint[]): string {
   return diff > 0 ? piq.green : piq.red;
 }
 
+/**
+ * Fractional position of y=0 from the TOP of the plotted value range, for a
+ * hard-stop SVG gradient that renders values above zero in the series color
+ * and values below zero in red. Returns null when the data doesn't cross
+ * zero (no gradient needed — a flat color is correct).
+ */
+export function zeroCrossingOffset(
+  data: DataPoint[],
+  key: string,
+): number | null {
+  const values = data
+    .map((p) => p[key])
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (values.length === 0) return null;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  if (min >= 0 || max <= 0) return null;
+  return max / (max - min);
+}
+
 export type RangeAnchor = "head" | "tail";
 
 /**
