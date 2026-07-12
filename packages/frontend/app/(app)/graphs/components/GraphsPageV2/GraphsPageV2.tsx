@@ -98,31 +98,20 @@ function autoScaleType(values: number[]): "linear" | "log" {
 // Fills its parent exactly (`w-full h-full`, same footprint as the chart it
 // stands in for) so the swap to real chart content never shifts layout —
 // mirrors the flex-1/no-fixed-height convention used by the route-level
-// GraphsPageSkeleton. `label` is SR-only (aria-label), not rendered visually.
+// GraphsPageSkeleton. `label` is SR-only (aria-label), not rendered visually:
+// the 4 chart types don't share a common header/legend shape (Waterfall and
+// HorizontalBar render neither, Scatter's legend is a conditional corner
+// overlay, Radar's legend count is dynamic), so this stays a single neutral
+// block rather than previewing chrome that may not materialize.
 function ChartSkeleton({ label }: { label?: string }) {
   return (
     <div
-      className="w-full h-full flex flex-col gap-4"
+      className="w-full h-full"
       role="status"
       aria-busy="true"
       aria-label={label || "Loading chart data"}
     >
-      <div className="flex items-center justify-between flex-shrink-0">
-        <Skeleton variant="text" height={20} width={160} />
-        <div className="flex gap-2">
-          <Skeleton variant="rounded" height={32} width={80} />
-          <Skeleton variant="rounded" height={32} width={80} />
-        </div>
-      </div>
-      <Skeleton variant="rounded" className="flex-1 w-full" />
-      <div className="flex gap-4 flex-shrink-0">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Skeleton variant="circular" width={12} height={12} />
-            <Skeleton variant="text" height={12} width={60} />
-          </div>
-        ))}
-      </div>
+      <Skeleton variant="rounded" className="w-full h-full rounded-3xl" />
     </div>
   );
 }
