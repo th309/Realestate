@@ -25,7 +25,7 @@ describe("BottomNavBar", () => {
       "/market",
       "/screener",
       "/reports",
-      "/scores",
+      "/analyzer",
     ]);
     expect(nav).toBeTruthy();
   });

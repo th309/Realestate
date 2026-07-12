@@ -25,14 +25,14 @@ const BOTTOM_NAV_TOTAL_HEIGHT = `calc(${BOTTOM_NAV_HEIGHT_PX}px + env(safe-area-
  * The 5 primary destinations, pulled from the single NAV source of truth in
  * header-nav-data.ts (no duplicate labels/icons/hrefs). All 5 already exist
  * there as discrete NavItem entries, so this is a read-only filter — order
- * follows NAV's own ordering (Maps, Markets, Screener, Reports, Scores).
+ * follows NAV's own ordering (Maps, Markets, Screener, Reports, Analyzer).
  */
 const BOTTOM_NAV_HREFS = [
   "/map",
   "/market",
   "/screener",
   "/reports",
-  "/scores",
+  "/analyzer",
 ];
 
 const BOTTOM_NAV_ITEMS: NavItem[] = ALL_NAV_ITEMS.filter((item) =>
