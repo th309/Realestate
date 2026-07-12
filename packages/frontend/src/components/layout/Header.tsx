@@ -113,8 +113,9 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 ml-8">
+          {/* Desktop Navigation — collapses below lg: the full link set +
+              auth actions need ~950px, so md (768) tablets get the mobile menu */}
+          <nav className="hidden lg:flex items-center gap-1 ml-8">
             {NAV.map((entry) => {
               if (isDropdown(entry)) {
                 return (
@@ -146,7 +147,7 @@ export function Header() {
           </nav>
 
           {/* Right Side Actions */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4">
             {loading ? null : !!user ? (
               <>
                 <TrialBadge />
@@ -244,7 +245,7 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}

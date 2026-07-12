@@ -190,3 +190,21 @@
 **Rule:** Testing a raw query interactively does NOT validate it as a function/RPC. CTE inlining and plan choices differ inside function bodies and across parameterization. Before declaring RPC SQL "verified," CREATE the function (in a scratch schema if needed) and CALL it. For any CTE containing an expensive per-row function referenced inside a join/cross-join, default to `AS MATERIALIZED`.
 
 **Debugging tip that worked:** a hanging RPC through PostgREST/MCP surfaces as generic `fetch failed`; force `SET statement_timeout = '15s'` first so Postgres returns the REAL error (here: `GEOS InterruptedException` inside `lwgeom_pointonsurface`), which names the guilty function immediately.
+
+## Responsive Fix ≠ No Overflow — Key Data Must Be Visible and Scroll Must Be Discoverable
+
+**Date:** 2026-07-12
+**Context:** Fixed the screener's mobile width blowout (flex `mx-auto` container disabling stretch → page laid out at the table's 941px intrinsic width, clipped by `overflow-x-clip`). Verified "no overflow" geometrically and declared it good. User immediately flagged two misses: the Δ score-change column — a core signal — sat just off-screen behind the in-card scroll, and nothing indicated more columns existed (mobile hides scrollbars).
+
+**Rule:** For any mobile/responsive fix on data-dense UI, "nothing overflows the viewport" is only the first gate. Also verify: (1) the decision-critical columns/fields fit in the initial viewport without scrolling, and (2) any intentional horizontal scroll region has a visible affordance (edge fade, chevron, or peeking column) that appears/disappears with scroll position. Judge the result as a user seeing the screen, not as a bounding-box measurement.
+
+**Wrong behavior:**
+
+- Measure `scrollWidth <= clientWidth`, declare mobile fixed
+- Leave key data one invisible swipe away with no cue it exists
+
+**Correct behavior:**
+
+- Rank the table's columns by decision value; make the top ones fit the phone viewport (tighter padding, responsive min-widths)
+- Add a scroll affordance for the rest (ScrollShadowContainer pattern: fade + chevron, driven by scrollLeft/scrollWidth)
+- Screenshot at real device widths and read it as a user would before claiming done

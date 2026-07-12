@@ -11,6 +11,7 @@ import {
   getScoreChangeColor,
   formatScoreChange,
 } from "../lib/score-change";
+import { ScrollShadowContainer } from "./ScrollShadowContainer";
 
 type SortableCol = NonNullable<ScreenerQuery["sortBy"]>;
 
@@ -79,6 +80,57 @@ function SortIcon({
   );
 }
 
+/** Rendered at card width (not inside the wide scrolling table) so the
+    message stays centered and fully visible on narrow viewports. */
+function ScreenerEmptyState({
+  activeFilters,
+  onClearFilters,
+}: {
+  activeFilters: string[];
+  onClearFilters?: () => void;
+}) {
+  return (
+    <div className="px-4 py-12">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <p className="text-on-surface font-medium">
+          No markets match your current filters.
+        </p>
+        {activeFilters.length > 0 ? (
+          <>
+            <p className="text-sm text-on-surface-variant max-w-md">
+              The screener is working — these active filters just narrowed
+              everything out. Loosen or clear them to see results.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl">
+              {activeFilters.map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant border border-outline-variant font-[family-name:var(--font-roboto-mono)]"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            {onClearFilters && (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="mt-1 px-4 py-2 rounded-full text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-on-surface-variant">
+            Try a different geography or adjust your filters.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ScreenerTable({
   rows,
   sortBy,
@@ -117,97 +169,63 @@ export function ScreenerTable({
         ${isFetching ? "opacity-60" : "opacity-100"}
       `}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm" aria-label="Market screener results">
-          <thead>
-            <tr className="bg-surface-container border-b border-outline-variant">
-              {columns.map((col) => (
-                <th
-                  key={col.label}
-                  scope="col"
-                  className={`
-                    px-4 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant
+      {rows.length === 0 ? (
+        <ScreenerEmptyState
+          activeFilters={activeFilters}
+          onClearFilters={onClearFilters}
+        />
+      ) : (
+        <ScrollShadowContainer ariaLabel="Scroll horizontally for more columns">
+          <table
+            className="w-full text-sm"
+            aria-label="Market screener results"
+          >
+            <thead>
+              <tr className="bg-surface-container border-b border-outline-variant">
+                {columns.map((col) => (
+                  <th
+                    key={col.label}
+                    scope="col"
+                    className={`
+                    px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant
                     whitespace-nowrap select-none
                     ${col.align === "right" ? "text-right" : "text-left"}
                     ${col.key ? "cursor-pointer hover:text-primary hover:bg-primary-container/20 transition-colors" : ""}
                   `}
-                  onClick={() => col.key && onSort(col.key)}
-                  aria-sort={
-                    col.key && sortBy === col.key
-                      ? sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : col.key
-                        ? "none"
-                        : undefined
-                  }
-                >
-                  <span className="inline-flex items-center gap-1 justify-end">
-                    {col.align === "right" && col.key && (
-                      <SortIcon
-                        col={col.key}
-                        sortBy={sortBy}
-                        sortOrder={sortOrder}
-                      />
-                    )}
-                    {col.label}
-                    {col.align === "left" && col.key && (
-                      <SortIcon
-                        col={col.key}
-                        sortBy={sortBy}
-                        sortOrder={sortOrder}
-                      />
-                    )}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12">
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <p className="text-on-surface font-medium">
-                      No markets match your current filters.
-                    </p>
-                    {activeFilters.length > 0 ? (
-                      <>
-                        <p className="text-sm text-on-surface-variant max-w-md">
-                          The screener is working — these active filters just
-                          narrowed everything out. Loosen or clear them to see
-                          results.
-                        </p>
-                        <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl">
-                          {activeFilters.map((label) => (
-                            <span
-                              key={label}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant border border-outline-variant font-[family-name:var(--font-roboto-mono)]"
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                        {onClearFilters && (
-                          <button
-                            type="button"
-                            onClick={onClearFilters}
-                            className="mt-1 px-4 py-2 rounded-full text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors"
-                          >
-                            Clear filters
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-sm text-on-surface-variant">
-                        Try a different geography or adjust your filters.
-                      </p>
-                    )}
-                  </div>
-                </td>
+                    onClick={() => col.key && onSort(col.key)}
+                    aria-sort={
+                      col.key && sortBy === col.key
+                        ? sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : col.key
+                          ? "none"
+                          : undefined
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      {col.align === "right" && col.key && (
+                        <SortIcon
+                          col={col.key}
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                        />
+                      )}
+                      {col.label}
+                      {col.align === "left" && col.key && (
+                        <SortIcon
+                          col={col.key}
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                        />
+                      )}
+                    </span>
+                  </th>
+                ))}
               </tr>
-            ) : (
-              rows.map((row, i) => (
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
                 <tr
                   key={`${row.geo_level}-${row.region_id}`}
                   className="
@@ -220,27 +238,27 @@ export function ScreenerTable({
                   }}
                 >
                   {/* Rank */}
-                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-xs text-on-surface-variant w-12">
+                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-xs text-on-surface-variant w-12">
                     {baseRank + i}
                   </td>
 
                   {/* Market name — region_name already carries ", ST"; the
                       separate state_code is redundant, so fall back to it only
                       when the name is missing. */}
-                  <td className="px-4 py-3 text-left min-w-[180px]">
+                  <td className="px-3 sm:px-4 py-3 text-left min-w-[140px] sm:min-w-[180px]">
                     <span className="font-medium text-on-surface">
                       {formatGeoDisplayName(row.region_name) || row.state_code}
                     </span>
                   </td>
 
                   {/* Score */}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 sm:px-4 py-3 text-right">
                     <ScoreCell score={row.score} />
                   </td>
 
                   {/* Δ Score (active window) */}
                   <td
-                    className={`px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] ${getScoreChangeColor(
+                    className={`px-3 sm:px-4 py-3 text-right whitespace-nowrap font-[family-name:var(--font-roboto-mono)] ${getScoreChangeColor(
                       row[changeCol] as number | null,
                     )}`}
                   >
@@ -253,28 +271,28 @@ export function ScreenerTable({
                   </td>
 
                   {/* Median Price */}
-                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
                     {row.median_price !== null
                       ? formatMetricValue(row.median_price, "currency")
                       : "—"}
                   </td>
 
                   {/* Rent (ZORI) — exact monthly $, not the $K currency bucket */}
-                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
+                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
                     {row.rent !== null
                       ? `$${formatMetricValue(Math.round(row.rent), "number")}`
                       : "—"}
                   </td>
 
                   {/* Cap Rate */}
-                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
                     {row.cap_rate !== null
                       ? formatMetricValue(row.cap_rate, "percent_abs")
                       : "—"}
                   </td>
 
                   {/* Months of Supply */}
-                  <td className="px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
+                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
                     {row.months_of_supply !== null
                       ? row.months_of_supply.toFixed(1)
                       : "—"}
@@ -283,7 +301,7 @@ export function ScreenerTable({
                   {/* Overvalued % */}
                   <td
                     className={`
-                      px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)]
+                      px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)]
                       ${
                         row.overvalued_pct !== null
                           ? row.overvalued_pct > 0
@@ -298,11 +316,11 @@ export function ScreenerTable({
                       : "—"}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </ScrollShadowContainer>
+      )}
     </div>
   );
 }
