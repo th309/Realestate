@@ -3,6 +3,7 @@
  * that only make sense for residential / small-MF / commercial-MF rentals.
  */
 import type { MetricThreshold } from "../shared/types";
+import type { BuyAndHoldAutoKillConfig } from "../shared/autokill-config";
 
 export interface GradingContext {
   floodZone?: "AE" | "VE" | "A" | "X" | null;
@@ -24,6 +25,8 @@ export interface UserThresholds {
     capRate: number;
     breakEvenOccupancy: number;
   };
+  /** Optional per-user auto-kill overrides. Absent = engine defaults. */
+  autoKills?: BuyAndHoldAutoKillConfig;
 }
 
 /**

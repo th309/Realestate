@@ -116,6 +116,7 @@ export function gradeBuyAndHoldDeal(
     context,
     dscrValue,
     annualPretaxCashFlow,
+    thresholds.autoKills,
   );
   if (autoKills.length > 0) {
     letter = "F";
