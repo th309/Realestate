@@ -9,6 +9,7 @@ import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 import { AppFooter } from "@/app/components/AppFooter";
 import { BottomNavBar } from "@/src/components/layout/BottomNavBar";
 import { InstallBanner } from "@/app/components/pwa/InstallBanner";
+import { PushOptInPrompt } from "@/app/components/pwa/PushOptInPrompt";
 import { ServiceWorkerManager } from "@/app/components/pwa/ServiceWorkerManager";
 import { EnterpriseGraceBanner } from "@/components/entitlements/EnterpriseGraceBanner";
 import { EnterpriseOnboardingGate } from "@/components/entitlements/EnterpriseOnboardingGate";
@@ -69,6 +70,7 @@ export async function AppShell({
           <BottomNavBar />
           <InstallBanner />
           <ServiceWorkerManager />
+          <PushOptInPrompt />
           <DevToolbarLoader />
         </EnterpriseOnboardingGate>
       </Providers>

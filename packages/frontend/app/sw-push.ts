@@ -80,8 +80,14 @@ function handleNotificationClick(event: NotificationEvent): void {
       const anyClient = clientsList[0];
       if (anyClient) {
         await anyClient.focus();
-        await anyClient.navigate(url);
-        return;
+        try {
+          await anyClient.navigate(url);
+          return;
+        } catch {
+          // navigate() rejects for not-yet-controlled windows
+          // (includeUncontrolled above) — fall through to a fresh window so
+          // the tap still lands on the alert instead of dying silently.
+        }
       }
       await self.clients.openWindow(url);
     })(),
