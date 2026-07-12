@@ -16,6 +16,7 @@ import { ReportAiService } from './report-ai.service';
 import { NewsScoutService } from './news-scout.service';
 import { ResearchBriefService } from './research-brief/research-brief.service';
 import { ReportGenerationV2Service } from './report-generation-v2.service';
+import { ReportsRetentionCron } from './reports-retention.cron';
 import { ReportFollowUpService } from './report-follow-up.service';
 import { ReportFollowUpController } from './report-follow-up.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -46,6 +47,7 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
     NewsScoutService,
     ResearchBriefService,
     ReportGenerationV2Service,
+    ReportsRetentionCron,
     ReportFollowUpService,
   ],
   controllers: [
