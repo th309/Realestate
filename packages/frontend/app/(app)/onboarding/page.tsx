@@ -80,7 +80,7 @@ export default function OnboardingQuizPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
+    <div className="min-h-dvh bg-surface flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         {/* Card container */}
         <div className="bg-surface-container-low rounded-3xl shadow-lg overflow-hidden">

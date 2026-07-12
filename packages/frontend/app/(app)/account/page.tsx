@@ -48,7 +48,7 @@ const TIER_BADGE: Record<string, { label: string; className: string }> = {
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="space-y-3">
           <div className="h-4 w-32 bg-surface-container-highest rounded animate-pulse" />
@@ -154,7 +154,7 @@ function AccountPageContent() {
   // If support tab, show it in isolation
   if (showSupport) {
     return (
-      <div className="min-h-screen bg-surface">
+      <div className="min-h-dvh bg-surface">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <PageHeaderWithBreadcrumbs
             breadcrumbs={[
@@ -173,7 +173,7 @@ function AccountPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Account" }]}

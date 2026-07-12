@@ -1,0 +1,108 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
+import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
+import {
+  dismissInstallBanner,
+  isInstallBannerEligible,
+} from "@/lib/pwa/install-value-moment";
+
+function ShareIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-5 h-5 inline-block shrink-0 align-text-bottom"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+    </svg>
+  );
+}
+
+/**
+ * Value-moment-gated install banner. Self-contained: decides on its own
+ * whether to render (never when installed or ineligible — see
+ * lib/pwa/install-value-moment.ts), so it's safe to mount anywhere in the
+ * tree that stays alive across route changes.
+ */
+export function InstallBanner() {
+  const { canPromptNatively, promptInstall, isIos, isInstalled } =
+    useInstallPrompt();
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const shownFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (dismissed || isInstalled) {
+      setVisible(false);
+      return;
+    }
+    const canShow = canPromptNatively || isIos;
+    setVisible(canShow && isInstallBannerEligible());
+  }, [canPromptNatively, isIos, isInstalled, dismissed]);
+
+  useEffect(() => {
+    if (!visible || shownFiredRef.current) return;
+    shownFiredRef.current = true;
+    trackEvent("pwa.install_banner_shown", {
+      platform: canPromptNatively ? "android" : "ios",
+    });
+  }, [visible, canPromptNatively]);
+
+  function handleDismiss() {
+    trackEvent("pwa.install_banner_dismissed", {});
+    dismissInstallBanner();
+    setDismissed(true);
+  }
+
+  async function handleInstallClick() {
+    trackEvent("pwa.install_banner_install_clicked", {});
+    await promptInstall();
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-50 pb-safe px-4 pb-4 pointer-events-none animate-in slide-in-from-bottom-4 duration-200">
+      <div
+        role="dialog"
+        aria-label="Install PropertyIQ"
+        className="pointer-events-auto max-w-md mx-auto rounded-xl shadow-sm bg-surface-container border border-outline-variant p-4 flex items-center gap-3"
+      >
+        {canPromptNatively ? (
+          <>
+            <p className="flex-1 text-sm text-on-surface">
+              Add PropertyIQ to your home screen
+            </p>
+            <button
+              onClick={handleInstallClick}
+              className="px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shrink-0 hover:bg-primary/90 transition-colors"
+            >
+              Install
+            </button>
+          </>
+        ) : (
+          <p className="flex-1 text-sm text-on-surface">
+            Install PropertyIQ: tap <ShareIcon /> then &ldquo;Add to Home
+            Screen&rdquo;
+          </p>
+        )}
+        <button
+          onClick={handleDismiss}
+          aria-label="Dismiss install banner"
+          className="text-on-surface-variant hover:text-on-surface text-lg leading-none p-1 shrink-0"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}

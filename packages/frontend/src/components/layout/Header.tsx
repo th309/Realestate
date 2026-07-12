@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
 import { useMyOrg } from "@/lib/data";
+import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import {
   MenuIcon,
   CloseIcon,
@@ -22,6 +23,41 @@ import { NAV, isDropdown } from "./header-nav-data";
 import { NavDropdownMenu } from "./NavDropdownMenu";
 import { MobileMenu } from "./MobileMenu";
 import { TrialBadge } from "./TrialBadge";
+
+/* ─── "Get the app" icon (local — Header owns its own icon, not Icons.nav.tsx) ─── */
+
+function DownloadIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
+    </svg>
+  );
+}
+
+function ShareGlyphIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+    </svg>
+  );
+}
 
 /* ─── Profile dropdown item ─── */
 
@@ -53,15 +89,26 @@ export function Header() {
   const { user, loading, signOut } = useAuth();
   const { tier } = useEntitlements();
   const { org } = useMyOrg();
+  const { canPromptNatively, promptInstall, isInstalled } = useInstallPrompt();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
 
   // Close menus on navigation
   useEffect(() => {
     setIsProfileOpen(false);
     setIsMenuOpen(false);
+    setShowInstallInstructions(false);
   }, [pathname]);
+
+  async function handleGetAppClick() {
+    if (canPromptNatively) {
+      await promptInstall();
+    } else {
+      setShowInstallInstructions(true);
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -204,6 +251,31 @@ export function Header() {
                         />
                       )}
                       <DropdownItem icon={HelpIcon} label="Help" href="/help" />
+                      {!isInstalled && (
+                        <button
+                          onClick={handleGetAppClick}
+                          className="group w-full flex items-center px-3 py-2 text-sm font-medium text-on-surface-variant rounded-lg hover:bg-surface-container hover:text-primary transition-colors"
+                        >
+                          <DownloadIcon className="w-4 h-4 mr-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+                          Get the app
+                        </button>
+                      )}
+                      {showInstallInstructions && (
+                        <div className="mx-1 mt-1 p-3 rounded-lg bg-surface-container border border-outline-variant text-xs text-on-surface-variant flex items-start gap-2">
+                          <ShareGlyphIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span className="flex-1">
+                            Tap the share icon, then &ldquo;Add to Home
+                            Screen&rdquo; to install PropertyIQ.
+                          </span>
+                          <button
+                            onClick={() => setShowInstallInstructions(false)}
+                            aria-label="Close install instructions"
+                            className="text-on-surface-variant hover:text-on-surface leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
                       {tier === "admin" && (
                         <DropdownItem
                           icon={SettingsIcon}
