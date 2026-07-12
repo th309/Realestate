@@ -106,7 +106,28 @@ export class AiInsightsCache {
       sectionId === 'batch' || sectionId === 'projection'
         ? Math.round((payload.projection?.finalEquity ?? 0) / 1000) * 1000
         : 'none';
-    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${proj}:${inputHash}:${rcHash}:${piqHash}`;
+    // The narrative cites the deal's computed figures (monthly cashflow, DSCR,
+    // GPA, auto-kill reasons). Assumption/criteria edits move these while
+    // price/rent/tax stay identical, so they need their own key segment or a
+    // vacancy change keeps serving a narrative quoting the old dollars.
+    const rental = payload.result?.rental ?? {};
+    const grading = payload.grading ?? {};
+    const figuresHash = createHash('sha1')
+      .update(
+        JSON.stringify({
+          cf: Math.round((rental.cashflowMonthly ?? 0) / 50) * 50,
+          dscr: Number(rental.dscr ?? 0).toFixed(2),
+          gpa: Number(grading.finalGpa ?? 0).toFixed(1),
+          letter: grading.letter ?? '',
+          kills: (grading.autoKills ?? [])
+            .map((k: { code?: string }) => k?.code ?? '')
+            .join(','),
+          flipProfit: Math.round((payload.result?.flip?.netProfit ?? 0) / 500),
+        }),
+      )
+      .digest('hex')
+      .slice(0, 8);
+    return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${proj}:${inputHash}:${rcHash}:${piqHash}:${figuresHash}`;
   }
 
   async get(key: string): Promise<CachedInsight | null> {
