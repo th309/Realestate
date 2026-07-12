@@ -217,3 +217,14 @@
 **Rule:** In a shared worktree with concurrent committers, staging and committing must be atomic per agent: use `git commit -m "..." -- <explicit paths>` as ONE command (pathspec commit ignores other staged entries), never `git add` + bare `git commit` as separate steps. Reviewers must verify each commit's `--stat` matches the task's ownership list.
 
 **Also observed same session:** stop-hooks attribute the user's parallel main-checkout WIP to the session (verify with `git status` on the flagged paths before dispatching validators); piping a long-running dev server through `head` wedges it when the pipe closes (redirect to a file instead).
+
+## Verification and Review Fan Out in Parallel — Even Mid-Fix
+
+**Date:** 2026-07-12
+**Context:** Finishing a handoff's in-flight fix, I ran lint → build → tests → tsc → live curl serially in the main context, one tool call after another. User interrupted: "dude...use multiple agents." The implementation edits were genuinely sequential (each shaped the next), but everything after the last edit — vitest suites, tsc, live render checks, code-reviewer, data-layer-reviewer — was independent and should have been one parallel dispatch.
+
+**Rule:** The moment the last edit lands, STOP running verification serially. Batch all independent checks (test suites, typecheck, live E2E, §1.6 reviewers) into a single multi-Agent dispatch. "I'm almost done, one more quick check" is the tell — that's when to fan out, not grind on.
+
+**Wrong behavior:** edit → run lint → wait → run build → wait → run tests → wait → curl → wait → then dispatch reviewers.
+
+**Correct behavior:** edit → one message dispatching verify-tests, verify-live, code-reviewer, data-layer-reviewer in parallel → integrate results.
