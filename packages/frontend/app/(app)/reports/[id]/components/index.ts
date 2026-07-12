@@ -6,9 +6,8 @@
  * and per-section error boundaries.
  */
 
-export { ErrorBoundary } from './ErrorBoundary';
-export { SectionFallback, SectionError } from './SectionFallback';
-export { BrandingProvider, useBranding } from './BrandingProvider';
-export type { BrandingConfig } from './BrandingProvider';
-export { SectionRenderer, PageRenderer } from './SectionRenderer';
-export type { SectionProps, ReportWithTemplate } from './types';
+export { ErrorBoundary } from "./ErrorBoundary";
+export { SectionFallback, SectionError } from "./SectionFallback";
+export { BrandingProvider, useBranding } from "./BrandingProvider";
+export type { BrandingConfig } from "./BrandingProvider";
+export type { SectionProps, ReportWithTemplate } from "./types";
