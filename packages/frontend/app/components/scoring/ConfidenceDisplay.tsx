@@ -9,11 +9,11 @@
  * - Warning for low confidence
  */
 
-'use client';
+"use client";
 
-import { memo, useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect } from "react";
 
-type ConfidenceLevel = 'a' | 'b' | 'c' | 'f';
+type ConfidenceLevel = "a" | "b" | "c" | "f";
 
 interface ConfidenceDisplayProps {
   level: ConfidenceLevel;
@@ -22,7 +22,7 @@ interface ConfidenceDisplayProps {
   metricsTotal: number;
   freshnessInDays: number;
   warning?: string;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
   showDetails?: boolean;
   className?: string;
 }
@@ -48,40 +48,40 @@ function getConfidenceColor(level: ConfidenceLevel): {
   border: string;
 } {
   switch (level) {
-    case 'a':
+    case "a":
       return {
-        text: 'text-emerald-600',
-        star: 'text-emerald-400',
-        bg: 'bg-emerald-50',
-        border: 'border-emerald-200',
+        text: "text-emerald-600",
+        star: "text-emerald-400",
+        bg: "bg-emerald-50",
+        border: "border-emerald-200",
       };
-    case 'b':
+    case "b":
       return {
-        text: 'text-amber-600',
-        star: 'text-amber-400',
-        bg: 'bg-amber-50',
-        border: 'border-amber-200',
+        text: "text-amber-600",
+        star: "text-amber-400",
+        bg: "bg-amber-50",
+        border: "border-amber-200",
       };
-    case 'c':
+    case "c":
       return {
-        text: 'text-rose-600',
-        star: 'text-rose-400',
-        bg: 'bg-rose-50',
-        border: 'border-rose-200',
+        text: "text-rose-600",
+        star: "text-rose-400",
+        bg: "bg-rose-50",
+        border: "border-rose-200",
       };
-    case 'f':
+    case "f":
       return {
-        text: 'text-red-700',
-        star: 'text-red-500',
-        bg: 'bg-red-50',
-        border: 'border-red-200',
+        text: "text-red-700",
+        star: "text-red-500",
+        bg: "bg-red-50",
+        border: "border-red-200",
       };
     default:
       return {
-        text: 'text-on-surface-variant',
-        star: 'text-on-surface-variant',
-        bg: 'bg-surface-container',
-        border: 'border-outline-variant',
+        text: "text-on-surface-variant",
+        star: "text-on-surface-variant",
+        bg: "bg-surface-container",
+        border: "border-outline-variant",
       };
   }
 }
@@ -92,8 +92,8 @@ function getConfidenceColor(level: ConfidenceLevel): {
 function StarIcon({ filled, color }: { filled: boolean; color: string }) {
   return (
     <svg
-      className={`w-3.5 h-3.5 ${filled ? color : 'text-surface-container-highest'}`}
-      fill={filled ? 'currentColor' : 'none'}
+      className={`w-3.5 h-3.5 ${filled ? color : "text-surface-container-highest"}`}
+      fill={filled ? "currentColor" : "none"}
       viewBox="0 0 24 24"
       stroke="currentColor"
       strokeWidth={filled ? 0 : 1.5}
@@ -110,7 +110,7 @@ function StarIcon({ filled, color }: { filled: boolean; color: string }) {
 /**
  * Warning icon for low confidence
  */
-function WarningIcon({ className = '' }: { className?: string }) {
+function WarningIcon({ className = "" }: { className?: string }) {
   return (
     <svg
       className={`w-4 h-4 ${className}`}
@@ -132,11 +132,11 @@ function WarningIcon({ className = '' }: { className?: string }) {
  * Get freshness label
  */
 function getFreshnessLabel(days: number): string {
-  if (days <= 7) return 'Fresh data';
-  if (days <= 30) return 'Recent data';
-  if (days <= 60) return 'Current data';
-  if (days <= 120) return 'Slightly dated';
-  return 'Older data';
+  if (days <= 7) return "Fresh data";
+  if (days <= 30) return "Recent data";
+  if (days <= 60) return "Current data";
+  if (days <= 120) return "Slightly dated";
+  return "Older data";
 }
 
 export const ConfidenceDisplay = memo(function ConfidenceDisplay({
@@ -146,25 +146,55 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
   metricsTotal,
   freshnessInDays,
   warning,
-  size = 'md',
+  size = "md",
   showDetails = false,
-  className = '',
+  className = "",
 }: ConfidenceDisplayProps) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top');
+  const containerRef = useRef<HTMLButtonElement>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<"top" | "bottom">(
+    "top",
+  );
 
   // Calculate tooltip position
   useEffect(() => {
     if (showTooltip && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setTooltipPosition(rect.top < 100 ? 'bottom' : 'top');
+      setTooltipPosition(rect.top < 100 ? "bottom" : "top");
     }
+  }, [showTooltip]);
+
+  // Tap opens/closes the tooltip (iOS Safari does not focus plain divs on
+  // tap, only real form controls — see MetricHelpButton for the same fix).
+  const toggleTooltip = () => setShowTooltip((visible) => !visible);
+
+  // Escape + outside click/tap close the tooltip once open.
+  useEffect(() => {
+    if (!showTooltip) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowTooltip(false);
+    }
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setShowTooltip(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
   }, [showTooltip]);
 
   const starCount = getStarCount(percentage);
   const colors = getConfidenceColor(level);
-  const isSmall = size === 'sm';
+  const isSmall = size === "sm";
 
   const tooltipContent = (
     <div className="space-y-1">
@@ -172,8 +202,12 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
         Grade {level.toUpperCase()} Confidence ({percentage}%)
       </div>
       <div className="text-gray-300 text-xs">
-        <div>{metricsAvailable} of {metricsTotal} metrics available</div>
-        <div>{getFreshnessLabel(freshnessInDays)} ({freshnessInDays} days old)</div>
+        <div>
+          {metricsAvailable} of {metricsTotal} metrics available
+        </div>
+        <div>
+          {getFreshnessLabel(freshnessInDays)} ({freshnessInDays} days old)
+        </div>
       </div>
       {warning && (
         <div className="text-amber-300 text-xs flex items-center gap-1">
@@ -185,19 +219,21 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
   );
 
   return (
-    <div
+    <button
       ref={containerRef}
+      type="button"
       className={`
         relative inline-flex items-center gap-1.5
-        ${showDetails ? `px-2 py-1 rounded border ${colors.bg} ${colors.border}` : ''}
+        appearance-none bg-transparent border-0 cursor-pointer
+        ${showDetails ? `px-2 py-1 rounded border ${colors.bg} ${colors.border}` : ""}
         ${className}
       `}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       onFocus={() => setShowTooltip(true)}
       onBlur={() => setShowTooltip(false)}
-      tabIndex={0}
-      role="img"
+      onClick={toggleTooltip}
+      aria-expanded={showTooltip}
       aria-label={`${level} confidence: ${percentage}%`}
     >
       {/* Star rating */}
@@ -210,11 +246,15 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
       {/* Percentage and label */}
       {showDetails && (
         <>
-          <span className={`${isSmall ? 'text-xs' : 'text-sm'} font-medium ${colors.text}`}>
+          <span
+            className={`${isSmall ? "text-xs" : "text-sm"} font-medium ${colors.text}`}
+          >
             {percentage}%
           </span>
-          {(level === 'c' || level === 'f') && warning && (
-            <WarningIcon className={`${colors.text} ${isSmall ? 'w-3 h-3' : 'w-4 h-4'}`} />
+          {(level === "c" || level === "f") && warning && (
+            <WarningIcon
+              className={`${colors.text} ${isSmall ? "w-3 h-3" : "w-4 h-4"}`}
+            />
           )}
         </>
       )}
@@ -225,7 +265,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
           className={`
             absolute left-1/2 -translate-x-1/2 z-50 w-48
             px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg
-            ${tooltipPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
+            ${tooltipPosition === "top" ? "bottom-full mb-2" : "top-full mt-2"}
           `}
           role="tooltip"
         >
@@ -233,12 +273,12 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
           <span
             className={`
               absolute left-1/2 -translate-x-1/2 border-4 border-transparent
-              ${tooltipPosition === 'top' ? 'top-full border-t-gray-900' : 'bottom-full border-b-gray-900'}
+              ${tooltipPosition === "top" ? "top-full border-t-gray-900" : "bottom-full border-b-gray-900"}
             `}
           />
         </div>
       )}
-    </div>
+    </button>
   );
 });
 

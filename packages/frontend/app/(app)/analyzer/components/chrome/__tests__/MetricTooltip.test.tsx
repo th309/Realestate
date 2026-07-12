@@ -30,4 +30,50 @@ describe("MetricTooltip", () => {
     fireEvent.mouseLeave(container.querySelector("[data-metric-tooltip]")!);
     expect(container.querySelector("[data-tooltip-body]")).toBeFalsy();
   });
+
+  it("renders the trigger as a real button element", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    const trigger = container.querySelector("[data-metric-tooltip]");
+    expect(trigger?.tagName).toBe("BUTTON");
+    expect(trigger).toHaveAttribute("type", "button");
+  });
+
+  it("tap (click) opens the tooltip", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    fireEvent.click(container.querySelector("[data-metric-tooltip]")!);
+    expect(container.querySelector("[data-tooltip-body]")).toBeTruthy();
+  });
+
+  it("second tap closes the tooltip", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    const trigger = container.querySelector("[data-metric-tooltip]")!;
+    fireEvent.click(trigger);
+    expect(container.querySelector("[data-tooltip-body]")).toBeTruthy();
+    fireEvent.click(trigger);
+    expect(container.querySelector("[data-tooltip-body]")).toBeFalsy();
+  });
+
+  it("outside click closes an open tooltip", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    fireEvent.click(container.querySelector("[data-metric-tooltip]")!);
+    expect(container.querySelector("[data-tooltip-body]")).toBeTruthy();
+    fireEvent.mouseDown(document.body);
+    expect(container.querySelector("[data-tooltip-body]")).toBeFalsy();
+  });
+
+  it("Escape closes an open tooltip", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    fireEvent.click(container.querySelector("[data-metric-tooltip]")!);
+    expect(container.querySelector("[data-tooltip-body]")).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(container.querySelector("[data-tooltip-body]")).toBeFalsy();
+  });
+
+  it("exposes aria-expanded on the trigger", () => {
+    const { container } = render(<MetricTooltip metric="cap_rate" />);
+    const trigger = container.querySelector("[data-metric-tooltip]")!;
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  });
 });

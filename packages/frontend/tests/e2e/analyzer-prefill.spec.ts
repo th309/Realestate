@@ -63,12 +63,13 @@ test.describe("/analyzer address-prefill (no auth)", () => {
       page.locator("aside").getByText(/as of/i).first(),
     ).toBeVisible();
 
-    // ConfidenceDisplay emits aria-label="<level> confidence: <pct>%" —
-    // assert at least one is present in the aside.
+    // ConfidenceDisplay emits aria-label="<level> confidence: <pct>%" on its
+    // trigger button (a real <button> as of the touch-fallback fix, so the
+    // accessible role is "button", not "img").
     await expect(
       page
         .locator("aside")
-        .getByRole("img", { name: /confidence:/i })
+        .getByRole("button", { name: /confidence:/i })
         .first(),
     ).toBeVisible();
 
@@ -214,11 +215,12 @@ test.describe("/analyzer address-prefill — Pro/Enterprise stamps", () => {
       page.locator("aside").getByText(/as of/i).first(),
     ).toBeVisible();
 
-    // Confidence grade chip must be present (aria-label from ConfidenceDisplay).
+    // Confidence grade chip must be present (aria-label from ConfidenceDisplay,
+    // rendered as a real <button> so it's role="button" not role="img").
     await expect(
       page
         .locator("aside")
-        .getByRole("img", { name: /confidence:/i })
+        .getByRole("button", { name: /confidence:/i })
         .first(),
     ).toBeVisible();
   });
