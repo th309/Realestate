@@ -72,6 +72,8 @@ interface InputPanelProps {
   brrrr?: BrrrrResult | null;
   provenance?: ProvenanceMap;
   onAddressSelect?: (s: AddressSuggestion) => void;
+  /** Opens the Customize drawer (Auto-Kill tab) from Advanced Assumptions. */
+  onCustomizeClick?: () => void;
 }
 
 const fmtUsd = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -106,6 +108,7 @@ export function InputPanel({
   brrrr,
   provenance = {},
   onAddressSelect,
+  onCustomizeClick,
 }: InputPanelProps) {
   // Fall back to uncontrolled local state when parent doesn't supply propertyType
   // (keeps existing tests working). When parent passes the prop, that wins.
@@ -369,6 +372,7 @@ export function InputPanel({
           onInputChange={update}
           onFinancingChange={updateFin}
           provenance={provenance}
+          onCustomizeClick={onCustomizeClick}
         />
       )}
     </aside>

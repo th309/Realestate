@@ -18,6 +18,8 @@ interface AdvancedAssumptionsProps {
   onInputChange: (patch: Partial<DealInput>) => void;
   onFinancingChange: (patch: Partial<DealInput["financing"]>) => void;
   provenance?: ProvenanceMap;
+  /** Opens the Customize drawer (Auto-Kill tab). Renders the link row when provided. */
+  onCustomizeClick?: () => void;
 }
 
 // analyzer-core defaults — mirrored so reset works on input-side fields too.
@@ -46,6 +48,7 @@ export function AdvancedAssumptions({
   onInputChange,
   onFinancingChange,
   provenance = {},
+  onCustomizeClick,
 }: AdvancedAssumptionsProps) {
   const [open, setOpen] = useState(false);
 
@@ -247,6 +250,27 @@ export function AdvancedAssumptions({
               />
             </div>
           </div>
+
+          {onCustomizeClick && (
+            <button
+              type="button"
+              onClick={onCustomizeClick}
+              data-testid="autokill-grading-customize"
+              className="w-full flex items-center justify-between gap-2 rounded-lg border border-outline-variant px-3 py-2 text-left transition-colors duration-200 hover:bg-surface-container"
+            >
+              <span className="min-w-0">
+                <span className="block text-xs font-medium text-on-surface">
+                  ⚙ Auto-kill &amp; grading criteria
+                </span>
+                <span className="block text-[11px] text-on-surface-variant">
+                  Edit thresholds, weights, and auto-kill rules
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-medium text-primary">
+                Customize
+              </span>
+            </button>
+          )}
         </div>
       )}
     </div>
