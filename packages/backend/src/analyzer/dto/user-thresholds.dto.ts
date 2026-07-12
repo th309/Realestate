@@ -14,6 +14,7 @@ import { Type } from 'class-transformer';
 import {
   IsIn,
   IsNumber,
+  IsOptional,
   Max,
   Min,
   Validate,
@@ -22,6 +23,7 @@ import {
   ValidatorConstraintInterface,
   ValidationArguments,
 } from 'class-validator';
+import { BuyAndHoldAutoKillsDto } from './auto-kill-config.dto';
 
 const NUM_OPTS = { allowNaN: false, allowInfinity: false } as const;
 
@@ -116,4 +118,9 @@ export class UserThresholdsDto {
   @Type(() => WeightsDto)
   @Validate(WeightsSumToHundredConstraint)
   weights!: WeightsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BuyAndHoldAutoKillsDto)
+  autoKills?: BuyAndHoldAutoKillsDto;
 }
