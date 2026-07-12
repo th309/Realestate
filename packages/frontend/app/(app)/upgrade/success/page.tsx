@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -25,7 +25,6 @@ function SuccessContent() {
       ? rawReturn
       : "/map";
   const [refreshed, setRefreshed] = useState(false);
-  const purchaseFiredRef = useRef(false);
   const sessionId = searchParams.get("session_id");
   const purchaseValue = Number(searchParams.get("value") ?? "0");
 
@@ -39,19 +38,23 @@ function SuccessContent() {
     refresh().then(() => setRefreshed(true));
   }, [refresh]);
 
-  // Fires once per session_id — the useRef guard prevents React StrictMode
-  // double-invoke and refresh double-count; transaction_id = session_id gives
-  // GA server-side dedup as a backstop.
+  // Fires once per session_id, persisted in sessionStorage so a page reload
+  // (F5) doesn't re-fire purchase with the same transaction_id — GA4 does not
+  // dedupe purchase revenue by transaction_id. Gated on `refreshed` so `tier`
+  // reflects the purchased tier rather than the pre-refresh default ("free").
   useEffect(() => {
-    if (purchaseFiredRef.current || !sessionId) return;
-    purchaseFiredRef.current = true;
+    if (!sessionId || !refreshed) return;
+    if (typeof window === "undefined") return;
+    const key = `ga_purchase_fired:${sessionId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
     gtagEvent("purchase", {
       transaction_id: sessionId,
       value: Number.isFinite(purchaseValue) ? purchaseValue : 0,
       currency: "USD",
       items: [{ item_id: tier }],
     });
-  }, [sessionId, purchaseValue, tier]);
+  }, [sessionId, purchaseValue, tier, refreshed]);
 
   // Defense-in-depth: show loading while auth resolves, bail out if unauthenticated
   if (authLoading || !user) {
