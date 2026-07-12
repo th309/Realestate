@@ -41,5 +41,5 @@
     ".next-dev/types/**/*.ts",
     ".next-dev/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "app/sw.ts"]
+  "exclude": ["node_modules", "app/sw.ts", "app/sw-push.ts"]
 }

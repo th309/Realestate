@@ -11,5 +11,5 @@
     "moduleResolution": "bundler",
     "isolatedModules": true
   },
-  "include": ["app/sw.ts"]
+  "include": ["app/sw.ts", "app/sw-push.ts"]
 }

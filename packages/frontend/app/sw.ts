@@ -31,6 +31,8 @@ import type {
   SerwistGlobalConfig,
 } from "serwist";
 
+import { registerPushHandlers } from "./sw-push";
+
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -234,5 +236,9 @@ self.addEventListener("message", (event) => {
     event.waitUntil(caches.delete(BACKEND_API_CACHE_NAME));
   }
 });
+
+// Push notifications + notification-click handling (see app/sw-push.ts —
+// split out to stay under the 300-line logic-file limit).
+registerPushHandlers();
 
 serwist.addEventListeners();

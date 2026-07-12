@@ -116,6 +116,10 @@ const nextConfig = {
   // of rehydrating stale data under a new build.
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
+    // Web push (see lib/pwa/use-push-subscription.ts) — public VAPID key
+    // only; the matching private key lives on the backend
+    // (packages/backend/src/push/push.service.ts) and never travels here.
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   },
   typescript: {
     ignoreBuildErrors: true,

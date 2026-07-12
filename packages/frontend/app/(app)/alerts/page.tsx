@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Bell, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
@@ -17,6 +18,12 @@ export default function AlertsPage() {
   } = useAlertHistory();
   const { tier, loading: entitlementsLoading } = useEntitlements();
   const isPaid = tier === "pro" || tier === "enterprise" || tier === "admin";
+
+  // Seeing the alerts list clears the app icon badge (Badging API,
+  // installed PWA only) — guarded since support is inconsistent.
+  useEffect(() => {
+    navigator.clearAppBadge?.();
+  }, []);
 
   if (entitlementsLoading) {
     return (
