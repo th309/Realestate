@@ -16,7 +16,13 @@ import { ReportBuilderHeader } from "./components/ReportBuilderHeader";
 import { CustomResearchPromoCard } from "./components/CustomResearchPromoCard";
 import { ReportGenerateFeedback } from "./components/ReportGenerateFeedback";
 
-export function ReportCreationPage() {
+interface ReportCreationPageProps {
+  /** Rendered in the right column under the Custom Research card so recent
+   *  reports stay visible in the first desktop viewport. */
+  recentReports?: React.ReactNode;
+}
+
+export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -289,11 +295,12 @@ export function ReportCreationPage() {
             />
           </div>
 
-          {/* Right: Custom Research */}
-          <div className="lg:col-span-2 flex">
+          {/* Right: Custom Research + recent reports */}
+          <div className="lg:col-span-2 flex flex-col gap-8">
             <CustomResearchPromoCard
               onOpen={() => router.push("/reports/research")}
             />
+            {recentReports}
           </div>
         </div>
       </div>

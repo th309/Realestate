@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FileText, Sparkles } from 'lucide-react';
+import React from "react";
+import { FileText } from "lucide-react";
 
 interface NarrativeSectionProps {
   title: string;
   content: string;
-  showAiBadge?: boolean;
 }
 
-export function NarrativeSection({ title, content, showAiBadge = true }: NarrativeSectionProps) {
+export function NarrativeSection({ title, content }: NarrativeSectionProps) {
   // Split content by numbered lists if present
   const paragraphs = content.split(/(?=\(\d+\)|\d+\.\s)/g).filter(Boolean);
-  const hasNumberedItems = paragraphs.length > 1 && /^\(\d+\)|^\d+\.\s/.test(paragraphs[1] || '');
+  const hasNumberedItems =
+    paragraphs.length > 1 && /^\(\d+\)|^\d+\.\s/.test(paragraphs[1] || "");
 
   return (
     <section className="bg-surface-container rounded-3xl p-6 md:p-8">
@@ -23,12 +23,6 @@ export function NarrativeSection({ title, content, showAiBadge = true }: Narrati
           </div>
           <h2 className="text-xl font-semibold text-on-surface">{title}</h2>
         </div>
-        {showAiBadge && (
-          <div className="flex items-center gap-1 text-xs text-on-surface-variant bg-surface-container-high px-2 py-1 rounded-full">
-            <Sparkles className="w-3 h-3" />
-            <span>AI Generated</span>
-          </div>
-        )}
       </div>
 
       <div className="prose prose-sm max-w-none">
@@ -44,7 +38,9 @@ export function NarrativeSection({ title, content, showAiBadge = true }: Narrati
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium flex items-center justify-center">
                       {match[1] || match[3]}
                     </span>
-                    <p className="text-on-surface leading-relaxed flex-1">{text}</p>
+                    <p className="text-on-surface leading-relaxed flex-1">
+                      {text}
+                    </p>
                   </div>
                 );
               }
@@ -56,7 +52,9 @@ export function NarrativeSection({ title, content, showAiBadge = true }: Narrati
             })}
           </div>
         ) : (
-          <p className="text-on-surface leading-relaxed whitespace-pre-wrap">{content}</p>
+          <p className="text-on-surface leading-relaxed whitespace-pre-wrap">
+            {content}
+          </p>
         )}
       </div>
     </section>

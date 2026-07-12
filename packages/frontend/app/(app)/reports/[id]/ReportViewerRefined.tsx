@@ -231,7 +231,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
                   {report.ai_model_used && (
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-[var(--report-stone-light)]" />
-                      <span>AI-Enhanced</span>
+                      <span>Drafted by AI</span>
                     </div>
                   )}
                 </div>

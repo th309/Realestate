@@ -24,7 +24,6 @@ export function CustomResearchPromoCard({
               hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
               border border-outline-variant/30 hover:border-outline-variant/60
               hover:shadow-xl hover:shadow-black/5
-              self-stretch
             "
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}

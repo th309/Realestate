@@ -81,6 +81,7 @@ export function GeneratingState({
       steps={GENERATION_STEPS}
       title="Generating your report"
       subtitle="This usually takes 1-3 minutes."
+      footnote="It's safe to leave this page. Your report keeps generating and will be waiting in your reports list."
       completeTitle="Report complete"
       completeSubtitle="Your report is ready."
       errorTitle="Report generation failed"
