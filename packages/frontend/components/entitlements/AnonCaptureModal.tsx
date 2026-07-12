@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackPaywallEvent } from "@/lib/entitlements/api";
 import { useDismissable } from "@/lib/entitlements/useDismissable";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface AnonCaptureModalProps {
   /** Human-readable name of the feature the user tried to unlock. */
@@ -34,6 +35,11 @@ export function AnonCaptureModal({
   const cardRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
   const { onScrimClick } = useDismissable({ onDismiss, cardRef });
+
+  // System back button / edge-swipe dismisses this modal instead of
+  // navigating away or exiting the installed PWA. Only mounts while shown
+  // (see MetricItem/QuickActions' `{showPaywall && <AnonCaptureModal .../>}`).
+  useModalHistory(true, onDismiss, "anon-capture-modal");
 
   useEffect(() => {
     trackPaywallEvent(

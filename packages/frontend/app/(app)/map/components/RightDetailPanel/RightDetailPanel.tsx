@@ -23,6 +23,7 @@ import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
 import { QuickActions } from "./QuickActions";
 import { SidebarScoreCard } from "../sidebar-components";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface MatchScoreInfo {
   matchScore: number;
@@ -109,6 +110,12 @@ export function RightDetailPanel({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(factors));
     }
   };
+
+  // System back button / edge-swipe closes the mobile full-screen panel
+  // instead of navigating away or exiting the installed PWA. Desktop keeps
+  // the panel docked in the layout (see the `md:` classes below), so this
+  // is a no-op there beyond the (harmless) extra history entry.
+  useModalHistory(isOpen, onClose, "right-detail-panel");
 
   if (!isOpen || !geography) return null;
 

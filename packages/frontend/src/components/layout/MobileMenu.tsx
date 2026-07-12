@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NAV, isDropdown } from "./header-nav-data";
 import { lockBodyScroll } from "@/lib/scroll-lock";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 import {
   LogoutIcon,
   SettingsIcon,
@@ -67,6 +68,11 @@ export function MobileMenu({
     const id = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  // System back button / edge-swipe closes the drawer instead of navigating
+  // away or exiting the installed PWA. This component only mounts while
+  // conceptually open (see Header.tsx's `{isMenuOpen && <MobileMenu .../>}`).
+  useModalHistory(true, handleClose, "mobile-menu");
 
   // Ref-counted body scroll lock (coordinates with other open sheets/drawers).
   useEffect(() => lockBodyScroll(), []);

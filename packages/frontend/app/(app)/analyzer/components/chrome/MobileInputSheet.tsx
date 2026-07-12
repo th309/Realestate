@@ -1,6 +1,7 @@
 "use client";
 import { ReactNode, useEffect } from "react";
 import { lockBodyScroll } from "@/lib/scroll-lock";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface MobileInputSheetProps {
   open: boolean;
@@ -25,6 +26,10 @@ export function MobileInputSheet({
     if (!open) return;
     return lockBodyScroll();
   }, [open]);
+
+  // System back button / edge-swipe closes the sheet instead of navigating
+  // away or exiting the installed PWA.
+  useModalHistory(open, onClose, "mobile-input-sheet");
 
   if (!open) return null;
 

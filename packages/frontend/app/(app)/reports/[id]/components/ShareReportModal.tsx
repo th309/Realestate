@@ -15,6 +15,7 @@ import {
 import { createReportShareLink } from "@/lib/data";
 import { useEntitlements } from "@/lib/entitlements";
 import { downloadCsv } from "@/lib/export";
+import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
 interface ShareReportModalProps {
   isOpen: boolean;
@@ -61,6 +62,10 @@ export function ShareReportModal({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, onClose]);
+
+  // System back button / edge-swipe closes this modal instead of navigating
+  // away or exiting the installed PWA.
+  useModalHistory(isOpen, onClose, "share-report-modal");
 
   const handleCopyLink = useCallback(async () => {
     if (sharing) return;
