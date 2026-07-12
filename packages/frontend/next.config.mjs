@@ -1,7 +1,19 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import withSerwistInit from '@serwist/next';
+import withBundleAnalyzerInit from '@next/bundle-analyzer';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+// Bundle size inspector (Phase 4.6 lazy-loading audit). Disabled unless
+// ANALYZE=true so it never runs in normal dev/prod builds. Composed as the
+// outermost wrapper (see `export default` below) so it observes the fully
+// composed webpack config (after Serwist's InjectManifest plugin and
+// Sentry's source-map/tree-shake plugins have already run) rather than
+// racing them for the last word on the plugin list.
+//   ANALYZE=true NEXT_DIST_DIR=.next-verify npx next build --webpack
+const withBundleAnalyzer = withBundleAnalyzerInit({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 // PWA service worker (Serwist InjectManifest). Registration is manual (see
 // lib/pwa/register-service-worker.ts) so the update-toast flow controls when
@@ -316,7 +328,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(withSerwist(nextConfig), {
+export default withBundleAnalyzer(withSentryConfig(withSerwist(nextConfig), {
   // Sentry organization and project (set in CI or locally for source map uploads).
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
@@ -330,4 +342,4 @@ export default withSentryConfig(withSerwist(nextConfig), {
   // Tree-shake Sentry debug logging out of production bundles.
   hideSourceMaps: true,
   widenClientFileUpload: true,
-});
+}));

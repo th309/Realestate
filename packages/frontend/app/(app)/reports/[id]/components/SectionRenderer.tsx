@@ -1,54 +1,51 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ErrorBoundary } from './ErrorBoundary';
-import { SectionFallback, SectionError } from './SectionFallback';
-import { SectionProps, ReportWithTemplate } from './types';
-import { ReportSection } from '../../types';
-import { BrandingConfig } from './BrandingProvider';
+import React from "react";
+import dynamic from "next/dynamic";
+import { SkeletonChart } from "@/components/ui/skeleton-parts";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { SectionFallback, SectionError } from "./SectionFallback";
+import { SectionProps, ReportWithTemplate } from "./types";
+import { ReportSection } from "../../types";
+import { BrandingConfig } from "./BrandingProvider";
 
 // Import existing sections
-import { HeroScoreSection } from '../sections/HeroScoreSection';
-import { NarrativeSection } from '../sections/NarrativeSection';
-import { NewsSection } from '../sections/NewsSection';
+import { HeroScoreSection } from "../sections/HeroScoreSection";
+import { NarrativeSection } from "../sections/NarrativeSection";
+import { NewsSection } from "../sections/NewsSection";
 
 // Import new section components
-import { MetricGrid } from './sections/MetricGrid';
-import { MetricDetail } from './sections/MetricDetail';
-import { MetricHighlight } from './sections/MetricHighlight';
-import { MetricComparison } from './sections/MetricComparison';
-import { TextBlock } from './sections/TextBlock';
-import { StatusBadge } from './sections/StatusBadge';
-import { FactBox } from './sections/FactBox';
-import { ChartSingle } from './sections/ChartSingle';
-import { ChartGrid } from './sections/ChartGrid';
-import { ComparisonChartGrid } from './sections/ComparisonChartGrid';
-import { ScoreGaugeSingle } from './sections/ScoreGaugeSingle';
-import { ScoreBreakdown } from './sections/ScoreBreakdown';
-import { MarketVerdictBar } from './sections/MarketVerdictBar';
-import { InvestmentVerdict } from './sections/InvestmentVerdict';
-import { ComparisonHeader } from './sections/ComparisonHeader';
-import { ComparisonTable } from './sections/ComparisonTable';
-import { ComparisonRadar } from './sections/ComparisonRadar';
-import { WinnerBadges } from './sections/WinnerBadges';
-import { ProsConsTable } from './sections/ProsConsTable';
-import { StrengthsRisks } from './sections/StrengthsRisks';
-import { AffordabilityGapVisual } from './sections/AffordabilityGapVisual';
-import { SavingsCalculator } from './sections/SavingsCalculator';
-import { PersonalAffordability } from './sections/PersonalAffordability';
-import { BudgetBreakdown } from './sections/BudgetBreakdown';
-import { SavingsTimeline } from './sections/SavingsTimeline';
-import { AlternativeAreas } from './sections/AlternativeAreas';
-import { RankedList } from './sections/RankedList';
-import { IndicatorDashboard } from './sections/IndicatorDashboard';
-import { PercentileRank } from './sections/PercentileRank';
-import { ProFormaAssumptions } from './sections/ProFormaAssumptions';
-import { ProFormaCashFlow } from './sections/ProFormaCashFlow';
-import { ProFormaReturns } from './sections/ProFormaReturns';
-import { ProFormaSensitivity } from './sections/ProFormaSensitivity';
-import { ScenarioCard } from './sections/ScenarioCard';
-import { ScenarioChart } from './sections/ScenarioChart';
-import { ForecastDisplay } from './sections/ForecastDisplay';
+import { MetricGrid } from "./sections/MetricGrid";
+import { MetricDetail } from "./sections/MetricDetail";
+import { MetricHighlight } from "./sections/MetricHighlight";
+import { MetricComparison } from "./sections/MetricComparison";
+import { TextBlock } from "./sections/TextBlock";
+import { StatusBadge } from "./sections/StatusBadge";
+import { FactBox } from "./sections/FactBox";
+import { ChartGrid } from "./sections/ChartGrid";
+import { ScoreGaugeSingle } from "./sections/ScoreGaugeSingle";
+import { ScoreBreakdown } from "./sections/ScoreBreakdown";
+import { MarketVerdictBar } from "./sections/MarketVerdictBar";
+import { InvestmentVerdict } from "./sections/InvestmentVerdict";
+import { ComparisonHeader } from "./sections/ComparisonHeader";
+import { ComparisonTable } from "./sections/ComparisonTable";
+import { WinnerBadges } from "./sections/WinnerBadges";
+import { ProsConsTable } from "./sections/ProsConsTable";
+import { StrengthsRisks } from "./sections/StrengthsRisks";
+import { AffordabilityGapVisual } from "./sections/AffordabilityGapVisual";
+import { SavingsCalculator } from "./sections/SavingsCalculator";
+import { PersonalAffordability } from "./sections/PersonalAffordability";
+import { SavingsTimeline } from "./sections/SavingsTimeline";
+import { AlternativeAreas } from "./sections/AlternativeAreas";
+import { RankedList } from "./sections/RankedList";
+import { IndicatorDashboard } from "./sections/IndicatorDashboard";
+import { PercentileRank } from "./sections/PercentileRank";
+import { ProFormaAssumptions } from "./sections/ProFormaAssumptions";
+import { ProFormaCashFlow } from "./sections/ProFormaCashFlow";
+import { ProFormaReturns } from "./sections/ProFormaReturns";
+import { ProFormaSensitivity } from "./sections/ProFormaSensitivity";
+import { ScenarioCard } from "./sections/ScenarioCard";
+import { ForecastDisplay } from "./sections/ForecastDisplay";
 
 // New comparison report sections (2026 redesign)
 import {
@@ -57,18 +54,64 @@ import {
   ScoreCredibility,
   MarketDeepDive,
   AIRecommendation,
-} from './sections/comparison';
+} from "./sections/comparison";
+
+// Chart sections pull in recharts, which doesn't play well with SSR and is
+// heavy enough to keep out of every report's initial chunk. Split into their
+// own lazily-loaded chunks (same ssr:false precedent as ScoreHistoryChart in
+// app/components/scoring/ScoreCard.tsx) with the shared chart skeleton as
+// the loading state.
+const ChartSingle = dynamic(
+  () => import("./sections/ChartSingle").then((mod) => mod.ChartSingle),
+  { ssr: false, loading: () => <SkeletonChart /> },
+);
+// ComparisonChartGrid/ComparisonRadar only take `report` (not the full
+// SectionProps SECTION_COMPONENTS requires) — next/dynamic's generic
+// inference resolves to their narrower prop type and then checks it
+// against ComponentType<SectionProps> as a strict (class-style) construct
+// signature, which fails where the plain, unwrapped function passed under
+// bivariant method-style checking. Adapt with a thin SectionProps wrapper.
+const ComparisonChartGrid = dynamic(
+  () =>
+    import("./sections/ComparisonChartGrid").then((mod) => {
+      const Component = mod.ComparisonChartGrid;
+      return function ComparisonChartGridDynamic({ report }: SectionProps) {
+        return <Component report={report} />;
+      };
+    }),
+  { ssr: false, loading: () => <SkeletonChart /> },
+);
+const ComparisonRadar = dynamic(
+  () =>
+    import("./sections/ComparisonRadar").then((mod) => {
+      const Component = mod.ComparisonRadar;
+      return function ComparisonRadarDynamic({ report }: SectionProps) {
+        return <Component report={report} />;
+      };
+    }),
+  { ssr: false, loading: () => <SkeletonChart /> },
+);
+const BudgetBreakdown = dynamic(
+  () => import("./sections/BudgetBreakdown").then((mod) => mod.BudgetBreakdown),
+  { ssr: false, loading: () => <SkeletonChart type="pie" /> },
+);
+const ScenarioChart = dynamic(
+  () => import("./sections/ScenarioChart").then((mod) => mod.ScenarioChart),
+  { ssr: false, loading: () => <SkeletonChart /> },
+);
 
 // Wrapper components to adapt existing sections to SectionProps interface
 function ScoreGaugeDualWrapper({ section, report }: SectionProps) {
   const userType = report.user_type;
-  const heroScore = userType === 'investor'
-    ? report.investoredge_score
-    : report.homeready_score;
-  const heroScoreType = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
-  const details = userType === 'investor'
-    ? report.scores_snapshot?.investoredge_details
-    : report.scores_snapshot?.homeready_details;
+  const heroScore =
+    userType === "investor"
+      ? report.investoredge_score
+      : report.homeready_score;
+  const heroScoreType = userType === "investor" ? "InvestorEdge" : "HomeReady";
+  const details =
+    userType === "investor"
+      ? report.scores_snapshot?.investoredge_details
+      : report.scores_snapshot?.homeready_details;
 
   return (
     <HeroScoreSection
@@ -82,9 +125,9 @@ function ScoreGaugeDualWrapper({ section, report }: SectionProps) {
 }
 
 function AiNarrativeWrapper({ section, report }: SectionProps) {
-  const narrativeKey = section.config?.narrative_id || 'market_summary';
+  const narrativeKey = section.config?.narrative_id || "market_summary";
   const content = report.ai_narrative?.[narrativeKey];
-  const title = section.config?.title || 'Analysis';
+  const title = section.config?.title || "Analysis";
 
   if (!content) return null;
 
@@ -98,7 +141,9 @@ function MarketNewsWrapper({ section, report }: SectionProps) {
 
   if (!news) return null;
 
-  return <NewsSection news={news} sentiment={sentiment} fetchedAt={fetchedAt} />;
+  return (
+    <NewsSection news={news} sentiment={sentiment} fetchedAt={fetchedAt} />
+  );
 }
 
 // Report Title Section
@@ -115,9 +160,7 @@ function ReportTitleSection({ section, report, branding }: SectionProps) {
       <h1 className="text-3xl font-bold text-on-surface mb-2">
         {report.title}
       </h1>
-      <p className="text-on-surface-variant">
-        {report.primary_geography_name}
-      </p>
+      <p className="text-on-surface-variant">{report.primary_geography_name}</p>
     </div>
   );
 }
@@ -216,13 +259,20 @@ interface SectionRendererProps {
  * Renders a single report section based on its type
  * Falls back gracefully if component doesn't exist
  */
-export function SectionRenderer({ section, report, branding }: SectionRendererProps) {
+export function SectionRenderer({
+  section,
+  report,
+  branding,
+}: SectionRendererProps) {
   const Component = SECTION_COMPONENTS[section.type];
 
   // Log section errors for debugging
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    console.error(`[Report ${report.id}] Section "${section.type}" failed:`, error);
-    console.error('Component stack:', errorInfo.componentStack);
+    console.error(
+      `[Report ${report.id}] Section "${section.type}" failed:`,
+      error,
+    );
+    console.error("Component stack:", errorInfo.componentStack);
   };
 
   if (!Component) {
@@ -247,7 +297,7 @@ export function SectionRenderer({ section, report, branding }: SectionRendererPr
 export function PageRenderer({
   page,
   report,
-  branding
+  branding,
 }: {
   page: { name: string; sections: ReportSection[] };
   report: ReportWithTemplate;
