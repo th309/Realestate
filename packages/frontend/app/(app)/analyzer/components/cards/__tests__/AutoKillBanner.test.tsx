@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { AutoKillFlag } from "@propertyiq/analyzer-core";
 import { AutoKillBanner } from "../AutoKillBanner";
 
@@ -29,5 +29,31 @@ describe("AutoKillBanner", () => {
     const { container } = render(<AutoKillBanner autoKills={kills} />);
     const banner = container.querySelector("[data-auto-kill-banner]");
     expect(banner?.getAttribute("role")).toBe("alert");
+  });
+
+  it("renders an Edit criteria button top-right when onEditCriteria is provided", () => {
+    const onEdit = vi.fn();
+    render(
+      <AutoKillBanner
+        autoKills={[{ code: "DSCR_BELOW_1", message: "DSCR below 1.0" }]}
+        onEditCriteria={onEdit}
+      />,
+    );
+    const btn = screen.getByRole("button", {
+      name: /edit auto-kill criteria/i,
+    });
+    fireEvent.click(btn);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders no button when onEditCriteria is absent", () => {
+    render(
+      <AutoKillBanner
+        autoKills={[{ code: "DSCR_BELOW_1", message: "DSCR below 1.0" }]}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /edit auto-kill criteria/i }),
+    ).toBeNull();
   });
 });

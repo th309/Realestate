@@ -15,6 +15,7 @@ import { deriveVerdict } from "./lib/format-helpers";
 import { GradingResultPanel } from "./components/cards/GradingResultPanel";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
+import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
@@ -84,6 +85,11 @@ export default function AnalyzerClient({
   );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<ThresholdsTabId>("thresholds");
+  const openDrawer = (tab: ThresholdsTabId) => {
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
 
   useAnalyzerDefaultsPrefill({
     setInput: analyzer.setInput,
@@ -293,7 +299,8 @@ export default function AnalyzerClient({
                 strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
                 onApplyLever={analyzer.setInput}
                 {...upgradeProps}
-                onCustomizeClick={() => setDrawerOpen(true)}
+                onCustomizeClick={() => openDrawer("thresholds")}
+                onEditAutoKillCriteria={() => openDrawer("autokill")}
                 presetLabel="Balanced"
                 aiProps={sectionAi.recommendation_analysis}
               />
@@ -386,6 +393,7 @@ export default function AnalyzerClient({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+        initialTab={drawerTab}
       />
     </main>
   );
