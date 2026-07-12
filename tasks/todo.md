@@ -25,11 +25,21 @@ Branch `worktree-PWA` (user-requested worktree). Full analysis + plan: `docs/pla
 - [ ] **3.6** Haptics · **3.7** dynamic theme-color · **3.8** View Transitions
 - [x] **3.9** Hover→touch fallbacks (ConfidenceDisplay, RichTooltip, MetricTooltip, base Tooltip) — 911c8334+ceb07881+e2c6a6e6, approved ✅ · **3.10** keyboard occlusion — `interactiveWidget` shipped in 2.2 (dc9394a0)
 
-## Phase 4 — Offline + caching
+## Phase 4 — Offline + caching (WAVE 2, merged direct to develop 2026-07-12)
 
-- [ ] **4.1** SW SWR on /backend GETs (allowlist + sign-out purge) · **4.2** RQ persister (IndexedDB)
-- [ ] **4.3** "Cached data from X ago" indicator · **4.4** GeoJSON/fonts caching
-- [ ] **4.5** useOnlineStatus + OfflineBanner + map honest-failure · **4.6** lazy-load heavy libs + bundle analyzer
+- [x] **4.1** SW SWR on /backend GETs (controller-verified public allowlist + private/no-store backstop + sign-out purge) — 22b40fb2+411e83d2, reviewed ✅ · **4.2** RQ persister (IndexedDB, mutation-dehydration blocked, sign-out purge) — 829a2510+78c4d428, reviewed ✅
+- [x] **4.3** CachedDataBadge (market header + report viewer) · **4.4** GeoJSON CacheFirst — 8ca43300/22b40fb2, reviewed ✅
+- [x] **4.5** useOnlineStatus + OfflineBanner (mounted a70e71aa, z-fix c729c173) + map honest-failure · **4.6** /map first-load −56% (923→405KB gzip) + bundle analyzer — 8ca43300/5e369e78/346a50f9, reviewed ✅
+
+### Wave-2 extras (same day)
+
+- [x] Anon report-generate showed PRO paywall instead of "Sign up free" (conversion bug, pre-existing) — e00d3351, e2e-proven ✅
+- [x] GraphsPageV2 spinners → skeletons — 93e6987c+4858d04f ✅ · SW snackbar dismiss + nav offset — 485bb2bf ✅ · Skeleton.tsx split (skeleton-parts/, case-collision resolved) — 51c45a9f..695a543b ✅ · useDismissableOpen extraction + confidence testids — 556603da ✅
+
+### Follow-up tickets (final wave-2 review, deduped)
+
+**Soon:** star-threshold mismatch (getStarCount 90/80/70/55 vs e2e fixture 90/70/55/40 — 2 e2e asserts can't pass); CI blind to ALL TypeScript errors (`ignoreBuildErrors:true` + eslint-only CI + Linux runners — the skeleton case-collision proved it); Playwright setup-project auth fixtures broken (enterprise + P1-signoff login timeout).
+**Someday:** delete dead report path (ReportViewerRefined/SectionRenderer/orphaned chart sections — recharts lazy-load was a no-op on it; also clears legacy investoredge/homeready refs); remove dead deps docx+pptxgenjs; formatRelativeTimeShort dedup (3 copies); useMapLayers 333>300 split; Tooltip.tsx 4-export split; GraphsPageV2 924-line split; InstallBanner×snackbar bottom overlap; SW snackbar exit-fade; SW score-prefix anchoring; skeleton shim TS1149→TS1261 comment; SR-only race-mode labels.
 
 ## Phase 5 — Auth hardening, capabilities, stores
 
