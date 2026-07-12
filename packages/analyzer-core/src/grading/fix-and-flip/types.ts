@@ -11,6 +11,7 @@
  */
 import type { FlipInput } from "../../types";
 import type { MetricThreshold } from "../shared/types";
+import type { FixAndFlipAutoKillConfig } from "../shared/autokill-config";
 
 /**
  * Financing model for the flip.
@@ -139,4 +140,6 @@ export interface FixAndFlipThresholds {
     annualized_roi: number;
     net_profit_dollar: number;
   };
+  /** Optional per-user auto-kill overrides. Absent = engine defaults. */
+  autoKills?: FixAndFlipAutoKillConfig;
 }

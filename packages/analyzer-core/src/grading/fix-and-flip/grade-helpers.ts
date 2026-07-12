@@ -23,8 +23,13 @@ import {
   netProfit,
 } from "./metrics";
 import type { FixAndFlipContext, FixAndFlipInput } from "./types";
+import {
+  AUTOKILL_DEFAULTS,
+  ruleEnabled,
+  ruleValue,
+  type FixAndFlipAutoKillConfig,
+} from "../shared/autokill-config";
 
-const DEFAULT_MIN_NET_PROFIT = 10_000;
 const DEFAULT_MARKET_AVG_RATE_PCT = 7;
 
 export function formatPercent(decimal: number): string {
@@ -66,17 +71,27 @@ export function buildFlipMetric(
 export function collectFlipAutoKills(
   input: FixAndFlipInput,
   context: FixAndFlipContext,
+  config?: FixAndFlipAutoKillConfig,
 ): AutoKillFlag[] {
   const kills: AutoKillFlag[] = [];
+  const D = AUTOKILL_DEFAULTS.FIX_AND_FLIP;
   const profit = netProfit(input);
-  const minProfit = context.minimumNetProfit ?? DEFAULT_MIN_NET_PROFIT;
+  // Config wins over the per-request context override, which wins over default.
+  const minProfit = ruleValue(
+    config?.minNetProfit,
+    context.minimumNetProfit ?? D.minNetProfit,
+  );
 
-  if (profit < 0) {
+  if (ruleEnabled(config?.projectLoss) && profit < 0) {
     kills.push({
       code: "PROJECT_LOSS",
       message: `Projected net loss of ${formatDollars(profit)} — exit does not cover total project costs.`,
     });
-  } else if (profit < minProfit) {
+  } else if (
+    ruleEnabled(config?.minNetProfit) &&
+    profit >= 0 &&
+    profit < minProfit
+  ) {
     kills.push({
       code: "PROFIT_BELOW_FLOOR",
       message: `Projected profit ${formatDollars(profit)} is below the ${formatDollars(minProfit)} minimum-profit floor.`,
@@ -84,25 +99,34 @@ export function collectFlipAutoKills(
   }
 
   // Rehab unverified + insufficient contingency = high blow-up risk.
+  const contingencyFloor = ruleValue(
+    config?.rehabContingency,
+    D.rehabContingency,
+  );
   if (
+    ruleEnabled(config?.rehabContingency) &&
     context.rehabVerification === "estimate" &&
-    effectiveContingencyPct(input) < 0.1 &&
+    effectiveContingencyPct(input) < contingencyFloor &&
     !context.rehabRiskAccepted
   ) {
     kills.push({
       code: "REHAB_UNVERIFIED_NO_CONTINGENCY",
-      message:
-        "Rehab is an estimate (not a contractor bid or itemized scope) and contingency is below 10% — high risk of cost overruns.",
+      message: `Rehab is an estimate (not a contractor bid or itemized scope) and contingency is below ${Math.round(contingencyFloor * 100)}% — high risk of cost overruns.`,
     });
   }
 
-  // Hold materially longer than market DOM (×2) signals an illiquid exit.
-  if (context.marketDomDays != null && !context.extendedHoldAccepted) {
+  // Hold materially longer than market DOM signals an illiquid exit.
+  const domMultiple = ruleValue(config?.extremeHold, D.extremeHold);
+  if (
+    ruleEnabled(config?.extremeHold) &&
+    context.marketDomDays != null &&
+    !context.extendedHoldAccepted
+  ) {
     const holdDays = effectiveHoldMonths(input) * 30;
-    if (holdDays > context.marketDomDays * 2) {
+    if (holdDays > context.marketDomDays * domMultiple) {
       kills.push({
         code: "EXTREME_HOLD",
-        message: `Planned hold of ${Math.round(holdDays)} days is more than 2× market DOM (${context.marketDomDays}) — exit liquidity is suspect.`,
+        message: `Planned hold of ${Math.round(holdDays)} days is more than ${domMultiple}× market DOM (${context.marketDomDays}) — exit liquidity is suspect.`,
       });
     }
   }
