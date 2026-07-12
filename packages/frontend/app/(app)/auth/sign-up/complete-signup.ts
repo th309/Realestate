@@ -31,6 +31,10 @@ export async function completeSignup(
   // Also surface the conversion in GA4 (internal trackEvent never reaches gtag).
   // Mark `sign_up` as a Key Event in the GA4 admin to see it as a conversion.
   gtagEvent("sign_up", { method: opts.method });
+  // The reverse Pro trial is granted 1:1 at signup, so this is the correct,
+  // once-per-user location for trial_start (not startOnboardingTrial() call
+  // sites — tour/page.tsx re-runs on every market change).
+  gtagEvent("trial_start", { tier: "pro" });
   flush(); // send queued events before navigation unmounts the page
 
   const supabase = createSupabaseBrowserClient();
