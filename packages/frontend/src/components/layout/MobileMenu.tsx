@@ -143,7 +143,7 @@ export function MobileMenu({
     "flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors";
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       {/* Scrim (below the 64px header so the header's close button stays live) */}
       <div
         className={`fixed inset-x-0 bottom-0 top-16 z-[60] bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${

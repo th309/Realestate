@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
+import { getScoreColorOnDark } from "@/app/components/scoring/score-color";
 import { trackEvent } from "@/lib/analytics/tracker";
 
 interface StickyScore {
@@ -128,10 +128,14 @@ export function StickyScoreBar({ scores }: StickyScoreBarProps) {
             <span key={s.name} className="flex items-center gap-1">
               {i > 0 && <span className="text-white/30 mx-1">|</span>}
               <span className="text-white/80">{s.name}</span>
+              {/* Same treatment as ScoreTeaserRow: 14px bold can't make 4.5:1
+                  in-hue on this dark bar, so white text + ramp-colored dot. */}
               <span
-                className="font-[family-name:var(--font-roboto-mono)] font-bold"
-                style={{ color: getScoreColor(s.score) }}
-              >
+                aria-hidden="true"
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: getScoreColorOnDark(s.score) }}
+              />
+              <span className="font-[family-name:var(--font-roboto-mono)] font-bold text-white">
                 {s.score}
               </span>
             </span>

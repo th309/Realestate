@@ -6,6 +6,7 @@ import { TrialConversionService } from './trial-conversion.service';
 import { BillingUserSyncService } from './billing-user-sync.service';
 import { McpEntitlementsInvalidator } from '../entitlements/mcp-entitlements-invalidator.service';
 import { TrialEndingNotificationService } from './trial-ending-notification.service';
+import { PaymentFailedNotificationService } from './payment-failed-notification.service';
 import Stripe from 'stripe';
 
 /**
@@ -31,6 +32,8 @@ export class BillingWebhookService {
     private readonly referralCredit?: ReferralCreditService,
     @Optional()
     private readonly trialEndingNotifier?: TrialEndingNotificationService,
+    @Optional()
+    private readonly paymentFailedNotifier?: PaymentFailedNotificationService,
   ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
@@ -65,6 +68,11 @@ export class BillingWebhookService {
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         await this.handlePaymentFailed(invoice);
+        await this.paymentFailedNotifier?.handlePaymentFailed(invoice);
+        break;
+      }
+      case 'invoice.payment_succeeded': {
+        await this.handlePaymentRecovered(event.data.object);
         break;
       }
       case 'customer.subscription.trial_will_end': {
@@ -221,5 +229,37 @@ export class BillingWebhookService {
       this.logger.warn(`Payment failed for user ${profile.id}`);
       await this.mcpInvalidator.invalidate([profile.id]);
     }
+  }
+
+  /**
+   * Clears `past_due` back to `active` when a previously failing invoice
+   * succeeds (Stripe Smart Retries recovered the card, or the user updated
+   * it). Only acts when the profile is currently `past_due` — a normal
+   * renewal also fires `invoice.payment_succeeded` and must be a no-op here.
+   */
+  private async handlePaymentRecovered(invoice: Stripe.Invoice): Promise<void> {
+    const customerId =
+      typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id;
+
+    if (!customerId) return;
+
+    const client = this.supabase.getClient();
+    const { data: profile } = await client
+      .from('user_profiles')
+      .select('id, subscription_status')
+      .eq('stripe_customer_id', customerId)
+      .single();
+
+    if (!profile || profile.subscription_status !== 'past_due') return;
+
+    await client
+      .from('user_profiles')
+      .update({ subscription_status: 'active' })
+      .eq('id', profile.id);
+
+    this.logger.log(`Payment recovered for user ${profile.id}`);
+    await this.mcpInvalidator.invalidate([profile.id]);
   }
 }

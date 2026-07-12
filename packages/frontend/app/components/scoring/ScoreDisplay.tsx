@@ -64,20 +64,12 @@ export interface ScoreDisplayProps {
   className?: string;
 }
 
-/**
- * Calculate color on a gradient from red (0) to green (100)
- * 0 = Red (Hue 0)
- * 100 = Green (Hue 120)
- * Smooth gradient transition through the full color spectrum
- */
-export const getScoreColor = (
-  value: number,
-  maxValue: number = 100,
-): string => {
-  const percentage = Math.min(Math.max(value / maxValue, 0), 1);
-  const hue = percentage * 120; // 0 = red, 120 = green (smooth transition)
-  return `hsl(${hue}, 100%, 50%)`;
-};
+// Score color now lives in ./score-color (plain module, server-importable) so
+// Server Components (ScoreTeaser, OG images) share the exact same brand ramp.
+// Imported (used by the ring strokes below) AND re-exported to keep this file
+// the canonical import surface (§9).
+import { getScoreColor } from "./score-color";
+export { getScoreColor };
 
 /**
  * Get letter grade from score (0-100)

@@ -12,6 +12,7 @@ import { TrialConversionService } from './trial-conversion.service';
 import { OrgBillingModule } from '../org-billing/org-billing.module';
 import { ReferralCreditService } from '../referrals/referral-credit.service';
 import { TrialEndingNotificationService } from './trial-ending-notification.service';
+import { PaymentFailedNotificationService } from './payment-failed-notification.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { TrialEndingNotificationService } from './trial-ending-notification.serv
     TrialConversionService,
     ReferralCreditService,
     TrialEndingNotificationService,
+    PaymentFailedNotificationService,
   ],
   controllers: [BillingController],
   exports: [

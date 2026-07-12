@@ -14,6 +14,8 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AccountLinkedToast } from "@/components/auth/AccountLinkedToast";
 import { BeaconProvider } from "@/app/components/beacons/BeaconProvider";
 import { fetchOnboardingState } from "@/lib/data";
+import { TrialEndingBanner } from "@/app/components/paywall/TrialEndingBanner";
+import { PostTrialPaywallGate } from "@/app/components/paywall/PostTrialPaywallGate";
 
 /**
  * Extract HTTP status code from an error.
@@ -173,7 +175,11 @@ export function Providers({
         <ToastProvider>
           <EntitlementsProvider initialState={initialEntitlementState}>
             <OnboardingBeaconProvider>
-              <PaywallProvider>{children}</PaywallProvider>
+              <PaywallProvider>
+                <TrialEndingBanner />
+                <PostTrialPaywallGate />
+                {children}
+              </PaywallProvider>
             </OnboardingBeaconProvider>
           </EntitlementsProvider>
           <ExitIntentModal />

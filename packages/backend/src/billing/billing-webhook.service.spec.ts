@@ -281,4 +281,70 @@ describe('BillingWebhookService — MCP cache invalidation', () => {
       expect(invalidator.invalidate).not.toHaveBeenCalled();
     });
   });
+
+  describe('handlePaymentRecovered', () => {
+    it('clears past_due to active and invalidates MCP', async () => {
+      supabaseClientMock.single.mockResolvedValueOnce({
+        data: { id: 'user-recovered', subscription_status: 'past_due' },
+      });
+
+      const event = {
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            customer: 'cus_recovered',
+          } as unknown as Stripe.Invoice,
+        },
+      } as Stripe.Event;
+
+      await service.handleWebhookEvent(event);
+
+      expect(supabaseClientMock.update).toHaveBeenCalledWith({
+        subscription_status: 'active',
+      });
+      expect(supabaseClientMock.eq).toHaveBeenCalledWith(
+        'id',
+        'user-recovered',
+      );
+      expect(invalidator.invalidate).toHaveBeenCalledWith(['user-recovered']);
+    });
+
+    it('leaves an already-active profile unchanged (no redundant update)', async () => {
+      supabaseClientMock.single.mockResolvedValueOnce({
+        data: { id: 'user-active', subscription_status: 'active' },
+      });
+
+      const event = {
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            customer: 'cus_active',
+          } as unknown as Stripe.Invoice,
+        },
+      } as Stripe.Event;
+
+      await service.handleWebhookEvent(event);
+
+      expect(supabaseClientMock.update).not.toHaveBeenCalled();
+      expect(invalidator.invalidate).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no profile is found for the customer', async () => {
+      supabaseClientMock.single.mockResolvedValueOnce({ data: null });
+
+      const event = {
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            customer: 'cus_ghost',
+          } as unknown as Stripe.Invoice,
+        },
+      } as Stripe.Event;
+
+      await service.handleWebhookEvent(event);
+
+      expect(supabaseClientMock.update).not.toHaveBeenCalled();
+      expect(invalidator.invalidate).not.toHaveBeenCalled();
+    });
+  });
 });

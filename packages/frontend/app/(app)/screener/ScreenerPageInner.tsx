@@ -298,7 +298,10 @@ export function ScreenerPageInner() {
   }, []);
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    // w-full is load-bearing: AppShell's <main> is a flex column, and mx-auto
+    // disables flex stretch — without an explicit width this container sizes
+    // to the table's intrinsic width and blows out the mobile viewport.
+    <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* ── Page header ── */}
       <ScreenerHeader
         dataAsOf={dataAsOf}
@@ -308,13 +311,13 @@ export function ScreenerPageInner() {
       />
 
       {/* ── Tabs + window selector ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4">
         <ScreenerTabs tab={tab} onChange={setTabState} />
         <WindowSelector value={changeWindow} onChange={handleWindowChange} />
       </div>
 
       {/* ── Geo selector + (screener-only) preset chips ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4">
         <GeoSegmentedControl value={geo} onChange={handleGeoChange} />
         <StateSelect value={stateFilter} onChange={handleStateChange} />
         <MarketSizeToggle

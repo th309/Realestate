@@ -48,10 +48,15 @@ export function ScoreTeaserRow({
         <span className="text-xs text-[#C5CAE9] uppercase tracking-wide">
           {label}
         </span>
+        {/* 14px text can't hit 4.5:1 in a hue that still reads as red/green on
+            the indigo gradient — so the score stays white (13:1) and the ramp
+            color rides on a decorative dot; the label text carries the signal. */}
         <span
-          className="font-[family-name:var(--font-roboto-mono)] text-sm font-bold w-8 text-center rounded-md px-1.5 py-0.5"
-          style={{ color, textShadow: "0 0 1px rgba(0,0,0,0.1)" }}
-        >
+          aria-hidden="true"
+          className="inline-block w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        <span className="font-[family-name:var(--font-roboto-mono)] text-sm font-bold w-8 text-center text-white">
           {score}
         </span>
       </div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 function ScreenerSkeleton() {
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-pulse">
+    <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-pulse">
       <div className="h-8 w-56 bg-surface-container rounded-lg" />
       <div className="h-5 w-80 bg-surface-container rounded-lg" />
       <div className="flex gap-3">

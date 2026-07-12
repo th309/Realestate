@@ -105,7 +105,9 @@ export function MarketMomentumMap({
           >
             {formatMonthLabel(currentMonth)}
           </p>
-          {era && <p className="text-xs text-primary">{era.caption}</p>}
+          {/* Always rendered with reserved line height so the header — and the
+              map below it — never shifts as the playhead enters/leaves eras. */}
+          <p className="min-h-4 text-xs text-primary">{era?.caption}</p>
         </div>
       </header>
 

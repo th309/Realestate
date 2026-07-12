@@ -46,7 +46,7 @@ export function MarketSizeToggle({
       }
       className={`
         inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-        border transition-all duration-200
+        whitespace-nowrap border transition-all duration-200
         ${
           hideSmallMarkets
             ? "bg-primary text-on-primary border-primary shadow-sm"

@@ -8,6 +8,12 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { StripeService } from './stripe.service';
 import { BillingWebhookService } from './billing-webhook.service';
+import { BillingUserSyncService } from './billing-user-sync.service';
+import {
+  guardDriftedCheckout,
+  resolveTrialDaysForCheckout,
+  buildPortalProducts,
+} from './checkout-guards';
 import Stripe from 'stripe';
 
 /**
@@ -24,6 +30,7 @@ export class BillingService {
     private readonly stripe: StripeService,
     private readonly config: ConfigService,
     private readonly webhookService: BillingWebhookService,
+    private readonly userSync: BillingUserSyncService,
   ) {
     const url = this.config.get<string>('FRONTEND_URL');
     if (!url) {
@@ -63,13 +70,9 @@ export class BillingService {
       throw new BadRequestException('User profile not found');
     }
 
-    // Guard: block a NEW checkout for ANY user with a LIVE paid Stripe sub,
+    // Guard (F13): block a NEW checkout for ANY user with a LIVE paid Stripe
+    // sub (`stripe_subscription_id` populated + non-terminal status),
     // REGARDLESS of requested tier — a second concurrent sub double-charges.
-    // Live paid sub = `stripe_subscription_id` populated (set for any real
-    // Stripe sub incl. card-trials; NULLed by the delete webhook on cancel)
-    // AND a non-terminal status (active/past_due/unpaid/trialing). Free users
-    // and app-level no-card trial users (status='trialing') have NO
-    // `stripe_subscription_id`, so they still convert to paid via checkout.
     // Paid subscribers change tiers via the billing portal, not a new checkout.
     const LIVE_PAID_STATUSES = ['active', 'past_due', 'unpaid', 'trialing'];
     if (
@@ -99,6 +102,17 @@ export class BillingService {
         .eq('id', userId);
     }
 
+    // Guard: DB may have drifted from Stripe (missed webhook) — re-sync and
+    // route to the portal instead of risking a second concurrent subscription.
+    const driftedPortalUrl = await guardDriftedCheckout({
+      stripeCustomerId,
+      userId,
+      stripeService: this.stripe,
+      userSync: this.userSync,
+      getBillingPortalUrl: (id) => this.getBillingPortalUrl(id),
+    });
+    if (driftedPortalUrl) return driftedPortalUrl;
+
     // Look up Stripe price ID from subscription_tiers
     const priceColumn =
       interval === 'year'
@@ -106,7 +120,7 @@ export class BillingService {
         : 'stripe_price_monthly_id';
     const { data: tierData } = await client
       .from('subscription_tiers')
-      .select(`${priceColumn}`)
+      .select(`${priceColumn}, price_monthly, price_yearly`)
       .eq('slug', tier)
       .single();
 
@@ -116,6 +130,10 @@ export class BillingService {
         `No Stripe price configured for tier: ${tier} (${interval})`,
       );
     }
+    // subscription_tiers price_monthly/price_yearly are dollars (Stripe cents differ).
+    const rawPlanPrice =
+      interval === 'year' ? tierData?.price_yearly : tierData?.price_monthly;
+    const purchaseValue = Number(rawPlanPrice) || 0;
 
     // Check if trial is enabled (enterprise skips trial)
     let trialDays: number | undefined;
@@ -129,13 +147,15 @@ export class BillingService {
         trialDays = trialConfig.duration_days;
       }
     }
+    // No second free trial for users who already used the reverse trial.
+    trialDays = await resolveTrialDaysForCheckout(client, userId, trialDays);
 
     // Build success/cancel URLs
     const baseUrl = this.getFrontendUrl();
     const returnParam = returnContext
       ? `&returnContext=${encodeURIComponent(returnContext)}`
       : '';
-    const successUrl = `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+    const successUrl = `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}&value=${purchaseValue}`;
     const cancelUrl = `${baseUrl}/pricing`;
 
     return this.stripe.createCheckoutSession({
@@ -152,11 +172,7 @@ export class BillingService {
     return this.webhookService.handleWebhookEvent(event);
   }
 
-  /**
-   * Cancel the user's subscription at the end of the current billing period.
-   * The user retains full access until the period ends, then Stripe fires
-   * `customer.subscription.deleted` which downgrades to free.
-   */
+  /** Cancels at period end; user keeps access until the delete webhook downgrades to free. */
   async cancelSubscription(
     userId: string,
   ): Promise<{ cancelAt: string; currentPeriodEnd: string }> {
@@ -187,10 +203,7 @@ export class BillingService {
     return { cancelAt: periodEnd, currentPeriodEnd: periodEnd };
   }
 
-  /**
-   * Resume a subscription that was scheduled for cancellation,
-   * so it renews normally at the end of the current billing period.
-   */
+  /** Resumes a subscription scheduled for cancellation so it renews normally. */
   async resumeSubscription(userId: string): Promise<void> {
     const client = this.supabase.getClient();
     const { data: profile } = await client
@@ -210,10 +223,7 @@ export class BillingService {
     this.logger.log(`User ${userId} resumed subscription`);
   }
 
-  /**
-   * Fetch the current subscription status from Stripe, including
-   * whether cancellation is pending and the period end date.
-   */
+  /** Fetches current Stripe subscription status, incl. pending cancellation + period end. */
   async getSubscriptionStatus(userId: string): Promise<{
     status: string;
     cancelAtPeriodEnd: boolean;
@@ -269,15 +279,7 @@ export class BillingService {
       )
       .neq('slug', 'free');
 
-    const products = (tiers ?? [])
-      .filter((t) => t.stripe_product_id)
-      .map((t) => ({
-        productId: t.stripe_product_id as string,
-        priceIds: [t.stripe_price_monthly_id, t.stripe_price_yearly_id].filter(
-          Boolean,
-        ) as string[],
-      }))
-      .filter((p) => p.priceIds.length > 0);
+    const products = buildPortalProducts(tiers ?? []);
 
     let configurationId: string | undefined;
     if (products.length > 0) {

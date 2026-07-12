@@ -6,10 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
 import { fetchScore } from "@/lib/data";
 
-function getScoreColor(value: number): string {
-  const pct = Math.min(Math.max(value / 100, 0), 1);
-  return `hsl(${pct * 120}, 100%, 50%)`;
-}
+import { getScoreColorOnDark } from "@/app/components/scoring/score-color";
 
 function getScoreLabel(score: number): string {
   if (score >= 90) return "VERY STRONG";
@@ -217,7 +214,7 @@ export function HeroSearchBar() {
             <div className="flex items-center gap-4 mb-4">
               <span
                 className="font-[family-name:var(--font-roboto-mono)] text-4xl font-bold"
-                style={{ color: getScoreColor(selected.score) }}
+                style={{ color: getScoreColorOnDark(selected.score) }}
               >
                 {selected.score}
               </span>

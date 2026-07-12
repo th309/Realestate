@@ -6,6 +6,7 @@ import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements";
+import { gtagEvent } from "@/lib/analytics/tracker";
 
 const TIER_LABELS: Record<string, string> = {
   enterprise: "Enterprise",
@@ -24,6 +25,8 @@ function SuccessContent() {
       ? rawReturn
       : "/map";
   const [refreshed, setRefreshed] = useState(false);
+  const sessionId = searchParams.get("session_id");
+  const purchaseValue = Number(searchParams.get("value") ?? "0");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,6 +37,35 @@ function SuccessContent() {
   useEffect(() => {
     refresh().then(() => setRefreshed(true));
   }, [refresh]);
+
+  // Fires once per session_id, persisted in sessionStorage so a page reload
+  // (F5) doesn't re-fire purchase with the same transaction_id — GA4 does not
+  // dedupe purchase revenue by transaction_id. Gated on `refreshed` so `tier`
+  // reflects the purchased tier rather than the pre-refresh default ("free").
+  useEffect(() => {
+    if (!sessionId || !refreshed) return;
+    if (typeof window === "undefined") return;
+    const key = `ga_purchase_fired:${sessionId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    const purchaseAmount = Number.isFinite(purchaseValue) ? purchaseValue : 0;
+    gtagEvent("purchase", {
+      transaction_id: sessionId,
+      value: purchaseAmount,
+      currency: "USD",
+      // Top-level `tier` powers the "Tier" GA4 custom dimension on purchases;
+      // items[].item_id below only feeds the item-scoped ecommerce reports.
+      tier,
+      items: [
+        {
+          item_id: tier,
+          item_name: TIER_LABELS[tier] ?? tier,
+          price: purchaseAmount,
+          quantity: 1,
+        },
+      ],
+    });
+  }, [sessionId, purchaseValue, tier, refreshed]);
 
   // Defense-in-depth: show loading while auth resolves, bail out if unauthenticated
   if (authLoading || !user) {

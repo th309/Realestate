@@ -4,13 +4,7 @@ import { ScoreTeaserRow } from "./ScoreTeaserRow";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// Inlined from ScoreDisplay — that module is "use client" and can't be
-// called from a Server Component.
-function getScoreColor(value: number): string {
-  const percentage = Math.min(Math.max(value / 100, 0), 1);
-  const hue = percentage * 120;
-  return `hsl(${hue}, 100%, 50%)`;
-}
+import { getScoreColorOnDark } from "@/app/components/scoring/score-color";
 
 function getScoreLabel(score: number): string {
   if (score >= 90) return "VERY STRONG";
@@ -90,7 +84,7 @@ export async function ScoreTeaser() {
                 hotOrCold="hot"
                 href={resolveMetroHref(m.location_id)}
                 label={getScoreLabel(m.score)}
-                color={getScoreColor(m.score)}
+                color={getScoreColorOnDark(m.score)}
               />
             ))}
           </div>
@@ -110,7 +104,7 @@ export async function ScoreTeaser() {
                 hotOrCold="cold"
                 href={resolveMetroHref(m.location_id)}
                 label={getScoreLabel(m.score)}
-                color={getScoreColor(m.score)}
+                color={getScoreColorOnDark(m.score)}
               />
             ))}
           </div>

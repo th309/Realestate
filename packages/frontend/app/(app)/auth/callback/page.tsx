@@ -229,6 +229,7 @@ function CallbackHandler() {
             gtagEvent("sign_up", {
               method: isEmailConfirm ? "email" : "oauth",
             });
+            gtagEvent("trial_start", { tier: "pro" });
             flush();
           }
         } catch (err) {
