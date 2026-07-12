@@ -1,4 +1,5 @@
 import { StatusDot } from "./StatusDot";
+import { formatRelativeTimeShort } from "@/lib/format/relative-time";
 
 interface AlertItemProps {
   severity: "critical" | "warning" | "info";
@@ -8,15 +9,9 @@ interface AlertItemProps {
 }
 
 function formatTimeAgo(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  if (diffSeconds < 60) return "Just now";
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return formatRelativeTimeShort(Date.now() - new Date(isoString).getTime(), {
+    zeroLabel: "Just now",
+  });
 }
 
 const severityDotVariant: Record<

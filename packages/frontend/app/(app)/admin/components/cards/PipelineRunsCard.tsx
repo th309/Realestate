@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Play } from "lucide-react";
 import { fetchAPIRaw } from "@/lib/data";
+import { formatRelativeTimeShort } from "@/lib/format/relative-time";
 import { DashboardCard } from "../shared/DashboardCard";
 import { StatusDot } from "../shared/StatusDot";
 
@@ -37,12 +38,7 @@ function formatDuration(ms: number | undefined): string {
 }
 
 function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  return formatRelativeTimeShort(Date.now() - new Date(dateStr).getTime());
 }
 
 export function PipelineRunsCard({

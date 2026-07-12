@@ -70,4 +70,30 @@ describe("ServiceWorkerManager", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(applyUpdate).not.toHaveBeenCalled();
   });
+
+  it("keeps the snackbar mounted for the exit fade, then removes it after the transition", () => {
+    vi.useFakeTimers();
+    try {
+      renderWithUpdateWaiting();
+
+      act(() => {
+        screen
+          .getByRole("button", { name: "Dismiss update notification" })
+          .click();
+      });
+
+      // No longer an active status region, but still in the DOM mid-fade.
+      expect(screen.getByText("New version available")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(
+        screen.queryByText("New version available"),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
