@@ -19,6 +19,7 @@ import {
   getGradeColor,
   MARKET_THRESHOLDS,
 } from "../ScoreDisplay";
+import { getScoreColorOnDark } from "../score-color";
 
 // ---------------------------------------------------------------------------
 // getLetterGrade
@@ -142,30 +143,88 @@ describe("getScoreLabel", () => {
 // getScoreColor
 // ---------------------------------------------------------------------------
 
-describe("getScoreColor", () => {
-  it("returns red hue (0) for score 0", () => {
+describe("getScoreColor (brand ramp: Error → Warning → Accent, §8.2)", () => {
+  it("returns brand Error red (#B3261E) for score 0", () => {
     const color = getScoreColor(0);
-    expect(color).toBe("hsl(0, 100%, 50%)");
+    expect(color).toBe("hsl(3, 71%, 41%)");
   });
 
-  it("returns green hue (120) for score 100", () => {
+  it("returns brand Accent green (#00C853) for score 100", () => {
     const color = getScoreColor(100);
-    expect(color).toBe("hsl(120, 100%, 50%)");
+    expect(color).toBe("hsl(145, 100%, 39%)");
   });
 
-  it("returns yellow-ish hue (60) for score 50", () => {
+  it("returns brand Warning amber (#FF8F00) at the midpoint (50)", () => {
     const color = getScoreColor(50);
-    expect(color).toBe("hsl(60, 100%, 50%)");
+    expect(color).toBe("hsl(34, 100%, 50%)");
   });
 
-  it("clamps values above maxValue to 120 hue", () => {
+  it("clamps values above maxValue to the Accent green endpoint", () => {
     const color = getScoreColor(200, 100);
-    expect(color).toBe("hsl(120, 100%, 50%)");
+    expect(color).toBe("hsl(145, 100%, 39%)");
   });
 
-  it("clamps negative values to 0 hue", () => {
+  it("clamps negative values to the Error red endpoint", () => {
     const color = getScoreColor(-10, 100);
-    expect(color).toBe("hsl(0, 100%, 50%)");
+    expect(color).toBe("hsl(3, 71%, 41%)");
+  });
+
+  it("never emits the retired neon hsl(h, 100%, 50%) outside the amber anchor", () => {
+    // Spot-check a few scores: saturation/lightness must come from the brand
+    // ramp, not the old full-chroma gradient.
+    expect(getScoreColor(99)).toBe("hsl(143, 100%, 39%)");
+    expect(getScoreColor(25)).toBe("hsl(19, 86%, 46%)");
+  });
+});
+
+describe("getScoreColorOnDark (lightness pinned for dark brand surfaces)", () => {
+  it("lifts the dark Error-red low end to the 55% lightness floor", () => {
+    expect(getScoreColorOnDark(0)).toBe("hsl(3, 71%, 55%)");
+  });
+
+  it("lifts the Accent-green high end to the floor as well", () => {
+    expect(getScoreColorOnDark(100)).toBe("hsl(145, 100%, 55%)");
+  });
+
+  it("keeps the same hue/saturation as the base ramp", () => {
+    expect(getScoreColorOnDark(50)).toBe("hsl(34, 100%, 55%)");
+  });
+
+  // Real contrast guard, not just string-pinning: the OnDark contract is
+  // "large text on the darkest brand surface (#1A237E) clears WCAG 3:1".
+  // Small-text surfaces must NOT use this as text color (see score-color.ts).
+  it("worst-case red clears 3:1 large-text contrast on #1A237E", () => {
+    const channel = (v: number) =>
+      v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    const luminance = (r: number, g: number, b: number) =>
+      0.2126 * channel(r / 255) +
+      0.7152 * channel(g / 255) +
+      0.0722 * channel(b / 255);
+    const hslToRgb = (
+      h: number,
+      s: number,
+      l: number,
+    ): [number, number, number] => {
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+      const [r, g, b] =
+        h < 60
+          ? [c, x, 0]
+          : h < 120
+            ? [x, c, 0]
+            : h < 180
+              ? [0, c, x]
+              : [0, x, c];
+      return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+    };
+    const contrast = (l1: number, l2: number) =>
+      (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+
+    const [h, s, l] = [3, 71, 55]; // getScoreColorOnDark(0)
+    const red = luminance(...hslToRgb(h, s / 100, l / 100));
+    const darkestSurface = luminance(0x1a, 0x23, 0x7e); // #1A237E
+    expect(contrast(red, darkestSurface)).toBeGreaterThanOrEqual(3);
   });
 });
 
