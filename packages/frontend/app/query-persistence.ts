@@ -58,15 +58,13 @@ export const queryPersister = createAsyncStoragePersister({
 });
 
 /**
- * Cache-busting build id. Mirrors next.config.mjs's `generateBuildId`
- * fallback chain (RAILWAY_GIT_COMMIT_SHA → GIT_HASH → timestamp), but that
- * env var is server-only and NOT inlined into the client bundle unless
- * mirrored under a `NEXT_PUBLIC_` name via next.config.mjs's `env` block —
- * which doesn't exist yet (next.config.mjs is owned by a different task this
- * wave; adding it is a follow-up, not done here). Until that's wired, this
- * always resolves to the "dev" fallback, so a redeploy won't bust the
- * persisted cache by itself — `maxAge` (24h) is the real backstop in the
- * meantime.
+ * Cache-busting build id. next.config.mjs inlines `NEXT_PUBLIC_BUILD_ID` via
+ * its `env` block from the same shared `buildId` const that feeds
+ * `generateBuildId` and the SW /offline precache revision
+ * (RAILWAY_GIT_COMMIT_SHA → GIT_HASH → timestamp fallback). In a real build
+ * this is the git SHA, so every deploy invalidates the persisted cache;
+ * the "dev" fallback only appears in dev where persistence is inert anyway.
+ * `maxAge` (24h) remains a second bound on staleness.
  */
 export const PERSISTED_QUERY_CACHE_BUSTER =
   process.env.NEXT_PUBLIC_BUILD_ID || "dev";
