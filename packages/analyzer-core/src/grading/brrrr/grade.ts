@@ -146,7 +146,7 @@ export function gradeBrrrrDeal(
   }
 
   // 6. Auto-kills always win — force letter to F.
-  const autoKills = collectBrrrrAutoKills(input, context);
+  const autoKills = collectBrrrrAutoKills(input, context, thresholds.autoKills);
   if (autoKills.length > 0) {
     letter = "F";
   }

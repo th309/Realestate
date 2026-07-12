@@ -18,6 +18,12 @@ import type {
   MetricThreshold,
 } from "../shared/types";
 import {
+  AUTOKILL_DEFAULTS,
+  ruleEnabled,
+  ruleValue,
+  type BrrrrAutoKillConfig,
+} from "../shared/autokill-config";
+import {
   cashLeftInDeal,
   effectiveContingencyPct,
   postRefiCapRate,
@@ -25,8 +31,6 @@ import {
   postRefiDSCR,
 } from "./metrics";
 import type { BrrrrContext, BrrrrGradingInput } from "./types";
-
-const DEFAULT_MAX_CASH_TO_LEAVE = 10_000;
 
 export function formatPercent(decimal: number): string {
   return `${(decimal * 100).toFixed(1)}%`;
@@ -73,26 +77,42 @@ export function buildBrrrrMetric(
 
 // ---- Auto-kills ------------------------------------------------------------
 
+/** "1.00" reads worse than the historical "1.0"; trim ONE trailing zero. */
+function formatFloor(value: number): string {
+  return value.toFixed(2).replace(/0$/, "");
+}
+
 export function collectBrrrrAutoKills(
   input: BrrrrGradingInput,
   context: BrrrrContext,
+  config?: BrrrrAutoKillConfig,
 ): AutoKillFlag[] {
   const kills: AutoKillFlag[] = [];
+  const D = AUTOKILL_DEFAULTS.BRRRR;
 
   // REFI_NOT_FINANCEABLE — lenders cap conventional refi at DSCR ≥ 1.0 (some
   // even 1.1+). Below that, the refi simply doesn't close and BRRRR breaks.
   const dscr = postRefiDSCR(input);
-  if (dscr < 1.0 && !context.negativeCashFlowAccepted) {
+  const refiFloor = ruleValue(config?.refiDscrFloor, D.refiDscrFloor);
+  if (
+    ruleEnabled(config?.refiDscrFloor) &&
+    dscr < refiFloor &&
+    !context.negativeCashFlowAccepted
+  ) {
     kills.push({
       code: "REFI_NOT_FINANCEABLE",
-      message: `Post-refi DSCR of ${formatRatio(dscr)} is below 1.0 — most lenders will not refinance this deal.`,
+      message: `Post-refi DSCR of ${formatRatio(dscr)} is below ${formatFloor(refiFloor)} — most lenders will not refinance this deal.`,
     });
   }
 
   // NEGATIVE_POST_REFI_CASHFLOW — even if the refi closes, bleeding cash month
   // after month makes the long-term hold untenable.
   const monthlyCF = postRefiCashFlowMonthly(input);
-  if (monthlyCF < 0 && !context.negativeCashFlowAccepted) {
+  if (
+    ruleEnabled(config?.negativePostRefiCashflow) &&
+    monthlyCF < 0 &&
+    !context.negativeCashFlowAccepted
+  ) {
     kills.push({
       code: "NEGATIVE_POST_REFI_CASHFLOW",
       message: `Post-refi cash flow of ${formatDollars(monthlyCF)}/mo is negative — long-term hold is unsustainable.`,
@@ -101,23 +121,34 @@ export function collectBrrrrAutoKills(
 
   // REHAB_UNVERIFIED_NO_CONTINGENCY — BRRRR rehabs are heavier than F&F (full
   // gut, not paint-and-flooring), so contingency discipline matters MORE.
+  const contingencyFloor = ruleValue(
+    config?.rehabContingency,
+    D.rehabContingency,
+  );
   if (
+    ruleEnabled(config?.rehabContingency) &&
     context.rehabVerification === "estimate" &&
-    effectiveContingencyPct(input) < 0.1 &&
+    effectiveContingencyPct(input) < contingencyFloor &&
     !context.rehabRiskAccepted
   ) {
     kills.push({
       code: "REHAB_UNVERIFIED_NO_CONTINGENCY",
-      message:
-        "Rehab is an estimate (not a contractor bid or itemized scope) and contingency is below 10% — high risk of cost overruns invalidating the refi appraisal.",
+      message: `Rehab is an estimate (not a contractor bid or itemized scope) and contingency is below ${Math.round(contingencyFloor * 100)}% — high risk of cost overruns invalidating the refi appraisal.`,
     });
   }
 
-  // CASH_LEFT_EXCEEDS_MAXIMUM — capital trapping. Default $10k floor matches
-  // the maximumCashToLeave context default.
+  // CASH_LEFT_EXCEEDS_MAXIMUM — capital trapping. Config wins over the
+  // per-request context override, which wins over the default.
   const left = cashLeftInDeal(input);
-  const maxLeft = context.maximumCashToLeave ?? DEFAULT_MAX_CASH_TO_LEAVE;
-  if (left > maxLeft && !context.capitalTrappingAccepted) {
+  const maxLeft = ruleValue(
+    config?.maxCashLeft,
+    context.maximumCashToLeave ?? D.maxCashLeft,
+  );
+  if (
+    ruleEnabled(config?.maxCashLeft) &&
+    left > maxLeft &&
+    !context.capitalTrappingAccepted
+  ) {
     kills.push({
       code: "CASH_LEFT_EXCEEDS_MAXIMUM",
       message: `Cash left in deal (${formatDollars(left)}) exceeds the ${formatDollars(maxLeft)} maximum — capital recovery objective is missed.`,
