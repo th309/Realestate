@@ -21,7 +21,11 @@
  * the loading flash on repeat visits, it doesn't change that contract.
  */
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { defaultShouldDehydrateQuery, type Query } from "@tanstack/react-query";
+import {
+  defaultShouldDehydrateQuery,
+  type Mutation,
+  type Query,
+} from "@tanstack/react-query";
 import { createStore, get, set, del } from "idb-keyval";
 
 // Dedicated IndexedDB database/store, namespaced away from idb-keyval's
@@ -110,4 +114,20 @@ export function shouldPersistQuery(query: Query): boolean {
     typeof keyFamily === "string" &&
     PERSISTABLE_QUERY_KEY_FAMILIES.has(keyFamily)
   );
+}
+
+/**
+ * `shouldDehydrateMutation` for `PersistQueryClientProvider`'s
+ * `dehydrateOptions`. Always `false` — the library default persists
+ * PAUSED mutations (a write fired while offline, e.g. preferences,
+ * analyzer thresholds, tour signup with an email address, deal grading).
+ * This app has no offline-mutation-resume feature and mutations are
+ * `retry: 0` by design (see providers.tsx); without this override, a
+ * paused mutation's `variables` payload would land in IndexedDB and React
+ * Query would auto-resume it on a later session's reconnect with stale
+ * variables — silently re-submitting old data, and on a shared device,
+ * leaking the previous user's payload to disk.
+ */
+export function shouldPersistMutation(_mutation: Mutation): boolean {
+  return false;
 }

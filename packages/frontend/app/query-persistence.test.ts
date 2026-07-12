@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Query } from "@tanstack/react-query";
+import type { Mutation, Query } from "@tanstack/react-query";
 
 /**
  * idb-keyval touches real IndexedDB (`createStore` calls `indexedDB.open`),
@@ -19,6 +19,11 @@ function makeQuery(
   queryKey: unknown[],
 ): Query {
   return { state: { status }, queryKey } as unknown as Query;
+}
+
+/** Minimal duck-typed stand-in for a React Query `Mutation` instance. */
+function makeMutation(isPaused: boolean): Mutation {
+  return { state: { isPaused } } as unknown as Mutation;
 }
 
 describe("query-persistence", () => {
@@ -83,6 +88,23 @@ describe("query-persistence", () => {
       const { shouldPersistQuery } = await import("./query-persistence");
       const query = makeQuery("success", [{ nested: true }]);
       expect(shouldPersistQuery(query)).toBe(false);
+    });
+  });
+
+  describe("shouldPersistMutation", () => {
+    it("never dehydrates a paused mutation (no offline-mutation-resume feature)", async () => {
+      const { shouldPersistMutation } = await import("./query-persistence");
+      // Paused is the state a mutation fired while offline settles into —
+      // the library default would otherwise dehydrate it, landing its
+      // `variables` payload (e.g. preferences, thresholds, tour signup
+      // email) in IndexedDB and auto-resuming it with stale variables on a
+      // later session's reconnect.
+      expect(shouldPersistMutation(makeMutation(true))).toBe(false);
+    });
+
+    it("never dehydrates a non-paused mutation either", async () => {
+      const { shouldPersistMutation } = await import("./query-persistence");
+      expect(shouldPersistMutation(makeMutation(false))).toBe(false);
     });
   });
 

@@ -15,6 +15,7 @@ import { PostTrialPaywallGate } from "@/app/components/paywall/PostTrialPaywallG
 import {
   queryPersister,
   shouldPersistQuery,
+  shouldPersistMutation,
   PERSISTED_QUERY_CACHE_BUSTER,
   PERSISTED_QUERY_MAX_AGE,
 } from "@/app/query-persistence";
@@ -128,6 +129,13 @@ function getQueryClient() {
  * `app/query-persistence.ts`) — on a shared/public device, a stale on-disk
  * copy of the previous user's cached queries would otherwise survive
  * sign-out and be readable by the next person to use the browser.
+ *
+ * The purge fires on SIGN-OUT specifically (prev user id -> none), not on
+ * "a different user was detected" (user A -> user B with no sign-out in
+ * between). That's acceptable here only because the persisted allowlist
+ * (`shouldPersistQuery` in query-persistence.ts) is public, non-personalized
+ * market/score data to begin with — there's no per-user payload in the
+ * persisted store for a same-device account switch to leak.
  */
 function QueryCacheCleaner() {
   const queryClient = useQueryClient();
@@ -190,7 +198,10 @@ export function Providers({
         persister: queryPersister,
         buster: PERSISTED_QUERY_CACHE_BUSTER,
         maxAge: PERSISTED_QUERY_MAX_AGE,
-        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+        dehydrateOptions: {
+          shouldDehydrateQuery: shouldPersistQuery,
+          shouldDehydrateMutation: shouldPersistMutation,
+        },
       }}
     >
       <AuthProvider initialUserId={initialUserId}>
