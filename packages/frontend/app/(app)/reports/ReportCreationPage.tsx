@@ -104,10 +104,20 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
       return;
     }
 
-    // Hard-block generation for users without the `reports` entitlement BEFORE
-    // hitting the API. Reuses the existing PaywallCard (same component the
-    // /reports/[id] view shows) instead of generating-then-paywalling. Dismiss
-    // does not re-enable generation — the card stays until the user upgrades.
+    // Anonymous users need a signup CTA, not the reports paywall — they have
+    // no entitlement to be "locked" out of, they just need an account. Runs
+    // before the reportsLocked gate and ahead of entitlementsLoading, since it
+    // depends on none of that state.
+    if (!user?.id) {
+      setShowSignupPrompt(true);
+      return;
+    }
+
+    // Hard-block generation for LOGGED-IN users without the `reports`
+    // entitlement BEFORE hitting the API. Reuses the existing PaywallCard
+    // (same component the /reports/[id] view shows) instead of
+    // generating-then-paywalling. Dismiss does not re-enable generation — the
+    // card stays until the user upgrades.
     if (reportsLocked) {
       setShowReportsPaywall(true);
       return;
@@ -178,16 +188,10 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
           Object.keys(userInputs).length > 0 ? userInputs : undefined,
       };
 
-      const userId = user?.id;
-      if (!userId) {
-        setShowSignupPrompt(true);
-        setIsGenerating(false);
-        return;
-      }
       const effectiveTier = simulatedTier || tier;
 
       const data = await generateReportAPI(requestBody, {
-        userId,
+        userId: user.id,
         userTier: effectiveTier || undefined,
       });
       setIsGenerating(false);
