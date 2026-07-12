@@ -36,4 +36,36 @@ describe("computeAfterTax", () => {
       low.yearly[0].estimatedTaxBenefit,
     );
   });
+
+  it("no growth opts = flat rent across years (backward compatible)", () => {
+    const r = computeAfterTax(validInput);
+    expect(r.yearly[0].preTaxCashflow).toBeCloseTo(
+      r.yearly[9].preTaxCashflow,
+      6,
+    );
+  });
+
+  it("rent growth compounds year over year and lifts later cashflow", () => {
+    const r = computeAfterTax(validInput, { rentGrowthPct: 0.5 });
+    // Year 1 uses today's rent — identical to the no-growth year 1.
+    const flat = computeAfterTax(validInput);
+    expect(r.yearly[0].preTaxCashflow).toBeCloseTo(
+      flat.yearly[0].preTaxCashflow,
+      6,
+    );
+    // 50%/yr compounding: by year 10 a deeply negative deal turns hugely
+    // positive (rent ≈ 38x while fixed costs stay flat).
+    expect(r.yearly[9].preTaxCashflow).toBeGreaterThan(
+      r.yearly[0].preTaxCashflow,
+    );
+    expect(r.yearly[9].preTaxCashflow).toBeGreaterThan(0);
+  });
+
+  it("expense growth compounds fixed costs and drags later cashflow", () => {
+    const flat = computeAfterTax(validInput);
+    const r = computeAfterTax(validInput, { expenseGrowthPct: 0.1 });
+    expect(r.yearly[9].preTaxCashflow).toBeLessThan(
+      flat.yearly[9].preTaxCashflow,
+    );
+  });
 });

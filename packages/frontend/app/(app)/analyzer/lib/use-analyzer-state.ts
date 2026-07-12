@@ -1,14 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  computeProjection,
-  computeSensitivity,
-  computeAfterTax,
-  computeBrrrrTimeline,
-  computeBreakEven,
-} from "@propertyiq/analyzer-core";
 import { useAnalyzer } from "@/lib/analyzer/useAnalyzer";
+import { useDerivedAnalytics } from "./use-derived-analytics";
 import {
   usePropertyLookup,
   useAiHeaderVerdict,
@@ -165,55 +159,8 @@ export function useAnalyzerState({
     }
   }, [isPro, address, paramAddress, mutate]);
 
-  const projection = useMemo(
-    () =>
-      computeProjection(analyzer.input, {
-        appreciationPct: assumptions.appreciationPct,
-        rentGrowthPct: assumptions.rentGrowthPct,
-        expenseGrowthPct: assumptions.expenseGrowthPct,
-      }),
-    [
-      analyzer.input,
-      assumptions.appreciationPct,
-      assumptions.rentGrowthPct,
-      assumptions.expenseGrowthPct,
-    ],
-  );
-  const sensitivity = useMemo(
-    () => computeSensitivity(analyzer.input),
-    [analyzer.input],
-  );
-  const afterTax = useMemo(
-    () =>
-      computeAfterTax(analyzer.input, {
-        marginalTaxRate: assumptions.marginalTaxRate,
-        landValuePct: assumptions.landValuePct,
-      }),
-    [analyzer.input, assumptions.marginalTaxRate, assumptions.landValuePct],
-  );
-  const breakEven = useMemo(
-    () => computeBreakEven(analyzer.input),
-    [analyzer.input],
-  );
-  const brrrrTimeline = useMemo(
-    () =>
-      computeBrrrrTimeline(
-        { ...analyzer.input, arv: arvLocal, rehabBudget },
-        {
-          seasoningMonths: assumptions.seasoningMonths,
-          rehabMonths: assumptions.rehabMonths,
-          leaseMonths: assumptions.leaseMonths,
-        },
-      ),
-    [
-      analyzer.input,
-      arvLocal,
-      rehabBudget,
-      assumptions.seasoningMonths,
-      assumptions.rehabMonths,
-      assumptions.leaseMonths,
-    ],
-  );
+  const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
+    useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);
 
   // Market context geography priority:
   //   1. ?zip= URL param (explicit, deep-link)
