@@ -3,6 +3,7 @@ import {
   recordInstallValueMoment,
   isInstallBannerEligible,
   dismissInstallBanner,
+  INSTALL_VALUE_MOMENT_EVENT,
 } from "../install-value-moment";
 
 const VALUE_MOMENT_KEY = "piq-install-value-moments";
@@ -42,6 +43,17 @@ describe("install-value-moment", () => {
       recordInstallValueMoment();
       recordInstallValueMoment();
       expect(localStorage.getItem(VALUE_MOMENT_KEY)).toBe("3");
+    });
+
+    it("dispatches INSTALL_VALUE_MOMENT_EVENT on window so same-tab listeners (e.g. InstallBanner) can react without a reload", () => {
+      const handler = vi.fn();
+      window.addEventListener(INSTALL_VALUE_MOMENT_EVENT, handler);
+      try {
+        recordInstallValueMoment();
+        expect(handler).toHaveBeenCalledTimes(1);
+      } finally {
+        window.removeEventListener(INSTALL_VALUE_MOMENT_EVENT, handler);
+      }
     });
   });
 

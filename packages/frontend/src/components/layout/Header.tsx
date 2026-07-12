@@ -23,6 +23,7 @@ import { NAV, isDropdown } from "./header-nav-data";
 import { NavDropdownMenu } from "./NavDropdownMenu";
 import { MobileMenu } from "./MobileMenu";
 import { TrialBadge } from "./TrialBadge";
+import { ShareGlyphIcon } from "@/app/components/pwa/ShareGlyphIcon";
 
 /* ─── "Get the app" icon (local — Header owns its own icon, not Icons.nav.tsx) ─── */
 
@@ -36,25 +37,6 @@ function DownloadIcon({ className = "w-4 h-4" }: { className?: string }) {
       aria-hidden="true"
     >
       <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
-    </svg>
-  );
-}
-
-function ShareGlyphIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 3v12" />
-      <path d="M8 7l4-4 4 4" />
-      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
     </svg>
   );
 }
@@ -198,13 +180,24 @@ export function Header() {
             {loading ? null : !!user ? (
               <>
                 <TrialBadge />
-                <div className="relative">
+                <div
+                  className="relative"
+                  onBlur={(e) => {
+                    // Only close on a genuine click-away: if focus lands on
+                    // another element inside this dropdown (e.g. the "Get
+                    // the app" button, which shows an instructions panel
+                    // rather than navigating away), relatedTarget is still
+                    // contained here and we leave it open.
+                    if (
+                      !e.currentTarget.contains(e.relatedTarget as Node | null)
+                    ) {
+                      setTimeout(() => setIsProfileOpen(false), 200);
+                    }
+                  }}
+                >
                   <button
                     data-testid="user-menu"
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    onBlur={() =>
-                      setTimeout(() => setIsProfileOpen(false), 200)
-                    }
                     className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
                     <PersonIcon className="w-5 h-5" />

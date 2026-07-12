@@ -74,11 +74,23 @@ export function useInstallPrompt() {
   const promptInstall = useCallback(async () => {
     if (!stashedPrompt) return;
     const event = stashedPrompt;
-    await event.prompt();
-    const choice = await event.userChoice;
-    setInstallOutcome(choice.outcome);
+    // Consume the module-level stash synchronously, before the first
+    // `await`, so it doubles as a re-entrancy lock: a second concurrent call
+    // (e.g. the banner and the header menu both triggering install) sees
+    // `stashedPrompt` already null and returns immediately instead of
+    // calling .prompt() a second time on an event the spec only allows to
+    // be used once.
     stashedPrompt = null;
     setCanPromptNatively(false);
+    try {
+      await event.prompt();
+      const choice = await event.userChoice;
+      setInstallOutcome(choice.outcome);
+    } catch {
+      // The event can only be used once regardless of outcome — if the
+      // browser rejected this call (already consumed, or a native-UI
+      // dismissal), there's nothing left to retry.
+    }
   }, []);
 
   return {

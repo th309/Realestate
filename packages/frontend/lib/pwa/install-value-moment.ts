@@ -9,6 +9,16 @@ const VALUE_MOMENT_STORAGE_KEY = "piq-install-value-moments";
 const DISMISSED_STORAGE_KEY = "piq-install-banner-dismissed";
 const ELIGIBILITY_THRESHOLD = 2;
 
+/**
+ * Fired on `window` after each recorded value moment. Same-tab localStorage
+ * writes don't trigger the native `storage` event (that only fires in other
+ * tabs), so anything that wants to react to crossing the eligibility
+ * threshold within the current tab — e.g. InstallBanner re-checking
+ * isInstallBannerEligible() after a client-side nav — must listen for this
+ * instead.
+ */
+export const INSTALL_VALUE_MOMENT_EVENT = "piq:install-value-moment";
+
 /** Increments the value-moment counter. Call this at each value moment. */
 export function recordInstallValueMoment(): void {
   if (typeof window === "undefined") return;
@@ -16,6 +26,7 @@ export function recordInstallValueMoment(): void {
     window.localStorage.getItem(VALUE_MOMENT_STORAGE_KEY) ?? "0",
   );
   window.localStorage.setItem(VALUE_MOMENT_STORAGE_KEY, String(count + 1));
+  window.dispatchEvent(new Event(INSTALL_VALUE_MOMENT_EVENT));
 }
 
 /** Marks the install banner dismissed so it never reappears for this visitor. */

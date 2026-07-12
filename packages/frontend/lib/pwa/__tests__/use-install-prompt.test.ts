@@ -174,4 +174,54 @@ describe("useInstallPrompt", () => {
     const second = renderHook(() => useInstallPrompt());
     expect(second.result.current.canPromptNatively).toBe(true);
   });
+
+  it("re-entrancy: two concurrent promptInstall() calls only invoke prompt() once", async () => {
+    const { useInstallPrompt } = await import("../use-install-prompt");
+    const { result } = renderHook(() => useInstallPrompt());
+
+    let captured!: ReturnType<typeof fireBeforeInstallPrompt>;
+    act(() => {
+      captured = fireBeforeInstallPrompt("accepted");
+    });
+
+    // Simulates the banner and the header menu both triggering install
+    // around the same time (or a double-click) before either has resolved.
+    await act(async () => {
+      await Promise.all([
+        result.current.promptInstall(),
+        result.current.promptInstall(),
+      ]);
+    });
+
+    expect(captured.prompt).toHaveBeenCalledTimes(1);
+    expect(result.current.installOutcome).toBe("accepted");
+  });
+
+  it("promptInstall() swallows a rejected prompt() instead of throwing", async () => {
+    const { useInstallPrompt } = await import("../use-install-prompt");
+    const { result } = renderHook(() => useInstallPrompt());
+
+    const prompt = vi.fn().mockRejectedValue(new Error("already used"));
+    const event = new Event("beforeinstallprompt", {
+      cancelable: true,
+    }) as Event & { prompt: typeof prompt; userChoice: Promise<unknown> };
+    event.prompt = prompt;
+    event.userChoice = Promise.resolve({
+      outcome: "dismissed",
+      platform: "web",
+    });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.promptInstall();
+      }),
+    ).resolves.not.toThrow();
+
+    expect(prompt).toHaveBeenCalledTimes(1);
+    // prompt() rejected before userChoice resolved, so the outcome was never recorded.
+    expect(result.current.installOutcome).toBe(null);
+  });
 });

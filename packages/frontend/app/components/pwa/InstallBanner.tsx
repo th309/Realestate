@@ -6,26 +6,9 @@ import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import {
   dismissInstallBanner,
   isInstallBannerEligible,
+  INSTALL_VALUE_MOMENT_EVENT,
 } from "@/lib/pwa/install-value-moment";
-
-function ShareIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-5 h-5 inline-block shrink-0 align-text-bottom"
-      aria-hidden="true"
-    >
-      <path d="M12 3v12" />
-      <path d="M8 7l4-4 4 4" />
-      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
-    </svg>
-  );
-}
+import { ShareGlyphIcon } from "./ShareGlyphIcon";
 
 /**
  * Value-moment-gated install banner. Self-contained: decides on its own
@@ -38,7 +21,21 @@ export function InstallBanner() {
     useInstallPrompt();
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  // Same-tab localStorage writes fire no `storage` event, so crossing the
+  // value-moment threshold via client-side nav wouldn't otherwise re-run the
+  // eligibility check below. recordInstallValueMoment() dispatches this
+  // event; bumping the tick re-runs the effect without a reload.
+  const [valueMomentTick, setValueMomentTick] = useState(0);
   const shownFiredRef = useRef(false);
+
+  useEffect(() => {
+    function handleValueMoment() {
+      setValueMomentTick((tick) => tick + 1);
+    }
+    window.addEventListener(INSTALL_VALUE_MOMENT_EVENT, handleValueMoment);
+    return () =>
+      window.removeEventListener(INSTALL_VALUE_MOMENT_EVENT, handleValueMoment);
+  }, []);
 
   useEffect(() => {
     if (dismissed || isInstalled) {
@@ -47,7 +44,7 @@ export function InstallBanner() {
     }
     const canShow = canPromptNatively || isIos;
     setVisible(canShow && isInstallBannerEligible());
-  }, [canPromptNatively, isIos, isInstalled, dismissed]);
+  }, [canPromptNatively, isIos, isInstalled, dismissed, valueMomentTick]);
 
   useEffect(() => {
     if (!visible || shownFiredRef.current) return;
@@ -91,8 +88,9 @@ export function InstallBanner() {
           </>
         ) : (
           <p className="flex-1 text-sm text-on-surface">
-            Install PropertyIQ: tap <ShareIcon /> then &ldquo;Add to Home
-            Screen&rdquo;
+            Install PropertyIQ: tap{" "}
+            <ShareGlyphIcon className="w-5 h-5 inline-block shrink-0 align-text-bottom" />{" "}
+            then &ldquo;Add to Home Screen&rdquo;
           </p>
         )}
         <button
