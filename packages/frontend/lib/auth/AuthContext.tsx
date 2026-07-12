@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { clearServiceWorkerApiCache } from "@/lib/pwa/clear-sw-api-cache";
 import { useAuthState } from "./useAuth";
 import type { User, Session, AuthError } from "@supabase/supabase-js";
 
@@ -170,6 +171,10 @@ export function AuthProvider({
   const signOut = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
+    // Purge the service worker's runtime API cache alongside the React Query
+    // caches (QueryCacheCleaner) — cached /backend responses must not survive
+    // a sign-out on a shared device.
+    clearServiceWorkerApiCache();
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
