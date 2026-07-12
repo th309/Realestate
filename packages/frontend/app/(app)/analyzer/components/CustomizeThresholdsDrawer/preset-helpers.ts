@@ -192,8 +192,9 @@ export function weightKeysForStrategy(strategy: Strategy): string[] {
  * Key-order-insensitive stringify. Postgres JSONB reorders object keys, so a
  * preset saved and read back never matches the preset constant under plain
  * JSON.stringify — every server round-trip would misdetect as "Custom".
+ * Exported for the drawer's dirty check, which has the same round-trip problem.
  */
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(",")}]`;

@@ -55,7 +55,11 @@ export function useUpdateThresholds(strategy: Strategy) {
   const qc = useQueryClient();
   return useMutation<UserThresholds, Error, UserThresholds>({
     mutationFn: (body) => updateThresholds(strategy, body),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // Seed the cache with the server's echo immediately — consumers (e.g.
+      // the drawer's dirty check) must not compare against stale data while
+      // the invalidation refetch is in flight.
+      qc.setQueryData(thresholdsKey(strategy), saved);
       qc.invalidateQueries({ queryKey: thresholdsKey(strategy) });
       invalidateGradingQueries(qc);
     },

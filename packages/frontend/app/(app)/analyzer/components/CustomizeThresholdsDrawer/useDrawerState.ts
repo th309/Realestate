@@ -33,6 +33,7 @@ import {
 import {
   detectActivePreset,
   presetForStrategy,
+  stableStringify,
   type AnyStrategyThresholds,
 } from "./preset-helpers";
 import {
@@ -96,14 +97,17 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     if (!open) setBanner(null);
   }, [open]);
 
+  // Key-order-insensitive comparison: server round-trips (JSONB) and the PUT
+  // echo reorder object keys, so plain JSON.stringify would report a freshly
+  // saved draft as "dirty" and trip the discard-confirm on close.
   const isDirty = useMemo(() => {
     if (!draftThresholds || !draftDefaults) return false;
     const tDirty =
       thresholdsQ.data &&
-      JSON.stringify(draftThresholds) !== JSON.stringify(thresholdsQ.data);
+      stableStringify(draftThresholds) !== stableStringify(thresholdsQ.data);
     const dDirty =
       defaultsQ.data &&
-      JSON.stringify(draftDefaults) !== JSON.stringify(defaultsQ.data);
+      stableStringify(draftDefaults) !== stableStringify(defaultsQ.data);
     return Boolean(tDirty || dDirty);
   }, [draftThresholds, draftDefaults, thresholdsQ.data, defaultsQ.data]);
 
