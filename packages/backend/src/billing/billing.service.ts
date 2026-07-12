@@ -8,6 +8,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { StripeService } from './stripe.service';
 import { BillingWebhookService } from './billing-webhook.service';
+import { resolveTrialDaysForCheckout } from './checkout-guards';
 import Stripe from 'stripe';
 
 /**
@@ -63,13 +64,9 @@ export class BillingService {
       throw new BadRequestException('User profile not found');
     }
 
-    // Guard: block a NEW checkout for ANY user with a LIVE paid Stripe sub,
+    // Guard (F13): block a NEW checkout for ANY user with a LIVE paid Stripe
+    // sub (`stripe_subscription_id` populated + non-terminal status),
     // REGARDLESS of requested tier — a second concurrent sub double-charges.
-    // Live paid sub = `stripe_subscription_id` populated (set for any real
-    // Stripe sub incl. card-trials; NULLed by the delete webhook on cancel)
-    // AND a non-terminal status (active/past_due/unpaid/trialing). Free users
-    // and app-level no-card trial users (status='trialing') have NO
-    // `stripe_subscription_id`, so they still convert to paid via checkout.
     // Paid subscribers change tiers via the billing portal, not a new checkout.
     const LIVE_PAID_STATUSES = ['active', 'past_due', 'unpaid', 'trialing'];
     if (
@@ -133,6 +130,8 @@ export class BillingService {
         trialDays = trialConfig.duration_days;
       }
     }
+    // No second free trial for users who already used the reverse trial.
+    trialDays = await resolveTrialDaysForCheckout(client, userId, trialDays);
 
     // Build success/cancel URLs
     const baseUrl = this.getFrontendUrl();
