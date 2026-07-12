@@ -86,11 +86,18 @@ export function MarketDashboard({
   }, [stateFilter, geographyType]);
 
   // Single hook replaces fetchData() + useDataCardBatch() — 2 HTTP calls instead of 116
-  const { cards, scores, geography, lastUpdated, isLoading, error } =
-    useMarketSnapshot(geographyType, geographyId, {
-      state: effectiveStateFilter,
-      trendMonths: 3,
-    });
+  const {
+    cards,
+    scores,
+    geography,
+    lastUpdated,
+    dataUpdatedAt,
+    isLoading,
+    error,
+  } = useMarketSnapshot(geographyType, geographyId, {
+    state: effectiveStateFilter,
+    trendMonths: 3,
+  });
 
   // Get metric categories for the current view (must be called before early returns)
   const categories = useMemo(() => {
@@ -167,6 +174,7 @@ export function MarketDashboard({
         geographyName={geography.name}
         geographyType={geographyType}
         updatedDateLabel={updatedDateLabel}
+        dataUpdatedAt={dataUpdatedAt}
         canExport={canExport}
         onRefresh={handleRefresh}
         onShare={() => setShareModalOpen(true)}

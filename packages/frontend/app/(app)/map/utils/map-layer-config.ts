@@ -27,8 +27,11 @@ function getBorderWidth(geoLevel: GeoLevel): number {
   }
 }
 
-/** Build highlight filter for searched geography. */
-function calculateHighlightFilter(
+/**
+ * Build highlight filter for searched geography. Exported — also used by
+ * useMapLayers' instant highlight-only update path (no full layer rebuild).
+ */
+export function calculateHighlightFilter(
   feature: SearchResult,
   geoLevel: GeoLevel,
 ): any {

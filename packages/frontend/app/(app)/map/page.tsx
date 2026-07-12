@@ -164,7 +164,7 @@ function MapPageInner() {
   const effectiveMetric =
     scoreViewMode === "match" ? "propertyiq_score" : selectedMetric;
 
-  useMapLayers({
+  const { updateMapLayers, boundaryError } = useMapLayers({
     map,
     popup,
     geoLevel,
@@ -361,6 +361,8 @@ function MapPageInner() {
           scoreViewMode={scoreViewMode}
           showTableView={showTableView}
           onShowTableView={setShowTableView}
+          boundaryError={boundaryError}
+          onRetryBoundary={updateMapLayers}
         />
 
         {/* Right-click context menu */}

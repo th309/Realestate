@@ -7,6 +7,7 @@ import {
   TableIcon,
   type ScoreViewMode,
 } from "./components";
+import { useOnlineStatus } from "@/lib/hooks/use-online-status";
 
 interface MapCanvasProps {
   mapContainer: React.RefObject<HTMLDivElement | null>;
@@ -21,6 +22,10 @@ interface MapCanvasProps {
   scoreViewMode: ScoreViewMode;
   showTableView: boolean;
   onShowTableView: (open: boolean) => void;
+  /** True when the boundary (GeoJSON) fetch failed outright — distinct from
+   * `mapError`, which is a fatal Mapbox instance load failure. */
+  boundaryError: boolean;
+  onRetryBoundary: () => void;
 }
 
 /**
@@ -41,12 +46,33 @@ export function MapCanvas({
   scoreViewMode,
   showTableView,
   onShowTableView,
+  boundaryError,
+  onRetryBoundary,
 }: MapCanvasProps) {
+  const isOnline = useOnlineStatus();
+
   return (
     <main className="flex-1 relative min-h-0" data-tour="map-area">
       {mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
           <p className="text-on-error-container font-medium">{mapError}</p>
+        </div>
+      )}
+      {!mapError && boundaryError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-surface/95 z-10">
+          <div className="text-center px-6">
+            <p className="text-on-surface font-medium mb-4">
+              {isOnline
+                ? "Couldn't load boundaries"
+                : "You're offline — showing saved data"}
+            </p>
+            <button
+              onClick={onRetryBoundary}
+              className="px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       )}
       {effectiveDataLoading && (

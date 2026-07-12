@@ -50,6 +50,10 @@ export interface UseMarketSnapshotResult {
   scores: MarketSnapshotResponse["scores"] | null;
   geography: MarketSnapshotResponse["geography"] | null;
   lastUpdated: string | null;
+  /** Epoch ms this snapshot was last fetched/cached (React Query's
+   * `dataUpdatedAt`) — cache freshness, distinct from `lastUpdated` (the
+   * underlying data's "as of" period date). Powers CachedDataBadge. */
+  dataUpdatedAt: number | undefined;
   isLoading: boolean;
   error: Error | null;
 }
@@ -178,6 +182,7 @@ export function useMarketSnapshot(
     scores: snapshotQuery.data?.scores ?? null,
     geography: snapshotQuery.data?.geography ?? null,
     lastUpdated: snapshotQuery.data?.lastUpdated ?? null,
+    dataUpdatedAt: snapshotQuery.dataUpdatedAt || undefined,
     isLoading,
     error:
       (snapshotQuery.error as Error) ?? (trendQuery.error as Error) ?? null,

@@ -4,6 +4,8 @@
  * Screen-space detection is in screen-space-detection.ts.
  */
 import mapboxgl from "mapbox-gl";
+import type { GeoLevel } from "../types";
+import { calculatePolylabel, getGeometryBbox } from "./polylabel";
 
 /** Offset distance (degrees) from state bbox edge to callout label. */
 const CALLOUT_OFFSET = 2;
@@ -217,4 +219,51 @@ export function buildLeaderLineGeojson(callouts: CalloutPosition[]): any {
       properties: { name: c.name },
     })),
   };
+}
+
+/**
+ * Create point features at the polylabel of each polygon feature for labeling.
+ * Stores bbox and polylabel coordinates as properties for screen-space calculations.
+ */
+export function createLabelPoints(geojson: any, geoLevel: GeoLevel): any {
+  if (geoLevel === "national") {
+    const firstFeature = geojson.features[0];
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [-98.5795, 39.8283] },
+          properties: firstFeature
+            ? { ...firstFeature.properties }
+            : { name: "United States", value: 0 },
+        },
+      ],
+    };
+  }
+
+  const labelFeatures = geojson.features
+    .map((feature: any) => {
+      const centroid = calculatePolylabel(feature.geometry);
+      if (!centroid) return null;
+
+      const bbox = getGeometryBbox(feature.geometry);
+
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: centroid },
+        properties: {
+          ...feature.properties,
+          polylabelLng: centroid[0],
+          polylabelLat: centroid[1],
+          bboxMinLng: bbox ? bbox[0] : centroid[0],
+          bboxMinLat: bbox ? bbox[1] : centroid[1],
+          bboxMaxLng: bbox ? bbox[2] : centroid[0],
+          bboxMaxLat: bbox ? bbox[3] : centroid[1],
+        },
+      };
+    })
+    .filter(Boolean);
+
+  return { type: "FeatureCollection", features: labelFeatures };
 }

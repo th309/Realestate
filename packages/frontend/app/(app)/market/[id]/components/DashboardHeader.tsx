@@ -11,12 +11,16 @@ import {
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/navigation";
 import { formatGeoDisplayName } from "@/lib/data";
+import { CachedDataBadge } from "@/components/data-display";
 
 interface DashboardHeaderProps {
   geographyId: string;
   geographyName: string;
   geographyType: string;
   updatedDateLabel: string;
+  /** React Query `dataUpdatedAt` for the snapshot fetch — cache freshness,
+   * powers the offline/stale-cache CachedDataBadge chip. */
+  dataUpdatedAt?: number;
   canExport: boolean;
   onRefresh: () => void;
   onShare: () => void;
@@ -28,6 +32,7 @@ export function DashboardHeader({
   geographyName,
   geographyType,
   updatedDateLabel,
+  dataUpdatedAt,
   canExport,
   onRefresh,
   onShare,
@@ -65,10 +70,14 @@ export function DashboardHeader({
                   {formattedName}
                 </h1>
               </div>
-              <p className="text-sm text-on-surface-variant">
-                {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)}{" "}
-                &bull; Updated {updatedDateLabel}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm text-on-surface-variant">
+                  {geographyType.charAt(0).toUpperCase() +
+                    geographyType.slice(1)}{" "}
+                  &bull; Updated {updatedDateLabel}
+                </p>
+                <CachedDataBadge dataUpdatedAt={dataUpdatedAt} />
+              </div>
             </div>
           </div>
 
