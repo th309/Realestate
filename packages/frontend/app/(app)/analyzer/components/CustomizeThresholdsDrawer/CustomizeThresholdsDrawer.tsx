@@ -22,6 +22,7 @@ import { X } from "lucide-react";
 import type { GradingPresetName, Strategy } from "@propertyiq/analyzer-core";
 import { ThresholdsTab } from "./ThresholdsTab";
 import { WeightsTab } from "./WeightsTab";
+import { AutoKillTab } from "./AutoKillTab";
 import { AssumptionsTab } from "./AssumptionsTab";
 import { DrawerFooter } from "./DrawerFooter";
 import { PresetSelector, PresetConfirmModal } from "./PresetSelector";
@@ -36,11 +37,14 @@ interface CustomizeThresholdsDrawerProps {
   open: boolean;
   onClose: () => void;
   strategy: Strategy;
+  /** Tab to show when the drawer opens (deep-link from banner / input panel). */
+  initialTab?: ThresholdsTabId;
 }
 
 const TABS: Array<{ id: ThresholdsTabId; label: string }> = [
   { id: "thresholds", label: "Thresholds" },
   { id: "weights", label: "Weights" },
+  { id: "autokill", label: "Auto-Kill" },
   { id: "assumptions", label: "Assumptions" },
 ];
 
@@ -48,6 +52,7 @@ export function CustomizeThresholdsDrawer({
   open,
   onClose,
   strategy,
+  initialTab,
 }: CustomizeThresholdsDrawerProps) {
   const state = useDrawerState(open, strategy);
   const rows = useMemo(() => rowsForStrategy(strategy), [strategy]);
@@ -56,7 +61,13 @@ export function CustomizeThresholdsDrawer({
     [strategy],
   );
 
-  const [tab, setTab] = useState<ThresholdsTabId>("thresholds");
+  const [tab, setTab] = useState<ThresholdsTabId>(initialTab ?? "thresholds");
+
+  // Re-sync the tab each time the drawer opens (open may deep-link a tab).
+  useEffect(() => {
+    if (open) setTab(initialTab ?? "thresholds");
+  }, [open, initialTab]);
+
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [presetToConfirm, setPresetToConfirm] =
     useState<GradingPresetName | null>(null);
@@ -219,6 +230,13 @@ export function CustomizeThresholdsDrawer({
               }
               sum={state.weightsCheck.sum}
               isValid={state.weightsCheck.valid}
+            />
+          ) : tab === "autokill" ? (
+            <AutoKillTab
+              strategy={strategy}
+              thresholds={state.draftThresholds}
+              onChange={state.setDraftThresholds}
+              errors={state.autoKillErrors}
             />
           ) : (
             <AssumptionsTab

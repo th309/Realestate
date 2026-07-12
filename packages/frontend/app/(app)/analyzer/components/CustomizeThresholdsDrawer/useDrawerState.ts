@@ -35,8 +35,17 @@ import {
   presetForStrategy,
   type AnyStrategyThresholds,
 } from "./preset-helpers";
+import {
+  getAutoKillConfig,
+  hasAnyAutoKillError,
+  validateAutoKills,
+} from "./autokill-rows";
 
-export type ThresholdsTabId = "thresholds" | "weights" | "assumptions";
+export type ThresholdsTabId =
+  | "thresholds"
+  | "weights"
+  | "autokill"
+  | "assumptions";
 
 export interface BannerState {
   kind: "success" | "error";
@@ -119,6 +128,15 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     [draftDefaults],
   );
 
+  const autoKillErrors = useMemo(
+    () =>
+      validateAutoKills(
+        strategy,
+        draftThresholds ? getAutoKillConfig(draftThresholds) : undefined,
+      ),
+    [draftThresholds, strategy],
+  );
+
   const activePreset: GradingPresetName | null = useMemo(
     () => detectActivePreset(strategy, draftThresholds),
     [strategy, draftThresholds],
@@ -130,6 +148,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     Object.values(thresholdErrors).every((e) => e === null) &&
     weightsCheck.valid &&
     !hasAnyAssumptionError(assumptionErrors as never) &&
+    !hasAnyAutoKillError(autoKillErrors) &&
     !updateThresholdsM.isPending &&
     !updateDefaultsM.isPending;
 
@@ -168,7 +187,13 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
 
   const applyPreset = useCallback(
     (preset: GradingPresetName) => {
-      setDraftThresholds(presetForStrategy(strategy, preset));
+      setDraftThresholds((prev) => {
+        const next = presetForStrategy(strategy, preset);
+        const autoKills = (prev as { autoKills?: unknown } | null)?.autoKills;
+        return autoKills
+          ? ({ ...(next as object), autoKills } as AnyStrategyThresholds)
+          : next;
+      });
     },
     [strategy],
   );
@@ -182,6 +207,7 @@ export function useDrawerState(open: boolean, strategy: Strategy) {
     thresholdErrors,
     weightsCheck,
     assumptionErrors,
+    autoKillErrors,
     canSave,
     isDirty,
     banner,

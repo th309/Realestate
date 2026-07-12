@@ -195,8 +195,13 @@ export function detectActivePreset(
   if (!current) return null;
   const presets = PRESETS_BY_STRATEGY[strategy];
   if (!presets) return null;
+  // autoKills is orthogonal to presets — ignore it for matching.
+  const { autoKills: _ignored, ...rubric } =
+    current as AnyStrategyThresholds & {
+      autoKills?: unknown;
+    };
   const keys: GradingPresetName[] = ["conservative", "balanced", "aggressive"];
-  const currentJson = JSON.stringify(current);
+  const currentJson = JSON.stringify(rubric);
   for (const name of keys) {
     if (JSON.stringify(presets[name]) === currentJson) return name;
   }
