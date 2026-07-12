@@ -47,6 +47,11 @@ export const ASSUMPTION_DEFAULTS = {
   appreciationPct: 0.03,
   holdYears: 10,
   closingCostsPct: 0.03,
+  // Mirrors DEFAULT_ASSUMPTIONS in lib/analyzer-assumptions.ts (marginalTaxRate,
+  // landValuePct, expenseGrowthPct) — the two surfaces must stay in sync.
+  marginalTaxRatePct: 0.24,
+  landValueSharePct: 0.25,
+  expenseGrowthPct: 0.025,
 } as const;
 
 /** B&H-only metric keys — retained for back-compat with tests and unaudited callers. */

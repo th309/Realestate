@@ -10,7 +10,11 @@
  * - validateWeightsForStrategy: strategy-aware variant that iterates the
  *   weight keys for the active rubric.
  * - validateAssumptions: per-field bounds matching the backend DTO so client
- *   errors mirror server rejections.
+ *   errors mirror server rejections. Bounds:
+ *     vacancy/maintenance/capex/pm: [0, 1]; closingCosts: [0, 0.2];
+ *     rentGrowth/appreciation: [0, 0.5]; holdYears: integer [1, 30];
+ *     marginalTaxRatePct: [0, 0.6]; landValueSharePct: [0, 0.9];
+ *     expenseGrowthPct: [0, 0.15].
  *
  * Each returns either `null` (valid) or a human-readable error string per
  * field — never throws.
@@ -112,6 +116,9 @@ export function validateAssumptions(a: AnalyzerDefaults): AssumptionErrors {
     appreciationPct: null,
     holdYears: null,
     closingCostsPct: null,
+    marginalTaxRatePct: null,
+    landValueSharePct: null,
+    expenseGrowthPct: null,
   };
   const pct01: Array<keyof AnalyzerDefaults> = [
     "vacancyPct",
@@ -144,6 +151,27 @@ export function validateAssumptions(a: AnalyzerDefaults): AssumptionErrors {
       out.holdYears = "Must be a number";
     else if (!Number.isInteger(v)) out.holdYears = "Must be a whole number";
     else if (v < 1 || v > 30) out.holdYears = "Must be between 1 and 30 years";
+  }
+  if (a.marginalTaxRatePct !== undefined) {
+    const v = a.marginalTaxRatePct;
+    if (typeof v !== "number" || Number.isNaN(v))
+      out.marginalTaxRatePct = "Must be a number";
+    else if (v < 0 || v > 0.6)
+      out.marginalTaxRatePct = "Must be between 0% and 60%";
+  }
+  if (a.landValueSharePct !== undefined) {
+    const v = a.landValueSharePct;
+    if (typeof v !== "number" || Number.isNaN(v))
+      out.landValueSharePct = "Must be a number";
+    else if (v < 0 || v > 0.9)
+      out.landValueSharePct = "Must be between 0% and 90%";
+  }
+  if (a.expenseGrowthPct !== undefined) {
+    const v = a.expenseGrowthPct;
+    if (typeof v !== "number" || Number.isNaN(v))
+      out.expenseGrowthPct = "Must be a number";
+    else if (v < 0 || v > 0.15)
+      out.expenseGrowthPct = "Must be between 0% and 15%";
   }
   return out;
 }

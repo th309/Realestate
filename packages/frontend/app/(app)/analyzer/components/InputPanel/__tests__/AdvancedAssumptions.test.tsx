@@ -1,38 +1,38 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AdvancedAssumptions } from "../AdvancedAssumptions";
-import { DEFAULT_ASSUMPTIONS } from "../../../lib/analyzer-assumptions";
 
-const baseProps = {
-  assumptions: DEFAULT_ASSUMPTIONS,
-  onChange: vi.fn(),
-  input: { price: 300_000, rentMonthly: 2_000, financing: {} } as never,
-  onInputChange: vi.fn(),
-  onFinancingChange: vi.fn(),
-};
-
-function openSection() {
-  fireEvent.click(
-    screen.getByRole("button", { name: /advanced assumptions/i }),
-  );
-}
-
-describe("AdvancedAssumptions customize row", () => {
-  it("renders the auto-kill & grading row when onCustomizeClick is provided", () => {
+describe("AdvancedAssumptions — Assumptions & criteria link row", () => {
+  it("renders the row with label, subtext, and Edit criteria button when onCustomizeClick is provided", () => {
     const onCustomize = vi.fn();
-    render(
-      <AdvancedAssumptions {...baseProps} onCustomizeClick={onCustomize} />,
-    );
-    openSection();
-    const row = screen.getByTestId("autokill-grading-customize");
-    expect(row.textContent).toMatch(/auto-kill & grading criteria/i);
-    fireEvent.click(row);
+    render(<AdvancedAssumptions onCustomizeClick={onCustomize} />);
+
+    expect(screen.getByText("Assumptions & criteria")).toBeTruthy();
+    expect(
+      screen.getByText("Tax, reserves, growth, and auto-kill rules"),
+    ).toBeTruthy();
+
+    const button = screen.getByTestId("autokill-grading-customize");
+    expect(button.textContent).toMatch(/edit criteria/i);
+
+    fireEvent.click(button);
     expect(onCustomize).toHaveBeenCalledTimes(1);
   });
 
-  it("renders no row when the callback is absent", () => {
-    render(<AdvancedAssumptions {...baseProps} />);
-    openSection();
-    expect(screen.queryByTestId("autokill-grading-customize")).toBeNull();
+  it("renders nothing when the callback is absent", () => {
+    const { container } = render(<AdvancedAssumptions />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("no longer renders the HOA field (promoted to InputPanel's main grid)", () => {
+    render(<AdvancedAssumptions onCustomizeClick={() => {}} />);
+    expect(screen.queryByLabelText(/hoa/i)).toBeNull();
+  });
+
+  it("no longer renders any of the removed inline assumption fields", () => {
+    render(<AdvancedAssumptions onCustomizeClick={() => {}} />);
+    expect(screen.queryByLabelText(/marginal tax rate/i)).toBeNull();
+    expect(screen.queryByLabelText(/appreciation/i)).toBeNull();
+    expect(screen.queryByLabelText(/rent growth/i)).toBeNull();
   });
 });

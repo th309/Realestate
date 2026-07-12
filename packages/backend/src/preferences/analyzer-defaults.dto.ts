@@ -59,4 +59,22 @@ export class AnalyzerDefaultsDto {
   @Min(0)
   @Max(0.2)
   closingCostsPct?: number;
+
+  @IsOptional()
+  @IsNumber(NUM)
+  @Min(0)
+  @Max(0.6)
+  marginalTaxRatePct?: number;
+
+  @IsOptional()
+  @IsNumber(NUM)
+  @Min(0)
+  @Max(0.9)
+  landValueSharePct?: number;
+
+  @IsOptional()
+  @IsNumber(NUM)
+  @Min(0)
+  @Max(0.15)
+  expenseGrowthPct?: number;
 }

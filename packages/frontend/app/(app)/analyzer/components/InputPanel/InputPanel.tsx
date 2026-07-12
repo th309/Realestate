@@ -22,6 +22,7 @@ import {
   nudgeForRent,
   nudgeForTax,
   nudgeForInsurance,
+  nudgeForHOA,
   nudgeForRate,
   nudgeForArv,
 } from "../../lib/nudges";
@@ -270,6 +271,24 @@ export function InputPanel({
             )}
           />
         </div>
+        <div>
+          <NumField
+            label="HOA (monthly)"
+            value={input.hoaMonthly ?? 0}
+            onChange={(v) => update({ hoaMonthly: v ?? 0 })}
+            prefix="$"
+            placeholder="0"
+            nudge={nudgeForHOA(input.hoaMonthly ?? 0, input.rentMonthly ?? 0)}
+          />
+          <FieldProvenance
+            data={provenance.hoaMonthly}
+            current={input.hoaMonthly ?? null}
+            divergent={isDivergent(
+              provenance.hoaMonthly?.baseline ?? null,
+              input.hoaMonthly ?? null,
+            )}
+          />
+        </div>
         {showArv && (
           <NumField
             label="ARV (after rehab)"
@@ -364,17 +383,7 @@ export function InputPanel({
         assumptions={assumptions}
       />
 
-      {assumptions && onAssumptionChange && (
-        <AdvancedAssumptions
-          assumptions={assumptions}
-          onChange={onAssumptionChange}
-          input={input}
-          onInputChange={update}
-          onFinancingChange={updateFin}
-          provenance={provenance}
-          onCustomizeClick={onCustomizeClick}
-        />
-      )}
+      <AdvancedAssumptions onCustomizeClick={onCustomizeClick} />
     </aside>
   );
 }

@@ -20,7 +20,8 @@ interface PrefillTargets {
  * Pre-fills the analyzer's form from the user's saved `user_preferences.analyzer_defaults`
  * exactly once per session. Fields split across two surfaces:
  *   - DealInput-owned: vacancyPctOfRent, maintenancePctOfRent, managementPctOfRent, financing.closingCostsPct
- *   - AnalyzerAssumptions-owned: rentGrowthPct, appreciationPct
+ *   - AnalyzerAssumptions-owned: rentGrowthPct, appreciationPct, marginalTaxRate,
+ *     landValuePct (from landValueSharePct), expenseGrowthPct
  *   - capexPct + holdYears: no direct SFH-buy-and-hold form field; ignored.
  */
 export function useAnalyzerDefaultsPrefill({
@@ -61,6 +62,12 @@ export function useAnalyzerDefaultsPrefill({
       setAssumption("rentGrowthPct", data.rentGrowthPct);
     if (data.appreciationPct != null)
       setAssumption("appreciationPct", data.appreciationPct);
+    if (data.marginalTaxRatePct != null)
+      setAssumption("marginalTaxRate", data.marginalTaxRatePct);
+    if (data.landValueSharePct != null)
+      setAssumption("landValuePct", data.landValueSharePct);
+    if (data.expenseGrowthPct != null)
+      setAssumption("expenseGrowthPct", data.expenseGrowthPct);
 
     appliedRef.current = true;
   }, [data, setInput, setAssumption, currentInput]);

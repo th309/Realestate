@@ -218,6 +218,9 @@ describe('AnalyzerDefaultsDto validation', () => {
       appreciationPct: 0.03,
       holdYears: 10,
       closingCostsPct: 0.03,
+      marginalTaxRatePct: 0.24,
+      landValueSharePct: 0.25,
+      expenseGrowthPct: 0.025,
     });
     const errors = await validate(instance);
     expect(errors).toEqual([]);
@@ -253,6 +256,48 @@ describe('AnalyzerDefaultsDto validation', () => {
     const errors = await validate(instance);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0].property).toBe('maintenancePct');
+  });
+
+  it('rejects marginalTaxRatePct above 0.6', async () => {
+    const instance = plainToInstance(AnalyzerDefaultsDto, {
+      marginalTaxRatePct: 0.61,
+    });
+    const errors = await validate(instance);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('marginalTaxRatePct');
+  });
+
+  it('rejects landValueSharePct above 0.9', async () => {
+    const instance = plainToInstance(AnalyzerDefaultsDto, {
+      landValueSharePct: 0.91,
+    });
+    const errors = await validate(instance);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('landValueSharePct');
+  });
+
+  it('rejects expenseGrowthPct above 0.15', async () => {
+    const instance = plainToInstance(AnalyzerDefaultsDto, {
+      expenseGrowthPct: 0.16,
+    });
+    const errors = await validate(instance);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('expenseGrowthPct');
+  });
+
+  it('rejects negative marginalTaxRatePct/landValueSharePct/expenseGrowthPct', async () => {
+    const instance = plainToInstance(AnalyzerDefaultsDto, {
+      marginalTaxRatePct: -0.01,
+      landValueSharePct: -0.01,
+      expenseGrowthPct: -0.01,
+    });
+    const errors = await validate(instance);
+    const properties = errors.map((e) => e.property).sort();
+    expect(properties).toEqual([
+      'expenseGrowthPct',
+      'landValueSharePct',
+      'marginalTaxRatePct',
+    ]);
   });
 
   // Tag the unused locals so the lint pass stays clean; these mirror types

@@ -191,7 +191,7 @@ export default function AnalyzerClient({
       analysisMode={analysisMode}
       onAnalysisModeChange={setAnalysisMode}
       onStrategyChange={setFocusedStrategy}
-      onCustomizeClick={() => openDrawer("autokill")}
+      onCustomizeClick={() => openDrawer("assumptions")}
     />
   );
 
