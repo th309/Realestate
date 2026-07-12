@@ -15,6 +15,11 @@ import { GradingResultPanel } from "./components/cards/GradingResultPanel";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
 import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
+import {
+  detectActivePreset,
+  type AnyStrategyThresholds,
+} from "./components/CustomizeThresholdsDrawer/preset-helpers";
+import { useThresholds } from "@/lib/data";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
@@ -95,6 +100,22 @@ export default function AnalyzerClient({
   });
   const activeStrategy: Strategy =
     analysisMode === "compare" ? bestPlay : focusedStrategy;
+
+  // "Graded against X criteria" must reflect the user's SAVED rubric, not a
+  // hardcoded preset name. GET falls back to the Balanced preset when the
+  // account has no saved row, so detectActivePreset resolves it correctly;
+  // anything off the preset grid reads as Custom.
+  const engineStrategy = toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD";
+  const savedThresholdsQ = useThresholds(engineStrategy);
+  const activePreset = detectActivePreset(
+    engineStrategy,
+    (savedThresholdsQ.data as AnyStrategyThresholds | undefined) ?? null,
+  );
+  const presetLabel = savedThresholdsQ.data
+    ? activePreset
+      ? activePreset.charAt(0).toUpperCase() + activePreset.slice(1)
+      : "Custom"
+    : "Balanced";
 
   const displayAddress =
     rentcastData?.resolved_address ?? (address.trim() || null);
@@ -266,7 +287,7 @@ export default function AnalyzerClient({
                 {...upgradeProps}
                 onCustomizeClick={() => openDrawer("thresholds")}
                 onEditAutoKillCriteria={() => openDrawer("autokill")}
-                presetLabel="Balanced"
+                presetLabel={presetLabel}
                 aiProps={sectionAi.recommendation_analysis}
               />
             ) : grading.isLoading ? (
