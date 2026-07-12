@@ -12,6 +12,7 @@
 "use client";
 
 import { memo, useState, useRef, useEffect } from "react";
+import { useDismissableOpen } from "@/lib/hooks/use-dismissable-open";
 
 type ConfidenceLevel = "a" | "b" | "c" | "f";
 
@@ -92,6 +93,7 @@ function getConfidenceColor(level: ConfidenceLevel): {
 function StarIcon({ filled, color }: { filled: boolean; color: string }) {
   return (
     <svg
+      data-testid={filled ? "confidence-star-filled-propertyiq" : undefined}
       className={`w-3.5 h-3.5 ${filled ? color : "text-surface-container-highest"}`}
       fill={filled ? "currentColor" : "none"}
       viewBox="0 0 24 24"
@@ -169,28 +171,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
   const toggleTooltip = () => setShowTooltip((visible) => !visible);
 
   // Escape + outside click/tap close the tooltip once open.
-  useEffect(() => {
-    if (!showTooltip) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowTooltip(false);
-    }
-    function handleOutsideClick(e: MouseEvent) {
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        setShowTooltip(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [showTooltip]);
+  useDismissableOpen(triggerRef, showTooltip, () => setShowTooltip(false));
 
   const starCount = getStarCount(percentage);
   const colors = getConfidenceColor(level);
@@ -237,7 +218,11 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
       aria-label={`${level} confidence: ${percentage}%`}
     >
       {/* Star rating */}
-      <div className="flex items-center gap-0.5">
+      <div
+        className="flex items-center gap-0.5"
+        data-testid="confidence-stars-propertyiq"
+        aria-label={`${percentage}% confidence, ${starCount} of 5 stars`}
+      >
         {[1, 2, 3, 4, 5].map((i) => (
           <StarIcon key={i} filled={i <= starCount} color={colors.star} />
         ))}
@@ -247,6 +232,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
       {showDetails && (
         <>
           <span
+            data-testid="confidence-percentage-propertyiq"
             className={`${isSmall ? "text-xs" : "text-sm"} font-medium ${colors.text}`}
           >
             {percentage}%

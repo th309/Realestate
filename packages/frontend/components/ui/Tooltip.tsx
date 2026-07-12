@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useDismissableOpen } from "@/lib/hooks/use-dismissable-open";
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
 
@@ -197,28 +198,7 @@ export const RichTooltip: React.FC<RichTooltipProps> = ({
 
   // Escape + outside click/tap close the tooltip once open — mirrors the
   // Popover pattern below, since touch has no blur/mouseleave to fall back on.
-  useEffect(() => {
-    if (!isVisible) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsVisible(false);
-    }
-    function handleOutsideClick(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsVisible(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isVisible]);
+  useDismissableOpen(containerRef, isVisible, () => setIsVisible(false));
 
   useEffect(() => {
     return () => {
@@ -293,19 +273,10 @@ export const Popover: React.FC<PopoverProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-        onOpenChange?.(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onOpenChange]);
+  useDismissableOpen(containerRef, isOpen, () => {
+    setIsOpen(false);
+    onOpenChange?.(false);
+  });
 
   const toggleOpen = () => {
     const newState = !isOpen;

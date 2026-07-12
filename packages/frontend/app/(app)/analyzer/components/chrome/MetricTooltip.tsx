@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState, ReactNode } from "react";
+import { useRef, useState, ReactNode } from "react";
 import { GLOSSARY, GlossaryKey } from "../../lib/glossary";
+import { useDismissableOpen } from "@/lib/hooks/use-dismissable-open";
 
 interface MetricTooltipProps {
   metric: GlossaryKey;
@@ -18,28 +19,7 @@ export function MetricTooltip({ metric, children }: MetricTooltipProps) {
   const toggleOpen = () => setOpen((visible) => !visible);
 
   // Escape + outside click/tap close the tooltip once open.
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    function handleOutsideClick(e: MouseEvent) {
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [open]);
+  useDismissableOpen(triggerRef, open, () => setOpen(false));
 
   return (
     <button

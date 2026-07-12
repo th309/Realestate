@@ -94,4 +94,27 @@ describe("ConfidenceDisplay — touch fallback", () => {
     render(<ConfidenceDisplay {...baseProps} showDetails />);
     expect(screen.getByText("72%")).toBeTruthy();
   });
+
+  it("exposes the confidence-percentage-propertyiq testid when showDetails is true", () => {
+    render(<ConfidenceDisplay {...baseProps} showDetails />);
+    expect(
+      screen.getByTestId("confidence-percentage-propertyiq"),
+    ).toHaveTextContent("72%");
+  });
+
+  it("exposes the confidence-star-filled-propertyiq testid on each filled star", () => {
+    render(<ConfidenceDisplay {...baseProps} />);
+    // 72% -> 3 filled stars (see getStarCount)
+    expect(
+      screen.getAllByTestId("confidence-star-filled-propertyiq"),
+    ).toHaveLength(3);
+  });
+
+  it("exposes the confidence-stars-propertyiq testid with an accessible label", () => {
+    render(<ConfidenceDisplay {...baseProps} />);
+    expect(screen.getByTestId("confidence-stars-propertyiq")).toHaveAttribute(
+      "aria-label",
+      "72% confidence, 3 of 5 stars",
+    );
+  });
 });
