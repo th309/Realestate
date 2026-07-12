@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NAV, isDropdown } from "./header-nav-data";
 import { lockBodyScroll } from "@/lib/scroll-lock";
 import { useModalHistory } from "@/lib/pwa/use-modal-history";
+import { GetAppMenuItem } from "./GetAppMenuItem";
 import {
   LogoutIcon,
   SettingsIcon,
@@ -273,6 +274,12 @@ export function MobileMenu({
               </Link>
             );
           })}
+
+          {/* Install entry — discoverable path to Add-to-Home-Screen on the
+              surface where it matters most (phones). Renders null once
+              installed. */}
+          <div className="my-3 h-px bg-outline-variant" />
+          <GetAppMenuItem onAfterPrompt={() => closeRef.current()} />
 
           {/* Sign out pinned to the bottom (signed-in only) */}
           {!loading && user && (
