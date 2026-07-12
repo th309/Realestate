@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { DealGradingResult, Letter } from "@propertyiq/analyzer-core";
 import { RecommendationCard } from "../RecommendationCard";
 
@@ -66,5 +66,35 @@ describe("RecommendationCard", () => {
       />,
     );
     expect(getByText("Watch the DSCR closely.")).toBeTruthy();
+  });
+
+  it("renders the graded-against label even without a customize callback", () => {
+    const { container, getByText } = render(
+      <RecommendationCard result={makeResult()} presetLabel="Aggressive" />,
+    );
+    expect(getByText("Graded against Aggressive criteria")).toBeTruthy();
+    expect(
+      container.querySelector('[data-meta-pill="customize"]'),
+    ).toBeTruthy();
+  });
+
+  it("does not render the Edit criteria button when onCustomizeClick is absent", () => {
+    render(<RecommendationCard result={makeResult()} />);
+    expect(screen.queryByTestId("grade-edit-criteria")).toBeNull();
+  });
+
+  it("renders an Edit criteria button that fires onCustomizeClick when provided", () => {
+    const onCustomizeClick = vi.fn();
+    render(
+      <RecommendationCard
+        result={makeResult()}
+        onCustomizeClick={onCustomizeClick}
+      />,
+    );
+    const btn = screen.getByTestId("grade-edit-criteria");
+    expect(btn.textContent).toBe("Edit criteria");
+    expect(btn.getAttribute("aria-label")).toBe("Edit grading criteria");
+    fireEvent.click(btn);
+    expect(onCustomizeClick).toHaveBeenCalledTimes(1);
   });
 });

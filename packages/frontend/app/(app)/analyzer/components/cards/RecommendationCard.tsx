@@ -116,15 +116,21 @@ export function RecommendationCard({
                 Floored at {result.flooredAt}
               </span>
             )}
+            <span
+              data-meta-pill="customize"
+              className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant"
+            >
+              Graded against {presetLabel} criteria
+            </span>
             {onCustomizeClick && (
               <button
                 type="button"
-                data-meta-pill="customize"
+                data-testid="grade-edit-criteria"
                 onClick={onCustomizeClick}
-                className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors cursor-pointer"
-                aria-label={`Customize grading criteria (current: ${presetLabel})`}
+                aria-label="Edit grading criteria"
+                className="rounded-full border border-outline-variant px-3 py-1 text-xs font-semibold text-primary transition-colors duration-200 hover:bg-surface-container"
               >
-                ⚙ Graded against {presetLabel} criteria · Customize
+                Edit criteria
               </button>
             )}
           </div>
