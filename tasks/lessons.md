@@ -228,3 +228,12 @@
 **Wrong behavior:** edit → run lint → wait → run build → wait → run tests → wait → curl → wait → then dispatch reviewers.
 
 **Correct behavior:** edit → one message dispatching verify-tests, verify-live, code-reviewer, data-layer-reviewer in parallel → integrate results.
+
+## Shared-Trunk Restructures Must Land the Final Safe Shape in the FIRST Commit
+
+**Date:** 2026-07-12
+**Context:** A file-tree split created `components/ui/skeleton/` next to `Skeleton.tsx` — a Windows case-collision landmine (TS1261). It was "temporary" (renamed to `skeleton-parts/` 4.5 minutes later), but within that window a concurrent agent wrote the natural bare import `@/components/ui/skeleton` against it, producing a 31-error typecheck storm. A reviewer watched it happen live.
+
+**Rule:** On a trunk being edited by multiple concurrent agents, an intermediate hazardous state is NOT temporary — someone will build against it within minutes. Any restructure with a known collision risk (case-insensitive dir/file overlap, renamed exports, moved barrels) must land the final safe name/shape in its first commit. Never sequence "create hazardous state → fix → clean up" as separate commits on a live shared branch.
+
+**Related pipeline gap (ticket):** `ignoreBuildErrors: true` in next.config + eslint-only frontend CI + Linux CI runners = NO pipeline stage catches TypeScript errors at all (including case collisions). Only local tsc/IDE does.
