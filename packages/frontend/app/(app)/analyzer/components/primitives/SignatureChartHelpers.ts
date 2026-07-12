@@ -72,6 +72,34 @@ export function zeroCrossingOffset(
   return max / (max - min);
 }
 
+/**
+ * Resolve the primary series' stroke/fill under optional sign coloring:
+ * data crossing zero paints via a hard-stop gradient (url ref), all-negative
+ * data is plain red, otherwise the base series color.
+ */
+export function resolveSignPaint(
+  data: DataPoint[],
+  key: string,
+  baseColor: string,
+  gradientId: string,
+  signColoring: boolean,
+): { color: string; paint: string; zeroOffset: number | null } {
+  const zeroOffset = signColoring ? zeroCrossingOffset(data, key) : null;
+  const allNegative =
+    signColoring &&
+    data.length > 0 &&
+    data.every((p) => {
+      const v = p[key];
+      return typeof v === "number" && v <= 0;
+    });
+  const color = allNegative ? piq.red : baseColor;
+  return {
+    color,
+    paint: zeroOffset != null ? `url(#${gradientId})` : color,
+    zeroOffset,
+  };
+}
+
 export type RangeAnchor = "head" | "tail";
 
 /**

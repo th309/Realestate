@@ -24,7 +24,7 @@ import {
   arrowForDelta,
   computeAxisTicks,
   formatYTick,
-  zeroCrossingOffset,
+  resolveSignPaint,
   type DataPoint,
   type RangeOption,
   type RangeAnchor,
@@ -94,7 +94,9 @@ export function SignatureChart({
   signColoring = false,
   className = "",
 }: SignatureChartProps) {
-  const gradientId = useId();
+  // Sanitize: useId() emits colons, which break url(#id) gradient refs in
+  // some browsers (same workaround as the tour charts' Sparkline et al).
+  const gradientId = `piq-grad-${useId().replace(/:/g, "")}`;
   const initialRange =
     defaultRange ?? ranges[ranges.length - 1]?.years ?? data.length;
   const [currentRangeYears, setCurrentRangeYears] = useState(initialRange);
@@ -116,24 +118,25 @@ export function SignatureChart({
   const primarySeries =
     resolvedSeries.find((s) => s.isPrimary) ?? resolvedSeries[0];
   const primaryKey = primarySeries.key;
-  // Sign coloring: below-zero values render red. With a zero crossing in
-  // view, a hard-stop gradient splits the stroke/fill at the zero line;
-  // all-negative data is just red; all-positive keeps the series color.
-  const zeroOffset = signColoring
-    ? zeroCrossingOffset(slicedData, primaryKey)
-    : null;
-  const allNegative =
-    signColoring &&
-    slicedData.length > 0 &&
-    slicedData.every((d) => readYValue(d, primaryKey) <= 0);
-  const primaryColor = allNegative ? piq.red : primarySeries.color;
-  const primaryPaint =
-    zeroOffset != null ? `url(#${gradientId})` : primaryColor;
+  const {
+    color: primaryColor,
+    paint: primaryPaint,
+    zeroOffset,
+  } = resolveSignPaint(
+    slicedData,
+    primaryKey,
+    primarySeries.color,
+    gradientId,
+    signColoring,
+  );
 
   const activePoint =
     activeIndex != null
       ? slicedData[activeIndex]
-      : slicedData[slicedData.length - 1];
+      : // Sign-colored forward projections open on TODAY's value (year 1) so
+        // the headline color always agrees with the part of the curve it
+        // describes — a red curve must not open with a green number.
+        slicedData[signColoring ? 0 : slicedData.length - 1];
   const firstPoint = slicedData[0];
 
   const activePrimary = readYValue(activePoint, primaryKey);
