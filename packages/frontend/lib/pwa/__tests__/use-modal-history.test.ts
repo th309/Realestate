@@ -147,6 +147,52 @@ describe("useModalHistory — stacked modals close LIFO", () => {
   });
 });
 
+describe("useModalHistory — enabled option (e.g. desktop docked-sidebar gating)", () => {
+  it("defaults to enabled (back-to-close active) when the 4th argument is omitted", () => {
+    const pushSpy = vi.spyOn(window.history, "pushState");
+    const onClose = vi.fn();
+
+    renderHook(() => useModalHistory(true, onClose, "default-enabled-test"));
+
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not push a history entry while isOpen is true but enabled is false", () => {
+    const pushSpy = vi.spyOn(window.history, "pushState");
+    const onClose = vi.fn();
+
+    renderHook(() => useModalHistory(true, onClose, "disabled-test", false));
+
+    expect(pushSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not react to a popstate while enabled is false", () => {
+    const onClose = vi.fn();
+    renderHook(() =>
+      useModalHistory(true, onClose, "disabled-popstate-test", false),
+    );
+
+    firePopState();
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("consumes a live marker via history.back() — without calling onClose — when enabled flips false while still open", () => {
+    const onClose = vi.fn();
+    const { rerender } = renderHook(
+      ({ enabled }) =>
+        useModalHistory(true, onClose, "enabled-flip-test", enabled),
+      { initialProps: { enabled: true } },
+    );
+
+    // e.g. the viewport crossed the md breakpoint while the panel was open.
+    rerender({ enabled: false });
+
+    expect(window.history.back).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
 describe("useModalHistory — route changes from inside the modal", () => {
   it("does not call history.back() when the pathname changed while open (a real navigation, e.g. router.push)", () => {
     const onClose = vi.fn();
