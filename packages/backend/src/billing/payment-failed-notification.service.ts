@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
-import { buildPaymentFailedEmail } from '../email/behavioral-trigger-emails';
+import { buildPaymentFailedEmail } from '../email/billing-trigger-emails';
 import { getEmailLinkBaseUrl } from '../email/email-link-base';
 import { buildUnsubscribe } from '../email/unsubscribe-link.util';
 
