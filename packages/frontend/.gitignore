@@ -42,3 +42,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Serwist-generated service worker build output (public/sw.js is built from
+# app/sw.ts by @serwist/next; never commit the generated bundle or its
+# source map / worker chunks — see next.config.mjs).
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker*.js
+/public/swe-worker*.js.map

@@ -1,6 +1,18 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import withSerwistInit from '@serwist/next';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+// PWA service worker (Serwist InjectManifest). Registration is manual (see
+// lib/pwa/register-service-worker.ts) so the update-toast flow controls when
+// a waiting worker takes over — `register: false` disables Serwist's own
+// auto-registration script.
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  register: false,
+});
 
 // De-scored market pages: generated monthly by scripts/generate-descored-redirects.ts.
 // Seed is [] so this is a no-op until the first generation run.
@@ -281,7 +293,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withSerwist(nextConfig), {
   // Sentry organization and project (set in CI or locally for source map uploads).
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,

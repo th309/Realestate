@@ -309,8 +309,12 @@ export const config = {
      * backend by app/backend/[[...path]]/route.ts (see lib/data/fetchers/api-url.ts).
      * Running the Supabase session refresh on every proxied data request would
      * add a getUser() round-trip per call for no benefit.
+     *
+     * `sw.js`/`sw.js.map` is excluded: the Serwist service worker script
+     * (next.config.mjs / app/sw.ts) must be served with no auth/redirect
+     * logic in front of it, or install/update can fail.
      */
-    "/((?!backend/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
+    "/((?!backend/|_next/static|_next/image|favicon.ico|sw\\.js(?:\\.map)?|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
     // Belt-and-suspenders for the admin API guard: the exclusion regex above
     // drops ANY path ending in a static extension (.json/.txt/.xml/...), which
     // would otherwise let `/api/admin/<route>/<id>.json` skip middleware — and
