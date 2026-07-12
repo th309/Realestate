@@ -29,7 +29,10 @@ export interface AlertHistoryEntry {
   alert_id: string;
   triggered_at: string;
   metric_value: number;
-  notified_via: 'in-app' | 'email' | 'both';
+  // 'both' = in-app + email (threshold alerts). 'in-app+push' = in-app + a
+  // successfully delivered Web Push notification — kept distinct from 'both'
+  // rather than overloading it, since email and push are independent channels.
+  notified_via: 'in-app' | 'email' | 'both' | 'in-app+push';
   read_at: string | null;
 }
 
@@ -223,17 +226,10 @@ export class AlertsService {
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
 
-    // Get all alert IDs belonging to this user
-    const { data: userAlerts } = await client
-      .from('user_alerts')
-      .select('id')
-      .eq('user_id', userId);
-
-    if (!userAlerts?.length) {
+    const alertIds = await this.getUserAlertIds(userId);
+    if (!alertIds.length) {
       return { entries: [], unread_count: 0 };
     }
-
-    const alertIds = userAlerts.map((a) => a.id);
 
     // Fetch history entries
     const { data: entries, error } = await client
@@ -248,17 +244,40 @@ export class AlertsService {
       throw new Error(error.message);
     }
 
-    // Get unread count
+    return {
+      entries: entries || [],
+      unread_count: await this.countUnread(alertIds),
+    };
+  }
+
+  /**
+   * Unread alert-history count for a user, e.g. for a push notification's
+   * badge count. Shares the exact query `getHistory()` uses so the badge
+   * count and the in-app unread count never diverge.
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    const alertIds = await this.getUserAlertIds(userId);
+    if (!alertIds.length) return 0;
+    return this.countUnread(alertIds);
+  }
+
+  private async getUserAlertIds(userId: string): Promise<string[]> {
+    const client = this.supabase.getClient();
+    const { data: userAlerts } = await client
+      .from('user_alerts')
+      .select('id')
+      .eq('user_id', userId);
+    return (userAlerts || []).map((a) => a.id);
+  }
+
+  private async countUnread(alertIds: string[]): Promise<number> {
+    const client = this.supabase.getClient();
     const { count: unreadCount } = await client
       .from('alert_history')
       .select('*', { count: 'exact', head: true })
       .in('alert_id', alertIds)
       .is('read_at', null);
-
-    return {
-      entries: entries || [],
-      unread_count: unreadCount || 0,
-    };
+    return unreadCount || 0;
   }
 
   /**
