@@ -208,3 +208,12 @@
 - Rank the table's columns by decision value; make the top ones fit the phone viewport (tighter padding, responsive min-widths)
 - Add a scroll affordance for the rest (ScrollShadowContainer pattern: fade + chevron, driven by scrollLeft/scrollWidth)
 - Screenshot at real device widths and read it as a user would before claiming done
+
+## Parallel Agents Sharing One Git Worktree Race on the Index
+
+**Date:** 2026-07-12
+**Context:** Two parallel implementers in the same worktree: agent A ran `git add -- <its files>` then `git commit` as separate commands; between them agent B's staged files entered the shared index and were swept into A's commit (d376dff5 carried two tasks' work). No data loss, but per-task review diffs broke and had to be reconstructed by file subsets.
+
+**Rule:** In a shared worktree with concurrent committers, staging and committing must be atomic per agent: use `git commit -m "..." -- <explicit paths>` as ONE command (pathspec commit ignores other staged entries), never `git add` + bare `git commit` as separate steps. Reviewers must verify each commit's `--stat` matches the task's ownership list.
+
+**Also observed same session:** stop-hooks attribute the user's parallel main-checkout WIP to the session (verify with `git status` on the flagged paths before dispatching validators); piping a long-running dev server through `head` wedges it when the pipe closes (redirect to a file instead).
