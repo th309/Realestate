@@ -151,6 +151,32 @@ export function buildTrialWillEndEmail(
   return wrapEmail(body, unsubscribeUrl);
 }
 
+/**
+ * buildPaymentFailedEmail — transactional notice sent when Stripe reports
+ * invoice.payment_failed on a subscription. Mirrors buildTrialWillEndEmail's
+ * wrapper/branding; deliberately not gated on marketing opt-out.
+ */
+export function buildPaymentFailedEmail(
+  name: string,
+  updateCardUrl: string,
+  unsubscribeUrl: string,
+): string {
+  const body = `
+    <h1 style="margin:0 0 8px; font-size:24px; font-weight:700; color:#1A237E;">Hi ${name},</h1>
+    <p style="margin:0 0 16px; font-size:16px; color:#424242; line-height:1.6;">
+      Your PropertyIQ payment didn't go through. Update your card to keep your Pro access.
+    </p>
+    <p style="margin:0 0 24px; font-size:16px; color:#424242; line-height:1.6;">
+      We'll automatically retry the charge, but updating your card now is the fastest way to avoid any interruption to your Pro features.
+    </p>
+    <a href="${updateCardUrl}"
+       style="display:inline-block; background-color:#3949AB; color:#ffffff; padding:14px 28px; border-radius:100px; font-size:15px; font-weight:600; text-decoration:none; letter-spacing:0.2px;">
+      Update Payment Method
+    </a>
+  `;
+  return wrapEmail(body, unsubscribeUrl);
+}
+
 export function buildTrialExpiredEmail(
   name: string,
   upgradeUrl: string,
