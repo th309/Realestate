@@ -1,15 +1,15 @@
-/* ─── Tab configuration ─── */
+/* ─── Reference page tab configuration ─── */
+/* Setup now lives on the /docs/mcp landing page, not a tab. */
 
-export type McpTabId = "setup" | "tools" | "examples" | "troubleshooting";
+export type McpTabId = "tools" | "examples" | "troubleshooting";
 
 export const MCP_TABS: { id: McpTabId; label: string }[] = [
-  { id: "setup", label: "Setup Guide" },
   { id: "tools", label: "Tools Reference" },
   { id: "examples", label: "Examples" },
   { id: "troubleshooting", label: "Troubleshooting" },
 ];
 
-export const DEFAULT_MCP_TAB: McpTabId = "setup";
+export const DEFAULT_MCP_TAB: McpTabId = "tools";
 
 /* ─── Tool types ─── */
 
