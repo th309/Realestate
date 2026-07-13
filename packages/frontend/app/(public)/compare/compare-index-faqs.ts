@@ -13,7 +13,7 @@ export const COMPARE_INDEX_FAQS: Faq[] = [
     question:
       "What real estate market analysis tools does PropertyIQ compare itself to?",
     answer:
-      "This page ranks PropertyIQ against other real estate market analysis and investing tools using a consistent set of criteria, with a detailed side-by-side comparison page for each one covering features, pricing, and where each tool wins.",
+      "This page ranks PropertyIQ against other real estate market analysis and investing tools using a consistent set of criteria. For the tools that have a dedicated comparison page, currently Reventure App, BiggerPockets, and Mashvisor, that page covers features, pricing, and where each tool wins.",
   },
   {
     question:
@@ -24,7 +24,7 @@ export const COMPARE_INDEX_FAQS: Faq[] = [
   {
     question: "Since PropertyIQ built this page, is the ranking biased?",
     answer:
-      "PropertyIQ is one of the tools being ranked and is ranked first on the stated criteria, which is worth knowing going in. The page discloses PropertyIQ's real gaps directly alongside the ranking: no short term rental data, no native mobile app yet, and no community or forums, areas where tools like Reventure App and PropStream are stronger. Off market lead generation is called out as another gap PropertyIQ does not fill.",
+      "PropertyIQ is one of the tools being ranked and is ranked first on the stated criteria, which is worth knowing going in. The page discloses PropertyIQ's real gaps directly alongside the ranking: no native mobile app yet, an area where Reventure App leads; no short term rental data, which is Mashvisor's strength; and no community or forums, where BiggerPockets is strongest. Off market lead generation is another disclosed gap, and that is where PropStream comes in.",
   },
   {
     question: "How does PropertyIQ compare to Reventure App?",
