@@ -1,3 +1,5 @@
+import { FaqSection } from "@/app/components/seo/FaqSection";
+
 const FAQ_ITEMS = [
   {
     q: "What is a real estate market score?",
@@ -33,67 +35,11 @@ const FAQ_ITEMS = [
   },
 ];
 
-/** FAQ JSON-LD structured data for scores page. */
-export function ScoresFaqJsonLd() {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQ_ITEMS.map((faq) => ({
-            "@type": "Question",
-            name: faq.q,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: faq.a,
-            },
-          })),
-        }),
-      }}
-    />
-  );
-}
-
-/** Expandable FAQ section for the scores page. */
+/** Expandable FAQ section for the scores page — now flat cards via shared FaqSection. */
 export function ScoresFaqSection() {
   return (
-    <section className="py-16 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-medium text-on-surface mb-8">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-6">
-          {FAQ_ITEMS.map((faq, i) => (
-            <details
-              key={i}
-              className="group relative border border-outline-variant rounded-xl"
-            >
-              <summary className="p-5 pr-12 cursor-pointer text-on-surface font-medium list-none [&::-webkit-details-marker]:hidden">
-                <h3 className="text-base font-medium">{faq.q}</h3>
-              </summary>
-              <svg
-                className="absolute right-5 top-5 w-5 h-5 text-on-surface-variant group-open:rotate-180 transition-transform pointer-events-none"
-                aria-hidden="true"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-              <p className="px-5 pb-5 text-on-surface-variant leading-relaxed">
-                {faq.a}
-              </p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
+    <FaqSection
+      faqs={FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a }))}
+    />
   );
 }
