@@ -11,6 +11,8 @@ import type { Metadata } from "next";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { RestartTutorialSection } from "./RestartTutorialSection";
+import { buildFaqJsonLd } from "@/lib/seo/faq-json-ld";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
 
 export const metadata: Metadata = {
   title: "Help & FAQ — PropertyIQ",
@@ -83,8 +85,16 @@ const RESOURCE_LINKS = [
 ];
 
 export default function HelpPage() {
+  // FAQ_ITEMS already matches the {question, answer} shape buildFaqJsonLd expects
+  // (its FaqItem interface is structurally identical to Faq), so no mapping needed.
+  const faqJsonLd = buildFaqJsonLd(FAQ_ITEMS);
+
   return (
     <div className="min-h-dvh bg-surface">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(faqJsonLd) }}
+      />
       <div className="max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Help" }]}
