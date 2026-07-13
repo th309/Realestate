@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { PRICING_FAQS } from "./pricing-faqs";
 
 export const metadata: Metadata = {
   title: "Plans & Pricing — Real Estate Analytics",
@@ -65,17 +67,17 @@ const pricingJsonLd = {
         },
         {
           "@type": "Offer",
-          name: "Team",
-          price: "99",
+          name: "Enterprise",
+          price: "149",
           priceCurrency: "USD",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "99",
+            price: "149",
             priceCurrency: "USD",
             billingDuration: "P1M",
           },
           description:
-            "Everything in Pro plus team collaboration, API access, and custom reports",
+            "Everything in Pro plus embeddable objects, widgets, team and brokerage features, and priority support",
         },
       ],
     },
@@ -129,13 +131,15 @@ export default function PricingLayout({
             Unlimited lookups, full score breakdowns with component analysis,
             AI-generated market reports, ZIP-level data, and priority support.
           </p>
-          <h2>Team — $99/month</h2>
+          <h2>Enterprise — $149/month</h2>
           <p>
-            Everything in Pro plus team collaboration, API access, custom
-            reports, and dedicated account management.
+            Everything in Pro plus embeddable objects, widgets, team and
+            brokerage features, and priority support.
           </p>
         </div>
       </noscript>
+
+      <FaqSection faqs={PRICING_FAQS} />
 
       {children}
     </>
