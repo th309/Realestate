@@ -82,7 +82,7 @@ export default async function ForecastHubPage() {
   faqs.push({
     question: "What does a PropertyIQ Score of 50 mean?",
     answer:
-      "A score of 50 marks a market's own state average, not a national midpoint. Scores are computed nationally across every market at a given geography level, then calibrated so 50 equals that market's state benchmark — a score above 50 predicts the market will outperform its state over the next three years, and a score below 50 predicts underperformance.",
+      "A score of 50 marks a market's own state average, not a national midpoint. Scores are computed nationally across every market at a given geography level, then calibrated so 50 equals that market's state benchmark. A score above 50 predicts the market will outperform its state over the next three years, and a score below 50 predicts underperformance.",
   });
 
   faqs.push({
