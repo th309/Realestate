@@ -58,4 +58,12 @@ describe("buildForecastFaqs answers the crash question from momentum data only",
   it("returns empty for missing stats (page renders without FAQ)", () => {
     expect(buildForecastFaqs({ displayName: "X", stats: null })).toEqual([]);
   });
+
+  it("adds a 5th question about data currency/sources when stats are present", () => {
+    expect(faqs.length).toBeGreaterThanOrEqual(4);
+    const currencyFaq = faqs.find((f) => f.question.includes("current"));
+    expect(currencyFaq).toBeDefined();
+    expect(currencyFaq!.answer).toContain("Zillow");
+    expect(currencyFaq!.answer).toContain("Realtor.com");
+  });
 });
