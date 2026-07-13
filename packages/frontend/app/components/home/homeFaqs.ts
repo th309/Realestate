@@ -22,7 +22,7 @@ export const HOME_FAQS: Faq[] = [
   },
   {
     question: "Does PropertyIQ work inside Claude or ChatGPT?",
-    answer: `Yes. PropertyIQ connects into Claude and ChatGPT through its MCP integration, so monthly-updated PropertyIQ scores, rent trends, and market forecasts are available without leaving the AI assistant you already use. More integrations beyond Claude and ChatGPT are planned.`,
+    answer: `Yes, for Claude. PropertyIQ connects into Claude through a native MCP server, so monthly-updated PropertyIQ scores, rent trends, and market forecasts are available without leaving the chat. ChatGPT does not support MCP yet, so that integration is not available today, but more AI assistant integrations are planned.`,
   },
   {
     question:
