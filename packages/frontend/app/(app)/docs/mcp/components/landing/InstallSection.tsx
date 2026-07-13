@@ -56,8 +56,8 @@ export function InstallSection() {
         <ol className="space-y-3">
           {recipe.steps.map((step, i) => (
             <li key={i} className="flex items-start gap-3 text-sm">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-on-primary text-xs font-medium shrink-0">
-                {i + 1}
+              <span className="font-mono text-sm font-semibold text-primary shrink-0 w-5 pt-0.5">
+                {i + 1}.
               </span>
               <span className="text-on-surface pt-0.5">{step}</span>
             </li>

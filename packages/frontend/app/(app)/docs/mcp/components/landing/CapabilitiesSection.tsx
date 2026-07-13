@@ -58,7 +58,7 @@ export function CapabilitiesSection() {
         {PERSONA_CARDS.map(({ icon: Icon, title, prompt, payoff }) => (
           <div
             key={title}
-            className="rounded-xl border border-outline-variant/50 p-5"
+            className="rounded-xl border border-outline-variant/50 bg-gradient-to-br from-primary-container/30 to-surface p-5"
           >
             <Icon className="w-5 h-5 text-primary mb-3" />
             <h3 className="text-sm font-semibold text-on-surface mb-2">
