@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { FaqSection } from "@/app/components/seo/FaqSection";
 import { ScreenerPageInner } from "./ScreenerPageInner";
+import { SCREENER_FAQS } from "./screener-faqs";
 
 export const metadata: Metadata = {
   title: "Market Screener — PropertyIQ",
@@ -27,8 +29,11 @@ function ScreenerSkeleton() {
 
 export default function ScreenerPage() {
   return (
-    <Suspense fallback={<ScreenerSkeleton />}>
-      <ScreenerPageInner />
-    </Suspense>
+    <>
+      <Suspense fallback={<ScreenerSkeleton />}>
+        <ScreenerPageInner />
+      </Suspense>
+      <FaqSection faqs={SCREENER_FAQS} />
+    </>
   );
 }
