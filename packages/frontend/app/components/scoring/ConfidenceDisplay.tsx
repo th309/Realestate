@@ -13,6 +13,9 @@
 
 import { memo, useState, useRef, useEffect } from "react";
 import { useDismissableOpen } from "@/lib/hooks/use-dismissable-open";
+import { getStarCount } from "./confidence-stars";
+
+export { getStarCount };
 
 type ConfidenceLevel = "a" | "b" | "c" | "f";
 
@@ -26,17 +29,6 @@ interface ConfidenceDisplayProps {
   size?: "sm" | "md";
   showDetails?: boolean;
   className?: string;
-}
-
-/**
- * Get number of filled stars based on percentage
- */
-function getStarCount(percentage: number): number {
-  if (percentage >= 90) return 5;
-  if (percentage >= 80) return 4;
-  if (percentage >= 70) return 3;
-  if (percentage >= 55) return 2;
-  return 1;
 }
 
 /**
