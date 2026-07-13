@@ -9,7 +9,7 @@ export const PRICING_FAQS: Faq[] = [
   {
     question: "What do I get with PropertyIQ Pro that Free doesn't include?",
     answer:
-      "Pro ($39/month) adds metro, county, and ZIP code-level data, full PropertyIQ Score breakdowns, AI-generated market analysis, unlimited AI reports, and ChatGPT and Claude integration through the MCP server. None of these features are available on the Free plan.",
+      "Pro ($39/month) adds metro, county, and ZIP code-level data, full PropertyIQ Score breakdowns, AI-generated market analysis, unlimited AI reports, and Claude integration through PropertyIQ's MCP server. None of these features are available on the Free plan.",
   },
   {
     question: "What does the Enterprise plan add over Pro?",
