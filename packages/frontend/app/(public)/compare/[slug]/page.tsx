@@ -9,6 +9,7 @@ import {
   type ComparisonWinner,
 } from "@/lib/data/comparisons";
 import { fetchPricingSummary } from "@/lib/data/fetchers/pricing";
+import { FaqSection } from "@/app/components/seo/FaqSection";
 
 // ---------------------------------------------------------------------------
 // Static params & metadata
@@ -193,47 +194,6 @@ function SummarySection({ summary }: { summary: string }) {
   );
 }
 
-function FAQSection({ faqs }: { faqs: ComparisonData["faqs"] }) {
-  if (!faqs || faqs.length === 0) return null;
-
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs.map((faq) => ({
-      "@type": "Question",
-      name: faq.question,
-      acceptedAnswer: { "@type": "Answer", text: faq.answer },
-    })),
-  };
-
-  return (
-    <section className="mt-10">
-      <h2 className="text-2xl font-medium text-on-surface mb-6">
-        Frequently Asked Questions
-      </h2>
-      <div className="space-y-4">
-        {faqs.map((faq) => (
-          <div
-            key={faq.question}
-            className="rounded-xl border border-outline-variant p-5"
-          >
-            <h3 className="text-base font-medium text-on-surface">
-              {faq.question}
-            </h3>
-            <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">
-              {faq.answer}
-            </p>
-          </div>
-        ))}
-      </div>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-    </section>
-  );
-}
-
 function RelatedComparisons({ currentSlug }: { currentSlug: string }) {
   const others = COMPARISONS.filter((c) => c.slug !== currentSlug);
   return (
@@ -369,7 +329,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       <FeatureComparisonTable comparison={comparison} />
       <PricingComparisonTable comparison={comparison} />
       <SummarySection summary={comparison.summary} />
-      <FAQSection faqs={comparison.faqs} />
+      <FaqSection faqs={comparison.faqs} />
       <RelatedComparisons currentSlug={slug} />
       <CallToAction />
     </>
