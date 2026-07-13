@@ -4,7 +4,7 @@ export const DOCS_API_FAQS: Faq[] = [
   {
     question: "Does PropertyIQ have a public REST API?",
     answer:
-      "Yes. The PropertyIQ Platform API exposes market data, PropertyIQ Scores, and property-level analysis over HTTP so you can pull the same data that powers the PropertyIQ app directly into your own tools and workflows.",
+      "Yes. The PropertyIQ Platform API exposes market data and PropertyIQ Scores across states, metros, counties, and ZIP codes over HTTP so you can pull the same data that powers the PropertyIQ app directly into your own tools and workflows.",
   },
   {
     question: "How do I authenticate requests to the API?",
@@ -19,7 +19,7 @@ export const DOCS_API_FAQS: Faq[] = [
   {
     question: "What format does the PropertyIQ API return data in?",
     answer:
-      "Responses are JSON, wrapped in a data field alongside a meta object with a request_id and timestamp for troubleshooting. List endpoints, like metrics or rankings, add pagination details to meta and use a cursor you pass back on the next request to page through results.",
+      "Responses are JSON, wrapped in a data field alongside a meta object with a request_id and timestamp for troubleshooting. List endpoints, like metrics or reports, add pagination details to meta and use a cursor you pass back on the next request to page through results.",
   },
   {
     question: "Is the PropertyIQ API rate limited?",
