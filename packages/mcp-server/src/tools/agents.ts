@@ -40,7 +40,7 @@ export const agentTools = [
           affordability_data: affordability,
           buyer_budget: args.budget || null,
           instructions:
-            "Create a buyer consultation brief. Include: market temperature, median price vs budget, DOM expectations, competition level (sold above list %), and 3-month trend. Plain language.",
+            "Create a buyer consultation brief. Include: market temperature, median price vs budget, DOM expectations, competition level (sold above list %), and 3-month trend. Plain language. Data note: every metric carries its own source field (zillow, realtor, or census) — check market_data.metrics.home_value.source before labeling it. Only call it 'Zillow Home Value Index (ZHVI)' (a smoothed regional index of typical home values, not a per-property valuation) when source is zillow; if it's realtor or census instead, cite that source by name (e.g. 'Realtor.com median listing price', 'Census median home value'). Never call any of these 'estimate' or 'Zestimate.' Apply the same source check to trend figures (home_value_yoy/home_value_mom) rather than assuming they're Zillow's.",
         },
         null,
         2,
