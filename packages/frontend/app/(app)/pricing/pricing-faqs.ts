@@ -4,17 +4,17 @@ export const PRICING_FAQS: Faq[] = [
   {
     question: "What's included in PropertyIQ's Free plan?",
     answer:
-      "The Free plan includes interactive market maps, national and state-level data, historical trends and charts, and preview reports, with no credit card required to sign up.",
+      "The Free plan includes interactive market maps, national and state-level data, historical trends and charts, and preview reports. No credit card is required to sign up.",
   },
   {
     question: "What do I get with PropertyIQ Pro that Free doesn't include?",
     answer:
-      "Pro ($39/month) adds metro, county, and ZIP code-level data, full PropertyIQ Score breakdowns, AI-generated market analysis, unlimited AI reports, and ChatGPT and Claude integration through the MCP server, all missing from the Free plan.",
+      "Pro ($39/month) adds metro, county, and ZIP code-level data, full PropertyIQ Score breakdowns, AI-generated market analysis, unlimited AI reports, and ChatGPT and Claude integration through the MCP server. None of these features are available on the Free plan.",
   },
   {
     question: "What does the Enterprise plan add over Pro?",
     answer:
-      "Enterprise ($149/month) includes everything in Pro plus embeddable objects and widgets for your own site, team and brokerage collaboration features, and priority support.",
+      "Enterprise ($149/month) includes everything in Pro plus embeddable objects and widgets for your own site. It also adds team and brokerage collaboration features and priority support.",
   },
   {
     question: "Can I switch between monthly and yearly billing?",
