@@ -10,12 +10,12 @@ export const ABOUT_FAQS: Faq[] = [
   {
     question: "Where does PropertyIQ get its housing and economic data from?",
     answer:
-      "PropertyIQ aggregates data from trusted public and private sources: Realtor.com and Zillow for listing and home-value data, the U.S. Census Bureau for demographics, and the Bureau of Labor Statistics, Bureau of Economic Analysis, and Federal Reserve (FRED) for economic indicators. Each data point in a report is traceable back to its source.",
+      "PropertyIQ aggregates data from trusted public and private sources: Realtor.com and Zillow for listing and home-value data, the U.S. Census Bureau for demographics, and the Bureau of Labor Statistics, Bureau of Economic Analysis, and Federal Reserve (FRED) for economic indicators. Metrics are updated monthly, and the full list of sources is published on the data sources page.",
   },
   {
     question: "Is PropertyIQ affiliated with Zillow, Realtor.com, or Redfin?",
     answer:
-      "No. PropertyIQ is an independent analytics platform that licenses and aggregates publicly available data from these providers alongside government sources; it is not owned by or affiliated with any of them.",
+      "No. PropertyIQ is an independent analytics platform that aggregates publicly available real estate and government data; it is not owned by or affiliated with Zillow, Realtor.com, Redfin, or any other company.",
   },
   {
     question: "When was PropertyIQ founded and who built it?",
