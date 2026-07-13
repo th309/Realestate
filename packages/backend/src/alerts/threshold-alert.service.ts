@@ -20,6 +20,8 @@ import React from 'react';
 import { EmailService } from '../email/email.service';
 import { ThresholdAlertDataService } from './threshold-alert-data.service';
 import { RedisLockService } from '../redis/redis-lock.service';
+import { AlertsService } from './alerts.service';
+import { PushService } from '../push/push.service';
 import {
   ActiveAlert,
   ScoreRow,
@@ -38,6 +40,8 @@ export class ThresholdAlertService {
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
     private readonly redis: RedisLockService,
+    private readonly alertsService: AlertsService,
+    private readonly pushService: PushService,
   ) {
     this.appUrl =
       this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
@@ -145,7 +149,43 @@ export class ThresholdAlertService {
     if (!success) return 'skipped';
 
     await this.alertData.recordTrigger(alert.id, currentScore);
+    await this.sendThresholdPush(
+      alert,
+      marketName,
+      scoreType,
+      currentScore,
+      direction,
+    );
     return 'sent';
+  }
+
+  /**
+   * Push notification alongside the email — mirrors the daily alert-processor
+   * wiring. Never throws: a push failure must not affect the 'sent' result
+   * (the email already succeeded), so this is fully isolated.
+   */
+  private async sendThresholdPush(
+    alert: ActiveAlert,
+    marketName: string,
+    scoreType: string,
+    currentScore: number,
+    direction: 'above' | 'below',
+  ): Promise<void> {
+    try {
+      const badgeCount = await this.alertsService.getUnreadCount(alert.user_id);
+      const directionLabel =
+        direction === 'above' ? 'rose above' : 'dropped below';
+      await this.pushService.sendToUser(alert.user_id, {
+        title: `${marketName} score alert`,
+        body: `${scoreType} score ${directionLabel} ${alert.threshold} (now ${Math.round(currentScore)})`,
+        url: '/alerts',
+        badgeCount,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Push notification failed for threshold alert ${alert.id}: ${err instanceof Error ? err.message : err}`,
+      );
+    }
   }
 
   private async sendAlertEmail(

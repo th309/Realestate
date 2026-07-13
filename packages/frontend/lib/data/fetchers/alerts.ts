@@ -4,8 +4,8 @@
  * API functions for user alert management and alert history.
  */
 
-import { fetchAPIRaw } from './base';
-import { getAuthHeaders } from './auth-headers';
+import { fetchAPIRaw } from "./base";
+import { getAuthHeaders } from "./auth-headers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,7 +17,7 @@ export interface Alert {
   geography_id: string;
   geography_name: string;
   metric_id: string;
-  condition: 'above' | 'below' | 'crosses';
+  condition: "above" | "below" | "crosses";
   threshold: number;
   is_active: boolean;
   last_triggered_at: string | null;
@@ -44,7 +44,7 @@ export interface AlertHistoryEntry {
  */
 export async function fetchAlerts(): Promise<Alert[]> {
   const authHeaders = await getAuthHeaders();
-  const res = await fetchAPIRaw('/api/alerts', { headers: authHeaders });
+  const res = await fetchAPIRaw("/api/alerts", { headers: authHeaders });
   if (!res.ok) return [];
   const data = await res.json();
   return data.data || data || [];
@@ -54,12 +54,12 @@ export async function fetchAlerts(): Promise<Alert[]> {
  * Create a new alert.
  */
 export async function createAlert(
-  alert: Omit<Alert, 'id' | 'last_triggered_at' | 'created_at' | 'is_active'>,
+  alert: Omit<Alert, "id" | "last_triggered_at" | "created_at" | "is_active">,
 ): Promise<Alert | null> {
   const authHeaders = await getAuthHeaders();
-  const res = await fetchAPIRaw('/api/alerts', {
-    method: 'POST',
-    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+  const res = await fetchAPIRaw("/api/alerts", {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
     body: JSON.stringify(alert),
   });
   if (!res.ok) return null;
@@ -72,12 +72,12 @@ export async function createAlert(
  */
 export async function updateAlert(
   id: string,
-  updates: Partial<Pick<Alert, 'threshold' | 'condition' | 'is_active'>>,
+  updates: Partial<Pick<Alert, "threshold" | "condition" | "is_active">>,
 ): Promise<boolean> {
   const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/${id}`, {
-    method: 'PATCH',
-    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
   return res.ok;
@@ -89,7 +89,7 @@ export async function updateAlert(
 export async function deleteAlert(id: string): Promise<boolean> {
   const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: authHeaders,
   });
   return res.ok;
@@ -103,10 +103,14 @@ export async function fetchAlertHistory(): Promise<{
   unreadCount: number;
 }> {
   const authHeaders = await getAuthHeaders();
-  const res = await fetchAPIRaw('/api/alerts/history', { headers: authHeaders });
+  const res = await fetchAPIRaw("/api/alerts/history", {
+    headers: authHeaders,
+  });
   if (!res.ok) return { entries: [], unreadCount: 0 };
   const data = await res.json();
-  return { entries: data.data || [], unreadCount: data.unreadCount || 0 };
+  // Controller returns snake_case `unread_count` (alerts.controller.ts) — the
+  // camelCase key never existed on the response, so the badge was stuck at 0.
+  return { entries: data.data || [], unreadCount: data.unread_count || 0 };
 }
 
 /**
@@ -115,7 +119,7 @@ export async function fetchAlertHistory(): Promise<{
 export async function markAlertRead(historyId: string): Promise<boolean> {
   const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/history/${historyId}/read`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: authHeaders,
   });
   return res.ok;

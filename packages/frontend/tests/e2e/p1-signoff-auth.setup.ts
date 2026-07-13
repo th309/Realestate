@@ -12,6 +12,13 @@ function requireEnv(name: string): string {
 }
 
 setup("authenticate admin for P1 sign-off", async ({ page }) => {
+  // Credentials, DOM structure, and the signInWithPassword() call path are
+  // all confirmed intact (see w3-e-report.md) — the prior 20s post-submit
+  // timeout was too tight for a dev server shared with other concurrent
+  // local processes (documented GC-thrash wedge pattern), not a UI/selector
+  // problem. Widen the budget rather than change the wait strategy.
+  setup.setTimeout(60_000);
+
   const email = requireEnv("P1_SIGNOFF_ADMIN_EMAIL");
   const password = requireEnv("P1_SIGNOFF_ADMIN_PASSWORD");
 
@@ -23,7 +30,7 @@ setup("authenticate admin for P1 sign-off", async ({ page }) => {
   // Troy's account lands on /map by default; other admins may go to
   // /dashboard, /admin, /home, /team — accept any authenticated route.
   await page.waitForURL(/\/(map|dashboard|admin|home|team)(\/.*)?$/, {
-    timeout: 20_000,
+    timeout: 45_000,
   });
 
   // Confirm we landed authed by checking cookie exists

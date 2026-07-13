@@ -8,6 +8,7 @@ export * from "./callout-markers";
 export * from "./value-format-expressions";
 export * from "./map-layer-config";
 export * from "./leader-line-layers";
+export * from "./state-label-callouts";
 export * from "./map-interactions";
 export * from "./feature-enrichment";
 export * from "./geojson-fetch";

@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { NAV, isDropdown } from "./header-nav-data";
 import { lockBodyScroll } from "@/lib/scroll-lock";
 import { useModalHistory } from "@/lib/pwa/use-modal-history";
+import { useAlertHistory } from "@/lib/alerts/hooks";
 import { GetAppMenuItem } from "./GetAppMenuItem";
 import {
   LogoutIcon,
@@ -57,6 +59,10 @@ export function MobileMenu({
   const [open, setOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const closeRef = useRef<() => void>(() => {});
+  // Bell/CreateAlertForm live on desktop (Header.tsx's AlertBell); mobile gets
+  // a single row here instead of cramming the full dropdown into the drawer.
+  const { unreadCount } = useAlertHistory();
+  const isPaid = tier === "pro" || tier === "enterprise" || tier === "admin";
 
   // Animate out, then let the parent unmount us.
   const handleClose = () => {
@@ -131,6 +137,17 @@ export function MobileMenu({
     { icon: SettingsIcon, label: "Settings", href: "/account" },
     { icon: CreditCardIcon, label: "Billing", href: "/account" },
     { icon: BookIcon, label: "Data Glossary", href: "/data" },
+    // Gated the same way as the /alerts page itself (pro/enterprise/admin).
+    ...(isPaid
+      ? [
+          {
+            icon: Bell,
+            label:
+              unreadCount > 0 ? `Alerts (${unreadCount} unread)` : "Alerts",
+            href: "/alerts",
+          },
+        ]
+      : []),
     ...(tier === "enterprise" && orgSlug
       ? [
           {

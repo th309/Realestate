@@ -54,6 +54,25 @@ export function InstallBanner() {
     });
   }, [visible, canPromptNatively]);
 
+  // Lets other bottom-anchored fixed elements (currently just
+  // ServiceWorkerManager's update snackbar) nudge themselves above this
+  // banner via a plain CSS calc() term instead of both components needing to
+  // share a layout/context — see the className comment in
+  // ServiceWorkerManager.tsx. `visible` already accounts for dismissed/
+  // installed/eligibility, so clearing the var on unmount is just a defensive
+  // backstop (this component stays mounted for the app's lifetime).
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--piq-install-banner-visible",
+      visible ? "1" : "0",
+    );
+    return () => {
+      document.documentElement.style.removeProperty(
+        "--piq-install-banner-visible",
+      );
+    };
+  }, [visible]);
+
   function handleDismiss() {
     trackEvent("pwa.install_banner_dismissed", {});
     dismissInstallBanner();

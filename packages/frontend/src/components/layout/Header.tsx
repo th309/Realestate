@@ -25,6 +25,7 @@ import { NavDropdownMenu } from "./NavDropdownMenu";
 import { MobileMenu } from "./MobileMenu";
 import { TrialBadge } from "./TrialBadge";
 import { ShareGlyphIcon } from "@/app/components/pwa/ShareGlyphIcon";
+import { AlertBell } from "@/components/alerts";
 
 /* ─── "Get the app" icon (local — Header owns its own icon, not Icons.nav.tsx) ─── */
 
@@ -71,6 +72,7 @@ export function Header() {
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const { tier } = useEntitlements();
+  const isPaid = tier === "pro" || tier === "enterprise" || tier === "admin";
   const { org } = useMyOrg();
   const { canPromptNatively, promptInstall, isInstalled } = useInstallPrompt();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -182,6 +184,7 @@ export function Header() {
             {loading ? null : !!user ? (
               <>
                 <TrialBadge />
+                {isPaid && <AlertBell />}
                 <div
                   className="relative"
                   onBlur={(e) => {

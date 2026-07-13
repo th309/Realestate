@@ -44,7 +44,17 @@ Branch `worktree-PWA` (user-requested worktree). Full analysis + plan: `docs/pla
 ## Phase 5 — Auth hardening, capabilities, stores
 
 - [x] **5.1** OTP password reset · **5.2** magic-link code alternative · **5.3** standalone-aware auth UX — 80c3a5ad + 84d678c1 (backend hook emails now carry the code; Supabase dashboard edit NOT needed — templates unused), reviewed ✅ (GATES: live signup-chain e2e pre-merge; visual email check post-deploy)
-- [ ] **5.4** Web Share API · **5.5** Push + Badging · **5.6** Play TWA ($25 gate) · **5.7** iOS store (DEFER)
+- [x] **5.5** Push + Badging (WAVE 3, direct on develop 2026-07-12) — `PushModule` (subscriptions table, DTO length caps, 10-per-user cap w/ LRU eviction, chunked fan-out) 65287238+466fc095; frontend SW push/notificationclick handlers + `use-push-subscription` hook + `PushOptInPrompt` mounted in-context bb664db9+92e14f01; App Badging API — backend `getUnreadCount()` → `badgeCount` on both alert-fire paths (alert-processor + threshold-alert services), SW `setAppBadge()` on push receipt, `/alerts` page `clearAppBadge()` on view. Backend push/alerts Jest (43 tests) + frontend PWA push Vitest (66 tests) + `tsc --noEmit` all verified green.
+- [ ] **5.4** Web Share API · **5.6** Play TWA ($25 gate) · **5.7** iOS store (DEFER)
+
+### Wave-3 extras (same day, bugs surfaced while wiring push into alerts)
+
+- [x] `createAlert`/`updateAlert` writing against stale `user_alerts` columns — c1e080b5 · alert read/filter using DTO field names instead of live schema — 5f591875 · unread-count bug + orphaned alert UI never mounted — 42cf0c32 · geography+value threaded through MetricCard's alert bell — 1a28b204
+- [x] Weekly digest silently emptying its alerts section (`42703` from live-column-alias mismatch) + surfaced query errors — ca6367c9
+- [x] Confidence-star e2e fixture threshold mismatch (fixture now delegates to component's own `getStarCount`, SSOT) — 6d835b4d
+- [x] Dead `ReportViewerRefined` report path + unused docx/pptxgenjs deps deleted — bd9b3108 · `Tooltip.tsx` + `useMapLayers` file-size splits — b84973b2 · `typecheck-frontend` CI gate added — b2734076 · e2e setup-fixture auth timeout hardening — b0a99aca
+
+**Not yet done:** 16 commits sitting local-only on `develop` — not pushed to `origin/develop`, not released to `main`.
 
 ## Review
 

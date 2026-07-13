@@ -5,11 +5,14 @@ import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
 import { BenchmarkBadge } from "@/components/benchmarks";
+import { MetricAlertBell } from "@/components/alerts";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 interface MetricCardProps {
   metricId: string;
   formattedValue: string;
+  /** Raw numeric value backing formattedValue — drives the alert bell. */
+  value?: number | null;
   trendPercent: number | null;
   trendDirection: "up" | "down" | "stable";
   source?: string;
@@ -23,11 +26,16 @@ interface MetricCardProps {
   } | null;
   isLoading?: boolean;
   delay?: number;
+  /** Geography context for the alert bell — omit to keep the bell hidden. */
+  geographyType?: string;
+  geographyId?: string;
+  geographyName?: string;
 }
 
 export function MetricCard({
   metricId,
   formattedValue,
+  value,
   trendPercent,
   trendDirection,
   source,
@@ -37,6 +45,9 @@ export function MetricCard({
   benchmark,
   isLoading = false,
   delay = 0,
+  geographyType,
+  geographyId,
+  geographyName,
 }: MetricCardProps) {
   const inheritedLevel =
     isInherited &&
@@ -67,26 +78,37 @@ export function MetricCard({
             }}
           />
         </div>
-        {trendPercent != null && (
-          <div
-            className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${
-              trendDirection === "up"
-                ? "text-green-600"
-                : trendDirection === "down"
-                  ? "text-red-600"
-                  : "text-on-surface-variant"
-            }`}
-          >
-            {trendDirection === "up" && (
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            )}
-            {trendDirection === "down" && (
-              <ArrowDownRight className="w-3.5 h-3.5" />
-            )}
-            {trendPercent >= 0 ? "+" : ""}
-            {trendPercent.toFixed(1)}%
-          </div>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {trendPercent != null && (
+            <div
+              className={`flex items-center gap-0.5 text-xs font-medium ${
+                trendDirection === "up"
+                  ? "text-green-600"
+                  : trendDirection === "down"
+                    ? "text-red-600"
+                    : "text-on-surface-variant"
+              }`}
+            >
+              {trendDirection === "up" && (
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              )}
+              {trendDirection === "down" && (
+                <ArrowDownRight className="w-3.5 h-3.5" />
+              )}
+              {trendPercent >= 0 ? "+" : ""}
+              {trendPercent.toFixed(1)}%
+            </div>
+          )}
+          {geographyType && geographyId && geographyName && (
+            <MetricAlertBell
+              metricId={metricId}
+              currentValue={value}
+              geographyType={geographyType}
+              geographyId={geographyId}
+              geographyName={geographyName}
+            />
+          )}
+        </div>
       </div>
       {(isFallback || inheritedLevel) && (
         <div className="flex items-center gap-1 mb-2">

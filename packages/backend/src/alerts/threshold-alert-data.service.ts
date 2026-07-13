@@ -27,6 +27,14 @@ export class ThresholdAlertDataService {
 
   /**
    * Fetch all active alerts whose metric_id maps to a score column.
+   *
+   * Schema note: `user_alerts`' live DB columns are `metric_name` /
+   * `condition_type` / `threshold_value`, NOT `metric_id`/`condition`/
+   * `threshold` (verified via `information_schema.columns` against the live
+   * table, 2026-07-12 — no ALTER migration for this table exists anywhere in
+   * the repo). Aliased in the select so `ActiveAlert`'s public field names —
+   * and every downstream consumer in threshold-alert.service.ts — are
+   * unaffected.
    */
   async fetchActiveScoreAlerts(): Promise<ActiveAlert[]> {
     const scoreMetricIds = Object.keys(SCORE_METRIC_COLUMNS);
@@ -34,10 +42,10 @@ export class ThresholdAlertDataService {
     const { data, error } = await this.supabase
       .from('user_alerts')
       .select(
-        'id, user_id, geography_type, geography_id, geography_name, metric_id, condition, threshold, last_triggered_at',
+        'id, user_id, geography_type, geography_id, geography_name, metric_id:metric_name, condition:condition_type, threshold:threshold_value, last_triggered_at',
       )
       .eq('is_active', true)
-      .in('metric_id', scoreMetricIds);
+      .in('metric_name', scoreMetricIds);
 
     if (error) {
       this.logger.error(`Failed to fetch active alerts: ${error.message}`);

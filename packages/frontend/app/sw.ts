@@ -31,6 +31,8 @@ import type {
   SerwistGlobalConfig,
 } from "serwist";
 
+import { registerPushHandlers } from "./sw-push";
+
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -121,6 +123,21 @@ const publicResponseOnly: SerwistPlugin = {
   },
 };
 
+/**
+ * True when `pathname` matches `prefix`: either `prefix` is a directory-style
+ * entry (ends in "/", matching anything nested under it), or `pathname`
+ * equals `prefix` exactly, or continues past it at a "/" boundary. Plain
+ * `pathname.startsWith(prefix)` would let a literal terminal route like
+ * "/backend/api/scores/top" also match an unrelated future sibling such as
+ * "/backend/api/scores/top-performers".
+ */
+function pathMatchesAllowlistPrefix(pathname: string, prefix: string): boolean {
+  if (!pathname.startsWith(prefix)) return false;
+  if (prefix.endsWith("/")) return true;
+  const nextChar = pathname.charAt(prefix.length);
+  return nextChar === "" || nextChar === "/";
+}
+
 // Phase-4.1: stale-while-revalidate for the public metric/market read
 // endpoints enumerated above. Excludes NDJSON stream routes (path ends in
 // "/stream") since those are unbounded/large and not meant to be cached.
@@ -131,7 +148,7 @@ const backendSwrAllowlist: RuntimeCaching = {
     sameOrigin &&
     !url.pathname.endsWith("/stream") &&
     CACHEABLE_BACKEND_PREFIXES.some((prefix) =>
-      url.pathname.startsWith(prefix),
+      pathMatchesAllowlistPrefix(url.pathname, prefix),
     ),
   method: "GET",
   handler: new StaleWhileRevalidate({
@@ -219,5 +236,9 @@ self.addEventListener("message", (event) => {
     event.waitUntil(caches.delete(BACKEND_API_CACHE_NAME));
   }
 });
+
+// Push notifications + notification-click handling (see app/sw-push.ts —
+// split out to stay under the 300-line logic-file limit).
+registerPushHandlers();
 
 serwist.addEventListeners();

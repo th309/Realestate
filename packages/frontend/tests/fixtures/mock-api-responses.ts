@@ -5,6 +5,8 @@
  * Used to mock API responses when testing UI components independently.
  */
 
+import { getStarCount } from "@/app/components/scoring/confidence-stars";
+
 // Score response for a typical ZIP code with all data available
 export const MOCK_FULL_SCORE_RESPONSE = {
   success: true,
@@ -208,14 +210,12 @@ export function getScoreColor(score: number | null): string {
   return "red";
 }
 
-// Confidence stars based on percentage
+// Confidence stars based on percentage. Delegates to the same pure
+// getStarCount() ConfidenceDisplay.tsx renders with, so this fixture can
+// never drift from the shipped thresholds again.
 export function getConfidenceStars(confidence: number | null): number {
   if (confidence === null) return 0;
-  if (confidence >= 90) return 5;
-  if (confidence >= 70) return 4;
-  if (confidence >= 55) return 3;
-  if (confidence >= 40) return 2;
-  return 1;
+  return getStarCount(confidence);
 }
 
 // Trend direction

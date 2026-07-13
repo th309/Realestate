@@ -3,6 +3,16 @@
  *
  * CRUD operations for user metric alerts backed by
  * the user_alerts and alert_history tables.
+ *
+ * Schema note: `user_alerts`' live DB columns are `metric_name` /
+ * `condition_type` / `threshold_value`, NOT `metric_id`/`condition`/
+ * `threshold` — verified directly against the live table via
+ * `information_schema.columns` (2026-07-12); no ALTER migration or
+ * compatibility view for this table exists anywhere in the repo. Every
+ * write below targets the real column names; every read aliases them back
+ * to `UserAlert`'s public field names (`USER_ALERT_SELECT_COLUMNS`) so the
+ * DTO contract this service exposes — and everything the frontend already
+ * depends on — is completely unchanged.
  */
 
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
@@ -29,7 +39,10 @@ export interface AlertHistoryEntry {
   alert_id: string;
   triggered_at: string;
   metric_value: number;
-  notified_via: 'in-app' | 'email' | 'both';
+  // 'both' = in-app + email (threshold alerts). 'in-app+push' = in-app + a
+  // successfully delivered Web Push notification — kept distinct from 'both'
+  // rather than overloading it, since email and push are independent channels.
+  notified_via: 'in-app' | 'email' | 'both' | 'in-app+push';
   read_at: string | null;
 }
 
@@ -47,6 +60,20 @@ export interface UpdateAlertDto {
   threshold?: number;
   is_active?: boolean;
 }
+
+/**
+ * Select list for `user_alerts`, aliasing the live DB columns
+ * (metric_name/condition_type/threshold_value) back to the public
+ * `UserAlert` field names (metric_id/condition/threshold) PostgREST-side —
+ * every read below uses this so the returned shape is always correct.
+ *
+ * MUST stay a single string literal with `as const`: string concatenation
+ * (`'a' + 'b'`) or a plain `const` without `as const` widens the inferred
+ * type to `string`, which breaks the Supabase client's select-string type
+ * inference and makes every read below type as an untyped error shape.
+ */
+const USER_ALERT_SELECT_COLUMNS =
+  'id, user_id, geography_type, geography_id, geography_name, metric_id:metric_name, condition:condition_type, threshold:threshold_value, is_active, last_triggered_at, created_at, updated_at' as const;
 
 @Injectable()
 export class AlertsService {
@@ -67,7 +94,7 @@ export class AlertsService {
 
     const { data: alerts, error } = await client
       .from('user_alerts')
-      .select('*')
+      .select(USER_ALERT_SELECT_COLUMNS)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -124,12 +151,12 @@ export class AlertsService {
         geography_type: dto.geography_type,
         geography_id: dto.geography_id,
         geography_name: dto.geography_name || null,
-        metric_id: dto.metric_id,
-        condition: dto.condition,
-        threshold: dto.threshold,
+        metric_name: dto.metric_id,
+        condition_type: dto.condition,
+        threshold_value: dto.threshold,
         is_active: true,
       })
-      .select()
+      .select(USER_ALERT_SELECT_COLUMNS)
       .single();
 
     if (error) {
@@ -156,8 +183,8 @@ export class AlertsService {
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
-    if (dto.condition !== undefined) updateData.condition = dto.condition;
-    if (dto.threshold !== undefined) updateData.threshold = dto.threshold;
+    if (dto.condition !== undefined) updateData.condition_type = dto.condition;
+    if (dto.threshold !== undefined) updateData.threshold_value = dto.threshold;
     if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
 
     const { data, error } = await client
@@ -165,7 +192,7 @@ export class AlertsService {
       .update(updateData)
       .eq('id', alertId)
       .eq('user_id', userId)
-      .select()
+      .select(USER_ALERT_SELECT_COLUMNS)
       .single();
 
     if (error) {
@@ -223,17 +250,10 @@ export class AlertsService {
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
 
-    // Get all alert IDs belonging to this user
-    const { data: userAlerts } = await client
-      .from('user_alerts')
-      .select('id')
-      .eq('user_id', userId);
-
-    if (!userAlerts?.length) {
+    const alertIds = await this.getUserAlertIds(userId);
+    if (!alertIds.length) {
       return { entries: [], unread_count: 0 };
     }
-
-    const alertIds = userAlerts.map((a) => a.id);
 
     // Fetch history entries
     const { data: entries, error } = await client
@@ -248,17 +268,40 @@ export class AlertsService {
       throw new Error(error.message);
     }
 
-    // Get unread count
+    return {
+      entries: entries || [],
+      unread_count: await this.countUnread(alertIds),
+    };
+  }
+
+  /**
+   * Unread alert-history count for a user, e.g. for a push notification's
+   * badge count. Shares the exact query `getHistory()` uses so the badge
+   * count and the in-app unread count never diverge.
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    const alertIds = await this.getUserAlertIds(userId);
+    if (!alertIds.length) return 0;
+    return this.countUnread(alertIds);
+  }
+
+  private async getUserAlertIds(userId: string): Promise<string[]> {
+    const client = this.supabase.getClient();
+    const { data: userAlerts } = await client
+      .from('user_alerts')
+      .select('id')
+      .eq('user_id', userId);
+    return (userAlerts || []).map((a) => a.id);
+  }
+
+  private async countUnread(alertIds: string[]): Promise<number> {
+    const client = this.supabase.getClient();
     const { count: unreadCount } = await client
       .from('alert_history')
       .select('*', { count: 'exact', head: true })
       .in('alert_id', alertIds)
       .is('read_at', null);
-
-    return {
-      entries: entries || [],
-      unread_count: unreadCount || 0,
-    };
+    return unreadCount || 0;
   }
 
   /**

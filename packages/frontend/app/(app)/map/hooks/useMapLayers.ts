@@ -14,23 +14,16 @@ import type {
 import {
   getMetricFormat,
   calculateValueRange,
-  computeScreenSpaceRatios,
-  computeCalloutPositions,
-  buildLeaderLineGeojson,
-  syncCalloutMarkers,
-  updateCalloutOpacity,
   removeAllCalloutMarkers,
   removeAllManagedLayers,
   addMapLayers,
-  addLeaderLineLayers,
-  computeFillColor,
   setupInteractions,
   addValuesToFeatures,
   fetchWithRetry,
   getGeojsonUrl,
   calculateHighlightFilter,
   createLabelPoints,
-  type LabelFeature,
+  setupStateLabelCallouts,
   type MarkerStore,
 } from "../utils";
 import { useMetricFreshness } from "@/lib/data/hooks";
@@ -193,72 +186,15 @@ export function useMapLayers({
 
       // Leader lines + callout labels for small states at state level
       if (geoLevel === "state" && labelPointsGeojson) {
-        // Build LabelFeature array from the label points
-        const labelFeatures: LabelFeature[] = labelPointsGeojson.features.map(
-          (f: any) => ({
-            name: f.properties.name,
-            value: f.properties.value,
-            polylabel: [
-              f.properties.polylabelLng,
-              f.properties.polylabelLat,
-            ] as [number, number],
-            bbox: [
-              f.properties.bboxMinLng,
-              f.properties.bboxMinLat,
-              f.properties.bboxMaxLng,
-              f.properties.bboxMaxLat,
-            ] as [number, number, number, number],
-            screenSpaceRatio: 0,
-            fillColor: "",
-          }),
-        );
-
-        // Compute fill colors for each state (matching geo-fills)
-        for (const lf of labelFeatures) {
-          lf.fillColor = computeFillColor(lf.value, minVal, maxVal);
-        }
-
-        // Function to update labels on zoom
-        const updateLabelsForZoom = () => {
-          if (!map.current) return;
-
-          computeScreenSpaceRatios(labelFeatures, map.current);
-
-          const source = map.current.getSource("geo-labels-data") as
-            | mapboxgl.GeoJSONSource
-            | undefined;
-          if (source) {
-            const updatedData = {
-              ...labelPointsGeojson,
-              features: labelPointsGeojson.features.map(
-                (f: any, i: number) => ({
-                  ...f,
-                  properties: {
-                    ...f.properties,
-                    screenSpaceRatio: labelFeatures[i]?.screenSpaceRatio ?? 0,
-                  },
-                }),
-              ),
-            };
-            source.setData(updatedData);
-          }
-
-          const callouts = computeCalloutPositions(labelFeatures, map.current);
-          const lineGeojson = buildLeaderLineGeojson(callouts);
-
-          addLeaderLineLayers(map.current, lineGeojson);
-          syncCalloutMarkers(
-            markersRef.current,
-            map.current,
-            callouts,
-            metricFormat,
-          );
-          updateCalloutOpacity(markersRef.current, labelFeatures);
-        };
-
-        updateLabelsForZoom();
-        map.current!.on("zoomend", updateLabelsForZoom);
-        zoomHandlerRef.current = updateLabelsForZoom;
+        setupStateLabelCallouts({
+          map,
+          labelPointsGeojson,
+          minVal,
+          maxVal,
+          metricFormat,
+          markersRef,
+          zoomHandlerRef,
+        });
       }
 
       // Setup hover and click interactions

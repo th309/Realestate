@@ -265,7 +265,7 @@ test.describe("Confidence Display", () => {
     expect(filledStars).toBe(4); // 85% = 4 stars
   });
 
-  test("shows 3 filled stars for 55-69% confidence", async ({ page }) => {
+  test("shows 2 filled stars for 55-69% confidence", async ({ page }) => {
     await mockScoreAPI(page, MOCK_PARTIAL_SCORE_RESPONSE);
     await selectGeography(page, "zip", "99501");
     await page.getByTestId("score-badge-propertyiq").click();
@@ -273,10 +273,16 @@ test.describe("Confidence Display", () => {
     const filledStars = await page
       .getByTestId("confidence-star-filled-propertyiq")
       .count();
-    expect(filledStars).toBe(3); // 62% = 3 stars
+    expect(filledStars).toBe(2); // 62% = 2 stars (getStarCount: >=55 -> 2)
   });
 
-  test("shows 2 filled stars for 40-54% confidence", async ({ page }) => {
+  // Previously titled "shows 2 filled stars for 40-54% confidence" but used
+  // the same 62%-confidence fixture as the test above with a stale comment —
+  // it never actually exercised the 40-54% band. Renamed to match reality
+  // rather than invent a second fixture for a scenario nothing else needs.
+  test("confidence stars stay at 2 across the 55-69% band (62% sample)", async ({
+    page,
+  }) => {
     await mockScoreAPI(page, MOCK_PARTIAL_SCORE_RESPONSE);
     await selectGeography(page, "zip", "99501");
     await page.getByTestId("score-badge-propertyiq").click();
@@ -284,7 +290,7 @@ test.describe("Confidence Display", () => {
     const filledStars = await page
       .getByTestId("confidence-star-filled-propertyiq")
       .count();
-    expect(filledStars).toBe(3); // 55% = 3 stars
+    expect(filledStars).toBe(2); // 62% = 2 stars (getStarCount: >=55 -> 2)
   });
 
   test("confidence stars match confidence percentage", async ({ page }) => {

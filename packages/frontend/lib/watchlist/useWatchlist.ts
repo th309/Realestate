@@ -121,6 +121,7 @@ export function useWatchlist({
 
         if (data.success) {
           setItems((prev) => [data.data, ...prev]);
+          window.dispatchEvent(new Event("piq:market-watched")); // see app/components/pwa/PushOptInPrompt.tsx
           return data.data;
         } else {
           setError(data.error);

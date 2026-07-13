@@ -151,16 +151,26 @@ export class DigestService {
       const sevenDaysAgo = new Date(
         Date.now() - 7 * 24 * 60 * 60 * 1000,
       ).toISOString();
-      const { data: alertHistory } = await this.supabase
-        .from('alert_history')
-        .select(
-          '*, alert:user_alerts(geography_name, metric_id, condition, threshold)',
-        )
-        .in('alert_id', userAlertIds)
-        .gte('triggered_at', sevenDaysAgo)
-        .order('triggered_at', { ascending: false })
-        .limit(10);
+      // user_alerts' live columns are metric_name/condition_type/threshold_value;
+      // alias them back to the public shape (same mapping as
+      // alerts.service.ts's USER_ALERT_SELECT_COLUMNS). The dead names made
+      // PostgREST 42703 here, silently emptying the digest's alerts section.
+      const { data: alertHistory, error: alertHistoryError } =
+        await this.supabase
+          .from('alert_history')
+          .select(
+            '*, alert:user_alerts(geography_name, metric_id:metric_name, condition:condition_type, threshold:threshold_value)',
+          )
+          .in('alert_id', userAlertIds)
+          .gte('triggered_at', sevenDaysAgo)
+          .order('triggered_at', { ascending: false })
+          .limit(10);
 
+      if (alertHistoryError) {
+        this.logger.warn(
+          `Digest alert-history query failed: ${alertHistoryError.message}`,
+        );
+      }
       userAlertHistory = alertHistory?.filter((h) => h.alert) || [];
     }
 
