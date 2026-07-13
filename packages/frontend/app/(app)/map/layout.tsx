@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { MAP_FAQS } from "./map-faqs";
 
 export const metadata: Metadata = {
   title: "Interactive Real Estate Market Heat Map — 40+ Metrics by ZIP Code",
@@ -56,6 +58,7 @@ export default function MapLayout({ children }: { children: React.ReactNode }) {
           any metric and geography level to compare markets across the country.
         </p>
       </section>
+      <FaqSection faqs={MAP_FAQS} />
       {children}
     </>
   );
