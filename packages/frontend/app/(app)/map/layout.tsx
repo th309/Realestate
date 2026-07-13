@@ -58,6 +58,17 @@ export default function MapLayout({ children }: { children: React.ReactNode }) {
           any metric and geography level to compare markets across the country.
         </p>
       </section>
+      {/*
+        This FAQ sits above the client map for the same reason as the section
+        above it: once the map hydrates, it renders absolute inset-0 over
+        main and covers this block, so sighted users never actually see
+        these questions. That's accepted here, not an oversight. The map is
+        a full-viewport interactive tool, and reworking the layout so the
+        FAQ stays visible alongside it is a larger UI change outside this
+        task's scope. The FAQ still does its job for its intended audience:
+        the JSON-LD and server-rendered text land in the initial HTML, so
+        Google and AI crawlers see it even though sighted users don't.
+      */}
       <FaqSection faqs={MAP_FAQS} />
       {children}
     </>

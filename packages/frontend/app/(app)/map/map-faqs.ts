@@ -5,7 +5,7 @@ export const MAP_FAQS: Faq[] = [
   {
     question: "What metrics can I visualize on the PropertyIQ map?",
     answer:
-      "The interactive map covers 40+ metrics including the PropertyIQ Score, home values, rent prices, inventory, and days on market, selectable from a single dropdown and rendered as a color-coded heat map across the country.",
+      "The interactive map covers 40+ metrics, including the PropertyIQ Score, home values, rent prices, inventory, and days on market. You can select any of them from a single dropdown, and the map renders your choice as a color-coded heat map across the country.",
   },
   {
     question: "What geography levels can I view on the map?",
