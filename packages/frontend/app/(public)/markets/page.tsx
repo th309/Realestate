@@ -3,6 +3,8 @@ import Link from "next/link";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { STATE_SLUG_DATA } from "@/lib/data/state-slug-data";
 import { MarketSearch } from "./MarketSearch";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { MARKETS_DIRECTORY_FAQS } from "./markets-directory-faqs";
 
 export const metadata: Metadata = {
   title: "Housing Market Analysis by City — PropertyIQ",
@@ -64,6 +66,8 @@ export default function MarketsIndexPage() {
       </section>
 
       <MarketSearch metros={METRO_SLUG_DATA} />
+
+      <FaqSection faqs={MARKETS_DIRECTORY_FAQS} />
     </div>
   );
 }
