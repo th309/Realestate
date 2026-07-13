@@ -19,6 +19,8 @@ import {
 } from "@/app/components/home";
 import { landingMetadata } from "@/app/components/home/landing-metadata";
 import { VariantStamp } from "@/app/components/home/landing-v2/VariantStamp";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { HOME_FAQS } from "@/app/components/home/homeFaqs";
 
 // Shared canonical homepage metadata — identical object for control A + the
 // variant-B rewrite, so B (served at `/`) carries SEO over unchanged.
@@ -88,6 +90,7 @@ export default async function HomePage() {
         <UseCasesSection />
         <PricingSection />
         <CTASection />
+        <FaqSection faqs={HOME_FAQS} />
         <Footer />
       </div>
       {stickyScores.length > 0 && <StickyScoreBar scores={stickyScores} />}
