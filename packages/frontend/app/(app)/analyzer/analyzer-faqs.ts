@@ -10,12 +10,12 @@ export const ANALYZER_FAQS: Faq[] = [
   {
     question: "What does the PropertyIQ Deal Analyzer calculate?",
     answer:
-      "Enter any property address and the Deal Analyzer estimates cap rate, monthly cashflow, and BRRRR (buy, rehab, rent, refinance, repeat) viability, then layers in PropertyIQ's market-level context for that property's ZIP code and metro so you can see the deal alongside local demand momentum.",
+      "Enter any property address and the Deal Analyzer estimates cap rate, monthly cashflow, and BRRRR (buy, rehab, rent, refinance, repeat) viability from your purchase price, rent, and financing assumptions, then layers in PropertyIQ's market-level context for that property's ZIP code and metro so you can see the deal alongside local demand momentum. It runs the same core underwriting for both residential deals and 5-plus unit commercial multifamily properties, adjusting vacancy, management fees, and loan sizing (DSCR versus LTV) to match the property type you select.",
   },
   {
     question: "Can I analyze any property address, or only listed properties?",
     answer:
-      "You can analyze any U.S. residential address, not just active listings — enter it directly via the address search or as a URL parameter, and the analyzer pulls property and market data to run the numbers.",
+      "You can analyze any U.S. property address, not just active listings. Enter it directly via the address search or pass it as a URL parameter, and the analyzer pulls property and market data to run the numbers. This includes commercial multifamily properties, since selecting 5 or more units in the property type toggle switches the underwriting to a DSCR-sized loan and cap rate valuation instead of the standard residential math.",
   },
   {
     question: "How does the analyzer calculate cap rate and monthly cashflow?",
