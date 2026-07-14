@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
-import { FaqSection } from "@/app/components/seo/FaqSection";
 import { MAP_FAQS } from "./map-faqs";
 
 export const metadata: Metadata = {
@@ -59,17 +58,32 @@ export default function MapLayout({ children }: { children: React.ReactNode }) {
         </p>
       </section>
       {/*
-        This FAQ sits above the client map for the same reason as the section
-        above it: once the map hydrates, it renders absolute inset-0 over
-        main and covers this block, so sighted users never actually see
-        these questions. That's accepted here, not an oversight. The map is
-        a full-viewport interactive tool, and reworking the layout so the
-        FAQ stays visible alongside it is a larger UI change outside this
-        task's scope. The FAQ still does its job for its intended audience:
-        the JSON-LD and server-rendered text land in the initial HTML, so
-        Google and AI crawlers see it even though sighted users don't.
+        FAQ content for this page, deliberately WITHOUT FAQPage JSON-LD. Like
+        the crawler-text section above, this sits above the client map and
+        gets covered by `absolute inset-0` once it hydrates, so sighted users
+        never see it — that's accepted, not an oversight, for the same
+        full-viewport-tool reason. Google's FAQPage rich-result guidelines
+        require the marked-up Q&A to be visible on the page; since it isn't
+        here, we intentionally render this as plain crawlable prose (no
+        FaqSection, no schema) rather than claim structured Q&A data for
+        content sighted users can't see. AI crawlers still read this text
+        directly from the initial HTML regardless of the missing schema.
       */}
-      <FaqSection faqs={MAP_FAQS} />
+      <section className="w-full mx-auto max-w-3xl px-6 pb-12 text-on-surface-variant">
+        <h2 className="text-lg font-medium text-on-surface mb-4">
+          Frequently Asked Questions
+        </h2>
+        <div className="space-y-4">
+          {MAP_FAQS.map((faq) => (
+            <div key={faq.question}>
+              <p className="text-sm font-medium text-on-surface">
+                {faq.question}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed">{faq.answer}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       {children}
     </>
   );
