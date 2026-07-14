@@ -25,11 +25,11 @@ export const ABOUT_FAQS: Faq[] = [
   {
     question: "What is the PropertyIQ Score and how was it validated?",
     answer:
-      "The PropertyIQ Score is a single 1 to 100 market score that predicts how a market will perform versus its state over the next 3 years. It was validated out of sample against more than two decades of historical price data, reaching a 0.27 information coefficient at the metro level and staying positive in every validated year. PropertyIQ publishes these accuracy metrics openly, a level of transparency the company says most competitors do not offer.",
+      "The PropertyIQ Score is a single 1 to 99 market score that predicts how a market will perform versus its state over the next 3 years. It was validated out of sample against more than two decades of historical price data, reaching a 0.27 information coefficient at the metro level and staying positive in every validated year. PropertyIQ publishes these accuracy metrics openly, a level of transparency the company says most competitors do not offer.",
   },
   {
-    question: "How many markets does PropertyIQ cover?",
-    answer: `PropertyIQ covers ${COVERAGE_COPY.metros} US metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes, spanning everything from major cities to small towns. That coverage reached its current scale in late 2025, building on the scoring formula validated earlier that year. Every metric behind these markets is updated monthly so scores and data stay current.`,
+    question: "How has PropertyIQ's market coverage grown over time?",
+    answer: `PropertyIQ now covers ${COVERAGE_COPY.metros} US metros, ${COVERAGE_COPY.counties} counties, and ${COVERAGE_COPY.zips} ZIP codes, spanning everything from major cities to small towns. That coverage reached its current scale in late 2025, building on the scoring formula validated earlier that year. Every metric behind these markets is updated monthly so scores and data stay current.`,
   },
   {
     question:
