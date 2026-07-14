@@ -13,7 +13,7 @@ export const HOME_FAQS: Faq[] = [
     answer: `PropertyIQ is a real estate market intelligence platform that scores housing markets from 1 to 99 based on demand momentum, then calibrates the scale so 50 equals each market's own state average. Instead of manually comparing dozens of raw statistics, you get one number per market, backed by the four underlying signals, to quickly compare where demand is strengthening or cooling.`,
   },
   {
-    question: "How many markets does PropertyIQ cover?",
+    question: "How many housing markets can I look up on PropertyIQ?",
     answer: `PropertyIQ scores ${COVERAGE_COPY.sentence}, with monthly refreshes as new source data arrives. Coverage is deepest at the metro level and expands over time as more counties and ZIP codes accumulate enough history to score reliably.`,
   },
   {
