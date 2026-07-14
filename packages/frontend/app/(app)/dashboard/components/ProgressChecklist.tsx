@@ -2,6 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { dismissBeaconTask } from "@/lib/data";
+
+/**
+ * Beacon id used to persist the "dismiss" action server-side via the
+ * existing `dismissed_beacons` mechanism (see FeatureDiscoveryNudge.tsx for
+ * the reference implementation of this pattern).
+ */
+const CHECKLIST_DISMISS_BEACON_ID = "dashboard-onboarding-checklist";
 
 const CHECKLIST_ITEMS = [
   { id: "view_score", label: "See your PropertyIQ Score", href: "/market" },
@@ -35,9 +43,16 @@ const CHECKLIST_ITEMS = [
 
 interface ProgressChecklistProps {
   completedTasks: string[];
+  dismissedBeacons: string[];
 }
 
-export function ProgressChecklist({ completedTasks }: ProgressChecklistProps) {
+export function ProgressChecklist({
+  completedTasks,
+  dismissedBeacons,
+}: ProgressChecklistProps) {
+  // Local state hides the panel instantly on click, without waiting on a
+  // refetch of onboarding state; dismissedBeacons is the server-persisted
+  // source of truth that survives reloads/new sessions.
   const [dismissed, setDismissed] = useState(false);
 
   const completed = new Set([...completedTasks]);
@@ -46,7 +61,12 @@ export function ProgressChecklist({ completedTasks }: ProgressChecklistProps) {
   const progress = (totalDone / total) * 100;
   const allDone = totalDone === total;
 
-  if (dismissed || allDone) return null;
+  if (
+    dismissed ||
+    dismissedBeacons.includes(CHECKLIST_DISMISS_BEACON_ID) ||
+    allDone
+  )
+    return null;
 
   return (
     <div className="bg-surface-container rounded-2xl border border-outline-variant/30 p-5">
@@ -57,7 +77,12 @@ export function ProgressChecklist({ completedTasks }: ProgressChecklistProps) {
             {Math.round(progress)}%
           </span>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={() => {
+              setDismissed(true);
+              // Best-effort server persistence; local state already hid it
+              // this session.
+              dismissBeaconTask(CHECKLIST_DISMISS_BEACON_ID).catch(() => {});
+            }}
             className="text-on-surface-variant/40 hover:text-on-surface-variant text-xs"
             aria-label="Dismiss checklist"
           >

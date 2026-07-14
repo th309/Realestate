@@ -17,6 +17,7 @@ function makeController(isPro: boolean) {
     {} as never,
     tierGate as never,
     {} as never,
+    {} as never,
   );
   return { controller, prefillService, tierGate };
 }

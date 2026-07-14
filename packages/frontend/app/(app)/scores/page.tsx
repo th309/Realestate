@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight, BarChart3, TrendingUp, Percent } from "lucide-react";
 import Link from "next/link";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
-import { ScoresFaqJsonLd, ScoresFaqSection } from "./ScoresFaqSection";
+import { ScoresFaqSection } from "./ScoresFaqSection";
 import {
   HowToUseScoresSection,
   MethodologyOverviewSection,
@@ -143,7 +143,6 @@ export default function ScoresPage() {
           { name: "Scores", url: "https://www.propertyiq.app/scores" },
         ]}
       />
-      <ScoresFaqJsonLd />
       <div className="mt-12 space-y-16">
         {/* Section 1: Hero */}
         <section className="text-center">

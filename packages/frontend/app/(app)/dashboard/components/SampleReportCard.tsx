@@ -16,7 +16,7 @@ interface SampleReportCardProps {
 }
 
 export function SampleReportCard({ onboardingMarket }: SampleReportCardProps) {
-  const { trial, tier } = useEntitlements();
+  const { trial, tier, loading } = useEntitlements();
   const market = onboardingMarket ?? FALLBACK_MARKET;
 
   const { propertyiq } = useScoreData(
@@ -26,7 +26,7 @@ export function SampleReportCard({ onboardingMarket }: SampleReportCardProps) {
   );
   const score = propertyiq?.score ?? null;
 
-  if (trial?.active || tier !== "free") return null;
+  if (loading || trial?.active || tier !== "free") return null;
 
   return (
     <div className="bg-surface-container rounded-2xl border border-outline-variant/30 overflow-hidden">

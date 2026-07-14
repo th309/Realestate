@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useScreener, type ScreenerQuery, type ScreenerRow } from "@/lib/data";
+import {
+  useScreener,
+  updateChecklistTask,
+  type ScreenerQuery,
+  type ScreenerRow,
+} from "@/lib/data";
 import type { ScreenerGeoLevel, MoverWindow } from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
 import { useEntitlements } from "@/lib/entitlements";
@@ -176,6 +181,13 @@ export function ScreenerPageInner() {
 
   // --- Handlers ---
 
+  const hasMarkedScreenRef = useRef(false);
+  const markScreenMarketsInteraction = useCallback(() => {
+    if (hasMarkedScreenRef.current) return;
+    hasMarkedScreenRef.current = true;
+    updateChecklistTask("screen_markets").catch(() => {});
+  }, []);
+
   const handleGeoChange = useCallback((next: ScreenerGeoLevel) => {
     setGeoState(next);
     setPageState(0);
@@ -193,7 +205,7 @@ export function ScreenerPageInner() {
   }, []);
 
   const handlePresetSelect = useCallback(
-    (preset: Preset) => {
+    (preset: Preset, userInitiated: boolean = true) => {
       setActivePreset(preset.id);
       if (preset.windowSorted) {
         // Gainers/Losers: sort by the ACTIVE window's Δ column.
@@ -211,8 +223,9 @@ export function ScreenerPageInner() {
         setFiltersState(pFilters);
       }
       setPageState(0);
+      if (userInitiated) markScreenMarketsInteraction();
     },
-    [changeWindow],
+    [changeWindow, markScreenMarketsInteraction],
   );
 
   const handleWindowChange = useCallback(
@@ -226,12 +239,16 @@ export function ScreenerPageInner() {
     [activePreset],
   );
 
-  const handleFilterChange = useCallback((patch: Partial<ScreenerQuery>) => {
-    trackEvent("feature.screener_filter", { keys: Object.keys(patch) });
-    setFiltersState((prev) => ({ ...prev, ...patch }));
-    setActivePreset(null);
-    setPageState(0);
-  }, []);
+  const handleFilterChange = useCallback(
+    (patch: Partial<ScreenerQuery>) => {
+      trackEvent("feature.screener_filter", { keys: Object.keys(patch) });
+      setFiltersState((prev) => ({ ...prev, ...patch }));
+      setActivePreset(null);
+      setPageState(0);
+      markScreenMarketsInteraction();
+    },
+    [markScreenMarketsInteraction],
+  );
 
   // Full reset: clears every active filter the empty state lists as a chip
   // (state, score/price, preset) so "Clear filters" does exactly what it says.
@@ -291,7 +308,7 @@ export function ScreenerPageInner() {
       )
     ) {
       const hottest = PRESETS.find((p) => p.id === "hottest");
-      if (hottest) handlePresetSelect(hottest);
+      if (hottest) handlePresetSelect(hottest, false);
     }
     // Run only once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps

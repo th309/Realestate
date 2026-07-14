@@ -171,8 +171,8 @@ export function TopMarketsList({ archetypeId }: TopMarketsListProps) {
     geoLevel: "metro",
     limit: 10,
   });
-  const { tier } = useEntitlements();
-  const isFree = tier === "free";
+  const { tier, loading: entitlementsLoading } = useEntitlements();
+  const isFree = !entitlementsLoading && tier === "free";
 
   return (
     <div className="bg-surface-container-low rounded-xl shadow-sm p-5">

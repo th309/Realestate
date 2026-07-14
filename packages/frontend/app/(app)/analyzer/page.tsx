@@ -1,4 +1,6 @@
 import AnalyzerClient from "./AnalyzerClient";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { ANALYZER_FAQS } from "./analyzer-faqs";
 
 export const metadata = {
   title: "Deal Analyzer",
@@ -15,5 +17,10 @@ export default function AnalyzerPage({
     zip?: string;
   }>;
 }) {
-  return <AnalyzerClient searchParamsPromise={searchParams} />;
+  return (
+    <>
+      <AnalyzerClient searchParamsPromise={searchParams} />
+      <FaqSection faqs={ANALYZER_FAQS} />
+    </>
+  );
 }

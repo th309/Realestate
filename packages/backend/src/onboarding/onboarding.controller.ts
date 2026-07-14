@@ -78,6 +78,9 @@ export class OnboardingController {
       await this.onboardingService.updateChecklist(userId, taskId);
       return { success: true };
     } catch (error) {
+      if (error.message?.startsWith('Unknown checklist task id')) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
       this.logger.error(
         `checklist update failed for user ${userId}: ${error.message}`,
       );

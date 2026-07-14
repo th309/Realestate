@@ -17,6 +17,18 @@ export interface OnboardingState {
   free_report_credits: number | null;
 }
 
+// Must stay in sync with CHECKLIST_ITEMS in
+// packages/frontend/app/(app)/dashboard/components/ProgressChecklist.tsx
+const VALID_CHECKLIST_TASK_IDS = new Set([
+  'view_score',
+  'read_report',
+  'connect_claude',
+  'compare_markets',
+  'screen_markets',
+  'analyze_property',
+  'add_watchlist',
+]);
+
 @Injectable()
 export class OnboardingService {
   private readonly logger = new Logger(OnboardingService.name);
@@ -107,6 +119,10 @@ export class OnboardingService {
   }
 
   async updateChecklist(userId: string, completedTaskId: string) {
+    if (!VALID_CHECKLIST_TASK_IDS.has(completedTaskId)) {
+      throw new Error(`Unknown checklist task id: ${completedTaskId}`);
+    }
+
     const { data } = await this.supabase
       .from('user_profiles')
       .select('onboarding_checklist')
@@ -145,6 +161,13 @@ export class OnboardingService {
       .update({ usage_stats: current })
       .eq('id', userId);
     if (error) throw new Error(`Failed to update usage stat: ${error.message}`);
+
+    // Auto-mark "view_score" checklist when user views their first market
+    if (stat === 'markets_viewed' && current.markets_viewed >= 1) {
+      await this.updateChecklist(userId, 'view_score').catch((e) =>
+        this.logger.warn(`Auto-mark view_score failed: ${e.message}`),
+      );
+    }
 
     // Auto-mark "compare_markets" checklist when user views 2+ markets
     if (stat === 'markets_viewed' && current.markets_viewed >= 2) {

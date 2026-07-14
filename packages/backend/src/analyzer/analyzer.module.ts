@@ -27,6 +27,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { RentcastModule } from '../rentcast/rentcast.module';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
+import { OnboardingModule } from '../onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AiProviderModule } from '../ai-provider/ai-provider.module';
     RentcastModule,
     AiProviderModule,
     EmailModule,
+    OnboardingModule,
   ],
   controllers: [
     AnalyzerController,

@@ -126,7 +126,10 @@ export default function DashboardPage() {
       )}
 
       {/* Getting-started checklist (hides itself when all done or dismissed) */}
-      <ProgressChecklist completedTasks={completedTasks} />
+      <ProgressChecklist
+        completedTasks={completedTasks}
+        dismissedBeacons={onboardingState?.dismissed_beacons ?? []}
+      />
 
       {/* Sample report card for post-trial free users */}
       <SampleReportCard

@@ -7,6 +7,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { OnboardingService } from '../onboarding/onboarding.service';
 
 export interface WatchlistItem {
   id: string;
@@ -41,6 +42,7 @@ export class WatchlistService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly entitlements: EntitlementsService,
+    private readonly onboardingService: OnboardingService,
   ) {}
 
   /**
@@ -184,6 +186,13 @@ export class WatchlistService {
     this.logger.log(
       `Added to watchlist: ${dto.geography_type}/${dto.geography_id} for user ${userId}`,
     );
+
+    await this.onboardingService
+      .updateChecklist(userId, 'add_watchlist')
+      .catch((e) =>
+        this.logger.warn(`Auto-mark add_watchlist failed: ${e.message}`),
+      );
+
     return data;
   }
 

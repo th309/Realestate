@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   useAnonymousListingPresentation,
   useAuthenticatedListingPresentation,
+  updateChecklistTask,
   type AnonReportResponse,
 } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
@@ -109,6 +110,22 @@ export function Step4Aha() {
   // restored-from-cache revisit).
   useEffect(() => {
     if (mutation.isSuccess && user?.id) triggerConfetti();
+  }, [mutation.isSuccess, user?.id]);
+
+  // Mark the onboarding checklist's "read your first report" task complete —
+  // signed-in only (anonymous tour-takers have no user_profiles row to write
+  // to), fresh generation only (mirrors the confetti trigger above, not a
+  // restored-from-cache revisit). Ref-guarded so the transition to success
+  // notifies the checklist exactly once per mount, not on every re-render
+  // while already succeeded. Best-effort side signal — a failure here must
+  // never surface as a user-facing error in the tour flow.
+  const checklistNotifiedRef = useRef(false);
+  useEffect(() => {
+    if (!mutation.isSuccess || !user?.id || checklistNotifiedRef.current) {
+      return;
+    }
+    checklistNotifiedRef.current = true;
+    updateChecklistTask("read_report").catch(() => {});
   }, [mutation.isSuccess, user?.id]);
 
   // A restored OR freshly generated report drives the finale via one shared path.

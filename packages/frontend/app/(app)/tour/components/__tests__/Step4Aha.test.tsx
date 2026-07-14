@@ -24,6 +24,7 @@ vi.mock("@/lib/data", () => ({
     mutate: authedMutateSpy,
   }),
   TourRateLimitError: class TourRateLimitError extends Error {},
+  updateChecklistTask: vi.fn(() => Promise.resolve()),
 }));
 
 let mockAuthState: any = { user: null, loading: false };

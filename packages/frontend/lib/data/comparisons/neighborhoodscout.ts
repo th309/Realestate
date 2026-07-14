@@ -105,5 +105,11 @@ export const NEIGHBORHOODSCOUT_COMPARISON: ComparisonData = {
       answer:
         "PropertyIQ provides data at the metro, county, and ZIP level — not sub-ZIP neighborhood level. NeighborhoodScout offers finer-grained, block-by-block comparisons within cities. PropertyIQ trades that granularity for validated, predictive market scoring across a far broader footprint.",
     },
+    {
+      question:
+        "Does PropertyIQ offer AI market reports or a Claude/MCP integration like NeighborhoodScout?",
+      answer:
+        "Yes. PropertyIQ generates AI-written market reports and runs an MCP server so Claude and other AI assistants can query any market's PropertyIQ Score directly. NeighborhoodScout offers neither AI-generated market narratives nor an AI assistant integration.",
+    },
   ],
 };

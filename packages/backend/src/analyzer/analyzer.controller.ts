@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -23,6 +24,7 @@ import { AnalyzerPrefillService } from './analyzer-prefill.service';
 import { AnalyzerPersistenceService } from './analyzer.persistence.service';
 import { AnalyzerPdfService } from './analyzer-pdf.service';
 import { AnalyzerTierGate } from './analyzer-tier-gate.service';
+import { OnboardingService } from '../onboarding/onboarding.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
 import { ListSavedQueryDto } from './dto/list-saved.dto';
@@ -42,12 +44,15 @@ const SHARE_TOKEN_REGEX = /^[A-Za-z0-9_-]{16,64}$/;
 @Controller('api/analyzer')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class AnalyzerController {
+  private readonly logger = new Logger(AnalyzerController.name);
+
   constructor(
     private readonly service: AnalyzerService,
     private readonly prefillService: AnalyzerPrefillService,
     private readonly persistence: AnalyzerPersistenceService,
     private readonly tierGate: AnalyzerTierGate,
     private readonly pdfService: AnalyzerPdfService,
+    private readonly onboardingService: OnboardingService,
   ) {}
 
   /**
@@ -106,6 +111,10 @@ export class AnalyzerController {
    *
    * Persist an analyzer run for the authenticated user. Pro-gated — saved
    * analyses are part of the paid feature surface (see spec §9 tier matrix).
+   *
+   * On success, best-effort marks the "analyze_property" onboarding
+   * checklist task. Failures here are logged and swallowed so a checklist
+   * write can never fail the primary save.
    */
   @Post('save')
   @UseGuards(JwtAuthGuard)
@@ -114,7 +123,13 @@ export class AnalyzerController {
     @Body() body: AnalysisSnapshotDto,
   ) {
     await this.tierGate.requirePro(userId);
-    return this.persistence.save(userId, body);
+    const result = await this.persistence.save(userId, body);
+    await this.onboardingService
+      .updateChecklist(userId, 'analyze_property')
+      .catch((e) =>
+        this.logger.warn(`Auto-mark analyze_property failed: ${e.message}`),
+      );
+    return result;
   }
 
   /**

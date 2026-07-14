@@ -12,6 +12,8 @@ import {
 import { StateTopMarketsTables } from "@/app/markets/components/StateTopMarketsTables";
 import { StatePageContent } from "./StatePageContent";
 import { generateStateSeoContent } from "./generate-seo-content";
+import { buildStateFaqs } from "./build-state-faqs";
+import { FaqSection } from "@/app/components/seo/FaqSection";
 import type { ZipSlugEntry } from "@/lib/data/zip-slugs";
 
 export function generateStaticParams() {
@@ -279,6 +281,15 @@ export default async function StatePage({
           Census Bureau, FRED, BLS, and BEA.
         </p>
       </section>
+
+      <FaqSection
+        faqs={buildStateFaqs({
+          stateName: stateEntry.name,
+          metroCount: metros.length,
+          countyCount: counties.length,
+          topMetroName: topMetros[0]?.name ?? null,
+        })}
+      />
     </>
   );
 }

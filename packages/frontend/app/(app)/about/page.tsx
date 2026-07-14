@@ -3,7 +3,9 @@ import { Info, Users, Target, Shield, Database, Scale } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
+import { FaqSection } from "@/app/components/seo/FaqSection";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { ABOUT_FAQS } from "./about-faqs";
 
 export const metadata: Metadata = {
   title: "About PropertyIQ — Our Mission, Team & Data Sources",
@@ -95,7 +97,7 @@ export default function AboutPage() {
                     <strong className="text-on-surface">
                       The PropertyIQ Score:
                     </strong>{" "}
-                    a single 1–100 market score that predicts how a market will
+                    a single 1–99 market score that predicts how a market will
                     perform versus its state over the next 3 years
                   </span>
                 </li>
@@ -388,6 +390,7 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
+      <FaqSection faqs={ABOUT_FAQS} />
     </>
   );
 }
