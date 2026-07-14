@@ -153,7 +153,7 @@ export async function updateChecklistTask(taskId: string): Promise<void> {
   } = await supabase.auth.getSession();
   if (!session?.user) return;
 
-  await withRequestLimit(() =>
+  const response = await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/checklist/${taskId}`, {
       method: "POST",
       headers: {
@@ -162,6 +162,14 @@ export async function updateChecklistTask(taskId: string): Promise<void> {
       },
     }),
   );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message ||
+        `Failed to update checklist task "${taskId}": ${response.status}`,
+    );
+  }
 }
 
 export async function incrementUsageStat(
@@ -173,7 +181,7 @@ export async function incrementUsageStat(
   } = await supabase.auth.getSession();
   if (!session?.user) return;
 
-  await withRequestLimit(() =>
+  const response = await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/usage/${stat}`, {
       method: "POST",
       headers: {
@@ -182,6 +190,14 @@ export async function incrementUsageStat(
       },
     }),
   );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message ||
+        `Failed to increment usage stat "${stat}": ${response.status}`,
+    );
+  }
 }
 
 export async function dismissBeaconTask(beaconId: string): Promise<void> {
@@ -191,7 +207,7 @@ export async function dismissBeaconTask(beaconId: string): Promise<void> {
   } = await supabase.auth.getSession();
   if (!session?.user) return;
 
-  await withRequestLimit(() =>
+  const response = await withRequestLimit(() =>
     fetch(`${API_URL}/api/onboarding/beacon/${beaconId}/dismiss`, {
       method: "POST",
       headers: {
@@ -200,4 +216,12 @@ export async function dismissBeaconTask(beaconId: string): Promise<void> {
       },
     }),
   );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message ||
+        `Failed to dismiss beacon "${beaconId}": ${response.status}`,
+    );
+  }
 }

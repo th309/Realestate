@@ -9,6 +9,7 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes, createHash } from 'crypto';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { OnboardingService } from '../onboarding/onboarding.service';
 import { CreateUserApiKeyDto } from './dto/create-user-api-key.dto';
 
 export interface UserApiKeyListItem {
@@ -35,6 +36,7 @@ export class UserApiKeysService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly onboardingService: OnboardingService,
   ) {}
 
   /** List all active API keys for a user (prefix only, no hashes). */
@@ -90,6 +92,15 @@ export class UserApiKeysService {
       );
       throw new Error(`Failed to create API key: ${error.message}`);
     }
+
+    // Best-effort: auto-mark the "connect_claude" onboarding checklist task
+    // now that the user has generated an MCP API key. Must never fail key
+    // creation itself if the checklist write errors.
+    await this.onboardingService
+      .updateChecklist(userId, 'connect_claude')
+      .catch((e) =>
+        this.logger.warn(`Auto-mark connect_claude failed: ${e.message}`),
+      );
 
     return { ...(data as UserApiKeyListItem), key: fullKey };
   }

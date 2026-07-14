@@ -8,6 +8,7 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { EmailModule } from '../email/email.module';
+import { OnboardingModule } from '../onboarding/onboarding.module';
 import { SavedQueriesService } from './saved-queries.service';
 import { SavedQueriesController } from './saved-queries.controller';
 import { WatchlistService } from './watchlist.service';
@@ -26,7 +27,7 @@ import { ExportService } from './export.service';
 import { ExportController } from './export.controller';
 
 @Module({
-  imports: [SupabaseModule, EntitlementsModule, EmailModule],
+  imports: [SupabaseModule, EntitlementsModule, EmailModule, OnboardingModule],
   providers: [
     SavedQueriesService,
     WatchlistService,
