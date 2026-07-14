@@ -97,7 +97,7 @@ export default function AboutPage() {
                     <strong className="text-on-surface">
                       The PropertyIQ Score:
                     </strong>{" "}
-                    a single 1–100 market score that predicts how a market will
+                    a single 1–99 market score that predicts how a market will
                     perform versus its state over the next 3 years
                   </span>
                 </li>
