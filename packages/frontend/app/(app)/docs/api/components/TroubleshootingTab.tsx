@@ -60,7 +60,7 @@ const FAQ_ITEMS = [
   {
     question: "How fresh is the data?",
     answer:
-      "Metrics update monthly following source publication. Scores recalculate weekly.",
+      "Metrics update monthly following source publication. Scores recalculate monthly as well, once the new source data lands.",
   },
   {
     question: "Can I use the API from a browser?",
