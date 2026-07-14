@@ -30,6 +30,6 @@ export const MAP_FAQS: Faq[] = [
   {
     question: "Can I access the map's underlying data programmatically?",
     answer:
-      "Yes. The same metric data shown on the map is available through the PropertyIQ MCP server for ChatGPT and Claude integrations on Pro plans, and through the PropertyIQ Platform API's metrics endpoints on Enterprise plans. Both provide the same monthly-refreshed values that power the map's heat layers.",
+      "Yes. The same metric data shown on the map is available through the PropertyIQ MCP server for Claude integrations on Pro plans, and through the PropertyIQ Platform API's metrics endpoints on Enterprise plans (ChatGPT does not support MCP yet). Both provide the same monthly-refreshed values that power the map's heat layers.",
   },
 ];
