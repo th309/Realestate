@@ -150,7 +150,7 @@ export const MCP_FAQ = [
   {
     question: "How fresh is the data?",
     answer:
-      "Metrics update monthly following source publication (Zillow, Census, BLS). PropertyIQ scores recalculate weekly.",
+      "Metrics update monthly following source publication (Zillow, Census, BLS). PropertyIQ scores recalculate monthly as well, once the new source data lands.",
   },
   {
     question: "Is there a rate limit?",

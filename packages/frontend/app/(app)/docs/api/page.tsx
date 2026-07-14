@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DocsPageClient } from "./components/DocsPageClient";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { DOCS_API_FAQS } from "./docs-api-faqs";
 
 export const metadata: Metadata = {
   title: "API Documentation | PropertyIQ",
@@ -8,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function ApiDocsPage() {
-  return <DocsPageClient />;
+  return (
+    <>
+      <DocsPageClient />
+      <FaqSection faqs={DOCS_API_FAQS} />
+    </>
+  );
 }

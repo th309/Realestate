@@ -11,6 +11,8 @@ import {
 import { fetchPricingSummary } from "@/lib/data/fetchers/pricing";
 import { COMPARISONS } from "@/lib/data/comparisons";
 import { RankingMatrix } from "./RankingMatrix";
+import { FaqSection } from "@/app/components/seo/FaqSection";
+import { COMPARE_INDEX_FAQS } from "./compare-index-faqs";
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -341,6 +343,8 @@ export default async function CompareHubPage() {
       <MoreComparisons />
 
       <CallToAction />
+
+      <FaqSection faqs={COMPARE_INDEX_FAQS} />
     </>
   );
 }

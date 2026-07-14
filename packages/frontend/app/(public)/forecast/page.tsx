@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchScoreDistribution, fetchRankings } from "@/lib/data";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 import { CBSA_TO_METRO } from "@/lib/data/metro-slug-data";
 import { forecastDisplayYear } from "@/lib/seo/forecast-year";
 import { MarketFaqSection } from "@/app/markets/components/MarketFaqSection";
@@ -72,6 +73,24 @@ export default async function ForecastHubPage() {
       answer: `Each market gets a PropertyIQ Score from four measured inputs: 12-month price momentum, 3-month price momentum, median days on market, and the share of listings with price cuts. Scores are calibrated so 50 equals the market's state average, refreshed monthly, and each carries an A-F confidence grade for data quality. PropertyIQ never publishes specific price predictions.`,
     },
   ];
+
+  faqs.push({
+    question: "How many housing markets does this forecast cover?",
+    answer: `PropertyIQ scores ${COVERAGE_COPY.sentence}, and every scored market gets its own forecast page with a live PropertyIQ Score and confidence grade. Coverage grows as new markets accumulate enough data history to score reliably.`,
+  });
+
+  faqs.push({
+    question: "What does a PropertyIQ Score of 50 mean?",
+    answer:
+      "A score of 50 marks a market's own state average, not a national midpoint. Scores are computed nationally across every market at a given geography level, then calibrated so 50 equals that market's state benchmark. A score above 50 predicts the market will outperform its state over the next three years, and a score below 50 predicts underperformance.",
+  });
+
+  faqs.push({
+    question:
+      "Does a low PropertyIQ Score mean a market is a bad place to buy?",
+    answer:
+      "No. The score measures demand momentum and timing, not market quality. A low score means cooling momentum, such as homes taking longer to sell or more sellers cutting prices, which often translates into more room for buyers to negotiate rather than a verdict that the market itself is undesirable.",
+  });
 
   // Only include the "cooling fastest" FAQ when there are actual bottom-ranked
   // metros to name — an empty rankings fetch would otherwise interpolate to

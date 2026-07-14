@@ -12,6 +12,19 @@ function momentumPhrase(score: number): string {
     : `${label} demand momentum`;
 }
 
+/**
+ * "June 2026" from a period date, or null when unparseable.
+ * Mirrors the private helper of the same name in build-market-faqs.ts —
+ * not exported there, so copied locally rather than reaching across modules.
+ */
+function monthYear(date: string | null | undefined): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  return Number.isNaN(d.getTime())
+    ? null
+    : d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 export function buildForecastFaqs({
   displayName,
   stats,
@@ -21,6 +34,7 @@ export function buildForecastFaqs({
 }): MarketFaq[] {
   if (!stats || stats.score === null) return [];
   const year = forecastDisplayYear(stats.latestDate);
+  const asOf = monthYear(stats.latestDate);
   const grade = stats.grade ? ` (confidence grade ${stats.grade})` : "";
   const faqs: MarketFaq[] = [];
 
@@ -49,6 +63,11 @@ export function buildForecastFaqs({
       answer: `Over the last year, ${displayName} home values ${yoy >= 0 ? "rose" : "fell"} ${formatMetricValue(Math.abs(yoy), "percent_abs")}. That is measured history, not a forecast; the PropertyIQ Score combines it with days-on-market and price-cut data to read where demand is heading.`,
     });
   }
+
+  faqs.push({
+    question: `How current is this ${displayName} forecast data?`,
+    answer: `This forecast is refreshed on a monthly cycle${asOf ? `, with the latest figures current through ${asOf}` : ""}. PropertyIQ recomputes the PropertyIQ Score every month using fresh price momentum data from Zillow and fresh days-on-market and price-cut data from Realtor.com, so the score always reflects the most recently completed reporting period rather than a static snapshot.`,
+  });
 
   return faqs;
 }
