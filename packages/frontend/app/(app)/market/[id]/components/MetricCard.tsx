@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { MetricTitle } from "@/app/components/MetricTitle";
@@ -61,11 +62,16 @@ export function MetricCard({
 
   return (
     <motion.div
-      className="bg-surface-container rounded-xl p-4 border border-outline-variant/30 hover:shadow-md hover:border-outline-variant/50 transition-all"
+      className="relative bg-surface-container rounded-xl p-4 border border-outline-variant/30 hover:shadow-md hover:border-outline-variant/50 transition-all"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
     >
+      <Link
+        href={`/metrics/${metricId}`}
+        aria-label={`View ${metricId} metric details`}
+        className="absolute inset-0 z-0 rounded-xl"
+      />
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="text-xs font-medium text-on-surface-variant uppercase tracking-wide min-w-0">
           <MetricTitle
@@ -78,7 +84,7 @@ export function MetricCard({
             }}
           />
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="relative z-10 flex items-center gap-1 shrink-0">
           {trendPercent != null && (
             <div
               className={`flex items-center gap-0.5 text-xs font-medium ${
