@@ -25,6 +25,7 @@ import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill"
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { PropertyRecordCard } from "./components/PropertyRecordCard";
+import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { useSelectedGoal } from "./lib/use-selected-goal";
 import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
@@ -250,6 +251,7 @@ export default function AnalyzerClient({
           </div>
 
           <div className="space-y-6 min-w-0">
+            <SavedAnalysesPanel />
             {!address.trim() && !rentcastData ? (
               <EmptyStateCta onClick={openInputs} />
             ) : (
