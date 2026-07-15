@@ -54,7 +54,9 @@ export const Builder: React.FC = () => {
     reorderSections,
     clearCanvas,
     isDirty,
+    isSaving,
     selectedSection,
+    saveTemplate,
   } = builderState;
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -224,11 +226,12 @@ export const Builder: React.FC = () => {
             </button>
             <div className="h-6 w-px bg-outline-variant" />
             <button
-              disabled={sections.length === 0}
+              onClick={saveTemplate}
+              disabled={sections.length === 0 || isSaving}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="w-4 h-4" />
-              Save Template
+              {isSaving ? "Saving…" : "Save Template"}
             </button>
           </div>
         </header>
