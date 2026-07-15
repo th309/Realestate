@@ -62,6 +62,19 @@ function isContiguous(f: RawFeature): boolean {
   return !EXCLUDED_STATE_FIPS.has(f.properties.STATEFP);
 }
 
+/** The state suffix of a CBSA NAME (everything after the last comma, e.g.
+ * "Kansas City, MO-KS" -> ["MO", "KS"]) — split on '-' so every member state
+ * of a multi-state metro matches exactly, not just the first one listed. */
+function metroStateAbbrs(name: string): string[] {
+  const lastComma = name.lastIndexOf(",");
+  if (lastComma === -1) return [];
+  return name
+    .slice(lastComma + 1)
+    .trim()
+    .split("-")
+    .map((s) => s.trim());
+}
+
 async function buildBoundaries(
   geoLevel: "state" | "metro" | "county" | "zip",
   parentLevel: "state" | "metro" | "county" | undefined,
@@ -124,18 +137,21 @@ async function buildBoundaries(
       computeBbox(stateFeature.geometry),
       SIZE,
     );
-    // metros.json has no direct state-FIPS field; NAME reliably ends in the
-    // state abbreviation (e.g. "Dallas-Fort Worth-Arlington, TX"), including
-    // cross-state CBSAs like "Texarkana, TX-AR" — validated against the live
-    // backend during design (Texas: 50 real metro/micro regions returned).
+    // metros.json has no direct state-FIPS field; NAME's suffix (after the
+    // last comma) is the metro's member state abbreviations. Multi-state
+    // CBSAs list every member, hyphen-separated (e.g. "Kansas City, MO-KS",
+    // "Memphis, TN-MS-AR") — 59 of 935 metros in metros.json are multi-state,
+    // so an exact split-membership check is required, not a "does the
+    // abbreviation appear right after the comma" regex (that would only ever
+    // match the FIRST state listed, silently dropping the metro from every
+    // other member state's roster).
     const abbr = stateFeature.properties.STUSPS;
-    const stateMetroRegex = new RegExp(`,\\s*${abbr}(-|$)`);
     return {
       parentOutline: toSvgPath(stateFeature.geometry, project),
       viewBoxWidth: width,
       viewBoxHeight: height,
       features: metros.features
-        .filter((f) => stateMetroRegex.test(f.properties.NAME))
+        .filter((f) => metroStateAbbrs(f.properties.NAME).includes(abbr))
         .map((f) => ({
           id: f.properties.CBSAFP,
           path: toSvgPath(f.geometry, project),

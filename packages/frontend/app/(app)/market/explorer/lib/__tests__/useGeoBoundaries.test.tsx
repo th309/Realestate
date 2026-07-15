@@ -37,6 +37,21 @@ const STATES_FC = {
         ],
       },
     },
+    {
+      type: "Feature",
+      properties: { STATEFP: "20", STUSPS: "KS", name: "Kansas" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-98, 39],
+            [-97, 39],
+            [-97.5, 40],
+            [-98, 39],
+          ],
+        ],
+      },
+    },
   ],
 };
 const METROS_FC = {
@@ -57,6 +72,25 @@ const METROS_FC = {
             [-99.8, 30.1],
             [-99.85, 30.2],
             [-99.9, 30.1],
+          ],
+        ],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        CBSAFP: "28140",
+        NAME: "Kansas City, MO-KS",
+        LSAD: "M1",
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-94.9, 39.0],
+            [-94.5, 39.0],
+            [-94.7, 39.3],
+            [-94.9, 39.0],
           ],
         ],
       },
@@ -90,7 +124,10 @@ describe("useGeoBoundaries", () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.parentOutline).toBeNull();
-    expect(result.current.features.map((f) => f.id)).toEqual(["48"]); // AK (02) excluded
+    expect(result.current.features.map((f) => f.id).sort()).toEqual([
+      "20",
+      "48",
+    ]); // AK (02) excluded
   });
 
   it("national metro scope: parentOutline is the merged contiguous-states background, features are every metro (no regionIds filter)", async () => {
@@ -100,7 +137,10 @@ describe("useGeoBoundaries", () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.parentOutline).toContain("M");
-    expect(result.current.features.map((f) => f.id)).toEqual(["19100"]);
+    expect(result.current.features.map((f) => f.id).sort()).toEqual([
+      "19100",
+      "28140",
+    ]);
   });
 
   it("state -> metro drill: parentOutline is the matching state, features filtered by NAME ending in the state abbreviation", async () => {
@@ -110,6 +150,15 @@ describe("useGeoBoundaries", () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.features.map((f) => f.id)).toEqual(["19100"]);
+  });
+
+  it("state -> metro drill: matches a multi-state CBSA even when the state is not the first one listed (e.g. Kansas City, MO-KS for KS)", async () => {
+    const { result } = renderHook(
+      () => useGeoBoundaries("metro", "state", "20", undefined),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.features.map((f) => f.id)).toEqual(["28140"]);
   });
 
   it("returns empty features (not a crash) when the parent id has no match", async () => {
