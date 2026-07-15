@@ -137,7 +137,7 @@ export function HeroVisualization(props: HeroVisualizationProps) {
                 height: 8,
                 borderRadius: 999,
                 background:
-                  "linear-gradient(90deg, var(--piq-red), var(--piq-amber), var(--piq-green))",
+                  "linear-gradient(90deg, var(--md-error), var(--md-warning), var(--md-tertiary))",
                 display: "inline-block",
               }}
             />
