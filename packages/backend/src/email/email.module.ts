@@ -11,6 +11,9 @@ import { MonthlyDigestService } from './monthly-digest.service';
 import { MonthlyDigestDataService } from './monthly-digest-data.service';
 import { BehavioralTriggerService } from './behavioral-trigger.service';
 import { EngagementTriggerService } from './engagement-trigger.service';
+import { EmailTriggerDedupService } from './email-trigger-dedup.service';
+import { InactiveUserTriggerService } from './inactive-user-trigger.service';
+import { TrialLifecycleTriggerService } from './trial-lifecycle-trigger.service';
 
 @Module({
   imports: [SupabaseModule, ConfigModule, PreferencesModule],
@@ -21,13 +24,16 @@ import { EngagementTriggerService } from './engagement-trigger.service';
     DripService,
     MonthlyDigestService,
     MonthlyDigestDataService,
+    EmailTriggerDedupService,
+    InactiveUserTriggerService,
+    TrialLifecycleTriggerService,
     BehavioralTriggerService,
     EngagementTriggerService,
   ],
   exports: [
     EmailService,
     DripService,
-    BehavioralTriggerService,
+    TrialLifecycleTriggerService,
     EngagementTriggerService,
   ],
 })

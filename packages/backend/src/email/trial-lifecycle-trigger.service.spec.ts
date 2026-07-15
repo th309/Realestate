@@ -1,5 +1,6 @@
-// behavioral-trigger.service.spec.ts
-import { BehavioralTriggerService } from './behavioral-trigger.service';
+// trial-lifecycle-trigger.service.spec.ts
+import { TrialLifecycleTriggerService } from './trial-lifecycle-trigger.service';
+import { EmailTriggerDedupService } from './email-trigger-dedup.service';
 
 function makeService(trialRows: any[], profileRows: any[]) {
   const sent: any[] = [];
@@ -51,22 +52,17 @@ function makeService(trialRows: any[], profileRows: any[]) {
   const supabase = { from: fromSpy } as any;
   const emailService = { sendEmail: jest.fn().mockResolvedValue(true) } as any;
   const config = { get: () => 'https://app.test' } as any;
-  const lock = {
-    acquireLock: jest.fn().mockResolvedValue(true),
-    releaseLock: jest.fn(),
-  } as any;
-  const engagement = { processAll: jest.fn() } as any;
-  const svc = new BehavioralTriggerService(
+  const dedup = new EmailTriggerDedupService(supabase);
+  const svc = new TrialLifecycleTriggerService(
     supabase,
     emailService,
     config,
-    lock,
-    engagement,
+    dedup,
   );
   return { svc, emailService, fromSpy };
 }
 
-describe('BehavioralTriggerService trial emails read user_trials', () => {
+describe('TrialLifecycleTriggerService trial emails read user_trials', () => {
   it('queries user_trials, looks up the email, and sends the day-13 email', async () => {
     const { svc, emailService, fromSpy } = makeService(
       [{ user_id: 'u1', expires_at: '2026-07-01T12:00:00Z' }],
