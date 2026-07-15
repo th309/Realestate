@@ -15,6 +15,10 @@ export interface PathCrumb {
   level: ExplorerGeoLevel;
   id: string;
   name: string;
+  /** 2-letter state code of the drilled-into region. Populated at DRILL time
+   * from the region's own `state` field — used by useGeoBoundaries to resolve
+   * the per-state ZIP boundary endpoint when the user drills county -> zip. */
+  state?: string;
 }
 
 export interface ExplorerState {
@@ -23,7 +27,7 @@ export interface ExplorerState {
   pinnedIds: string[]; // up to 3
   metric: ExplorerMetricId;
   monthIndex: number; // index into the fetched `dates` axis
-  view: ViewMode; // 'map' only valid at national scope
+  view: ViewMode; // 'bubbles' or 'map' — map works at every drilled scope
   range: RangePreset;
   playing: boolean;
   includeNearby: boolean;

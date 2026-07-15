@@ -49,7 +49,10 @@ export function buildLevelTabs(
         label,
         active: state.view === "map",
         enabled: true,
-        onClick: () => dispatch({ type: "SET_VIEW", view: "map" }),
+        onClick: () => {
+          dispatch({ type: "RESET_NATIONAL" });
+          dispatch({ type: "SET_VIEW", view: "map" });
+        },
       };
     if (level === "metro")
       return {
