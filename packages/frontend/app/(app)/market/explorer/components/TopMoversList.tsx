@@ -15,6 +15,13 @@ export interface TopMoversListProps {
 }
 
 export function TopMoversList({ movers, onSelect }: TopMoversListProps) {
+  const handleRowKeyDown = (id: string, e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(id);
+    }
+  };
+
   return (
     <div>
       <div
@@ -34,7 +41,10 @@ export function TopMoversList({ movers, onSelect }: TopMoversListProps) {
           return (
             <div
               key={region.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(region.id)}
+              onKeyDown={(e) => handleRowKeyDown(region.id, e)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -86,6 +96,7 @@ export function TopMoversList({ movers, onSelect }: TopMoversListProps) {
               >
                 {(delta >= 0 ? "+" : "") + delta.toFixed(1)}
               </span>
+              {/* Compact score pill — documented exception to CLAUDE.md §9's ScoreBadge requirement; ScoreBadge's ring doesn't fit this row's compact width. */}
               <span
                 style={{
                   fontFamily: "var(--font-roboto-mono)",
