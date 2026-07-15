@@ -138,6 +138,43 @@ describe('resolveNearbyRegions', () => {
     expect(orderCalls).toContain('state_fips');
   });
 
+  it('caps the zip-nearby branch at ZIP_FETCH_CAP even with more sibling zips than that', async () => {
+    const manyZips = Array.from({ length: 90 }, (_, i) => `7600${i}`);
+    const supabase = makeSupabase({
+      crosswalk: (eqCol, eqVal, selectCol) => {
+        if (
+          eqCol === 'county_fips' &&
+          eqVal === '48113' &&
+          selectCol === 'cbsa_code'
+        )
+          return ['19100'];
+        if (
+          eqCol === 'cbsa_code' &&
+          eqVal === '19100' &&
+          selectCol === 'county_fips'
+        )
+          return ['48113', '48439'];
+        if (
+          eqCol === 'county_fips' &&
+          eqVal === '48439' &&
+          selectCol === 'zip_code'
+        )
+          return manyZips;
+        return [];
+      },
+      roster: (ids) =>
+        ids.map((id, i) => ({
+          region_id: id,
+          region_name: `ZIP ${id}`,
+          state_code: 'TX',
+          population: 100000 - i,
+        })),
+    });
+    const rows = await resolveNearbyRegions(supabase, 'zip', 'county', '48113');
+    expect(rows.length).toBe(70); // ZIP_FETCH_CAP
+    expect(rows.every((r) => r.nearby === true)).toBe(true);
+  });
+
   it('county scope → zips of sibling counties in the same metro, marked nearby (lookupOne orders deterministically)', async () => {
     const orderCalls: string[] = [];
     const supabase = makeSupabase({

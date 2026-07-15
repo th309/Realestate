@@ -1,6 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ScopeRegion } from './market-explorer.types';
-import { distinctCrosswalkIds, snapshotRoster } from './resolve-child-regions';
+import {
+  distinctCrosswalkIds,
+  snapshotRoster,
+  ZIP_FETCH_CAP,
+} from './resolve-child-regions';
 import { adjacentStateFips } from './us-tiles';
 
 const uniq = (xs: string[]) => [...new Set(xs)];
@@ -88,7 +92,14 @@ export async function resolveNearbyRegions(
         distinctCrosswalkIds(supabase, 'zip_code', 'county_fips', c),
       ),
     );
-    return mark(await snapshotRoster(supabase, 'zip', uniq(zipLists.flat())));
+    return mark(
+      await snapshotRoster(
+        supabase,
+        'zip',
+        uniq(zipLists.flat()),
+        ZIP_FETCH_CAP,
+      ),
+    );
   }
 
   return [];
