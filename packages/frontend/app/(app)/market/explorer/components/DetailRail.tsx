@@ -5,6 +5,29 @@ import { ConfidenceDisplay } from "@/app/components/scoring/ConfidenceDisplay";
 import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
 import { Sparkline } from "./Sparkline";
 
+function ScoreUnavailablePlaceholder({ size }: { size: number }) {
+  return (
+    <div
+      role="img"
+      aria-label="Score unavailable"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: "4px solid var(--md-outline-variant)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "var(--md-on-surface-variant)",
+        fontSize: Math.round(size * 0.269),
+        fontWeight: 700,
+      }}
+    >
+      {"—"}
+    </div>
+  );
+}
+
 export interface DetailRailProps {
   name: string;
   sub: string;
@@ -119,7 +142,11 @@ export function DetailRail(props: DetailRailProps) {
       <div
         style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}
       >
-        <ScoreGaugeRing value={score ?? 50} size={150} />
+        {score == null ? (
+          <ScoreUnavailablePlaceholder size={150} />
+        ) : (
+          <ScoreGaugeRing value={score} size={150} />
+        )}
       </div>
       <div
         style={{
