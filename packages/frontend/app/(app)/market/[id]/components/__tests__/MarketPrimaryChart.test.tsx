@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-const useTimeSeriesData = vi.fn(() => ({
+const useTimeSeriesData = vi.fn((..._args: unknown[]) => ({
   data: [
     { date: "2021-01-01", value: 400000 },
     { date: "2022-01-01", value: 455000 },
