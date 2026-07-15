@@ -97,6 +97,7 @@ export function CompareStrip({ pins, onUnpin, onClear }: CompareStripProps) {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Compact score pill — documented exception to CLAUDE.md §9's ScoreBadge requirement; ScoreBadge's 48px+ ring doesn't fit this card's width. */}
                 <span
                   style={{
                     fontFamily: "var(--font-roboto-mono)",
