@@ -605,7 +605,7 @@ export function useBuilderState(): UseBuilderStateReturn {
     try {
       await saveBuilderTemplate({
         title: state.title,
-        user_type: state.userType,
+        user_type: state.userType as "homebuyer" | "investor",
         sections: state.sections as unknown as Record<string, unknown>[],
       });
       setState((prev) => ({ ...prev, isSaving: false, isDirty: false }));
