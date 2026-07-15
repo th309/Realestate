@@ -9,21 +9,18 @@ import React, {
 } from "react";
 import {
   useMarketSnapshot,
-  type GeoLevel,
   isMetricSupportedForGeo,
   incrementUsageStat,
+  type GeoLevel,
 } from "@/lib/data";
-import { getMetricCategories } from "@/app/map/config/metric-categories";
 import { useEntitlements } from "@/lib/entitlements";
-import { AIMarketAnalysis } from "./AIMarketAnalysis";
 import { useQueryClient } from "@tanstack/react-query";
-import { useBenchmarks } from "@/lib/benchmarks/hooks";
 import { MarketLimitUpgradePrompt } from "@/components/entitlements";
 import {
   DashboardHeader,
   ViewToggle,
-  ScoreColumn,
-  MetricCategorySection,
+  MetricRail,
+  MarketPrimaryChart,
   QuickActions,
   MobileViewToggle,
   DashboardLoadingSpinner,
@@ -32,6 +29,11 @@ import {
   PREMIUM_GEO_LEVELS,
   ShareMarketModal,
 } from "./components";
+import {
+  RAIL_METRIC_IDS,
+  pickDefaultRailMetric,
+} from "./components/market-rail-metrics";
+import { MarketHeadline } from "./MarketHeadline";
 import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 import { TourSpotlight } from "@/app/tour/components/TourSpotlight";
 
@@ -52,6 +54,7 @@ export function MarketDashboard({
     userView,
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Track market view for onboarding (once per geography)
@@ -62,7 +65,7 @@ export function MarketDashboard({
     incrementUsageStat("markets_viewed").catch(console.error);
   }, [geographyId]);
 
-  // Check entitlements for geography level
+  // Entitlements for geography level
   const { getAccess, canAccess } = useEntitlements();
   const geoAccess = getAccess("geo", geographyType);
   const hasGeoAccess =
@@ -76,16 +79,13 @@ export function MarketDashboard({
     window.print();
   }, [canExport]);
 
-  // Derive state filter: use URL param if available
-  // Note: metros don't use state filter - they can span state boundaries
   const effectiveStateFilter = useMemo(() => {
     if (geographyType === "metro") return undefined;
     if (stateFilter) return stateFilter;
-    if (geographyType !== "zip" && geographyType !== "county") return undefined;
     return undefined;
   }, [stateFilter, geographyType]);
 
-  // Single hook replaces fetchData() + useDataCardBatch() — 2 HTTP calls instead of 116
+  // Single hook: all metric cards + scores + trends in 2 calls
   const {
     cards,
     scores,
@@ -99,30 +99,7 @@ export function MarketDashboard({
     trendMonths: 3,
   });
 
-  // Get metric categories for the current view (must be called before early returns)
-  const categories = useMemo(() => {
-    const viewMode = activeView === "investor" ? "investor" : "homebuyer";
-    return getMetricCategories(viewMode).filter(
-      (cat) => !cat.isDivider && cat.id !== "scores",
-    );
-  }, [activeView]);
-
-  // Collect all displayed metric IDs for benchmarking
-  const allMetricIds = useMemo(() => {
-    return categories.flatMap((cat) =>
-      (cat.metrics || [])
-        .filter((m) => isMetricSupportedForGeo(m.id, geographyType as GeoLevel))
-        .map((m) => m.id),
-    );
-  }, [categories, geographyType]);
-
-  const { benchmarks, hasAccess: hasBenchmarkAccess } = useBenchmarks(
-    geographyType,
-    geographyId,
-    allMetricIds,
-  );
-
-  // Apply metric fallbacks: home_value falls back to listing_price when ZHVI is unavailable
+  // Apply home_value → listing_price fallback (matches prior behavior)
   const displayData = useMemo(() => {
     const result = { ...cards };
     if (!result["home_value"]?.value && result["listing_price"]?.value) {
@@ -131,6 +108,27 @@ export function MarketDashboard({
     return result;
   }, [cards]);
 
+  // Rail metrics = configured set, filtered to supported + present for this geo
+  const railMetricIds = useMemo(
+    () =>
+      RAIL_METRIC_IDS.filter(
+        (id) =>
+          isMetricSupportedForGeo(id, geographyType as GeoLevel) &&
+          displayData[id] !== undefined,
+      ),
+    [geographyType, displayData],
+  );
+
+  // Keep the charted metric valid: default to home_value, reset if it drops out
+  useEffect(() => {
+    if (railMetricIds.length === 0) return;
+    setSelectedMetricId((current) =>
+      current && railMetricIds.includes(current)
+        ? current
+        : pickDefaultRailMetric(displayData, geographyType),
+    );
+  }, [railMetricIds, displayData, geographyType]);
+
   const updatedDateLabel = useMemo(() => {
     if (!lastUpdated) return "Unknown";
     const parsed = new Date(lastUpdated);
@@ -138,7 +136,6 @@ export function MarketDashboard({
     return parsed.toLocaleDateString();
   }, [lastUpdated]);
 
-  // Refresh handler
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: ["market-snapshot", geographyType, geographyId],
@@ -166,6 +163,8 @@ export function MarketDashboard({
   }
 
   const primaryScore = scores?.propertyiq;
+  const chartMetricId =
+    selectedMetricId ?? railMetricIds[0] ?? RAIL_METRIC_IDS[0];
 
   return (
     <div className="min-h-screen bg-surface">
@@ -188,99 +187,51 @@ export function MarketDashboard({
         />
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
         <ViewToggle activeView={activeView} onViewChange={setActiveView} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <ScoreColumn
-            activeView={activeView}
-            primaryScore={primaryScore}
-            geoLevel={geographyType}
+        {/* Hybrid: short AI framing sets context */}
+        <div data-tour="ai-assessment">
+          <MarketHeadline
+            geoType={geographyType}
             geoId={geographyId}
+            marketName={geography.name}
+            view={activeView}
+            cards={displayData}
+            score={primaryScore?.score ?? null}
+            scoreGrade={(primaryScore as { grade?: string })?.grade ?? "—"}
           />
+        </div>
 
-          {/* Right Column - Details */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Market Metrics by Category */}
-            <div>
-              <h3 className="text-sm font-medium text-on-surface-variant mb-4 uppercase tracking-wide">
-                Market Metrics
-              </h3>
-              <div className="space-y-6">
-                {categories.map((category, catIndex) => {
-                  const supportedMetrics =
-                    category.metrics
-                      ?.filter((m) =>
-                        isMetricSupportedForGeo(
-                          m.id,
-                          geographyType as GeoLevel,
-                        ),
-                      )
-                      .map((m) => m.id) ?? [];
-                  const metricsWithData = supportedMetrics.filter(
-                    (id) => displayData[id] !== undefined,
-                  );
-                  if (metricsWithData.length === 0) return null;
-
-                  const showDivider = catIndex === 3;
-
-                  return (
-                    <React.Fragment key={category.id}>
-                      {showDivider && (
-                        <hr className="border-outline-variant/40 my-2" />
-                      )}
-                      <MetricCategorySection
-                        categoryName={category.name}
-                        subtext={category.subtext}
-                        icon={category.icon}
-                        metricIds={metricsWithData}
-                        factorsData={displayData}
-                        benchmarks={benchmarks}
-                        hasBenchmarkAccess={hasBenchmarkAccess}
-                        delay={catIndex * 0.1}
-                        geographyType={geographyType}
-                        geographyId={geographyId}
-                        geographyName={geography.name}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* AI Market Analysis */}
-            <div data-tour="ai-assessment">
-              <AIMarketAnalysis
-                geoType={geographyType}
-                geoId={geographyId}
-                marketName={geography.name}
-                view={activeView}
-                metrics={Object.fromEntries(
-                  Object.entries(displayData).map(([key, card]) => [
-                    key,
-                    {
-                      value: card.value,
-                      formattedValue: card.formattedValue,
-                      percentChange: card.percentChange,
-                    },
-                  ]),
-                )}
-                scores={{
-                  propertyiq: scores?.propertyiq ?? null,
-                }}
-                lastUpdated={lastUpdated ?? new Date().toISOString()}
-              />
-            </div>
-
-            <QuickActions
-              geographyId={geographyId}
-              geographyType={geographyType}
-              geographyName={geography.name}
-              userView={userView}
-              stateFilter={stateFilter}
+        {/* Primary chart (spine) + metric rail */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8">
+            <MarketPrimaryChart
+              geoType={geographyType as GeoLevel}
+              geoId={geographyId}
+              marketName={geography.name}
+              metricId={chartMetricId}
+            />
+          </div>
+          <div className="lg:col-span-4">
+            <MetricRail
+              geoType={geographyType}
+              geoId={geographyId}
+              cards={displayData}
+              metricIds={railMetricIds}
+              selectedMetricId={chartMetricId}
+              onSelectMetric={setSelectedMetricId}
             />
           </div>
         </div>
+
+        <QuickActions
+          geographyId={geographyId}
+          geographyType={geographyType}
+          geographyName={geography.name}
+          userView={userView}
+          stateFilter={stateFilter}
+        />
       </main>
 
       <MobileViewToggle activeView={activeView} onViewChange={setActiveView} />
@@ -303,11 +254,9 @@ export function MarketDashboard({
         supply={displayData["pending_ratio"]?.formattedValue}
       />
 
-      {/* Sandbox tour value-arc spotlights — each renders null unless the URL
-          carries its matching ?tour=step. step1 highlights the PropertyIQ
-          Score (data-tour="propertyiq-score" in ScoreColumn); step2 highlights
-          the AI assessment (data-tour="ai-assessment" above). Both live on this
-          market-detail page. */}
+      {/* Sandbox tour value-arc spotlights. step1 highlights the PropertyIQ
+          Score (data-tour="propertyiq-score" inside MetricRail); step2
+          highlights the AI framing (data-tour="ai-assessment" above). */}
       <TourSpotlight stepId="step1" />
       <TourSpotlight stepId="step2" />
     </div>

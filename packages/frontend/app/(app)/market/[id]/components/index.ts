@@ -1,9 +1,8 @@
-export { MetricCard } from "./MetricCard";
-export { MetricCategorySection } from "./MetricCategorySection";
+export { MetricRail } from "./MetricRail";
+export { MarketPrimaryChart } from "./MarketPrimaryChart";
 export { DashboardScoreBadge } from "./DashboardScoreBadge";
 export { DashboardHeader } from "./DashboardHeader";
 export { ViewToggle } from "./ViewToggle";
-export { ScoreColumn } from "./ScoreColumn";
 export { QuickActions } from "./QuickActions";
 export { MobileViewToggle } from "./MobileViewToggle";
 export {
