@@ -6,7 +6,11 @@ import { PushService } from '../../push/push.service';
 
 function createSupabaseMock(
   activeAlerts: any[],
-  values: { calculated_metrics?: number; propertyiq_scores_v2?: number },
+  values: {
+    calculated_metrics?: number;
+    propertyiq_scores_v2?: number;
+    median_price?: number;
+  },
 ) {
   return {
     from: jest.fn((table: string) => {
@@ -44,7 +48,7 @@ function createSupabaseMock(
       }
       if (table === 'propertyiq_scores_v2') {
         return {
-          select: jest.fn(() => ({
+          select: jest.fn((column: string) => ({
             eq: jest.fn(() => ({
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
@@ -52,7 +56,12 @@ function createSupabaseMock(
                     limit: jest.fn(() => ({
                       single: jest.fn(() =>
                         Promise.resolve({
-                          data: { score: values.propertyiq_scores_v2 ?? null },
+                          data: {
+                            [column]:
+                              column === 'median_price'
+                                ? (values.median_price ?? null)
+                                : (values.propertyiq_scores_v2 ?? null),
+                          },
                           error: null,
                         }),
                       ),
@@ -131,6 +140,26 @@ describe('AlertProcessorService metric routing', () => {
     expect(push).toHaveBeenCalledTimes(1);
     expect(push.mock.calls[0][1].body).toBe(
       'propertyiq_score crossed 50 (now 72)',
+    );
+  });
+
+  it('reads propertyiq_scores_v2 median_price for the median_price metric (new branch)', async () => {
+    const push = jest.fn().mockResolvedValue({ sent: 1, failed: 0, pruned: 0 });
+    const client = createSupabaseMock(
+      [
+        {
+          ...baseAlert,
+          metric_name: 'median_price',
+          threshold_value: 300000,
+        },
+      ],
+      { median_price: 350000 },
+    );
+    const service = await buildService(client, push);
+    await service.processAlerts();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push.mock.calls[0][1].body).toBe(
+      'median_price crossed 300000 (now 350000)',
     );
   });
 });
