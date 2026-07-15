@@ -15,20 +15,33 @@ export const RAIL_METRIC_IDS: readonly string[] = [
   "home_value_yoy",
 ];
 
-/** Months of history to request for a given chart timeframe. */
-export function timeFrameToHistoryMonths(tf: TimeFrame): number {
+/**
+ * Start date (YYYY-MM-DD) for a given chart timeframe, relative to today.
+ * Matches the established `/graphs` conversion (see useChartData.ts) — NOT
+ * `historyMonths`, which the backend timeseries route silently clamps to 6
+ * months (HISTORY_MONTHS_MAX, intended for short-window trend deltas, not a
+ * multi-year chart) and overwrites the response's `data` array with.
+ */
+export function timeFrameToStartDate(tf: TimeFrame): string {
+  const startDate = new Date();
   switch (tf) {
     case "1Y":
-      return 12;
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
     case "3Y":
-      return 36;
+      startDate.setFullYear(startDate.getFullYear() - 3);
+      break;
     case "5Y":
-      return 60;
+      startDate.setFullYear(startDate.getFullYear() - 5);
+      break;
     case "10Y":
-      return 120;
+      startDate.setFullYear(startDate.getFullYear() - 10);
+      break;
     case "Max":
-      return 240;
+      startDate.setFullYear(2000);
+      break;
   }
+  return startDate.toISOString().split("T")[0];
 }
 
 /**

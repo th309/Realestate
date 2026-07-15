@@ -7,10 +7,15 @@ const useTimeSeriesData = vi.fn((..._args: unknown[]) => ({
     { date: "2022-01-01", value: 455000 },
   ],
   isLoading: false,
-  error: null,
+  error: null as string | null,
+  gated: false,
+  tierRequired: undefined as string | undefined,
 }));
+const metricHasTimeSeries = vi.fn((_id: string) => true);
 vi.mock("@/lib/data", () => ({
   useTimeSeriesData: (...args: unknown[]) => useTimeSeriesData(...args),
+  metricHasTimeSeries: (id: string) => metricHasTimeSeries(id),
+  getMetricConfig: (id: string) => ({ title: id }),
 }));
 // Stub the heavy D3 chart; surface the props we assert on.
 vi.mock("@/app/graphs/components/AnimatedTimeSeriesChart", () => ({
@@ -43,7 +48,7 @@ describe("MarketPrimaryChart", () => {
     expect(chart.getAttribute("data-points")).toBe("2");
   });
 
-  it("defaults to the 5Y timeframe (60 months) for the data hook", () => {
+  it("defaults to the 5Y timeframe (startDate 5 years back) for the data hook", () => {
     render(
       <MarketPrimaryChart
         geoType="metro"
@@ -54,10 +59,13 @@ describe("MarketPrimaryChart", () => {
     );
     const lastCall = useTimeSeriesData.mock.calls.at(-1)!;
     expect(lastCall[0]).toBe("home_value");
-    expect(lastCall[3]).toEqual({ historyMonths: 60 });
+    const options = lastCall[3] as { startDate: string; enabled: boolean };
+    const fiveYearsAgo = String(new Date().getUTCFullYear() - 5);
+    expect(options.startDate.slice(0, 4)).toBe(fiveYearsAgo);
+    expect(options.enabled).toBe(true);
   });
 
-  it("re-requests a shorter window when the 1Y timeframe pill is clicked", () => {
+  it("requests an earlier startDate when the 1Y timeframe pill is clicked", () => {
     render(
       <MarketPrimaryChart
         geoType="metro"
@@ -68,6 +76,46 @@ describe("MarketPrimaryChart", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "1Y" }));
     const lastCall = useTimeSeriesData.mock.calls.at(-1)!;
-    expect(lastCall[3]).toEqual({ historyMonths: 12 });
+    const options = lastCall[3] as { startDate: string };
+    const oneYearAgo = String(new Date().getUTCFullYear() - 1);
+    expect(options.startDate.slice(0, 4)).toBe(oneYearAgo);
+  });
+
+  it("shows a no-history message instead of a blank chart for a metric with no time series", () => {
+    metricHasTimeSeries.mockReturnValueOnce(false);
+    render(
+      <MarketPrimaryChart
+        geoType="metro"
+        geoId="12420"
+        marketName="Austin, TX"
+        metricId="months_of_supply"
+      />,
+    );
+    expect(screen.getByTestId("chart-no-history")).toBeTruthy();
+    expect(screen.queryByTestId("ts-chart")).toBeNull();
+    // Doesn't fetch a chart it can never render.
+    const lastCall = useTimeSeriesData.mock.calls.at(-1)!;
+    expect((lastCall[3] as { enabled: boolean }).enabled).toBe(false);
+  });
+
+  it("shows an upgrade message instead of a blank chart for a gated metric", () => {
+    useTimeSeriesData.mockReturnValueOnce({
+      data: [],
+      isLoading: false,
+      error: null,
+      gated: true,
+      tierRequired: "pro",
+    });
+    render(
+      <MarketPrimaryChart
+        geoType="metro"
+        geoId="12420"
+        marketName="Austin, TX"
+        metricId="cap_rate"
+      />,
+    );
+    expect(screen.getByTestId("chart-gated")).toBeTruthy();
+    expect(screen.getByText(/requires the pro plan/i)).toBeTruthy();
+    expect(screen.queryByTestId("ts-chart")).toBeNull();
   });
 });

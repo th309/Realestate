@@ -9,7 +9,7 @@ vi.mock("@/lib/data", () => ({
 
 import {
   RAIL_METRIC_IDS,
-  timeFrameToHistoryMonths,
+  timeFrameToStartDate,
   pickDefaultRailMetric,
 } from "../market-rail-metrics";
 
@@ -21,13 +21,22 @@ describe("RAIL_METRIC_IDS", () => {
   });
 });
 
-describe("timeFrameToHistoryMonths", () => {
-  it("maps each timeframe to a month count", () => {
-    expect(timeFrameToHistoryMonths("1Y")).toBe(12);
-    expect(timeFrameToHistoryMonths("3Y")).toBe(36);
-    expect(timeFrameToHistoryMonths("5Y")).toBe(60);
-    expect(timeFrameToHistoryMonths("10Y")).toBe(120);
-    expect(timeFrameToHistoryMonths("Max")).toBe(240);
+describe("timeFrameToStartDate", () => {
+  const YEAR = new Date().getUTCFullYear();
+
+  it("maps each timeframe to a start date N years before today", () => {
+    expect(timeFrameToStartDate("1Y").slice(0, 4)).toBe(String(YEAR - 1));
+    expect(timeFrameToStartDate("3Y").slice(0, 4)).toBe(String(YEAR - 3));
+    expect(timeFrameToStartDate("5Y").slice(0, 4)).toBe(String(YEAR - 5));
+    expect(timeFrameToStartDate("10Y").slice(0, 4)).toBe(String(YEAR - 10));
+  });
+
+  it("returns a fixed year-2000 floor for Max (fetch all available data)", () => {
+    expect(timeFrameToStartDate("Max").slice(0, 4)).toBe("2000");
+  });
+
+  it("returns an ISO YYYY-MM-DD date string", () => {
+    expect(timeFrameToStartDate("5Y")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 
