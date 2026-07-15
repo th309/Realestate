@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PostSignupCelebrate } from "../PostSignupCelebrate";
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(""),
+}));
+
 const resetSpy = vi.fn();
 let mockSession: any = {
   sessionId: "sess-abc",
