@@ -42,6 +42,11 @@ Cap constants live in `packages/backend/src/market-explorer/resolve-child-region
 - `ZIP_FETCH_CAP = 70` (backend fetch cap)
 - Metro and county rosters: no cap constant: return every resolved child.
 
+**Every capped view must disclose the cap and provide a way to reach what's excluded.**
+
+- **Metro bubbles**: no new affordance needed. The tile map at the same scope is uncapped (all 383), so switching to "Map" view already surfaces every metro — the existing Bubbles/Map toggle _is_ the escape hatch. Still worth a light "top 70 of 383 by population — see all in Map view" notice on the bubble view itself so it's discoverable without trial and error.
+- **ZIP tier (both bubbles and tiles, since the fetch itself is capped)**: this is the real case that needs a new mechanism, since the excluded ZIPs are absent from the data entirely, not just from one view. Add a notice ("Showing top 70 of N ZIP codes in {county}, by population") plus a search-to-jump affordance for any ZIP not in the capped set. Reuse the existing pattern from the main `/map` page (`useMapSearch.ts`, wrapping `useUniversalSearch` + Mapbox Geocoding fallback) rather than building a new search component — it already does exactly this job (fly to/highlight any region by name, independent of what's currently rendered) and is proven in production.
+
 ### 3. Backend combines all 8 metrics into one response per scope
 
 Today the frontend fires 8 separate requests per scope (`FETCHED_METRICS.map(...)` in `useExplorerScopeData.ts`), each hitting `GET /api/market-explorer/scope/:geoLevel?metric=X` and each duplicating the `dates` + `regions` payload. The existing client-side merge logic (`mergeScopeResponses` in `useExplorerScopeData.ts`) that aligns per-metric responses onto one shared date axis moves server-side into `MarketExplorerService.getScopeSeries`: it fetches all 8 metrics, aligns them, and returns one combined `{dates, regions, series: {metric1: [...], metric2: [...], ...}}` payload. One HTTP request per scope instead of 8; one Redis entry instead of 8. The `metric` query param is dropped from `ScopeQueryDto` (or made optional/ignored) since a scope request now always returns every metric.
@@ -80,7 +85,8 @@ During initial investigation (separate from this design), clicking the "Metro" s
 - `lib/data/fetchers/market-explorer.ts` — response shape changes to the combined-metric format.
 - `app/(app)/market/explorer/MarketExplorer.tsx` — `heroChart` selection logic generalizes beyond the current state-only `StateTileMap` special case.
 - `app/(app)/market/explorer/lib/explorer-reducer.ts`, `explorer-navigation.ts` — verify/fix the map↔bubbles transition per §5.
-- `app/(app)/market/explorer/components/BubbleChart.tsx` — client-side top-70 slice for metro-tier bubble rendering.
+- `app/(app)/market/explorer/components/BubbleChart.tsx` — client-side top-70 slice for metro-tier bubble rendering, plus a "top 70 of N — see all in Map view" notice.
+- New (ZIP tier only): a "showing top N of M" notice and a search-to-jump control, reusing `app/(app)/map/hooks/useMapSearch.ts` (or extracting its shared search logic if it isn't already geo-level-agnostic) rather than a new component.
 
 ## Verification requirement
 
