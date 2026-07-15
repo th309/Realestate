@@ -15,7 +15,7 @@ const PARENT_COL: Record<string, string> = {
   county: 'county_fips',
 };
 
-async function distinctCrosswalkIds(
+export async function distinctCrosswalkIds(
   supabase: SupabaseClient,
   childCol: string,
   parentCol: string,
@@ -35,7 +35,7 @@ async function distinctCrosswalkIds(
   ];
 }
 
-async function snapshotRoster(
+export async function snapshotRoster(
   supabase: SupabaseClient,
   geoLevel: string,
   ids: string[],

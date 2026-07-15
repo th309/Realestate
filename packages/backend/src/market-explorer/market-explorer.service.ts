@@ -4,6 +4,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScopeQueryDto } from './market-explorer.dto';
 import { ScopeSeriesResponse } from './market-explorer.types';
 import { resolveChildRegions } from './resolve-child-regions';
+import { resolveNearbyRegions } from './resolve-nearby-regions';
 import { fetchMetricSeriesForRegions } from './fetch-metric-series';
 import { fetchStateMetricSeries } from './fetch-state-series';
 import { stateRegions } from './us-states';
@@ -42,6 +43,16 @@ export class MarketExplorerService {
         dto.parentId,
         !!dto.includeNearby,
       );
+      if (dto.includeNearby) {
+        const nearby = await resolveNearbyRegions(
+          this.supabase,
+          geoLevel,
+          dto.parentLevel,
+          dto.parentId,
+        );
+        const have = new Set(regions.map((r) => r.id));
+        regions = [...regions, ...nearby.filter((n) => !have.has(n.id))];
+      }
       rows = await fetchMetricSeriesForRegions(
         this.supabase,
         dto.metric,
