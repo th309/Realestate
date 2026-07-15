@@ -9,10 +9,10 @@ export interface ListingsActivityChartProps {
   monthIndex: number;
 }
 
-const Wv = 440,
-  Hv = 190,
-  mB = 22,
-  mT = 8;
+const chartWidth = 440,
+  chartHeight = 190,
+  marginBottom = 22,
+  marginTop = 8;
 
 export function ListingsActivityChart({
   title,
@@ -23,10 +23,17 @@ export function ListingsActivityChart({
 }: ListingsActivityChartProps) {
   const end = Math.min(monthIndex, newListings.length - 1);
   const start = Math.max(0, end - 11);
-  const idx: number[] = [];
-  for (let t = start; t <= end; t++) idx.push(t);
-  const max = Math.max(1, ...idx.map((t) => newListings[t] ?? 0)) * 1.1;
-  const bw = (Wv - 16) / (idx.length || 1);
+  const visibleMonthIndices: number[] = [];
+  for (let monthIdx = start; monthIdx <= end; monthIdx++)
+    visibleMonthIndices.push(monthIdx);
+  const max =
+    Math.max(
+      1,
+      ...visibleMonthIndices.map((monthIdx) =>
+        Math.max(newListings[monthIdx] ?? 0, pending[monthIdx] ?? 0),
+      ),
+    ) * 1.1;
+  const barWidth = (chartWidth - 16) / (visibleMonthIndices.length || 1);
   const monthShort = (iso: string) =>
     new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleString("en-US", {
       month: "short",
@@ -90,56 +97,62 @@ export function ListingsActivityChart({
         </div>
       </div>
       <svg
-        viewBox={`0 0 ${Wv} ${Hv}`}
+        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         preserveAspectRatio="none"
         width="100%"
-        style={{ display: "block", height: Hv }}
+        style={{ display: "block", height: chartHeight }}
       >
         <line
           x1={6}
-          x2={Wv - 6}
-          y1={Hv - mB}
-          y2={Hv - mB}
+          x2={chartWidth - 6}
+          y1={chartHeight - marginBottom}
+          y2={chartHeight - marginBottom}
           stroke="var(--md-outline-variant)"
         />
-        {idx.map((t, i) => {
-          const x0 = 8 + i * bw,
-            cur = t === monthIndex;
-          const h1 = ((newListings[t] ?? 0) / max) * (Hv - mB - mT);
-          const h2 = ((pending[t] ?? 0) / max) * (Hv - mB - mT);
+        {visibleMonthIndices.map((monthIdx, i) => {
+          const x0 = 8 + i * barWidth,
+            isCurrentMonth = monthIdx === monthIndex;
+          const newListingsBarHeight =
+            ((newListings[monthIdx] ?? 0) / max) *
+            (chartHeight - marginBottom - marginTop);
+          const pendingBarHeight =
+            ((pending[monthIdx] ?? 0) / max) *
+            (chartHeight - marginBottom - marginTop);
           return (
-            <g key={t}>
+            <g key={monthIdx}>
               <rect
-                x={x0 + bw * 0.14}
-                width={bw * 0.32}
-                y={Hv - mB - h1}
-                height={h1}
+                x={x0 + barWidth * 0.14}
+                width={barWidth * 0.32}
+                y={chartHeight - marginBottom - newListingsBarHeight}
+                height={newListingsBarHeight}
                 rx={3}
                 fill="var(--md-primary)"
-                fillOpacity={cur ? 1 : 0.55}
+                fillOpacity={isCurrentMonth ? 1 : 0.55}
               />
               <rect
-                x={x0 + bw * 0.52}
-                width={bw * 0.32}
-                y={Hv - mB - h2}
-                height={h2}
+                x={x0 + barWidth * 0.52}
+                width={barWidth * 0.32}
+                y={chartHeight - marginBottom - pendingBarHeight}
+                height={pendingBarHeight}
                 rx={3}
                 fill="var(--md-tertiary)"
-                fillOpacity={cur ? 1 : 0.55}
+                fillOpacity={isCurrentMonth ? 1 : 0.55}
               />
-              {(i % 2 === 0 || idx.length <= 8) && (
+              {(i % 2 === 0 || visibleMonthIndices.length <= 8) && (
                 <text
-                  x={x0 + bw / 2}
-                  y={Hv - 7}
+                  x={x0 + barWidth / 2}
+                  y={chartHeight - 7}
                   textAnchor="middle"
                   fontSize={9.5}
                   fontFamily="var(--font-roboto-mono)"
                   fill={
-                    cur ? "var(--md-primary)" : "var(--md-on-surface-variant)"
+                    isCurrentMonth
+                      ? "var(--md-primary)"
+                      : "var(--md-on-surface-variant)"
                   }
-                  fontWeight={cur ? 700 : 400}
+                  fontWeight={isCurrentMonth ? 700 : 400}
                 >
-                  {monthShort(months[t] ?? "")}
+                  {monthShort(months[monthIdx] ?? "")}
                 </text>
               )}
             </g>
