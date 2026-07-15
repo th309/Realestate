@@ -30,6 +30,13 @@ export function Leaderboard({
   selectedId,
   onSelect,
 }: LeaderboardProps) {
+  const handleRowKeyDown = (id: string, e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(id);
+    }
+  };
+
   return (
     <div
       style={{
@@ -71,7 +78,10 @@ export function Leaderboard({
         {rows.map((r) => (
           <div
             key={r.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelect(r.id)}
+            onKeyDown={(e) => handleRowKeyDown(r.id, e)}
             style={{
               display: "grid",
               gridTemplateColumns: "40px minmax(0,1fr) 96px 92px 76px",
@@ -135,6 +145,7 @@ export function Leaderboard({
             >
               {r.valueLabel}
             </span>
+            {/* Compact score pill — documented exception to CLAUDE.md §9's ScoreBadge requirement; ScoreBadge's ring doesn't fit this row's 76px column. */}
             <span
               style={{
                 justifySelf: "end",
