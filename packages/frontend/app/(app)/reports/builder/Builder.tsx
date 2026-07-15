@@ -25,7 +25,6 @@ import {
   Settings,
   Home,
   TrendingUp,
-  Sparkles,
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/navigation";
 import {
@@ -278,11 +277,6 @@ export const Builder: React.FC = () => {
             </div>
           )}
         </DragOverlay>
-
-        {/* AI Assist Floating Button */}
-        <button className="fixed bottom-6 right-6 p-4 bg-tertiary text-on-tertiary rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all">
-          <Sparkles className="w-6 h-6" />
-        </button>
       </div>
     </DndContext>
   );
