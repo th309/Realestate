@@ -1,4 +1,13 @@
 import { MarketExplorerService } from '../market-explorer.service';
+import { RedisService } from '../../redis/redis.service';
+
+function fakeRedis(overrides: Partial<RedisService> = {}): RedisService {
+  return {
+    getByKey: jest.fn().mockResolvedValue(null),
+    setByKey: jest.fn().mockResolvedValue(true),
+    ...overrides,
+  } as any;
+}
 
 describe('MarketExplorerService.getScopeSeries', () => {
   it('state scope: uses stateRegions + RPC and returns a combined multi-metric response, no totalAvailable', async () => {
@@ -30,7 +39,7 @@ describe('MarketExplorerService.getScopeSeries', () => {
         range: async () => ({ data: [], error: null }),
       }),
     } as any;
-    const service = new MarketExplorerService(supabase);
+    const service = new MarketExplorerService(supabase, fakeRedis());
     const res = await service.getScopeSeries('state', { months: 3 } as any);
     expect(res.regions.length).toBe(51);
     expect(res.dates).toEqual(['2026-03-01', '2026-04-01', '2026-05-01']);
@@ -139,7 +148,7 @@ describe('MarketExplorerService.getScopeSeries', () => {
         };
       },
     } as any;
-    const service = new MarketExplorerService(supabase);
+    const service = new MarketExplorerService(supabase, fakeRedis());
     const res = await service.getScopeSeries('metro', { months: 2 } as any);
     expect(res.regions[0].id).toBe('35620');
     expect(snapshotCalls).toBeGreaterThan(0);
@@ -212,7 +221,7 @@ describe('MarketExplorerService.getScopeSeries', () => {
         };
       },
     } as any;
-    const service = new MarketExplorerService(supabase);
+    const service = new MarketExplorerService(supabase, fakeRedis());
     const res = await service.getScopeSeries('zip', {
       parentLevel: 'county',
       parentId: '06037',
@@ -220,5 +229,95 @@ describe('MarketExplorerService.getScopeSeries', () => {
     } as any);
     expect(res.regions.length).toBe(70);
     expect(res.totalAvailable).toBe(90);
+  });
+});
+
+describe('MarketExplorerService caching', () => {
+  it('returns the cached value on hit without touching Supabase', async () => {
+    const cachedResponse = {
+      success: true,
+      geoLevel: 'state',
+      months: 3,
+      dates: ['2026-05-01'],
+      regions: [],
+      series: {},
+    };
+    const supabase = {
+      rpc: jest
+        .fn()
+        .mockRejectedValue(new Error('should not be called on cache hit')),
+    } as any;
+    const redis = fakeRedis({
+      getByKey: jest.fn().mockResolvedValue(cachedResponse),
+    });
+    const service = new MarketExplorerService(supabase, redis);
+    const res = await service.getScopeSeries('state', { months: 3 } as any);
+    expect(res).toEqual(cachedResponse);
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('on cache miss, builds the response and writes it back with the pipeline-aligned TTL', async () => {
+    const supabase = {
+      rpc: jest.fn().mockResolvedValue({ data: [], error: null }),
+      from: () => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        gte() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        range: async () => ({ data: [], error: null }),
+      }),
+    } as any;
+    const redis = fakeRedis();
+    const service = new MarketExplorerService(supabase, redis);
+    await service.getScopeSeries('state', { months: 3 } as any);
+    expect(redis.setByKey).toHaveBeenCalledTimes(1);
+    const [key, , ttlSeconds] = (redis.setByKey as jest.Mock).mock.calls[0];
+    expect(key).toBe('market-explorer:v2:state:::false');
+    expect(ttlSeconds).toBeGreaterThan(0);
+  });
+
+  it('still returns a correct built result when Redis is unavailable (getByKey/setByKey no-op)', async () => {
+    const supabase = {
+      rpc: jest.fn().mockResolvedValue({
+        data: [{ state_fips: '48', score_date: '2026-05-01', avg_score: 61 }],
+        error: null,
+      }),
+      from: () => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        gte() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        range: async () => ({ data: [], error: null }),
+      }),
+    } as any;
+    const redis = fakeRedis({
+      getByKey: jest.fn().mockResolvedValue(null),
+      setByKey: jest.fn().mockResolvedValue(false),
+    });
+    const service = new MarketExplorerService(supabase, redis);
+    const res = await service.getScopeSeries('state', { months: 1 } as any);
+    expect(res.series.propertyiq_score['48']).toEqual([61]);
   });
 });
