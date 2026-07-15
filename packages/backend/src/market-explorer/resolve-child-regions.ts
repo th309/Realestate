@@ -80,7 +80,6 @@ export async function resolveChildRegions(
       .from('screener_snapshot')
       .select('region_id, region_name, state_code, population')
       .eq('geo_level', 'metro')
-      .not('population', 'is', null)
       .order('population', { ascending: false, nullsFirst: false })
       .limit(NATIONAL_METRO_CAP);
     return (data ?? []).map((r: any) => ({

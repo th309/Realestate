@@ -11,7 +11,13 @@ function makeSupabase(handlers: {
 }) {
   return {
     from(table: string) {
-      const state: any = { table, _eqCol: null, _eqVal: null, _inIds: null };
+      const state: any = {
+        table,
+        _eqCol: null,
+        _eqVal: null,
+        _inIds: null,
+        _notFilters: [] as { col: string; op: string; val: unknown }[],
+      };
       const builder: any = {
         select: () => builder,
         eq: (c: string, v: string) => {
@@ -23,7 +29,10 @@ function makeSupabase(handlers: {
           state._inIds = ids;
           return builder;
         },
-        not: () => builder,
+        not: (col: string, op: string, val: unknown) => {
+          state._notFilters.push({ col, op, val });
+          return builder;
+        },
         order: () => builder,
         limit: () => builder,
         then: (resolve: any) => {
@@ -31,7 +40,15 @@ function makeSupabase(handlers: {
           if (table === 'geography_crosswalk')
             data = handlers.crosswalk!(state._eqCol, state._eqVal);
           else if (state._inIds) data = handlers.snapshot!(state._inIds);
-          else data = handlers.topMetros!();
+          else {
+            data = handlers.topMetros!();
+            // Simulate Supabase's `.not(col, 'is', null)` server-side filter.
+            for (const f of state._notFilters) {
+              if (f.op === 'is' && f.val === null) {
+                data = data.filter((r) => r[f.col] != null);
+              }
+            }
+          }
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
@@ -72,6 +89,35 @@ describe('resolveChildRegions', () => {
       population: 20000000,
     });
     expect(rows.length).toBeLessThanOrEqual(NATIONAL_METRO_CAP);
+  });
+
+  it('regression: still returns national-scope metros when population is null for every row', async () => {
+    const supabase = makeSupabase({
+      topMetros: () => [
+        {
+          region_id: '35620',
+          region_name: 'New York',
+          state_code: 'NY',
+          population: null,
+        },
+        {
+          region_id: '31080',
+          region_name: 'Los Angeles',
+          state_code: 'CA',
+          population: null,
+        },
+      ],
+    });
+    const rows = await resolveChildRegions(
+      supabase,
+      'metro',
+      undefined,
+      undefined,
+      false,
+    );
+    expect(rows.length).toBe(2);
+    expect(rows.map((r) => r.id).sort()).toEqual(['31080', '35620']);
+    expect(rows.every((r) => r.population === null)).toBe(true);
   });
 
   it('resolves counties of a metro via the crosswalk then reads snapshot names', async () => {
