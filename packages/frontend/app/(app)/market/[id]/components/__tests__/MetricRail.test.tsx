@@ -55,6 +55,13 @@ vi.mock("@/lib/benchmarks/hooks", () => ({
   getBenchmarkForMetric: (...args: unknown[]) =>
     (getBenchmarkForMetric as (...a: unknown[]) => unknown)(...args),
 }));
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: any) => (
+    <a href={typeof href === "string" ? href : ""} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 
 import { getMetricTitle } from "@/lib/data";
 import { MetricRail } from "../MetricRail";
@@ -185,6 +192,26 @@ describe("MetricRail", () => {
       selectableButton.contains(screen.getByTestId("inherited-badge")),
     ).toBe(false);
     expect(selectableButton.children.length).toBe(0);
+  });
+
+  it("links each row to its metric detail page, independent of the selectable button", () => {
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={cards}
+        metricIds={["home_value", "rent_index"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    const detailLink = screen.getByLabelText(
+      `View ${getMetricTitle("home_value")} details`,
+    );
+    expect(detailLink.getAttribute("href")).toBe("/metrics/home_value");
+    const selectableButton = screen.getByRole("button", {
+      name: `Chart ${getMetricTitle("home_value")}`,
+    });
+    expect(selectableButton.contains(detailLink)).toBe(false);
   });
 
   it("renders an alert bell per metric row, independent of the selectable button", () => {

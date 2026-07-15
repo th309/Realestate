@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import {
   type MarketSnapshotCard,
   type BenchmarkResult,
@@ -171,7 +172,15 @@ export function MetricRail({
                   </div>
                 )}
               </div>
-              <div className="relative">
+              <div className="relative flex items-center gap-1">
+                <Link
+                  href={`/metrics/${metricId}`}
+                  aria-label={`View ${metricTitle} details`}
+                  title="View metric details"
+                  className="rounded-full p-1.5 text-on-surface-variant/60 transition-colors hover:bg-surface-container-high hover:text-on-surface-variant"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </Link>
                 <MetricAlertBell
                   metricId={metricId}
                   currentValue={card?.value}

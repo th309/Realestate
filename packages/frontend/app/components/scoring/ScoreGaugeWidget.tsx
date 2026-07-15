@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics/tracker";
 import { ScoreGaugeRing } from "./ScoreGaugeRing";
@@ -131,6 +132,12 @@ export function ScoreGaugeWidget({
         <span className="text-center text-[11px] leading-snug text-on-surface-variant">
           50 = state average · higher = stronger momentum
         </span>
+        <Link
+          href="/scores/methodology"
+          className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          How it&apos;s calculated →
+        </Link>
       </div>
     </div>
   );
