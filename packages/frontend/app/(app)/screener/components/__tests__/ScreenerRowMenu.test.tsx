@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 const push = vi.fn();
+const entitlementsState = vi.hoisted(() => ({ loading: false }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: { id: "u1" } }) }));
 vi.mock("@/lib/watchlist/useWatchlist", () => ({
@@ -13,7 +14,10 @@ vi.mock("@/lib/watchlist/useWatchlist", () => ({
   }),
 }));
 vi.mock("@/lib/entitlements", () => ({
-  useEntitlements: () => ({ getAccess: () => ({ level: "full" }) }),
+  useEntitlements: () => ({
+    getAccess: () => ({ level: "full" }),
+    loading: entitlementsState.loading,
+  }),
 }));
 vi.mock("@/lib/entitlements/useIsAnonymous", () => ({
   useIsAnonymous: () => false,
@@ -44,6 +48,18 @@ const row = {
 } as any;
 
 describe("ScreenerRowMenu", () => {
+  afterEach(() => {
+    entitlementsState.loading = false;
+  });
+
+  it("renders nothing while entitlements are still loading", () => {
+    entitlementsState.loading = true;
+    render(<ScreenerRowMenu row={row} x={0} y={0} onClose={vi.fn()} />);
+    expect(screen.queryByText("Favorite")).toBeNull();
+    expect(screen.queryByText("View on Map")).toBeNull();
+    expect(screen.queryByText("Generate Report")).toBeNull();
+  });
+
   it("navigates to the map with the geo/id/name/state deep-link params", () => {
     render(<ScreenerRowMenu row={row} x={0} y={0} onClose={vi.fn()} />);
     fireEvent.click(screen.getByText("View on Map"));

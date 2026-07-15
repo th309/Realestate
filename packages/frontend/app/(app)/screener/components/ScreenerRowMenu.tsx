@@ -30,7 +30,7 @@ export function ScreenerRowMenu({ row, x, y, onClose }: ScreenerRowMenuProps) {
 
   const { isInWatchlist, addToWatchlist, removeFromWatchlist, items } =
     useWatchlist({ userId: user?.id ?? "", autoLoad: !!user?.id });
-  const { getAccess } = useEntitlements();
+  const { getAccess, loading } = useEntitlements();
   const isAnonymous = useIsAnonymous();
 
   const [toggling, setToggling] = useState(false);
@@ -38,12 +38,6 @@ export function ScreenerRowMenu({ row, x, y, onClose }: ScreenerRowMenuProps) {
   const [overlay, setOverlay] = useState<
     "watchlist" | "reports" | "anon-watchlist" | "anon-reports" | null
   >(null);
-
-  const watchlistLocked =
-    getAccess("feature", "watchlist_limit").level === "none";
-  const reportAccess = getAccess("feature", "reports");
-  const isSaved = isInWatchlist(row.geo_level, row.region_id);
-  const displayName = formatGeoDisplayName(row.region_name);
 
   const [pos, setPos] = useState({ top: y, left: x });
   useEffect(() => {
@@ -84,6 +78,16 @@ export function ScreenerRowMenu({ row, x, y, onClose }: ScreenerRowMenuProps) {
   }, [onClose]);
 
   useModalHistory(true, onClose, "screener-row-menu");
+
+  if (loading) {
+    return null;
+  }
+
+  const watchlistLocked =
+    getAccess("feature", "watchlist_limit").level === "none";
+  const reportAccess = getAccess("feature", "reports");
+  const isSaved = isInWatchlist(row.geo_level, row.region_id);
+  const displayName = formatGeoDisplayName(row.region_name);
 
   const handleFavorite = async () => {
     if (isAnonymous) {
@@ -224,26 +228,28 @@ export function ScreenerRowMenu({ row, x, y, onClose }: ScreenerRowMenuProps) {
         )}
       </div>
 
-      {overlay && (
-        <div
-          ref={overlayRef}
-          className="fixed inset-0 z-[100000] flex items-center justify-center bg-scrim/40"
-          onClick={() => setOverlay(null)}
-        >
-          <div className="mx-4 max-w-sm" onClick={(e) => e.stopPropagation()}>
-            {overlay === "anon-watchlist" || overlay === "anon-reports" ? (
-              <AnonCaptureModal
-                featureName={
-                  overlay === "anon-watchlist" ? "Favorites" : "Reports"
-                }
-                returnTo={buildAnonReturnTo(
-                  window.location.pathname,
-                  window.location.search,
-                  undefined,
-                )}
-                onDismiss={() => setOverlay(null)}
-              />
-            ) : (
+      {overlay &&
+        (overlay === "anon-watchlist" || overlay === "anon-reports" ? (
+          <div ref={overlayRef} className="fixed inset-0 z-[100000]">
+            <AnonCaptureModal
+              featureName={
+                overlay === "anon-watchlist" ? "Favorites" : "Reports"
+              }
+              returnTo={buildAnonReturnTo(
+                window.location.pathname,
+                window.location.search,
+                undefined,
+              )}
+              onDismiss={() => setOverlay(null)}
+            />
+          </div>
+        ) : (
+          <div
+            ref={overlayRef}
+            className="fixed inset-0 z-[100000] flex items-center justify-center bg-scrim/40"
+            onClick={() => setOverlay(null)}
+          >
+            <div className="mx-4 max-w-sm" onClick={(e) => e.stopPropagation()}>
               <PaywallCard
                 type="feature"
                 id={overlay === "watchlist" ? "watchlist_limit" : "reports"}
@@ -253,10 +259,9 @@ export function ScreenerRowMenu({ row, x, y, onClose }: ScreenerRowMenuProps) {
                     : "Unlock Reports"
                 }
               />
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
     </>,
     document.body,
   );
