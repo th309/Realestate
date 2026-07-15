@@ -8,6 +8,7 @@
  * No hardcoded tier gating — use the admin tiers page to move scores between tiers.
  */
 
+import Link from "next/link";
 import { InsightsIcon } from "../Icons";
 import { TrendArrow, getTrendDirection, formatTrendValue } from "./TrendArrow";
 import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
@@ -80,6 +81,13 @@ export function SidebarScoreCard({
             </span>
           )}
         </div>
+        <Link
+          href="/scores/methodology"
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 text-[11px] text-primary hover:text-primary/80 transition-colors"
+        >
+          How it&apos;s scored
+        </Link>
       </div>
 
       {/* Score Content */}

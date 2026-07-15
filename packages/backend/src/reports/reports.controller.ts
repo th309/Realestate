@@ -26,6 +26,7 @@ import {
   GenerateReportDto,
   SendMessageDto,
   CreateShareDto,
+  SaveBuilderTemplateDto,
 } from './dto/generate-report.dto';
 import { STATIC_SAMPLE_REPORT } from './static-sample-report';
 
@@ -106,6 +107,20 @@ export class ReportsController {
     // (checkAccess → TierResolverService); never trust a client x-user-tier.
     const reportId = await this.reportsService.generateReport(userId, dto);
     return { report_id: reportId, status: 'generating' };
+  }
+
+  /**
+   * Save the current report-builder layout as a private, user-owned template.
+   *
+   * POST /reports/builder-templates
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('builder-templates')
+  async saveBuilderTemplate(
+    @Body() dto: SaveBuilderTemplateDto,
+    @AuthUserId() userId: string,
+  ) {
+    return this.reportsService.saveBuilderTemplate(userId, dto);
   }
 
   /**

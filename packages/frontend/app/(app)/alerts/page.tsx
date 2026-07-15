@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { Bell, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  Bell,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  ChevronRight,
+} from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { useAlerts, useAlertHistory } from "@/lib/alerts/hooks";
@@ -113,6 +119,13 @@ export default function AlertsPage() {
                           {alert.metric_id} {alert.condition} {alert.threshold}
                         </p>
                       </div>
+                      <Link
+                        href={`/map?geo=${alert.geography_type}&id=${alert.geography_id}`}
+                        className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors"
+                        title="View on map"
+                      >
+                        <ChevronRight className="w-4 h-4 text-on-surface-variant" />
+                      </Link>
                       <button
                         onClick={() =>
                           update(alert.id, { is_active: !alert.is_active })

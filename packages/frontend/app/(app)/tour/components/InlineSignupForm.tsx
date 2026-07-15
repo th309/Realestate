@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTourSignup } from "@/lib/data";
 import { useTour } from "../TourStateProvider";
@@ -59,6 +60,12 @@ export function InlineSignupForm() {
           finish setting up your account. Your report is already saved and
           waiting for you.
         </p>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-on-primary transition hover:bg-primary/90"
+        >
+          Continue to dashboard →
+        </Link>
       </div>
     );
   }

@@ -21,6 +21,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AlertsService } from './alerts.service';
 import { PushService } from '../push/push.service';
+import { fetchCurrentMetricValue } from './alert-metric-resolver';
 
 interface TriggeredAlert {
   id: string;
@@ -78,7 +79,8 @@ export class AlertProcessorService {
     for (const key of uniqueKeys) {
       const [metricId, geoType, geoId] = key.split(':');
       try {
-        const value = await this.fetchCurrentMetricValue(
+        const value = await fetchCurrentMetricValue(
+          client,
           metricId,
           geoType,
           geoId,
@@ -257,26 +259,5 @@ export class AlertProcessorService {
       default:
         return false;
     }
-  }
-
-  private async fetchCurrentMetricValue(
-    metricId: string,
-    geoType: string,
-    geoId: string,
-  ): Promise<number | null> {
-    const client = this.supabase.getClient();
-
-    // Try calculated_metrics first (most metrics are there)
-    const { data } = await client
-      .from('calculated_metrics')
-      .select(metricId)
-      .eq('geography_type', geoType)
-      .eq('geography_id', geoId)
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (data?.[metricId] != null) return Number(data[metricId]);
-    return null;
   }
 }
