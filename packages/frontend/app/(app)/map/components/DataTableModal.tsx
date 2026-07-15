@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { GeoLevel, MapData, MapDataEntry } from "../types";
 import { getValueFromEntry, getDateFromEntry } from "../types";
 import { getMetricFormat, getMetricTitle } from "../config";
@@ -38,6 +39,13 @@ export function DataTableModal({
   const [sortField, setSortField] = useState<SortField>("value");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [searchFilter, setSearchFilter] = useState("");
+
+  const router = useRouter();
+
+  const handleRowClick = (regionId: string) => {
+    router.push(`/market/${regionId}?type=${geoLevel}`);
+    onClose();
+  };
 
   // Get metric display info from central config
   const metricFormat = getMetricFormat(selectedMetric);
@@ -256,7 +264,13 @@ export function DataTableModal({
                 tableData.map((row, index) => (
                   <tr
                     key={row.id}
-                    className={`hover:bg-surface-container transition-colors ${index % 2 === 0 ? "bg-surface" : "bg-surface-container-lowest"}`}
+                    onClick={() => handleRowClick(row.id)}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRowClick(row.id);
+                    }}
+                    className={`cursor-pointer hover:bg-surface-container transition-colors ${index % 2 === 0 ? "bg-surface" : "bg-surface-container-lowest"}`}
                   >
                     <td className="px-6 py-3 text-sm text-on-surface">
                       {row.name}
