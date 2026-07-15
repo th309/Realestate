@@ -14,6 +14,7 @@ import {
   MarketHeadlineService,
   MarketHeadlineResult,
 } from './market-headline.service';
+import { MarketHeadlineDto } from './dto/market-headline.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 interface MarketAnalysisBody {
@@ -26,18 +27,6 @@ interface MarketAnalysisBody {
     propertyiq: { score: number; grade: string };
   };
   lastUpdated?: string;
-}
-
-interface MarketHeadlineBody {
-  geoName: string;
-  audience: 'homebuyer' | 'investor';
-  metrics: Record<
-    string,
-    { value: number | null; formatted: string; change: number | null }
-  >;
-  scores: {
-    propertyiq: { score: number; grade: string };
-  };
 }
 
 @Controller('api/markets')
@@ -75,7 +64,7 @@ export class MarketAnalysisController {
   async getHeadline(
     @Param('geoType') geoType: string,
     @Param('geoId') geoId: string,
-    @Body() body: MarketHeadlineBody,
+    @Body() body: MarketHeadlineDto,
   ): Promise<{ success: boolean; headline: MarketHeadlineResult }> {
     this.logger.log(`[AI Headline] ${body.geoName} (${geoType}/${geoId})`);
 

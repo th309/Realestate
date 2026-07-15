@@ -33,18 +33,17 @@ export function MarketHeadline({
   const { canAccess } = useEntitlements();
   const aiEnabled = canAccess("feature", "ai_insights");
 
+  // Recomputed every render so it never goes stale when score/cards update
+  // without geoId/view changing (e.g. snapshot data finishing a late load).
   const fallback = buildHeadlineSummary(marketName, score, cards);
-  const [content, setContent] = useState<HeadlineSummary>(fallback);
+  const [aiContent, setAiContent] = useState<HeadlineSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Fetch the AI headline once per (geoId, view) when entitled. On any failure
-  // we keep the deterministic fallback already in state.
+  // we keep the deterministic fallback (aiContent stays null).
   const fetchedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!aiEnabled) {
-      setContent(buildHeadlineSummary(marketName, score, cards));
-      return;
-    }
+    if (!aiEnabled) return;
     const key = `${geoId}:${view}`;
     if (fetchedRef.current === key) return;
     fetchedRef.current = key;
@@ -73,12 +72,14 @@ export function MarketHeadline({
       },
     })
       .then((result) =>
-        setContent({ headline: result.headline, summary: result.summary }),
+        setAiContent({ headline: result.headline, summary: result.summary }),
       )
       .catch(() => (fetchedRef.current = null))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoId, view, aiEnabled]);
+
+  const content = aiEnabled ? (aiContent ?? fallback) : fallback;
 
   return (
     <motion.div
