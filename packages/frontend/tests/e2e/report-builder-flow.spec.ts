@@ -28,15 +28,17 @@ test.describe("Report Builder Flow — Live E2E", () => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
-    // The page heading is rendered inside DashboardRefined's header section
-    await expect(page.getByRole("heading", { name: /market reports/i })).toBeVisible();
+    // The /reports page renders a top-level heading.
+    await expect(
+      page.getByRole("heading", { name: /market reports/i }),
+    ).toBeVisible();
 
     // Either a report history grid is visible OR the empty state message appears.
-    // The empty state renders "No reports yet" inside ReportHistoryRefined.
+    // The empty state renders "No reports yet" in the reports list.
     const reportCards = page.locator(".report-card-elevated");
     const emptyState = page.getByText("No reports yet");
 
-    const hasCards = await reportCards.count() > 0;
+    const hasCards = (await reportCards.count()) > 0;
     if (hasCards) {
       await expect(reportCards.first()).toBeVisible();
     } else {
@@ -52,30 +54,40 @@ test.describe("Report Builder Flow — Live E2E", () => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
-    // The builder wizard is embedded in the /reports page under DashboardRefined.
+    // The builder wizard is embedded in the /reports page.
     // It renders a "Create New Report" section heading and a step indicator.
-    await expect(page.getByRole("heading", { name: /create new report/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /create new report/i }),
+    ).toBeVisible();
 
     // Step 1 of the wizard asks for user type and template selection
     await expect(page.getByText(/what brings you here today/i)).toBeVisible();
 
     // The template selection label appears once templates have loaded
-    await expect(page.getByText(/select a report template/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/select a report template/i)).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   // --------------------------------------------------------------------------
   // Template (Report Type) Selection
   // --------------------------------------------------------------------------
 
-  test("report type options are visible and one can be selected", async ({ page }) => {
+  test("report type options are visible and one can be selected", async ({
+    page,
+  }) => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
     // Wait for templates to finish loading from the API / defaults
-    await expect(page.getByText(/select a report template/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/select a report template/i)).toBeVisible({
+      timeout: 10000,
+    });
 
     // At minimum the Market Snapshot template is always present (free tier, default)
-    const marketSnapshotButton = page.getByRole("button", { name: /market snapshot/i }).first();
+    const marketSnapshotButton = page
+      .getByRole("button", { name: /market snapshot/i })
+      .first();
     await expect(marketSnapshotButton).toBeVisible();
 
     // Click to select it
@@ -93,57 +105,85 @@ test.describe("Report Builder Flow — Live E2E", () => {
   // Geography Selection
   // --------------------------------------------------------------------------
 
-  test("can navigate to geography step and search for a location", async ({ page }) => {
+  test("can navigate to geography step and search for a location", async ({
+    page,
+  }) => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
     // Wait for templates to load then select Market Snapshot (always accessible)
-    await expect(page.getByText(/select a report template/i)).toBeVisible({ timeout: 10000 });
-    await page.getByRole("button", { name: /market snapshot/i }).first().click();
+    await expect(page.getByText(/select a report template/i)).toBeVisible({
+      timeout: 10000,
+    });
+    await page
+      .getByRole("button", { name: /market snapshot/i })
+      .first()
+      .click();
 
     // Advance to step 2 (geography)
     await page.getByRole("button", { name: /continue/i }).click();
 
     // Geography step renders a search input
-    const searchInput = page.getByPlaceholder(/enter a state, metro, county, or zip/i);
+    const searchInput = page.getByPlaceholder(
+      /enter a state, metro, county, or zip/i,
+    );
     await expect(searchInput).toBeVisible();
 
     // Type a location to trigger search
     await searchInput.fill("Austin");
 
     // Search results should appear (the dropdown opens)
-    const resultsDropdown = page.locator("[data-testid='search-results'], [class*='search-results'], [class*='SearchWidget']").first();
+    const resultsDropdown = page
+      .locator(
+        "[data-testid='search-results'], [class*='search-results'], [class*='SearchWidget']",
+      )
+      .first();
 
     // Alternatively look for any result item that contains "Austin"
     const austinResult = page.getByText(/austin/i).nth(1); // nth(1) skips the input value itself
     await expect(austinResult).toBeVisible({ timeout: 10000 });
   });
 
-  test("selected geography appears as the primary selection", async ({ page }) => {
+  test("selected geography appears as the primary selection", async ({
+    page,
+  }) => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
     // Select a template
-    await expect(page.getByText(/select a report template/i)).toBeVisible({ timeout: 10000 });
-    await page.getByRole("button", { name: /market snapshot/i }).first().click();
+    await expect(page.getByText(/select a report template/i)).toBeVisible({
+      timeout: 10000,
+    });
+    await page
+      .getByRole("button", { name: /market snapshot/i })
+      .first()
+      .click();
 
     // Advance to geography step
     await page.getByRole("button", { name: /continue/i }).click();
 
-    const searchInput = page.getByPlaceholder(/enter a state, metro, county, or zip/i);
+    const searchInput = page.getByPlaceholder(
+      /enter a state, metro, county, or zip/i,
+    );
     await expect(searchInput).toBeVisible();
     await searchInput.fill("Austin");
 
     // Wait for a result and click it — pick the first result that mentions Austin
     const firstAustinResult = page
       .getByRole("option", { name: /austin/i })
-      .or(page.locator("li, [role='listitem'], [class*='result']").filter({ hasText: /austin/i }))
+      .or(
+        page
+          .locator("li, [role='listitem'], [class*='result']")
+          .filter({ hasText: /austin/i }),
+      )
       .first();
     await expect(firstAustinResult).toBeVisible({ timeout: 10000 });
     await firstAustinResult.click();
 
     // After selection the primary selection card appears showing the geography name
-    await expect(page.getByText(/primary selection/i)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/primary selection/i)).toBeVisible({
+      timeout: 8000,
+    });
     await expect(page.getByText(/austin/i)).toBeVisible();
   });
 
@@ -151,22 +191,29 @@ test.describe("Report Builder Flow — Live E2E", () => {
   // Report History
   // --------------------------------------------------------------------------
 
-  test("report history section is visible on the reports page", async ({ page }) => {
+  test("report history section is visible on the reports page", async ({
+    page,
+  }) => {
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");
 
     // The Recent Reports heading is always rendered
-    await expect(page.getByRole("heading", { name: /recent reports/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /recent reports/i }),
+    ).toBeVisible();
 
     // Either reports appear or the empty state — both are acceptable outcomes
-    const hasReports = await page.locator(".report-card-elevated").count() > 0;
+    const hasReports =
+      (await page.locator(".report-card-elevated").count()) > 0;
     const hasEmptyState = await page.getByText("No reports yet").isVisible();
 
     expect(hasReports || hasEmptyState).toBe(true);
   });
 
   test.describe("when existing reports are present", () => {
-    test("at least one report card shows geography name and creation date", async ({ page }) => {
+    test("at least one report card shows geography name and creation date", async ({
+      page,
+    }) => {
       await page.goto("/reports");
       await page.waitForLoadState("networkidle");
 
@@ -174,7 +221,10 @@ test.describe("Report Builder Flow — Live E2E", () => {
       const count = await reportCards.count();
 
       if (count === 0) {
-        test.skip(true, "No existing reports — skipping report card verification");
+        test.skip(
+          true,
+          "No existing reports — skipping report card verification",
+        );
         return;
       }
 
@@ -183,14 +233,22 @@ test.describe("Report Builder Flow — Live E2E", () => {
 
       // Each card renders a MapPin icon followed by the geography name
       // and a Clock icon followed by a relative date string
-      const geographyText = firstCard.locator("svg ~ span, [class*='truncate']").first();
+      const geographyText = firstCard
+        .locator("svg ~ span, [class*='truncate']")
+        .first();
       await expect(geographyText).toBeVisible();
 
       // The footer of each card contains a Clock icon and date text
-      await expect(firstCard.getByText(/today|yesterday|\d+ days? ago|\d+ weeks? ago|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i)).toBeVisible();
+      await expect(
+        firstCard.getByText(
+          /today|yesterday|\d+ days? ago|\d+ weeks? ago|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i,
+        ),
+      ).toBeVisible();
     });
 
-    test("clicking a report card navigates to the report viewer", async ({ page }) => {
+    test("clicking a report card navigates to the report viewer", async ({
+      page,
+    }) => {
       await page.goto("/reports");
       await page.waitForLoadState("networkidle");
 
@@ -198,7 +256,10 @@ test.describe("Report Builder Flow — Live E2E", () => {
       const count = await reportCards.count();
 
       if (count === 0) {
-        test.skip(true, "No existing reports — skipping report viewer navigation test");
+        test.skip(
+          true,
+          "No existing reports — skipping report viewer navigation test",
+        );
         return;
       }
 
@@ -216,12 +277,14 @@ test.describe("Report Builder Flow — Live E2E", () => {
       const generatingState = page.getByText(/generating your report/i);
       const errorState = page.getByText(/report not found/i);
 
-      await expect(
-        reportTitle.or(generatingState).or(errorState)
-      ).toBeVisible({ timeout: 20000 });
+      await expect(reportTitle.or(generatingState).or(errorState)).toBeVisible({
+        timeout: 20000,
+      });
     });
 
-    test("report viewer header includes navigation and action buttons", async ({ page }) => {
+    test("report viewer header includes navigation and action buttons", async ({
+      page,
+    }) => {
       await page.goto("/reports");
       await page.waitForLoadState("networkidle");
 
@@ -229,7 +292,10 @@ test.describe("Report Builder Flow — Live E2E", () => {
       const count = await reportCards.count();
 
       if (count === 0) {
-        test.skip(true, "No existing reports — skipping report viewer header test");
+        test.skip(
+          true,
+          "No existing reports — skipping report viewer header test",
+        );
         return;
       }
 
@@ -237,17 +303,30 @@ test.describe("Report Builder Flow — Live E2E", () => {
       await expect(page).toHaveURL(/\/reports\/[^/]+$/, { timeout: 15000 });
 
       // Wait for the viewer to settle — skip if stuck in generating/error state
-      const isGenerating = await page.getByText(/generating your report/i).isVisible().catch(() => false);
-      const isError = await page.getByText(/report not found/i).isVisible().catch(() => false);
+      const isGenerating = await page
+        .getByText(/generating your report/i)
+        .isVisible()
+        .catch(() => false);
+      const isError = await page
+        .getByText(/report not found/i)
+        .isVisible()
+        .catch(() => false);
 
       if (isGenerating || isError) {
-        test.skip(true, "Report is generating or errored — skipping header button check");
+        test.skip(
+          true,
+          "Report is generating or errored — skipping header button check",
+        );
         return;
       }
 
       // The sticky header contains Back to Reports link, Ask AI, Share, Print, Download
-      await expect(page.getByRole("link", { name: /back to reports/i })).toBeVisible({ timeout: 10000 });
-      await expect(page.getByRole("button", { name: /download/i })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: /back to reports/i }),
+      ).toBeVisible({ timeout: 10000 });
+      await expect(
+        page.getByRole("button", { name: /download/i }),
+      ).toBeVisible();
     });
   });
 });
