@@ -61,8 +61,10 @@ describe("ScreenerTable interactions", () => {
   });
 
   it("opens the row action menu from the kebab button", () => {
+    push.mockClear();
     render(<ScreenerTable {...baseProps} />);
     fireEvent.click(screen.getByLabelText("Row actions"));
     expect(screen.getByTestId("row-menu")).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 });

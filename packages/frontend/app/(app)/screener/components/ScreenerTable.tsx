@@ -248,6 +248,11 @@ export function ScreenerTable({
                 <tr
                   key={`${row.geo_level}-${row.region_id}`}
                   onClick={() => handleRowClick(row)}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRowClick(row);
+                  }}
                   className="
                     animate-screener-row cursor-pointer
                     border-b border-outline-variant/40 last:border-0
