@@ -148,4 +148,19 @@ describe("DetailRail", () => {
     );
     expect(onOpenDashboard).toHaveBeenCalled();
   });
+
+  it("hides the dashboard CTA when hasDashboard is false", () => {
+    render(
+      <DetailRail
+        {...base}
+        hasDashboard={false}
+        onTogglePin={() => {}}
+        onDrill={() => {}}
+        onOpenDashboard={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /Open full market dashboard/i }),
+    ).toBeNull();
+  });
 });

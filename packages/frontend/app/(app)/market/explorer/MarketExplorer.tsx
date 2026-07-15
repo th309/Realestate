@@ -65,7 +65,7 @@ export default function MarketExplorer() {
   const scope = resolveScope(state);
   const scopeKey = `${scope.geoLevel}:${scope.parentId ?? ""}:${state.view}`;
 
-  const { dates, regions, series, isLoading } = useExplorerScopeData(
+  const { dates, regions, series, isLoading, error } = useExplorerScopeData(
     scope.geoLevel,
     scope.parentLevel,
     scope.parentId,
@@ -255,6 +255,7 @@ export default function MarketExplorer() {
       hasDrill={scope.geoLevel !== "zip"}
       drillLabel={`Explore ${selChildPlural ?? "detail"} in ${titleCaseLocationName(selected.name)} ↓`}
       onDrill={() => onDrillEntity(selected.id)}
+      hasDashboard={scope.geoLevel !== "state"}
       onOpenDashboard={() => openDashboard(selected)}
     />
   );
@@ -372,6 +373,18 @@ export default function MarketExplorer() {
           }}
         >
           Loading market data…
+        </div>
+      )}
+      {error && (
+        <div
+          style={{
+            padding: 12,
+            fontSize: 12,
+            color: "var(--md-error)",
+          }}
+        >
+          Something went wrong loading this scope’s data — try refreshing or
+          picking a different market.
         </div>
       )}
     </main>

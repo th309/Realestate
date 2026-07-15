@@ -105,4 +105,26 @@ describe("MarketExplorer", () => {
       screen.queryByRole("img", { name: /Score unavailable/i }),
     ).toBeNull();
   });
+
+  it("hides the dashboard CTA at state scope (Map view has no per-state dashboard page)", () => {
+    render(<MarketExplorer />);
+    fireEvent.click(screen.getByText("Map"));
+    expect(
+      screen.queryByRole("button", { name: /Open full market dashboard/i }),
+    ).toBeNull();
+  });
+
+  it("surfaces an error message when the scope data hook returns an error", () => {
+    mockUseExplorerScopeData.mockReturnValue({
+      dates: [],
+      regions: [],
+      series: {},
+      isLoading: false,
+      error: new Error("network down"),
+    });
+    render(<MarketExplorer />);
+    expect(
+      screen.getByText(/Something went wrong loading this scope/i),
+    ).toBeTruthy();
+  });
 });

@@ -53,6 +53,7 @@ export interface DetailRailProps {
   hasDrill: boolean;
   drillLabel: string;
   onDrill: () => void;
+  hasDashboard?: boolean;
   onOpenDashboard: () => void;
 }
 
@@ -73,6 +74,7 @@ export function DetailRail(props: DetailRailProps) {
     hasDrill,
     drillLabel,
     onDrill,
+    hasDashboard = true,
     onOpenDashboard,
   } = props;
   return (
@@ -261,23 +263,25 @@ export function DetailRail(props: DetailRailProps) {
           {drillLabel}
         </button>
       )}
-      <button
-        onClick={onOpenDashboard}
-        style={{
-          border: "none",
-          cursor: "pointer",
-          background: "var(--md-primary)",
-          color: "var(--md-on-primary)",
-          padding: "11px 16px",
-          borderRadius: 999,
-          fontSize: 13.5,
-          fontWeight: 500,
-          boxShadow:
-            "0 2px 8px color-mix(in srgb, var(--md-primary) 35%, transparent)",
-        }}
-      >
-        Open full market dashboard →
-      </button>
+      {hasDashboard && (
+        <button
+          onClick={onOpenDashboard}
+          style={{
+            border: "none",
+            cursor: "pointer",
+            background: "var(--md-primary)",
+            color: "var(--md-on-primary)",
+            padding: "11px 16px",
+            borderRadius: 999,
+            fontSize: 13.5,
+            fontWeight: 500,
+            boxShadow:
+              "0 2px 8px color-mix(in srgb, var(--md-primary) 35%, transparent)",
+          }}
+        >
+          Open full market dashboard →
+        </button>
+      )}
     </aside>
   );
 }
