@@ -26,4 +26,27 @@ describe('alignSeriesToAxis', () => {
   it('returns empty axis and series for no rows', () => {
     expect(alignSeriesToAxis([], 12)).toEqual({ dates: [], series: {} });
   });
+
+  it('fills missing months with nulls when data is non-contiguous', () => {
+    const rows = [
+      { regionId: 'A', date: '2026-01-15', value: 1 },
+      { regionId: 'A', date: '2026-03-20', value: 3 },
+      { regionId: 'B', date: '2026-01-01', value: 10 },
+      { regionId: 'B', date: '2026-03-01', value: 30 },
+    ];
+    const { dates, series } = alignSeriesToAxis(rows, 3);
+    expect(dates).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
+    expect(series.A).toEqual([1, null, 3]);
+    expect(series.B).toEqual([10, null, 30]);
+  });
+
+  it('uses anchorDate to pin the axis to a historical month', () => {
+    const rows = [
+      { regionId: 'A', date: '2026-01-01', value: 1 },
+      { regionId: 'A', date: '2026-05-31', value: 5 },
+    ];
+    const { dates, series } = alignSeriesToAxis(rows, 3, '2026-03-15');
+    expect(dates).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
+    expect(series.A).toEqual([1, null, null]);
+  });
 });
