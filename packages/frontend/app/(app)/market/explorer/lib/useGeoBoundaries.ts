@@ -33,8 +33,17 @@ interface RawFeatureCollection {
   features: RawFeature[];
 }
 
-/** AK, HI, PR — excluded from the equirectangular contiguous-US projection; not renderable in Map view at this scope (known MVP limit, still reachable via Bubbles view or search). */
-const EXCLUDED_STATE_FIPS = new Set(["02", "15", "72"]);
+/**
+ * AK, HI, and US territories — excluded from the equirectangular contiguous-US
+ * projection; not renderable in Map view at this scope (known MVP limit,
+ * still reachable via Bubbles view or search).
+ * Verified live against public/geojson/states.json (56 features, 2026-07-15):
+ * 02=AK, 15=HI, 60=American Samoa, 66=Guam, 69=N. Mariana Islands, 72=PR,
+ * 78=US Virgin Islands. The brief's original AK/HI/PR-only set left the three
+ * Pacific/Caribbean territories in the "contiguous" merge, which would blow
+ * out the bbox across the antimeridian and wreck the national projection.
+ */
+const EXCLUDED_STATE_FIPS = new Set(["02", "15", "60", "66", "69", "72", "78"]);
 const SIZE = 900;
 const EMPTY: Omit<GeoBoundaries, "isLoading" | "error"> = {
   parentOutline: null,
