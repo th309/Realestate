@@ -47,6 +47,7 @@ export function useExplorerScopeData(
   geoLevel: ScopeGeoLevel,
   parentLevel?: "state" | "metro" | "county",
   parentId?: string,
+  includeNearby?: boolean,
 ) {
   const results = useQueries({
     queries: FETCHED_METRICS.map((metric) => ({
@@ -56,6 +57,7 @@ export function useExplorerScopeData(
         parentLevel ?? null,
         parentId ?? null,
         metric,
+        !!includeNearby,
       ],
       queryFn: () =>
         fetchScopeSeries(geoLevel, {
@@ -63,6 +65,7 @@ export function useExplorerScopeData(
           parentId,
           metric,
           months: MAX_MONTHS,
+          includeNearby,
         }),
       staleTime: 2 * 60 * 60 * 1000, // 2h (CLAUDE.md §5)
       gcTime: 2 * 60 * 60 * 1000,

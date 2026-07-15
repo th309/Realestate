@@ -36,4 +36,16 @@ describe("BubbleChart", () => {
     expect(onSelect).toHaveBeenCalled();
     expect(onDrill).toHaveBeenCalled();
   });
+  it("renders nearby entities dimmed", () => {
+    const props = {
+      ...base,
+      entities: [{ id: "A", name: "Metro A", state: "TX", nearby: true }],
+      selectedId: null,
+    };
+    const { container } = render(
+      <BubbleChart {...props} onSelect={() => {}} onDrill={() => {}} />,
+    );
+    const circle = container.querySelector("circle");
+    expect(circle?.getAttribute("fill-opacity")).toBe("0.38");
+  });
 });

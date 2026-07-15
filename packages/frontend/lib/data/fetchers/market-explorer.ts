@@ -30,6 +30,7 @@ export interface ScopeQuery {
   parentId?: string;
   metric: string;
   months: number;
+  includeNearby?: boolean;
 }
 
 export async function fetchScopeSeries(
@@ -43,6 +44,7 @@ export async function fetchScopeSeries(
       parentId: query.parentId,
       metric: query.metric,
       months: query.months,
+      includeNearby: query.includeNearby ? "true" : undefined,
     },
   );
 }

@@ -13,6 +13,7 @@ interface BubbleEntity {
   id: string;
   name: string;
   state: string;
+  nearby?: boolean;
 }
 export interface BubbleChartProps {
   entities: BubbleEntity[];
@@ -166,7 +167,7 @@ export function BubbleChart(props: BubbleChartProps) {
           cy={y(v)}
           r={r}
           fill={color}
-          fillOpacity={sel ? 0.92 : 0.68}
+          fillOpacity={sel ? 0.92 : e.nearby ? 0.38 : 0.68}
           stroke={
             sel
               ? "var(--md-on-surface)"
@@ -175,7 +176,7 @@ export function BubbleChart(props: BubbleChartProps) {
                 : color
           }
           strokeWidth={sel ? 2.5 : pinned ? 1.8 : 1}
-          strokeDasharray={pinned && !sel ? "4 3" : "none"}
+          strokeDasharray={(pinned || e.nearby) && !sel ? "4 3" : "none"}
           style={{
             cursor: "pointer",
             transition:

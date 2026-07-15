@@ -65,13 +65,11 @@ export default function MarketExplorer() {
   const scope = resolveScope(state);
   const scopeKey = `${scope.geoLevel}:${scope.parentId ?? ""}:${state.view}`;
 
-  // includeNearby is tracked in reducer state and the toggle UI works today,
-  // but the fetch itself stays 3-arg until Task 29 wires server-side nearby
-  // resolution into useExplorerScopeData.
   const { dates, regions, series, isLoading } = useExplorerScopeData(
     scope.geoLevel,
     scope.parentLevel,
     scope.parentId,
+    state.includeNearby,
   );
   // Nearby overlay is available whenever a parent scope exists (drilled in).
   const hasNearby = !!scope.parentId;
