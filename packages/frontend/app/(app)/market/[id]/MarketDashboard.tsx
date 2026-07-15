@@ -14,6 +14,7 @@ import {
   type GeoLevel,
 } from "@/lib/data";
 import { useEntitlements } from "@/lib/entitlements";
+import { useBenchmarks } from "@/lib/benchmarks/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { MarketLimitUpgradePrompt } from "@/components/entitlements";
 import {
@@ -129,6 +130,14 @@ export function MarketDashboard({
     );
   }, [railMetricIds, displayData, geographyType]);
 
+  // Benchmark-vs-parent-geo badges for the rail rows (Pro+ only; hook
+  // no-ops and hasAccess is false below that tier).
+  const { benchmarks, hasAccess: hasBenchmarkAccess } = useBenchmarks(
+    geographyType,
+    geographyId,
+    railMetricIds,
+  );
+
   const updatedDateLabel = useMemo(() => {
     if (!lastUpdated) return "Unknown";
     const parsed = new Date(lastUpdated);
@@ -217,10 +226,13 @@ export function MarketDashboard({
             <MetricRail
               geoType={geographyType}
               geoId={geographyId}
+              geoName={geography.name}
               cards={displayData}
               metricIds={railMetricIds}
               selectedMetricId={chartMetricId}
               onSelectMetric={setSelectedMetricId}
+              benchmarks={benchmarks}
+              hasBenchmarkAccess={hasBenchmarkAccess}
             />
           </div>
         </div>

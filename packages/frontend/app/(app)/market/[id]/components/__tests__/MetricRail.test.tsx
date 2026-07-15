@@ -9,10 +9,64 @@ vi.mock("@/app/components/scoring/ScoreGaugeWidget", () => ({
 vi.mock("@/app/components/MetricTitle", () => ({
   MetricTitle: ({ metricId }: { metricId: string }) => <span>{metricId}</span>,
 }));
+// InheritedBadge/BenchmarkBadge are presentational leaves; render markers so
+// tests can assert they received the right data without their own DOM/tooltip.
+vi.mock("@/app/components/scoring/InheritedBadge", () => ({
+  InheritedBadge: ({ sourceType }: { sourceType: string }) => (
+    <span data-testid="inherited-badge">{sourceType}</span>
+  ),
+}));
+vi.mock("@/components/benchmarks", () => ({
+  BenchmarkBadge: ({
+    diff,
+    direction,
+    parentGeoName,
+  }: {
+    diff: number;
+    direction: string;
+    parentGeoName: string;
+  }) => (
+    <span data-testid="benchmark-badge">
+      {direction} {diff} {parentGeoName}
+    </span>
+  ),
+}));
+// MetricAlertBell is entitlement-gated and self-fetching; stub it so this
+// test doesn't depend on an entitlements provider.
+vi.mock("@/components/alerts", () => ({
+  MetricAlertBell: ({ metricId }: { metricId: string }) => (
+    <button type="button" data-testid={`alert-bell-${metricId}`}>
+      bell
+    </button>
+  ),
+}));
+const getBenchmarkForMetric = vi.fn(
+  () =>
+    null as null | {
+      metricId: string;
+      value: number | null;
+      parentGeo: { level: string; id: string; name: string } | null;
+      parentValue: number | null;
+      diff: number | null;
+      direction: "better" | "worse" | "similar" | null;
+    },
+);
+vi.mock("@/lib/benchmarks/hooks", () => ({
+  getBenchmarkForMetric: (...args: unknown[]) =>
+    (getBenchmarkForMetric as (...a: unknown[]) => unknown)(...args),
+}));
 
 import { MetricRail } from "../MetricRail";
 
-const card = (formattedValue: string, value: number) => ({
+const card = (
+  formattedValue: string,
+  value: number,
+  overrides: Partial<{
+    isInherited: boolean;
+    isFallback: boolean;
+    sourceGeoLevel: "metro" | "county" | "state" | "national";
+  }> = {},
+) => ({
   value,
   formattedValue,
   percentChange: 2.0,
@@ -24,6 +78,7 @@ const card = (formattedValue: string, value: number) => ({
   sourceGeoLevel: "metro" as const,
   isInherited: false,
   isFallback: false,
+  ...overrides,
 });
 
 const cards = {
@@ -31,12 +86,17 @@ const cards = {
   rent_index: card("$1,850", 1850),
 };
 
+const baseProps = {
+  geoType: "metro",
+  geoId: "12420",
+  geoName: "Austin, TX",
+};
+
 describe("MetricRail", () => {
   it("renders the score gauge and a row per metric", () => {
     render(
       <MetricRail
-        geoType="metro"
-        geoId="12420"
+        {...baseProps}
         cards={cards}
         metricIds={["home_value", "rent_index"]}
         selectedMetricId="home_value"
@@ -51,8 +111,7 @@ describe("MetricRail", () => {
   it("exposes the tour target on the score gauge wrapper", () => {
     const { container } = render(
       <MetricRail
-        geoType="metro"
-        geoId="12420"
+        {...baseProps}
         cards={cards}
         metricIds={["home_value"]}
         selectedMetricId="home_value"
@@ -68,8 +127,7 @@ describe("MetricRail", () => {
     const onSelect = vi.fn();
     render(
       <MetricRail
-        geoType="metro"
-        geoId="12420"
+        {...baseProps}
         cards={cards}
         metricIds={["home_value", "rent_index"]}
         selectedMetricId="home_value"
@@ -83,8 +141,7 @@ describe("MetricRail", () => {
   it("marks the selected row as pressed", () => {
     render(
       <MetricRail
-        geoType="metro"
-        geoId="12420"
+        {...baseProps}
         cards={cards}
         metricIds={["home_value", "rent_index"]}
         selectedMetricId="home_value"
@@ -93,5 +150,91 @@ describe("MetricRail", () => {
     );
     const selected = screen.getByRole("button", { name: /home_value/i });
     expect(selected.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("renders an alert bell per metric row, independent of the selectable button", () => {
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={cards}
+        metricIds={["home_value", "rent_index"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("alert-bell-home_value")).toBeTruthy();
+    expect(screen.getByTestId("alert-bell-rent_index")).toBeTruthy();
+  });
+
+  it("shows a fallback chip when the card resolved from a fallback source", () => {
+    const fallbackCards = {
+      home_value: card("$455K", 455000, { isFallback: true }),
+    };
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={fallbackCards}
+        metricIds={["home_value"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    expect(screen.getByText("Fallback")).toBeTruthy();
+  });
+
+  it("shows an inherited badge when the card value is inherited from a parent geography", () => {
+    const inheritedCards = {
+      home_value: card("$455K", 455000, {
+        isInherited: true,
+        sourceGeoLevel: "county",
+      }),
+    };
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={inheritedCards}
+        metricIds={["home_value"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("inherited-badge").textContent).toBe("county");
+  });
+
+  it("shows a benchmark badge when the caller has benchmark access and a result exists", () => {
+    getBenchmarkForMetric.mockReturnValueOnce({
+      metricId: "home_value",
+      value: 455000,
+      parentGeo: { level: "state", id: "TX", name: "Texas" },
+      parentValue: 400000,
+      diff: 13.75,
+      direction: "better",
+    });
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={cards}
+        metricIds={["home_value"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+        benchmarks={[]}
+        hasBenchmarkAccess
+      />,
+    );
+    expect(screen.getByTestId("benchmark-badge")).toBeTruthy();
+  });
+
+  it("does not look up benchmarks when the caller lacks benchmark access", () => {
+    getBenchmarkForMetric.mockClear();
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={cards}
+        metricIds={["home_value"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    expect(getBenchmarkForMetric).not.toHaveBeenCalled();
   });
 });
