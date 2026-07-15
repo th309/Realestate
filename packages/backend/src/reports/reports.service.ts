@@ -21,7 +21,10 @@ import { PartnersService } from '../partners/partners.service';
 import { MarketSnapshotService } from '../market-snapshot/market-snapshot.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { ReportGenerationV2Service } from './report-generation-v2.service';
-import { GenerateReportDto } from './dto/generate-report.dto';
+import {
+  GenerateReportDto,
+  SaveBuilderTemplateDto,
+} from './dto/generate-report.dto';
 import { generateReportAsync, ReportDeps } from './reports-orchestrator';
 import {
   sendConversationMessage as sendConversationMessageFn,
@@ -105,6 +108,43 @@ export class ReportsService {
       return null;
     }
     return data;
+  }
+
+  /**
+   * Persist a report-builder layout as a private, user-owned template row in
+   * report_templates (is_public=false so it never enters the public catalog).
+   * The table was built for this: created_by is the owner, config holds the
+   * section structure. Returns the new template's id + slug.
+   */
+  async saveBuilderTemplate(
+    userId: string,
+    dto: SaveBuilderTemplateDto,
+  ): Promise<{ id: string; slug: string }> {
+    const client = this.supabase.getClient();
+    const slug = `custom-${userId.slice(0, 8)}-${Date.now().toString(36)}`;
+
+    const { data, error } = await client
+      .from('report_templates')
+      .insert({
+        slug,
+        name: dto.title,
+        description: 'Custom builder template',
+        icon: 'FileText',
+        tier_required: 'free',
+        is_active: true,
+        is_public: false,
+        config: { sections: dto.sections, userType: dto.user_type },
+        created_by: userId,
+      })
+      .select('id, slug')
+      .single();
+
+    if (error || !data) {
+      this.logger.error('Failed to save builder template:', error);
+      throw new Error('Failed to save builder template');
+    }
+
+    return { id: data.id, slug: data.slug };
   }
 
   // ============================================================================

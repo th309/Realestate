@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUp, ArrowDown, ChevronsUpDown, MoreVertical } from "lucide-react";
 import type { ScreenerRow, ScreenerQuery, MoverWindow } from "@/lib/data";
 import { formatMetricValue, formatGeoDisplayName } from "@/lib/data";
+import { useRouter } from "next/navigation";
 import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
 import {
   WINDOW_TO_COLUMN,
@@ -12,6 +13,7 @@ import {
   formatScoreChange,
 } from "../lib/score-change";
 import { ScrollShadowContainer } from "./ScrollShadowContainer";
+import { ScreenerRowMenu } from "./ScreenerRowMenu";
 
 type SortableCol = NonNullable<ScreenerQuery["sortBy"]>;
 
@@ -144,6 +146,22 @@ export function ScreenerTable({
   onClearFilters,
 }: ScreenerTableProps) {
   const baseRank = page * pageSize + 1;
+  const router = useRouter();
+  const [menu, setMenu] = useState<{
+    row: ScreenerRow;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleRowClick = (clickedRow: ScreenerRow) => {
+    const params = new URLSearchParams({
+      type: clickedRow.geo_level,
+      view: "investor",
+    });
+    if (clickedRow.state_code) params.set("state", clickedRow.state_code);
+    router.push(`/market/${clickedRow.region_id}?${params.toString()}`);
+  };
+
   const changeCol = WINDOW_TO_COLUMN[changeWindow];
   const columns: ColumnDef[] = [
     { key: null, label: "#", align: "right" },
@@ -159,6 +177,7 @@ export function ScreenerTable({
     { key: "cap_rate", label: "Cap Rate", align: "right" },
     { key: "months_of_supply", label: "MoS", align: "right" },
     { key: "overvalued_pct", label: "Overvalued %", align: "right" },
+    { key: null, label: "", align: "right" },
   ];
 
   return (
@@ -228,8 +247,14 @@ export function ScreenerTable({
               {rows.map((row, i) => (
                 <tr
                   key={`${row.geo_level}-${row.region_id}`}
+                  onClick={() => handleRowClick(row)}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRowClick(row);
+                  }}
                   className="
-                    animate-screener-row
+                    animate-screener-row cursor-pointer
                     border-b border-outline-variant/40 last:border-0
                     hover:bg-primary-container/10 transition-colors duration-100
                   "
@@ -315,11 +340,37 @@ export function ScreenerTable({
                       ? `${row.overvalued_pct > 0 ? "+" : ""}${row.overvalued_pct.toFixed(1)}%`
                       : "—"}
                   </td>
+
+                  {/* Row actions */}
+                  <td className="px-2 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = (
+                          e.currentTarget as HTMLElement
+                        ).getBoundingClientRect();
+                        setMenu({ row, x: rect.right, y: rect.bottom });
+                      }}
+                      aria-label="Row actions"
+                      className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </ScrollShadowContainer>
+      )}
+      {menu && (
+        <ScreenerRowMenu
+          row={menu.row}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+        />
       )}
     </div>
   );

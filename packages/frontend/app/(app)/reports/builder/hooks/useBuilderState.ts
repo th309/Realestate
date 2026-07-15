@@ -7,6 +7,7 @@ import type {
   Geography,
   UserType,
 } from "../../types";
+import { saveBuilderTemplate } from "@/lib/data/fetchers/reports-list";
 
 export interface BuilderSection extends ReportSection {
   name?: string;
@@ -454,6 +455,7 @@ export interface UseBuilderStateReturn extends BuilderState {
   // Builder actions
   clearCanvas: () => void;
   loadFromTemplate: (sections: BuilderSection[]) => void;
+  saveTemplate: () => Promise<void>;
 
   // Computed
   selectedSection: BuilderSection | null;
@@ -598,6 +600,20 @@ export function useBuilderState(): UseBuilderStateReturn {
     }));
   }, []);
 
+  const saveTemplate = useCallback(async () => {
+    setState((prev) => ({ ...prev, isSaving: true }));
+    try {
+      await saveBuilderTemplate({
+        title: state.title,
+        user_type: state.userType as "homebuyer" | "investor",
+        sections: state.sections as unknown as Record<string, unknown>[],
+      });
+      setState((prev) => ({ ...prev, isSaving: false, isDirty: false }));
+    } catch {
+      setState((prev) => ({ ...prev, isSaving: false }));
+    }
+  }, [state.title, state.userType, state.sections]);
+
   // Computed
   const selectedSection = useMemo(
     () => state.sections.find((s) => s.id === state.selectedSectionId) ?? null,
@@ -618,6 +634,7 @@ export function useBuilderState(): UseBuilderStateReturn {
     reorderSections,
     clearCanvas,
     loadFromTemplate,
+    saveTemplate,
     selectedSection,
   };
 }

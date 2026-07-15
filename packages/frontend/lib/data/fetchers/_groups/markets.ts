@@ -21,6 +21,12 @@ export {
   type MarketAnalysisResult,
 } from "../market-analysis";
 
+// Market AI headline
+export {
+  fetchMarketHeadline,
+  type MarketHeadlineResult,
+} from "../market-headline";
+
 // Market snapshot (batch)
 export {
   fetchMarketSnapshot,

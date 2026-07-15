@@ -112,10 +112,11 @@ export function MapContextMenu({
       return;
     }
     const params = new URLSearchParams({
-      geo: geography.id,
-      level: geography.geoLevel,
-      name: geography.name,
+      mid: geography.id,
+      mtype: geography.geoLevel,
+      mname: geography.name,
     });
+    if (geography.stateAbbr) params.set("mstate", geography.stateAbbr);
     router.push(`/graphs?${params.toString()}`);
     onClose();
   }

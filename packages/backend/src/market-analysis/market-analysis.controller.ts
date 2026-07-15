@@ -10,6 +10,11 @@ import {
   MarketAnalysisService,
   MarketAnalysisResult,
 } from './market-analysis.service';
+import {
+  MarketHeadlineService,
+  MarketHeadlineResult,
+} from './market-headline.service';
+import { MarketHeadlineDto } from './dto/market-headline.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 interface MarketAnalysisBody {
@@ -28,7 +33,10 @@ interface MarketAnalysisBody {
 export class MarketAnalysisController {
   private readonly logger = new Logger(MarketAnalysisController.name);
 
-  constructor(private readonly marketAnalysisService: MarketAnalysisService) {}
+  constructor(
+    private readonly marketAnalysisService: MarketAnalysisService,
+    private readonly marketHeadlineService: MarketHeadlineService,
+  ) {}
 
   @Post(':geoType/:geoId/ai-analysis')
   @UseGuards(JwtAuthGuard)
@@ -49,5 +57,26 @@ export class MarketAnalysisController {
     });
 
     return { success: true, analysis };
+  }
+
+  @Post(':geoType/:geoId/ai-headline')
+  @UseGuards(JwtAuthGuard)
+  async getHeadline(
+    @Param('geoType') geoType: string,
+    @Param('geoId') geoId: string,
+    @Body() body: MarketHeadlineDto,
+  ): Promise<{ success: boolean; headline: MarketHeadlineResult }> {
+    this.logger.log(`[AI Headline] ${body.geoName} (${geoType}/${geoId})`);
+
+    const headline = await this.marketHeadlineService.generateHeadline({
+      geoType,
+      geoId,
+      geoName: body.geoName,
+      audience: body.audience,
+      metrics: body.metrics,
+      scores: body.scores,
+    });
+
+    return { success: true, headline };
   }
 }

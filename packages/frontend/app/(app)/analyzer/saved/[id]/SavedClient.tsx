@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSavedAnalysis } from "@/lib/analyzer/useSavedAnalysis";
 import type {
   RentalResult,
@@ -21,12 +22,28 @@ export default function SavedClient({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="p-12 text-center text-on-surface-variant">Loading…</div>
+      <div className="p-12 text-center text-on-surface-variant">
+        <p>Loading…</p>
+        <Link
+          href="/analyzer"
+          className="mt-4 inline-block text-primary hover:underline"
+        >
+          ← Back to Analyzer
+        </Link>
+      </div>
     );
   }
   if (!row) {
     return (
-      <div className="p-12 text-center text-on-surface-variant">Not found.</div>
+      <div className="p-12 text-center text-on-surface-variant">
+        <p>Not found.</p>
+        <Link
+          href="/analyzer"
+          className="mt-4 inline-block text-primary hover:underline"
+        >
+          ← Back to Analyzer
+        </Link>
+      </div>
     );
   }
 
@@ -58,6 +75,12 @@ export default function SavedClient({ id }: { id: string }) {
   return (
     <main className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-6 py-12">
+        <Link
+          href="/analyzer"
+          className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          ← Back to Analyzer
+        </Link>
         <h1 className="text-3xl font-light text-on-surface mb-2">
           {row.label || `${row.address_city}, ${row.address_state}`}
         </h1>

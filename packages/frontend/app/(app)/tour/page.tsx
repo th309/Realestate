@@ -15,6 +15,7 @@ import { MarketPickerStep } from "./components/MarketPickerStep";
 import { Step4Aha } from "./components/Step4Aha";
 import { PostSignupCelebrate } from "./components/PostSignupCelebrate";
 import type { MarketRef, Persona, TourPhase } from "./types";
+import { resolveTourPhase } from "./resolveTourPhase";
 import "./print.css";
 
 export default function TourPage() {
@@ -44,13 +45,7 @@ function TourPhaseSwitch() {
   // hand-edited link — falls back to collecting what's missing instead of
   // hanging. Computed at render only (no state mutation), so it's idempotent:
   // once the user picks a market, setMarket re-enters step1 with it.
-  const STEP_PHASES: TourPhase[] = ["step1", "step2", "step3", "step4"];
-  const phase: TourPhase =
-    STEP_PHASES.includes(session.phase) && !session.market
-      ? session.persona
-        ? "market"
-        : "persona"
-      : session.phase;
+  const phase: TourPhase = resolveTourPhase(session);
 
   // `?next=` (return-to-context) rides along on the URL through the flow and is
   // consumed at the `celebrate` phase: PostSignupCelebrate routes the primary

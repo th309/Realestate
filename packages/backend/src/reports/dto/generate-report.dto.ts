@@ -99,3 +99,15 @@ export class CreateShareDto {
   @IsOptional()
   expires_in_days?: number;
 }
+
+export class SaveBuilderTemplateDto {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsIn(['homebuyer', 'investor'])
+  user_type: 'homebuyer' | 'investor';
+
+  @IsArray()
+  sections: Record<string, unknown>[];
+}

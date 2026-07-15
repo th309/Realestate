@@ -25,7 +25,6 @@ import {
   Settings,
   Home,
   TrendingUp,
-  Sparkles,
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/navigation";
 import {
@@ -55,7 +54,9 @@ export const Builder: React.FC = () => {
     reorderSections,
     clearCanvas,
     isDirty,
+    isSaving,
     selectedSection,
+    saveTemplate,
   } = builderState;
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -225,11 +226,12 @@ export const Builder: React.FC = () => {
             </button>
             <div className="h-6 w-px bg-outline-variant" />
             <button
-              disabled={sections.length === 0}
+              onClick={saveTemplate}
+              disabled={sections.length === 0 || isSaving}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="w-4 h-4" />
-              Save Template
+              {isSaving ? "Saving…" : "Save Template"}
             </button>
           </div>
         </header>
@@ -278,11 +280,6 @@ export const Builder: React.FC = () => {
             </div>
           )}
         </DragOverlay>
-
-        {/* AI Assist Floating Button */}
-        <button className="fixed bottom-6 right-6 p-4 bg-tertiary text-on-tertiary rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all">
-          <Sparkles className="w-6 h-6" />
-        </button>
       </div>
     </DndContext>
   );
