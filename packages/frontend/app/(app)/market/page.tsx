@@ -1,13 +1,5 @@
-"use client";
-
-import React, { Suspense } from "react";
-import { MarketLanding } from "./MarketLanding";
-import { MarketPageSkeleton } from "./MarketPageSkeleton";
+import MarketExplorer from "./explorer/MarketExplorer";
 
 export default function MarketPage() {
-  return (
-    <Suspense fallback={<MarketPageSkeleton />}>
-      <MarketLanding />
-    </Suspense>
-  );
+  return <MarketExplorer />;
 }
