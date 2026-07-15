@@ -4,6 +4,7 @@ import {
   initialExplorerState,
   resolveScope,
 } from "../explorer-reducer";
+import type { PathCrumb } from "../explorer-config";
 
 const S = initialExplorerState;
 
@@ -60,7 +61,7 @@ describe("resolveScope", () => {
     expect(resolveScope({ ...S, view: "map" }).geoLevel).toBe("state");
     const drilled = {
       ...S,
-      path: [{ level: "metro", id: "19100", name: "Dallas" }],
+      path: [{ level: "metro", id: "19100", name: "Dallas" }] as PathCrumb[],
     };
     expect(resolveScope(drilled)).toEqual({
       geoLevel: "county",
