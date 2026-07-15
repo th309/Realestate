@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
 import { DashboardScoreBadge } from "./DashboardScoreBadge";
 import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
@@ -63,6 +64,12 @@ export function ScoreColumn({
         </motion.div>
 
         <p className="text-on-surface-variant">PropertyIQ Score</p>
+        <Link
+          href="/scores/methodology"
+          className="mt-1 inline-block text-xs text-primary hover:text-primary/80 transition-colors"
+        >
+          How it&apos;s calculated →
+        </Link>
         <div className="mt-3">
           <SocialProofBadge
             geoLevel={geoLevel}
