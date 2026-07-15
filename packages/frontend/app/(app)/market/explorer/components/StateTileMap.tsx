@@ -25,6 +25,19 @@ export function StateTileMap({
   onDrill,
 }: StateTileMapProps) {
   const byAbbr = new Map(entities.map((e) => [e.state, e]));
+
+  const handleTileKeyDown = (
+    fips: string,
+    name: string,
+    abbr: string,
+    e: React.KeyboardEvent,
+  ) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onDrill(fips, name, abbr);
+    }
+  };
+
   return (
     <div style={{ padding: "8px 8px 4px" }}>
       <div
@@ -47,9 +60,16 @@ export function StateTileMap({
           return (
             <div
               key={abbr}
+              role={hasData ? "button" : undefined}
+              tabIndex={hasData ? 0 : undefined}
               onClick={
                 hasData
                   ? () => onDrill(region!.id, region!.name, abbr)
+                  : undefined
+              }
+              onKeyDown={
+                hasData
+                  ? (e) => handleTileKeyDown(region!.id, region!.name, abbr, e)
                   : undefined
               }
               style={{
