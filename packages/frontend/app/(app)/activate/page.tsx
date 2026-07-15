@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { fetchAPIRaw } from "@/lib/data/fetchers/base";
 
 type ActivationState = "input" | "submitting" | "success" | "error";
@@ -53,6 +54,20 @@ export default function ActivatePage() {
             <p className="mt-2 text-sm text-on-surface/60">
               Your MCP server is now authenticated. You can close this page.
             </p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Link
+                href="/account/api-keys"
+                className="rounded-full bg-primary px-6 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+              >
+                Manage API keys
+              </Link>
+              <Link
+                href="/docs/mcp"
+                className="rounded-full border border-outline/30 px-6 py-2.5 text-center text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-high"
+              >
+                Read the MCP docs
+              </Link>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
