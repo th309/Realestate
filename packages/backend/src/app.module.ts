@@ -77,6 +77,7 @@ import { RentcastModule } from './rentcast/rentcast.module';
 import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.module';
 import { ScreenerModule } from './screener/screener.module';
 import { UsageModule } from './usage/usage.module';
+import { MarketExplorerModule } from './market-explorer/market-explorer.module';
 
 @Module({
   imports: [
@@ -170,6 +171,7 @@ import { UsageModule } from './usage/usage.module';
     SeoRevalidationModule,
     ScreenerModule,
     UsageModule,
+    MarketExplorerModule,
   ],
   controllers: [AppController],
   providers: [
