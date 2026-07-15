@@ -156,6 +156,28 @@ export function scoreChip(score: number): { bg: string; color: string } {
   };
 }
 
+/**
+ * Latest month index with a real (non-null) PropertyIQ score for at least one
+ * region. Different sources publish on different monthly cadences (Zillow vs
+ * Realtor.com), so the raw date union's last index can be a month where every
+ * score is still null — landing there would blank out the detail rail's score
+ * gauge and the KPI strip's score/value/rent cards on default load. Scans
+ * backward to the latest scored month, falling back to the raw last index if
+ * no scored month exists yet (e.g. a brand-new scope with no score data at
+ * all).
+ */
+export function latestScoredMonthIndex(
+  scoreByRegion: Record<string, Series> | undefined,
+  length: number,
+): number {
+  if (scoreByRegion) {
+    for (let i = length - 1; i >= 0; i--) {
+      if (Object.values(scoreByRegion).some((arr) => arr[i] != null)) return i;
+    }
+  }
+  return Math.max(0, length - 1);
+}
+
 /** Delegates to the registry formatter; adds the day/month unit suffixes the prototype uses. */
 export function formatExplorerValue(
   value: number | null | undefined,

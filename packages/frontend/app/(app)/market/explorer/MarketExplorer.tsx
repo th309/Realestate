@@ -21,6 +21,7 @@ import {
   aggregateScopeKpis,
   computeMovers,
   metricSeriesFor,
+  latestScoredMonthIndex,
   formatExplorerValue,
 } from "./lib/explorer-math";
 import {
@@ -75,11 +76,20 @@ export default function MarketExplorer() {
   // Nearby overlay is available whenever a parent scope exists (drilled in).
   const hasNearby = !!scope.parentId;
 
-  // Reset month to latest + selection to first whenever the scope changes.
+  // series is a fresh object every render (useExplorerScopeData doesn't
+  // memoize it), so depend on this primitive index rather than series itself
+  // — otherwise the reset effect below would refire and dispatch every render.
+  const latestScoredIdx = useMemo(
+    () => latestScoredMonthIndex(series.propertyiq_score, dates.length),
+    [series.propertyiq_score, dates.length],
+  );
+
+  // Reset month to the latest scored month + selection to first whenever the
+  // scope changes.
   useEffect(() => {
     if (dates.length)
-      dispatch({ type: "SET_MONTH", monthIndex: dates.length - 1 });
-  }, [scopeKey, dates.length]);
+      dispatch({ type: "SET_MONTH", monthIndex: latestScoredIdx });
+  }, [scopeKey, dates.length, latestScoredIdx]);
   useEffect(() => {
     if (regions.length && !regions.some((r) => r.id === state.selectedId)) {
       dispatch({ type: "SELECT", id: regions[0].id });
