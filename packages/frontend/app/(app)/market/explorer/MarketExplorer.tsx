@@ -125,6 +125,7 @@ export default function MarketExplorer() {
   // ── handlers ──
   const onSelect = (id: string) => dispatch({ type: "SELECT", id });
   const onDrillEntity = (id: string) => {
+    if (scope.geoLevel === "zip") return; // no level below ZIP to drill into
     const r = regions.find((e) => e.id === id);
     if (!r) return;
     dispatch({
@@ -344,7 +345,7 @@ export default function MarketExplorer() {
             pinnedIds={state.pinnedIds}
             scoreByRegion={scalars.scoreByRegion}
             geoLevel={scope.geoLevel}
-            onUnpinPin={(id) => dispatch({ type: "UNPIN", id })}
+            onUnpin={(id) => dispatch({ type: "UNPIN", id })}
             onClearPins={() => dispatch({ type: "CLEAR_PINS" })}
             boardTitle={boardTitle}
             monthLabel={monthLabelOf(dates[mi])}

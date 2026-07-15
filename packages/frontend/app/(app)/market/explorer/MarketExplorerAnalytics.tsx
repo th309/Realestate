@@ -4,6 +4,7 @@ import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
 import type { ScopeRegion } from "@/lib/data/fetchers/market-explorer";
 import { titleCaseLocationName } from "@/lib/data";
 import type { SeriesByMetric } from "./lib/explorer-math";
+import type { ExplorerGeoLevel } from "./lib/explorer-config";
 import { buildDetailStats } from "./lib/explorer-view-model";
 import type { LeaderboardRow } from "./components/Leaderboard";
 import type { Mover } from "./components/TopMoversList";
@@ -32,8 +33,8 @@ export interface MarketExplorerAnalyticsProps {
   regions: ScopeRegion[];
   pinnedIds: string[];
   scoreByRegion: Record<string, number | null>;
-  geoLevel: string;
-  onUnpinPin: (id: string) => void;
+  geoLevel: ExplorerGeoLevel;
+  onUnpin: (id: string) => void;
   onClearPins: () => void;
   boardTitle: string;
   monthLabel: string;
@@ -54,7 +55,7 @@ export function MarketExplorerAnalytics({
   pinnedIds,
   scoreByRegion,
   geoLevel,
-  onUnpinPin,
+  onUnpin,
   onClearPins,
   boardTitle,
   monthLabel,
@@ -107,7 +108,7 @@ export function MarketExplorerAnalytics({
         </div>
       </div>
 
-      <CompareStrip pins={pins} onUnpin={onUnpinPin} onClear={onClearPins} />
+      <CompareStrip pins={pins} onUnpin={onUnpin} onClear={onClearPins} />
       <Leaderboard
         title={boardTitle}
         monthLabel={monthLabel}

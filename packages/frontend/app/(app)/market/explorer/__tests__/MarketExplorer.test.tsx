@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("../lib/useExplorerScopeData", () => ({
@@ -34,5 +34,28 @@ describe("MarketExplorer", () => {
     expect(screen.getByText("PropertyIQ Score")).toBeTruthy(); // metric chip
     expect(screen.getByText(/Rankings/)).toBeTruthy();
     expect(screen.getAllByText("New York").length).toBeGreaterThan(0);
+  });
+
+  it("does not drill past ZIP scope when double-clicking a bubble at ZIP scope", () => {
+    const { container } = render(<MarketExplorer />);
+    // BubbleChart redraws the selected bubble last (so it sits on top), so DOM
+    // order isn't stable across drills — target the "New York" bubble via its
+    // <title> child's text content instead of relying on element order.
+    const drillNewYork = () => {
+      const titleEl = Array.from(
+        container.querySelectorAll("circle title"),
+      ).find((el) => el.textContent?.includes("New York"));
+      expect(titleEl).toBeTruthy();
+      fireEvent.doubleClick(titleEl!.parentElement!);
+    };
+
+    drillNewYork(); // metro -> county
+    drillNewYork(); // county -> zip
+    const crumbsAtZipScope = screen.getAllByText("New York").length;
+
+    // Attempting to drill again while already at ZIP scope must be a no-op:
+    // there is no level below ZIP, so this must not push another breadcrumb.
+    drillNewYork();
+    expect(screen.getAllByText("New York").length).toBe(crumbsAtZipScope);
   });
 });
