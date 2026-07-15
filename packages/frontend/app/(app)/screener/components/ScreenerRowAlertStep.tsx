@@ -29,7 +29,7 @@ export function ScreenerRowAlertStep({
   row,
   onClose,
 }: ScreenerRowAlertStepProps) {
-  const { tier } = useEntitlements();
+  const { tier, loading } = useEntitlements();
   const isPaid = tier === "pro" || tier === "enterprise" || tier === "admin";
   const [selected, setSelected] = useState<AlertMetricOption | null>(null);
 
@@ -56,6 +56,10 @@ export function ScreenerRowAlertStep({
       value: row.overvalued_pct as number,
     },
   ].filter((option) => option.value !== null && option.value !== undefined);
+
+  if (loading) {
+    return null;
+  }
 
   if (!isPaid) {
     return (
