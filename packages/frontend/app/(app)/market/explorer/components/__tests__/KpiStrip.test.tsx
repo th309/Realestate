@@ -32,11 +32,13 @@ describe("KpiStrip", () => {
     const { container } = render(
       <KpiStrip agg={agg} monthIndex={1} windowStart={0} />
     );
-    expect(screen.getByText("—")).toBeTruthy();
-    const badges = container.querySelectorAll(
+    const medianValueLabel = screen.getByText("Median value");
+    const priceCard = medianValueLabel.closest("div[style*='background']");
+    expect(priceCard).toBeTruthy();
+    const badgesInPriceCard = priceCard?.querySelectorAll(
       'span[style*="font-size: 11.5"]'
     );
-    expect(badges.length).toBeGreaterThan(0);
+    expect(badgesInPriceCard?.length).toBe(0);
   });
 
   it("suppresses delta badge when previous value is null", () => {
@@ -50,13 +52,13 @@ describe("KpiStrip", () => {
     const { container } = render(
       <KpiStrip agg={agg} monthIndex={1} windowStart={0} />
     );
-    expect(screen.getByText("$420K")).toBeTruthy();
-    const priceBadges = Array.from(
-      container.querySelectorAll('span[style*="font-size: 11.5"]')
+    const medianValueLabel = screen.getByText("Median value");
+    const priceCard = medianValueLabel.closest("div[style*='background']");
+    expect(priceCard).toBeTruthy();
+    const badgesInPriceCard = priceCard?.querySelectorAll(
+      'span[style*="font-size: 11.5"]'
     );
-    for (const badge of priceBadges) {
-      expect(badge.textContent).not.toContain("$420K");
-    }
+    expect(badgesInPriceCard?.length).toBe(0);
   });
 
   it("suppresses delta badge when monthIndex is 0 (no prior period)", () => {
