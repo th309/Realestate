@@ -1,7 +1,11 @@
 "use client";
 
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { type MarketSnapshotCard, type BenchmarkResult } from "@/lib/data";
+import {
+  type MarketSnapshotCard,
+  type BenchmarkResult,
+  getMetricTitle,
+} from "@/lib/data";
 import { ScoreGaugeWidget } from "@/app/components/scoring/ScoreGaugeWidget";
 import { MetricTitle } from "@/app/components/MetricTitle";
 import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
@@ -81,25 +85,33 @@ export function MetricRail({
                 }
               : null;
 
+          const metricTitle = getMetricTitle(metricId);
+
           return (
             <div
               key={metricId}
-              className={`flex items-center gap-1 rounded-xl border px-4 py-3 transition-all ${
+              className={`relative flex items-center gap-1 rounded-xl border px-4 py-3 transition-all ${
                 isSelected
                   ? "border-primary bg-primary/5 shadow-sm"
                   : "border-outline-variant/30 bg-surface-container hover:border-outline-variant/60"
               }`}
             >
-              {/* Selectable region — the alert bell below is a sibling, not
-                  nested inside, since it's its own interactive button. */}
+              {/* Stretched click target for the whole row. A real <button>
+                  cannot contain other interactive content (the info icon in
+                  MetricTitle, InheritedBadge's focusable tooltip, the alert
+                  bell below), so this empty overlay button sits BEHIND the
+                  row's content; those specific islands opt back in via
+                  pointer-events-auto so they stay independently clickable. */}
               <button
                 type="button"
                 aria-pressed={isSelected}
+                aria-label={`Chart ${metricTitle}`}
                 onClick={() => onSelectMetric(metricId)}
-                className="flex-1 min-w-0 flex flex-col gap-1 text-left"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-on-surface-variant min-w-0 truncate">
+                className="absolute inset-0 rounded-xl"
+              />
+              <div className="relative flex-1 min-w-0 flex flex-col gap-1 pointer-events-none">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-on-surface-variant min-w-0 truncate pointer-events-auto">
                     <MetricTitle
                       metricId={metricId}
                       resolvedMetric={{
@@ -135,9 +147,9 @@ export function MetricRail({
                       </span>
                     )}
                   </span>
-                </span>
+                </div>
                 {(card?.isFallback || inheritedLevel || benchmarkProp) && (
-                  <span className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {card?.isFallback && (
                       <span
                         className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
@@ -151,19 +163,23 @@ export function MetricRail({
                       </span>
                     )}
                     {inheritedLevel && (
-                      <InheritedBadge sourceType={inheritedLevel} />
+                      <span className="pointer-events-auto">
+                        <InheritedBadge sourceType={inheritedLevel} />
+                      </span>
                     )}
                     {benchmarkProp && <BenchmarkBadge {...benchmarkProp} />}
-                  </span>
+                  </div>
                 )}
-              </button>
-              <MetricAlertBell
-                metricId={metricId}
-                currentValue={card?.value}
-                geographyType={geoType}
-                geographyId={geoId}
-                geographyName={geoName}
-              />
+              </div>
+              <div className="relative">
+                <MetricAlertBell
+                  metricId={metricId}
+                  currentValue={card?.value}
+                  geographyType={geoType}
+                  geographyId={geoId}
+                  geographyName={geoName}
+                />
+              </div>
             </div>
           );
         })}

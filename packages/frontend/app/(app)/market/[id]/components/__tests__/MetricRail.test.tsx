@@ -56,6 +56,7 @@ vi.mock("@/lib/benchmarks/hooks", () => ({
     (getBenchmarkForMetric as (...a: unknown[]) => unknown)(...args),
 }));
 
+import { getMetricTitle } from "@/lib/data";
 import { MetricRail } from "../MetricRail";
 
 const card = (
@@ -134,7 +135,11 @@ describe("MetricRail", () => {
         onSelectMetric={onSelect}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /rent_index/i }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Chart ${getMetricTitle("rent_index")}`,
+      }),
+    );
     expect(onSelect).toHaveBeenCalledWith("rent_index");
   });
 
@@ -148,8 +153,38 @@ describe("MetricRail", () => {
         onSelectMetric={() => {}}
       />,
     );
-    const selected = screen.getByRole("button", { name: /home_value/i });
+    const selected = screen.getByRole("button", {
+      name: `Chart ${getMetricTitle("home_value")}`,
+    });
     expect(selected.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("keeps the info-icon and inherited badge independently clickable, not nested inside the selectable button", () => {
+    const inheritedCards = {
+      home_value: card("$455K", 455000, {
+        isInherited: true,
+        sourceGeoLevel: "county",
+      }),
+    };
+    render(
+      <MetricRail
+        {...baseProps}
+        cards={inheritedCards}
+        metricIds={["home_value"]}
+        selectedMetricId="home_value"
+        onSelectMetric={() => {}}
+      />,
+    );
+    const selectableButton = screen.getByRole("button", {
+      name: `Chart ${getMetricTitle("home_value")}`,
+    });
+    // MetricTitle and InheritedBadge must be siblings of the selectable
+    // button, never descendants — a <button> cannot legally contain other
+    // interactive content (buttons, focusable elements).
+    expect(
+      selectableButton.contains(screen.getByTestId("inherited-badge")),
+    ).toBe(false);
+    expect(selectableButton.children.length).toBe(0);
   });
 
   it("renders an alert bell per metric row, independent of the selectable button", () => {
