@@ -1,3 +1,5 @@
+import { getScoreMomentumLabel } from '../scoring/score-label.util';
+
 export interface HeadlineRequest {
   geoType: string;
   geoId: string;
@@ -23,18 +25,12 @@ const PLAIN_PROSE_RULE =
   'Write plain prose only: no markdown or formatting (no bold, italics, headers, bullets, or backticks), no em-dashes (use a comma, period, or "and"), and no code-style identifiers (write field names in plain English). Keep all numbers exact.';
 
 /**
- * CLAUDE.md §9 momentum labels. Momentum/timing words only — never quality
- * verdicts (a low score means cooling momentum, not a poor-quality market).
+ * CLAUDE.md §9 momentum labels. Delegates to the canonical backend SSOT
+ * (`getScoreMomentumLabel`) so the ladder can't drift from the rest of the
+ * backend — momentum/timing words only, never a quality verdict.
  */
 export function scoreMomentumWord(score: number): string {
-  if (score >= 90) return 'VERY STRONG';
-  if (score >= 80) return 'STRONG';
-  if (score >= 70) return 'RISING';
-  if (score >= 60) return 'FIRMING';
-  if (score >= 50) return 'STEADY';
-  if (score >= 40) return 'EASING';
-  if (score >= 20) return 'WEAK';
-  return 'VERY WEAK';
+  return getScoreMomentumLabel(score);
 }
 
 export function buildHeadlinePrompt(request: HeadlineRequest): string {
