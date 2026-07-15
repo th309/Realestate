@@ -5,7 +5,7 @@ export interface MarketDashboardProps {
   stateFilter?: string;
 }
 
-/** Shape of a single card in the snapshot response (used by MetricCard & MetricCategorySection) */
+/** Shape of a single card in the snapshot response */
 export interface MetricCardData {
   formattedValue: string;
   value?: number | null;
