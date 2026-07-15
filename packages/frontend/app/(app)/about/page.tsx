@@ -266,6 +266,12 @@ export default function AboutPage() {
                     every validated year. We publish our accuracy metrics openly
                     — something most competitors don&apos;t do.
                   </p>
+                  <Link
+                    href="/scores/methodology"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    See how scores are validated →
+                  </Link>
                 </div>
                 <div className="p-6 rounded-xl bg-surface-container-low">
                   <h3 className="font-medium text-on-surface mb-2">
@@ -287,6 +293,12 @@ export default function AboutPage() {
                     data sources. You can see exactly how scores are calculated
                     and verified.
                   </p>
+                  <Link
+                    href="/scores/methodology"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Read the full methodology →
+                  </Link>
                 </div>
               </div>
             </section>
