@@ -82,7 +82,7 @@ export function GeoTileMap(props: GeoTileMapProps) {
       <div
         style={{ padding: 40, textAlign: "center", color: "var(--md-error)" }}
       >
-        Couldn't load the map for this scope.
+        Couldn&apos;t load the map for this scope.
       </div>
     );
   }
