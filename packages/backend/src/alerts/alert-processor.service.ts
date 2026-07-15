@@ -266,6 +266,23 @@ export class AlertProcessorService {
   ): Promise<number | null> {
     const client = this.supabase.getClient();
 
+    // PropertyIQ Score lives in propertyiq_scores_v2, not calculated_metrics.
+    // Take the latest score_date for this geography.
+    if (metricId === 'propertyiq_score') {
+      const { data: scoreRow } = await client
+        .from('propertyiq_scores_v2')
+        .select('score')
+        .eq('geography', geoType)
+        .eq('location_id', geoId)
+        .eq('score_type', 'propertyiq')
+        .order('score_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (scoreRow?.score != null) return Number(scoreRow.score);
+      return null;
+    }
+
     // Try calculated_metrics first (most metrics are there)
     const { data } = await client
       .from('calculated_metrics')
