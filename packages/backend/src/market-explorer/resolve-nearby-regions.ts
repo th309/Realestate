@@ -18,6 +18,7 @@ async function lookupOne(
     .select(selectCol)
     .eq(filterCol, val)
     .not(selectCol, 'is', null)
+    .order(selectCol)
     .limit(1);
   const row = (data ?? [])[0] as any;
   return row?.[selectCol] ?? null;
@@ -60,17 +61,14 @@ export async function resolveNearbyRegions(
     const sibs = (
       await distinctCrosswalkIds(supabase, 'cbsa_code', 'state_fips', stateFips)
     ).filter((c) => c !== parentId);
-    const counties: string[] = [];
-    for (const c of sibs)
-      counties.push(
-        ...(await distinctCrosswalkIds(
-          supabase,
-          'county_fips',
-          'cbsa_code',
-          c,
-        )),
-      );
-    return mark(await snapshotRoster(supabase, 'county', uniq(counties)));
+    const countyLists = await Promise.all(
+      sibs.map((c) =>
+        distinctCrosswalkIds(supabase, 'county_fips', 'cbsa_code', c),
+      ),
+    );
+    return mark(
+      await snapshotRoster(supabase, 'county', uniq(countyLists.flat())),
+    );
   }
 
   // Drilled into a county (showing zips) → zips of sibling counties in the same metro.
@@ -85,12 +83,12 @@ export async function resolveNearbyRegions(
     const sibs = (
       await distinctCrosswalkIds(supabase, 'county_fips', 'cbsa_code', cbsa)
     ).filter((c) => c !== parentId);
-    const zips: string[] = [];
-    for (const c of sibs)
-      zips.push(
-        ...(await distinctCrosswalkIds(supabase, 'zip_code', 'county_fips', c)),
-      );
-    return mark(await snapshotRoster(supabase, 'zip', uniq(zips)));
+    const zipLists = await Promise.all(
+      sibs.map((c) =>
+        distinctCrosswalkIds(supabase, 'zip_code', 'county_fips', c),
+      ),
+    );
+    return mark(await snapshotRoster(supabase, 'zip', uniq(zipLists.flat())));
   }
 
   return [];
