@@ -32,7 +32,7 @@
     "build:libs": "npm run build -w @propertyiq/analyzer-core && npm run build -w @propertyiq/emails",
     "release:main": "bash scripts/git/release-to-main.sh",
     "sync:develop": "bash scripts/git/release-to-main.sh --sync-only",
-    "postinstall": "node scripts/postinstall-fix-types.js",
+    "postinstall": "node scripts/postinstall-fix-types.js && patch-package",
     "seo:rebuild-slugs": "npm run seo:slugs:metro && npm run seo:slugs:county && npm run seo:slugs:zip && npm run seo:redirects && npm run seo:generate-llms",
     "seo:slugs:metro": "npx tsx scripts/generate-metro-slugs.ts",
     "seo:slugs:county": "npx tsx scripts/generate-county-slugs.ts",
@@ -49,6 +49,7 @@
     "@types/react-window": "^1.8.8",
     "concurrently": "^8.2.2",
     "node-fetch": "^3.3.2",
+    "patch-package": "^8.0.1",
     "pg": "^8.16.3",
     "rimraf": "^5.0.5",
     "xlsx": "^0.18.5"

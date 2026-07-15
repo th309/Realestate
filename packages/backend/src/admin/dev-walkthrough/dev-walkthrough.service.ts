@@ -2,7 +2,7 @@ import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../../supabase/supabase.service';
 import { DripService } from '../../email/drip.service';
-import { BehavioralTriggerService } from '../../email/behavioral-trigger.service';
+import { TrialLifecycleTriggerService } from '../../email/trial-lifecycle-trigger.service';
 import { EngagementTriggerService } from '../../email/engagement-trigger.service';
 import { UsersService } from '../users/users.service';
 
@@ -28,7 +28,7 @@ export class DevWalkthroughService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly drip: DripService,
-    private readonly behavioral: BehavioralTriggerService,
+    private readonly trialLifecycle: TrialLifecycleTriggerService,
     private readonly engagement: EngagementTriggerService,
     private readonly users: UsersService,
   ) {
@@ -73,11 +73,11 @@ export class DevWalkthroughService {
     if (job.startsWith('drip'))
       return void (await this.drip.runDripDay(Number(job.slice(4)), userId));
     if (job === 'trial_day_10')
-      return void (await this.behavioral.fireTrialDay10(userId));
+      return void (await this.trialLifecycle.fireTrialDay10(userId));
     if (job === 'trial_day_13')
-      return void (await this.behavioral.fireTrialDay13(userId));
+      return void (await this.trialLifecycle.fireTrialDay13(userId));
     if (job === 'trial_expired')
-      return void (await this.behavioral.fireTrialExpired(userId));
+      return void (await this.trialLifecycle.fireTrialExpired(userId));
     throw new Error(`Unknown job: ${job}`);
   }
 

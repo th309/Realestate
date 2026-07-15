@@ -1,40 +1,21 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { EmailService } from './email.service';
 import { RedisLockService } from '../redis/redis-lock.service';
 import { EngagementTriggerService } from './engagement-trigger.service';
-import {
-  EligibleUser,
-  getFutureDayBoundaries,
-  getPastDayBoundaries,
-} from './behavioral-trigger.utils';
-import {
-  buildInactive24hEmail,
-  buildTrialDay10Email,
-  buildTrialDay13Email,
-  buildTrialExpiredEmail,
-} from './behavioral-trigger-emails';
-import { getEmailLinkBaseUrl } from './email-link-base';
-import { getMarketingOptOutIds } from './email-recipients.util';
-import { buildUnsubscribe } from './unsubscribe-link.util';
+import { InactiveUserTriggerService } from './inactive-user-trigger.service';
+import { TrialLifecycleTriggerService } from './trial-lifecycle-trigger.service';
 
+/** Hourly cron entrypoint that fans out to each behavioral email trigger. */
 @Injectable()
 export class BehavioralTriggerService {
   private readonly logger = new Logger(BehavioralTriggerService.name);
-  private readonly appUrl: string;
 
   constructor(
-    @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-    private readonly emailService: EmailService,
-    private readonly config: ConfigService,
     private readonly lockService: RedisLockService,
     private readonly engagementTriggers: EngagementTriggerService,
-  ) {
-    this.appUrl = getEmailLinkBaseUrl(this.config);
-  }
+    private readonly inactiveUserTriggers: InactiveUserTriggerService,
+    private readonly trialLifecycleTriggers: TrialLifecycleTriggerService,
+  ) {}
 
   @Cron('0 * * * *') // Every hour
   async processTriggersHourly() {
@@ -51,242 +32,13 @@ export class BehavioralTriggerService {
     try {
       this.logger.log('Starting behavioral trigger processing...');
       await this.engagementTriggers.processAll();
-      await this.fireInactive24h();
-      await this.fireTrialDay10();
-      await this.fireTrialDay13();
-      await this.fireTrialExpired();
+      await this.inactiveUserTriggers.fireInactive24h();
+      await this.trialLifecycleTriggers.fireTrialDay10();
+      await this.trialLifecycleTriggers.fireTrialDay13();
+      await this.trialLifecycleTriggers.fireTrialExpired();
       this.logger.log('Behavioral trigger processing complete.');
     } finally {
       await this.lockService.releaseLock('cron:behavioral-triggers');
     }
-  }
-
-  // ─── Dedup helpers ──────────────────────────────────────────────────────────
-
-  private async hasFired(
-    userId: string,
-    triggerName: string,
-  ): Promise<boolean> {
-    const { data } = await this.supabase
-      .from('email_triggers')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('trigger_name', triggerName)
-      .maybeSingle();
-    return !!data;
-  }
-
-  private async markFired(userId: string, triggerName: string): Promise<void> {
-    await this.supabase
-      .from('email_triggers')
-      .insert({ user_id: userId, trigger_name: triggerName, metadata: {} });
-  }
-
-  // ─── Shared send loop for subscription-based triggers ───────────────────────
-
-  private async sendToTrialingUsers(opts: {
-    triggerName: string;
-    subject: string;
-    rangeStart: string;
-    rangeEnd: string;
-    buildHtml: (
-      name: string,
-      actionUrl: string,
-      unsubscribeUrl: string,
-    ) => string;
-    actionPath: string;
-    onlyUserId?: string;
-  }): Promise<void> {
-    const {
-      triggerName,
-      subject,
-      rangeStart,
-      rangeEnd,
-      buildHtml,
-      actionPath,
-      onlyUserId,
-    } = opts;
-
-    let query = this.supabase
-      .from('user_trials')
-      .select('user_id, expires_at')
-      .is('converted_at', null)
-      .is('cancelled_at', null)
-      .gte('expires_at', rangeStart)
-      .lt('expires_at', rangeEnd);
-    if (onlyUserId) query = query.eq('user_id', onlyUserId);
-    const { data: trials, error } = await query;
-
-    if (error) {
-      this.logger.error(`${triggerName}: query failed: ${error.message}`);
-      return;
-    }
-    if (!trials?.length) return;
-
-    // user_trials has no FK to user_profiles (both reference auth.users), so a
-    // PostgREST embed cannot resolve — fetch emails in a second query.
-    const userIds = trials.map((t: { user_id: string }) => t.user_id);
-    const { data: profiles, error: profileError } = await this.supabase
-      .from('user_profiles')
-      .select('id, email')
-      .in('id', userIds);
-    if (profileError) {
-      this.logger.error(
-        `${triggerName}: profile lookup failed: ${profileError.message}`,
-      );
-      return;
-    }
-    const users: EligibleUser[] = (profiles ?? [])
-      .filter((p: { id: string; email: string | null }) => !!p.email)
-      .map((p: { id: string; email: string }) => ({
-        id: p.id,
-        email: p.email,
-      }));
-    const optedOutIds = await getMarketingOptOutIds(
-      this.supabase,
-      users.map((u) => u.id),
-    );
-
-    let sent = 0;
-    for (const user of users) {
-      if (!user.email) continue;
-      if (optedOutIds.has(user.id)) continue;
-      if (await this.hasFired(user.id, triggerName)) continue;
-
-      const unsub = buildUnsubscribe(this.config, user.id);
-      const html = buildHtml(
-        user.email.split('@')[0],
-        `${this.appUrl}${actionPath}`,
-        unsub?.url ?? `${this.appUrl}/account/notifications`,
-      );
-
-      const success = await this.emailService.sendEmail({
-        to: user.email,
-        subject,
-        html,
-        userId: user.id,
-        emailType: triggerName,
-        headers: unsub?.headers,
-      });
-
-      if (success) {
-        await this.markFired(user.id, triggerName);
-        sent++;
-      }
-    }
-
-    if (sent > 0) this.logger.log(`${triggerName}: sent ${sent}`);
-  }
-
-  // ─── Trigger: inactive_24h ──────────────────────────────────────────────────
-
-  /**
-   * Users who signed up 24–48 hours ago and have not completed onboarding.
-   * "Completed onboarding" is defined as having at least one session recorded.
-   */
-  private async fireInactive24h(): Promise<void> {
-    const now = new Date();
-    const cutoffStart = new Date(
-      now.getTime() - 48 * 60 * 60 * 1000,
-    ).toISOString();
-    const cutoffEnd = new Date(
-      now.getTime() - 24 * 60 * 60 * 1000,
-    ).toISOString();
-
-    const { data: candidates, error } = await this.supabase
-      .from('user_profiles')
-      .select('id, email')
-      .gte('created_at', cutoffStart)
-      .lt('created_at', cutoffEnd);
-
-    if (error) {
-      this.logger.error(`inactive_24h: user query failed: ${error.message}`);
-      return;
-    }
-    if (!candidates?.length) return;
-
-    const userIds = candidates.map((u: EligibleUser) => u.id);
-    const { data: sessions } = await this.supabase
-      .from('user_sessions')
-      .select('user_id')
-      .in('user_id', userIds);
-
-    const activeUserIds = new Set<string>(
-      (sessions ?? []).map((s: { user_id: string }) => s.user_id),
-    );
-    const optedOutIds = await getMarketingOptOutIds(this.supabase, userIds);
-
-    let sent = 0;
-    for (const user of candidates as EligibleUser[]) {
-      if (!user.email) continue;
-      if (activeUserIds.has(user.id)) continue;
-      if (optedOutIds.has(user.id)) continue;
-      if (await this.hasFired(user.id, 'inactive_24h')) continue;
-
-      const unsub = buildUnsubscribe(this.config, user.id);
-      const html = buildInactive24hEmail(
-        user.email.split('@')[0],
-        `${this.appUrl}/graphs`,
-        unsub?.url ?? `${this.appUrl}/account/notifications`,
-      );
-      const success = await this.emailService.sendEmail({
-        to: user.email,
-        subject: 'Your PropertyIQ market data is waiting',
-        html,
-        userId: user.id,
-        emailType: 'inactive_24h',
-        headers: unsub?.headers,
-      });
-      if (success) {
-        await this.markFired(user.id, 'inactive_24h');
-        sent++;
-      }
-    }
-
-    if (sent > 0) this.logger.log(`inactive_24h: sent ${sent}`);
-  }
-
-  // ─── Triggers: trial lifecycle ───────────────────────────────────────────────
-
-  /** Users whose trial expires in exactly 4 days. */
-  public fireTrialDay10(onlyUserId?: string) {
-    const { rangeStart, rangeEnd } = getFutureDayBoundaries(4);
-    return this.sendToTrialingUsers({
-      triggerName: 'trial_day_10',
-      subject: '4 days left on your PropertyIQ Pro trial',
-      rangeStart,
-      rangeEnd,
-      buildHtml: buildTrialDay10Email,
-      actionPath: '/pricing',
-      onlyUserId,
-    });
-  }
-
-  /** Users whose trial expires tomorrow. */
-  public fireTrialDay13(onlyUserId?: string) {
-    const { rangeStart, rangeEnd } = getFutureDayBoundaries(1);
-    return this.sendToTrialingUsers({
-      triggerName: 'trial_day_13',
-      subject: 'Last chance — your Pro trial ends tomorrow',
-      rangeStart,
-      rangeEnd,
-      buildHtml: buildTrialDay13Email,
-      actionPath: '/pricing',
-      onlyUserId,
-    });
-  }
-
-  /** Users whose trial expired yesterday and have not converted to paid. */
-  public fireTrialExpired(onlyUserId?: string) {
-    const { rangeStart, rangeEnd } = getPastDayBoundaries(1);
-    return this.sendToTrialingUsers({
-      triggerName: 'trial_expired',
-      subject: 'Your PropertyIQ Pro trial has ended',
-      rangeStart,
-      rangeEnd,
-      buildHtml: buildTrialExpiredEmail,
-      actionPath: '/pricing',
-      onlyUserId,
-    });
   }
 }

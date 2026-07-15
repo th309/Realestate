@@ -1,0 +1,20 @@
+diff --git a/node_modules/@nestjs/cli/lib/utils/tree-kill.js b/node_modules/@nestjs/cli/lib/utils/tree-kill.js
+index 47f78a0..23ba04b 100644
+--- a/node_modules/@nestjs/cli/lib/utils/tree-kill.js
++++ b/node_modules/@nestjs/cli/lib/utils/tree-kill.js
+@@ -4,7 +4,14 @@ exports.treeKillSync = treeKillSync;
+ const child_process_1 = require("child_process");
+ function treeKillSync(pid, signal) {
+     if (process.platform === 'win32') {
+-        (0, child_process_1.execSync)('taskkill /pid ' + pid + ' /T /F');
++        try {
++            (0, child_process_1.execSync)('taskkill /pid ' + pid + ' /T /F');
++        }
++        catch (err) {
++            // taskkill exits non-zero when a process in the tree already exited
++            // (a common race during nest's watch-restart cycle) or lacks access.
++            // Best-effort cleanup — don't crash the whole watcher over it.
++        }
+         return;
+     }
+     const childs = getAllChilds(pid);
