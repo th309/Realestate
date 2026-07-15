@@ -32,16 +32,16 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
     invertGood: boolean,
     isPts: boolean,
   ) => {
-    const cur = series[monthIndex],
-      prev = series[Math.max(0, monthIndex - 1)];
-    const d =
-      cur != null && prev != null
-        ? isPts
-          ? cur - prev
-          : prev
-            ? ((cur - prev) / prev) * 100
-            : 0
-        : 0;
+    const cur = series[monthIndex];
+    const prev = monthIndex === 0 ? null : series[monthIndex - 1];
+    const hasBothValues = cur != null && prev != null;
+    const d = hasBothValues
+      ? isPts
+        ? cur - prev
+        : prev
+          ? ((cur - prev) / prev) * 100
+          : 0
+      : 0;
     const up = d >= 0,
       good = invertGood ? !up : up;
     const col =
@@ -107,21 +107,23 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
           >
             {cur == null ? "—" : fmt(cur)}
           </span>
-          <span
-            style={{
-              fontFamily: "var(--font-roboto-mono)",
-              fontSize: 11.5,
-              fontWeight: 600,
-              padding: "2px 7px",
-              borderRadius: 999,
-              background: `color-mix(in srgb, ${col} 12%, transparent)`,
-              color: col,
-            }}
-          >
-            {(up ? "▲ " : "▼ ") +
-              Math.abs(d).toFixed(1) +
-              (isPts ? " pt" : "%")}
-          </span>
+          {hasBothValues && (
+            <span
+              style={{
+                fontFamily: "var(--font-roboto-mono)",
+                fontSize: 11.5,
+                fontWeight: 600,
+                padding: "2px 7px",
+                borderRadius: 999,
+                background: `color-mix(in srgb, ${col} 12%, transparent)`,
+                color: col,
+              }}
+            >
+              {(up ? "▲ " : "▼ ") +
+                Math.abs(d).toFixed(1) +
+                (isPts ? " pt" : "%")}
+            </span>
+          )}
         </div>
         <div style={{ marginTop: 2 }}>
           <Sparkline
@@ -129,6 +131,7 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
             width={120}
             height={22}
             markerIndex={Math.max(0, monthIndex - windowStart)}
+            color={dot}
           />
         </div>
       </div>

@@ -20,4 +20,57 @@ describe("KpiStrip", () => {
       "Avg PIQ score",
     ].forEach((label) => expect(screen.getByText(label)).toBeTruthy());
   });
+
+  it("suppresses delta badge when current value is null", () => {
+    const agg = {
+      price: [400000, null],
+      rent: [1800, 1850],
+      inventory: [10000, 11000],
+      dom: [40, 38],
+      score: [55, 57],
+    };
+    const { container } = render(
+      <KpiStrip agg={agg} monthIndex={1} windowStart={0} />
+    );
+    expect(screen.getByText("—")).toBeTruthy();
+    const badges = container.querySelectorAll(
+      'span[style*="font-size: 11.5"]'
+    );
+    expect(badges.length).toBeGreaterThan(0);
+  });
+
+  it("suppresses delta badge when previous value is null", () => {
+    const agg = {
+      price: [null, 420000],
+      rent: [1800, 1850],
+      inventory: [10000, 11000],
+      dom: [40, 38],
+      score: [55, 57],
+    };
+    const { container } = render(
+      <KpiStrip agg={agg} monthIndex={1} windowStart={0} />
+    );
+    expect(screen.getByText("$420K")).toBeTruthy();
+    const priceBadges = Array.from(
+      container.querySelectorAll('span[style*="font-size: 11.5"]')
+    );
+    for (const badge of priceBadges) {
+      expect(badge.textContent).not.toContain("$420K");
+    }
+  });
+
+  it("suppresses delta badge when monthIndex is 0 (no prior period)", () => {
+    const agg = {
+      price: [400000, 420000],
+      rent: [1800, 1850],
+      inventory: [10000, 11000],
+      dom: [40, 38],
+      score: [55, 57],
+    };
+    render(<KpiStrip agg={agg} monthIndex={0} windowStart={0} />);
+    const badgeText = Array.from(document.querySelectorAll("span")).map(
+      (el) => el.textContent
+    );
+    expect(badgeText.some((text) => text?.includes("0.0%"))).toBe(false);
+  });
 });
