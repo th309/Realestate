@@ -6,11 +6,26 @@ vi.mock("../lib/useExplorerScopeData", () => ({
   MAX_MONTHS: 120,
   useExplorerScopeData: vi.fn(),
 }));
+vi.mock("../lib/useGeoBoundaries", () => ({
+  useGeoBoundaries: vi.fn(() => ({
+    parentOutline: null,
+    viewBoxWidth: 400,
+    viewBoxHeight: 300,
+    features: [
+      { id: "35620", path: "M0,0L10,0L10,10L0,10Z" },
+      { id: "31080", path: "M20,0L30,0L30,10L20,10Z" },
+    ],
+    isLoading: false,
+    error: null,
+  })),
+}));
 
 import { useExplorerScopeData } from "../lib/useExplorerScopeData";
+import { useGeoBoundaries } from "../lib/useGeoBoundaries";
 import MarketExplorer from "../MarketExplorer";
 
 const mockUseExplorerScopeData = vi.mocked(useExplorerScopeData);
+const mockUseGeoBoundaries = vi.mocked(useGeoBoundaries);
 
 const TWO_MONTH_SCOPE = {
   dates: ["2026-04-01", "2026-05-01"],
@@ -129,5 +144,40 @@ describe("MarketExplorer", () => {
     expect(
       screen.getByText(/Something went wrong loading this scope/i),
     ).toBeTruthy();
+  });
+
+  it("drilling into a metro then toggling Map view shows that metro's own boundaries, not the national state grid", () => {
+    render(<MarketExplorer />);
+    const titleEl = Array.from(document.querySelectorAll("circle title")).find(
+      (el) => el.textContent?.includes("New York"),
+    );
+    fireEvent.doubleClick(titleEl!.parentElement!); // drill metro -> county
+    fireEvent.click(screen.getByText("Map"));
+    // Before the SET_VIEW fix, this would reset path to [] and re-render the
+    // national state grid via useGeoBoundaries("state", ...) instead of
+    // staying scoped to New York's counties.
+    expect(mockUseGeoBoundaries).toHaveBeenLastCalledWith(
+      "county",
+      "metro",
+      "35620",
+      undefined,
+      expect.any(Array),
+    );
+  });
+
+  it('the "State" level tab still jumps to the national tile map from any depth', () => {
+    render(<MarketExplorer />);
+    const titleEl = Array.from(document.querySelectorAll("circle title")).find(
+      (el) => el.textContent?.includes("New York"),
+    );
+    fireEvent.doubleClick(titleEl!.parentElement!);
+    fireEvent.click(screen.getByText("State")); // level tab, not the Map toggle
+    expect(mockUseGeoBoundaries).toHaveBeenLastCalledWith(
+      "state",
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Array),
+    );
   });
 });

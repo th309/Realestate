@@ -50,9 +50,7 @@ export function explorerReducer(
     case "SET_RANGE":
       return { ...state, range: action.range };
     case "SET_VIEW":
-      return action.view === "map"
-        ? { ...state, view: "map", path: [], selectedId: null, playing: false }
-        : { ...state, view: "bubbles" };
+      return { ...state, view: action.view, playing: false };
     case "SELECT":
       return { ...state, selectedId: action.id };
     case "PIN":

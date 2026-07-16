@@ -36,28 +36,12 @@ import { MetricSwitcher } from "./components/MetricSwitcher";
 import { KpiStrip } from "./components/KpiStrip";
 import { HeroVisualization } from "./components/HeroVisualization";
 import { BubbleChart } from "./components/BubbleChart";
-import { StateTileMap } from "./components/StateTileMap";
+import { GeoTileMap } from "./components/GeoTileMap";
+import { useGeoBoundaries } from "./lib/useGeoBoundaries";
 import { TimelineScrubber } from "./components/TimelineScrubber";
 import { DetailRail } from "./components/DetailRail";
 import { MarketExplorerAnalytics } from "./MarketExplorerAnalytics";
-
-const UNIT_PLURAL: Record<string, string> = {
-  state: "states",
-  metro: "metros",
-  county: "counties",
-  zip: "ZIPs",
-};
-const CHILD_PLURAL: Record<string, string> = {
-  state: "metros",
-  metro: "counties",
-  county: "ZIP codes",
-};
-const monthLabelOf = (iso?: string) =>
-  iso
-    ? new Date(`${iso.slice(0, 10)}T00:00:00`)
-        .toLocaleString("en-US", { month: "short", year: "2-digit" })
-        .replace(" ", " ’")
-    : "";
+import { UNIT_PLURAL, CHILD_PLURAL, monthLabelOf } from "./lib/explorer-labels";
 
 export default function MarketExplorer() {
   const router = useRouter();
@@ -65,14 +49,27 @@ export default function MarketExplorer() {
   const scope = resolveScope(state);
   const scopeKey = `${scope.geoLevel}:${scope.parentId ?? ""}:${state.view}`;
 
-  const { dates, regions, series, isLoading, error } = useExplorerScopeData(
+  const { dates, regions, series, totalAvailable, isLoading, error } =
+    useExplorerScopeData(
+      scope.geoLevel,
+      scope.parentLevel,
+      scope.parentId,
+      state.includeNearby,
+    );
+  // Nearby overlay is available whenever a parent scope exists (drilled in).
+  const hasNearby = !!scope.parentId;
+
+  const parentState =
+    scope.geoLevel === "zip"
+      ? state.path[state.path.length - 1]?.state
+      : undefined;
+  const boundaries = useGeoBoundaries(
     scope.geoLevel,
     scope.parentLevel,
     scope.parentId,
-    state.includeNearby,
+    parentState,
+    regions.map((r) => r.id),
   );
-  // Nearby overlay is available whenever a parent scope exists (drilled in).
-  const hasNearby = !!scope.parentId;
 
   // series is a fresh object every render (useExplorerScopeData doesn't
   // memoize it), so depend on this primitive index rather than series itself
@@ -138,7 +135,7 @@ export default function MarketExplorer() {
     if (!r) return;
     dispatch({
       type: "DRILL",
-      crumb: { level: scope.geoLevel, id, name: r.name },
+      crumb: { level: scope.geoLevel, id, name: r.name, state: r.state },
     });
   };
   const openDashboard = (r: { id: string; state: string } | null) => {
@@ -162,14 +159,14 @@ export default function MarketExplorer() {
   // ── hero chart ──
   const heroChart =
     state.view === "map" ? (
-      <StateTileMap
-        entities={regions}
+      <GeoTileMap
+        boundaries={boundaries}
         scoreByRegion={scalars.scoreByRegion}
         valueByRegion={scalars.yByRegion}
         format={metricCfg.format}
-        onDrill={(fips, name) =>
-          dispatch({ type: "DRILL", crumb: { level: "state", id: fips, name } })
-        }
+        selectedId={state.selectedId}
+        onSelect={onSelect}
+        onDrill={onDrillEntity}
       />
     ) : (
       <BubbleChart
@@ -260,7 +257,7 @@ export default function MarketExplorer() {
     />
   );
 
-  const heroTitle = `${scopeName ? `${scopeName} — ` : ""}${state.view === "map" ? `${metricCfg.label} state tile map` : `${metricCfg.label} across ${regions.length} ${unitPlural}`}`;
+  const heroTitle = `${scopeName ? `${scopeName} — ` : ""}${state.view === "map" ? `${metricCfg.label} across ${regions.length} ${unitPlural} (map)` : `${metricCfg.label} across ${regions.length} ${unitPlural}`}`;
   const boardTitle = `Rankings — ${unitPlural} in ${scopeName ?? "U.S."}${metricCfg.betterHigh ? "" : " (lower is better)"}`;
 
   return (

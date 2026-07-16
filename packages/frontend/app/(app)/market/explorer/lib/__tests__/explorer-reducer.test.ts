@@ -9,14 +9,6 @@ import type { PathCrumb } from "../explorer-config";
 const S = initialExplorerState;
 
 describe("explorerReducer", () => {
-  it("SET_VIEW map clears the path (map is national state view)", () => {
-    const s = explorerReducer(
-      { ...S, path: [{ level: "state", id: "48", name: "Texas" }] },
-      { type: "SET_VIEW", view: "map" },
-    );
-    expect(s.view).toBe("map");
-    expect(s.path).toEqual([]);
-  });
   it("DRILL pushes a crumb, resets selection, forces bubbles", () => {
     const s = explorerReducer(
       { ...S, view: "map" },
@@ -52,6 +44,42 @@ describe("explorerReducer", () => {
   });
   it("TOGGLE_PLAY flips playing", () => {
     expect(explorerReducer(S, { type: "TOGGLE_PLAY" }).playing).toBe(true);
+  });
+});
+
+describe("explorerReducer SET_VIEW", () => {
+  it("switches view without resetting an active drill path", () => {
+    const drilled = {
+      ...initialExplorerState,
+      path: [{ level: "state" as const, id: "48", name: "Texas", state: "TX" }],
+      selectedId: "19100",
+    };
+    const result = explorerReducer(drilled, { type: "SET_VIEW", view: "map" });
+    expect(result.view).toBe("map");
+    expect(result.path).toEqual(drilled.path); // must NOT reset to []
+    expect(result.selectedId).toBe("19100"); // must NOT clear selection
+  });
+
+  it("stops autoplay when switching view", () => {
+    const playing = { ...initialExplorerState, playing: true };
+    const result = explorerReducer(playing, { type: "SET_VIEW", view: "map" });
+    expect(result.playing).toBe(false);
+  });
+
+  it("switching back to bubbles also preserves the path", () => {
+    const drilled = {
+      ...initialExplorerState,
+      view: "map" as const,
+      path: [
+        { level: "metro" as const, id: "19100", name: "Dallas-Fort Worth" },
+      ],
+    };
+    const result = explorerReducer(drilled, {
+      type: "SET_VIEW",
+      view: "bubbles",
+    });
+    expect(result.view).toBe("bubbles");
+    expect(result.path).toEqual(drilled.path);
   });
 });
 
