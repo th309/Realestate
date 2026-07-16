@@ -24,7 +24,10 @@ describe("getCinematicConfig", () => {
   it("enables real 3D and full tilt for zip", () => {
     const c = getCinematicConfig("zip");
     expect(c.enable3D).toBe(true);
-    expect(c.pitch).toBeGreaterThanOrEqual(45);
+    // Tilt was intentionally halved (55 -> 28) in efa76be9 to fix off-center
+    // framing at high pitch; assert "clearly steeper than city" rather than
+    // the old exact value so this doesn't re-drift on the next tuning pass.
+    expect(c.pitch).toBeGreaterThanOrEqual(25);
   });
   it("keeps metro flat with no 3D", () => {
     const c = getCinematicConfig("metro");

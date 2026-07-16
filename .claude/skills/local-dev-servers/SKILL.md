@@ -33,23 +33,29 @@ Manages Redis (Docker, port 6379), frontend (Next.js, port 3000), and backend (N
 ### Restart Workflow (mandatory when user says "restart")
 
 1. **Kill all node processes via PowerShell** — the only reliable way on Windows:
+
    ```powershell
    Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
    ```
+
    Use the PowerShell tool, NOT `taskkill //IM node.exe //F` in bash — the bash version has been observed to time out on this codebase. PowerShell node-kill also disconnects MCP servers running under node; they reconnect on next use.
 
 2. **Confirm ports are free** before starting anything new:
+
    ```bash
    curl -s -o /dev/null -w "Frontend: %{http_code}\n" http://localhost:3000
    curl -s -o /dev/null -w "Backend: %{http_code}\n" http://localhost:3001/api/docs
    ```
+
    Both must return `000` (no listener). A `200` means orphans are still alive — re-run the kill until they're gone.
 
-3. **Start ONE `dev:fresh`** in background:
-   ```bash
-   cd D:/projects/rei-platform && npm run dev:fresh
+3. **Start ONE `dev:fresh`** in a detached window (not an agent `run_in_background` Bash task — see **Detached-Window Persistence** below for why):
+
+   ```powershell
+   Start-Process powershell -ArgumentList '-NoExit','-Command',"`$env:PATH = 'D:\Program Files\Git\bin;D:\Program Files\Git\usr\bin;' + `$env:PATH; cd 'D:\projects\rei-platform'; npm run dev:fresh" -WindowStyle Normal -PassThru | Select-Object -ExpandProperty Id
    ```
-   Run with `run_in_background: true`.
+
+   Note the printed PID — it's the detached window's process, useful for later verification.
 
 4. **Verify single instance per port** after boot:
    ```bash
@@ -59,15 +65,19 @@ Manages Redis (Docker, port 6379), frontend (Next.js, port 3000), and backend (N
 
 ## Startup Procedure
 
-### Recommended: Fresh Start with Crash Recovery
+### Recommended: Fresh Start with Crash Recovery (DEFAULT: detached window)
 
-Starts Redis Docker container, clears ports, kills stale processes, starts all servers, auto-restarts on crash (5 retries, 3s delay):
+Starts Redis Docker container, clears ports, kills stale processes, starts all servers, auto-restarts on crash (5 retries, 3s delay). **Launch this in a detached, independent terminal window — not an agent `run_in_background` Bash task.** A detached window is a top-level OS process, not a child of the Claude Code session, so the whole `concurrently` tree survives session/task teardown and long idle gaps (see **Detached-Window Persistence** below). Everything — Redis log tail, video-template watch, backend, frontend — runs multiplexed inside that ONE window via `concurrently`, color-prefixed per service.
 
-```bash
-cd D:/projects/rei-platform && npm run dev:fresh
+```powershell
+Start-Process powershell -ArgumentList '-NoExit','-Command',"`$env:PATH = 'D:\Program Files\Git\bin;D:\Program Files\Git\usr\bin;' + `$env:PATH; cd 'D:\projects\rei-platform'; npm run dev:fresh" -WindowStyle Normal -PassThru | Select-Object -ExpandProperty Id
 ```
 
-Run with `run_in_background: true` — this is a long-running process.
+**Why prepend Git's bin dirs to PATH — CRITICAL, do not skip:** a fresh Windows process resolves the bare `bash` command to the **WSL launcher** (`C:\WINDOWS\system32\bash.exe`), not Git Bash. `npm run dev:fresh` runs `bash scripts/dev-start.sh`, and under WSL that fails instantly with `/bin/bash: scripts/dev-start.sh: No such file or directory` (WSL has a different filesystem view and can't see the Windows path). The window stays open (`-NoExit`) showing the error, but **no node process ever starts** — ports 3000/3001 sit at `000` indefinitely with no other symptom, and this is easy to miss since the window visibly opened. Without the PATH prepend, this launch silently does nothing. Diagnosed 2026-07-15.
+
+After launching, boot takes 15–30s (compiling). Poll with a one-shot wait (e.g. the Monitor tool's `until curl ...; do sleep 2; done` pattern, or a couple of spaced-out one-shot curl checks) rather than assuming success because the window opened. If ports are still `000` after ~30–45s, check `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` — zero node processes found usually means the PATH/WSL issue above; a `concurrently` process present but ports still down means it's still compiling or genuinely wedged.
+
+Fall back to an agent `run_in_background` Bash task, or to asking the user to run `npm run dev:fresh` in a terminal they open themselves, only if the user explicitly says that's fine for the current session.
 
 The script automatically:
 
@@ -110,7 +120,7 @@ Use when ports refuse to free, zombie processes persist, or as step 1 of the **R
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
-Then re-run `npm run dev:fresh`.
+Then re-launch in a detached window (see **Recommended: Fresh Start** above) — not an agent background task.
 
 ### Verify Servers Are Running
 
@@ -120,7 +130,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/docs 2>/dev/nul
 docker exec rei-redis redis-cli ping 2>/dev/null && echo " Redis OK" || echo " Redis DOWN (informational locally — backend runs without it)"
 ```
 
-**Caution:** A `200` response only proves *something* is listening on that port — it does not prove that the listener is the `dev:fresh` you just started. After a restart, also run the netstat check from the Restart Workflow to confirm the listener PID belongs to the new tree.
+**Caution:** A `200` response only proves _something_ is listening on that port — it does not prove that the listener is the `dev:fresh` you just started. After a restart, also run the netstat check from the Restart Workflow to confirm the listener PID belongs to the new tree.
 
 ## Health-Check Semantics — a status code is not health
 
@@ -158,6 +168,7 @@ Error: ENOENT: no such file or directory, open '…\packages\frontend\.next\dev\
 The two recovery paths race each other on cold start: the curl probe sees a non-200 during boot, kills the still-starting PID, and spawns a parallel `nohup npm` process while `concurrently` is also retrying — producing zombie node trees, double-bound ports, and EADDRINUSE storms. Real-world incident: ~120 zombie node processes + 18 orphaned `nest.js start --watch` pairs in one ~65-min editing session.
 
 **Rules:**
+
 - NEVER write a `while true; do curl … taskkill … nohup npm … & done` loop on top of `dev:fresh`. Period.
 - NEVER use `TaskStop <task_id>` alone as a restart — see the **Restart Rule** section. It only kills `concurrently` and orphans the children.
 - To check liveness on demand, run the one-shot **Verify Servers Are Running** block above — single execution, no loop.
@@ -166,7 +177,9 @@ The two recovery paths race each other on cold start: the curl probe sees a non-
 
 **When servers seem flaky:** read the `dev:fresh` background output first — concurrently logs each retry attempt and the failure reason. The actual crash is usually a TS compile error or port conflict, not something a polling loop can fix.
 
-**In-session task vs dedicated terminal (persistence):** a `dev:fresh` started as an agent `run_in_background` task is tied to the agent/session lifecycle and can be terminated when that task is reaped — the **whole `concurrently` tree** dies at once, abruptly, mid-request, with **no app error and no `concurrently` teardown** in the log (the log just ends mid-line). Distinguish reap vs crash: a crash logs a stack trace or `concurrently`'s `--> Sending SIGTERM to other processes`; a reap leaves the log ending cleanly mid-line. If the servers must survive long idle gaps, have the **user run `npm run dev:fresh` in their own terminal window** — that is decoupled from the agent and immune to anything on the agent side. Verify from the agent with the one-shot health block; don't relaunch in a loop.
+**Detached-Window Persistence (DEFAULT launch method):** a `dev:fresh` started as an agent `run_in_background` Bash task is tied to the agent/session lifecycle and can be terminated when that task is reaped — the **whole `concurrently` tree** dies at once, abruptly, mid-request, with **no app error and no `concurrently` teardown** in the log (the log just ends mid-line). Worse, the task status can falsely report `killed`/`failed` while the tree actually survives detached and keeps serving fine — don't trust the task status; verify the process list (`Get-CimInstance Win32_Process -Filter "Name='node.exe'"`) and curl before concluding either way. Distinguish reap vs crash: a crash logs a stack trace or `concurrently`'s `--> Sending SIGTERM to other processes`; a reap leaves the log ending cleanly mid-line.
+
+Default to launching `dev:fresh` yourself in a **detached PowerShell window** via `Start-Process` (see **Recommended: Fresh Start** above), not an agent `run_in_background` task. A `Start-Process` window is a top-level OS process, not a child of the Claude Code session — it survives session/task teardown and long idle gaps with no action needed from the user. This is the default precisely because a past agent `run_in_background` task got reaped mid-session (2026-07-15) right after being warned about this exact risk. Remember the **Git-Bash-vs-WSL PATH gotcha** documented above — without it the detached window opens but never actually starts anything. Only fall back to an agent `run_in_background` task, or to asking the user to run `npm run dev:fresh` in a terminal they open themselves, if the user explicitly says that's fine for the current session. Verify from the agent with the one-shot health block; don't relaunch in a loop.
 
 ## When Restart Is Needed
 
@@ -181,21 +194,22 @@ The two recovery paths race each other on cold start: the curl probe sees a non-
 
 ## Troubleshooting
 
-| Symptom | Fix |
-| --- | --- |
-| "Port already in use" / EADDRINUSE | Restart Workflow (PowerShell node-kill → confirm 000 → `dev:fresh`); orphans from a prior `TaskStop` are the usual cause |
-| Frontend 500 / "Internal Server Error" on every route; log shows `ENOENT … .next-dev/dev/routes-manifest.json` | Rare since dev moved to `.next-dev` (2026-06-27). Means the next.config isolation was reverted or a build targeted `.next-dev`. Fix: kill node → `rm -rf packages/frontend/.next-dev` → `dev:fresh` |
-| Frontend port LISTENING but `curl` returns `000` (even after 45s) | Wedged `next dev` — not dead, not compiling. Nuclear restart. See **Health-Check Semantics** |
-| Backend up (3001→200) but frontend gone (3000→000) after a kill/`TaskStop` | Asymmetric orphan — `nest --watch` resurrected the backend, `next dev` died. Nuclear-kill ALL node, then `dev:fresh`. Don't just start the frontend |
-| SSR shows new code but browser DOM is stale | Orphaned webpack workers locked `.next`. `Get-Process node \| Stop-Process -Force` (PowerShell) then `dev:fresh` (wipes `.next`) |
-| Backend on wrong port (3005) | Check `packages/backend/.env` has `PORT=3001` |
-| Frontend can't reach backend | Verify `NEXT_PUBLIC_API_URL=http://localhost:3001` in frontend `.env.local` |
-| Backend won't start / `npm install` hangs / `UNABLE_TO_VERIFY_LEAF_SIGNATURE` | Norton intercepts node TLS. Ensure `NODE_OPTIONS=--use-system-ca` is set (Windows User env); `dev:fresh`'s backend already passes it via cross-env |
-| Server crashes immediately on boot | Read the `dev:fresh` background log for the TS compile error. Do NOT run `npm run build -w web` to "check" — it clobbers the dev `.next` (see Frontend 500). For a standalone build use `NEXT_DIST_DIR=.next-verify`. Backend-only standalone check: `npm run build -w backend` |
-| Zombie processes after Ctrl+C | `Get-Process node \| Stop-Process -Force` (PowerShell) then restart |
-| Redis not connecting | `docker logs rei-redis` to check container health |
-| Redis container missing | `docker run -d --name rei-redis -p 6379:6379 --restart unless-stopped redis:7-alpine` |
-| Backend logs "REDIS_URL not configured" | Restart via `dev:fresh` (auto-sets REDIS_URL) or export `REDIS_URL=redis://localhost:6379` |
+| Symptom                                                                                                        | Fix                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Port already in use" / EADDRINUSE                                                                             | Restart Workflow (PowerShell node-kill → confirm 000 → `dev:fresh`); orphans from a prior `TaskStop` are the usual cause                                                                                                                                                        |
+| Frontend 500 / "Internal Server Error" on every route; log shows `ENOENT … .next-dev/dev/routes-manifest.json` | Rare since dev moved to `.next-dev` (2026-06-27). Means the next.config isolation was reverted or a build targeted `.next-dev`. Fix: kill node → `rm -rf packages/frontend/.next-dev` → `dev:fresh`                                                                             |
+| Frontend port LISTENING but `curl` returns `000` (even after 45s)                                              | Wedged `next dev` — not dead, not compiling. Nuclear restart. See **Health-Check Semantics**                                                                                                                                                                                    |
+| Backend up (3001→200) but frontend gone (3000→000) after a kill/`TaskStop`                                     | Asymmetric orphan — `nest --watch` resurrected the backend, `next dev` died. Nuclear-kill ALL node, then `dev:fresh`. Don't just start the frontend                                                                                                                             |
+| SSR shows new code but browser DOM is stale                                                                    | Orphaned webpack workers locked `.next`. `Get-Process node \| Stop-Process -Force` (PowerShell) then `dev:fresh` (wipes `.next`)                                                                                                                                                |
+| Backend on wrong port (3005)                                                                                   | Check `packages/backend/.env` has `PORT=3001`                                                                                                                                                                                                                                   |
+| Frontend can't reach backend                                                                                   | Verify `NEXT_PUBLIC_API_URL=http://localhost:3001` in frontend `.env.local`                                                                                                                                                                                                     |
+| Backend won't start / `npm install` hangs / `UNABLE_TO_VERIFY_LEAF_SIGNATURE`                                  | Norton intercepts node TLS. Ensure `NODE_OPTIONS=--use-system-ca` is set (Windows User env); `dev:fresh`'s backend already passes it via cross-env                                                                                                                              |
+| Server crashes immediately on boot                                                                             | Read the `dev:fresh` background log for the TS compile error. Do NOT run `npm run build -w web` to "check" — it clobbers the dev `.next` (see Frontend 500). For a standalone build use `NEXT_DIST_DIR=.next-verify`. Backend-only standalone check: `npm run build -w backend` |
+| Zombie processes after Ctrl+C                                                                                  | `Get-Process node \| Stop-Process -Force` (PowerShell) then restart                                                                                                                                                                                                             |
+| Redis not connecting                                                                                           | `docker logs rei-redis` to check container health                                                                                                                                                                                                                               |
+| Redis container missing                                                                                        | `docker run -d --name rei-redis -p 6379:6379 --restart unless-stopped redis:7-alpine`                                                                                                                                                                                           |
+| Backend logs "REDIS_URL not configured"                                                                        | Restart via `dev:fresh` (auto-sets REDIS_URL) or export `REDIS_URL=redis://localhost:6379`                                                                                                                                                                                      |
+| Detached `Start-Process` window opens but zero `node.exe` processes and ports stay `000` after ~30s            | `bash` resolved to WSL's launcher instead of Git Bash inside that window, so `npm run dev:fresh` failed instantly. Relaunch with Git's bin dirs prepended to that window's PATH (see **Recommended: Fresh Start**)                                                              |
 
 ## Port Config Files
 

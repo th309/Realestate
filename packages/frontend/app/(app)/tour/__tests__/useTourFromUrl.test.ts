@@ -4,15 +4,21 @@ import { useTourFromUrl } from "../hooks/useTourFromUrl";
 
 const pushSpy = vi.fn();
 let currentParams = "";
+// Rehydration only resumes a stored tour when still on that tour's market
+// page (see useTourFromUrl.ts) — default to the fixture market's page so the
+// sessionStorage-rehydration tests below match that guard.
+let currentPathname = "/market/39580";
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(currentParams),
   useRouter: () => ({ push: pushSpy }),
+  usePathname: () => currentPathname,
 }));
 
 describe("useTourFromUrl", () => {
   beforeEach(() => {
     pushSpy.mockClear();
     currentParams = "";
+    currentPathname = "/market/39580";
     window.sessionStorage.clear();
   });
 

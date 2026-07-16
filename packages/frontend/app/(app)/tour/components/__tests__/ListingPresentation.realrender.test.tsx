@@ -136,8 +136,9 @@ describe("ListingPresentation — real backend data (no section mocks)", () => {
 
   it("maps the raw score → the display label (exec-summary really rendered)", () => {
     render(<ListingPresentation {...props} />);
-    // getScoreLabel(72) === "GOOD" — proves the raw ScoreResult was mapped, not crashed on.
-    expect(screen.getByText("GOOD")).toBeInTheDocument();
+    // getScoreLabel(72) === "RISING" (momentum label, not a quality grade —
+    // see CLAUDE.md §9) — proves the raw ScoreResult was mapped, not crashed on.
+    expect(screen.getByText("RISING")).toBeInTheDocument();
   });
 
   it("maps the metricsBatch Record → market-now stats", () => {

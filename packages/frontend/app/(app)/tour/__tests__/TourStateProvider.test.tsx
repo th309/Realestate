@@ -8,6 +8,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/tour",
 }));
 
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({ user: null, session: null, loading: false }),
+}));
+
 function Probe() {
   const { session } = useTour();
   return <div data-testid="phase">{session.phase}</div>;
