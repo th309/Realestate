@@ -3,12 +3,13 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScopeQueryDto } from './market-explorer.dto';
 import { ScopeSeriesResponse } from './market-explorer.types';
-import { resolveChildRegions } from './resolve-child-regions';
+import { resolveChildRegionsWithCount } from './resolve-child-regions';
 import { resolveNearbyRegions } from './resolve-nearby-regions';
 import { fetchMetricSeriesForRegions } from './fetch-metric-series';
 import { fetchStateMetricSeries } from './fetch-state-series';
 import { stateRegions } from './us-states';
-import { alignSeriesToAxis } from './align-series';
+import { alignAndMergeMetrics } from './merge-metric-series';
+import { FETCHED_METRICS } from './market-explorer-metrics';
 
 /** First-of-month ISO string `months` months back from today (inclusive window start). */
 function windowStart(months: number): string {
@@ -31,18 +32,20 @@ export class MarketExplorerService {
     const startDate = windowStart(dto.months);
 
     let regions;
-    let rows;
+    let totalAvailable: number | undefined;
     if (geoLevel === 'state') {
       regions = stateRegions();
-      rows = await fetchStateMetricSeries(this.supabase, dto.metric, startDate);
     } else {
-      regions = await resolveChildRegions(
+      const resolved = await resolveChildRegionsWithCount(
         this.supabase,
         geoLevel,
         dto.parentLevel,
         dto.parentId,
         !!dto.includeNearby,
       );
+      regions = resolved.regions;
+      if (resolved.totalAvailable > regions.length)
+        totalAvailable = resolved.totalAvailable;
       if (dto.includeNearby) {
         const nearby = await resolveNearbyRegions(
           this.supabase,
@@ -53,24 +56,34 @@ export class MarketExplorerService {
         const have = new Set(regions.map((r) => r.id));
         regions = [...regions, ...nearby.filter((n) => !have.has(n.id))];
       }
-      rows = await fetchMetricSeriesForRegions(
-        this.supabase,
-        dto.metric,
-        geoLevel,
-        regions.map((r) => r.id),
-        startDate,
-      );
     }
 
-    const { dates, series } = alignSeriesToAxis(rows, dto.months);
+    const regionIds = regions.map((r) => r.id);
+    const perMetric = await Promise.all(
+      FETCHED_METRICS.map(async (metric) => ({
+        metric,
+        rows:
+          geoLevel === 'state'
+            ? await fetchStateMetricSeries(this.supabase, metric, startDate)
+            : await fetchMetricSeriesForRegions(
+                this.supabase,
+                metric,
+                geoLevel,
+                regionIds,
+                startDate,
+              ),
+      })),
+    );
+
+    const { dates, series } = alignAndMergeMetrics(perMetric, dto.months);
     return {
       success: true,
       geoLevel,
-      metric: dto.metric,
       months: dto.months,
       dates,
       regions,
       series,
+      ...(totalAvailable != null ? { totalAvailable } : {}),
     };
   }
 }

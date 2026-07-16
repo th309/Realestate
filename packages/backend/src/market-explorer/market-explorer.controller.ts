@@ -22,7 +22,7 @@ export class MarketExplorerController {
   @Get('scope/:geoLevel')
   @ApiOperation({
     summary:
-      'One metric across all child regions of a scope, aligned to a shared monthly axis',
+      'All 8 tracked metrics across every child region of a scope, aligned to a shared monthly axis',
   })
   @ApiParam({ name: 'geoLevel', enum: [...SCOPE_GEO_LEVELS] })
   async getScope(

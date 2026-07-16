@@ -1,6 +1,7 @@
 /**
  * MARKET EXPLORER FETCHER
- * One metric across all child regions of a scope, aligned to a shared monthly axis.
+ * All 8 core metrics across all child regions of a scope, aligned to one
+ * shared monthly axis, in a single request.
  * GET /api/market-explorer/scope/:geoLevel
  */
 import { fetchAPIWithParams } from "./base";
@@ -18,17 +19,18 @@ export interface ScopeRegion {
 export interface ScopeSeriesResponse {
   success: true;
   geoLevel: string;
-  metric: string;
   months: number;
   dates: string[];
   regions: ScopeRegion[];
-  series: Record<string, (number | null)[]>;
+  /** series[metric][regionId] = aligned monthly values */
+  series: Record<string, Record<string, (number | null)[]>>;
+  /** Present only when the roster was capped below the true count (ZIP tier). */
+  totalAvailable?: number;
 }
 
 export interface ScopeQuery {
   parentLevel?: "state" | "metro" | "county";
   parentId?: string;
-  metric: string;
   months: number;
   includeNearby?: boolean;
 }
@@ -42,7 +44,6 @@ export async function fetchScopeSeries(
     {
       parentLevel: query.parentLevel,
       parentId: query.parentId,
-      metric: query.metric,
       months: query.months,
       includeNearby: query.includeNearby ? "true" : undefined,
     },
