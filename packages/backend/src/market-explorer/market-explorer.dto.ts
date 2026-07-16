@@ -15,9 +15,6 @@ export class ScopeQueryDto {
   @IsString()
   parentId?: string;
 
-  @IsString()
-  metric!: string;
-
   @Type(() => Number)
   @IsInt()
   @Min(1)

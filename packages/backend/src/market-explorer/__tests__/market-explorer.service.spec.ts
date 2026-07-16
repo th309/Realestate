@@ -1,7 +1,7 @@
 import { MarketExplorerService } from '../market-explorer.service';
 
 describe('MarketExplorerService.getScopeSeries', () => {
-  it('state scope: uses stateRegions + RPC and aligns to a shared axis', async () => {
+  it('state scope: uses stateRegions + RPC and returns a combined multi-metric response, no totalAvailable', async () => {
     const supabase = {
       rpc: jest.fn().mockResolvedValue({
         data: [
@@ -11,58 +11,214 @@ describe('MarketExplorerService.getScopeSeries', () => {
         ],
         error: null,
       }),
+      from: () => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        gte() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        range: async () => ({ data: [], error: null }),
+      }),
     } as any;
     const service = new MarketExplorerService(supabase);
-    const res = await service.getScopeSeries('state', {
-      metric: 'propertyiq_score',
-      months: 3,
-    } as any);
+    const res = await service.getScopeSeries('state', { months: 3 } as any);
     expect(res.regions.length).toBe(51);
     expect(res.dates).toEqual(['2026-03-01', '2026-04-01', '2026-05-01']);
-    expect(res.series['48']).toEqual([null, 54, 55]);
-    expect(res.series['06']).toEqual([null, null, 60]);
+    expect(res.series.propertyiq_score['48']).toEqual([null, 54, 55]);
+    expect(res.series.propertyiq_score['06']).toEqual([null, null, 60]);
+    expect(Object.keys(res.series).sort()).toEqual(
+      [
+        'days_on_market',
+        'for_sale_inventory',
+        'home_sales',
+        'home_value',
+        'hotness_score',
+        'new_listings',
+        'propertyiq_score',
+        'rent_index',
+      ].sort(),
+    );
+    expect((res as any).metric).toBeUndefined();
+    expect(res.totalAvailable).toBeUndefined();
   });
 
-  it('national metro scope: roster from screener_snapshot, series from the metric table', async () => {
-    const builder = (rows: any[]) => {
-      const b: any = {
-        select: () => b,
-        eq: () => b,
-        in: () => b,
-        gte: () => b,
-        not: () => b,
-        order: () => b,
-        limit: () => b,
-        range: async (from: number) => ({
-          data: from === 0 ? rows : [],
-          error: null,
-        }),
-        then: (r: any) => Promise.resolve({ data: rows, error: null }).then(r),
-      };
-      return b;
-    };
+  it('national metro scope: roster from screener_snapshot, at least one metric series populated per region', async () => {
+    let snapshotCalls = 0;
     const supabase = {
-      from: (table: string) =>
-        table === 'screener_snapshot'
-          ? builder([
-              {
-                region_id: '35620',
-                region_name: 'New York',
-                state_code: 'NY',
-                population: 20000000,
-              },
-            ])
-          : builder([
-              { cbsa_code: '35620', period_date: '2026-05-01', value: 700000 },
-            ]),
       rpc: jest.fn(),
+      from: (table: string) => {
+        if (table === 'screener_snapshot') {
+          return {
+            select() {
+              return this;
+            },
+            eq() {
+              return this;
+            },
+            order() {
+              return this;
+            },
+            range: async (from: number) => {
+              snapshotCalls++;
+              return {
+                data:
+                  from === 0
+                    ? [
+                        {
+                          region_id: '35620',
+                          region_name: 'New York',
+                          state_code: 'NY',
+                          population: 20000000,
+                        },
+                      ]
+                    : [],
+                error: null,
+              };
+            },
+          };
+        }
+        if (table === 'propertyiq_scores') {
+          return {
+            select() {
+              return this;
+            },
+            in() {
+              return this;
+            },
+            gte() {
+              return this;
+            },
+            eq() {
+              return this;
+            },
+            order() {
+              return this;
+            },
+            range: async (from: number) => ({
+              data:
+                from === 0
+                  ? [
+                      {
+                        location_id: '35620',
+                        score_date: '2026-05-01',
+                        score: 65,
+                      },
+                    ]
+                  : [],
+              error: null,
+            }),
+          };
+        }
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          in() {
+            return this;
+          },
+          gte() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          range: async () => ({ data: [], error: null }),
+        };
+      },
     } as any;
     const service = new MarketExplorerService(supabase);
-    const res = await service.getScopeSeries('metro', {
-      metric: 'home_value',
-      months: 2,
-    } as any);
+    const res = await service.getScopeSeries('metro', { months: 2 } as any);
     expect(res.regions[0].id).toBe('35620');
-    expect(res.series['35620'][res.dates.length - 1]).toBe(700000);
+    expect(snapshotCalls).toBeGreaterThan(0);
+    expect(Object.keys(res.series)).toContain('propertyiq_score');
+    expect(res.series.propertyiq_score['35620']).toEqual([null, 65]);
+    expect(res.totalAvailable).toBeUndefined(); // national metro is uncapped, so no cap was applied
+  });
+
+  it('zip scope: includes totalAvailable when the roster was actually capped', async () => {
+    const supabase = {
+      rpc: jest.fn(),
+      from: (table: string) => {
+        if (table === 'geography_crosswalk') {
+          return {
+            select: () => ({
+              eq: () => ({
+                not: () => ({
+                  limit: async () => ({
+                    data: Array.from({ length: 90 }, (_, i) => ({
+                      zip_code: `Z${i}`,
+                    })),
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'screener_snapshot') {
+          return {
+            select: (_cols: string, opts?: { count?: string }) => {
+              if (opts?.count) {
+                return {
+                  eq: () => ({ in: async () => ({ count: 90, error: null }) }),
+                };
+              }
+              return {
+                eq: () => ({
+                  in: async (_c: string, ids: string[]) => ({
+                    data: ids.slice(0, 70).map((id, i) => ({
+                      region_id: id,
+                      region_name: id,
+                      state_code: 'CA',
+                      population: 90 - i,
+                    })),
+                    error: null,
+                  }),
+                }),
+              };
+            },
+          };
+        }
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          in() {
+            return this;
+          },
+          gte() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          range: async () => ({ data: [], error: null }),
+        };
+      },
+    } as any;
+    const service = new MarketExplorerService(supabase);
+    const res = await service.getScopeSeries('zip', {
+      parentLevel: 'county',
+      parentId: '06037',
+      months: 1,
+    } as any);
+    expect(res.regions.length).toBe(70);
+    expect(res.totalAvailable).toBe(90);
   });
 });
