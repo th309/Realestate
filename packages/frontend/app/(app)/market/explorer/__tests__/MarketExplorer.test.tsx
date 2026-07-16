@@ -28,6 +28,7 @@ const TWO_MONTH_SCOPE = {
     home_sales: { "35620": [8000, 8100], "31080": [4600, 4700] },
     propertyiq_score: { "35620": [72, 74], "31080": [58, 60] },
   },
+  totalAvailable: undefined,
   isLoading: false,
   error: null,
 };
@@ -89,6 +90,7 @@ describe("MarketExplorer", () => {
         home_sales: { "35620": [8000, 8100, 8200] },
         propertyiq_score: { "35620": [72, 74, null] },
       },
+      totalAvailable: undefined,
       isLoading: false,
       error: null,
     });
@@ -119,6 +121,7 @@ describe("MarketExplorer", () => {
       dates: [],
       regions: [],
       series: {},
+      totalAvailable: undefined,
       isLoading: false,
       error: new Error("network down"),
     });
