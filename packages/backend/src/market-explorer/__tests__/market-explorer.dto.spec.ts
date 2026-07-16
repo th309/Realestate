@@ -23,6 +23,12 @@ describe('ScopeQueryDto', () => {
     expect(errors.some((e) => e.property === 'months')).toBe(true);
   });
 
+  it('rejects a missing months', async () => {
+    const dto = plainToInstance(ScopeQueryDto, {});
+    const errors = await validate(dto);
+    expect(errors.some((e) => e.property === 'months')).toBe(true);
+  });
+
   it('rejects an unknown parentLevel', async () => {
     const dto = plainToInstance(ScopeQueryDto, {
       parentLevel: 'planet',
