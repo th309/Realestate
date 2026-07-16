@@ -20,7 +20,7 @@ export function alignSeriesToAxis(
   months: number,
   anchorDate?: string,
 ): { dates: string[]; series: Record<string, (number | null)[]> } {
-  if (!rows.length) return { dates: [], series: {} };
+  if (!rows.length && !anchorDate) return { dates: [], series: {} };
 
   const allMonths = [...new Set(rows.map((r) => monthKey(r.date)))].sort();
   const latestMonth = anchorDate
