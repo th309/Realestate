@@ -123,9 +123,12 @@ describe("MarketExplorer", () => {
     ).toBeNull();
   });
 
-  it("hides the dashboard CTA at state scope (Map view has no per-state dashboard page)", () => {
+  it("hides the dashboard CTA at state scope (states have no per-state dashboard page)", () => {
     render(<MarketExplorer />);
-    fireEvent.click(screen.getByText("Map"));
+    // The "State" level tab, not the Bubbles/Map quick toggle — toggling Map
+    // alone must keep the current root level (e.g. stay on Metro) rather
+    // than forcing state scope; only the level tab actually switches level.
+    fireEvent.click(screen.getByText("State"));
     expect(
       screen.queryByRole("button", { name: /Open full market dashboard/i }),
     ).toBeNull();
@@ -177,6 +180,24 @@ describe("MarketExplorer", () => {
       undefined,
       undefined,
       undefined,
+      expect.any(Array),
+    );
+  });
+
+  it("the \"ZIP\" level tab jumps straight into the selected county's ZIPs from a metro's county view, without a second drill-in click", () => {
+    render(<MarketExplorer />);
+    const titleEl = Array.from(document.querySelectorAll("circle title")).find(
+      (el) => el.textContent?.includes("New York"),
+    );
+    fireEvent.doubleClick(titleEl!.parentElement!); // metro -> county; New York is auto-selected
+
+    fireEvent.click(screen.getByText("ZIP")); // level tab, not a second bubble drill
+
+    expect(mockUseGeoBoundaries).toHaveBeenLastCalledWith(
+      "zip",
+      "county",
+      "35620",
+      "NY",
       expect.any(Array),
     );
   });

@@ -9,7 +9,7 @@ const base = {
   ],
   xByRegion: { A: 300000, B: 900000 },
   yByRegion: { A: 55, B: 42 },
-  scoreByRegion: { A: 60, B: 40 },
+  colorByRegion: { A: 60, B: 40 },
   radiusByRegion: { A: 1000, B: 3000 },
   axisLabel: "Momentum score (1–99)",
   format: "index" as const,
@@ -47,5 +47,16 @@ describe("BubbleChart", () => {
     );
     const circle = container.querySelector("circle");
     expect(circle?.getAttribute("fill-opacity")).toBe("0.38");
+  });
+
+  it("bubble fill tracks colorByRegion, not a value frozen to one metric — the bug this fixes", () => {
+    const props = { ...base, colorByRegion: { A: 0, B: 100 } };
+    const { container } = render(
+      <BubbleChart {...props} onSelect={() => {}} onDrill={() => {}} />,
+    );
+    const circles = container.querySelectorAll("circle");
+    expect(circles[0].getAttribute("fill")).not.toBe(
+      circles[1].getAttribute("fill"),
+    );
   });
 });

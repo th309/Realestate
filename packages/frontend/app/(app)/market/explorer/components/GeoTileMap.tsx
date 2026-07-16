@@ -7,7 +7,9 @@ import type { GeoBoundaries, BoundaryFeature } from "../lib/useGeoBoundaries";
 
 export interface GeoTileMapProps {
   boundaries: GeoBoundaries;
-  scoreByRegion: Record<string, number | null>;
+  /** 0-100 color scalar for the CURRENTLY selected metric (see
+   * `metricColorScalars`) — not the PropertyIQ Score. */
+  colorByRegion: Record<string, number | null>;
   valueByRegion: Record<string, number | null>;
   format: ExplorerFormat;
   selectedId: string | null;
@@ -22,6 +24,19 @@ export interface GeoTileMapProps {
  * legible labeled tiles there were ~32px).
  */
 const MIN_LABEL_SIZE = 14;
+
+/**
+ * Fixed on-screen frame height for every scope. `useGeoBoundaries` fits each
+ * scope's bbox to `SIZE` (900) along its OWN longer axis, so a portrait-shaped
+ * metro/county (height is the longer axis) produces a viewBox many times
+ * taller, relative to its width, than a landscape one like the national map.
+ * Without a fixed height, `width="100%"` + no `height` lets the SVG's
+ * intrinsic aspect ratio dictate its rendered height, so the map ballooned to
+ * 3x the normal height for portrait scopes. `preserveAspectRatio="xMidYMid
+ * meet"` (the default) letterboxes/pillarboxes content within this fixed
+ * frame instead, keeping the map the same size at every scope.
+ */
+const MAP_FRAME_HEIGHT = 580;
 
 function pathExtent(d: string): { w: number; h: number } {
   const nums = d.match(/-?\d+\.?\d*/g)?.map(Number) ?? [];
@@ -56,7 +71,7 @@ function centroid(d: string): [number, number] {
 export function GeoTileMap(props: GeoTileMapProps) {
   const {
     boundaries,
-    scoreByRegion,
+    colorByRegion,
     valueByRegion,
     format,
     selectedId,
@@ -91,6 +106,8 @@ export function GeoTileMap(props: GeoTileMapProps) {
     <svg
       viewBox={`0 0 ${boundaries.viewBoxWidth} ${boundaries.viewBoxHeight}`}
       width="100%"
+      height={MAP_FRAME_HEIGHT}
+      preserveAspectRatio="xMidYMid meet"
       style={{ display: "block" }}
     >
       {boundaries.parentOutline && (
@@ -100,14 +117,15 @@ export function GeoTileMap(props: GeoTileMapProps) {
         />
       )}
       {boundaries.features.map((feature: BoundaryFeature) => {
-        // Missing score is a COLOR fallback only, never a visibility gate —
-        // this is the fix for the StateTileMap bug: a region's real value
-        // for the selected metric must always render if present, regardless
-        // of whether PropertyIQ Score (a metro-aggregated, often-null value)
-        // happens to exist. Mirrors BubbleChart's `scoreByRegion[id] ?? 50`.
-        const score = scoreByRegion[feature.id] ?? 50;
+        // Missing color scalar is a COLOR fallback only, never a visibility
+        // gate — this is the fix for the StateTileMap bug: a region's real
+        // value for the selected metric must always render if present,
+        // regardless of whether its color scalar could be computed (e.g. no
+        // other regions in view to derive dynamic bounds from). Mirrors
+        // BubbleChart's `colorByRegion[id] ?? 50`.
+        const colorScalar = colorByRegion[feature.id] ?? 50;
         const value = valueByRegion[feature.id];
-        const color = getScoreColor(score, 100);
+        const color = getScoreColor(colorScalar, 100);
         const sel = feature.id === selectedId;
         const { w, h } = pathExtent(feature.path);
         const canLabel = w >= MIN_LABEL_SIZE && h >= MIN_LABEL_SIZE;

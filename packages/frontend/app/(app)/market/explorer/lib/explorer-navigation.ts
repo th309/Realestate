@@ -38,6 +38,9 @@ export function buildLevelTabs(
   state: ExplorerState,
   scopeGeoLevel: ExplorerGeoLevel,
   dispatch: Dispatch,
+  /** Drills into the currently selected entity (same DRILL path a map/bubble
+   * double-click uses). Null when there's nothing selected to drill into. */
+  onDrillSelected: (() => void) | null,
 ): LevelTab[] {
   const crumbAt = (lvl: string) => state.path.findIndex((c) => c.level === lvl);
   const tab = (
@@ -47,31 +50,46 @@ export function buildLevelTabs(
     if (level === "state")
       return {
         label,
-        active: state.view === "map",
+        active: state.path.length === 0 && state.rootLevel === "state",
         enabled: true,
-        onClick: () => {
-          dispatch({ type: "RESET_NATIONAL" });
-          dispatch({ type: "SET_VIEW", view: "map" });
-        },
+        onClick: () => dispatch({ type: "RESET_NATIONAL", level: "state" }),
       };
     if (level === "metro")
       return {
         label,
-        active: scopeGeoLevel === "metro" && state.view !== "map",
+        active: scopeGeoLevel === "metro",
         enabled: true,
         onClick: () => {
           const i = crumbAt("state");
           if (i >= 0) dispatch({ type: "NAVIGATE_CRUMB", index: i });
-          else dispatch({ type: "RESET_NATIONAL" });
+          // Already at metro root (bubbles or map) — clicking the
+          // already-active tab must be a no-op, not silently force Map back
+          // to Bubbles. Only actually switching root levels (from State)
+          // needs the reset.
+          else if (state.rootLevel !== "metro")
+            dispatch({ type: "RESET_NATIONAL" });
         },
       };
-    const parent = level === "county" ? "metro" : "county";
-    const i = crumbAt(parent);
+    // "county" and "zip" share the same pattern: once the parent tier's
+    // crumb already exists, jump back to it. Otherwise — viewing the parent
+    // tier's list with one entity auto-selected — jump straight into that
+    // selection's children instead of forcing an extra "double-click to
+    // drill in first" step (County needs a metro crumb, ZIP needs a county
+    // crumb).
+    const parentLevel = level === "county" ? "metro" : "county";
+    const i = crumbAt(parentLevel);
+    if (i >= 0)
+      return {
+        label,
+        active: scopeGeoLevel === level,
+        enabled: true,
+        onClick: () => dispatch({ type: "NAVIGATE_CRUMB", index: i }),
+      };
     return {
       label,
-      active: scopeGeoLevel === level,
-      enabled: i >= 0,
-      onClick: () => i >= 0 && dispatch({ type: "NAVIGATE_CRUMB", index: i }),
+      active: false,
+      enabled: scopeGeoLevel === parentLevel && !!onDrillSelected,
+      onClick: () => onDrillSelected?.(),
     };
   };
   return [

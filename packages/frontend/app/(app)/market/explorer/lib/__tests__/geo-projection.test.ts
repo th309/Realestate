@@ -69,12 +69,27 @@ describe("mergeBbox", () => {
 
 describe("makeProjection", () => {
   it("scales to fit the target size along the longer axis and flips Y (latitude grows up, SVG grows down)", () => {
-    const bbox = { minX: 0, minY: 0, maxX: 10, maxY: 5 };
+    // Centered on the equator (midLat 0) so cos(midLat) === 1 and the
+    // longitude correction is a no-op — isolates the plain scale-to-fit math.
+    const bbox = { minX: 0, minY: -2.5, maxX: 10, maxY: 2.5 };
     const { project, width, height } = makeProjection(bbox, 100);
     expect(width).toBeCloseTo(100);
     expect(height).toBeCloseTo(50);
-    expect(project(0, 5)).toEqual([0, 0]);
-    expect(project(10, 0)).toEqual([100, 50]);
+    expect(project(0, 2.5)).toEqual([0, 0]);
+    expect(project(10, -2.5)).toEqual([100, 50]);
+  });
+
+  it("compresses longitude relative to latitude away from the equator (ground distance = degrees * cos(latitude))", () => {
+    // Equal degree spans in lon/lat, centered at 60°N: a naive projection
+    // would render a square; the real ground shape is wider than it is tall
+    // is WRONG — at 60°N a degree of longitude covers half the ground
+    // distance of a degree of latitude (cos(60°) = 0.5), so the correct
+    // render is narrower than it is tall.
+    const bbox = { minX: 0, minY: 55, maxX: 10, maxY: 65 };
+    const { width, height } = makeProjection(bbox, 100);
+    expect(height).toBeCloseTo(100); // latitude span is the longer axis after correction
+    expect(width).toBeCloseTo(100 * Math.cos((60 * Math.PI) / 180));
+    expect(width).toBeLessThan(height);
   });
 
   it("does not divide by zero for a degenerate (zero-area) bbox", () => {

@@ -9,6 +9,7 @@ import {
 } from "./explorer-config";
 import {
   metricSeriesFor,
+  metricColorScalars,
   scoreChip,
   formatExplorerValue,
   type SeriesByMetric,
@@ -38,7 +39,17 @@ export function buildBubbleScalars(
     scoreByRegion[e.id] = at(series.propertyiq_score?.[e.id], monthIndex);
     radiusByRegion[e.id] = lastNonNull(series.for_sale_inventory?.[e.id]);
   }
-  return { xByRegion, yByRegion, scoreByRegion, radiusByRegion };
+  // Color must track whichever metric is currently selected (yByRegion),
+  // not always PropertyIQ Score — scoreByRegion above stays the REAL score
+  // for the gauge/chips/momentum donut, which must never change with the
+  // metric switcher.
+  const cfg = EXPLORER_METRICS.find((m) => m.id === metricId)!;
+  const colorByRegion = metricColorScalars(
+    yByRegion,
+    cfg.format,
+    cfg.betterHigh,
+  );
+  return { xByRegion, yByRegion, scoreByRegion, radiusByRegion, colorByRegion };
 }
 
 export function buildLeaderboardRows(

@@ -45,9 +45,17 @@ export function mergeBbox(boxes: Bbox[]): Bbox {
 }
 
 /**
- * Simple equirectangular projection scaled to fit `targetSize` along the
- * bbox's longer axis. Y is flipped: latitude increases northward, SVG y
- * increases downward.
+ * Equirectangular projection scaled to fit `targetSize` along the bbox's
+ * longer axis. Y is flipped: latitude increases northward, SVG y increases
+ * downward.
+ *
+ * Longitude degrees are scaled by cos(midLatitude) before fitting — a degree
+ * of longitude spans less real ground distance than a degree of latitude
+ * everywhere except the equator (ground distance = degrees * cos(latitude)).
+ * Skipping this correction stretched every map horizontally (e.g. the
+ * contiguous US bbox is ~58° wide by ~25° tall in raw degrees — a naive
+ * unprojected fit renders it at a ~2.3:1 aspect ratio, visibly wider than a
+ * real US map's ~1.7-1.9:1).
  */
 export function makeProjection(
   bbox: Bbox,
@@ -57,12 +65,14 @@ export function makeProjection(
   width: number;
   height: number;
 } {
-  const w = bbox.maxX - bbox.minX;
+  const midLat = (bbox.minY + bbox.maxY) / 2;
+  const lonScale = Math.cos((midLat * Math.PI) / 180);
+  const w = (bbox.maxX - bbox.minX) * lonScale;
   const h = bbox.maxY - bbox.minY;
   const longerAxis = Math.max(w, h);
   const scale = longerAxis === 0 ? 1 : targetSize / longerAxis;
   const project = (lon: number, lat: number): [number, number] => [
-    (lon - bbox.minX) * scale,
+    (lon - bbox.minX) * lonScale * scale,
     (bbox.maxY - lat) * scale,
   ];
   return { project, width: w * scale, height: h * scale };

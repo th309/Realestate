@@ -197,3 +197,47 @@ export function formatExplorerValue(
       return `${value.toFixed(1)} mo`;
   }
 }
+
+/**
+ * Maps each region's raw value for the CURRENTLY selected metric onto a
+ * 0-100 scalar for `getScoreColor`, so the map/bubble color always reflects
+ * whatever metric is active — not a frozen, unrelated dimension.
+ *
+ * Bounds are dynamic per format (CLAUDE.md §1.1/§6 — never hardcode
+ * breakpoints): percent/percent_abs use the 5th-95th percentile (a few
+ * outlier metros shouldn't wash out the whole gradient); index uses the
+ * true min-max (PIQ score/hotness are already bounded 1-99); days/months use
+ * min-95th (a long tail of slow markets shouldn't compress the rest).
+ * Direction is flipped for "lower is better" metrics (days on market,
+ * months of supply) so green always means "good", not "numerically high".
+ */
+export function metricColorScalars(
+  valueByRegion: Record<string, number | null>,
+  format: ExplorerFormat,
+  betterHigh: boolean,
+): Record<string, number | null> {
+  const sorted = Object.values(valueByRegion)
+    .filter((v): v is number => v != null)
+    .sort((a, b) => a - b);
+  const result: Record<string, number | null> = {};
+  if (!sorted.length) {
+    for (const id of Object.keys(valueByRegion)) result[id] = null;
+    return result;
+  }
+  const n = sorted.length;
+  const at = (p: number) => sorted[Math.min(n - 1, Math.round(p * (n - 1)))];
+  const lo =
+    format === "percent" || format === "percent_abs" ? at(0.05) : sorted[0];
+  const hi = format === "index" ? sorted[n - 1] : at(0.95);
+  const span = hi - lo;
+  for (const [id, v] of Object.entries(valueByRegion)) {
+    if (v == null) {
+      result[id] = null;
+      continue;
+    }
+    const clamped = Math.min(hi, Math.max(lo, v));
+    const t = span === 0 ? 0.5 : (clamped - lo) / span;
+    result[id] = (betterHigh ? t : 1 - t) * 100;
+  }
+  return result;
+}
