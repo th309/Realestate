@@ -1880,6 +1880,14 @@
     "cbsaCode": "16620"
   },
   {
+    "fips": "48033",
+    "slug": "borden-county-tx",
+    "name": "Borden County",
+    "shortName": "Borden County, TX",
+    "state": "TX",
+    "cbsaCode": null
+  },
+  {
     "fips": "48035",
     "slug": "bosque-county-tx",
     "name": "Bosque County",
@@ -7728,20 +7736,20 @@
     "cbsaCode": "34420"
   },
   {
-    "fips": "51067",
-    "slug": "franklin-county-va",
-    "name": "Franklin County",
-    "shortName": "Franklin County, VA",
-    "state": "VA",
-    "cbsaCode": "40220"
-  },
-  {
     "fips": "51620",
     "slug": "franklin-county-va",
     "name": "Franklin County",
     "shortName": "Franklin County, VA",
     "state": "VA",
     "cbsaCode": "47260"
+  },
+  {
+    "fips": "51067",
+    "slug": "franklin-county-va",
+    "name": "Franklin County",
+    "shortName": "Franklin County, VA",
+    "state": "VA",
+    "cbsaCode": "40220"
   },
   {
     "fips": "50011",
