@@ -432,6 +432,15 @@
     "cbsaCode": "44140"
   },
   {
+    "zip": "01088",
+    "slug": "01088-west-hatfield-ma",
+    "name": "01088 (West Hatfield)",
+    "shortName": "01088, West Hatfield, MA",
+    "state": "MA",
+    "countyFips": "25015",
+    "cbsaCode": "11200"
+  },
+  {
     "zip": "01089",
     "slug": "01089-west-springfield-ma",
     "name": "01089 (West Springfield)",
@@ -544,6 +553,15 @@
     "slug": "01109-springfield-ma",
     "name": "01109 (Springfield)",
     "shortName": "01109, Springfield, MA",
+    "state": "MA",
+    "countyFips": "25013",
+    "cbsaCode": "44140"
+  },
+  {
+    "zip": "01116",
+    "slug": "01116-longmeadow-ma",
+    "name": "01116 (Longmeadow)",
+    "shortName": "01116, Longmeadow, MA",
     "state": "MA",
     "countyFips": "25013",
     "cbsaCode": "44140"
@@ -949,6 +967,15 @@
     "slug": "01346-heath-ma",
     "name": "01346 (Heath)",
     "shortName": "01346, Heath, MA",
+    "state": "MA",
+    "countyFips": "25011",
+    "cbsaCode": "24640"
+  },
+  {
+    "zip": "01347",
+    "slug": "01347-lake-pleasant-ma",
+    "name": "01347 (Lake Pleasant)",
+    "shortName": "01347, Lake Pleasant, MA",
     "state": "MA",
     "countyFips": "25011",
     "cbsaCode": "24640"
@@ -2502,6 +2529,15 @@
     "cbsaCode": "14460"
   },
   {
+    "zip": "01965",
+    "slug": "01965-prides-crossing-ma",
+    "name": "01965 (Prides Crossing)",
+    "shortName": "01965, Prides Crossing, MA",
+    "state": "MA",
+    "countyFips": "25009",
+    "cbsaCode": "14460"
+  },
+  {
     "zip": "01966",
     "slug": "01966-rockport-ma",
     "name": "01966 (Rockport)",
@@ -3402,6 +3438,15 @@
     "cbsaCode": "14460"
   },
   {
+    "zip": "02344",
+    "slug": "02344-middleboro-ma",
+    "name": "02344 (Middleboro)",
+    "shortName": "02344, Middleboro, MA",
+    "state": "MA",
+    "countyFips": "25023",
+    "cbsaCode": "14460"
+  },
+  {
     "zip": "02346",
     "slug": "02346-middleboro-ma",
     "name": "02346 (Middleboro)",
@@ -3460,6 +3505,15 @@
     "slug": "02364-kingston-ma",
     "name": "02364 (Kingston)",
     "shortName": "02364, Kingston, MA",
+    "state": "MA",
+    "countyFips": "25023",
+    "cbsaCode": "14460"
+  },
+  {
+    "zip": "02366",
+    "slug": "02366-south-carver-ma",
+    "name": "02366 (South Carver)",
+    "shortName": "02366, South Carver, MA",
     "state": "MA",
     "countyFips": "25023",
     "cbsaCode": "14460"
@@ -7794,6 +7848,15 @@
     "cbsaCode": "38860"
   },
   {
+    "zip": "04063",
+    "slug": "04063-ocean-park-me",
+    "name": "04063 (Ocean Park)",
+    "shortName": "04063, Ocean Park, ME",
+    "state": "ME",
+    "countyFips": "23031",
+    "cbsaCode": "38860"
+  },
+  {
     "zip": "04064",
     "slug": "04064-old-orchard-beach-me",
     "name": "04064 (Old Orchard Beach)",
@@ -9126,6 +9189,24 @@
     "cbsaCode": "12620"
   },
   {
+    "zip": "04490",
+    "slug": "04490-topsfield-me",
+    "name": "04490 (Topsfield)",
+    "shortName": "04490, Topsfield, ME",
+    "state": "ME",
+    "countyFips": "23029",
+    "cbsaCode": null
+  },
+  {
+    "zip": "04491",
+    "slug": "04491-vanceboro-me",
+    "name": "04491 (Vanceboro)",
+    "shortName": "04491, Vanceboro, ME",
+    "state": "ME",
+    "countyFips": "23029",
+    "cbsaCode": null
+  },
+  {
     "zip": "04492",
     "slug": "04492-waite-me",
     "name": "04492 (Waite)",
@@ -9450,6 +9531,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "04613",
+    "slug": "04613-birch-harbor-me",
+    "name": "04613 (Birch Harbor)",
+    "shortName": "04613, Birch Harbor, ME",
+    "state": "ME",
+    "countyFips": "23009",
+    "cbsaCode": null
+  },
+  {
     "zip": "04614",
     "slug": "04614-blue-hill-me",
     "name": "04614 (Blue Hill)",
@@ -9508,6 +9598,15 @@
     "slug": "04624-corea-me",
     "name": "04624 (Corea)",
     "shortName": "04624, Corea, ME",
+    "state": "ME",
+    "countyFips": "23009",
+    "cbsaCode": null
+  },
+  {
+    "zip": "04625",
+    "slug": "04625-cranberry-isles-me",
+    "name": "04625 (Cranberry Isles)",
+    "shortName": "04625, Cranberry Isles, ME",
     "state": "ME",
     "countyFips": "23009",
     "cbsaCode": null
@@ -9735,6 +9834,15 @@
     "shortName": "04668, Princeton, ME",
     "state": "ME",
     "countyFips": "23029",
+    "cbsaCode": null
+  },
+  {
+    "zip": "04669",
+    "slug": "04669-prospect-harbor-me",
+    "name": "04669 (Prospect Harbor)",
+    "shortName": "04669, Prospect Harbor, ME",
+    "state": "ME",
+    "countyFips": "23009",
     "cbsaCode": null
   },
   {
@@ -10849,6 +10957,15 @@
     "slug": "05001-white-river-junction-vt",
     "name": "05001 (White River Junction)",
     "shortName": "05001, White River Junction, VT",
+    "state": "VT",
+    "countyFips": "50027",
+    "cbsaCode": "30150"
+  },
+  {
+    "zip": "05030",
+    "slug": "05030-ascutney-vt",
+    "name": "05030 (Ascutney)",
+    "shortName": "05030, Ascutney, VT",
     "state": "VT",
     "countyFips": "50027",
     "cbsaCode": "30150"
@@ -14143,6 +14260,15 @@
     "slug": "06385-waterford-ct",
     "name": "06385 (Waterford)",
     "shortName": "06385, Waterford, CT",
+    "state": "CT",
+    "countyFips": "09180",
+    "cbsaCode": null
+  },
+  {
+    "zip": "06389",
+    "slug": "06389-yantic-ct",
+    "name": "06389 (Yantic)",
+    "shortName": "06389, Yantic, CT",
     "state": "CT",
     "countyFips": "09180",
     "cbsaCode": null
@@ -17991,6 +18117,15 @@
     "cbsaCode": "35620"
   },
   {
+    "zip": "07979",
+    "slug": "07979-pottersville-nj",
+    "name": "07979 (Pottersville)",
+    "shortName": "07979, Pottersville, NJ",
+    "state": "NJ",
+    "countyFips": "34019",
+    "cbsaCode": "35620"
+  },
+  {
     "zip": "07980",
     "slug": "07980-stirling-nj",
     "name": "07980 (Stirling)",
@@ -18294,6 +18429,15 @@
     "shortName": "08038, Hancocks Bridge, NJ",
     "state": "NJ",
     "countyFips": "34033",
+    "cbsaCode": "37980"
+  },
+  {
+    "zip": "08039",
+    "slug": "08039-harrisonville-nj",
+    "name": "08039 (Harrisonville)",
+    "shortName": "08039, Harrisonville, NJ",
+    "state": "NJ",
+    "countyFips": "34015",
     "cbsaCode": "37980"
   },
   {
@@ -22104,6 +22248,15 @@
     "cbsaCode": "35620"
   },
   {
+    "zip": "10953",
+    "slug": "10953-mountainville-ny",
+    "name": "10953 (Mountainville)",
+    "shortName": "10953, Mountainville, NY",
+    "state": "NY",
+    "countyFips": "36071",
+    "cbsaCode": "28880"
+  },
+  {
     "zip": "10954",
     "slug": "10954-nanuet-ny",
     "name": "10954 (Nanuet)",
@@ -22221,15 +22374,6 @@
     "cbsaCode": "35620"
   },
   {
-    "zip": "10975",
-    "slug": "10975-southfields-ny",
-    "name": "10975 (Southfields)",
-    "shortName": "10975, Southfields, NY",
-    "state": "NY",
-    "countyFips": "36071",
-    "cbsaCode": "28880"
-  },
-  {
     "zip": "10976",
     "slug": "10976-sparkill-ny",
     "name": "10976 (Sparkill)",
@@ -22273,6 +22417,15 @@
     "state": "NY",
     "countyFips": "36087",
     "cbsaCode": "35620"
+  },
+  {
+    "zip": "10985",
+    "slug": "10985-thompson-ridge-ny",
+    "name": "10985 (Thompson Ridge)",
+    "shortName": "10985, Thompson Ridge, NY",
+    "state": "NY",
+    "countyFips": "36071",
+    "cbsaCode": "28880"
   },
   {
     "zip": "10986",
@@ -25353,6 +25506,15 @@
     "cbsaCode": "10580"
   },
   {
+    "zip": "12115",
+    "slug": "12115-malden-bridge-ny",
+    "name": "12115 (Malden Bridge)",
+    "shortName": "12115, Malden Bridge, NY",
+    "state": "NY",
+    "countyFips": "36021",
+    "cbsaCode": "26460"
+  },
+  {
     "zip": "12116",
     "slug": "12116-maryland-ny",
     "name": "12116 (Maryland)",
@@ -25648,6 +25810,15 @@
     "state": "NY",
     "countyFips": "36095",
     "cbsaCode": "11220"
+  },
+  {
+    "zip": "12161",
+    "slug": "12161-south-bethlehem-ny",
+    "name": "12161 (South Bethlehem)",
+    "shortName": "12161, South Bethlehem, NY",
+    "state": "NY",
+    "countyFips": "36001",
+    "cbsaCode": "10580"
   },
   {
     "zip": "12164",
@@ -26631,15 +26802,6 @@
     "cbsaCode": "28740"
   },
   {
-    "zip": "12482",
-    "slug": "12482-south-cairo-ny",
-    "name": "12482 (South Cairo)",
-    "shortName": "12482, South Cairo, NY",
-    "state": "NY",
-    "countyFips": "36039",
-    "cbsaCode": null
-  },
-  {
     "zip": "12483",
     "slug": "12483-spring-glen-ny",
     "name": "12483 (Spring Glen)",
@@ -26802,6 +26964,15 @@
     "cbsaCode": "28880"
   },
   {
+    "zip": "12512",
+    "slug": "12512-chelsea-ny",
+    "name": "12512 (Chelsea)",
+    "shortName": "12512, Chelsea, NY",
+    "state": "NY",
+    "countyFips": "36027",
+    "cbsaCode": "28880"
+  },
+  {
     "zip": "12513",
     "slug": "12513-claverack-ny",
     "name": "12513 (Claverack)",
@@ -26941,6 +27112,15 @@
     "slug": "12529-hillsdale-ny",
     "name": "12529 (Hillsdale)",
     "shortName": "12529, Hillsdale, NY",
+    "state": "NY",
+    "countyFips": "36021",
+    "cbsaCode": "26460"
+  },
+  {
+    "zip": "12530",
+    "slug": "12530-hollowville-ny",
+    "name": "12530 (Hollowville)",
+    "shortName": "12530, Hollowville, NY",
     "state": "NY",
     "countyFips": "36021",
     "cbsaCode": "26460"
@@ -29340,6 +29520,15 @@
     "cbsaCode": "18660"
   },
   {
+    "zip": "13102",
+    "slug": "13102-mc-lean-ny",
+    "name": "13102 (Mc Lean)",
+    "shortName": "13102, Mc Lean, NY",
+    "state": "NY",
+    "countyFips": "36109",
+    "cbsaCode": "27060"
+  },
+  {
     "zip": "13103",
     "slug": "13103-mallory-ny",
     "name": "13103 (Mallory)",
@@ -29662,6 +29851,15 @@
     "state": "NY",
     "countyFips": "36065",
     "cbsaCode": "46540"
+  },
+  {
+    "zip": "13163",
+    "slug": "13163-wampsville-ny",
+    "name": "13163 (Wampsville)",
+    "shortName": "13163, Wampsville, NY",
+    "state": "NY",
+    "countyFips": "36053",
+    "cbsaCode": "45060"
   },
   {
     "zip": "13164",
@@ -30276,15 +30474,6 @@
     "cbsaCode": "46540"
   },
   {
-    "zip": "13404",
-    "slug": "13404-martinsburg-ny",
-    "name": "13404 (Martinsburg)",
-    "shortName": "13404, Martinsburg, NY",
-    "state": "NY",
-    "countyFips": "36049",
-    "cbsaCode": null
-  },
-  {
     "zip": "13406",
     "slug": "13406-middleville-ny",
     "name": "13406 (Middleville)",
@@ -30618,6 +30807,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "13475",
+    "slug": "13475-van-hornesville-ny",
+    "name": "13475 (Van Hornesville)",
+    "shortName": "13475, Van Hornesville, NY",
+    "state": "NY",
+    "countyFips": "36043",
+    "cbsaCode": "46540"
+  },
+  {
     "zip": "13476",
     "slug": "13476-vernon-ny",
     "name": "13476 (Vernon)",
@@ -30679,6 +30877,15 @@
     "state": "NY",
     "countyFips": "36065",
     "cbsaCode": "46540"
+  },
+  {
+    "zip": "13488",
+    "slug": "13488-westford-ny",
+    "name": "13488 (Westford)",
+    "shortName": "13488, Westford, NY",
+    "state": "NY",
+    "countyFips": "36077",
+    "cbsaCode": "36580"
   },
   {
     "zip": "13489",
@@ -31399,6 +31606,15 @@
     "state": "NY",
     "countyFips": "36107",
     "cbsaCode": "13780"
+  },
+  {
+    "zip": "13738",
+    "slug": "13738-blodgett-mills-ny",
+    "name": "13738 (Blodgett Mills)",
+    "shortName": "13738, Blodgett Mills, NY",
+    "state": "NY",
+    "countyFips": "36023",
+    "cbsaCode": "18660"
   },
   {
     "zip": "13739",
@@ -32274,6 +32490,15 @@
     "cbsaCode": "15380"
   },
   {
+    "zip": "14056",
+    "slug": "14056-east-pembroke-ny",
+    "name": "14056 (East Pembroke)",
+    "shortName": "14056, East Pembroke, NY",
+    "state": "NY",
+    "countyFips": "36037",
+    "cbsaCode": "12860"
+  },
+  {
     "zip": "14057",
     "slug": "14057-eden-ny",
     "name": "14057 (Eden)",
@@ -32616,6 +32841,15 @@
     "cbsaCode": "36460"
   },
   {
+    "zip": "14135",
+    "slug": "14135-sheridan-ny",
+    "name": "14135 (Sheridan)",
+    "shortName": "14135, Sheridan, NY",
+    "state": "NY",
+    "countyFips": "36013",
+    "cbsaCode": "27460"
+  },
+  {
     "zip": "14136",
     "slug": "14136-silver-creek-ny",
     "name": "14136 (Silver Creek)",
@@ -32677,6 +32911,15 @@
     "state": "NY",
     "countyFips": "36121",
     "cbsaCode": null
+  },
+  {
+    "zip": "14169",
+    "slug": "14169-wales-center-ny",
+    "name": "14169 (Wales Center)",
+    "shortName": "14169, Wales Center, NY",
+    "state": "NY",
+    "countyFips": "36029",
+    "cbsaCode": "15380"
   },
   {
     "zip": "14170",
@@ -33444,6 +33687,15 @@
     "cbsaCode": "40380"
   },
   {
+    "zip": "14515",
+    "slug": "14515-north-greece-ny",
+    "name": "14515 (North Greece)",
+    "shortName": "14515, North Greece, NY",
+    "state": "NY",
+    "countyFips": "36055",
+    "cbsaCode": "40380"
+  },
+  {
     "zip": "14516",
     "slug": "14516-north-rose-ny",
     "name": "14516 (North Rose)",
@@ -33568,6 +33820,15 @@
     "state": "NY",
     "countyFips": "36099",
     "cbsaCode": "42900"
+  },
+  {
+    "zip": "14542",
+    "slug": "14542-rose-ny",
+    "name": "14542 (Rose)",
+    "shortName": "14542, Rose, NY",
+    "state": "NY",
+    "countyFips": "36117",
+    "cbsaCode": "40380"
   },
   {
     "zip": "14543",
@@ -34920,6 +35181,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "14881",
+    "slug": "14881-slaterville-springs-ny",
+    "name": "14881 (Slaterville Springs)",
+    "shortName": "14881, Slaterville Springs, NY",
+    "state": "NY",
+    "countyFips": "36109",
+    "cbsaCode": "27060"
+  },
+  {
     "zip": "14882",
     "slug": "14882-lansing-ny",
     "name": "14882 (Lansing)",
@@ -34963,6 +35233,15 @@
     "state": "NY",
     "countyFips": "36097",
     "cbsaCode": "27060"
+  },
+  {
+    "zip": "14887",
+    "slug": "14887-tyrone-ny",
+    "name": "14887 (Tyrone)",
+    "shortName": "14887, Tyrone, NY",
+    "state": "NY",
+    "countyFips": "36097",
+    "cbsaCode": null
   },
   {
     "zip": "14889",
@@ -35079,6 +35358,15 @@
     "shortName": "15003, Ambridge, PA",
     "state": "PA",
     "countyFips": "42007",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "15004",
+    "slug": "15004-atlasburg-pa",
+    "name": "15004 (Atlasburg)",
+    "shortName": "15004, Atlasburg, PA",
+    "state": "PA",
+    "countyFips": "42125",
     "cbsaCode": "38300"
   },
   {
@@ -35223,6 +35511,15 @@
     "shortName": "15027, Conway, PA",
     "state": "PA",
     "countyFips": "42007",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "15028",
+    "slug": "15028-coulters-pa",
+    "name": "15028 (Coulters)",
+    "shortName": "15028, Coulters, PA",
+    "state": "PA",
+    "countyFips": "42003",
     "cbsaCode": "38300"
   },
   {
@@ -35734,6 +36031,15 @@
     "slug": "15126-imperial-pa",
     "name": "15126 (Imperial)",
     "shortName": "15126, Imperial, PA",
+    "state": "PA",
+    "countyFips": "42003",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "15127",
+    "slug": "15127-ingomar-pa",
+    "name": "15127 (Ingomar)",
+    "shortName": "15127, Ingomar, PA",
     "state": "PA",
     "countyFips": "42003",
     "cbsaCode": "38300"
@@ -36333,6 +36639,15 @@
     "cbsaCode": "38300"
   },
   {
+    "zip": "15325",
+    "slug": "15325-crucible-pa",
+    "name": "15325 (Crucible)",
+    "shortName": "15325, Crucible, PA",
+    "state": "PA",
+    "countyFips": "42059",
+    "cbsaCode": null
+  },
+  {
     "zip": "15327",
     "slug": "15327-dilliner-pa",
     "name": "15327 (Dilliner)",
@@ -36652,6 +36967,15 @@
     "slug": "15420-cardale-pa",
     "name": "15420 (Cardale)",
     "shortName": "15420, Cardale, PA",
+    "state": "PA",
+    "countyFips": "42051",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "15422",
+    "slug": "15422-chestnut-ridge-pa",
+    "name": "15422 (Chestnut Ridge)",
+    "shortName": "15422, Chestnut Ridge, PA",
     "state": "PA",
     "countyFips": "42051",
     "cbsaCode": "38300"
@@ -37219,6 +37543,15 @@
     "slug": "15547-jennerstown-pa",
     "name": "15547 (Jennerstown)",
     "shortName": "15547, Jennerstown, PA",
+    "state": "PA",
+    "countyFips": "42111",
+    "cbsaCode": "43740"
+  },
+  {
+    "zip": "15549",
+    "slug": "15549-listie-pa",
+    "name": "15549 (Listie)",
+    "shortName": "15549, Listie, PA",
     "state": "PA",
     "countyFips": "42111",
     "cbsaCode": "43740"
@@ -37836,6 +38169,15 @@
     "cbsaCode": "27780"
   },
   {
+    "zip": "15715",
+    "slug": "15715-big-run-pa",
+    "name": "15715 (Big Run)",
+    "shortName": "15715, Big Run, PA",
+    "state": "PA",
+    "countyFips": "42065",
+    "cbsaCode": null
+  },
+  {
     "zip": "15716",
     "slug": "15716-black-lick-pa",
     "name": "15716 (Black Lick)",
@@ -38023,6 +38365,15 @@
     "state": "PA",
     "countyFips": "42063",
     "cbsaCode": "26860"
+  },
+  {
+    "zip": "15764",
+    "slug": "15764-oliveburg-pa",
+    "name": "15764 (Oliveburg)",
+    "shortName": "15764, Oliveburg, PA",
+    "state": "PA",
+    "countyFips": "42065",
+    "cbsaCode": null
   },
   {
     "zip": "15765",
@@ -38367,6 +38718,24 @@
     "cbsaCode": "27780"
   },
   {
+    "zip": "15921",
+    "slug": "15921-beaverdale-pa",
+    "name": "15921 (Beaverdale)",
+    "shortName": "15921, Beaverdale, PA",
+    "state": "PA",
+    "countyFips": "42021",
+    "cbsaCode": "27780"
+  },
+  {
+    "zip": "15922",
+    "slug": "15922-belsano-pa",
+    "name": "15922 (Belsano)",
+    "shortName": "15922, Belsano, PA",
+    "state": "PA",
+    "countyFips": "42021",
+    "cbsaCode": "27780"
+  },
+  {
     "zip": "15923",
     "slug": "15923-bolivar-pa",
     "name": "15923 (Bolivar)",
@@ -38434,6 +38803,15 @@
     "slug": "15931-ebensburg-pa",
     "name": "15931 (Ebensburg)",
     "shortName": "15931, Ebensburg, PA",
+    "state": "PA",
+    "countyFips": "42021",
+    "cbsaCode": "27780"
+  },
+  {
+    "zip": "15934",
+    "slug": "15934-elton-pa",
+    "name": "15934 (Elton)",
+    "shortName": "15934, Elton, PA",
     "state": "PA",
     "countyFips": "42021",
     "cbsaCode": "27780"
@@ -38520,6 +38898,15 @@
     "cbsaCode": "27780"
   },
   {
+    "zip": "15948",
+    "slug": "15948-revloc-pa",
+    "name": "15948 (Revloc)",
+    "shortName": "15948, Revloc, PA",
+    "state": "PA",
+    "countyFips": "42021",
+    "cbsaCode": "27780"
+  },
+  {
     "zip": "15951",
     "slug": "15951-saint-michael-pa",
     "name": "15951 (Saint Michael)",
@@ -38581,6 +38968,15 @@
     "state": "PA",
     "countyFips": "42021",
     "cbsaCode": "27780"
+  },
+  {
+    "zip": "15959",
+    "slug": "15959-tire-hill-pa",
+    "name": "15959 (Tire Hill)",
+    "shortName": "15959, Tire Hill, PA",
+    "state": "PA",
+    "countyFips": "42111",
+    "cbsaCode": "43740"
   },
   {
     "zip": "15960",
@@ -38650,6 +39046,15 @@
     "slug": "16023-cabot-pa",
     "name": "16023 (Cabot)",
     "shortName": "16023, Cabot, PA",
+    "state": "PA",
+    "countyFips": "42019",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "16024",
+    "slug": "16024-callery-pa",
+    "name": "16024 (Callery)",
+    "shortName": "16024, Callery, PA",
     "state": "PA",
     "countyFips": "42019",
     "cbsaCode": "38300"
@@ -38767,6 +39172,15 @@
     "slug": "16046-mars-pa",
     "name": "16046 (Mars)",
     "shortName": "16046, Mars, PA",
+    "state": "PA",
+    "countyFips": "42019",
+    "cbsaCode": "38300"
+  },
+  {
+    "zip": "16048",
+    "slug": "16048-north-washington-pa",
+    "name": "16048 (North Washington)",
+    "shortName": "16048, North Washington, PA",
     "state": "PA",
     "countyFips": "42019",
     "cbsaCode": "38300"
@@ -39571,6 +39985,15 @@
     "state": "PA",
     "countyFips": "42039",
     "cbsaCode": "32740"
+  },
+  {
+    "zip": "16333",
+    "slug": "16333-ludlow-pa",
+    "name": "16333 (Ludlow)",
+    "shortName": "16333, Ludlow, PA",
+    "state": "PA",
+    "countyFips": "42083",
+    "cbsaCode": "14620"
   },
   {
     "zip": "16334",
@@ -43443,6 +43866,15 @@
     "cbsaCode": "44980"
   },
   {
+    "zip": "17833",
+    "slug": "17833-kreamer-pa",
+    "name": "17833 (Kreamer)",
+    "shortName": "17833, Kreamer, PA",
+    "state": "PA",
+    "countyFips": "42109",
+    "cbsaCode": "42780"
+  },
+  {
     "zip": "17834",
     "slug": "17834-kulpmont-pa",
     "name": "17834 (Kulpmont)",
@@ -43785,6 +44217,15 @@
     "cbsaCode": "39060"
   },
   {
+    "zip": "17936",
+    "slug": "17936-gordon-pa",
+    "name": "17936 (Gordon)",
+    "shortName": "17936, Gordon, PA",
+    "state": "PA",
+    "countyFips": "42107",
+    "cbsaCode": "39060"
+  },
+  {
     "zip": "17938",
     "slug": "17938-hegins-pa",
     "name": "17938 (Hegins)",
@@ -43816,6 +44257,24 @@
     "slug": "17949-mahanoy-plane-pa",
     "name": "17949 (Mahanoy Plane)",
     "shortName": "17949, Mahanoy Plane, PA",
+    "state": "PA",
+    "countyFips": "42107",
+    "cbsaCode": "39060"
+  },
+  {
+    "zip": "17951",
+    "slug": "17951-mar-lin-pa",
+    "name": "17951 (Mar Lin)",
+    "shortName": "17951, Mar Lin, PA",
+    "state": "PA",
+    "countyFips": "42107",
+    "cbsaCode": "39060"
+  },
+  {
+    "zip": "17953",
+    "slug": "17953-middleport-pa",
+    "name": "17953 (Middleport)",
+    "shortName": "17953, Middleport, PA",
     "state": "PA",
     "countyFips": "42107",
     "cbsaCode": "39060"
@@ -43861,6 +44320,15 @@
     "slug": "17963-pine-grove-pa",
     "name": "17963 (Pine Grove)",
     "shortName": "17963, Pine Grove, PA",
+    "state": "PA",
+    "countyFips": "42107",
+    "cbsaCode": "39060"
+  },
+  {
+    "zip": "17964",
+    "slug": "17964-pitman-pa",
+    "name": "17964 (Pitman)",
+    "shortName": "17964, Pitman, PA",
     "state": "PA",
     "countyFips": "42107",
     "cbsaCode": "39060"
@@ -44613,6 +45081,15 @@
     "cbsaCode": "39060"
   },
   {
+    "zip": "18245",
+    "slug": "18245-quakake-pa",
+    "name": "18245 (Quakake)",
+    "shortName": "18245, Quakake, PA",
+    "state": "PA",
+    "countyFips": "42107",
+    "cbsaCode": "39060"
+  },
+  {
     "zip": "18246",
     "slug": "18246-rock-glen-pa",
     "name": "18246 (Rock Glen)",
@@ -45022,6 +45499,15 @@
     "slug": "18407-carbondale-pa",
     "name": "18407 (Carbondale)",
     "shortName": "18407, Carbondale, PA",
+    "state": "PA",
+    "countyFips": "42069",
+    "cbsaCode": "42540"
+  },
+  {
+    "zip": "18410",
+    "slug": "18410-chinchilla-pa",
+    "name": "18410 (Chinchilla)",
+    "shortName": "18410, Chinchilla, PA",
     "state": "PA",
     "countyFips": "42069",
     "cbsaCode": "42540"
@@ -46098,6 +46584,15 @@
     "cbsaCode": "37980"
   },
   {
+    "zip": "18911",
+    "slug": "18911-blooming-glen-pa",
+    "name": "18911 (Blooming Glen)",
+    "shortName": "18911, Blooming Glen, PA",
+    "state": "PA",
+    "countyFips": "42017",
+    "cbsaCode": "37980"
+  },
+  {
     "zip": "18913",
     "slug": "18913-carversville-pa",
     "name": "18913 (Carversville)",
@@ -46662,6 +47157,15 @@
     "shortName": "19038, Glenside, PA",
     "state": "PA",
     "countyFips": "42091",
+    "cbsaCode": "37980"
+  },
+  {
+    "zip": "19039",
+    "slug": "19039-gradyville-pa",
+    "name": "19039 (Gradyville)",
+    "shortName": "19039, Gradyville, PA",
+    "state": "PA",
+    "countyFips": "42045",
     "cbsaCode": "37980"
   },
   {
@@ -48060,6 +48564,24 @@
     "cbsaCode": "39740"
   },
   {
+    "zip": "19536",
+    "slug": "19536-lyon-station-pa",
+    "name": "19536 (Lyon Station)",
+    "shortName": "19536, Lyon Station, PA",
+    "state": "PA",
+    "countyFips": "42011",
+    "cbsaCode": "39740"
+  },
+  {
+    "zip": "19538",
+    "slug": "19538-maxatawny-pa",
+    "name": "19538 (Maxatawny)",
+    "shortName": "19538, Maxatawny, PA",
+    "state": "PA",
+    "countyFips": "42011",
+    "cbsaCode": "39740"
+  },
+  {
     "zip": "19539",
     "slug": "19539-mertztown-pa",
     "name": "19539 (Mertztown)",
@@ -48253,6 +48775,15 @@
     "slug": "19611-reading-pa",
     "name": "19611 (Reading)",
     "shortName": "19611, Reading, PA",
+    "state": "PA",
+    "countyFips": "42011",
+    "cbsaCode": "39740"
+  },
+  {
+    "zip": "19612",
+    "slug": "19612-reading-pa",
+    "name": "19612 (Reading)",
+    "shortName": "19612, Reading, PA",
     "state": "PA",
     "countyFips": "42011",
     "cbsaCode": "39740"
@@ -48496,6 +49027,15 @@
     "slug": "19934-camden-wyoming-de",
     "name": "19934 (Camden Wyoming)",
     "shortName": "19934, Camden Wyoming, DE",
+    "state": "DE",
+    "countyFips": "10001",
+    "cbsaCode": "20100"
+  },
+  {
+    "zip": "19936",
+    "slug": "19936-cheswold-de",
+    "name": "19936 (Cheswold)",
+    "shortName": "19936, Cheswold, DE",
     "state": "DE",
     "countyFips": "10001",
     "cbsaCode": "20100"
@@ -49239,6 +49779,15 @@
     "cbsaCode": "47900"
   },
   {
+    "zip": "20160",
+    "slug": "20160-lincoln-va",
+    "name": "20160 (Lincoln)",
+    "shortName": "20160, Lincoln, VA",
+    "state": "VA",
+    "countyFips": "51107",
+    "cbsaCode": "47900"
+  },
+  {
     "zip": "20164",
     "slug": "20164-sterling-va",
     "name": "20164 (Sterling)",
@@ -49351,6 +49900,15 @@
     "slug": "20187-warrenton-va",
     "name": "20187 (Warrenton)",
     "shortName": "20187, Warrenton, VA",
+    "state": "VA",
+    "countyFips": "51061",
+    "cbsaCode": "47900"
+  },
+  {
+    "zip": "20188",
+    "slug": "20188-warrenton-va",
+    "name": "20188 (Warrenton)",
+    "shortName": "20188, Warrenton, VA",
     "state": "VA",
     "countyFips": "51061",
     "cbsaCode": "47900"
@@ -50805,6 +51363,15 @@
     "cbsaCode": "12580"
   },
   {
+    "zip": "21027",
+    "slug": "21027-chase-md",
+    "name": "21027 (Chase)",
+    "shortName": "21027, Chase, MD",
+    "state": "MD",
+    "countyFips": "24005",
+    "cbsaCode": "12580"
+  },
+  {
     "zip": "21028",
     "slug": "21028-churchville-md",
     "name": "21028 (Churchville)",
@@ -51858,15 +52425,6 @@
     "cbsaCode": "19060"
   },
   {
-    "zip": "21540",
-    "slug": "21540-luke-md",
-    "name": "21540 (Luke)",
-    "shortName": "21540, Luke, MD",
-    "state": "MD",
-    "countyFips": "24001",
-    "cbsaCode": "19060"
-  },
-  {
     "zip": "21541",
     "slug": "21541-mc-henry-md",
     "name": "21541 (Mc Henry)",
@@ -51907,6 +52465,15 @@
     "slug": "21557-rawlings-md",
     "name": "21557 (Rawlings)",
     "shortName": "21557, Rawlings, MD",
+    "state": "MD",
+    "countyFips": "24001",
+    "cbsaCode": "19060"
+  },
+  {
+    "zip": "21560",
+    "slug": "21560-spring-gap-md",
+    "name": "21560 (Spring Gap)",
+    "shortName": "21560, Spring Gap, MD",
     "state": "MD",
     "countyFips": "24001",
     "cbsaCode": "19060"
@@ -55629,6 +56196,15 @@
     "cbsaCode": "40060"
   },
   {
+    "zip": "23090",
+    "slug": "23090-lightfoot-va",
+    "name": "23090 (Lightfoot)",
+    "shortName": "23090, Lightfoot, VA",
+    "state": "VA",
+    "countyFips": "51199",
+    "cbsaCode": "47260"
+  },
+  {
     "zip": "23091",
     "slug": "23091-little-plymouth-va",
     "name": "23091 (Little Plymouth)",
@@ -55996,6 +56572,15 @@
     "state": "VA",
     "countyFips": "51101",
     "cbsaCode": "40060"
+  },
+  {
+    "zip": "23184",
+    "slug": "23184-wicomico-va",
+    "name": "23184 (Wicomico)",
+    "shortName": "23184, Wicomico, VA",
+    "state": "VA",
+    "countyFips": "51073",
+    "cbsaCode": "47260"
   },
   {
     "zip": "23185",
@@ -56445,6 +57030,15 @@
     "shortName": "23398, Jamesville, VA",
     "state": "VA",
     "countyFips": "51131",
+    "cbsaCode": null
+  },
+  {
+    "zip": "23401",
+    "slug": "23401-keller-va",
+    "name": "23401 (Keller)",
+    "shortName": "23401, Keller, VA",
+    "state": "VA",
+    "countyFips": "51001",
     "cbsaCode": null
   },
   {
@@ -60048,6 +60642,15 @@
     "cbsaCode": "14140"
   },
   {
+    "zip": "24627",
+    "slug": "24627-mavisdale-va",
+    "name": "24627 (Mavisdale)",
+    "shortName": "24627, Mavisdale, VA",
+    "state": "VA",
+    "countyFips": "51027",
+    "cbsaCode": null
+  },
+  {
     "zip": "24630",
     "slug": "24630-north-tazewell-va",
     "name": "24630 (North Tazewell)",
@@ -60219,6 +60822,24 @@
     "cbsaCode": null
   },
   {
+    "zip": "24811",
+    "slug": "24811-avondale-wv",
+    "name": "24811 (Avondale)",
+    "shortName": "24811, Avondale, WV",
+    "state": "WV",
+    "countyFips": "54047",
+    "cbsaCode": null
+  },
+  {
+    "zip": "24816",
+    "slug": "24816-big-sandy-wv",
+    "name": "24816 (Big Sandy)",
+    "shortName": "24816, Big Sandy, WV",
+    "state": "WV",
+    "countyFips": "54047",
+    "cbsaCode": null
+  },
+  {
     "zip": "24822",
     "slug": "24822-clear-fork-wv",
     "name": "24822 (Clear Fork)",
@@ -60297,6 +60918,15 @@
     "shortName": "24854, Kopperston, WV",
     "state": "WV",
     "countyFips": "54109",
+    "cbsaCode": null
+  },
+  {
+    "zip": "24861",
+    "slug": "24861-maybeury-wv",
+    "name": "24861 (Maybeury)",
+    "shortName": "24861, Maybeury, WV",
+    "state": "WV",
+    "countyFips": "54047",
     "cbsaCode": null
   },
   {
@@ -60642,6 +61272,15 @@
     "cbsaCode": "16620"
   },
   {
+    "zip": "25025",
+    "slug": "25025-blount-wv",
+    "name": "25025 (Blount)",
+    "shortName": "25025, Blount, WV",
+    "state": "WV",
+    "countyFips": "54039",
+    "cbsaCode": "16620"
+  },
+  {
     "zip": "25028",
     "slug": "25028-bob-white-wv",
     "name": "25028 (Bob White)",
@@ -60685,6 +61324,15 @@
     "state": "WV",
     "countyFips": "54039",
     "cbsaCode": "16620"
+  },
+  {
+    "zip": "25040",
+    "slug": "25040-charlton-heights-wv",
+    "name": "25040 (Charlton Heights)",
+    "shortName": "25040, Charlton Heights, WV",
+    "state": "WV",
+    "countyFips": "54019",
+    "cbsaCode": "13220"
   },
   {
     "zip": "25045",
@@ -60820,6 +61468,15 @@
     "state": "WV",
     "countyFips": "54039",
     "cbsaCode": "16620"
+  },
+  {
+    "zip": "25119",
+    "slug": "25119-kincaid-wv",
+    "name": "25119 (Kincaid)",
+    "shortName": "25119, Kincaid, WV",
+    "state": "WV",
+    "countyFips": "54019",
+    "cbsaCode": "13220"
   },
   {
     "zip": "25121",
@@ -62055,6 +62712,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "25692",
+    "slug": "25692-red-jacket-wv",
+    "name": "25692 (Red Jacket)",
+    "shortName": "25692, Red Jacket, WV",
+    "state": "WV",
+    "countyFips": "54059",
+    "cbsaCode": null
+  },
+  {
     "zip": "25701",
     "slug": "25701-huntington-wv",
     "name": "25701 (Huntington)",
@@ -62262,12 +62928,12 @@
     "cbsaCode": "13220"
   },
   {
-    "zip": "25857",
-    "slug": "25857-josephine-wv",
-    "name": "25857 (Josephine)",
-    "shortName": "25857, Josephine, WV",
+    "zip": "25855",
+    "slug": "25855-hilltop-wv",
+    "name": "25855 (Hilltop)",
+    "shortName": "25855, Hilltop, WV",
     "state": "WV",
-    "countyFips": "54081",
+    "countyFips": "54019",
     "cbsaCode": "13220"
   },
   {
@@ -62392,6 +63058,15 @@
     "slug": "25918-shady-spring-wv",
     "name": "25918 (Shady Spring)",
     "shortName": "25918, Shady Spring, WV",
+    "state": "WV",
+    "countyFips": "54081",
+    "cbsaCode": "13220"
+  },
+  {
+    "zip": "25920",
+    "slug": "25920-slab-fork-wv",
+    "name": "25920 (Slab Fork)",
+    "shortName": "25920, Slab Fork, WV",
     "state": "WV",
     "countyFips": "54081",
     "cbsaCode": "13220"
@@ -63072,6 +63747,15 @@
     "cbsaCode": "21180"
   },
   {
+    "zip": "26230",
+    "slug": "26230-pickens-wv",
+    "name": "26230 (Pickens)",
+    "shortName": "26230, Pickens, WV",
+    "state": "WV",
+    "countyFips": "54083",
+    "cbsaCode": "21180"
+  },
+  {
     "zip": "26238",
     "slug": "26238-volga-wv",
     "name": "26238 (Volga)",
@@ -63198,6 +63882,15 @@
     "cbsaCode": "21180"
   },
   {
+    "zip": "26271",
+    "slug": "26271-hendricks-wv",
+    "name": "26271 (Hendricks)",
+    "shortName": "26271, Hendricks, WV",
+    "state": "WV",
+    "countyFips": "54093",
+    "cbsaCode": null
+  },
+  {
     "zip": "26273",
     "slug": "26273-huttonsville-wv",
     "name": "26273 (Huttonsville)",
@@ -63306,6 +63999,15 @@
     "cbsaCode": "21180"
   },
   {
+    "zip": "26298",
+    "slug": "26298-bergoo-wv",
+    "name": "26298 (Bergoo)",
+    "shortName": "26298, Bergoo, WV",
+    "state": "WV",
+    "countyFips": "54101",
+    "cbsaCode": null
+  },
+  {
     "zip": "26301",
     "slug": "26301-clarksburg-wv",
     "name": "26301 (Clarksburg)",
@@ -63331,6 +64033,15 @@
     "state": "WV",
     "countyFips": "54033",
     "cbsaCode": "17220"
+  },
+  {
+    "zip": "26327",
+    "slug": "26327-berea-wv",
+    "name": "26327 (Berea)",
+    "shortName": "26327, Berea, WV",
+    "state": "WV",
+    "countyFips": "54085",
+    "cbsaCode": null
   },
   {
     "zip": "26330",
@@ -63522,13 +64233,22 @@
     "cbsaCode": null
   },
   {
-    "zip": "26421",
-    "slug": "26421-pullman-wv",
-    "name": "26421 (Pullman)",
-    "shortName": "26421, Pullman, WV",
+    "zip": "26422",
+    "slug": "26422-reynoldsville-wv",
+    "name": "26422 (Reynoldsville)",
+    "shortName": "26422, Reynoldsville, WV",
     "state": "WV",
-    "countyFips": "54085",
-    "cbsaCode": null
+    "countyFips": "54033",
+    "cbsaCode": "17220"
+  },
+  {
+    "zip": "26424",
+    "slug": "26424-rosemont-wv",
+    "name": "26424 (Rosemont)",
+    "shortName": "26424, Rosemont, WV",
+    "state": "WV",
+    "countyFips": "54091",
+    "cbsaCode": "17220"
   },
   {
     "zip": "26425",
@@ -63870,6 +64590,15 @@
     "shortName": "26610, Birch River, WV",
     "state": "WV",
     "countyFips": "54067",
+    "cbsaCode": null
+  },
+  {
+    "zip": "26615",
+    "slug": "26615-copen-wv",
+    "name": "26615 (Copen)",
+    "shortName": "26615, Copen, WV",
+    "state": "WV",
+    "countyFips": "54007",
     "cbsaCode": null
   },
   {
@@ -64624,6 +65353,15 @@
     "slug": "27101-winston-salem-nc",
     "name": "27101 (Winston Salem)",
     "shortName": "27101, Winston Salem, NC",
+    "state": "NC",
+    "countyFips": "37067",
+    "cbsaCode": "49180"
+  },
+  {
+    "zip": "27102",
+    "slug": "27102-winston-salem-nc",
+    "name": "27102 (Winston Salem)",
+    "shortName": "27102, Winston Salem, NC",
     "state": "NC",
     "countyFips": "37067",
     "cbsaCode": "49180"
@@ -65889,6 +66627,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "27582",
+    "slug": "27582-stovall-nc",
+    "name": "27582 (Stovall)",
+    "shortName": "27582, Stovall, NC",
+    "state": "NC",
+    "countyFips": "37077",
+    "cbsaCode": null
+  },
+  {
     "zip": "27583",
     "slug": "27583-timberlake-nc",
     "name": "27583 (Timberlake)",
@@ -66681,15 +67428,6 @@
     "cbsaCode": "40260"
   },
   {
-    "zip": "27877",
-    "slug": "27877-severn-nc",
-    "name": "27877 (Severn)",
-    "shortName": "27877, Severn, NC",
-    "state": "NC",
-    "countyFips": "37131",
-    "cbsaCode": "40260"
-  },
-  {
     "zip": "27878",
     "slug": "27878-sharpsburg-nc",
     "name": "27878 (Sharpsburg)",
@@ -66895,6 +67633,15 @@
     "state": "NC",
     "countyFips": "37029",
     "cbsaCode": "47260"
+  },
+  {
+    "zip": "27922",
+    "slug": "27922-cofield-nc",
+    "name": "27922 (Cofield)",
+    "shortName": "27922, Cofield, NC",
+    "state": "NC",
+    "countyFips": "37091",
+    "cbsaCode": null
   },
   {
     "zip": "27923",
@@ -67311,6 +68058,15 @@
     "cbsaCode": "16740"
   },
   {
+    "zip": "28007",
+    "slug": "28007-ansonville-nc",
+    "name": "28007 (Ansonville)",
+    "shortName": "28007, Ansonville, NC",
+    "state": "NC",
+    "countyFips": "37007",
+    "cbsaCode": "16740"
+  },
+  {
     "zip": "28009",
     "slug": "28009-badin-nc",
     "name": "28009 (Badin)",
@@ -67621,15 +68377,6 @@
     "slug": "28092-lincolnton-nc",
     "name": "28092 (Lincolnton)",
     "shortName": "28092, Lincolnton, NC",
-    "state": "NC",
-    "countyFips": "37109",
-    "cbsaCode": "16740"
-  },
-  {
-    "zip": "28093",
-    "slug": "28093-lincolnton-nc",
-    "name": "28093 (Lincolnton)",
-    "shortName": "28093, Lincolnton, NC",
     "state": "NC",
     "countyFips": "37109",
     "cbsaCode": "16740"
@@ -69495,6 +70242,15 @@
     "shortName": "28532, Havelock, NC",
     "state": "NC",
     "countyFips": "37049",
+    "cbsaCode": "35100"
+  },
+  {
+    "zip": "28537",
+    "slug": "28537-hobucken-nc",
+    "name": "28537 (Hobucken)",
+    "shortName": "28537, Hobucken, NC",
+    "state": "NC",
+    "countyFips": "37137",
     "cbsaCode": "35100"
   },
   {
@@ -72594,6 +73350,15 @@
     "cbsaCode": "16700"
   },
   {
+    "zip": "29452",
+    "slug": "29452-jacksonboro-sc",
+    "name": "29452 (Jacksonboro)",
+    "shortName": "29452, Jacksonboro, SC",
+    "state": "SC",
+    "countyFips": "45029",
+    "cbsaCode": null
+  },
+  {
     "zip": "29453",
     "slug": "29453-jamestown-sc",
     "name": "29453 (Jamestown)",
@@ -72823,6 +73588,15 @@
     "slug": "29501-florence-sc",
     "name": "29501 (Florence)",
     "shortName": "29501, Florence, SC",
+    "state": "SC",
+    "countyFips": "45041",
+    "cbsaCode": "22500"
+  },
+  {
+    "zip": "29502",
+    "slug": "29502-florence-sc",
+    "name": "29502 (Florence)",
+    "shortName": "29502, Florence, SC",
     "state": "SC",
     "countyFips": "45041",
     "cbsaCode": "22500"
@@ -73251,15 +74025,6 @@
     "cbsaCode": "22500"
   },
   {
-    "zip": "29592",
-    "slug": "29592-sellers-sc",
-    "name": "29592 (Sellers)",
-    "shortName": "29592, Sellers, SC",
-    "state": "SC",
-    "countyFips": "45033",
-    "cbsaCode": null
-  },
-  {
     "zip": "29593",
     "slug": "29593-society-hill-sc",
     "name": "29593 (Society Hill)",
@@ -73606,6 +74371,15 @@
     "slug": "29664-mountain-rest-sc",
     "name": "29664 (Mountain Rest)",
     "shortName": "29664, Mountain Rest, SC",
+    "state": "SC",
+    "countyFips": "45073",
+    "cbsaCode": "42860"
+  },
+  {
+    "zip": "29665",
+    "slug": "29665-newry-sc",
+    "name": "29665 (Newry)",
+    "shortName": "29665, Newry, SC",
     "state": "SC",
     "countyFips": "45073",
     "cbsaCode": "42860"
@@ -74517,6 +75291,15 @@
     "shortName": "30005, Alpharetta, GA",
     "state": "GA",
     "countyFips": "13117",
+    "cbsaCode": "12060"
+  },
+  {
+    "zip": "30006",
+    "slug": "30006-marietta-ga",
+    "name": "30006 (Marietta)",
+    "shortName": "30006, Marietta, GA",
+    "state": "GA",
+    "countyFips": "13067",
     "cbsaCode": "12060"
   },
   {
@@ -87795,6 +88578,15 @@
     "cbsaCode": "26140"
   },
   {
+    "zip": "34430",
+    "slug": "34430-dunnellon-fl",
+    "name": "34430 (Dunnellon)",
+    "shortName": "34430, Dunnellon, FL",
+    "state": "FL",
+    "countyFips": "12083",
+    "cbsaCode": "36100"
+  },
+  {
     "zip": "34431",
     "slug": "34431-dunnellon-fl",
     "name": "34431 (Dunnellon)",
@@ -88251,6 +89043,15 @@
     "shortName": "34677, Oldsmar, FL",
     "state": "FL",
     "countyFips": "12103",
+    "cbsaCode": "45300"
+  },
+  {
+    "zip": "34679",
+    "slug": "34679-aripeka-fl",
+    "name": "34679 (Aripeka)",
+    "shortName": "34679, Aripeka, FL",
+    "state": "FL",
+    "countyFips": "12101",
     "cbsaCode": "45300"
   },
   {
@@ -89986,6 +90787,15 @@
     "slug": "35456-duncanville-al",
     "name": "35456 (Duncanville)",
     "shortName": "35456, Duncanville, AL",
+    "state": "AL",
+    "countyFips": "01125",
+    "cbsaCode": "46220"
+  },
+  {
+    "zip": "35458",
+    "slug": "35458-elrod-al",
+    "name": "35458 (Elrod)",
+    "shortName": "35458, Elrod, AL",
     "state": "AL",
     "countyFips": "01125",
     "cbsaCode": "46220"
@@ -92997,6 +93807,15 @@
     "cbsaCode": "19300"
   },
   {
+    "zip": "36556",
+    "slug": "36556-malcolm-al",
+    "name": "36556 (Malcolm)",
+    "shortName": "36556, Malcolm, AL",
+    "state": "AL",
+    "countyFips": "01129",
+    "cbsaCode": null
+  },
+  {
     "zip": "36558",
     "slug": "36558-millry-al",
     "name": "36558 (Millry)",
@@ -93121,15 +93940,6 @@
     "state": "AL",
     "countyFips": "01097",
     "cbsaCode": "33660"
-  },
-  {
-    "zip": "36583",
-    "slug": "36583-tibbie-al",
-    "name": "36583 (Tibbie)",
-    "shortName": "36583, Tibbie, AL",
-    "state": "AL",
-    "countyFips": "01129",
-    "cbsaCode": null
   },
   {
     "zip": "36584",
@@ -93474,6 +94284,15 @@
     "cbsaCode": "42820"
   },
   {
+    "zip": "36768",
+    "slug": "36768-pine-apple-al",
+    "name": "36768 (Pine Apple)",
+    "shortName": "36768, Pine Apple, AL",
+    "state": "AL",
+    "countyFips": "01131",
+    "cbsaCode": null
+  },
+  {
     "zip": "36769",
     "slug": "36769-pine-hill-al",
     "name": "36769 (Pine Hill)",
@@ -93499,6 +94318,15 @@
     "state": "AL",
     "countyFips": "01065",
     "cbsaCode": "46220"
+  },
+  {
+    "zip": "36782",
+    "slug": "36782-sweet-water-al",
+    "name": "36782 (Sweet Water)",
+    "shortName": "36782, Sweet Water, AL",
+    "state": "AL",
+    "countyFips": "01091",
+    "cbsaCode": null
   },
   {
     "zip": "36783",
@@ -93568,6 +94396,15 @@
     "slug": "36830-auburn-al",
     "name": "36830 (Auburn)",
     "shortName": "36830, Auburn, AL",
+    "state": "AL",
+    "countyFips": "01081",
+    "cbsaCode": "12220"
+  },
+  {
+    "zip": "36831",
+    "slug": "36831-auburn-al",
+    "name": "36831 (Auburn)",
+    "shortName": "36831, Auburn, AL",
     "state": "AL",
     "countyFips": "01081",
     "cbsaCode": "12220"
@@ -94506,6 +95343,15 @@
     "shortName": "37138, Old Hickory, TN",
     "state": "TN",
     "countyFips": "47189",
+    "cbsaCode": "34980"
+  },
+  {
+    "zip": "37140",
+    "slug": "37140-only-tn",
+    "name": "37140 (Only)",
+    "shortName": "37140, Only, TN",
+    "state": "TN",
+    "countyFips": "47081",
     "cbsaCode": "34980"
   },
   {
@@ -102330,6 +103176,15 @@
     "cbsaCode": "45620"
   },
   {
+    "zip": "39832",
+    "slug": "39832-cedar-springs-ga",
+    "name": "39832 (Cedar Springs)",
+    "shortName": "39832, Cedar Springs, GA",
+    "state": "GA",
+    "countyFips": "13099",
+    "cbsaCode": null
+  },
+  {
     "zip": "39834",
     "slug": "39834-climax-ga",
     "name": "39834 (Climax)",
@@ -104139,6 +104994,15 @@
     "cbsaCode": "18340"
   },
   {
+    "zip": "40803",
+    "slug": "40803-asher-ky",
+    "name": "40803 (Asher)",
+    "shortName": "40803, Asher, KY",
+    "state": "KY",
+    "countyFips": "21131",
+    "cbsaCode": null
+  },
+  {
     "zip": "40806",
     "slug": "40806-baxter-ky",
     "name": "40806 (Baxter)",
@@ -104931,6 +105795,15 @@
     "cbsaCode": "26580"
   },
   {
+    "zip": "41124",
+    "slug": "41124-blaine-ky",
+    "name": "41124 (Blaine)",
+    "shortName": "41124, Blaine, KY",
+    "state": "KY",
+    "countyFips": "21127",
+    "cbsaCode": "26580"
+  },
+  {
     "zip": "41129",
     "slug": "41129-catlettsburg-ky",
     "name": "41129 (Catlettsburg)",
@@ -104973,6 +105846,15 @@
     "shortName": "41144, Greenup, KY",
     "state": "KY",
     "countyFips": "21089",
+    "cbsaCode": "26580"
+  },
+  {
+    "zip": "41159",
+    "slug": "41159-martha-ky",
+    "name": "41159 (Martha)",
+    "shortName": "41159, Martha, KY",
+    "state": "KY",
+    "countyFips": "21127",
     "cbsaCode": "26580"
   },
   {
@@ -105072,6 +105954,15 @@
     "shortName": "41189, Tollesboro, KY",
     "state": "KY",
     "countyFips": "21135",
+    "cbsaCode": null
+  },
+  {
+    "zip": "41204",
+    "slug": "41204-boons-camp-ky",
+    "name": "41204 (Boons Camp)",
+    "shortName": "41204, Boons Camp, KY",
+    "state": "KY",
+    "countyFips": "21115",
     "cbsaCode": null
   },
   {
@@ -105525,10 +106416,28 @@
     "cbsaCode": "38210"
   },
   {
+    "zip": "41547",
+    "slug": "41547-majestic-ky",
+    "name": "41547 (Majestic)",
+    "shortName": "41547, Majestic, KY",
+    "state": "KY",
+    "countyFips": "21195",
+    "cbsaCode": "38210"
+  },
+  {
     "zip": "41548",
     "slug": "41548-mouthcard-ky",
     "name": "41548 (Mouthcard)",
     "shortName": "41548, Mouthcard, KY",
+    "state": "KY",
+    "countyFips": "21195",
+    "cbsaCode": "38210"
+  },
+  {
+    "zip": "41549",
+    "slug": "41549-myra-ky",
+    "name": "41549 (Myra)",
+    "shortName": "41549, Myra, KY",
     "state": "KY",
     "countyFips": "21195",
     "cbsaCode": "38210"
@@ -105840,12 +106749,30 @@
     "cbsaCode": null
   },
   {
+    "zip": "41739",
+    "slug": "41739-dwarf-ky",
+    "name": "41739 (Dwarf)",
+    "shortName": "41739, Dwarf, KY",
+    "state": "KY",
+    "countyFips": "21193",
+    "cbsaCode": null
+  },
+  {
     "zip": "41740",
     "slug": "41740-emmalena-ky",
     "name": "41740 (Emmalena)",
     "shortName": "41740, Emmalena, KY",
     "state": "KY",
     "countyFips": "21119",
+    "cbsaCode": null
+  },
+  {
+    "zip": "41746",
+    "slug": "41746-happy-ky",
+    "name": "41746 (Happy)",
+    "shortName": "41746, Happy, KY",
+    "state": "KY",
+    "countyFips": "21193",
     "cbsaCode": null
   },
   {
@@ -105871,6 +106798,15 @@
     "slug": "41760-scuddy-ky",
     "name": "41760 (Scuddy)",
     "shortName": "41760, Scuddy, KY",
+    "state": "KY",
+    "countyFips": "21193",
+    "cbsaCode": null
+  },
+  {
+    "zip": "41763",
+    "slug": "41763-slemp-ky",
+    "name": "41763 (Slemp)",
+    "shortName": "41763, Slemp, KY",
     "state": "KY",
     "countyFips": "21193",
     "cbsaCode": null
@@ -106458,6 +107394,15 @@
     "shortName": "42123, Austin, KY",
     "state": "KY",
     "countyFips": "21009",
+    "cbsaCode": "23980"
+  },
+  {
+    "zip": "42124",
+    "slug": "42124-beaumont-ky",
+    "name": "42124 (Beaumont)",
+    "shortName": "42124, Beaumont, KY",
+    "state": "KY",
+    "countyFips": "21169",
     "cbsaCode": "23980"
   },
   {
@@ -107883,6 +108828,15 @@
     "cbsaCode": "18140"
   },
   {
+    "zip": "43005",
+    "slug": "43005-bladensburg-oh",
+    "name": "43005 (Bladensburg)",
+    "shortName": "43005, Bladensburg, OH",
+    "state": "OH",
+    "countyFips": "39083",
+    "cbsaCode": "34540"
+  },
+  {
     "zip": "43006",
     "slug": "43006-brinkhaven-oh",
     "name": "43006 (Brinkhaven)",
@@ -107890,15 +108844,6 @@
     "state": "OH",
     "countyFips": "39075",
     "cbsaCode": "18740"
-  },
-  {
-    "zip": "43007",
-    "slug": "43007-broadway-oh",
-    "name": "43007 (Broadway)",
-    "shortName": "43007, Broadway, OH",
-    "state": "OH",
-    "countyFips": "39159",
-    "cbsaCode": "18140"
   },
   {
     "zip": "43008",
@@ -108456,6 +109401,15 @@
     "shortName": "43125, Groveport, OH",
     "state": "OH",
     "countyFips": "39049",
+    "cbsaCode": "18140"
+  },
+  {
+    "zip": "43127",
+    "slug": "43127-haydenville-oh",
+    "name": "43127 (Haydenville)",
+    "shortName": "43127, Haydenville, OH",
+    "state": "OH",
+    "countyFips": "39073",
     "cbsaCode": "18140"
   },
   {
@@ -109098,6 +110052,15 @@
     "cbsaCode": "18140"
   },
   {
+    "zip": "43336",
+    "slug": "43336-middleburg-oh",
+    "name": "43336 (Middleburg)",
+    "shortName": "43336, Middleburg, OH",
+    "state": "OH",
+    "countyFips": "39091",
+    "cbsaCode": "13340"
+  },
+  {
     "zip": "43338",
     "slug": "43338-mount-gilead-oh",
     "name": "43338 (Mount Gilead)",
@@ -109159,15 +110122,6 @@
     "state": "OH",
     "countyFips": "39065",
     "cbsaCode": "13340"
-  },
-  {
-    "zip": "43346",
-    "slug": "43346-roundhead-oh",
-    "name": "43346 (Roundhead)",
-    "shortName": "43346, Roundhead, OH",
-    "state": "OH",
-    "countyFips": "39065",
-    "cbsaCode": null
   },
   {
     "zip": "43347",
@@ -110673,6 +111627,15 @@
     "cbsaCode": "41400"
   },
   {
+    "zip": "43931",
+    "slug": "43931-hannibal-oh",
+    "name": "43931 (Hannibal)",
+    "shortName": "43931, Hannibal, OH",
+    "state": "OH",
+    "countyFips": "39111",
+    "cbsaCode": null
+  },
+  {
     "zip": "43933",
     "slug": "43933-jacobsburg-oh",
     "name": "43933 (Jacobsburg)",
@@ -110707,6 +111670,15 @@
     "state": "OH",
     "countyFips": "39081",
     "cbsaCode": "48260"
+  },
+  {
+    "zip": "43940",
+    "slug": "43940-neffs-oh",
+    "name": "43940 (Neffs)",
+    "shortName": "43940, Neffs, OH",
+    "state": "OH",
+    "countyFips": "39013",
+    "cbsaCode": "48540"
   },
   {
     "zip": "43942",
@@ -114444,6 +115416,15 @@
     "cbsaCode": "48940"
   },
   {
+    "zip": "45147",
+    "slug": "45147-miamiville-oh",
+    "name": "45147 (Miamiville)",
+    "shortName": "45147, Miamiville, OH",
+    "state": "OH",
+    "countyFips": "39025",
+    "cbsaCode": "17140"
+  },
+  {
     "zip": "45148",
     "slug": "45148-midland-oh",
     "name": "45148 (Midland)",
@@ -114486,6 +115467,15 @@
     "shortName": "45154, Mount Orab, OH",
     "state": "OH",
     "countyFips": "39015",
+    "cbsaCode": "17140"
+  },
+  {
+    "zip": "45156",
+    "slug": "45156-neville-oh",
+    "name": "45156 (Neville)",
+    "shortName": "45156, Neville, OH",
+    "state": "OH",
+    "countyFips": "39025",
     "cbsaCode": "17140"
   },
   {
@@ -116667,6 +117657,15 @@
     "cbsaCode": "31930"
   },
   {
+    "zip": "45789",
+    "slug": "45789-wingett-run-oh",
+    "name": "45789 (Wingett Run)",
+    "shortName": "45789, Wingett Run, OH",
+    "state": "OH",
+    "countyFips": "39167",
+    "cbsaCode": "31930"
+  },
+  {
     "zip": "45801",
     "slug": "45801-lima-oh",
     "name": "45801 (Lima)",
@@ -116752,6 +117751,15 @@
     "slug": "45814-arlington-oh",
     "name": "45814 (Arlington)",
     "shortName": "45814, Arlington, OH",
+    "state": "OH",
+    "countyFips": "39063",
+    "cbsaCode": "22300"
+  },
+  {
+    "zip": "45816",
+    "slug": "45816-benton-ridge-oh",
+    "name": "45816 (Benton Ridge)",
+    "shortName": "45816, Benton Ridge, OH",
     "state": "OH",
     "countyFips": "39063",
     "cbsaCode": "22300"
@@ -117861,6 +118869,15 @@
     "shortName": "46151, Martinsville, IN",
     "state": "IN",
     "countyFips": "18109",
+    "cbsaCode": "26900"
+  },
+  {
+    "zip": "46154",
+    "slug": "46154-maxwell-in",
+    "name": "46154 (Maxwell)",
+    "shortName": "46154, Maxwell, IN",
+    "state": "IN",
+    "countyFips": "18059",
     "cbsaCode": "26900"
   },
   {
@@ -119826,6 +120843,15 @@
     "cbsaCode": "28340"
   },
   {
+    "zip": "46796",
+    "slug": "46796-wolflake-in",
+    "name": "46796 (Wolflake)",
+    "shortName": "46796, Wolflake, IN",
+    "state": "IN",
+    "countyFips": "18113",
+    "cbsaCode": "28340"
+  },
+  {
     "zip": "46797",
     "slug": "46797-woodburn-in",
     "name": "46797 (Woodburn)",
@@ -120202,6 +121228,15 @@
     "state": "IN",
     "countyFips": "18169",
     "cbsaCode": "47340"
+  },
+  {
+    "zip": "46942",
+    "slug": "46942-lake-cicott-in",
+    "name": "46942 (Lake Cicott)",
+    "shortName": "46942, Lake Cicott, IN",
+    "state": "IN",
+    "countyFips": "18017",
+    "cbsaCode": "30900"
   },
   {
     "zip": "46943",
@@ -121050,6 +122085,15 @@
     "cbsaCode": "31140"
   },
   {
+    "zip": "47174",
+    "slug": "47174-sulphur-in",
+    "name": "47174 (Sulphur)",
+    "shortName": "47174, Sulphur, IN",
+    "state": "IN",
+    "countyFips": "18025",
+    "cbsaCode": null
+  },
+  {
     "zip": "47175",
     "slug": "47175-taswell-in",
     "name": "47175 (Taswell)",
@@ -121455,6 +122499,15 @@
     "cbsaCode": "34620"
   },
   {
+    "zip": "47337",
+    "slug": "47337-dunreith-in",
+    "name": "47337 (Dunreith)",
+    "shortName": "47337, Dunreith, IN",
+    "state": "IN",
+    "countyFips": "18065",
+    "cbsaCode": "35220"
+  },
+  {
     "zip": "47338",
     "slug": "47338-eaton-in",
     "name": "47338 (Eaton)",
@@ -121621,6 +122674,15 @@
     "slug": "47362-new-castle-in",
     "name": "47362 (New Castle)",
     "shortName": "47362, New Castle, IN",
+    "state": "IN",
+    "countyFips": "18065",
+    "cbsaCode": "35220"
+  },
+  {
+    "zip": "47366",
+    "slug": "47366-new-lisbon-in",
+    "name": "47366 (New Lisbon)",
+    "shortName": "47366, New Lisbon, IN",
     "state": "IN",
     "countyFips": "18065",
     "cbsaCode": "35220"
@@ -122029,6 +123091,15 @@
     "state": "IN",
     "countyFips": "18093",
     "cbsaCode": "13260"
+  },
+  {
+    "zip": "47464",
+    "slug": "47464-stinesville-in",
+    "name": "47464 (Stinesville)",
+    "shortName": "47464, Stinesville, IN",
+    "state": "IN",
+    "countyFips": "18105",
+    "cbsaCode": "14020"
   },
   {
     "zip": "47468",
@@ -123165,6 +124236,15 @@
     "cbsaCode": "33900"
   },
   {
+    "zip": "47925",
+    "slug": "47925-buffalo-in",
+    "name": "47925 (Buffalo)",
+    "shortName": "47925, Buffalo, IN",
+    "state": "IN",
+    "countyFips": "18181",
+    "cbsaCode": "33900"
+  },
+  {
     "zip": "47926",
     "slug": "47926-burnettsville-in",
     "name": "47926 (Burnettsville)",
@@ -123397,6 +124477,15 @@
     "state": "IN",
     "countyFips": "18107",
     "cbsaCode": "18820"
+  },
+  {
+    "zip": "47969",
+    "slug": "47969-newtown-in",
+    "name": "47969 (Newtown)",
+    "shortName": "47969, Newtown, IN",
+    "state": "IN",
+    "countyFips": "18045",
+    "cbsaCode": null
   },
   {
     "zip": "47970",
@@ -127078,6 +128167,15 @@
     "state": "MI",
     "countyFips": "26067",
     "cbsaCode": "24340"
+  },
+  {
+    "zip": "48816",
+    "slug": "48816-cohoctah-mi",
+    "name": "48816 (Cohoctah)",
+    "shortName": "48816, Cohoctah, MI",
+    "state": "MI",
+    "countyFips": "26093",
+    "cbsaCode": "19820"
   },
   {
     "zip": "48817",
@@ -131868,6 +132966,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "49955",
+    "slug": "49955-painesdale-mi",
+    "name": "49955 (Painesdale)",
+    "shortName": "49955, Painesdale, MI",
+    "state": "MI",
+    "countyFips": "26061",
+    "cbsaCode": "26340"
+  },
+  {
     "zip": "49958",
     "slug": "49958-pelkie-mi",
     "name": "49958 (Pelkie)",
@@ -131937,6 +133044,15 @@
     "shortName": "49969, Watersmeet, MI",
     "state": "MI",
     "countyFips": "26053",
+    "cbsaCode": null
+  },
+  {
+    "zip": "49970",
+    "slug": "49970-watton-mi",
+    "name": "49970 (Watton)",
+    "shortName": "49970, Watton, MI",
+    "state": "MI",
+    "countyFips": "26013",
     "cbsaCode": null
   },
   {
@@ -132154,6 +133270,15 @@
     "state": "IA",
     "countyFips": "19049",
     "cbsaCode": "19780"
+  },
+  {
+    "zip": "50040",
+    "slug": "50040-boxholm-ia",
+    "name": "50040 (Boxholm)",
+    "shortName": "50040, Boxholm, IA",
+    "state": "IA",
+    "countyFips": "19015",
+    "cbsaCode": "11180"
   },
   {
     "zip": "50042",
@@ -132397,6 +133522,15 @@
     "state": "IA",
     "countyFips": "19127",
     "cbsaCode": "32260"
+  },
+  {
+    "zip": "50102",
+    "slug": "50102-garden-city-ia",
+    "name": "50102 (Garden City)",
+    "shortName": "50102, Garden City, IA",
+    "state": "IA",
+    "countyFips": "19083",
+    "cbsaCode": null
   },
   {
     "zip": "50105",
@@ -134568,6 +135702,15 @@
     "cbsaCode": "47940"
   },
   {
+    "zip": "50605",
+    "slug": "50605-aredale-ia",
+    "name": "50605 (Aredale)",
+    "shortName": "50605, Aredale, IA",
+    "state": "IA",
+    "countyFips": "19023",
+    "cbsaCode": null
+  },
+  {
     "zip": "50606",
     "slug": "50606-arlington-ia",
     "name": "50606 (Arlington)",
@@ -134910,6 +136053,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "50664",
+    "slug": "50664-oran-ia",
+    "name": "50664 (Oran)",
+    "shortName": "50664, Oran, IA",
+    "state": "IA",
+    "countyFips": "19065",
+    "cbsaCode": "47940"
+  },
+  {
     "zip": "50665",
     "slug": "50665-parkersburg-ia",
     "name": "50665 (Parkersburg)",
@@ -134970,6 +136122,15 @@
     "shortName": "50672, Steamboat Rock, IA",
     "state": "IA",
     "countyFips": "19083",
+    "cbsaCode": "47940"
+  },
+  {
+    "zip": "50673",
+    "slug": "50673-stout-ia",
+    "name": "50673 (Stout)",
+    "shortName": "50673, Stout, IA",
+    "state": "IA",
+    "countyFips": "19075",
     "cbsaCode": "47940"
   },
   {
@@ -135216,15 +136377,6 @@
     "cbsaCode": null
   },
   {
-    "zip": "50862",
-    "slug": "50862-sharpsburg-ia",
-    "name": "50862 (Sharpsburg)",
-    "shortName": "50862, Sharpsburg, IA",
-    "state": "IA",
-    "countyFips": "19173",
-    "cbsaCode": null
-  },
-  {
     "zip": "50863",
     "slug": "50863-tingley-ia",
     "name": "50863 (Tingley)",
@@ -135324,12 +136476,30 @@
     "cbsaCode": null
   },
   {
+    "zip": "51015",
+    "slug": "51015-climbing-hill-ia",
+    "name": "51015 (Climbing Hill)",
+    "shortName": "51015, Climbing Hill, IA",
+    "state": "IA",
+    "countyFips": "19193",
+    "cbsaCode": "43580"
+  },
+  {
     "zip": "51016",
     "slug": "51016-correctionville-ia",
     "name": "51016 (Correctionville)",
     "shortName": "51016, Correctionville, IA",
     "state": "IA",
     "countyFips": "19193",
+    "cbsaCode": "43580"
+  },
+  {
+    "zip": "51018",
+    "slug": "51018-cushing-ia",
+    "name": "51018 (Cushing)",
+    "shortName": "51018, Cushing, IA",
+    "state": "IA",
+    "countyFips": "19093",
     "cbsaCode": "43580"
   },
   {
@@ -136224,6 +137394,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "51459",
+    "slug": "51459-ralston-ia",
+    "name": "51459 (Ralston)",
+    "shortName": "51459, Ralston, IA",
+    "state": "IA",
+    "countyFips": "19027",
+    "cbsaCode": "16140"
+  },
+  {
     "zip": "51461",
     "slug": "51461-schleswig-ia",
     "name": "51461 (Schleswig)",
@@ -136827,6 +138006,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "52036",
+    "slug": "52036-delaware-ia",
+    "name": "52036 (Delaware)",
+    "shortName": "52036, Delaware, IA",
+    "state": "IA",
+    "countyFips": "19055",
+    "cbsaCode": null
+  },
+  {
     "zip": "52037",
     "slug": "52037-delmar-ia",
     "name": "52037 (Delmar)",
@@ -136885,6 +138073,15 @@
     "slug": "52043-elkader-ia",
     "name": "52043 (Elkader)",
     "shortName": "52043, Elkader, IA",
+    "state": "IA",
+    "countyFips": "19043",
+    "cbsaCode": null
+  },
+  {
+    "zip": "52044",
+    "slug": "52044-elkport-ia",
+    "name": "52044 (Elkport)",
+    "shortName": "52044, Elkport, IA",
     "state": "IA",
     "countyFips": "19043",
     "cbsaCode": null
@@ -137682,6 +138879,15 @@
     "cbsaCode": "16300"
   },
   {
+    "zip": "52307",
+    "slug": "52307-middle-amana-ia",
+    "name": "52307 (Middle Amana)",
+    "shortName": "52307, Middle Amana, IA",
+    "state": "IA",
+    "countyFips": "19095",
+    "cbsaCode": null
+  },
+  {
     "zip": "52310",
     "slug": "52310-monticello-ia",
     "name": "52310 (Monticello)",
@@ -138091,6 +139297,15 @@
     "slug": "52405-cedar-rapids-ia",
     "name": "52405 (Cedar Rapids)",
     "shortName": "52405, Cedar Rapids, IA",
+    "state": "IA",
+    "countyFips": "19113",
+    "cbsaCode": "16300"
+  },
+  {
+    "zip": "52408",
+    "slug": "52408-cedar-rapids-ia",
+    "name": "52408 (Cedar Rapids)",
+    "shortName": "52408, Cedar Rapids, IA",
     "state": "IA",
     "countyFips": "19113",
     "cbsaCode": "16300"
@@ -138726,6 +139941,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "52701",
+    "slug": "52701-andover-ia",
+    "name": "52701 (Andover)",
+    "shortName": "52701, Andover, IA",
+    "state": "IA",
+    "countyFips": "19045",
+    "cbsaCode": "17540"
+  },
+  {
     "zip": "52720",
     "slug": "52720-atalissa-ia",
     "name": "52720 (Atalissa)",
@@ -139311,6 +140535,15 @@
     "cbsaCode": "33340"
   },
   {
+    "zip": "53031",
+    "slug": "53031-hingham-wi",
+    "name": "53031 (Hingham)",
+    "shortName": "53031, Hingham, WI",
+    "state": "WI",
+    "countyFips": "55117",
+    "cbsaCode": "43100"
+  },
+  {
     "zip": "53032",
     "slug": "53032-horicon-wi",
     "name": "53032 (Horicon)",
@@ -139869,6 +141102,15 @@
     "cbsaCode": "39540"
   },
   {
+    "zip": "53127",
+    "slug": "53127-genesee-depot-wi",
+    "name": "53127 (Genesee Depot)",
+    "shortName": "53127, Genesee Depot, WI",
+    "state": "WI",
+    "countyFips": "55133",
+    "cbsaCode": "33340"
+  },
+  {
     "zip": "53128",
     "slug": "53128-genoa-city-wi",
     "name": "53128 (Genoa City)",
@@ -140179,15 +141421,6 @@
     "slug": "53191-williams-bay-wi",
     "name": "53191 (Williams Bay)",
     "shortName": "53191, Williams Bay, WI",
-    "state": "WI",
-    "countyFips": "55127",
-    "cbsaCode": "48580"
-  },
-  {
-    "zip": "53195",
-    "slug": "53195-zenda-wi",
-    "name": "53195 (Zenda)",
-    "shortName": "53195, Zenda, WI",
     "state": "WI",
     "countyFips": "55127",
     "cbsaCode": "48580"
@@ -142875,6 +144108,15 @@
     "cbsaCode": "49220"
   },
   {
+    "zip": "54413",
+    "slug": "54413-babcock-wi",
+    "name": "54413 (Babcock)",
+    "shortName": "54413, Babcock, WI",
+    "state": "WI",
+    "countyFips": "55141",
+    "cbsaCode": "49220"
+  },
+  {
     "zip": "54414",
     "slug": "54414-birnamwood-wi",
     "name": "54414 (Birnamwood)",
@@ -143511,6 +144753,15 @@
     "shortName": "54524, Fifield, WI",
     "state": "WI",
     "countyFips": "55099",
+    "cbsaCode": null
+  },
+  {
+    "zip": "54525",
+    "slug": "54525-gile-wi",
+    "name": "54525 (Gile)",
+    "shortName": "54525, Gile, WI",
+    "state": "WI",
+    "countyFips": "55051",
     "cbsaCode": null
   },
   {
@@ -144351,6 +145602,15 @@
     "cbsaCode": "32860"
   },
   {
+    "zip": "54731",
+    "slug": "54731-conrath-wi",
+    "name": "54731 (Conrath)",
+    "shortName": "54731, Conrath, WI",
+    "state": "WI",
+    "countyFips": "55107",
+    "cbsaCode": null
+  },
+  {
     "zip": "54732",
     "slug": "54732-cornell-wi",
     "name": "54732 (Cornell)",
@@ -144880,6 +146140,15 @@
     "state": "WI",
     "countyFips": "55013",
     "cbsaCode": null
+  },
+  {
+    "zip": "54841",
+    "slug": "54841-haugen-wi",
+    "name": "54841 (Haugen)",
+    "shortName": "54841, Haugen, WI",
+    "state": "WI",
+    "countyFips": "55005",
+    "cbsaCode": "39960"
   },
   {
     "zip": "54842",
@@ -147780,6 +149049,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "55613",
+    "slug": "55613-schroeder-mn",
+    "name": "55613 (Schroeder)",
+    "shortName": "55613, Schroeder, MN",
+    "state": "MN",
+    "countyFips": "27031",
+    "cbsaCode": null
+  },
+  {
     "zip": "55614",
     "slug": "55614-silver-bay-mn",
     "name": "55614 (Silver Bay)",
@@ -148347,6 +149625,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "55796",
+    "slug": "55796-winton-mn",
+    "name": "55796 (Winton)",
+    "shortName": "55796, Winton, MN",
+    "state": "MN",
+    "countyFips": "27137",
+    "cbsaCode": "20260"
+  },
+  {
     "zip": "55797",
     "slug": "55797-wrenshall-mn",
     "name": "55797 (Wrenshall)",
@@ -148635,6 +149922,15 @@
     "cbsaCode": "40340"
   },
   {
+    "zip": "55933",
+    "slug": "55933-elkton-mn",
+    "name": "55933 (Elkton)",
+    "shortName": "55933, Elkton, MN",
+    "state": "MN",
+    "countyFips": "27099",
+    "cbsaCode": "12380"
+  },
+  {
     "zip": "55934",
     "slug": "55934-eyota-mn",
     "name": "55934 (Eyota)",
@@ -148741,6 +150037,15 @@
     "state": "MN",
     "countyFips": "27045",
     "cbsaCode": "40340"
+  },
+  {
+    "zip": "55950",
+    "slug": "55950-lansing-mn",
+    "name": "55950 (Lansing)",
+    "shortName": "55950, Lansing, MN",
+    "state": "MN",
+    "countyFips": "27099",
+    "cbsaCode": "12380"
   },
   {
     "zip": "55951",
@@ -149706,6 +151011,15 @@
     "cbsaCode": "21860"
   },
   {
+    "zip": "56122",
+    "slug": "56122-chandler-mn",
+    "name": "56122 (Chandler)",
+    "shortName": "56122, Chandler, MN",
+    "state": "MN",
+    "countyFips": "27101",
+    "cbsaCode": "49380"
+  },
+  {
     "zip": "56123",
     "slug": "56123-currie-mn",
     "name": "56123 (Currie)",
@@ -149895,6 +151209,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "56153",
+    "slug": "56153-leota-mn",
+    "name": "56153 (Leota)",
+    "shortName": "56153, Leota, MN",
+    "state": "MN",
+    "countyFips": "27105",
+    "cbsaCode": "49380"
+  },
+  {
     "zip": "56156",
     "slug": "56156-luverne-mn",
     "name": "56156 (Luverne)",
@@ -150001,6 +151324,15 @@
     "state": "MN",
     "countyFips": "27105",
     "cbsaCode": "49380"
+  },
+  {
+    "zip": "56169",
+    "slug": "56169-russell-mn",
+    "name": "56169 (Russell)",
+    "shortName": "56169, Russell, MN",
+    "state": "MN",
+    "countyFips": "27083",
+    "cbsaCode": "32140"
   },
   {
     "zip": "56171",
@@ -150523,6 +151855,15 @@
     "state": "MN",
     "countyFips": "27067",
     "cbsaCode": "48820"
+  },
+  {
+    "zip": "56274",
+    "slug": "56274-norcross-mn",
+    "name": "56274 (Norcross)",
+    "shortName": "56274, Norcross, MN",
+    "state": "MN",
+    "countyFips": "27051",
+    "cbsaCode": null
   },
   {
     "zip": "56276",
@@ -152748,6 +154089,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "56760",
+    "slug": "56760-viking-mn",
+    "name": "56760 (Viking)",
+    "shortName": "56760, Viking, MN",
+    "state": "MN",
+    "countyFips": "27089",
+    "cbsaCode": null
+  },
+  {
     "zip": "56761",
     "slug": "56761-wannaska-mn",
     "name": "56761 (Wannaska)",
@@ -153558,6 +154908,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "57251",
+    "slug": "57251-marvin-sd",
+    "name": "57251 (Marvin)",
+    "shortName": "57251, Marvin, SD",
+    "state": "SD",
+    "countyFips": "46051",
+    "cbsaCode": null
+  },
+  {
     "zip": "57252",
     "slug": "57252-milbank-sd",
     "name": "57252 (Milbank)",
@@ -153603,10 +154962,10 @@
     "cbsaCode": "47980"
   },
   {
-    "zip": "57264",
-    "slug": "57264-stockholm-sd",
-    "name": "57264 (Stockholm)",
-    "shortName": "57264, Stockholm, SD",
+    "zip": "57265",
+    "slug": "57265-strandburg-sd",
+    "name": "57265 (Strandburg)",
+    "shortName": "57265, Strandburg, SD",
     "state": "SD",
     "countyFips": "46051",
     "cbsaCode": "47980"
@@ -153727,6 +155086,15 @@
     "state": "SD",
     "countyFips": "46097",
     "cbsaCode": "33580"
+  },
+  {
+    "zip": "57324",
+    "slug": "57324-cavour-sd",
+    "name": "57324 (Cavour)",
+    "shortName": "57324, Cavour, SD",
+    "state": "SD",
+    "countyFips": "46005",
+    "cbsaCode": "26700"
   },
   {
     "zip": "57325",
@@ -154017,6 +155385,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "57426",
+    "slug": "57426-barnard-sd",
+    "name": "57426 (Barnard)",
+    "shortName": "57426, Barnard, SD",
+    "state": "SD",
+    "countyFips": "46013",
+    "cbsaCode": "10100"
+  },
+  {
     "zip": "57427",
     "slug": "57427-bath-sd",
     "name": "57427 (Bath)",
@@ -154125,6 +155502,15 @@
     "cbsaCode": "10100"
   },
   {
+    "zip": "57452",
+    "slug": "57452-java-sd",
+    "name": "57452 (Java)",
+    "shortName": "57452, Java, SD",
+    "state": "SD",
+    "countyFips": "46129",
+    "cbsaCode": null
+  },
+  {
     "zip": "57454",
     "slug": "57454-langford-sd",
     "name": "57454 (Langford)",
@@ -154197,6 +155583,15 @@
     "cbsaCode": "38180"
   },
   {
+    "zip": "57523",
+    "slug": "57523-burke-sd",
+    "name": "57523 (Burke)",
+    "shortName": "57523, Burke, SD",
+    "state": "SD",
+    "countyFips": "46053",
+    "cbsaCode": null
+  },
+  {
     "zip": "57528",
     "slug": "57528-colome-sd",
     "name": "57528 (Colome)",
@@ -154219,6 +155614,15 @@
     "slug": "57533-gregory-sd",
     "name": "57533 (Gregory)",
     "shortName": "57533, Gregory, SD",
+    "state": "SD",
+    "countyFips": "46053",
+    "cbsaCode": null
+  },
+  {
+    "zip": "57538",
+    "slug": "57538-herrick-sd",
+    "name": "57538 (Herrick)",
+    "shortName": "57538, Herrick, SD",
     "state": "SD",
     "countyFips": "46053",
     "cbsaCode": null
@@ -154323,6 +155727,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "57633",
+    "slug": "57633-isabel-sd",
+    "name": "57633 (Isabel)",
+    "shortName": "57633, Isabel, SD",
+    "state": "SD",
+    "countyFips": "46041",
+    "cbsaCode": null
+  },
+  {
     "zip": "57638",
     "slug": "57638-lemmon-sd",
     "name": "57638 (Lemmon)",
@@ -154402,6 +155815,15 @@
     "state": "SD",
     "countyFips": "46063",
     "cbsaCode": null
+  },
+  {
+    "zip": "57722",
+    "slug": "57722-buffalo-gap-sd",
+    "name": "57722 (Buffalo Gap)",
+    "shortName": "57722, Buffalo Gap, SD",
+    "state": "SD",
+    "countyFips": "46033",
+    "cbsaCode": "39660"
   },
   {
     "zip": "57725",
@@ -154521,6 +155943,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "57763",
+    "slug": "57763-oelrichs-sd",
+    "name": "57763 (Oelrichs)",
+    "shortName": "57763, Oelrichs, SD",
+    "state": "SD",
+    "countyFips": "46047",
+    "cbsaCode": null
+  },
+  {
     "zip": "57766",
     "slug": "57766-oral-sd",
     "name": "57766 (Oral)",
@@ -154618,6 +156049,33 @@
     "state": "ND",
     "countyFips": "38017",
     "cbsaCode": "22020"
+  },
+  {
+    "zip": "58006",
+    "slug": "58006-arthur-nd",
+    "name": "58006 (Arthur)",
+    "shortName": "58006, Arthur, ND",
+    "state": "ND",
+    "countyFips": "38017",
+    "cbsaCode": "22020"
+  },
+  {
+    "zip": "58007",
+    "slug": "58007-ayr-nd",
+    "name": "58007 (Ayr)",
+    "shortName": "58007, Ayr, ND",
+    "state": "ND",
+    "countyFips": "38017",
+    "cbsaCode": "22020"
+  },
+  {
+    "zip": "58009",
+    "slug": "58009-blanchard-nd",
+    "name": "58009 (Blanchard)",
+    "shortName": "58009, Blanchard, ND",
+    "state": "ND",
+    "countyFips": "38097",
+    "cbsaCode": null
   },
   {
     "zip": "58011",
@@ -154854,6 +156312,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58069",
+    "slug": "58069-stirum-nd",
+    "name": "58069 (Stirum)",
+    "shortName": "58069, Stirum, ND",
+    "state": "ND",
+    "countyFips": "38081",
+    "cbsaCode": null
+  },
+  {
     "zip": "58072",
     "slug": "58072-valley-city-nd",
     "name": "58072 (Valley City)",
@@ -154942,6 +156409,15 @@
     "state": "ND",
     "countyFips": "38035",
     "cbsaCode": "24220"
+  },
+  {
+    "zip": "58210",
+    "slug": "58210-adams-nd",
+    "name": "58210 (Adams)",
+    "shortName": "58210, Adams, ND",
+    "state": "ND",
+    "countyFips": "38099",
+    "cbsaCode": null
   },
   {
     "zip": "58212",
@@ -155259,6 +156735,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58323",
+    "slug": "58323-calvin-nd",
+    "name": "58323 (Calvin)",
+    "shortName": "58323, Calvin, ND",
+    "state": "ND",
+    "countyFips": "38019",
+    "cbsaCode": null
+  },
+  {
     "zip": "58324",
     "slug": "58324-cando-nd",
     "name": "58324 (Cando)",
@@ -155412,6 +156897,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58377",
+    "slug": "58377-starkweather-nd",
+    "name": "58377 (Starkweather)",
+    "shortName": "58377, Starkweather, ND",
+    "state": "ND",
+    "countyFips": "38071",
+    "cbsaCode": null
+  },
+  {
     "zip": "58380",
     "slug": "58380-tolna-nd",
     "name": "58380 (Tolna)",
@@ -155502,6 +156996,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58430",
+    "slug": "58430-denhoff-nd",
+    "name": "58430 (Denhoff)",
+    "shortName": "58430, Denhoff, ND",
+    "state": "ND",
+    "countyFips": "38083",
+    "cbsaCode": null
+  },
+  {
     "zip": "58433",
     "slug": "58433-edgeley-nd",
     "name": "58433 (Edgeley)",
@@ -155536,6 +157039,15 @@
     "state": "ND",
     "countyFips": "38047",
     "cbsaCode": "27420"
+  },
+  {
+    "zip": "58448",
+    "slug": "58448-hannaford-nd",
+    "name": "58448 (Hannaford)",
+    "shortName": "58448, Hannaford, ND",
+    "state": "ND",
+    "countyFips": "38039",
+    "cbsaCode": null
   },
   {
     "zip": "58456",
@@ -155601,6 +157113,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58477",
+    "slug": "58477-regan-nd",
+    "name": "58477 (Regan)",
+    "shortName": "58477, Regan, ND",
+    "state": "ND",
+    "countyFips": "38015",
+    "cbsaCode": "13900"
+  },
+  {
     "zip": "58479",
     "slug": "58479-rogers-nd",
     "name": "58479 (Rogers)",
@@ -155637,6 +157158,15 @@
     "cbsaCode": "27420"
   },
   {
+    "zip": "58486",
+    "slug": "58486-sykeston-nd",
+    "name": "58486 (Sykeston)",
+    "shortName": "58486, Sykeston, ND",
+    "state": "ND",
+    "countyFips": "38103",
+    "cbsaCode": "27420"
+  },
+  {
     "zip": "58494",
     "slug": "58494-wing-nd",
     "name": "58494 (Wing)",
@@ -155653,6 +157183,15 @@
     "state": "ND",
     "countyFips": "38051",
     "cbsaCode": null
+  },
+  {
+    "zip": "58497",
+    "slug": "58497-ypsilanti-nd",
+    "name": "58497 (Ypsilanti)",
+    "shortName": "58497, Ypsilanti, ND",
+    "state": "ND",
+    "countyFips": "38093",
+    "cbsaCode": "27420"
   },
   {
     "zip": "58501",
@@ -155709,6 +157248,15 @@
     "cbsaCode": "13900"
   },
   {
+    "zip": "58524",
+    "slug": "58524-braddock-nd",
+    "name": "58524 (Braddock)",
+    "shortName": "58524, Braddock, ND",
+    "state": "ND",
+    "countyFips": "38029",
+    "cbsaCode": "13900"
+  },
+  {
     "zip": "58529",
     "slug": "58529-carson-nd",
     "name": "58529 (Carson)",
@@ -155736,6 +157284,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58532",
+    "slug": "58532-driscoll-nd",
+    "name": "58532 (Driscoll)",
+    "shortName": "58532, Driscoll, ND",
+    "state": "ND",
+    "countyFips": "38043",
+    "cbsaCode": "13900"
+  },
+  {
     "zip": "58533",
     "slug": "58533-elgin-nd",
     "name": "58533 (Elgin)",
@@ -155760,6 +157317,15 @@
     "shortName": "58540, Garrison, ND",
     "state": "ND",
     "countyFips": "38055",
+    "cbsaCode": null
+  },
+  {
+    "zip": "58544",
+    "slug": "58544-hazelton-nd",
+    "name": "58544 (Hazelton)",
+    "shortName": "58544, Hazelton, ND",
+    "state": "ND",
+    "countyFips": "38029",
     "cbsaCode": null
   },
   {
@@ -155889,6 +157455,15 @@
     "cbsaCode": "13900"
   },
   {
+    "zip": "58580",
+    "slug": "58580-zap-nd",
+    "name": "58580 (Zap)",
+    "shortName": "58580, Zap, ND",
+    "state": "ND",
+    "countyFips": "38057",
+    "cbsaCode": null
+  },
+  {
     "zip": "58581",
     "slug": "58581-zeeland-nd",
     "name": "58581 (Zeeland)",
@@ -155949,6 +157524,15 @@
     "shortName": "58626, Dunn Center, ND",
     "state": "ND",
     "countyFips": "38025",
+    "cbsaCode": "19860"
+  },
+  {
+    "zip": "58627",
+    "slug": "58627-fairfield-nd",
+    "name": "58627 (Fairfield)",
+    "shortName": "58627, Fairfield, ND",
+    "state": "ND",
+    "countyFips": "38007",
     "cbsaCode": "19860"
   },
   {
@@ -156060,6 +157644,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "58651",
+    "slug": "58651-rhame-nd",
+    "name": "58651 (Rhame)",
+    "shortName": "58651, Rhame, ND",
+    "state": "ND",
+    "countyFips": "38087",
+    "cbsaCode": null
+  },
+  {
     "zip": "58652",
     "slug": "58652-richardton-nd",
     "name": "58652 (Richardton)",
@@ -156150,6 +157743,15 @@
     "cbsaCode": "33500"
   },
   {
+    "zip": "58723",
+    "slug": "58723-butte-nd",
+    "name": "58723 (Butte)",
+    "shortName": "58723, Butte, ND",
+    "state": "ND",
+    "countyFips": "38083",
+    "cbsaCode": "33500"
+  },
+  {
     "zip": "58727",
     "slug": "58727-columbus-nd",
     "name": "58727 (Columbus)",
@@ -156166,6 +157768,15 @@
     "state": "ND",
     "countyFips": "38023",
     "cbsaCode": null
+  },
+  {
+    "zip": "58733",
+    "slug": "58733-des-lacs-nd",
+    "name": "58733 (Des Lacs)",
+    "shortName": "58733, Des Lacs, ND",
+    "state": "ND",
+    "countyFips": "38101",
+    "cbsaCode": "33500"
   },
   {
     "zip": "58735",
@@ -156337,6 +157948,15 @@
     "state": "ND",
     "countyFips": "38061",
     "cbsaCode": "33500"
+  },
+  {
+    "zip": "58772",
+    "slug": "58772-portal-nd",
+    "name": "58772 (Portal)",
+    "shortName": "58772, Portal, ND",
+    "state": "ND",
+    "countyFips": "38013",
+    "cbsaCode": null
   },
   {
     "zip": "58773",
@@ -157059,6 +158679,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "59231",
+    "slug": "59231-saint-marie-mt",
+    "name": "59231 (Saint Marie)",
+    "shortName": "59231, Saint Marie, MT",
+    "state": "MT",
+    "countyFips": "30105",
+    "cbsaCode": null
+  },
+  {
     "zip": "59241",
     "slug": "59241-hinsdale-mt",
     "name": "59241 (Hinsdale)",
@@ -157473,6 +159102,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "59456",
+    "slug": "59456-ledger-mt",
+    "name": "59456 (Ledger)",
+    "shortName": "59456, Ledger, MT",
+    "state": "MT",
+    "countyFips": "30101",
+    "cbsaCode": null
+  },
+  {
     "zip": "59457",
     "slug": "59457-lewistown-mt",
     "name": "59457 (Lewistown)",
@@ -157695,6 +159333,15 @@
     "shortName": "59528, Hingham, MT",
     "state": "MT",
     "countyFips": "30041",
+    "cbsaCode": null
+  },
+  {
+    "zip": "59531",
+    "slug": "59531-joplin-mt",
+    "name": "59531 (Joplin)",
+    "shortName": "59531, Joplin, MT",
+    "state": "MT",
+    "countyFips": "30051",
     "cbsaCode": null
   },
   {
@@ -161154,6 +162801,15 @@
     "cbsaCode": "16980"
   },
   {
+    "zip": "60557",
+    "slug": "60557-wedron-il",
+    "name": "60557 (Wedron)",
+    "shortName": "60557, Wedron, IL",
+    "state": "IL",
+    "countyFips": "17099",
+    "cbsaCode": "36837"
+  },
+  {
     "zip": "60558",
     "slug": "60558-western-springs-il",
     "name": "60558 (Western Springs)",
@@ -163053,6 +164709,15 @@
     "cbsaCode": "19340"
   },
   {
+    "zip": "61274",
+    "slug": "61274-osco-il",
+    "name": "61274 (Osco)",
+    "shortName": "61274, Osco, IL",
+    "state": "IL",
+    "countyFips": "17073",
+    "cbsaCode": "19340"
+  },
+  {
     "zip": "61275",
     "slug": "61275-port-byron-il",
     "name": "61275 (Port Byron)",
@@ -163233,6 +164898,15 @@
     "cbsaCode": "36837"
   },
   {
+    "zip": "61324",
+    "slug": "61324-eldena-il",
+    "name": "61324 (Eldena)",
+    "shortName": "61324, Eldena, IL",
+    "state": "IL",
+    "countyFips": "17103",
+    "cbsaCode": "19940"
+  },
+  {
     "zip": "61325",
     "slug": "61325-grand-ridge-il",
     "name": "61325 (Grand Ridge)",
@@ -163309,6 +164983,15 @@
     "slug": "61336-magnolia-il",
     "name": "61336 (Magnolia)",
     "shortName": "61336, Magnolia, IL",
+    "state": "IL",
+    "countyFips": "17155",
+    "cbsaCode": "36837"
+  },
+  {
+    "zip": "61340",
+    "slug": "61340-mark-il",
+    "name": "61340 (Mark)",
+    "shortName": "61340, Mark, IL",
     "state": "IL",
     "countyFips": "17155",
     "cbsaCode": "36837"
@@ -163692,6 +165375,15 @@
     "cbsaCode": "15900"
   },
   {
+    "zip": "61432",
+    "slug": "61432-fairview-il",
+    "name": "61432 (Fairview)",
+    "shortName": "61432, Fairview, IL",
+    "state": "IL",
+    "countyFips": "17057",
+    "cbsaCode": "15900"
+  },
+  {
     "zip": "61433",
     "slug": "61433-fiatt-il",
     "name": "61433 (Fiatt)",
@@ -163858,6 +165550,15 @@
     "slug": "61465-new-windsor-il",
     "name": "61465 (New Windsor)",
     "shortName": "61465, New Windsor, IL",
+    "state": "IL",
+    "countyFips": "17131",
+    "cbsaCode": "19340"
+  },
+  {
+    "zip": "61466",
+    "slug": "61466-north-henderson-il",
+    "name": "61466 (North Henderson)",
+    "shortName": "61466, North Henderson, IL",
     "state": "IL",
     "countyFips": "17131",
     "cbsaCode": "19340"
@@ -164151,6 +165852,15 @@
     "cbsaCode": "37900"
   },
   {
+    "zip": "61539",
+    "slug": "61539-kingston-mines-il",
+    "name": "61539 (Kingston Mines)",
+    "shortName": "61539, Kingston Mines, IL",
+    "state": "IL",
+    "countyFips": "17143",
+    "cbsaCode": "37900"
+  },
+  {
     "zip": "61540",
     "slug": "61540-lacon-il",
     "name": "61540 (Lacon)",
@@ -164239,6 +165949,15 @@
     "state": "IL",
     "countyFips": "17143",
     "cbsaCode": "37900"
+  },
+  {
+    "zip": "61553",
+    "slug": "61553-norris-il",
+    "name": "61553 (Norris)",
+    "shortName": "61553, Norris, IL",
+    "state": "IL",
+    "countyFips": "17057",
+    "cbsaCode": "15900"
   },
   {
     "zip": "61554",
@@ -165951,6 +167670,15 @@
     "cbsaCode": "41180"
   },
   {
+    "zip": "62089",
+    "slug": "62089-taylor-springs-il",
+    "name": "62089 (Taylor Springs)",
+    "shortName": "62089, Taylor Springs, IL",
+    "state": "IL",
+    "countyFips": "17135",
+    "cbsaCode": null
+  },
+  {
     "zip": "62090",
     "slug": "62090-venice-il",
     "name": "62090 (Venice)",
@@ -166482,6 +168210,15 @@
     "cbsaCode": "41180"
   },
   {
+    "zip": "62279",
+    "slug": "62279-renault-il",
+    "name": "62279 (Renault)",
+    "shortName": "62279, Renault, IL",
+    "state": "IL",
+    "countyFips": "17133",
+    "cbsaCode": "41180"
+  },
+  {
     "zip": "62280",
     "slug": "62280-rockwood-il",
     "name": "62280 (Rockwood)",
@@ -166905,6 +168642,15 @@
     "cbsaCode": "39500"
   },
   {
+    "zip": "62380",
+    "slug": "62380-west-point-il",
+    "name": "62380 (West Point)",
+    "shortName": "62380, West Point, IL",
+    "state": "IL",
+    "countyFips": "17067",
+    "cbsaCode": null
+  },
+  {
     "zip": "62401",
     "slug": "62401-effingham-il",
     "name": "62401 (Effingham)",
@@ -167269,6 +169015,15 @@
     "slug": "62513-blue-mound-il",
     "name": "62513 (Blue Mound)",
     "shortName": "62513, Blue Mound, IL",
+    "state": "IL",
+    "countyFips": "17115",
+    "cbsaCode": "19500"
+  },
+  {
+    "zip": "62514",
+    "slug": "62514-boody-il",
+    "name": "62514 (Boody)",
+    "shortName": "62514, Boody, IL",
     "state": "IL",
     "countyFips": "17115",
     "cbsaCode": "19500"
@@ -167715,6 +169470,15 @@
     "cbsaCode": "44100"
   },
   {
+    "zip": "62630",
+    "slug": "62630-chesterfield-il",
+    "name": "62630 (Chesterfield)",
+    "shortName": "62630, Chesterfield, IL",
+    "state": "IL",
+    "countyFips": "17117",
+    "cbsaCode": "41180"
+  },
+  {
     "zip": "62631",
     "slug": "62631-concord-il",
     "name": "62631 (Concord)",
@@ -168156,6 +169920,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "62820",
+    "slug": "62820-burnt-prairie-il",
+    "name": "62820 (Burnt Prairie)",
+    "shortName": "62820, Burnt Prairie, IL",
+    "state": "IL",
+    "countyFips": "17193",
+    "cbsaCode": null
+  },
+  {
     "zip": "62821",
     "slug": "62821-carmi-il",
     "name": "62821 (Carmi)",
@@ -168271,6 +170044,15 @@
     "state": "IL",
     "countyFips": "17025",
     "cbsaCode": null
+  },
+  {
+    "zip": "62841",
+    "slug": "62841-freeman-spur-il",
+    "name": "62841 (Freeman Spur)",
+    "shortName": "62841, Freeman Spur, IL",
+    "state": "IL",
+    "countyFips": "17199",
+    "cbsaCode": "32060"
   },
   {
     "zip": "62842",
@@ -170424,6 +172206,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "63431",
+    "slug": "63431-anabel-mo",
+    "name": "63431 (Anabel)",
+    "shortName": "63431, Anabel, MO",
+    "state": "MO",
+    "countyFips": "29121",
+    "cbsaCode": null
+  },
+  {
     "zip": "63435",
     "slug": "63435-canton-mo",
     "name": "63435 (Canton)",
@@ -170671,6 +172462,15 @@
     "slug": "63535-coatsville-mo",
     "name": "63535 (Coatsville)",
     "shortName": "63535, Coatsville, MO",
+    "state": "MO",
+    "countyFips": "29197",
+    "cbsaCode": "28860"
+  },
+  {
+    "zip": "63536",
+    "slug": "63536-downing-mo",
+    "name": "63536 (Downing)",
+    "shortName": "63536, Downing, MO",
     "state": "MO",
     "countyFips": "29197",
     "cbsaCode": "28860"
@@ -171117,6 +172917,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "63665",
+    "slug": "63665-redford-mo",
+    "name": "63665 (Redford)",
+    "shortName": "63665, Redford, MO",
+    "state": "MO",
+    "countyFips": "29179",
+    "cbsaCode": null
+  },
+  {
     "zip": "63670",
     "slug": "63670-sainte-genevieve-mo",
     "name": "63670 (Sainte Genevieve)",
@@ -171310,6 +173119,15 @@
     "slug": "63781-sedgewickville-mo",
     "name": "63781 (Sedgewickville)",
     "shortName": "63781, Sedgewickville, MO",
+    "state": "MO",
+    "countyFips": "29017",
+    "cbsaCode": "16020"
+  },
+  {
+    "zip": "63782",
+    "slug": "63782-sturdivant-mo",
+    "name": "63782 (Sturdivant)",
+    "shortName": "63782, Sturdivant, MO",
     "state": "MO",
     "countyFips": "29017",
     "cbsaCode": "16020"
@@ -172323,6 +174141,15 @@
     "cbsaCode": "28140"
   },
   {
+    "zip": "64092",
+    "slug": "64092-waldron-mo",
+    "name": "64092 (Waldron)",
+    "shortName": "64092, Waldron, MO",
+    "state": "MO",
+    "countyFips": "29165",
+    "cbsaCode": "28140"
+  },
+  {
     "zip": "64093",
     "slug": "64093-warrensburg-mo",
     "name": "64093 (Warrensburg)",
@@ -172926,6 +174753,15 @@
     "cbsaCode": "41140"
   },
   {
+    "zip": "64451",
+    "slug": "64451-forest-city-mo",
+    "name": "64451 (Forest City)",
+    "shortName": "64451, Forest City, MO",
+    "state": "MO",
+    "countyFips": "29087",
+    "cbsaCode": null
+  },
+  {
     "zip": "64453",
     "slug": "64453-gentry-mo",
     "name": "64453 (Gentry)",
@@ -173025,6 +174861,15 @@
     "cbsaCode": "41140"
   },
   {
+    "zip": "64476",
+    "slug": "64476-pickering-mo",
+    "name": "64476 (Pickering)",
+    "shortName": "64476, Pickering, MO",
+    "state": "MO",
+    "countyFips": "29147",
+    "cbsaCode": "32340"
+  },
+  {
     "zip": "64477",
     "slug": "64477-plattsburg-mo",
     "name": "64477 (Plattsburg)",
@@ -173095,6 +174940,15 @@
     "state": "MO",
     "countyFips": "29003",
     "cbsaCode": "41140"
+  },
+  {
+    "zip": "64486",
+    "slug": "64486-sheridan-mo",
+    "name": "64486 (Sheridan)",
+    "shortName": "64486, Sheridan, MO",
+    "state": "MO",
+    "countyFips": "29227",
+    "cbsaCode": "32340"
   },
   {
     "zip": "64487",
@@ -173526,6 +175380,15 @@
     "shortName": "64673, Princeton, MO",
     "state": "MO",
     "countyFips": "29129",
+    "cbsaCode": null
+  },
+  {
+    "zip": "64676",
+    "slug": "64676-rothville-mo",
+    "name": "64676 (Rothville)",
+    "shortName": "64676, Rothville, MO",
+    "state": "MO",
+    "countyFips": "29041",
     "cbsaCode": null
   },
   {
@@ -174069,6 +175932,15 @@
     "cbsaCode": "27900"
   },
   {
+    "zip": "64849",
+    "slug": "64849-neck-city-mo",
+    "name": "64849 (Neck City)",
+    "shortName": "64849, Neck City, MO",
+    "state": "MO",
+    "countyFips": "29097",
+    "cbsaCode": "27900"
+  },
+  {
     "zip": "64850",
     "slug": "64850-neosho-mo",
     "name": "64850 (Neosho)",
@@ -174426,6 +176298,15 @@
     "shortName": "65053, Lohman, MO",
     "state": "MO",
     "countyFips": "29051",
+    "cbsaCode": "27620"
+  },
+  {
+    "zip": "65054",
+    "slug": "65054-loose-creek-mo",
+    "name": "65054 (Loose Creek)",
+    "shortName": "65054, Loose Creek, MO",
+    "state": "MO",
+    "countyFips": "29151",
     "cbsaCode": "27620"
   },
   {
@@ -174861,6 +176742,15 @@
     "cbsaCode": "33620"
   },
   {
+    "zip": "65258",
+    "slug": "65258-holliday-mo",
+    "name": "65258 (Holliday)",
+    "shortName": "65258, Holliday, MO",
+    "state": "MO",
+    "countyFips": "29137",
+    "cbsaCode": null
+  },
+  {
     "zip": "65259",
     "slug": "65259-huntsville-mo",
     "name": "65259 (Huntsville)",
@@ -175003,6 +176893,15 @@
     "state": "MO",
     "countyFips": "29019",
     "cbsaCode": "17860"
+  },
+  {
+    "zip": "65285",
+    "slug": "65285-thompson-mo",
+    "name": "65285 (Thompson)",
+    "shortName": "65285, Thompson, MO",
+    "state": "MO",
+    "countyFips": "29007",
+    "cbsaCode": "33020"
   },
   {
     "zip": "65287",
@@ -175833,6 +177732,15 @@
     "cbsaCode": "44180"
   },
   {
+    "zip": "65623",
+    "slug": "65623-butterfield-mo",
+    "name": "65623 (Butterfield)",
+    "shortName": "65623, Butterfield, MO",
+    "state": "MO",
+    "countyFips": "29009",
+    "cbsaCode": null
+  },
+  {
     "zip": "65624",
     "slug": "65624-cape-fair-mo",
     "name": "65624 (Cape Fair)",
@@ -176418,6 +178326,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "65730",
+    "slug": "65730-powell-mo",
+    "name": "65730 (Powell)",
+    "shortName": "65730, Powell, MO",
+    "state": "MO",
+    "countyFips": "29119",
+    "cbsaCode": null
+  },
+  {
     "zip": "65731",
     "slug": "65731-powersite-mo",
     "name": "65731 (Powersite)",
@@ -176443,6 +178360,15 @@
     "state": "MO",
     "countyFips": "29009",
     "cbsaCode": "27900"
+  },
+  {
+    "zip": "65735",
+    "slug": "65735-quincy-mo",
+    "name": "65735 (Quincy)",
+    "shortName": "65735, Quincy, MO",
+    "state": "MO",
+    "countyFips": "29085",
+    "cbsaCode": null
   },
   {
     "zip": "65737",
@@ -177786,15 +179712,6 @@
     "cbsaCode": "31740"
   },
   {
-    "zip": "66412",
-    "slug": "66412-bremen-ks",
-    "name": "66412 (Bremen)",
-    "shortName": "66412, Bremen, KS",
-    "state": "KS",
-    "countyFips": "20117",
-    "cbsaCode": null
-  },
-  {
     "zip": "66413",
     "slug": "66413-burlingame-ks",
     "name": "66413 (Burlingame)",
@@ -178983,6 +180900,15 @@
     "cbsaCode": "21380"
   },
   {
+    "zip": "66870",
+    "slug": "66870-virgil-ks",
+    "name": "66870 (Virgil)",
+    "shortName": "66870, Virgil, KS",
+    "state": "KS",
+    "countyFips": "20073",
+    "cbsaCode": null
+  },
+  {
     "zip": "66871",
     "slug": "66871-waverly-ks",
     "name": "66871 (Waverly)",
@@ -179262,15 +181188,6 @@
     "cbsaCode": "48620"
   },
   {
-    "zip": "67018",
-    "slug": "67018-bluff-city-ks",
-    "name": "67018 (Bluff City)",
-    "shortName": "67018, Bluff City, KS",
-    "state": "KS",
-    "countyFips": "20077",
-    "cbsaCode": "48620"
-  },
-  {
     "zip": "67019",
     "slug": "67019-burden-ks",
     "name": "67019 (Burden)",
@@ -179476,6 +181393,15 @@
     "state": "KS",
     "countyFips": "20079",
     "cbsaCode": "48620"
+  },
+  {
+    "zip": "67057",
+    "slug": "67057-hardtner-ks",
+    "name": "67057 (Hardtner)",
+    "shortName": "67057, Hardtner, KS",
+    "state": "KS",
+    "countyFips": "20007",
+    "cbsaCode": null
   },
   {
     "zip": "67058",
@@ -180457,6 +182383,15 @@
     "state": "KS",
     "countyFips": "20123",
     "cbsaCode": null
+  },
+  {
+    "zip": "67447",
+    "slug": "67447-green-ks",
+    "name": "67447 (Green)",
+    "shortName": "67447, Green, KS",
+    "state": "KS",
+    "countyFips": "20027",
+    "cbsaCode": "31740"
   },
   {
     "zip": "67448",
@@ -182052,6 +183987,15 @@
     "cbsaCode": "36540"
   },
   {
+    "zip": "68071",
+    "slug": "68071-winnebago-ne",
+    "name": "68071 (Winnebago)",
+    "shortName": "68071, Winnebago, NE",
+    "state": "NE",
+    "countyFips": "31173",
+    "cbsaCode": null
+  },
+  {
     "zip": "68073",
     "slug": "68073-yutan-ne",
     "name": "68073 (Yutan)",
@@ -182896,6 +184840,15 @@
     "state": "NE",
     "countyFips": "31025",
     "cbsaCode": "36540"
+  },
+  {
+    "zip": "68414",
+    "slug": "68414-nemaha-ne",
+    "name": "68414 (Nemaha)",
+    "shortName": "68414, Nemaha, NE",
+    "state": "NE",
+    "countyFips": "31127",
+    "cbsaCode": null
   },
   {
     "zip": "68415",
@@ -183744,6 +185697,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "68717",
+    "slug": "68717-belden-ne",
+    "name": "68717 (Belden)",
+    "shortName": "68717, Belden, NE",
+    "state": "NE",
+    "countyFips": "31027",
+    "cbsaCode": null
+  },
+  {
     "zip": "68718",
     "slug": "68718-bloomfield-ne",
     "name": "68718 (Bloomfield)",
@@ -183868,6 +185830,15 @@
     "state": "NE",
     "countyFips": "31119",
     "cbsaCode": "35740"
+  },
+  {
+    "zip": "68751",
+    "slug": "68751-maskell-ne",
+    "name": "68751 (Maskell)",
+    "shortName": "68751, Maskell, NE",
+    "state": "NE",
+    "countyFips": "31051",
+    "cbsaCode": null
   },
   {
     "zip": "68752",
@@ -184554,6 +186525,15 @@
     "cbsaCode": "28260"
   },
   {
+    "zip": "68925",
+    "slug": "68925-ayr-ne",
+    "name": "68925 (Ayr)",
+    "shortName": "68925, Ayr, NE",
+    "state": "NE",
+    "countyFips": "31001",
+    "cbsaCode": "25580"
+  },
+  {
     "zip": "68926",
     "slug": "68926-beaver-city-ne",
     "name": "68926 (Beaver City)",
@@ -184761,15 +186741,6 @@
     "cbsaCode": "28260"
   },
   {
-    "zip": "68960",
-    "slug": "68960-naponee-ne",
-    "name": "68960 (Naponee)",
-    "shortName": "68960, Naponee, NE",
-    "state": "NE",
-    "countyFips": "31061",
-    "cbsaCode": null
-  },
-  {
     "zip": "68961",
     "slug": "68961-nelson-ne",
     "name": "68961 (Nelson)",
@@ -184912,6 +186883,15 @@
     "state": "NE",
     "countyFips": "31063",
     "cbsaCode": "35820"
+  },
+  {
+    "zip": "69026",
+    "slug": "69026-danbury-ne",
+    "name": "69026 (Danbury)",
+    "shortName": "69026, Danbury, NE",
+    "state": "NE",
+    "countyFips": "31145",
+    "cbsaCode": null
   },
   {
     "zip": "69028",
@@ -186579,6 +188559,15 @@
     "cbsaCode": "43640"
   },
   {
+    "zip": "70465",
+    "slug": "70465-tangipahoa-la",
+    "name": "70465 (Tangipahoa)",
+    "shortName": "70465, Tangipahoa, LA",
+    "state": "LA",
+    "countyFips": "22105",
+    "cbsaCode": "25220"
+  },
+  {
     "zip": "70466",
     "slug": "70466-tickfaw-la",
     "name": "70466 (Tickfaw)",
@@ -186903,15 +188892,6 @@
     "cbsaCode": "29180"
   },
   {
-    "zip": "70556",
-    "slug": "70556-mermentau-la",
-    "name": "70556 (Mermentau)",
-    "shortName": "70556, Mermentau, LA",
-    "state": "LA",
-    "countyFips": "22001",
-    "cbsaCode": "29180"
-  },
-  {
     "zip": "70558",
     "slug": "70558-milton-la",
     "name": "70558 (Milton)",
@@ -187135,6 +189115,15 @@
     "state": "LA",
     "countyFips": "22003",
     "cbsaCode": "19760"
+  },
+  {
+    "zip": "70639",
+    "slug": "70639-evans-la",
+    "name": "70639 (Evans)",
+    "shortName": "70639, Evans, LA",
+    "state": "LA",
+    "countyFips": "22115",
+    "cbsaCode": null
   },
   {
     "zip": "70640",
@@ -188010,12 +189999,30 @@
     "cbsaCode": "43340"
   },
   {
+    "zip": "71028",
+    "slug": "71028-gibsland-la",
+    "name": "71028 (Gibsland)",
+    "shortName": "71028, Gibsland, LA",
+    "state": "LA",
+    "countyFips": "22013",
+    "cbsaCode": null
+  },
+  {
     "zip": "71029",
     "slug": "71029-gilliam-la",
     "name": "71029 (Gilliam)",
     "shortName": "71029, Gilliam, LA",
     "state": "LA",
     "countyFips": "22017",
+    "cbsaCode": "43340"
+  },
+  {
+    "zip": "71030",
+    "slug": "71030-gloster-la",
+    "name": "71030 (Gloster)",
+    "shortName": "71030, Gloster, LA",
+    "state": "LA",
+    "countyFips": "22031",
     "cbsaCode": "43340"
   },
   {
@@ -188539,6 +190546,15 @@
     "state": "LA",
     "countyFips": "22061",
     "cbsaCode": "40820"
+  },
+  {
+    "zip": "71247",
+    "slug": "71247-hodge-la",
+    "name": "71247 (Hodge)",
+    "shortName": "71247, Hodge, LA",
+    "state": "LA",
+    "countyFips": "22049",
+    "cbsaCode": null
   },
   {
     "zip": "71251",
@@ -189306,6 +191322,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "71479",
+    "slug": "71479-tullos-la",
+    "name": "71479 (Tullos)",
+    "shortName": "71479, Tullos, LA",
+    "state": "LA",
+    "countyFips": "22059",
+    "cbsaCode": null
+  },
+  {
     "zip": "71480",
     "slug": "71480-urania-la",
     "name": "71480 (Urania)",
@@ -189679,6 +191704,15 @@
     "slug": "71758-mount-holly-ar",
     "name": "71758 (Mount Holly)",
     "shortName": "71758, Mount Holly, AR",
+    "state": "AR",
+    "countyFips": "05139",
+    "cbsaCode": "20980"
+  },
+  {
+    "zip": "71759",
+    "slug": "71759-norphlet-ar",
+    "name": "71759 (Norphlet)",
+    "shortName": "71759, Norphlet, AR",
     "state": "AR",
     "countyFips": "05139",
     "cbsaCode": "20980"
@@ -190494,15 +192528,6 @@
     "cbsaCode": "30780"
   },
   {
-    "zip": "72037",
-    "slug": "72037-coy-ar",
-    "name": "72037 (Coy)",
-    "shortName": "72037, Coy, AR",
-    "state": "AR",
-    "countyFips": "05085",
-    "cbsaCode": "30780"
-  },
-  {
     "zip": "72039",
     "slug": "72039-damascus-ar",
     "name": "72039 (Damascus)",
@@ -190575,6 +192600,15 @@
     "cbsaCode": "30780"
   },
   {
+    "zip": "72048",
+    "slug": "72048-ethel-ar",
+    "name": "72048 (Ethel)",
+    "shortName": "72048, Ethel, AR",
+    "state": "AR",
+    "countyFips": "05001",
+    "cbsaCode": null
+  },
+  {
     "zip": "72051",
     "slug": "72051-fox-ar",
     "name": "72051 (Fox)",
@@ -190591,6 +192625,15 @@
     "state": "AR",
     "countyFips": "05001",
     "cbsaCode": null
+  },
+  {
+    "zip": "72057",
+    "slug": "72057-grapevine-ar",
+    "name": "72057 (Grapevine)",
+    "shortName": "72057, Grapevine, AR",
+    "state": "AR",
+    "countyFips": "05053",
+    "cbsaCode": "30780"
   },
   {
     "zip": "72058",
@@ -191061,6 +193104,15 @@
     "cbsaCode": "42620"
   },
   {
+    "zip": "72139",
+    "slug": "72139-russell-ar",
+    "name": "72139 (Russell)",
+    "shortName": "72139, Russell, AR",
+    "state": "AR",
+    "countyFips": "05145",
+    "cbsaCode": "42620"
+  },
+  {
     "zip": "72140",
     "slug": "72140-saint-charles-ar",
     "name": "72140 (Saint Charles)",
@@ -191322,6 +193374,15 @@
     "cbsaCode": "32820"
   },
   {
+    "zip": "72313",
+    "slug": "72313-bassett-ar",
+    "name": "72313 (Bassett)",
+    "shortName": "72313, Bassett, AR",
+    "state": "AR",
+    "countyFips": "05093",
+    "cbsaCode": "14180"
+  },
+  {
     "zip": "72315",
     "slug": "72315-blytheville-ar",
     "name": "72315 (Blytheville)",
@@ -191410,6 +193471,15 @@
     "state": "AR",
     "countyFips": "05107",
     "cbsaCode": null
+  },
+  {
+    "zip": "72346",
+    "slug": "72346-heth-ar",
+    "name": "72346 (Heth)",
+    "shortName": "72346, Heth, AR",
+    "state": "AR",
+    "countyFips": "05123",
+    "cbsaCode": "22620"
   },
   {
     "zip": "72347",
@@ -192307,6 +194377,15 @@
     "slug": "72550-locust-grove-ar",
     "name": "72550 (Locust Grove)",
     "shortName": "72550, Locust Grove, AR",
+    "state": "AR",
+    "countyFips": "05063",
+    "cbsaCode": "12900"
+  },
+  {
+    "zip": "72553",
+    "slug": "72553-magness-ar",
+    "name": "72553 (Magness)",
+    "shortName": "72553, Magness, AR",
     "state": "AR",
     "countyFips": "05063",
     "cbsaCode": "12900"
@@ -195327,6 +197406,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "73555",
+    "slug": "73555-manitou-ok",
+    "name": "73555 (Manitou)",
+    "shortName": "73555, Manitou, OK",
+    "state": "OK",
+    "countyFips": "40141",
+    "cbsaCode": null
+  },
+  {
     "zip": "73557",
     "slug": "73557-medicine-park-ok",
     "name": "73557 (Medicine Park)",
@@ -195613,15 +197701,6 @@
     "state": "OK",
     "countyFips": "40075",
     "cbsaCode": "11060"
-  },
-  {
-    "zip": "73658",
-    "slug": "73658-oakwood-ok",
-    "name": "73658 (Oakwood)",
-    "shortName": "73658, Oakwood, OK",
-    "state": "OK",
-    "countyFips": "40043",
-    "cbsaCode": null
   },
   {
     "zip": "73661",
@@ -196497,6 +198576,15 @@
     "cbsaCode": "46140"
   },
   {
+    "zip": "74042",
+    "slug": "74042-lenapah-ok",
+    "name": "74042 (Lenapah)",
+    "shortName": "74042, Lenapah, OK",
+    "state": "OK",
+    "countyFips": "40105",
+    "cbsaCode": null
+  },
+  {
     "zip": "74044",
     "slug": "74044-mannford-ok",
     "name": "74044 (Mannford)",
@@ -196845,6 +198933,15 @@
     "shortName": "74116, Tulsa, OK",
     "state": "OK",
     "countyFips": "40131",
+    "cbsaCode": "46140"
+  },
+  {
+    "zip": "74117",
+    "slug": "74117-tulsa-ok",
+    "name": "74117 (Tulsa)",
+    "shortName": "74117, Tulsa, OK",
+    "state": "OK",
+    "countyFips": "40143",
     "cbsaCode": "46140"
   },
   {
@@ -197559,6 +199656,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "74522",
+    "slug": "74522-alderson-ok",
+    "name": "74522 (Alderson)",
+    "shortName": "74522, Alderson, OK",
+    "state": "OK",
+    "countyFips": "40121",
+    "cbsaCode": "32540"
+  },
+  {
     "zip": "74523",
     "slug": "74523-antlers-ok",
     "name": "74523 (Antlers)",
@@ -198090,6 +200196,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "74738",
+    "slug": "74738-grant-ok",
+    "name": "74738 (Grant)",
+    "shortName": "74738, Grant, OK",
+    "state": "OK",
+    "countyFips": "40023",
+    "cbsaCode": null
+  },
+  {
     "zip": "74740",
     "slug": "74740-haworth-ok",
     "name": "74740 (Haworth)",
@@ -198295,6 +200410,15 @@
     "state": "OK",
     "countyFips": "40081",
     "cbsaCode": "36420"
+  },
+  {
+    "zip": "74837",
+    "slug": "74837-cromwell-ok",
+    "name": "74837 (Cromwell)",
+    "shortName": "74837, Cromwell, OK",
+    "state": "OK",
+    "countyFips": "40133",
+    "cbsaCode": null
   },
   {
     "zip": "74839",
@@ -201375,6 +203499,15 @@
     "cbsaCode": "30980"
   },
   {
+    "zip": "75694",
+    "slug": "75694-woodlawn-tx",
+    "name": "75694 (Woodlawn)",
+    "shortName": "75694, Woodlawn, TX",
+    "state": "TX",
+    "countyFips": "48203",
+    "cbsaCode": "30980"
+  },
+  {
     "zip": "75701",
     "slug": "75701-tyler-tx",
     "name": "75701 (Tyler)",
@@ -201609,6 +203742,15 @@
     "cbsaCode": "46340"
   },
   {
+    "zip": "75772",
+    "slug": "75772-maydelle-tx",
+    "name": "75772 (Maydelle)",
+    "shortName": "75772, Maydelle, TX",
+    "state": "TX",
+    "countyFips": "48073",
+    "cbsaCode": "27380"
+  },
+  {
     "zip": "75773",
     "slug": "75773-mineola-tx",
     "name": "75773 (Mineola)",
@@ -201804,6 +203946,15 @@
     "shortName": "75847, Kennard, TX",
     "state": "TX",
     "countyFips": "48225",
+    "cbsaCode": null
+  },
+  {
+    "zip": "75850",
+    "slug": "75850-leona-tx",
+    "name": "75850 (Leona)",
+    "shortName": "75850, Leona, TX",
+    "state": "TX",
+    "countyFips": "48289",
     "cbsaCode": null
   },
   {
@@ -203596,6 +205747,15 @@
     "state": "TX",
     "countyFips": "48487",
     "cbsaCode": "46900"
+  },
+  {
+    "zip": "76388",
+    "slug": "76388-weinert-tx",
+    "name": "76388 (Weinert)",
+    "shortName": "76388, Weinert, TX",
+    "state": "TX",
+    "countyFips": "48207",
+    "cbsaCode": null
   },
   {
     "zip": "76389",
@@ -207918,6 +210078,15 @@
     "cbsaCode": "13140"
   },
   {
+    "zip": "77720",
+    "slug": "77720-beaumont-tx",
+    "name": "77720 (Beaumont)",
+    "shortName": "77720, Beaumont, TX",
+    "state": "TX",
+    "countyFips": "48245",
+    "cbsaCode": "13140"
+  },
+  {
     "zip": "77801",
     "slug": "77801-bryan-tx",
     "name": "77801 (Bryan)",
@@ -208800,6 +210969,15 @@
     "cbsaCode": "41700"
   },
   {
+    "zip": "78067",
+    "slug": "78067-san-ygnacio-tx",
+    "name": "78067 (San Ygnacio)",
+    "shortName": "78067, San Ygnacio, TX",
+    "state": "TX",
+    "countyFips": "48505",
+    "cbsaCode": "49820"
+  },
+  {
     "zip": "78069",
     "slug": "78069-somerset-tx",
     "name": "78069 (Somerset)",
@@ -208908,6 +211086,24 @@
     "cbsaCode": "41700"
   },
   {
+    "zip": "78116",
+    "slug": "78116-gillett-tx",
+    "name": "78116 (Gillett)",
+    "shortName": "78116, Gillett, TX",
+    "state": "TX",
+    "countyFips": "48255",
+    "cbsaCode": null
+  },
+  {
+    "zip": "78117",
+    "slug": "78117-hobson-tx",
+    "name": "78117 (Hobson)",
+    "shortName": "78117, Hobson, TX",
+    "state": "TX",
+    "countyFips": "48255",
+    "cbsaCode": null
+  },
+  {
     "zip": "78118",
     "slug": "78118-karnes-city-tx",
     "name": "78118 (Karnes City)",
@@ -209014,6 +211210,15 @@
     "state": "TX",
     "countyFips": "48025",
     "cbsaCode": "13300"
+  },
+  {
+    "zip": "78143",
+    "slug": "78143-pandora-tx",
+    "name": "78143 (Pandora)",
+    "shortName": "78143, Pandora, TX",
+    "state": "TX",
+    "countyFips": "48493",
+    "cbsaCode": "41700"
   },
   {
     "zip": "78145",
@@ -209682,6 +211887,15 @@
     "cbsaCode": "18580"
   },
   {
+    "zip": "78339",
+    "slug": "78339-banquete-tx",
+    "name": "78339 (Banquete)",
+    "shortName": "78339, Banquete, TX",
+    "state": "TX",
+    "countyFips": "48355",
+    "cbsaCode": "18580"
+  },
+  {
     "zip": "78340",
     "slug": "78340-bayside-tx",
     "name": "78340 (Bayside)",
@@ -210256,6 +212470,15 @@
     "state": "TX",
     "countyFips": "48215",
     "cbsaCode": "32580"
+  },
+  {
+    "zip": "78548",
+    "slug": "78548-grulla-tx",
+    "name": "78548 (Grulla)",
+    "shortName": "78548, Grulla, TX",
+    "state": "TX",
+    "countyFips": "48427",
+    "cbsaCode": "40100"
   },
   {
     "zip": "78549",
@@ -211842,6 +214065,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "78944",
+    "slug": "78944-industry-tx",
+    "name": "78944 (Industry)",
+    "shortName": "78944, Industry, TX",
+    "state": "TX",
+    "countyFips": "48015",
+    "cbsaCode": "26420"
+  },
+  {
     "zip": "78945",
     "slug": "78945-la-grange-tx",
     "name": "78945 (La Grange)",
@@ -212643,6 +214875,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "79256",
+    "slug": "79256-roaring-springs-tx",
+    "name": "79256 (Roaring Springs)",
+    "shortName": "79256, Roaring Springs, TX",
+    "state": "TX",
+    "countyFips": "48345",
+    "cbsaCode": null
+  },
+  {
     "zip": "79257",
     "slug": "79257-silverton-tx",
     "name": "79257 (Silverton)",
@@ -213129,6 +215370,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "79503",
+    "slug": "79503-avoca-tx",
+    "name": "79503 (Avoca)",
+    "shortName": "79503, Avoca, TX",
+    "state": "TX",
+    "countyFips": "48253",
+    "cbsaCode": "10180"
+  },
+  {
     "zip": "79504",
     "slug": "79504-baird-tx",
     "name": "79504 (Baird)",
@@ -213444,15 +215694,6 @@
     "cbsaCode": null
   },
   {
-    "zip": "79566",
-    "slug": "79566-wingate-tx",
-    "name": "79566 (Wingate)",
-    "shortName": "79566, Wingate, TX",
-    "state": "TX",
-    "countyFips": "48399",
-    "cbsaCode": "10180"
-  },
-  {
     "zip": "79567",
     "slug": "79567-winters-tx",
     "name": "79567 (Winters)",
@@ -213642,6 +215883,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "79743",
+    "slug": "79743-imperial-tx",
+    "name": "79743 (Imperial)",
+    "shortName": "79743, Imperial, TX",
+    "state": "TX",
+    "countyFips": "48371",
+    "cbsaCode": null
+  },
+  {
     "zip": "79744",
     "slug": "79744-iraan-tx",
     "name": "79744 (Iraan)",
@@ -213795,6 +216045,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "79789",
+    "slug": "79789-wink-tx",
+    "name": "79789 (Wink)",
+    "shortName": "79789, Wink, TX",
+    "state": "TX",
+    "countyFips": "48495",
+    "cbsaCode": null
+  },
+  {
     "zip": "79821",
     "slug": "79821-anthony-tx",
     "name": "79821 (Anthony)",
@@ -213831,12 +216090,30 @@
     "cbsaCode": "21340"
   },
   {
+    "zip": "79837",
+    "slug": "79837-dell-city-tx",
+    "name": "79837 (Dell City)",
+    "shortName": "79837, Dell City, TX",
+    "state": "TX",
+    "countyFips": "48229",
+    "cbsaCode": "21340"
+  },
+  {
     "zip": "79838",
     "slug": "79838-fabens-tx",
     "name": "79838 (Fabens)",
     "shortName": "79838, Fabens, TX",
     "state": "TX",
     "countyFips": "48141",
+    "cbsaCode": "21340"
+  },
+  {
+    "zip": "79839",
+    "slug": "79839-fort-hancock-tx",
+    "name": "79839 (Fort Hancock)",
+    "shortName": "79839, Fort Hancock, TX",
+    "state": "TX",
+    "countyFips": "48229",
     "cbsaCode": "21340"
   },
   {
@@ -216969,6 +219246,15 @@
     "shortName": "81047, Holly, CO",
     "state": "CO",
     "countyFips": "08099",
+    "cbsaCode": null
+  },
+  {
+    "zip": "81049",
+    "slug": "81049-kim-co",
+    "name": "81049 (Kim)",
+    "shortName": "81049, Kim, CO",
+    "state": "CO",
+    "countyFips": "08071",
     "cbsaCode": null
   },
   {
@@ -220473,6 +222759,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "83531",
+    "slug": "83531-fenn-id",
+    "name": "83531 (Fenn)",
+    "shortName": "83531, Fenn, ID",
+    "state": "ID",
+    "countyFips": "16049",
+    "cbsaCode": null
+  },
+  {
     "zip": "83533",
     "slug": "83533-greencreek-id",
     "name": "83533 (Greencreek)",
@@ -221182,15 +223477,6 @@
     "state": "ID",
     "countyFips": "16021",
     "cbsaCode": null
-  },
-  {
-    "zip": "83806",
-    "slug": "83806-bovill-id",
-    "name": "83806 (Bovill)",
-    "shortName": "83806, Bovill, ID",
-    "state": "ID",
-    "countyFips": "16057",
-    "cbsaCode": "34140"
   },
   {
     "zip": "83808",
@@ -222588,6 +224874,15 @@
     "cbsaCode": "14940"
   },
   {
+    "zip": "84308",
+    "slug": "84308-cornish-ut",
+    "name": "84308 (Cornish)",
+    "shortName": "84308, Cornish, UT",
+    "state": "UT",
+    "countyFips": "49005",
+    "cbsaCode": "30860"
+  },
+  {
     "zip": "84309",
     "slug": "84309-deweyville-ut",
     "name": "84309 (Deweyville)",
@@ -222982,6 +225277,15 @@
     "state": "UT",
     "countyFips": "49015",
     "cbsaCode": null
+  },
+  {
+    "zip": "84529",
+    "slug": "84529-kenilworth-ut",
+    "name": "84529 (Kenilworth)",
+    "shortName": "84529, Kenilworth, UT",
+    "state": "UT",
+    "countyFips": "49007",
+    "cbsaCode": "39220"
   },
   {
     "zip": "84530",
@@ -225295,6 +227599,15 @@
     "state": "AZ",
     "countyFips": "04027",
     "cbsaCode": "49740"
+  },
+  {
+    "zip": "85357",
+    "slug": "85357-wenden-az",
+    "name": "85357 (Wenden)",
+    "shortName": "85357, Wenden, AZ",
+    "state": "AZ",
+    "countyFips": "04012",
+    "cbsaCode": null
   },
   {
     "zip": "85360",
@@ -228114,6 +230427,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "87712",
+    "slug": "87712-buena-vista-nm",
+    "name": "87712 (Buena Vista)",
+    "shortName": "87712, Buena Vista, NM",
+    "state": "NM",
+    "countyFips": "35033",
+    "cbsaCode": "29780"
+  },
+  {
     "zip": "87714",
     "slug": "87714-cimarron-nm",
     "name": "87714 (Cimarron)",
@@ -228217,6 +230539,15 @@
     "slug": "87747-springer-nm",
     "name": "87747 (Springer)",
     "shortName": "87747, Springer, NM",
+    "state": "NM",
+    "countyFips": "35007",
+    "cbsaCode": null
+  },
+  {
+    "zip": "87749",
+    "slug": "87749-ute-park-nm",
+    "name": "87749 (Ute Park)",
+    "shortName": "87749, Ute Park, NM",
     "state": "NM",
     "countyFips": "35007",
     "cbsaCode": null
@@ -228789,15 +231120,6 @@
     "cbsaCode": "17580"
   },
   {
-    "zip": "88126",
-    "slug": "88126-pep-nm",
-    "name": "88126 (Pep)",
-    "shortName": "88126, Pep, NM",
-    "state": "NM",
-    "countyFips": "35041",
-    "cbsaCode": "17580"
-  },
-  {
     "zip": "88130",
     "slug": "88130-portales-nm",
     "name": "88130 (Portales)",
@@ -229003,6 +231325,15 @@
     "state": "NM",
     "countyFips": "35027",
     "cbsaCode": "40760"
+  },
+  {
+    "zip": "88314",
+    "slug": "88314-bent-nm",
+    "name": "88314 (Bent)",
+    "shortName": "88314, Bent, NM",
+    "state": "NM",
+    "countyFips": "35035",
+    "cbsaCode": "10460"
   },
   {
     "zip": "88316",
@@ -230562,6 +232893,15 @@
     "cbsaCode": "21220"
   },
   {
+    "zip": "89826",
+    "slug": "89826-jarbidge-nv",
+    "name": "89826 (Jarbidge)",
+    "shortName": "89826, Jarbidge, NV",
+    "state": "NV",
+    "countyFips": "32007",
+    "cbsaCode": "21220"
+  },
+  {
     "zip": "89828",
     "slug": "89828-lamoille-nv",
     "name": "89828 (Lamoille)",
@@ -231682,6 +234022,15 @@
     "slug": "90631-la-habra-ca",
     "name": "90631 (La Habra)",
     "shortName": "90631, La Habra, CA",
+    "state": "CA",
+    "countyFips": "06059",
+    "cbsaCode": "31080"
+  },
+  {
+    "zip": "90633",
+    "slug": "90633-la-habra-ca",
+    "name": "90633 (La Habra)",
+    "shortName": "90633, La Habra, CA",
     "state": "CA",
     "countyFips": "06059",
     "cbsaCode": "31080"
@@ -234922,6 +237271,15 @@
     "slug": "92392-victorville-ca",
     "name": "92392 (Victorville)",
     "shortName": "92392, Victorville, CA",
+    "state": "CA",
+    "countyFips": "06071",
+    "cbsaCode": "40140"
+  },
+  {
+    "zip": "92393",
+    "slug": "92393-victorville-ca",
+    "name": "92393 (Victorville)",
+    "shortName": "92393, Victorville, CA",
     "state": "CA",
     "countyFips": "06071",
     "cbsaCode": "40140"
@@ -239994,6 +242352,15 @@
     "cbsaCode": "41860"
   },
   {
+    "zip": "94922",
+    "slug": "94922-bodega-ca",
+    "name": "94922 (Bodega)",
+    "shortName": "94922, Bodega, CA",
+    "state": "CA",
+    "countyFips": "06097",
+    "cbsaCode": "42220"
+  },
+  {
     "zip": "94923",
     "slug": "94923-bodega-bay-ca",
     "name": "94923 (Bodega Bay)",
@@ -241227,6 +243594,15 @@
     "cbsaCode": "43760"
   },
   {
+    "zip": "95312",
+    "slug": "95312-cressey-ca",
+    "name": "95312 (Cressey)",
+    "shortName": "95312, Cressey, CA",
+    "state": "CA",
+    "countyFips": "06047",
+    "cbsaCode": "32900"
+  },
+  {
     "zip": "95313",
     "slug": "95313-crows-landing-ca",
     "name": "95313 (Crows Landing)",
@@ -241699,6 +244075,15 @@
     "slug": "95386-waterford-ca",
     "name": "95386 (Waterford)",
     "shortName": "95386, Waterford, CA",
+    "state": "CA",
+    "countyFips": "06099",
+    "cbsaCode": "33700"
+  },
+  {
+    "zip": "95387",
+    "slug": "95387-westley-ca",
+    "name": "95387 (Westley)",
+    "shortName": "95387, Westley, CA",
     "state": "CA",
     "countyFips": "06099",
     "cbsaCode": "33700"
@@ -244620,15 +247005,6 @@
     "cbsaCode": "39820"
   },
   {
-    "zip": "96029",
-    "slug": "96029-flournoy-ca",
-    "name": "96029 (Flournoy)",
-    "shortName": "96029, Flournoy, CA",
-    "state": "CA",
-    "countyFips": "06103",
-    "cbsaCode": "39780"
-  },
-  {
     "zip": "96032",
     "slug": "96032-fort-jones-ca",
     "name": "96032 (Fort Jones)",
@@ -244690,15 +247066,6 @@
     "state": "CA",
     "countyFips": "06093",
     "cbsaCode": null
-  },
-  {
-    "zip": "96040",
-    "slug": "96040-hat-creek-ca",
-    "name": "96040 (Hat Creek)",
-    "shortName": "96040, Hat Creek, CA",
-    "state": "CA",
-    "countyFips": "06089",
-    "cbsaCode": "39820"
   },
   {
     "zip": "96041",
@@ -245284,6 +247651,15 @@
     "state": "CA",
     "countyFips": "06049",
     "cbsaCode": null
+  },
+  {
+    "zip": "96136",
+    "slug": "96136-wendel-ca",
+    "name": "96136 (Wendel)",
+    "shortName": "96136, Wendel, CA",
+    "state": "CA",
+    "countyFips": "06035",
+    "cbsaCode": "45000"
   },
   {
     "zip": "96137",
@@ -246402,6 +248778,15 @@
     "cbsaCode": "38900"
   },
   {
+    "zip": "97039",
+    "slug": "97039-moro-or",
+    "name": "97039 (Moro)",
+    "shortName": "97039, Moro, OR",
+    "state": "OR",
+    "countyFips": "41055",
+    "cbsaCode": null
+  },
+  {
     "zip": "97040",
     "slug": "97040-mosier-or",
     "name": "97040 (Mosier)",
@@ -246967,6 +249352,15 @@
     "state": "OR",
     "countyFips": "41067",
     "cbsaCode": "38900"
+  },
+  {
+    "zip": "97145",
+    "slug": "97145-tolovana-park-or",
+    "name": "97145 (Tolovana Park)",
+    "shortName": "97145, Tolovana Park, OR",
+    "state": "OR",
+    "countyFips": "41007",
+    "cbsaCode": "11820"
   },
   {
     "zip": "97146",
@@ -249561,6 +251955,15 @@
     "cbsaCode": "36620"
   },
   {
+    "zip": "97905",
+    "slug": "97905-durkee-or",
+    "name": "97905 (Durkee)",
+    "shortName": "97905, Durkee, OR",
+    "state": "OR",
+    "countyFips": "41001",
+    "cbsaCode": "12520"
+  },
+  {
     "zip": "97906",
     "slug": "97906-harper-or",
     "name": "97906 (Harper)",
@@ -251811,6 +254214,15 @@
     "cbsaCode": "10140"
   },
   {
+    "zip": "98522",
+    "slug": "98522-adna-wa",
+    "name": "98522 (Adna)",
+    "shortName": "98522, Adna, WA",
+    "state": "WA",
+    "countyFips": "53041",
+    "cbsaCode": "16500"
+  },
+  {
     "zip": "98524",
     "slug": "98524-allyn-wa",
     "name": "98524 (Allyn)",
@@ -251818,6 +254230,15 @@
     "state": "WA",
     "countyFips": "53045",
     "cbsaCode": "43220"
+  },
+  {
+    "zip": "98526",
+    "slug": "98526-amanda-park-wa",
+    "name": "98526 (Amanda Park)",
+    "shortName": "98526, Amanda Park, WA",
+    "state": "WA",
+    "countyFips": "53027",
+    "cbsaCode": "10140"
   },
   {
     "zip": "98527",
@@ -251973,6 +254394,15 @@
     "cbsaCode": "10140"
   },
   {
+    "zip": "98554",
+    "slug": "98554-lebam-wa",
+    "name": "98554 (Lebam)",
+    "shortName": "98554, Lebam, WA",
+    "state": "WA",
+    "countyFips": "53049",
+    "cbsaCode": null
+  },
+  {
     "zip": "98555",
     "slug": "98555-lilliwaup-wa",
     "name": "98555 (Lilliwaup)",
@@ -252043,6 +254473,15 @@
     "state": "WA",
     "countyFips": "53041",
     "cbsaCode": "16500"
+  },
+  {
+    "zip": "98566",
+    "slug": "98566-neilton-wa",
+    "name": "98566 (Neilton)",
+    "shortName": "98566, Neilton, WA",
+    "state": "WA",
+    "countyFips": "53027",
+    "cbsaCode": "10140"
   },
   {
     "zip": "98568",
@@ -253152,6 +255591,15 @@
     "cbsaCode": "49420"
   },
   {
+    "zip": "98909",
+    "slug": "98909-yakima-wa",
+    "name": "98909 (Yakima)",
+    "shortName": "98909, Yakima, WA",
+    "state": "WA",
+    "countyFips": "53077",
+    "cbsaCode": "49420"
+  },
+  {
     "zip": "98922",
     "slug": "98922-cle-elum-wa",
     "name": "98922 (Cle Elum)",
@@ -253447,6 +255895,15 @@
     "state": "WA",
     "countyFips": "53063",
     "cbsaCode": "44060"
+  },
+  {
+    "zip": "99017",
+    "slug": "99017-lamont-wa",
+    "name": "99017 (Lamont)",
+    "shortName": "99017, Lamont, WA",
+    "state": "WA",
+    "countyFips": "53075",
+    "cbsaCode": "39420"
   },
   {
     "zip": "99018",
@@ -254691,15 +257148,6 @@
     "cbsaCode": null
   },
   {
-    "zip": "99566",
-    "slug": "99566-chitina-ak",
-    "name": "99566 (Chitina)",
-    "shortName": "99566, Chitina, AK",
-    "state": "AK",
-    "countyFips": "02066",
-    "cbsaCode": null
-  },
-  {
     "zip": "99567",
     "slug": "99567-chugiak-ak",
     "name": "99567 (Chugiak)",
@@ -254916,6 +257364,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "99644",
+    "slug": "99644-ouzinkie-ak",
+    "name": "99644 (Ouzinkie)",
+    "shortName": "99644, Ouzinkie, AK",
+    "state": "AK",
+    "countyFips": "02150",
+    "cbsaCode": null
+  },
+  {
     "zip": "99645",
     "slug": "99645-palmer-ak",
     "name": "99645 (Palmer)",
@@ -254932,6 +257389,15 @@
     "state": "AK",
     "countyFips": "02170",
     "cbsaCode": "11260"
+  },
+  {
+    "zip": "99653",
+    "slug": "99653-port-alsworth-ak",
+    "name": "99653 (Port Alsworth)",
+    "shortName": "99653, Port Alsworth, AK",
+    "state": "AK",
+    "countyFips": "02164",
+    "cbsaCode": null
   },
   {
     "zip": "99654",
@@ -255159,6 +257625,15 @@
     "cbsaCode": null
   },
   {
+    "zip": "99755",
+    "slug": "99755-denali-national-park-ak",
+    "name": "99755 (Denali National Park)",
+    "shortName": "99755, Denali National Park, AK",
+    "state": "AK",
+    "countyFips": "02068",
+    "cbsaCode": null
+  },
+  {
     "zip": "99756",
     "slug": "99756-manley-hot-springs-ak",
     "name": "99756 (Manley Hot Springs)",
@@ -255337,6 +257812,15 @@
     "state": "AK",
     "countyFips": "02198",
     "cbsaCode": null
+  },
+  {
+    "zip": "99928",
+    "slug": "99928-ward-cove-ak",
+    "name": "99928 (Ward Cove)",
+    "shortName": "99928, Ward Cove, AK",
+    "state": "AK",
+    "countyFips": "02130",
+    "cbsaCode": "28540"
   },
   {
     "zip": "99929",
