@@ -3,6 +3,7 @@ import type { MarketStatsData } from "@/lib/data";
 import {
   buildMarketDataSummary,
   buildRegionalContext,
+  buildMomentumClause,
 } from "@/lib/seo/market-metadata";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
@@ -132,12 +133,12 @@ const OPENING_TEMPLATES = [
 ];
 
 const MIDDLE_TEMPLATES = [
-  (name: string) =>
-    `The PropertyIQ Score for the ${name} market is built from four inputs: Zillow home-value momentum over twelve months, Zillow home-value momentum over three months, the median days listings spend on the market (Realtor.com), and the share of listings with a price cut (Realtor.com). The score runs on a 1 to 99 scale computed across all metro markets nationally and calibrated so 50 equals the state average — a score above 50 means this market is positioned to outperform its state, and a score below 50 means it is set to lag.`,
-  (name: string) =>
-    `For the ${name} market, PropertyIQ calculates a single score each month from four inputs: twelve-month Zillow home-value momentum, three-month Zillow home-value momentum, median days on market from Realtor.com, and the Realtor.com price-reduced share. The score is computed nationally across all metros and calibrated so 50 equals the state average. Across the validation history, metro markets in the top score band have outperformed their state by roughly 1.7 percentage points more per year than bottom-band markets.`,
-  (name: string) =>
-    `Each month, PropertyIQ updates its score for ${name} using four inputs: Zillow ZHVI twelve-month and three-month momentum, Realtor.com median days on market, and the Realtor.com share of listings with price cuts. These four signals are combined into a single 1 to 99 score computed across all metro markets and calibrated so 50 represents the state average, making it a direct read of how this market is positioned to perform relative to its state.`,
+  (name: string, stats: MarketStatsData | null) =>
+    `The PropertyIQ Score for the ${name} market is built from four inputs: Zillow home-value momentum over twelve months, Zillow home-value momentum over three months, the median days listings spend on the market (Realtor.com), and the share of listings with a price cut (Realtor.com). The score runs on a 1 to 99 scale computed across all metro markets nationally and calibrated so 50 equals the state average — a score above 50 means this market is positioned to outperform its state, and a score below 50 means it is set to lag.${buildMomentumClause(stats)}`,
+  (name: string, stats: MarketStatsData | null) =>
+    `For the ${name} market, PropertyIQ calculates a single score each month from four inputs: twelve-month Zillow home-value momentum, three-month Zillow home-value momentum, median days on market from Realtor.com, and the Realtor.com price-reduced share. The score is computed nationally across all metros and calibrated so 50 equals the state average. Across the validation history, metro markets in the top score band have outperformed their state by roughly 1.7 percentage points more per year than bottom-band markets.${buildMomentumClause(stats)}`,
+  (name: string, stats: MarketStatsData | null) =>
+    `Each month, PropertyIQ updates its score for ${name} using four inputs: Zillow ZHVI twelve-month and three-month momentum, Realtor.com median days on market, and the Realtor.com share of listings with price cuts. These four signals are combined into a single 1 to 99 score computed across all metro markets and calibrated so 50 represents the state average, making it a direct read of how this market is positioned to perform relative to its state.${buildMomentumClause(stats)}`,
 ];
 
 const CLOSING_TEMPLATES = [
@@ -186,7 +187,7 @@ export function generateMarketSeoContent(
       stats,
     ),
     stateContext: STATE_CONTEXT[metro.state] || null,
-    middle: MIDDLE_TEMPLATES[middleIdx](metro.shortName),
+    middle: MIDDLE_TEMPLATES[middleIdx](metro.shortName, stats),
     closing: CLOSING_TEMPLATES[closingIdx](metro.shortName),
   };
 }

@@ -18,7 +18,7 @@ const series = {
 } as any;
 
 describe("buildBubbleScalars", () => {
-  it("slices x=price, y=metric, color=score, radius=current inventory at the month", () => {
+  it("slices x=price, y=metric, radius=current inventory at the month; scoreByRegion is always the real PIQ score", () => {
     const s = buildBubbleScalars(
       [region("A"), region("B")],
       series,
@@ -29,6 +29,32 @@ describe("buildBubbleScalars", () => {
     expect(s.yByRegion.A).toBe(58); // score at month 1
     expect(s.scoreByRegion.B).toBe(44);
     expect(s.radiusByRegion.A).toBe(1100); // latest inventory
+  });
+
+  it("colorByRegion tracks the CURRENTLY SELECTED metric, not a value frozen to PropertyIQ Score", () => {
+    // Metric "score" happens to equal PIQ score, so this alone wouldn't
+    // catch the bug — the second assertion (switching metric to "dom")
+    // is the one that actually exercises the fix.
+    const scoreMetric = buildBubbleScalars(
+      [region("A"), region("B")],
+      series,
+      "score",
+      1,
+    );
+    expect(scoreMetric.colorByRegion.A).toBe(100); // 58 is the max of {58,44}
+    expect(scoreMetric.colorByRegion.B).toBe(0); // 44 is the min
+
+    // Switching to Days on Market (lower is better): A=38, B=28 at month 1.
+    // B has fewer days (better) so must come out greener despite being the
+    // LOWER PIQ score region — proof color no longer tracks PIQ score.
+    const domMetric = buildBubbleScalars(
+      [region("A"), region("B")],
+      series,
+      "dom",
+      1,
+    );
+    expect(domMetric.colorByRegion.B).toBe(100); // fewer days = better = greenest
+    expect(domMetric.colorByRegion.A).toBe(0);
   });
 });
 

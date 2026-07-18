@@ -90,14 +90,58 @@ export const COUNTY_SLUG_ALIASES = makeLazyMap<string, string>(() => {
   const canonical = new Set(COUNTY_SLUG_DATA.map((c) => c.slug));
   const aliases = new Map<string, string>();
 
+  const addAlias = (alias: string, canonicalSlug: string) => {
+    if (alias === canonicalSlug) return; // nothing to alias
+    if (canonical.has(alias)) return; // never shadow a real canonical slug
+    if (aliases.has(alias)) return; // keep first; county+state is unique anyway
+    aliases.set(alias, canonicalSlug);
+  };
+
+  // Bare-alias pass runs cities BEFORE counties, deliberately: a same-named
+  // city/county pair (Richmond, Roanoke, Franklin VA) would otherwise both
+  // try to claim the same bare alias ("richmond-va"), and `addAlias`'s
+  // keep-first guard would resolve it by array order — accidental, not a
+  // real decision. Cities are what most searchers mean by the bare name, so
+  // they get first claim; the county's identical attempt is then correctly
+  // skipped by the keep-first guard instead of silently winning by luck.
   for (const county of COUNTY_SLUG_DATA) {
-    // Alias = canonical slug minus the "-county-" segment: people type
-    // "mecklenburg-nc", not "mecklenburg-county-nc".
-    const alias = county.slug.replace("-county-", "-");
-    if (alias === county.slug) continue; // no "-county-" token; nothing to alias
-    if (canonical.has(alias)) continue; // never shadow a real canonical slug
-    if (aliases.has(alias)) continue; // keep first; county+state is unique anyway
-    aliases.set(alias, county.slug);
+    if (!county.isCity) continue;
+    addAlias(county.slug.replace("-city-", "-"), county.slug);
+  }
+
+  for (const county of COUNTY_SLUG_DATA) {
+    // Alias = canonical slug minus its "-county-"/"-city-" segment: people
+    // type "mecklenburg-nc" or "richmond-va", not "mecklenburg-county-nc" or
+    // "richmond-city-va". Gated on `isCity` (not a slug substring check) so
+    // this never misfires on a real county whose proper name contains the
+    // word "City" — James City County, Charles City County. (Cities already
+    // claimed their bare alias in the pass above; this re-attempt for a city
+    // is a harmless no-op via the `alias === canonicalSlug`/`aliases.has`
+    // guards.)
+    const segment = county.isCity ? "-city-" : "-county-";
+    addAlias(county.slug.replace(segment, "-"), county.slug);
+
+    // Louisiana's counties are legally "parishes" and used to be slugged that
+    // way ("acadia-parish-la") before the slug generator standardized on
+    // "-county-" for all states. Google indexed the old parish URLs; alias
+    // them back to the canonical slug so they 308 instead of 404.
+    if (county.state === "LA") {
+      addAlias(county.slug.replace("-county-", "-parish-"), county.slug);
+    }
+
+    // Independent cities (VA + Baltimore/St. Louis/Carson City) used to be
+    // slugged "-county-" like everything else — either colliding with a
+    // same-named real county, or inventing a nonexistent "X County" name
+    // (see generate-county-slugs.ts). Google indexed those old "-county-"
+    // URLs; alias them back to the corrected "-city-" canonical slug. This is
+    // self-guarding for the collision cases: where a real same-named county
+    // now legitimately owns that "-county-" slug, `addAlias` skips it (the
+    // `canonical.has(alias)` check) rather than hijacking the real county's
+    // URL — e.g. "richmond-county-va" stays Richmond County, not an alias to
+    // Richmond City.
+    if (county.isCity) {
+      addAlias(county.slug.replace("-city-", "-county-"), county.slug);
+    }
   }
   return aliases;
 });

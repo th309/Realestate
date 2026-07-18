@@ -18,6 +18,7 @@ const countyEntry = {
   shortName: "Test County, TX",
   state: "TX",
   cbsaCode: "12345",
+  isCity: false,
 };
 
 describe("MarketBreadcrumbs", () => {

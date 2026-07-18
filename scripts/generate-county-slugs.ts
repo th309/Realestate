@@ -11,6 +11,7 @@ import {
   assertNonEmpty,
 } from "./lib/published-set";
 import { fetchScoredByPeriod } from "./lib/scored-set-client";
+import { isIndependentCity } from "./lib/independent-cities";
 
 const API_BASE = process.env.API_URL || "http://localhost:3001";
 
@@ -31,8 +32,12 @@ interface CrosswalkRow {
   cbsa_code: string | null;
 }
 
-function generateSlug(countyName: string, state: string): string {
-  const base = `${countyName} county ${state}`;
+function generateSlug(
+  countyName: string,
+  state: string,
+  isCity: boolean,
+): string {
+  const base = `${countyName} ${isCity ? "city" : "county"} ${state}`;
   return base
     .toLowerCase()
     .replace(/[,.'()/]/g, "")
@@ -107,14 +112,19 @@ async function main() {
   }
 
   const entries = counties
-    .map((c) => ({
-      fips: c.fips,
-      slug: generateSlug(c.name, c.state),
-      name: `${c.name} County`,
-      shortName: `${c.name} County, ${c.state}`,
-      state: c.state,
-      cbsaCode: crosswalkMap.get(c.fips) || null,
-    }))
+    .map((c) => {
+      const isCity = isIndependentCity(c.fips);
+      const suffix = isCity ? "City" : "County";
+      return {
+        fips: c.fips,
+        slug: generateSlug(c.name, c.state, isCity),
+        name: `${c.name} ${suffix}`,
+        shortName: `${c.name} ${suffix}, ${c.state}`,
+        state: c.state,
+        cbsaCode: crosswalkMap.get(c.fips) || null,
+        isCity,
+      };
+    })
     .filter((e) => publishedFips.has(e.fips));
 
   console.log(

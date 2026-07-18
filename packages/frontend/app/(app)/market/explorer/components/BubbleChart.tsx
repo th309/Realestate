@@ -19,7 +19,9 @@ export interface BubbleChartProps {
   entities: BubbleEntity[];
   xByRegion: Record<string, number | null>;
   yByRegion: Record<string, number | null>;
-  scoreByRegion: Record<string, number | null>;
+  /** 0-100 color scalar for the CURRENTLY selected metric (see
+   * `metricColorScalars`) — not the PropertyIQ Score. */
+  colorByRegion: Record<string, number | null>;
   radiusByRegion: Record<string, number | null>;
   axisLabel: string;
   format: ExplorerFormat;
@@ -41,7 +43,7 @@ export function BubbleChart(props: BubbleChartProps) {
     entities,
     xByRegion,
     yByRegion,
-    scoreByRegion,
+    colorByRegion,
     radiusByRegion,
     axisLabel,
     format,
@@ -152,8 +154,8 @@ export function BubbleChart(props: BubbleChartProps) {
     const px = xByRegion[e.id],
       v = yByRegion[e.id];
     if (px == null || v == null) return null;
-    const s = scoreByRegion[e.id] ?? 50;
-    const color = getScoreColor(s, 100);
+    const colorScalar = colorByRegion[e.id] ?? 50;
+    const color = getScoreColor(colorScalar, 100);
     const r = Math.min(
       26,
       7 + Math.sqrt((radiusByRegion[e.id] ?? 0) / maxInv) * 19,

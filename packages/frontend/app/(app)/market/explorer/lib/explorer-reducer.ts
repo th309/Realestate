@@ -15,6 +15,7 @@ export const initialExplorerState: ExplorerState = {
   metric: "score",
   monthIndex: 0,
   view: "bubbles",
+  rootLevel: "metro",
   range: 24,
   playing: false,
   includeNearby: false,
@@ -34,7 +35,7 @@ export type ExplorerAction =
   | { type: "TOGGLE_NEARBY" }
   | { type: "DRILL"; crumb: PathCrumb }
   | { type: "NAVIGATE_CRUMB"; index: number }
-  | { type: "RESET_NATIONAL" };
+  | { type: "RESET_NATIONAL"; level?: ExplorerGeoLevel };
 
 export function explorerReducer(
   state: ExplorerState,
@@ -78,19 +79,28 @@ export function explorerReducer(
         view: "bubbles",
         playing: false,
       };
-    case "NAVIGATE_CRUMB":
+    case "NAVIGATE_CRUMB": {
+      const path = state.path.slice(0, action.index + 1);
+      // Already exactly at this crumb (re-clicking the active tab/breadcrumb)
+      // — a no-op, not a real navigation. Without this guard, clicking an
+      // already-active level tab (e.g. Metro, drilled into a state, while
+      // viewing its Map) silently forced view back to "bubbles" and cleared
+      // the selection for no reason.
+      if (path.length === state.path.length) return state;
       return {
         ...state,
-        path: state.path.slice(0, action.index + 1),
+        path,
         selectedId: null,
         view: "bubbles",
       };
+    }
     case "RESET_NATIONAL":
       return {
         ...state,
         path: [],
         selectedId: null,
-        view: "bubbles",
+        view: action.level === "state" ? "map" : "bubbles",
+        rootLevel: action.level ?? "metro",
         includeNearby: false,
       };
     default:
@@ -104,10 +114,8 @@ export function resolveScope(state: ExplorerState): {
   parentLevel?: "state" | "metro" | "county";
   parentId?: string;
 } {
-  if (state.view === "map" && state.path.length === 0)
-    return { geoLevel: "state" };
   const last = state.path[state.path.length - 1];
-  if (!last) return { geoLevel: "metro" };
+  if (!last) return { geoLevel: state.rootLevel };
   return {
     geoLevel: childGeoLevel(last.level),
     parentLevel: last.level as "state" | "metro" | "county",

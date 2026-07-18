@@ -9,6 +9,7 @@ import {
   buildMarketTitle,
   buildMarketDescription,
   buildMarketOgImagePath,
+  isMarketPageIndexable,
 } from "@/lib/seo/market-metadata";
 import { MarketStatsBlock } from "@/app/markets/components/MarketStatsBlock";
 import { buildStatsJsonLd } from "@/app/markets/components/buildStatsJsonLd";
@@ -55,6 +56,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: pageUrl },
+    robots: { index: isMarketPageIndexable(stats), follow: true },
     openGraph: {
       type: "website",
       url: pageUrl,

@@ -147,7 +147,12 @@ export default function MarketExplorer() {
 
   // ── breadcrumbs + level tabs ──
   const crumbs = buildBreadcrumbs(state, dispatch);
-  const levelTabs = buildLevelTabs(state, scope.geoLevel, dispatch);
+  const levelTabs = buildLevelTabs(
+    state,
+    scope.geoLevel,
+    dispatch,
+    selected ? () => onDrillEntity(selected.id) : null,
+  );
 
   const disabledMetricIds = EXPLORER_METRICS.filter(
     (m) =>
@@ -161,7 +166,7 @@ export default function MarketExplorer() {
     state.view === "map" ? (
       <GeoTileMap
         boundaries={boundaries}
-        scoreByRegion={scalars.scoreByRegion}
+        colorByRegion={scalars.colorByRegion}
         valueByRegion={scalars.yByRegion}
         format={metricCfg.format}
         selectedId={state.selectedId}
@@ -173,7 +178,7 @@ export default function MarketExplorer() {
         entities={regions}
         xByRegion={scalars.xByRegion}
         yByRegion={scalars.yByRegion}
-        scoreByRegion={scalars.scoreByRegion}
+        colorByRegion={scalars.colorByRegion}
         radiusByRegion={scalars.radiusByRegion}
         axisLabel={metricCfg.axis}
         format={metricCfg.format}

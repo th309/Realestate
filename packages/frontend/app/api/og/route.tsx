@@ -303,6 +303,13 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
+      // Decorative, templated card image — one unique URL per market page (~35k
+      // variants). Not meaningful in Google Images and not article content, so
+      // keep it out of page-indexing consideration entirely (crawlable per
+      // robots.txt's `Allow: /api/og` for OG/Twitter unfurling, just not
+      // indexed). A <meta> tag isn't possible on a raw image response, so this
+      // has to be the HTTP header.
+      headers: { "X-Robots-Tag": "noindex" },
     },
   );
 }

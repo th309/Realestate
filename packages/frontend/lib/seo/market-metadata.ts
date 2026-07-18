@@ -213,3 +213,34 @@ export function buildRegionalContext(
         : `runs below the ${region} norm`;
   return `${regionContext} Within the ${region}, ${name}'s PropertyIQ Score of ${s} ${stance}.`;
 }
+
+/**
+ * Whether a market page has real per-geo data worth indexing. Mirrors the
+ * same condition already gating `<MarketStatsBlock>` and the Dataset/
+ * ImageObject JSON-LD blocks — a page with `stats === null` is templated
+ * boilerplate only. Slug generation already guarantees a page only exists
+ * for a currently-scored geo, so this isn't re-checking the score itself;
+ * it catches the separate case where the price/DOM snapshot pipeline
+ * (`fetchSeoMarketStats`) independently nulls out on staleness (>120 days,
+ * "C2") or fetch failure even though the geo has a live PropertyIQ score.
+ */
+export function isMarketPageIndexable(stats: MarketStatsData | null): boolean {
+  return stats !== null;
+}
+
+/**
+ * One data-bearing sentence appended to a template's middle paragraph when
+ * YoY momentum is available — the same null-guard pattern as
+ * `buildMarketDataSummary`/`buildRegionalContext`, shared across metro/
+ * county/ZIP so their otherwise-boilerplate middle paragraph carries real
+ * per-geo substance instead of only place-name interpolation.
+ */
+export function buildMomentumClause(stats: MarketStatsData | null): string {
+  if (!stats || stats.headline.yoy.value === null) return "";
+  const yoy = stats.headline.yoy.value;
+  if (yoy > 0)
+    return ` Momentum here has been positive, with home values up ${yoy.toFixed(1)}% over the past year.`;
+  if (yoy < 0)
+    return ` Momentum here has been negative, with home values down ${Math.abs(yoy).toFixed(1)}% over the past year.`;
+  return ` Home values here have been essentially flat over the past year.`;
+}

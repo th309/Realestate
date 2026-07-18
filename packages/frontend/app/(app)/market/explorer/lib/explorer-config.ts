@@ -28,6 +28,10 @@ export interface ExplorerState {
   metric: ExplorerMetricId;
   monthIndex: number; // index into the fetched `dates` axis
   view: ViewMode; // 'bubbles' or 'map' — map works at every drilled scope
+  /** Geo level shown at the national root (path === []). Independent of
+   * `view` — Bubbles/Map is just a rendering toggle within whichever root
+   * level (State/Metro) is selected; only meaningful when `path` is empty. */
+  rootLevel: ExplorerGeoLevel;
   range: RangePreset;
   playing: boolean;
   includeNearby: boolean;
