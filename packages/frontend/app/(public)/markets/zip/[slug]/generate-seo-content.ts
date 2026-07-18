@@ -3,6 +3,7 @@ import type { MarketStatsData } from "@/lib/data";
 import {
   buildMarketDataSummary,
   buildRegionalContext,
+  buildMomentumClause,
 } from "@/lib/seo/market-metadata";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
@@ -108,12 +109,12 @@ const OPENING_TEMPLATES = [
 ];
 
 const MIDDLE_TEMPLATES = [
-  (shortName: string) =>
-    `The PropertyIQ Score for ${shortName} is built from four inputs measured at the ZIP-code level: Zillow home-value momentum over twelve months, Zillow home-value momentum over three months, the median days listings spend on the market (Realtor.com), and the share of listings with a price cut (Realtor.com). The score runs on a 1 to 99 scale computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a score above 50 points to a micro-market positioned to outperform its state.`,
-  (shortName: string) =>
-    `For ${shortName}, PropertyIQ updates a hyperlocal score each month from four signals: twelve-month and three-month Zillow home-value momentum, Realtor.com median days on market, and the Realtor.com share of price-reduced listings. The score is computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a value above 50 means this ZIP's demand dynamics read stronger than its state. ZIP-level analysis captures neighborhood variation that county and metro scores smooth over.`,
-  (shortName: string) =>
-    `PropertyIQ distills four housing signals into a single 1 to 99 score for ${shortName} at the most granular geography available: Zillow twelve-month and three-month home-value momentum, Realtor.com median days on market, and the Realtor.com price-reduced share. It is not a generic market-health grade; it is a validated predictor of which ZIP codes are positioned to outperform their state. The ZIP-level view often tells a different story than the broader county or metro score.`,
+  (shortName: string, stats: MarketStatsData | null) =>
+    `The PropertyIQ Score for ${shortName} is built from four inputs measured at the ZIP-code level: Zillow home-value momentum over twelve months, Zillow home-value momentum over three months, the median days listings spend on the market (Realtor.com), and the share of listings with a price cut (Realtor.com). The score runs on a 1 to 99 scale computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a score above 50 points to a micro-market positioned to outperform its state.${buildMomentumClause(stats)}`,
+  (shortName: string, stats: MarketStatsData | null) =>
+    `For ${shortName}, PropertyIQ updates a hyperlocal score each month from four signals: twelve-month and three-month Zillow home-value momentum, Realtor.com median days on market, and the Realtor.com share of price-reduced listings. The score is computed across all ZIP codes nationally and calibrated so 50 equals the state average, so a value above 50 means this ZIP's demand dynamics read stronger than its state. ZIP-level analysis captures neighborhood variation that county and metro scores smooth over.${buildMomentumClause(stats)}`,
+  (shortName: string, stats: MarketStatsData | null) =>
+    `PropertyIQ distills four housing signals into a single 1 to 99 score for ${shortName} at the most granular geography available: Zillow twelve-month and three-month home-value momentum, Realtor.com median days on market, and the Realtor.com price-reduced share. It is not a generic market-health grade; it is a validated predictor of which ZIP codes are positioned to outperform their state. The ZIP-level view often tells a different story than the broader county or metro score.${buildMomentumClause(stats)}`,
 ];
 
 const CLOSING_TEMPLATES = [
@@ -155,7 +156,7 @@ export function generateZipSeoContent(
       `ZIP code ${zip.zip}`,
       stats,
     ),
-    middle: MIDDLE_TEMPLATES[middleIdx](zip.shortName),
+    middle: MIDDLE_TEMPLATES[middleIdx](zip.shortName, stats),
     closing: CLOSING_TEMPLATES[closingIdx](zip.shortName),
   };
 }

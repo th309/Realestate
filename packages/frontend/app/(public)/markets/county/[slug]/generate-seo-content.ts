@@ -3,6 +3,7 @@ import type { MarketStatsData } from "@/lib/data";
 import {
   buildMarketDataSummary,
   buildRegionalContext,
+  buildMomentumClause,
 } from "@/lib/seo/market-metadata";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
 
@@ -106,12 +107,12 @@ const OPENING_TEMPLATES = [
 ];
 
 const MIDDLE_TEMPLATES = [
-  (name: string) =>
-    `The PropertyIQ Score for ${name} blends four proven demand indicators. When home values are gaining momentum, homes sell quickly, and few sellers cut prices, the score rises — signaling a market positioned to outperform its state. Historically, top-scored markets delivered significantly higher 3-year excess returns than bottom-scored markets.`,
-  (name: string) =>
-    `For ${name}, PropertyIQ calculates a demand signal score updated monthly using the latest housing data. A score above 50 means this county's demand dynamics are stronger than the state average. Scores in the 80+ range have historically corresponded with meaningful outperformance in home price appreciation.`,
-  (name: string) =>
-    `PropertyIQ's county-level score for ${name} distills four housing metrics into a single 1-99 number. This isn't a generic market health grade — it's a validated predictor of which counties within a state will see the strongest home price growth over the next one to three years.`,
+  (name: string, stats: MarketStatsData | null) =>
+    `The PropertyIQ Score for ${name} blends four proven demand indicators. When home values are gaining momentum, homes sell quickly, and few sellers cut prices, the score rises — signaling a market positioned to outperform its state. Historically, top-scored markets delivered significantly higher 3-year excess returns than bottom-scored markets.${buildMomentumClause(stats)}`,
+  (name: string, stats: MarketStatsData | null) =>
+    `For ${name}, PropertyIQ calculates a demand signal score updated monthly using the latest housing data. A score above 50 means this county's demand dynamics are stronger than the state average. Scores in the 80+ range have historically corresponded with meaningful outperformance in home price appreciation.${buildMomentumClause(stats)}`,
+  (name: string, stats: MarketStatsData | null) =>
+    `PropertyIQ's county-level score for ${name} distills four housing metrics into a single 1-99 number. This isn't a generic market health grade — it's a validated predictor of which counties within a state will see the strongest home price growth over the next one to three years.${buildMomentumClause(stats)}`,
 ];
 
 const CLOSING_TEMPLATES = [
@@ -153,7 +154,7 @@ export function generateCountySeoContent(
       county.shortName,
       stats,
     ),
-    middle: MIDDLE_TEMPLATES[middleIdx](county.shortName),
+    middle: MIDDLE_TEMPLATES[middleIdx](county.shortName, stats),
     closing: CLOSING_TEMPLATES[closingIdx](county.shortName),
   };
 }
