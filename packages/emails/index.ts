@@ -19,6 +19,7 @@ export { default as NpsDay30 } from "./emails/nps-day30";
 export { default as MonthlyDigest } from "./emails/monthly-digest";
 export { default as ThresholdAlert } from "./emails/threshold-alert";
 export { LeadMagnetDelivery } from "./emails/lead-magnet-delivery";
+export { default as ChurnWhyAsk } from "./emails/churn-why-ask";
 
 // Types
 export type { WelcomeEmailProps } from "./emails/welcome";
@@ -41,6 +42,7 @@ export type { NpsDay30Props } from "./emails/nps-day30";
 export type { MonthlyDigestProps } from "./emails/monthly-digest";
 export type { ThresholdAlertProps } from "./emails/threshold-alert";
 export type { LeadMagnetDeliveryProps } from "./emails/lead-magnet-delivery";
+export type { ChurnWhyAskProps } from "./emails/churn-why-ask";
 
 // Shared copy (single source of truth for marketing/lifecycle wording)
 export { SCORE_DESCRIPTION, SCORES_ACCURACY_PATH } from "./copy/email-copy";
@@ -55,4 +57,9 @@ export {
   TRIAL_EXPIRED_EMAIL,
   TRIAL_WILL_END_EMAIL,
   ACTIVE_EXPLORER_EMAIL,
+  CHURN_REASON_LABELS,
+  CHURN_WHY_ZERO_SESSION,
+  CHURN_WHY_TRIED_ONCE,
+  CHURN_WHY_ENGAGED_QUIET,
 } from "./copy/email-copy";
+export type { ChurnWhyCopy } from "./copy/email-copy";
