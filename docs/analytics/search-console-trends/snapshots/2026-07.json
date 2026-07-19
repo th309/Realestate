@@ -1,0 +1,133 @@
+{
+  "asOf": "2026-07-19",
+  "windowStart": "2026-04-17",
+  "windowEnd": "2026-07-16",
+  "top": [
+    {
+      "query": "best places to invest in north dakota",
+      "impressions": 31,
+      "clicks": 0,
+      "position": 8.032258064516128
+    },
+    {
+      "query": "best cities to buy a house in mississippi",
+      "impressions": 30,
+      "clicks": 0,
+      "position": 21.433333333333334
+    },
+    {
+      "query": "best markets for brrrr strategy 2026",
+      "impressions": 20,
+      "clicks": 0,
+      "position": 4.3
+    },
+    {
+      "query": "sacramento vs inland empire vs central valley real estate investment 2026",
+      "impressions": 19,
+      "clicks": 0,
+      "position": 3.6842105263157894
+    },
+    {
+      "query": "best cities to buy a home in indiana",
+      "impressions": 17,
+      "clicks": 0,
+      "position": 28.764705882352942
+    },
+    {
+      "query": "best cities for investment properties idaho",
+      "impressions": 15,
+      "clicks": 0,
+      "position": 50.8
+    },
+    {
+      "query": "investment property market insights idaho",
+      "impressions": 13,
+      "clicks": 0,
+      "position": 67.53846153846153
+    },
+    {
+      "query": "21218 market trend",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 10.727272727272727
+    },
+    {
+      "query": "best places to invest in real estate nevada",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 20.818181818181817
+    },
+    {
+      "query": "wilmington nc real estate market forecast 2026",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 11.636363636363637
+    },
+    {
+      "query": "average days on market zip 60607 chicago 2026",
+      "impressions": 10,
+      "clicks": 0,
+      "position": 7
+    },
+    {
+      "query": "fargo housing market forecast 2026",
+      "impressions": 10,
+      "clicks": 0,
+      "position": 14.7
+    },
+    {
+      "query": "missoula real estate forecast",
+      "impressions": 10,
+      "clicks": 0,
+      "position": 15.8
+    },
+    {
+      "query": "best cities for airbnb investment 2026",
+      "impressions": 8,
+      "clicks": 0,
+      "position": 25.625
+    },
+    {
+      "query": "best places to invest in real estate in idaho",
+      "impressions": 8,
+      "clicks": 0,
+      "position": 15.375
+    },
+    {
+      "query": "pensacola florida housing market forecast 2026 2027",
+      "impressions": 8,
+      "clicks": 0,
+      "position": 7.375
+    },
+    {
+      "query": "\"blowing rock\" nc housing market forecast 2026",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 9
+    },
+    {
+      "query": "\"lookout, ca\" \"median sale price\" or \"housing market\" or \"real estate market trend\" in 2025",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 5
+    },
+    {
+      "query": "best places to invest $200,000 in 2026",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 10.333333333333334
+    },
+    {
+      "query": "chicago real estate forecast",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 60.166666666666664
+    }
+  ],
+  "totalDistinct": 9956,
+  "exclusionCounts": {
+    "bot": 18,
+    "brand": 13,
+    "geo": 377
+  }
+}
