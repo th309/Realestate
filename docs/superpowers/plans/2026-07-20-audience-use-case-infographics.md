@@ -207,7 +207,7 @@ body {
 }
 
 .stat-row .label {
-  color: #3c3c4a;
+  color: var(--primary-dark);
   font-weight: 400;
 }
 .stat-row .value {
