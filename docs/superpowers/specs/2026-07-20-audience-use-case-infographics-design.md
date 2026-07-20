@@ -52,7 +52,7 @@ All three infographics share a common header strip — the 1–99 score scale wi
 - **Size:** 2000×1125px (16:9), matching typical blog hero / OG-image / social-card ratios — serves both embed and standalone-share use cases (per user's "both" decision).
 - **Build:** Static HTML/CSS file per infographic using the brand tokens above, rendered via Playwright screenshot at the fixed canvas size.
 - **Output:** `packages/frontend/public/images/infographics/{slug}.png` — `investor-use-case.png`, `homebuyer-use-case.png`, `agents-use-case.png`.
-- Source HTML kept alongside for future edits (exact location decided at implementation time — likely a `content-pipeline/infographics/` or scratch build directory, not shipped to production).
+- **Source:** `docs/superpowers/specs/assets/2026-07-20-audience-use-case-infographics/{slug}.html` + a shared `_shared.css` in the same folder. Kept versioned alongside the spec for future edits — not `packages/backend/src/content-pipeline` (that's the real NestJS lead-magnet module, not a place for standalone build-time HTML) and not under `packages/frontend/public` (files there are directly web-served; these are Playwright render inputs, not pages meant to be visited).
 
 ## Content per infographic
 
