@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PropertyIQ for Agents</title>
+    <link rel="stylesheet" href="_shared.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="eyebrow">PropertyIQ &middot; For Agents</div>
+      <div class="title">
+        Walk into every listing with a market score and a narrative.
+      </div>
+      <div class="hook">Win listings with numbers, not instinct.</div>
+    </div>
+    <div class="score-strip">
+      <span class="end-label">1</span>
+      <div class="scale-bar"></div>
+      <span class="end-label">99</span>
+      <span class="mid-caption">50 = state average</span>
+    </div>
+    <div class="panels">
+      <div class="card">
+        <div class="card-header">
+          <span>Listing Presentation</span>
+          <span class="as-of"
+            >Austin, TX &middot; 78704 &mdash; as of 2026-05-31</span
+          >
+        </div>
+        <div class="stat-rows">
+          <div class="stat-row">
+            <span class="label">Median days on market</span
+            ><span class="value mono">57 days</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Price per sq ft</span
+            ><span class="value mono">$572</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Active inventory</span
+            ><span class="value mono neg">374 (&minus;18.7% YoY)</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">New listings</span
+            ><span class="value mono neg">96 (&minus;25% YoY)</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Listings with price cuts</span
+            ><span class="value mono neg">23.4%</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Home values</span
+            ><span class="value mono neg">&minus;10.81% YoY</span>
+          </div>
+        </div>
+        <div class="verdict warn">
+          &ldquo;Cooling + tight inventory &mdash; price it right or it
+          sits&rdquo;
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span>Ask Claude &middot; MCP</span>
+          <span class="as-of">Live tool call &mdash; as of 2026-05-31</span>
+        </div>
+        <div class="stat-rows">
+          <div class="stat-row">
+            <span class="label">Query</span
+            ><span class="value"
+              >&ldquo;What&rsquo;s the score for 78704?&rdquo;</span
+            >
+          </div>
+          <div class="stat-row">
+            <span class="label">Tool call</span
+            ><span class="value mono">get_propertyiq_score(zip, 78704)</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Score</span
+            ><span class="value mono neg">7 &middot; F</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">Confidence</span
+            ><span class="value mono pos">A</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">3-month trend</span
+            ><span class="value mono neg">&minus;8</span>
+          </div>
+        </div>
+        <div class="verdict pos">
+          A real MCP tool call against live PropertyIQ data &mdash; plug it into
+          Claude or any MCP client.
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="wordmark">PropertyIQ</div>
+      <div class="coverage">
+        <div class="stat-tile">
+          <div class="num">900+</div>
+          <div class="cap">Metros</div>
+        </div>
+        <div class="stat-tile">
+          <div class="num">3,000+</div>
+          <div class="cap">Counties</div>
+        </div>
+        <div class="stat-tile">
+          <div class="num">29,000+</div>
+          <div class="cap">ZIP Codes</div>
+        </div>
+      </div>
+      <div class="wordmark" style="font-size: 18px; font-weight: 400">
+        Updated monthly
+      </div>
+    </div>
+  </body>
+</html>
