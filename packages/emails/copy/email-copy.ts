@@ -285,3 +285,63 @@ export const ACTIVE_EXPLORER_EMAIL = {
   ],
   cta: "Keep Exploring Markets",
 } as const;
+
+/** Canonical reason_code → human label. Shared by the email template, the
+ * churn-why drip, and the admin Trial Settings page (via TrialService). */
+export const CHURN_REASON_LABELS: Record<string, string> = {
+  busy: "Got busy",
+  unsure: "Wasn't sure what to do next",
+  curious: "Just curious, not actively looking",
+  missing_market: "Couldn't find my market",
+  not_found: "Didn't find what I needed",
+  confusing: "Confusing or unclear",
+  too_expensive: "Too expensive",
+  got_what_needed: "Found what I needed, done for now",
+  switched_tools: "Switched to another tool",
+  not_enough_new: "Not enough new information to keep checking",
+  other: "Other",
+};
+
+export interface ChurnWhyCopy {
+  heading: string;
+  preview: string;
+  greeting: (name: string) => string;
+  body: string;
+  reasonCodes: string[];
+}
+
+export const CHURN_WHY_ZERO_SESSION: ChurnWhyCopy = {
+  heading: "Quick question — what happened?",
+  preview: "One click, no hard feelings",
+  greeting: (name: string) => `Hey ${name},`,
+  body: "You signed up for PropertyIQ but I don't think you've been back yet. No hard feelings — I'd love to know why. One click:",
+  reasonCodes: ["busy", "unsure", "curious", "missing_market", "other"],
+};
+
+export const CHURN_WHY_TRIED_ONCE: ChurnWhyCopy = {
+  heading: "Quick question — what happened?",
+  preview: "One click, no hard feelings",
+  greeting: (name: string) => `Hey ${name},`,
+  body: "You checked out PropertyIQ once but haven't been back since. Mind sharing why? One click:",
+  reasonCodes: [
+    "not_found",
+    "confusing",
+    "too_expensive",
+    "missing_market",
+    "other",
+  ],
+};
+
+export const CHURN_WHY_ENGAGED_QUIET: ChurnWhyCopy = {
+  heading: "Quick question — what happened?",
+  preview: "One click, no hard feelings",
+  greeting: (name: string) => `Hey ${name},`,
+  body: "You were checking PropertyIQ regularly, then stopped. I'd love to know why. One click:",
+  reasonCodes: [
+    "got_what_needed",
+    "switched_tools",
+    "not_enough_new",
+    "busy",
+    "other",
+  ],
+};

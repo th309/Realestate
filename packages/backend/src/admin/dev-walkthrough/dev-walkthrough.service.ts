@@ -72,6 +72,8 @@ export class DevWalkthroughService {
       return void (await this.engagement.fireWelcome(userId));
     if (job.startsWith('drip'))
       return void (await this.drip.runDripDay(Number(job.slice(4)), userId));
+    if (job.startsWith('churn_why_'))
+      return void (await this.drip.runChurnWhyCohort(job, userId));
     if (job === 'trial_day_10')
       return void (await this.trialLifecycle.fireTrialDay10(userId));
     if (job === 'trial_day_13')

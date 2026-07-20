@@ -19,6 +19,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TrialService } from './trial.service';
+import { TrialActionsService } from './trial-actions.service';
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
 @UseGuards(AdminGuard)
@@ -26,7 +27,10 @@ import { AdminGuard } from '../../common/guards/admin-auth.guard';
 export class TrialController {
   private readonly logger = new Logger(TrialController.name);
 
-  constructor(private readonly trialService: TrialService) {}
+  constructor(
+    private readonly trialService: TrialService,
+    private readonly trialActionsService: TrialActionsService,
+  ) {}
 
   /**
    * Get trial configuration
@@ -124,7 +128,10 @@ export class TrialController {
     this.logger.log(`POST /admin/trial/users/${userId}/start`);
 
     try {
-      const trial = await this.trialService.startTrial(userId, body.tier);
+      const trial = await this.trialActionsService.startTrial(
+        userId,
+        body.tier,
+      );
       return { success: true, data: trial };
     } catch (error) {
       return { success: false, error: error.message };
@@ -150,7 +157,10 @@ export class TrialController {
     }
 
     try {
-      const trial = await this.trialService.extendTrial(userId, body.days);
+      const trial = await this.trialActionsService.extendTrial(
+        userId,
+        body.days,
+      );
       return { success: true, data: trial };
     } catch (error) {
       return { success: false, error: error.message };
@@ -166,7 +176,7 @@ export class TrialController {
     this.logger.log(`DELETE /admin/trial/users/${userId}`);
 
     try {
-      await this.trialService.cancelTrial(userId);
+      await this.trialActionsService.cancelTrial(userId);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -182,7 +192,7 @@ export class TrialController {
     this.logger.log(`PUT /admin/trial/users/${userId}/convert`);
 
     try {
-      await this.trialService.convertTrial(userId);
+      await this.trialActionsService.convertTrial(userId);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
