@@ -5,21 +5,17 @@ import {
   Clock,
   Users,
   TrendingUp,
-  Bell,
-  Save,
-  ToggleLeft,
-  ToggleRight,
   Calendar,
-  Gift,
   AlertCircle,
-  CheckCircle,
   XCircle,
   Loader2,
   RefreshCw,
 } from "lucide-react";
 import { fetchAPIRaw } from "@/lib/data";
+import { ToggleSwitch } from "./components/ToggleSwitch";
+import { StatCard } from "./components/StatCard";
+import { TrialsTable, type ActiveTrial } from "./components/TrialsTable";
 
-// Types
 interface TrialConfig {
   isEnabled: boolean;
   durationDays: number;
@@ -33,19 +29,7 @@ interface TrialStats {
   activeCount: number;
   expiringSoonCount: number;
   conversionRate: number;
-  avgUsage: number;
-}
-
-interface ActiveTrial {
-  id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  tier: string;
-  startedAt: string;
-  expiresAt: string;
-  daysRemaining: number;
-  paywallHits: number;
+  avgSessions: number;
 }
 
 const DEFAULT_CONFIG: TrialConfig = {
@@ -57,101 +41,10 @@ const DEFAULT_CONFIG: TrialConfig = {
   reminderDays: [7, 3, 1],
 };
 
-// Components
-function ToggleSwitch({
-  enabled,
-  onChange,
-  label,
-  description,
-}: {
-  enabled: boolean;
-  onChange: (value: boolean) => void;
-  label: string;
-  description?: string;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <div className="text-sm font-medium text-on-surface">{label}</div>
-        {description && (
-          <div className="text-xs text-on-surface-variant mt-0.5">
-            {description}
-          </div>
-        )}
-      </div>
-      <button
-        onClick={() => onChange(!enabled)}
-        className="flex-shrink-0"
-        aria-label={`Toggle ${label}`}
-      >
-        {enabled ? (
-          <ToggleRight className="w-10 h-6 text-primary" />
-        ) : (
-          <ToggleLeft className="w-10 h-6 text-on-surface-variant" />
-        )}
-      </button>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  trend,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  trend?: string;
-}) {
-  return (
-    <div className="bg-surface-container rounded-xl p-5">
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-primary" />
-        </div>
-        {trend && (
-          <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
-            {trend}
-          </span>
-        )}
-      </div>
-      <div className="text-2xl font-semibold text-on-surface">{value}</div>
-      <div className="text-sm text-on-surface-variant">{label}</div>
-    </div>
-  );
-}
-
-function TrialStatusBadge({ daysRemaining }: { daysRemaining: number }) {
-  if (daysRemaining <= 1) {
-    return (
-      <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-        <AlertCircle className="w-3 h-3" />
-        Expiring
-      </span>
-    );
-  }
-  if (daysRemaining <= 3) {
-    return (
-      <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-        <Clock className="w-3 h-3" />
-        {daysRemaining} days left
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-      <CheckCircle className="w-3 h-3" />
-      {daysRemaining} days left
-    </span>
-  );
-}
-
 export default function TrialSettingsPage() {
   const [config, setConfig] = useState<TrialConfig>(DEFAULT_CONFIG);
   const [stats, setStats] = useState<TrialStats | null>(null);
-  const [activeTrials, setActiveTrials] = useState<ActiveTrial[]>([]);
+  const [trials, setTrials] = useState<ActiveTrial[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -168,6 +61,8 @@ export default function TrialSettingsPage() {
         fetchAPIRaw("/api/admin/trial/users"),
       ]);
 
+      const failures: string[] = [];
+
       if (configRes.ok) {
         const configResponse = await configRes.json();
         const configData = configResponse.data || configResponse;
@@ -179,6 +74,8 @@ export default function TrialSettingsPage() {
           autoConvertEnabled: configData.auto_convert_enabled ?? false,
           reminderDays: configData.reminder_days ?? [7, 3, 1],
         });
+      } else {
+        failures.push(`config (${configRes.status})`);
       }
 
       if (statsRes.ok) {
@@ -188,15 +85,16 @@ export default function TrialSettingsPage() {
           activeCount: statsData.active_count ?? 0,
           expiringSoonCount: statsData.expiring_soon_count ?? 0,
           conversionRate: statsData.conversion_rate ?? 0,
-          avgUsage: statsData.avg_usage ?? 0,
+          avgSessions: statsData.avg_sessions ?? 0,
         });
+      } else {
+        failures.push(`stats (${statsRes.status})`);
       }
 
       if (trialsRes.ok) {
         const trialsResponse = await trialsRes.json();
         const trialsData = trialsResponse.data || [];
-        // Map snake_case API response to camelCase interface
-        setActiveTrials(
+        setTrials(
           trialsData.map((t: Record<string, unknown>) => ({
             id: t.id,
             userId: t.user_id,
@@ -206,9 +104,20 @@ export default function TrialSettingsPage() {
             startedAt: t.started_at,
             expiresAt: t.expires_at,
             daysRemaining: t.days_remaining ?? 0,
+            convertedAt: (t.converted_at as string | null) ?? null,
+            cancelledAt: (t.cancelled_at as string | null) ?? null,
             paywallHits: t.paywall_hits ?? 0,
+            reasonCode: (t.reason_code as string | null) ?? null,
+            reasonLabel: (t.reason_label as string | null) ?? null,
+            detail: (t.detail as string | null) ?? null,
           })),
         );
+      } else {
+        failures.push(`trials (${trialsRes.status})`);
+      }
+
+      if (failures.length) {
+        setError(`Failed to load: ${failures.join(", ")}`);
       }
     } catch (err) {
       console.error("Failed to fetch trial data:", err);
@@ -281,8 +190,6 @@ export default function TrialSettingsPage() {
     }
   };
 
-  const expiringCount = activeTrials.filter((t) => t.daysRemaining <= 3).length;
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -293,7 +200,6 @@ export default function TrialSettingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Error Banner */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-2 text-red-700">
@@ -309,14 +215,13 @@ export default function TrialSettingsPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold text-on-surface">
             Trial Settings
           </h1>
           <p className="text-on-surface-variant">
-            Configure trial periods and manage active trials
+            Configure trial periods and manage trials
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -342,23 +247,22 @@ export default function TrialSettingsPage() {
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Save className="w-4 h-4" />
+              <Calendar className="w-4 h-4" />
             )}
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Active Trials"
-          value={stats?.activeCount ?? activeTrials.length}
+          value={stats?.activeCount ?? trials.length}
           icon={Users}
         />
         <StatCard
           label="Expiring Soon"
-          value={stats?.expiringSoonCount ?? expiringCount}
+          value={stats?.expiringSoonCount ?? 0}
           icon={AlertCircle}
         />
         <StatCard
@@ -367,27 +271,20 @@ export default function TrialSettingsPage() {
             stats?.conversionRate != null ? `${stats.conversionRate}%` : "-"
           }
           icon={TrendingUp}
-          trend={
-            stats?.conversionRate != null && stats.conversionRate > 20
-              ? "+5%"
-              : undefined
-          }
         />
         <StatCard
-          label="Avg Trial Usage"
-          value={stats?.avgUsage != null ? `${stats.avgUsage}%` : "-"}
+          label="Avg Sessions"
+          value={stats?.avgSessions ?? "-"}
           icon={Clock}
         />
       </div>
 
-      {/* Configuration */}
       <div className="bg-surface-container rounded-xl p-6 mb-8">
         <h2 className="text-lg font-medium text-on-surface mb-6">
           Trial Configuration
         </h2>
 
         <div className="space-y-6">
-          {/* Master Toggle */}
           <div className="pb-6 border-b border-outline-variant">
             <ToggleSwitch
               enabled={config.isEnabled}
@@ -397,7 +294,6 @@ export default function TrialSettingsPage() {
             />
           </div>
 
-          {/* Duration */}
           <div className="flex items-center justify-between gap-4 pb-6 border-b border-outline-variant">
             <div>
               <div className="text-sm font-medium text-on-surface">
@@ -422,7 +318,6 @@ export default function TrialSettingsPage() {
             </div>
           </div>
 
-          {/* Trial Tier */}
           <div className="flex items-center justify-between gap-4 pb-6 border-b border-outline-variant">
             <div>
               <div className="text-sm font-medium text-on-surface">
@@ -442,7 +337,6 @@ export default function TrialSettingsPage() {
             </select>
           </div>
 
-          {/* Show Banner */}
           <div className="pb-6 border-b border-outline-variant">
             <ToggleSwitch
               enabled={config.showBanner}
@@ -452,7 +346,6 @@ export default function TrialSettingsPage() {
             />
           </div>
 
-          {/* Reminder Emails */}
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-medium text-on-surface">
@@ -489,118 +382,13 @@ export default function TrialSettingsPage() {
         </div>
       </div>
 
-      {/* Active Trials */}
       <div className="bg-surface-container rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-medium text-on-surface">Active Trials</h2>
-          <button className="text-sm text-primary hover:underline">
-            View all
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left border-b border-outline-variant">
-                <th className="pb-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider">
-                  User
-                </th>
-                <th className="pb-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="pb-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider text-center">
-                  Tier
-                </th>
-                <th className="pb-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider text-right">
-                  Usage
-                </th>
-                <th className="pb-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeTrials.map((trial) => (
-                <tr
-                  key={trial.id}
-                  className="border-b border-outline-variant last:border-0"
-                >
-                  <td className="py-3">
-                    <div>
-                      <div className="text-sm font-medium text-on-surface">
-                        {trial.userName}
-                      </div>
-                      <div className="text-xs text-on-surface-variant">
-                        {trial.userEmail}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    <TrialStatusBadge daysRemaining={trial.daysRemaining} />
-                  </td>
-                  <td className="py-3 text-center">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                      {trial.tier}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right text-sm text-on-surface-variant">
-                    {trial.paywallHits} features used
-                  </td>
-                  <td className="py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleExtendTrial(trial.userId)}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Extend
-                      </button>
-                      <button
-                        onClick={() => handleCancelTrial(trial.userId)}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {activeTrials.length === 0 && (
-          <div className="text-center py-8">
-            <Gift className="w-12 h-12 text-on-surface-variant mx-auto mb-3" />
-            <p className="text-on-surface-variant">No active trials</p>
-          </div>
-        )}
-      </div>
-
-      {/* Trial Tips */}
-      <div className="mt-8 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-        <h3 className="text-lg font-medium text-blue-900 mb-3">
-          Trial Best Practices
-        </h3>
-        <ul className="space-y-2 text-sm text-blue-800">
-          <li className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <span>
-              14-day trials have 30% higher conversion than 7-day trials
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <span>
-              Users who use 3+ premium features are 5x more likely to convert
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <span>
-              Email reminders at 7, 3, and 1 day increase conversions by 15%
-            </span>
-          </li>
-        </ul>
+        <h2 className="text-lg font-medium text-on-surface mb-6">Trials</h2>
+        <TrialsTable
+          trials={trials}
+          onExtend={handleExtendTrial}
+          onCancel={handleCancelTrial}
+        />
       </div>
     </div>
   );
