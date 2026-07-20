@@ -9,7 +9,7 @@ import { getEmailLinkBaseUrl } from './email-link-base';
 import { DRIP_DAY_CONFIGS } from './drip.types';
 import type { DripDeps } from './drip.types';
 import { processDripDay, runOnboardingDrip } from './drip-onboarding.helper';
-import { runWinbackDrip } from './drip-winback.helper';
+import { runChurnWhyDrip, runChurnWhyCohort } from './drip-churn-why.helper';
 import { runNpsDrip } from './drip-nps.helper';
 
 @Injectable()
@@ -50,14 +50,19 @@ export class DripService {
     return processDripDay(this.deps(), config, onlyUserId);
   }
 
+  /** Dev/test entry: run a single churn-why cohort deterministically (no cron lock). */
+  async runChurnWhyCohort(emailType: string, onlyUserId?: string) {
+    return runChurnWhyCohort(this.deps(), emailType, onlyUserId);
+  }
+
   @Cron('0 9 * * *')
   async processOnboardingDrip() {
     await runOnboardingDrip(this.deps());
   }
 
   @Cron('0 9 * * *')
-  async processWinbackDrip() {
-    await runWinbackDrip(this.deps());
+  async processChurnWhyDrip() {
+    await runChurnWhyDrip(this.deps());
   }
 
   @Cron('0 9 * * *')
