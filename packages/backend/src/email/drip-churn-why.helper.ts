@@ -136,7 +136,10 @@ async function runSnapshotCohort(
 }
 
 /** Engaged-then-quiet: 3+ sessions in a specific day 14-15 days ago (the same
- * rolling-dormancy query the old win-back email used), then silent since. */
+ * rolling-dormancy query the old win-back email used). Note: this only checks
+ * for a burst of activity in that window — it does not verify the user has
+ * stayed inactive since, so someone active again today with 3+ old sessions
+ * in that window still qualifies. Inherited as-is from the win-back logic. */
 async function runEngagedQuietCohort(
   deps: DripDeps,
   onlyUserId?: string,
