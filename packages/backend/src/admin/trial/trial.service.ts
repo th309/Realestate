@@ -6,6 +6,13 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { getPaywallCountsForUsers } from '../users/users-batch-fetch.helper';
+import { getSessionCountsForUsers } from '../../common/user-sessions-count.util';
+import {
+  hydrateTrialRecords,
+  computeTrialStats,
+  type TrialStatsResult,
+} from './trial-hydration.util';
 
 export interface TrialConfig {
   id: string;
@@ -25,8 +32,14 @@ export interface UserTrial {
   converted_at: string | null;
   cancelled_at: string | null;
   created_at: string;
-  // Joined user info
+  // Joined/computed fields — populated by hydrateTrialRecords()
   user_email?: string;
+  user_name?: string;
+  days_remaining?: number;
+  paywall_hits?: number;
+  reason_code?: string | null;
+  reason_label?: string | null;
+  detail?: string | null;
 }
 
 @Injectable()
@@ -156,57 +169,108 @@ export class TrialService {
       throw new Error(error.message);
     }
 
-    return { trials: data || [], total: count || 0 };
+    const trials = await this.hydrate(data || []);
+    return { trials, total: count || 0 };
+  }
+
+  /** Joins profile identity, real paywall-hit counts, and the latest churn
+   * reason onto raw user_trials rows. */
+  private async hydrate(trials: UserTrial[]): Promise<UserTrial[]> {
+    if (!trials.length) return [];
+
+    const client = this.supabase.getClient();
+    const userIds = trials.map((t) => t.user_id);
+
+    const [profilesResult, paywallCounts, churnResult] = await Promise.all([
+      client
+        .from('user_profiles')
+        .select('id, email, full_name')
+        .in('id', userIds),
+      getPaywallCountsForUsers(client, userIds),
+      client
+        .from('churn_survey_responses')
+        .select('user_id, reason_code, detail, created_at')
+        .in('user_id', userIds),
+    ]);
+
+    return hydrateTrialRecords(
+      trials,
+      profilesResult.data || [],
+      paywallCounts,
+      churnResult.data || [],
+      Date.now(),
+    );
   }
 
   /**
    * Get trial stats
    */
-  async getStats(): Promise<{
-    active: number;
-    expired: number;
-    converted: number;
-    cancelled: number;
-    conversionRate: number;
-  }> {
+  async getStats(): Promise<TrialStatsResult> {
     const client = this.supabase.getClient();
     const now = new Date().toISOString();
+    const soonCutoff = new Date(
+      Date.now() + 3 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
-    // Get counts for each status
-    const [activeResult, expiredResult, convertedResult, cancelledResult] =
-      await Promise.all([
-        client
-          .from('user_trials')
-          .select('*', { count: 'exact', head: true })
-          .is('converted_at', null)
-          .is('cancelled_at', null)
-          .gt('expires_at', now),
-        client
-          .from('user_trials')
-          .select('*', { count: 'exact', head: true })
-          .is('converted_at', null)
-          .is('cancelled_at', null)
-          .lt('expires_at', now),
-        client
-          .from('user_trials')
-          .select('*', { count: 'exact', head: true })
-          .not('converted_at', 'is', null),
-        client
-          .from('user_trials')
-          .select('*', { count: 'exact', head: true })
-          .not('cancelled_at', 'is', null),
-      ]);
+    const [
+      activeResult,
+      expiredResult,
+      convertedResult,
+      cancelledResult,
+      expiringSoonResult,
+      activeUsersResult,
+    ] = await Promise.all([
+      client
+        .from('user_trials')
+        .select('*', { count: 'exact', head: true })
+        .is('converted_at', null)
+        .is('cancelled_at', null)
+        .gt('expires_at', now),
+      client
+        .from('user_trials')
+        .select('*', { count: 'exact', head: true })
+        .is('converted_at', null)
+        .is('cancelled_at', null)
+        .lt('expires_at', now),
+      client
+        .from('user_trials')
+        .select('*', { count: 'exact', head: true })
+        .not('converted_at', 'is', null),
+      client
+        .from('user_trials')
+        .select('*', { count: 'exact', head: true })
+        .not('cancelled_at', 'is', null),
+      client
+        .from('user_trials')
+        .select('*', { count: 'exact', head: true })
+        .is('converted_at', null)
+        .is('cancelled_at', null)
+        .gt('expires_at', now)
+        .lte('expires_at', soonCutoff),
+      client
+        .from('user_trials')
+        .select('user_id')
+        .is('converted_at', null)
+        .is('cancelled_at', null)
+        .gt('expires_at', now),
+    ]);
 
-    const active = activeResult.count || 0;
-    const expired = expiredResult.count || 0;
-    const converted = convertedResult.count || 0;
-    const cancelled = cancelledResult.count || 0;
+    const activeUserIds = (activeUsersResult.data || []).map((t) => t.user_id);
+    const sessionCounts = await getSessionCountsForUsers(client, activeUserIds);
+    const activeUserSessionCounts = activeUserIds.map(
+      (id) => sessionCounts.get(id) ?? 0,
+    );
 
-    const totalCompleted = expired + converted + cancelled;
-    const conversionRate =
-      totalCompleted > 0 ? (converted / totalCompleted) * 100 : 0;
-
-    return { active, expired, converted, cancelled, conversionRate };
+    return computeTrialStats(
+      {
+        active: activeResult.count || 0,
+        expired: expiredResult.count || 0,
+        converted: convertedResult.count || 0,
+        cancelled: cancelledResult.count || 0,
+        expiringSoon: expiringSoonResult.count || 0,
+      },
+      activeUserSessionCounts,
+    );
   }
 
   /**
