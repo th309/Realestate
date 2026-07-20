@@ -6,17 +6,37 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 import { SurveysService } from './surveys.service';
 
+// class-validator decorators are required here, not just documentation: the
+// global `ValidationPipe({ whitelist: true })` (main.ts) strips any property
+// without at least one validator decorator, so an undecorated field is
+// silently dropped from the body before the controller ever sees it.
 class SubmitNpsSurveyBody {
+  @IsString()
+  @IsNotEmpty()
   token!: string;
+
+  @IsNumber()
   score!: number;
+
+  @IsOptional()
+  @IsString()
   comment?: string;
 }
 
 class SubmitChurnSurveyBody {
+  @IsString()
+  @IsNotEmpty()
   token!: string;
+
+  @IsString()
+  @IsNotEmpty()
   reasonCode!: string;
+
+  @IsOptional()
+  @IsString()
   detail?: string;
 }
 
