@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-20
 **Status:** Approved for implementation
-**Scope:** First of three planned infographic series (see "Out of Scope" below). This spec covers only the audience use-case series: Investor, Homebuyer, and Agents & Brokerages.
+**Scope:** First of three planned infographic series (see "Out of Scope" below). This spec covers only the audience use-case series: Investor, Homebuyer, and Agents.
 
 ## Why
 
@@ -21,9 +21,9 @@ No invented screens, no invented numbers, no invented quotes. Every stat panel c
 
 ## Audience scoping decision
 
-Research found **no dedicated "broker" content anywhere in the codebase** — broker appears only as a bundled mention inside agent copy and one Enterprise-tier pricing line ("team/brokerage features"). Per user decision, Broker is folded into the Agent infographic as "Agents & Brokerages" rather than given its own infographic or fabricated content.
+Research found **no dedicated "broker" content anywhere in the codebase** — broker appears only as a bundled mention inside agent copy and one Enterprise-tier pricing line ("team/brokerage features"). Per user decision, Broker is simply merged into the Agent infographic — no separate "& Brokerages" naming, no dedicated brokerage panel or callout. It's one "Agents" infographic; brokers are served by the same real agent-facing tools depicted.
 
-Final set: **3 infographics** — Investor, Homebuyer, Agents & Brokerages.
+Final set: **3 infographics** — Investor, Homebuyer, Agents.
 
 ## Structural approach
 
@@ -51,7 +51,7 @@ All three infographics share a common header strip — the 1–99 score scale wi
 
 - **Size:** 2000×1125px (16:9), matching typical blog hero / OG-image / social-card ratios — serves both embed and standalone-share use cases (per user's "both" decision).
 - **Build:** Static HTML/CSS file per infographic using the brand tokens above, rendered via Playwright screenshot at the fixed canvas size.
-- **Output:** `packages/frontend/public/images/infographics/{slug}.png` — `investor-use-case.png`, `homebuyer-use-case.png`, `agents-brokerages-use-case.png`.
+- **Output:** `packages/frontend/public/images/infographics/{slug}.png` — `investor-use-case.png`, `homebuyer-use-case.png`, `agents-use-case.png`.
 - Source HTML kept alongside for future edits (exact location decided at implementation time — likely a `content-pipeline/infographics/` or scratch build directory, not shipped to production).
 
 ## Content per infographic
@@ -86,7 +86,7 @@ All three infographics share a common header strip — the 1–99 score scale wi
 - **Panel: Market contrast** — same Seattle vs. Buffalo real data, reframed as "where affordability and momentum line up" (Buffalo's lower price point + rising score vs. Seattle's high price + falling score).
 - **Footer:** coverage stats.
 
-### 3. Agents & Brokerages
+### 3. Agents
 
 - **Header hook** (verbatim, real, from `UseCasesSection.tsx`): _"Walk into every listing presentation with a market score and an AI-generated narrative. Win listings with numbers, not instinct."_
 - **Score scale strip** (shared component).
@@ -99,7 +99,6 @@ All three infographics share a common header strip — the 1–99 score scale wi
   - Home values: −10.81% YoY
   - Verdict: "Cooling + tight inventory — price it right or it sits"
 - **Panel: Ask Claude / MCP** — real MCP exchange (`MCP_EXCHANGE` in `snapshots.ts`): the literal `get_propertyiq_score(geography="zip", location_id="78704")` call and its real JSON response, framed as "A real MCP tool call against live PropertyIQ data."
-- **Panel: Brokerage callout** — real Enterprise-tier pricing line: "team/brokerage features," framed honestly as an Enterprise-tier capability, not a live dashboard.
 - **Footer:** coverage stats.
 
 ## Verification plan
