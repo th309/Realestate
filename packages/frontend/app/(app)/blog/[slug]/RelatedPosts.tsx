@@ -1,14 +1,36 @@
 import { getAllPosts } from "@/lib/blog";
+import type { BlogPost } from "@/lib/blog";
 
 interface RelatedPostsProps {
   currentSlug: string;
 }
 
+function relatednessScore(current: BlogPost, candidate: BlogPost): number {
+  const currentTags = new Set(current.frontmatter.tags);
+  const sharedTags = candidate.frontmatter.tags.filter((tag) =>
+    currentTags.has(tag),
+  ).length;
+  const sameCategory =
+    candidate.frontmatter.category === current.frontmatter.category ? 1 : 0;
+  return sharedTags * 2 + sameCategory;
+}
+
 export function RelatedPosts({ currentSlug }: RelatedPostsProps) {
   const allPosts = getAllPosts();
-  const related = allPosts
-    .filter((post) => post.slug !== currentSlug)
-    .slice(0, 3);
+  const current = allPosts.find((post) => post.slug === currentSlug);
+  const others = allPosts.filter((post) => post.slug !== currentSlug);
+
+  // Ranked by shared tags (then category, falling back to recency via the
+  // stable sort) instead of always the 3 most-recently-published posts --
+  // that meant any post older than the newest few never got linked from
+  // this section again, regardless of topic.
+  const related = current
+    ? [...others]
+        .sort(
+          (a, b) => relatednessScore(current, b) - relatednessScore(current, a),
+        )
+        .slice(0, 3)
+    : others.slice(0, 3);
 
   if (related.length === 0) return null;
 
