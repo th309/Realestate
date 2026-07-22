@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { useSavedAnalysis } from "@/lib/analyzer/useSavedAnalysis";
-import type {
-  RentalResult,
-  FlipResult,
-  BrrrrResult,
-} from "@propertyiq/analyzer-core";
+import type { RentalResult } from "@propertyiq/analyzer-core";
 import { Hero } from "../../components/Hero/Hero";
 import { ThreeStrategyGrid } from "../../components/StrategyCompare/ThreeStrategyGrid";
 import { MarketContextSection } from "../../components/sections/MarketContextSection";
@@ -15,7 +11,11 @@ import {
   buildStrategyCardsFromResult,
   extractMarketContextProps,
 } from "../../lib/saved-render-builders";
-import { deriveVerdict } from "../../lib/format-helpers";
+import {
+  deriveVerdict,
+  resolveSavedAnalysisLabel,
+} from "../../lib/format-helpers";
+import type { RichResultSnapshot } from "../../lib/analyzer-snapshot-types";
 
 export default function SavedClient({ id }: { id: string }) {
   const { data: row, isLoading } = useSavedAnalysis(id);
@@ -47,17 +47,16 @@ export default function SavedClient({ id }: { id: string }) {
     );
   }
 
-  const result = row.result_snapshot as {
-    rental?: Partial<RentalResult>;
-    flip?: FlipResult | null;
-    brrrr?: BrrrrResult | null;
-    notes?: string;
-    shareNotes?: boolean;
-  };
+  const result = row.result_snapshot as Partial<RichResultSnapshot>;
   const rental = (result.rental ?? {}) as Partial<RentalResult>;
   const flip = result.flip ?? null;
   const brrrr = result.brrrr ?? null;
   const notes = result.notes?.trim() ? result.notes : null;
+  // Pre-awaited + persisted at save time (see AnalyzerHeaderActions) — never
+  // refetched here, so opening a saved analysis is a zero-network render.
+  const ai = (result.aiNarratives ?? {}) as NonNullable<
+    RichResultSnapshot["aiNarratives"]
+  >;
 
   const piqScore =
     (row.market_context as { piq_score?: { value?: number | null } } | null)
@@ -70,7 +69,7 @@ export default function SavedClient({ id }: { id: string }) {
   });
   const kpiTiles = buildKpiTilesFromRental(rental);
   const strategyCards = buildStrategyCardsFromResult(rental, flip, brrrr);
-  const marketProps = extractMarketContextProps(row.market_context);
+  const marketProps = extractMarketContextProps(row.market_context, ai);
 
   return (
     <main className="min-h-screen bg-surface">
@@ -82,14 +81,18 @@ export default function SavedClient({ id }: { id: string }) {
           ← Back to Analyzer
         </Link>
         <h1 className="text-3xl font-light text-on-surface mb-2">
-          {row.label || `${row.address_city}, ${row.address_state}`}
+          {resolveSavedAnalysisLabel(row)}
         </h1>
         <p className="text-sm text-on-surface-variant mb-6">
           Saved {new Date(row.created_at).toLocaleDateString()}
         </p>
 
         <div className="space-y-6">
-          <Hero verdict={verdict} kpiTiles={kpiTiles} />
+          <Hero
+            verdict={verdict}
+            kpiTiles={kpiTiles}
+            aiText={ai.recommendation_analysis ?? null}
+          />
           <ThreeStrategyGrid strategies={strategyCards} />
           {row.market_context && <MarketContextSection {...marketProps} />}
           {notes && (

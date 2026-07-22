@@ -23,19 +23,24 @@ export function useAnalyzerNotes(initial?: {
 
   // The save handle published by AnalyzerHeaderActions. Held in a ref so
   // updating it doesn't re-render and so the latest handle is always called.
-  const saveRef = useRef<(() => Promise<void>) | null>(null);
+  const saveRef = useRef<(() => Promise<boolean>) | null>(null);
 
-  const registerSave = useCallback((saveNow: (() => Promise<void>) | null) => {
-    saveRef.current = saveNow;
-  }, []);
+  const registerSave = useCallback(
+    (saveNow: (() => Promise<boolean>) | null) => {
+      saveRef.current = saveNow;
+    },
+    [],
+  );
 
   const onNotesChange = useCallback((next: string, share: boolean) => {
     setNotes(next);
     setShareNotes(share);
   }, []);
 
-  const saveNotes = useCallback(() => {
-    void saveRef.current?.();
+  // Resolves true/false so NotesSection can tell a real save from a guarded
+  // one (e.g. no resolved property address) instead of always showing "Saved".
+  const saveNotes = useCallback(async (): Promise<boolean> => {
+    return (await saveRef.current?.()) ?? false;
   }, []);
 
   return {

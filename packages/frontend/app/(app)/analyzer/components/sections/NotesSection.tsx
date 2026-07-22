@@ -4,7 +4,12 @@ import { useState } from "react";
 interface NotesSectionProps {
   initialNotes?: string;
   initialShare?: boolean;
-  onSave?: (payload: { notes: string; shareWithClient: boolean }) => void;
+  /** Resolves `true` on a genuine save, `false` when the save was guarded or
+   *  failed — the button only shows "Saved ✓" on `true`. */
+  onSave?: (payload: {
+    notes: string;
+    shareWithClient: boolean;
+  }) => Promise<boolean> | void;
   /**
    * Fires on every edit so a parent can keep controlled state in sync — this
    * is what lets notes ride along on the header Share/PDF save, not just the
@@ -23,6 +28,7 @@ export function NotesSection({
   const [notes, setNotes] = useState(initialNotes);
   const [shareWithClient, setShareWithClient] = useState(initialShare);
   const [saved, setSaved] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   return (
     <section
       data-notes-section
@@ -36,6 +42,7 @@ export function NotesSection({
           const next = e.currentTarget.value;
           setNotes(next);
           setSaved(false);
+          setSaveFailed(false);
           onChange?.(next, shareWithClient);
         }}
         placeholder="Add personal observations, follow-up tasks, comp prices…"
@@ -51,6 +58,7 @@ export function NotesSection({
               const next = e.currentTarget.checked;
               setShareWithClient(next);
               setSaved(false);
+              setSaveFailed(false);
               onChange?.(notes, next);
             }}
           />
@@ -58,15 +66,26 @@ export function NotesSection({
         </label>
         <button
           data-notes-save
-          onClick={() => {
-            onSave?.({ notes, shareWithClient });
-            setSaved(true);
+          onClick={async () => {
+            setSaveFailed(false);
+            const ok = await onSave?.({ notes, shareWithClient });
+            if (ok === false) {
+              setSaveFailed(true);
+            } else {
+              setSaved(true);
+            }
           }}
           className="rounded-full bg-primary text-on-primary px-4 py-1.5 text-sm font-semibold"
         >
           {saved ? "Saved ✓" : "Save"}
         </button>
       </div>
+      {saveFailed && (
+        <p data-notes-save-error className="text-xs text-error">
+          Couldn&apos;t save — make sure this analysis has a property address,
+          then try again.
+        </p>
+      )}
     </section>
   );
 }

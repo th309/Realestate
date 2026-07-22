@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   deriveVerdict,
+  resolveSavedAnalysisLabel,
   VERDICT_LETTER,
   VERDICT_LABEL,
   verdictColor,
@@ -122,6 +123,63 @@ describe("deriveVerdict", () => {
         }),
       ).toBe("avoid");
     });
+  });
+});
+
+describe("resolveSavedAnalysisLabel", () => {
+  it("prefers the user-entered label when present", () => {
+    expect(
+      resolveSavedAnalysisLabel({
+        label: "My Rental",
+        address_full: "123 Main St",
+        address_city: "Austin",
+        address_state: "TX",
+      }),
+    ).toBe("My Rental");
+  });
+
+  it("falls back to address_full when there is no label", () => {
+    expect(
+      resolveSavedAnalysisLabel({
+        label: null,
+        address_full: "123 Main St, Austin, TX",
+        address_city: "Austin",
+        address_state: "TX",
+      }),
+    ).toBe("123 Main St, Austin, TX");
+  });
+
+  it("falls back to city, state when label and address_full are blank", () => {
+    expect(
+      resolveSavedAnalysisLabel({
+        label: null,
+        address_full: null,
+        address_city: "Austin",
+        address_state: "TX",
+      }),
+    ).toBe("Austin, TX");
+  });
+
+  it("drops a blank city or state instead of rendering a bare comma", () => {
+    expect(
+      resolveSavedAnalysisLabel({
+        label: null,
+        address_full: null,
+        address_city: "Austin",
+        address_state: "",
+      }),
+    ).toBe("Austin");
+  });
+
+  it("falls back to a friendly default when every field is blank", () => {
+    expect(
+      resolveSavedAnalysisLabel({
+        label: null,
+        address_full: null,
+        address_city: "",
+        address_state: "",
+      }),
+    ).toBe("Untitled analysis");
   });
 });
 

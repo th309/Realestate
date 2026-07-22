@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import cookieParser from 'cookie-parser';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -26,8 +27,78 @@ import { AppModule } from '../src/app.module';
 // for the whole suite.
 jest.setTimeout(60_000);
 
+// Same env vars `SupabaseModule` resolves the app's own client from (see
+// `src/supabase/supabase.module.ts:37-42`) — read here too so this file can
+// mint a real Pro-tier test user via the auth admin API for the save/share
+// lifecycle test below. By the time this line runs, `AppModule` has already
+// been imported above, and `@Module({ imports: [ConfigModule.forRoot(...)] })`
+// runs its `dotenv` load as a side effect of that import — so `.env.local`
+// values are already in `process.env` here despite no explicit dotenv setup
+// in this file (matches the pattern in `grade-thresholds.e2e-spec.ts`).
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 describe('Analyzer (e2e)', () => {
   let app: INestApplication<App>;
+  let supabaseAdmin: SupabaseClient;
+  let proUser: { id: string; jwt: string };
+
+  /**
+   * Creates a real auth user, signs in for a JWT, then explicitly sets
+   * `user_profiles.subscription_tier = 'pro'` so the test doesn't depend on
+   * `trial_config.is_enabled` (the `handle_new_user` trigger auto-grants a
+   * Pro trial on signup today, but that's a product toggle, not a test
+   * fixture guarantee).
+   */
+  async function createProUserWithJwt(): Promise<{ id: string; jwt: string }> {
+    const email = `e2e-analyzer-save-${Date.now()}@example.test`;
+    const password = 'TestPassword123!';
+
+    const created = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (created.error || !created.data.user) {
+      throw new Error(
+        `failed to create e2e Pro test user: ${created.error?.message ?? 'unknown'}`,
+      );
+    }
+    // Captured immediately so a failure in the tier-update or sign-in steps
+    // below can still clean up the already-created auth user instead of
+    // orphaning it (createProUserWithJwt() would otherwise throw before
+    // returning, so `proUser` in the outer scope never gets set and
+    // `afterAll`'s `if (proUser?.id)` guard would silently skip deletion).
+    const userId = created.data.user.id;
+
+    try {
+      const { error: tierError } = await supabaseAdmin
+        .from('user_profiles')
+        .update({ subscription_tier: 'pro', subscription_status: 'active' })
+        .eq('id', userId);
+      if (tierError) {
+        throw new Error(
+          `failed to set e2e test user to Pro tier: ${tierError.message}`,
+        );
+      }
+
+      const signed = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signed.error || !signed.data.session) {
+        throw new Error(
+          `failed to sign in e2e Pro test user: ${signed.error?.message ?? 'unknown'}`,
+        );
+      }
+      return { id: userId, jwt: signed.data.session.access_token };
+    } catch (err) {
+      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
+      throw err;
+    }
+  }
 
   beforeAll(async () => {
     // FreePreviewMiddleware throws in its constructor if this is missing.
@@ -49,13 +120,36 @@ describe('Analyzer (e2e)', () => {
     );
     app.use(cookieParser());
     await app.init();
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+      throw new Error(
+        'SUPABASE_URL / SUPABASE_SERVICE_KEY must be set (via .env.local or .env) to run analyzer e2e tests.',
+      );
+    }
+    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    proUser = await createProUserWithJwt();
   }, 60_000);
 
   afterAll(async () => {
-    // Closing AppModule shuts down many cron + scheduler services. Some of
-    // those drain async work (pg-boss, queue listeners) and need a generous
-    // timeout to wind down cleanly.
-    await app.close();
+    // try/finally: app.close() must run even if the user deletion below
+    // throws/rejects, or the cron/scheduler/pg-boss handles it shuts down
+    // leak for the rest of the Jest run.
+    try {
+      // Deleting the auth user cascades to their `deal_analyses` rows via
+      // `owner_id UUID ... REFERENCES auth.users(id) ON DELETE CASCADE`
+      // (see `20260514000100_create_deal_analyses.sql`), so no separate
+      // `deal_analyses` cleanup is needed.
+      if (proUser?.id) {
+        await supabaseAdmin.auth.admin.deleteUser(proUser.id);
+      }
+    } finally {
+      // Closing AppModule shuts down many cron + scheduler services. Some of
+      // those drain async work (pg-boss, queue listeners) and need a generous
+      // timeout to wind down cleanly.
+      await app.close();
+    }
   }, 60_000);
 
   it('GET /api/analyzer/market-context returns geo_level + geo_id for a valid zip', async () => {
@@ -114,16 +208,72 @@ describe('Analyzer (e2e)', () => {
     expect(res.status).toBe(404);
   });
 
-  // Auth-required flow tests (save → list → get → delete → share lifecycle)
-  // require a real Supabase JWT for a Pro-tier test user. Skipped here until
-  // a SUPABASE_TEST_PRO_JWT fixture is wired in CI. To enable locally:
-  //   1. Create a Pro user in the Supabase test project.
-  //   2. Mint a long-lived JWT (Supabase dashboard → Authentication → SQL).
-  //   3. export SUPABASE_TEST_PRO_JWT=<token>
-  //   4. Remove the .skip below and add `.set('Authorization', \`Bearer ${jwt}\`)`
-  //      to each authenticated request.
-  it.skip('POST /api/analyzer/save with Pro JWT persists and returns id + share_token', () => {
-    // Requires SUPABASE_TEST_PRO_JWT env var. See comment above.
+  // Auth-required flow test (save → upsert → get → share → delete
+  // lifecycle) against the real Postgres project, using the ephemeral
+  // Pro-tier user minted in `beforeAll` (see `createProUserWithJwt`).
+  //
+  // Exercises real infrastructure no unit test does: the actual
+  // `deal_analyses_owner_address_unique` constraint (via the second save,
+  // which must upsert in place rather than violate the constraint or
+  // create a duplicate row), and the real service-role Supabase client
+  // (RLS is bypassed for it, so `.eq('owner_id', ...)` in application code
+  // is what actually scopes these queries — see `analyzer.persistence.
+  // service.ts`'s `updateExisting()` doc comment).
+  it('POST /api/analyzer/save with Pro JWT persists and returns id + share_token', async () => {
+    const payload = {
+      address_full: `100 E2E Congress Ave, Austin, TX (${proUser.id.slice(0, 8)})`,
+      address_city: 'Austin',
+      address_state: 'TX',
+      input_snapshot: { test: true },
+      result_snapshot: { test: true },
+    };
+
+    const first = await request(app.getHttpServer())
+      .post('/api/analyzer/save')
+      .set('Authorization', `Bearer ${proUser.jwt}`)
+      .send(payload)
+      .expect(201);
+
+    expect(typeof first.body.id).toBe('string');
+    expect(typeof first.body.share_token).toBe('string');
+
+    // Re-saving the same owner+address upserts in place (same id and
+    // share_token, so a previously distributed share link keeps working)
+    // instead of hitting the unique constraint or creating a duplicate row.
+    const second = await request(app.getHttpServer())
+      .post('/api/analyzer/save')
+      .set('Authorization', `Bearer ${proUser.jwt}`)
+      .send({ ...payload, label: 'updated label' })
+      .expect(201);
+
+    expect(second.body.id).toBe(first.body.id);
+    expect(second.body.share_token).toBe(first.body.share_token);
+
+    // GET /saved/:id confirms the update landed and reads back through the
+    // owner-scoped path.
+    const got = await request(app.getHttpServer())
+      .get(`/api/analyzer/saved/${first.body.id}`)
+      .set('Authorization', `Bearer ${proUser.jwt}`)
+      .expect(200);
+    expect(got.body).toMatchObject({
+      id: first.body.id,
+      label: 'updated label',
+      address_full: payload.address_full,
+    });
+
+    // GET /share/:token confirms the public SECURITY DEFINER lookup resolves.
+    const shared = await request(app.getHttpServer())
+      .get(`/api/analyzer/share/${first.body.share_token}`)
+      .expect(200);
+    expect(shared.body).toHaveProperty('id', first.body.id);
+
+    // Clean up the row so the test is rerunnable against the same DB (the
+    // `afterAll` user deletion would also cascade-remove it, but this keeps
+    // the test self-contained even if that ever changes).
+    await request(app.getHttpServer())
+      .delete(`/api/analyzer/saved/${first.body.id}`)
+      .set('Authorization', `Bearer ${proUser.jwt}`)
+      .expect(200);
   });
 
   // ------------------------------------------------------------------

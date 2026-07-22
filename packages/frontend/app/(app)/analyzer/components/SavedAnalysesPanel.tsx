@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bookmark, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchSavedAnalyses, type SavedAnalysis } from "@/lib/data";
+import { resolveSavedAnalysisLabel } from "../lib/format-helpers";
 
 /**
  * Entry point for a user's saved analyses inside /analyzer. Renders nothing
@@ -58,9 +59,7 @@ export function SavedAnalysesPanel() {
                 className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-container"
               >
                 <span className="min-w-0 truncate text-sm text-on-surface">
-                  {row.label ||
-                    row.address_full ||
-                    `${row.address_city}, ${row.address_state}`}
+                  {resolveSavedAnalysisLabel(row)}
                 </span>
                 <span className="shrink-0 text-xs text-on-surface-variant">
                   {new Date(row.created_at).toLocaleDateString()}

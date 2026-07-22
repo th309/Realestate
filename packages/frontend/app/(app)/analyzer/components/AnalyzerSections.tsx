@@ -87,7 +87,7 @@ interface AnalyzerSectionsProps {
   notes: string;
   shareNotes: boolean;
   onNotesChange: (notes: string, shareNotes: boolean) => void;
-  onSaveNotes: () => void;
+  onSaveNotes: () => Promise<boolean>;
 }
 
 export function AnalyzerSections({
@@ -181,9 +181,9 @@ export function AnalyzerSections({
         initialNotes={notes}
         initialShare={shareNotes}
         onChange={onNotesChange}
-        onSave={({ notes: n, shareWithClient }) => {
+        onSave={async ({ notes: n, shareWithClient }) => {
           onNotesChange(n, shareWithClient);
-          onSaveNotes();
+          return onSaveNotes();
         }}
       />
     </>

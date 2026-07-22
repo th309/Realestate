@@ -17,13 +17,14 @@
  * as `isStale` so the UI shows a subtle refresh affordance.
  */
 import { useCallback } from "react";
-import type {
-  BrrrrResult,
-  DealGradingResult,
-  DealInput,
-  FlipResult,
-  ProjectionResult,
-  RentalResult,
+import {
+  buildAiInsightsFingerprint,
+  type BrrrrResult,
+  type DealGradingResult,
+  type DealInput,
+  type FlipResult,
+  type ProjectionResult,
+  type RentalResult,
 } from "@propertyiq/analyzer-core";
 import {
   fetchBatchedAiInsights,
@@ -125,31 +126,31 @@ export function useSectionAiInsights({
     projection: projectionSummary,
   };
 
-  // Discriminator mirrors the backend's cache key fields so the two layers
-  // stay aligned: re-fetch when PIQ scores by geo, resolved geo level,
-  // grading letter, strategy, or goal change.
-  const discriminator = [
-    piqByGeo.metro ?? "",
-    piqByGeo.county ?? "",
-    piqByGeo.zip ?? "",
-    typeof piq === "object" && piq && "geo_level" in piq
-      ? ((piq as { geo_level?: string }).geo_level ?? "")
-      : "",
-    grading?.letter ?? "",
-    strategy ?? "",
-    goal ?? "",
-    // Re-fetch the projection tip when the wealth projection materially shifts
-    // (e.g., appreciation/rent-growth assumption edits move final equity).
-    Math.round(projectionSummary?.finalEquity ?? 0),
-    // Figures the narrative cites — assumption/criteria edits move these while
-    // price/rent stay identical (mirrors the backend key's figuresHash).
-    Math.round((rental?.cashflowMonthly ?? 0) / 50) * 50,
-    (rental?.dscr ?? 0).toFixed(2),
-    (grading?.finalGpa ?? 0).toFixed(1),
-    (grading?.autoKills ?? []).map((k) => k.code).join(","),
-    Math.round((input.price ?? 0) / 1000),
-    Math.round((input.rentMonthly ?? 0) / 25),
-  ].join("|");
+  // Discriminator built from the SAME canonical fingerprint the backend's
+  // `AiInsightsCache.computeKey()` uses (packages/analyzer-core/src/
+  // ai-cache-fingerprint.ts), so the two layers can't independently drift on
+  // rounding rules: re-fetch when PIQ scores by geo, resolved geo level,
+  // grading letter, strategy, goal, the 30-year projection, or ANY field of
+  // the deal input / rental / flip / BRRRR results materially changes
+  // (assemblePrompt on the backend JSON-stringifies all of those verbatim
+  // into the prompt, so every field there can move the narrative).
+  const discriminator = buildAiInsightsFingerprint({
+    input,
+    rental: rental ?? null,
+    flip: flip ?? null,
+    brrrr: brrrr ?? null,
+    finalGpa: grading?.finalGpa,
+    letter: grading?.letter,
+    autoKillCodes: (grading?.autoKills ?? []).map((k) => k.code),
+    strategy,
+    goal: goal ?? null,
+    projectionFinalEquity: projectionSummary?.finalEquity,
+    piqByGeo,
+    geoLevel:
+      typeof piq === "object" && piq && "geo_level" in piq
+        ? ((piq as { geo_level?: string }).geo_level ?? "")
+        : "",
+  });
 
   // Gate the entire batched call on `enabled` AND grading being present.
   // Five of the six sections don't strictly need grading, but firing without
