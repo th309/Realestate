@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ShareButton } from "./ShareButton";
 import { PdfButton } from "./PdfButton";
 import { ShareAnalysisModal } from "./ShareAnalysisModal";
@@ -16,6 +17,7 @@ import {
   type AnalyzerSnapshotState,
 } from "../../lib/build-analyzer-snapshot";
 import { emitAnalyzerEvent } from "../../lib/analyzer-telemetry";
+import { SAVED_ANALYSES_QUERY_KEY } from "../SavedAnalysesPanel";
 
 interface Props {
   /** True if the caller is Pro+ (save endpoint requires Pro). */
@@ -66,6 +68,7 @@ export function AnalyzerHeaderActions({
   const [saveInProgress, setSaveInProgress] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pdfInProgress, setPdfInProgress] = useState(false);
+  const queryClient = useQueryClient();
 
   // Live refs avoid stale closures + bypass useCallback dep churn from the
   // many fields inside state/derived/extras.
@@ -124,6 +127,10 @@ export function AnalyzerHeaderActions({
         buildAnalyzerSnapshot(stateRef.current, derivedRef.current, merged),
       );
       setShareToken(result.share_token);
+      // Refresh the "Saved analyses" panel so a re-save (which upserts the
+      // same row rather than inserting a new one) or a brand-new save shows
+      // up without a page reload.
+      queryClient.invalidateQueries({ queryKey: SAVED_ANALYSES_QUERY_KEY });
       return result.share_token;
     } catch (err) {
       const msg =
@@ -133,7 +140,7 @@ export function AnalyzerHeaderActions({
     } finally {
       setSaveInProgress(false);
     }
-  }, []);
+  }, [queryClient]);
 
   // Share/PDF reuse an existing token (same link) once one exists.
   const ensureToken = useCallback(async (): Promise<string | null> => {

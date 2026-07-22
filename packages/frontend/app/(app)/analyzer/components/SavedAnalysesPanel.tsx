@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Bookmark, ChevronDown, ChevronUp } from "lucide-react";
-import { fetchSavedAnalyses, type SavedAnalysis } from "@/lib/data";
+import { fetchSavedAnalyses } from "@/lib/data";
 import { resolveSavedAnalysisLabel } from "../lib/format-helpers";
+
+/** Shared with AnalyzerHeaderActions so a Share/PDF/Notes-save can invalidate
+ *  this list and make the freshly-saved (or re-saved) row show up without a
+ *  page reload. */
+export const SAVED_ANALYSES_QUERY_KEY = ["saved-analyses"] as const;
 
 /**
  * Entry point for a user's saved analyses inside /analyzer. Renders nothing
@@ -12,22 +18,11 @@ import { resolveSavedAnalysisLabel } from "../lib/format-helpers";
  * Each row links to /analyzer/saved/[id].
  */
 export function SavedAnalysesPanel() {
-  const [saved, setSaved] = useState<SavedAnalysis[]>([]);
   const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSavedAnalyses()
-      .then((rows) => {
-        if (!cancelled) setSaved(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setSaved([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: saved = [] } = useQuery({
+    queryKey: SAVED_ANALYSES_QUERY_KEY,
+    queryFn: fetchSavedAnalyses,
+  });
 
   if (saved.length === 0) return null;
 
