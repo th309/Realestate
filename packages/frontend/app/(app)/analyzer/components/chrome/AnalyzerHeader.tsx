@@ -23,8 +23,10 @@ interface Props {
   notes: string;
   /** Whether notes are shared on the public link / PDF. */
   shareNotes: boolean;
-  /** Receives a "save now" handle so the NotesSection button can persist. */
-  onRegisterSave?: (saveNow: (() => Promise<void>) | null) => void;
+  /** Receives a "save now" handle so the NotesSection button can persist.
+   *  Resolves true/false so the caller can tell a real save from a guarded
+   *  one (e.g. no resolved property address). */
+  onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
 }
 
 /**

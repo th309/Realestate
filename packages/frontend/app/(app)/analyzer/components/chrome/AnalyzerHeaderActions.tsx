@@ -32,9 +32,11 @@ interface Props {
    * Publishes a "save now" function up to the parent so the NotesSection
    * "Save" button (which lives in a different subtree) can persist the
    * current snapshot — notes included — without re-implementing the save
-   * flow. Called with `null` on unmount to clear the reference.
+   * flow. Resolves `true`/`false` so the caller can tell success from a
+   * guarded/failed save (e.g. no resolved address) instead of assuming
+   * success. Called with `null` on unmount to clear the reference.
    */
-  onRegisterSave?: (saveNow: (() => Promise<void>) | null) => void;
+  onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
 }
 
 /**
@@ -77,9 +79,19 @@ export function AnalyzerHeaderActions({
   aiPayloadRef.current = aiPayload;
 
   // Builds the snapshot (pre-awaiting AI narratives) and persists it, returning
-  // the fresh share token. Always writes a new row — callers decide whether to
-  // reuse an existing token (Share/PDF) or force a re-save (notes edit).
+  // the fresh share token. Upserts by (owner, property address) server-side —
+  // repeat saves of the same property update the existing row rather than
+  // creating a new one. Requires a resolved address: manual/numbers-only
+  // analyses (no address entered, RentCast unresolved) have no property to
+  // key the save on, so the backend now rejects address_full being blank —
+  // guard against that here with a friendly message instead of a raw 400.
   const saveSnapshot = useCallback(async (): Promise<string | null> => {
+    if (!derivedRef.current.displayAddress?.trim()) {
+      setSaveError(
+        "Enter a property address before saving — this analysis has no property to save it against.",
+      );
+      return null;
+    }
     setSaveInProgress(true);
     setSaveError(null);
     try {
@@ -134,9 +146,7 @@ export function AnalyzerHeaderActions({
   // re-saves so freshly typed notes land even after a share link was created.
   useEffect(() => {
     if (!onRegisterSave) return;
-    onRegisterSave(async () => {
-      await saveSnapshot();
-    });
+    onRegisterSave(async () => (await saveSnapshot()) != null);
     return () => onRegisterSave(null);
   }, [onRegisterSave, saveSnapshot]);
 
@@ -163,7 +173,13 @@ export function AnalyzerHeaderActions({
     setPdfInProgress(true);
     try {
       const token = await ensureToken();
-      if (!token) return;
+      if (!token) {
+        // ensureToken()/saveSnapshot() already set saveError (e.g. the
+        // no-address guard) — surface it via the modal instead of silently
+        // reverting the button with no explanation.
+        setModalOpen(true);
+        return;
+      }
       const blob = await downloadAnalysisPdf(token);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

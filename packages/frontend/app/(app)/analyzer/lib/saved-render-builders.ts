@@ -20,6 +20,7 @@ import type {
 import type { MarketContext } from "@/lib/data";
 import type { KPITileProps } from "../components/Hero/KPITile";
 import type { StrategyCardData } from "../components/StrategyCompare/ThreeStrategyGrid";
+import type { RichResultSnapshot } from "./analyzer-snapshot-types";
 import { fmtPct, fmtUsd, fmtRatio } from "./format-helpers";
 
 /**
@@ -136,6 +137,11 @@ export interface MarketContextSectionInputs {
   fallbackRentIndex: number | null;
   fallbackMarketHeat: number | null;
   fallbackNetMigration: number | null;
+  /** Persisted AI prose for this section — saved/shared routes never fire a
+   *  live AI fetch, so this is the only text the section ever shows. */
+  aiText: string | null;
+  /** Always false: the snapshot is already resolved, there is nothing to load. */
+  aiIsLoading: boolean;
 }
 
 /**
@@ -143,11 +149,19 @@ export interface MarketContextSectionInputs {
  * fallback props expected by `MarketContextSection`. Saved analyses are
  * snapshot data with no live geography — pills are suppressed (chain=null)
  * and the section paints the snapshot values without firing trend hooks.
+ *
+ * `ai` is the persisted `aiNarratives` blob (see `RichResultSnapshot`);
+ * mirrors the `market_context ?? comps` preference used by the public share
+ * view (`ReadonlyAnalyzerView`) so both read paths render identical prose.
  */
 export function extractMarketContextProps(
   mc: MarketContext | Record<string, unknown> | null | undefined,
+  ai?: RichResultSnapshot["aiNarratives"],
 ): MarketContextSectionInputs {
   const ctx = (mc ?? {}) as Partial<MarketContext>;
+  const narratives = (ai ?? {}) as NonNullable<
+    RichResultSnapshot["aiNarratives"]
+  >;
   return {
     chain: null,
     initialGeoLevel: ctx.geo_level ?? null,
@@ -157,5 +171,7 @@ export function extractMarketContextProps(
     fallbackRentIndex: ctx.rent_index?.value ?? null,
     fallbackMarketHeat: ctx.market_heat?.value ?? null,
     fallbackNetMigration: ctx.net_migration?.value ?? null,
+    aiText: narratives.market_context ?? narratives.comps ?? null,
+    aiIsLoading: false,
   };
 }

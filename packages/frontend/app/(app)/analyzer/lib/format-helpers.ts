@@ -91,6 +91,29 @@ export function verdictToQualifier(verdict: Verdict): string {
   }
 }
 
+export interface SavedAnalysisLabelFields {
+  label: string | null;
+  address_full: string | null;
+  address_city: string | null;
+  address_state: string | null;
+}
+
+/**
+ * Blank-safe display label for a saved analysis (list row or page title).
+ * A property can legitimately save with only a partial address resolved
+ * (address_full present but city/state empty, or vice versa) — guard
+ * against rendering a bare ", " in that case and fall back to a friendly
+ * default when every field is blank.
+ */
+export function resolveSavedAnalysisLabel(
+  row: SavedAnalysisLabelFields,
+): string {
+  const cityState = [row.address_city, row.address_state]
+    .filter(Boolean)
+    .join(", ");
+  return row.label || row.address_full || cityState || "Untitled analysis";
+}
+
 export interface VerdictInputs {
   capRatePct: number | null; // e.g. 7.5 means 7.5%
   dscr: number | null; // debt service coverage
