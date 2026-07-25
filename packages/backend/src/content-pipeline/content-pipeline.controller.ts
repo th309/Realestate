@@ -34,6 +34,7 @@ import {
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
+import { DashboardQueryDto } from './dto/dashboard-query.dto';
 
 const THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -58,10 +59,10 @@ export class ContentPipelineController {
   }
 
   @Get('dashboard')
-  async dashboard(@Query('batchId') batchId?: string) {
+  async dashboard(@Query() q: DashboardQueryDto) {
     return {
       success: true,
-      data: await this.queries.getDashboard({ batchId }),
+      data: await this.queries.getDashboard({ batchId: q.batchId }),
     };
   }
 
