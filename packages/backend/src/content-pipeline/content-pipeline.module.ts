@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
+import { ContentPipelineRunsController } from './content-pipeline-runs.controller';
 import { ContentPipelinePlatformsController } from './content-pipeline-platforms.controller';
 import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
 import { ContentRunsService } from './content-runs.service';
@@ -147,6 +148,7 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     PostsBrandKitModule,
   ],
   controllers: [
+    ContentPipelineRunsController,
     ContentPipelineController,
     ContentPipelinePlatformsController,
     PlatformOAuthCallbackController,
