@@ -1,12 +1,13 @@
-"use client";
 /**
- * Month view — a 6×7 Eastern-Time grid. Each day cell is a drop target and
- * shows up to a few posts, then "+N more". Days outside the anchor month are
- * dimmed; today is tinted.
+ * Month view — a 6×7 Eastern-Time grid of @dnd-kit droppable day cells. Each
+ * cell shows up to a few posts, then a "+N more" button that opens week view
+ * anchored on that day so overflowed posts stay reachable (and draggable).
+ * Days outside the anchor month are dimmed; today is tinted. (No "use client":
+ * only imported by the client planner page.)
  */
-import { useState } from "react";
 import type { PlannerPost } from "../lib/posts-api";
-import { PostCard } from "./PostCard";
+import { DraggablePostCard } from "./DraggablePostCard";
+import { DroppableDay } from "./DroppableDay";
 import {
   monthGridKeys,
   weekdayShort,
@@ -21,20 +22,15 @@ export function MonthView({
   anchorKey,
   todayKey,
   postsByDay,
-  draggingId,
-  onDropOnDay,
-  onDragStart,
-  onDragEnd,
+  onReschedule,
+  onOpenDay,
 }: {
   anchorKey: string;
   todayKey: string;
   postsByDay: Map<string, PlannerPost[]>;
-  draggingId: string | null;
-  onDropOnDay: (dayKey: string, postId: string) => void;
-  onDragStart: (postId: string) => void;
-  onDragEnd: () => void;
+  onReschedule: (post: PlannerPost, iso: string) => void;
+  onOpenDay: (dayKey: string) => void;
 }) {
-  const [overKey, setOverKey] = useState<string | null>(null);
   const cells = monthGridKeys(anchorKey);
 
   return (
@@ -55,34 +51,23 @@ export function MonthView({
           {cells.map((dayKey) => {
             const inMonth = sameMonth(dayKey, anchorKey);
             const isToday = dayKey === todayKey;
-            const isOver = overKey === dayKey && draggingId !== null;
             const posts = postsByDay.get(dayKey) ?? [];
             const overflow = posts.length - MAX_PER_CELL;
             return (
-              <div
+              <DroppableDay
                 key={dayKey}
-                onDragOver={(e) => {
-                  if (draggingId) {
-                    e.preventDefault();
-                    setOverKey(dayKey);
-                  }
-                }}
-                onDragLeave={() => setOverKey((k) => (k === dayKey ? null : k))}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setOverKey(null);
-                  const id = e.dataTransfer.getData("text/plain");
-                  if (id) onDropOnDay(dayKey, id);
-                }}
-                className={`flex min-h-[7.5rem] flex-col rounded-lg border p-1.5 transition-colors duration-200 ${
-                  isOver
-                    ? "border-primary border-dashed bg-primary-container/40"
-                    : isToday
-                      ? "border-primary/30 bg-primary-container/20"
-                      : inMonth
-                        ? "border-outline-variant bg-surface-container-low"
-                        : "border-outline-variant/50 bg-surface"
-                }`}
+                dayKey={dayKey}
+                className={(isOver) =>
+                  `flex min-h-[7.5rem] flex-col rounded-lg border p-1.5 transition-colors duration-200 ${
+                    isOver
+                      ? "border-dashed border-primary bg-primary-container/40"
+                      : isToday
+                        ? "border-primary/30 bg-primary-container/20"
+                        : inMonth
+                          ? "border-outline-variant bg-surface-container-low"
+                          : "border-outline-variant/50 bg-surface"
+                  }`
+                }
               >
                 <div className="mb-1 flex items-center justify-between px-0.5">
                   <span className="sr-only">{weekdayShort(dayKey)}</span>
@@ -101,22 +86,24 @@ export function MonthView({
 
                 <div className="flex flex-1 flex-col gap-1">
                   {posts.slice(0, MAX_PER_CELL).map((post) => (
-                    <PostCard
+                    <DraggablePostCard
                       key={post.id}
                       post={post}
-                      draggable
                       showHook={false}
-                      onDragStart={onDragStart}
-                      onDragEnd={onDragEnd}
+                      onReschedule={onReschedule}
                     />
                   ))}
                   {overflow > 0 && (
-                    <span className="px-1 text-[10px] text-on-surface-variant">
+                    <button
+                      type="button"
+                      onClick={() => onOpenDay(dayKey)}
+                      className="mt-0.5 rounded px-1 text-left text-[10px] font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                    >
                       + {overflow} more
-                    </span>
+                    </button>
                   )}
                 </div>
-              </div>
+              </DroppableDay>
             );
           })}
         </div>

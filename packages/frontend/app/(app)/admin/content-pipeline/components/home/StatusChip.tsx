@@ -12,6 +12,7 @@ import type { PipelineStatus } from "../../lib/content-pipeline-api";
 
 export type StatusChipTone =
   | "generating"
+  | "ready"
   | "review"
   | "scheduled"
   | "published"
@@ -74,7 +75,9 @@ export function postStatusToStatusChip(
     case "pending_review":
       return { label: "Needs review", tone: "review" };
     case "approved":
-      return { label: "Approved", tone: "generating" };
+      // Static tone — an approved post is greenlit, not actively working, so it
+      // must not borrow the pulsing "generating" tone.
+      return { label: "Approved", tone: "ready" };
     case "scheduled":
       return { label: "Scheduled", tone: "scheduled" };
     case "published":
@@ -88,12 +91,36 @@ export function postStatusToStatusChip(
   }
 }
 
+/**
+ * Map a social-connection status to its plain-language chip. Consumed by the
+ * platforms account cards so connection state uses the same vocabulary and
+ * tones as the rest of the studio. All tones here are static.
+ */
+export function connectionStatusToStatusChip(
+  status: string | null | undefined,
+): StatusChipDescriptor {
+  switch (status) {
+    case "connected":
+      return { label: "Connected", tone: "published" };
+    case "needs_reauth":
+      return { label: "Needs reauth", tone: "attention" };
+    case "disconnected":
+      return { label: "Disconnected", tone: "muted" };
+    default:
+      return { label: "Disconnected", tone: "muted" };
+  }
+}
+
 /** Tone → Tailwind classes. All semantic M3 tokens (see globals.css). */
 export const STATUS_CHIP_TONE_CLASSES: Record<
   StatusChipTone,
   { pill: string; dot: string }
 > = {
   generating: {
+    pill: "bg-secondary-container text-on-secondary-container",
+    dot: "bg-secondary",
+  },
+  ready: {
     pill: "bg-secondary-container text-on-secondary-container",
     dot: "bg-secondary",
   },

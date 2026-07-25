@@ -1,14 +1,33 @@
 "use client";
 /**
  * Planner — a week/month calendar of scheduled posts in Eastern Time. Scheduled
- * posts sit on their day; approved posts wait in a tray until dragged onto a
- * day (which schedules them at a best-time slot). Rescheduling drags a post to
- * another day, preserving its time-of-day, and calls the posts status API.
+ * posts sit on their day; approved posts wait in a tray until dragged (or
+ * clock-picked) onto a day. Drag-and-drop runs on @dnd-kit (pointer + keyboard
+ * sensors, drag overlay); every post also has an inline reschedule control so
+ * there's a pointer-free path. Rescheduling preserves time-of-day on day moves
+ * and uses a best-time slot when scheduling from the tray.
  */
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { fetchPosts, reschedulePost, type PlannerPost } from "../lib/posts-api";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { fetchPosts, type PlannerPost } from "../lib/posts-api";
+import {
+  useReschedulePost,
+  POSTS_SCHEDULED_KEY,
+  POSTS_APPROVED_KEY,
+} from "../lib/use-post-mutations";
+import { useToast } from "../lib/toast";
 import {
   etDayKey,
   etTimeParts,
@@ -16,29 +35,51 @@ import {
   etTodayKey,
   addDaysToKey,
   addMonthsToKey,
+  weekKeys,
+  monthGridKeys,
 } from "./planner-tz";
 import { bestTimeForDay } from "./best-times";
 import { PlannerHeader, type PlannerView } from "./PlannerHeader";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
 import { UnscheduledTray } from "./UnscheduledTray";
-
-const SCHEDULED_KEY = ["cp-posts", "scheduled"] as const;
-const APPROVED_KEY = ["cp-posts", "approved"] as const;
+import { PostCard } from "./PostCard";
 
 export default function PlannerPage() {
-  const qc = useQueryClient();
+  const toast = useToast();
   const [view, setView] = useState<PlannerView>("week");
   const [anchorKey, setAnchorKey] = useState<string>(() => etTodayKey());
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  // Visible calendar window → sent to the server (harmlessly ignored until the
+  // range filter lands) and used as the scheduled query key so nav refetches.
+  const rangeKeys =
+    view === "week" ? weekKeys(anchorKey) : monthGridKeys(anchorKey);
+  const rangeStart = rangeKeys[0];
+  const rangeEnd = rangeKeys[rangeKeys.length - 1];
+  const scheduledFrom = etWallClockToUtcIso(rangeStart, 0, 0);
+  const scheduledTo = etWallClockToUtcIso(addDaysToKey(rangeEnd, 1), 0, 0);
 
   const scheduledQuery = useQuery({
-    queryKey: SCHEDULED_KEY,
-    queryFn: () => fetchPosts({ status: "scheduled", limit: 500 }),
+    queryKey: [...POSTS_SCHEDULED_KEY, rangeStart, rangeEnd],
+    queryFn: () =>
+      fetchPosts({
+        status: "scheduled",
+        limit: 500,
+        scheduledFrom,
+        scheduledTo,
+        orderBy: "scheduled_at",
+      }),
+    placeholderData: (prev) => prev,
     refetchInterval: 60_000,
   });
   const approvedQuery = useQuery({
-    queryKey: APPROVED_KEY,
+    queryKey: POSTS_APPROVED_KEY,
     queryFn: () => fetchPosts({ status: "approved", limit: 500 }),
   });
 
@@ -51,7 +92,6 @@ export default function PlannerPage() {
     [approvedQuery.data],
   );
 
-  // Scheduled posts grouped by ET day, each day sorted by time.
   const postsByDay = useMemo(() => {
     const map = new Map<string, PlannerPost[]>();
     for (const post of scheduledPosts) {
@@ -69,39 +109,66 @@ export default function PlannerPage() {
     return map;
   }, [scheduledPosts]);
 
-  const rescheduleMutation = useMutation({
-    mutationFn: ({ id, iso }: { id: string; iso: string }) =>
-      reschedulePost(id, iso),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: SCHEDULED_KEY });
-      qc.invalidateQueries({ queryKey: APPROVED_KEY });
+  const rescheduleMutation = useReschedulePost();
+
+  const reschedule = useCallback(
+    (post: PlannerPost, iso: string) =>
+      rescheduleMutation.mutate({ id: post.id, iso }),
+    [rescheduleMutation],
+  );
+
+  // Place a post on a day: keep its time-of-day when it already has one, else
+  // pick a best-time slot. A full day yields no slot → tell the operator.
+  const dropOnDay = useCallback(
+    (dayKey: string, post: PlannerPost) => {
+      let hour: number;
+      let minute: number;
+      if (post.scheduled_at) {
+        ({ hour, minute } = etTimeParts(post.scheduled_at));
+      } else {
+        const occupied = (postsByDay.get(dayKey) ?? []).map((p) => {
+          const t = etTimeParts(p.scheduled_at as string);
+          return t.hour * 60 + t.minute;
+        });
+        const slot = bestTimeForDay(occupied);
+        if (!slot) {
+          toast.error(
+            "That day is full — pick a time manually or another day.",
+          );
+          return;
+        }
+        ({ hour, minute } = slot);
+      }
+      reschedule(post, etWallClockToUtcIso(dayKey, hour, minute));
     },
-  });
+    [postsByDay, reschedule, toast],
+  );
 
-  function handleDropOnDay(dayKey: string, postId: string) {
-    const post =
-      scheduledPosts.find((p) => p.id === postId) ??
-      unscheduledPosts.find((p) => p.id === postId);
-    if (!post) return;
+  const findPost = useCallback(
+    (id: string) =>
+      scheduledPosts.find((p) => p.id === id) ??
+      unscheduledPosts.find((p) => p.id === id),
+    [scheduledPosts, unscheduledPosts],
+  );
 
-    let hour: number;
-    let minute: number;
-    if (post.scheduled_at) {
-      // Reschedule: keep the same time-of-day, change the day.
-      ({ hour, minute } = etTimeParts(post.scheduled_at));
-    } else {
-      // Schedule from the tray: pick a best-time slot for that day.
-      const occupied = (postsByDay.get(dayKey) ?? []).map((p) => {
-        const t = etTimeParts(p.scheduled_at as string);
-        return t.hour * 60 + t.minute;
-      });
-      ({ hour, minute } = bestTimeForDay(occupied));
-    }
-    rescheduleMutation.mutate({
-      id: postId,
-      iso: etWallClockToUtcIso(dayKey, hour, minute),
-    });
-  }
+  const handleDragStart = useCallback(
+    (e: DragStartEvent) => setActiveId(String(e.active.id)),
+    [],
+  );
+  const handleDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      setActiveId(null);
+      if (!e.over) return;
+      const post = findPost(String(e.active.id));
+      if (post) dropOnDay(String(e.over.id), post);
+    },
+    [findPost, dropOnDay],
+  );
+
+  const openDayInWeek = useCallback((dayKey: string) => {
+    setView("week");
+    setAnchorKey(dayKey);
+  }, []);
 
   const step = (dir: 1 | -1) =>
     setAnchorKey((key) =>
@@ -117,6 +184,7 @@ export default function PlannerPage() {
     unscheduledPosts.length === 0;
 
   const todayKey = etTodayKey();
+  const activePost = activeId ? findPost(activeId) : undefined;
 
   return (
     <div className="min-h-screen bg-surface text-on-surface">
@@ -139,49 +207,49 @@ export default function PlannerPage() {
           </div>
         )}
 
-        {rescheduleMutation.isError && (
-          <div
-            role="alert"
-            className="rounded-xl border border-error/40 bg-error-container/40 px-5 py-3 text-sm text-on-surface"
-          >
-            Couldn&apos;t reschedule that post. It stayed where it was — try
-            again.
-          </div>
-        )}
-
         {isLoading ? (
           <div className="h-96 animate-pulse rounded-xl bg-surface-container-low" />
         ) : isEmpty ? (
           <EmptyState />
         ) : (
-          <>
-            <UnscheduledTray
-              posts={unscheduledPosts}
-              onDragStart={setDraggingId}
-              onDragEnd={() => setDraggingId(null)}
-            />
-            {view === "week" ? (
-              <WeekView
-                anchorKey={anchorKey}
-                todayKey={todayKey}
-                postsByDay={postsByDay}
-                draggingId={draggingId}
-                onDropOnDay={handleDropOnDay}
-                onDragStart={setDraggingId}
-                onDragEnd={() => setDraggingId(null)}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div className="space-y-6">
+              <UnscheduledTray
+                posts={unscheduledPosts}
+                onReschedule={reschedule}
               />
-            ) : (
-              <MonthView
-                anchorKey={anchorKey}
-                todayKey={todayKey}
-                postsByDay={postsByDay}
-                draggingId={draggingId}
-                onDropOnDay={handleDropOnDay}
-                onDragStart={setDraggingId}
-                onDragEnd={() => setDraggingId(null)}
-              />
-            )}
-          </>
+              {view === "week" ? (
+                <WeekView
+                  anchorKey={anchorKey}
+                  todayKey={todayKey}
+                  postsByDay={postsByDay}
+                  onReschedule={reschedule}
+                />
+              ) : (
+                <MonthView
+                  anchorKey={anchorKey}
+                  todayKey={todayKey}
+                  postsByDay={postsByDay}
+                  onReschedule={reschedule}
+                  onOpenDay={openDayInWeek}
+                />
+              )}
+            </div>
+
+            <DragOverlay>
+              {activePost && (
+                <div className="w-[200px] rotate-1">
+                  <PostCard post={activePost} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
     </div>

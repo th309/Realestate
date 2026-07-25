@@ -29,9 +29,11 @@ const MIN_GAP_MINUTES = 45;
 /**
  * Pick a slot for a new post on a day, avoiding times within MIN_GAP_MINUTES of
  * an already-scheduled post. `occupiedMinutes` is minutes-since-ET-midnight for
- * posts already on that day. Falls back to hourly stepping, then 9:00 AM.
+ * posts already on that day. Tries the preferred windows, then hourly steps
+ * from 8am–9pm. Returns null when the day is too full to place a post without a
+ * collision — the caller must surface that rather than schedule on top.
  */
-export function bestTimeForDay(occupiedMinutes: number[]): DaySlot {
+export function bestTimeForDay(occupiedMinutes: number[]): DaySlot | null {
   const isFree = (mins: number) =>
     !occupiedMinutes.some((o) => Math.abs(o - mins) < MIN_GAP_MINUTES);
 
@@ -43,7 +45,7 @@ export function bestTimeForDay(occupiedMinutes: number[]): DaySlot {
       return { hour, minute: 0, label: labelFor(hour, 0) };
     }
   }
-  return { hour: 9, minute: 0, label: "9:00 AM" };
+  return null;
 }
 
 function labelFor(hour: number, minute: number): string {

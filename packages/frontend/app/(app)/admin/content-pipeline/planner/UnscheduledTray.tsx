@@ -1,19 +1,17 @@
 /**
  * Staging shelf for approved posts that have no scheduled_at yet. Drag a card
- * onto a day in the calendar to schedule it — the parent picks a best-time slot
- * for that day. Hidden when there's nothing waiting to schedule.
+ * onto a day (or use its clock button) to schedule it — the parent picks a
+ * best-time slot for that day. Hidden when there's nothing waiting to schedule.
  */
 import type { PlannerPost } from "../lib/posts-api";
-import { PostCard } from "./PostCard";
+import { DraggablePostCard } from "./DraggablePostCard";
 
 export function UnscheduledTray({
   posts,
-  onDragStart,
-  onDragEnd,
+  onReschedule,
 }: {
   posts: PlannerPost[];
-  onDragStart: (postId: string) => void;
-  onDragEnd: () => void;
+  onReschedule: (post: PlannerPost, iso: string) => void;
 }) {
   if (posts.length === 0) return null;
 
@@ -30,18 +28,13 @@ export function UnscheduledTray({
           Ready to schedule
         </h2>
         <span className="text-sm text-on-surface-variant">
-          Drag a post onto a day to schedule it at a best-time slot.
+          Drag a post onto a day, or use its clock button to pick a time.
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
         {posts.map((post) => (
           <div key={post.id} className="w-[180px]">
-            <PostCard
-              post={post}
-              draggable
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
+            <DraggablePostCard post={post} onReschedule={onReschedule} />
           </div>
         ))}
       </div>

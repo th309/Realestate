@@ -20,6 +20,15 @@ export interface PostCopy {
   body?: string;
   cta?: string;
   hashtags?: string[];
+  /** Carousel slides / multi-part copy. */
+  slides?: Array<{ heading?: string; body?: string }>;
+  [key: string]: unknown;
+}
+
+export interface PostMediaRef {
+  kind: string;
+  url?: string;
+  storage_path?: string;
   [key: string]: unknown;
 }
 
@@ -30,10 +39,16 @@ export interface PlannerPost {
   platform: string;
   post_type: string;
   copy: PostCopy;
+  media_refs: PostMediaRef[];
   status: PostStatus;
   scheduled_at: string | null;
   published_at: string | null;
+  platform_post_id: string | null;
   source: string;
+  /** Failure reason — present for the `failed` status the planner renders. */
+  error: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PostsListResult {
@@ -41,17 +56,33 @@ export interface PostsListResult {
   counts: Record<string, number>;
 }
 
+export interface FetchPostsOptions {
+  status?: PostStatus;
+  brandId?: string;
+  limit?: number;
+  /** Calendar window (frozen contract). ISO8601. Harmlessly ignored until the
+   *  backend range filter lands, at which point it narrows the query. */
+  scheduledFrom?: string;
+  scheduledTo?: string;
+  orderBy?: "created_at" | "scheduled_at";
+}
+
 /**
- * List posts, optionally filtered by a single status (the API takes one
- * status at a time) and/or brand. Returns rows plus per-status counts.
+ * List posts, optionally filtered by a single status and/or a scheduled_at
+ * window. Window params are sent whenever present; the backend whitelist
+ * ignores unknown params until its range filter ships, so callers keep their
+ * own client-side windowing as belt-and-suspenders.
  */
 export async function fetchPosts(
-  opts: { status?: PostStatus; brandId?: string; limit?: number } = {},
+  opts: FetchPostsOptions = {},
 ): Promise<PostsListResult> {
   const params = new URLSearchParams();
   if (opts.status) params.set("status", opts.status);
   if (opts.brandId) params.set("brandId", opts.brandId);
   if (opts.limit) params.set("limit", String(opts.limit));
+  if (opts.scheduledFrom) params.set("scheduledFrom", opts.scheduledFrom);
+  if (opts.scheduledTo) params.set("scheduledTo", opts.scheduledTo);
+  if (opts.orderBy) params.set("orderBy", opts.orderBy);
   const qs = params.toString();
   const path = `/api/admin/content-pipeline/posts${qs ? `?${qs}` : ""}`;
   const res = await fetchAPI<{ data: PostsListResult }>(path);
