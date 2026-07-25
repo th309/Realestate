@@ -53,11 +53,13 @@ export class LateNotConfiguredError extends Error {
   }
 }
 
-/** Thrown when Late returns a non-2xx response. Carries the HTTP status. */
+/** Thrown when Late returns a non-2xx response. Carries the HTTP status + raw body. */
 export class LateApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Raw response body, so callers can inspect e.g. a 409 duplicate payload. */
+    readonly body?: string,
   ) {
     super(message);
     this.name = 'LateApiError';
@@ -101,10 +103,17 @@ export interface LatePublishParams {
   scheduledAt?: string;
   /** IANA timezone for the schedule (defaults to UTC). */
   timezone?: string;
+  /**
+   * Stable idempotency key (our post id) sent as Late's `x-request-id`. Lets a
+   * retried publish after a crash de-duplicate at Late instead of double-posting.
+   */
+  idempotencyKey?: string;
 }
 
 export interface LatePublishResult {
   postId?: string;
   platformPostUrl?: string;
+  /** True when Late reported this as a duplicate of an already-published post. */
+  duplicate?: boolean;
   raw: unknown;
 }

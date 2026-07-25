@@ -36,6 +36,8 @@ import {
 interface LateRequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
+  /** Extra request headers (e.g. `x-request-id` for idempotent publishing). */
+  headers?: Record<string, string>;
 }
 
 @Injectable()
@@ -78,6 +80,7 @@ export class LateClientService {
         Authorization: `Bearer ${apiKey}`,
         Accept: 'application/json',
         ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+        ...opts.headers,
       },
       ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
     });
@@ -90,6 +93,7 @@ export class LateClientService {
       throw new LateApiError(
         res.status,
         `Late API ${method} ${path} failed: ${res.status}`,
+        detail,
       );
     }
 
@@ -202,14 +206,50 @@ export class LateClientService {
       body.publishNow = true;
     }
 
-    const raw = await this.request<Record<string, unknown>>('POST', '/posts', {
-      body,
-    });
-    return {
-      postId: (raw._id as string) ?? (raw.postId as string) ?? undefined,
-      platformPostUrl: (raw.platformPostUrl as string) ?? undefined,
-      raw,
-    };
+    const headers = params.idempotencyKey
+      ? { 'x-request-id': params.idempotencyKey }
+      : undefined;
+
+    try {
+      const raw = await this.request<Record<string, unknown>>(
+        'POST',
+        '/posts',
+        { body, headers },
+      );
+      return {
+        postId: (raw._id as string) ?? (raw.postId as string) ?? undefined,
+        platformPostUrl: (raw.platformPostUrl as string) ?? undefined,
+        raw,
+      };
+    } catch (err) {
+      // Late dedupes by content hash for 24h; a retried publish (e.g. after a
+      // crash mid-flight) returns 409 with the existing post id. Treat that as
+      // success — the post already went out — instead of double-posting.
+      if (err instanceof LateApiError && err.status === 409) {
+        const dup = this.parseDuplicate(err.body);
+        return { postId: dup.existingPostId, duplicate: true, raw: dup.raw };
+      }
+      throw err;
+    }
+  }
+
+  private parseDuplicate(body?: string): {
+    existingPostId?: string;
+    raw: unknown;
+  } {
+    if (!body) return { raw: {} };
+    try {
+      const parsed = JSON.parse(body) as {
+        existingPostId?: string;
+        error?: { existingPostId?: string };
+      };
+      return {
+        existingPostId: parsed.existingPostId ?? parsed.error?.existingPostId,
+        raw: parsed,
+      };
+    } catch {
+      return { raw: body };
+    }
   }
 
   // ── Analytics (used by a later phase) ─────────────────────────────────────

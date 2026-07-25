@@ -130,4 +130,41 @@ describe('LateClientService', () => {
       status: 500,
     } satisfies Partial<LateApiError>);
   });
+
+  it('sends x-request-id when an idempotencyKey is provided', async () => {
+    process.env.LATE_API_KEY = 'k';
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ _id: 'p9' }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await service.publishPost({
+      accountId: 'acc1',
+      platform: 'instagram',
+      copy: 'hi',
+      idempotencyKey: 'post-123',
+    });
+
+    const headers = (
+      fetchMock.mock.calls[0][1] as { headers: Record<string, string> }
+    ).headers;
+    expect(headers['x-request-id']).toBe('post-123');
+  });
+
+  it('treats a 409 duplicate as success, returning the existing post id', async () => {
+    process.env.LATE_API_KEY = 'k';
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        errorResponse(409, JSON.stringify({ existingPostId: 'dup-1' })),
+      ) as unknown as typeof fetch;
+
+    const out = await service.publishPost({
+      accountId: 'acc1',
+      platform: 'instagram',
+      copy: 'retry after crash',
+      idempotencyKey: 'post-123',
+    });
+
+    expect(out.duplicate).toBe(true);
+    expect(out.postId).toBe('dup-1');
+  });
 });

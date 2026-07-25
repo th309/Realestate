@@ -222,6 +222,7 @@ export class SocialConnectService {
     connectionId: string,
     brandId: string,
     input: PublishViaConnectionDto,
+    opts?: { idempotencyKey?: string },
   ) {
     if (!this.late.isConfigured()) throw new LateNotConfiguredError();
 
@@ -249,6 +250,7 @@ export class SocialConnectService {
       mediaUrls: input.mediaUrls,
       scheduledAt: input.scheduledAt,
       timezone: input.timezone,
+      idempotencyKey: opts?.idempotencyKey,
     });
   }
 }
