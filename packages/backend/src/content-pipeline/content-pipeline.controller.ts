@@ -6,6 +6,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -35,6 +36,10 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateFormatDefaultDto } from './dto/update-format-default.dto';
 import { TriggerTestMagnetDto } from './dto/trigger-test-magnet.dto';
 import { DashboardQueryDto } from './dto/dashboard-query.dto';
+import { ResolveMarketQueryDto } from './dto/resolve-market-query.dto';
+import { EditScriptDto } from './dto/edit-script.dto';
+import { RejectRunDto, CancelRunDto } from './dto/run-reason.dto';
+import { isContentFormat } from './dto/content-format';
 
 const THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -111,7 +116,7 @@ export class ContentPipelineController {
   }
 
   @Post('resolve-market')
-  async resolveMarket(@Body() body: { query: string }) {
+  async resolveMarket(@Body() body: ResolveMarketQueryDto) {
     const matches = await this.runs.resolveMarket(body.query);
     return { success: true, data: { matches } };
   }
@@ -158,36 +163,39 @@ export class ContentPipelineController {
   }
 
   @Post('runs/:id/approve')
-  async approve(@Param('id') id: string) {
+  async approve(@Param('id', new ParseUUIDPipe()) id: string) {
     await this.actions.approveRun(id);
     return { success: true, data: { status: 'publishing' } };
   }
 
   @Post('runs/:id/reject')
-  async reject(@Param('id') id: string, @Body() body: { reason: string }) {
+  async reject(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: RejectRunDto,
+  ) {
     await this.actions.rejectRun(id, body.reason);
     return { success: true, data: { status: 'rejected' } };
   }
 
   @Post('runs/:id/cancel')
   async cancel(
-    @Param('id') id: string,
-    @Body() body: { reason?: string } = {},
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: CancelRunDto,
   ) {
-    await this.actions.cancelRun(id, body.reason);
+    await this.actions.cancelRun(id, body?.reason);
     return { success: true, data: { status: 'cancelled' } };
   }
 
   @Post('runs/:id/retry')
-  async retry(@Param('id') id: string) {
+  async retry(@Param('id', new ParseUUIDPipe()) id: string) {
     await this.actions.retryRun(id);
     return { success: true, data: { status: 'queued' } };
   }
 
   @Post('runs/:id/edit-script')
   async editScript(
-    @Param('id') id: string,
-    @Body() body: { variantId: 'A' | 'B'; newFullText: string },
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: EditScriptDto,
   ) {
     const data = await this.actions.editScript(
       id,
@@ -198,7 +206,7 @@ export class ContentPipelineController {
   }
 
   @Post('runs/:id/continue-pipeline')
-  async continuePipeline(@Param('id') id: string) {
+  async continuePipeline(@Param('id', new ParseUUIDPipe()) id: string) {
     const data = await this.actions.resumePipelineFromReview(id);
     return { success: true, data };
   }
@@ -206,7 +214,7 @@ export class ContentPipelineController {
   @Post('runs/:id/thumbnail/regenerate')
   @HttpCode(202)
   async regenerateThumbnail(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: { frame: number },
   ) {
     if (body == null || typeof body.frame !== 'number') {
@@ -224,7 +232,7 @@ export class ContentPipelineController {
     FileInterceptor('file', { limits: { fileSize: THUMBNAIL_MAX_BYTES } }),
   )
   async replaceThumbnail(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
   ) {
     if (!file) {
@@ -242,7 +250,7 @@ export class ContentPipelineController {
   }
 
   @Delete('runs/:id')
-  async deleteRun(@Param('id') id: string) {
+  async deleteRun(@Param('id', new ParseUUIDPipe()) id: string) {
     const result = await this.actions.deleteRun(id);
     return { success: true, data: result };
   }
@@ -278,6 +286,9 @@ export class ContentPipelineController {
     @Param('format') format: string,
     @Body() dto: UpdateFormatDefaultDto,
   ) {
+    if (!isContentFormat(format)) {
+      throw new BadRequestException(`Unknown content format: ${format}`);
+    }
     return {
       success: true,
       data: await this.settingsService.updateFormatDefault(format, dto),
