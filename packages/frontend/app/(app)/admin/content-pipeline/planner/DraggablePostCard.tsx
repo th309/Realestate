@@ -7,6 +7,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { PlannerPost } from "../lib/posts-api";
 import { PostCard } from "./PostCard";
+import { formatEtTime } from "./planner-tz";
 
 export function DraggablePostCard({
   post,
@@ -22,11 +23,22 @@ export function DraggablePostCard({
     data: { post },
   });
 
+  // Give the focusable drag handle its own accessible name — otherwise the
+  // wrapper's name is the jumbled concatenation of all descendant text
+  // (including the nested clock button). aria-label after {...attributes}
+  // overrides dnd-kit's aria-* so this wins.
+  const time = post.scheduled_at ? formatEtTime(post.scheduled_at) : null;
+  const dragLabel = `Drag to reschedule: ${post.platform} ${post.post_type.replace(
+    /_/g,
+    " ",
+  )}${time ? ` at ${time}` : ""}`;
+
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      aria-label={dragLabel}
       className={`cursor-grab touch-none rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing ${
         isDragging ? "opacity-40" : ""
       }`}
