@@ -198,3 +198,44 @@ describe('BrandKitService seeding + approved-copy exposure', () => {
     expect(preamble).toContain('PropertyIQ Score');
   });
 });
+
+describe('BrandKitService.updateBrand deep-merges JSONB (no sibling loss)', () => {
+  it('preserves untouched approvedCopy siblings on a partial patch', async () => {
+    const { supabase, store } = makeSupabaseFake([
+      {
+        id: 'brand-1',
+        name: 'PropertyIQ',
+        website_url: 'https://www.propertyiq.app',
+        voice_summary: 'v',
+        tone_settings: { attributes: ['confident'], shorthand: 's' },
+        products: [],
+        target_platforms: ['linkedin'],
+        approved_copy: {
+          coverageStat: 'OLD',
+          taglines: ['Keep me'],
+          signOffs: ['Now you know.'],
+          bans: { hypePhrases: ['game-changer'], competitors: ['Reventure'] },
+        },
+        created_at: '2026-07-25T00:00:00Z',
+        updated_at: '2026-07-25T00:00:00Z',
+      },
+    ]);
+    const service = new BrandKitService(supabase);
+
+    const profile = await service.updateBrand('brand-1', {
+      approvedCopy: { coverageStat: 'NEW' },
+    } as never);
+
+    // Patched field updated...
+    expect(profile.approvedCopy.coverageStat).toBe('NEW');
+    // ...and siblings preserved (not wiped by a full-column overwrite).
+    expect(profile.approvedCopy.taglines).toContain('Keep me');
+    // The stored row reflects the merge, not a replace.
+    const stored = store.brands[0].approved_copy as {
+      coverageStat: string;
+      taglines: string[];
+    };
+    expect(stored.coverageStat).toBe('NEW');
+    expect(stored.taglines).toEqual(['Keep me']);
+  });
+});

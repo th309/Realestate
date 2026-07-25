@@ -11,6 +11,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -32,15 +33,18 @@ export class ToneSettingsDto {
 }
 
 export class BrandProductDto {
-  @IsOptional()
+  // Required (not optional): the preamble interpolates `- ${name}: ${summary}`,
+  // so a product entry missing either field would render "- undefined: undefined"
+  // into every generation prompt. The normalizer also filters incomplete entries.
   @IsString()
+  @IsNotEmpty()
   @MaxLength(120)
-  name?: string;
+  name!: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(1000)
-  summary?: string;
+  summary!: string;
 }
 
 export class ScoreLanguageDto {

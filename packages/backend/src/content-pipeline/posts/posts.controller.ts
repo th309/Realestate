@@ -74,6 +74,7 @@ export class PostsController {
       data: await this.posts.updateStatus(id, dto.status, {
         scheduledAt: dto.scheduledAt,
         error: dto.error,
+        platformPostId: dto.platformPostId,
       }),
     };
   }

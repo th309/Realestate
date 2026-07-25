@@ -10,7 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PUBLISH_PLATFORMS } from '../../social-platforms';
+import { PUBLISH_PLATFORMS } from '../../feed/feed.types';
 import {
   ApprovedCopyDto,
   BrandProductDto,
@@ -21,6 +21,11 @@ import {
  * Admin patch for a brand row. All fields optional (PATCH semantics). JSONB
  * fields use nested validated DTOs (bounded strings) because they are
  * interpolated verbatim into generation prompts.
+ *
+ * Merge semantics (see BrandKitService.updateBrand): toneSettings and
+ * approvedCopy are DEEP-MERGED onto the stored row, so sending a single nested
+ * field (e.g. { approvedCopy: { coverageStat } }) preserves the untouched
+ * siblings. products/targetPlatforms and scalars are replaced wholesale.
  */
 export class UpdateBrandDto {
   @IsOptional()

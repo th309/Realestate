@@ -74,6 +74,12 @@ export class UpdatePostStatusDto {
   @IsString()
   @MaxLength(2000)
   error?: string;
+
+  /** External post id/URL from the publisher (Phase 5). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  platformPostId?: string;
 }
 
 /** PATCH /posts/:id/copy — edit the copy JSONB (blocked once published). */

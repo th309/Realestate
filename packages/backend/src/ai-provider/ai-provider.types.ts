@@ -268,7 +268,7 @@ export const AI_PURPOSES = {
   MARKET_FORECAST: 'market_forecast',
   // Content feed (Phase 2): social post generation + tone re-voicing + brand
   // analysis, all routed to DeepSeek by default via ai_model_config seed
-  // (20260725000200_seed_content_feed_ai_purposes.sql).
+  // (20260725180610_seed_content_feed_ai_purposes.sql).
   POST_GENERATION: 'post_generation',
   TONE_ADAPTATION: 'tone_adaptation',
   BRAND_ANALYSIS: 'brand_analysis',

@@ -17,6 +17,39 @@ import type {
   ToneSettings,
 } from './brand-kit.types';
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Deep-merge a JSONB patch onto a base value: nested plain objects merge
+ * recursively; arrays and scalars from the patch replace the base. Used so a
+ * partial PATCH to tone_settings/approved_copy preserves the sibling fields the
+ * caller did not send (a full-column overwrite would silently drop them).
+ */
+export function deepMergeJsonb(base: unknown, patch: unknown): unknown {
+  if (!isPlainObject(base) || !isPlainObject(patch)) return patch;
+  const out: Record<string, unknown> = { ...base };
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === undefined) continue;
+    out[k] = k in out ? deepMergeJsonb(out[k], v) : v;
+  }
+  return out;
+}
+
+/** Keep only product entries that have BOTH a non-blank name and summary. */
+export function coerceProducts(raw: unknown): BrandProduct[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (p): p is BrandProduct =>
+      isPlainObject(p) &&
+      typeof p.name === 'string' &&
+      p.name.trim().length > 0 &&
+      typeof p.summary === 'string' &&
+      p.summary.trim().length > 0,
+  );
+}
+
 export function coerceTone(raw: unknown): ToneSettings {
   const t = (raw ?? {}) as Partial<ToneSettings>;
   return {
@@ -69,9 +102,7 @@ export function rowToBrandProfile(row: BrandRow): BrandProfile {
     websiteUrl: row.website_url ?? null,
     voiceSummary: row.voice_summary ?? null,
     tone: coerceTone(row.tone_settings),
-    products: Array.isArray(row.products)
-      ? (row.products as BrandProduct[])
-      : [],
+    products: coerceProducts(row.products),
     targetPlatforms: Array.isArray(row.target_platforms)
       ? row.target_platforms
       : [],

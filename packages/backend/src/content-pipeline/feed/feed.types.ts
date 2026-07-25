@@ -4,7 +4,22 @@
 // types, grounds each in real market data, generates copy via the DeepSeek
 // purposes, lints it through Gate B, and inserts a `posts` row (pending_review).
 
-import type { PublishPlatform } from '../social-platforms';
+import {
+  SOCIAL_PLATFORMS,
+  type SocialPlatform,
+} from '../../social-connect/late-client.types';
+
+/**
+ * Platforms a feed post can target. SOCIAL_PLATFORMS is the canonical
+ * Late-publishable set (single source of truth in social-connect). 'youtube' is
+ * appended only as a generic marker for the direct-YouTube path: video_script
+ * posts publish via the direct YouTube integration, never Late. The Phase 5
+ * publisher routes youtube by `platform.startsWith('youtube')`, so this generic
+ * id matches without needing the concrete 'youtube_shorts'/'youtube_long' ids
+ * from content-pipeline/types.ts.
+ */
+export const PUBLISH_PLATFORMS = [...SOCIAL_PLATFORMS, 'youtube'] as const;
+export type PublishPlatform = SocialPlatform | 'youtube';
 
 /** Post types the feed rotates through. */
 export type FeedPostType =

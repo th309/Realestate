@@ -103,12 +103,17 @@ export class PostsService {
 
   /**
    * Move a post to a new status, enforcing the transition map. Optionally sets
-   * scheduled_at (when moving to 'scheduled') or an error string (on 'failed').
+   * scheduled_at (when moving to 'scheduled'), an error string (on 'failed'), or
+   * platform_post_id (the external post id/URL the publisher returns, Phase 5).
    */
   async updateStatus(
     id: string,
     to: PostStatus,
-    extra?: { scheduledAt?: string | null; error?: string | null },
+    extra?: {
+      scheduledAt?: string | null;
+      error?: string | null;
+      platformPostId?: string | null;
+    },
   ): Promise<PostRow> {
     const current = await this.getById(id);
     if (!isAllowedPostStatusTransition(current.status, to)) {
@@ -124,6 +129,8 @@ export class PostsService {
     if (extra?.scheduledAt !== undefined)
       patch.scheduled_at = extra.scheduledAt;
     if (extra?.error !== undefined) patch.error = extra.error;
+    if (extra?.platformPostId !== undefined)
+      patch.platform_post_id = extra.platformPostId;
     if (to === 'published') patch.published_at = new Date().toISOString();
 
     const { data, error } = await client

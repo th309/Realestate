@@ -12,7 +12,7 @@ import {
   PROPERTYIQ_VOICE_SUMMARY,
   PROPERTYIQ_WEBSITE_URL,
 } from './propertyiq-brand-seed';
-import { rowToBrandProfile } from './brand-profile-normalizers';
+import { deepMergeJsonb, rowToBrandProfile } from './brand-profile-normalizers';
 import { buildBrandPromptPreamble } from './brand-preamble';
 
 /**
@@ -50,11 +50,18 @@ export class BrandKitService {
     return (data as BrandRow[]).map(rowToBrandProfile);
   }
 
-  /** Update mutable brand fields; returns the refreshed profile. */
+  /**
+   * Update mutable brand fields; returns the refreshed profile. JSONB objects
+   * (tone_settings, approved_copy) are DEEP-MERGED onto the existing row, so a
+   * partial PATCH like { approvedCopy: { coverageStat } } preserves the sibling
+   * fields (taglines, bans, etc.) instead of silently dropping them. Scalars and
+   * arrays (name, targetPlatforms, products) are replaced wholesale.
+   */
   async updateBrand(
     brandId: string,
     patch: UpdateBrandDto,
   ): Promise<BrandProfile> {
+    const existing = await this.getRowById(brandId);
     const client = this.supabase.getClient();
     const update: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -63,13 +70,19 @@ export class BrandKitService {
     if (patch.websiteUrl !== undefined) update.website_url = patch.websiteUrl;
     if (patch.voiceSummary !== undefined)
       update.voice_summary = patch.voiceSummary;
-    if (patch.toneSettings !== undefined)
-      update.tone_settings = patch.toneSettings;
     if (patch.products !== undefined) update.products = patch.products;
     if (patch.targetPlatforms !== undefined)
       update.target_platforms = patch.targetPlatforms;
+    if (patch.toneSettings !== undefined)
+      update.tone_settings = deepMergeJsonb(
+        existing.tone_settings,
+        patch.toneSettings,
+      );
     if (patch.approvedCopy !== undefined)
-      update.approved_copy = patch.approvedCopy;
+      update.approved_copy = deepMergeJsonb(
+        existing.approved_copy,
+        patch.approvedCopy,
+      );
 
     const { data, error } = await client
       .from('brands')

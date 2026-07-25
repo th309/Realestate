@@ -113,11 +113,16 @@ export const PROPERTYIQ_PRODUCTS: BrandProduct[] = [
 export const PROPERTYIQ_VOICE_SUMMARY =
   'PropertyIQ is the Smart Friend for real estate investors and agents: confident, conversational, data-first, and never salesy. Lead with a number, a percentage, or a trend, then point to a specific, low-friction next step. Describe the PropertyIQ Score as momentum (rising, steady, easing, weak), never as quality.';
 
+// Channels PropertyIQ targets, in brand-guide §9 priority order. 'x' is a valid
+// platform in the allow-list (PUBLISH_PLATFORMS) but is DELIBERATELY excluded
+// from PropertyIQ's own targets: brand guide §9 says the X absence is intentional
+// pending Troy's decision. An admin can add it later via PATCH once decided.
 export const PROPERTYIQ_TARGET_PLATFORMS = [
   'linkedin',
-  'facebook',
-  'instagram',
   'youtube',
+  'instagram',
+  'tiktok',
+  'facebook',
 ];
 
 /** The approved-copy JSONB payload seeded into the PropertyIQ brand row. */
