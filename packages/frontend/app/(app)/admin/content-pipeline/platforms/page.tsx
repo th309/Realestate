@@ -5,15 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPlatforms } from "../lib/content-pipeline-api";
 import { PlatformRow } from "./platform-row";
+import { SocialConnectWall } from "./social-connect-wall";
 
-const ALL_PLATFORMS = [
-  "youtube_shorts",
-  "tiktok",
-  "instagram_reels",
-  "facebook_reels",
-  "linkedin",
-  "youtube_long",
-] as const;
+/**
+ * YouTube keeps its own direct OAuth integration (developer-app credentials +
+ * the platform callback flow). Everything else connects through Late on the
+ * one-click wall above. These are the only rows still rendered by the legacy
+ * direct-OAuth path — the Meta / TikTok / LinkedIn / X rows moved to Late.
+ */
+const DIRECT_PLATFORMS = ["youtube_shorts", "youtube_long"] as const;
 
 function errorMessage(code: string): string {
   // exchange_failed:<reason> — emitted by the per-platform handlers when
@@ -55,11 +55,16 @@ function PlatformsPageInner() {
   });
 
   useEffect(() => {
+    // Bridges the YouTube direct-OAuth callback (?connected / ?error) into a
+    // toast, then strips the params. This is a legitimate URL→state sync on
+    // navigation return, not a render-driven update — the setState is gated by
+    // the presence of callback params so it runs at most once per redirect.
     const connected = searchParams.get("connected");
     const label = searchParams.get("label");
     const errorCode = searchParams.get("error");
 
     if (connected) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot OAuth callback bridge
       setToast({
         kind: "success",
         message: `Connected ${label ? label + " to " : ""}${connected.replaceAll("_", " ")}`,
@@ -67,6 +72,7 @@ function PlatformsPageInner() {
       refetch();
       router.replace("/admin/content-pipeline/platforms");
     } else if (errorCode) {
+       
       setToast({ kind: "error", message: errorMessage(errorCode) });
       router.replace("/admin/content-pipeline/platforms");
     }
@@ -81,47 +87,67 @@ function PlatformsPageInner() {
   const byPlatform = new Map(data.map((p) => [p.platform, p]));
 
   return (
-    <div className="p-8 max-w-3xl space-y-3">
-      <h1 className="text-2xl font-semibold mb-4 text-on-surface">
-        Platform Credentials
-      </h1>
+    <div className="max-w-3xl space-y-8 p-8">
+      <div>
+        <h1 className="mb-1 text-2xl font-semibold text-on-surface">
+          Platforms
+        </h1>
+        <p className="text-sm text-on-surface-variant">
+          Manage where PropertyIQ publishes. Connect social networks in one
+          click, or manage the direct YouTube integration below.
+        </p>
+      </div>
 
-      {isLoading && (
-        <div className="rounded-xl bg-surface-container-low p-6 text-sm text-outline">
-          Loading platforms...
-        </div>
-      )}
+      <SocialConnectWall />
 
-      {ALL_PLATFORMS.map((platform) => {
-        const row = byPlatform.get(platform);
-        return (
-          <PlatformRow
-            key={platform}
-            platform={platform}
-            configured={row?.configured ?? false}
-            supported={row?.supported ?? false}
-            accountLabel={row?.accountLabel ?? null}
-            connectedAt={row?.connectedAt ?? null}
-            lastPublishedAt={row?.lastPublishedAt ?? null}
-            mirrorsPlatform={row?.mirrorsPlatform ?? null}
-            appCredentials={
-              row?.appCredentials ?? {
-                configured: false,
-                source: null,
-                lastFour: null,
-                updatedAt: null,
-                notes: null,
-                redirectUri: null,
+      <section className="space-y-3">
+        <header className="space-y-1">
+          <h2 className="text-lg font-semibold text-on-surface">
+            Direct integration
+          </h2>
+          <p className="text-sm text-on-surface-variant">
+            YouTube uses its own Google OAuth app. Enter the developer
+            credentials, then connect a channel.
+          </p>
+        </header>
+
+        {isLoading && (
+          <div className="rounded-xl bg-surface-container-low p-6 text-sm text-outline">
+            Loading platforms…
+          </div>
+        )}
+
+        {DIRECT_PLATFORMS.map((platform) => {
+          const row = byPlatform.get(platform);
+          return (
+            <PlatformRow
+              key={platform}
+              platform={platform}
+              configured={row?.configured ?? false}
+              supported={row?.supported ?? false}
+              accountLabel={row?.accountLabel ?? null}
+              connectedAt={row?.connectedAt ?? null}
+              lastPublishedAt={row?.lastPublishedAt ?? null}
+              mirrorsPlatform={row?.mirrorsPlatform ?? null}
+              appCredentials={
+                row?.appCredentials ?? {
+                  configured: false,
+                  source: null,
+                  lastFour: null,
+                  updatedAt: null,
+                  notes: null,
+                  redirectUri: null,
+                }
               }
-            }
-            onChange={() => refetch()}
-          />
-        );
-      })}
+              onChange={() => refetch()}
+            />
+          );
+        })}
+      </section>
 
       {toast && (
         <div
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-4 py-2 shadow-lg text-sm ${
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-4 py-2 text-sm shadow-lg ${
             toast.kind === "success"
               ? "bg-primary text-on-primary"
               : "bg-error text-on-error"
@@ -139,7 +165,7 @@ export default function PlatformsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 max-w-3xl text-sm text-outline">Loading...</div>
+        <div className="max-w-3xl p-8 text-sm text-outline">Loading…</div>
       }
     >
       <PlatformsPageInner />
