@@ -2,8 +2,9 @@ import { IsOptional, IsUUID } from 'class-validator';
 
 /**
  * Body for POST /connections/sync — reconcile Late's connected accounts into
- * `platform_connections`. `brandId` is required to persist rows (the table's
- * brand_id is NOT NULL); the controller falls back to SOCIAL_CONNECT_DEFAULT_BRAND_ID.
+ * `platform_connections`. brandId is optional; when omitted the service resolves
+ * it via SocialConnectService.resolveBrandId() (explicit id →
+ * SOCIAL_CONNECT_DEFAULT_BRAND_ID env var → seeded default PropertyIQ brand).
  */
 export class SyncConnectionsDto {
   @IsOptional()
