@@ -253,4 +253,35 @@ export class SocialConnectService {
       idempotencyKey: opts?.idempotencyKey,
     });
   }
+
+  /**
+   * Resolve the brand's connected Late account for a platform and publish to it.
+   * Used by the Phase 5 scheduler, which knows brand + platform (posts carry no
+   * connection id). Throws NotFound when the brand has no connected account.
+   */
+  async publishForBrandPlatform(
+    brandId: string,
+    platform: SocialPlatform,
+    input: PublishViaConnectionDto,
+    opts?: { idempotencyKey?: string },
+  ) {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from(TABLE)
+      .select('id')
+      .eq('brand_id', brandId)
+      .eq('platform', platform)
+      .eq('provider', 'late')
+      .eq('status', 'connected')
+      .maybeSingle();
+    if (error) throw error;
+
+    const connectionId = (data as { id?: string } | null)?.id;
+    if (!connectionId) {
+      throw new NotFoundException(
+        `No connected ${platform} account for this brand`,
+      );
+    }
+    return this.publishPost(connectionId, brandId, input, opts);
+  }
 }
