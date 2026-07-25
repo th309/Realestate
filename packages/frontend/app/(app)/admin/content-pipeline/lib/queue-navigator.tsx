@@ -32,6 +32,13 @@ export interface QueueItem {
   format?: string;
   thumbnail_url?: string;
   status?: string;
+  /**
+   * Image posts in the review feed carry their own signed media (planner-post
+   * shape). When present, `mediaUrls[0]` is the preview; `post_type` drives the
+   * carousel count chip. Video runs leave these unset and use `thumbnail_url`.
+   */
+  mediaUrls?: string[];
+  post_type?: string;
 }
 
 export interface QueueNavigatorApi {

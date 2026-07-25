@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useQueueNavigator } from "../lib/queue-navigator";
 import { pipelineStateToStatusChip } from "../components/home/StatusChip";
+import { PostMediaThumb } from "../components/PostMediaThumb";
 
 /**
  * Horizontal film-strip of every run in the review queue. Current run is
@@ -51,7 +52,13 @@ export function QueueRibbon() {
             aria-current={active ? "true" : undefined}
             aria-label={`Run ${idx + 1} of ${nav.totalCount}: ${item.market_query ?? item.id}`}
           >
-            {item.thumbnail_url ? (
+            {item.mediaUrls?.[0] ? (
+              <PostMediaThumb
+                urls={item.mediaUrls}
+                className="h-full w-full"
+                rounded="rounded-none"
+              />
+            ) : item.thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.thumbnail_url}

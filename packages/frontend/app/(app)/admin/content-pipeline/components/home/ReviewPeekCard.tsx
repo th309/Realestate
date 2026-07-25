@@ -6,6 +6,7 @@
 import Link from "next/link";
 import type { QueueItem } from "../../lib/queue-navigator";
 import { FORMAT_META } from "../../lib/format-previews";
+import { PostMediaThumb } from "../PostMediaThumb";
 import { StatusChip } from "./StatusChip";
 
 export function ReviewPeekCard({ item }: { item: QueueItem }) {
@@ -13,22 +14,27 @@ export function ReviewPeekCard({ item }: { item: QueueItem }) {
   const formatLabel = item.format
     ? (FORMAT_META[item.format]?.displayName ?? item.format)
     : null;
+  const hasPostMedia = Boolean(item.mediaUrls?.[0]);
 
   return (
     <Link
       href={`/admin/content-pipeline/review?run=${item.id}`}
       className="group flex items-center gap-3 rounded-xl border border-outline-variant bg-surface p-3 transition-shadow duration-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high">
-        {item.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.thumbnail_url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </div>
+      {hasPostMedia ? (
+        <PostMediaThumb urls={item.mediaUrls} className="h-16 w-12 shrink-0" />
+      ) : (
+        <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high">
+          {item.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.thumbnail_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-on-surface">
           {marketLabel}
