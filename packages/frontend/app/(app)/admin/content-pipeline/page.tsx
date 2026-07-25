@@ -1,324 +1,186 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  fetchDashboard,
-  fetchAssetSignedUrl,
-  type RunSummary,
-} from "./lib/content-pipeline-api";
-import { STATE_LABELS } from "./lib/state-labels";
-import type { PipelineStatus } from "./lib/content-pipeline-api";
-import { RunCardOverlay } from "./components/run-card-overlay";
-import { useCancelRun, useDeleteRun } from "./lib/use-run-mutations";
+import { fetchDashboard, fetchReviewQueue } from "./lib/content-pipeline-api";
 import { API_URL } from "@/lib/data/fetchers/base";
+import type { QueueItem } from "./lib/queue-navigator";
+import {
+  StudioGreeting,
+  type InFlightCounts,
+  type ReviewLoadStatus,
+} from "./components/home/StudioGreeting";
+import { ReviewStrip } from "./components/home/ReviewStrip";
+import { TaskGroup } from "./components/home/TaskGroup";
+import { TASK_GROUPS } from "./components/home/taskCatalog";
+import { RecentWorkRail } from "./components/home/RecentWorkRail";
+import { ManageToolsNav } from "./components/home/ManageToolsNav";
+import { CostCapBanner } from "./components/home/CostCapBanner";
+import { BatchCreatedBanner } from "./components/home/BatchCreatedBanner";
+import { WeeklyRecapCard } from "./components/home/WeeklyRecapCard";
+import { pipelineStateToStatusChip } from "./components/home/StatusChip";
 
-function DashboardContent() {
+export default function ContentPipelineHomePage() {
+  // useSearchParams (for the ?batch= confirmation) must render inside a
+  // Suspense boundary in the App Router.
+  return (
+    <Suspense fallback={<HomeSkeleton />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const searchParams = useSearchParams();
+  // Set by the batch-create wizard's redirect (new/page.tsx) so a freshly
+  // submitted batch lands on a confirmation rather than the generic home.
   const batchId = searchParams.get("batch") ?? undefined;
 
-  /** Single mutation scope for the whole grid — avoids N× useDeleteRun/useCancelRun per card firing duplicate onSuccess/onError. */
-  const deleteMut = useDeleteRun();
-  const cancelMut = useCancelRun();
-
-  const { data, isLoading, isError, error } = useQuery({
+  const dashboard = useQuery({
     queryKey: ["content-pipeline-dashboard", batchId ?? "all"],
     queryFn: () => fetchDashboard({ batchId }),
     refetchInterval: 60_000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-8 text-on-surface-variant text-sm">Loading...</div>
-    );
+  const reviewQueue = useQuery({
+    queryKey: ["review-queue"],
+    queryFn: fetchReviewQueue,
+    refetchInterval: 30_000,
+  });
+
+  // Memoize on the stable React Query data so the counts useMemo below (and
+  // the child props) don't churn a fresh array reference every render.
+  const recentRuns = useMemo(
+    () => dashboard.data?.recentRuns ?? [],
+    [dashboard.data],
+  );
+  const reviewItems = useMemo(
+    () => (reviewQueue.data ?? []) as QueueItem[],
+    [reviewQueue.data],
+  );
+
+  // The review queue is a separate fetch — surface its true state so a
+  // still-loading or failed queue is never silently read as "0 waiting".
+  const reviewStatus: ReviewLoadStatus = reviewQueue.isError
+    ? "error"
+    : reviewQueue.isSuccess
+      ? "ready"
+      : "loading";
+
+  const counts = useMemo<InFlightCounts>(() => {
+    const next: InFlightCounts = {
+      generating: 0,
+      review: reviewItems.length,
+      published: 0,
+      attention: 0,
+    };
+    for (const run of recentRuns) {
+      const { tone } = pipelineStateToStatusChip(run.status);
+      if (tone === "generating") next.generating += 1;
+      else if (tone === "published") next.published += 1;
+      else if (tone === "attention") next.attention += 1;
+    }
+    return next;
+  }, [recentRuns, reviewItems]);
+
+  if (dashboard.isLoading) {
+    return <HomeSkeleton />;
   }
-  if (isError) {
-    const msg = error instanceof Error ? error.message : "";
-    const looksLikeNetwork =
-      msg === "Failed to fetch" || msg.includes("Failed to fetch");
-    const isDev = process.env.NODE_ENV === "development";
-    return (
-      <div className="min-h-screen bg-surface p-8 space-y-3" role="alert">
-        <p className="text-error text-sm font-medium">
-          Failed to load dashboard{msg ? `: ${msg}` : "."}
-        </p>
-        {isDev && looksLikeNetwork && (
-          <p className="text-on-surface-variant text-sm max-w-xl leading-relaxed">
-            This page calls the Nest API at{" "}
-            <code className="rounded bg-surface-container-low px-1 py-0.5 font-mono text-xs">
-              {API_URL}
-            </code>
-            . Start the backend (for example{" "}
-            <code className="font-mono text-xs">npm run dev:backend</code>
-            ), or set{" "}
-            <code className="font-mono text-xs">NEXT_PUBLIC_API_URL</code> in{" "}
-            <code className="font-mono text-xs">packages/frontend/.env.local</code>
-            .
-          </p>
-        )}
-        {!isDev && looksLikeNetwork && (
-          <p className="text-on-surface-variant text-sm max-w-xl leading-relaxed">
-            Set{" "}
-            <code className="font-mono text-xs">NEXT_PUBLIC_API_URL</code> on the
-            frontend deployment to your API origin (same value as production), then
-            redeploy.
-          </p>
-        )}
-      </div>
-    );
-  }
-  if (!data) {
-    return <div className="p-8 text-on-surface-variant text-sm">No data.</div>;
+
+  if (dashboard.isError) {
+    return <HomeError error={dashboard.error} />;
   }
 
   return (
     <div className="min-h-screen bg-surface text-on-surface">
-      <div className="p-8 space-y-8">
-        <h1 className="text-3xl font-semibold text-on-surface">This Week</h1>
+      <div className="mx-auto max-w-6xl space-y-10 p-8">
+        <StudioGreeting counts={counts} reviewStatus={reviewStatus} />
 
-        {data.costCapStatus?.breached && (
-          <div className="rounded-xl bg-warning/10 border border-warning px-5 py-4 text-sm text-on-surface flex items-start justify-between gap-4">
-            <div>
-              <div className="font-semibold text-warning">Daily budget cap hit</div>
-              <div className="text-on-surface-variant mt-1">
-                Auto-ideation is paused until tomorrow. Spent $
-                {data.costCapStatus.usdSpent.toFixed(2)} of $
-                {data.costCapStatus.usdCap.toFixed(2)}.
-              </div>
-            </div>
-            <Link
-              href="/admin/content-pipeline/auto-ideation"
-              className="bg-warning text-on-primary rounded-full px-4 py-2 font-semibold hover:opacity-90 transition-opacity duration-200"
-            >
-              View rules
-            </Link>
-          </div>
+        {batchId && (
+          <BatchCreatedBanner batchId={batchId} count={recentRuns.length} />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat label="Published" value={data.thisWeek.published} />
-          <Stat label="In Review" value={data.thisWeek.inReview} />
-          <Stat label="Attributed Signups" value={data.thisWeek.signups} />
-          <Stat
-            label="Revenue MRR"
-            value={`$${data.thisWeek.revenueUsd.toFixed(0)}`}
-          />
-        </div>
+        <CostCapBanner status={dashboard.data?.costCapStatus} />
 
-        {data.upcomingAutoRuns && data.upcomingAutoRuns.length > 0 && (
-          <div className="rounded-xl bg-tertiary-container/30 border border-outline-variant p-6">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold text-on-surface">
-                  Auto-ideation upcoming
-                </h2>
-                <p className="text-sm text-on-surface-variant mt-1">
-                  Preview of what enabled rules would enqueue on their next scan.
-                </p>
-              </div>
-              <Link
-                href="/admin/content-pipeline/auto-ideation"
-                className="text-primary text-sm font-medium hover:underline"
-              >
-                Manage rules →
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2 text-sm">
-              {data.upcomingAutoRuns.map((u) => (
-                <li
-                  key={u.rule_name}
-                  className="rounded-lg bg-surface px-4 py-3 border border-outline-variant flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium text-on-surface truncate">
-                      {u.rule_name}
-                    </div>
-                    <div className="text-on-surface-variant text-xs mt-0.5">
-                      target: <span className="font-mono">{u.format}</span>
-                    </div>
-                  </div>
-                  <div className="font-mono text-xs text-on-surface-variant">
-                    matches: {u.matches?.length ?? 0}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {data.reviewQueueCount > 0 && (
-          <div className="bg-primary-container text-on-primary-container rounded-xl p-6 flex items-center justify-between">
-            <div className="font-medium">
-              {data.reviewQueueCount} run
-              {data.reviewQueueCount === 1 ? "" : "s"} waiting on you
-            </div>
-            <Link
-              href="/admin/content-pipeline/review"
-              className="bg-primary text-on-primary rounded-full px-6 py-2 font-semibold hover:bg-primary/90 transition-colors duration-200"
-            >
-              Review now
-            </Link>
-          </div>
-        )}
-
-        <div>
-          <h2 className="text-xl font-semibold mb-4 text-on-surface">
-            Last 7 days
-          </h2>
-          {batchId && (
-            <div className="rounded-xl bg-secondary-container/40 px-4 py-3 mb-4 text-sm flex items-center gap-3">
-              <span>
-                Showing batch{" "}
-                <span className="font-mono text-xs">{batchId}</span>
-                {" — "}
-                <strong>{data.recentRuns.length}</strong> runs
-              </span>
-              <a
-                href="/admin/content-pipeline"
-                className="ml-auto text-primary text-xs hover:underline"
-              >
-                Show all
-              </a>
-            </div>
-          )}
-          {data.recentRuns.length === 0 ? (
-            <div className="rounded-xl bg-surface-container-low p-6 text-sm text-on-surface-variant">
-              No runs yet. Start one with the Create a run button.
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-3">
-              {data.recentRuns.map((run) => (
-                <RunCard
-                  key={run.id}
-                  run={run}
-                  executeDelete={() => deleteMut.mutateAsync(run.id)}
-                  executeCancel={() =>
-                    cancelMut.mutateAsync({
-                      id: run.id,
-                      reason: "user_cancelled",
-                    })
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="fixed bottom-8 right-8 z-10">
-        <Link
-          href="/admin/content-pipeline/new"
-          className="bg-primary text-on-primary rounded-full px-8 py-4 font-semibold shadow-lg hover:bg-primary/90 transition-colors duration-200 inline-flex items-center gap-2"
-        >
-          <span className="text-xl leading-none">+</span>
-          <span>Create a run</span>
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-surface p-8 text-on-surface-variant text-sm">
-          Loading...
-        </div>
-      }
-    >
-      <DashboardContent />
-    </Suspense>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-xl bg-surface-container-low p-6 shadow-sm">
-      <div className="text-sm text-on-surface-variant mb-1">{label}</div>
-      <div className="text-3xl font-mono font-bold text-on-surface">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function RunCard({
-  run,
-  executeDelete,
-  executeCancel,
-}: {
-  run: RunSummary;
-  executeDelete: () => Promise<unknown>;
-  executeCancel: () => Promise<unknown>;
-}) {
-  const { data: videoData } = useQuery({
-    queryKey: ["content-pipeline-asset-url", run.id, "video_master"],
-    queryFn: () => fetchAssetSignedUrl(run.id, "video_master"),
-    enabled: Boolean(run.has_video),
-    staleTime: 50 * 60 * 1000,
-  });
-
-  const runHref = `/admin/content-pipeline/runs/${run.id}`;
-
-  return (
-    <div className="group relative w-[240px] rounded-xl bg-surface-container-low p-3 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <div className="relative aspect-[9/16] rounded-lg bg-gradient-to-br from-primary-container to-surface-container-high mb-2 overflow-hidden flex items-center justify-center">
-        {/* Link only covers the preview — overlay actions are siblings, not nested in <a> */}
-        <Link
-          href={runHref}
-          aria-label={`View run: ${run.market_query}`}
-          className="absolute inset-0 z-0 flex items-center justify-center"
-        >
-          {videoData?.url ? (
-            <video
-              src={videoData.url}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              onMouseEnter={(e) => {
-                const v = e.currentTarget;
-                v.play().catch(() => {});
-              }}
-              onMouseLeave={(e) => {
-                const v = e.currentTarget;
-                v.pause();
-                v.currentTime = 0;
-              }}
-              className="pointer-events-none h-full w-full object-cover"
-            />
-          ) : run.thumbnail_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={run.thumbnail_url}
-              alt=""
-              className="pointer-events-none h-full w-full object-cover"
-            />
-          ) : (
-            <div className="text-on-primary-container pointer-events-none text-xs font-semibold text-center px-2">
-              {run.market_query.split(",")[0]}
-            </div>
-          )}
-        </Link>
-        <RunCardOverlay
-          runId={run.id}
-          status={run.status as PipelineStatus}
-          marketQuery={run.market_query}
-          executeDelete={executeDelete}
-          executeCancel={executeCancel}
+        <ReviewStrip
+          items={reviewItems}
+          isError={reviewStatus === "error"}
+          onRetry={() => reviewQueue.refetch()}
         />
+
+        <div className="space-y-8">
+          {TASK_GROUPS.map((group) => (
+            <TaskGroup key={group.id} group={group} />
+          ))}
+        </div>
+
+        <WeeklyRecapCard />
+
+        <RecentWorkRail
+          runs={recentRuns}
+          heading={batchId ? "In this batch" : undefined}
+        />
+
+        <ManageToolsNav />
       </div>
-      <Link href={runHref} className="block">
-        <div className="text-xs font-medium truncate text-on-surface">
-          {run.market_query}
+    </div>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <div className="min-h-screen bg-surface p-8">
+      <div className="mx-auto max-w-6xl space-y-10">
+        <div className="space-y-3">
+          <div className="h-10 w-64 animate-pulse rounded-lg bg-surface-container-low" />
+          <div className="h-6 w-80 animate-pulse rounded-lg bg-surface-container-low" />
         </div>
-        <div className="text-xs text-on-surface-variant truncate">
-          {STATE_LABELS[run.status as PipelineStatus] ?? run.status}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-32 animate-pulse rounded-xl bg-surface-container-low"
+            />
+          ))}
         </div>
-      </Link>
+      </div>
+    </div>
+  );
+}
+
+function HomeError({ error }: { error: unknown }) {
+  const message = error instanceof Error ? error.message : "";
+  const looksLikeNetwork =
+    message === "Failed to fetch" || message.includes("Failed to fetch");
+  const isDev = process.env.NODE_ENV === "development";
+
+  return (
+    <div className="min-h-screen space-y-3 bg-surface p-8" role="alert">
+      <p className="text-sm font-medium text-error">
+        Couldn&apos;t load the studio{message ? `: ${message}` : "."}
+      </p>
+      {looksLikeNetwork && isDev && (
+        <p className="max-w-xl text-sm leading-relaxed text-on-surface-variant">
+          This page calls the Nest API at{" "}
+          <code className="rounded bg-surface-container-low px-1 py-0.5 font-mono text-xs">
+            {API_URL}
+          </code>
+          . Start the backend (for example{" "}
+          <code className="font-mono text-xs">npm run dev:backend</code>), or
+          set <code className="font-mono text-xs">NEXT_PUBLIC_API_URL</code> in{" "}
+          <code className="font-mono text-xs">
+            packages/frontend/.env.local
+          </code>
+          .
+        </p>
+      )}
+      {looksLikeNetwork && !isDev && (
+        <p className="max-w-xl text-sm leading-relaxed text-on-surface-variant">
+          Set <code className="font-mono text-xs">NEXT_PUBLIC_API_URL</code> on
+          the frontend deployment to your API origin, then redeploy.
+        </p>
+      )}
     </div>
   );
 }

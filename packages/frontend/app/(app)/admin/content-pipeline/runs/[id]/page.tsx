@@ -7,6 +7,7 @@ import { PipelineVisualization } from "./pipeline-visualization";
 import { EventLog } from "./event-log";
 import { ArtifactsPanel } from "./artifacts-panel";
 import { GateReviewCallout } from "./gate-review-callout";
+import { StatusChip } from "../../components/home/StatusChip";
 
 // Stop auto-refetch in these states — polling isn't useful because the run
 // either won't advance without operator input (ready_for_review) or has hit
@@ -88,7 +89,18 @@ export default function RunDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{data.run.market_query}</h1>
-          <p className="text-sm text-outline">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <StatusChip status={data.run.status} />
+            <details className="text-xs text-on-surface-variant">
+              <summary className="cursor-pointer select-none hover:text-on-surface">
+                Technical state
+              </summary>
+              <code className="mt-1 inline-block rounded bg-surface-container-high px-1.5 py-0.5 font-mono text-[11px] text-on-surface">
+                {data.run.status}
+              </code>
+            </details>
+          </div>
+          <p className="text-sm text-outline mt-1">
             {data.run.format} | {data.run.approval_mode}
           </p>
           {data.run.status_reason && (

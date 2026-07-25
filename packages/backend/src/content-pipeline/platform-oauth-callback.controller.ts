@@ -5,6 +5,12 @@ import { PlatformCredentialsService } from './platform-credentials.service';
 import { PlatformAppCredentialsService } from './platform-app-credentials.service';
 import { exchangeForPlatform } from './oauth/oauth-handlers';
 
+// Redirect-param contract: the `connected` / `error` / `label` query params this
+// controller appends when bouncing back to /admin/content-pipeline/platforms are
+// mirrored as constants in the frontend's platforms/redirect-params.ts, alongside
+// the Late aggregator flow's `late_connected` marker (social-connect-redirect.ts).
+// Renaming any of them requires updating that file — the two OAuth flows land on
+// the same page and must never emit colliding param names.
 const SUPPORTED_PLATFORMS = new Set([
   'youtube_shorts',
   'tiktok',

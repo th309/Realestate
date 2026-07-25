@@ -1,0 +1,103 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  ServiceUnavailableException,
+  UseGuards,
+} from '@nestjs/common';
+import { AdminGuard } from '../common/guards/admin-auth.guard';
+import { SocialConnectService } from './social-connect.service';
+import { LateNotConfiguredError } from './late-client.types';
+import { ConnectLinkDto } from './dto/connect-link.dto';
+import { ListConnectionsQueryDto } from './dto/list-connections.query.dto';
+import { SyncConnectionsDto } from './dto/sync-connections.dto';
+
+/**
+ * Admin endpoints for one-click social-account connection via the Late
+ * aggregator. Guarded exactly like the sibling content-pipeline admin
+ * controllers (AdminGuard). Every response uses the `{ success, data }`
+ * envelope the frontend expects — including the not-configured 503, which is
+ * `{ success: false, error: <setup> }`.
+ *
+ * Wired via SocialConnectModule (imported in app.module.ts) — these routes are
+ * live; the publish cron in the same module fires only when RUN_CRONS=true.
+ */
+@UseGuards(AdminGuard)
+@Controller('api/admin/social-connect')
+export class SocialConnectController {
+  constructor(private readonly service: SocialConnectService) {}
+
+  /** List stored connections, with live status overlaid when Late is configured. */
+  @Get('connections')
+  async list(@Query() query: ListConnectionsQueryDto) {
+    return {
+      success: true,
+      data: await this.service.listConnections(query.brandId),
+    };
+  }
+
+  /** Return the hosted Late OAuth URL the browser opens in a popup. */
+  @Post('connections/connect-link')
+  async connectLink(@Body() body: ConnectLinkDto) {
+    try {
+      const data = await this.service.createConnectLink({
+        platform: body.platform,
+        brandId: body.brandId,
+        redirectUrl: body.redirectUrl,
+      });
+      return { success: true, data };
+    } catch (err) {
+      throw this.mapNotConfigured(err);
+    }
+  }
+
+  /**
+   * Disconnect a connection the brand owns. `:id` is UUID-validated (bare param
+   * strings bypass the global ValidationPipe) and the operation is tenant-scoped
+   * by brandId (service-role client bypasses RLS).
+   */
+  @Delete('connections/:id')
+  async disconnect(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('brandId', new ParseUUIDPipe()) brandId: string,
+  ) {
+    return { success: true, data: await this.service.disconnect(id, brandId) };
+  }
+
+  /**
+   * Reconcile Late's connected accounts into `platform_connections`. brandId is
+   * optional — the service resolves (and seeds) the default PropertyIQ brand when
+   * omitted, so the zero-config "Sync accounts" click just works.
+   */
+  @Post('connections/sync')
+  async sync(@Body() body: SyncConnectionsDto) {
+    try {
+      return {
+        success: true,
+        data: await this.service.syncFromLate(body.brandId),
+      };
+    } catch (err) {
+      throw this.mapNotConfigured(err);
+    }
+  }
+
+  /**
+   * Turn a missing-key error into a structured 503 that keeps the `{ success }`
+   * envelope; rethrow anything else. Shared so the future publish route inherits
+   * the exact same shape.
+   */
+  private mapNotConfigured(err: unknown): unknown {
+    if (err instanceof LateNotConfiguredError) {
+      return new ServiceUnavailableException({
+        success: false,
+        error: this.service.setup(),
+      });
+    }
+    return err;
+  }
+}

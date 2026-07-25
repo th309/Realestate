@@ -56,3 +56,6 @@ export {
 
 // Market Explorer (scope series timelines)
 export * from "./market-explorer";
+
+// Social connect (one-click account connection via the Late aggregator)
+export * from "./social-connect";
