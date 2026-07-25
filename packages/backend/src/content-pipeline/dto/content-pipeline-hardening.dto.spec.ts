@@ -1,5 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { BadRequestException, ParseUUIDPipe } from '@nestjs/common';
 import { ResolveMarketQueryDto } from './resolve-market-query.dto';
 import { EditScriptDto } from './edit-script.dto';
 import { RejectRunDto, CancelRunDto } from './run-reason.dto';
@@ -127,6 +128,19 @@ describe('content-pipeline controller hardening DTOs', () => {
       expect(isContentFormat('recruitment_angle')).toBe(true);
       expect(isContentFormat('not_a_format')).toBe(false);
       expect(isContentFormat('')).toBe(false);
+    });
+  });
+
+  describe('ParseUUIDPipe on runs/:id routes', () => {
+    const pipe = new ParseUUIDPipe();
+    const meta = { type: 'param', data: 'id' } as never;
+    it('passes a valid uuid through and 400s on a malformed id', async () => {
+      await expect(
+        pipe.transform('11111111-1111-4111-8111-111111111111', meta),
+      ).resolves.toBe('11111111-1111-4111-8111-111111111111');
+      await expect(pipe.transform('not-a-uuid', meta)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 });
