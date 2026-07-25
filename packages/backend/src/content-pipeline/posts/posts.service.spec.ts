@@ -9,11 +9,33 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
   function builder(table: 'posts') {
     let op: 'select' | 'insert' | 'update' = 'select';
     const filters: Array<[string, unknown]> = [];
+    const ranges: Array<[string, 'gte' | 'lte', string]> = [];
+    let orderCol: string | null = null;
+    let orderAsc = false;
     let insertRow: Record<string, unknown> | null = null;
     let patch: Record<string, unknown> | null = null;
 
     const match = (rows: Record<string, unknown>[]) =>
       rows.filter((r) => filters.every(([c, v]) => r[c] === v));
+
+    const applyListFilters = () => {
+      let rows = match(store[table]).filter((r) =>
+        ranges.every(([c, dir, v]) => {
+          const rv = r[c];
+          if (rv == null) return false;
+          return dir === 'gte' ? String(rv) >= v : String(rv) <= v;
+        }),
+      );
+      if (orderCol) {
+        const col = orderCol;
+        rows = [...rows].sort((a, z) => {
+          const av = String(a[col] ?? '');
+          const zv = String(z[col] ?? '');
+          return orderAsc ? av.localeCompare(zv) : zv.localeCompare(av);
+        });
+      }
+      return rows;
+    };
 
     const resolveSingle = () => {
       if (op === 'insert') return { data: insertRow, error: null };
@@ -44,7 +66,17 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
         filters.push([c, v]);
         return b;
       },
-      order() {
+      gte(c: string, v: string) {
+        ranges.push([c, 'gte', v]);
+        return b;
+      },
+      lte(c: string, v: string) {
+        ranges.push([c, 'lte', v]);
+        return b;
+      },
+      order(col: string, opts?: { ascending?: boolean }) {
+        orderCol = col;
+        orderAsc = !!opts?.ascending;
         return b;
       },
       limit() {
@@ -57,7 +89,7 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
         return Promise.resolve(resolveSingle());
       },
       then(resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) {
-        return Promise.resolve({ data: match(store[table]), error: null }).then(
+        return Promise.resolve({ data: applyListFilters(), error: null }).then(
           resolve,
           reject,
         );
@@ -156,5 +188,45 @@ describe('PostsService.updateStatus enforces the transition map', () => {
     await expect(service.updateCopy('post-1', { body: 'new' })).rejects.toThrow(
       /published/,
     );
+  });
+});
+
+describe('PostsService.listPosts calendar range filter (planner contract)', () => {
+  function scheduledPost(id: string, scheduledAt: string) {
+    return {
+      ...seedPost('scheduled'),
+      id,
+      scheduled_at: scheduledAt,
+    };
+  }
+
+  it('filters by scheduled_at range and orders ascending', async () => {
+    const { supabase } = makePostsFake([
+      scheduledPost('p-jun', '2026-06-15T00:00:00Z'),
+      scheduledPost('p-jul-10', '2026-07-10T00:00:00Z'),
+      scheduledPost('p-jul-20', '2026-07-20T00:00:00Z'),
+      scheduledPost('p-aug', '2026-08-05T00:00:00Z'),
+    ]);
+    const service = new PostsService(supabase);
+
+    const rows = await service.listPosts({
+      status: 'scheduled',
+      scheduledFrom: '2026-07-01T00:00:00Z',
+      scheduledTo: '2026-07-31T23:59:59Z',
+      orderBy: 'scheduled_at',
+    });
+
+    expect(rows.map((r) => r.id)).toEqual(['p-jul-10', 'p-jul-20']);
+  });
+
+  it('defaults to created_at DESC when orderBy is omitted', async () => {
+    const { supabase } = makePostsFake([
+      { ...seedPost('draft'), id: 'old', created_at: '2026-07-01T00:00:00Z' },
+      { ...seedPost('draft'), id: 'new', created_at: '2026-07-20T00:00:00Z' },
+    ]);
+    const service = new PostsService(supabase);
+
+    const rows = await service.listPosts({});
+    expect(rows.map((r) => r.id)).toEqual(['new', 'old']);
   });
 });

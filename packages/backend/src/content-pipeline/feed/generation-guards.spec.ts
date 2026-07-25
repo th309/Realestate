@@ -1,4 +1,5 @@
 import {
+  assertNonBlankPostCopy,
   assertNonEmptyCompletion,
   EmptyCompletionError,
   parseJsonObject,
@@ -40,5 +41,53 @@ describe('generation guards', () => {
     expect(() => parseJsonObject('not json at all', 'ctx')).toThrow(
       /Failed to parse JSON/,
     );
+  });
+});
+
+describe('assertNonBlankPostCopy (valid-but-blank JSON guard)', () => {
+  it('rejects empty object and blank fields for text posts', () => {
+    expect(() => assertNonBlankPostCopy({}, 'linkedin_post', 'ctx')).toThrow(
+      EmptyCompletionError,
+    );
+    expect(() =>
+      assertNonBlankPostCopy(
+        { hook: '', body: '', cta: '', hashtags: [] },
+        'linkedin_post',
+        'ctx',
+      ),
+    ).toThrow(EmptyCompletionError);
+    expect(() =>
+      assertNonBlankPostCopy({ foo: 'bar' }, 'facebook_post', 'ctx'),
+    ).toThrow(EmptyCompletionError);
+  });
+
+  it('accepts a text post with non-blank hook and body', () => {
+    expect(() =>
+      assertNonBlankPostCopy(
+        { hook: 'Austin is heating up', body: 'The data shows momentum.' },
+        'video_script',
+        'ctx',
+      ),
+    ).not.toThrow();
+  });
+
+  it('requires a non-blank hook and at least one real slide for carousels', () => {
+    expect(() =>
+      assertNonBlankPostCopy(
+        { hook: 'Top markets', slides: [{ heading: '', body: '' }] },
+        'carousel_copy',
+        'ctx',
+      ),
+    ).toThrow(EmptyCompletionError);
+    expect(() =>
+      assertNonBlankPostCopy(
+        {
+          hook: 'Top markets',
+          slides: [{ heading: 'Austin', body: 'Score 82' }],
+        },
+        'carousel_copy',
+        'ctx',
+      ),
+    ).not.toThrow();
   });
 });

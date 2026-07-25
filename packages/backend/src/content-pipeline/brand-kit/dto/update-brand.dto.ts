@@ -1,48 +1,64 @@
 import {
+  ArrayMaxSize,
   IsArray,
-  IsObject,
+  IsIn,
   IsOptional,
   IsString,
+  IsUrl,
+  MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
-import type {
-  ApprovedCopy,
-  BrandProduct,
-  ToneSettings,
-} from '../brand-kit.types';
+import { Type } from 'class-transformer';
+import { PUBLISH_PLATFORMS } from '../../social-platforms';
+import {
+  ApprovedCopyDto,
+  BrandProductDto,
+  ToneSettingsDto,
+} from './brand-copy.dto';
 
 /**
  * Admin patch for a brand row. All fields optional (PATCH semantics). JSONB
- * fields are accepted as objects/arrays; the service persists them as-is.
+ * fields use nested validated DTOs (bounded strings) because they are
+ * interpolated verbatim into generation prompts.
  */
 export class UpdateBrandDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
+  @MaxLength(120)
   name?: string;
 
   @IsOptional()
-  @IsString()
-  websiteUrl?: string | null;
+  @IsUrl()
+  @MaxLength(500)
+  websiteUrl?: string;
 
   @IsOptional()
   @IsString()
-  voiceSummary?: string | null;
+  @MaxLength(2000)
+  voiceSummary?: string;
 
   @IsOptional()
-  @IsObject()
-  toneSettings?: ToneSettings;
+  @ValidateNested()
+  @Type(() => ToneSettingsDto)
+  toneSettings?: ToneSettingsDto;
 
   @IsOptional()
   @IsArray()
-  products?: BrandProduct[];
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(30)
+  @Type(() => BrandProductDto)
+  products?: BrandProductDto[];
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsIn(PUBLISH_PLATFORMS as unknown as string[], { each: true })
+  @ArrayMaxSize(12)
   targetPlatforms?: string[];
 
   @IsOptional()
-  @IsObject()
-  approvedCopy?: ApprovedCopy;
+  @ValidateNested()
+  @Type(() => ApprovedCopyDto)
+  approvedCopy?: ApprovedCopyDto;
 }

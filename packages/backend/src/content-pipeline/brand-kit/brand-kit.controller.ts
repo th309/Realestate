@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
 import { BrandKitService } from './brand-kit.service';
 import { UpdateBrandDto } from './dto/update-brand.dto';
@@ -30,12 +38,15 @@ export class BrandKitController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return { success: true, data: await this.brandKit.getBrandProfile(id) };
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateBrandDto) {
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateBrandDto,
+  ) {
     return {
       success: true,
       data: await this.brandKit.updateBrand(id, dto),

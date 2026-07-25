@@ -4,6 +4,8 @@
 // types, grounds each in real market data, generates copy via the DeepSeek
 // purposes, lints it through Gate B, and inserts a `posts` row (pending_review).
 
+import type { PublishPlatform } from '../social-platforms';
+
 /** Post types the feed rotates through. */
 export type FeedPostType =
   | 'linkedin_post'
@@ -18,8 +20,15 @@ export const FEED_POST_TYPES: FeedPostType[] = [
   'video_script',
 ];
 
-/** Which social platform a generated post_type targets. */
-export const FEED_POST_TYPE_PLATFORM: Record<FeedPostType, string> = {
+/**
+ * Which platform a generated post_type targets. Typed as PublishPlatform so a
+ * typo is a compile error. NOTE: `video_script` maps to 'youtube', which is NOT
+ * a Late `SocialPlatform` — youtube-typed posts route to the direct YouTube
+ * publisher (Phase 5), never the Late publish path (whose PublishViaConnectionDto
+ * validates @IsIn(SOCIAL_PLATFORMS) and would reject 'youtube'). Whoever wires
+ * Phase 5 must branch on platform === 'youtube' before dispatching to Late.
+ */
+export const FEED_POST_TYPE_PLATFORM: Record<FeedPostType, PublishPlatform> = {
   linkedin_post: 'linkedin',
   facebook_post: 'facebook',
   carousel_copy: 'linkedin',

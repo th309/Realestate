@@ -50,20 +50,32 @@ export class PostsService {
     return data as PostRow;
   }
 
-  /** List posts, optionally filtered by status and/or brand. Newest first. */
+  /**
+   * List posts, optionally filtered by status/brand and a scheduled_at range.
+   * Default order is created_at DESC (newest first); orderBy 'scheduled_at'
+   * sorts ascending (calendar order) — the frozen contract the planner calls.
+   */
   async listPosts(opts: {
     status?: PostStatus;
     brandId?: string;
     limit?: number;
+    scheduledFrom?: string;
+    scheduledTo?: string;
+    orderBy?: 'created_at' | 'scheduled_at';
   }): Promise<PostRow[]> {
     const client = this.supabase.getClient();
+    const orderColumn =
+      opts.orderBy === 'scheduled_at' ? 'scheduled_at' : 'created_at';
+    const ascending = orderColumn === 'scheduled_at';
     let q = client
       .from('posts')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order(orderColumn, { ascending })
       .limit(Math.min(Math.max(opts.limit ?? 100, 1), 500));
     if (opts.status) q = q.eq('status', opts.status);
     if (opts.brandId) q = q.eq('brand_id', opts.brandId);
+    if (opts.scheduledFrom) q = q.gte('scheduled_at', opts.scheduledFrom);
+    if (opts.scheduledTo) q = q.lte('scheduled_at', opts.scheduledTo);
     const { data, error } = await q;
     if (error) throw error;
     return (data ?? []) as PostRow[];
@@ -121,6 +133,7 @@ export class PostsService {
       .select('*')
       .single();
     if (error) throw error;
+    this.logger.log(`post ${id} status ${current.status} -> ${to}`);
     return data as PostRow;
   }
 

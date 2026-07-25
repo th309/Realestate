@@ -13,6 +13,12 @@ import { FeedMarketGrounding } from './feed.types';
 /**
  * Momentum label for a score (CLAUDE.md §9 table). Momentum only, never quality
  * words. Kept here so the feed never imports the frontend scoring util.
+ *
+ * DRIFT GUARD: this table MUST stay identical to getScoreLabel() in
+ * packages/frontend/app/components/scoring/ScoreDisplay.tsx. The backend cannot
+ * import from the frontend, so feed-helpers.spec.ts asserts the exact 8-band
+ * table verbatim. If you change a band or label here, change ScoreDisplay.tsx
+ * (and this spec) too, or stale momentum language leaks into generated posts.
  */
 export function scoreMomentumLabel(
   score: number | null | undefined,

@@ -18,7 +18,7 @@ function makeSupabaseFake(initialRows: Record<string, unknown>[] = []) {
   let idCounter = 1;
 
   function builder(table: 'brands') {
-    let op: 'select' | 'insert' | 'update' = 'select';
+    let op: 'select' | 'insert' | 'upsert' | 'update' = 'select';
     const filters: Array<[string, unknown]> = [];
     let insertRow: Record<string, unknown> | null = null;
     let patch: Record<string, unknown> | null = null;
@@ -39,6 +39,21 @@ function makeSupabaseFake(initialRows: Record<string, unknown>[] = []) {
           ...obj,
         };
         store[table].push(insertRow);
+        return b;
+      },
+      // Atomic seed: INSERT ON CONFLICT (name) DO NOTHING. Only inserts when no
+      // row with the same name exists (ignoreDuplicates).
+      upsert(obj: Record<string, unknown>) {
+        op = 'upsert';
+        if (!store[table].some((r) => r.name === obj.name)) {
+          insertRow = {
+            id: `brand-${idCounter++}`,
+            created_at: new Date(2026, 0, idCounter).toISOString(),
+            updated_at: new Date().toISOString(),
+            ...obj,
+          };
+          store[table].push(insertRow);
+        }
         return b;
       },
       update(p: Record<string, unknown>) {
@@ -73,6 +88,12 @@ function makeSupabaseFake(initialRows: Record<string, unknown>[] = []) {
       then(resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) {
         if (op === 'insert') {
           return Promise.resolve({ data: [insertRow], error: null }).then(
+            resolve,
+            reject,
+          );
+        }
+        if (op === 'upsert') {
+          return Promise.resolve({ data: null, error: null }).then(
             resolve,
             reject,
           );

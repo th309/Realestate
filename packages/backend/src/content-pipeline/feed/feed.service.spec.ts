@@ -177,4 +177,25 @@ describe('FeedService.topUp draft-topping logic', () => {
     expect(createPost).not.toHaveBeenCalled();
     expect(outcomes.every((o) => o.status === 'empty_completion')).toBe(true);
   });
+
+  it('rejects valid-but-blank JSON as empty_completion (blank-fields guard)', async () => {
+    const { service, createPost } = build({
+      pendingCount: 0,
+      completionContent: '{"hook":"","body":"","cta":"","hashtags":[]}',
+    });
+    const outcomes = await service.topUp();
+    expect(createPost).not.toHaveBeenCalled();
+    expect(outcomes.every((o) => o.status === 'empty_completion')).toBe(true);
+  });
+
+  it('still records spend when a generation fails (reasoning tokens bill regardless)', async () => {
+    const { service, recordSpend } = build({
+      pendingCount: 0,
+      completionContent: '   ',
+    });
+    await service.topUp();
+    // Spend is accumulated before the emptiness assertion, so a failed cycle
+    // still records what DeepSeek billed.
+    expect(recordSpend).toHaveBeenCalledTimes(1);
+  });
 });

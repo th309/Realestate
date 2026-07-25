@@ -49,7 +49,12 @@ export function isAllowedPostStatusTransition(
   return (ALLOWED_POST_STATUS_TRANSITIONS[from] ?? []).includes(to);
 }
 
-/** JSONB `copy` payload. Flexible per post_type; these keys are the common set. */
+/**
+ * JSONB `copy` payload. These typed keys are the schema the DTO validates and
+ * the generators/linter read; no index signature, so the validated PostCopyDto
+ * (which also drops it) is assignable here. Extra keys a model might emit are
+ * dropped by DTO validation before persistence.
+ */
 export interface PostCopy {
   hook?: string;
   body?: string;
@@ -57,7 +62,6 @@ export interface PostCopy {
   hashtags?: string[];
   /** Carousel slides / multi-part copy. */
   slides?: Array<{ heading?: string; body?: string }>;
-  [key: string]: unknown;
 }
 
 /** A media reference (image/video asset) attached to a post. */

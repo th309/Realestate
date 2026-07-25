@@ -25,6 +25,44 @@ export function assertNonEmptyCompletion(
   }
 }
 
+function isNonBlank(v: unknown): v is string {
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
+/**
+ * Assert a parsed post copy has real content, not a syntactically-valid-but-blank
+ * shape ({}, {"foo":"bar"}, or all-empty strings) — which would otherwise pass
+ * JSON parsing, produce zero deterministic-lint violations, and reach
+ * pending_review as an empty post. Throws EmptyCompletionError (same treatment as
+ * a silent-empty completion) so the cycle records it and moves on.
+ *
+ * carousel_copy requires a non-blank hook and at least one non-blank slide;
+ * every other post type requires a non-blank hook AND body.
+ */
+export function assertNonBlankPostCopy(
+  copy: {
+    hook?: unknown;
+    body?: unknown;
+    slides?: Array<{ heading?: unknown; body?: unknown }> | unknown;
+  },
+  postType: string,
+  context: string,
+): void {
+  if (postType === 'carousel_copy') {
+    const slides = Array.isArray(copy.slides) ? copy.slides : [];
+    const hasSlide = slides.some(
+      (s) => s && (isNonBlank(s.heading) || isNonBlank(s.body)),
+    );
+    if (!isNonBlank(copy.hook) || !hasSlide) {
+      throw new EmptyCompletionError(`blank carousel (${context})`);
+    }
+    return;
+  }
+  if (!isNonBlank(copy.hook) || !isNonBlank(copy.body)) {
+    throw new EmptyCompletionError(`blank hook/body (${context})`);
+  }
+}
+
 /**
  * Parse a JSON object from a model completion, tolerating ```json fences and
  * surrounding prose. Throws if no parseable object is present.

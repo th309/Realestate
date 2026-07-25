@@ -15,10 +15,17 @@ export interface ScoreLanguageRules {
 
 /** Hard content bans enforced by Gate B and encoded in every prompt preamble. */
 export interface BrandBans {
+  /** Hype phrases to avoid (editable — admins may extend the list). */
   hypePhrases: string[];
+  /**
+   * FIXED, always-on. The preamble emits the em-dash and no-competitor rules
+   * unconditionally and these coerce to true on read, so they are NOT exposed
+   * as editable in UpdateBrandDto (toggling them would be a silent no-op). Per
+   * the brand guide these rules are not optional.
+   */
   noEmOrEnDashes: boolean;
   neverNameCompetitors: boolean;
-  /** Named for prompt context so the model knows who NOT to mention. */
+  /** Named for prompt context so the model knows who NOT to mention (editable). */
   competitors: string[];
 }
 

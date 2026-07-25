@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -30,6 +31,9 @@ export class PostsController {
         status: q.status,
         brandId: q.brandId,
         limit: q.limit,
+        scheduledFrom: q.scheduledFrom,
+        scheduledTo: q.scheduledTo,
+        orderBy: q.orderBy,
       }),
       this.posts.countByStatus(q.brandId),
     ]);
@@ -37,13 +41,13 @@ export class PostsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return { success: true, data: await this.posts.getById(id) };
   }
 
   /** Approve a pending post (pending_review -> approved). */
   @Post(':id/approve')
-  async approve(@Param('id') id: string) {
+  async approve(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.posts.updateStatus(id, 'approved'),
@@ -52,7 +56,7 @@ export class PostsController {
 
   /** Skip a post (any non-terminal state -> skipped). */
   @Post(':id/skip')
-  async skip(@Param('id') id: string) {
+  async skip(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.posts.updateStatus(id, 'skipped'),
@@ -62,7 +66,7 @@ export class PostsController {
   /** Generic lifecycle transition (validated against the transition map). */
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdatePostStatusDto,
   ) {
     return {
@@ -75,7 +79,10 @@ export class PostsController {
   }
 
   @Patch(':id/copy')
-  async updateCopy(@Param('id') id: string, @Body() dto: UpdatePostCopyDto) {
+  async updateCopy(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdatePostCopyDto,
+  ) {
     return {
       success: true,
       data: await this.posts.updateCopy(id, dto.copy),
