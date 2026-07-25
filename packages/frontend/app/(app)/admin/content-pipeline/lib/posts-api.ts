@@ -11,6 +11,7 @@ export type PostStatus =
   | "pending_review"
   | "approved"
   | "scheduled"
+  | "publishing"
   | "published"
   | "failed"
   | "skipped";
