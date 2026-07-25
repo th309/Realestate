@@ -66,7 +66,7 @@ export default function VideoScriptsPage() {
             </Link>
             <h1 className="mt-2 text-2xl font-semibold">Video scripts</h1>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Fresh video ideas grounded in live market data — read one, or hand
+              Fresh video ideas grounded in live market data. Read one, or hand
               it to the video maker.
             </p>
           </div>
