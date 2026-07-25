@@ -86,7 +86,7 @@ export interface PostRow {
   platform_post_id: string | null;
   source: string;
   error: string | null;
-  /** Publish attempt counter (Phase 5 bounded retry). Added in migration 20260725000300. */
+  /** Publish attempt counter (Phase 5 bounded retry). Added in migration 20260725183849. */
   attempts: number;
   created_at: string;
   updated_at: string;
