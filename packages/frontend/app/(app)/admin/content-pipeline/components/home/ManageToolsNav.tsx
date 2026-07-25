@@ -13,6 +13,7 @@ interface ToolLink {
 const TOOLS: ToolLink[] = [
   { label: "Review queue", href: "/admin/content-pipeline/review" },
   { label: "Planner", href: "/admin/content-pipeline/planner" },
+  { label: "Insights", href: "/admin/content-pipeline/insights" },
   { label: "Platforms", href: "/admin/content-pipeline/platforms" },
   { label: "Performance", href: "/admin/content-pipeline/performance" },
   { label: "Auto-ideation", href: "/admin/content-pipeline/auto-ideation" },

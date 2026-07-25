@@ -18,6 +18,7 @@ import { RecentWorkRail } from "./components/home/RecentWorkRail";
 import { ManageToolsNav } from "./components/home/ManageToolsNav";
 import { CostCapBanner } from "./components/home/CostCapBanner";
 import { BatchCreatedBanner } from "./components/home/BatchCreatedBanner";
+import { WeeklyRecapCard } from "./components/home/WeeklyRecapCard";
 import { pipelineStateToStatusChip } from "./components/home/StatusChip";
 
 export default function ContentPipelineHomePage() {
@@ -113,6 +114,8 @@ function HomeContent() {
             <TaskGroup key={group.id} group={group} />
           ))}
         </div>
+
+        <WeeklyRecapCard />
 
         <RecentWorkRail
           runs={recentRuns}
