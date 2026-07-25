@@ -187,4 +187,36 @@ describe('LateClientService', () => {
       }),
     ).rejects.toMatchObject({ name: 'LateApiError', status: 409 });
   });
+
+  it('getOrCreateProfile falls back to the default profile without creating a phantom', async () => {
+    process.env.LATE_API_KEY = 'k';
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        profiles: [{ _id: 'def', name: 'Default', isDefault: true }],
+      }),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const profile = await service.getOrCreateProfile('PropertyIQ');
+
+    expect(profile._id).toBe('def');
+    // Only the list call — no POST /profiles to create a phantom "PropertyIQ".
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/profiles');
+  });
+
+  it('getOrCreateProfile uses any existing profile when none is marked default', async () => {
+    process.env.LATE_API_KEY = 'k';
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ profiles: [{ _id: 'only', name: 'X' }] }),
+      );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const profile = await service.getOrCreateProfile('PropertyIQ');
+
+    expect(profile._id).toBe('only');
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no create
+  });
 });

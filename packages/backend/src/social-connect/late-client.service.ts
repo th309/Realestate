@@ -129,16 +129,17 @@ export class LateClientService {
    * maps 1:1 to a PropertyIQ brand.
    */
   async getOrCreateProfile(name: string): Promise<LateProfile> {
-    const byName = await this.listProfiles(name);
-    const exact = byName.find((p) => p.name === name);
-    if (exact) return exact;
-
     const all = await this.listProfiles();
-    const fallback =
-      all.find((p) => p.name === name) ?? all.find((p) => p.isDefault);
-    if (fallback) return fallback;
-
-    return this.createProfile(name);
+    // Prefer an exact name match, then the account's default profile, then ANY
+    // existing profile (single-tenant: one Zernio login is ours). Only create
+    // when the account has NO profiles — never a phantom second "PropertyIQ"
+    // alongside the auto-created Default, which would split where connects land
+    // (the hosted flow attaches to Default) from where we look.
+    const resolved =
+      all.find((p) => p.name === name) ??
+      all.find((p) => p.isDefault) ??
+      all[0];
+    return resolved ?? this.createProfile(name);
   }
 
   // ── Connect (hosted OAuth) ────────────────────────────────────────────────
