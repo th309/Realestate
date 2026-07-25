@@ -1,6 +1,10 @@
 import Image from "next/image";
 import type { SocialConnection } from "@/lib/data";
 import type { SocialPlatformMeta } from "./social-platform-meta";
+import {
+  StatusChip,
+  connectionStatusToStatusChip,
+} from "../components/home/StatusChip";
 
 /**
  * One platform tile on the connected-accounts wall. Presentational only — all
@@ -39,10 +43,8 @@ export function SocialAccountCard({
           </span>
           <div className="font-semibold text-on-surface">{label}</div>
         </div>
-        {(isConnected || needsReauth) && (
-          <ConnectionStatusChip
-            status={needsReauth ? "needs_reauth" : "connected"}
-          />
+        {connection && (isConnected || needsReauth) && (
+          <StatusChip {...connectionStatusToStatusChip(connection.status)} />
         )}
       </div>
 
@@ -104,31 +106,6 @@ export function SocialAccountCard({
         )}
       </div>
     </div>
-  );
-}
-
-function ConnectionStatusChip({
-  status,
-}: {
-  status: "connected" | "needs_reauth";
-}) {
-  const connected = status === "connected";
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-        connected
-          ? "bg-tertiary-container text-on-tertiary-container"
-          : "bg-error-container text-on-error-container"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          connected ? "bg-tertiary" : "bg-error"
-        }`}
-        aria-hidden
-      />
-      {connected ? "Connected" : "Reconnect needed"}
-    </span>
   );
 }
 
