@@ -29,7 +29,7 @@ export class PublishViaConnectionDto {
 
   @IsOptional()
   @IsArray()
-  @IsUrl({}, { each: true })
+  @IsUrl({ require_protocol: true, protocols: ['https'] }, { each: true })
   mediaUrls?: string[];
 
   @IsOptional()
