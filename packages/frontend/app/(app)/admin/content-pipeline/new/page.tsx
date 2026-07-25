@@ -1,6 +1,7 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { resolvePrefill } from "./helpers/prefill";
 import { FormatStep } from "./format-step";
 import { MarketStep } from "./market-step";
 import { ConfirmStep } from "./confirm-step";
@@ -34,13 +35,38 @@ type RankingArgs = {
 
 const RANKING_FORMATS = new Set(["top_10_ranking", "bottom_10_ranking"]);
 
+/**
+ * Reads the "Make this video" prefill (`?format=&market=`) and seeds the flow.
+ * useSearchParams requires a Suspense boundary in the App Router.
+ */
 export default function NewRunPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewRunEntry />
+    </Suspense>
+  );
+}
+
+function NewRunEntry() {
+  const searchParams = useSearchParams();
+  const prefill = resolvePrefill({
+    format: searchParams.get("format"),
+    market: searchParams.get("market"),
+  });
+  return <NewRunFlow prefill={prefill} />;
+}
+
+function NewRunFlow({
+  prefill,
+}: {
+  prefill: ReturnType<typeof resolvePrefill>;
+}) {
   const [step, setStep] = useState<
     "format" | "market" | "confirm" | "ranking-params" | "ranking-preview"
-  >("format");
-  const [format, setFormat] = useState<string>("");
+  >(prefill.step);
+  const [format, setFormat] = useState<string>(prefill.format);
   const [mode, setMode] = useState<WizardMode>("single");
-  const [market, setMarket] = useState<string>("");
+  const [market, setMarket] = useState<string>(prefill.market);
   const [batchMarkets, setBatchMarkets] = useState<BatchMarket[]>([]);
   const [formatOptions, setFormatOptions] = useState<WizardFormatOptions>({});
   const [topMoversGeo, setTopMoversGeo] = useState<ScoreMoverGeo>("metro");

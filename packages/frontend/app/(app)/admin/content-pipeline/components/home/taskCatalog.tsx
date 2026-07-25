@@ -103,7 +103,7 @@ export const TASK_GROUPS: TaskGroupDefinition[] = [
         key: "video-scripts",
         title: "Video scripts",
         subtitle: "Draft a script before you render.",
-        comingSoon: true,
+        href: "/admin/content-pipeline/video-scripts",
         icon: ScriptIcon,
       },
       {

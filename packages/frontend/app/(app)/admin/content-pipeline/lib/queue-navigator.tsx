@@ -35,10 +35,13 @@ export interface QueueItem {
   /**
    * Image posts in the review feed carry their own signed media (planner-post
    * shape). When present, `mediaUrls[0]` is the preview; `post_type` drives the
-   * carousel count chip. Video runs leave these unset and use `thumbnail_url`.
+   * carousel count chip and the video_script "video idea" treatment. `platform`
+   * overlays a glyph on the mockup. Video runs leave these unset and use
+   * `thumbnail_url`.
    */
   mediaUrls?: string[];
   post_type?: string;
+  platform?: string;
 }
 
 export interface QueueNavigatorApi {

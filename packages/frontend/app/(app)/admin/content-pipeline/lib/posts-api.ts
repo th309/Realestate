@@ -23,6 +23,18 @@ export interface PostCopy {
   hashtags?: string[];
   /** Carousel slides / multi-part copy. */
   slides?: Array<{ heading?: string; body?: string }>;
+  /**
+   * Structured video_script fields (backend adds these to video_script copy).
+   * Older rows only have hook/body/cta — the Video Scripts page falls back
+   * (title ← hook, no scene-direction block). See `video-script-copy.ts`.
+   */
+  title?: string;
+  close?: string;
+  sceneDirection?: string;
+  durationSeconds?: number;
+  /** Prefill for the "Make this video" handoff into the run wizard. */
+  suggestedFormat?: string;
+  suggestedMarketQuery?: string;
   [key: string]: unknown;
 }
 
@@ -30,6 +42,12 @@ export interface PostMediaRef {
   kind: string;
   url?: string;
   storage_path?: string;
+  bucket?: string;
+  /** Intrinsic pixel size — used to reserve aspect-ratio boxes (no layout shift). */
+  width?: number;
+  height?: number;
+  /** Carousel sequence index. */
+  order?: number;
   [key: string]: unknown;
 }
 
@@ -97,8 +115,16 @@ export async function fetchPosts(
   return res.data;
 }
 
-/** The three post kinds the guided create-post flow can generate. */
-export type GeneratePostType = "image_post" | "carousel" | "from_topic";
+/**
+ * Post kinds the generate endpoint can produce. The guided create-post flow
+ * uses the first three; `video_script` is generated only by the Video Scripts
+ * page's "Suggest one now" (no platform pick — the server routes it to YouTube).
+ */
+export type GeneratePostType =
+  | "image_post"
+  | "carousel"
+  | "from_topic"
+  | "video_script";
 
 /** Platforms the create-post flow targets (one per generated post). */
 export type GeneratePostPlatform =
@@ -110,7 +136,8 @@ export type GeneratePostPlatform =
 
 export interface GeneratePostInput {
   type: GeneratePostType;
-  platform: GeneratePostPlatform;
+  /** Chosen in the create-post flow; omitted for `video_script` suggestions. */
+  platform?: GeneratePostPlatform;
   /** Free-text idea — only for `from_topic` (server caps length). */
   topic?: string;
   /** Market to ground the post in — for `image_post` / `carousel`. */
@@ -142,6 +169,30 @@ export async function generatePost(
   };
   if (json.success === false) {
     throw new Error(json.error ?? "generatePost failed");
+  }
+  return json.data;
+}
+
+/**
+ * Skip a post (any non-terminal state -> skipped) via the dedicated endpoint.
+ * Used by the Video Scripts page to dismiss a suggestion.
+ */
+export async function skipPost(id: string): Promise<PlannerPost> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/posts/${id}/skip`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`skipPost failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    data: PlannerPost;
+    error?: string;
+  };
+  if (json.success === false) {
+    throw new Error(json.error ?? "skipPost failed");
   }
   return json.data;
 }

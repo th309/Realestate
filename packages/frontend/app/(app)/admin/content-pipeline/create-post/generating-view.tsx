@@ -1,6 +1,6 @@
 import type { GeneratePostType } from "../lib/posts-api";
 
-const NOUN: Record<GeneratePostType, string> = {
+const NOUN: Partial<Record<GeneratePostType, string>> = {
   image_post: "image post",
   carousel: "carousel",
   from_topic: "post",
@@ -24,7 +24,7 @@ export function GeneratingView({ type }: { type: GeneratePostType }) {
       />
       <div>
         <p className="text-base font-semibold text-on-surface">
-          Writing and rendering your {NOUN[type]}
+          Writing and rendering your {NOUN[type] ?? "post"}
         </p>
         <p className="mt-1 text-sm text-on-surface-variant">
           Drafting the copy and rendering the image — about 15 seconds.

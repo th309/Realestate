@@ -22,7 +22,8 @@ import { GeneratedPreview } from "./generated-preview";
 
 type Phase = "type" | "grounding" | "platform" | "generating" | "done";
 
-const TITLES: Record<GeneratePostType, string> = {
+// The flow only ever handles these three; video_script is generated elsewhere.
+const TITLES: Partial<Record<GeneratePostType, string>> = {
   image_post: "Create an image post",
   carousel: "Create a carousel",
   from_topic: "Turn a topic into a post",
@@ -99,7 +100,9 @@ export function CreatePostFlow({
         </div>
 
         <h1 className="text-2xl font-semibold">
-          {phase === "type" ? "Create a post" : TITLES[type]}
+          {phase === "type"
+            ? "Create a post"
+            : (TITLES[type] ?? "Create a post")}
         </h1>
 
         {phase === "type" && (
@@ -137,7 +140,11 @@ export function CreatePostFlow({
         {phase === "generating" && <GeneratingView type={type} />}
 
         {phase === "done" && created && (
-          <GeneratedPreview post={created} onReset={reset} />
+          <GeneratedPreview
+            post={created}
+            onReset={reset}
+            onRegenerate={runGenerate}
+          />
         )}
       </div>
     </div>
