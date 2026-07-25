@@ -7,6 +7,11 @@ import { fetchPlatforms } from "../lib/content-pipeline-api";
 import { useToast } from "../lib/toast";
 import { PlatformRow } from "./platform-row";
 import { SocialConnectWall } from "./social-connect-wall";
+import {
+  CONNECTED_PARAM,
+  CONNECT_ERROR_PARAM,
+  CONNECT_LABEL_PARAM,
+} from "./redirect-params";
 
 /**
  * YouTube keeps its own direct OAuth integration (developer-app credentials +
@@ -61,9 +66,9 @@ function PlatformsPageInner() {
     // shared toast, then strip the params. Errors use the shared error variant,
     // which is manual-dismiss (ttl:0) so the operator can read exchange_failed
     // reasons — the old bespoke pill auto-dismissed at 5s.
-    const connected = searchParams.get("connected");
-    const label = searchParams.get("label");
-    const errorCode = searchParams.get("error");
+    const connected = searchParams.get(CONNECTED_PARAM);
+    const label = searchParams.get(CONNECT_LABEL_PARAM);
+    const errorCode = searchParams.get(CONNECT_ERROR_PARAM);
     const key = connected
       ? `c:${connected}`
       : errorCode

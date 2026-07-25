@@ -16,6 +16,7 @@ import { useToast } from "../lib/toast";
 import { SOCIAL_PLATFORM_META } from "./social-platform-meta";
 import { SocialAccountCard } from "./social-account-card";
 import { LateNotConfiguredBanner } from "./late-not-configured-banner";
+import { LATE_CONNECTED_PARAM, YOUTUBE_BRIDGE_PARAMS } from "./redirect-params";
 
 /** Per-platform in-flight action so only the clicked card shows a spinner. */
 type WorkingMap = Partial<
@@ -37,6 +38,9 @@ export function SocialConnectWall() {
   const pollRef = useRef<
     Map<SocialConnectPlatform, ReturnType<typeof setInterval>>
   >(new Map());
+  // One-shot guard so the late_connected reconcile fires once per return, even
+  // if the effect re-runs (Strict Mode double-invoke, or before replace lands).
+  const handledLateConnect = useRef(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["social-connections"],
@@ -162,10 +166,12 @@ export function SocialConnectWall() {
     }
   }, [refetch, toast]);
 
-  // Reconcile on return from a popup-blocked full-page redirect, then strip
-  // the marker so a reload doesn't re-sync.
+  // Reconcile on return from a popup-blocked full-page redirect, then strip the
+  // marker so a reload doesn't re-sync. Once-guarded against effect re-runs.
   useEffect(() => {
-    if (!searchParams.get("late_connected")) return;
+    if (!searchParams.get(LATE_CONNECTED_PARAM)) return;
+    if (handledLateConnect.current) return;
+    handledLateConnect.current = true;
     void (async () => {
       try {
         await syncSocialConnections();
@@ -174,7 +180,14 @@ export function SocialConnectWall() {
       }
       await refetch();
     })();
-    router.replace("/admin/content-pipeline/platforms");
+    // Coordinator-wins: if the YouTube bridge params are also present, let
+    // page.tsx's callback effect own the URL cleanup; otherwise strip our marker.
+    const pageBridgeActive = YOUTUBE_BRIDGE_PARAMS.some((p) =>
+      searchParams.get(p),
+    );
+    if (!pageBridgeActive) {
+      router.replace("/admin/content-pipeline/platforms");
+    }
   }, [searchParams, router, refetch]);
 
   // Stop any open poll intervals when the wall unmounts.

@@ -20,6 +20,11 @@ export function resolveAppBaseUrl(): string {
  * Default post-consent redirect. The `late_connected` marker lets the platforms
  * page reconcile even when the popup was blocked and a full-page redirect was
  * used instead — see the wall's on-mount sync.
+ *
+ * The `late_connected` param name is coordinated with the frontend's single
+ * source of truth: platforms/redirect-params.ts (LATE_CONNECTED_PARAM). It must
+ * not collide with the YouTube direct-OAuth callback's `connected`/`error`
+ * params, which land on the same page.
  */
 export function defaultRedirectUrl(): string {
   return `${resolveAppBaseUrl()}/admin/content-pipeline/platforms?late_connected=1`;
