@@ -1,7 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { PostPublisherService } from './post-publisher.service';
 import { LateApiError } from './late-client.types';
-import { YOUTUBE_FAILURE_MESSAGE } from './post-publisher.helpers';
+import {
+  TIKTOK_IMAGE_UNSUPPORTED_MESSAGE,
+  YOUTUBE_FAILURE_MESSAGE,
+} from './post-publisher.helpers';
 import type { PostRow } from '../content-pipeline/posts/post.types';
 import type { SupabaseService } from '../supabase/supabase.service';
 import type { SocialConnectService } from './social-connect.service';
@@ -37,10 +40,25 @@ function makePost(over: Partial<PostRow> = {}): PostRow {
  * guarded by .eq('status', from) only mutates a row whose status still matches,
  * so `claimReturnsNull` simulates losing the race to a concurrent tick.
  */
+type SignImpl = (
+  path: string,
+  ttl: number,
+) => Promise<{
+  data: { signedUrl: string } | null;
+  error: { message: string } | null;
+}>;
+
+const defaultSign: SignImpl = async (path, ttl) => ({
+  data: { signedUrl: `https://signed.test/${path}?ttl=${ttl}` },
+  error: null,
+});
+
 function makeFakeSupabase(
   rows: PostRow[],
-  opts: { claimReturnsNull?: boolean } = {},
+  opts: { claimReturnsNull?: boolean; sign?: SignImpl } = {},
 ) {
+  const createSignedUrl = jest.fn(opts.sign ?? defaultSign);
+  const storage = { from: (_bucket: string) => ({ createSignedUrl }) };
   function builder() {
     const eqs: Record<string, unknown> = {};
     const ranges: Array<{
@@ -112,7 +130,7 @@ function makeFakeSupabase(
     return b;
   }
   return {
-    getClient: () => ({ from: () => builder() }),
+    getClient: () => ({ from: () => builder(), storage }),
   } as unknown as SupabaseService;
 }
 
@@ -137,6 +155,7 @@ function makeService(
     configured?: boolean;
     publish?: jest.Mock;
     claimReturnsNull?: boolean;
+    sign?: SignImpl;
   } = {},
 ) {
   const late = {
@@ -152,7 +171,10 @@ function makeService(
   } as unknown as SocialConnectService;
   const posts = makePostsMock(rows);
   const service = new PostPublisherService(
-    makeFakeSupabase(rows, { claimReturnsNull: overrides.claimReturnsNull }),
+    makeFakeSupabase(rows, {
+      claimReturnsNull: overrides.claimReturnsNull,
+      sign: overrides.sign,
+    }),
     socialConnect,
     late,
     posts,
@@ -281,6 +303,122 @@ describe('PostPublisherService', () => {
       expect.objectContaining({
         error: expect.stringContaining('No connected'),
       }),
+    );
+  });
+
+  it('signs storage-backed image refs and passes them to Late in `order` sequence', async () => {
+    const rows = [
+      makePost({
+        media_refs: [
+          {
+            kind: 'image',
+            bucket: 'content-pipeline',
+            path: 'posts/p1/2.png',
+            order: 2,
+          },
+          {
+            kind: 'image',
+            bucket: 'content-pipeline',
+            path: 'posts/p1/1.png',
+            order: 1,
+          },
+        ],
+      }),
+    ];
+    const { service, publish } = makeService(rows);
+
+    const res = await service.runOnce();
+
+    expect(res.published).toBe(1);
+    expect(publish).toHaveBeenCalledWith(
+      'b1',
+      'instagram',
+      expect.objectContaining({
+        mediaUrls: [
+          'https://signed.test/posts/p1/1.png?ttl=3600',
+          'https://signed.test/posts/p1/2.png?ttl=3600',
+        ],
+      }),
+      { idempotencyKey: 'p1' },
+    );
+  });
+
+  it('publishes text-only (empty mediaUrls) when a post has no images — no regression', async () => {
+    const rows = [makePost({ media_refs: [] })];
+    const { service, publish } = makeService(rows);
+
+    const res = await service.runOnce();
+
+    expect(res.published).toBe(1);
+    expect(publish).toHaveBeenCalledWith(
+      'b1',
+      'instagram',
+      expect.objectContaining({ mediaUrls: [] }),
+      { idempotencyKey: 'p1' },
+    );
+  });
+
+  it('fails a post visibly when its image cannot be signed (never a silent text-only downgrade)', async () => {
+    // attempts=2 → claim bumps to 3 (MAX) → the signing throw exhausts retries.
+    const rows = [
+      makePost({
+        attempts: 2,
+        media_refs: [
+          { kind: 'image', bucket: 'content-pipeline', path: 'posts/p1/1.png' },
+        ],
+      }),
+    ];
+    const sign: SignImpl = async () => ({
+      data: null,
+      error: { message: 'object not found' },
+    });
+    const { service, publish, posts } = makeService(rows, { sign });
+
+    const res = await service.runOnce();
+
+    expect(res.failed).toBe(1);
+    expect(publish).not.toHaveBeenCalled(); // never reached Late — image failed first
+    expect(posts.updateStatus).toHaveBeenCalledWith(
+      'p1',
+      'failed',
+      expect.objectContaining({
+        error: expect.stringContaining('failed to sign post image'),
+      }),
+    );
+  });
+
+  it('fails a TikTok post that carries images (consent flags are not fabricated)', async () => {
+    const rows = [
+      makePost({
+        platform: 'tiktok',
+        media_refs: [
+          { kind: 'image', bucket: 'content-pipeline', path: 'posts/p1/1.png' },
+        ],
+      }),
+    ];
+    const { service, publish, posts } = makeService(rows);
+
+    const res = await service.runOnce();
+
+    expect(res.failed).toBe(1);
+    expect(publish).not.toHaveBeenCalled();
+    expect(posts.updateStatus).toHaveBeenCalledWith('p1', 'failed', {
+      error: TIKTOK_IMAGE_UNSUPPORTED_MESSAGE,
+    });
+  });
+
+  it('still publishes a text-only TikTok post (guard only blocks images)', async () => {
+    const rows = [makePost({ platform: 'tiktok', media_refs: [] })];
+    const { service, publish } = makeService(rows);
+
+    const res = await service.runOnce();
+
+    expect(res.published).toBe(1);
+    expect(publish).toHaveBeenCalledWith(
+      'b1',
+      'tiktok',
+      expect.objectContaining({ mediaUrls: [] }),
+      { idempotencyKey: 'p1' },
     );
   });
 });

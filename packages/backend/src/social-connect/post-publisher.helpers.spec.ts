@@ -1,9 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import { LateApiError } from './late-client.types';
 import {
-  extractHttpsMediaUrls,
   isPermanentPublishError,
   renderPostCopy,
+  TIKTOK_IMAGE_UNSUPPORTED_MESSAGE,
   YOUTUBE_FAILURE_MESSAGE,
 } from './post-publisher.helpers';
 
@@ -24,22 +24,6 @@ describe('post-publisher helpers', () => {
     it('handles copy with only some fields', () => {
       expect(renderPostCopy({ body: 'Just body' })).toBe('Just body');
       expect(renderPostCopy({})).toBe('');
-    });
-  });
-
-  describe('extractHttpsMediaUrls', () => {
-    it('keeps https urls and drops http, storage-only, and null', () => {
-      const urls = extractHttpsMediaUrls([
-        { kind: 'image', url: 'https://cdn/a.png' },
-        { kind: 'image', url: 'http://cdn/b.png' },
-        { kind: 'image', storage_path: 'brand/c.png' },
-        { kind: 'video' },
-      ]);
-      expect(urls).toEqual(['https://cdn/a.png']);
-    });
-
-    it('handles null refs', () => {
-      expect(extractHttpsMediaUrls(null)).toEqual([]);
     });
   });
 
@@ -65,5 +49,10 @@ describe('post-publisher helpers', () => {
 
   it('exposes the honest YouTube failure message', () => {
     expect(YOUTUBE_FAILURE_MESSAGE).toMatch(/video pipeline/);
+  });
+
+  it('exposes the honest TikTok image failure message', () => {
+    expect(TIKTOK_IMAGE_UNSUPPORTED_MESSAGE).toMatch(/TikTok/);
+    expect(TIKTOK_IMAGE_UNSUPPORTED_MESSAGE).toMatch(/manually|consent/i);
   });
 });
