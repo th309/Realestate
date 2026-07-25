@@ -19,8 +19,8 @@ Full plan: `C:\Users\troyh\.claude\plans\i-want-you-to-drifting-hollerith.md` (s
 
 ## Definition of done
 
-- [ ] Phase 0: Stale coverage copy fixed in explainer-videos doc; GOAL.md exists (this file)
-- [ ] Phase 1: Task-first Munch-style home replaces run-centric dashboard; plain-language status chips everywhere; every existing capability still reachable
+- [x] Phase 0: Stale coverage copy fixed in explainer-videos doc; GOAL.md exists (this file) — commit a99d019f; repo-wide grep clean
+- [x] Phase 1: Task-first Munch-style home replaces run-centric dashboard; plain-language status chips everywhere; every existing capability still reachable — browser-verified 2026-07-25 (greeting/Create/Repurpose cards render, all 10 Manage tools reachable incl. new Planner+Insights, zero raw state names on primary surfaces)
 - [ ] Phase 2: `brands`/`posts` model + brand-kit module live; rolling DeepSeek-generated draft feed with inline approve/edit/skip; generated copy provably uses approved coverage stats
 - [ ] Phase 3: One real social account connected through the Late/Zernio hosted popup, token stored, status visible on a redesigned platforms wall
 - [ ] Phase 4: Approved posts appear on a timezone-aware calendar with drag-drop rescheduling
