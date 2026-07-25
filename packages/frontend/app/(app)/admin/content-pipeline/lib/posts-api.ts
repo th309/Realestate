@@ -61,8 +61,8 @@ export interface FetchPostsOptions {
   status?: PostStatus;
   brandId?: string;
   limit?: number;
-  /** Calendar window (frozen contract). ISO8601. Harmlessly ignored until the
-   *  backend range filter lands, at which point it narrows the query. */
+  /** Calendar window — the server-side scheduled_at range filter (frozen
+   *  contract). ISO8601. */
   scheduledFrom?: string;
   scheduledTo?: string;
   orderBy?: "created_at" | "scheduled_at";
@@ -70,9 +70,9 @@ export interface FetchPostsOptions {
 
 /**
  * List posts, optionally filtered by a single status and/or a scheduled_at
- * window. Window params are sent whenever present; the backend whitelist
- * ignores unknown params until its range filter ships, so callers keep their
- * own client-side windowing as belt-and-suspenders.
+ * window. The server owns the date-range filter (scheduledFrom / scheduledTo /
+ * orderBy) and returns only in-window rows; the planner's client-side day
+ * bucketing is display grouping over that result, not a data filter.
  */
 export async function fetchPosts(
   opts: FetchPostsOptions = {},
