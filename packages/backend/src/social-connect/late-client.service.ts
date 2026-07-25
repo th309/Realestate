@@ -197,6 +197,10 @@ export class LateClientService {
       platforms: [{ platform: params.platform, accountId: params.accountId }],
     };
     if (params.mediaUrls?.length) {
+      // Phase 5 scope: feed posts carry IMAGES only (video publishes via the
+      // video pipeline, Decision 2), so every media item is type:'image'. Before
+      // any video URL can route here, mediaUrls must become a typed
+      // { url, type } union so this mapping stops mislabeling videos as images.
       body.mediaItems = params.mediaUrls.map((url) => ({ type: 'image', url }));
     }
     if (params.scheduledAt) {
@@ -223,11 +227,16 @@ export class LateClientService {
       };
     } catch (err) {
       // Late dedupes by content hash for 24h; a retried publish (e.g. after a
-      // crash mid-flight) returns 409 with the existing post id. Treat that as
-      // success — the post already went out — instead of double-posting.
+      // crash mid-flight) returns 409 with the existing post id. Only a body
+      // that actually CONFIRMS that dedupe (carries existingPostId) is treated
+      // as success. Any other 409 — rate limit, account-state conflict, or a
+      // malformed body — rethrows, so we never mistake it for "already posted"
+      // and silently drop the post.
       if (err instanceof LateApiError && err.status === 409) {
         const dup = this.parseDuplicate(err.body);
-        return { postId: dup.existingPostId, duplicate: true, raw: dup.raw };
+        if (dup.existingPostId) {
+          return { postId: dup.existingPostId, duplicate: true, raw: dup.raw };
+        }
       }
       throw err;
     }

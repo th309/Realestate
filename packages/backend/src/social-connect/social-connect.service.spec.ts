@@ -302,4 +302,114 @@ describe('SocialConnectService', () => {
       expect(result.synced).toBe(3);
     });
   });
+
+  describe('publishPost', () => {
+    const lateOk = () =>
+      ({
+        isConfigured: () => true,
+        publishPost: jest
+          .fn()
+          .mockResolvedValue({ postId: 'p1', platformPostUrl: 'https://x/p1' }),
+      }) as unknown as LateClientService;
+
+    it('publishes through a connected account, passing the idempotency key', async () => {
+      const late = lateOk();
+      const service = new SocialConnectService(
+        makeFakeSupabase([storedRow({ external_account_id: 'acc1' })]),
+        late,
+        noopReconciler,
+      );
+
+      await service.publishPost(
+        'row1',
+        'brand1',
+        { brandId: 'brand1', platform: 'instagram', copy: 'hi' },
+        { idempotencyKey: 'post-9' },
+      );
+
+      expect(late.publishPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: 'acc1',
+          platform: 'instagram',
+          idempotencyKey: 'post-9',
+        }),
+      );
+    });
+
+    const denialCases: Array<[string, Partial<PlatformConnectionRow>, string]> =
+      [
+        ['wrong brand', { brand_id: 'brand1' }, 'other-brand'],
+        ['disconnected', { status: 'disconnected' }, 'brand1'],
+        ['needs_reauth', { status: 'needs_reauth' }, 'brand1'],
+      ];
+    it.each(denialCases)(
+      'denies publish for a %s connection (NotFound, publisher untouched)',
+      async (_label, over, brandId) => {
+        const late = lateOk();
+        const service = new SocialConnectService(
+          makeFakeSupabase([storedRow(over)]),
+          late,
+          noopReconciler,
+        );
+
+        await expect(
+          service.publishPost('row1', brandId, {
+            brandId,
+            platform: 'instagram',
+            copy: 'hi',
+          }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(late.publishPost).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe('publishForBrandPlatform', () => {
+    it('resolves the brand+platform connection then publishes', async () => {
+      const late = {
+        isConfigured: () => true,
+        publishPost: jest.fn().mockResolvedValue({ postId: 'p1' }),
+      } as unknown as LateClientService;
+      const service = new SocialConnectService(
+        makeFakeSupabase([storedRow({ platform: 'instagram' })]),
+        late,
+        noopReconciler,
+      );
+
+      await service.publishForBrandPlatform(
+        'brand1',
+        'instagram',
+        { brandId: 'brand1', platform: 'instagram', copy: 'hi' },
+        { idempotencyKey: 'post-9' },
+      );
+
+      expect(late.publishPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: 'acc1',
+          idempotencyKey: 'post-9',
+        }),
+      );
+    });
+
+    it('denies when the brand has no connected account for the platform', async () => {
+      const late = {
+        isConfigured: () => true,
+        publishPost: jest.fn(),
+      } as unknown as LateClientService;
+      const service = new SocialConnectService(
+        makeFakeSupabase([storedRow({ status: 'disconnected' })]),
+        late,
+        noopReconciler,
+      );
+
+      await expect(
+        service.publishForBrandPlatform('brand1', 'instagram', {
+          brandId: 'brand1',
+          platform: 'instagram',
+          copy: 'hi',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(late.publishPost).not.toHaveBeenCalled();
+    });
+  });
 });

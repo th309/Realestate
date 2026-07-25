@@ -226,12 +226,16 @@ export class SocialConnectService {
   ) {
     if (!this.late.isConfigured()) throw new LateNotConfiguredError();
 
+    // Enforce status='connected' — disconnect() only flips status and never
+    // clears external_account_id, so without this a disconnected/needs_reauth
+    // account would still publish (a consent bug for an auto-publisher).
     const { data, error } = await this.supabase
       .getClient()
       .from(TABLE)
-      .select('external_account_id')
+      .select('external_account_id, platform')
       .eq('id', connectionId)
       .eq('brand_id', brandId)
+      .eq('status', 'connected')
       .maybeSingle();
     if (error) throw error;
 
@@ -239,7 +243,7 @@ export class SocialConnectService {
       ?.external_account_id;
     if (!externalId) {
       throw new NotFoundException(
-        `Connection ${connectionId} has no linked Late account for this brand`,
+        `No connected account for connection ${connectionId} in this brand`,
       );
     }
 

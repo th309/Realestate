@@ -25,8 +25,8 @@ import { SyncConnectionsDto } from './dto/sync-connections.dto';
  * envelope the frontend expects — including the not-configured 503, which is
  * `{ success: false, error: <setup> }`.
  *
- * NOT wired into any module import yet — the team lead adds the single
- * `SocialConnectModule` import after all Phase 3 agents finish (see report).
+ * Wired via SocialConnectModule (imported in app.module.ts) — these routes are
+ * live; the publish cron in the same module fires only when RUN_CRONS=true.
  */
 @UseGuards(AdminGuard)
 @Controller('api/admin/social-connect')

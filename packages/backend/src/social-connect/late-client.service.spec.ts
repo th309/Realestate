@@ -167,4 +167,24 @@ describe('LateClientService', () => {
     expect(out.duplicate).toBe(true);
     expect(out.postId).toBe('dup-1');
   });
+
+  it('rethrows a 409 whose body does not confirm the dedupe (no existingPostId)', async () => {
+    process.env.LATE_API_KEY = 'k';
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        errorResponse(409, JSON.stringify({ error: 'rate limited' })),
+      ) as unknown as typeof fetch;
+
+    // A non-dedupe 409 must NOT read as "already published" — it rethrows so the
+    // scanner leaves the post for retry instead of silently dropping it.
+    await expect(
+      service.publishPost({
+        accountId: 'acc1',
+        platform: 'instagram',
+        copy: 'hi',
+        idempotencyKey: 'post-123',
+      }),
+    ).rejects.toMatchObject({ name: 'LateApiError', status: 409 });
+  });
 });

@@ -126,6 +126,12 @@ export class PostPublisherService {
    * Atomically claim a post: flip <from> -> 'publishing' and bump attempts,
    * guarded on the current status so only one worker wins. Returns the claimed
    * row (attempts incremented) or null when another worker got there first.
+   *
+   * SANCTIONED EXCEPTION to the "all post writes go through PostsService" rule:
+   * this MUST be a direct atomic conditional UPDATE. Do NOT refactor it into
+   * PostsService.updateStatus — that is read-then-write and two concurrent ticks
+   * would both pass it, reintroducing the double-post race. The atomic flip IS
+   * the point.
    */
   private async claim(
     post: PostRow,
@@ -185,8 +191,11 @@ export class PostPublisherService {
         { idempotencyKey: post.id },
       );
       await this.posts.updateStatus(post.id, 'published', {});
-      // PostsService.updateStatus owns the lifecycle transition + published_at;
-      // the external post id/URL is a publisher concern, stored directly here.
+      // The external post id/URL is Late's server response (never client input).
+      // Stored via a direct write only because PostsService.updateStatus has no
+      // platformPostId param yet — fold this into updateStatus once the Phase 2
+      // agent's additive `extra.platformPostId` lands (see report). Not the claim
+      // exception; purely write-path hygiene, no concurrency concern.
       const externalId = result.platformPostUrl ?? result.postId;
       if (externalId) {
         await this.supabase
