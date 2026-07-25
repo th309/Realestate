@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useQueueNavigator } from "../lib/queue-navigator";
-import { STATE_LABELS } from "../lib/state-labels";
-import type { PipelineStatus } from "../lib/content-pipeline-api";
+import { pipelineStateToStatusChip } from "../components/home/StatusChip";
 
 /**
  * Horizontal film-strip of every run in the review queue. Current run is
@@ -80,13 +79,9 @@ export function QueueRibbon() {
                 {!isReady && (
                   <span
                     className="text-[8px] font-medium text-surface/80 truncate"
-                    title={STATE_LABELS[item.status as PipelineStatus]}
+                    title={pipelineStateToStatusChip(item.status).label}
                   >
-                    {
-                      (STATE_LABELS[item.status as PipelineStatus] ?? "").split(
-                        " ",
-                      )[0]
-                    }
+                    {pipelineStateToStatusChip(item.status).label}
                   </span>
                 )}
               </div>
