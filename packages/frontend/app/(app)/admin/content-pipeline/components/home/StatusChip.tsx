@@ -59,6 +59,35 @@ export function pipelineStateToStatusChip(
   }
 }
 
+/**
+ * Map a `posts` lifecycle status to its plain-language chip. Post statuses are
+ * a different vocabulary from the pipeline states above, but share the same
+ * tones and StatusChip component. This is where the "scheduled" tone (reserved
+ * until now) earns its keep.
+ */
+export function postStatusToStatusChip(
+  status: string | null | undefined,
+): StatusChipDescriptor {
+  switch (status) {
+    case "draft":
+      return { label: "Draft", tone: "muted" };
+    case "pending_review":
+      return { label: "Needs review", tone: "review" };
+    case "approved":
+      return { label: "Approved", tone: "generating" };
+    case "scheduled":
+      return { label: "Scheduled", tone: "scheduled" };
+    case "published":
+      return { label: "Published", tone: "published" };
+    case "failed":
+      return { label: "Failed", tone: "attention" };
+    case "skipped":
+      return { label: "Skipped", tone: "muted" };
+    default:
+      return { label: "Draft", tone: "muted" };
+  }
+}
+
 /** Tone → Tailwind classes. All semantic M3 tokens (see globals.css). */
 export const STATUS_CHIP_TONE_CLASSES: Record<
   StatusChipTone,
