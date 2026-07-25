@@ -9,6 +9,7 @@ export const POST_STATUSES = [
   'pending_review',
   'approved',
   'scheduled',
+  'publishing',
   'published',
   'failed',
   'skipped',
@@ -30,7 +31,11 @@ export const ALLOWED_POST_STATUS_TRANSITIONS: Record<PostStatus, PostStatus[]> =
     draft: ['pending_review', 'skipped'],
     pending_review: ['approved', 'draft', 'skipped'],
     approved: ['scheduled', 'published', 'skipped'],
-    scheduled: ['published', 'failed', 'skipped'],
+    // 'publishing' is the Phase 5 in-flight claim: the scanner flips
+    // scheduled->publishing before calling the external API. scheduled->failed
+    // stays for the pre-claim honest-fail path (e.g. YouTube).
+    scheduled: ['publishing', 'published', 'failed', 'skipped'],
+    publishing: ['published', 'failed'],
     published: [],
     failed: ['pending_review', 'scheduled', 'skipped'],
     skipped: [],
@@ -77,6 +82,8 @@ export interface PostRow {
   platform_post_id: string | null;
   source: string;
   error: string | null;
+  /** Publish attempt counter (Phase 5 bounded retry). Added in migration 20260725000300. */
+  attempts: number;
   created_at: string;
   updated_at: string;
 }
