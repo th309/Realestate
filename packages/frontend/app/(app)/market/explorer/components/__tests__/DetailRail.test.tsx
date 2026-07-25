@@ -61,6 +61,24 @@ describe("DetailRail", () => {
     expect(screen.queryByRole("img", { name: /PropertyIQ Score/i })).toBeNull();
   });
 
+  it("shows an explanatory note instead of a score gauge or unavailable placeholder for state scope — PropertyIQ Score isn't computed for states at all, unlike a market simply not having one yet", () => {
+    render(
+      <DetailRail
+        {...base}
+        score={null}
+        isStateScope
+        onTogglePin={() => {}}
+        onDrill={() => {}}
+        onOpenDashboard={() => {}}
+      />,
+    );
+    expect(screen.getByText(/isn't computed for states/i)).toBeTruthy();
+    expect(
+      screen.queryByRole("img", { name: /Score unavailable/i }),
+    ).toBeNull();
+    expect(screen.queryByRole("img", { name: /PropertyIQ Score/i })).toBeNull();
+  });
+
   it("renders InheritedBadge with the source geography when inherited is set", () => {
     render(
       <DetailRail

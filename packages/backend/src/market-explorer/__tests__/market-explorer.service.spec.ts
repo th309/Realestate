@@ -55,6 +55,9 @@ describe('MarketExplorerService.getScopeSeries', () => {
         'new_listings',
         'propertyiq_score',
         'rent_index',
+        // States have no native PropertyIQ score, so the state-scope request
+        // additionally fetches unemployment_rate for the frontend KPI strip.
+        'unemployment_rate',
       ].sort(),
     );
     expect((res as any).metric).toBeUndefined();

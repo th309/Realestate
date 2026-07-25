@@ -108,8 +108,17 @@ export class MarketExplorerService {
     }
 
     const regionIds = regions.map((r) => r.id);
+    // States have no native PropertyIQ score (see me_state_score_series'
+    // mean-of-metros proxy), so the frontend KPI strip swaps in unemployment
+    // rate for state scope specifically — fetched only here, not for every
+    // geo level, since economic_metro/economic_county coverage isn't part of
+    // this feature and economic_zip doesn't exist at all.
+    const metricsToFetch: readonly string[] =
+      geoLevel === 'state'
+        ? [...FETCHED_METRICS, 'unemployment_rate']
+        : FETCHED_METRICS;
     const perMetric = await Promise.all(
-      FETCHED_METRICS.map(async (metric) => ({
+      metricsToFetch.map(async (metric) => ({
         metric,
         rows:
           geoLevel === 'state'

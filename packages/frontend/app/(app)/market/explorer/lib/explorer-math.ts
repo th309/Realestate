@@ -9,6 +9,16 @@ import {
 export type Series = (number | null)[];
 export type SeriesByMetric = Record<string, Record<string, Series>>;
 
+/** Lookback window for BOTH the KPI strip's/detail rail's trend-delta badges
+ * AND the small sparkline charts under them — fixed at 6 months regardless
+ * of the "range" preset (6M/1Y/2Y/5Y/10Y) that governs the main hero
+ * chart's timeline scrubber. Those are two different concerns: the range
+ * preset controls how much history the user can scrub through; this
+ * constant controls how much RECENT history a quick-glance trend indicator
+ * shows, which should stay a small, consistent, comparable window no matter
+ * how far back the user has zoomed the main timeline out to. */
+export const TREND_WINDOW_MONTHS = 6;
+
 export function deriveYoY(home: Series): Series {
   return home.map((_, t) => {
     const cur = home[t],
@@ -80,6 +90,11 @@ function reduceMonth(
   return sum ? acc : acc / n;
 }
 
+/** Scope-wide KPI series — mean (or sum, for inventory) across every region
+ * currently in view. This is the CURRENT SCOPE's own aggregate (e.g. all of
+ * Colorado's metros when drilled into Colorado), distinct from whatever
+ * single region is selected/highlighted — the KPI strip tracks the scope
+ * itself; the detail rail tracks the selection. See MarketExplorer.tsx. */
 export function aggregateScopeKpis(
   ids: string[],
   series: SeriesByMetric,
@@ -87,12 +102,22 @@ export function aggregateScopeKpis(
 ) {
   const build = (metric: string, sum: boolean): Series =>
     Array.from({ length }, (_, t) => reduceMonth(ids, series[metric], t, sum));
+  const price = build("home_value", false);
   return {
-    price: build("home_value", false),
+    price,
     rent: build("rent_index", false),
     inventory: build("for_sale_inventory", true),
     dom: build("days_on_market", false),
     score: build("propertyiq_score", false),
+    // State-scope-only substitutes — states have no native PropertyIQ score
+    // (see me_state_score_series' mean-of-metros proxy) and no rent_index
+    // coverage in zillow_state, so the KPI strip swaps these two in for the
+    // state scope specifically (see KpiStrip's `isStateScope` prop).
+    // homeValueYoy is free (derived from the aggregate price series already
+    // computed above); unemployment is fetched by the backend only for
+    // state-scope requests, so it's an empty series everywhere else.
+    homeValueYoy: deriveYoY(price),
+    unemployment: build("unemployment_rate", false),
   };
 }
 
@@ -119,19 +144,6 @@ export function computeMovers(
   return top.filter(
     (x, i, arr) => arr.findIndex((y) => y.region.id === x.region.id) === i,
   );
-}
-
-export function makeLogScale(min: number, max: number): (v: number) => number {
-  const lo = Math.log(Math.max(1, min)),
-    hi = Math.log(Math.max(min + 1, max));
-  return (v: number) =>
-    (Math.log(Math.min(max, Math.max(min, v))) - lo) / (hi - lo);
-}
-
-export function niceBubbleBounds(prices: number[]): [number, number] {
-  const valid = prices.filter((p) => p > 0);
-  if (!valid.length) return [1, 10];
-  return [Math.max(1, Math.min(...valid) * 0.8), Math.max(...valid) * 1.15];
 }
 
 export function scoreChip(score: number): { bg: string; color: string } {
@@ -196,48 +208,4 @@ export function formatExplorerValue(
     case "months":
       return `${value.toFixed(1)} mo`;
   }
-}
-
-/**
- * Maps each region's raw value for the CURRENTLY selected metric onto a
- * 0-100 scalar for `getScoreColor`, so the map/bubble color always reflects
- * whatever metric is active — not a frozen, unrelated dimension.
- *
- * Bounds are dynamic per format (CLAUDE.md §1.1/§6 — never hardcode
- * breakpoints): percent/percent_abs use the 5th-95th percentile (a few
- * outlier metros shouldn't wash out the whole gradient); index uses the
- * true min-max (PIQ score/hotness are already bounded 1-99); days/months use
- * min-95th (a long tail of slow markets shouldn't compress the rest).
- * Direction is flipped for "lower is better" metrics (days on market,
- * months of supply) so green always means "good", not "numerically high".
- */
-export function metricColorScalars(
-  valueByRegion: Record<string, number | null>,
-  format: ExplorerFormat,
-  betterHigh: boolean,
-): Record<string, number | null> {
-  const sorted = Object.values(valueByRegion)
-    .filter((v): v is number => v != null)
-    .sort((a, b) => a - b);
-  const result: Record<string, number | null> = {};
-  if (!sorted.length) {
-    for (const id of Object.keys(valueByRegion)) result[id] = null;
-    return result;
-  }
-  const n = sorted.length;
-  const at = (p: number) => sorted[Math.min(n - 1, Math.round(p * (n - 1)))];
-  const lo =
-    format === "percent" || format === "percent_abs" ? at(0.05) : sorted[0];
-  const hi = format === "index" ? sorted[n - 1] : at(0.95);
-  const span = hi - lo;
-  for (const [id, v] of Object.entries(valueByRegion)) {
-    if (v == null) {
-      result[id] = null;
-      continue;
-    }
-    const clamped = Math.min(hi, Math.max(lo, v));
-    const t = span === 0 ? 0.5 : (clamped - lo) / span;
-    result[id] = (betterHigh ? t : 1 - t) * 100;
-  }
-  return result;
 }

@@ -1,6 +1,14 @@
 "use client";
 import React, { useEffect } from "react";
 
+/**
+ * Autoplay tick cadence: how often `monthIndex` itself advances by one whole
+ * month. Exported so `useTickInterpolation` (used by BubbleChart/GeoTileMap
+ * to blend between consecutive months) can sync to the same cadence — its
+ * blend fraction reaches 1 right as this interval fires the next SET_MONTH.
+ */
+export const AUTOPLAY_TICK_MS = 380;
+
 export interface TimelineScrubberProps {
   min: number;
   max: number;
@@ -44,7 +52,7 @@ export function TimelineScrubber(props: TimelineScrubberProps) {
     const id = setInterval(() => {
       if (value >= max) onStop();
       else onAdvance(value + 1);
-    }, 380);
+    }, AUTOPLAY_TICK_MS);
     return () => clearInterval(id);
   }, [playing, value, max, onAdvance, onStop]);
 

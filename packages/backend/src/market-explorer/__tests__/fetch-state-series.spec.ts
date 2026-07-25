@@ -65,4 +65,38 @@ describe('fetchStateMetricSeries', () => {
       value: 350000,
     });
   });
+
+  it('reads native economic_state rows keyed directly on state_fips, no crosswalk needed', async () => {
+    const builder: any = {
+      select: () => builder,
+      eq: () => builder,
+      gte: () => builder,
+      not: () => builder,
+      order: () => builder,
+      range: async (from: number) => ({
+        data:
+          from === 0
+            ? [
+                {
+                  state_fips: '48',
+                  period_date: '2026-05-01',
+                  unemployment_rate: 4.2,
+                },
+              ]
+            : [],
+        error: null,
+      }),
+    };
+    const supabase = { from: () => builder, rpc: jest.fn() } as any;
+    const rows = await fetchStateMetricSeries(
+      supabase,
+      'unemployment_rate',
+      '2016-06-01',
+    );
+    expect(rows[0]).toEqual({
+      regionId: '48',
+      date: '2026-05-01',
+      value: 4.2,
+    });
+  });
 });

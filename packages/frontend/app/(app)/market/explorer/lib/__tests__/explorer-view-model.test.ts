@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildBubbleScalars,
+  buildDetailStats,
   buildLeaderboardRows,
   coverageConfidence,
 } from "../explorer-view-model";
@@ -72,6 +73,22 @@ describe("buildLeaderboardRows", () => {
     expect(rows[0].rank).toBe("01");
     expect(rows[0].valueLabel).toMatch(/STEADY|FIRMING|RISING/);
   });
+
+  it("caps each row's spark at monthIndex — .slice(windowStart) alone runs to the end of the FULL series, which is one month beyond 'now' whenever monthIndex isn't the array's last index (e.g. state scope, whose default month lags the rest of the dataset)", () => {
+    const longSeries = {
+      ...series,
+      propertyiq_score: { A: [50, 55, 60, 65, 70] }, // 5 months, monthIndex will be 2 (mid-array)
+    };
+    const rows = buildLeaderboardRows(
+      [region("A")],
+      longSeries,
+      "score",
+      2, // "now" is index 2, even though the series has data through index 4
+      0,
+      15,
+    );
+    expect(rows[0].spark).toEqual([50, 55, 60]); // stops at monthIndex, not the array's end
+  });
 });
 
 describe("coverageConfidence", () => {
@@ -80,5 +97,31 @@ describe("coverageConfidence", () => {
     expect(c.metricsTotal).toBe(8);
     expect(c.metricsAvailable).toBe(8);
     expect(c.level).toBe("a");
+  });
+});
+
+describe("buildDetailStats", () => {
+  it("shows Rent yield + Hotness by default (metro/county/zip)", () => {
+    const stats = buildDetailStats(series, "A", 1);
+    const labels = stats.map((s) => s.label);
+    expect(labels).toContain("Rent yield");
+    expect(labels).toContain("Hotness");
+    expect(labels).not.toContain("Unemployment");
+    expect(labels).not.toContain("New listings");
+  });
+
+  it("swaps Rent yield -> Unemployment and Hotness -> New listings for state scope — states have no rent_index or hotness_score coverage at all", () => {
+    const stateSeries = {
+      ...series,
+      unemployment_rate: { A: [4.2, 4.1] },
+    };
+    const stats = buildDetailStats(stateSeries, "A", 1, true);
+    const labels = stats.map((s) => s.label);
+    expect(labels).toContain("Unemployment");
+    expect(labels).toContain("New listings");
+    expect(labels).not.toContain("Rent yield");
+    expect(labels).not.toContain("Hotness");
+    const unemployment = stats.find((s) => s.label === "Unemployment")!;
+    expect(unemployment.value).toBe("4.1%");
   });
 });

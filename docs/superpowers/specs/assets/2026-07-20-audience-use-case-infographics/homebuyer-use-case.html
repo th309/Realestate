@@ -28,6 +28,46 @@
             >Austin, TX &middot; 78704 &mdash; as of 2026-05-31</span
           >
         </div>
+        <div class="hero">
+          <div class="hero-icon">
+            <svg width="76" height="76" viewBox="0 0 76 76">
+              <circle cx="38" cy="38" r="38" fill="#FF8F00" />
+              <circle
+                cx="38"
+                cy="38"
+                r="17"
+                stroke="#ffffff"
+                stroke-width="3.5"
+                fill="none"
+              />
+              <line
+                x1="38"
+                y1="38"
+                x2="38"
+                y2="27"
+                stroke="#ffffff"
+                stroke-width="3.5"
+                stroke-linecap="round"
+              />
+              <line
+                x1="38"
+                y1="38"
+                x2="47"
+                y2="43"
+                stroke="#ffffff"
+                stroke-width="3.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div class="hero-number warn">17</div>
+          <div class="hero-side">
+            <span class="hero-badge warn">Years to Save</span>
+            <span class="hero-caption"
+              >for a 20% down payment at median local income</span
+            >
+          </div>
+        </div>
         <div class="stat-rows">
           <div class="stat-row">
             <span class="label">Median home price</span
@@ -45,10 +85,6 @@
             <span class="label">Affordable at median income</span
             ><span class="value mono">$361,262</span>
           </div>
-          <div class="stat-row">
-            <span class="label">Years to save a down payment</span
-            ><span class="value mono neg">17</span>
-          </div>
         </div>
         <div class="verdict warn">
           &ldquo;Buying needs 2.3&times; the local income &mdash; renting wins
@@ -57,38 +93,110 @@
       </div>
       <div class="card">
         <div class="card-header">
-          <span>Market Contrast</span>
+          <span>Market Contrast &mdash; 6-Month Score Trend</span>
           <span class="as-of">Metro &middot; as of 2026-06-30</span>
         </div>
-        <div class="stat-rows">
-          <div class="stat-row">
-            <span class="label">Seattle, WA &mdash; Median home value</span
-            ><span class="value mono neg">$745,263</span>
-          </div>
-          <div class="stat-row">
-            <span class="label">Seattle &mdash; Score momentum</span
-            ><span class="value mono neg">16 &middot; F, falling</span>
-          </div>
-          <div class="stat-row">
-            <span class="label">Seattle &mdash; Years to save</span
-            ><span class="value mono neg">12.5</span>
-          </div>
-          <div class="stat-row">
-            <span class="label">Buffalo, NY &mdash; Median home value</span
-            ><span class="value mono pos">$294,992</span>
-          </div>
-          <div class="stat-row">
-            <span class="label">Buffalo &mdash; Score momentum</span
-            ><span class="value mono pos">98 &middot; A+, rising</span>
-          </div>
-          <div class="stat-row">
-            <span class="label">Buffalo &mdash; Years to save</span
-            ><span class="value mono pos">7.7</span>
-          </div>
+        <div class="chart-legend">
+          <span class="chip"
+            ><span class="dot" style="background: #b3261e"></span>Seattle, WA
+            &middot; $745K median</span
+          >
+          <span class="chip"
+            ><span class="dot" style="background: #00c853"></span>Buffalo, NY
+            &middot; $295K median</span
+          >
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet">
+            <line
+              x1="40"
+              y1="140"
+              x2="860"
+              y2="140"
+              stroke="#C5CAE9"
+              stroke-width="2"
+              stroke-dasharray="6 6"
+            />
+            <text
+              x="700"
+              y="132"
+              font-size="15"
+              fill="#5C6BC0"
+              font-style="italic"
+              text-anchor="middle"
+            >
+              50 = state average
+            </text>
+
+            <polyline
+              points="40,154.4 204,80 368,125.6 532,149.6 696,226.4 860,221.6"
+              fill="none"
+              stroke="#B3261E"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <polyline
+              points="40,46.4 204,39.2 368,39.2 532,27.2 696,29.6 860,24.8"
+              fill="none"
+              stroke="#00C853"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <g fill="#B3261E">
+              <circle cx="40" cy="154.4" r="5" />
+              <circle cx="204" cy="80" r="5" />
+              <circle cx="368" cy="125.6" r="5" />
+              <circle cx="532" cy="149.6" r="5" />
+              <circle cx="696" cy="226.4" r="5" />
+              <circle cx="860" cy="221.6" r="6" />
+            </g>
+            <g fill="#00C853">
+              <circle cx="40" cy="46.4" r="5" />
+              <circle cx="204" cy="39.2" r="5" />
+              <circle cx="368" cy="39.2" r="5" />
+              <circle cx="532" cy="27.2" r="5" />
+              <circle cx="696" cy="29.6" r="5" />
+              <circle cx="860" cy="24.8" r="6" />
+            </g>
+
+            <text
+              x="866"
+              y="226"
+              font-size="19"
+              font-weight="700"
+              fill="#B3261E"
+              class="mono"
+            >
+              16
+            </text>
+            <text
+              x="866"
+              y="20"
+              font-size="19"
+              font-weight="700"
+              fill="#00C853"
+              class="mono"
+            >
+              98
+            </text>
+
+            <g font-size="15" fill="#8a8aa0">
+              <text x="40" y="290" text-anchor="middle">Jan</text>
+              <text x="204" y="290" text-anchor="middle">Feb</text>
+              <text x="368" y="290" text-anchor="middle">Mar</text>
+              <text x="532" y="290" text-anchor="middle">Apr</text>
+              <text x="696" y="290" text-anchor="middle">May</text>
+              <text x="860" y="290" text-anchor="middle">Jun</text>
+            </g>
+          </svg>
         </div>
         <div class="verdict pos">
           Affordability and momentum don&rsquo;t always trade off &mdash;
-          Buffalo has both right now.
+          Buffalo has both right now (7.7 years to save vs. Seattle&rsquo;s
+          12.5).
         </div>
       </div>
     </div>

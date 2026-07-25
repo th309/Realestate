@@ -32,6 +32,11 @@ export interface DetailRailProps {
   name: string;
   sub: string;
   score: number | null;
+  /** States have no native PropertyIQ score at all (only metro/county/zip
+   * are scored) — shows an explanatory note pointing at drill-down instead
+   * of a gauge or "unavailable" placeholder, which would wrongly imply a
+   * score merely hasn't been computed yet rather than never existing. */
+  isStateScope?: boolean;
   confidence: {
     level: "a" | "b" | "c" | "f";
     percentage: number;
@@ -62,6 +67,7 @@ export function DetailRail(props: DetailRailProps) {
     name,
     sub,
     score,
+    isStateScope = false,
     confidence,
     inherited,
     stats,
@@ -141,15 +147,33 @@ export function DetailRail(props: DetailRailProps) {
           {isPinned ? "✓ Pinned" : "+ Compare"}
         </button>
       </div>
-      <div
-        style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}
-      >
-        {score == null ? (
-          <ScoreUnavailablePlaceholder size={150} />
-        ) : (
-          <ScoreGaugeRing value={score} size={150} />
-        )}
-      </div>
+      {isStateScope ? (
+        <div
+          style={{
+            padding: "10px 4px",
+            textAlign: "center",
+            fontSize: 12.5,
+            color: "var(--md-on-surface-variant)",
+          }}
+        >
+          PropertyIQ Score isn&apos;t computed for states — drill into a metro
+          below for a real score.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "4px 0",
+          }}
+        >
+          {score == null ? (
+            <ScoreUnavailablePlaceholder size={150} />
+          ) : (
+            <ScoreGaugeRing value={score} size={150} />
+          )}
+        </div>
+      )}
       <div
         style={{
           display: "flex",
