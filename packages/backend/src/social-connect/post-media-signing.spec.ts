@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PostMediaRef } from '../content-pipeline/posts/post.types';
 import {
+  POST_IMAGE_DEFAULT_BUCKET,
   POST_IMAGE_SIGNED_URL_TTL_SEC,
   resolvePostMediaUrls,
 } from './post-media-signing';
@@ -32,25 +33,25 @@ describe('resolvePostMediaUrls', () => {
     expect(await resolvePostMediaUrls(client, [])).toEqual([]);
   });
 
-  it('signs storage-backed refs ordered by the `order` field, not array order', async () => {
+  it('signs storage_path refs ordered by the `order` field, not array order', async () => {
     const { client, from, createSignedUrl } = makeClient();
     const refs: PostMediaRef[] = [
       {
         kind: 'image',
         bucket: 'content-pipeline',
-        path: 'posts/p/2.png',
+        storage_path: 'posts/p/2.png',
         order: 2,
       },
       {
         kind: 'image',
         bucket: 'content-pipeline',
-        path: 'posts/p/1.png',
+        storage_path: 'posts/p/1.png',
         order: 1,
       },
       {
         kind: 'image',
         bucket: 'content-pipeline',
-        path: 'posts/p/3.png',
+        storage_path: 'posts/p/3.png',
         order: 3,
       },
     ];
@@ -70,7 +71,15 @@ describe('resolvePostMediaUrls', () => {
     );
   });
 
-  it('passes through already-public https urls without signing', async () => {
+  it('defaults the bucket to content-pipeline when the ref omits it', async () => {
+    const { client, from } = makeClient();
+    await resolvePostMediaUrls(client, [
+      { kind: 'image', storage_path: 'posts/p/1.png' },
+    ]);
+    expect(from).toHaveBeenCalledWith(POST_IMAGE_DEFAULT_BUCKET);
+  });
+
+  it('passes through legacy already-public https urls without signing', async () => {
     const { client, createSignedUrl } = makeClient();
     const urls = await resolvePostMediaUrls(client, [
       { kind: 'image', url: 'https://cdn.example/a.png' },
@@ -82,35 +91,36 @@ describe('resolvePostMediaUrls', () => {
   it('drops non-image refs and refs with no resolvable location', async () => {
     const { client } = makeClient();
     const urls = await resolvePostMediaUrls(client, [
-      { kind: 'video', bucket: 'content-pipeline', path: 'posts/p/v.mp4' },
+      { kind: 'video', storage_path: 'posts/p/v.mp4' },
       { kind: 'image', url: 'http://cdn.example/insecure.png' }, // not https
       { kind: 'image' }, // no location at all
-      {
-        kind: 'image',
-        bucket: 'content-pipeline',
-        path: 'posts/p/1.png',
-        order: 0,
-      },
+      { kind: 'image', storage_path: 'posts/p/1.png', order: 0 },
     ]);
     expect(urls).toEqual(['https://signed.test/posts/p/1.png?ttl=3600']);
   });
 
-  it('THROWS when a storage-backed ref cannot be signed (no silent text-only downgrade)', async () => {
+  it('THROWS with context when a storage ref cannot be signed (no silent text-only downgrade)', async () => {
     const { client } = makeClient(async () => ({
       data: null,
       error: { message: 'object not found' },
     }));
     await expect(
       resolvePostMediaUrls(client, [
-        { kind: 'image', bucket: 'content-pipeline', path: 'posts/p/1.png' },
+        {
+          kind: 'image',
+          bucket: 'content-pipeline',
+          storage_path: 'posts/p/1.png',
+        },
       ]),
-    ).rejects.toThrow(/failed to sign post image/i);
+    ).rejects.toThrow(
+      /failed to sign post image content-pipeline\/posts\/p\/1\.png: object not found/i,
+    );
   });
 
   it('signs FRESH on every call (recovery retries never reuse a stale url)', async () => {
     const { client, createSignedUrl } = makeClient();
     const refs: PostMediaRef[] = [
-      { kind: 'image', bucket: 'content-pipeline', path: 'posts/p/1.png' },
+      { kind: 'image', storage_path: 'posts/p/1.png' },
     ];
     await resolvePostMediaUrls(client, refs);
     await resolvePostMediaUrls(client, refs);

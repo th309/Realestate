@@ -313,13 +313,13 @@ describe('PostPublisherService', () => {
           {
             kind: 'image',
             bucket: 'content-pipeline',
-            path: 'posts/p1/2.png',
+            storage_path: 'posts/p1/2.png',
             order: 2,
           },
           {
             kind: 'image',
             bucket: 'content-pipeline',
-            path: 'posts/p1/1.png',
+            storage_path: 'posts/p1/1.png',
             order: 1,
           },
         ],
@@ -364,7 +364,11 @@ describe('PostPublisherService', () => {
       makePost({
         attempts: 2,
         media_refs: [
-          { kind: 'image', bucket: 'content-pipeline', path: 'posts/p1/1.png' },
+          {
+            kind: 'image',
+            bucket: 'content-pipeline',
+            storage_path: 'posts/p1/1.png',
+          },
         ],
       }),
     ];
@@ -392,7 +396,11 @@ describe('PostPublisherService', () => {
       makePost({
         platform: 'tiktok',
         media_refs: [
-          { kind: 'image', bucket: 'content-pipeline', path: 'posts/p1/1.png' },
+          {
+            kind: 'image',
+            bucket: 'content-pipeline',
+            storage_path: 'posts/p1/1.png',
+          },
         ],
       }),
     ];

@@ -1,14 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PostMediaRef } from '../content-pipeline/posts/post.types';
+import { signStoragePath } from '../content-pipeline/asset-signing';
 
 /**
  * TTL for the signed image URLs handed to Late at publish time. ≥1h so Late has
  * ample time to fetch the asset server-side. URLs are signed FRESH on every
  * publish attempt (never cached), so a crash-recovery re-attempt minutes later
  * never carries an expired link. Mirrors the video pipeline's 3600s signing
- * (see content-pipeline/asset-signing.ts).
+ * (content-pipeline/asset-signing.ts).
  */
 export const POST_IMAGE_SIGNED_URL_TTL_SEC = 3600;
+
+/** Rendered post images live in this bucket unless the ref says otherwise. */
+export const POST_IMAGE_DEFAULT_BUCKET = 'content-pipeline';
 
 /**
  * Resolve a post's image `media_refs` to signed, publicly-fetchable https URLs
@@ -17,9 +21,12 @@ export const POST_IMAGE_SIGNED_URL_TTL_SEC = 3600;
  *
  * Two ref shapes are accepted:
  *   - Storage-backed (the render pipeline's frozen shape):
- *       { kind:'image', bucket, path, width, height, order }
+ *       { kind:'image', bucket:'content-pipeline', storage_path:'posts/<id>/1.png',
+ *         width, height, order }
  *     → a fresh Supabase Storage signed URL (paths are private, never public).
- *   - Already-public: { kind:'image', url:'https://…' } → passed through as-is.
+ *       `bucket` defaults to 'content-pipeline' when omitted.
+ *   - Legacy already-public: { kind:'image', url:'https://…' } → passed through.
+ *     (Rendered refs carry no `url`; this is only for older/manual refs.)
  *
  * Honest-failure contract: a storage-backed ref that FAILS to sign THROWS, so
  * the publish fails visibly (→ Needs-attention) rather than silently dropping
@@ -52,30 +59,34 @@ export async function resolvePostMediaUrls(
  * Resolve one image ref to a signed/public https URL, or null when it carries
  * no resolvable location. Throws when a storage-backed ref cannot be signed —
  * that is an image we were meant to attach but couldn't, and dropping it would
- * be a silent text-only downgrade.
+ * be a silent text-only downgrade. Reuses the shared `signStoragePath` signer.
  */
 async function signRef(
   client: SupabaseClient,
   ref: PostMediaRef,
 ): Promise<string | null> {
-  const bucket = typeof ref.bucket === 'string' ? ref.bucket : undefined;
-  const path = typeof ref.path === 'string' ? ref.path : undefined;
+  const storagePath =
+    typeof ref.storage_path === 'string' ? ref.storage_path : undefined;
 
-  if (bucket && path) {
-    const { data, error } = await client.storage
-      .from(bucket)
-      .createSignedUrl(path, POST_IMAGE_SIGNED_URL_TTL_SEC);
-    if (error || !data?.signedUrl) {
+  if (storagePath) {
+    const bucket =
+      typeof ref.bucket === 'string' ? ref.bucket : POST_IMAGE_DEFAULT_BUCKET;
+    try {
+      return await signStoragePath(
+        client,
+        bucket,
+        storagePath,
+        POST_IMAGE_SIGNED_URL_TTL_SEC,
+      );
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `failed to sign post image ${bucket}/${path}: ${
-          error?.message ?? 'no signed url returned'
-        }`,
+        `failed to sign post image ${bucket}/${storagePath}: ${reason}`,
       );
     }
-    return data.signedUrl;
   }
 
-  // Already-public asset (e.g. an externally hosted image): pass through.
+  // Legacy already-public asset (rendered refs carry no url): pass through.
   if (typeof ref.url === 'string' && ref.url.startsWith('https://')) {
     return ref.url;
   }
