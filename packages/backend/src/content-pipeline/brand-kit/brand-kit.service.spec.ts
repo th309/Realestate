@@ -239,3 +239,39 @@ describe('BrandKitService.updateBrand deep-merges JSONB (no sibling loss)', () =
     expect(stored.taglines).toEqual(['Keep me']);
   });
 });
+
+describe('BrandKitService filters malformed stored products (read side)', () => {
+  it('drops product entries missing name or summary', async () => {
+    const { supabase } = makeSupabaseFake([
+      {
+        id: 'brand-x',
+        name: 'PropertyIQ',
+        website_url: null,
+        voice_summary: null,
+        tone_settings: {},
+        products: [
+          { name: 'PropertyIQ Score', summary: 'A momentum score.' },
+          { name: '', summary: 'no name' },
+          { name: 'no summary' },
+          {},
+          'not an object',
+        ],
+        target_platforms: [],
+        approved_copy: {},
+        created_at: '2026-07-25T00:00:00Z',
+        updated_at: '2026-07-25T00:00:00Z',
+      },
+    ]);
+    const service = new BrandKitService(supabase);
+
+    const profile = await service.getBrandProfile('brand-x');
+
+    expect(profile.products).toHaveLength(1);
+    expect(profile.products[0]).toEqual({
+      name: 'PropertyIQ Score',
+      summary: 'A momentum score.',
+    });
+    // A preamble built from this profile can never render "undefined: undefined".
+    expect(service.buildPromptPreamble(profile)).not.toContain('undefined');
+  });
+});

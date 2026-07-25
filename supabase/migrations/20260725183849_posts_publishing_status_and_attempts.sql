@@ -9,7 +9,7 @@
 -- `attempts` bounds the retry: each claim/re-claim increments it; past the cap
 -- the post is moved to 'failed' (surfaces as a Needs-attention feed card).
 --
--- Additive + idempotent. Depends on 20260725000100 (posts table). No new GRANTs:
+-- Additive + idempotent. Depends on 20260725171557 (posts table). No new GRANTs:
 -- the table already has GRANT ALL to service_role + authenticated, which covers
 -- the new column; the CHECK swap changes no privileges.
 

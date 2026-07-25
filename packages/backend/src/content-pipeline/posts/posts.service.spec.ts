@@ -189,6 +189,17 @@ describe('PostsService.updateStatus enforces the transition map', () => {
       /published/,
     );
   });
+
+  it('persists platformPostId from the publisher (Phase 5)', async () => {
+    const { supabase, store } = makePostsFake([seedPost('scheduled')]);
+    const service = new PostsService(supabase);
+    const row = await service.updateStatus('post-1', 'published', {
+      platformPostId: 'late_abc123',
+    });
+    expect(row.status).toBe('published');
+    expect(row.platform_post_id).toBe('late_abc123');
+    expect(store.posts[0].platform_post_id).toBe('late_abc123');
+  });
 });
 
 describe('PostsService.listPosts calendar range filter (planner contract)', () => {
