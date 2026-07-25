@@ -11,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { ContentFormat, Platform, ApprovalMode } from '../types';
 import { FormatOptionsDto } from './format-options.dto';
+import { CONTENT_FORMATS } from './content-format';
 
 /**
  * Snapshot of ranking resolution params submitted by the operator at
@@ -32,17 +33,7 @@ export interface RankingRunParams {
 }
 
 export class CreateRunDto {
-  @IsIn([
-    'grade_reveal',
-    'top_10_ranking',
-    'bottom_10_ranking',
-    'score_mover',
-    'head_to_head',
-    'long_form_deep_dive',
-    'farm_area_spotlight',
-    'brokerage_market_share',
-    'recruitment_angle',
-  ])
+  @IsIn(CONTENT_FORMATS)
   format!: ContentFormat;
 
   @IsString()

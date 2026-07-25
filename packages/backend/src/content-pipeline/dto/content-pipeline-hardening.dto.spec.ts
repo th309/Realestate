@@ -3,6 +3,8 @@ import { plainToInstance } from 'class-transformer';
 import { ResolveMarketQueryDto } from './resolve-market-query.dto';
 import { EditScriptDto } from './edit-script.dto';
 import { RejectRunDto, CancelRunDto } from './run-reason.dto';
+import { RegenerateThumbnailDto } from './regenerate-thumbnail.dto';
+import { PerformanceRunsQueryDto } from './performance-query.dto';
 import { isContentFormat } from './content-format';
 
 const errorsFor = (cls: any, obj: unknown) =>
@@ -81,6 +83,41 @@ describe('content-pipeline controller hardening DTOs', () => {
       expect(
         (await errorsFor(CancelRunDto, { reason: 'x'.repeat(1001) })).length,
       ).toBeGreaterThan(0);
+    });
+  });
+
+  describe('RegenerateThumbnailDto', () => {
+    it('accepts a non-negative integer frame', async () => {
+      expect(
+        await errorsFor(RegenerateThumbnailDto, { frame: 0 }),
+      ).toHaveLength(0);
+      expect(
+        await errorsFor(RegenerateThumbnailDto, { frame: 42 }),
+      ).toHaveLength(0);
+    });
+    it('rejects NaN, negative, and non-integer frames', async () => {
+      expect(
+        (await errorsFor(RegenerateThumbnailDto, { frame: NaN })).length,
+      ).toBeGreaterThan(0);
+      expect(
+        (await errorsFor(RegenerateThumbnailDto, { frame: -1 })).length,
+      ).toBeGreaterThan(0);
+      expect(
+        (await errorsFor(RegenerateThumbnailDto, { frame: 1.5 })).length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  describe('PerformanceRunsQueryDto', () => {
+    it('accepts a real ContentFormat (or none) and rejects unknown formats', async () => {
+      expect(await errorsFor(PerformanceRunsQueryDto, {})).toHaveLength(0);
+      expect(
+        await errorsFor(PerformanceRunsQueryDto, { format: 'top_10_ranking' }),
+      ).toHaveLength(0);
+      const errors = await errorsFor(PerformanceRunsQueryDto, {
+        format: 'not_a_format',
+      });
+      expect(errors.some((e) => e.property === 'format')).toBe(true);
     });
   });
 

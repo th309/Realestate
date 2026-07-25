@@ -39,6 +39,7 @@ import { DashboardQueryDto } from './dto/dashboard-query.dto';
 import { ResolveMarketQueryDto } from './dto/resolve-market-query.dto';
 import { EditScriptDto } from './dto/edit-script.dto';
 import { RejectRunDto, CancelRunDto } from './dto/run-reason.dto';
+import { RegenerateThumbnailDto } from './dto/regenerate-thumbnail.dto';
 import { isContentFormat } from './dto/content-format';
 
 const THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024; // 5MB
@@ -147,12 +148,15 @@ export class ContentPipelineController {
   }
 
   @Get('runs/:id')
-  async getRun(@Param('id') id: string) {
+  async getRun(@Param('id', new ParseUUIDPipe()) id: string) {
     return { success: true, data: await this.queries.getRunDetail(id) };
   }
 
   @Get('runs/:id/asset-url')
-  async getAssetUrl(@Param('id') id: string, @Query('kind') kind: string) {
+  async getAssetUrl(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('kind') kind: string,
+  ) {
     if (kind !== 'video_master' && kind !== 'audio') {
       throw new BadRequestException('kind must be video_master or audio');
     }
@@ -215,11 +219,8 @@ export class ContentPipelineController {
   @HttpCode(202)
   async regenerateThumbnail(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: { frame: number },
+    @Body() body: RegenerateThumbnailDto,
   ) {
-    if (body == null || typeof body.frame !== 'number') {
-      throw new BadRequestException('frame is required');
-    }
     await this.thumbnails.regenerateThumbnail(id, body.frame);
     return {
       success: true,

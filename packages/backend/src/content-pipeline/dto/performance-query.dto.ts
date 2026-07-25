@@ -1,4 +1,5 @@
-import { IsInt, IsIn, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsIn, IsOptional, Max, Min } from 'class-validator';
+import { CONTENT_FORMATS } from './content-format';
 
 export class PerformanceOverviewQueryDto {
   @IsOptional()
@@ -16,7 +17,7 @@ export class PerformanceRunsQueryDto {
   sinceDays?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(CONTENT_FORMATS)
   format?: string;
 
   @IsOptional()
@@ -33,4 +34,3 @@ export class PerformanceRunsQueryDto {
   @Max(200)
   limit?: number;
 }
-
