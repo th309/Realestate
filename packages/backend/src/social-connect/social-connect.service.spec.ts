@@ -251,6 +251,22 @@ describe('SocialConnectService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('propagates a DB select error instead of reporting false success', async () => {
+      const rows = [storedRow({ id: 'row1', brand_id: 'brand1' })];
+      const late = {
+        isConfigured: () => false,
+      } as unknown as LateClientService;
+      const service = new SocialConnectService(
+        makeFakeSupabase(rows, { single: 'read failed' }),
+        late,
+        noopReconciler,
+      );
+
+      await expect(service.disconnect('row1', 'brand1')).rejects.toMatchObject({
+        message: 'read failed',
+      });
+    });
+
     it('propagates a DB update error instead of reporting false success', async () => {
       const rows = [storedRow({ id: 'row1', brand_id: 'brand1' })];
       const late = {

@@ -40,7 +40,9 @@ export function SocialAccountCard({
           <div className="font-semibold text-on-surface">{label}</div>
         </div>
         {(isConnected || needsReauth) && (
-          <StatusChip status={needsReauth ? "needs_reauth" : "connected"} />
+          <ConnectionStatusChip
+            status={needsReauth ? "needs_reauth" : "connected"}
+          />
         )}
       </div>
 
@@ -105,7 +107,11 @@ export function SocialAccountCard({
   );
 }
 
-function StatusChip({ status }: { status: "connected" | "needs_reauth" }) {
+function ConnectionStatusChip({
+  status,
+}: {
+  status: "connected" | "needs_reauth";
+}) {
   const connected = status === "connected";
   return (
     <span

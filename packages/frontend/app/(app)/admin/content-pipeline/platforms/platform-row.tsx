@@ -38,8 +38,6 @@ export function PlatformRow({
   const [error, setError] = useState<string | null>(null);
   const label = platform.replaceAll("_", " ");
 
-  void connectedAt;
-
   async function handleConnect() {
     setError(null);
     if (!appCredentials.configured) {
@@ -93,13 +91,13 @@ export function PlatformRow({
       ? `Connected · ${accountLabel ?? "channel"} (same OAuth as ${mirrorLabel})`
       : mirrorsPlatform && !configured && mirrorLabel
         ? `Uses the same Google connection as ${mirrorLabel} — connect there first`
-      : configured
-        ? accountLabel
-          ? `Connected · ${accountLabel}`
-          : "Connected"
-        : appCredentials.configured
-          ? "App ready · click Connect to authorize an account"
-          : "App credentials not configured";
+        : configured
+          ? accountLabel
+            ? `Connected · ${accountLabel}`
+            : "Connected"
+          : appCredentials.configured
+            ? "App ready · click Connect to authorize an account"
+            : "App credentials not configured";
 
   return (
     <div className="rounded-xl bg-surface-container-low shadow-sm">
@@ -124,6 +122,11 @@ export function PlatformRow({
               {label}
             </div>
             <div className="text-xs text-outline">{statusLine}</div>
+            {configured && connectedAt && (
+              <div className="text-xs text-outline mt-0.5">
+                Connected {new Date(connectedAt).toLocaleDateString()}
+              </div>
+            )}
             {configured && lastPublishedAt && (
               <div className="text-xs text-outline mt-0.5">
                 Last publish {new Date(lastPublishedAt).toLocaleDateString()}
