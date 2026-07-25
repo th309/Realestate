@@ -1,19 +1,31 @@
 "use client";
 import React from "react";
 import { formatMetricValue } from "@/lib/data";
+import { TREND_WINDOW_MONTHS } from "../lib/explorer-math";
 import { Sparkline } from "./Sparkline";
 
 type Series = (number | null)[];
 export interface KpiStripProps {
-  agg: {
+  /** Raw per-month series for the CURRENT SCOPE — a scope-wide aggregate
+   * (mean, or sum for inventory) across every region currently in view, e.g.
+   * all of Colorado's metros when drilled into Colorado. See
+   * `aggregateScopeKpis` in explorer-math.ts. Deliberately distinct from
+   * whichever single region is selected/highlighted, which the detail rail
+   * tracks separately. */
+  kpiSeries: {
     price: Series;
     rent: Series;
     inventory: Series;
     dom: Series;
     score: Series;
+    homeValueYoy: Series;
+    unemployment: Series;
   };
   monthIndex: number;
-  windowStart: number;
+  /** States have no native PropertyIQ score and no rent_index coverage —
+   * swaps Median Rent → Home Value YoY and PIQ Score → Unemployment Rate for
+   * this scope only. Metro/county/zip keep the original 5 cards. */
+  isStateScope: boolean;
 }
 
 const fmtBig = (v: number) =>
@@ -23,17 +35,30 @@ const fmtBig = (v: number) =>
       ? `${Math.round(v / 1e3)}K`
       : String(Math.round(v));
 
-export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
+export function KpiStrip({
+  kpiSeries,
+  monthIndex,
+  isStateScope,
+}: KpiStripProps) {
+  // Fixed 6-month lookback for BOTH the delta badge AND the sparkline below
+  // it — computed from `monthIndex` (wherever the user has scrubbed the
+  // main timeline to), NOT from the page-wide "range" preset (6M/1Y/2Y/5Y/
+  // 10Y) that governs the main hero chart's zoom. A quick-glance trend
+  // indicator should always compare like-for-like windows regardless of how
+  // far back the user happens to have the main timeline zoomed.
+  const windowStart = Math.max(0, monthIndex - TREND_WINDOW_MONTHS);
   const card = (
     label: string,
     dot: string,
     series: Series,
     fmt: (v: number) => string,
-    invertGood: boolean,
     isPts: boolean,
   ) => {
     const cur = series[monthIndex];
-    const prev = monthIndex === 0 ? null : series[monthIndex - 1];
+    const prev =
+      monthIndex < TREND_WINDOW_MONTHS
+        ? null
+        : series[monthIndex - TREND_WINDOW_MONTHS];
     const hasBothValues = cur != null && prev != null;
     const d = hasBothValues
       ? isPts
@@ -42,12 +67,14 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
           ? ((cur - prev) / prev) * 100
           : 0
       : 0;
-    const up = d >= 0,
-      good = invertGood ? !up : up;
+    // Direction and color always agree, with no per-metric "is up actually
+    // good?" inversion — up is always green with an up-triangle, down is
+    // always red with a down-triangle, full stop.
+    const up = d >= 0;
     const col =
       Math.abs(d) < 0.05
         ? "var(--md-on-surface-variant)"
-        : good
+        : up
           ? "var(--md-tertiary)"
           : "var(--md-error)";
     return (
@@ -127,7 +154,7 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
         </div>
         <div style={{ marginTop: 2 }}>
           <Sparkline
-            series={series.slice(windowStart)}
+            series={series.slice(windowStart, monthIndex + 1)}
             width={120}
             height={22}
             markerIndex={Math.max(0, monthIndex - windowStart)}
@@ -149,43 +176,60 @@ export function KpiStrip({ agg, monthIndex, windowStart }: KpiStripProps) {
       {card(
         "Median value",
         "var(--md-primary)",
-        agg.price,
+        kpiSeries.price,
         (v) => formatMetricValue(v, "currency"),
         false,
-        false,
       )}
-      {card(
-        "Median rent",
-        "var(--md-secondary)",
-        agg.rent,
-        (v) => `$${fmtBig(v)}`,
-        false,
-        false,
-      )}
+      {isStateScope
+        ? card(
+            "Home value YoY",
+            "var(--md-secondary)",
+            kpiSeries.homeValueYoy,
+            (v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
+            // homeValueYoy is ALREADY a percentage — a percent-CHANGE-of-a-
+            // percent (e.g. 0.7% -> 4.2% read as "+500%") is meaningless.
+            // isPts=true shows the raw point delta instead, same as the
+            // score card below.
+            true,
+          )
+        : card(
+            "Median rent",
+            "var(--md-secondary)",
+            kpiSeries.rent,
+            (v) => `$${fmtBig(v)}`,
+            false,
+          )}
       {card(
         "Active listings",
         "var(--md-warning)",
-        agg.inventory,
+        kpiSeries.inventory,
         (v) => fmtBig(v),
-        true,
         false,
       )}
       {card(
-        "Avg days on mkt",
+        "Days on mkt",
         "var(--md-error)",
-        agg.dom,
+        kpiSeries.dom,
         (v) => `${Math.round(v)} d`,
-        true,
         false,
       )}
-      {card(
-        "Avg PIQ score",
-        "var(--md-tertiary)",
-        agg.score,
-        (v) => String(Math.round(v)),
-        false,
-        true,
-      )}
+      {isStateScope
+        ? card(
+            "Unemployment rate",
+            "var(--md-tertiary)",
+            kpiSeries.unemployment,
+            (v) => `${v.toFixed(1)}%`,
+            // Same reasoning as Home Value YoY above — this value is already
+            // a percentage, so the trend badge shows the raw point delta.
+            true,
+          )
+        : card(
+            "PIQ score",
+            "var(--md-tertiary)",
+            kpiSeries.score,
+            (v) => String(Math.round(v)),
+            true,
+          )}
     </div>
   );
 }

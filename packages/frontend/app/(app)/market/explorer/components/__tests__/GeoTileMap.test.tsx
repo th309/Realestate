@@ -19,6 +19,7 @@ const baseProps = {
   boundaries,
   format: "index" as const,
   selectedId: null,
+  playing: false,
   onSelect: vi.fn(),
   onDrill: vi.fn(),
 };
@@ -63,6 +64,32 @@ describe("GeoTileMap", () => {
     const low = container.querySelector('path[data-region-id="48"]');
     const high = container.querySelector('path[data-region-id="06"]');
     expect(low?.getAttribute("fill")).not.toBe(high?.getAttribute("fill"));
+  });
+
+  it("suppresses the CSS fill transition while playing — AnimatedHeroChart already drives smooth color blending via explicit per-frame interpolation (CSS transitions were verified not to animate fill for these SVG elements at all)", () => {
+    const { container } = render(
+      <GeoTileMap
+        {...baseProps}
+        playing
+        colorByRegion={{ "48": 50 }}
+        valueByRegion={{ "48": 50 }}
+      />,
+    );
+    const path = container.querySelector('path[data-region-id="48"]');
+    expect((path as SVGElement).style.transition).toBe("none");
+  });
+
+  it("keeps a CSS transition while paused, so one-off changes (scrubbing a step, switching metrics) still animate instead of snapping instantly", () => {
+    const { container } = render(
+      <GeoTileMap
+        {...baseProps}
+        playing={false}
+        colorByRegion={{ "48": 50 }}
+        valueByRegion={{ "48": 50 }}
+      />,
+    );
+    const path = container.querySelector('path[data-region-id="48"]');
+    expect((path as SVGElement).style.transition).toMatch(/^fill \d+ms ease$/);
   });
 
   it("clicking a region calls onSelect with its id", () => {
@@ -117,6 +144,75 @@ describe("GeoTileMap", () => {
       />,
     );
     expect(screen.getByText(/couldn.t load|error/i)).toBeInTheDocument();
+  });
+
+  it("positions the label at the bounding-box center, not a vertex-density-skewed average — a shape with most of its path points clustered near one edge (e.g. a detailed coastline) must not pull the label off-center", () => {
+    // A square from (0,0) to (100,100), but with a dense cluster of extra
+    // vertices near the TOP edge only (simulating a detailed coastline).
+    // The true bbox center is (50,50); a naive vertex-average would skew
+    // heavily toward y≈0 because most points are crammed up there.
+    const skewedPath =
+      "M0,0L10,1L20,0L30,1L40,0L50,1L60,0L70,1L80,0L90,1L100,0L100,100L0,100Z";
+    const skewedBoundaries: GeoBoundaries = {
+      ...boundaries,
+      features: [{ id: "48", path: skewedPath }],
+    };
+    const { container } = render(
+      <GeoTileMap
+        {...baseProps}
+        boundaries={skewedBoundaries}
+        colorByRegion={{ "48": 60 }}
+        valueByRegion={{ "48": 60 }}
+      />,
+    );
+    const label = container.querySelector("text");
+    expect(label).not.toBeNull();
+    expect(Number(label!.getAttribute("x"))).toBeCloseTo(50, 0);
+    expect(Number(label!.getAttribute("y"))).toBeCloseTo(50, 0);
+  });
+
+  it("drops the smaller of two labels that would visually collide, keeping the bigger tile's label", () => {
+    // "big" bbox-centers at (75,50); "small" bbox-centers at (90,55), only
+    // 15px/5px away — well within the label-collision threshold — while
+    // "big" is 15000 sq. units vs. "small"'s 800, so "big" sorts first and
+    // wins the slot.
+    const collidingBoundaries: GeoBoundaries = {
+      ...boundaries,
+      features: [
+        { id: "big", path: "M0,0L150,0L150,100L0,100Z" },
+        { id: "small", path: "M70,45L110,45L110,65L70,65Z" },
+      ],
+    };
+    const { container } = render(
+      <GeoTileMap
+        {...baseProps}
+        boundaries={collidingBoundaries}
+        colorByRegion={{ big: 60, small: 60 }}
+        valueByRegion={{ big: 60, small: 60 }}
+      />,
+    );
+    const bigGroup = container.querySelector(
+      'path[data-region-id="big"]',
+    )!.parentElement!;
+    const smallGroup = container.querySelector(
+      'path[data-region-id="small"]',
+    )!.parentElement!;
+    expect(bigGroup.querySelector("text")).not.toBeNull();
+    expect(smallGroup.querySelector("text")).toBeNull();
+  });
+
+  it("outlines label text with a dark stroke so it stays legible over any tile fill color", () => {
+    const { container } = render(
+      <GeoTileMap
+        {...baseProps}
+        colorByRegion={{ "48": 60 }}
+        valueByRegion={{ "48": 60 }}
+      />,
+    );
+    const label = container.querySelector("text");
+    expect(label).not.toBeNull();
+    expect(label!.getAttribute("stroke")).toMatch(/rgba\(0,0,0/);
+    expect(label!.getAttribute("paint-order")).toBe("stroke");
   });
 
   it("renders at a fixed frame height regardless of a portrait (tall) boundaries viewBox", () => {

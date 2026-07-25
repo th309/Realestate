@@ -16,6 +16,12 @@ function stateKeyColumn(source: string): {
       col: 'state_id',
       toFips: (v) => stateFipsByAbbr[String(v).toUpperCase()],
     };
+  // economic_state already keys on state_fips directly — no crosswalk needed.
+  if (source === 'economic')
+    return {
+      col: 'state_fips',
+      toFips: (v) => (v ? String(v) : undefined),
+    };
   // zillow_state keys on the full state name in region_name
   return {
     col: 'region_name',

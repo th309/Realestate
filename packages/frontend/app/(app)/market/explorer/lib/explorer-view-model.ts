@@ -9,11 +9,11 @@ import {
 } from "./explorer-config";
 import {
   metricSeriesFor,
-  metricColorScalars,
   scoreChip,
   formatExplorerValue,
   type SeriesByMetric,
 } from "./explorer-math";
+import { metricColorScalars } from "./explorer-scale";
 
 const at = (arr: (number | null)[] | undefined, i: number): number | null =>
   arr ? (arr[i] ?? null) : null;
@@ -28,6 +28,13 @@ export function buildBubbleScalars(
   series: SeriesByMetric,
   metricId: ExplorerMetricId,
   monthIndex: number,
+  /** Precomputed GLOBAL [lo, hi] color bounds (see `collectAllMetricValues` +
+   * `computeMetricBounds`) — REQUIRED for animated playback (AnimatedHeroChart),
+   * since recomputing bounds fresh from just this one month's snapshot makes
+   * the whole color scale rescale every tick. Omitted for the plain,
+   * non-animated single-month usage (KPI strip/leaderboard/etc. in
+   * MarketExplorer.tsx), which is unaffected by this concern. */
+  colorBounds?: [number, number],
 ) {
   const xByRegion: Record<string, number | null> = {};
   const yByRegion: Record<string, number | null> = {};
@@ -48,8 +55,38 @@ export function buildBubbleScalars(
     yByRegion,
     cfg.format,
     cfg.betterHigh,
+    colorBounds,
   );
   return { xByRegion, yByRegion, scoreByRegion, radiusByRegion, colorByRegion };
+}
+
+/** The 4 blendable fields of a `buildBubbleScalars` snapshot — everything a
+ * caller needs to interpolate toward the next month's positions/color.
+ * `scoreByRegion` is deliberately excluded: the PropertyIQ score gauge
+ * always snaps to the current month, never blends (see AnimatedHeroChart). */
+export type BubbleBlendScalars = Pick<
+  ReturnType<typeof buildBubbleScalars>,
+  "xByRegion" | "yByRegion" | "colorByRegion" | "radiusByRegion"
+>;
+
+/**
+ * All non-null values for a metric, across every region AND every month —
+ * used to build STABLE, GLOBAL scale bounds for animated playback (position
+ * + color axes must stay fixed while dots/tiles move; see `buildBubbleScalars`'s
+ * `colorBounds` param and BubbleChart's `yBounds`/`xBounds` props).
+ */
+export function collectAllMetricValues(
+  entities: ScopeRegion[],
+  series: SeriesByMetric,
+  metricId: ExplorerMetricId,
+): number[] {
+  const values: number[] = [];
+  for (const e of entities) {
+    for (const v of metricSeriesFor(metricId, series, e.id)) {
+      if (v != null) values.push(v);
+    }
+  }
+  return values;
 }
 
 export function buildLeaderboardRows(
@@ -90,7 +127,13 @@ export function buildLeaderboardRows(
       score,
       scoreBg: chip.bg,
       scoreColor: chip.color,
-      spark: x.series.slice(windowStart),
+      // Upper-bounded at monthIndex+1 — without it, .slice(windowStart)
+      // runs to the end of the FULL fetched series, which is one month
+      // beyond "now" whenever monthIndex isn't the array's last index (e.g.
+      // state scope, whose default month is anchored to unemployment_rate's
+      // latest month — 1 month behind the rest of the dataset since FRED
+      // lags). Same root cause fixed in KpiStrip/ExplorerDetailRail.
+      spark: x.series.slice(windowStart, monthIndex + 1),
       markerIndex: Math.max(0, monthIndex - windowStart),
     };
   });
@@ -137,19 +180,61 @@ export function buildDetailStats(
   series: SeriesByMetric,
   regionId: string,
   monthIndex: number,
+  /** States have no rent_index or hotness_score coverage at all — those 2
+   * cards would always read "—" for every state. Swaps them for this one
+   * region's own unemployment rate and new-listings count, both of which
+   * ARE available at state level. */
+  isStateScope = false,
 ) {
   const price = at(series.home_value?.[regionId], monthIndex);
   const yoy = at(
     metricSeriesFor("home_value_yoy", series, regionId),
     monthIndex,
   );
-  const yld = at(metricSeriesFor("rent_yield", series, regionId), monthIndex);
-  const hot = at(series.hotness_score?.[regionId], monthIndex);
   const dom = at(series.days_on_market?.[regionId], monthIndex);
   const sup = at(metricSeriesFor("supply", series, regionId), monthIndex);
   const pos = "var(--md-tertiary)",
     neg = "var(--md-error)",
     on = "var(--md-on-surface)";
+
+  const secondRow = isStateScope
+    ? [
+        {
+          label: "Unemployment",
+          value: formatExplorerValue(
+            at(series.unemployment_rate?.[regionId], monthIndex),
+            "percent_abs",
+          ),
+          color: on,
+        },
+        {
+          label: "New listings",
+          value: formatMetricValue(
+            at(series.new_listings?.[regionId], monthIndex),
+            "number",
+          ),
+          color: on,
+        },
+      ]
+    : [
+        {
+          label: "Rent yield",
+          value: formatExplorerValue(
+            at(metricSeriesFor("rent_yield", series, regionId), monthIndex),
+            "percent_abs",
+          ),
+          color: on,
+        },
+        {
+          label: "Hotness",
+          value: formatExplorerValue(
+            at(series.hotness_score?.[regionId], monthIndex),
+            "index",
+          ),
+          color: on,
+        },
+      ];
+
   return [
     {
       label: "Median value",
@@ -161,12 +246,7 @@ export function buildDetailStats(
       value: formatExplorerValue(yoy, "percent"),
       color: (yoy ?? 0) >= 0 ? pos : neg,
     },
-    {
-      label: "Rent yield",
-      value: formatExplorerValue(yld, "percent_abs"),
-      color: on,
-    },
-    { label: "Hotness", value: formatExplorerValue(hot, "index"), color: on },
+    ...secondRow,
     {
       label: "Days on mkt",
       value: formatExplorerValue(dom, "days"),

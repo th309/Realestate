@@ -15,6 +15,7 @@ const base = {
   format: "index" as const,
   selectedId: "A",
   pinnedIds: [] as string[],
+  playing: false,
 };
 
 describe("BubbleChart", () => {
@@ -58,5 +59,26 @@ describe("BubbleChart", () => {
     expect(circles[0].getAttribute("fill")).not.toBe(
       circles[1].getAttribute("fill"),
     );
+  });
+
+  it("suppresses the CSS position transition while playing — AnimatedHeroChart already drives smooth motion via explicit per-frame interpolation (CSS transitions were verified not to animate cx/cy for these SVG elements at all)", () => {
+    const { container } = render(
+      <BubbleChart {...base} playing onSelect={() => {}} onDrill={() => {}} />,
+    );
+    const circle = container.querySelector("circle")!;
+    expect(circle.style.transition).toBe("none");
+  });
+
+  it("keeps a CSS transition while paused, so one-off changes (scrubbing a step, switching metrics) still animate instead of snapping instantly", () => {
+    const { container } = render(
+      <BubbleChart
+        {...base}
+        playing={false}
+        onSelect={() => {}}
+        onDrill={() => {}}
+      />,
+    );
+    const circle = container.querySelector("circle")!;
+    expect(circle.style.transition).toMatch(/^cx \d+ms ease, cy \d+ms ease$/);
   });
 });

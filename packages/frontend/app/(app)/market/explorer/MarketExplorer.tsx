@@ -2,44 +2,31 @@
 import React, { useEffect, useMemo, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import {
-  isMetricSupportedForGeo,
-  titleCaseLocationName,
-  type GeoLevel,
-} from "@/lib/data";
-import {
   explorerReducer,
   initialExplorerState,
   resolveScope,
 } from "./lib/explorer-reducer";
 import { useExplorerScopeData } from "./lib/useExplorerScopeData";
-import {
-  EXPLORER_METRICS,
-  RANGE_PRESETS,
-  type ExplorerMetricId,
-} from "./lib/explorer-config";
+import { EXPLORER_METRICS } from "./lib/explorer-config";
 import {
   aggregateScopeKpis,
   computeMovers,
-  metricSeriesFor,
   latestScoredMonthIndex,
-  formatExplorerValue,
 } from "./lib/explorer-math";
 import {
   buildBubbleScalars,
   buildLeaderboardRows,
-  buildDetailStats,
-  coverageConfidence,
 } from "./lib/explorer-view-model";
+import { useMetricAvailability } from "./lib/useMetricAvailability";
 import { buildBreadcrumbs, buildLevelTabs } from "./lib/explorer-navigation";
 import { GeoDrillBar } from "./components/GeoDrillBar";
 import { MetricSwitcher } from "./components/MetricSwitcher";
 import { KpiStrip } from "./components/KpiStrip";
 import { HeroVisualization } from "./components/HeroVisualization";
-import { BubbleChart } from "./components/BubbleChart";
-import { GeoTileMap } from "./components/GeoTileMap";
+import { AnimatedHeroChart } from "./components/AnimatedHeroChart";
 import { useGeoBoundaries } from "./lib/useGeoBoundaries";
-import { TimelineScrubber } from "./components/TimelineScrubber";
-import { DetailRail } from "./components/DetailRail";
+import { ExplorerTimeline } from "./components/ExplorerTimeline";
+import { ExplorerDetailRail } from "./components/ExplorerDetailRail";
 import { MarketExplorerAnalytics } from "./MarketExplorerAnalytics";
 import { UNIT_PLURAL, CHILD_PLURAL, monthLabelOf } from "./lib/explorer-labels";
 
@@ -74,9 +61,28 @@ export default function MarketExplorer() {
   // series is a fresh object every render (useExplorerScopeData doesn't
   // memoize it), so depend on this primitive index rather than series itself
   // — otherwise the reset effect below would refire and dispatch every render.
+  // States have no native PropertyIQ score, so anchoring the default month to
+  // PIQ score's own latest-scored month picked a month where unemployment
+  // (FRED) had NO data at all for any state — landing the whole page on a
+  // month where the state-scope KPI strip/detail rail showed nothing but
+  // dashes. unemployment_rate is itself the LAGGIEST of the 5 state-scope
+  // KPI metrics (confirmed live: home_value/days_on_market/for_sale_inventory
+  // are current through the latest month, but FRED's unemployment_rate is
+  // consistently ~1 month behind) — anchoring on it specifically guarantees
+  // every other state metric already has data by the time unemployment does.
+  const isStateScope = scope.geoLevel === "state";
   const latestScoredIdx = useMemo(
-    () => latestScoredMonthIndex(series.propertyiq_score, dates.length),
-    [series.propertyiq_score, dates.length],
+    () =>
+      latestScoredMonthIndex(
+        isStateScope ? series.unemployment_rate : series.propertyiq_score,
+        dates.length,
+      ),
+    [
+      isStateScope,
+      series.unemployment_rate,
+      series.propertyiq_score,
+      dates.length,
+    ],
   );
 
   // Reset month to the latest scored month + selection to first whenever the
@@ -102,7 +108,13 @@ export default function MarketExplorer() {
     () => buildBubbleScalars(regions, series, state.metric, mi),
     [regions, series, state.metric, mi],
   );
-  const agg = useMemo(
+  // Scope-wide aggregate (e.g. all of Colorado's metros when drilled into
+  // Colorado) — the KPI strip tracks the CURRENT SCOPE itself, labeled with
+  // the scope's own name below; the detail rail separately tracks whichever
+  // individual region (`selected`) is highlighted on the map/bubble chart.
+  // These are deliberately two different things shown side by side, not
+  // duplicates of each other.
+  const kpiSeries = useMemo(
     () =>
       aggregateScopeKpis(
         regions.map((r) => r.id),
@@ -154,111 +166,71 @@ export default function MarketExplorer() {
     selected ? () => onDrillEntity(selected.id) : null,
   );
 
-  const disabledMetricIds = EXPLORER_METRICS.filter(
-    (m) =>
-      m.source.kind === "fetched" &&
-      !isMetricSupportedForGeo(m.source.series, scope.geoLevel as GeoLevel) &&
-      !series[m.source.series],
-  ).map((m) => m.id) as ExplorerMetricId[];
+  const disabledMetricIds = useMetricAvailability(
+    scope.geoLevel,
+    isStateScope,
+    series,
+    state.metric,
+    dispatch,
+  );
 
   // ── hero chart ──
-  const heroChart =
-    state.view === "map" ? (
-      <GeoTileMap
-        boundaries={boundaries}
-        colorByRegion={scalars.colorByRegion}
-        valueByRegion={scalars.yByRegion}
-        format={metricCfg.format}
-        selectedId={state.selectedId}
-        onSelect={onSelect}
-        onDrill={onDrillEntity}
-      />
-    ) : (
-      <BubbleChart
-        entities={regions}
-        xByRegion={scalars.xByRegion}
-        yByRegion={scalars.yByRegion}
-        colorByRegion={scalars.colorByRegion}
-        radiusByRegion={scalars.radiusByRegion}
-        axisLabel={metricCfg.axis}
-        format={metricCfg.format}
-        selectedId={state.selectedId}
-        pinnedIds={state.pinnedIds}
-        onSelect={onSelect}
-        onDrill={onDrillEntity}
-      />
-    );
+  // AnimatedHeroChart drives smoothing via explicit per-frame interpolation
+  // (requestAnimationFrame), not a CSS transition — verified by frame-by-frame
+  // screen-recording analysis that CSS transitions do not animate cx/cy/fill
+  // for these SVG elements at all (instant snap, zero intermediate frames).
+  // It owns its own (blended) scalars internally — the `scalars` computed
+  // above stays the single source of truth for the REAL, unblended
+  // current-month values everything else (KPI strip, leaderboard, detail
+  // rail, momentum donut) reads from.
+  const heroChart = (
+    <AnimatedHeroChart
+      view={state.view}
+      boundaries={boundaries}
+      regions={regions}
+      series={series}
+      metricId={state.metric}
+      monthIndex={mi}
+      lastIdx={lastIdx}
+      playing={state.playing}
+      format={metricCfg.format}
+      axisLabel={metricCfg.axis}
+      selectedId={state.selectedId}
+      pinnedIds={state.pinnedIds}
+      onSelect={onSelect}
+      onDrill={onDrillEntity}
+    />
+  );
 
   const scrubber = (
-    <TimelineScrubber
-      min={windowStart}
-      max={lastIdx}
-      value={mi}
-      playing={state.playing}
-      onTogglePlay={() => dispatch({ type: "TOGGLE_PLAY" })}
-      onScrub={(v) => {
-        dispatch({ type: "SET_MONTH", monthIndex: v });
-        dispatch({ type: "SET_PLAYING", playing: false });
-      }}
-      onAdvance={(v) => dispatch({ type: "SET_MONTH", monthIndex: v })}
-      onStop={() => dispatch({ type: "SET_PLAYING", playing: false })}
-      rangeOptions={RANGE_PRESETS.map((r) => ({
-        months: r.months,
-        label: r.label,
-        active: state.range === r.months,
-        onClick: () => dispatch({ type: "SET_RANGE", range: r.months }),
-      }))}
-      startLabel={monthLabelOf(dates[windowStart])}
-      midLabel={monthLabelOf(dates[Math.round((windowStart + lastIdx) / 2)])}
-      endLabel={monthLabelOf(dates[lastIdx])}
-      monthLabel={monthLabelOf(dates[mi])}
+    <ExplorerTimeline
+      state={state}
+      dispatch={dispatch}
+      dates={dates}
+      windowStart={windowStart}
+      lastIdx={lastIdx}
+      monthIndex={mi}
     />
   );
 
   // ── rail ──
-  const selScore = selected ? scalars.scoreByRegion[selected.id] : null;
-  const selMetricSeries = selected
-    ? metricSeriesFor(state.metric, series, selected.id)
-    : [];
   const selChildPlural = CHILD_PLURAL[scope.geoLevel];
-  const rail = selected && (
-    <DetailRail
-      name={titleCaseLocationName(selected.name)}
-      sub={`${selected.state} · ${scope.geoLevel}${scope.geoLevel === "metro" ? ` · CBSA ${selected.id}` : ""}`}
-      score={selScore}
-      confidence={coverageConfidence(series, selected.id, mi, dates[lastIdx])}
-      inherited={
-        selScore == null && state.path.length > 0
-          ? {
-              sourceType: state.path[state.path.length - 1].level as
-                | "county"
-                | "metro"
-                | "state"
-                | "national",
-              sourceName: scopeName,
-            }
-          : null
-      }
-      stats={buildDetailStats(series, selected.id, mi)}
-      metricLabel={metricCfg.label}
-      metricValueNow={formatExplorerValue(
-        selMetricSeries[mi] ?? null,
-        metricCfg.format,
-      )}
-      railSpark={selMetricSeries.slice(windowStart)}
-      railMarker={Math.max(0, mi - windowStart)}
-      isPinned={state.pinnedIds.includes(selected.id)}
-      onTogglePin={() =>
-        dispatch({
-          type: state.pinnedIds.includes(selected.id) ? "UNPIN" : "PIN",
-          id: selected.id,
-        })
-      }
-      hasDrill={scope.geoLevel !== "zip"}
-      drillLabel={`Explore ${selChildPlural ?? "detail"} in ${titleCaseLocationName(selected.name)} ↓`}
-      onDrill={() => onDrillEntity(selected.id)}
-      hasDashboard={scope.geoLevel !== "state"}
-      onOpenDashboard={() => openDashboard(selected)}
+  const rail = (
+    <ExplorerDetailRail
+      selected={selected}
+      scoreByRegion={scalars.scoreByRegion}
+      series={series}
+      dates={dates}
+      monthIndex={mi}
+      lastIdx={lastIdx}
+      state={state}
+      dispatch={dispatch}
+      geoLevel={scope.geoLevel}
+      scopeName={scopeName}
+      metricCfg={metricCfg}
+      isStateScope={isStateScope}
+      onDrillEntity={onDrillEntity}
+      onOpenDashboard={openDashboard}
     />
   );
 
@@ -307,7 +279,21 @@ export default function MarketExplorer() {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <KpiStrip agg={agg} monthIndex={mi} windowStart={windowStart} />
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--md-on-surface-variant)",
+            marginBottom: 8,
+          }}
+        >
+          {scopeName ?? "United States"} · {regions.length} {unitPlural}
+        </div>
+        <KpiStrip
+          kpiSeries={kpiSeries}
+          monthIndex={mi}
+          isStateScope={isStateScope}
+        />
       </div>
 
       <div
