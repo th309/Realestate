@@ -1,5 +1,3 @@
-import type { SocialPlatform } from './late-client.types';
-
 /** Connection status persisted in `platform_connections.status`. */
 export type ConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
 
@@ -45,11 +43,18 @@ export interface SocialConnectSetup {
   steps: string[];
 }
 
-/** Input for the later-phase publish path (connection id → Late account). */
-export interface PublishViaConnectionInput {
-  copy: string;
-  platform: SocialPlatform;
-  mediaUrls?: string[];
-  scheduledAt?: string;
-  timezone?: string;
+/** One row that failed to upsert during a sync, with the reason. */
+export interface SyncFailure {
+  platform: string;
+  externalAccountId: string;
+  error: string;
+}
+
+/**
+ * Outcome of a sync. `failed` lets callers tell full success from partial —
+ * a non-empty array means some accounts did not persist.
+ */
+export interface SyncResult {
+  synced: number;
+  failed: SyncFailure[];
 }

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { SocialConnectController } from './social-connect.controller';
 import { SocialConnectService } from './social-connect.service';
+import { SocialConnectReconciler } from './social-connect-reconciler.service';
 import { LateClientService } from './late-client.service';
 
 /**
@@ -20,7 +21,7 @@ import { LateClientService } from './late-client.service';
 @Module({
   imports: [SupabaseModule, ConfigModule],
   controllers: [SocialConnectController],
-  providers: [SocialConnectService, LateClientService],
+  providers: [SocialConnectService, SocialConnectReconciler, LateClientService],
   exports: [SocialConnectService, LateClientService],
 })
 export class SocialConnectModule {}

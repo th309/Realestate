@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import type { SocialConnection } from "@/lib/data";
 import type { SocialPlatformMeta } from "./social-platform-meta";
@@ -8,6 +6,9 @@ import type { SocialPlatformMeta } from "./social-platform-meta";
  * One platform tile on the connected-accounts wall. Presentational only — all
  * fetching + popup logic lives in `social-connect-wall.tsx`. Shows either the
  * connected account (avatar, handle, status chip) or a Connect button.
+ *
+ * No "use client" directive: it inherits client-ness from the wall that imports
+ * it, so its function props don't trip the client-entry serializable-props rule.
  */
 export function SocialAccountCard({
   meta,
@@ -27,6 +28,7 @@ export function SocialAccountCard({
   const { label, Glyph } = meta;
   const isConnected = connection?.status === "connected";
   const needsReauth = connection?.status === "needs_reauth";
+  const helperId = `connect-help-${meta.id}`;
 
   return (
     <div className="flex flex-col rounded-xl bg-surface-container-low p-4 shadow-sm">
@@ -58,7 +60,7 @@ export function SocialAccountCard({
           </div>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-on-surface-variant">
+        <p id={helperId} className="mt-4 text-sm text-on-surface-variant">
           {configured
             ? "Connect an account to publish here."
             : "Available once the Late key is set."}
@@ -92,10 +94,8 @@ export function SocialAccountCard({
             type="button"
             onClick={onConnect}
             disabled={!configured || working !== null}
+            aria-describedby={helperId}
             className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-primary transition-colors duration-200 disabled:opacity-60"
-            title={
-              configured ? undefined : "Set LATE_API_KEY to enable connect"
-            }
           >
             {working === "connect" ? "Opening…" : "Connect"}
           </button>

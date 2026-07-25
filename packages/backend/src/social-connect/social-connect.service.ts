@@ -1,33 +1,41 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LateClientService } from './late-client.service';
+import { SocialConnectReconciler } from './social-connect-reconciler.service';
 import {
   LATE_PLATFORM_BY_SOCIAL,
-  LateApiError,
   LateNotConfiguredError,
-  SOCIAL_BY_LATE_PLATFORM,
   type LateAccount,
   type SocialPlatform,
 } from './late-client.types';
+import { mergeLiveAccount, toConnectionView } from './social-connect.mappers';
+import {
+  assertAllowedRedirect,
+  defaultRedirectUrl,
+} from './social-connect-redirect';
 import type {
   ConnectionStatus,
   ListConnectionsResult,
   PlatformConnectionRow,
-  PublishViaConnectionInput,
   SocialConnectSetup,
-  SocialConnectionView,
+  SyncResult,
 } from './social-connect.types';
+import type { PublishViaConnectionDto } from './dto/publish-via-connection.dto';
 
 const TABLE = 'platform_connections';
 
 /**
- * Orchestrates PropertyIQ's social connections: reads/writes the
- * `platform_connections` table and drives the Late aggregator client.
+ * Public API for PropertyIQ's social connections: reads `platform_connections`
+ * and drives the Late aggregator client. The write/reconcile path lives in
+ * {@link SocialConnectReconciler}.
  *
  * The feature is optional until Troy provisions a Late account. Every
  * Late-dependent path degrades to a structured "not configured" state instead
  * of crashing (CLAUDE.md §1.2 — no hardcoded fallback key, gate at request
  * time).
+ *
+ * Tenant safety: the shared Supabase client is service-role and bypasses RLS,
+ * so every row operation is scoped by `brand_id` in app code — never by id alone.
  */
 @Injectable()
 export class SocialConnectService {
@@ -36,6 +44,7 @@ export class SocialConnectService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly late: LateClientService,
+    private readonly reconciler: SocialConnectReconciler,
   ) {}
 
   // ── Config helpers ─────────────────────────────────────────────────────────
@@ -59,14 +68,6 @@ export class SocialConnectService {
     };
   }
 
-  /** Where Late returns the user after the hosted OAuth flow. */
-  defaultRedirectUrl(): string {
-    const base = (
-      process.env.APP_BASE_URL?.trim() || 'http://localhost:3000'
-    ).replace(/\/$/, '');
-    return `${base}/admin/content-pipeline/platforms`;
-  }
-
   /** Late profile (workspace/brand) name to connect accounts under. */
   private profileName(): string {
     return process.env.SOCIAL_CONNECT_PROFILE_NAME?.trim() || 'PropertyIQ';
@@ -76,8 +77,8 @@ export class SocialConnectService {
 
   /**
    * List connections from `platform_connections`, overlaying live status from
-   * Late when configured. Never throws on a Late outage — falls back to the
-   * stored rows so the wall still renders.
+   * Late when configured. A DB failure throws (surfaces as a real error, not a
+   * healthy-empty list); a Late outage degrades to the stored rows.
    */
   async listConnections(brandId?: string): Promise<ListConnectionsResult> {
     const rows = await this.selectRows(brandId);
@@ -85,7 +86,7 @@ export class SocialConnectService {
     if (!this.late.isConfigured()) {
       return {
         configured: false,
-        connections: rows.map((r) => this.toView(r)),
+        connections: rows.map(toConnectionView),
         setup: this.setup(),
       };
     }
@@ -105,13 +106,7 @@ export class SocialConnectService {
       const live = r.external_account_id
         ? liveById.get(r.external_account_id)
         : undefined;
-      if (!live) return this.toView(r);
-      return this.toView({
-        ...r,
-        handle: live.username ?? live.displayName ?? r.handle,
-        avatar_url: live.profilePicture ?? r.avatar_url,
-        status: live.isActive === false ? 'needs_reauth' : 'connected',
-      });
+      return toConnectionView(live ? mergeLiveAccount(r, live) : r);
     });
 
     return { configured: true, connections };
@@ -129,8 +124,9 @@ export class SocialConnectService {
 
     const { data, error } = await query;
     if (error) {
+      // Propagate — a real outage must not render as an empty, healthy wall.
       this.logger.error(`select ${TABLE} failed: ${error.message}`);
-      return [];
+      throw new Error(`Failed to read connections: ${error.message}`);
     }
     return (data ?? []) as PlatformConnectionRow[];
   }
@@ -149,141 +145,110 @@ export class SocialConnectService {
   }): Promise<{ authUrl: string; state?: string; platform: SocialPlatform }> {
     if (!this.late.isConfigured()) throw new LateNotConfiguredError();
 
+    let redirectUrl: string;
+    if (params.redirectUrl) {
+      assertAllowedRedirect(params.redirectUrl);
+      redirectUrl = params.redirectUrl;
+    } else {
+      redirectUrl = defaultRedirectUrl();
+    }
+
     const latePlatform = LATE_PLATFORM_BY_SOCIAL[params.platform];
     const profile = await this.late.getOrCreateProfile(this.profileName());
     const { authUrl, state } = await this.late.startConnect({
       platform: latePlatform,
       profileId: profile._id,
-      redirectUrl: params.redirectUrl ?? this.defaultRedirectUrl(),
+      redirectUrl,
     });
     return { authUrl, state, platform: params.platform };
   }
 
   // ── Disconnect ──────────────────────────────────────────────────────────────
 
-  async disconnect(id: string): Promise<{ disconnected: string }> {
-    const { data } = await this.supabase
+  /** Disconnect a connection the brand owns (drops it at Late too). */
+  async disconnect(
+    id: string,
+    brandId: string,
+  ): Promise<{ disconnected: string }> {
+    const { data, error: selectError } = await this.supabase
       .getClient()
       .from(TABLE)
       .select('external_account_id')
       .eq('id', id)
+      .eq('brand_id', brandId)
       .maybeSingle();
+    if (selectError) throw selectError;
+    if (!data) {
+      throw new NotFoundException('Connection not found for this brand');
+    }
 
-    const externalId = (data as { external_account_id?: string } | null)
-      ?.external_account_id;
+    const externalId = (data as { external_account_id?: string })
+      .external_account_id;
     if (externalId && this.late.isConfigured()) {
       try {
         await this.late.disconnectAccount(externalId);
       } catch (err) {
-        // Still mark disconnected locally even if Late already dropped it.
+        // Late may have already dropped it — still mark it locally.
         this.logger.warn(`Late disconnect failed for ${id}: ${String(err)}`);
       }
     }
 
-    await this.supabase
+    const { error: updateError } = await this.supabase
       .getClient()
       .from(TABLE)
       .update({ status: 'disconnected' satisfies ConnectionStatus })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('brand_id', brandId);
+    if (updateError) throw updateError;
 
     return { disconnected: id };
   }
 
   // ── Sync (webhook / poll) ────────────────────────────────────────────────────
 
-  /**
-   * Reconcile Late's connected accounts into `platform_connections`. Called
-   * after the popup closes and by a future webhook. `brandId` is required — the
-   * table's brand_id is NOT NULL.
-   */
-  async syncFromLate(brandId: string): Promise<{ synced: number }> {
-    if (!this.late.isConfigured()) throw new LateNotConfiguredError();
-
-    let accounts: LateAccount[];
-    try {
-      accounts = await this.late.listAccounts();
-    } catch (err) {
-      if (err instanceof LateApiError) throw err;
-      throw err;
-    }
-
-    let synced = 0;
-    for (const account of accounts) {
-      const platform = SOCIAL_BY_LATE_PLATFORM[account.platform];
-      if (!platform) continue; // ignore platforms PropertyIQ does not surface
-
-      const row = {
-        brand_id: brandId,
-        platform,
-        provider: 'late' as const,
-        external_account_id: account._id,
-        handle: account.username ?? account.displayName ?? null,
-        avatar_url: account.profilePicture ?? null,
-        status: (account.isActive === false
-          ? 'needs_reauth'
-          : 'connected') satisfies ConnectionStatus,
-        meta: account as unknown as Record<string, unknown>,
-        connected_at: new Date().toISOString(),
-      };
-
-      const { error } = await this.supabase
-        .getClient()
-        .from(TABLE)
-        .upsert(row, { onConflict: 'brand_id,platform,provider' });
-      if (error) {
-        this.logger.error(`upsert ${TABLE} failed: ${error.message}`);
-        continue;
-      }
-      synced += 1;
-    }
-
-    return { synced };
+  /** Reconcile Late's accounts into `platform_connections` for a brand. */
+  async syncFromLate(brandId: string): Promise<SyncResult> {
+    return this.reconciler.syncFromLate(brandId);
   }
 
   // ── Publish (used by a later phase) ──────────────────────────────────────────
 
   /**
-   * Publish through a stored connection. Resolves our connection id to the Late
-   * account id, then delegates to the Late client. Wired by a later phase.
+   * Publish through a connection the brand owns. Resolves our connection id to
+   * the Late account id, then delegates to the Late client. Wired by a later
+   * phase; scoped by brand_id like every other row operation.
    */
-  async publishPost(connectionId: string, input: PublishViaConnectionInput) {
+  async publishPost(
+    connectionId: string,
+    brandId: string,
+    input: PublishViaConnectionDto,
+  ) {
     if (!this.late.isConfigured()) throw new LateNotConfiguredError();
 
-    const { data } = await this.supabase
+    const { data, error } = await this.supabase
       .getClient()
       .from(TABLE)
-      .select('external_account_id, platform')
+      .select('external_account_id')
       .eq('id', connectionId)
+      .eq('brand_id', brandId)
       .maybeSingle();
+    if (error) throw error;
 
-    const row = data as { external_account_id?: string } | null;
-    if (!row?.external_account_id) {
-      throw new Error(`Connection ${connectionId} has no linked Late account`);
+    const externalId = (data as { external_account_id?: string } | null)
+      ?.external_account_id;
+    if (!externalId) {
+      throw new NotFoundException(
+        `Connection ${connectionId} has no linked Late account for this brand`,
+      );
     }
 
     return this.late.publishPost({
-      accountId: row.external_account_id,
+      accountId: externalId,
       platform: LATE_PLATFORM_BY_SOCIAL[input.platform],
       copy: input.copy,
       mediaUrls: input.mediaUrls,
       scheduledAt: input.scheduledAt,
       timezone: input.timezone,
     });
-  }
-
-  // ── Mapping ──────────────────────────────────────────────────────────────────
-
-  private toView(r: PlatformConnectionRow): SocialConnectionView {
-    return {
-      id: r.id,
-      brandId: r.brand_id,
-      platform: r.platform,
-      provider: r.provider,
-      externalAccountId: r.external_account_id,
-      handle: r.handle,
-      avatarUrl: r.avatar_url,
-      status: r.status,
-      connectedAt: r.connected_at,
-    };
   }
 }

@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   ServiceUnavailableException,
@@ -21,7 +22,8 @@ import { SyncConnectionsDto } from './dto/sync-connections.dto';
  * Admin endpoints for one-click social-account connection via the Late
  * aggregator. Guarded exactly like the sibling content-pipeline admin
  * controllers (AdminGuard). Every response uses the `{ success, data }`
- * envelope the frontend already expects.
+ * envelope the frontend expects — including the not-configured 503, which is
+ * `{ success: false, error: <setup> }`.
  *
  * NOT wired into any module import yet — the team lead adds the single
  * `SocialConnectModule` import after all Phase 3 agents finish (see report).
@@ -55,10 +57,17 @@ export class SocialConnectController {
     }
   }
 
-  /** Disconnect a stored connection (drops it at Late too when configured). */
+  /**
+   * Disconnect a connection the brand owns. `:id` is UUID-validated (bare param
+   * strings bypass the global ValidationPipe) and the operation is tenant-scoped
+   * by brandId (service-role client bypasses RLS).
+   */
   @Delete('connections/:id')
-  async disconnect(@Param('id') id: string) {
-    return { success: true, data: await this.service.disconnect(id) };
+  async disconnect(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('brandId', new ParseUUIDPipe()) brandId: string,
+  ) {
+    return { success: true, data: await this.service.disconnect(id, brandId) };
   }
 
   /** Reconcile Late's connected accounts into `platform_connections`. */
@@ -78,10 +87,17 @@ export class SocialConnectController {
     }
   }
 
-  /** Turn a missing-key error into a structured 503; rethrow anything else. */
+  /**
+   * Turn a missing-key error into a structured 503 that keeps the `{ success }`
+   * envelope; rethrow anything else. Shared so the future publish route inherits
+   * the exact same shape.
+   */
   private mapNotConfigured(err: unknown): unknown {
     if (err instanceof LateNotConfiguredError) {
-      return new ServiceUnavailableException(this.service.setup());
+      return new ServiceUnavailableException({
+        success: false,
+        error: this.service.setup(),
+      });
     }
     return err;
   }

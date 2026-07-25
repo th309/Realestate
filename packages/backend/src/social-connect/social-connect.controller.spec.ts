@@ -37,7 +37,7 @@ describe('SocialConnectController', () => {
     expect(res.data.configured).toBe(false);
   });
 
-  it('connect-link surfaces a 503 with the setup payload when Late is not configured', async () => {
+  it('connect-link 503 keeps the { success:false, error } envelope', async () => {
     const service = {
       createConnectLink: jest
         .fn()
@@ -53,8 +53,22 @@ describe('SocialConnectController', () => {
     try {
       await controller.connectLink({ platform: 'instagram' });
     } catch (err) {
-      expect((err as ServiceUnavailableException).getResponse()).toEqual(SETUP);
+      expect((err as ServiceUnavailableException).getResponse()).toEqual({
+        success: false,
+        error: SETUP,
+      });
     }
+  });
+
+  it('disconnect forwards the tenant-scoped id + brandId to the service', async () => {
+    const disconnect = jest.fn().mockResolvedValue({ disconnected: 'conn-1' });
+    const service = { disconnect } as unknown as SocialConnectService;
+    const controller = new SocialConnectController(service);
+
+    const res = await controller.disconnect('conn-1', 'brand-1');
+
+    expect(disconnect).toHaveBeenCalledWith('conn-1', 'brand-1');
+    expect(res.data.disconnected).toBe('conn-1');
   });
 
   it('sync rejects with 400 when no brandId is provided and no default is set', async () => {
@@ -70,15 +84,18 @@ describe('SocialConnectController', () => {
     expect(service.syncFromLate).not.toHaveBeenCalled();
   });
 
-  it('sync falls back to SOCIAL_CONNECT_DEFAULT_BRAND_ID when body.brandId is absent', async () => {
-    process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID = 'env-brand';
-    const syncFromLate = jest.fn().mockResolvedValue({ synced: 2 });
+  it('sync falls back to SOCIAL_CONNECT_DEFAULT_BRAND_ID and returns the result', async () => {
+    process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID =
+      '11111111-1111-4111-8111-111111111111';
+    const syncFromLate = jest.fn().mockResolvedValue({ synced: 2, failed: [] });
     const service = { syncFromLate } as unknown as SocialConnectService;
     const controller = new SocialConnectController(service);
 
     const res = await controller.sync({});
 
-    expect(syncFromLate).toHaveBeenCalledWith('env-brand');
+    expect(syncFromLate).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(res.data.synced).toBe(2);
   });
 });

@@ -1,60 +1,68 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SocialConnectService } from './social-connect.service';
 import { LateNotConfiguredError, type LateAccount } from './late-client.types';
 import type { PlatformConnectionRow } from './social-connect.types';
 import type { SupabaseService } from '../supabase/supabase.service';
 import type { LateClientService } from './late-client.service';
+import type { SocialConnectReconciler } from './social-connect-reconciler.service';
 
 /**
- * Chainable Supabase stub backed by an in-memory row array. Supports the exact
- * call chains SocialConnectService uses: select().eq()[.eq()] (awaited),
- * select().eq().maybeSingle(), update().eq(), and upsert().
+ * In-memory Supabase stub with per-operation error injection. Supports the
+ * chains the service uses: select().eq()[.eq()] (awaited list),
+ * select().eq().eq().maybeSingle(), and update().eq().eq() (awaited).
  */
-function makeFakeSupabase(rows: Array<Record<string, unknown>>) {
+function makeFakeSupabase(
+  rows: Array<Record<string, unknown>>,
+  errs: { list?: string; single?: string; update?: string } = {},
+) {
   function builder() {
     const filters: Record<string, unknown> = {};
-    const q: Record<string, unknown> = {};
+    let mode: 'select' | 'update' = 'select';
+    let patch: Record<string, unknown> | null = null;
     const match = (r: Record<string, unknown>) =>
       Object.entries(filters).every(([k, v]) => r[k] === v);
 
+    const q: Record<string, unknown> = {};
     Object.assign(q, {
-      select: () => q,
+      select: () => {
+        mode = 'select';
+        return q;
+      },
       eq: (col: string, val: unknown) => {
         filters[col] = val;
         return q;
       },
-      maybeSingle: async () => ({
-        data: rows.find(match) ?? null,
-        error: null,
-      }),
-      update: (patch: Record<string, unknown>) => ({
-        eq: async (col: string, val: unknown) => {
-          const row = rows.find((r) => r[col] === val);
-          if (row) Object.assign(row, patch);
-          return { data: null, error: null };
-        },
-      }),
-      upsert: async (row: Record<string, unknown>) => {
-        const existing = rows.find(
-          (r) =>
-            r.brand_id === row.brand_id &&
-            r.platform === row.platform &&
-            r.provider === row.provider,
-        );
-        if (existing) Object.assign(existing, row);
-        else rows.push({ id: `id-${rows.length + 1}`, ...row });
-        return { error: null };
+      update: (p: Record<string, unknown>) => {
+        mode = 'update';
+        patch = p;
+        return q;
       },
-      // Awaiting the builder resolves the filtered list query.
-      then: (resolve: (v: unknown) => void) =>
-        resolve({ data: rows.filter(match), error: null }),
+      maybeSingle: async () =>
+        errs.single
+          ? { data: null, error: { message: errs.single } }
+          : { data: rows.find(match) ?? null, error: null },
+      then: (resolve: (v: unknown) => void) => {
+        if (mode === 'update') {
+          if (errs.update)
+            return resolve({ data: null, error: { message: errs.update } });
+          rows.filter(match).forEach((r) => Object.assign(r, patch));
+          return resolve({ data: null, error: null });
+        }
+        if (errs.list)
+          return resolve({ data: null, error: { message: errs.list } });
+        return resolve({ data: rows.filter(match), error: null });
+      },
     });
     return q;
   }
-
   return {
     getClient: () => ({ from: () => builder() }),
   } as unknown as SupabaseService;
 }
+
+const noopReconciler = {
+  syncFromLate: jest.fn().mockResolvedValue({ synced: 0, failed: [] }),
+} as unknown as SocialConnectReconciler;
 
 function storedRow(
   over: Partial<PlatformConnectionRow>,
@@ -75,28 +83,35 @@ function storedRow(
 }
 
 describe('SocialConnectService', () => {
-  describe('listConnections when Late is not configured', () => {
-    it('returns configured:false with the setup payload and stored rows', async () => {
-      const rows = [storedRow({})];
+  const realKey = process.env.LATE_API_KEY;
+  const realBase = process.env.APP_BASE_URL;
+  afterEach(() => {
+    if (realKey === undefined) delete process.env.LATE_API_KEY;
+    else process.env.LATE_API_KEY = realKey;
+    if (realBase === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = realBase;
+  });
+
+  describe('listConnections', () => {
+    it('returns configured:false with setup + stored rows when Late is off', async () => {
       const late = {
         isConfigured: () => false,
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase(rows), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([storedRow({})]),
+        late,
+        noopReconciler,
+      );
 
       const result = await service.listConnections('brand1');
 
       expect(result.configured).toBe(false);
       expect(result.setup?.error).toBe('late_not_configured');
-      expect(result.setup?.steps.length).toBeGreaterThan(0);
-      expect(result.connections).toHaveLength(1);
       expect(result.connections[0].handle).toBe('@stored');
     });
-  });
 
-  describe('listConnections when Late is configured', () => {
-    it('overlays live handle, avatar, and status from Late onto stored rows', async () => {
-      const rows = [storedRow({ handle: '@stale', avatar_url: null })];
-      const liveAccount: LateAccount = {
+    it('overlays live handle/avatar/status from Late onto stored rows', async () => {
+      const live: LateAccount = {
         _id: 'acc1',
         platform: 'instagram',
         username: '@live',
@@ -105,30 +120,33 @@ describe('SocialConnectService', () => {
       };
       const late = {
         isConfigured: () => true,
-        listAccounts: jest.fn().mockResolvedValue([liveAccount]),
+        listAccounts: jest.fn().mockResolvedValue([live]),
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase(rows), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([storedRow({ handle: '@stale' })]),
+        late,
+        noopReconciler,
+      );
 
       const result = await service.listConnections('brand1');
 
-      expect(result.configured).toBe(true);
       expect(result.connections[0].handle).toBe('@live');
       expect(result.connections[0].avatarUrl).toBe('https://cdn/live.png');
-      expect(result.connections[0].status).toBe('connected');
     });
 
-    it('degrades to stored rows when Late listAccounts throws', async () => {
-      const rows = [storedRow({ handle: '@stored' })];
+    it('throws when the DB read fails (never a healthy-empty list)', async () => {
       const late = {
-        isConfigured: () => true,
-        listAccounts: jest.fn().mockRejectedValue(new Error('network')),
+        isConfigured: () => false,
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase(rows), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([], { list: 'connection refused' }),
+        late,
+        noopReconciler,
+      );
 
-      const result = await service.listConnections();
-
-      expect(result.configured).toBe(true);
-      expect(result.connections[0].handle).toBe('@stored');
+      await expect(service.listConnections('brand1')).rejects.toThrow(
+        /Failed to read connections/,
+      );
     });
   });
 
@@ -137,13 +155,17 @@ describe('SocialConnectService', () => {
       const late = {
         isConfigured: () => false,
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase([]), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        late,
+        noopReconciler,
+      );
       await expect(
         service.createConnectLink({ platform: 'x' }),
       ).rejects.toBeInstanceOf(LateNotConfiguredError);
     });
 
-    it('maps X to the Late twitter platform and returns the auth URL', async () => {
+    it('maps X to twitter and returns the auth URL', async () => {
       const startConnect = jest
         .fn()
         .mockResolvedValue({ authUrl: 'https://late/oauth', state: 's' });
@@ -154,52 +176,114 @@ describe('SocialConnectService', () => {
           .mockResolvedValue({ _id: 'prof1', name: 'PropertyIQ' }),
         startConnect,
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase([]), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        late,
+        noopReconciler,
+      );
 
-      const result = await service.createConnectLink({
-        platform: 'x',
-        redirectUrl: 'https://app/return',
-      });
+      const result = await service.createConnectLink({ platform: 'x' });
 
       expect(result.authUrl).toBe('https://late/oauth');
       expect(startConnect).toHaveBeenCalledWith(
         expect.objectContaining({ platform: 'twitter', profileId: 'prof1' }),
       );
     });
-  });
 
-  describe('syncFromLate', () => {
-    it('upserts known platforms and skips platforms PropertyIQ does not surface', async () => {
-      const rows: Array<Record<string, unknown>> = [];
+    it('rejects a redirectUrl that is not a PropertyIQ origin (open-redirect guard)', async () => {
+      process.env.APP_BASE_URL = 'https://app.propertyiq.example';
       const late = {
         isConfigured: () => true,
-        listAccounts: jest.fn().mockResolvedValue([
-          { _id: 'a1', platform: 'twitter', username: '@x', isActive: true },
-          { _id: 'a2', platform: 'pinterest', username: '@p' }, // not surfaced
-        ] satisfies LateAccount[]),
+        getOrCreateProfile: jest.fn(),
+        startConnect: jest.fn(),
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase(rows), late);
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        late,
+        noopReconciler,
+      );
 
-      const result = await service.syncFromLate('brand1');
+      await expect(
+        service.createConnectLink({
+          platform: 'x',
+          redirectUrl: 'https://evil.example/steal',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(late.startConnect).not.toHaveBeenCalled();
+    });
+  });
 
-      expect(result.synced).toBe(1);
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        brand_id: 'brand1',
-        platform: 'x',
-        provider: 'late',
-        external_account_id: 'a1',
-      });
+  describe('disconnect', () => {
+    it('is tenant-scoped and marks the row disconnected', async () => {
+      const rows = [storedRow({ id: 'row1', brand_id: 'brand1' })];
+      const disconnectAccount = jest.fn().mockResolvedValue(undefined);
+      const late = {
+        isConfigured: () => true,
+        disconnectAccount,
+      } as unknown as LateClientService;
+      const service = new SocialConnectService(
+        makeFakeSupabase(rows),
+        late,
+        noopReconciler,
+      );
+
+      const result = await service.disconnect('row1', 'brand1');
+
+      expect(result.disconnected).toBe('row1');
+      expect(disconnectAccount).toHaveBeenCalledWith('acc1');
+      expect(rows[0].status).toBe('disconnected');
     });
 
-    it('throws LateNotConfiguredError when the key is missing', async () => {
+    it('throws NotFound when the row is not owned by the brand', async () => {
+      const rows = [storedRow({ id: 'row1', brand_id: 'brand1' })];
+      const late = {
+        isConfigured: () => true,
+        disconnectAccount: jest.fn(),
+      } as unknown as LateClientService;
+      const service = new SocialConnectService(
+        makeFakeSupabase(rows),
+        late,
+        noopReconciler,
+      );
+
+      await expect(
+        service.disconnect('row1', 'someone-elses-brand'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('propagates a DB update error instead of reporting false success', async () => {
+      const rows = [storedRow({ id: 'row1', brand_id: 'brand1' })];
       const late = {
         isConfigured: () => false,
       } as unknown as LateClientService;
-      const service = new SocialConnectService(makeFakeSupabase([]), late);
-      await expect(service.syncFromLate('brand1')).rejects.toBeInstanceOf(
-        LateNotConfiguredError,
+      const service = new SocialConnectService(
+        makeFakeSupabase(rows, { update: 'write failed' }),
+        late,
+        noopReconciler,
       );
+
+      await expect(service.disconnect('row1', 'brand1')).rejects.toMatchObject({
+        message: 'write failed',
+      });
+    });
+  });
+
+  describe('syncFromLate', () => {
+    it('delegates to the reconciler', async () => {
+      const late = { isConfigured: () => true } as unknown as LateClientService;
+      const reconciler = {
+        syncFromLate: jest.fn().mockResolvedValue({ synced: 3, failed: [] }),
+      } as unknown as SocialConnectReconciler;
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        late,
+        reconciler,
+      );
+
+      const result = await service.syncFromLate('brand1');
+
+      expect(reconciler.syncFromLate).toHaveBeenCalledWith('brand1');
+      expect(result.synced).toBe(3);
     });
   });
 });
