@@ -15,7 +15,7 @@ function makeFakeSupabase(opts: {
       in: () => q,
       not: () => q,
       gte: () => q,
-      insert: (row: Record<string, unknown>) => {
+      upsert: (row: Record<string, unknown>) => {
         opts.inserted.push(row);
         return Promise.resolve({ error: null });
       },
@@ -83,6 +83,7 @@ describe('InsightsMetricsPullService', () => {
         engagement: 7,
         followers_delta: null,
         captured_at: expect.any(String),
+        captured_date: expect.any(String),
       },
     ]);
   });

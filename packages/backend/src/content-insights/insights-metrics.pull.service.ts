@@ -114,15 +114,25 @@ export class InsightsMetricsPullService {
     reach: number,
     engagement: number,
   ): Promise<void> {
-    const { error } = await this.supabase.getClient().from(SNAP).insert({
-      post_id: post.id,
-      brand_id: brandId,
-      platform: post.platform,
-      reach,
-      engagement,
-      followers_delta: null,
-      captured_at: new Date().toISOString(),
-    });
+    const now = new Date();
+    // Upsert one row per post per UTC day (unique index on post_id,captured_date)
+    // — re-running a day refreshes the row instead of appending forever.
+    const { error } = await this.supabase
+      .getClient()
+      .from(SNAP)
+      .upsert(
+        {
+          post_id: post.id,
+          brand_id: brandId,
+          platform: post.platform,
+          reach,
+          engagement,
+          followers_delta: null,
+          captured_at: now.toISOString(),
+          captured_date: now.toISOString().slice(0, 10),
+        },
+        { onConflict: 'post_id,captured_date' },
+      );
     if (error) throw new Error(error.message);
   }
 }

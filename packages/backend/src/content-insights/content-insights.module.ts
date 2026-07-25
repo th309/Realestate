@@ -14,9 +14,9 @@ import { InsightsMetricsCron } from './insights-metrics.cron';
  *
  * Imports SocialConnectModule for LateClientService (the analytics client).
  *
- * WIRING TODO (team lead): add `ContentInsightsModule` to app.module.ts imports.
- * The controller self-registers `api/admin/content-pipeline/insights/*`; the
- * daily cron only fires when RUN_CRONS=true and no-ops without LATE_API_KEY.
+ * Wired into app.module.ts (commit ea367435). The controller self-registers
+ * `api/admin/content-pipeline/insights/*`; the daily cron only fires when
+ * RUN_CRONS=true and no-ops without LATE_API_KEY.
  */
 @Module({
   imports: [SupabaseModule, ConfigModule, SocialConnectModule],

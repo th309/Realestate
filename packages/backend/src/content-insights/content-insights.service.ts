@@ -112,6 +112,7 @@ export class ContentInsightsService {
         .gt('captured_at', from)
         .lte('captured_at', to)
         .order('captured_at', { ascending: false })
+        .order('id', { ascending: false }) // deterministic page boundaries
         .range(offset, offset + PAGE - 1);
       if (brandId) q = q.eq('brand_id', brandId);
 
@@ -155,19 +156,31 @@ export class ContentInsightsService {
   private async fetchSnapshotsForPosts(
     postIds: string[],
   ): Promise<AnalyticsSnapshotRow[]> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from(SNAP)
-      .select(
-        'post_id, brand_id, platform, reach, engagement, followers_delta, captured_at',
-      )
-      .in('post_id', postIds)
-      .order('captured_at', { ascending: false });
-    if (error) {
-      this.logger.error(`post-snapshot fetch failed: ${error.message}`);
-      throw new Error(`Failed to read analytics: ${error.message}`);
+    if (postIds.length === 0) return [];
+    // Paginate + id tiebreaker like fetchSnapshots — without this, a post set
+    // whose snapshots exceed one 1000-row page silently truncates and
+    // latest-per-post goes stale (the documented Supabase max-rows gotcha).
+    const all: AnalyticsSnapshotRow[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await this.supabase
+        .getClient()
+        .from(SNAP)
+        .select(
+          'post_id, brand_id, platform, reach, engagement, followers_delta, captured_at',
+        )
+        .in('post_id', postIds)
+        .order('captured_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(offset, offset + PAGE - 1);
+      if (error) {
+        this.logger.error(`post-snapshot fetch failed: ${error.message}`);
+        throw new Error(`Failed to read analytics: ${error.message}`);
+      }
+      const batch = (data ?? []) as AnalyticsSnapshotRow[];
+      all.push(...batch);
+      if (batch.length < PAGE) break;
     }
-    return (data ?? []) as AnalyticsSnapshotRow[];
+    return all;
   }
 }
 
