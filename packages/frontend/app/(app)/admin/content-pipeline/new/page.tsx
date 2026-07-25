@@ -66,7 +66,9 @@ function NewRunFlow({
   >(prefill.step);
   const [format, setFormat] = useState<string>(prefill.format);
   const [mode, setMode] = useState<WizardMode>("single");
-  const [market, setMarket] = useState<string>(prefill.market);
+  // The confirmed market is only ever set by picking a resolveMarket match; the
+  // prefill contributes a search seed, not a verified value.
+  const [market, setMarket] = useState<string>("");
   const [batchMarkets, setBatchMarkets] = useState<BatchMarket[]>([]);
   const [formatOptions, setFormatOptions] = useState<WizardFormatOptions>({});
   const [topMoversGeo, setTopMoversGeo] = useState<ScoreMoverGeo>("metro");
@@ -163,6 +165,7 @@ function NewRunFlow({
           onFormatOptionsChange={setFormatOptions}
           topMoversGeo={topMoversGeo}
           onTopMoversGeoChange={setTopMoversGeo}
+          initialQuery={prefill.marketSeed}
           onBack={() => setStep("format")}
           onPickSingle={(m, opts) => {
             setMarket(m);

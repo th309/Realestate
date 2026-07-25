@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { KEYBINDINGS } from "./keybindings";
-import { useKeybindingScope } from "../lib/queue-navigator";
+import { useKeybindingScope } from "../lib/keybinding-scope";
 
 export type ShortcutHandler = () => void | Promise<void>;
 

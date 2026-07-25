@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { CHEATSHEET_GROUPS, KEYBINDINGS } from "./keybindings";
-import { useKeybindingScopeFrame } from "../lib/queue-navigator";
+import { useKeybindingScopeFrame } from "../lib/keybinding-scope";
 
 /**
  * Slide-in panel listing every review keybinding. Driven entirely by the

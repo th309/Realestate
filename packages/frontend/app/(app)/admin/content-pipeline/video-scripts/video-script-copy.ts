@@ -7,14 +7,11 @@
  * testable.
  */
 import type { PlannerPost } from "../lib/posts-api";
-import { FORMAT_META } from "../lib/format-previews";
+import { isValidRunFormat } from "../lib/format-previews";
 
-/** The run wizard's valid formats are exactly the FORMAT_META keys (SSOT). */
-export function isValidRunFormat(format: string | undefined): boolean {
-  return (
-    format != null && Object.prototype.hasOwnProperty.call(FORMAT_META, format)
-  );
-}
+// Re-exported so existing consumers/tests keep importing it from here; the
+// canonical definition lives with FORMAT_META in lib/format-previews.ts.
+export { isValidRunFormat };
 
 export interface NormalizedVideoScript {
   title: string;

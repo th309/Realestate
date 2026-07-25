@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   fetchMetroHeroOptions,
   resolveMarket,
@@ -35,6 +35,7 @@ export function MarketStep({
   onPickBatch,
   onPickTopMovers,
   onBack,
+  initialQuery,
 }: {
   format: string;
   mode: WizardMode;
@@ -43,16 +44,15 @@ export function MarketStep({
   onFormatOptionsChange: (opts: WizardFormatOptions) => void;
   topMoversGeo: ScoreMoverGeo;
   onTopMoversGeoChange: (g: ScoreMoverGeo) => void;
-  onPickSingle: (
-    market: string,
-    opts?: { heroImageOptionId?: string },
-  ) => void;
+  onPickSingle: (market: string, opts?: { heroImageOptionId?: string }) => void;
   onPickBatch: (markets: BatchMarket[]) => void;
   onPickTopMovers: (
     markets: BatchMarket[],
     windowDays: ScoreMoverWindowDays,
   ) => void;
   onBack: () => void;
+  /** Prefill seed (from "Make this video") — auto-searched, auto-picked on match. */
+  initialQuery?: string;
 }) {
   const isScoreMover = format === "score_mover";
   const windowDays = formatOptions.windowDays ?? 90;
@@ -85,7 +85,11 @@ export function MarketStep({
       )}
 
       {mode === "single" && (
-        <SingleMarketBody format={format} onPick={onPickSingle} />
+        <SingleMarketBody
+          format={format}
+          onPick={onPickSingle}
+          initialQuery={initialQuery}
+        />
       )}
       {mode === "batch" && <MarketStepBatch onPick={onPickBatch} />}
       {mode === "top_movers" && (
@@ -151,9 +155,11 @@ function ModeToggle({
 function SingleMarketBody({
   format,
   onPick,
+  initialQuery,
 }: {
   format: string;
   onPick: (market: string, opts?: { heroImageOptionId?: string }) => void;
+  initialQuery?: string;
 }) {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<MarketMatch[]>([]);
@@ -164,6 +170,35 @@ function SingleMarketBody({
   >(null);
 
   const isLongForm = format === "long_form_deep_dive";
+
+  // Seed from the "Make this video" prefill: search it, and auto-pick only a
+  // verified match (exact canonical name, or a sole result). Anything ambiguous
+  // stays as results for the operator to choose — an unverified string is never
+  // promoted to a run.
+  useEffect(() => {
+    const seed = initialQuery?.trim();
+    if (!seed || seed.length < 2) return;
+    let cancelled = false;
+    setQuery(seed);
+    (async () => {
+      try {
+        const m = (await resolveMarket(seed)) as MarketMatch[];
+        if (cancelled) return;
+        setMatches(m);
+        const exact = m.find(
+          (x) => x.canonical_name.toLowerCase() === seed.toLowerCase(),
+        );
+        const auto = exact ?? (m.length === 1 ? m[0] : undefined);
+        if (auto) void handleMarketClick(auto);
+      } catch {
+        if (!cancelled) setMatches([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
 
   async function handleChange(v: string) {
     setQuery(v);
@@ -287,9 +322,7 @@ function SingleMarketBody({
           <button
             key={m.id}
             type="button"
-            disabled={
-              heroUi?.phase === "loading" && heroUi.match.id === m.id
-            }
+            disabled={heroUi?.phase === "loading" && heroUi.match.id === m.id}
             onClick={() => handleMarketClick(m)}
             className="block w-full text-left p-4 rounded-lg hover:bg-surface-container-low disabled:opacity-60"
           >

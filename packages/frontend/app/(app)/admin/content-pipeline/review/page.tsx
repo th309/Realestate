@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReviewQueue, fetchRun } from "../lib/content-pipeline-api";
 import {
-  KeybindingScopeProvider,
   QueueNavigatorProvider,
   useQueueNavigator,
 } from "../lib/queue-navigator";
+import { KeybindingScopeProvider } from "../lib/keybinding-scope";
 import { ReviewCard } from "./review-card";
 import { QueueRibbon } from "./queue-ribbon";
 

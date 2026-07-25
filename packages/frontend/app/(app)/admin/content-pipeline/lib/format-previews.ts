@@ -23,6 +23,19 @@ export interface FormatMeta {
   purpose: string;
 }
 
+/**
+ * Whether a string is one of the wizard's run formats (the FORMAT_META keys are
+ * the single source of truth). Shared by the create-a-run prefill and the video
+ * script "Make this video" handoff so the membership check lives in one place.
+ */
+export function isValidRunFormat(
+  format: string | null | undefined,
+): format is string {
+  return (
+    format != null && Object.prototype.hasOwnProperty.call(FORMAT_META, format)
+  );
+}
+
 export const FORMAT_META: Record<string, FormatMeta> = {
   grade_reveal: {
     displayName: "Grade Reveal",

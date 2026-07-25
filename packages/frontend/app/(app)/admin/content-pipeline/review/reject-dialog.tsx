@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { M3Dialog } from "../components/m3-dialog";
-import { useKeybindingScopeFrame } from "../lib/queue-navigator";
+import { useKeybindingScopeFrame } from "../lib/keybinding-scope";
 
 const COMMON_REASONS = [
   "Off-brand",
