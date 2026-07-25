@@ -130,6 +130,10 @@ import { AutoIdeationScoreScanCron } from './crons/auto-ideation-score-scan.cron
 import { AutoIdeationRankScanCron } from './crons/auto-ideation-rank-scan.cron';
 import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-scan.cron';
 
+import { PostsBrandKitModule } from './posts-brand-kit.module';
+import { FeedService } from './feed/feed.service';
+import { FeedTopUpCron } from './crons/feed-topup.cron';
+
 @Module({
   imports: [
     SupabaseModule,
@@ -140,6 +144,7 @@ import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-s
     GeographyModule,
     MarketSnapshotModule,
     MetricResolutionModule,
+    PostsBrandKitModule,
   ],
   controllers: [
     ContentPipelineController,
@@ -287,6 +292,9 @@ import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-s
     ScopeService,
     RankingResolverService,
     MetroHeroImageService,
+
+    FeedService,
+    FeedTopUpCron,
   ],
   exports: [
     ContentRunsService,
