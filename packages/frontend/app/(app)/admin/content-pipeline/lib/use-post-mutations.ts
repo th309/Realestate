@@ -2,8 +2,8 @@
 /**
  * Post mutations for the planner. Rescheduling is optimistic (onMutate cancel/
  * snapshot -> setQueryData -> onError rollback -> onSettled invalidate) so a
- * dragged post lands on its new day instantly, following the same idiom as
- * use-run-mutations.ts.
+ * dragged post lands on its new day instantly, following the same optimistic
+ * idiom as use-format-mutations.ts.
  *
  * The scheduled query is keyed by its calendar window, so we match caches by
  * the shared key PREFIX (getQueriesData/setQueriesData) rather than an exact

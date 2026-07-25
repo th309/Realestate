@@ -53,8 +53,10 @@ export function PostCard({
   const chip = postStatusToStatusChip(post.status);
   const time = post.scheduled_at ? formatEtTime(post.scheduled_at) : null;
   const hook = post.copy?.hook?.trim();
-  const stop = (e: React.PointerEvent | React.MouseEvent) =>
-    e.stopPropagation();
+  // Stop pointer AND keyboard events from bubbling to the draggable wrapper —
+  // otherwise Enter/Space on these nested controls would also reach @dnd-kit's
+  // KeyboardSensor and start a drag.
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   function submit() {
     const dayKey = value.slice(0, 10);
@@ -78,6 +80,7 @@ export function PostCard({
           <button
             type="button"
             onPointerDown={stop}
+            onKeyDown={stop}
             onClick={(e) => {
               stop(e);
               setPicking((v) => !v);
@@ -118,7 +121,7 @@ export function PostCard({
       </div>
 
       {picking && onReschedule && (
-        <div className="mt-2" onPointerDown={stop}>
+        <div className="mt-2" onPointerDown={stop} onKeyDown={stop}>
           <div className="flex items-center gap-1.5">
             <input
               type="datetime-local"

@@ -80,6 +80,10 @@ export function postStatusToStatusChip(
       return { label: "Approved", tone: "ready" };
     case "scheduled":
       return { label: "Scheduled", tone: "scheduled" };
+    case "publishing":
+      // Live idempotency-claim state (scheduled -> publishing -> published) —
+      // genuinely working, so the pulsing "generating" tone is correct here.
+      return { label: "Publishing", tone: "generating" };
     case "published":
       return { label: "Published", tone: "published" };
     case "failed":
@@ -103,7 +107,7 @@ export function connectionStatusToStatusChip(
     case "connected":
       return { label: "Connected", tone: "published" };
     case "needs_reauth":
-      return { label: "Needs reauth", tone: "attention" };
+      return { label: "Reconnect needed", tone: "attention" };
     case "disconnected":
       return { label: "Disconnected", tone: "muted" };
     default:
@@ -121,8 +125,10 @@ export const STATUS_CHIP_TONE_CLASSES: Record<
     dot: "bg-secondary",
   },
   ready: {
-    pill: "bg-secondary-container text-on-secondary-container",
-    dot: "bg-secondary",
+    // Distinct from generating (secondary) and review (solid primary-container):
+    // a light primary tint reading as "greenlit / ready", static.
+    pill: "bg-primary/10 text-primary",
+    dot: "bg-primary",
   },
   review: {
     pill: "bg-primary-container text-on-primary-container",
