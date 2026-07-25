@@ -9,15 +9,20 @@ import {
  *  OAuth return target, and null-origin schemes (javascript:/data:) are rejected. */
 describe('social-connect redirect guard', () => {
   const realBase = process.env.APP_BASE_URL;
+  const realFrontend = process.env.FRONTEND_URL;
   const realExtra = process.env.SOCIAL_CONNECT_ALLOWED_ORIGINS;
 
   beforeEach(() => {
+    // No FRONTEND_URL by default → falls back to APP_BASE_URL for these cases.
+    delete process.env.FRONTEND_URL;
     process.env.APP_BASE_URL = 'https://app.propertyiq.example';
     delete process.env.SOCIAL_CONNECT_ALLOWED_ORIGINS;
   });
   afterEach(() => {
     if (realBase === undefined) delete process.env.APP_BASE_URL;
     else process.env.APP_BASE_URL = realBase;
+    if (realFrontend === undefined) delete process.env.FRONTEND_URL;
+    else process.env.FRONTEND_URL = realFrontend;
     if (realExtra === undefined)
       delete process.env.SOCIAL_CONNECT_ALLOWED_ORIGINS;
     else process.env.SOCIAL_CONNECT_ALLOWED_ORIGINS = realExtra;
@@ -63,9 +68,27 @@ describe('social-connect redirect guard', () => {
     ).not.toThrow();
   });
 
-  it('defaultRedirectUrl carries the late_connected marker on the app origin', () => {
+  it('defaultRedirectUrl carries the late_connected marker on the frontend origin', () => {
     expect(defaultRedirectUrl()).toBe(
       'https://app.propertyiq.example/admin/content-pipeline/platforms?late_connected=1',
+    );
+  });
+
+  it('uses FRONTEND_URL (not the backend APP_BASE_URL) for the redirect and allow-list', () => {
+    process.env.APP_BASE_URL = 'https://backend.example'; // backend origin
+    process.env.FRONTEND_URL = 'https://app.propertyiq.example'; // frontend origin
+
+    expect(defaultRedirectUrl()).toBe(
+      'https://app.propertyiq.example/admin/content-pipeline/platforms?late_connected=1',
+    );
+    const origins = allowedRedirectOrigins();
+    expect(origins.has('https://app.propertyiq.example')).toBe(true);
+    expect(origins.has('https://backend.example')).toBe(false);
+    expect(() =>
+      assertAllowedRedirect('https://app.propertyiq.example/back'),
+    ).not.toThrow();
+    expect(() => assertAllowedRedirect('https://backend.example/back')).toThrow(
+      BadRequestException,
     );
   });
 });

@@ -9,11 +9,19 @@ import { BadRequestException, Logger } from '@nestjs/common';
 
 const logger = new Logger('SocialConnectRedirect');
 
-export function resolveAppBaseUrl(): string {
-  return (process.env.APP_BASE_URL?.trim() || 'http://localhost:3000').replace(
-    /\/$/,
-    '',
-  );
+/**
+ * Base URL of the FRONTEND (where the popup returns after Late's consent). Must
+ * NOT use APP_BASE_URL alone — that's the BACKEND origin everywhere (oauth-urls
+ * builds provider callbacks from it), so a Late redirect built on it lands on
+ * Nest (404). Mirrors the sibling direct-OAuth callback: FRONTEND_URL first,
+ * then APP_BASE_URL, then localhost:3000. Trailing slash stripped.
+ */
+export function resolveFrontendBaseUrl(): string {
+  const base =
+    process.env.FRONTEND_URL?.trim() ||
+    process.env.APP_BASE_URL?.trim() ||
+    'http://localhost:3000';
+  return base.replace(/\/$/, '');
 }
 
 /**
@@ -27,16 +35,17 @@ export function resolveAppBaseUrl(): string {
  * params, which land on the same page.
  */
 export function defaultRedirectUrl(): string {
-  return `${resolveAppBaseUrl()}/admin/content-pipeline/platforms?late_connected=1`;
+  return `${resolveFrontendBaseUrl()}/admin/content-pipeline/platforms?late_connected=1`;
 }
 
-/** Origins a caller-supplied redirectUrl may point at. */
+/** Origins a caller-supplied redirectUrl may point at (the FRONTEND origin the
+ *  popup actually returns to, plus any explicitly allow-listed extras). */
 export function allowedRedirectOrigins(): Set<string> {
   const origins = new Set<string>();
   try {
-    origins.add(new URL(resolveAppBaseUrl()).origin);
+    origins.add(new URL(resolveFrontendBaseUrl()).origin);
   } catch {
-    /* resolveAppBaseUrl is always a valid origin, but stay defensive */
+    /* resolveFrontendBaseUrl is always a valid origin, but stay defensive */
   }
   const extra = process.env.SOCIAL_CONNECT_ALLOWED_ORIGINS?.trim();
   if (extra) {
