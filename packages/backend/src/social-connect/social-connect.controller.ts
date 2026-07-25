@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -70,18 +69,18 @@ export class SocialConnectController {
     return { success: true, data: await this.service.disconnect(id, brandId) };
   }
 
-  /** Reconcile Late's connected accounts into `platform_connections`. */
+  /**
+   * Reconcile Late's connected accounts into `platform_connections`. brandId is
+   * optional — the service resolves (and seeds) the default PropertyIQ brand when
+   * omitted, so the zero-config "Sync accounts" click just works.
+   */
   @Post('connections/sync')
   async sync(@Body() body: SyncConnectionsDto) {
-    const brandId =
-      body.brandId ?? process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID?.trim();
-    if (!brandId) {
-      throw new BadRequestException(
-        'brandId is required to persist connections (platform_connections.brand_id is NOT NULL)',
-      );
-    }
     try {
-      return { success: true, data: await this.service.syncFromLate(brandId) };
+      return {
+        success: true,
+        data: await this.service.syncFromLate(body.brandId),
+      };
     } catch (err) {
       throw this.mapNotConfigured(err);
     }

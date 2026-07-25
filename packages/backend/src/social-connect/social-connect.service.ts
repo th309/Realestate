@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LateClientService } from './late-client.service';
 import { SocialConnectReconciler } from './social-connect-reconciler.service';
+import { BrandKitService } from '../content-pipeline/brand-kit/brand-kit.service';
 import {
   LATE_PLATFORM_BY_SOCIAL,
   LateNotConfiguredError,
@@ -13,6 +14,7 @@ import {
   assertAllowedRedirect,
   defaultRedirectUrl,
 } from './social-connect-redirect';
+import { SOCIAL_CONNECT_SETUP } from './social-connect.types';
 import type {
   ConnectionStatus,
   ListConnectionsResult,
@@ -45,6 +47,7 @@ export class SocialConnectService {
     private readonly supabase: SupabaseService,
     private readonly late: LateClientService,
     private readonly reconciler: SocialConnectReconciler,
+    private readonly brandKit: BrandKitService,
   ) {}
 
   // ── Config helpers ─────────────────────────────────────────────────────────
@@ -55,17 +58,7 @@ export class SocialConnectService {
 
   /** Human steps for the not-configured banner and the 503 payload. */
   setup(): SocialConnectSetup {
-    return {
-      error: 'late_not_configured',
-      message:
-        'Social connect is not active yet. Set LATE_API_KEY on the backend to enable one-click account connection.',
-      steps: [
-        'Create a Late account at https://getlate.dev',
-        'In the Late dashboard, generate an API key',
-        'Add LATE_API_KEY to the backend service environment (Railway → backend → Variables)',
-        'Redeploy the backend, then reload this page',
-      ],
-    };
+    return SOCIAL_CONNECT_SETUP;
   }
 
   /** Late profile (workspace/brand) name to connect accounts under. */
@@ -206,9 +199,23 @@ export class SocialConnectService {
 
   // ── Sync (webhook / poll) ────────────────────────────────────────────────────
 
-  /** Reconcile Late's accounts into `platform_connections` for a brand. */
-  async syncFromLate(brandId: string): Promise<SyncResult> {
-    return this.reconciler.syncFromLate(brandId);
+  /** Reconcile Late's accounts into `platform_connections` for a brand. With no
+   *  brandId, resolves (and seeds on first use) the default PropertyIQ brand. */
+  async syncFromLate(brandId?: string): Promise<SyncResult> {
+    return this.reconciler.syncFromLate(await this.resolveBrandId(brandId));
+  }
+
+  /**
+   * Resolve the brand a connection is scoped to: an explicit id wins, then
+   * SOCIAL_CONNECT_DEFAULT_BRAND_ID, then the default PropertyIQ brand — which
+   * BrandKitService.ensurePropertyIqBrand() seeds on first call, so the
+   * zero-config case (no brand created yet) just works.
+   */
+  async resolveBrandId(explicit?: string): Promise<string> {
+    const chosen =
+      explicit?.trim() || process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID?.trim();
+    if (chosen) return chosen;
+    return (await this.brandKit.ensurePropertyIqBrand()).id;
   }
 
   // ── Publish (used by a later phase) ──────────────────────────────────────────

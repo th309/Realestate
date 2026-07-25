@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { SocialConnectController } from './social-connect.controller';
 import { LateNotConfiguredError } from './late-client.types';
 import type { SocialConnectService } from './social-connect.service';
@@ -71,31 +68,25 @@ describe('SocialConnectController', () => {
     expect(res.data.disconnected).toBe('conn-1');
   });
 
-  it('sync rejects with 400 when no brandId is provided and no default is set', async () => {
-    delete process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID;
-    const service = {
-      syncFromLate: jest.fn(),
-    } as unknown as SocialConnectService;
-    const controller = new SocialConnectController(service);
-
-    await expect(controller.sync({})).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(service.syncFromLate).not.toHaveBeenCalled();
-  });
-
-  it('sync falls back to SOCIAL_CONNECT_DEFAULT_BRAND_ID and returns the result', async () => {
-    process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID =
-      '11111111-1111-4111-8111-111111111111';
-    const syncFromLate = jest.fn().mockResolvedValue({ synced: 2, failed: [] });
+  it('sync delegates to the service with no brandId (resolution lives in the service now)', async () => {
+    const syncFromLate = jest.fn().mockResolvedValue({ synced: 0, failed: [] });
     const service = { syncFromLate } as unknown as SocialConnectService;
     const controller = new SocialConnectController(service);
 
     const res = await controller.sync({});
 
-    expect(syncFromLate).toHaveBeenCalledWith(
-      '11111111-1111-4111-8111-111111111111',
-    );
+    expect(syncFromLate).toHaveBeenCalledWith(undefined);
+    expect(res.success).toBe(true);
+  });
+
+  it('sync passes an explicit brandId through', async () => {
+    const syncFromLate = jest.fn().mockResolvedValue({ synced: 2, failed: [] });
+    const service = { syncFromLate } as unknown as SocialConnectService;
+    const controller = new SocialConnectController(service);
+
+    const res = await controller.sync({ brandId: 'brand-9' });
+
+    expect(syncFromLate).toHaveBeenCalledWith('brand-9');
     expect(res.data.synced).toBe(2);
   });
 });

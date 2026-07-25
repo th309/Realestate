@@ -43,6 +43,19 @@ export interface SocialConnectSetup {
   steps: string[];
 }
 
+/** The static not-configured payload (banner + 503 body). */
+export const SOCIAL_CONNECT_SETUP: SocialConnectSetup = {
+  error: 'late_not_configured',
+  message:
+    'Social connect is not active yet. Set LATE_API_KEY on the backend to enable one-click account connection.',
+  steps: [
+    'Create a Late account at https://getlate.dev',
+    'In the Late dashboard, generate an API key',
+    'Add LATE_API_KEY to the backend service environment (Railway → backend → Variables)',
+    'Redeploy the backend, then reload this page',
+  ],
+};
+
 /** One row that failed to upsert during a sync, with the reason. */
 export interface SyncFailure {
   platform: string;

@@ -5,6 +5,7 @@ import type { PlatformConnectionRow } from './social-connect.types';
 import type { SupabaseService } from '../supabase/supabase.service';
 import type { LateClientService } from './late-client.service';
 import type { SocialConnectReconciler } from './social-connect-reconciler.service';
+import type { BrandKitService } from '../content-pipeline/brand-kit/brand-kit.service';
 
 /**
  * In-memory Supabase stub with per-operation error injection. Supports the
@@ -64,6 +65,10 @@ const noopReconciler = {
   syncFromLate: jest.fn().mockResolvedValue({ synced: 0, failed: [] }),
 } as unknown as SocialConnectReconciler;
 
+const noopBrandKit = {
+  ensurePropertyIqBrand: jest.fn().mockResolvedValue({ id: 'default-brand' }),
+} as unknown as BrandKitService;
+
 function storedRow(
   over: Partial<PlatformConnectionRow>,
 ): Record<string, unknown> {
@@ -101,6 +106,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([storedRow({})]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       const result = await service.listConnections('brand1');
@@ -126,6 +132,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([storedRow({ handle: '@stale' })]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       const result = await service.listConnections('brand1');
@@ -142,6 +149,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([], { list: 'connection refused' }),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(service.listConnections('brand1')).rejects.toThrow(
@@ -159,6 +167,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
       await expect(
         service.createConnectLink({ platform: 'x' }),
@@ -180,6 +189,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       const result = await service.createConnectLink({ platform: 'x' });
@@ -201,6 +211,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(
@@ -225,6 +236,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase(rows),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       const result = await service.disconnect('row1', 'brand1');
@@ -244,6 +256,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase(rows),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(
@@ -260,6 +273,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase(rows, { single: 'read failed' }),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(service.disconnect('row1', 'brand1')).rejects.toMatchObject({
@@ -276,6 +290,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase(rows, { update: 'write failed' }),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(service.disconnect('row1', 'brand1')).rejects.toMatchObject({
@@ -285,7 +300,7 @@ describe('SocialConnectService', () => {
   });
 
   describe('syncFromLate', () => {
-    it('delegates to the reconciler', async () => {
+    it('delegates to the reconciler with the explicit brandId', async () => {
       const late = { isConfigured: () => true } as unknown as LateClientService;
       const reconciler = {
         syncFromLate: jest.fn().mockResolvedValue({ synced: 3, failed: [] }),
@@ -294,12 +309,57 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([]),
         late,
         reconciler,
+        noopBrandKit,
       );
 
       const result = await service.syncFromLate('brand1');
 
       expect(reconciler.syncFromLate).toHaveBeenCalledWith('brand1');
       expect(result.synced).toBe(3);
+    });
+
+    it('resolves and seeds the default brand when no brandId is given', async () => {
+      const late = { isConfigured: () => true } as unknown as LateClientService;
+      const reconciler = {
+        syncFromLate: jest.fn().mockResolvedValue({ synced: 1, failed: [] }),
+      } as unknown as SocialConnectReconciler;
+      const ensurePropertyIqBrand = jest
+        .fn()
+        .mockResolvedValue({ id: 'seeded-brand' });
+      const brandKit = {
+        ensurePropertyIqBrand,
+      } as unknown as BrandKitService;
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        late,
+        reconciler,
+        brandKit,
+      );
+
+      await service.syncFromLate();
+
+      expect(ensurePropertyIqBrand).toHaveBeenCalled();
+      expect(reconciler.syncFromLate).toHaveBeenCalledWith('seeded-brand');
+    });
+
+    it('prefers SOCIAL_CONNECT_DEFAULT_BRAND_ID over the seed when set', async () => {
+      const realDefault = process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID;
+      process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID = 'env-brand';
+      const ensurePropertyIqBrand = jest.fn();
+      const service = new SocialConnectService(
+        makeFakeSupabase([]),
+        { isConfigured: () => true } as unknown as LateClientService,
+        noopReconciler,
+        { ensurePropertyIqBrand } as unknown as BrandKitService,
+      );
+
+      const resolved = await service.resolveBrandId();
+
+      expect(resolved).toBe('env-brand');
+      expect(ensurePropertyIqBrand).not.toHaveBeenCalled();
+      if (realDefault === undefined)
+        delete process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID;
+      else process.env.SOCIAL_CONNECT_DEFAULT_BRAND_ID = realDefault;
     });
   });
 
@@ -318,6 +378,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([storedRow({ external_account_id: 'acc1' })]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await service.publishPost(
@@ -350,6 +411,7 @@ describe('SocialConnectService', () => {
           makeFakeSupabase([storedRow(over)]),
           late,
           noopReconciler,
+          noopBrandKit,
         );
 
         await expect(
@@ -374,6 +436,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([storedRow({ platform: 'instagram' })]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await service.publishForBrandPlatform(
@@ -400,6 +463,7 @@ describe('SocialConnectService', () => {
         makeFakeSupabase([storedRow({ status: 'disconnected' })]),
         late,
         noopReconciler,
+        noopBrandKit,
       );
 
       await expect(
