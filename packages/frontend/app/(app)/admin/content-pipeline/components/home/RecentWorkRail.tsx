@@ -38,7 +38,7 @@ export function RecentWorkRail({ runs }: { runs: RunSummary[] }) {
 }
 
 function RunTile({ run }: { run: RunSummary }) {
-  const marketLabel = run.market_query?.trim() || "Untitled run";
+  const marketLabel = run.market_query?.trim() || "Untitled";
   const formatLabel = FORMAT_META[run.format]?.displayName ?? run.format;
 
   return (

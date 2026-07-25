@@ -9,7 +9,7 @@ import { FORMAT_META } from "../../lib/format-previews";
 import { StatusChip } from "./StatusChip";
 
 export function ReviewPeekCard({ item }: { item: QueueItem }) {
-  const marketLabel = item.market_query?.trim() || "Untitled run";
+  const marketLabel = item.market_query?.trim() || "Untitled";
   const formatLabel = item.format
     ? (FORMAT_META[item.format]?.displayName ?? item.format)
     : null;
