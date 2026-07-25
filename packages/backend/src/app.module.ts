@@ -70,6 +70,7 @@ import { SchedulingModule } from './scheduling/scheduling.module';
 import { ApiMetricsInterceptor } from './admin-metrics/interceptors/api-metrics.interceptor';
 import { ContentPipelineModule } from './content-pipeline/content-pipeline.module';
 import { SocialConnectModule } from './social-connect/social-connect.module';
+import { ContentInsightsModule } from './content-insights/content-insights.module';
 import { MigrationModule } from './migration/migration.module';
 import { EmploymentSectorsModule } from './employment-sectors/employment-sectors.module';
 import { AnonymousModule } from './anonymous/anonymous.module';
@@ -165,6 +166,7 @@ import { MarketExplorerModule } from './market-explorer/market-explorer.module';
     SchedulingModule,
     ContentPipelineModule,
     SocialConnectModule,
+    ContentInsightsModule,
     MigrationModule,
     EmploymentSectorsModule,
     AnonymousModule,
