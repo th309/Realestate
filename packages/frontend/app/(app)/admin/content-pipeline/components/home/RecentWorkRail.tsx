@@ -10,7 +10,13 @@ import { StatusChip } from "./StatusChip";
 
 const MAX_VISIBLE = 8;
 
-export function RecentWorkRail({ runs }: { runs: RunSummary[] }) {
+export function RecentWorkRail({
+  runs,
+  heading = "Recent work",
+}: {
+  runs: RunSummary[];
+  heading?: string;
+}) {
   return (
     <section aria-labelledby="recent-work-heading">
       <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -18,7 +24,7 @@ export function RecentWorkRail({ runs }: { runs: RunSummary[] }) {
           id="recent-work-heading"
           className="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
         >
-          Recent work
+          {heading}
         </h2>
       </div>
 

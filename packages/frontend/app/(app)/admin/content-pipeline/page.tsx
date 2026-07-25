@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { fetchDashboard, fetchReviewQueue } from "./lib/content-pipeline-api";
 import { API_URL } from "@/lib/data/fetchers/base";
 import type { QueueItem } from "./lib/queue-navigator";
 import {
   StudioGreeting,
   type InFlightCounts,
+  type ReviewLoadStatus,
 } from "./components/home/StudioGreeting";
 import { ReviewStrip } from "./components/home/ReviewStrip";
 import { TaskGroup } from "./components/home/TaskGroup";
@@ -15,12 +17,28 @@ import { TASK_GROUPS } from "./components/home/taskCatalog";
 import { RecentWorkRail } from "./components/home/RecentWorkRail";
 import { ManageToolsNav } from "./components/home/ManageToolsNav";
 import { CostCapBanner } from "./components/home/CostCapBanner";
+import { BatchCreatedBanner } from "./components/home/BatchCreatedBanner";
 import { pipelineStateToStatusChip } from "./components/home/StatusChip";
 
 export default function ContentPipelineHomePage() {
+  // useSearchParams (for the ?batch= confirmation) must render inside a
+  // Suspense boundary in the App Router.
+  return (
+    <Suspense fallback={<HomeSkeleton />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
+  const searchParams = useSearchParams();
+  // Set by the batch-create wizard's redirect (new/page.tsx) so a freshly
+  // submitted batch lands on a confirmation rather than the generic home.
+  const batchId = searchParams.get("batch") ?? undefined;
+
   const dashboard = useQuery({
-    queryKey: ["content-pipeline-dashboard", "home"],
-    queryFn: () => fetchDashboard(),
+    queryKey: ["content-pipeline-dashboard", batchId ?? "all"],
+    queryFn: () => fetchDashboard({ batchId }),
     refetchInterval: 60_000,
   });
 
@@ -40,6 +58,14 @@ export default function ContentPipelineHomePage() {
     () => (reviewQueue.data ?? []) as QueueItem[],
     [reviewQueue.data],
   );
+
+  // The review queue is a separate fetch — surface its true state so a
+  // still-loading or failed queue is never silently read as "0 waiting".
+  const reviewStatus: ReviewLoadStatus = reviewQueue.isError
+    ? "error"
+    : reviewQueue.isSuccess
+      ? "ready"
+      : "loading";
 
   const counts = useMemo<InFlightCounts>(() => {
     const next: InFlightCounts = {
@@ -68,11 +94,19 @@ export default function ContentPipelineHomePage() {
   return (
     <div className="min-h-screen bg-surface text-on-surface">
       <div className="mx-auto max-w-6xl space-y-10 p-8">
-        <StudioGreeting counts={counts} />
+        <StudioGreeting counts={counts} reviewStatus={reviewStatus} />
+
+        {batchId && (
+          <BatchCreatedBanner batchId={batchId} count={recentRuns.length} />
+        )}
 
         <CostCapBanner status={dashboard.data?.costCapStatus} />
 
-        <ReviewStrip items={reviewItems} />
+        <ReviewStrip
+          items={reviewItems}
+          isError={reviewStatus === "error"}
+          onRetry={() => reviewQueue.refetch()}
+        />
 
         <div className="space-y-8">
           {TASK_GROUPS.map((group) => (
@@ -80,7 +114,10 @@ export default function ContentPipelineHomePage() {
           ))}
         </div>
 
-        <RecentWorkRail runs={recentRuns} />
+        <RecentWorkRail
+          runs={recentRuns}
+          heading={batchId ? "In this batch" : undefined}
+        />
 
         <ManageToolsNav />
       </div>

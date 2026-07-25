@@ -14,6 +14,13 @@ export interface InFlightCounts {
   attention: number;
 }
 
+/**
+ * The review queue is fetched independently of the dashboard. Its load state
+ * is threaded in so a still-loading or failed queue is never rendered as a
+ * confident "0 ready to review" (which would understate the ticker).
+ */
+export type ReviewLoadStatus = "loading" | "ready" | "error";
+
 function greetingForHour(hour: number): string {
   if (hour < 12) return "Good morning.";
   if (hour < 18) return "Good afternoon.";
@@ -31,8 +38,28 @@ const TICKER_ORDER: Array<{
   { key: "attention", tone: "attention", label: "Needs attention" },
 ];
 
-export function StudioGreeting({ counts }: { counts: InFlightCounts }) {
-  const visible = TICKER_ORDER.filter((entry) => counts[entry.key] > 0);
+export function StudioGreeting({
+  counts,
+  reviewStatus = "ready",
+}: {
+  counts: InFlightCounts;
+  reviewStatus?: ReviewLoadStatus;
+}) {
+  const visible = TICKER_ORDER.filter((entry) => {
+    // Only trust the review count once its own fetch has resolved.
+    if (entry.key === "review") {
+      return reviewStatus === "ready" && counts.review > 0;
+    }
+    return counts[entry.key] > 0;
+  });
+
+  // Never claim "nothing in flight" while the review queue is still unknown.
+  const emptyMessage =
+    reviewStatus === "loading"
+      ? "Checking what's waiting…"
+      : reviewStatus === "error"
+        ? "Couldn't check the review queue — see below."
+        : "Nothing in flight right now — start something below.";
 
   return (
     <header className="space-y-4">
@@ -48,7 +75,7 @@ export function StudioGreeting({ counts }: { counts: InFlightCounts }) {
       <div className="flex flex-wrap items-center gap-2" aria-live="polite">
         {visible.length === 0 ? (
           <span className="text-sm text-on-surface-variant">
-            Nothing in flight right now — start something below.
+            {emptyMessage}
           </span>
         ) : (
           visible.map((entry) => (
