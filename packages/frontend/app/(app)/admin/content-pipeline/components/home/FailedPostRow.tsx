@@ -87,8 +87,10 @@ export function FailedPostRow({
         <span className="font-mono tabular-nums">{slot}</span>
         <span aria-hidden>·</span>
         <span>
-          {/* A manual retry pushes attempts past the budget, so the exhausted
-              label never quotes the ceiling — "4 of 3" would read as a bug. */}
+          {/* Leaving 'failed' resets the counter backend-side, so a retried post
+              starts its budget over and `spent` should stay within it. The
+              exhausted branch still avoids quoting the ceiling, so a stale or
+              un-reset counter reads as a fact rather than as "4 of 3". */}
           {exhausted
             ? `Gave up after ${spent} attempt${spent === 1 ? "" : "s"}`
             : `Failed on attempt ${spent} of ${maxAttempts}`}

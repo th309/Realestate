@@ -168,7 +168,7 @@ export function ConfirmStep({
         idempotencyKey,
         approvalMode,
         selectedPlatforms: platformsForRun,
-        params: infographicPlan?.params,
+        infographicParams: infographicPlan?.params,
         formatOptions: isInfographic
           ? undefined
           : buildCreateFormatOptions(format, mode, formatOptions),

@@ -48,8 +48,14 @@ export async function createRun(payload: {
   approvalMode?: "auto" | "review" | "draft";
   selectedPlatforms?: string[];
   rankingParams?: RankingRunParams;
-  /** Format-specific params. Infographic runs send their topic/task/style here. */
-  params?: InfographicRunParams;
+  /**
+   * Infographic runs send their topic/task/style here. The key matches the
+   * backend's CreateRunDto field and sits alongside `rankingParams` — the
+   * global validation pipe runs `whitelist: true`, so a key the DTO doesn't
+   * declare is stripped before the handler sees it and the run is rejected
+   * for missing params it was actually sent.
+   */
+  infographicParams?: InfographicRunParams;
   formatOptions?: CreateRunFormatOptions;
 }) {
   const res = await fetchAPIRaw("/api/admin/content-pipeline/runs", {
