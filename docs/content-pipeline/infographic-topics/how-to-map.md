@@ -15,7 +15,7 @@ name shown. All numbers must come from the approved-claims rules in README.md.
 "Pick a question. Pick a map level. The whole country colors itself in. That's
 the entire learning curve."
 
-## Nine map skills (one graphic each)
+## Ten map skills (one graphic each)
 
 1. **Pick your lens: Homebuyer or Investor** — the map has a view-mode switch
    that changes which metric categories you see. Homebuyer shows Affordability,
@@ -50,12 +50,18 @@ the entire learning curve."
    that market's score gauge, a market snapshot of core metrics (home value,
    days on market, for-sale inventory, home sales), and a trend sparkline. You
    can favorite the market from here to track it.
-8. **See how a market ranks against its peers** — the benchmark panel shows a
-   market's position rather than just its raw number, so a value has context
-   instead of sitting alone.
-9. **Get the data out** — any map view opens as a data table, and the table
-   exports to CSV. CSV export is a paid feature; free accounts see the table and
-   an upgrade prompt on the export button.
+8. **See where each number came from** — snapshot metrics carry provenance
+   badges. An "Inherited" badge means the value came from a parent geography
+   (county, metro, state, or national) because the exact region had none, and a
+   "Fallback" badge means it came from a backup source. The map tells you when a
+   number is borrowed rather than quietly showing it as local.
+9. **Right-click a region to go deeper** — the context menu jumps you straight to
+   that market elsewhere on the platform: View in Markets, View in Graphs, or
+   Generate Report. This is how you get off the map and into the detail without
+   losing your place.
+10. **Get the data out** — the Table View button opens the current map view as a
+    data table, and the table exports to CSV. CSV export is a paid feature; the
+    export button shows a padlock and an upgrade prompt without it.
 
 ## Approved claims (use these exact framings)
 
@@ -78,6 +84,10 @@ the entire learning curve."
   are metro-only, and the map hides unsupported combinations rather than
   drawing an empty layer.
 - Do not imply the map values individual properties. It is market-level.
+- **The map does not compare markets side by side.** There is no benchmark or
+  peer-ranking panel on the map, so do not draw one. Market-versus-market
+  comparison lives on /market/compare, and multi-market comparison reports come
+  from the report flow. Keep those out of map graphics.
 
 ## Needs a decision before use
 
@@ -105,5 +115,9 @@ valuation."
   callout on the grey swatch reading "no data, not low".
 - Task 7: a device frame showing the click, an arrow, and the detail panel with
   its four snapshot tiles.
+- Task 8: one metric tile enlarged with its "Inherited" badge called out, and a
+  small ladder showing the ZIP borrowing from its county.
+- Task 9: a right-click cursor on a region with the three menu items fanning out
+  to three destination thumbnails.
 - Style references: sketch-note (hand-drawn) or editorial (cream/slate) per
   Troy's approved sample styles.
