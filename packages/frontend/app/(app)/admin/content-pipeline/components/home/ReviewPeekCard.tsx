@@ -1,43 +1,57 @@
 /**
- * A single "waiting on you" card in the review strip. Mockup-first: when a post
- * carries rendered media, the image IS the card (large, platform glyph overlaid,
- * label below) — you approve what you see. video_script items are suggestions,
- * not publishable posts, so they get a compact "video idea" treatment that links
- * to the Video Scripts page instead of the review queue. Everything else (video
- * runs) keeps the compact thumbnail-beside-text row. Uses the shared StatusChip
- * so no raw state name ever shows.
+ * A single "waiting on you" card in the review strip. The mixed queue holds runs
+ * AND posts, so this discriminates on `kind`:
+ *   - video_script post → compact "video idea" pointer to the Video Scripts page
+ *     (suggestions, not publishable posts).
+ *   - other post → mockup-first: the rendered image IS the card, with the post's
+ *     own copy hook as the title and its post-lifecycle status chip. Links to the
+ *     review page with `?post=` so it never triggers a run-detail fetch.
+ *   - run (or any item without `kind`, for back-compat) → the compact
+ *     thumbnail-beside-text row, linked with `?run=`.
  */
 import Link from "next/link";
 import type { QueueItem } from "../../lib/queue-navigator";
 import { FORMAT_META } from "../../lib/format-previews";
+import {
+  isPostReviewItem,
+  isVideoScriptItem,
+  prettyPostType,
+  reviewItemTitle,
+} from "../../review/review-item";
 import { PostMediaThumb } from "../PostMediaThumb";
 import { PlatformGlyph } from "../../planner/platform-glyph";
-import { StatusChip } from "./StatusChip";
+import { StatusChip, postStatusToStatusChip } from "./StatusChip";
 
 export function ReviewPeekCard({ item }: { item: QueueItem }) {
-  if (item.post_type === "video_script") {
+  if (isVideoScriptItem(item)) {
     return <VideoIdeaPeek item={item} />;
   }
-  if (item.mediaUrls?.[0]) {
+  if (isPostReviewItem(item)) {
     return <MockupPeek item={item} />;
   }
   return <RunPeek item={item} />;
 }
 
-/** Image-first card — the rendered mockup leads, copy/status sit below it. */
+/** Image-first card — the rendered mockup leads, copy hook + post status below. */
 function MockupPeek({ item }: { item: QueueItem }) {
-  const label = item.market_query?.trim() || "Untitled";
+  const chip = postStatusToStatusChip(item.status);
   return (
     <Link
-      href={`/admin/content-pipeline/review?run=${item.id}`}
+      href={`/admin/content-pipeline/review?post=${item.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface transition-shadow duration-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <div className="relative">
-        <PostMediaThumb
-          urls={item.mediaUrls}
-          className="w-full aspect-[4/5]"
-          rounded="rounded-none"
-        />
+        {item.mediaUrls?.[0] ? (
+          <PostMediaThumb
+            urls={item.mediaUrls}
+            className="w-full aspect-[4/5]"
+            rounded="rounded-none"
+          />
+        ) : (
+          <div className="flex aspect-[4/5] w-full items-center justify-center bg-surface-container-high text-xs font-medium text-on-surface-variant">
+            {prettyPostType(item.post_type)}
+          </div>
+        )}
         {item.platform && (
           <span className="absolute left-2 top-2 rounded-md bg-on-surface/70 p-1 backdrop-blur-sm">
             <PlatformGlyph
@@ -49,9 +63,9 @@ function MockupPeek({ item }: { item: QueueItem }) {
       </div>
       <div className="flex items-center justify-between gap-2 p-3">
         <span className="truncate text-sm font-medium text-on-surface">
-          {label}
+          {reviewItemTitle(item)}
         </span>
-        <StatusChip status={item.status ?? "ready_for_review"} />
+        <StatusChip tone={chip.tone} label={chip.label} />
       </div>
     </Link>
   );
@@ -59,7 +73,6 @@ function MockupPeek({ item }: { item: QueueItem }) {
 
 /** Text-forward suggestion pointer — video scripts live on their own page. */
 function VideoIdeaPeek({ item }: { item: QueueItem }) {
-  const label = item.market_query?.trim() || "Video idea";
   return (
     <Link
       href="/admin/content-pipeline/video-scripts"
@@ -70,7 +83,7 @@ function VideoIdeaPeek({ item }: { item: QueueItem }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-on-surface">
-          {label}
+          {reviewItemTitle(item)}
         </div>
         <div className="mt-0.5 text-xs text-on-surface-variant">Video idea</div>
         <div className="mt-1.5 text-xs font-medium text-primary">

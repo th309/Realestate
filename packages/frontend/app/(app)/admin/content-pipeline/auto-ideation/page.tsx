@@ -6,7 +6,17 @@ import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
 import { RuleEditor } from "./rule-editor";
 import { useToast } from "../lib/toast";
 
-type Rule = any;
+/** Loosely-typed auto-ideation rule — only the fields this page reads are
+ *  named; the rest (trigger_config, etc.) stay open for the RuleEditor. */
+interface Rule {
+  id: string;
+  rule_name: string;
+  enabled?: boolean;
+  trigger_type?: string;
+  target_format?: string;
+  last_fired_at?: string | null;
+  [key: string]: unknown;
+}
 
 export default function AutoIdeationPage() {
   const toast = useToast();
@@ -50,7 +60,21 @@ export default function AutoIdeationPage() {
       { method: "POST" },
     );
     if (!res.ok) throw new Error(await res.text());
-    toast.success("Fired. Check dashboard for new runs.");
+    const json = (await res.json()) as {
+      data?: { matches?: number; runsCreated?: number };
+      matches?: number;
+      runsCreated?: number;
+    };
+    const runsCreated = json.data?.runsCreated ?? json.runsCreated ?? 0;
+    // Honest states only: never claim runs that weren't created.
+    if (runsCreated > 0) {
+      toast.success(
+        `Queued ${runsCreated} run${runsCreated === 1 ? "" : "s"}. See them on the dashboard.`,
+      );
+    } else {
+      toast.info("No markets currently match this rule.");
+    }
+    refetch();
   }
 
   return (
@@ -62,7 +86,8 @@ export default function AutoIdeationPage() {
               Auto-Ideation Rules
             </h1>
             <p className="text-sm text-on-surface-variant mt-1">
-              Configure triggers that automatically enqueue runs (with cost caps).
+              Configure triggers that automatically enqueue runs (with cost
+              caps).
             </p>
           </div>
           <button
@@ -86,7 +111,8 @@ export default function AutoIdeationPage() {
                 </div>
                 <div className="text-xs text-on-surface-variant mt-0.5">
                   <span className="font-mono">{r.trigger_type}</span> • target{" "}
-                  <span className="font-mono">{r.target_format}</span> • last fired{" "}
+                  <span className="font-mono">{r.target_format}</span> • last
+                  fired{" "}
                   {r.last_fired_at
                     ? new Date(r.last_fired_at).toLocaleString()
                     : "never"}
@@ -99,7 +125,9 @@ export default function AutoIdeationPage() {
                     checked={!!r.enabled}
                     onChange={() =>
                       toggle(r).catch((e) =>
-                        toast.error(`Toggle failed: ${String(e?.message ?? e)}`),
+                        toast.error(
+                          `Toggle failed: ${String(e?.message ?? e)}`,
+                        ),
                       )
                     }
                   />
@@ -158,4 +186,3 @@ export default function AutoIdeationPage() {
     </div>
   );
 }
-

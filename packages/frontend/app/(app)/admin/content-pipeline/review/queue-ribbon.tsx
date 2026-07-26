@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useQueueNavigator } from "../lib/queue-navigator";
-import { pipelineStateToStatusChip } from "../components/home/StatusChip";
+import {
+  pipelineStateToStatusChip,
+  postStatusToStatusChip,
+} from "../components/home/StatusChip";
 import { PostMediaThumb } from "../components/PostMediaThumb";
 
 /**
@@ -37,7 +40,14 @@ export function QueueRibbon() {
     >
       {nav.items.map((item, idx) => {
         const active = item.id === nav.currentId;
-        const isReady = item.status === "ready_for_review";
+        const isPost = item.kind === "post";
+        const statusChip = isPost
+          ? postStatusToStatusChip(item.status)
+          : pipelineStateToStatusChip(item.status);
+        // Hide the label for each kind's default "waiting on you" state.
+        const isDefaultWaiting = isPost
+          ? item.status === "pending_review"
+          : item.status === "ready_for_review";
         return (
           <button
             key={item.id}
@@ -90,12 +100,12 @@ export function QueueRibbon() {
                 <span className="text-[9px] font-mono text-surface">
                   {idx + 1}
                 </span>
-                {!isReady && (
+                {!isDefaultWaiting && (
                   <span
                     className="text-[8px] font-medium text-surface/80 truncate"
-                    title={pipelineStateToStatusChip(item.status).label}
+                    title={statusChip.label}
                   >
-                    {pipelineStateToStatusChip(item.status).label}
+                    {statusChip.label}
                   </span>
                 )}
               </div>

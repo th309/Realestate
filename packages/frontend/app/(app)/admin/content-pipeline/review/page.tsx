@@ -49,14 +49,16 @@ function ReviewShell() {
   const qc = useQueryClient();
   const toast = useToast();
   const searchParams = useSearchParams();
-  const deepLinkRunId = searchParams.get("run");
+  // Peek/ribbon cards deep-link posts with `?post=` and runs with `?run=`; both
+  // carry an item id the navigator can anchor to.
+  const deepLinkId = searchParams.get("post") ?? searchParams.get("run");
 
   useEffect(() => {
-    if (!deepLinkRunId) return;
-    if (!items.some((i) => i.id === deepLinkRunId)) return;
-    if (currentId === deepLinkRunId) return;
-    jumpTo(deepLinkRunId);
-  }, [deepLinkRunId, items, currentId, jumpTo]);
+    if (!deepLinkId) return;
+    if (!items.some((i) => i.id === deepLinkId)) return;
+    if (currentId === deepLinkId) return;
+    jumpTo(deepLinkId);
+  }, [deepLinkId, items, currentId, jumpTo]);
 
   const currentItem = items.find((i) => i.id === currentId);
   const isPost = currentItem ? isPostReviewItem(currentItem) : false;
