@@ -14,18 +14,23 @@ import {
   PostRow,
   PostStatus,
 } from './post.types';
-import {
-  signPostMediaRefs,
-  SignedMediaRef,
-} from '../post-images/post-image-signing';
 import type { PostImageMediaRef } from '../post-images/post-image.types';
 
 /**
- * A post row plus 1-hour signed image URLs in slide order (list/get/generate).
- * `mediaUrls` is a plain string[] — the frozen frontend contract (`<img src>`);
- * refs that fail to sign are dropped (honest absence, not a broken entry).
+ * A post row plus same-origin image URLs in slide order (list/get/generate).
+ * `mediaUrls` is a plain string[] — the frozen frontend contract (`<img src>`) —
+ * pointing at this app's streaming endpoint, NOT a supabase URL: content blockers
+ * filter IMAGE requests to supabase.co, so <img> loads must be same-origin.
  */
 export type PostWithMedia = PostRow & { mediaUrls: string[] };
+
+/** Base path for the same-origin media streaming endpoint. */
+const POSTS_MEDIA_BASE = '/api/admin/content-pipeline/posts';
+
+/** Read the numeric slide order off a media ref (0 default; refs store it loosely). */
+function refOrder(ref: PostMediaRef): number {
+  return Number((ref as { order?: unknown }).order ?? 0);
+}
 
 /**
  * CRUD + status lifecycle for the generalized `posts` model. The feed generator
@@ -176,23 +181,46 @@ export class PostsService {
     return data as PostRow;
   }
 
-  /** Mint 1-hour signed URLs for a post's stored image refs (list/get responses). */
-  async signMedia(
-    mediaRefs: PostMediaRef[] | undefined,
-  ): Promise<SignedMediaRef[]> {
-    return signPostMediaRefs(this.supabase.getClient(), mediaRefs);
+  /**
+   * Attach same-origin image URLs (string[], slide order) to a post. Points at
+   * this app's streaming endpoint (GET .../posts/:id/media/:order), so <img> loads
+   * are same-origin and survive content blockers that filter supabase.co images.
+   * async to keep the frozen call sites (list/get/generate/queue) unchanged.
+   */
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async withSignedMedia(post: PostRow): Promise<PostWithMedia> {
+    const mediaUrls = (post.media_refs ?? [])
+      .filter((r) => r?.kind === 'image' && typeof r.storage_path === 'string')
+      .sort((a, b) => refOrder(a) - refOrder(b))
+      .map((r) => `${POSTS_MEDIA_BASE}/${post.id}/media/${refOrder(r)}`);
+    return { ...post, mediaUrls };
   }
 
-  /** Attach signed image URLs (string[], slide order) to a post for the admin UI. */
-  async withSignedMedia(post: PostRow): Promise<PostWithMedia> {
-    const signed = await this.signMedia(post.media_refs);
-    const mediaUrls = signed
-      .filter(
-        (r): r is SignedMediaRef & { url: string } => typeof r.url === 'string',
-      )
-      .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
-      .map((r) => r.url);
-    return { ...post, mediaUrls };
+  /**
+   * Download the bytes of a post's rendered image via the service-role client, to
+   * stream same-origin (blocker-proof). 404 if the post or the ref at that order
+   * is missing. Signing stays server-side (this + the publish path).
+   */
+  async downloadMedia(id: string, order: number): Promise<Buffer> {
+    const post = await this.getById(id);
+    const ref = (post.media_refs ?? []).find(
+      (r) => r?.kind === 'image' && refOrder(r) === order,
+    );
+    const bucket = (ref as { bucket?: unknown } | undefined)?.bucket;
+    const path = ref?.storage_path;
+    if (!ref || typeof bucket !== 'string' || typeof path !== 'string') {
+      throw new NotFoundException(`no image at order ${order} for post ${id}`);
+    }
+    const { data, error } = await this.supabase
+      .getClient()
+      .storage.from(bucket)
+      .download(path);
+    if (error || !data) {
+      throw new NotFoundException(
+        `media object missing for post ${id}/${order}`,
+      );
+    }
+    return Buffer.from(await data.arrayBuffer());
   }
 
   /**

@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Header,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
@@ -48,6 +52,28 @@ export class PostsController {
   async getOne(@Param('id', new ParseUUIDPipe()) id: string) {
     const post = await this.posts.getById(id);
     return { success: true, data: await this.posts.withSignedMedia(post) };
+  }
+
+  /**
+   * Stream a post's rendered image SAME-ORIGIN so <img src> survives content
+   * blockers that filter supabase.co image requests. Downloaded server-side with
+   * the service-role client; the path is immutable per render, so it caches 1h.
+   */
+  @Get(':id/media/:order')
+  @Header('Cache-Control', 'private, max-age=3600')
+  async media(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('order', new ParseIntPipe()) order: number,
+  ): Promise<StreamableFile> {
+    if (order < 0 || order > 40) {
+      throw new BadRequestException('media order out of range');
+    }
+    const bytes = await this.posts.downloadMedia(id, order);
+    return new StreamableFile(bytes, {
+      type: 'image/png',
+      disposition: 'inline',
+      length: bytes.length,
+    });
   }
 
   /** Approve a pending post (pending_review -> approved). */
