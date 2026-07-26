@@ -147,13 +147,19 @@ export function leadingSentences(
 ): string {
   const t = (text ?? '').trim().replace(/\s+/g, ' ');
   if (t.length <= softMax) return t;
-  const sentences = t.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [t];
-  let out = '';
-  for (const s of sentences) {
-    if (out && (out + s).length > softMax) break;
-    out += s;
+  const sentences = t.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+  if (sentences) {
+    let out = '';
+    for (const s of sentences) {
+      if (out && (out + s).length > softMax) break;
+      out += s;
+    }
+    out = out.trim();
+    if (out && out.length <= softMax) return out; // whole sentences fit the budget
   }
-  return (out || sentences[0] || t).trim();
+  // No usable sentence boundary within softMax (incl. a punctuation-less body):
+  // word-safe backstop + warn — never return an over-length or mid-word blob.
+  return fitField(t, softMax, 'subhead (no sentence boundary)');
 }
 
 /**
@@ -173,37 +179,14 @@ export function headlineFontSize(
   return Math.round(Math.max(min, Math.min(base, size)));
 }
 
-// ---- real-data formatters (only emit for finite numbers) --------------------
-
-export function formatScore(n: number | null | undefined): string | null {
-  return n != null && Number.isFinite(n) ? String(Math.round(n)) : null;
-}
-
-export function formatCurrencyCompact(
-  n: number | null | undefined,
-): string | null {
-  if (n == null || !Number.isFinite(n)) return null;
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000)
-    return `$${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
-  if (abs >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
-}
-
-export function formatPercent(
-  n: number | null | undefined,
-  signed = true,
-): string | null {
-  if (n == null || !Number.isFinite(n)) return null;
-  const sign = signed && n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(1)}%`;
-}
-
-export function formatDelta(n: number | null | undefined): string | null {
-  if (n == null || !Number.isFinite(n) || n === 0) return null;
-  const sign = n > 0 ? '+' : '−'; // real minus sign
-  return `${sign}${Math.abs(Math.round(n))}`;
-}
+// Real-data value formatters live in post-image-format.ts; re-exported so the
+// templates keep importing them from post-image-shared.
+export {
+  formatScore,
+  formatCurrencyCompact,
+  formatPercent,
+  formatDelta,
+} from './post-image-format';
 
 // ---- shared HTML fragments --------------------------------------------------
 

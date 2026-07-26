@@ -26,6 +26,22 @@ import {
   PostImageStat,
 } from './post-image.types';
 
+/**
+ * Per-region CHAR BUDGETS = how much copy each region holds at the renderer's
+ * FLOOR scale (0.6). These are no-ops for legal feed copy (bounded by PostCopyDto)
+ * — font step-down + the scale ladder do the real fitting; fitField only truncates
+ * (+warns) genuinely pathological input. Where the DTO max exceeds what a 4:5 card
+ * can hold (body 2200, slide body 1000), the budget is set to the measured floor
+ * capacity and the overflow lives in the published caption, not the image.
+ */
+const FIT = {
+  hook: 300, // = PostCopyDto.hook max
+  cta: 500, // = PostCopyDto.cta max
+  slideHeading: 200, // = PostCopyDto slide heading max
+  slideBody: 600, // content-slide floor capacity (< DTO 1000)
+  subhead: 260, // single-post supporting line (leading sentences of a long body)
+} as const;
+
 /** Full HTML for a single-post card at the given scale (1 = design size). */
 export function buildSinglePostHtml(
   content: PostImageContent,
@@ -147,7 +163,7 @@ export function copyToImageContents(
         family,
         template: 'carousel_slide',
         variant: 'cover',
-        headline: fitField(hook, 300, 'cover hook'),
+        headline: fitField(hook, FIT.hook, 'cover hook'),
         slideLabel: `1 / ${total}`,
         asOf,
       },
@@ -161,10 +177,10 @@ export function copyToImageContents(
           variant: 'content',
           headline: fitField(
             slide.heading?.trim() || hook,
-            200,
+            FIT.slideHeading,
             'slide heading',
           ),
-          body: fitField(slide.body, 600, 'slide body'),
+          body: fitField(slide.body, FIT.slideBody, 'slide body'),
           slideLabel: `${i + 2} / ${total}`,
           asOf,
         },
@@ -176,8 +192,8 @@ export function copyToImageContents(
         family,
         template: 'carousel_slide',
         variant: 'closer',
-        headline: fitField(hook, 300, 'closer hook'),
-        cta: fitField(cta, 500, 'closer cta'),
+        headline: fitField(hook, FIT.hook, 'closer hook'),
+        cta: fitField(cta, FIT.cta, 'closer cta'),
         asOf,
       },
     });
@@ -188,13 +204,13 @@ export function copyToImageContents(
   const derived = deriveStat(grounding);
   const headline = fitField(
     copy.hook?.trim() || 'PropertyIQ market intelligence',
-    300,
+    FIT.hook,
     'single hook',
   );
   // Card subhead = complete leading sentences of the body (never a mid-word cut);
   // the full body stays in the published caption.
-  const subhead = leadingSentences(copy.body, 260) || undefined;
-  const cta = fitField(copy.cta, 500, 'single cta') || undefined;
+  const subhead = leadingSentences(copy.body, FIT.subhead) || undefined;
+  const cta = fitField(copy.cta, FIT.cta, 'single cta') || undefined;
 
   const content: PostImageContent =
     derived != null

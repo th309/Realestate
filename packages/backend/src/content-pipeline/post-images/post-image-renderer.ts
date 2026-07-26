@@ -2,7 +2,10 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import puppeteer, { Browser } from 'puppeteer';
 import { RENDER_DEVICE_SCALE } from './post-image.types';
-import { PostImageRenderer } from './post-image-renderer.interface';
+import {
+  PostImageOverflowError,
+  PostImageRenderer,
+} from './post-image-renderer.interface';
 
 const RENDER_TIMEOUT_MS = 20_000;
 const IDLE_BROWSER_TIMEOUT_MS = 5 * 60_000;
@@ -59,18 +62,17 @@ export class PuppeteerPostImageRenderer
         const last = i === FIT_SCALES.length - 1;
         if (!(await this.overflows(page))) return this.shoot(page);
         if (last) {
-          // Floor reached: render as-is rather than skip the image. Copy is
-          // budgeted to fit here, so this is rare (very long copy).
-          this.logger.warn(
-            `post image still tight at min scale ${scale}; rendering as-is`,
+          // Still overflowing at the floor: copy is budgeted to fit here, so this
+          // is pathological. Skip the image (best-effort) rather than clip a card.
+          throw new PostImageOverflowError(
+            `card still overflows at min scale ${scale}`,
           );
-          return this.shoot(page);
         }
         this.logger.warn(
           `post image overflowed at scale ${scale} — retrying smaller`,
         );
       }
-      return this.shoot(page); // unreachable; satisfies the return type
+      throw new PostImageOverflowError('card overflowed the fit ladder'); // unreachable
     });
   }
 

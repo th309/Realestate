@@ -137,6 +137,13 @@ describe('text fit — never cut off legal copy', () => {
     expect(out).toContain('quiet slide shows up');
   });
 
+  it('leadingSentences word-safe backstops a punctuation-less body (no bypass)', () => {
+    const noPunct = 'word '.repeat(200).trim(); // ~1000 chars, no . ! ?
+    const out = leadingSentences(noPunct, 260);
+    expect(out.length).toBeLessThan(280); // capped, not returned whole
+    expect(out.endsWith('…')).toBe(true); // word-safe backstop, not a raw blob
+  });
+
   it('carousel closer keeps the FULL hook + cta (Troy: never cut off)', () => {
     const out = copyToImageContents('carousel_copy', {
       hook: 'Plattsburgh, NY climbed 58 points on the PropertyIQ Score. Now at 96, very strong momentum.',

@@ -50,7 +50,7 @@ function cover(c: PostImageContent): string {
       ${markHtml(c.family)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         <div class="${serifClass(c.family)}" style="font-size:${s(hSize)};font-weight:800;line-height:1.06;color:${ink(c.family)};">${escapeHtml(c.headline)}</div>
-        ${c.subhead ? `<div style="margin-top:34px;font-size:36px;line-height:1.35;color:${muted(c.family)};">${escapeHtml(c.subhead)}</div>` : ''}
+        ${c.subhead ? `<div style="margin-top:34px;font-size:${s(36)};line-height:1.35;color:${muted(c.family)};">${escapeHtml(c.subhead)}</div>` : ''}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:26px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:${accent(c.family)};">Swipe →</div>
@@ -81,7 +81,7 @@ function closer(c: PostImageContent): string {
       ${markHtml(c.family)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         <div class="${serifClass(c.family)}" style="font-size:${s(hSize)};font-weight:800;line-height:1.08;color:${ink(c.family)};">${escapeHtml(c.headline)}</div>
-        ${c.cta ? `<div style="margin-top:36px;font-size:40px;font-weight:700;color:${accent(c.family)};">${escapeHtml(c.cta)}</div>` : ''}
+        ${c.cta ? `<div style="margin-top:36px;font-size:${s(40)};font-weight:700;color:${accent(c.family)};">${escapeHtml(c.cta)}</div>` : ''}
       </div>
       ${footerHtml(c.family, c.asOf)}
     </div>`;
