@@ -23,54 +23,8 @@ export const MEDIA_QUERY_MAP = {
 
 export type MediaCategory = keyof typeof MEDIA_QUERY_MAP;
 
-/**
- * Terms that mark a result as actual city/urban footage.
- *
- * Naming the city is NOT enough on its own: many US metros share a name with an
- * everyday noun, and Pexels' fuzzy search happily returns those. A live run
- * matched "Barre, VT" to `a-ballerina-training-on-a-barre` — the slug contains
- * "barre", so a bare substring test passed and a ballet clip was nearly shipped
- * as a real-estate video. Requiring an urban term alongside the city name
- * rejects that whole class (Barre, Reading, Mobile, Jackson, Corning, Sandwich).
- */
-const URBAN_CONTEXT_TERMS = [
-  'skyline',
-  'downtown',
-  'cityscape',
-  'city',
-  'urban',
-  'aerial',
-  'street',
-  'building',
-  'skyscraper',
-  'bridge',
-  'traffic',
-  'neighborhood',
-  'suburb',
-  'architecture',
-] as const;
+import { passesCityAlignmentGate } from './city-alignment-gate';
 
-/** Whole-word match, so "barre" never matches inside another token. */
-function namesCity(haystack: string, city: string): boolean {
-  const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(haystack);
-}
-
-function looksUrban(haystack: string): boolean {
-  return URBAN_CONTEXT_TERMS.some((term) => haystack.includes(term));
-}
-
-/**
- * The alignment gate: a result is only accepted when its metadata BOTH names the
- * city as a whole word AND reads as city footage. Right media, or no media.
- */
-export function passesCityAlignmentGate(
-  metadata: string,
-  city: string,
-): boolean {
-  const haystack = metadata.toLowerCase();
-  return namesCity(haystack, city.toLowerCase()) && looksUrban(haystack);
-}
 
 /** A Pexels photo that passed the alignment gate, with provenance for auditing. */
 export interface PexelsPhoto {
@@ -115,6 +69,7 @@ export async function searchCitySkylinePhoto(
   city: string,
   apiKey: string | undefined,
   fetchImpl: FetchFn = fetch,
+  expectedState?: string | null,
 ): Promise<PexelsPhoto | null> {
   const cityQuery = city.trim();
   if (!apiKey || !cityQuery) return null;
@@ -133,7 +88,7 @@ export async function searchCitySkylinePhoto(
       continue;
     }
     const match = (json.photos ?? []).find((p) =>
-      passesCityAlignmentGate(p.alt ?? '', needle),
+      passesCityAlignmentGate(p.alt ?? '', needle, expectedState),
     );
     if (match?.src?.large2x) {
       return {
@@ -198,6 +153,7 @@ export async function searchCitySkylineVideo(
   city: string,
   apiKey: string | undefined,
   fetchImpl: FetchFn = fetch,
+  expectedState?: string | null,
 ): Promise<PexelsVideo | null> {
   const cityQuery = city.trim();
   if (!apiKey || !cityQuery) return null;
@@ -218,7 +174,7 @@ export async function searchCitySkylineVideo(
     const match = (json.videos ?? []).find((v) => {
       const slug = (v.url ?? '').toLowerCase();
       const tags = (v.tags ?? []).map((t) => String(t).toLowerCase()).join(' ');
-      return passesCityAlignmentGate(`${slug} ${tags}`, needle);
+      return passesCityAlignmentGate(`${slug} ${tags}`, needle, expectedState);
     });
     const link = match ? pickVideoFile(match.video_files ?? []) : null;
     if (match && link) {

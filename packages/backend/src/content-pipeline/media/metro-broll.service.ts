@@ -70,6 +70,8 @@ export class MetroBrollService {
     cbsa: string,
     city: string,
     apiKey: string | undefined = process.env.PEXELS_API_KEY,
+    /** Metro state, so the gate can reject the same city name in another state. */
+    state?: string | null,
   ): Promise<MetroBroll | null> {
     const cbsaCode = String(cbsa ?? '').trim();
     if (!cbsaCode) return null;
@@ -78,7 +80,7 @@ export class MetroBrollService {
     const cached = await this.readCache(client, cbsaCode).catch(() => null);
     if (cached) return cached;
 
-    return this.populateFromPexels(client, cbsaCode, city, apiKey).catch(
+    return this.populateFromPexels(client, cbsaCode, city, apiKey, state).catch(
       (e) => {
         this.logger.warn(
           `[metro-broll] pexels failed CBSA=${cbsaCode}: ${errMsg(e)}`,
@@ -123,8 +125,9 @@ export class MetroBrollService {
     cbsa: string,
     city: string,
     apiKey: string | undefined,
+    state?: string | null,
   ): Promise<MetroBroll | null> {
-    const video = await searchCitySkylineVideo(city, apiKey);
+    const video = await searchCitySkylineVideo(city, apiKey, fetch, state);
     // No key, API error, or no clip whose slug/tags confidently name the city.
     if (!video) return null;
 

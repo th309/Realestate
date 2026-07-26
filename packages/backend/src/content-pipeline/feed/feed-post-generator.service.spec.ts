@@ -208,7 +208,14 @@ describe('FeedPostGeneratorService skyline photos', () => {
     });
     await service.generatePost(BRAND, 'PREAMBLE', 'linkedin_post', MOVER);
 
-    expect(getSkylineDataUri).toHaveBeenCalledWith('metro-1', 'Austin');
+    // State is threaded through so the alignment gate can reject the same city
+    // name in another state.
+    expect(getSkylineDataUri).toHaveBeenCalledWith(
+      'metro-1',
+      'Austin',
+      process.env.PEXELS_API_KEY,
+      null,
+    );
     expect(renderedGrounding(renderForPost).photoDataUri).toBe(SKYLINE);
   });
 

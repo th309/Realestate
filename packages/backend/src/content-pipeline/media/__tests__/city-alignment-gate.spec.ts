@@ -1,4 +1,4 @@
-import { passesCityAlignmentGate } from '../pexels-media';
+import { passesCityAlignmentGate } from '../city-alignment-gate';
 
 describe('passesCityAlignmentGate accepts genuine city footage', () => {
   it.each([
@@ -59,5 +59,66 @@ describe('passesCityAlignmentGate rejects wrong-subject media', () => {
 
   it('rejects empty metadata', () => {
     expect(passesCityAlignmentGate('', 'chicago')).toBe(false);
+  });
+});
+
+describe('passesCityAlignmentGate rejects the right city in the wrong country', () => {
+  // Both are live misses. US city names are exported worldwide, and a US-state
+  // check cannot catch a foreign one.
+  it('rejects Bangor, Wales for Bangor, ME', () => {
+    expect(
+      passesCityAlignmentGate(
+        'Explore Bangor, Wales with this vibrant marina scene featuring moored boats and urban architecture.',
+        'bangor',
+        'ME',
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects Johnstown Castle, Ireland for Johnstown, PA', () => {
+    expect(
+      passesCityAlignmentGate(
+        'majestic peacock at johnstown castle ireland downtown',
+        'johnstown',
+        'PA',
+      ),
+    ).toBe(false);
+  });
+
+  it('still accepts genuine US footage', () => {
+    expect(
+      passesCityAlignmentGate(
+        'Bangor Maine waterfront downtown',
+        'bangor',
+        'ME',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('passesCityAlignmentGate rejects the right city in the wrong state', () => {
+  // The live miss: Johnstown PA was served an aerial of Johnstown, CO.
+  const JOHNSTOWN_CO =
+    'Aerial view of a town in Johnstown, CO, featuring a sports complex and residential area.';
+
+  it('rejects a metadata state that conflicts with the metro state', () => {
+    expect(passesCityAlignmentGate(JOHNSTOWN_CO, 'johnstown', 'PA')).toBe(
+      false,
+    );
+  });
+
+  it('accepts it for the metro it actually depicts', () => {
+    expect(passesCityAlignmentGate(JOHNSTOWN_CO, 'johnstown', 'CO')).toBe(true);
+  });
+
+  it('allows metadata that names no state at all', () => {
+    // Most stock captions omit the state; city + urban checks still apply.
+    expect(
+      passesCityAlignmentGate('Johnstown downtown street', 'johnstown', 'PA'),
+    ).toBe(true);
+  });
+
+  it('ignores the state check when the caller does not know the state', () => {
+    expect(passesCityAlignmentGate(JOHNSTOWN_CO, 'johnstown')).toBe(true);
   });
 });

@@ -15,7 +15,10 @@ import { config } from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseService } from '../src/supabase/supabase.service';
 import { fetchTopMovers } from '../src/content-pipeline/data/score-mover-context.queries';
-import { buildGrounding } from '../src/content-pipeline/feed/feed-helpers';
+import {
+  buildGrounding,
+  stateFromCanonicalName,
+} from '../src/content-pipeline/feed/feed-helpers';
 import { marketCityForQuery } from '../src/content-pipeline/post-images/post-image-names';
 import { MetroPhotoService } from '../src/content-pipeline/media/metro-photo.service';
 import { PostImageRenderService } from '../src/content-pipeline/post-images/post-image-render.service';
@@ -97,8 +100,9 @@ async function main(): Promise<void> {
       null;
     for (const mover of candidates) {
       const city = marketCityForQuery(mover.canonical_name, null);
+      const state = stateFromCanonicalName(mover.canonical_name);
       const photo = await photos
-        .getSkylineDataUri(mover.id, city)
+        .getSkylineDataUri(mover.id, city, process.env.PEXELS_API_KEY, state)
         .catch(() => null);
       if (photo) {
         console.log(

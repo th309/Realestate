@@ -64,7 +64,12 @@ export class PostVideoCardService {
 
     const city = marketCityForQuery(grounding.marketName, grounding.state);
     if (!city) return null;
-    const broll = await this.broll.getBroll(grounding.geoId, city);
+    const broll = await this.broll.getBroll(
+      grounding.geoId,
+      city,
+      process.env.PEXELS_API_KEY,
+      grounding.state,
+    );
     if (!broll) {
       this.logger.log(
         `no city-confident b-roll for ${city} — falling back to an image post`,

@@ -139,7 +139,12 @@ async function main(): Promise<void> {
 
       // Ask ONCE whether this metro has city-confident b-roll; doing it here
       // rather than inside the seed loop avoids re-querying Pexels per seed.
-      const broll = await brollService.getBroll(mover.id, city);
+      const broll = await brollService.getBroll(
+        mover.id,
+        city,
+        process.env.PEXELS_API_KEY,
+        grounding.state,
+      );
       if (!broll) {
         console.log(
           `${city}: no city-confident b-roll — image post instead (honest skip)`,

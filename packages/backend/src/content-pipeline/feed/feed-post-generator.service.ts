@@ -180,7 +180,12 @@ export class FeedPostGeneratorService {
     const city = marketCityForQuery(grounding.marketName, grounding.state);
     if (!city) return grounding;
     const photo = await this.metroPhotos
-      .getSkylineDataUri(grounding.geoId, city)
+      .getSkylineDataUri(
+        grounding.geoId,
+        city,
+        process.env.PEXELS_API_KEY,
+        grounding.state,
+      )
       .catch((err) => {
         this.logger.warn(
           `skyline lookup failed for ${city} (${grounding.geoId}): ${(err as Error).message}`,

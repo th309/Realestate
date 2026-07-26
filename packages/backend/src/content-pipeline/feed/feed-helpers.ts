@@ -66,6 +66,20 @@ export function formatAsOfDate(iso: string | null | undefined): string | null {
  * render only, never the prompt (see FeedMarketGrounding.markets). `asOf` is the
  * snapshot's data period (score date first, then ZHVI/rent), not the render date.
  */
+/**
+ * Pull the state out of a canonical market name ("Johnstown, PA" -> "PA").
+ *
+ * Score movers carry no `state` field, but their canonical name ends in one.
+ * Without this the media alignment gate has no state to check and would happily
+ * serve Johnstown, CO footage for Johnstown, PA.
+ */
+export function stateFromCanonicalName(
+  canonicalName: string | null | undefined,
+): string | null {
+  const match = /,\s*([A-Za-z]{2})\s*$/.exec(String(canonicalName ?? ''));
+  return match ? match[1].toUpperCase() : null;
+}
+
 export function buildGrounding(
   target: GroundingTarget,
   snapshot: MarketSnapshot | null,
@@ -92,7 +106,7 @@ export function buildGrounding(
     geoLevel: target.geography,
     geoId: target.id,
     marketName: target.canonical_name,
-    state: target.state ?? null,
+    state: target.state ?? stateFromCanonicalName(target.canonical_name),
     score,
     scoreLabel: scoreMomentumLabel(score),
     confidence: snapshot?.score?.confidence ?? null,

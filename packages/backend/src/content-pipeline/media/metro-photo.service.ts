@@ -97,6 +97,8 @@ export class MetroPhotoService {
     cbsa: string,
     city: string,
     apiKey: string | undefined = process.env.PEXELS_API_KEY,
+    /** Metro state, so the gate can reject the same city name in another state. */
+    state?: string | null,
   ): Promise<SkylinePhoto | null> {
     const cbsaCode = String(cbsa ?? '').trim();
     if (!cbsaCode) return null;
@@ -113,12 +115,14 @@ export class MetroPhotoService {
     });
     if (curated) return curated;
 
-    return this.populatePexels(client, cbsaCode, city, apiKey).catch((e) => {
-      this.logger.warn(
-        `[metro-photo] pexels failed CBSA=${cbsaCode}: ${errMsg(e)}`,
-      );
-      return null;
-    });
+    return this.populatePexels(client, cbsaCode, city, apiKey, state).catch(
+      (e) => {
+        this.logger.warn(
+          `[metro-photo] pexels failed CBSA=${cbsaCode}: ${errMsg(e)}`,
+        );
+        return null;
+      },
+    );
   }
 
   /**
@@ -191,8 +195,9 @@ export class MetroPhotoService {
     cbsa: string,
     city: string,
     apiKey: string | undefined,
+    state?: string | null,
   ): Promise<SkylinePhoto | null> {
-    const photo = await searchCitySkylinePhoto(city, apiKey);
+    const photo = await searchCitySkylinePhoto(city, apiKey, fetch, state);
     if (!photo) return null; // no key, error, or no confident city match
     const img = await downloadImageBytes(photo.downloadUrl);
     const optionId = `pexels-${photo.id}`;
