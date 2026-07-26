@@ -9,6 +9,8 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
+import { recordDriverSpend } from './record-driver-spend';
 
 @Injectable()
 export class TimeCaptionsHandler {
@@ -18,6 +20,7 @@ export class TimeCaptionsHandler {
     private readonly orchestrator: RunOrchestratorService,
     @Inject(CAPTION_TIMER) private readonly timer: CaptionTimer,
     private readonly supabase: SupabaseService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -109,6 +112,14 @@ export class TimeCaptionsHandler {
           cost_usd: Number(result.cost.amount_usd.toFixed(6)),
         },
       });
+
+      await recordDriverSpend(
+        this.costCap,
+        this.logger,
+        'time-captions',
+        runId,
+        result.cost,
+      );
 
       this.logger.log(`[PIPE] time-captions.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);

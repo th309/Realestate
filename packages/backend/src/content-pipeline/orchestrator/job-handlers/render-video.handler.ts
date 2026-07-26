@@ -12,6 +12,8 @@ import { tmpdir } from 'os';
 import { readFileSync } from 'fs';
 import { loadLongFormRenderPlan } from './long-form-render-plan-loader';
 import { buildRenderVideoProps } from './render-video-props';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
+import { recordDriverSpend } from './record-driver-spend';
 
 @Injectable()
 export class RenderVideoHandler {
@@ -22,6 +24,7 @@ export class RenderVideoHandler {
     @Inject(VIDEO_RENDERER) private readonly renderer: VideoRenderer,
     private readonly supabase: SupabaseService,
     private readonly queue: QueueService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -209,6 +212,16 @@ export class RenderVideoHandler {
           cost_usd: result.cost?.amount_usd ?? 0,
         },
       });
+
+      // Local Remotion renders bill $0, so this is a no-op today; it keeps the
+      // ledger correct if the renderer ever moves to a metered backend.
+      await recordDriverSpend(
+        this.costCap,
+        this.logger,
+        'render-video',
+        runId,
+        result.cost,
+      );
 
       this.logger.log(`[PIPE] render-video.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);
