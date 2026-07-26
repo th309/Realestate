@@ -7,6 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveForwardAuthHeader } from "./forward-auth";
 
 function backendOrigin(): string {
   const raw =
@@ -20,7 +22,9 @@ function buildTargetUrl(
   request: NextRequest,
   pathSegments: string[] | undefined,
 ): string {
-  const safe = (pathSegments ?? []).filter((s) => s.length > 0 && !s.includes(".."));
+  const safe = (pathSegments ?? []).filter(
+    (s) => s.length > 0 && !s.includes(".."),
+  );
   const sub = safe.join("/");
   const backendPath = sub
     ? `/api/admin/content-pipeline/${sub}`
@@ -28,13 +32,25 @@ function buildTargetUrl(
   return `${backendOrigin()}${backendPath}${request.nextUrl.search}`;
 }
 
+/** Access token from the caller's Supabase cookie session, or null. */
+async function sessionAccessToken(): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
 async function proxy(request: NextRequest, pathSegments: string[] | undefined) {
   const targetUrl = buildTargetUrl(request, pathSegments);
 
   const headers = new Headers();
-  const auth = request.headers.get("authorization");
-  if (auth) {
-    headers.set("Authorization", auth);
+  // Forward the client's JWT (fetchAPI path) untouched, or — for headerless GET
+  // <img>/media loads — mint one from the cookie session so AdminGuard doesn't
+  // 401 the image. See forward-auth.ts.
+  const authValue = await resolveForwardAuthHeader(request, sessionAccessToken);
+  if (authValue) {
+    headers.set("Authorization", authValue);
   }
   const contentType = request.headers.get("content-type");
   if (contentType) {
@@ -54,7 +70,11 @@ async function proxy(request: NextRequest, pathSegments: string[] | undefined) {
       body,
     });
   } catch (err) {
-    console.error("[content-pipeline proxy] upstream fetch failed:", targetUrl, err);
+    console.error(
+      "[content-pipeline proxy] upstream fetch failed:",
+      targetUrl,
+      err,
+    );
     return NextResponse.json(
       { success: false, error: "Backend unreachable" },
       { status: 502 },
