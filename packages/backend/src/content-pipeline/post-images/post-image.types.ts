@@ -9,21 +9,48 @@
 /** Image templates the renderer supports. */
 export type PostImageTemplate = 'single_post' | 'carousel_slide';
 
-/** Visual family. `dark` = the proven navy Daily Card; `cream` = editorial infographic. */
-export type PostImageFamily = 'dark' | 'cream';
+/**
+ * Visual family (the "skin"):
+ * - `dark`  = the proven navy Daily Card already live on PropertyIQ socials.
+ * - `cream` = the editorial infographic look (Source Serif display).
+ * - `white` = the quote-highlight look (pure white, serif, green highlighter stroke).
+ */
+export type PostImageFamily = 'dark' | 'cream' | 'white';
 
 /**
- * Single-post layout variants. The selector picks one by content fit:
- * - `daily_card_stat`  dark, score/stat-forward (hero number + market).
- * - `daily_card_hook`  dark, typographic bold-claim (hook-led, no stat).
- * - `editorial_stat`   cream, Source-Serif headline + big mono stat.
- * - `editorial_claim`  cream, Source-Serif headline claim (no stat).
+ * Single-post layout variants = skeleton × family. The selector picks one by
+ * content fit (real data available) + a deterministic seed so a feed shows a
+ * mix and a regenerate cycles to a different look:
+ * - `daily_card_stat`   dark,  score/stat-forward (hero number + market).
+ * - `daily_card_hook`   dark,  typographic bold-claim (hook-led, no stat).
+ * - `daily_card_rows`   dark,  market-row list (name + momentum score chip per row).
+ * - `daily_card_versus` dark,  head-to-head two-panel (market A vs market B).
+ * - `editorial_stat`    cream, Source-Serif headline + big mono stat.
+ * - `editorial_claim`   cream, Source-Serif headline claim (no stat).
+ * - `editorial_ranking` cream, Source-Serif ranking list (numbered market rows).
+ * - `editorial_versus`  cream, editorial head-to-head two-panel.
+ * - `quote_highlight`   white, serif quote with a green highlighter stroke behind
+ *                       the emphasized phrase.
  */
 export type SinglePostVariant =
   | 'daily_card_stat'
   | 'daily_card_hook'
+  | 'daily_card_rows'
+  | 'daily_card_versus'
   | 'editorial_stat'
-  | 'editorial_claim';
+  | 'editorial_claim'
+  | 'editorial_ranking'
+  | 'editorial_versus'
+  | 'quote_highlight';
+
+/** Layout skeleton — the structural shape a variant renders, independent of skin. */
+export type SinglePostSkeleton =
+  | 'stat'
+  | 'hook'
+  | 'claim'
+  | 'rows'
+  | 'versus'
+  | 'quote';
 
 /** Carousel slide role — cover / content / closer differ in treatment. */
 export type CarouselSlideRole = 'cover' | 'content' | 'closer';
@@ -68,6 +95,22 @@ export interface PostImageStat {
 }
 
 /**
+ * One market in a row-list / ranking / head-to-head card. Real data only. The
+ * chip shows the MOMENTUM word (rising/steady/weak — never an A/F quality grade),
+ * and `tone` colors both the score and the chip. `score` is null when a market
+ * has no usable number (the row still renders its name with an em-dash).
+ */
+export interface PostImageRow {
+  name: string;
+  score: string | null;
+  /** Momentum descriptor (e.g. "RISING") — never a letter grade. */
+  momentum?: string | null;
+  /** Signed score delta, pre-formatted (e.g. "+4") — optional. */
+  delta?: string | null;
+  tone: PostImageStat['tone'];
+}
+
+/**
  * Structured, real-data grounding subset the templates render. A minimal copy of
  * the feed's FeedMarketGrounding, redeclared here so post-images stays decoupled
  * from feed/ (the feed generator maps its grounding into this shape). Numbers are
@@ -87,6 +130,19 @@ export interface PostImageGrounding {
   rentYoyPct?: number | null;
   /** Pre-formatted "as of" date for the footer, e.g. "Jun 30, 2026". */
   asOf?: string | null;
+  /**
+   * Real ranked markets for list / head-to-head cards (top movers). Present only
+   * when the feed passes the candidate list down; a row/versus variant is picked
+   * only when this holds >= 2 entries. Scores are the source of truth; momentum
+   * words come from scoreLabel (never a quality grade).
+   */
+  markets?: Array<{
+    name: string;
+    state?: string | null;
+    score?: number | null;
+    scoreLabel?: string | null;
+    scoreDelta?: number | null;
+  }>;
 }
 
 /** Structured content a template renders. Built from the post's copy + grounding. */
@@ -110,8 +166,30 @@ export interface PostImageContent {
   stat?: PostImageStat;
   /** 1-99 PropertyIQ score to draw on the scale bar (real data). */
   scaleScore?: number | null;
+  /** Market rows for list / ranking / head-to-head variants (real data). */
+  rows?: PostImageRow[];
+  /**
+   * The phrase inside `headline` to highlight (quote variant): the first
+   * occurrence gets the green highlighter stroke behind it. No match = no stroke.
+   */
+  emphasis?: string;
+  /** Attribution / source line under a quote (e.g. "PropertyIQ market intelligence"). */
+  attribution?: string;
   /** Slide position label for carousels, e.g. "1 / 5". */
   slideLabel?: string;
   /** Footer "as of" date. */
   asOf?: string | null;
+}
+
+/**
+ * One single-post layout in the registry: `skeleton` (structural shape) ×
+ * `family` (skin) → its build fn. Adding a look = appending an entry plus its
+ * build fn — no dispatcher surgery. Lives in types so per-skeleton files can
+ * import it without a cycle through post-image-single.ts.
+ */
+export interface SingleVariantEntry {
+  id: SinglePostVariant;
+  family: PostImageFamily;
+  skeleton: SinglePostSkeleton;
+  build: (c: PostImageContent) => string;
 }

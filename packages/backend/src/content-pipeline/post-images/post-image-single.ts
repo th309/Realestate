@@ -10,44 +10,34 @@
 import {
   CREAM,
   DARK,
-  categoryPillHtml,
   escapeHtml,
-  footerHtml,
   headlineFontSize,
-  markHtml,
-  scaleBarHtml,
+  s,
   toneColor,
 } from './post-image-shared';
 import {
+  accentBarHtml,
+  footerHtml,
+  headerRowHtml,
+  scaleBarHtml,
+} from './post-image-fragments';
+import { ROWS_VARIANTS } from './post-image-rows';
+import { VERSUS_VARIANTS } from './post-image-versus';
+import { QUOTE_VARIANTS } from './post-image-quote';
+import {
   PostImageContent,
-  PostImageFamily,
+  SingleVariantEntry,
   SinglePostVariant,
 } from './post-image.types';
-
-/** px value that scales with --s (for text that must shrink to fit). */
-function s(px: number): string {
-  return `calc(${px}px * var(--s))`;
-}
-
-function darkAccentBar(): string {
-  return `<div style="position:absolute;top:0;left:0;right:0;height:10px;background:linear-gradient(90deg,${DARK.barFrom} 0%,${DARK.barTo} 100%);"></div>`;
-}
-
-function headerRow(c: PostImageContent): string {
-  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;">
-    ${markHtml(c.family)}
-    ${c.category ? categoryPillHtml(c.family, c.category) : ''}
-  </div>`;
-}
 
 /** Dark: score/stat-forward Daily Card. */
 function darkStat(c: PostImageContent): string {
   const stat = c.stat;
   const valueColor = stat ? toneColor('dark', stat.tone) : DARK.white;
   const hSize = headlineFontSize(c.headline, 64, 44);
-  return `${darkAccentBar()}
+  return `${accentBarHtml('dark')}
     <div class="stage" style="padding:78px 64px 60px;">
-      ${headerRow(c)}
+      ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div style="margin-top:16px;font-size:${s(hSize)};font-weight:800;line-height:1.08;">${escapeHtml(c.headline)}</div>
@@ -73,9 +63,9 @@ function darkStat(c: PostImageContent): string {
 /** Dark: typographic bold-claim (hook-led, no stat). */
 function darkHook(c: PostImageContent): string {
   const hSize = headlineFontSize(c.headline, 92, 56);
-  return `${darkAccentBar()}
+  return `${accentBarHtml('dark')}
     <div class="stage" style="padding:78px 64px 60px;">
-      ${headerRow(c)}
+      ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div style="font-size:${s(hSize)};font-weight:800;line-height:1.06;">${escapeHtml(c.headline)}</div>
@@ -92,7 +82,7 @@ function creamStat(c: PostImageContent): string {
   const valueColor = stat ? toneColor('cream', stat.tone) : CREAM.ink;
   const hSize = headlineFontSize(c.headline, 62, 42);
   return `<div class="stage" style="padding:72px 68px 60px;">
-      ${headerRow(c)}
+      ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div class="serif" style="margin-top:14px;font-size:${s(hSize)};font-weight:700;line-height:1.12;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
@@ -119,7 +109,7 @@ function creamStat(c: PostImageContent): string {
 function creamClaim(c: PostImageContent): string {
   const hSize = headlineFontSize(c.headline, 84, 50);
   return `<div class="stage" style="padding:72px 68px 60px;">
-      ${headerRow(c)}
+      ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
         ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div class="serif" style="font-size:${s(hSize)};font-weight:700;line-height:1.1;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
@@ -131,18 +121,13 @@ function creamClaim(c: PostImageContent): string {
 }
 
 /**
- * One single-post layout. `skeleton` (stat/hook/claim) x `family` (dark/cream) is
- * the matrix the selector reasons over; adding a look is appending an entry here
- * plus its build fn — no dispatcher surgery.
+ * The single-post variant registry: the seam for the dozen-looks expansion. Each
+ * entry is skeleton × family → build fn; the four base looks live here and the
+ * rows / versus / quote skeletons are contributed by their own modules (spread
+ * in below). Adding a look = appending an entry + its build fn, no dispatcher
+ * surgery. `SingleVariantEntry` is defined in post-image.types.ts so the
+ * per-skeleton modules can build entries without importing this file (no cycle).
  */
-export interface SingleVariantEntry {
-  id: SinglePostVariant;
-  family: PostImageFamily;
-  skeleton: 'stat' | 'hook' | 'claim';
-  build: (c: PostImageContent) => string;
-}
-
-/** The single-post variant registry (the seam for the dozen-looks expansion). */
 export const SINGLE_VARIANT_REGISTRY: SingleVariantEntry[] = [
   { id: 'daily_card_stat', family: 'dark', skeleton: 'stat', build: darkStat },
   { id: 'daily_card_hook', family: 'dark', skeleton: 'hook', build: darkHook },
@@ -153,6 +138,9 @@ export const SINGLE_VARIANT_REGISTRY: SingleVariantEntry[] = [
     skeleton: 'claim',
     build: creamClaim,
   },
+  ...ROWS_VARIANTS,
+  ...VERSUS_VARIANTS,
+  ...QUOTE_VARIANTS,
 ];
 
 const SINGLE_VARIANT_BY_ID = new Map(

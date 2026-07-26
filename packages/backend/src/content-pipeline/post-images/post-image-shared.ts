@@ -8,11 +8,7 @@
 // Daily Card SVG source and CLAUDE.md §8. Accent-green (dark) / teal (cream) are
 // reserved for genuinely positive metrics.
 
-import {
-  fontFaceCss,
-  logoNormalDataUri,
-  logoReversedDataUri,
-} from './post-image-assets';
+import { fontFaceCss } from './post-image-assets';
 import {
   POST_IMAGE_DIMENSIONS,
   PostImageFamily,
@@ -50,6 +46,26 @@ export const CREAM = {
   muted: '#8A8578',
   hairline: '#E0D8C4',
 } as const;
+
+/**
+ * The quote-highlight look: pure white, near-black ink, brand accent green. The
+ * signature is a translucent green marker stroke behind the emphasized phrase —
+ * `greenWash` is that stroke fill. Green (#00C853) is the CLAUDE.md §8 accent.
+ */
+export const WHITE = {
+  surface: '#FFFFFF',
+  ink: '#1A1A2E',
+  muted: '#6B7280',
+  green: '#00C853',
+  greenInk: '#0A7A38',
+  greenWash: 'rgba(0, 200, 83, 0.30)',
+  hairline: '#ECECEC',
+} as const;
+
+/** px value that scales with the renderer's --s fit variable (text that must shrink). */
+export function s(px: number): string {
+  return `calc(${px}px * var(--s))`;
+}
 
 /** Accent color for a stat tone, per family. Green/teal = positive only. */
 export function toneColor(
@@ -179,6 +195,23 @@ export function headlineFontSize(
   return Math.round(Math.max(min, Math.min(base, size)));
 }
 
+/**
+ * Per-region CHAR BUDGETS = how much copy each region holds at the renderer's
+ * FLOOR scale (0.6). These are no-ops for legal feed copy (bounded by PostCopyDto)
+ * — font step-down + the scale ladder do the real fitting; fitField only truncates
+ * (+warns) genuinely pathological input. Where the DTO max exceeds what a 4:5 card
+ * can hold (body 2200, slide body 1000), the budget is set to the measured floor
+ * capacity and the overflow lives in the published caption, not the image. Single
+ * SSOT so both the carousel path and the single-post path budget identically.
+ */
+export const FIT = {
+  hook: 300, // = PostCopyDto.hook max
+  cta: 500, // = PostCopyDto.cta max
+  slideHeading: 200, // = PostCopyDto slide heading max
+  slideBody: 600, // content-slide floor capacity (< DTO 1000)
+  subhead: 260, // single-post supporting line (leading sentences of a long body)
+} as const;
+
 // Real-data value formatters live in post-image-format.ts; re-exported so the
 // templates keep importing them from post-image-shared.
 export {
@@ -201,12 +234,12 @@ export function shell(
   const bg =
     family === 'dark'
       ? `linear-gradient(180deg, ${DARK.bgTop} 0%, ${DARK.bgBottom} 100%)`
-      : CREAM.surface;
-  const color = family === 'dark' ? DARK.white : CREAM.ink;
-  const bodyFont =
-    family === 'dark'
-      ? `'Roboto', 'Helvetica Neue', Arial, sans-serif`
-      : `'Roboto', 'Helvetica Neue', Arial, sans-serif`;
+      : family === 'white'
+        ? WHITE.surface
+        : CREAM.surface;
+  const color =
+    family === 'dark' ? DARK.white : family === 'white' ? WHITE.ink : CREAM.ink;
+  const bodyFont = `'Roboto', 'Helvetica Neue', Arial, sans-serif`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     ${fontFaceCss()}
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -219,61 +252,6 @@ export function shell(
   </style></head><body>${inner}</body></html>`;
 }
 
-/** Brand mark: logomark + wordmark, colored for the family. */
-export function markHtml(family: PostImageFamily): string {
-  const logo = family === 'dark' ? logoReversedDataUri() : logoNormalDataUri();
-  const color = family === 'dark' ? DARK.white : CREAM.ink;
-  const chip = family === 'dark' ? DARK.white : CREAM.panel;
-  return `<div style="display:flex;align-items:center;gap:20px;">
-    <div style="width:76px;height:76px;border-radius:18px;background:${chip};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
-      <img src="${logo}" width="52" height="52" alt="PropertyIQ"/>
-    </div>
-    <div style="font-size:38px;font-weight:800;letter-spacing:0.5px;color:${color};">PropertyIQ</div>
-  </div>`;
-}
-
-/** Outlined category pill (top-right of single posts). */
-export function categoryPillHtml(
-  family: PostImageFamily,
-  text: string,
-): string {
-  const stroke = family === 'dark' ? DARK.rowStroke : CREAM.hairline;
-  const color = family === 'dark' ? DARK.lavender : CREAM.muted;
-  return `<div style="border:2px solid ${stroke};color:${color};border-radius:999px;padding:12px 28px;font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;">${escapeHtml(text)}</div>`;
-}
-
-/** Footer: site + as-of + the standing disclaimer. */
-export function footerHtml(
-  family: PostImageFamily,
-  asOf?: string | null,
-): string {
-  const rule = family === 'dark' ? DARK.rowStroke : CREAM.hairline;
-  const site = family === 'dark' ? DARK.white : CREAM.ink;
-  const muted = family === 'dark' ? DARK.lavender : CREAM.muted;
-  return `<div style="margin-top:auto;">
-    <div style="height:2px;background:${rule};margin-bottom:22px;"></div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-      <div style="font-size:30px;font-weight:700;color:${site};">${SITE}</div>
-      <div style="text-align:right;">
-        ${asOf ? `<div style="font-size:22px;color:${muted};">As of ${escapeHtml(asOf)}</div>` : ''}
-        <div style="font-size:18px;color:${muted};margin-top:4px;">${DISCLAIMER}</div>
-      </div>
-    </div>
-  </div>`;
-}
-
-/** 1-99 score scale bar with a marker at the score position (the score signature). */
-export function scaleBarHtml(family: PostImageFamily, score: number): string {
-  const pct = Math.max(2, Math.min(98, score));
-  const endLabel = family === 'dark' ? DARK.lavender : CREAM.muted;
-  const marker = family === 'dark' ? DARK.white : CREAM.ink;
-  const track =
-    'linear-gradient(90deg,#B3261E 0%,#FF8F00 27%,#F3EFE3 50%,#5C6BC0 74%,#00C853 100%)';
-  return `<div style="display:flex;align-items:center;gap:18px;">
-    <span style="font-size:24px;font-weight:700;color:${endLabel};">1</span>
-    <div style="position:relative;flex:1;height:14px;border-radius:999px;background:${track};">
-      <div style="position:absolute;left:${pct}%;top:-7px;width:4px;height:28px;background:${marker};border-radius:2px;transform:translateX(-50%);box-shadow:0 0 0 3px rgba(0,0,0,0.15);"></div>
-    </div>
-    <span style="font-size:24px;font-weight:700;color:${endLabel};">99</span>
-  </div>`;
-}
+// Brand HTML fragments (mark, category pill, footer, scale bar, momentum chip)
+// live in post-image-fragments.ts to keep this tokens/text module under the
+// 300-line logic-file limit.

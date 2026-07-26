@@ -8,15 +8,11 @@ import {
   CREAM,
   DARK,
   escapeHtml,
-  footerHtml,
   headlineFontSize,
-  markHtml,
+  s,
 } from './post-image-shared';
+import { accentBarHtml, footerHtml, markHtml } from './post-image-fragments';
 import { PostImageContent, PostImageFamily } from './post-image.types';
-
-function s(px: number): string {
-  return `calc(${px}px * var(--s))`;
-}
 
 function ink(family: PostImageFamily): string {
   return family === 'dark' ? DARK.white : CREAM.ink;
@@ -37,15 +33,10 @@ function slideChip(family: PostImageFamily, label: string): string {
   return `<div style="border:2px solid ${border};color:${muted(family)};border-radius:999px;padding:8px 22px;font-size:22px;font-weight:700;letter-spacing:1px;align-self:flex-start;">${escapeHtml(label)}</div>`;
 }
 
-function accentBar(family: PostImageFamily): string {
-  if (family !== 'dark') return '';
-  return `<div style="position:absolute;top:0;left:0;right:0;height:10px;background:linear-gradient(90deg,${DARK.barFrom} 0%,${DARK.barTo} 100%);"></div>`;
-}
-
 /** Cover slide: brand mark, hook headline, slide count, swipe hint. */
 function cover(c: PostImageContent): string {
   const hSize = headlineFontSize(c.headline, 86, 52);
-  return `${accentBar(c.family)}
+  return `${accentBarHtml(c.family)}
     <div class="stage" style="padding:78px 64px 60px;">
       ${markHtml(c.family)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
@@ -62,7 +53,7 @@ function cover(c: PostImageContent): string {
 /** Content slide: one idea — heading + body. */
 function content(c: PostImageContent): string {
   const hSize = headlineFontSize(c.headline, 62, 44);
-  return `${accentBar(c.family)}
+  return `${accentBarHtml(c.family)}
     <div class="stage" style="padding:78px 64px 60px;">
       ${c.slideLabel ? slideChip(c.family, c.slideLabel) : ''}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
@@ -76,7 +67,7 @@ function content(c: PostImageContent): string {
 /** Closer slide: CTA + brand mark + disclaimer footer. */
 function closer(c: PostImageContent): string {
   const hSize = headlineFontSize(c.headline, 72, 46);
-  return `${accentBar(c.family)}
+  return `${accentBarHtml(c.family)}
     <div class="stage" style="padding:78px 64px 60px;">
       ${markHtml(c.family)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">

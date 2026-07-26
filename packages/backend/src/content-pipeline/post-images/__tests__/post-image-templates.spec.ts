@@ -29,37 +29,51 @@ describe('copyToImageContents', () => {
     expect(out.every((o) => o.template === 'carousel_slide')).toBe(true);
   });
 
-  it('uses a stat variant when grounding has a real score', () => {
+  // Selection is deterministic-per-seed among the variants the DATA supports, so
+  // a feed shows a mix and a regenerate (new seed) cycles the look. These assert
+  // the eligibility contract across many seeds rather than one fixed variant.
+  const seeds = Array.from({ length: 24 }, (_, i) => `seed-${i}`);
+
+  it('stat cards are reachable and always show the REAL score (never invented)', () => {
     const grounding: PostImageGrounding = {
       marketName: 'Buffalo',
       state: 'NY',
       score: 98,
       scoreLabel: 'very strong',
     };
-    const out = copyToImageContents(
-      'linkedin_post',
-      { hook: 'Buffalo is outrunning its state' },
-      grounding,
-      'seed-a',
+    const contents = seeds.map(
+      (sd) =>
+        copyToImageContents(
+          'linkedin_post',
+          { hook: 'Buffalo is outrunning its state' },
+          grounding,
+          sd,
+        )[0].content,
     );
-    expect(out).toHaveLength(1);
-    expect(['daily_card_stat', 'editorial_stat']).toContain(
-      out[0].content.variant,
-    );
-    expect(out[0].content.stat?.value).toBe('98');
+    // A stat look is reachable when a real number exists...
+    expect(contents.some((c) => c.stat != null)).toBe(true);
+    // ...and whenever one is shown, it carries the real score, never a fabrication.
+    for (const c of contents) {
+      if (c.stat) expect(c.stat.value).toBe('98');
+    }
   });
 
-  it('falls back to a typographic variant when grounding has no number', () => {
-    const out = copyToImageContents(
-      'facebook_post',
-      { hook: 'A market to watch' },
-      { marketName: 'Nowhere' },
-      'seed-b',
-    );
-    expect(['daily_card_hook', 'editorial_claim']).toContain(
-      out[0].content.variant,
-    );
-    expect(out[0].content.stat).toBeUndefined();
+  it('with no number and no markets, only typographic looks are used (no stat, no rows)', () => {
+    for (const sd of seeds) {
+      const c = copyToImageContents(
+        'facebook_post',
+        { hook: 'A market to watch' },
+        { marketName: 'Nowhere' },
+        sd,
+      )[0].content;
+      expect([
+        'daily_card_hook',
+        'editorial_claim',
+        'quote_highlight',
+      ]).toContain(c.variant);
+      expect(c.stat).toBeUndefined();
+      expect(c.rows).toBeUndefined();
+    }
   });
 
   it('never invents a number: no stat when score and value are absent', () => {
@@ -67,7 +81,7 @@ describe('copyToImageContents', () => {
     expect(out[0].content.stat).toBeUndefined();
   });
 
-  it('picks a family deterministically from the seed', () => {
+  it('picks a look deterministically from the seed (same seed → same variant)', () => {
     const a = copyToImageContents(
       'linkedin_post',
       { hook: 'x' },
@@ -80,7 +94,114 @@ describe('copyToImageContents', () => {
       {},
       'same',
     )[0];
+    expect(a.content.variant).toBe(b.content.variant);
     expect(a.content.family).toBe(b.content.family);
+  });
+
+  const texasMarkets = [
+    { name: 'Abilene', state: 'TX', score: 94, scoreLabel: 'very strong' },
+    { name: 'Austin', state: 'TX', score: 2, scoreLabel: 'very weak' },
+    { name: 'Dallas', state: 'TX', score: 5, scoreLabel: 'very weak' },
+  ];
+
+  it('rows and versus looks are reachable with markets and never used without them', () => {
+    const withMarkets = seeds.map(
+      (sd) =>
+        copyToImageContents(
+          'linkedin_post',
+          { hook: 'Texas' },
+          { markets: texasMarkets },
+          sd,
+        )[0].content.variant,
+    );
+    expect(
+      withMarkets.some(
+        (v) => v === 'daily_card_rows' || v === 'editorial_ranking',
+      ),
+    ).toBe(true);
+    expect(
+      withMarkets.some(
+        (v) => v === 'daily_card_versus' || v === 'editorial_versus',
+      ),
+    ).toBe(true);
+
+    const listy = new Set([
+      'daily_card_rows',
+      'editorial_ranking',
+      'daily_card_versus',
+      'editorial_versus',
+    ]);
+    const noMarkets = seeds.map(
+      (sd) =>
+        copyToImageContents('linkedin_post', { hook: 'x' }, {}, sd)[0].content
+          .variant,
+    );
+    expect(noMarkets.some((v) => listy.has(v))).toBe(false);
+  });
+
+  it('rows map real markets to momentum rows (momentum word + tone, never a letter grade)', () => {
+    let rowsContent;
+    for (let i = 0; i < 300 && !rowsContent; i++) {
+      const c = copyToImageContents(
+        'linkedin_post',
+        { hook: 'Texas markets' },
+        { markets: texasMarkets },
+        `r-${i}`,
+      )[0].content;
+      if (
+        c.variant === 'daily_card_rows' ||
+        c.variant === 'editorial_ranking'
+      ) {
+        rowsContent = c;
+      }
+    }
+    expect(rowsContent).toBeDefined();
+    expect(rowsContent!.rows!.length).toBeGreaterThanOrEqual(3);
+    expect(rowsContent!.rows![0]).toMatchObject({
+      name: 'Abilene, TX',
+      score: '94',
+      momentum: 'VERY STRONG',
+    });
+    expect(['pos', 'neg', 'neutral', 'warn']).toContain(
+      rowsContent!.rows![0].tone,
+    );
+    // The chip renders the momentum WORD, not an A/F grade.
+    expect(buildSinglePostHtml(rowsContent)).toContain('VERY STRONG');
+  });
+
+  it('versus uses the first two markets', () => {
+    let versus;
+    for (let i = 0; i < 300 && !versus; i++) {
+      const c = copyToImageContents(
+        'linkedin_post',
+        { hook: 'Head to head' },
+        { markets: texasMarkets },
+        `v-${i}`,
+      )[0].content;
+      if (c.variant === 'daily_card_versus' || c.variant === 'editorial_versus')
+        versus = c;
+    }
+    expect(versus).toBeDefined();
+    expect(versus!.rows).toHaveLength(2);
+    expect(versus!.rows![0].name).toBe('Abilene, TX');
+    expect(versus!.rows![1].name).toBe('Austin, TX');
+  });
+
+  it('quote look highlights an emphasis phrase with the inline green stroke', () => {
+    let quote;
+    for (let i = 0; i < 300 && !quote; i++) {
+      const c = copyToImageContents(
+        'linkedin_post',
+        { hook: 'The best markets are the ones just starting to turn' },
+        {},
+        `q-${i}`,
+      )[0].content;
+      if (c.variant === 'quote_highlight') quote = c;
+    }
+    expect(quote).toBeDefined();
+    expect(quote!.emphasis).toBeTruthy();
+    // The highlighter stroke is an inline-SVG data-URI background (self-contained).
+    expect(buildSinglePostHtml(quote)).toContain('background-image:url');
   });
 });
 
