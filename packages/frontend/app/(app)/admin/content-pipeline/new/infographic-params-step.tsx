@@ -5,10 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchInfographicOptions,
   isMissingInfographicCatalog,
-  type InfographicStyle,
 } from "../lib/infographic-options-api";
 import { InfographicTopicPicker } from "./infographic-topic-picker";
 import { InfographicTaskPicker } from "./infographic-task-picker";
+import { InfographicStylePicker } from "./infographic-style-picker";
 import {
   buildInfographicRunPlan,
   EMPTY_INFOGRAPHIC_SELECTION,
@@ -114,7 +114,7 @@ export function InfographicParamsStep({
       )}
 
       {options && options.styles.length > 0 && (
-        <StylePicker
+        <InfographicStylePicker
           styles={options.styles}
           selected={effective.styleId}
           onPick={(styleId) => setSelection((cur) => ({ ...cur, styleId }))}
@@ -137,47 +137,6 @@ export function InfographicParamsStep({
         </button>
       </div>
     </div>
-  );
-}
-
-function StylePicker({
-  styles,
-  selected,
-  onPick,
-}: {
-  styles: InfographicStyle[];
-  selected: string;
-  onPick: (styleId: string) => void;
-}) {
-  return (
-    <section className="mb-10">
-      <h2 className="text-sm font-semibold mb-2">Which style?</h2>
-      <div
-        className="flex flex-wrap gap-2"
-        role="radiogroup"
-        aria-label="Style"
-      >
-        {styles.map((style) => {
-          const active = selected === style.id;
-          return (
-            <button
-              key={style.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => onPick(style.id)}
-              className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200 ${
-                active
-                  ? "border-primary bg-primary text-on-primary"
-                  : "border-outline text-on-surface hover:bg-surface-container-low"
-              }`}
-            >
-              {style.label}
-            </button>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
