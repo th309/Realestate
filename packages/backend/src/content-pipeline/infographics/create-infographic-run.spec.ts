@@ -28,7 +28,7 @@ function buildClient() {
 const VALID_DTO = {
   format: 'infographic',
   idempotencyKey: 'e6d1a0e0-0000-4000-8000-000000000001',
-  params: {
+  infographicParams: {
     topic_slug: 'mcp-for-agents',
     task_number: 1,
     style_id: 'flat-editorial',
@@ -113,7 +113,7 @@ describe('createInfographicRun refuses ungeneratable requests', () => {
         client as never,
         {
           ...VALID_DTO,
-          params: params,
+          infographicParams: params,
         } as unknown as CreateRunDto,
       ),
     ).rejects.toThrow(expectedMessage);
@@ -121,7 +121,29 @@ describe('createInfographicRun refuses ungeneratable requests', () => {
   }
 
   it('rejects a missing params object', async () => {
-    await expectRejection(undefined, /require params/);
+    await expectRejection(undefined, /require infographicParams/);
+  });
+
+  // Pins the wire key. The admin composer sends `infographicParams` (house
+  // rankingParams precedent); a payload keyed `params` must not silently work,
+  // or the two sides could drift apart again.
+  it('does not accept the params key as a substitute', async () => {
+    const { client, inserted } = buildClient();
+    await expect(
+      createInfographicRun(
+        client as never,
+        {
+          format: 'infographic',
+          idempotencyKey: 'e6d1a0e0-0000-4000-8000-000000000002',
+          params: {
+            topic_slug: 'mcp-for-agents',
+            task_number: 1,
+            style_id: 'flat-editorial',
+          },
+        } as unknown as CreateRunDto,
+      ),
+    ).rejects.toThrow(/require infographicParams/);
+    expect(inserted).toHaveLength(0);
   });
 
   it('rejects an unknown topic slug', async () => {

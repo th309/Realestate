@@ -87,17 +87,18 @@ export class CreateRunDto {
   formatOptions?: FormatOptionsDto;
 
   /**
-   * Per-format params. Today only `infographic` uses it: which vetted topic
-   * doc, which single task within it, and which approved visual style. Sent
-   * top-level by the admin composer; persisted into content_runs.format_options.
+   * Required when format is `infographic`: which vetted topic doc, which single
+   * task within it, and which approved visual style. Follows the house
+   * `rankingParams` precedent, and is sent top-level by the admin composer.
    *
    * Declared on the DTO (rather than read off the raw body) so a global
-   * validation whitelist cannot strip it before the service sees it.
+   * validation whitelist cannot strip it before the service sees it. Persisted
+   * into content_runs.format_options.infographic.
    */
   @ValidateIf((o: CreateRunDto) => o.format === 'infographic')
   @ValidateNested()
   @Type(() => InfographicRunParamsDto)
-  params?: InfographicRunParamsDto;
+  infographicParams?: InfographicRunParamsDto;
 
   /**
    * Internal-only usage: auto-ideation cron can enqueue runs without human action.

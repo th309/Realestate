@@ -31,10 +31,10 @@ export async function createInfographicRun(
   client: SupabaseClient,
   dto: CreateRunDto,
 ): Promise<CreatedRun> {
-  const params = dto.params;
+  const params = dto.infographicParams;
   if (!params) {
     throw new BadRequestException(
-      'infographic runs require params (topic slug, task number, style id)',
+      'infographic runs require infographicParams (topic slug, task number, style id)',
     );
   }
 
