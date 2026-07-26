@@ -5,9 +5,17 @@ import { useSyncExternalStore } from "react";
 function subscribe(callback: () => void): () => void {
   window.addEventListener("online", callback);
   window.addEventListener("offline", callback);
+  // Browsers don't always fire online/offline reliably — a transition (often
+  // the recovery back to online) can be missed after sleep/network churn,
+  // stranding a stale `false` even though navigator.onLine is now true. Re-read
+  // whenever the tab regains focus/visibility so the snapshot can't get stuck.
+  window.addEventListener("focus", callback);
+  document.addEventListener("visibilitychange", callback);
   return () => {
     window.removeEventListener("online", callback);
     window.removeEventListener("offline", callback);
+    window.removeEventListener("focus", callback);
+    document.removeEventListener("visibilitychange", callback);
   };
 }
 

@@ -46,6 +46,22 @@ describe("useOnlineStatus", () => {
     expect(result.current).toBe(true);
   });
 
+  it("re-syncs on visibilitychange when the 'online' event was missed", () => {
+    // The stale-state bug: the browser recovers but never fires 'online', so a
+    // snapshot stuck at false must still correct itself when the tab is next
+    // focused/made visible.
+    setNavigatorOnline(false);
+    const { result } = renderHook(() => useOnlineStatus());
+    expect(result.current).toBe(false);
+
+    act(() => {
+      setNavigatorOnline(true); // recovered, but NO 'online' event dispatched
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(result.current).toBe(true);
+  });
+
   it("removes its event listeners on unmount", () => {
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");
