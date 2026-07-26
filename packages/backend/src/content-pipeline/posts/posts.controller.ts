@@ -30,6 +30,7 @@ export class PostsController {
       this.posts.listPosts({
         status: q.status,
         brandId: q.brandId,
+        postType: q.postType,
         limit: q.limit,
         scheduledFrom: q.scheduledFrom,
         scheduledTo: q.scheduledTo,
@@ -37,12 +38,16 @@ export class PostsController {
       }),
       this.posts.countByStatus(q.brandId),
     ]);
-    return { success: true, data: { posts: rows, counts } };
+    const posts = await Promise.all(
+      rows.map((r) => this.posts.withSignedMedia(r)),
+    );
+    return { success: true, data: { posts, counts } };
   }
 
   @Get(':id')
   async getOne(@Param('id', new ParseUUIDPipe()) id: string) {
-    return { success: true, data: await this.posts.getById(id) };
+    const post = await this.posts.getById(id);
+    return { success: true, data: await this.posts.withSignedMedia(post) };
   }
 
   /** Approve a pending post (pending_review -> approved). */

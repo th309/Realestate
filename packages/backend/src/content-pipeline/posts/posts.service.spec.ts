@@ -99,7 +99,18 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
   }
 
   const supabase = {
-    getClient: () => ({ from: (t: 'posts') => builder(t) }),
+    getClient: () => ({
+      from: (t: 'posts') => builder(t),
+      storage: {
+        from: () => ({
+          createSignedUrl: (path: string) =>
+            Promise.resolve({
+              data: { signedUrl: `https://signed.example/${path}` },
+              error: null,
+            }),
+        }),
+      },
+    }),
   } as unknown as SupabaseService;
   return { supabase, store };
 }
@@ -239,5 +250,36 @@ describe('PostsService.listPosts calendar range filter (planner contract)', () =
 
     const rows = await service.listPosts({});
     expect(rows.map((r) => r.id)).toEqual(['new', 'old']);
+  });
+});
+
+describe('PostsService media refs (render output + signing)', () => {
+  const imageRef = {
+    kind: 'image' as const,
+    bucket: 'content-pipeline',
+    storage_path: 'posts/post-1/0.png',
+    width: 1080,
+    height: 1350,
+    order: 0,
+  };
+
+  it('persists rendered media_refs', async () => {
+    const { supabase, store } = makePostsFake([seedPost('pending_review')]);
+    const service = new PostsService(supabase);
+    const row = await service.updateMediaRefs('post-1', [imageRef]);
+    expect(row.media_refs).toEqual([imageRef]);
+    expect(store.posts[0].media_refs).toEqual([imageRef]);
+  });
+
+  it('attaches 1h signed URLs to image refs on read', async () => {
+    const post = { ...seedPost('pending_review'), media_refs: [imageRef] };
+    const { supabase } = makePostsFake([post]);
+    const service = new PostsService(supabase);
+    const withMedia = await service.withSignedMedia(
+      (await service.getById('post-1')) as never,
+    );
+    expect(withMedia.mediaUrls[0].url).toBe(
+      'https://signed.example/posts/post-1/0.png',
+    );
   });
 });

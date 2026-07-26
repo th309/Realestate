@@ -133,7 +133,12 @@ import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-s
 
 import { PostsBrandKitModule } from './posts-brand-kit.module';
 import { FeedService } from './feed/feed.service';
+import { FeedPostGeneratorService } from './feed/feed-post-generator.service';
 import { FeedTopUpCron } from './crons/feed-topup.cron';
+import { PostGenerateController } from './feed/post-generate.controller';
+import { PostImageRenderService } from './post-images/post-image-render.service';
+import { PuppeteerPostImageRenderer } from './post-images/post-image-renderer';
+import { POST_IMAGE_RENDERER } from './post-images/post-image-renderer.interface';
 
 @Module({
   imports: [
@@ -162,6 +167,7 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     BatchRunsController,
     RankingResolverController,
     AutoIdeationController,
+    PostGenerateController,
   ],
   providers: [
     ContentRunsService,
@@ -296,7 +302,11 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     MetroHeroImageService,
 
     FeedService,
+    FeedPostGeneratorService,
     FeedTopUpCron,
+    PostImageRenderService,
+    PuppeteerPostImageRenderer,
+    { provide: POST_IMAGE_RENDERER, useExisting: PuppeteerPostImageRenderer },
   ],
   exports: [
     ContentRunsService,

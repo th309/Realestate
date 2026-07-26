@@ -1,64 +1,53 @@
 // packages/backend/src/content-pipeline/feed/feed.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { AiProviderService } from '../../ai-provider/ai-provider.service';
-import { AI_PURPOSES } from '../../ai-provider/ai-provider.types';
 import { BrandKitService } from '../brand-kit/brand-kit.service';
-import { PostsService } from '../posts/posts.service';
+import { PostsService, PostWithMedia } from '../posts/posts.service';
 import { ContentDataService } from '../data/content-data.service';
 import { CostCapService } from '../auto-ideation/cost-cap.service';
-import { BrandVoiceLinterService } from '../gates/brand-voice-linter.service';
 import { PipelineSettingsService } from '../pipeline-settings.service';
+import { FeedPostGeneratorService } from './feed-post-generator.service';
+import {
+  mapGenerateTypeToPostType,
+  pickMoverForQuery,
+  resolveMarketTarget,
+} from './feed-helpers';
 import type {
   ScoreMoverGeo,
   ScoreMoverWindowDays,
 } from '../data/score-mover-config';
-import type { PostCopy } from '../posts/post.types';
+import type { PostRow } from '../posts/post.types';
 import {
   FEED_POST_TYPES,
-  FEED_POST_TYPE_PLATFORM,
   FeedGenerationOutcome,
+  FeedPostType,
+  GroundingTarget,
 } from './feed.types';
-import { buildFeedUserPrompt } from './feed-prompts';
-import {
-  buildGrounding,
-  flattenCopyForLint,
-  usdFromUsage,
-} from './feed-helpers';
-import {
-  assertNonBlankPostCopy,
-  assertNonEmptyCompletion,
-  EmptyCompletionError,
-  parseJsonObject,
-} from './generation-guards';
 
 const DEFAULT_TARGET_DRAFTS = 6;
 const MAX_PER_CYCLE = 10;
 /** Conservative per-post spend estimate for the budget guards (DeepSeek). */
 const EST_USD_PER_POST = 0.02;
-const POST_MAX_TOKENS = 1200;
 const FEED_GEO: ScoreMoverGeo = 'metro';
 const FEED_WINDOW: ScoreMoverWindowDays = 90;
 
 /**
- * Keeps N draft posts (status pending_review) queued for the feed UI. Each cycle:
- * counts pending posts, picks a mix of post types, grounds each in real score-mover
- * + snapshot data, generates copy via the DeepSeek `post_generation` purpose, runs
- * it through Gate B (brand-voice linter), then inserts a `posts` row. Respects the
- * pipeline pause flag and the CONTENT_PIPELINE_DAILY_USD_MAX budget (CostCapService),
- * re-checking the cap per post against real running spend.
+ * Orchestrates the content feed: keeps N pending_review drafts queued (cron) and
+ * generates one post on demand (/generate). Grounding + DeepSeek generation +
+ * Gate B + insert + image render live in FeedPostGeneratorService; this service
+ * owns the pause gate, candidate selection, and the CONTENT_PIPELINE_DAILY_USD_MAX
+ * budget (re-checked per post against real running spend).
  */
 @Injectable()
 export class FeedService {
   private readonly logger = new Logger(FeedService.name);
 
   constructor(
-    private readonly ai: AiProviderService,
     private readonly brandKit: BrandKitService,
     private readonly posts: PostsService,
     private readonly contentData: ContentDataService,
     private readonly costCap: CostCapService,
-    private readonly linter: BrandVoiceLinterService,
     private readonly settings: PipelineSettingsService,
+    private readonly generator: FeedPostGeneratorService,
   ) {}
 
   private targetDrafts(): number {
@@ -133,92 +122,18 @@ export class FeedService {
           break;
         }
 
-        const ctx = `${postType}/${mover.canonical_name}`;
-        try {
-          const snapshot = await this.contentData
-            .getMarketSnapshot({
-              geography: mover.geography,
-              id: mover.id,
-              canonical_name: mover.canonical_name,
-            })
-            .catch(() => null);
-          const grounding = buildGrounding(mover, snapshot);
-          const userPrompt = buildFeedUserPrompt(postType, grounding);
-
-          const resp = await this.ai.complete(AI_PURPOSES.POST_GENERATION, {
-            systemPrompt: preamble,
-            userPrompt,
-            maxTokens: POST_MAX_TOKENS,
-            temperature: 0.8,
-            responseFormat: 'json',
-          });
-
-          // Record spend BEFORE any content assertion: DeepSeek bills reasoning
-          // tokens even on a 402 silent-empty response, so a failed generation
-          // still costs money and must count against the cap.
-          spentUsd += usdFromUsage(resp.model, resp.usage);
-          spentTokens += resp.usage?.totalTokens ?? 0;
-
-          assertNonEmptyCompletion(resp.content, ctx);
-          const copy = parseJsonObject<PostCopy>(resp.content, ctx);
-          assertNonBlankPostCopy(copy, postType, ctx);
-
-          const lint = await this.linter.lint(flattenCopyForLint(copy));
-          if (!lint.passed) {
-            outcomes.push({
-              postType,
-              marketName: mover.canonical_name,
-              status: 'lint_failed',
-              reason: `${lint.violations.length} violation(s)`,
-            });
-            continue;
-          }
-
-          const post = await this.posts.createPost({
-            brandId: brand.id,
-            platform: FEED_POST_TYPE_PLATFORM[postType],
-            postType,
-            copy,
-            status: 'pending_review',
-            source: 'ai_generated',
-          });
-          outcomes.push({
-            postType,
-            marketName: mover.canonical_name,
-            status: 'inserted',
-            postId: post.id,
-          });
-        } catch (err) {
-          const empty = err instanceof EmptyCompletionError;
-          this.logger.error(
-            `feed generation failed (${ctx}): ${(err as Error).message}`,
-          );
-          outcomes.push({
-            postType,
-            marketName: mover.canonical_name,
-            status: empty ? 'empty_completion' : 'error',
-            reason: (err as Error).message,
-          });
-        }
+        const r = await this.generator.generatePost(
+          brand,
+          preamble,
+          postType,
+          mover,
+        );
+        spentUsd += r.spentUsd;
+        spentTokens += r.spentTokens;
+        outcomes.push(r.outcome);
       }
     } finally {
-      // Always record whatever was actually spent, even if the cycle aborted.
-      if (spentUsd > 0) {
-        try {
-          await this.costCap.recordSpend([
-            {
-              provider: 'deepseek',
-              amount_usd: spentUsd,
-              units: spentTokens,
-              unit_type: 'tokens_output',
-            },
-          ]);
-        } catch (e) {
-          this.logger.error(
-            `feed recordSpend failed (spent ~$${spentUsd.toFixed(4)}): ${(e as Error).message}`,
-          );
-        }
-      }
+      await this.recordSpend(spentUsd, spentTokens);
     }
 
     const inserted = outcomes.filter((o) => o.status === 'inserted').length;
@@ -226,6 +141,157 @@ export class FeedService {
       `feed top-up: inserted ${inserted}/${need} (spent ~$${spentUsd.toFixed(4)})`,
     );
     return outcomes;
+  }
+
+  /**
+   * Generate one post on demand (the manual counterpart to the cron): same
+   * grounding, DeepSeek generation, Gate B, insert, and image render.
+   */
+  async generateOnePost(input: {
+    postType?: FeedPostType;
+    brandId?: string;
+  }): Promise<{ outcome: FeedGenerationOutcome; post: PostRow | null }> {
+    const postType = input.postType ?? FEED_POST_TYPES[0];
+    if (this.settings.isPaused()) {
+      return {
+        outcome: {
+          postType,
+          marketName: '',
+          status: 'skipped_budget',
+          reason: 'pipeline paused',
+        },
+        post: null,
+      };
+    }
+    const brand = await this.brandKit.getBrandProfile(input.brandId);
+    const budget = await this.costCap.canEnqueue(EST_USD_PER_POST);
+    if (!budget.allowed) {
+      return {
+        outcome: { postType, marketName: '', status: 'skipped_budget' },
+        post: null,
+      };
+    }
+    const candidates = await this.pickCandidateMarkets();
+    if (candidates.length === 0) {
+      return {
+        outcome: {
+          postType,
+          marketName: '',
+          status: 'error',
+          reason: 'no candidate markets available',
+        },
+        post: null,
+      };
+    }
+    const preamble = this.brandKit.buildPromptPreamble(brand);
+    const r = await this.generator.generatePost(
+      brand,
+      preamble,
+      postType,
+      candidates[0],
+    );
+    await this.recordSpend(r.spentUsd, r.spentTokens);
+    return { outcome: r.outcome, post: r.post };
+  }
+
+  /**
+   * Generate one post on demand from the Create cards. Maps the request type to a
+   * feed post type + platform, grounds it in a real market (matched to marketQuery
+   * / topic when given, else the top mover), and runs the standard generation path
+   * (grounding + DeepSeek + Gate B + insert + image render). video_script produces
+   * a suggestion (no image, routed to the video pipeline), so it keeps the youtube
+   * platform and ignores the social platform hint.
+   */
+  async generateOnDemand(input: {
+    type: 'image_post' | 'carousel' | 'from_topic' | 'video_script';
+    platform?: string;
+    topic?: string;
+    marketQuery?: string;
+    brandId?: string;
+  }): Promise<{ outcome: FeedGenerationOutcome; post: PostWithMedia | null }> {
+    const postType = mapGenerateTypeToPostType(input.type, input.platform);
+    if (this.settings.isPaused()) {
+      return {
+        outcome: {
+          postType,
+          marketName: '',
+          status: 'skipped_budget',
+          reason: 'pipeline paused',
+        },
+        post: null,
+      };
+    }
+    const brand = await this.brandKit.getBrandProfile(input.brandId);
+    const budget = await this.costCap.canEnqueue(EST_USD_PER_POST);
+    if (!budget.allowed) {
+      return {
+        outcome: { postType, marketName: '', status: 'skipped_budget' },
+        post: null,
+      };
+    }
+    // User-directed grounding: an explicit marketQuery resolves a specific
+    // market; otherwise pick a top mover (matched to the query/topic if any).
+    const query = input.marketQuery?.trim();
+    let target: GroundingTarget | null = query
+      ? resolveMarketTarget(
+          await this.contentData.resolveMarket(query).catch(() => []),
+        )
+      : null;
+    if (!target) {
+      const candidates = await this.pickCandidateMarkets();
+      target = candidates.length
+        ? pickMoverForQuery(candidates, query ?? input.topic)
+        : null;
+    }
+    if (!target) {
+      return {
+        outcome: {
+          postType,
+          marketName: '',
+          status: 'error',
+          reason: 'no market to ground on',
+        },
+        post: null,
+      };
+    }
+    const preamble = this.brandKit.buildPromptPreamble(brand);
+    const r = await this.generator.generatePost(
+      brand,
+      preamble,
+      postType,
+      target,
+      {
+        // video_script routes to the youtube video pipeline; keep its own platform.
+        platform: input.type === 'video_script' ? undefined : input.platform,
+        brief: input.type === 'from_topic' ? input.topic : undefined,
+      },
+    );
+    await this.recordSpend(r.spentUsd, r.spentTokens);
+    // Re-read + sign so the response carries the freshly-rendered media.
+    const post = r.post ? await this.posts.withSignedMedia(r.post) : null;
+    return { outcome: r.outcome, post };
+  }
+
+  /** Record accumulated DeepSeek spend against the daily cap (best-effort). */
+  private async recordSpend(
+    spentUsd: number,
+    spentTokens: number,
+  ): Promise<void> {
+    if (spentUsd <= 0) return;
+    try {
+      await this.costCap.recordSpend([
+        {
+          provider: 'deepseek',
+          amount_usd: spentUsd,
+          units: spentTokens,
+          unit_type: 'tokens_output',
+        },
+      ]);
+    } catch (e) {
+      this.logger.error(
+        `feed recordSpend failed (spent ~$${spentUsd.toFixed(4)}): ${(e as Error).message}`,
+      );
+    }
   }
 
   /**

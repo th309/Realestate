@@ -43,6 +43,9 @@ export function assertNonBlankPostCopy(
   copy: {
     hook?: unknown;
     body?: unknown;
+    title?: unknown;
+    close?: unknown;
+    sceneDirection?: unknown;
     slides?: Array<{ heading?: unknown; body?: unknown }> | unknown;
   },
   postType: string,
@@ -55,6 +58,20 @@ export function assertNonBlankPostCopy(
     );
     if (!isNonBlank(copy.hook) || !hasSlide) {
       throw new EmptyCompletionError(`blank carousel (${context})`);
+    }
+    return;
+  }
+  if (postType === 'video_script') {
+    // A complete suggestion needs the full spoken script (hook/body/close) plus
+    // a title and scene direction — an incomplete one must not reach review.
+    if (
+      !isNonBlank(copy.title) ||
+      !isNonBlank(copy.hook) ||
+      !isNonBlank(copy.body) ||
+      !isNonBlank(copy.close) ||
+      !isNonBlank(copy.sceneDirection)
+    ) {
+      throw new EmptyCompletionError(`blank video script (${context})`);
     }
     return;
   }

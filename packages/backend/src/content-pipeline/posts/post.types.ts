@@ -62,6 +62,23 @@ export interface PostCopy {
   hashtags?: string[];
   /** Carousel slides / multi-part copy. */
   slides?: Array<{ heading?: string; body?: string }>;
+
+  // --- video_script suggestion fields (post_type 'video_script' only) ---------
+  // A video_script post is a Munch-style creative SUGGESTION, not a schedulable
+  // post: it renders no image and never publishes. The frontend routes "Make this
+  // video" into the run wizard using suggestedFormat + suggestedMarketQuery.
+  /** Working title for the video idea. */
+  title?: string;
+  /** Closing line of the spoken script. */
+  close?: string;
+  /** 1-2 sentences on how to shoot/frame it. */
+  sceneDirection?: string;
+  /** Estimated spoken length in seconds (~120 wpm). */
+  durationSeconds?: number;
+  /** Best-fit video pipeline ContentFormat id (validated against CONTENT_FORMATS). */
+  suggestedFormat?: string;
+  /** Market the idea is about — usable as the run wizard `marketQuery`. */
+  suggestedMarketQuery?: string;
 }
 
 /** A media reference (image/video asset) attached to a post. */

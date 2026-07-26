@@ -65,6 +65,34 @@ describe('assertNonBlankPostCopy (valid-but-blank JSON guard)', () => {
     expect(() =>
       assertNonBlankPostCopy(
         { hook: 'Austin is heating up', body: 'The data shows momentum.' },
+        'linkedin_post',
+        'ctx',
+      ),
+    ).not.toThrow();
+  });
+
+  it('requires a full video script (title, hook, body, close, sceneDirection)', () => {
+    // Missing close + sceneDirection fails even with title + hook + body.
+    expect(() =>
+      assertNonBlankPostCopy(
+        {
+          title: 'Austin score reveal',
+          hook: 'Austin is heating up',
+          body: 'The data shows momentum.',
+        },
+        'video_script',
+        'ctx',
+      ),
+    ).toThrow(EmptyCompletionError);
+    expect(() =>
+      assertNonBlankPostCopy(
+        {
+          title: 'Austin score reveal',
+          hook: 'Austin is heating up',
+          body: 'The data shows momentum.',
+          close: 'Learn more at propertyiq.app',
+          sceneDirection: 'Open on a slow push over the skyline.',
+        },
         'video_script',
         'ctx',
       ),

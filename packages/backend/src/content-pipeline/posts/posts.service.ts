@@ -10,9 +10,18 @@ import {
   CreatePostInput,
   isAllowedPostStatusTransition,
   PostCopy,
+  PostMediaRef,
   PostRow,
   PostStatus,
 } from './post.types';
+import {
+  signPostMediaRefs,
+  SignedMediaRef,
+} from '../post-images/post-image-signing';
+import type { PostImageMediaRef } from '../post-images/post-image.types';
+
+/** A post row plus 1-hour signed URLs for its stored image refs (list/get). */
+export type PostWithMedia = PostRow & { mediaUrls: SignedMediaRef[] };
 
 /**
  * CRUD + status lifecycle for the generalized `posts` model. The feed generator
@@ -58,6 +67,7 @@ export class PostsService {
   async listPosts(opts: {
     status?: PostStatus;
     brandId?: string;
+    postType?: string;
     limit?: number;
     scheduledFrom?: string;
     scheduledTo?: string;
@@ -74,6 +84,7 @@ export class PostsService {
       .limit(Math.min(Math.max(opts.limit ?? 100, 1), 500));
     if (opts.status) q = q.eq('status', opts.status);
     if (opts.brandId) q = q.eq('brand_id', opts.brandId);
+    if (opts.postType) q = q.eq('post_type', opts.postType);
     if (opts.scheduledFrom) q = q.gte('scheduled_at', opts.scheduledFrom);
     if (opts.scheduledTo) q = q.lte('scheduled_at', opts.scheduledTo);
     const { data, error } = await q;
@@ -154,6 +165,37 @@ export class PostsService {
     const { data, error } = await client
       .from('posts')
       .update({ copy, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data as PostRow;
+  }
+
+  /** Mint 1-hour signed URLs for a post's stored image refs (list/get responses). */
+  async signMedia(
+    mediaRefs: PostMediaRef[] | undefined,
+  ): Promise<SignedMediaRef[]> {
+    return signPostMediaRefs(this.supabase.getClient(), mediaRefs);
+  }
+
+  /** Attach signed image URLs to a post for the admin feed UI. */
+  async withSignedMedia(post: PostRow): Promise<PostWithMedia> {
+    return { ...post, mediaUrls: await this.signMedia(post.media_refs) };
+  }
+
+  /**
+   * Replace a post's media_refs (the rendered image references). Best-effort from
+   * the renderer: a render failure leaves the draft alive with empty media_refs.
+   */
+  async updateMediaRefs(
+    id: string,
+    mediaRefs: PostImageMediaRef[],
+  ): Promise<PostRow> {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('posts')
+      .update({ media_refs: mediaRefs, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();

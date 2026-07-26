@@ -2,14 +2,18 @@ import {
   ArrayMaxSize,
   IsArray,
   IsIn,
+  IsInt,
   IsISO8601,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { POST_STATUSES, PostStatus } from '../post.types';
+import { CONTENT_FORMATS } from '../../dto/content-format';
 
 /** One carousel slide (validated). */
 export class PostCopySlideDto {
@@ -59,6 +63,37 @@ export class PostCopyDto {
   @ArrayMaxSize(20)
   @Type(() => PostCopySlideDto)
   slides?: PostCopySlideDto[];
+
+  // video_script suggestion fields (declared so the copy-edit whitelist keeps them)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2200)
+  close?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  sceneDirection?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(600)
+  durationSeconds?: number;
+
+  @IsOptional()
+  @IsIn(CONTENT_FORMATS as unknown as string[])
+  suggestedFormat?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  suggestedMarketQuery?: string;
 }
 
 /** PATCH /posts/:id/status — move a post through its lifecycle. */

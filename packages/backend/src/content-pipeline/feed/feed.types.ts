@@ -71,6 +71,22 @@ export interface FeedMarketGrounding {
   rentYoyPct: number | null;
 }
 
+/**
+ * A market to ground a post in. A score-mover (ScoreMoverItem, from the cron
+ * candidate pick) and a resolved market (ResolvedMarket, from an on-demand
+ * marketQuery) both satisfy this; the score fields are optional because a
+ * resolved market has none until getMarketSnapshot fills them.
+ */
+export interface GroundingTarget {
+  id: string;
+  canonical_name: string;
+  geography: 'metro' | 'county' | 'zip';
+  current_score?: number | null;
+  previous_score?: number | null;
+  delta?: number | null;
+  state?: string | null;
+}
+
 /** Result of one feed generation attempt (for logging / tests). */
 export interface FeedGenerationOutcome {
   postType: FeedPostType;

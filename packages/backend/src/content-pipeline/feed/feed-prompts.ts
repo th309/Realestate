@@ -6,6 +6,7 @@
 // service routes these through the DeepSeek generation purposes.
 
 import { FeedMarketGrounding, FeedPostType } from './feed.types';
+import { CONTENT_FORMATS } from '../dto/content-format';
 
 function groundingLines(g: FeedMarketGrounding): string {
   const parts: string[] = [];
@@ -17,8 +18,8 @@ function groundingLines(g: FeedMarketGrounding): string {
       `PropertyIQ Score: ${g.score}${g.scoreLabel ? ` (${g.scoreLabel})` : ''}, confidence ${g.confidence ?? 'unknown'}.`,
     );
   }
-  if (g.previousScore != null && g.scoreDelta != null) {
-    const dir = g.scoreDelta > 0 ? 'up' : g.scoreDelta < 0 ? 'down' : 'flat';
+  if (g.previousScore != null && g.scoreDelta != null && g.scoreDelta !== 0) {
+    const dir = g.scoreDelta > 0 ? 'up' : 'down';
     parts.push(
       `Score moved ${dir} ${Math.abs(g.scoreDelta)} points from ${g.previousScore}.`,
     );
@@ -51,7 +52,10 @@ const OUTPUT_SHAPE: Record<FeedPostType, string> = {
   carousel_copy:
     'Return JSON: {"hook": string, "slides": [{"heading": string, "body": string}], "cta": string}. 4 to 6 slides, declarative and sparse (Apple-keynote tone, not clickbait).',
   video_script:
-    'Return JSON: {"hook": string, "body": string, "cta": string}. A 30 to 45 second spoken script. hook is the first line. Close with "Learn more at propertyiq.app".',
+    'Return JSON: {"title": string, "hook": string, "body": string, "close": string, "sceneDirection": string, "durationSeconds": number, "suggestedFormat": string, "suggestedMarketQuery": string}. ' +
+    'title is a short working title for the idea. hook is the first spoken line. body is the middle of a 30 to 45 second spoken script. close is the final spoken line and ends with "Learn more at propertyiq.app". ' +
+    'sceneDirection is 1 to 2 sentences on how to shoot or frame it. durationSeconds estimates the spoken length at about 120 words per minute. suggestedMarketQuery is the market this is about (for example "Austin, TX"). ' +
+    `suggestedFormat MUST be exactly one of: ${CONTENT_FORMATS.join(', ')}. Choose the best fit (score_mover for a score-change story, head_to_head for a two-market comparison, grade_reveal for a single-market score reveal, top_10_ranking or bottom_10_ranking for lists).`,
 };
 
 const INTENT: Record<FeedPostType, string> = {
@@ -62,7 +66,7 @@ const INTENT: Record<FeedPostType, string> = {
   carousel_copy:
     'Write a LinkedIn carousel that reveals this market as a finding, one idea per slide, ending on the takeaway.',
   video_script:
-    'Write a short-form video script (YouTube Short / Reel) that reveals this market score as a finding and points to the site for the full picture.',
+    'Propose one fresh short-form video idea (YouTube Short / Reel) that reveals this market as a finding. It is a creative SUGGESTION a creator will shoot, so give it a title, a full spoken script (hook, body, close), concrete scene direction, a runtime estimate, the best-fit video format, and the market it is about.',
 };
 
 /**
@@ -72,9 +76,13 @@ const INTENT: Record<FeedPostType, string> = {
 export function buildFeedUserPrompt(
   postType: FeedPostType,
   grounding: FeedMarketGrounding,
+  extraBrief?: string,
 ): string {
   return [
     INTENT[postType],
+    extraBrief && extraBrief.trim()
+      ? `\nAngle this around: ${extraBrief.trim()}`
+      : '',
     '',
     'GROUND EVERY CLAIM IN THIS DATA (do not invent numbers):',
     groundingLines(grounding),
