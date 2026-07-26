@@ -85,12 +85,11 @@ function MockupReview({
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <ChipRow item={item} />
 
-      {/* Definite (viewport-based) width, NOT a percentage: the admin shell's
-          `overflow-auto` flex main leaves this subtree's width indefinite, so a
-          `w-full` frame resolved to 0 and the mockup was invisible (clientWidth
-          0) even though the text rendered. `min(24rem,90vw)` can't collapse. */}
-      <div className="mx-auto w-[min(24rem,90vw)]">
-        <div className="relative aspect-[4/5] max-h-[70vh] w-full overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-high">
+      <div className="mx-auto w-full max-w-sm">
+        <div
+          className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-high"
+          style={{ aspectRatio: "1080 / 1350" }}
+        >
           {current ? (
             // Keyed by src so each slide is a fresh element — a failed src swap
             // can never leave the previous slide's frame painted (Chrome retains

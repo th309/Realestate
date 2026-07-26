@@ -10,8 +10,9 @@ import { useState } from "react";
  * fall back to their own placeholder — it never draws an empty box itself.
  *
  * On a load failure it drops the `<img>` and leaves the neutral tinted frame
- * (no broken-image icon, no stale pixels) rather than showing whatever the
- * browser last painted.
+ * (no broken-image icon, no stale pixels). The image is keyed by its URL, so a
+ * new URL (e.g. after a regenerate) remounts with a fresh error state — a
+ * transient failure never permanently blanks the thumb.
  *
  * Sizing is the caller's job (pass it via `className`); this owns the crop,
  * rounding, lazy-load, and the slide-count chip.
@@ -33,7 +34,6 @@ export function PostMediaThumb({
   /** Corner rounding — override to match the host card. */
   rounded?: string;
 }) {
-  const [errored, setErrored] = useState(false);
   const first = urls?.[0];
   if (!first) return null;
 
@@ -44,17 +44,9 @@ export function PostMediaThumb({
     <div
       className={`relative overflow-hidden bg-surface-container-high ${rounded} ${className}`}
     >
-      {!errored && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={first}
-          src={first}
-          alt={alt}
-          loading="lazy"
-          className="h-full w-full object-cover"
-          onError={() => setErrored(true)}
-        />
-      )}
+      {/* Keyed by src: a new URL remounts a fresh <ThumbImage>, so a prior load
+          failure can't linger past a media change (e.g. regenerate). */}
+      <ThumbImage key={first} src={first} alt={alt} />
       {isCarousel && (
         <span
           className="absolute right-1 top-1 rounded-full bg-on-surface/70 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-surface backdrop-blur-sm"
@@ -64,5 +56,21 @@ export function PostMediaThumb({
         </span>
       )}
     </div>
+  );
+}
+
+/** Cover image; on error it drops out, leaving the parent's neutral frame. */
+function ThumbImage({ src, alt }: { src: string; alt: string }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="h-full w-full object-cover"
+      onError={() => setErrored(true)}
+    />
   );
 }

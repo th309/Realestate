@@ -3,11 +3,9 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { SlideImage } from "../slide-image";
 
 describe("SlideImage", () => {
-  it("shows the image initially", () => {
-    const { container } = render(
-      <SlideImage src="https://cdn.test/1.png" label="Slide 1" />,
-    );
-    expect(container.querySelector("img")).toHaveAttribute(
+  it("shows the image initially, with the label as alt text", () => {
+    render(<SlideImage src="https://cdn.test/1.png" label="Slide 1" />);
+    expect(screen.getByAltText("Slide 1")).toHaveAttribute(
       "src",
       "https://cdn.test/1.png",
     );

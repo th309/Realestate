@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { PlannerPost } from "../lib/posts-api";
+import { SlideImage } from "../review/slide-image";
 
 /**
  * Success state: the freshly generated draft, shown mockup-first — the full-size
@@ -49,11 +50,13 @@ export function GeneratedPreview({
           style={{ aspectRatio }}
         >
           {current ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            // Keyed by src so each slide is a fresh element with its own
+            // load/error state — this is the create flow's payoff moment, so a
+            // failed slide shows an honest retry, never a stale/blank frame.
+            <SlideImage
+              key={current}
               src={current}
-              alt=""
-              className="h-full w-full object-contain"
+              label={urls.length > 1 ? `Slide ${slide + 1}` : "Image"}
             />
           ) : (
             <FailedOrEmpty renderFailed={renderFailed} />

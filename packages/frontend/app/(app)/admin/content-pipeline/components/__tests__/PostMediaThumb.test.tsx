@@ -57,4 +57,19 @@ describe("PostMediaThumb", () => {
     expect(container.querySelector("img")).not.toBeInTheDocument();
     expect(screen.getByText("×2")).toBeInTheDocument();
   });
+
+  it("clears the error and shows the image when the src changes (e.g. regenerate)", () => {
+    const { container, rerender } = render(
+      <PostMediaThumb urls={["https://cdn.test/old.png"]} />,
+    );
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).not.toBeInTheDocument();
+
+    // A new URL must remount a fresh image, not stay blanked from the old failure.
+    rerender(<PostMediaThumb urls={["https://cdn.test/new.png"]} />);
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://cdn.test/new.png",
+    );
+  });
 });

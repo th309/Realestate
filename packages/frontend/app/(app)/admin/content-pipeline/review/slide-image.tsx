@@ -46,7 +46,7 @@ export function SlideImage({ src, label }: { src: string; label: string }) {
     <img
       key={resolvedSrc}
       src={resolvedSrc}
-      alt=""
+      alt={label}
       className="h-full w-full object-contain"
       onLoad={() => setStatus("loaded")}
       onError={() => setStatus("error")}
