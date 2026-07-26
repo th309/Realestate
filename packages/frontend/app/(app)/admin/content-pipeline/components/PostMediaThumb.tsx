@@ -1,9 +1,17 @@
+"use client";
+
+import { useState } from "react";
+
 /**
  * Image thumbnail for a post's rendered media, shared by every surface that
  * lists posts (planner cards, the home review strip, the review-queue ribbon).
  * Renders the first slide with `object-cover`; a carousel (more than one slide)
  * gets a "×N" count chip. Returns `null` when there's no media so callers can
  * fall back to their own placeholder — it never draws an empty box itself.
+ *
+ * On a load failure it drops the `<img>` and leaves the neutral tinted frame
+ * (no broken-image icon, no stale pixels) rather than showing whatever the
+ * browser last painted.
  *
  * Sizing is the caller's job (pass it via `className`); this owns the crop,
  * rounding, lazy-load, and the slide-count chip.
@@ -25,6 +33,7 @@ export function PostMediaThumb({
   /** Corner rounding — override to match the host card. */
   rounded?: string;
 }) {
+  const [errored, setErrored] = useState(false);
   const first = urls?.[0];
   if (!first) return null;
 
@@ -35,13 +44,17 @@ export function PostMediaThumb({
     <div
       className={`relative overflow-hidden bg-surface-container-high ${rounded} ${className}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={first}
-        alt={alt}
-        loading="lazy"
-        className="h-full w-full object-cover"
-      />
+      {!errored && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={first}
+          src={first}
+          alt={alt}
+          loading="lazy"
+          className="h-full w-full object-cover"
+          onError={() => setErrored(true)}
+        />
+      )}
       {isCarousel && (
         <span
           className="absolute right-1 top-1 rounded-full bg-on-surface/70 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-surface backdrop-blur-sm"

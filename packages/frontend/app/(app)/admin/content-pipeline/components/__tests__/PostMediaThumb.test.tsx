@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { PostMediaThumb } from "../PostMediaThumb";
 
 describe("PostMediaThumb", () => {
@@ -40,5 +40,21 @@ describe("PostMediaThumb", () => {
   it("honors an explicit count override", () => {
     render(<PostMediaThumb urls={["https://cdn.test/1.png"]} count={5} />);
     expect(screen.getByText("×5")).toBeInTheDocument();
+  });
+
+  it("drops the image on a load error, keeping the neutral frame + chip", () => {
+    const { container } = render(
+      <PostMediaThumb
+        urls={["https://cdn.test/a.png", "https://cdn.test/b.png"]}
+      />,
+    );
+    const img = container.querySelector("img");
+    expect(img).toBeInTheDocument();
+
+    fireEvent.error(img!);
+
+    // No broken/stale image; the frame box (and its ×2 chip) survive.
+    expect(container.querySelector("img")).not.toBeInTheDocument();
+    expect(screen.getByText("×2")).toBeInTheDocument();
   });
 });

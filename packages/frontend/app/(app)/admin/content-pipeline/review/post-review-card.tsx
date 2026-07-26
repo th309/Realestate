@@ -13,6 +13,7 @@ import {
   buildMakeVideoHref,
 } from "../video-scripts/video-script-copy";
 import { isVideoScriptItem, prettyPostType } from "./review-item";
+import { SlideImage } from "./slide-image";
 
 /**
  * Review-queue detail for a POST item (image/carousel or video_script). Renders
@@ -90,11 +91,13 @@ function MockupReview({
           style={{ aspectRatio: "1080 / 1350" }}
         >
           {current ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            // Keyed by src so each slide is a fresh element — a failed src swap
+            // can never leave the previous slide's frame painted (Chrome retains
+            // it otherwise). SlideImage renders an explicit failed+retry state.
+            <SlideImage
+              key={current}
               src={current}
-              alt=""
-              className="h-full w-full object-contain"
+              label={urls.length > 1 ? `Slide ${slide + 1}` : "Image"}
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-on-surface-variant">
