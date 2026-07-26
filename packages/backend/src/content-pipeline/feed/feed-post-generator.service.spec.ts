@@ -4,6 +4,7 @@ import { ContentDataService } from '../data/content-data.service';
 import { BrandVoiceLinterService } from '../gates/brand-voice-linter.service';
 import { PostsService } from '../posts/posts.service';
 import { PostImageRenderService } from '../post-images/post-image-render.service';
+import { MetroPhotoService } from '../media/metro-photo.service';
 import type { BrandProfile } from '../brand-kit/brand-kit.types';
 import type { ScoreMoverItem } from '../data/score-mover-context.queries';
 
@@ -22,6 +23,8 @@ type Overrides = {
   completionContent?: string;
   lintPassed?: boolean;
   renderThrows?: boolean;
+  /** null = no confident photo for this metro; 'throw' = lookup blew up. */
+  skyline?: string | null | 'throw';
 };
 
 function build(o: Overrides = {}) {
@@ -42,24 +45,23 @@ function build(o: Overrides = {}) {
         ]),
   );
 
-  const ai = {
-    complete: jest.fn(() =>
-      Promise.resolve({
-        content:
-          o.completionContent ??
-          JSON.stringify({
-            hook: 'PropertyIQ Score is rising in Austin.',
-            body: 'The data shows momentum. See the full picture on the map.',
-            cta: 'Check your market free at propertyiq.app. No credit card required.',
-            hashtags: ['#realestate'],
-          }),
-        model: 'deepseek-v4-pro',
-        provider: 'deepseek' as const,
-        usage: { promptTokens: 500, completionTokens: 300, totalTokens: 800 },
-        durationMs: 10,
-      }),
-    ),
-  } as unknown as AiProviderService;
+  const complete = jest.fn(() =>
+    Promise.resolve({
+      content:
+        o.completionContent ??
+        JSON.stringify({
+          hook: 'PropertyIQ Score is rising in Austin.',
+          body: 'The data shows momentum. See the full picture on the map.',
+          cta: 'Check your market free at propertyiq.app. No credit card required.',
+          hashtags: ['#realestate'],
+        }),
+      model: 'deepseek-v4-pro',
+      provider: 'deepseek' as const,
+      usage: { promptTokens: 500, completionTokens: 300, totalTokens: 800 },
+      durationMs: 10,
+    }),
+  );
+  const ai = { complete } as unknown as AiProviderService;
   const contentData = {
     getMarketSnapshot: jest.fn(() => Promise.resolve(null)),
   } as unknown as ContentDataService;
@@ -73,6 +75,21 @@ function build(o: Overrides = {}) {
   } as unknown as BrandVoiceLinterService;
   const posts = { createPost, updateMediaRefs } as unknown as PostsService;
   const postImages = { renderForPost } as unknown as PostImageRenderService;
+  const getSkylineDataUri = jest.fn(() => {
+    if (o.skyline === 'throw') return Promise.reject(new Error('pexels down'));
+    if (o.skyline == null) return Promise.resolve(null);
+    return Promise.resolve({
+      dataUri: o.skyline,
+      provenance: {
+        provider: 'pexels' as const,
+        optionId: 'pexels-1',
+        sourceUrl: 'https://pexels.com/p/1',
+      },
+    });
+  });
+  const metroPhotos = {
+    getSkylineDataUri,
+  } as unknown as MetroPhotoService;
 
   const service = new FeedPostGeneratorService(
     ai,
@@ -80,8 +97,16 @@ function build(o: Overrides = {}) {
     linter,
     posts,
     postImages,
+    metroPhotos,
   );
-  return { service, createPost, updateMediaRefs, renderForPost };
+  return {
+    service,
+    createPost,
+    updateMediaRefs,
+    renderForPost,
+    getSkylineDataUri,
+    complete,
+  };
 }
 
 describe('FeedPostGeneratorService.generatePost', () => {
@@ -155,5 +180,74 @@ describe('FeedPostGeneratorService.generatePost', () => {
     );
     expect(r.outcome.status).toBe('empty_completion');
     expect(createPost).not.toHaveBeenCalled();
+  });
+});
+
+const SKYLINE = 'data:image/jpeg;base64,QUJD';
+
+/** The grounding the renderer actually received. */
+function renderedGrounding(renderForPost: jest.Mock) {
+  return renderForPost.mock.calls[0][1] as { photoDataUri?: string };
+}
+
+describe('FeedPostGeneratorService skyline photos', () => {
+  it('attaches the metro skyline so photo-hero variants become eligible', async () => {
+    const { service, renderForPost, getSkylineDataUri } = build({
+      skyline: SKYLINE,
+    });
+    await service.generatePost(BRAND, 'PREAMBLE', 'linkedin_post', MOVER);
+
+    expect(getSkylineDataUri).toHaveBeenCalledWith('metro-1', 'Austin');
+    expect(renderedGrounding(renderForPost).photoDataUri).toBe(SKYLINE);
+  });
+
+  it('renders without a photo when no confident match exists', async () => {
+    const { service, renderForPost, updateMediaRefs } = build({
+      skyline: null,
+    });
+    const r = await service.generatePost(
+      BRAND,
+      'PREAMBLE',
+      'linkedin_post',
+      MOVER,
+    );
+    // No media beats wrong media — the post still ships, typographic.
+    expect(r.outcome.status).toBe('inserted');
+    expect(renderedGrounding(renderForPost).photoDataUri).toBeUndefined();
+    expect(updateMediaRefs).toHaveBeenCalledTimes(1);
+  });
+
+  it('survives a skyline lookup that throws', async () => {
+    const { service, renderForPost, updateMediaRefs } = build({
+      skyline: 'throw',
+    });
+    const r = await service.generatePost(
+      BRAND,
+      'PREAMBLE',
+      'linkedin_post',
+      MOVER,
+    );
+    expect(r.outcome.status).toBe('inserted');
+    expect(renderedGrounding(renderForPost).photoDataUri).toBeUndefined();
+    expect(updateMediaRefs).toHaveBeenCalledTimes(1);
+  });
+
+  it('never looks up a skyline for non-metro geographies', async () => {
+    const { service, getSkylineDataUri } = build({ skyline: SKYLINE });
+    await service.generatePost(BRAND, 'PREAMBLE', 'linkedin_post', {
+      ...MOVER,
+      geography: 'zip',
+    });
+    expect(getSkylineDataUri).not.toHaveBeenCalled();
+  });
+
+  it('keeps the photo out of the generation prompt', async () => {
+    const { service, complete } = build({ skyline: SKYLINE });
+    await service.generatePost(BRAND, 'PREAMBLE', 'linkedin_post', MOVER);
+    // The prompt is built before the render path attaches the photo. A data URI
+    // reaching the model would be a large, pointless token bill.
+    const sentToModel = JSON.stringify(complete.mock.calls);
+    expect(sentToModel).not.toContain('base64');
+    expect(sentToModel).not.toContain(SKYLINE);
   });
 });

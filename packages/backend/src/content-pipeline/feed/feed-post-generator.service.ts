@@ -7,6 +7,8 @@ import { PostsService } from '../posts/posts.service';
 import { ContentDataService } from '../data/content-data.service';
 import { BrandVoiceLinterService } from '../gates/brand-voice-linter.service';
 import { PostImageRenderService } from '../post-images/post-image-render.service';
+import { marketCityForQuery } from '../post-images/post-image-names';
+import { MetroPhotoService } from '../media/metro-photo.service';
 import type { PostCopy, PostRow } from '../posts/post.types';
 import {
   FEED_POST_TYPE_PLATFORM,
@@ -56,6 +58,7 @@ export class FeedPostGeneratorService {
     private readonly linter: BrandVoiceLinterService,
     private readonly posts: PostsService,
     private readonly postImages: PostImageRenderService,
+    private readonly metroPhotos: MetroPhotoService,
   ) {}
 
   async generatePost(
@@ -158,6 +161,38 @@ export class FeedPostGeneratorService {
   }
 
   /**
+   * Give metro posts their own city's skyline, which makes the photo-hero image
+   * variants eligible in the variant rotation. Attached here, on the render
+   * path only, so the base64 data URI can never reach the generation prompt.
+   *
+   * Fail-safe by design (right media → no media → NEVER wrong media): non-metro
+   * geographies, an unresolvable city, a missing PEXELS_API_KEY, or a photo
+   * whose alt text does not confidently name the city all return the grounding
+   * untouched, and the post falls back to a typographic look. A photo problem
+   * never fails a post.
+   */
+  private async attachSkylinePhoto(
+    grounding: FeedMarketGrounding,
+  ): Promise<FeedMarketGrounding> {
+    if (grounding.geoLevel !== 'metro') return grounding;
+    const city = marketCityForQuery(grounding.marketName, grounding.state);
+    if (!city) return grounding;
+    const photo = await this.metroPhotos
+      .getSkylineDataUri(grounding.geoId, city)
+      .catch((err) => {
+        this.logger.warn(
+          `skyline lookup failed for ${city} (${grounding.geoId}): ${(err as Error).message}`,
+        );
+        return null;
+      });
+    if (!photo) return grounding;
+    this.logger.log(
+      `skyline attached for ${city}: ${photo.provenance.provider}/${photo.provenance.optionId}`,
+    );
+    return { ...grounding, photoDataUri: photo.dataUri };
+  }
+
+  /**
    * Render post images and attach them; returns the post with media_refs written
    * (or the original row if nothing rendered / the render failed — best-effort,
    * the draft always survives).
@@ -167,7 +202,8 @@ export class FeedPostGeneratorService {
     grounding: FeedMarketGrounding,
   ): Promise<PostRow> {
     try {
-      const refs = await this.postImages.renderForPost(post, grounding);
+      const withPhoto = await this.attachSkylinePhoto(grounding);
+      const refs = await this.postImages.renderForPost(post, withPhoto);
       if (refs.length > 0)
         return await this.posts.updateMediaRefs(post.id, refs);
     } catch (err) {
