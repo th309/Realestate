@@ -38,9 +38,13 @@ export function headerRowHtml(c: PostImageContent): string {
   </div>`;
 }
 
+/** `photo` shares `dark`'s white-on-dark treatment (it sits on a dark gradient). */
+function isDarkSkin(family: PostImageFamily): boolean {
+  return family === 'dark' || family === 'photo';
+}
 /** Primary ink color for a family. */
 function inkOf(family: PostImageFamily): string {
-  return family === 'dark'
+  return isDarkSkin(family)
     ? DARK.white
     : family === 'white'
       ? WHITE.ink
@@ -48,7 +52,7 @@ function inkOf(family: PostImageFamily): string {
 }
 /** Muted/secondary text color for a family. */
 function mutedOf(family: PostImageFamily): string {
-  return family === 'dark'
+  return isDarkSkin(family)
     ? DARK.lavender
     : family === 'white'
       ? WHITE.muted
@@ -56,7 +60,7 @@ function mutedOf(family: PostImageFamily): string {
 }
 /** Hairline / divider color for a family. */
 function ruleOf(family: PostImageFamily): string {
-  return family === 'dark'
+  return isDarkSkin(family)
     ? DARK.rowStroke
     : family === 'white'
       ? WHITE.hairline
@@ -65,13 +69,12 @@ function ruleOf(family: PostImageFamily): string {
 
 /** Brand mark: logomark chip + wordmark, colored for the family. */
 export function markHtml(family: PostImageFamily): string {
-  const logo = family === 'dark' ? logoReversedDataUri() : logoNormalDataUri();
-  const chipBg =
-    family === 'dark'
-      ? DARK.white
-      : family === 'white'
-        ? WHITE.surface
-        : CREAM.panel;
+  const logo = isDarkSkin(family) ? logoReversedDataUri() : logoNormalDataUri();
+  const chipBg = isDarkSkin(family)
+    ? DARK.white
+    : family === 'white'
+      ? WHITE.surface
+      : CREAM.panel;
   const chipBorder =
     family === 'white' ? `border:1px solid ${WHITE.hairline};` : '';
   return `<div style="display:flex;align-items:center;gap:20px;">

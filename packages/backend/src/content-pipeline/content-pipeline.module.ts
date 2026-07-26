@@ -106,6 +106,7 @@ import { MagnetPromotionCron } from './crons/magnet-promotion.cron';
 import { RankingResolverController } from './ranking/ranking-resolver.controller';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
 import { MetroHeroImageService } from './metro-hero-image.service';
+import { MetroPhotoService } from './media/metro-photo.service';
 
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
@@ -300,6 +301,7 @@ import { POST_IMAGE_RENDERER } from './post-images/post-image-renderer.interface
     ScopeService,
     RankingResolverService,
     MetroHeroImageService,
+    MetroPhotoService,
 
     FeedService,
     FeedPostGeneratorService,

@@ -40,7 +40,7 @@ import {
 /** What real data each variant requires to be eligible for selection. */
 const NEEDS: Record<
   SinglePostVariant,
-  'markets2' | 'markets3' | 'stat' | 'any'
+  'markets2' | 'markets3' | 'stat' | 'photo' | 'any'
 > = {
   daily_card_stat: 'stat',
   editorial_stat: 'stat',
@@ -51,6 +51,8 @@ const NEEDS: Record<
   editorial_ranking: 'markets3',
   daily_card_versus: 'markets2',
   editorial_versus: 'markets2',
+  photo_hero_stat: 'photo',
+  photo_hero_hook: 'photo',
 };
 
 /**
@@ -191,6 +193,24 @@ function buildContent(a: BuildArgs): PostImageContent {
     };
   }
 
+  if (skeleton === 'photo') {
+    return {
+      ...base,
+      category: derived?.category ?? 'Market Signal',
+      eyebrow: marketLine(grounding),
+      headline: fitField(
+        copy.hook?.trim() || 'PropertyIQ market intelligence',
+        FIT.hook,
+        'photo headline',
+      ),
+      subhead: family === 'photo' ? subhead : undefined,
+      cta: fitField(copy.cta, FIT.cta, 'photo cta') || undefined,
+      stat: derived?.stat,
+      scaleScore: derived?.scaleScore ?? null,
+      photoDataUri: grounding?.photoDataUri,
+    };
+  }
+
   // hook / claim — typographic, copy-only.
   return {
     ...base,
@@ -225,6 +245,7 @@ export function selectAndBuildSingle(
     if (need === 'markets2') return rows.length >= 2;
     if (need === 'markets3') return rows.length >= 3;
     if (need === 'stat') return derived != null;
+    if (need === 'photo') return !!grounding?.photoDataUri;
     return true;
   });
   const pick = eligible[hashSeed(seed) % eligible.length];

@@ -14,8 +14,9 @@ export type PostImageTemplate = 'single_post' | 'carousel_slide';
  * - `dark`  = the proven navy Daily Card already live on PropertyIQ socials.
  * - `cream` = the editorial infographic look (Source Serif display).
  * - `white` = the quote-highlight look (pure white, serif, green highlighter stroke).
+ * - `photo` = a market skyline photo background + dark gradient (styled like `dark`).
  */
-export type PostImageFamily = 'dark' | 'cream' | 'white';
+export type PostImageFamily = 'dark' | 'cream' | 'white' | 'photo';
 
 /**
  * Single-post layout variants = skeleton × family. The selector picks one by
@@ -41,7 +42,9 @@ export type SinglePostVariant =
   | 'editorial_claim'
   | 'editorial_ranking'
   | 'editorial_versus'
-  | 'quote_highlight';
+  | 'quote_highlight'
+  | 'photo_hero_stat'
+  | 'photo_hero_hook';
 
 /** Layout skeleton — the structural shape a variant renders, independent of skin. */
 export type SinglePostSkeleton =
@@ -50,7 +53,8 @@ export type SinglePostSkeleton =
   | 'claim'
   | 'rows'
   | 'versus'
-  | 'quote';
+  | 'quote'
+  | 'photo';
 
 /** Carousel slide role — cover / content / closer differ in treatment. */
 export type CarouselSlideRole = 'cover' | 'content' | 'closer';
@@ -143,6 +147,12 @@ export interface PostImageGrounding {
     scoreLabel?: string | null;
     scoreDelta?: number | null;
   }>;
+  /**
+   * Full-bleed skyline photo (data URI) for this market, resolved by the feed via
+   * MetroPhotoService before render. Present only when a subject-aligned photo was
+   * found; the photo-hero look is eligible only when this is set.
+   */
+  photoDataUri?: string;
 }
 
 /** Structured content a template renders. Built from the post's copy + grounding. */
@@ -175,6 +185,8 @@ export interface PostImageContent {
   emphasis?: string;
   /** Attribution / source line under a quote (e.g. "PropertyIQ market intelligence"). */
   attribution?: string;
+  /** Full-bleed skyline background as a data URI (photo family) — embedded, offline. */
+  photoDataUri?: string;
   /** Slide position label for carousels, e.g. "1 / 5". */
   slideLabel?: string;
   /** Footer "as of" date. */

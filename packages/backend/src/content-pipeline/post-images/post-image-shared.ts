@@ -72,7 +72,7 @@ export function toneColor(
   family: PostImageFamily,
   tone: PostImageStat['tone'],
 ): string {
-  if (family === 'dark') {
+  if (family === 'dark' || family === 'photo') {
     return tone === 'pos'
       ? DARK.green
       : tone === 'neg'
@@ -234,11 +234,17 @@ export function shell(
   const bg =
     family === 'dark'
       ? `linear-gradient(180deg, ${DARK.bgTop} 0%, ${DARK.bgBottom} 100%)`
-      : family === 'white'
-        ? WHITE.surface
-        : CREAM.surface;
+      : family === 'photo'
+        ? DARK.bgBottom // dark fallback behind the full-bleed skyline
+        : family === 'white'
+          ? WHITE.surface
+          : CREAM.surface;
   const color =
-    family === 'dark' ? DARK.white : family === 'white' ? WHITE.ink : CREAM.ink;
+    family === 'dark' || family === 'photo'
+      ? DARK.white
+      : family === 'white'
+        ? WHITE.ink
+        : CREAM.ink;
   const bodyFont = `'Roboto', 'Helvetica Neue', Arial, sans-serif`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     ${fontFaceCss()}

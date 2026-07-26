@@ -24,6 +24,7 @@ import {
 import { ROWS_VARIANTS } from './post-image-rows';
 import { VERSUS_VARIANTS } from './post-image-versus';
 import { QUOTE_VARIANTS } from './post-image-quote';
+import { PHOTO_VARIANTS } from './post-image-photo';
 import {
   PostImageContent,
   SingleVariantEntry,
@@ -141,6 +142,7 @@ export const SINGLE_VARIANT_REGISTRY: SingleVariantEntry[] = [
   ...ROWS_VARIANTS,
   ...VERSUS_VARIANTS,
   ...QUOTE_VARIANTS,
+  ...PHOTO_VARIANTS,
 ];
 
 const SINGLE_VARIANT_BY_ID = new Map(

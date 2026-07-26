@@ -17,17 +17,20 @@ export interface MetroHeroOptionPublic {
   preview_url: string;
 }
 
-interface MetroHeroOptionBundle {
+export interface MetroHeroOptionBundle {
   id: string;
   label: string;
   license_note?: string;
   source_url: string;
 }
 
-let bundledOptionsByCbsa: Record<string, MetroHeroOptionBundle[]> | null =
-  null;
+let bundledOptionsByCbsa: Record<string, MetroHeroOptionBundle[]> | null = null;
 
-function loadBundledHeroOptions(): Record<string, MetroHeroOptionBundle[]> {
+/** Curated (Wikimedia) skyline options keyed by CBSA — shared with the photo chain. */
+export function loadBundledHeroOptions(): Record<
+  string,
+  MetroHeroOptionBundle[]
+> {
   if (bundledOptionsByCbsa) return bundledOptionsByCbsa;
   const pathOpts = join(__dirname, 'data', 'metro-hero-options.json');
   const pathLegacy = join(__dirname, 'data', 'metro-hero-source-urls.json');
@@ -47,9 +50,10 @@ function loadBundledHeroOptions(): Record<string, MetroHeroOptionBundle[]> {
 
   if (existsSync(pathLegacy)) {
     try {
-      const legacy = JSON.parse(
-        readFileSync(pathLegacy, 'utf-8'),
-      ) as Record<string, string>;
+      const legacy = JSON.parse(readFileSync(pathLegacy, 'utf-8')) as Record<
+        string,
+        string
+      >;
       for (const [cbsa, url] of Object.entries(legacy)) {
         if (!merged[cbsa]?.length && url?.trim()) {
           merged[cbsa] = [
@@ -123,8 +127,7 @@ export class MetroHeroImageService {
     if (!options?.length) return null;
 
     const wanted = optionId?.trim();
-    let selected =
-      wanted ? options.find((o) => o.id === wanted) : undefined;
+    let selected = wanted ? options.find((o) => o.id === wanted) : undefined;
     if (wanted && !selected) {
       this.logger.warn(
         `[metro-hero] unknown option_id=${wanted} for CBSA=${cbsa} — using first option`,
@@ -162,12 +165,14 @@ export class MetroHeroImageService {
         throw new Error(`metro hero upload: ${uploadErr.message}`);
       }
 
-      const { error: insertErr } = await client.from('metro_hero_images').insert({
-        cbsa_code: cbsa,
-        option_id: selected.id,
-        storage_path: storagePath,
-        source_url: sourceUrl,
-      });
+      const { error: insertErr } = await client
+        .from('metro_hero_images')
+        .insert({
+          cbsa_code: cbsa,
+          option_id: selected.id,
+          storage_path: storagePath,
+          source_url: sourceUrl,
+        });
       if (insertErr?.code === '23505') {
         const { data: row } = await client
           .from('metro_hero_images')
@@ -189,7 +194,7 @@ export class MetroHeroImageService {
 
     const { data: signed, error: signErr } = await client.storage
       .from(BUCKET)
-      .createSignedUrl(storagePath!, SIGN_SEC);
+      .createSignedUrl(storagePath, SIGN_SEC);
     if (signErr || !signed?.signedUrl) {
       throw new Error(signErr?.message ?? 'metro hero signed URL failed');
     }
