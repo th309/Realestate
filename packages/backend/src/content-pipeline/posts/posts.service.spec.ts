@@ -271,15 +271,15 @@ describe('PostsService media refs (render output + signing)', () => {
     expect(store.posts[0].media_refs).toEqual([imageRef]);
   });
 
-  it('attaches 1h signed URLs to image refs on read', async () => {
+  it('attaches 1h signed URLs as a plain string[] in slide order on read', async () => {
     const post = { ...seedPost('pending_review'), media_refs: [imageRef] };
     const { supabase } = makePostsFake([post]);
     const service = new PostsService(supabase);
     const withMedia = await service.withSignedMedia(
       (await service.getById('post-1')) as never,
     );
-    expect(withMedia.mediaUrls[0].url).toBe(
+    expect(withMedia.mediaUrls).toEqual([
       'https://signed.example/posts/post-1/0.png',
-    );
+    ]);
   });
 });

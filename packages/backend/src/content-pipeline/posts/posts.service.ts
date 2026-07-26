@@ -20,8 +20,12 @@ import {
 } from '../post-images/post-image-signing';
 import type { PostImageMediaRef } from '../post-images/post-image.types';
 
-/** A post row plus 1-hour signed URLs for its stored image refs (list/get). */
-export type PostWithMedia = PostRow & { mediaUrls: SignedMediaRef[] };
+/**
+ * A post row plus 1-hour signed image URLs in slide order (list/get/generate).
+ * `mediaUrls` is a plain string[] — the frozen frontend contract (`<img src>`);
+ * refs that fail to sign are dropped (honest absence, not a broken entry).
+ */
+export type PostWithMedia = PostRow & { mediaUrls: string[] };
 
 /**
  * CRUD + status lifecycle for the generalized `posts` model. The feed generator
@@ -179,9 +183,16 @@ export class PostsService {
     return signPostMediaRefs(this.supabase.getClient(), mediaRefs);
   }
 
-  /** Attach signed image URLs to a post for the admin feed UI. */
+  /** Attach signed image URLs (string[], slide order) to a post for the admin UI. */
   async withSignedMedia(post: PostRow): Promise<PostWithMedia> {
-    return { ...post, mediaUrls: await this.signMedia(post.media_refs) };
+    const signed = await this.signMedia(post.media_refs);
+    const mediaUrls = signed
+      .filter(
+        (r): r is SignedMediaRef & { url: string } => typeof r.url === 'string',
+      )
+      .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
+      .map((r) => r.url);
+    return { ...post, mediaUrls };
   }
 
   /**
