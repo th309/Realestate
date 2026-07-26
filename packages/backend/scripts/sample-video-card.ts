@@ -8,7 +8,8 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { execFileSync } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { searchCitySkylineVideo } from '../src/content-pipeline/media/pexels-media';
 import {
@@ -76,7 +77,14 @@ async function fetchBroll(city: string, downloadUrl: string): Promise<string> {
   if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
   const path = join(CACHE, `${city.toLowerCase()}.mp4`);
   if (existsSync(path)) return path; // one download per metro
-  const res = await fetch(downloadUrl);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(downloadUrl, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`b-roll download HTTP ${res.status}`);
   writeFileSync(path, Buffer.from(await res.arrayBuffer()));
   return path;
@@ -123,6 +131,7 @@ async function main() {
   if (!url || !key)
     throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY missing');
   if (!pexelsKey) throw new Error('PEXELS_API_KEY missing');
+  mkdirSync(OUT, { recursive: true });
   const client = createClient(url, key);
   const renderer = new PuppeteerPostImageRenderer();
   try {
@@ -173,10 +182,21 @@ async function main() {
           1080,
           1350,
         );
-        const overlayPath = join(CACHE, `overlay-${city.toLowerCase()}.png`);
+        // Per-run temp artifact: keep it out of the persistent cache and remove
+        // it after compositing.
+        const overlayPath = join(
+          tmpdir(),
+          `piq-overlay-${city.toLowerCase()}.png`,
+        );
         writeFileSync(overlayPath, overlayPng);
         const outFile = join(OUT, `video-card-${city.toLowerCase()}.mp4`);
-        composite(broll, overlayPath, outFile);
+        try {
+          composite(broll, overlayPath, outFile);
+        } finally {
+          try {
+            unlinkSync(overlayPath);
+          } catch {}
+        }
         console.log(
           `wrote video-card-${city.toLowerCase()}.mp4 — pexels video ${video.id} by ${video.user} (${video.durationSec}s src), asOf=${content.asOf}`,
         );
