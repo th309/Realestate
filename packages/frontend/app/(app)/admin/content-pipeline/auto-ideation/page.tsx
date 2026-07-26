@@ -60,19 +60,33 @@ export default function AutoIdeationPage() {
       { method: "POST" },
     );
     if (!res.ok) throw new Error(await res.text());
-    const json = (await res.json()) as {
-      data?: { matches?: number; runsCreated?: number };
-      matches?: number;
-      runsCreated?: number;
-    };
-    const runsCreated = json.data?.runsCreated ?? json.runsCreated ?? 0;
-    // Honest states only: never claim runs that weren't created.
-    if (runsCreated > 0) {
-      toast.success(
-        `Queued ${runsCreated} run${runsCreated === 1 ? "" : "s"}. See them on the dashboard.`,
-      );
+    const json = (await res.json()) as Record<string, unknown>;
+    const payload = ((json.data as Record<string, unknown>) ?? json) as Record<
+      string,
+      unknown
+    >;
+
+    // Honest states only. Gate on whether the endpoint reports counts yet: an
+    // older `{ fired: true }` response carries neither key, so we must not
+    // assert a specific outcome in either direction (claiming "no markets
+    // match" when runs actually queued is just as dishonest as the reverse).
+    const hasCounts = "runsCreated" in payload || "matches" in payload;
+    if (!hasCounts) {
+      toast.info("Rule fired. Check the dashboard.");
     } else {
-      toast.info("No markets currently match this rule.");
+      const runsCreated = Number(payload.runsCreated ?? 0);
+      const matches = Number(payload.matches ?? 0);
+      if (runsCreated > 0) {
+        toast.success(
+          `Queued ${runsCreated} run${runsCreated === 1 ? "" : "s"}.`,
+        );
+      } else if (matches > 0) {
+        toast.info(
+          `${matches} market${matches === 1 ? "" : "s"} matched but no runs were queued (caps or duplicates).`,
+        );
+      } else {
+        toast.info("No markets currently match this rule.");
+      }
     }
     refetch();
   }

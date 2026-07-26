@@ -12,7 +12,7 @@ import {
   normalizeVideoScript,
   buildMakeVideoHref,
 } from "../video-scripts/video-script-copy";
-import { prettyPostType } from "./review-item";
+import { isVideoScriptItem, prettyPostType } from "./review-item";
 
 /**
  * Review-queue detail for a POST item (image/carousel or video_script). Renders
@@ -34,7 +34,7 @@ export function PostReviewCard({
   approving?: boolean;
   skipping?: boolean;
 }) {
-  if (item.post_type === "video_script") {
+  if (isVideoScriptItem(item)) {
     return <ScriptReview item={item} onSkip={onSkip} skipping={skipping} />;
   }
   return (
