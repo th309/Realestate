@@ -14,6 +14,10 @@ const IN_FLIGHT: ReadonlySet<PipelineStatus> = new Set([
   "rendering_voice",
   "timing_captions",
   "rendering_video",
+  // Still working, just on the local worker rather than a backend queue.
+  // Omitting it would read the run as terminal and offer a hard delete
+  // instead of a cancel.
+  "generating_infographic",
   "publishing",
 ]);
 

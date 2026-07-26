@@ -43,6 +43,16 @@ export function pipelineStateToStatusChip(
     case "rendering_video":
     case "publishing":
       return { label: "Generating", tone: "generating" };
+    case "generating_infographic":
+      // Named for what it is rather than folded into "Generating": this lane
+      // runs on the local worker, so "still going" and "is the worker up?" are
+      // the same question, and the operator needs to see which lane is moving.
+      return { label: "Generating graphic", tone: "generating" };
+    case "infographic_ready":
+      // Terminal success, NOT a review request: the finished PNG enters the
+      // review feed as a draft post, so the run itself needs nothing further.
+      // A "review" tone here would double-count the work in the queue.
+      return { label: "Graphic ready", tone: "ready" };
     case "ready_for_review":
       return { label: "Ready to review", tone: "review" };
     case "published":

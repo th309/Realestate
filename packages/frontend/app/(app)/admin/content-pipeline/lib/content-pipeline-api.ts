@@ -13,6 +13,13 @@ export type PipelineStatus =
   | "rendering_voice"
   | "timing_captions"
   | "rendering_video"
+  // Infographic lane only — driven by the local NotebookLM worker, not a
+  // backend queue. `infographic_ready` is terminal success: the finished PNG
+  // waits for review as a draft POST, not as a run, which is why it is
+  // deliberately not `ready_for_review` (that status offers a resume action
+  // that would push the run into the video pipeline).
+  | "generating_infographic"
+  | "infographic_ready"
   | "ready_for_review"
   | "publishing"
   | "published"
@@ -32,44 +39,9 @@ export type ContentFormat =
   | "brokerage_market_share"
   | "recruitment_angle";
 
-export interface RunSummary {
-  id: string;
-  format: string;
-  status: PipelineStatus;
-  market_query: string;
-  created_at: string;
-  thumbnail_url?: string;
-  has_video?: boolean;
-  views?: number;
-  signups?: number;
-}
-
-export interface DashboardData {
-  thisWeek: {
-    published: number;
-    inReview: number;
-    signups: number;
-    revenueUsd: number;
-  };
-  recentRuns: RunSummary[];
-  reviewQueueCount: number;
-  upcomingAutoRuns?: Array<{
-    rule_name: string;
-    format: string;
-    matches: any[];
-  }>;
-  costCapStatus?: { breached: boolean; usdSpent: number; usdCap: number };
-}
-
-export async function fetchDashboard(
-  opts: { batchId?: string } = {},
-): Promise<DashboardData> {
-  const path = opts.batchId
-    ? `/api/admin/content-pipeline/dashboard?batchId=${encodeURIComponent(opts.batchId)}`
-    : "/api/admin/content-pipeline/dashboard";
-  const res = await fetchAPI<{ data: DashboardData }>(path);
-  return res.data;
-}
+// The dashboard read model (RunSummary, DashboardData, fetchDashboard) lives in
+// `dashboard-api.ts` (extracted to keep this file under the 300-line hard
+// limit) and is re-exported at the bottom of this file.
 
 export async function fetchRun(id: string) {
   const res = await fetchAPI<{ data: any }>(
@@ -291,3 +263,10 @@ export {
   type InfographicRunParams,
   createRun,
 } from "./create-run-api";
+
+// Dashboard read model lives in `dashboard-api.ts` (same reason).
+export {
+  type RunSummary,
+  type DashboardData,
+  fetchDashboard,
+} from "./dashboard-api";
