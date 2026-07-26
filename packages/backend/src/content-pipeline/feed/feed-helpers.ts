@@ -13,6 +13,7 @@ import type { ScoreMoverItem } from '../data/score-mover-context.queries';
 import type { PostCopy } from '../posts/post.types';
 import { isContentFormat } from '../dto/content-format';
 import {
+  FeedGenerationOutcome,
   FeedMarketGrounding,
   FeedPostType,
   GroundingTarget,
@@ -203,6 +204,27 @@ export function pickMoverForQuery(
     if (match) return match;
   }
   return candidates[0];
+}
+
+/**
+ * A "no post produced" result (paused / budget-exhausted / no-market) for the
+ * on-demand generation paths. `post: null` is assignable to both PostRow and
+ * PostWithMedia returns, so both single-post methods share it.
+ */
+export function noPostOutcome(
+  postType: FeedPostType,
+  status: FeedGenerationOutcome['status'],
+  reason?: string,
+): { outcome: FeedGenerationOutcome; post: null } {
+  return {
+    outcome: {
+      postType,
+      marketName: '',
+      status,
+      ...(reason ? { reason } : {}),
+    },
+    post: null,
+  };
 }
 
 /** Estimate USD spend for a completion from its token usage. 0 if unpriced. */

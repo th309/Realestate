@@ -6,8 +6,10 @@ import { ContentDataService } from '../data/content-data.service';
 import { CostCapService } from '../auto-ideation/cost-cap.service';
 import { PipelineSettingsService } from '../pipeline-settings.service';
 import { FeedPostGeneratorService } from './feed-post-generator.service';
+import { StylePreferenceService } from '../style-preferences/style-preference.service';
 import {
   mapGenerateTypeToPostType,
+  noPostOutcome,
   pickMoverForQuery,
   resolveMarketTarget,
 } from './feed-helpers';
@@ -36,6 +38,10 @@ const FEED_WINDOW: ScoreMoverWindowDays = 90;
  * Gate B + insert + image render live in FeedPostGeneratorService; this service
  * owns the pause gate, candidate selection, and the CONTENT_PIPELINE_DAILY_USD_MAX
  * budget (re-checked per post against real running spend).
+ *
+ * Every generation path takes its system prompt from
+ * StylePreferenceService.buildGenerationPreamble, which is the brand voice plus
+ * the brand's liked style references (Phase 8 preference learning).
  */
 @Injectable()
 export class FeedService {
@@ -48,6 +54,7 @@ export class FeedService {
     private readonly costCap: CostCapService,
     private readonly settings: PipelineSettingsService,
     private readonly generator: FeedPostGeneratorService,
+    private readonly stylePreferences: StylePreferenceService,
   ) {}
 
   private targetDrafts(): number {
@@ -98,7 +105,7 @@ export class FeedService {
       return [];
     }
 
-    const preamble = this.brandKit.buildPromptPreamble(brand);
+    const preamble = await this.stylePreferences.buildGenerationPreamble(brand);
     const outcomes: FeedGenerationOutcome[] = [];
     let spentUsd = 0;
     let spentTokens = 0;
@@ -154,18 +161,18 @@ export class FeedService {
   }): Promise<{ outcome: FeedGenerationOutcome; post: PostRow | null }> {
     const postType = input.postType ?? FEED_POST_TYPES[0];
     if (this.settings.isPaused()) {
-      return this.noPost(postType, 'skipped_budget', 'pipeline paused');
+      return noPostOutcome(postType, 'skipped_budget', 'pipeline paused');
     }
     const brand = await this.brandKit.getBrandProfile(input.brandId);
     const budget = await this.costCap.canEnqueue(EST_USD_PER_POST);
     if (!budget.allowed) {
-      return this.noPost(postType, 'skipped_budget');
+      return noPostOutcome(postType, 'skipped_budget');
     }
     const candidates = await this.pickCandidateMarkets();
     if (candidates.length === 0) {
-      return this.noPost(postType, 'error', 'no candidate markets available');
+      return noPostOutcome(postType, 'error', 'no candidate markets available');
     }
-    const preamble = this.brandKit.buildPromptPreamble(brand);
+    const preamble = await this.stylePreferences.buildGenerationPreamble(brand);
     const r = await this.generator.generatePost(
       brand,
       preamble,
@@ -194,12 +201,12 @@ export class FeedService {
   }): Promise<{ outcome: FeedGenerationOutcome; post: PostWithMedia | null }> {
     const postType = mapGenerateTypeToPostType(input.type, input.platform);
     if (this.settings.isPaused()) {
-      return this.noPost(postType, 'skipped_budget', 'pipeline paused');
+      return noPostOutcome(postType, 'skipped_budget', 'pipeline paused');
     }
     const brand = await this.brandKit.getBrandProfile(input.brandId);
     const budget = await this.costCap.canEnqueue(EST_USD_PER_POST);
     if (!budget.allowed) {
-      return this.noPost(postType, 'skipped_budget');
+      return noPostOutcome(postType, 'skipped_budget');
     }
     // User-directed grounding: an explicit marketQuery resolves a specific
     // market; otherwise pick a top mover (matched to the query/topic if any).
@@ -220,9 +227,9 @@ export class FeedService {
         : null;
     }
     if (!target) {
-      return this.noPost(postType, 'error', 'no market to ground on');
+      return noPostOutcome(postType, 'error', 'no market to ground on');
     }
-    const preamble = this.brandKit.buildPromptPreamble(brand);
+    const preamble = await this.stylePreferences.buildGenerationPreamble(brand);
     const r = await this.generator.generatePost(
       brand,
       preamble,
@@ -239,27 +246,6 @@ export class FeedService {
     // Re-read + sign so the response carries the freshly-rendered media.
     const post = r.post ? await this.posts.withSignedMedia(r.post) : null;
     return { outcome: r.outcome, post };
-  }
-
-  /**
-   * A "no post produced" result (paused / budget-exhausted / no-market) for the
-   * on-demand paths. `post: null` is assignable to both PostRow and PostWithMedia
-   * returns, so both single-post methods share it.
-   */
-  private noPost(
-    postType: FeedPostType,
-    status: FeedGenerationOutcome['status'],
-    reason?: string,
-  ): { outcome: FeedGenerationOutcome; post: null } {
-    return {
-      outcome: {
-        postType,
-        marketName: '',
-        status,
-        ...(reason ? { reason } : {}),
-      },
-      post: null,
-    };
   }
 
   /** Record accumulated DeepSeek spend against the daily cap (best-effort). */

@@ -5,6 +5,7 @@ import { ContentDataService } from '../data/content-data.service';
 import { CostCapService } from '../auto-ideation/cost-cap.service';
 import { PipelineSettingsService } from '../pipeline-settings.service';
 import { FeedPostGeneratorService } from './feed-post-generator.service';
+import { StylePreferenceService } from '../style-preferences/style-preference.service';
 import type { FeedGenerationOutcome } from './feed.types';
 
 type Overrides = {
@@ -67,6 +68,10 @@ function build(o: Overrides = {}) {
   } as unknown as BrandKitService;
   const posts = {
     listPosts: jest.fn(() => Promise.resolve(pending)),
+    // generateOnDemand re-reads the row to attach signed media URLs.
+    withSignedMedia: jest.fn((p: unknown) =>
+      Promise.resolve({ ...(p as object), mediaUrls: [] }),
+    ),
   } as unknown as PostsService;
   const contentData = {
     getTopMovers: jest.fn(() =>
@@ -98,6 +103,14 @@ function build(o: Overrides = {}) {
     isPaused: jest.fn(() => o.paused ?? false),
   } as unknown as PipelineSettingsService;
   const generator = { generatePost } as unknown as FeedPostGeneratorService;
+  // Phase 8: the system prompt now comes from the style-preference service
+  // (brand preamble + the brand's liked style references).
+  const buildGenerationPreamble = jest.fn(() =>
+    Promise.resolve('PREAMBLE\n\nSAVED STYLE PREFERENCES (…)'),
+  );
+  const stylePreferences = {
+    buildGenerationPreamble,
+  } as unknown as StylePreferenceService;
 
   const service = new FeedService(
     brandKit,
@@ -106,8 +119,9 @@ function build(o: Overrides = {}) {
     costCap,
     settings,
     generator,
+    stylePreferences,
   );
-  return { service, generatePost, recordSpend };
+  return { service, generatePost, recordSpend, buildGenerationPreamble };
 }
 
 describe('FeedService.topUp orchestration', () => {
@@ -184,5 +198,21 @@ describe('FeedService.generateOnePost', () => {
     const { outcome } = await service.generateOnePost({});
     expect(generatePost).not.toHaveBeenCalled();
     expect(outcome.status).toBe('skipped_budget');
+  });
+});
+
+describe('FeedService feeds the preference-learned preamble to the generator', () => {
+  it('passes the brand preamble plus the saved-style block on every path', async () => {
+    const { service, generatePost, buildGenerationPreamble } = build({});
+    await service.generateOnePost({ postType: 'facebook_post' });
+    await service.generateOnDemand({ type: 'image_post' });
+
+    expect(buildGenerationPreamble).toHaveBeenCalledTimes(2);
+    expect(buildGenerationPreamble).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'brand-1' }),
+    );
+    for (const call of generatePost.mock.calls) {
+      expect(call[1]).toContain('SAVED STYLE PREFERENCES');
+    }
   });
 });
