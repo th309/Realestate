@@ -37,8 +37,8 @@ canonical claim constants.
 | File                   | Topic                                       | Audience         | Status      |
 | ---------------------- | ------------------------------------------- | ---------------- | ----------- |
 | `mcp-for-agents.md`    | What agents can do with the PropertyIQ MCP  | Agents           | Draft ready |
-| `how-to-map.md`        | Using the interactive map                   | All              | TODO        |
-| `how-to-analyzer.md`   | Analyzing a deal by address                 | Investors/Buyers | TODO        |
-| `how-to-reports.md`    | Building AI market reports                  | All              | TODO        |
-| `score-explainer.md`   | The 1-99 momentum score, honestly explained | All              | TODO        |
-| `mcp-for-investors.md` | Investor workflows via MCP                  | Investors        | TODO        |
+| `how-to-map.md`        | Using the interactive map                   | All              | DRAFT       |
+| `how-to-analyzer.md`   | Analyzing a deal by address                 | Investors/Buyers | DRAFT       |
+| `how-to-reports.md`    | Building AI market reports                  | All              | DRAFT       |
+| `score-explainer.md`   | The 1-99 momentum score, honestly explained | All              | DRAFT       |
+| `mcp-for-investors.md` | Investor workflows via MCP                  | Investors        | DRAFT       |
