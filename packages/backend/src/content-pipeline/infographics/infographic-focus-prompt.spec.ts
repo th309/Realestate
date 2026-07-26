@@ -70,6 +70,13 @@ describe('buildInfographicFocusPrompt carries the anti-fabrication rules', () =>
     expect(prompt).toContain('prefer fewer, larger text elements');
   });
 
+  it('forbids text truncated mid-thought', () => {
+    expect(prompt).toContain('NO TRUNCATION');
+    expect(prompt).toContain(
+      'every phrase or sentence that appears must be complete',
+    );
+  });
+
   it('ends with the exact footer line', () => {
     expect(INFOGRAPHIC_FOOTER).toBe(
       'propertyiq.app - Market-level intelligence. Not property valuation.',

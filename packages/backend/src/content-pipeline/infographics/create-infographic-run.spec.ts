@@ -28,7 +28,7 @@ function buildClient() {
 const VALID_DTO = {
   format: 'infographic',
   idempotencyKey: 'e6d1a0e0-0000-4000-8000-000000000001',
-  infographicParams: {
+  params: {
     topic_slug: 'mcp-for-agents',
     task_number: 1,
     style_id: 'flat-editorial',
@@ -64,13 +64,41 @@ describe('createInfographicRun parks the run for the local worker', () => {
     });
   });
 
-  it('derives a readable market query from the topic and task', async () => {
+  it('derives a readable market query when the composer sends none', async () => {
     const { client, inserted } = buildClient();
     await createInfographicRun(client as never, VALID_DTO);
     expect(inserted[0].market_query).toBe(
       'mcp-for-agents - Find your farm area',
     );
     expect(String(inserted[0].market_query)).not.toContain('_');
+  });
+
+  it('keeps the composer label verbatim when one is supplied', async () => {
+    const { client, inserted } = buildClient();
+    const label =
+      'What Real Estate Agents Can Do with the PropertyIQ MCP — Find your farm area';
+    await createInfographicRun(
+      client as never,
+      {
+        ...VALID_DTO,
+        marketQuery: label,
+      } as never,
+    );
+    expect(inserted[0].market_query).toBe(label);
+  });
+
+  it('falls back to the derived label when the query is blank', async () => {
+    const { client, inserted } = buildClient();
+    await createInfographicRun(
+      client as never,
+      {
+        ...VALID_DTO,
+        marketQuery: '   ',
+      } as never,
+    );
+    expect(inserted[0].market_query).toBe(
+      'mcp-for-agents - Find your farm area',
+    );
   });
 });
 
@@ -85,7 +113,7 @@ describe('createInfographicRun refuses ungeneratable requests', () => {
         client as never,
         {
           ...VALID_DTO,
-          infographicParams: params,
+          params: params,
         } as unknown as CreateRunDto,
       ),
     ).rejects.toThrow(expectedMessage);
@@ -93,7 +121,7 @@ describe('createInfographicRun refuses ungeneratable requests', () => {
   }
 
   it('rejects a missing params object', async () => {
-    await expectRejection(undefined, /require infographicParams/);
+    await expectRejection(undefined, /require params/);
   });
 
   it('rejects an unknown topic slug', async () => {

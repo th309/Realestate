@@ -94,9 +94,15 @@ async function waitForArtifact(
 }
 
 /**
- * Download the PNG twice and byte-compare. A failed download can leave stale or
- * truncated bytes behind, so identical non-empty PNG bytes across two attempts
- * is the only accepted outcome — publishing stale bytes is worse than failing.
+ * Download the PNG, retrying once on failure.
+ *
+ * Byte comparison here is ONLY a stale-file guard: if the first attempt failed
+ * validation and the retry produces byte-identical output, nothing actually
+ * re-downloaded and we are looking at the same bad file again. It is NOT an
+ * image-identity check — NotebookLM varies an embedded metadata chunk per
+ * download, so two good downloads of the same artifact can differ byte-for-byte
+ * at identical pixel content. For the same reason, never dedupe on a content
+ * hash of these PNGs.
  */
 function downloadArtifact(
   notebookId: string,
@@ -115,22 +121,32 @@ function downloadArtifact(
       path,
     ]);
     if (!existsSync(path)) throw new Error(`nlm wrote no file at ${path}`);
-    const bytes = readFileSync(path);
+    return readFileSync(path);
+  };
+
+  const validate = (bytes: Buffer): void => {
     if (bytes.length === 0) throw new Error('downloaded file was empty');
     if (bytes.subarray(0, 8).toString('hex') !== PNG_MAGIC) {
       throw new Error('downloaded file is not a PNG');
     }
-    return bytes;
   };
 
-  const first = attempt('attempt-1.png');
-  const second = attempt('attempt-2.png');
-  if (!first.equals(second)) {
-    throw new Error(
-      `download was unstable (${first.length} vs ${second.length} bytes) — refusing to use possibly stale bytes`,
-    );
+  let firstBytes: Buffer | null = null;
+  try {
+    const bytes = attempt('attempt-1.png');
+    firstBytes = bytes;
+    validate(bytes);
+    return bytes;
+  } catch (firstError) {
+    const retried = attempt('attempt-2.png');
+    if (firstBytes && retried.equals(firstBytes)) {
+      throw new Error(
+        `retry returned identical bytes to the failed download (${retried.length}) — stale file, not a fresh download: ${(firstError as Error).message}`,
+      );
+    }
+    validate(retried);
+    return retried;
   }
-  return first;
 }
 
 /** Generate one infographic end to end and return its PNG bytes. */

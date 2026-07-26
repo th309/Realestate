@@ -30,10 +30,11 @@ export class InfographicOptionsController {
             label: task.label,
           })),
         })),
+        // {id, label} only — the VISUAL STYLE descriptor is prompt text the
+        // worker uses, not something the picker renders.
         styles: INFOGRAPHIC_STYLES.map((style) => ({
           id: style.id,
           label: style.label,
-          descriptor: style.descriptor,
         })),
       },
     };

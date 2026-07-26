@@ -31,10 +31,10 @@ export async function createInfographicRun(
   client: SupabaseClient,
   dto: CreateRunDto,
 ): Promise<CreatedRun> {
-  const params = dto.infographicParams;
+  const params = dto.params;
   if (!params) {
     throw new BadRequestException(
-      'infographic runs require infographicParams (topic slug, task number, style id)',
+      'infographic runs require params (topic slug, task number, style id)',
     );
   }
 
@@ -71,8 +71,12 @@ export async function createInfographicRun(
       format: 'infographic',
       // Infographics are product explainers, not market-scoped content.
       audience: 'mixed',
-      // market_query is NOT NULL and drives the run list label.
-      market_query: `${topic.slug} - ${task.label}`,
+      // market_query is NOT NULL and drives the run list label. Nothing
+      // resolves it for this format, so the composer's human label wins when
+      // supplied; otherwise derive one.
+      market_query: dto.marketQuery?.trim()
+        ? dto.marketQuery.trim()
+        : `${topic.slug} - ${task.label}`,
       approval_mode: dto.approvalMode ?? 'review',
       selected_platforms: dto.selectedPlatforms ?? [],
       idempotency_key: dto.idempotencyKey,

@@ -41,6 +41,11 @@ const ANTI_FABRICATION_RULES = [
   'TEXT DENSITY: prefer fewer, larger text elements. Short phrases over ' +
     'sentences. Every word must be comfortably legible at a glance — do not ' +
     'crowd the layout with small type.',
+  // A live render cut a sourced stat mid-sentence and dropped its magnitude,
+  // turning a cited number into an unquantified promise.
+  'NO TRUNCATION: every phrase or sentence that appears must be complete; ' +
+    'never cut off text mid-thought. If a statement will not fit, shorten it ' +
+    'to a complete shorter statement rather than letting it run out of space.',
   `FOOTER: end with exactly this one footer line: ${INFOGRAPHIC_FOOTER}`,
 ] as const;
 

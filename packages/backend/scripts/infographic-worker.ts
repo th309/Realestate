@@ -33,6 +33,8 @@ config({ path: ['.env.local', '.env'] });
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const MAX_RUNS_PER_PASS = 25;
+/** A generation that has not moved in this long lost its worker. */
+const STALE_CLAIM_MINUTES = 15;
 
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key =
@@ -62,6 +64,38 @@ async function claim(client: SupabaseClient, runId: string): Promise<boolean> {
     .select('id')
     .maybeSingle();
   return Boolean(data);
+}
+
+/**
+ * Recover runs abandoned mid-generation by a dead worker (crash, Ctrl+C,
+ * laptop sleep). RecoverStuckRunsCron deliberately ignores
+ * `generating_infographic` — no backend queue can advance it — so without this
+ * sweep those rows would wedge forever.
+ *
+ * They are reset to `queued` rather than failed: NotebookLM creation is free
+ * and an orphaned artifact in the notebook is harmless, so a retry costs
+ * nothing and is friendlier than making the operator resubmit.
+ *
+ * Note this worker writes run transitions directly by design, so
+ * ALLOWED_TRANSITIONS is descriptive for this lane, not enforced.
+ */
+async function sweepStaleClaims(client: SupabaseClient): Promise<void> {
+  const cutoff = new Date(
+    Date.now() - STALE_CLAIM_MINUTES * 60_000,
+  ).toISOString();
+  const { data, error } = await client
+    .from('content_runs')
+    .update({ status: 'queued', updated_at: new Date().toISOString() })
+    .eq('format', 'infographic')
+    .eq('status', 'generating_infographic')
+    .lt('updated_at', cutoff)
+    .select('id');
+  if (error) throw error;
+  if (data && data.length > 0) {
+    console.log(
+      `recovered ${data.length} run(s) abandoned mid-generation for over ${STALE_CLAIM_MINUTES} minutes`,
+    );
+  }
 }
 
 async function markFailed(
@@ -128,6 +162,10 @@ async function main(): Promise<void> {
     throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY missing in .env');
   }
   const client = createClient(url, key);
+
+  // Recover abandoned claims before looking for new work, so a run orphaned by
+  // a previous crash is picked up on this pass rather than sitting forever.
+  if (!DRY_RUN) await sweepStaleClaims(client);
 
   const { data: rows, error } = await client
     .from('content_runs')

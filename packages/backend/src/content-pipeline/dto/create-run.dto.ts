@@ -39,11 +39,16 @@ export class CreateRunDto {
   format!: ContentFormat;
 
   /**
-   * Required for market-scoped formats. Infographic runs are product
-   * explainers with no market, so the service derives the label from the
-   * chosen topic and task instead.
+   * Market-scoped formats resolve this against the market resolver in
+   * fetch-data. Infographic runs never reach that handler, so for them this is
+   * just a human-readable label the admin UI supplies ("<topic> — <task>") and
+   * it may be any non-empty string, or omitted entirely (the service derives
+   * one from the topic and task).
    */
-  @ValidateIf((o: CreateRunDto) => o.format !== 'infographic')
+  @ValidateIf(
+    (o: CreateRunDto) =>
+      o.format !== 'infographic' || o.marketQuery !== undefined,
+  )
   @IsString()
   @MinLength(2)
   marketQuery!: string;
@@ -82,13 +87,17 @@ export class CreateRunDto {
   formatOptions?: FormatOptionsDto;
 
   /**
-   * Required when format is `infographic`: which vetted topic doc, which
-   * single task within it, and which approved visual style to generate.
+   * Per-format params. Today only `infographic` uses it: which vetted topic
+   * doc, which single task within it, and which approved visual style. Sent
+   * top-level by the admin composer; persisted into content_runs.format_options.
+   *
+   * Declared on the DTO (rather than read off the raw body) so a global
+   * validation whitelist cannot strip it before the service sees it.
    */
   @ValidateIf((o: CreateRunDto) => o.format === 'infographic')
   @ValidateNested()
   @Type(() => InfographicRunParamsDto)
-  infographicParams?: InfographicRunParamsDto;
+  params?: InfographicRunParamsDto;
 
   /**
    * Internal-only usage: auto-ideation cron can enqueue runs without human action.
