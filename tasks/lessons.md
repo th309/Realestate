@@ -244,6 +244,7 @@
 **Context:** During the content-pipeline completion round, task #13 was assigned by one agent (backend-foundation-2) to another (backend-foundation) — and then the delegating agent ALSO built the entire task itself in parallel. Both agents edited the same content-pipeline files in the shared working tree, clobbering each other's edits. Separately, an agent-to-agent assignment of task #14 landed in the wrong agent's inbox and stalled work until ownership was resolved. This also explains why ordered fixes (e.g. the getBrowser launch-race guard) repeatedly appeared "not landed" on disk after being reported complete — parallel same-file edits were overwriting each other.
 
 **Rules:**
+
 - Only the team lead assigns, transfers, or reassigns tasks. Agents who think work should move propose it to the lead; they never task each other directly.
 - One owner per backend module per round. Parallelism runs ACROSS modules (content-pipeline vs social-connect vs frontend), never within one module's files.
 - A delegating agent must never also build the delegated work. Delegate OR build, never both.
@@ -255,3 +256,39 @@
 **Context:** User waited over an hour for 5 sample images while the lead ran a per-batch review-relay loop (every stop-hook → reviewer → findings → relay → fix → re-verify) on a SAMPLES pipeline. Reviews caught real bugs (fabricated as-of date, missing timeouts) but most findings were polish (doc comments, consolidation, style) that gated pixels the user was actively waiting for. User: "what in the ever loving fuck are you doing?"
 
 **Rule:** When the user is waiting on a visible artifact (samples, demos, previews — anything not shipping to production), the ONLY pre-ship gates are factual correctness (real data, no wrong-subject media, no fabricated numbers/dates/claims). Everything else — style, dedup, docs, hygiene — accumulates into ONE post-hoc cleanup pass after the artifact is in the user's hands. Per-batch review relays are for production-bound code only. Ship increments the moment they exist; never batch deliverables behind polish.
+
+## Waiting Is Work to Delegate — One Agent Per Independent Artifact
+
+**Date:** 2026-07-26
+**Context:** Five NotebookLM infographics were generating concurrently. The lead sat in a foreground PowerShell poll loop watching all five statuses. User interrupted: "USE multiple agents whenever practical." The 2026-07-12 fan-out lesson covered parallel verification after edits; this extends it to waits: polling, downloading, delivering, and fact-checking N independent artifacts is N independent pipelines, not one loop.
+
+**Rule:** Whenever 2+ independent work items exist — including "just waiting" chores like polling generation jobs, downloading artifacts, or per-file checks — dispatch one agent per item in a single message, each owning its item's full chain (poll → download → deliver → verify). The main session orchestrates and does other useful work (memory, docs, next steps) while they run. Verify each agent's "done" report against disk before accepting.
+
+**Wrong behavior:** foreground `Start-Sleep` poll loop over five artifact ids, then serial download + fact-check of each.
+
+**Correct behavior:** five parallel agents, each polling only its artifact and carrying it through delivery and fact-check; lead integrates verdicts and spot-checks the files on disk.
+
+## Generated Media Must Match the User's Approved Reference Styles — a Style Flag Is Not a Style
+
+**Date:** 2026-07-26
+**Context:** Generated six NotebookLM infographics with `--style editorial` and no visual descriptor. NotebookLM freestyled steampunk/Victorian sketch scenes. Troy: "WHY ARE YOU IGNORING THE SAMPLE INFOGRAPHIC STYLES I have give? you are making up your own style." He maintains specific approved reference samples (cartoon-mascot explainer, sketch-note, flat editorial cream/slate/rust, clean modern flat, flat editorial with map, glassmorphic bento).
+
+**Rule:** For any generated visual media, the prompt must pin the approved reference style explicitly: a VISUAL STYLE paragraph (background, palette, illustration mode, typography feel) plus a NO-list of failure modes (no steampunk, no cartoon unless mascot style, no photorealism), paired with the closest generator style flag (`sketch_note`, `editorial`, `professional`, `bento_grid`, `instructional`). The fact-check pass gets a STYLE GATE: verify the render matches the descriptor, not just the facts. Reference styles live with Troy's samples; the memory file `feedback_use-approved-infographic-styles.md` carries the six descriptors.
+
+**Wrong behavior:** `--style editorial` alone, then fact-checking only text content.
+
+**Correct behavior:** style flag + explicit descriptor + NO-list in every generation prompt; style compliance verified alongside facts before delivery.
+
+## A Component Existing Is Not a Component Shipping — Check Who Imports It
+
+**Date:** 2026-07-26
+**Context:** Two of five infographic topic docs documented dead code as live features: how-to-reports.md described the five-template picker (`TEMPLATE_INFO` + wizard steps — referenced only by other dead wizard code) and how-to-map.md described "benchmark position" (`BenchmarkPanel` — exported from a barrel, rendered nowhere). Both components exist, compile, and grep fine; neither is reachable by a user. Fixed in a0643fe1.
+
+**Rule:** Before documenting (or building on) a UI feature, verify REACHABILITY, not existence: "who imports this, outside its own folder?" A definition + barrel re-export proves nothing — trace to a rendered page/route. This is the inverse of the audit-follows-composition rule (don't claim a feature is MISSING without reading child components); together: presence in the tree ≠ presence in the product, in both directions. Frontends with dead-code tolerance (this repo has wizard remnants, dead panels, unmounted selectors) make this check mandatory for docs, marketing copy, and topic docs that feed generated content.
+
+## A Test That Cannot Fail Is Worse Than No Test — Prove It Can Go Red
+
+**Date:** 2026-07-26
+**Context:** Guarding a payload-key rename (`params` → `infographicParams`), an agent wrote a runtime spec asserting the wire key — and it PASSED against the broken code. `createRun` does `JSON.stringify(payload)` and forwards whatever keys the caller supplies, so no assertion inside the helper can ever fail on a caller's key choice. The real guard is TypeScript's excess-property check on the object literal at the call site. The agent verified this by reverting the caller and watching tsc reject it, then deleted the un-failable assertion and kept only what types can't see (endpoint string, error propagation).
+
+**Rule:** Before trusting a new test, make it fail once — revert the fix, introduce the bug, or mutate the code — and watch it go red. A test that stays green against the defect it claims to guard is a false safety signal that actively misleads future readers. Corollary: know WHICH layer actually enforces a contract (compiler vs runtime vs review) and put the guard there; runtime tests cannot police what serialization forwards transparently, and type-level guards need a call-site literal to bite.
