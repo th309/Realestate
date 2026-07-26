@@ -2,15 +2,18 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import puppeteer, { Browser } from 'puppeteer';
 import { RENDER_DEVICE_SCALE } from './post-image.types';
-import {
-  PostImageOverflowError,
-  PostImageRenderer,
-} from './post-image-renderer.interface';
+import { PostImageRenderer } from './post-image-renderer.interface';
 
 const RENDER_TIMEOUT_MS = 20_000;
 const IDLE_BROWSER_TIMEOUT_MS = 5 * 60_000;
-/** One shrink retry when a card overflows (text-fit guard, second line of defense). */
-const SHRINK_SCALE = 0.85;
+/**
+ * Font-fit ladder: render at full size, then step the whole card DOWN until the
+ * copy fits — never clip. Copy is budgeted upstream (fitField) to fit at the
+ * floor, so the floor render is a real fit; if it is still tight we render it
+ * anyway (a slightly small card beats a skipped image, and truncation already
+ * happened upstream as the absolute backstop).
+ */
+const FIT_SCALES = [1, 0.92, 0.84, 0.76, 0.68, 0.6] as const;
 
 /**
  * Puppeteer HTML→PNG engine for post images. Hardened lifecycle modeled on
@@ -50,16 +53,24 @@ export class PuppeteerPostImageRenderer
     height: number,
   ): Promise<Buffer> {
     return this.withPage(width, height, async (page) => {
-      for (const scale of [1, SHRINK_SCALE]) {
+      for (let i = 0; i < FIT_SCALES.length; i++) {
+        const scale = FIT_SCALES[i];
         await this.load(page, buildHtml(scale));
+        const last = i === FIT_SCALES.length - 1;
         if (!(await this.overflows(page))) return this.shoot(page);
+        if (last) {
+          // Floor reached: render as-is rather than skip the image. Copy is
+          // budgeted to fit here, so this is rare (very long copy).
+          this.logger.warn(
+            `post image still tight at min scale ${scale}; rendering as-is`,
+          );
+          return this.shoot(page);
+        }
         this.logger.warn(
-          `post image overflowed at scale ${scale}${scale === 1 ? ' — retrying smaller' : ''}`,
+          `post image overflowed at scale ${scale} — retrying smaller`,
         );
       }
-      throw new PostImageOverflowError(
-        'card overflowed its canvas after shrink retry',
-      );
+      return this.shoot(page); // unreachable; satisfies the return type
     });
   }
 

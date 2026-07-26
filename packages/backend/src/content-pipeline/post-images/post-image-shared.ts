@@ -115,6 +115,48 @@ export function truncateWords(
 }
 
 /**
+ * Pass copy through UNTOUCHED up to a generous card-fit budget; truncate + warn
+ * only as an absolute backstop (degenerate / far-over-DTO input). Font step-down
+ * (headlineFontSize) and the renderer's scale ladder do the real fitting — so
+ * legal feed copy is NEVER cut off. Budgets are set so the field fits at the
+ * renderer's floor scale, per the "regions must fit legal copy" invariant.
+ */
+export function fitField(
+  text: string | undefined,
+  budget: number,
+  label: string,
+): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (t.length <= budget) return t;
+
+  console.warn(
+    `[post-image] backstop-truncated ${label}: ${t.length} > ${budget} chars`,
+  );
+  return truncateWords(t, budget);
+}
+
+/**
+ * A card's supporting line drawn from a long body/caption: complete LEADING
+ * SENTENCES up to a soft length, ending on a real sentence boundary — never a
+ * mid-word ellipsis. The full body still lives in the published caption; the
+ * card shows a clean, whole-sentence excerpt (so nothing reads as "cut off").
+ */
+export function leadingSentences(
+  text: string | undefined,
+  softMax: number,
+): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (t.length <= softMax) return t;
+  const sentences = t.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [t];
+  let out = '';
+  for (const s of sentences) {
+    if (out && (out + s).length > softMax) break;
+    out += s;
+  }
+  return (out || sentences[0] || t).trim();
+}
+
+/**
  * Auto font-step-down: pick a headline size from character count so long hooks
  * shrink instead of overflowing. `base` is the size for a short hook; it steps
  * down toward `min` as length grows. Defensive first line; the renderer's

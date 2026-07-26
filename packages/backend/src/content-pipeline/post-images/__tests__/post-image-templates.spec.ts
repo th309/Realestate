@@ -3,7 +3,7 @@ import {
   buildSinglePostHtml,
   copyToImageContents,
 } from '../post-image-templates';
-import { DISCLAIMER } from '../post-image-shared';
+import { DISCLAIMER, fitField, leadingSentences } from '../post-image-shared';
 import { PostImageGrounding } from '../post-image.types';
 
 describe('copyToImageContents', () => {
@@ -116,5 +116,38 @@ describe('template HTML', () => {
 
   it('applies the render scale to the --s variable', () => {
     expect(buildCarouselSlideHtml(content, 0.85)).toContain('--s:0.85');
+  });
+});
+
+describe('text fit — never cut off legal copy', () => {
+  const realCta =
+    'See the full momentum breakdown at propertyiq.app. Start with our free tier, no credit card required. PropertyIQ. Now you know.';
+
+  it('fitField passes legal copy through with no ellipsis', () => {
+    expect(fitField(realCta, 500, 'cta')).toBe(realCta);
+    expect(fitField(realCta, 500, 'cta')).not.toContain('…');
+  });
+
+  it('leadingSentences returns whole sentences, never a mid-word ellipsis', () => {
+    const body =
+      'PropertyIQ reads demand momentum monthly, so a quiet slide shows up before the sale prices do. Check yours before you make the next move. A third sentence far beyond the soft cap that must be dropped at a boundary.';
+    const out = leadingSentences(body, 140);
+    expect(out).not.toContain('…');
+    expect(out.endsWith('.')).toBe(true);
+    expect(out).toContain('quiet slide shows up');
+  });
+
+  it('carousel closer keeps the FULL hook + cta (Troy: never cut off)', () => {
+    const out = copyToImageContents('carousel_copy', {
+      hook: 'Plattsburgh, NY climbed 58 points on the PropertyIQ Score. Now at 96, very strong momentum.',
+      slides: [{ heading: 'X', body: 'Y' }],
+      cta: realCta,
+    });
+    const closer = out[out.length - 1].content;
+    expect(closer.variant).toBe('closer');
+    expect(closer.headline).not.toContain('…');
+    expect(closer.cta).not.toContain('…');
+    expect(closer.headline).toContain('very strong momentum');
+    expect(closer.cta).toContain('Now you know');
   });
 });

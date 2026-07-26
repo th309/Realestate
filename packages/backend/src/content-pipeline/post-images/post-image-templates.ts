@@ -11,11 +11,12 @@ import { buildCarouselInner } from './post-image-carousel';
 import { buildSingleInner } from './post-image-single';
 import {
   deltaTone,
+  fitField,
   formatCurrencyCompact,
   formatScore,
+  leadingSentences,
   scoreTone,
   shell,
-  truncateWords,
 } from './post-image-shared';
 import type { PostCopy } from '../posts/post.types';
 import {
@@ -146,7 +147,7 @@ export function copyToImageContents(
         family,
         template: 'carousel_slide',
         variant: 'cover',
-        headline: truncateWords(hook, 120),
+        headline: fitField(hook, 300, 'cover hook'),
         slideLabel: `1 / ${total}`,
         asOf,
       },
@@ -158,8 +159,12 @@ export function copyToImageContents(
           family,
           template: 'carousel_slide',
           variant: 'content',
-          headline: truncateWords(slide.heading?.trim() || hook, 90),
-          body: truncateWords(slide.body, 200),
+          headline: fitField(
+            slide.heading?.trim() || hook,
+            200,
+            'slide heading',
+          ),
+          body: fitField(slide.body, 600, 'slide body'),
           slideLabel: `${i + 2} / ${total}`,
           asOf,
         },
@@ -171,8 +176,8 @@ export function copyToImageContents(
         family,
         template: 'carousel_slide',
         variant: 'closer',
-        headline: truncateWords(hook, 90),
-        cta: truncateWords(cta, 90),
+        headline: fitField(hook, 300, 'closer hook'),
+        cta: fitField(cta, 500, 'closer cta'),
         asOf,
       },
     });
@@ -181,12 +186,15 @@ export function copyToImageContents(
 
   // Single image post: stat variant when we have a real number, else typographic.
   const derived = deriveStat(grounding);
-  const headline = truncateWords(
+  const headline = fitField(
     copy.hook?.trim() || 'PropertyIQ market intelligence',
-    130,
+    300,
+    'single hook',
   );
-  const subhead = truncateWords(copy.body, 150) || undefined;
-  const cta = truncateWords(copy.cta, 90) || undefined;
+  // Card subhead = complete leading sentences of the body (never a mid-word cut);
+  // the full body stays in the published caption.
+  const subhead = leadingSentences(copy.body, 260) || undefined;
+  const cta = fitField(copy.cta, 500, 'single cta') || undefined;
 
   const content: PostImageContent =
     derived != null

@@ -34,8 +34,16 @@ async function main(): Promise<void> {
     .limit(500);
   if (error) throw error;
 
+  // Default: only posts with no images yet (idempotent). BACKFILL_FORCE=1
+  // re-renders every image-capable pending post (e.g. after a template/fit fix).
+  const force = process.env.BACKFILL_FORCE === '1';
   const targets = ((data ?? []) as PostRow[]).filter(
-    (p) => (p.media_refs ?? []).length === 0 && p.post_type !== 'video_script',
+    (p) =>
+      p.post_type !== 'video_script' &&
+      (force || (p.media_refs ?? []).length === 0),
+  );
+  console.log(
+    `mode=${force ? 'FORCE re-render' : 'empty-only'} targets=${targets.length}`,
   );
 
   let rendered = 0;
