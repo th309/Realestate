@@ -6,8 +6,18 @@
  * "Make this video" handoff into the run wizard — kept React-free so it's unit
  * testable.
  */
-import type { PlannerPost } from "../lib/posts-api";
+import type { PostCopy } from "../lib/posts-api";
 import { isValidRunFormat } from "../lib/format-previews";
+
+/**
+ * Minimal shape the normalizers need — satisfied by both a full PlannerPost and
+ * a review-queue post item. Widened from PlannerPost so review items (which
+ * aren't full posts) can be passed without an adapter.
+ */
+export interface VideoScriptSource {
+  copy?: PostCopy | null;
+  platform?: string | null;
+}
 
 // Re-exported so existing consumers/tests keep importing it from here; the
 // canonical definition lives with FORMAT_META in lib/format-previews.ts.
@@ -34,7 +44,9 @@ function firstNonEmpty(...values: Array<unknown>): string | null {
 }
 
 /** Normalize a video_script post's copy across the structured and legacy shapes. */
-export function normalizeVideoScript(post: PlannerPost): NormalizedVideoScript {
+export function normalizeVideoScript(
+  post: VideoScriptSource,
+): NormalizedVideoScript {
   const copy = post.copy ?? {};
   const suggestedFormat = isValidRunFormat(copy.suggestedFormat)
     ? (copy.suggestedFormat ?? null)
@@ -61,7 +73,7 @@ export function normalizeVideoScript(post: PlannerPost): NormalizedVideoScript {
  * and market when the script suggests them. Invalid/absent format is simply
  * omitted so the wizard lands on the format step unselected.
  */
-export function buildMakeVideoHref(post: PlannerPost): string {
+export function buildMakeVideoHref(post: VideoScriptSource): string {
   const script = normalizeVideoScript(post);
   const params = new URLSearchParams();
   if (script.suggestedFormat) params.set("format", script.suggestedFormat);

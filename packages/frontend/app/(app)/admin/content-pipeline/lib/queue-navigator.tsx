@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { PostCopy } from "./posts-api";
 
 /**
  * id-based review-queue navigator.
@@ -26,6 +27,12 @@ import {
 
 export interface QueueItem {
   id: string;
+  /**
+   * Discriminates the mixed review queue. `'run'` (or absent, for back-compat
+   * during the backend seam) → a content_run; `'post'` → a generalized post
+   * carrying its own copy + signed media, rendered without a detail fetch.
+   */
+  kind?: "run" | "post";
   // Whatever else the ribbon needs to render — kept loose so the navigator
   // doesn't couple to RunSummary's full shape.
   market_query?: string;
@@ -33,15 +40,17 @@ export interface QueueItem {
   thumbnail_url?: string;
   status?: string;
   /**
-   * Image posts in the review feed carry their own signed media (planner-post
-   * shape). When present, `mediaUrls[0]` is the preview; `post_type` drives the
-   * carousel count chip and the video_script "video idea" treatment. `platform`
-   * overlays a glyph on the mockup. Video runs leave these unset and use
-   * `thumbnail_url`.
+   * Post items carry their own signed media (planner-post shape). When present,
+   * `mediaUrls[0]` is the preview; `post_type` drives the carousel count chip
+   * and the video_script "video idea" treatment; `platform` overlays a glyph on
+   * the mockup; `copy` renders the caption/script. Video runs leave these unset
+   * and use `thumbnail_url` + a detail fetch.
    */
   mediaUrls?: string[];
   post_type?: string;
   platform?: string;
+  copy?: PostCopy;
+  created_at?: string;
 }
 
 export interface QueueNavigatorApi {

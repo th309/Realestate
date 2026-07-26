@@ -2,14 +2,18 @@
 import Link from "next/link";
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchReviewQueue, fetchRun } from "../lib/content-pipeline-api";
+import { approvePost, skipPost } from "../lib/posts-api";
 import {
   QueueNavigatorProvider,
   useQueueNavigator,
 } from "../lib/queue-navigator";
 import { KeybindingScopeProvider } from "../lib/keybinding-scope";
+import { useToast } from "../lib/toast";
 import { ReviewCard } from "./review-card";
+import { PostReviewCard } from "./post-review-card";
+import { isPostReviewItem, reviewItemTitle } from "./review-item";
 import { QueueRibbon } from "./queue-ribbon";
 
 export default function ReviewQueuePage() {
@@ -42,6 +46,8 @@ function ReviewShell() {
   const nav = useQueueNavigator();
   const { items, currentId, jumpTo, prev, next, currentIndex, totalCount } =
     nav;
+  const qc = useQueryClient();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const deepLinkRunId = searchParams.get("run");
 
@@ -52,11 +58,43 @@ function ReviewShell() {
     jumpTo(deepLinkRunId);
   }, [deepLinkRunId, items, currentId, jumpTo]);
 
+  const currentItem = items.find((i) => i.id === currentId);
+  const isPost = currentItem ? isPostReviewItem(currentItem) : false;
+
+  // Only runs have a detail document — post items render straight from the
+  // queue row, so never fire a run fetch for them (a 404 otherwise).
   const { data: detail } = useQuery({
     queryKey: ["review-run", currentId],
     queryFn: () => (currentId ? fetchRun(currentId) : null),
-    enabled: !!currentId,
+    enabled: !!currentId && !isPost,
   });
+
+  const afterPostAction = () => {
+    nav.removeCurrent();
+    qc.invalidateQueries({ queryKey: ["review-queue"] });
+  };
+  const approveMut = useMutation({
+    mutationFn: (id: string) => approvePost(id),
+    onSuccess: () => {
+      toast.success("Post approved");
+      afterPostAction();
+    },
+    onError: (e: Error) => toast.error(`Couldn't approve: ${e.message}`),
+  });
+  const skipMut = useMutation({
+    mutationFn: (id: string) => skipPost(id),
+    onSuccess: () => {
+      toast.success("Post skipped");
+      afterPostAction();
+    },
+    onError: (e: Error) => toast.error(`Couldn't skip: ${e.message}`),
+  });
+
+  const headerTitle = isPost
+    ? reviewItemTitle(currentItem)
+    : (detail?.run?.market_query ?? "Loading…");
+  const headerFormat =
+    !isPost && detail?.run?.format ? detail.run.format : null;
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
@@ -72,10 +110,10 @@ function ReviewShell() {
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-medium text-on-surface truncate">
-              {detail?.run?.market_query ?? "Loading…"}
-              {detail?.run?.format ? (
+              {headerTitle}
+              {headerFormat ? (
                 <span className="ml-2 text-on-surface-variant text-xs font-mono">
-                  · {detail.run.format}
+                  · {headerFormat}
                 </span>
               ) : null}
             </h1>
@@ -86,7 +124,7 @@ function ReviewShell() {
               onClick={prev}
               className="px-2 py-1 rounded hover:bg-on-surface/8 transition-colors duration-200 disabled:opacity-30"
               disabled={currentIndex <= 0}
-              aria-label="Previous run"
+              aria-label="Previous item"
             >
               ‹
             </button>
@@ -98,7 +136,7 @@ function ReviewShell() {
               onClick={next}
               className="px-2 py-1 rounded hover:bg-on-surface/8 transition-colors duration-200 disabled:opacity-30"
               disabled={currentIndex >= totalCount - 1}
-              aria-label="Next run"
+              aria-label="Next item"
             >
               ›
             </button>
@@ -108,7 +146,15 @@ function ReviewShell() {
       </header>
 
       <main className="flex-1">
-        {detail ? (
+        {isPost && currentItem ? (
+          <PostReviewCard
+            item={currentItem}
+            onApprove={() => approveMut.mutate(currentItem.id)}
+            onSkip={() => skipMut.mutate(currentItem.id)}
+            approving={approveMut.isPending}
+            skipping={skipMut.isPending}
+          />
+        ) : detail ? (
           <ReviewCard run={detail} />
         ) : (
           <div className="p-12 text-center text-on-surface-variant text-sm">
@@ -149,9 +195,9 @@ function CaughtUpEmptyState() {
           All caught up
         </h1>
         <p className="text-sm text-on-surface-variant mb-6">
-          No runs are waiting for review right now. They appear here whenever a
-          run reaches review (including gate pauses before video is rendered),
-          for every content format.
+          Nothing is waiting for review right now. Posts, video scripts, and
+          rendered videos all land here the moment they&apos;re ready for your
+          eyes.
         </p>
         <Link
           href="/admin/content-pipeline"

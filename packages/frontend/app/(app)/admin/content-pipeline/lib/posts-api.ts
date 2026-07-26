@@ -174,17 +174,20 @@ export async function generatePost(
 }
 
 /**
- * Skip a post (any non-terminal state -> skipped) via the dedicated endpoint.
- * Used by the Video Scripts page to dismiss a suggestion.
+ * POST a lifecycle action to a post's dedicated endpoint and return the updated
+ * row. Shared idiom: fetchAPIRaw + { success, data }.
  */
-export async function skipPost(id: string): Promise<PlannerPost> {
+async function postLifecycleAction(
+  id: string,
+  action: "approve" | "skip",
+): Promise<PlannerPost> {
   const res = await fetchAPIRaw(
-    `/api/admin/content-pipeline/posts/${id}/skip`,
+    `/api/admin/content-pipeline/posts/${id}/${action}`,
     { method: "POST" },
   );
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`skipPost failed: ${res.status} ${body}`);
+    throw new Error(`post ${action} failed: ${res.status} ${body}`);
   }
   const json = (await res.json()) as {
     success?: boolean;
@@ -192,9 +195,22 @@ export async function skipPost(id: string): Promise<PlannerPost> {
     error?: string;
   };
   if (json.success === false) {
-    throw new Error(json.error ?? "skipPost failed");
+    throw new Error(json.error ?? `post ${action} failed`);
   }
   return json.data;
+}
+
+/** Approve a pending post (pending_review -> approved). */
+export function approvePost(id: string): Promise<PlannerPost> {
+  return postLifecycleAction(id, "approve");
+}
+
+/**
+ * Skip a post (any non-terminal state -> skipped). Dismisses a draft or
+ * suggestion from the review feed / Video Scripts page.
+ */
+export function skipPost(id: string): Promise<PlannerPost> {
+  return postLifecycleAction(id, "skip");
 }
 
 /**

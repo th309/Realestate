@@ -50,7 +50,7 @@ export function QueueRibbon() {
                 : "ring-1 ring-outline-variant scale-95 opacity-70 hover:opacity-100 hover:scale-100"
             }`}
             aria-current={active ? "true" : undefined}
-            aria-label={`Run ${idx + 1} of ${nav.totalCount}: ${item.market_query ?? item.id}`}
+            aria-label={`Item ${idx + 1} of ${nav.totalCount}: ${item.market_query ?? item.copy?.hook ?? item.post_type ?? item.id}`}
           >
             {item.mediaUrls?.[0] ? (
               <PostMediaThumb
@@ -74,7 +74,14 @@ export function QueueRibbon() {
                 }`}
               >
                 <span className="text-[10px] font-medium leading-tight">
-                  {(item.market_query ?? "—").split(",")[0]}
+                  {
+                    (
+                      item.market_query ??
+                      item.copy?.hook ??
+                      item.post_type ??
+                      "—"
+                    ).split(",")[0]
+                  }
                 </span>
               </div>
             )}
