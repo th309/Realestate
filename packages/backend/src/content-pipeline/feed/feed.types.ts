@@ -69,6 +69,26 @@ export interface FeedMarketGrounding {
   homeValueYoyPct: number | null;
   rent: number | null;
   rentYoyPct: number | null;
+  /**
+   * Pre-formatted data-period date for the image footer ("As of Jun 30, 2026") —
+   * a data-freshness statement sourced from the snapshot's score/ZHVI period, NOT
+   * the render date. Null when the snapshot carried no dated data.
+   */
+  asOf: string | null;
+  /**
+   * Real ranked markets (the top-mover candidates) for the list / head-to-head
+   * image cards. Present only when the feed hands the candidate list down; the
+   * image selector picks a rows/versus look only when this holds >= 2 entries.
+   * Shape matches PostImageGrounding.markets. NOT surfaced in the generation
+   * prompt (groundingLines never reads it) — image render only.
+   */
+  markets?: Array<{
+    name: string;
+    state?: string | null;
+    score?: number | null;
+    scoreLabel?: string | null;
+    scoreDelta?: number | null;
+  }>;
 }
 
 /**

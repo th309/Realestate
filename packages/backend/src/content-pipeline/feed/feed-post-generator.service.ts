@@ -63,7 +63,7 @@ export class FeedPostGeneratorService {
     preamble: string,
     postType: FeedPostType,
     target: GroundingTarget,
-    options?: { platform?: string; brief?: string },
+    options?: { platform?: string; brief?: string; movers?: GroundingTarget[] },
   ): Promise<GenerateResult> {
     const ctx = `${postType}/${target.canonical_name}`;
     let spentUsd = 0;
@@ -76,7 +76,7 @@ export class FeedPostGeneratorService {
           canonical_name: target.canonical_name,
         })
         .catch(() => null);
-      const grounding = buildGrounding(target, snapshot);
+      const grounding = buildGrounding(target, snapshot, options?.movers);
       const userPrompt = buildFeedUserPrompt(
         postType,
         grounding,

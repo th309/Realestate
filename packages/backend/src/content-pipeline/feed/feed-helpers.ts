@@ -42,13 +42,52 @@ export function scoreMomentumLabel(
   return 'very weak';
 }
 
-/** Combine a grounding target (score-mover or resolved market) + snapshot into the prompt grounding. */
+/**
+ * Format an ISO date (e.g. "2026-06-30") as the footer "as of" label
+ * ("Jun 30, 2026"). Parsed in UTC so a date-only value never shifts a day in a
+ * negative-offset locale. Null for a missing / unparseable date.
+ */
+export function formatAsOfDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/**
+ * Combine a grounding target (score-mover or resolved market) + snapshot into the
+ * prompt grounding. `movers` (the feed's already-fetched top-mover candidates) is
+ * passed through as `markets` for the list / head-to-head image cards — image
+ * render only, never the prompt (see FeedMarketGrounding.markets). `asOf` is the
+ * snapshot's data period (score date first, then ZHVI/rent), not the render date.
+ */
 export function buildGrounding(
   target: GroundingTarget,
   snapshot: MarketSnapshot | null,
+  movers?: GroundingTarget[],
 ): FeedMarketGrounding {
   const score =
     snapshot?.score?.propertyiq_score ?? target.current_score ?? null;
+  const asOf = formatAsOfDate(
+    snapshot?.score?.current_score_date ??
+      snapshot?.home_value?.period_date ??
+      snapshot?.rent?.period_date ??
+      null,
+  );
+  const markets = (movers ?? [])
+    .filter((m) => m.canonical_name)
+    .map((m) => ({
+      name: m.canonical_name,
+      state: m.state ?? null,
+      score: m.current_score ?? null,
+      scoreLabel: scoreMomentumLabel(m.current_score ?? null),
+      scoreDelta: m.delta ?? null,
+    }));
   return {
     geoLevel: target.geography,
     geoId: target.id,
@@ -63,6 +102,8 @@ export function buildGrounding(
     homeValueYoyPct: snapshot?.home_value?.yoy_pct ?? null,
     rent: snapshot?.rent?.value ?? null,
     rentYoyPct: snapshot?.rent?.yoy_pct ?? null,
+    asOf,
+    ...(markets.length ? { markets } : {}),
   };
 }
 
