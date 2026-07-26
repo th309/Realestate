@@ -87,6 +87,8 @@ export function buildFeedUserPrompt(
     'GROUND EVERY CLAIM IN THIS DATA (do not invent numbers):',
     groundingLines(grounding),
     '',
+    'Frame this as demand and momentum, not valuation. Never say what a home or market is "worth" or predict a price. The PropertyIQ Score measures where demand is heading now (momentum), not property value. Prefer "how strong is your market" over "what is your market worth".',
+    '',
     "Tie the call to action to what you just showed (this market's report or score), mention the free tier, and link to propertyiq.app.",
     '',
     OUTPUT_SHAPE[postType],
