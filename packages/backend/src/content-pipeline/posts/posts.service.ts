@@ -125,6 +125,12 @@ export class PostsService {
    * Move a post to a new status, enforcing the transition map. Optionally sets
    * scheduled_at (when moving to 'scheduled'), an error string (on 'failed'), or
    * platform_post_id (the external post id/URL the publisher returns, Phase 5).
+   *
+   * Deliberately un-failing a post (failed -> pending_review/scheduled) is a
+   * fresh start: `attempts` resets to 0 and `error` clears. Without this the
+   * retry counter stays at MAX_PUBLISH_ATTEMPTS and the publisher insta-fails
+   * the post on its next claim, so a rescheduled post could never actually
+   * publish again.
    */
   async updateStatus(
     id: string,
@@ -152,6 +158,14 @@ export class PostsService {
     if (extra?.platformPostId !== undefined)
       patch.platform_post_id = extra.platformPostId;
     if (to === 'published') patch.published_at = new Date().toISOString();
+
+    const isUnfail =
+      current.status === 'failed' &&
+      (to === 'pending_review' || to === 'scheduled');
+    if (isUnfail) {
+      patch.attempts = 0;
+      patch.error = null;
+    }
 
     const { data, error } = await client
       .from('posts')
