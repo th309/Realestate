@@ -39,7 +39,7 @@ function darkStat(c: PostImageContent): string {
     <div class="stage" style="padding:78px 64px 60px;">
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
-        ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};">${escapeHtml(c.eyebrow)}</div>` : ''}
+        ${c.eyebrow ? `<div style="font-size:${s(26)};font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div style="margin-top:16px;font-size:${s(hSize)};font-weight:800;line-height:1.08;">${escapeHtml(c.headline)}</div>
         ${
           stat
@@ -67,7 +67,7 @@ function darkHook(c: PostImageContent): string {
     <div class="stage" style="padding:78px 64px 60px;">
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
-        ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
+        ${c.eyebrow ? `<div style="font-size:${s(26)};font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div style="font-size:${s(hSize)};font-weight:800;line-height:1.06;">${escapeHtml(c.headline)}</div>
         ${c.subhead ? `<div style="margin-top:36px;font-size:${s(38)};line-height:1.35;color:${DARK.lavender};">${escapeHtml(c.subhead)}</div>` : ''}
         ${c.cta ? `<div style="margin-top:40px;font-size:${s(34)};font-weight:700;color:${DARK.green};">${escapeHtml(c.cta)}</div>` : ''}
@@ -84,7 +84,7 @@ function creamStat(c: PostImageContent): string {
   return `<div class="stage" style="padding:72px 68px 60px;">
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
-        ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};">${escapeHtml(c.eyebrow)}</div>` : ''}
+        ${c.eyebrow ? `<div style="font-size:${s(24)};font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div class="serif" style="margin-top:14px;font-size:${s(hSize)};font-weight:700;line-height:1.12;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
         ${
           stat
@@ -111,7 +111,7 @@ function creamClaim(c: PostImageContent): string {
   return `<div class="stage" style="padding:72px 68px 60px;">
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
-        ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
+        ${c.eyebrow ? `<div style="font-size:${s(24)};font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:24px;">${escapeHtml(c.eyebrow)}</div>` : ''}
         <div class="serif" style="font-size:${s(hSize)};font-weight:700;line-height:1.1;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
         ${c.subhead ? `<div style="margin-top:34px;font-size:${s(36)};line-height:1.4;color:${CREAM.slateSoft};">${escapeHtml(c.subhead)}</div>` : ''}
         ${c.cta ? `<div style="margin-top:38px;font-size:${s(32)};font-weight:700;color:${CREAM.teal};">${escapeHtml(c.cta)}</div>` : ''}

@@ -16,7 +16,11 @@ import {
   headlineFontSize,
   s,
   toneColor,
+  truncateWords,
 } from './post-image-shared';
+
+/** Backstop cap for a market row name after shortMarketName (rarely triggers). */
+const ROW_NAME_MAX = 32;
 import {
   accentBarHtml,
   footerHtml,
@@ -48,7 +52,7 @@ function marketRowHtml(
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:${s(20)};padding:${s(24)} ${s(32)};background:${rowBg};border:2px solid ${rowBorder};border-radius:20px;">
     <div style="display:flex;align-items:center;gap:${s(22)};min-width:0;flex:1;">
       ${rank != null ? `<span class="mono" style="font-size:${s(34)};font-weight:700;color:${rankColor};flex-shrink:0;">${rank}</span>` : ''}
-      <span style="font-size:${s(38)};font-weight:800;line-height:1.1;color:${nameColor};word-break:break-word;">${escapeHtml(row.name)}</span>
+      <span style="font-size:${s(38)};font-weight:800;line-height:1.1;color:${nameColor};word-break:break-word;">${escapeHtml(truncateWords(row.name, ROW_NAME_MAX))}</span>
     </div>
     <div style="display:flex;align-items:center;gap:${s(20)};flex-shrink:0;">
       ${row.momentum ? momentumChipHtml(family, row.momentum, row.tone) : ''}
@@ -66,7 +70,7 @@ function darkRows(c: PostImageContent): string {
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:${s(36)};margin-bottom:${s(24)};">
         <div>
-          ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:${s(18)};">${escapeHtml(c.eyebrow)}</div>` : ''}
+          ${c.eyebrow ? `<div style="font-size:${s(26)};font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:${s(18)};">${escapeHtml(c.eyebrow)}</div>` : ''}
           <div style="font-size:${s(hSize)};font-weight:800;line-height:1.06;color:${DARK.white};">${escapeHtml(c.headline)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:${s(18)};">
@@ -86,7 +90,7 @@ function creamRanking(c: PostImageContent): string {
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:${s(32)};margin-bottom:${s(24)};">
         <div>
-          ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:${s(16)};">${escapeHtml(c.eyebrow)}</div>` : ''}
+          ${c.eyebrow ? `<div style="font-size:${s(24)};font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:${s(16)};">${escapeHtml(c.eyebrow)}</div>` : ''}
           <div class="serif" style="font-size:${s(hSize)};font-weight:700;line-height:1.1;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:${s(14)};">

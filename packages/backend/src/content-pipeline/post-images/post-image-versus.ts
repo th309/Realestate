@@ -15,7 +15,11 @@ import {
   headlineFontSize,
   s,
   toneColor,
+  truncateWords,
 } from './post-image-shared';
+
+/** Backstop cap for a versus panel market name after shortMarketName. */
+const PANEL_NAME_MAX = 34;
 import {
   accentBarHtml,
   footerHtml,
@@ -37,7 +41,7 @@ function versusPanelHtml(family: PostImageFamily, row: PostImageRow): string {
   const nameColor = dark ? DARK.white : CREAM.ink;
   const mutedColor = dark ? DARK.lavender : CREAM.muted;
   return `<div style="flex:1;min-width:0;padding:${s(40)} ${s(26)};background:${panelBg};border:2px solid ${panelBorder};border-radius:28px;display:flex;flex-direction:column;align-items:center;gap:${s(18)};text-align:center;">
-    <div style="font-size:${s(40)};font-weight:800;line-height:1.1;color:${nameColor};word-break:break-word;">${escapeHtml(row.name)}</div>
+    <div style="font-size:${s(40)};font-weight:800;line-height:1.1;color:${nameColor};word-break:break-word;">${escapeHtml(truncateWords(row.name, PANEL_NAME_MAX))}</div>
     <div class="mono" style="font-size:${s(150)};font-weight:700;line-height:0.9;color:${toneColor(family, row.tone)};">${escapeHtml(row.score ?? '—')}</div>
     ${row.momentum ? momentumChipHtml(family, row.momentum, row.tone) : ''}
     <div style="font-size:${s(24)};color:${mutedColor};">out of 99</div>
@@ -67,7 +71,7 @@ function darkVersus(c: PostImageContent): string {
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:${s(40)};margin-bottom:${s(24)};">
         <div>
-          ${c.eyebrow ? `<div style="font-size:26px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:${s(18)};">${escapeHtml(c.eyebrow)}</div>` : ''}
+          ${c.eyebrow ? `<div style="font-size:${s(26)};font-weight:600;letter-spacing:4px;text-transform:uppercase;color:${DARK.lavender};margin-bottom:${s(18)};">${escapeHtml(c.eyebrow)}</div>` : ''}
           <div style="font-size:${s(hSize)};font-weight:800;line-height:1.06;color:${DARK.white};">${escapeHtml(c.headline)}</div>
         </div>
         ${versusBody('dark', rows, DARK.amber)}
@@ -85,7 +89,7 @@ function creamVersus(c: PostImageContent): string {
       ${headerRowHtml(c)}
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:${s(36)};margin-bottom:${s(24)};">
         <div>
-          ${c.eyebrow ? `<div style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:${s(16)};">${escapeHtml(c.eyebrow)}</div>` : ''}
+          ${c.eyebrow ? `<div style="font-size:${s(24)};font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${CREAM.terracotta};margin-bottom:${s(16)};">${escapeHtml(c.eyebrow)}</div>` : ''}
           <div class="serif" style="font-size:${s(hSize)};font-weight:700;line-height:1.1;color:${CREAM.ink};">${escapeHtml(c.headline)}</div>
         </div>
         ${versusBody('cream', rows, CREAM.gold)}

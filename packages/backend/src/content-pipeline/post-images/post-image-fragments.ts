@@ -13,6 +13,7 @@ import {
   SITE,
   WHITE,
   escapeHtml,
+  fitField,
   s,
   toneColor,
 } from './post-image-shared';
@@ -81,12 +82,17 @@ export function markHtml(family: PostImageFamily): string {
   </div>`;
 }
 
-/** Outlined category pill (top-right of single posts). */
+/**
+ * Outlined category pill (top-right of single posts). Short by design; the label
+ * is budget-capped (~24 chars, warn backstop) and the font scales with --s, so a
+ * long category shrinks/caps instead of clipping off the card edge under nowrap.
+ */
 export function categoryPillHtml(
   family: PostImageFamily,
   text: string,
 ): string {
-  return `<div style="border:2px solid ${ruleOf(family)};color:${mutedOf(family)};border-radius:999px;padding:12px 28px;font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;">${escapeHtml(text)}</div>`;
+  const label = fitField(text, 24, 'category pill');
+  return `<div style="border:2px solid ${ruleOf(family)};color:${mutedOf(family)};border-radius:999px;padding:12px 28px;font-size:${s(22)};font-weight:700;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;">${escapeHtml(label)}</div>`;
 }
 
 /** Footer: site + as-of + the standing disclaimer. */

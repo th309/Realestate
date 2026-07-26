@@ -12,12 +12,19 @@ import {
   FIT,
   fitField,
   formatCurrencyCompact,
-  formatDelta,
   formatScore,
   leadingSentences,
   scoreTone,
   deltaTone,
 } from './post-image-shared';
+import {
+  hashSeed,
+  marketLine,
+  pickEmphasis,
+  titleCase,
+  toRow,
+  weekday,
+} from './post-image-names';
 import { SINGLE_VARIANT_REGISTRY } from './post-image-single';
 import type { PostCopy } from '../posts/post.types';
 import {
@@ -45,41 +52,6 @@ const NEEDS: Record<
   daily_card_versus: 'markets2',
   editorial_versus: 'markets2',
 };
-
-function titleCase(str: string): string {
-  return str.replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-function weekday(): string {
-  return new Date()
-    .toLocaleDateString('en-US', { weekday: 'long' })
-    .toUpperCase();
-}
-
-function marketLine(g: PostImageGrounding | undefined): string | undefined {
-  if (!g?.marketName) return undefined;
-  return g.state ? `${g.marketName}, ${g.state}` : g.marketName;
-}
-
-/** Stable non-negative hash of a seed (post id) for deterministic variant picks. */
-function hashSeed(seed: string): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-/** Real grounding market → a renderable row (momentum word + tone, never a grade). */
-function toRow(
-  m: NonNullable<PostImageGrounding['markets']>[number],
-): PostImageRow {
-  return {
-    name: m.state ? `${m.name}, ${m.state}` : m.name,
-    score: formatScore(m.score),
-    momentum: m.scoreLabel ? m.scoreLabel.toUpperCase() : null,
-    delta: formatDelta(m.scoreDelta),
-    tone: scoreTone(m.score),
-  };
-}
 
 /**
  * Derive the hero stat from real grounding (score first, then home value). Returns
@@ -118,31 +90,6 @@ function deriveStat(
     };
   }
   return undefined;
-}
-
-/**
- * Choose the phrase to highlight in a quote: the clause after the last comma when
- * it's a meaningful tail, else the last few words (the punchline). Deterministic,
- * never the whole line unless the quote is very short.
- */
-function pickEmphasis(text: string): string | undefined {
-  const t = (text ?? '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/["'.“”]+$/, '');
-  if (!t) return undefined;
-  const words = t.split(' ');
-  if (words.length <= 3) return t;
-  const lastComma = t.lastIndexOf(',');
-  let phrase =
-    lastComma >= 0 && lastComma > t.length * 0.4
-      ? t.slice(lastComma + 1).trim()
-      : '';
-  if (!phrase || phrase.length > t.length * 0.6) {
-    const n = Math.min(4, Math.max(2, Math.round(words.length * 0.35)));
-    phrase = words.slice(-n).join(' ');
-  }
-  return phrase.replace(/[.,;:]+$/, '');
 }
 
 type BuildArgs = {

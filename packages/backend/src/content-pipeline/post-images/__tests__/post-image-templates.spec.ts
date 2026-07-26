@@ -203,6 +203,93 @@ describe('copyToImageContents', () => {
     // The highlighter stroke is an inline-SVG data-URI background (self-contained).
     expect(buildSinglePostHtml(quote)).toContain('background-image:url');
   });
+
+  it('does not select rows/versus with only one market (below threshold)', () => {
+    const oneMarket = [
+      { name: 'Abilene', state: 'TX', score: 94, scoreLabel: 'very strong' },
+    ];
+    const listy = new Set([
+      'daily_card_rows',
+      'editorial_ranking',
+      'daily_card_versus',
+      'editorial_versus',
+    ]);
+    for (const sd of seeds) {
+      const v = copyToImageContents(
+        'linkedin_post',
+        { hook: 'x' },
+        { markets: oneMarket },
+        sd,
+      )[0].content.variant;
+      expect(listy.has(v)).toBe(false);
+    }
+  });
+
+  it('caps a rows card at 5 markets even when more are supplied', () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({
+      name: `City ${i}`,
+      state: 'TX',
+      score: 90 - i,
+      scoreLabel: 'strong',
+    }));
+    let rowsContent;
+    for (let i = 0; i < 300 && !rowsContent; i++) {
+      const c = copyToImageContents(
+        'linkedin_post',
+        { hook: 'x' },
+        { markets: many },
+        `cap-${i}`,
+      )[0].content;
+      if (
+        c.variant === 'daily_card_rows' ||
+        c.variant === 'editorial_ranking'
+      ) {
+        rowsContent = c;
+      }
+    }
+    expect(rowsContent).toBeDefined();
+    expect(rowsContent!.rows!.length).toBe(5);
+  });
+
+  it('applies shortMarketName to row names (CBSA title -> City, ST)', () => {
+    const cbsa = [
+      {
+        name: 'Houston-The Woodlands-Sugar Land, TX',
+        score: 70,
+        scoreLabel: 'rising',
+      },
+      {
+        name: 'Dallas-Fort Worth-Arlington, TX',
+        score: 65,
+        scoreLabel: 'firming',
+      },
+      {
+        name: 'Austin-Round Rock-Georgetown, TX',
+        score: 55,
+        scoreLabel: 'steady',
+      },
+    ];
+    let rowsContent;
+    for (let i = 0; i < 300 && !rowsContent; i++) {
+      const c = copyToImageContents(
+        'linkedin_post',
+        { hook: 'x' },
+        { markets: cbsa },
+        `cbsa-${i}`,
+      )[0].content;
+      if (
+        c.variant === 'daily_card_rows' ||
+        c.variant === 'editorial_ranking'
+      ) {
+        rowsContent = c;
+      }
+    }
+    expect(rowsContent).toBeDefined();
+    expect(rowsContent!.rows!.map((r) => r.name)).toContain('Houston, TX');
+    expect(
+      rowsContent!.rows!.every((r) => !r.name.includes('The Woodlands')),
+    ).toBe(true);
+  });
 });
 
 describe('template HTML', () => {
