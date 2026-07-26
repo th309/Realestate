@@ -1,9 +1,10 @@
 // packages/backend/src/content-pipeline/post-images/post-image-renderer.interface.ts
 
 /**
- * Thrown when a card still overflows at the smallest fit scale. The render
- * service treats it as best-effort (the draft survives with no image) — better a
- * missing image an operator can regenerate than a clipped card shipped to social.
+ * Thrown when a card still overflows at the smallest fit scale. The caller two
+ * layers up (FeedPostGeneratorService.renderImagesBestEffort) treats it as
+ * best-effort (the draft survives with no image) — better a missing image an
+ * operator can regenerate than a clipped card shipped to social.
  */
 export class PostImageOverflowError extends Error {
   constructor(message: string) {
